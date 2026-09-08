@@ -11,6 +11,7 @@ export function collectKubernetesRelease(target, { execute = execFileSync } = {}
     if (!kinds.has(workload?.kind) || !dnsName.test(workload?.name ?? '') || seen.has(`${workload.kind}/${workload.name}`)) throw new Error('Unsupported, invalid or duplicate target workload');
     seen.add(`${workload.kind}/${workload.name}`);
   }
+  const observedAt = new Date().toISOString();
   const read = args => JSON.parse(execute('kubectl', [`--context=${target.context}`, `--namespace=${target.namespace}`,
     'get', ...args, '-o', 'json'], { encoding: 'utf8', timeout: 30000, maxBuffer: 16 * 1024 * 1024 }));
   const workloads = target.workloads.map(expected => {
@@ -23,6 +24,6 @@ export function collectKubernetesRelease(target, { execute = execFileSync } = {}
   if (inventory.items.some(item => !['Pod', 'ReplicaSet'].includes(item?.kind) || item.metadata?.namespace !== target.namespace)) throw new Error('Unexpected runtime inventory scope');
   const observations = kubernetesReleaseObservations({ workloads,
     pods: inventory.items.filter(item => item.kind === 'Pod'), replicaSets: inventory.items.filter(item => item.kind === 'ReplicaSet') });
-  return { schemaVersion: 1, scope: 'kubernetes-runtime-image-observations', observedAt: new Date().toISOString(),
+  return { schemaVersion: 1, scope: 'kubernetes-runtime-image-observations', observedAt,
     target: { context: target.context, namespace: target.namespace, workloads: target.workloads }, observations };
 }

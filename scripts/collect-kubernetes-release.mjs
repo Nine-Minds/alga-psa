@@ -9,6 +9,5 @@ try {
   mkdirSync(path.dirname(outputFile), { recursive: true });
   writeFileSync(outputFile, '');
   const result = collectKubernetesRelease(JSON.parse(readFileSync(targetFile, 'utf8')));
-  writeFileSync(outputFile, JSON.stringify(result.observations, null, 2) + '\n');
-  writeFileSync(`${outputFile}.metadata.json`, JSON.stringify({ ...result, observations: undefined }, null, 2) + '\n');
+  writeFileSync(outputFile, JSON.stringify(result, null, 2) + '\n');
 } catch (error) { console.error(error.message); process.exitCode = 1; }

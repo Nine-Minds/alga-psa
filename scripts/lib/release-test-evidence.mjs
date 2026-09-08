@@ -1,3 +1,4 @@
+import { verifyRuntimeObservationEvidence } from './runtime-observation-evidence.mjs';
 import { createHash } from 'node:crypto';
 import { validateReleaseManifest, compareReleaseDeployment } from './release-component-manifest.mjs';
 
@@ -48,7 +49,8 @@ export function verifyReleaseTestEvidence({ manifest, revision, edition, require
 
 export function verifyReleasePromotion(input) {
   const tests = verifyReleaseTestEvidence(input);
-  const deployment = compareReleaseDeployment(input);
-  const failures = [...tests.failures, ...deployment.failures];
+  const freshness = verifyRuntimeObservationEvidence(input);
+  const deployment = compareReleaseDeployment({ ...input, observations: input.runtimeEvidence?.observations });
+  const failures = [...tests.failures, ...freshness.failures, ...deployment.failures];
   return { ...tests, scope: 'release-promotion-identities', status: failures.length ? 'failed' : 'passed', failures };
 }

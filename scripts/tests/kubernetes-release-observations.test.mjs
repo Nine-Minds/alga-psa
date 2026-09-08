@@ -101,3 +101,23 @@ test('missing ReplicaSet UID and incomplete Jobs cannot provide release observat
   const job = fixture('Job'); job.workloads[0].status.conditions = [];
   assert.throws(() => kubernetesReleaseObservations(job), /completion not observed/);
 });
+
+test('collector envelope flows into promotion with target and freshness policy intact', async () => {
+  const { collectKubernetesRelease } = await import('../lib/collect-kubernetes-release.mjs');
+  const { releaseManifestDigest, verifyReleasePromotion } = await import('../lib/release-test-evidence.mjs');
+  const input = fixture();
+  const expectedTarget = { context: 'release-smoke', namespace: 'isolated', workloads: [{ kind: 'Deployment', name: 'service' }] };
+  const runtimeEvidence = collectKubernetesRelease(expectedTarget, { execute: (_command, args) => JSON.stringify(
+    args.includes('pods,replicasets') ? { kind: 'List', items: [...input.pods, ...input.replicaSets] } : input.workloads[0]) });
+  const revision = 'a'.repeat(40), edition = 'enterprise';
+  const manifest = { schemaVersion: 1, revision, edition, components: kubernetesReleaseObservations(input) };
+  const policy = { revision, edition, manifest, expectedTarget, maxObservationAgeSeconds: 300,
+    requiredComponents: manifest.components.map(component => component.name), requiredChecks: ['smoke'] };
+  const manifestDigest = releaseManifestDigest(policy);
+  const evidence = { schemaVersion: 1, revision, edition, manifestDigest,
+    results: [{ id: 'smoke', status: 'passed', failures: [], manifestDigest }] };
+  const serialized = JSON.parse(JSON.stringify(runtimeEvidence));
+  assert.equal(verifyReleasePromotion({ ...policy, evidence, runtimeEvidence: serialized }).status, 'passed');
+  serialized.target.namespace = 'other';
+  assert.equal(verifyReleasePromotion({ ...policy, evidence, runtimeEvidence: serialized }).status, 'failed');
+});

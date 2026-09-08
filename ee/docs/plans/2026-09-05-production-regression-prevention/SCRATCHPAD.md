@@ -2656,3 +2656,10 @@ Focused component/rendered-resource/binding tests and real CLI process pass. Tes
 Added kubernetes-release-observations and collect-kubernetes-release with explicit target context/namespace/workloads, read-only bounded kubectl queries, ownership UID chains, rollout completeness/readiness and init/Job lifecycle guards. Pullable status.imageID values only; never infer runtime identity from desired image or bare config digest. Consistent substituted image fails existing release comparison. Missing/duplicate/stale/unsupported inputs fail explicitly. CLI clears stale observation output before querying and emits metadata sidecar.
 
 Focused runtime/component/manifest/binding tests pass; see evidence/host-kubernetes-runtime-readback.json and release-runtime-readback.md. No live cluster queried, no Docker build. Target-specific imageID support, runtime snapshot freshness and actual release pipeline/smoke wiring remain open. F020 stays incomplete. Publication approval remains pending.
+
+
+### Reject stale or wrong-target runtime observations
+
+Audit found collector timestamp/target were written in a sidecar while promotion consumed only the bare image array, so old or different-target readback could pass. Collector now emits one versioned runtime envelope, timestamped before API reads. Promotion requires consumer-owned expectedTarget and positive maxObservationAgeSeconds, validates context/namespace/workload set, and rejects missing/invalid/future/stale timestamps plus legacy arrays. Millisecond threshold is inclusive at limit and fails one millisecond beyond.
+
+Focused runtime/component/manifest suites and collector-envelope-to-promotion serialization pass; CLI fixture upgraded to explicit target/age policy. Evidence: evidence/host-runtime-evidence-freshness.json. Runbook updated. No live cluster queried or Docker builds. Target-specific policy, actual smoke provenance and release pipeline remain open; no broad completion flags changed. Publication approval remains pending.

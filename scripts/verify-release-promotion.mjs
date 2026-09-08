@@ -13,7 +13,8 @@ try {
   const policy = read(policyFile);
   result = verifyReleasePromotion({ revision: policy.revision, edition: policy.edition,
     requiredComponents: policy.requiredComponents, requiredChecks: policy.requiredChecks,
-    manifest: read(manifestFile), evidence: read(evidenceFile), observations: read(observationsFile) });
+    expectedTarget: policy.expectedTarget, maxObservationAgeSeconds: policy.maxObservationAgeSeconds,
+    manifest: read(manifestFile), evidence: read(evidenceFile), runtimeEvidence: read(observationsFile) });
 } catch (error) { result = { schemaVersion: 1, scope: 'release-promotion-identities', status: 'failed', failures: [error.message] }; }
 if (outputFile) {
   mkdirSync(path.dirname(outputFile), { recursive: true });
