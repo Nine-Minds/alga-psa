@@ -1,8 +1,8 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes, randomUUID, scrypt } from 'node:crypto';
 import { constants } from 'node:fs';
 import { assertPortableTransferActive, createPortableWriteStream, portableTransferSignal, writePortableBytes } from './portableTransfer';
-import { chmod, mkdtemp, open, rename, rm, type FileHandle } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { open, rename, rm, type FileHandle } from 'node:fs/promises';
+import { createPortableTemporaryDirectory } from './portableTemporaryDirectory';
 import { isAbsolute, join } from 'node:path';
 import { Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
@@ -105,11 +105,7 @@ async function keyFor(passphrase: string, salt: Buffer) {
       { N: 131072, r: 8, p: 1, maxmem: 256 * 1024 * 1024 }, (error, key) => error ? reject(error) : resolve(key)));
   } finally { password.fill(0); }
 }
-async function privateDirectory() {
-  const directory = await mkdtemp(join(tmpdir(), 'alga-portable-archive-'));
-  try { await chmod(directory, 0o700); } catch { await rm(directory, { recursive: true, force: true }); invalid(); }
-  return { directory, dispose: () => rm(directory, { recursive: true, force: true }) };
-}
+const privateDirectory = () => createPortableTemporaryDirectory('archive');
 async function regularFile(path: string, maxBytes: number) {
   if (typeof path !== 'string' || !isAbsolute(path)) invalid();
   const file = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW);
@@ -192,7 +188,8 @@ export async function sealPortableArchive(input: { context: PortableArchiveConte
       size += chunk.length; if (size > MAX_ARCHIVE) return callback(new Error(MESSAGE)); hash.update(chunk); callback(null, chunk);
     } }), createPortableWriteStream(partial), { signal: portableTransferSignal() });
     await rename(partial, path);
-    return { context, path, size, sha256: hash.digest('hex'), dispose: lease.dispose };
+    lease.assertActive();
+    return { context, path, size, sha256: hash.digest('hex'), dispose: lease.dispose, assertActive: lease.assertActive };
   } catch { if (lease) await lease.dispose().catch(() => {}); return invalid(); }
   finally { key?.fill(0); metadata?.fill(0); }
 }

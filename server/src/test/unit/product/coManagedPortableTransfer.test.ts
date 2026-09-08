@@ -3,14 +3,22 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
-import { expect, it } from 'vitest';
-import { awaitPortableTransfer, createPortableWriteStream, portableTransferSignal, withPortableTransfer } from '../../../../../packages/co-managed/src/portableTransfer';
+import { expect, it, vi } from 'vitest';
+import { assertPortableTransferActive, awaitPortableTransfer, createPortableWriteStream, portableTransferSignal, withPortableTransfer } from '../../../../../packages/co-managed/src/portableTransfer';
 
 async function disk(work: (root: string) => Promise<void>) {
   const root = await mkdtemp(join(tmpdir(), 'portable-transfer-test-'));
   try { await work(root); } finally { await rm(root, { recursive: true, force: true }); }
 }
 const write = (path: string, value: Buffer) => pipeline(Readable.from([value]), createPortableWriteStream(path), { signal: portableTransferSignal() });
+it('rejects an elapsed deadline even before the event loop delivers the abort timer', async () => {
+  const now = vi.spyOn(Date, 'now').mockReturnValue(1000);
+  try {
+    await expect(withPortableTransfer({ timeoutMs: 100 }, async () => {
+      now.mockReturnValue(1100); assertPortableTransferActive();
+    })).rejects.toThrow('resource limits');
+  } finally { now.mockRestore(); }
+});
 it('counts temporary writes across files and rejects a write before exceeding the request budget', () => disk(async root => {
   await expect(withPortableTransfer({ maxWrittenBytes: 7 }, async () => {
     await write(join(root, 'first'), Buffer.from('1234'));

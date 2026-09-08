@@ -1,8 +1,8 @@
 import type { Knex } from 'knex';
 import { constants } from 'node:fs';
-import { chmod, mkdtemp, open, rm } from 'node:fs/promises';
+import { open } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
-import { tmpdir } from 'node:os';
+import { createPortableTemporaryDirectory } from '../../../../../packages/co-managed/src/portableTemporaryDirectory';
 import { isAbsolute, join } from 'node:path';
 import { Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
@@ -44,10 +44,9 @@ function administrators(manifest: CoManagedPortableWorkspaceManifest) {
 async function withArchive<T>(archivePath: string, passphrase: string,
   work: (archive: Awaited<ReturnType<typeof openPortableArchive>>, manifest: CoManagedPortableWorkspaceManifest, sha256: string) => Promise<T>) {
   if (!isAbsolute(archivePath) || archivePath.includes('\0')) fail('absolute archive path required');
-  const root = await mkdtemp(join(tmpdir(), 'alga-portable-restore-'));
+  const { directory: root, dispose } = await createPortableTemporaryDirectory('restore');
   let archive: Awaited<ReturnType<typeof openPortableArchive>> | undefined;
   try {
-    await chmod(root, 0o700);
     const path = join(root, 'input.alga'), handle = await open(archivePath, constants.O_RDONLY | constants.O_NOFOLLOW);
     const hash = createHash('sha256'); let size = 0;
     try {
@@ -64,7 +63,7 @@ async function withArchive<T>(archivePath: string, passphrase: string,
     return await work(archive, manifest, hash.digest('hex'));
   } finally {
     passphrase = '';
-    try { await archive?.dispose(); } finally { await rm(root, { recursive: true, force: true }); }
+    try { await archive?.dispose(); } finally { await dispose(); }
   }
 }
 

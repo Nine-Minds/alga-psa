@@ -111,6 +111,7 @@ async function prepareWorkspace(db: Knex, inputActor: CoManagedSessionActor, pas
       state = 'consuming';
       const operation = (async () => {
         try {
+          sealed.assertActive();
           return await db.transaction(trx => withCoManagedExportAdmin(trx, actor, async (current, verified) => {
             for (const name of Object.keys(recordCollectors) as RecordSection[]) {
               const source = await recordCollectors[name][1](current, verified, packageId);
@@ -118,7 +119,9 @@ async function prepareWorkspace(db: Knex, inputActor: CoManagedSessionActor, pas
             }
             for (const check of currentCapture.checks) await check(current);
             await assertCoManagedSessionUnexpired(current, verified);
+            sealed.assertActive();
             const value = await callback({ ...currentCapture.context, path: sealed.path, size: sealed.size, sha256: sealed.sha256 });
+            sealed.assertActive();
             await assertCoManagedSessionUnexpired(current, verified);
             return value;
           }), { isolationLevel: 'repeatable read' });

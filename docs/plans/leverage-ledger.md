@@ -767,3 +767,10 @@ Session licensing checkpoint (2026-09-08): inspection narrowed the suspected edi
 - **Where:** portableRestoreUploads, maintenanceJobFanout system jobs, PG Boss/Temporal registration and operator compatibility entries.
 - **Gate:** A concrete scheduled caller exposed the wrong placement of an otherwise shared database/storage engine. ACT / bounded-now.
 - **Status:** moved recovery and installation authority to the shared co-managed package, retaining EE compatibility exports; used the existing system-maintenance dispatch instead of a separate timer.
+
+
+## portable-local-staging-lifecycle — pattern
+- **What:** Four private-directory producers disposed normal completion but left no durable ownership or expiry evidence after process exit.
+- **Where:** Archive sealing/extraction, native blob staging, remote meeting staging and installation archive capture.
+- **Gate:** Four established identical filesystem lifecycles; sensitive crash remnants cannot be recovered by the remote provider-maintenance worker. ACT / bounded-now.
+- **Status:** Extracted a private directory lease and bounded, resumable local sweeper. All four producers use it; application startup runs one process-local recovery timer. Prepared download admission checks the same lease expiry.

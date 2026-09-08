@@ -81,6 +81,19 @@ export function registerCoManagedPortableWorkspaceExportTests(getDb: () => Knex,
     expect(callback).not.toHaveBeenCalled(); expect(await f.fs.readdir(f.root)).toEqual([]);
   }));
 
+  it('portable workspace prepared download rejects an expired staging lease before opening a transaction', async () => workspace(async f => {
+    const fs = await import('node:fs/promises'), path = await import('node:path');
+    const prepared = await f.prepare();
+    const name = (await fs.readdir(f.root)).find(name => name.startsWith('alga-portable-archive-'))!;
+    const marker = JSON.parse(await fs.readFile(path.join(f.root, name, '.alga-portable-lease.json'), 'utf8'));
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(marker.expiresAt), transaction = vi.spyOn(getDb(), 'transaction');
+    try {
+      await expect(prepared.acquireDownload()).rejects.toThrow('staging lease has expired');
+      expect(transaction).not.toHaveBeenCalled();
+      expect(await fs.readdir(f.root)).toEqual([]);
+    } finally { clock.mockRestore(); transaction.mockRestore(); await prepared.dispose(); }
+  }));
+
   it('portable export browser handler streams after releasing database locks and rejects revoked or foreign requests', async () => workspace(async f => {
     const auth = await import('@alga-psa/auth'), database = await import('@alga-psa/db');
     const session = vi.spyOn(auth, 'getSession').mockResolvedValue({ session_id: f.customerPrincipal.sessionId,

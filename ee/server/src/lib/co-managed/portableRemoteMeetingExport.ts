@@ -1,7 +1,6 @@
 import { assertPortableTransferActive, awaitPortableTransfer, createPortableWriteStream, portableTransferSignal } from '../../../../../packages/co-managed/src/portableTransfer';
 import { createHash } from 'node:crypto';
-import { chmod, mkdtemp, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { createPortableTemporaryDirectory } from '../../../../../packages/co-managed/src/portableTemporaryDirectory';
 import { join } from 'node:path';
 import { Readable, Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
@@ -139,10 +138,8 @@ export async function exportCoManagedPortableRemoteMeetingFiles(db: Knex, inputA
   const actor = snapshotCoManagedSessionActor(inputActor);
   if (!isCoManagedUuid(packageId)) throw new CoManagedSharedWorkError();
   const snapshot = await collect(db, actor, databaseSnapshot), original = digest(snapshot);
-  const directory = await mkdtemp(join(tmpdir(), 'alga-portable-remote-meetings-'));
-  const dispose = () => rm(directory, { recursive: true, force: true });
+  const { directory, dispose } = await createPortableTemporaryDirectory('remote-meetings');
   try {
-    await chmod(directory, 0o700);
     const files: PortableStagedBlob[] = [];
     if (snapshot.sources.length) {
       const config = await currentConfig(actor.tenant, snapshot.sources);

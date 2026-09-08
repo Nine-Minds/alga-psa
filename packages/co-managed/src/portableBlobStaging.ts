@@ -1,6 +1,5 @@
 import { createHash } from 'node:crypto';
-import { chmod, mkdtemp, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { createPortableTemporaryDirectory } from './portableTemporaryDirectory';
 import { join } from 'node:path';
 import { Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
@@ -25,10 +24,8 @@ export async function stageCoManagedPortableBlobs(input: readonly PortableSource
         (blob.sha256 !== undefined && !/^[0-9a-f]{64}$/.test(blob.sha256))) throw new Error('Invalid portable source blob');
     ids.add(blob.id);
   }
-  const directory = await mkdtemp(join(tmpdir(), 'alga-portable-blobs-'));
-  const dispose = () => rm(directory, { recursive: true, force: true });
+  const { directory, dispose } = await createPortableTemporaryDirectory('blobs');
   try {
-    await chmod(directory, 0o700);
     const files: PortableStagedBlob[] = [];
     if (blobs.length) {
       const provider = await awaitPortableTransfer(() => StorageProviderFactory.createProvider());

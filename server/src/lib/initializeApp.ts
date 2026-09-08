@@ -55,6 +55,9 @@ export async function initializeApp() {
     // Load environment configuration
     config();
 
+    const { startPortableTemporaryRecovery } = await import('./portableTemporaryRecovery');
+    startPortableTemporaryRecovery(() => logger.error('Portable temporary-file recovery failed'));
+
     // Register the server's PostHog-backed feature-flag checker so that
     // packages (@alga-psa/integrations, @alga-psa/clients, etc.) can check
     // feature flags via @alga-psa/core without importing from server.

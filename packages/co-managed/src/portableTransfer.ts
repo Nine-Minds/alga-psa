@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { Writable } from 'node:stream';
 
 export interface PortableTransferOptions { signal?: AbortSignal; maxWrittenBytes?: number; minFreeBytes?: number; timeoutMs?: number }
-interface Transfer { signal: AbortSignal; active: boolean; written: number; maxWrittenBytes: number; minFreeBytes: bigint }
+interface Transfer { deadlineAt: number; signal: AbortSignal; active: boolean; written: number; maxWrittenBytes: number; minFreeBytes: bigint }
 const transfers = new AsyncLocalStorage<Transfer>();
 const failure = () => new Error('Portable transfer was cancelled or exceeded its resource limits');
 const CHUNK = 4 * 1024 ** 2;
@@ -21,12 +21,12 @@ export async function withPortableTransfer<T>(options: PortableTransferOptions, 
   const deadline = new AbortController(), timer = setTimeout(() => deadline.abort(), timeoutMs);
   timer.unref?.();
   const state: Transfer = { signal: options.signal ? AbortSignal.any([options.signal, deadline.signal]) : deadline.signal,
-    active: true, written: 0, maxWrittenBytes, minFreeBytes: BigInt(minFreeBytes) };
+    deadlineAt: Date.now() + timeoutMs, active: true, written: 0, maxWrittenBytes, minFreeBytes: BigInt(minFreeBytes) };
   try { return await transfers.run(state, async () => { assertPortableTransferActive(); const result = await work(); assertPortableTransferActive(); return result; }); }
   finally { state.active = false; clearTimeout(timer); }
 }
 export function assertPortableTransferActive() {
-  const state = transfers.getStore(); if (state && (!state.active || state.signal.aborted)) throw failure();
+  const state = transfers.getStore(); if (state && (!state.active || state.signal.aborted || Date.now() >= state.deadlineAt)) throw failure();
 }
 export function portableTransferSignal() { return transfers.getStore()?.signal; }
 
