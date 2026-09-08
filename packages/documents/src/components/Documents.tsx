@@ -365,24 +365,6 @@ const Documents = ({
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [previewDocument, setPreviewDocument] = useState<IDocument | null>(null);
 
-  // Track previous initialDocuments to avoid infinite loops
-  const prevInitialDocumentsRef = useRef<string>('');
-
-  // Sync documents from props when they change (e.g., after router.refresh() in entity mode)
-  useEffect(() => {
-    // In entity mode, sync from initialDocuments when they actually change
-    if (!inFolderMode) {
-      // Compare document IDs to detect actual changes (not just reference changes)
-      const currentIds = initialDocuments.map(d => d.document_id).sort().join(',');
-      if (currentIds !== prevInitialDocumentsRef.current) {
-        prevInitialDocumentsRef.current = currentIds;
-        setDocumentsToDisplay(initialDocuments);
-        setTotalDocuments(initialDocuments.length);
-      }
-    }
-  }, [initialDocuments, inFolderMode]);
-
-
   // Folder mode: fetch documents from server
   // Track all fetch dependencies to detect actual changes vs reference-only changes
   const prevFetchKeyRef = useRef<string>('');
@@ -442,7 +424,8 @@ const Documents = ({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage, pageSize, inFolderMode, currentFolder, filters]);
 
-  // Entity mode: handle search filtering
+  // Entity mode: sync the complete rows, including same-ID attachment metadata
+  // after claim/edit, and apply search in the same effect.
   useEffect(() => {
     if (inFolderMode) return;
 
@@ -455,6 +438,7 @@ const Documents = ({
     }
 
     setDocumentsToDisplay(filtered);
+    setTotalDocuments(initialDocuments.length);
   }, [searchTermFromParent, inFolderMode, initialDocuments]);
 
   // Refresh documents - handles both folder mode and entity mode

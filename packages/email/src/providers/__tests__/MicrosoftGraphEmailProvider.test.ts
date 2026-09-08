@@ -319,6 +319,44 @@ describe('MicrosoftGraphEmailProvider', () => {
     });
   });
 
+  it('classifies named Graph throttling by HTTP status and preserves sanitized retry timing', async () => {
+    const provider = new MicrosoftGraphEmailProvider('microsoft-provider-1');
+    await provider.initialize(providerConfig());
+    sendMailMock.mockRejectedValueOnce(Object.assign(new Error('Throttled'), {
+      status: 429, code: 'ErrorTooManyRequests', retryAfter: '19', requestId: 'graph-throttle',
+    }));
+    await expect(provider.sendEmail(message(), 'tenant-1')).rejects.toMatchObject({
+      isRetryable: true, errorCode: 'ErrorTooManyRequests',
+      metadata: { status: 429, definitelyNotSent: true, requiresReconciliation: false, retryAfterMs: 19000, requestId: 'graph-throttle' },
+    });
+  });
+
+  it('preserves an HTTP-date retry hint from a raw Graph rejection', async () => {
+    const provider = new MicrosoftGraphEmailProvider('microsoft-provider-1');
+    await provider.initialize(providerConfig());
+    const now = Date.parse('2026-09-04T00:00:00Z');
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(now);
+    try {
+      sendMailMock.mockRejectedValueOnce({ response: { status: 429, data: { error: { code: 'ErrorTooManyRequests' } },
+        headers: { 'retry-after': new Date(now + 45000).toUTCString() } } });
+      await expect(provider.sendEmail(message(), 'tenant-1')).rejects.toMatchObject({
+        isRetryable: true, metadata: { definitelyNotSent: true, retryAfterMs: 45000 },
+      });
+    } finally { clock.mockRestore(); }
+  });
+
+  it.each([{ status: 503, code: 'ErrorInternalServerError' }, { code: 'ECONNRESET' }, { status: 408, code: 'Timeout' }])(
+    'keeps potentially accepted sends out of automatic retry: %j', async error => {
+      const provider = new MicrosoftGraphEmailProvider('microsoft-provider-1');
+      await provider.initialize(providerConfig());
+      sendMailMock.mockRejectedValueOnce(error);
+      await expect(provider.sendEmail(message(), 'tenant-1')).rejects.toMatchObject({
+        isRetryable: false, errorCode: error.code,
+        metadata: { definitelyNotSent: false, requiresReconciliation: true },
+      });
+    },
+  );
+
   it('marks throttling as retryable and rejects oversized simple attachments', async () => {
     const provider = new MicrosoftGraphEmailProvider('microsoft-provider-1');
     await provider.initialize(providerConfig());

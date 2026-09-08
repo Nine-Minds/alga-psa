@@ -1598,5 +1598,21 @@
   },
   "callLink": {
     "teamsCall": "Bellen in Microsoft Teams"
+  },
+  "editor": {
+    "attachFiles": "Bestanden bijvoegen",
+    "uploadingFiles": "Bestanden uploaden…",
+    "fileUploadFailed": "Bestand uploaden mislukt."
+  },
+  "emailPreferences": {
+    "loading": "E-mailvoorkeuren laden…",
+    "saving": "E-mailvoorkeuren opslaan…",
+    "slow": "Dit duurt langer dan normaal. Wacht op bevestiging voordat u meer wijzigingen aanbrengt.",
+    "loadError": "Opgeslagen e-mailvoorkeuren konden niet worden geladen. Probeer opnieuw om uw instellingen te bevestigen.",
+    "saveError": "Opslaan kon niet worden bevestigd. Controleer uw opgeslagen voorkeuren en probeer het opnieuw.",
+    "retry": "Opnieuw proberen",
+    "disabledByAdmin": "Uitgeschakeld door beheerder",
+    "mixed": "Gedeeltelijk ingeschakeld",
+    "empty": "Geen categorieën voor e-mailmeldingen beschikbaar."
   }
 }

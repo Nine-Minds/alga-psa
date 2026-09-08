@@ -1598,5 +1598,21 @@
   },
   "callLink": {
     "teamsCall": "Appeler dans Microsoft Teams"
+  },
+  "editor": {
+    "attachFiles": "Joindre des fichiers",
+    "uploadingFiles": "Envoi des fichiers…",
+    "fileUploadFailed": "Échec de l’envoi du fichier."
+  },
+  "emailPreferences": {
+    "loading": "Chargement des préférences e-mail…",
+    "saving": "Enregistrement des préférences e-mail…",
+    "slow": "Cela prend plus de temps que prévu. Veuillez attendre la confirmation avant de modifier les réglages.",
+    "loadError": "Impossible de charger les préférences e-mail enregistrées. Réessayez pour confirmer vos réglages.",
+    "saveError": "Enregistrement non confirmé. Vérifiez vos préférences enregistrées et réessayez.",
+    "retry": "Réessayer",
+    "disabledByAdmin": "Désactivé par un administrateur",
+    "mixed": "Partiellement activé",
+    "empty": "Aucune catégorie de notification e-mail disponible."
   }
 }

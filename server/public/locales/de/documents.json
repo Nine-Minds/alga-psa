@@ -73,7 +73,7 @@
       "noPhasesDefined": "Keine Phasen definiert"
     },
     "note": {
-      "billedTimePortalDetail": "Eine detaillierte Aufschlüsselung der Zeiteinträge zu jedem Ticket ist im Kundenportal verfügbar.",
+      "billedTimePortalDetail": "Wenden Sie sich für eine Aufschlüsselung der abgerechneten Zeit an Ihren Dienstleister.",
       "pickedBy": "Kommissioniert von: ____________________     Datum: ____________",
       "preTaxTotals": "Die angegebenen Summen verstehen sich ohne Steuer. Die anfallende Steuer wird auf Ihrer Rechnung ausgewiesen.",
       "thankYouForOrder": "Vielen Dank für Ihren Auftrag."
@@ -118,5 +118,20 @@
       "typeNotAllowed": "Dieser Dateityp ist nicht zulässig.",
       "sessionRequired": "Zum Hochladen von Dokumenten ist Ihre Sitzung erforderlich. Bitte melden Sie sich erneut an."
     }
+  },
+  "time": {
+    "mixed": "Gemischte Tarife",
+    "unknown": "Tarif nicht verfügbar",
+    "other": "Sonstige abgerechnete Zeit",
+    "ticket": "Ticket",
+    "task": "Projektaufgabe",
+    "partial": "Ein Teil der abgerechneten Zeit wird als Leistung angezeigt, da Ticketdetails fehlen.",
+    "unavailable": "Ticketdetails sind nicht verfügbar. Alle Leistungen sind unten aufgeführt.",
+    "quantityHours": "Menge / Stunden",
+    "breakdown": "Wenden Sie sich für eine Aufschlüsselung der abgerechneten Zeit an Ihren Dienstleister.",
+    "detail": "Zeitdetails — in den obigen Leistungen enthalten",
+    "incompleteDetail": "Die Zeitdetails sind möglicherweise unvollständig.",
+    "detailPartial": "Diese Detailansicht enthält nur verfügbare abgerechnete Zeiteinträge.",
+    "detailUnavailable": "Für diese Rechnung sind keine Details zu abgerechneten Zeiteinträgen verfügbar."
   }
 }

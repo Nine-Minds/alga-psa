@@ -320,8 +320,15 @@
       "noContractLinesDescription": "Add contract lines to define what's included in this contract",
       "noContractLinesYet": "No contract lines yet",
       "noServicesConfigured": "No services configured",
+      "billedOnRecordedUsage": "Billed on recorded usage",
       "serviceCountOne": "{{count}} service",
-      "serviceCountOther": "{{count}} services"
+      "serviceCountOther": "{{count}} services",
+      "previouslyConfiguredQuantity": "Previously configured quantity: {{count}} — not used for billing",
+      "billedOnPeriodCount": "Billed on the count reported for each period",
+      "recurringSeats": "{{count}} × {{rate}} (recurring seats)",
+      "bundleAllocation": "Allocation of the bundle price — not billable seats",
+      "setUpRecurringSeats": "Set up recurring seats",
+      "reportPeriodCount": "Report a period count"
     },
     "stats": {
       "contractLines": "Contract Lines",
@@ -331,7 +338,35 @@
       "variableSuffix": "+ variable (hourly/usage)",
       "viewDetails": "View details"
     },
-    "title": "What's Included"
+    "title": "What's Included",
+    "legacyTransition": {
+      "recurringSeats": {
+        "title": "Set up recurring seats",
+        "explanation": "Recurring seats bill quantity × unit rate every period without usage records, so they live on a Fixed contract line priced by recurring seats/units — not on this Usage line.",
+        "nextStep": "Go to Contract Lines, add (or open) a Fixed line, add this service, and choose “Recurring seats/units”, then confirm the quantity and unit rate. The change takes effect at the next unbilled service period; this Usage line and its history stay as they are until you remove it.",
+        "manualHandoff": "Go to Contract Lines → Create Custom, choose Fixed, add this service, and select “Recurring seats/units”. Review the quantity, unit rate and billing schedule before saving. This creates a separate recurring commitment; it does not convert or close this Usage service. Coordinate its start with the end of usage billing and review outstanding usage before enabling both for the same period."
+      },
+      "periodCount": {
+        "title": "Report a period count",
+        "explanation": "Reporting a period count switches this service to one replaceable count per service period: correcting 10 to 12 bills 12, never 22, and the minimum applies once. The next period starts unreported — no count carries forward.",
+        "nextStep": "Confirming changes only how this service is measured from the next unbilled service period. Existing entries stay additive, and no count is created — report the count for the period in Usage Tracking afterwards."
+      },
+      "referenceHeading": "Unconfirmed reference from the previous configuration",
+      "referenceQuantity": "Previously configured quantity: {{count}}",
+      "referenceRate": "Saved rate: {{rate}}",
+      "referenceCaveat": "These values have never billed. Nothing here is saved or charged until you confirm the values yourself in the flow below.",
+      "actions": {
+        "close": "Close",
+        "cancel": "Cancel",
+        "switching": "Switching…",
+        "confirmPeriodCount": "Switch to period counts"
+      },
+      "errors": {
+        "missingConfiguration": "This service has no saved configuration to convert. Refresh and try again.",
+        "failed": "Could not change how this service is measured."
+      },
+      "effectiveFrom": "Measurement change effective from"
+    }
   },
   "contractDialog": {
     "actions": {
@@ -389,7 +424,7 @@
       "noServicesConfigured": "No services configured for this preset",
       "notSet": "Not set",
       "overrideBaseRate": "Override Base Rate",
-      "quantity": "Quantity",
+      "usageRecordDrivenNote": "Usage services bill from usage recorded in Usage Tracking for each service period. A period with no usage record produces no charge — record usage (or an explicit zero) each period to bill these services.",
       "quantityShort": "Qty: {{quantity}}",
       "ratePerUnit": "Rate (per unit)",
       "roundUpToNearestMinutes": "Round up to nearest (minutes)",
@@ -559,7 +594,12 @@
       "typeLabel": "{{type}} Service",
       "unitOfMeasure": "Unit of Measure",
       "unitPlaceholder": "unit",
-      "unitRate": "Unit Rate"
+      "unitRate": "Unit Rate",
+      "effectiveFrom": "Recurring seat changes effective from",
+      "prospectiveSeatHelp": "Seats bill quantity × unit rate. Changes apply at this service-period boundary; earlier quantities and pricing are preserved.",
+      "recurringUnits": "Recurring seats/units",
+      "semanticsEffectiveFrom": "Service pricing and measurement changes effective from",
+      "prospectiveSemanticsHelp": "Changes apply at this service-period boundary; earlier quantities, measurement and pricing are preserved. Changing the date reloads the applicable settings for review."
     },
     "title": "Contract Lines"
   },
@@ -667,7 +707,7 @@
     "title": "Add Contract Lines from Presets",
     "usageConfig": {
       "defaultRate": "Default: ${{rate}}",
-      "quantity": "Quantity",
+      "recordDrivenNote": "Usage services bill from usage recorded in Usage Tracking for each service period. A period with no usage record produces no charge — record usage (or an explicit zero) each period to bill these services.",
       "ratePerUnit": "Rate (per unit)",
       "unitHint": "e.g., GB, API call, user",
       "unitOfMeasure": "Unit of Measure",
@@ -692,7 +732,8 @@
       "hourlyDescription": "Bill based on approved time entries.",
       "hourlyTitle": "Hourly",
       "usageDescription": "Invoice for units consumed.",
-      "usageTitle": "Usage-Based"
+      "usageTitle": "Usage-Based",
+      "fixedSemantics": "Bill a bundle price or recurring quantity × unit rate every period."
     },
     "billingTiming": {
       "advance": "Advance (bill at start of period)",
@@ -758,8 +799,15 @@
       "unitOfMeasureRequired": "Service {{index}}: Unit of measure is required",
       "unitRateRequired": "Service {{index}}: Unit rate is required",
       "usageServiceRequired": "At least one usage-based service is required",
-      "usageServiceSelectRequired": "Service {{index}}: Please select a service"
-    }
+      "usageServiceSelectRequired": "Service {{index}}: Please select a service",
+      "invalidQuantity": "Quantity must be zero or greater.",
+      "recurringUnitRateRequired": "Enter a unit rate for each recurring service."
+    },
+    "fixedServicesPricingIntent": "Choose a bundle price or recurring seats/units for each service.",
+    "fixedServicesPricingExplanation": "Bundle allocations share the line base rate. Recurring seats bill the agreed quantity × unit rate each period without usage records.",
+    "recurringQuantity": "Recurring quantity",
+    "allocationQuantity": "Allocation quantity",
+    "bundleBaseRateHelp": "Recurring fee for bundle-priced services. Recurring seats are billed separately at quantity × unit rate."
   },
   "pricingSchedules": {
     "list": {

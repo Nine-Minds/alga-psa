@@ -1,5 +1,6 @@
 'use server';
 
+import { applyPublicCommentAttachmentFilter } from '@alga-psa/shared/lib/ticketCommentAttachments';
 import { IDocument, IFolderNode } from '@alga-psa/types';
 import { IUser } from '@alga-psa/types';
 import { Knex } from 'knex';
@@ -238,6 +239,8 @@ export const getClientDocuments = withAuth(
         getClientDocumentVisibilitySources(filters.sourceType)
       );
 
+      applyPublicCommentAttachmentFilter(baseQuery, trx, tenant, user.user_id);
+
       // Wrap in subquery for filtering and pagination
       let query = trx
         .select('*')
@@ -273,7 +276,7 @@ export const getClientDocuments = withAuth(
         .offset(offset);
 
       return {
-        documents: documents as IDocument[],
+        documents: documents.map(document => ({ ...document, file_size: document.file_size == null ? undefined : Number(document.file_size) })) as IDocument[],
         total,
         page,
         pageSize: effectivePageSize,
@@ -329,7 +332,8 @@ export const getClientDocumentFolders = withAuth(
         .distinct('folder_path')
         .where('d.is_client_visible', true)
         .whereNotNull('d.folder_path')
-        .modify((query) => applyClientDocumentVisibilityFilter(query, scopedDb, clientId, 'd'));
+        .modify((query) => applyClientDocumentVisibilityFilter(query, scopedDb, clientId, 'd'))
+        .modify((query) => applyPublicCommentAttachmentFilter(query, trx, tenant, user.user_id));
 
       // Also get explicitly client-visible folders scoped to this client or one of the
       // client's owned contracts so portal navigation matches document visibility rules.
@@ -403,13 +407,14 @@ export const downloadClientDocument = withAuth(
 
       applyClientDocumentVisibilityFilter(documentQuery, scopedDb, clientId, 'd');
 
+      applyPublicCommentAttachmentFilter(documentQuery, trx, tenant, user.user_id);
       const document = await documentQuery.first();
 
       if (!document) {
         throw new Error('Document not found or access denied');
       }
 
-      return document as unknown as IDocument;
+      return { ...document, file_size: document.file_size == null ? undefined : Number(document.file_size) } as IDocument;
       });
     } catch (error) {
       const expected = clientPortalActionErrorFrom(error);

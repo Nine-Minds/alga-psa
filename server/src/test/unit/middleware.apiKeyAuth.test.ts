@@ -3,6 +3,10 @@ import { describe, expect, it } from 'vitest';
 import { shouldSkipApiKeyAuth } from 'server/src/middleware';
 
 describe('shouldSkipApiKeyAuth', () => {
+  it('lets recipient-bound attachment links authenticate in their session-aware handler', () => {
+    expect(shouldSkipApiKeyAuth('/api/ticket-comment-attachments/download')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/ticket-comment-attachments/download-malicious')).toBe(false);
+  });
   it('allows SCIM routes to perform Bearer authentication in the route handler', () => {
     expect(shouldSkipApiKeyAuth('/api/scim/v2/connection-id/Users')).toBe(true);
     expect(shouldSkipApiKeyAuth('/api/scim-malicious/v2/connection-id/Users')).toBe(false);

@@ -1,0 +1,237 @@
+[
+  {
+    "id": "F001",
+    "description": "Authoring explains recurring seats, period counts, and additive consumption, including carry-forward, replacement, and addition behavior.",
+    "implemented": true,
+    "prdRefs": [
+      "R1 — Explicit agreement semantics"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Persist explicit Fixed pricing basis and Usage measurement mode per service configuration with legacy-compatible defaults.",
+    "implemented": true,
+    "prdRefs": [
+      "R1 — Explicit agreement semantics"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Wizard, presets, templates, editors, and overview display consistent quantity sources and distinguish fixed allocations from billable units.",
+    "implemented": false,
+    "prdRefs": [
+      "R1 — Explicit agreement semantics"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Recurring unit pricing bills the configured quantity times unit rate without usage entries or hidden bundle-total overrides, including zero quantity.",
+    "implemented": true,
+    "prdRefs": [
+      "R2 — Recurring unit commitments"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Schedule recurring quantity/rate changes at a displayed next unbilled service-period boundary while preserving earlier period prices.",
+    "implemented": true,
+    "prdRefs": [
+      "R2 — Recurring unit commitments"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Persist one explicit period total per tenant, assignment, line, service configuration, and stable service-period boundary across period regeneration.",
+    "implemented": true,
+    "prdRefs": [
+      "R3 — Period-total replacement and concurrency"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Creating or editing a period total replaces its quantity with database uniqueness, request replay protection, and stale-revision rejection.",
+    "implemented": true,
+    "prdRefs": [
+      "R3 — Period-total replacement and concurrency"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Period totals apply minimum/tier pricing once, accept explicit zero, and neither bill nor carry forward absent reports.",
+    "implemented": true,
+    "prdRefs": [
+      "R3 — Period-total replacement and concurrency"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Finalization consumes the previewed total revision once, rejects stale previews, and prevents edits, deletion, or recreation of invoiced totals.",
+    "implemented": true,
+    "prdRefs": [
+      "R3 — Period-total replacement and concurrency"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Existing additive entries retain amounts and per-entry minimum/tier behavior with explicit additive labels and request-id retry protection.",
+    "implemented": true,
+    "prdRefs": [
+      "R4 — Additive compatibility and pricing"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Reject additive writes into period-total configurations and mixed measurement modes in one period; schedule mode changes only at eligible boundaries.",
+    "implemented": true,
+    "prdRefs": [
+      "R4 — Additive compatibility and pricing"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Record-usage shortcuts open the correct operation with client, assignment, line, service, and affected period populated in the form.",
+    "implemented": true,
+    "prdRefs": [
+      "R5 — Record usage in the correct period"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Validate shortcut scope and eligibility on the server, disambiguate same-named lines, and preserve calendar dates and half-open periods.",
+    "implemented": true,
+    "prdRefs": [
+      "R5 — Record usage in the correct period"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "After recording or replacing usage, return to the same invoice preview selection for verification.",
+    "implemented": true,
+    "prdRefs": [
+      "R5 — Record usage in the correct period"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Billing diagnostics distinguish unreported, explicit zero, billable, already-invoiced, attribution-excluded, and calculation-error states with appropriate actions.",
+    "implemented": true,
+    "prdRefs": [
+      "R6 — Accurate billing diagnostics"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Mixed invoices require acknowledgement of omitted usage; automated generation reports incomplete usage and keeps omitted obligations available.",
+    "implemented": true,
+    "prdRefs": [
+      "R6 — Accurate billing diagnostics"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Preserve invoice retry idempotency, tenant isolation, minor-unit arithmetic, and tax/profile/contract attribution for both usage modes and recurring units.",
+    "implemented": true,
+    "prdRefs": [
+      "Data, API, and permissions"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Overview, reports, and summaries share recurring unit/bundle valuation with cadence normalization and effective active commitment filtering.",
+    "implemented": true,
+    "prdRefs": [
+      "R7 — Honest recurring-revenue reporting"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Reports label pure usage as Variable usage, mixed agreements as fixed plus variable, and totals as Fixed MRR with actuals separate.",
+    "implemented": true,
+    "prdRefs": [
+      "R7 — Honest recurring-revenue reporting"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Report rows retain contract currency and summaries aggregate separately by currency without tenant-currency relabeling or implicit FX.",
+    "implemented": true,
+    "prdRefs": [
+      "R7 — Honest recurring-revenue reporting"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Display legacy ignored quantities and saved rates as non-billing reference data with explicit recurring-seat and period-count transition actions.",
+    "implemented": true,
+    "prdRefs": [
+      "R8 — Deliberate transition and history preservation"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Review and atomically schedule recurring-seat transitions at an eligible boundary with no source/destination overlap or orphaned usage.",
+    "implemented": false,
+    "prdRefs": [
+      "R8 — Deliberate transition and history preservation"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "Schedule explicit period-total transitions without reinterpreting historical entries or creating a report until separately confirmed.",
+    "implemented": true,
+    "prdRefs": [
+      "R8 — Deliberate transition and history preservation"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "Schema rollout preserves existing billing semantics, legacy reference quantities, and invoice attribution without billable-data backfill.",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout and migration"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "Complete isolated-data UI smoke journeys for recurring seats, corrected period counts, additive usage, missing-period recovery, legacy transition, and reports.",
+    "implemented": false,
+    "prdRefs": [
+      "Acceptance criteria"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "The active Create Custom dialog exposes and persists per-service Usage measurement, minimums and tiers, and Fixed bundle versus recurring-unit quantity and rate.",
+    "implemented": true,
+    "prdRefs": [
+      "R1 — Explicit agreement semantics",
+      "R8 — Deliberate transition and history preservation"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "The active Contract Lines editor loads effective Usage pricing, displays the service-period boundary, and saves measurement and prices through the guarded transition, including after invoicing.",
+    "implemented": true,
+    "prdRefs": [
+      "R1 — Explicit agreement semantics",
+      "R8 — Deliberate transition and history preservation"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "The recurring-seat legacy handoff explains separate commitment creation without promising automatic source closure or a scheduled conversion.",
+    "implemented": true,
+    "prdRefs": [
+      "R1 — Explicit agreement semantics",
+      "R8 — Deliberate transition and history preservation"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "Automatic Invoices discovery and individual/bulk repair share canonical client-cadence obligation eligibility, excluding pre-effective periods while preserving genuine missing eligible periods.",
+    "implemented": true,
+    "prdRefs": [
+      "Narrow recurring-gap mitigation"
+    ]
+  }
+]

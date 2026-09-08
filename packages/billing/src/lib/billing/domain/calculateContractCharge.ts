@@ -147,6 +147,7 @@ export function normalizeResolvedContractCharge(input: {
           baseRate: service.service_base_rate,
           enableProration: service.enable_proration,
           quantity: service.quantity,
+          pricingBasis: service.pricing_basis,
         })),
         fallbackService: charge.inputs.fallbackService
           ? {
@@ -193,6 +194,16 @@ export function normalizeResolvedContractCharge(input: {
           customRate: entry.custom_rate,
           currencyRate: entry.currency_rate,
           billableMinutes: entry.billable_duration,
+          workItemId: entry.work_item_id,
+          workItemType: entry.work_item_type,
+          ticketNumber: entry.ticket_number,
+          ticketTitle: entry.ticket_title,
+          ticketDescription: entry.ticket_description,
+          projectTaskName: entry.project_task_name,
+          projectId: entry.project_id,
+          projectPhaseId: entry.project_phase_id,
+          phaseRateOverride: charge.inputs.resolvePhaseRateOverride?.(entry.project_phase_id, entry.service_id),
+          projectChargeConfig: entry.project_id ? charge.inputs.getProjectChargeConfig?.(entry.project_id) : undefined,
           billingProfileId: entry.work_item_billing_profile_id,
         })),
       };
@@ -223,6 +234,8 @@ export function normalizeResolvedContractCharge(input: {
           quantity: record.quantity,
           taxRateId: record.tax_rate_id,
           currencyRate: record.currency_rate,
+          periodTotalId: record.period_total_id ?? null,
+          periodTotalRevision: record.period_total_revision ?? null,
         })),
       };
       break;
@@ -372,6 +385,7 @@ export function calculateNormalizedContractCharge(
             service_base_rate: service.baseRate,
             enable_proration: service.enableProration,
             quantity: service.quantity,
+            pricing_basis: service.pricingBasis,
           })),
           fallbackService: facts.fallbackService
             ? {
@@ -431,12 +445,24 @@ export function calculateNormalizedContractCharge(
             custom_rate: entry.customRate,
             currency_rate: entry.currencyRate,
             billable_duration: entry.billableMinutes,
+            work_item_id: entry.workItemId,
+            work_item_type: entry.workItemType,
+            ticket_number: entry.ticketNumber,
+            ticket_title: entry.ticketTitle,
+            ticket_description: entry.ticketDescription,
+            project_task_name: entry.projectTaskName,
+            project_id: entry.projectId,
+            project_phase_id: entry.projectPhaseId,
             work_item_billing_profile_id: entry.billingProfileId,
           })),
           contractCurrency: facts.line.currencyCode,
           billingProfile: facts.billingProfile,
-          resolvePhaseRateOverride: null,
-          getProjectChargeConfig: null,
+          resolvePhaseRateOverride: (phaseId, serviceId) => facts.activity.find(
+            (entry) => entry.projectPhaseId === phaseId && entry.serviceId === serviceId,
+          )?.phaseRateOverride ?? null,
+          getProjectChargeConfig: (projectId) => facts.activity.find(
+            (entry) => entry.projectId === projectId,
+          )?.projectChargeConfig,
         },
       };
       break;
@@ -475,6 +501,12 @@ export function calculateNormalizedContractCharge(
             quantity: record.quantity,
             tax_rate_id: record.taxRateId,
             currency_rate: record.currencyRate,
+            ...(record.periodTotalId
+              ? {
+                  period_total_id: record.periodTotalId,
+                  period_total_revision: Number(record.periodTotalRevision ?? 1),
+                }
+              : {}),
           })),
           contractCurrency: facts.line.currencyCode,
           billingProfile: facts.billingProfile,
@@ -490,6 +522,7 @@ export function calculateNormalizedContractCharge(
           billingPeriod: facts.billingPeriod!,
           clientContractLine,
           client,
+          timing: facts.timing,
           config: {
             config_id: facts.configuration.configurationId,
             service_id: facts.configuration.serviceId,

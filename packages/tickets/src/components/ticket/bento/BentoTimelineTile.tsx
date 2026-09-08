@@ -405,24 +405,29 @@ export function BentoTimelineTile({
 
   const { deleteDocument } = useDocumentsCrossFeature();
   const composeUploadSession = useTicketRichTextUploadSession({
+    commentAttachments: true,
     componentLabel: 'BentoTimelineTile-compose',
     ticketId,
     userId: currentUser?.id,
     trackDraftUploads: true,
     onDocumentsChanged: onClipboardImageUploaded,
-    onDiscard: () => { setHasDraft(false); setShowComposer(false); },
+    onDiscard: () => {
+      onNewCommentContentChange(DEFAULT_BLOCK);
+      setHasDraft(false); setShowComposer(false); setIsScheduleToggle(false); setScheduledPublishAt(undefined);
+    },
     uploadDocumentAction: uploadTicketAttachmentAction,
     deleteDraftClipboardImagesAction: deleteDraftTicketAttachmentImagesAction,
     resolveDocumentViewUrl: resolveTicketAttachmentViewUrl,
     deleteDocumentFn: deleteDocument,
   });
   const editUploadSession = useTicketRichTextUploadSession({
+    commentAttachments: true,
     componentLabel: 'BentoTimelineTile',
     ticketId,
     userId: currentUser?.id,
-    trackDraftUploads: false,
+    trackDraftUploads: true,
     onDocumentsChanged: onClipboardImageUploaded,
-    onDiscard: onCloseEdit,
+    onDiscard: () => { setReplyingToCommentId(null); onCloseEdit(); },
     uploadDocumentAction: uploadTicketAttachmentAction,
     deleteDraftClipboardImagesAction: deleteDraftTicketAttachmentImagesAction,
     resolveDocumentViewUrl: resolveTicketAttachmentViewUrl,
@@ -630,6 +635,7 @@ export function BentoTimelineTile({
       isResolution && resolutionCloseStatusId !== NO_STATUS_CHANGE
         ? resolutionCloseStatusId
         : null;
+    if (composeUploadSession.isUploading) return;
     const success = await onAddNewComment(
       composerLane === 'internal',
       isResolution,
@@ -651,15 +657,11 @@ export function BentoTimelineTile({
       composeUploadSession.resetDraftTracking();
     }
     return success;
-  }, [onAddNewComment, composerLane, resolutionCloseStatusId, notificationSuppression, isScheduleToggle, scheduledInstant, composeUploadSession]);
+  }, [composeUploadSession.isUploading, onAddNewComment, composerLane, resolutionCloseStatusId, notificationSuppression, isScheduleToggle, scheduledInstant, composeUploadSession]);
 
-  const handleCancelCompose = useCallback(() => {
-    onNewCommentContentChange(DEFAULT_BLOCK);
-    setHasDraft(false);
-    setShowComposer(false);
-    setIsScheduleToggle(false);
-    setScheduledPublishAt(undefined);
-  }, [onNewCommentContentChange]);
+  const handleCancelCompose = useCallback(async () => {
+    await composeUploadSession.requestDiscard();
+  }, [composeUploadSession]);
 
   useEffect(() => {
     if (composerLane !== 'resolution') {
@@ -683,7 +685,7 @@ export function BentoTimelineTile({
   });
   useDialogSubmitShortcut(() => { void handleSend(); }, {
     active: hasDraft,
-    enabled: !isSubmitting && hasDraft && scheduleIsValid,
+    enabled: !isSubmitting && !composeUploadSession.isUploading && hasDraft && scheduleIsValid,
   });
 
   // A single comment card plus, when it's the active reply target, an inline
@@ -705,8 +707,8 @@ export function BentoTimelineTile({
           userMap={userMap}
           contactMap={contactMap}
           onContentChange={onContentChange}
-          onSave={onSaveComment}
-          onClose={onCloseEdit}
+          onSave={updates => { if (!editUploadSession.isUploading) onSaveComment(updates); }}
+          onClose={editUploadSession.requestDiscard}
           onEdit={() => onEditComment(comment)}
           onDelete={onDeleteComment}
           onReply={
@@ -744,6 +746,7 @@ export function BentoTimelineTile({
         </p>
       ) : null}
       <TextEditor
+            allowFileAttachments
         {...withDataAutomationId({ id: `${id}-composer-editor` })}
         key={editorKey}
         roomName={`ticket-${ticketId}`}
@@ -799,7 +802,7 @@ export function BentoTimelineTile({
           id={`${id}-composer-send`}
           size="sm"
           onClick={handleSend}
-          disabled={isSubmitting || !hasDraft || !scheduleIsValid}
+          disabled={isSubmitting || composeUploadSession.isUploading || !hasDraft || !scheduleIsValid}
         >
           {isSubmitting
             ? t('bento.timeline.sending', 'Sending…')
@@ -1042,12 +1045,14 @@ export function BentoTimelineTile({
               uploadFile={editUploadSession.uploadFile}
               searchMentions={searchUsersForMentions}
               onSubmit={async ({ content, parentCommentId, isInternal }) => {
+                if (editUploadSession.isUploading) return;
                 const success = await onAddReplyComment?.(content, parentCommentId, isInternal);
                 if (success) {
+                  editUploadSession.resetDraftTracking();
                   setReplyingToCommentId(null);
                 }
               }}
-              onCancel={() => setReplyingToCommentId(null)}
+              onCancel={editUploadSession.requestDiscard}
             />
           </div>
         </div>

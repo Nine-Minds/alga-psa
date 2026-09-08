@@ -134,6 +134,7 @@ export const API_RULES: readonly ApiRule[] = [
       '/api/v1/meta',
       '/api/v1/tickets',
       '/api/v1/comments',
+      '/api/ticket-comment-attachments',
       '/api/v1/clients',
       '/api/v1/contacts',
       '/api/v1/boards',

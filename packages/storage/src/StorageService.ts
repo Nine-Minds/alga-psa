@@ -17,6 +17,7 @@ import { FileStoreModel } from './models/storage';
 import type { FileStore } from './types/storage';
 import { StorageError } from './providers/StorageProvider';
 import fs from 'fs';
+import type { Knex } from 'knex';
 
 import {
     getProviderConfig,
@@ -370,10 +371,11 @@ export class StorageService {
         }
     }
 
-    static async deleteFile(file_id: string, deleted_by_id: string): Promise<void> {
+    static async deleteFile(file_id: string, deleted_by_id: string, transaction?: Knex.Transaction): Promise<void> {
         try {
             // Get file record
-            const { knex, tenant } = await createTenantKnex();
+            const { knex: connection, tenant } = await createTenantKnex();
+            const knex = transaction ?? connection;
             const fileRecord = await FileStoreModel.findById(knex, file_id);
             if (!fileRecord) {
                 throw new Error('File not found');
@@ -428,7 +430,7 @@ export class StorageService {
         mime_type: string,
         file_size: number
     ): Promise<void> {
-        validateFileConfig(mime_type, file_size);
+        await validateFileConfig(mime_type, file_size);
     }
 
     static async createDocumentSystemEntry(options: {

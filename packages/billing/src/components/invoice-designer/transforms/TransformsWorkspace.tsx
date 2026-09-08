@@ -1,5 +1,9 @@
 'use client';
 
+import { isBilledTimeCollection } from '../utils/billedTimeUi';
+import { useFeatureFlag } from '@alga-psa/ui/hooks/useFeatureFlag';
+import { INVOICE_COLLECTION_DESCRIPTORS, humanizeCollectionBindingLabel, resolveCollectionDescriptor } from '../../../lib/invoice-template-ast/collectionDescriptors';
+
 import React, { useEffect, useMemo, useState } from 'react';
 import type { TFunction } from 'i18next';
 import { generateUUID } from '@alga-psa/core';
@@ -269,6 +273,7 @@ const TransformsWorkspace: React.FC<Props> = ({
   loadExistingInvoiceOptions,
 }) => {
   const { t } = useTranslation('msp/invoicing');
+  const { enabled: releaseV16Enabled } = useFeatureFlag('release-v1-6-feature');
   const nodes = useInvoiceDesignerStore((state) => state.nodes);
   const rootId = useInvoiceDesignerStore((state) => state.rootId);
   const snapToGrid = useInvoiceDesignerStore((state) => state.snapToGrid);
@@ -361,18 +366,26 @@ const TransformsWorkspace: React.FC<Props> = ({
   );
 
   const sourceFieldPaths = useMemo(
-    () => Array.from(discoverFieldPaths(sourceCollection[0] ?? {})).filter((path) => !path.includes('*')).sort(),
-    [sourceCollection]
+    () => resolveCollectionDescriptor(transforms.sourceBindingId, undefined, baseAst)?.fields.map((field) => field.name) ?? Array.from(discoverFieldPaths(sourceCollection[0] ?? {})).filter((path) => !path.includes('*')).sort(),
+    [sourceCollection, transforms.sourceBindingId, baseAst]
   );
 
   const sourceCollectionOptions = useMemo(() => {
     const options: CollectionOption[] = Object.entries(baseAst.bindings?.collections ?? {}).map(([bindingId, binding]) => ({
       value: bindingId,
-      label: `${bindingId} (${binding.path})`,
+      label: `${humanizeCollectionBindingLabel(bindingId, binding.path, t)} (${binding.path})`,
       path: binding.path,
       rowCount: Array.isArray(getPathValue(previewData, binding.path)) ? (getPathValue(previewData, binding.path) as unknown[]).length : null,
       source: 'binding',
     }));
+
+    if (previewDocumentKind === 'invoice') {
+      for (const descriptor of INVOICE_COLLECTION_DESCRIPTORS) {
+        if (options.some((option) => option.path === descriptor.path)) continue;
+        const value = getPathValue(previewData, descriptor.path);
+        options.push({ value: descriptor.id, label: humanizeCollectionBindingLabel(descriptor.id, descriptor.path, t), path: descriptor.path, rowCount: Array.isArray(value) ? value.length : 0, source: 'binding' });
+      }
+    }
 
     discoverCollectionPaths(previewData).forEach((path) => {
       if (options.some((option) => option.path === path || option.value === path)) {
@@ -401,8 +414,8 @@ const TransformsWorkspace: React.FC<Props> = ({
       });
     }
 
-    return options.sort((left, right) => left.label.localeCompare(right.label));
-  }, [baseAst, collectionPathById, previewData, sourceCollection.length, transforms.sourceBindingId]);
+    return options.filter(option => releaseV16Enabled || option.value === transforms.sourceBindingId || !isBilledTimeCollection(option.path)).sort((left, right) => left.label.localeCompare(right.label));
+  }, [baseAst, collectionPathById, previewData, sourceCollection.length, transforms.sourceBindingId, t, previewDocumentKind, releaseV16Enabled]);
 
   const selectedSourceOption = useMemo(
     () => sourceCollectionOptions.find((option) => option.value === transforms.sourceBindingId) ?? null,
@@ -472,9 +485,13 @@ const TransformsWorkspace: React.FC<Props> = ({
           : { bindingAliases: INVOICE_TEMPLATE_BINDING_ALIASES }
       );
       const outputRows = Array.isArray(evaluation.output) ? evaluation.output.filter(isRecord) : [];
+      const outputFields = resolveCollectionDescriptor(
+        ast.transforms?.outputBindingId ?? '', ast.transforms, ast,
+      )?.fields.map((field) => field.name) ?? [];
       return {
+        hasOutput: Array.isArray(evaluation.output),
         issues: [] as PreviewIssue[],
-        rowPaths: Array.from(discoverFieldPaths(outputRows[0] ?? {})).filter((path) => !path.includes('*')).sort(),
+        rowPaths: Array.from(new Set([...outputFields, ...discoverFieldPaths(outputRows[0] ?? {})])).filter((path) => !path.includes('*')).sort(),
         groups: evaluation.groups ? (evaluation.groups as unknown as Array<Record<string, unknown>>) : null,
         rows: outputRows,
       };
@@ -1091,7 +1108,7 @@ const TransformsWorkspace: React.FC<Props> = ({
                   </label>
                   <CustomSelect
                     id="invoice-designer-transforms-sample-select"
-                    options={sampleScenarios.map((scenario) => ({
+                    options={sampleScenarios.filter(scenario => releaseV16Enabled || scenario.id !== 'sample-ticket-time-detail').map((scenario) => ({
                       value: scenario.id,
                       label: scenario.label,
                     }))}
@@ -1449,7 +1466,7 @@ const TransformsWorkspace: React.FC<Props> = ({
                 </div>
               ))}
             </div>
-          ) : outputPreview.rows.length > 0 ? (
+          ) : outputPreview.hasOutput ? (
             <div className="space-y-2">
               <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-400">
                 <span>

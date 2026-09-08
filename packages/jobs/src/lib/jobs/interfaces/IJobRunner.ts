@@ -100,10 +100,11 @@ export interface BaseJobData extends Record<string, unknown> {
 export interface IJobRunner {
   /**
    * Register a job handler for a specific job type
+   * Await completion before scheduling; asynchronous registration can fail.
    *
    * @param config Job handler configuration including name and handler function
    */
-  registerHandler<T extends BaseJobData>(config: JobHandlerConfig<T>): void;
+  registerHandler<T extends BaseJobData>(config: JobHandlerConfig<T>): void | Promise<void>;
 
   /**
    * Schedule a job for immediate execution

@@ -2,6 +2,7 @@
 'use server'
 
 import crypto from 'crypto';
+import { timePresentationLabels } from '../lib/invoice-template-ast/timePresentationLocalization';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import type { WasmInvoiceViewModel } from '@alga-psa/types';
@@ -9,7 +10,7 @@ import type { DesignerWorkspaceSnapshot } from '../components/invoice-designer/s
 import { exportWorkspaceToTemplateAst } from '../components/invoice-designer/ast/workspaceAst';
 import { evaluateTemplateAst, TemplateEvaluationError } from '../lib/invoice-template-ast/evaluator';
 import { INVOICE_TEMPLATE_BINDING_ALIASES } from '../lib/invoice-template-ast/bindingAliases';
-import { localizeTemplateAstForLocale } from '../lib/invoice-template-ast/i18nLabels';
+import { localizeTemplateAstForLocale, resolveTemplateAstI18n } from '../lib/invoice-template-ast/i18nLabels';
 import { renderEvaluatedTemplateAst } from '../lib/invoice-template-ast/react-renderer';
 import { validateTemplateAst } from '../lib/invoice-template-ast/schema';
 
@@ -33,6 +34,8 @@ type AuthoritativePreviewDiagnostic = {
 };
 
 type AuthoritativePreviewResult = {
+  presentationLabels?: Record<string, string>;
+  effectiveLocale?: string;
   success: boolean;
   sourceHash: string | null;
   generatedSource: string | null;
@@ -155,8 +158,18 @@ export const runAuthoritativeInvoiceTemplatePreview = withAuth(
       );
       // Same seam the PDF path uses, so the preview is authoritative.
       const localized = await localizeTemplateAstForLocale(validation.ast, input.locale);
-      const rendered = await renderEvaluatedTemplateAst(localized.ast, evaluation, { locale: localized.locale });
+      const rendered = await renderEvaluatedTemplateAst(localized.ast, evaluation, { locale: localized.locale, t: localized.t });
+      const presentationLabels = timePresentationLabels(localized.t);
+      // Reuse the document AST's display-only walk for canvas labels. Never
+      // translate authored literals or expose the translator across the wire.
+      resolveTemplateAstI18n(validation.ast, (key, options) => {
+        const value = localized.t?.(key, options) ?? options.defaultValue;
+        presentationLabels[key] = value;
+        return value;
+      });
       return {
+        presentationLabels,
+        effectiveLocale: localized.locale ?? 'en',
         success: true,
         sourceHash,
         generatedSource,

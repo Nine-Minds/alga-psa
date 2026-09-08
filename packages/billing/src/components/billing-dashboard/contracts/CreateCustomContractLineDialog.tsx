@@ -23,6 +23,10 @@ import {
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 
+import { UsageServiceConfigPanel } from '../service-configurations/UsageServiceConfigPanel';
+import { FixedServiceConfigPanel } from '../service-configurations/FixedServiceConfigPanel';
+import type { IContractLineServiceRateTier } from '@alga-psa/types';
+
 const isReturnedActionError = (value: unknown) =>
   isActionMessageError(value) || isActionPermissionError(value);
 
@@ -32,6 +36,7 @@ interface CreateCustomContractLineDialogProps {
   isOpen: boolean;
   onClose: () => void;
   contractId: string;
+  currencyCode?: string;
   onCreated: () => Promise<void>;
 }
 
@@ -39,10 +44,13 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
   isOpen,
   onClose,
   contractId,
+  currencyCode,
   onCreated,
 }) => {
   const { t } = useTranslation('msp/contracts');
-  const { money, symbol } = useCurrencyFormat();
+  const { money: formatMoney, symbol: currencySymbol } = useCurrencyFormat();
+  const money = (cents: number) => formatMoney(cents, currencyCode);
+  const symbol = () => currencySymbol(currencyCode);
   const billingFrequencyOptions = useBillingFrequencyOptions();
   const [planName, setPlanName] = useState('');
   const [planType, setPlanType] = useState<PlanType | null>(null);
@@ -52,10 +60,11 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
   // Fixed plan state
   const [baseRate, setBaseRate] = useState<number | undefined>(undefined);
   const [baseRateInput, setBaseRateInput] = useState<string>('');
+  const [billingCycleAlignment, setBillingCycleAlignment] = useState<'start' | 'end' | 'prorated'>('start');
   const [enableProration, setEnableProration] = useState<boolean>(false);
 
   // Services state
-  const [fixedServices, setFixedServices] = useState<Array<{ service_id: string; service_name: string; quantity: number }>>([]);
+  const [fixedServices, setFixedServices] = useState<Array<{ service_id: string; service_name: string; quantity: number; pricing_basis: 'bundle' | 'unit'; unit_rate?: number | null }>>([]);
   const [hourlyServices, setHourlyServices] = useState<Array<{
     service_id: string;
     service_name: string;
@@ -68,6 +77,10 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
     service_name: string;
     unit_rate: number | undefined;
     unit_of_measure: string;
+    measurement_mode: 'additive' | 'period_total';
+    minimum_usage: number;
+    enable_tiered_pricing: boolean;
+    rate_tiers: IContractLineServiceRateTier[];
     bucket_overlay?: BucketOverlayInput | null;
   }>>([]);
   const [usageServiceRateInputs, setUsageServiceRateInputs] = useState<Record<number, string>>({});
@@ -120,6 +133,12 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
         }));
       }
       fixedServices.forEach((service, index) => {
+        if (!Number.isFinite(service.quantity) || service.quantity < 0) {
+          errors.push(t('createCustomLine.validation.invalidQuantity', { defaultValue: 'Quantity must be zero or greater.' }));
+        }
+        if (service.pricing_basis === 'unit' && (service.unit_rate == null || !Number.isFinite(service.unit_rate) || service.unit_rate < 0)) {
+          errors.push(t('createCustomLine.validation.recurringUnitRateRequired', { defaultValue: 'Enter a unit rate for each recurring service.' }));
+        }
         if (!service.service_id) {
           errors.push(t('createCustomLine.validation.fixedServiceSelectRequired', {
             defaultValue: 'Item {{index}}: Please select a service or product',
@@ -201,7 +220,9 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
           if (service.service_id) {
             serviceConfigs.push({
               service_id: service.service_id,
-              quantity: service.quantity || 1,
+              quantity: service.quantity,
+              pricing_basis: service.pricing_basis,
+              custom_rate: service.unit_rate ?? undefined,
             });
           }
         });
@@ -227,6 +248,10 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
               service_id: service.service_id,
               custom_rate: service.unit_rate,
               unit_of_measure: service.unit_of_measure || 'unit',
+              measurement_mode: service.measurement_mode,
+              minimum_usage: service.minimum_usage,
+              enable_tiered_pricing: service.enable_tiered_pricing,
+              rate_tiers: service.rate_tiers.map(({ min_quantity, max_quantity, rate }) => ({ min_quantity, max_quantity: max_quantity ?? null, rate })),
               bucket_overlay: service.bucket_overlay ? {
                 total_minutes: service.bucket_overlay.total_minutes ?? 0,
                 overage_rate: service.bucket_overlay.overage_rate ?? 0,
@@ -245,8 +270,9 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
         billing_timing: billingTiming,
         services: serviceConfigs,
         ...(planType === 'Fixed' ? {
-          base_rate: baseRate ?? null,
+          base_rate: fixedServices.some(service => service.pricing_basis === 'bundle') ? baseRate ?? null : null,
           enable_proration: enableProration,
+          billing_cycle_alignment: billingCycleAlignment,
         } : {}),
         ...(planType === 'Hourly' ? {
           minimum_billable_time: minimumBillableTime ?? 15,
@@ -282,6 +308,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
     setBaseRate(undefined);
     setBaseRateInput('');
     setEnableProration(false);
+    setBillingCycleAlignment('start');
     setMinimumBillableTime(undefined);
     setRoundUpToNearest(undefined);
     setFixedServices([]);
@@ -300,7 +327,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
 
   const renderFixedConfig = () => {
     const handleAddFixedService = () => {
-      setFixedServices([...fixedServices, { service_id: '', service_name: '', quantity: 1 }]);
+      setFixedServices([...fixedServices, { service_id: '', service_name: '', quantity: 1, pricing_basis: 'bundle' }]);
     };
 
     const handleRemoveFixedService = (index: number) => {
@@ -324,11 +351,11 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
               })}
               :
             </strong>{' '}
-            {t('createCustomLine.fixedServicesAlertBaseRate', {
-              defaultValue: "The contract line's base rate (set below) is the billed amount.",
+            {t('createCustomLine.fixedServicesPricingIntent', {
+              defaultValue: 'Choose a bundle price or recurring seats/units for each service.',
             })}{' '}
-            {t('createCustomLine.fixedServicesAlertProducts', {
-              defaultValue: 'You can also attach products to this contract line; product quantities are billed as units, while fixed-fee service quantities are used for tax allocation only.',
+            {t('createCustomLine.fixedServicesPricingExplanation', {
+              defaultValue: 'Bundle allocations share the line base rate. Recurring seats bill the agreed quantity × unit rate each period without usage records.',
             })}
           </AlertDescription>
         </Alert>
@@ -373,19 +400,35 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
 
                 <div className="space-y-2">
                   <Label htmlFor={`quantity-${index}`} className="text-sm">
-                    {t('createCustomLine.quantityLabel', {
-                      defaultValue: 'Quantity',
+                    {t(service.pricing_basis === 'unit' ? 'createCustomLine.recurringQuantity' : 'createCustomLine.allocationQuantity', {
+                      defaultValue: service.pricing_basis === 'unit' ? 'Recurring quantity' : 'Allocation quantity',
                     })}
                   </Label>
                   <Input
                     id={`quantity-${index}`}
                     type="number"
                     value={service.quantity}
-                    onChange={(e) => handleQuantityChange(index, parseInt(e.target.value) || 1)}
-                    min="1"
+                    onChange={(e) => handleQuantityChange(index, Number(e.target.value))}
+                    min="0"
                     className="w-24"
                   />
                 </div>
+                <FixedServiceConfigPanel
+                  idPrefix={`custom-fixed-${index}-`}
+                  currencyCode={currencyCode}
+                  configuration={{ pricing_basis: service.pricing_basis, base_rate: service.unit_rate }}
+                  quantity={service.quantity}
+                  planFixedConfig={{ enable_proration: enableProration, billing_cycle_alignment: billingCycleAlignment }}
+                  onConfigurationChange={updates => setFixedServices(current => current.map((item, i) => i === index
+                    ? { ...item, pricing_basis: updates.pricing_basis ?? item.pricing_basis,
+                        unit_rate: updates.base_rate !== undefined ? updates.base_rate : item.unit_rate }
+                    : item))}
+                  onPlanFixedConfigChange={updates => {
+                    setEnableProration(updates.enable_proration ?? enableProration);
+                    setBillingCycleAlignment(updates.billing_cycle_alignment ?? billingCycleAlignment);
+                  }}
+                  disabled={isSaving}
+                />
               </div>
 
               <Button
@@ -688,7 +731,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
 
   const renderUsageConfig = () => {
     const handleAddUsageService = () => {
-      setUsageServices([...usageServices, { service_id: '', service_name: '', unit_rate: undefined, unit_of_measure: 'unit' }]);
+      setUsageServices([...usageServices, { service_id: '', service_name: '', unit_rate: undefined, unit_of_measure: 'unit', measurement_mode: 'additive', minimum_usage: 0, enable_tiered_pricing: false, rate_tiers: [] }]);
     };
 
     const handleRemoveUsageService = (index: number) => {
@@ -702,12 +745,6 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
     const handleUsageRateChange = (index: number, rate: number) => {
       const newServices = [...usageServices];
       newServices[index] = { ...newServices[index], unit_rate: rate };
-      setUsageServices(newServices);
-    };
-
-    const handleUnitChange = (index: number, unit: string) => {
-      const newServices = [...usageServices];
-      newServices[index] = { ...newServices[index], unit_of_measure: unit };
       setUsageServices(newServices);
     };
 
@@ -824,23 +861,15 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                     </p>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor={`unit-measure-${index}`} className="text-sm">
-                      {t('createCustomLine.unitOfMeasureLabel', {
-                        defaultValue: 'Unit of Measure',
-                      })}
-                    </Label>
-                    <Input
-                      id={`unit-measure-${index}`}
-                      type="text"
-                      value={service.unit_of_measure || 'unit'}
-                      onChange={(e) => handleUnitChange(index, e.target.value)}
-                      placeholder={t('createCustomLine.unitOfMeasurePlaceholder', {
-                        defaultValue: 'e.g., GB, API call, user',
-                      })}
-                    />
-                  </div>
                 </div>
+                <UsageServiceConfigPanel
+                  idPrefix={`custom-usage-${index}-`}
+                  configuration={service}
+                  rateTiers={service.rate_tiers}
+                  onConfigurationChange={updates => setUsageServices(current => current.map((item, i) => i === index ? { ...item, ...updates, measurement_mode: updates.measurement_mode ?? item.measurement_mode, minimum_usage: updates.minimum_usage ?? item.minimum_usage } : item))}
+                  onRateTiersChange={tiers => setUsageServices(current => current.map((item, i) => i === index ? { ...item, rate_tiers: tiers } : item))}
+                  disabled={isSaving}
+                />
 
                 {/* Bucket Overlay Section */}
                 <div className="space-y-3 pt-3 border-t border-dashed border-[rgb(var(--color-border-200))]">
@@ -1070,8 +1099,8 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                 {
                   key: 'Fixed' as PlanType,
                   title: t('createCustomLine.billingModel.fixedTitle', { defaultValue: 'Fixed Fee' }),
-                  description: t('createCustomLine.billingModel.fixedDescription', {
-                    defaultValue: 'Charge a flat amount every billing period.',
+                  description: t('createCustomLine.billingModel.fixedSemantics', {
+                    defaultValue: 'Bill a bundle price or recurring quantity × unit rate every period.',
                   }),
                   icon: Package,
                   accent: 'text-blue-600',
@@ -1132,7 +1161,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
               </div>
               {renderFixedConfig()}
 
-              {fixedServices.length > 0 && (
+              {fixedServices.some(service => service.pricing_basis === 'bundle') && (
                 <>
                   <div className="space-y-2 pt-4 border-t">
                     <Label htmlFor="base-rate">
@@ -1168,8 +1197,8 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                       />
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      {t('createCustomLine.recurringBaseRateHelp', {
-                        defaultValue: 'Recurring fee for all fixed services.',
+                      {t('createCustomLine.bundleBaseRateHelp', {
+                        defaultValue: 'Recurring fee for bundle-priced services. Recurring seats are billed separately at quantity × unit rate.',
                       })}
                     </p>
                   </div>
