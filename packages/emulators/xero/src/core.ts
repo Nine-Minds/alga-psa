@@ -59,7 +59,7 @@ export class XeroEmulatorCore implements EmulatorCore {
   authorizeRequests: XeroAuthorizeRequest[] = [];
   private codes = new Map<string, { clientId: string; redirectUri: string; scope: string; codeChallenge?: string }>();
   private accessTokens = new Map<string, { expiresAt: number; scope: string; clientId: string }>();
-  private refreshTokens = new Map<string, { clientId: string; scope: string }>();
+  private refreshTokens = new Map<string, { clientId: string; scope: string; expiresAt: number }>();
   private organisations: XeroOrganisation[] = [];
   private orgData = new Map<string, OrgData>();
   private invoiceNumberCounter = 0;
@@ -155,11 +155,13 @@ export class XeroEmulatorCore implements EmulatorCore {
     }
     if (params.grant_type === 'refresh_token') {
       const record = this.refreshTokens.get(String(params.refresh_token));
-      if (!record || record.clientId !== params.client_id) {
+      if (!record || record.clientId !== params.client_id || record.expiresAt <= this.nowMs()) {
         throw new XeroWireError(400, { error: 'invalid_grant' });
       }
       this.authenticateClient(record.clientId, params.client_secret);
-      this.refreshTokens.delete(String(params.refresh_token));
+      // A lost token response can be retried for 30 minutes. Reusing the old
+      // token must not continually extend that original recovery window.
+      record.expiresAt = Math.min(record.expiresAt, this.nowMs() + 30 * 60 * 1000);
       return this.issueTokens(record.scope, record.clientId);
     }
     throw new XeroWireError(400, { error: 'unsupported_grant_type' });
@@ -169,7 +171,7 @@ export class XeroEmulatorCore implements EmulatorCore {
     const accessToken = this.newId('access');
     const refreshToken = this.newId('refresh');
     this.accessTokens.set(accessToken, { expiresAt: this.nowMs() + this.accessTokenTtlSeconds * 1000, scope, clientId });
-    this.refreshTokens.set(refreshToken, { scope, clientId });
+    this.refreshTokens.set(refreshToken, { scope, clientId, expiresAt: this.nowMs() + 60 * 24 * 60 * 60 * 1000 });
     return {
       access_token: accessToken,
       refresh_token: refreshToken,

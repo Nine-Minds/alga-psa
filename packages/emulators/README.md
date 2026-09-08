@@ -652,3 +652,15 @@ contract. Tests exercise invalid item codes, archived accounts and a missing
 contact name through HTTP. OAuth error objects keep their separate shape.
 This checks representative rejection payloads; it does not claim live sandbox
 verification, full batch-error semantics or complete Xero API coverage.
+
+### Xero refresh-token recovery and expiry
+
+The token endpoint retains a rotated refresh token for a fixed 30-minute retry
+window, allowing recovery when the first refresh response is lost. Repeated
+use does not extend that deadline. Unused refresh tokens expire after 60 days;
+newly issued tokens retain their own lifetime and client/scope binding.
+`xero/tests/tokenLifecycle.test.ts` verifies recovery and expiry over HTTP with
+an isolated emulator clock. These rules follow the
+[Xero OAuth FAQ](https://developer.xero.com/faq/oauth2), reviewed 2026-09-08.
+This covers token lifetime behavior, not live sandbox drift, JWT signatures,
+or complete scope-dependent token issuance parity.
