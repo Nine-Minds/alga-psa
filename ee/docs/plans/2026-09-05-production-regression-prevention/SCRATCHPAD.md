@@ -2859,3 +2859,9 @@ Built3smallnativeemulatorbundles; accountinghostsession81018 QBO56105/Xero56106/
 - Browser runner now records execution exit code/database/application revision in runner.json. Split upgrade raw artifact from diagnostic archive to retain stable top-level JSON paths.
 - Extended actual CLI fixture to supply raw upgrade reports and prove deleting an executed journey fails while recorded verdict remains green.29readiness/upgrade-verifier tests pass; actionlint both workflows pass. Source fixtures materialized to support realpath normalization on macOS.
 - Enterprise execution wiring and parent enforcement are local only. Need current-source run/native CI publication with explicit authorization; no claim that existing host build establishes new code execution.
+
+### Complete canonical tooling passes with upgrade CI integration
+
+- Session19139 exited0. At clean revision5c7fd60b82bfe1596dae6838a4e9cd15d66c92d8, canonical scripts/run-node-tooling-tests.mjs verifies620tests/63requiredfiles,0failed/skipped/todo/cancelled. Raw Node event pass count includes extra suite events; use reconciled620test count. Evidence host-tooling-upgrade-ci.json.
+- PR3343 rechecked read-only: OPEN draft, published head7b170294a755dfebba34cb8bbfc1069b6d8ba8bc, so local upgrade commits are not native-CI evidence. No push attempted; prior publication approval remains unresolved.
+- Next current-source host production build (NEXT_DIST_DIR separate from running older build, Next --webpack, 12GB heap, NEXT_BUILD_CPUS=2), fresh upgrade and strict artifact runner; then remaining plan work including Citus upgrade. No Docker build this turn.
