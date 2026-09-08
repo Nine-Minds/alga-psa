@@ -8,7 +8,9 @@ import { writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 
-export async function checkAuthoredWorkflow() {
+export async function checkAuthoredWorkflow({ steps, completionTimeoutMs = 30_000 } = {}) {
+  assert.ok(Number.isInteger(completionTimeoutMs) && completionTimeoutMs > 0 && completionTimeoutMs <= 30_000,
+    'Completion deadline must be a positive integer no greater than 30000ms');
   assert.equal(process.env.AUTHORED_WORKFLOW_CI_OWNED, 'true', 'Explicit CI-owned database authorization required');
   const expectedHost = process.env.AUTHORED_WORKFLOW_EXPECTED_DB_HOST;
   const expectedDatabase = process.env.AUTHORED_WORKFLOW_EXPECTED_DB_NAME;
@@ -40,13 +42,16 @@ export async function checkAuthoredWorkflow() {
     assert.equal(identity.rows[0].database, expectedDatabase, 'Connected database differs from authorized CI stack');
     core.initializeWorkflowRuntimeV2();
     const definition = core.workflowDefinitionSchema.parse({ id: workflowId, name: 'CI authored execution', version: 1,
-      payloadSchemaRef: 'payload.ci-authored-proof.v1', steps: [
+      payloadSchemaRef: 'payload.ci-authored-proof.v1', steps: steps ?? [
         { id: 'mark_ready', type: 'state.set', config: { state: 'native-ready' } },
         { id: 'finish', type: 'control.return' },
       ] });
-    const node = core.getNodeTypeRegistry().get('state.set');
-    assert.ok(node, 'Production registry must contain state.set');
-    node.configSchema.parse(definition.steps[0].config);
+    for (const step of definition.steps) {
+      if (step.type === 'control.return') continue;
+      const node = core.getNodeTypeRegistry().get(step.type);
+      assert.ok(node, `Production registry must contain ${step.type}`);
+      node.configSchema.parse(step.config ?? {});
+    }
     await db('tenants').insert({ tenant, client_name: 'CI authored workflow proof', email: `${tenant}@example.test` });
     tenantCreated = true;
     await Definitions.create(db, tenant, { workflow_id: workflowId, name: definition.name, payload_schema_ref: definition.payloadSchemaRef,
@@ -62,23 +67,24 @@ export async function checkAuthoredWorkflow() {
     const dispatched = await dispatcher.startWorkflowRuntimeV2TemporalRun({ runId, tenantId: tenant, workflowId, workflowVersion: 1, triggerType: null, executionKey: runId });
     assert.equal(dispatched.workflowId, handle.workflowId);
     let completed = false;
-    for (let attempt = 0; attempt < 120; attempt++) {
+    const deadline = Date.now() + completionTimeoutMs;
+    while (Date.now() < deadline) {
       const description = await handle.describe();
       if (description.status.name !== 'RUNNING') { assert.equal(description.status.name, 'COMPLETED'); completed = true; executionCompleted = true; break; }
       await new Promise(resolve => setTimeout(resolve, 250));
     }
-    assert.ok(completed, 'Authored workflow did not complete within 30 seconds');
+    assert.ok(completed, `Authored workflow did not complete within ${completionTimeoutMs}ms`);
     await handle.result();
     const run = await db('workflow_runs').where({ tenant, run_id: runId }).first();
     assert.equal(run.status, 'SUCCEEDED');
     assert.ok(run.completed_at);
-    const steps = await db('workflow_run_steps').where({ tenant, run_id: runId });
-    assert.deepEqual(steps.map(step => step.definition_step_id).sort(), ['finish', 'mark_ready']);
-    for (const step of steps) assert.equal(step.status, 'SUCCEEDED');
-    const stateStep = steps.find(step => step.definition_step_id === 'mark_ready');
+    const projectedSteps = await db('workflow_run_steps').where({ tenant, run_id: runId });
+    assert.deepEqual(projectedSteps.map(step => step.definition_step_id).sort(), ['finish', 'mark_ready']);
+    for (const step of projectedSteps) assert.equal(step.status, 'SUCCEEDED');
+    const stateStep = projectedSteps.find(step => step.definition_step_id === 'mark_ready');
     const snapshot = await db('workflow_run_snapshots').where({ tenant, run_id: runId, snapshot_id: stateStep.snapshot_id }).first();
     assert.equal(snapshot?.envelope_json?.meta?.state, 'native-ready');
-    result.execution = { temporalStatus: 'COMPLETED', runStatus: 'SUCCEEDED', steps: steps.map(step => ({ id: step.definition_step_id, status: step.status })), state: 'native-ready' };
+    result.execution = { temporalStatus: 'COMPLETED', runStatus: 'SUCCEEDED', steps: projectedSteps.map(step => ({ id: step.definition_step_id, status: step.status })), state: 'native-ready' };
     result.status = 'passed';
   } catch (error) {
     error.authoredScenario = result;

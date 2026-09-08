@@ -133,7 +133,16 @@ if (process.env.E2E_EDITION !== 'enterprise') {
         await page.goto('/msp/schedule');
         const calendarEvent = (text: string) => page.locator('.rbc-event').filter({ hasText: text }).first();
         await expect(calendarEvent(title)).toBeVisible();
-        if (allDay) await expect(page.locator('.rbc-event').filter({ hasText: title })).toHaveCount(1);
+        const assertAllDayPlacement = async (eventTitle: string) => {
+          // TimeGridHeader renders DateContentRow into this all-day region;
+          // TimeGrid renders hourly events into the separate time-content grid.
+          const allDayEvent = page.locator('.rbc-allday-cell .rbc-event').filter({ hasText: eventTitle });
+          await expect(allDayEvent).toHaveCount(1);
+          await expect(allDayEvent).toBeVisible();
+          await expect(page.locator('.rbc-time-content .rbc-event').filter({ hasText: eventTitle })).toHaveCount(0);
+          await expect(page.locator('.rbc-event').filter({ hasText: eventTitle })).toHaveCount(1);
+        };
+        if (allDay) await assertAllDayPlacement(title);
 
         // A persistent provider failure makes the local save/error/retry transition
         // observable even when multiple background handlers attempt synchronization.
@@ -190,7 +199,7 @@ if (process.env.E2E_EDITION !== 'enterprise') {
         await expect(calendarEvent(vendorTitle)).toBeVisible();
         if (allDay) {
           await assertStoredDates();
-          await expect(page.locator('.rbc-event').filter({ hasText: vendorTitle })).toHaveCount(1);
+          await assertAllDayPlacement(vendorTitle);
         }
         await emulators.action('msgraph', 'calendar-change', { changeType: 'deleted', eventId: created.event.id });
         await expect.poll(async () => (await database('schedule_entries').where(entryScope)).length, { timeout: 60000 }).toBe(0);

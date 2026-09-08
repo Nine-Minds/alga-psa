@@ -351,7 +351,51 @@
         "R036"
       ],
       "owner": "stripe_protocol and coordinator",
-      "notes": "Candidatehelper implemented with productionexports, actualDBidentityguard, unique scopedfixture, realdispatch/completion/step/snapshot assertions. Separate nativeprocess passed and cleanup preserved unrelatedtenant. CI executes existingworker, retains passJSON/failurediagnostics; actionlint passes. Noncompletedfailure retention implemented but not fault-tested; actualCIpending."
+      "notes": "Candidatehelper implemented with productionexports, actualDBidentityguard, unique scopedfixture, realdispatch/completion/step/snapshot assertions. Separate nativeprocess passed and cleanup preserved unrelatedtenant. CI executes existingworker, retains passJSON/failurediagnostics; actionlint passes. Noncompleted failure retention passed native actual-worker fault test; actualCIpending."
+    },
+    {
+      "id": "R042",
+      "title": "Replace expired Bullseye security repository base for Temporal image",
+      "status": "done",
+      "dependsOn": [
+        "R033"
+      ],
+      "owner": "qbo_protocol",
+      "notes": "CurrentCIapt100 explicitlyexpired bullseye-security metadata. Changedbase toofficialnode22-bookworm, retainingaptsecuritychecks. OfficialNode/architecture/engine/glibc compatibility reviewed; publicBookwormsecuritymetadata validSept15. CleanimageCIpending."
+    },
+    {
+      "id": "R043",
+      "title": "Assert all-day event placement in browser calendar",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "calendar_review",
+      "notes": "Afterimport andvendorupdate requireonevisibleall-dayregion event andnoneintimedgrid; keepDBexplicitflag/dates andglobaluniqueness. InstalledTimeGridDOMverified;4Playwrightcasescollect. Browserexecutionpending; placementalone cannotproveflagprovenance."
+    },
+    {
+      "id": "R044",
+      "title": "Fault-test authored workflow termination with retained fixtures",
+      "status": "done",
+      "dependsOn": [
+        "R041"
+      ],
+      "owner": "stripe_protocol",
+      "notes": "Native actual compiled worker passed bounded event.wait failure, owned Temporal execution termination, retained diagnostic fixtures, and unrelated tenant preservation. Combined positive/negative harness exited 0 and dropped only its disposable database. Current-source candidate image validation remains pending."
+    },
+    {
+      "id": "R045",
+      "title": "Remove QBO consumer test dependency on unbuilt application packages",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "qbo_protocol",
+      "notes": "Source aliases for mocked infrastructure and real core exports. Process-local filesystem shim hides DB/core dist without altering shared artifacts: original config reproduces CI resolution failure, fixed config passes 29 behavioral tests. Typecheck passes; actual image CI pending."
+    },
+    {
+      "id": "R046",
+      "title": "Declare shared sanitizer jsdom types for clean worker compilation",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "stripe_protocol and coordinator",
+      "notes": "Shared workspace now declares existing locked @types/jsdom 21.1.7, and lock workspace entry matches. Isolated actual sanitizer compile reproduces TS7016 before and passes after real declarations. Full Temporal noEmit and manifest selection checks pass; clean image CI pending."
     }
   ]
 }

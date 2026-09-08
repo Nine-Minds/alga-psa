@@ -1,4 +1,4 @@
-FROM node:22-bullseye AS base
+FROM node:22-bookworm AS base
 ARG TARGETARCH
 
 # Install system dependencies

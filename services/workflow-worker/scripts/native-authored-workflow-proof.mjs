@@ -168,6 +168,14 @@ try {
   assert.ok(await db('tenants').where({ tenant }).first(), 'Scenario cleanup must preserve the unrelated native fixture tenant');
   assert.equal((await db('tenants').count('* as count').first()).count, '1', 'Scenario must leave only the unrelated native fixture tenant');
   evidence.candidateScenario = { status: 'passed', unrelatedFixturePreserved: true, noAdditionalTenantRemains: true };
+  const retention = start(process.execPath, [path.join(root, 'services/workflow-worker/scripts/native-authored-workflow-retention.mjs')], {
+    cwd: path.join(root, 'services/workflow-worker'), env: { ...env, AUTHORED_WORKFLOW_CI_OWNED: 'true',
+      AUTHORED_WORKFLOW_EXPECTED_DB_HOST: host, AUTHORED_WORKFLOW_EXPECTED_DB_NAME: databaseName },
+  }, 'failure-retention');
+  assert.equal((await retention.completion).code, 0, 'Failure-retention proof failed; see private failure-retention.log');
+  assert.ok(await db('tenants').where({ tenant }).first(), 'Failure retention must preserve the unrelated native tenant');
+  assert.equal(Number((await db('tenants').count('* as count').first()).count), 2, 'Only native and retained scenario tenants may remain');
+  evidence.failureRetention = { status: 'passed', ownExecutionTerminated: true, fixtureRowsRetained: true, unrelatedFixturePreserved: true };
   evidence.status = 'passed';
   console.log('Actual authored workflow execution passed');
 } catch (error) {

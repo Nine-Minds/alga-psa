@@ -7,7 +7,8 @@ current revision passed the full CI or browser matrix.
 
 | Surface | Implemented and exercised | Evidence boundary / remaining gap |
 | --- | --- | --- |
-| Teams organizer lookup | Both workspace and EE `saveTeamsIntegrationSettings` obtain a token and resolve an organizer by UPN through native Graph HTTP; journal proves the token POST and user GET. Graph also accepts directory object ID and preserves unknown-user 404. | [Consumer tests](msgraph/tests/teamsOrganizerRouting.test.ts), [wire tests](msgraph/tests/smoke.test.ts). Auth/storage seams are isolated. This does not exercise a browser profile form, tenant consent, SSO, or live directory behavior. Production and absent-gate override rejection are separate action tests. |
+| Teams organizer lookup | Both workspace and EE `saveTeamsIntegrationSettings` obtain a token and resolve an organizer by UPN through native Graph HTTP; journal proves the token POST and user GET. Graph also accepts directory object ID and preserves unknown-user 404. Both save actions preserve existing settings after an unresolved organizer and recover when the directory user becomes available. | [Consumer tests](msgraph/tests/teamsOrganizerRouting.test.ts), [wire tests](msgraph/tests/smoke.test.ts). Auth/storage seams are isolated. This does not exercise a browser profile form, tenant consent, SSO, or live directory behavior. Production and absent-gate override rejection are separate action tests. |
+| QBO consumer refresh/retry | Actual `QboClientService` recovers from API 401 through HTTP refresh, persists replacement credentials, and retries once. Revoked refresh does not overwrite credentials or replay; another API 401 stops after one refresh. | [Consumer tests](qbo/tests/clientRecoveryConsumer.test.ts). Native Axios/vendor HTTP with private memory secret storage and mocked disconnect coordination. This does not prove cross-process refresh locking, a database transaction, or Intuit retry-window parity. |
 | QBO revocation | Basic authentication + JSON token; either access or refresh token can revoke the modeled grant family. Independent grants survive; invalid/foreign clients cannot revoke it. | [HTTP tests](qbo/tests/tokenRevocation.test.ts). Unknown/repeated success and grant-family invalidation are RFC-based model choices, not live Intuit observations. Existing immediate refresh-token consumption still lacks Intuit retry-window parity. |
 | Xero revocation | Basic authentication + form refresh token, empty 200; removes connected organisations and rotated credentials. | [Lifecycle HTTP tests](xero/tests/tokenLifecycle.test.ts), [model limits](xero/README.md). One resource owner per client; immediate access-token invalidation is deterministic emulation, not measured JWT propagation. Unknown/repeated/foreign-token success follows RFC 7009. Direct access-token revocation is not modeled. |
 | Actual accounting cleanup consumers | Real `revokeAccountingOAuthGrant` for each provider reaches the journaled vendor route. Success rejects credentials; Xero also verifies connection removal after fresh authorization. Failed cleanup logs without throwing and preserves usable credentials. | [QBO consumer](qbo/tests/accountingCleanupConsumer.test.ts), [Xero consumer](xero/tests/accountingCleanup.test.ts). Native HTTP with guards against external destinations; auth/state/logger seams are isolated. This is the cleanup helper, not the entire denied OAuth callback, database rollback, disconnect UI, or a running worker. |
@@ -45,8 +46,12 @@ there; those browser runs do not establish the newly added cleanup paths.
 Both Xero revocation variables and QBO's revocation variable must reach each
 requesting process. Rendered Compose values prove configuration only. A generic
 invalid-credential probe proves endpoint reachability, not that a real consumer
-uses that endpoint. The recorded browser topology does not yet start the
-workflow-worker or Temporal worker. Running-process routing, the remaining
+uses that endpoint. Current CI configuration builds and starts the authored worker in both editions
+and the traditional Temporal worker in EE, with strict readiness and retained
+per-process routing evidence. That configuration has not yet completed a green
+image/browser run. Native compiled authored-workflow execution proves its
+state-node persistence boundary, without provider actions. Running-process
+provider journeys, the remaining
 Temporal constructors, denied callback/disconnect journeys, and optional
 sanitized live-provider drift checks remain explicit follow-up work.
 
