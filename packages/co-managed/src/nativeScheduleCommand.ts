@@ -11,6 +11,7 @@ import { retainScheduleSource, isScheduleFieldHidden, scheduleView } from './nat
 import { lockCoManagedLocalAuthentication, snapshotCoManagedAuthenticatedActor, type CoManagedAuthenticatedActor } from './localAuthentication';
 import { authorizeCoManagedLocalRecord, matchesCoManagedScopeConstraints, CoManagedSharedWorkError, isCoManagedUuid } from './sharedWorkIdentity';
 import { hasCoManagedLocalPermission } from './localPermission';
+import { applyNativeScheduleRelations } from './nativeScheduleRelations';
 
 export class NativeScheduleError extends Error {
   constructor(readonly code: 'SCHEDULE_INVALID' | 'SCHEDULE_NOT_FOUND' | 'SCHEDULE_IN_USE' | 'SCHEDULE_OCCURRENCE_NOT_FOUND') {
@@ -89,7 +90,7 @@ export async function commandCoManagedNativeSchedule(db: Knex, tenant: string, i
     if (!await hasCoManagedLocalPermission(trx, actor, 'user_schedule', 'read', true)) throw new CoManagedSharedWorkError();
     const hint = input.action === 'create' ? null : await owner.table('schedule_entries').where('entry_id', masterId).first();
     if (input.action !== 'create' && !hint) throw new NativeScheduleError('SCHEDULE_NOT_FOUND');
-    const previous = hint ? await retainScheduleSource(trx, actor, credential.subject, hint) : null;
+    const previous = hint ? await retainScheduleSource(trx, actor, credential.subject, hint, true) : null;
     // Resolve both source roots before taking the schedule write lock. The
     // locked row must still agree with this old-source hint below.
     let proposedSource = previous;
@@ -97,7 +98,7 @@ export async function commandCoManagedNativeSchedule(db: Knex, tenant: string, i
       let type = input.data.work_item_type ?? hint.work_item_type;
       if (['meeting', 'break', 'other'].includes(type)) type = 'ad_hoc';
       proposedSource = await retainScheduleSource(trx, actor, credential.subject, { work_item_type: type,
-        work_item_id: ['ad_hoc', 'non_billable_category'].includes(type) ? null : input.data.work_item_id === undefined ? hint.work_item_id : input.data.work_item_id });
+        work_item_id: ['ad_hoc', 'non_billable_category'].includes(type) ? null : input.data.work_item_id === undefined ? hint.work_item_id : input.data.work_item_id }, true);
     }
     const row = hint ? await owner.table('schedule_entries').where('entry_id', hint.entry_id).forUpdate().first() : null;
     if (hint && (!row || row.work_item_id !== hint.work_item_id || row.work_item_type !== hint.work_item_type)) throw new CoManagedSharedWorkError();
@@ -144,7 +145,7 @@ export async function commandCoManagedNativeSchedule(db: Knex, tenant: string, i
       normalized.patch.scheduled_end = normalized.merged.scheduled_end;
       if (isScheduleFieldHidden(fields, ['recurrence_pattern', 'is_recurring', 'original_entry_id'])) throw new CoManagedSharedWorkError();
     }
-    const next = normalized ? proposedSource ?? await retainScheduleSource(trx, actor, credential.subject, normalized.merged) : previous!;
+    const next = normalized ? proposedSource ?? await retainScheduleSource(trx, actor, credential.subject, normalized.merged, true) : previous!;
     if (normalized) {
       const ids: string[] = normalized.merged.assigned_user_ids, nextOwn = ids.length === 1 && ids[0] === actor.userId;
       const nextRecord = { ...next.record, id: row?.entry_id, ownerUserId: ids.length === 1 ? ids[0] : undefined, assignedUserIds: ids };
@@ -162,6 +163,10 @@ export async function commandCoManagedNativeSchedule(db: Knex, tenant: string, i
       if (await owner.table('time_entries').where({ work_item_type: 'ad_hoc', work_item_id: row.entry_id }).forShare().first('entry_id') ||
         await owner.table('native_time_tracking_sessions').where({ work_item_type: 'ad_hoc', work_item_id: row.entry_id }).whereNull('completed_entry_id').forShare().first('session_id')) throw new NativeScheduleError('SCHEDULE_IN_USE');
     }
+    // The schedule FK requires conflict cleanup before physical removal;
+    // later relation admission and final credential checks still roll it back.
+    if (row && input.action === 'delete' && !retainsMaster) await owner.table('schedule_conflicts')
+      .where(query => query.where('entry_id_1', row.entry_id).orWhere('entry_id_2', row.entry_id)).del();
     let saved: any = null;
     if (input.action === 'create') saved = await ScheduleEntry.create(trx, tenant, normalized!.merged, { assignedUserIds: normalized!.merged.assigned_user_ids, assignedByUserId: actor.userId });
     else if (input.action === 'update') saved = await ScheduleEntry.update(trx, tenant, effectiveId, normalized!.patch, scope as IEditScope | undefined);
@@ -176,6 +181,8 @@ export async function commandCoManagedNativeSchedule(db: Knex, tenant: string, i
       const read = await authorizeCoManagedLocalRecord(trx, actor, credential.subject, 'user_schedule', 'read', { ...next.record, id: saved.entry_id, ownerUserId: ids.length === 1 ? ids[0] : undefined, assignedUserIds: ids });
       view = scheduleView(retained, ids, actor, [...fields, ...read.redactedFields], next);
     }
+    const currentSchedule = saved ? await owner.table('schedule_entries').where('entry_id', saved.entry_id).first() : row ? await owner.table('schedule_entries').where('entry_id', row.entry_id).first() : null;
+    await applyNativeScheduleRelations(trx, actor, row, currentSchedule ?? null, assignments, normalized?.merged.assigned_user_ids ?? assignments);
     await credential.assertCurrent(); await assertCoManagedOperationalWrite(trx, tenant);
     const events: Array<{ eventType: 'SCHEDULE_ENTRY_CREATED' | 'SCHEDULE_ENTRY_UPDATED' | 'SCHEDULE_ENTRY_DELETED'; entryId: string }> = [];
     if (!row) events.push({ eventType: 'SCHEDULE_ENTRY_CREATED', entryId: saved.entry_id });

@@ -12,7 +12,7 @@ export interface ScheduleSource { record: AuthorizationRecord; fields: readonly 
 
 // LEVERAGE: pattern native-operational-source-admission — time and schedule read the same work roots; keep schedule authority independent of time-entry permissions.
 export async function retainScheduleSource(trx: Knex.Transaction, actor: CoManagedAuthenticatedActor, subject: AuthorizationSubject,
-  entry: { work_item_type: string; work_item_id: string | null }): Promise<ScheduleSource> {
+  entry: { work_item_type: string; work_item_id: string | null; entry_id?: string }, writing = false): Promise<ScheduleSource> {
   const owner = tenantDb(trx, actor.tenant), id = entry.work_item_id;
   if (['ad_hoc', 'non_billable_category'].includes(entry.work_item_type) && (!id || id === '__non_billable__')) return { record: {}, fields: [], workItem: null };
   if (!isCoManagedUuid(id)) throw new CoManagedSharedWorkError();
@@ -43,11 +43,13 @@ export async function retainScheduleSource(trx: Knex.Transaction, actor: CoManag
     const hint = await owner.table('appointment_requests').where('appointment_request_id', id).first('ticket_id');
     if (!hint) throw new CoManagedSharedWorkError();
     const source = hint.ticket_id ? await retainScheduleSource(trx, actor, subject, { work_item_type: 'ticket', work_item_id: hint.ticket_id }) : { record: {}, fields: [], workItem: null };
-    const request = await owner.table('appointment_requests').where('appointment_request_id', id).forShare().first('ticket_id');
-    if (!request || request.ticket_id !== hint.ticket_id) throw new CoManagedSharedWorkError();
+    const requestQuery = owner.table('appointment_requests').where('appointment_request_id', id);
+    if (writing) requestQuery.forUpdate(); else requestQuery.forShare();
+    const request = await requestQuery.first('ticket_id', 'client_id', 'schedule_entry_id');
+    if (!request || request.ticket_id !== hint.ticket_id || (entry.entry_id && request.schedule_entry_id && request.schedule_entry_id !== entry.entry_id)) throw new CoManagedSharedWorkError();
     // Appointment requests use user_schedule authority, evaluated below against
     // the actual schedule and assignments, plus their linked ticket's scope.
-    return { record: source.record, fields: source.fields, workItem: { id: id!, type: entry.work_item_type, title: source.workItem?.title ?? '' } };
+    return { record: { ...source.record, clientId: request.client_id ?? source.record.clientId }, fields: source.fields, workItem: { id: id!, type: entry.work_item_type, title: source.workItem?.title ?? '' } };
   } else throw new CoManagedSharedWorkError();
   const fields = (await authorizeCoManagedLocalRecord(trx, actor, subject, resource, 'read', record)).redactedFields;
   const sourceId = entry.work_item_type === 'project_task' ? 'task_id' : entry.work_item_type === 'ticket' ? 'ticket_id' : 'interaction_id';

@@ -1,6 +1,6 @@
 'use server'
 import ScheduleEntry from '@alga-psa/shared/models/scheduleEntry';
-import { commandCoManagedNativeSchedule, NativeScheduleError, readCoManagedNativeSchedules } from '@alga-psa/co-managed';
+import { commandCoManagedNativeSchedule, NativeScheduleRelationError, NativeScheduleError, readCoManagedNativeSchedules } from '@alga-psa/co-managed';
 import { resolveNativeTimeBrowserActor } from '../lib/nativeTimeReader';
 import { IScheduleEntry, IEditScope, DeletionValidationResult } from '@alga-psa/types';
 import { WorkItemType } from '@alga-psa/types';
@@ -58,7 +58,7 @@ export type ScheduleActionResult<T> =
 type ScheduleActionError = ActionMessageError | ActionPermissionError;
 
 function scheduleActionErrorMessage(error: unknown, fallback: string): string {
-  if (error instanceof NativeScheduleError) return error.message;
+  if (error instanceof NativeScheduleError || error instanceof NativeScheduleRelationError) return error.message;
   const message = error instanceof Error ? error.message : typeof error === 'string' ? error : '';
 
   if (message.startsWith('Permission denied')) {

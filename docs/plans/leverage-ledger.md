@@ -537,3 +537,9 @@ Inline markers are the per-site ledger; `grep -rn "LEVERAGE:"` is the count.
 - **Where:** `nativeScheduleCommand`, native schedule actions and shared schedule model recurrence branches.
 - **Gate:** Existing retained command admission fits occurrence mutations when master membership is verified first; the model must preserve explicit fields and count/duration semantics. ACT / bounded-now.
 - **Status:** Native mutations share current credentials/scope; exact occurrence checks, single/future/all behavior, stable cancellation identity and actual-row events are verified by eight focused PostgreSQL scenarios and 22 fast model cases. Native branches now publish identity-only schedule events; appointment/Teams cleanup and derived workflow consequences still need retained integration.
+
+## native-schedule-relations — friction
+- **What:** Co-managed calendar commands needed atomic local appointment/meeting cleanup; legacy request-only provider IDs would otherwise disappear during cancellation, and external failure must not leave a half-cancelled local booking.
+- **Where:** `nativeScheduleRelations`, retained schedule source/command admission and online_meetings synchronization intent columns.
+- **Gate:** The admitted schedule transaction owns its local relation changes; provider work requires a durable operation retained on the actual meeting. ACT / bounded-now for local consistency and intent storage.
+- **Status:** Local request/meeting rescheduling and cancellation, stable provider IDs, conflicting binding rejection and final-credential rollback pass six focused source-mode PostgreSQL scenarios in 9.45 seconds. Six source files and the migration pass syntax checks. External provider execution, retries and explicit appointment/meeting action admission remain pending; no Graph calls or broad builds performed.

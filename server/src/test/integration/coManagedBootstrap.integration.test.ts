@@ -90,7 +90,7 @@ beforeAll(async () => {
     '20260906080000_create_co_management_relationship_events.cjs',
     '20260906100000_add_external_file_metadata.cjs',
     '20260906110000_add_kb_import_batch_identity.cjs',
-    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs']) {
+    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs', '20260908011054_add_co_managed_meeting_sync_intents.cjs']) {
     await require('../../../migrations/' + file).up(db);
   }
   for (const table of ['standard_statuses', 'standard_priorities', 'countries', 'notification_categories',
@@ -14466,4 +14466,80 @@ it('native schedule commands preserve recorded time when cancelling an occurrenc
   expect(await native.deleteScheduleEntry(series.entry_id, 'all')).toMatchObject({ success: false });
   expect(await customer.table('schedule_entries').where('entry_id', series.entry_id)).toHaveLength(1);
   expect(await customer.table('time_entries').where('entry_id', time.entry_id).first()).toMatchObject({ work_item_id: series.entry_id });
+}));
+
+async function withScheduleAppointmentFixture(work: (fixture: any) => Promise<void>) {
+  await withNativeScheduleCommandFixture(async (fixture: any) => {
+    const { customer, context, ownId, operation } = fixture;
+    const requestId = randomUUID(), meetingId = randomUUID(), serviceId = randomUUID(), typeId = randomUUID();
+    await customer.table('service_types').insert({ tenant: context.tenant, id: typeId, name: 'Appointment service type' });
+    await customer.table('service_catalog').insert({ tenant: context.tenant, service_id: serviceId, service_name: 'IT appointment', billing_method: 'hourly', custom_service_type_id: typeId });
+    await customer.table('appointment_requests').insert({ tenant: context.tenant, appointment_request_id: requestId, service_id: serviceId, client_id: operation.customer_client_id,
+      requested_date: '2026-09-07', requested_time: '05:00:00', requested_duration: 90, requester_timezone: 'America/New_York', status: 'approved',
+      schedule_entry_id: ownId, preferred_assigned_user_id: context.userId, online_meeting_provider: 'teams', online_meeting_id: `provider-${meetingId}`, online_meeting_url: 'https://meeting.test.invalid/join' });
+    await customer.table('schedule_entries').where('entry_id', ownId).update({ work_item_type: 'appointment_request', work_item_id: requestId });
+    const meeting = { tenant: context.tenant, meeting_id: meetingId, provider: 'teams', provider_meeting_id: `provider-${meetingId}`, provider_event_id: `event-${meetingId}`,
+      subject: 'Previously disclosed appointment', join_url: 'https://meeting.test.invalid/join', start_time: '2026-09-07T09:00:00Z', end_time: '2026-09-07T10:30:00Z', status: 'scheduled', schedule_entry_id: ownId, appointment_request_id: requestId };
+    await customer.table('online_meetings').insert(meeting);
+    await work({ ...fixture, requestId, meetingId, meeting });
+  });
+}
+
+it('customer schedule relations move request wall-clock dates and queue meeting updates in the same command', async () => withScheduleAppointmentFixture(async ({ native, ownId, customer, requestId, meetingId, context }: any) => {
+  const changed = await native.updateScheduleEntry(ownId, { scheduled_start: new Date('2026-09-15T09:30:00Z'), scheduled_end: new Date('2026-09-15T11:00:00Z'), title: 'Internal calendar title', notes: 'Internal calendar note' });
+  expect(changed.success).toBe(true);
+  const request = await customer.table('appointment_requests').where('appointment_request_id', requestId).first();
+  expect((await import('@alga-psa/db')).timePeriodCalendarDate(request.requested_date)).toBe('2026-09-15');
+  expect(request).toMatchObject({ requested_time: '05:30:00', requested_duration: 90, preferred_assigned_user_id: context.userId, status: 'approved', schedule_entry_id: ownId });
+  const meeting = await customer.table('online_meetings').where('meeting_id', meetingId).first();
+  expect(meeting.start_time.toISOString()).toBe('2026-09-15T09:30:00.000Z');
+  expect(meeting).toMatchObject({ subject: 'Previously disclosed appointment', co_managed_sync_action: 'update', co_managed_sync_attempts: 0, co_managed_sync_last_error: null });
+  expect(meeting.co_managed_sync_operation_id).toMatch(/^[a-f0-9-]{36}$/);
+  expect(JSON.stringify(changed)).not.toContain('co_managed_sync');
+}));
+
+it('customer schedule relations cancel linked requests meetings and conflicts atomically while retaining provider IDs', async () => withScheduleAppointmentFixture(async ({ native, ownId, busyId, customer, context, requestId, meetingId }: any) => {
+  await customer.table('schedule_conflicts').insert({ tenant: context.tenant, entry_id_1: ownId, entry_id_2: busyId, conflict_type: 'overlap' });
+  expect(await native.deleteScheduleEntry(ownId)).toMatchObject({ success: true, deleted: true });
+  expect(await customer.table('schedule_entries').where('entry_id', ownId)).toHaveLength(0);
+  expect(await customer.table('schedule_conflicts')).toHaveLength(0);
+  expect(await customer.table('appointment_requests').where('appointment_request_id', requestId).first()).toMatchObject({ status: 'cancelled', schedule_entry_id: null, online_meeting_provider: null, online_meeting_id: null, online_meeting_url: null });
+  const meeting = await customer.table('online_meetings').where('meeting_id', meetingId).first();
+  expect(meeting).toMatchObject({ status: 'cancelled', provider_meeting_id: `provider-${meetingId}`, provider_event_id: `event-${meetingId}`, co_managed_sync_action: 'delete' });
+  expect(meeting.co_managed_sync_operation_id).toBeTruthy();
+  await expect(require('../../../migrations/20260908011054_add_co_managed_meeting_sync_intents.cjs').down(db)).rejects.toThrow(/pending co-managed meeting/);
+}));
+
+it('customer schedule relations retain request-only provider identity before clearing live join fields', async () => withScheduleAppointmentFixture(async ({ native, ownId, customer, meetingId, requestId }: any) => {
+  await customer.table('online_meetings').where('meeting_id', meetingId).del();
+  expect(await native.deleteScheduleEntry(ownId)).toMatchObject({ success: true });
+  const rows = await customer.table('online_meetings').where('appointment_request_id', requestId);
+  expect(rows).toHaveLength(1);
+  expect(rows[0]).toMatchObject({ provider_meeting_id: `provider-${meetingId}`, status: 'cancelled', co_managed_sync_action: 'delete' });
+  expect(await customer.table('appointment_requests').where('appointment_request_id', requestId).first()).toMatchObject({ online_meeting_id: null, online_meeting_url: null });
+}));
+
+it('customer schedule relations enforce canonical request binding and cannot approve pending requests through calendar edits', async () => withScheduleAppointmentFixture(async ({ native, ownId, taskId, customer, requestId, createSchedule }: any) => {
+  await customer.table('appointment_requests').where('appointment_request_id', requestId).update({ schedule_entry_id: taskId });
+  expect(await native.updateScheduleEntry(ownId, { title: 'Wrong binding' })).toMatchObject({ success: false });
+  await customer.table('appointment_requests').where('appointment_request_id', requestId).update({ schedule_entry_id: ownId, status: 'pending' });
+  expect(await native.updateScheduleEntry(ownId, { title: 'Implicit approval' })).toMatchObject({ success: false });
+  expect(await createSchedule({ work_item_type: 'appointment_request', work_item_id: requestId })).toMatchObject({ success: false });
+  expect(await customer.table('schedule_entries')).toHaveLength(3);
+  expect(await customer.table('schedule_entries').where('entry_id', ownId).first()).toMatchObject({ title: 'Own appointment' });
+  expect(await customer.table('appointment_requests').where('appointment_request_id', requestId).first()).toMatchObject({ status: 'pending', schedule_entry_id: ownId });
+}));
+
+it('customer schedule relations roll request meeting intents and conflict cleanup back on final key expiry', async () => withScheduleAppointmentFixture(async ({ sheetService, context, ownId, busyId, customer, meetingId, requestId }: any) => {
+  await customer.table('schedule_conflicts').insert({ tenant: context.tenant, entry_id_1: ownId, entry_id_2: busyId, conflict_type: 'overlap' });
+  await db.raw(`CREATE FUNCTION expire_schedule_relation_key() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN UPDATE api_keys SET expires_at = clock_timestamp() - interval '1 second' WHERE tenant = NEW.tenant AND api_key_id = '${context.apiKeyId}'::uuid; RETURN NEW; END $$`);
+  await db.raw('CREATE TRIGGER expire_schedule_relation_key AFTER UPDATE ON online_meetings FOR EACH ROW EXECUTE FUNCTION expire_schedule_relation_key()');
+  try {
+    await expect(sheetService.updateScheduleEntry(ownId, { scheduled_start: '2026-09-15T09:00:00Z', scheduled_end: '2026-09-15T10:00:00Z' }, context)).rejects.toMatchObject({ statusCode: 403 });
+    await expect(sheetService.deleteScheduleEntry(ownId, context)).rejects.toMatchObject({ statusCode: 403 });
+    expect(await customer.table('schedule_entries').where('entry_id', ownId)).toHaveLength(1);
+    expect(await customer.table('schedule_conflicts')).toHaveLength(1);
+    expect(await customer.table('appointment_requests').where('appointment_request_id', requestId).first()).toMatchObject({ status: 'approved', schedule_entry_id: ownId });
+    expect(await customer.table('online_meetings').where('meeting_id', meetingId).first()).toMatchObject({ status: 'scheduled', co_managed_sync_operation_id: null, co_managed_sync_action: null });
+  } finally { await db.raw('DROP TRIGGER expire_schedule_relation_key ON online_meetings'); await db.raw('DROP FUNCTION expire_schedule_relation_key()'); }
 }));
