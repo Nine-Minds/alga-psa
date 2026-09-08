@@ -1,4 +1,5 @@
 import type { NamedConversationReplyAdmission } from './namedConversationReplyAdmission';
+import { hasAcceptedNamedConversationReference, isNamedConversationCorrespondent } from './namedConversationCorrespondents';
 import { htmlToVisibleText } from '../../lib/email/replyParser';
 import { hasNamedConversationReplyHint, isQualifiedReplyToken, qualifiedReplyTokenFromBody, type EmailReplyAdmission, type AdmittedEmailReply } from './qualifiedReplyAdmission';
 import type { EmailMessageDetails } from '../../interfaces/inbound-email.interfaces';
@@ -147,7 +148,7 @@ export interface ProcessInboundEmailInAppDiagnostics extends Record<string, unkn
   };
   outcome?: {
     kind: 'skipped' | 'deduped' | 'replied' | 'created' | 'quarantined';
-    matchedBy?: 'reply_token' | 'thread_headers';
+    matchedBy?: 'reply_token' | 'thread_headers' | 'correspondent';
     ticketId?: string;
     ticketNumber?: string;
     commentId?: string;
@@ -195,7 +196,7 @@ type ProcessInboundEmailInAppBaseResult =
   | {
       outcome: 'quarantined';
       reason: 'conversation_reply_requires_admission';
-      matchedBy: 'reply_token' | 'thread_headers';
+      matchedBy: 'reply_token' | 'thread_headers' | 'correspondent';
     };
 
 export type ProcessInboundEmailInAppResult = ProcessInboundEmailInAppBaseResult & {
@@ -1072,11 +1073,20 @@ export async function processInboundEmailInApp(
   const reservedQualifiedToken = qualifiedReplyTokenFromBody(emailData.body);
   // Named replies use their own qualified destination writer. An unconfigured
   // composition retains them in protected review without legacy matching.
-  if (hasNamedConversationReplyHint(emailData)) {
-    if (durableExecution?.namedConversationReplyAdmission) return durableExecution.namedConversationReplyAdmission(durableExecution.trx, {
+  if (durableExecution?.namedConversationReplyAdmission) {
+    const named = await durableExecution.namedConversationReplyAdmission(durableExecution.trx, {
       tenant: tenantId, providerId, inboxId: durableExecution.inboxId, email: emailData, senderAuth: senderAuthResults,
     });
+    if (named) return named;
+  }
+  if (hasNamedConversationReplyHint(emailData)) {
     return { outcome: 'quarantined', reason: 'conversation_reply_requires_admission', matchedBy: hasNamedConversationReplyHint({ body: emailData.body }) ? 'reply_token' : 'thread_headers' };
+  }
+  if (durableExecution && !durableExecution.namedConversationReplyAdmission) {
+    if (await hasAcceptedNamedConversationReference(durableExecution.trx, tenantId, providerId, emailData))
+      return { outcome: 'quarantined', reason: 'conversation_reply_requires_admission', matchedBy: 'thread_headers' };
+    if (!reservedQualifiedToken && await isNamedConversationCorrespondent(durableExecution.trx, tenantId, providerId, emailData.from.email))
+      return { outcome: 'quarantined', reason: 'conversation_reply_requires_admission', matchedBy: 'correspondent' };
   }
   const existingTicket = reservedQualifiedToken ? null : await findExistingEmailTicket({
     tenantId,

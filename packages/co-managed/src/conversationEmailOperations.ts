@@ -13,6 +13,7 @@ import { conversationUuid, snapshotConversationReference, snapshotConversationTi
 import type { PublishedConversationEmail, ReviewedEmailAddress, ReviewedEmailPreview } from '@alga-psa/shared/lib/email/reviewedEmail';
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
 import { coManagedConversationAuthorSources } from './conversationPolicy';
+import { rememberNamedConversationCorrespondents } from '@alga-psa/shared/services/email/namedConversationCorrespondents';
 import type { CoManagedConversationItem } from './ticketConversation';
 
 export interface NamedConversationEmailRequest { operationId: string; expectedDraftRevision: number; expectedConversationRevision: number }
@@ -125,10 +126,12 @@ export function confirmNamedConversationEmail(db: Knex, actor: CoManagedSessionA
         messageId: row.rfc_message_id, mailbox: { tenant: mailbox.tenant, id: mailbox.id } };
       await tenantDb(current.trx, ref.storeTenant).table('ticket_conversation_publications').where({ operation_id: id, conversation_id: ref.conversationId })
         .update({ email_envelope: JSON.stringify(envelope) });
-      await tenantDb(current.trx, mailbox.tenant).table('ticket_conversation_email_routes').insert({ tenant: mailbox.tenant, mailbox_id: mailbox.id,
+      const route = { tenant: mailbox.tenant, mailbox_id: mailbox.id,
         token_hash: row.reply_token_hash, rfc_message_id: row.rfc_message_id, operation_tenant: current.actor.tenant, operation_id: id,
         ticket_tenant: current.ticket.tenant, ticket_id: current.ticket.ticketId, relationship_id: current.ticket.relationshipId ?? null,
-        conversation_store_tenant: ref.storeTenant, conversation_id: ref.conversationId });
+        conversation_store_tenant: ref.storeTenant, conversation_id: ref.conversationId };
+      await tenantDb(current.trx, mailbox.tenant).table('ticket_conversation_email_routes').insert(route);
+      await rememberNamedConversationCorrespondents(current.trx, route, [...envelope.to, ...envelope.cc]);
       const [saved] = await operation(current, id).update({ status: 'pending' }).returning('*');
       return state(saved);
     });

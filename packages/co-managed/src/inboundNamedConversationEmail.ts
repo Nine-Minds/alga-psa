@@ -9,6 +9,8 @@ import { TicketConversationError, conversationUuid, readStoredTicketConversation
 import type { NamedConversationReplyAdmission } from '@alga-psa/shared/services/email/namedConversationReplyAdmission';
 import { plainTextContent } from './conversationContent';
 import { reviewConversationEmailDraft } from '@alga-psa/shared/lib/tickets/conversationEmailEnvelope';
+import { hasNamedConversationReplyHint, qualifiedReplyTokenFromBody } from '@alga-psa/shared/services/email/qualifiedReplyAdmission';
+import { isNamedConversationCorrespondent, rememberNamedConversationCorrespondents } from '@alga-psa/shared/services/email/namedConversationCorrespondents';
 
 const RECEIPTS = 'ticket_conversation_inbound_receipts', MESSAGES = 'ticket_conversation_inbound_messages';
 class ReplyRejected extends Error {}
@@ -26,30 +28,45 @@ function evidence(email: Parameters<NamedConversationReplyAdmission>[1]['email']
     const pattern = /(?:ALGA-REPLY-TOKEN[\s:]+|data-alga-reply-token\s*=\s*["']|alga:reply-token:)([^\s<>"'\]]*?)(?=-->|[\s<>"'\]]|$)/gi;
     for (const match of (content ?? '').matchAll(pattern)) tokens.add(match[1]);
   }
-  if (tokens.size > 100 || [...tokens].some(token => !/^tc1:[A-Za-z0-9_-]{43}$/.test(token))) return reject();
   const headers = [...new Set([email.inReplyTo, ...(email.references ?? []).slice().reverse()].filter((value): value is string => Boolean(value))
-    .map(normalizeId).filter(value => /^<conversation-/i.test(value)))];
-  if (headers.length > 100 || (!tokens.size && !headers.length)) return reject();
+    .map(normalizeId))];
+  if (tokens.size > 100 || headers.length > 100) return reject();
   return { tokens: [...tokens], headers };
 }
 async function routeFor(trx: Knex.Transaction, tenant: string, providerId: string, email: Parameters<NamedConversationReplyAdmission>[1]['email']) {
   const hints = evidence(email), routes: any[] = [];
+  let replyParent: any = null;
   for (const id of hints.headers) {
     const found = await tenantDb(trx, tenant).table('ticket_conversation_email_routes').where({ mailbox_id: providerId, rfc_message_id: id }).forShare().first();
-    if (!found) return reject(); routes.push(found);
+    if (found) routes.push(found);
+    else if (/^<conversation-/i.test(id)) return reject();
+    // A colleague may reply to a previously accepted vendor message, dropping
+    // both our token and the original outgoing reference from the thread.
+    const receipts = await tenantDb(trx, tenant).table(RECEIPTS).where({ provider_id: providerId })
+      .whereRaw("envelope->>'messageId' = ?", [id]).forShare().select('*');
+    if (receipts.length > 1 || (found && receipts.length)) return reject();
+    for (const receipt of receipts) {
+      const prior = await tenantDb(trx, tenant).table('ticket_conversation_email_routes').where({ mailbox_id: providerId,
+        operation_tenant: receipt.route_operation_tenant, operation_id: receipt.route_operation_id }).forShare().first();
+      if (!prior) return reject();
+      if (!routes.length) replyParent = receipt;
+      routes.push(prior);
+    }
   }
+  if (!routes.length && !hasNamedConversationReplyHint(email)) return null;
+  if (hints.tokens.some(token => !/^tc1:[A-Za-z0-9_-]{43}$/.test(token))) return reject();
   for (const token of hints.tokens) {
     const found = await tenantDb(trx, tenant).table('ticket_conversation_email_routes').where({ mailbox_id: providerId, token_hash: digest(token) }).forShare().first();
     if (!found) return reject(); routes.push(found);
   }
   const first = routes[0];
   if (!first || routes.some(row => ['ticket_tenant', 'ticket_id', 'relationship_id', 'conversation_store_tenant', 'conversation_id'].some(key => row[key] !== first[key]))) return reject();
-  return { route: first, matchedBy: hints.tokens.length ? 'reply_token' as const : 'thread_headers' as const };
+  return { route: first, replyParent, matchedBy: hints.tokens.length ? 'reply_token' as const : 'thread_headers' as const };
 }
 /** Intake is an organization capability issued by an accepted Send, not a
  * borrowed staff session. Current mailbox, relationship and collaboration scope
  * must still permit receiving into this exact audience/store. */
-async function destination(trx: Knex.Transaction, route: any) {
+async function destination(trx: Knex.Transaction, route: any, replyParent?: any) {
   const owner = tenantDb(trx, route.ticket_tenant);
   for (const tenant of new Set<string>([route.tenant, route.ticket_tenant, route.conversation_store_tenant])) await assertCoManagedOperationalWrite(trx, tenant);
   const mailbox = await tenantDb(trx, route.tenant).table('email_providers').where({ id: route.mailbox_id, is_active: true, status: 'connected' }).forShare().first('mailbox');
@@ -81,11 +98,13 @@ async function destination(trx: Knex.Transaction, route: any) {
     .where({ thread_id: source.thread_id, conversation_id: conversation.conversationId }).forShare().first();
   if (!thread || (privateStore && thread.disclosure_operation_id)) return reject();
   const comments = privateStore ? 'co_management_private_comments' : 'comments';
-  for (const commentId of new Set([source.comment_id, thread.root_comment_id])) {
+  if (replyParent && (replyParent.conversation_store_tenant !== conversation.storeTenant || replyParent.conversation_id !== conversation.conversationId ||
+    replyParent.thread_id !== thread.thread_id || replyParent.ticket_tenant !== route.ticket_tenant || replyParent.ticket_id !== route.ticket_id)) return reject();
+  for (const commentId of new Set([source.comment_id, thread.root_comment_id, ...(replyParent ? [replyParent.comment_id] : [])])) {
     const row = await store.table(comments).where({ thread_id: thread.thread_id, comment_id: commentId }).whereNull('deleted_at').forShare().first();
     if (!row || (!privateStore && (row.publish_state !== 'published' || !row.is_internal || thread.collaboration_audience !== conversation.audience))) return reject();
   }
-  return { conversation, source, privateStore, store };
+  return { conversation, source: replyParent ? { ...source, comment_id: replyParent.comment_id } : source, privateStore, store };
 }
 export const admitNamedConversationEmailReply: NamedConversationReplyAdmission = async (outer, input) => {
   if (!outer?.isTransaction || ![input.tenant, input.providerId, input.inboxId].every(conversationUuid)) throw new Error('Named replies require a qualified durable inbox transaction');
@@ -95,12 +114,20 @@ export const admitNamedConversationEmailReply: NamedConversationReplyAdmission =
   input = { ...input, email, senderAuth: sourceAuth };
   try {
     return await outer.transaction(async trx => {
+      const home = tenantDb(trx, input.tenant);
+      const resolved = await routeFor(trx, input.tenant, input.providerId, email);
+      if (!resolved) {
+        // Explicit cm1/cm2 tokens retain their existing guarded admission. A
+        // subject or bare sender address never chooses a vendor destination.
+        if (qualifiedReplyTokenFromBody(email.body) || !await isNamedConversationCorrespondent(trx, input.tenant, input.providerId, email.from.email)) return null;
+        return { outcome: 'quarantined' as const, reason: 'conversation_reply_requires_admission' as const, matchedBy: 'correspondent' as const };
+      }
       if (!allowsContactSenderAttribution(sourceAuth)) return reject();
-      const home = tenantDb(trx, input.tenant), from = address(email.from);
+      const from = address(email.from);
       const inbox = await home.table('inbound_email_inbox').where({ inbox_id: input.inboxId, provider_id: input.providerId, status: 'processing' }).forUpdate().first();
       if (!inbox?.source_object_key || !inbox.source_sha256 || inbox.source_sha256 !== email.sourceSha256 || email.tenant !== input.tenant || email.providerId !== input.providerId) return reject();
-      const { route, matchedBy } = await routeFor(trx, input.tenant, input.providerId, email);
-      const { conversation, source, privateStore, store } = await destination(trx, route);
+      const { route, matchedBy, replyParent } = resolved;
+      const { conversation, source, privateStore, store } = await destination(trx, route, replyParent);
       const previous = await home.table(RECEIPTS).where({ provider_id: input.providerId, normalized_message_id: inbox.normalized_message_id }).forShare().first();
       if (previous) {
         if (previous.source_sha256 !== inbox.source_sha256 || previous.conversation_store_tenant !== conversation.storeTenant || previous.conversation_id !== conversation.conversationId) return reject();
@@ -141,6 +168,7 @@ export const admitNamedConversationEmailReply: NamedConversationReplyAdmission =
         source_sha256: inbox.source_sha256, ticket_tenant: route.ticket_tenant, ticket_id: route.ticket_id, relationship_id: route.relationship_id,
         conversation_store_tenant: conversation.storeTenant, conversation_id: conversation.conversationId, thread_id: source.thread_id, comment_id: commentId,
         route_operation_tenant: route.operation_tenant, route_operation_id: route.operation_id, sender_auth: JSON.stringify(sourceAuth), envelope: JSON.stringify(envelope) });
+      await rememberNamedConversationCorrespondents(trx, route, [from]);
       await store.table('ticket_conversations').where('conversation_id', conversation.conversationId).update({ status: 'open',
         revision: conversation.revision + (conversation.status === 'done' ? 1 : 0), message_version: trx.raw('message_version + 1'), updated_at: trx.fn.now() });
       return { outcome: 'replied' as const, ticketId: route.ticket_id, commentId, matchedBy };

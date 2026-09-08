@@ -34,6 +34,7 @@ import { processInboundEmailArtifactsBestEffort } from './processInboundEmailArt
 import { ORIGINAL_EMAIL_ATTACHMENT_ID, extractEmbeddedImageAttachments, sanitizeGeneratedFileName } from './inboundEmailArtifactHelpers';
 import { hasNamedConversationReplyHint, qualifiedReplyTokenFromBody } from './qualifiedReplyAdmission';
 import type { QualifiedReplyArtifactProcessor, QualifiedReplyArtifactInput } from './qualifiedReplyArtifacts';
+import { tenantDb } from '@alga-psa/db';
 
 const TERMINAL_ARTIFACT_STATUSES = new Set(['succeeded', 'skipped', 'terminal_failed']);
 
@@ -163,10 +164,11 @@ export async function processInboundArtifactJob(
     return { disposition: 'retry', error: message };
   }
 
-  // Use the digest-verified original MIME, not editable comment metadata, to
-  // select the protected artifact path. Its conversation adapter must preserve
-  // current thread authority; native folder defaults cannot decide visibility.
-  const namedReply = hasNamedConversationReplyHint(parsed.emailData);
+  // The admitted receipt also covers replies referencing an accepted vendor
+  // message with no surviving Alga marker. Editable comment metadata cannot
+  // select visibility, and absence of a token cannot make these files public.
+  const namedReply = hasNamedConversationReplyHint(parsed.emailData) || Boolean(await tenantDb(db, inbox.tenant)
+    .table('ticket_conversation_inbound_receipts').where({ inbox_id: inbox.inbox_id, provider_id: inbox.provider_id }).first('inbox_id'));
   if (namedReply || /^cm2:/i.test(qualifiedReplyTokenFromBody(parsed.emailData.body) ?? '')) {
     let reason = namedReply ? 'named_conversation_artifact_admission_pending' : 'co_managed_artifact_admission_pending';
     if (qualifiedReplyArtifacts && !namedReply) {
