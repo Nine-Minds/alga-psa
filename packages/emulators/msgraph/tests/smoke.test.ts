@@ -3,6 +3,7 @@ import { createLocalJWKSet, jwtVerify } from 'jose';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { EmulatorHost } from '@alga-psa/emulator-host';
 import msgraphEmulator from '../src/index';
+import { oauthTokenResponse } from './contracts/oauth';
 
 /**
  * Parity port of test-harness/graph-emulator/smoke.test.mjs, driven through
@@ -124,6 +125,10 @@ describe('msgraph emulator', { shuffle: false }, () => {
     );
     expect(tokenResponse.status).toBe(200);
     const tokens = await tokenResponse.json();
+    expect(oauthTokenResponse.safeParse(tokens).success).toBe(true);
+    // Deliberate wire-response drift must fail even if a token is present.
+    expect(oauthTokenResponse.safeParse({ ...tokens, expires_in: String(tokens.expires_in) }).success).toBe(false);
+    expect(oauthTokenResponse.safeParse({ ...tokens, token_type: 'Basic' }).success).toBe(false);
     const delegatedScopes = (token: string) => JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString()).scp;
     expect(delegatedScopes(tokens.access_token)).toBe('Mail.Read Mail.Send offline_access');
     expect(tokens.refresh_token).toBeTruthy();
@@ -140,6 +145,7 @@ describe('msgraph emulator', { shuffle: false }, () => {
     );
     expect(refreshed.status).toBe(200);
     const refreshedTokens = await refreshed.json();
+    expect(oauthTokenResponse.safeParse(refreshedTokens).success).toBe(true);
     expect(delegatedScopes(refreshedTokens.access_token)).toBe('Mail.Read Mail.Send offline_access');
     accessToken = refreshedTokens.access_token;
     refreshToken = refreshedTokens.refresh_token;
@@ -396,6 +402,7 @@ describe('msgraph emulator', { shuffle: false }, () => {
     expect(tokenResponse.status).toBe(200);
     const tokens = await tokenResponse.json();
     expect(tokens.refresh_token).toBeUndefined();
+    expect(oauthTokenResponse.safeParse(tokens).success).toBe(true);
     botToken = tokens.access_token;
 
     const headers = { authorization: `Bearer ${botToken}`, 'content-type': 'application/json' };

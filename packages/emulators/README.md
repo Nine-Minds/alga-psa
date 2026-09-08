@@ -217,6 +217,23 @@ errors retain their separate format. This is partial contract coverage: callback
 OAuth, bot and other provider contracts still require independent parity checks.
 No live Microsoft sandbox drift verification has been performed.
 
+The following Microsoft contract boundaries are independently checked. These
+checks run in the normal msgraph Vitest suite against local HTTP listeners.
+
+| Surface | Contract evidence | Remaining limitation |
+| --- | --- | --- |
+| Calendar create/error responses | `tests/contracts/calendar.ts` and real HTTP checks in `calendar.test.ts`; malformed event/error bodies and wrong create status fail | Consumed fields only; no full event schema or live sandbox comparison |
+| OAuth token responses | `tests/contracts/oauth.ts` applied to code, refresh and client-credential responses in `smoke.test.ts`; wrong expiry type and bearer type fail | Opaque token envelope only; does not establish Entra signatures, consent, PKCE, SSO, or complete scope-dependent token issuance parity |
+| Subscription validation | `calendar.test.ts` verifies request method/content type, accepts only 200/plain-text matching token responses, and verifies rejected callbacks leave no subscription | HTTP loopback transport; real HTTPS trust and tenant registration require application/sandbox coverage |
+
+OAuth response reference: [Microsoft authorization code flow](https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-auth-code-flow).
+Subscription reference: [Graph webhook validation](https://learn.microsoft.com/en-us/graph/change-notifications-delivery-webhooks#notificationurl-validation).
+Both were reviewed 2026-09-08. Validation requests have a ten-second deadline,
+including reading the response body, and do not follow redirects. Notification
+payload contracts, provider-specific auth errors and non-Microsoft providers
+still need independent contract coverage; a green emulator suite does not claim
+those contracts have been verified.
+
 Unimplemented `/v1.0` Graph routes return HTTP 501 with
 `error.code: EmulatorUnsupportedOperation`. This is an emulator capability
 error, not a claim that Microsoft Graph returns the same response. Implemented

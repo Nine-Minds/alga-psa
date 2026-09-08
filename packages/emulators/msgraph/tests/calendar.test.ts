@@ -11,6 +11,7 @@ let token: string;
 let receiver: http.Server;
 let callback: string;
 const notifications: Array<{ path: string; body: any }> = [];
+const validationRequests: Array<{ method?: string; contentType?: string }> = [];
 
 async function controlPost(path: string, body = {}) {
   const response = await fetch(`${control}/control/msgraph/${path}`, {
@@ -38,6 +39,13 @@ beforeAll(async () => {
   receiver = http.createServer(async (req, res) => {
     const url = new URL(req.url!, 'http://localhost');
     if (url.searchParams.has('validationToken')) {
+      validationRequests.push({ method: req.method, contentType: req.headers['content-type'] });
+      if (url.pathname === '/validation-contract') {
+        const type = url.searchParams.get('type');
+        res.writeHead(Number(url.searchParams.get('status') || 200), type ? { 'content-type': type } : {});
+        res.end(url.searchParams.get('wrong') ? 'wrong-token' : url.searchParams.get('validationToken'));
+        return;
+      }
       res.writeHead(200, { 'content-type': 'text/plain' }).end(url.searchParams.get('validationToken'));
       return;
     }
@@ -70,6 +78,7 @@ async function signIn(clientId = 'calendar-client') {
 }
 beforeEach(async () => {
   notifications.length = 0;
+  validationRequests.length = 0;
   await controlPost('reset');
   await signIn();
 });
@@ -349,4 +358,27 @@ it('matches the documented calendar response contract and detects malformed prov
   expect(missing.status).toBe(404);
   expect(graphErrorResponse.safeParse(errorResponse).success).toBe(true);
   expect(graphErrorResponse.safeParse({ ...errorResponse, body: { message: 'Missing' } }).success).toBe(false);
+});
+
+// Independent protocol reference, reviewed 2026-09-08:
+// https://learn.microsoft.com/en-us/graph/change-notifications-delivery-webhooks#notificationurl-validation
+it.each([
+  [200, 'text/plain', false, true],
+  [200, 'text/plain; charset=utf-8', false, true],
+  [202, 'text/plain', false, false],
+  [200, 'application/json', false, false],
+  [200, '', false, false],
+  [200, 'text/plain', true, false],
+  [302, 'text/plain', false, false],
+])('validates subscription callback status=%s type=%s wrongToken=%s', async (status, type, wrong, accepted) => {
+  const query = new URLSearchParams({ status: String(status), type: String(type), ...(wrong ? { wrong: '1' } : {}) });
+  const response = await graph('/subscriptions', 'POST', {
+    resource: '/me/calendar/events', changeType: 'created',
+    notificationUrl: `${callback}/validation-contract?${query}`, clientState: 'contract-state',
+    expirationDateTime: new Date(Date.now() + 3600000).toISOString(),
+  });
+  expect(response.status).toBe(accepted ? 201 : 400);
+  expect(validationRequests).toEqual([{ method: 'POST', contentType: 'text/plain; charset=utf-8' }]);
+  const subscriptions = await (await graph('/subscriptions')).json();
+  expect(subscriptions.value).toHaveLength(accepted ? 1 : 0);
 });

@@ -32,11 +32,15 @@ const SCOPED_SUBSCRIPTION_RESOURCES = new Set<string>([
  * redirecting notificationUrl pass here and fail in production.
  */
 export async function validateNotificationUrl(notificationUrl: string, validationToken: string): Promise<boolean> {
-  const url = new URL(notificationUrl);
-  url.searchParams.set('validationToken', validationToken);
   try {
-    const response = await fetch(url, { method: 'POST', redirect: 'manual' });
-    return response.ok && (await response.text()) === validationToken;
+    const url = new URL(notificationUrl);
+    url.searchParams.set('validationToken', validationToken);
+    const response = await fetch(url, {
+      method: 'POST', redirect: 'manual', signal: AbortSignal.timeout(10000),
+      headers: { 'content-type': 'text/plain; charset=utf-8' },
+    });
+    const mediaType = response.headers.get('content-type')?.split(';', 1)[0].trim().toLowerCase();
+    return response.status === 200 && mediaType === 'text/plain' && (await response.text()) === validationToken;
   } catch {
     return false;
   }
