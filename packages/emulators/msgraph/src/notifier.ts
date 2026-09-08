@@ -1,3 +1,4 @@
+import { EMULATED_TENANT_ID } from './core';
 import type { HostEnv } from '@alga-psa/emulator-host';
 import { signBotFrameworkJwt } from './botFramework';
 import type {
@@ -9,6 +10,16 @@ import type {
   InboundBotActivityInput,
   MsGraphCore,
 } from './core';
+
+// The emulator's OAuth tokens and notifications use the same single Entra tenant.
+function subscriptionMetadata(subscription: GraphSubscription) {
+  return {
+    subscriptionId: subscription.id,
+    subscriptionExpirationDateTime: subscription.expirationDateTime,
+    tenantId: EMULATED_TENANT_ID,
+    clientState: subscription.clientState,
+  };
+}
 
 const ARTIFACT_SUBSCRIPTION_RESOURCES = {
   recording: 'communications/onlineMeetings/getAllRecordings',
@@ -85,7 +96,7 @@ export async function deliverCalendarNotifications(
       const response = await fetch(subscription.notificationUrl, {
         method: 'POST', redirect: 'manual', signal: AbortSignal.timeout(10000),
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ value: [{ subscriptionId: subscription.id, clientState: subscription.clientState,
+        body: JSON.stringify({ value: [{ ...subscriptionMetadata(subscription),
           changeType, resource, resourceData: { id: event.id, '@odata.type': '#Microsoft.Graph.Event', '@odata.id': resource } }] }),
       });
       return { subscriptionId: subscription.id, notificationUrl: subscription.notificationUrl, delivered: response.ok, status: response.status };
@@ -116,8 +127,7 @@ export async function deliverMeetingArtifactNotifications(
     const body = {
       value: [
         {
-          subscriptionId: subscription.id,
-          clientState: subscription.clientState,
+          ...subscriptionMetadata(subscription),
           changeType: 'created',
           resource: `communications/onlineMeetings('${artifact.meetingId}')/${kindSegment}('${artifact.id}')`,
           resourceData: {
@@ -175,8 +185,7 @@ export async function deliverCallRecordNotifications(
     const body = {
       value: [
         {
-          subscriptionId: subscription.id,
-          clientState: subscription.clientState,
+          ...subscriptionMetadata(subscription),
           changeType: 'created',
           resource: `communications/callRecords('${record.id}')`,
           resourceData: {
@@ -226,8 +235,7 @@ async function deliverOne(subscription: GraphSubscription, message: GraphMessage
       body: JSON.stringify({
         value: [
           {
-            subscriptionId: subscription.id,
-            clientState: subscription.clientState,
+            ...subscriptionMetadata(subscription),
             changeType: 'created',
             resource: `${subscription.resource}/${message.id}`,
             resourceData: { id: message.id },

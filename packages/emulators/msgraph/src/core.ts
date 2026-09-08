@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { Temporal } from '@js-temporal/polyfill';
 import type { EmulatorCore, HostEnv } from '@alga-psa/emulator-host';
 
@@ -833,7 +834,11 @@ export class MsGraphCore implements EmulatorCore {
   // --- Subscriptions ---
 
   createSubscription(clientId: string, input: Omit<GraphSubscription, 'id' | 'clientId'>): GraphSubscription {
-    const subscription: GraphSubscription = { ...input, id: this.newId('subscription'), clientId };
+    // Graph exposes subscription IDs as GUIDs. Derive one from the seeded ID
+    // stream so reset/replay stays deterministic without loosening the wire shape.
+    const hash = createHash('sha256').update(this.newId('subscription')).digest('hex');
+    const id = `${hash.slice(0, 8)}-${hash.slice(8, 12)}-4${hash.slice(13, 16)}-8${hash.slice(17, 20)}-${hash.slice(20, 32)}`;
+    const subscription: GraphSubscription = { ...input, id, clientId };
     this.subscriptions.set(subscription.id, subscription);
     return subscription;
   }

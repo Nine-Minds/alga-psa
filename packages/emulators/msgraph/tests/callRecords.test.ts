@@ -1,3 +1,4 @@
+import { changeNotifications } from './contracts/notifications';
 import http from 'node:http';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -152,6 +153,7 @@ describe('msgraph call records', { shuffle: false }, () => {
 
     callRecordId = seeded.result.callRecord.id;
     const notification = notifications[before];
+    expect(changeNotifications.safeParse(notification).success).toBe(true);
     expect(notification.value[0].resource).toBe(`communications/callRecords('${callRecordId}')`);
     expect(notification.value[0].clientState).toBe('telephony-call-records:tenant-1:teams-phone:secret');
   });

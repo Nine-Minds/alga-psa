@@ -1,5 +1,6 @@
+import { changeNotifications } from './contracts/notifications';
 import http from 'node:http';
-import { createLocalJWKSet, jwtVerify } from 'jose';
+import { createLocalJWKSet, decodeJwt, jwtVerify } from 'jose';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { EmulatorHost } from '@alga-psa/emulator-host';
 import msgraphEmulator from '../src/index';
@@ -236,6 +237,7 @@ describe('msgraph emulator', { shuffle: false }, () => {
       }),
     });
     expect(subscription.status).toBe(201);
+    const savedSubscription = await subscription.json() as any;
 
     const badSubscription = await fetch(`${base}/v1.0/subscriptions`, {
       method: 'POST',
@@ -261,6 +263,23 @@ describe('msgraph emulator', { shuffle: false }, () => {
     expect(raw.headers.get('content-type')).toContain('message/rfc822');
     expect(await raw.text()).toContain('Subject: Backfill me');
 
+    expect(changeNotifications.safeParse(notifications[0]).success).toBe(true);
+    expect(notifications[0].value[0]).toMatchObject({
+      subscriptionId: savedSubscription.id,
+      subscriptionExpirationDateTime: savedSubscription.expirationDateTime,
+      tenantId: decodeJwt(accessToken).tid,
+    });
+    for (const field of ['subscriptionId', 'subscriptionExpirationDateTime', 'tenantId', 'changeType', 'resource']) {
+      const malformed = structuredClone(notifications[0]);
+      delete malformed.value[0][field];
+      expect(changeNotifications.safeParse(malformed).success, field).toBe(false);
+    }
+    for (const [field, value] of Object.entries({ subscriptionId: 'not-a-guid', tenantId: 'not-a-guid',
+      subscriptionExpirationDateTime: 'not-a-date', changeType: 'upserted' })) {
+      const malformed = structuredClone(notifications[0]);
+      malformed.value[0][field] = value;
+      expect(changeNotifications.safeParse(malformed).success, field).toBe(false);
+    }
     expect(notifications[0].value[0].resourceData.id).toBe(message.id);
     expect(notifications[0].value[0].clientState).toBe('secret-state');
   });
@@ -567,6 +586,7 @@ describe('msgraph emulator', { shuffle: false }, () => {
     expect(seeded.result.deliveries).toHaveLength(1);
     expect(seeded.result.deliveries[0].delivered).toBe(true);
     const artifactNotification = notifications[notificationsBefore];
+    expect(changeNotifications.safeParse(artifactNotification).success).toBe(true);
     expect(artifactNotification.value[0].resource).toBe(
       `communications/onlineMeetings('${meetingId}')/recordings('${seeded.result.artifact.id}')`,
     );

@@ -1,3 +1,4 @@
+import { changeNotifications } from './contracts/notifications';
 import { afterAll, beforeAll, beforeEach, expect, it } from 'vitest';
 import { EmulatorHost } from '@alga-psa/emulator-host';
 import msgraph from '../src/index';
@@ -254,6 +255,7 @@ it('routes created/updated/deleted calendar notifications separately from mail, 
   const created = await createEvent();
   expect((await graph(`/me/calendar/events/${created.id}`, 'PATCH', { subject: 'Changed' })).status).toBe(200);
   expect((await graph(`/me/calendar/events/${created.id}`, 'DELETE')).status).toBe(204);
+  for (const notification of notifications) expect(changeNotifications.safeParse(notification.body).success).toBe(true);
   const changes = notifications.filter(x => x.path === '/calendar').map(x => x.body.value[0]);
   expect(changes.map(x => x.changeType)).toEqual(['created', 'updated', 'deleted']);
   for (const change of changes) expect(change).toMatchObject({ subscriptionId: all.id, clientState: 'state-/calendar', resourceData: { id: created.id } });

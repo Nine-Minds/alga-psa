@@ -225,14 +225,18 @@ checks run in the normal msgraph Vitest suite against local HTTP listeners.
 | Calendar create/error responses | `tests/contracts/calendar.ts` and real HTTP checks in `calendar.test.ts`; malformed event/error bodies and wrong create status fail | Consumed fields only; no full event schema or live sandbox comparison |
 | OAuth token responses | `tests/contracts/oauth.ts` applied to code, refresh and client-credential responses in `smoke.test.ts`; wrong expiry type and bearer type fail | Opaque token envelope only; does not establish Entra signatures, consent, PKCE, SSO, or complete scope-dependent token issuance parity |
 | Subscription validation | `calendar.test.ts` verifies request method/content type, accepts only 200/plain-text matching token responses, and verifies rejected callbacks leave no subscription | HTTP loopback transport; real HTTPS trust and tenant registration require application/sandbox coverage |
+| Basic change notifications | `tests/contracts/notifications.ts` validates real mail, calendar, meeting-artifact and call-record callbacks; deleting required fields or corrupting GUIDs, expiry and change type fails. Mail checks compare tenant to the OAuth claim and ID/expiry to the created subscription | Single emulated Entra tenant; resource-specific encrypted payloads, lifecycle notifications and live sandbox drift remain unverified |
 
 OAuth response reference: [Microsoft authorization code flow](https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-auth-code-flow).
 Subscription reference: [Graph webhook validation](https://learn.microsoft.com/en-us/graph/change-notifications-delivery-webhooks#notificationurl-validation).
 Both were reviewed 2026-09-08. Validation requests have a ten-second deadline,
-including reading the response body, and do not follow redirects. Notification
-payload contracts, provider-specific auth errors and non-Microsoft providers
-still need independent contract coverage; a green emulator suite does not claim
-those contracts have been verified.
+including reading the response body, and do not follow redirects. Basic callback
+metadata follows the [changeNotification resource contract](https://learn.microsoft.com/en-us/graph/api/resources/changenotification?view=graph-rest-1.0),
+reviewed 2026-09-08: GUID subscription/tenant IDs, subscription expiration,
+change type and resource. Subscription GUIDs are derived from the seeded ID
+stream, preserving deterministic replay. Resource-specific rich notification
+payloads, lifecycle events and remaining provider auth/error surfaces still need
+independent checks; a green emulator suite does not establish those contracts.
 
 Explicit delegated OAuth scope requests now receive a refresh token only when
 they include `offline_access` as a complete scope. App-only grants never create
