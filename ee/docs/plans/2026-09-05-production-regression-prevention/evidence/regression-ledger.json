@@ -781,6 +781,41 @@
         "Host development execution is diagnostic evidence, not a production image or current-source GitHub CI attestation.",
         "The separate CI invoice-generation connection acquisition timeout did not reproduce in two host runs; its resource-exhaustion cause remains unconfirmed."
       ]
+    },
+    {
+      "id": "microsoft-all-day-calendar-3348",
+      "classification": "reported-production-defect",
+      "incident": "https://github.com/Nine-Minds/alga-psa/issues/3348",
+      "journey": "Synchronize and edit a Microsoft all-day calendar event without changing its dates",
+      "missingBoundary": "Graph input contract and exclusive date-only end through shared schedule mapping",
+      "ownerRole": "Integration and scheduling maintainers",
+      "testFiles": [
+        "packages/emulators/msgraph/tests/calendar.test.ts",
+        "packages/integrations/src/utils/calendar/eventMapping.test.ts"
+      ],
+      "ci": {
+        "workflow": ".github/workflows/unit-tests.yml",
+        "job": "Server unit suite + coverage"
+      },
+      "baseRevision": "5fadade66e",
+      "fixRevision": "9c8184185f (adapter); shared mapping follow-up in this commit",
+      "evidence": [
+        "microsoft-all-day-contract.json",
+        "calendar-date-roundtrip.json"
+      ],
+      "before": {
+        "status": "assertion-failed",
+        "assertion": "Permissive emulator accepted invalid dates; corrected emulator exposed real adapter HTTP 400; shared mapper extended exclusive end by almost a day."
+      },
+      "after": {
+        "status": "native-focused-tests-passed",
+        "assertion": "87 Microsoft HTTP/adapter cases pass; shared mapper passes 3 cases in each of UTC, Berlin, and Los Angeles."
+      },
+      "status": "partial-local-before-and-after-verified",
+      "limits": [
+        "Full incident remains open: browser rendering/editor save, deployed timezone behavior, and current-source CI are not yet proven.",
+        "Owner role is provisional; named operational owner still required."
+      ]
     }
   ]
 }

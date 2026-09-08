@@ -132,7 +132,7 @@ export async function mapExternalEventToScheduleEntry(
   const endDate = event.end.dateTime 
     ? new Date(event.end.dateTime)
     : event.end.date 
-      ? new Date(event.end.date + 'T23:59:59Z')
+      ? new Date(event.end.date + 'T00:00:00Z')
       : new Date();
 
   // Extract Alga entry ID from extended properties if present
@@ -230,18 +230,11 @@ export async function mapExternalEventToScheduleEntry(
  * Check if an event is all-day based on start/end times
  */
 function isAllDayEvent(start: Date, end: Date): boolean {
-  const startHour = start.getHours();
-  const startMinute = start.getMinutes();
-  const endHour = end.getHours();
-  const endMinute = end.getMinutes();
-
-  // Consider all-day if starts at midnight and ends at midnight next day
-  // Or if it spans exactly 24 hours starting at midnight
-  return (
-    startHour === 0 && startMinute === 0 &&
-    (endHour === 0 && endMinute === 0 && 
-     end.getTime() - start.getTime() >= 86400000) // At least 24 hours
-  );
+  // Date-only provider values are stored as UTC-midnight sentinels. Their
+  // classification must not depend on the worker's local timezone.
+  const isMidnight = (date: Date) => date.getUTCHours() === 0
+    && date.getUTCMinutes() === 0 && date.getUTCSeconds() === 0 && date.getUTCMilliseconds() === 0;
+  return isMidnight(start) && isMidnight(end) && end.getTime() - start.getTime() >= 86400000;
 }
 
 /**
