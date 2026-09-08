@@ -71,6 +71,12 @@ export async function exportCoManagedPortableVault(db: Knex, inputActor: CoManag
     return result;
   }));
   const original = fingerprint(snapshot);
+  const assertCurrent = async (trx: Knex.Transaction) => {
+    if (!trx.isTransaction) throw new Error('Portable retention requires a transaction');
+    await withCoManagedExportAdmin(trx, actor, async (retained, verified, subject) => {
+      if (fingerprint(await collect(retained, verified, subject)) !== original) throw new CoManagedSharedWorkError();
+    });
+  };
   const vault = await sealPortableCredentialVault(context, snapshot.rows.map(row => ({
     credentialId: row.credential_id, passwordCiphertext: row.password_ciphertext,
     otpSecretCiphertext: row.otp_secret_ciphertext,
@@ -80,6 +86,6 @@ export async function exportCoManagedPortableVault(db: Knex, inputActor: CoManag
     if (fingerprint(await collect(trx, current, subject)) !== original) throw new CoManagedSharedWorkError();
     const credentials = snapshot.rows.map(({ password_ciphertext: _password, otp_secret_ciphertext: _otp,
       encryption_scheme: _scheme, ...metadata }) => metadata);
-    return { vault, credentials, grants: snapshot.grants, associations: snapshot.associations };
+    return { vault, credentials, grants: snapshot.grants, associations: snapshot.associations, assertCurrent };
   });
 }

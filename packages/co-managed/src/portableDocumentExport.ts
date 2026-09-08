@@ -33,7 +33,14 @@ interface SourceBlob { id: string; path: string; size: number; name: string; mim
 interface FileBinding { documentId: string; field: 'file_id' | 'thumbnail_file_id' | 'preview_file_id'; blobId: string }
 
 async function collect(db: Knex, actor: CoManagedSessionActor, databaseSnapshot?: CoManagedPortableSnapshot) {
-  return portableSnapshotTransaction(db, databaseSnapshot, trx => withCoManagedExportAdmin(trx, actor, async (current, verified, subject) => {
+  return portableSnapshotTransaction(db, databaseSnapshot, trx => retainCoManagedPortableDocumentSource(trx, actor));
+}
+
+/** Provider-free source retention for coordinated final delivery admission. */
+export async function retainCoManagedPortableDocumentSource(trx: Knex.Transaction, inputActor: CoManagedSessionActor) {
+  if (!trx.isTransaction) throw new Error('Portable retention requires a transaction');
+  const actor = snapshotCoManagedSessionActor(inputActor);
+  return withCoManagedExportAdmin(trx, actor, async (current, verified, subject) => {
     for (const resource of ['document', 'system_settings']) {
       if (!await hasCoManagedLocalPermission(current, verified, resource, 'read', true)) throw new CoManagedSharedWorkError();
     }
@@ -89,7 +96,7 @@ async function collect(db: Knex, actor: CoManagedSessionActor, databaseSnapshot?
     }
     if (meetings.handled && 'assertCurrent' in meetings) await meetings.assertCurrent?.();
     return { records, blobs, bindings, fileMetadata: [...files.values()], legacyPaths };
-  }));
+  });
 }
 
 const checksum = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
@@ -102,13 +109,16 @@ export async function exportCoManagedPortableDocuments(db: Knex, inputActor: CoM
   const actor = snapshotCoManagedSessionActor(inputActor);
   if (!isCoManagedUuid(packageId)) throw new CoManagedSharedWorkError();
   const snapshot = await collect(db, actor, databaseSnapshot), original = checksum(snapshot);
+  const assertCurrent = async (trx: Knex.Transaction) => {
+    if (checksum(await retainCoManagedPortableDocumentSource(trx, actor)) !== original) throw new CoManagedSharedWorkError();
+  };
   const staged = await stageCoManagedPortableBlobs(snapshot.blobs);
   try {
     const { files } = staged;
-    if (checksum(await collect(db, actor)) !== original) throw new CoManagedSharedWorkError();
+    await portableSnapshotTransaction(db, undefined, assertCurrent);
     const payload = JSON.parse(JSON.stringify({ kind: 'alga-workspace-documents', version: 1, packageId, sourceTenant: actor.tenant,
       records: snapshot.records, references: CO_MANAGED_PORTABLE_DOCUMENT_REFERENCES, fileBindings: snapshot.bindings,
       blobs: snapshot.blobs.map(({ path: _path, ...blob }) => ({ ...blob, sha256: files.find(file => file.id === blob.id)!.sha256 })) }));
-    return { component: { ...payload, sha256: checksum(payload) }, files, dispose: staged.dispose };
+    return { component: { ...payload, sha256: checksum(payload) }, files, dispose: staged.dispose, assertCurrent };
   } catch (error) { await staged.dispose(); throw error; }
 }

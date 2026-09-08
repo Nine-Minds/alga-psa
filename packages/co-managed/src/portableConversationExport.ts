@@ -11,7 +11,14 @@ import { listPublishedCoManagedAttachmentSources } from './conversationAttachmen
 import { stageCoManagedPortableBlobs } from './portableBlobStaging';
 
 async function collect(db: Knex, actor: CoManagedSessionActor, databaseSnapshot?: CoManagedPortableSnapshot) {
-  return portableSnapshotTransaction(db, databaseSnapshot, trx => withCoManagedExportAdmin(trx, actor, async (current, verified, subject) => {
+  return portableSnapshotTransaction(db, databaseSnapshot, trx => retainCoManagedPortableConversationSource(trx, actor));
+}
+
+/** Provider-free source retention for coordinated final delivery admission. */
+export async function retainCoManagedPortableConversationSource(trx: Knex.Transaction, inputActor: CoManagedSessionActor) {
+  if (!trx.isTransaction) throw new Error('Portable retention requires a transaction');
+  const actor = snapshotCoManagedSessionActor(inputActor);
+  return withCoManagedExportAdmin(trx, actor, async (current, verified, subject) => {
     if (!await hasCoManagedLocalPermission(current, verified, 'ticket', 'read', true)) throw new CoManagedSharedWorkError();
     const own = tenantDb(current, actor.tenant);
     const filesExist = own.table('co_management_conversation_attachments as f')
@@ -43,7 +50,7 @@ async function collect(db: Knex, actor: CoManagedSessionActor, databaseSnapshot?
       if (sources.length > 100_000) throw new Error('Portable conversation attachment limit exceeded');
     }
     return sources;
-  }));
+  });
 }
 
 const checksum = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
@@ -57,10 +64,13 @@ export async function exportCoManagedPortableConversationFiles(db: Knex, inputAc
   const actor = snapshotCoManagedSessionActor(inputActor);
   if (!isCoManagedUuid(packageId)) throw new CoManagedSharedWorkError();
   const snapshot = await collect(db, actor, databaseSnapshot), original = checksum(snapshot);
+  const assertCurrent = async (trx: Knex.Transaction) => {
+    if (checksum(await retainCoManagedPortableConversationSource(trx, actor)) !== original) throw new CoManagedSharedWorkError();
+  };
   const staged = await stageCoManagedPortableBlobs(snapshot.map(({ attachment }) => ({ id: `attachment:${attachment.attachment_id}`,
     path: attachment.storage_path, size: Number(attachment.file_size), sha256: attachment.content_hash })));
   try {
-    if (checksum(await collect(db, actor)) !== original) throw new CoManagedSharedWorkError();
+    await portableSnapshotTransaction(db, undefined, assertCurrent);
     const payload = JSON.parse(JSON.stringify({ kind: 'alga-workspace-conversation-files', version: 1, packageId, sourceTenant: actor.tenant,
       restorePolicy: { attachmentStore: 'native_ticket_documents', sponsorship: 'none' },
       attachments: snapshot.map(({ comment, attachment }) => ({ attachmentId: attachment.attachment_id, blobId: `attachment:${attachment.attachment_id}`,
@@ -68,6 +78,6 @@ export async function exportCoManagedPortableConversationFiles(db: Knex, inputAc
         audience: comment.audience, fileName: attachment.file_name, mimeType: attachment.mime_type, size: Number(attachment.file_size),
         sha256: attachment.content_hash, createdAt: attachment.created_at, actorTenant: attachment.actor_tenant, actorUserId: attachment.actor_user_id,
         actorReferenceId: comment.actor_reference_id, actorDisplayName: comment.actor_display_name, actorOrganizationName: comment.actor_organization_name })) }));
-    return { component: { ...payload, sha256: checksum(payload) }, files: staged.files, dispose: staged.dispose };
+    return { component: { ...payload, sha256: checksum(payload) }, files: staged.files, dispose: staged.dispose, assertCurrent };
   } catch (error) { await staged.dispose(); throw error; }
 }

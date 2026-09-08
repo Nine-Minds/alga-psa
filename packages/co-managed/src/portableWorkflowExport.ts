@@ -66,7 +66,15 @@ export async function exportCoManagedPortableWorkflows(db: Knex, inputActor: CoM
   if (db.isTransaction) throw new Error('Portable export requires a root database connection');
   const actor = snapshotCoManagedSessionActor(inputActor);
   if (!isCoManagedUuid(packageId)) throw new CoManagedSharedWorkError();
-  return portableSnapshotTransaction(db, snapshot, trx => withCoManagedExportAdmin(trx, actor, async (current, verified, subject) => {
+  return portableSnapshotTransaction(db, snapshot, trx => retainCoManagedPortableWorkflows(trx, actor, packageId, snapshot?.capturedAt));
+}
+
+/** Internal retained collector for a final package-wide current-source check. */
+export async function retainCoManagedPortableWorkflows(trx: Knex.Transaction, inputActor: CoManagedSessionActor, packageId: string, capturedAt?: string) {
+  if (!trx.isTransaction) throw new Error('Portable retention requires a transaction');
+  const actor = snapshotCoManagedSessionActor(inputActor);
+  if (!isCoManagedUuid(packageId)) throw new CoManagedSharedWorkError();
+  return withCoManagedExportAdmin(trx, actor, async (current, verified, subject) => {
     // The existing native workflow bundle export requires workflow.admin.
     for (const action of ['admin', 'read']) if (!await hasCoManagedLocalPermission(current, verified, 'workflow', action, true)) throw new CoManagedSharedWorkError();
     const own = tenantDb(current, verified.tenant), records = {} as CoManagedPortableWorkflowRecords;
@@ -95,12 +103,12 @@ export async function exportCoManagedPortableWorkflows(db: Knex, inputActor: CoM
     });
     const [{ captured_at }] = (await current.raw('SELECT transaction_timestamp() AS captured_at')).rows;
     const payload = JSON.parse(JSON.stringify({ kind: 'alga-workspace-workflows', version: 1, packageId, sourceTenant: verified.tenant,
-      capturedAt: snapshot?.capturedAt ?? captured_at, records, references: CO_MANAGED_PORTABLE_WORKFLOW_REFERENCES, referenceValueTypes: CO_MANAGED_PORTABLE_WORKFLOW_VALUE_TYPES,
+      capturedAt: capturedAt ?? captured_at, records, references: CO_MANAGED_PORTABLE_WORKFLOW_REFERENCES, referenceValueTypes: CO_MANAGED_PORTABLE_WORKFLOW_VALUE_TYPES,
       conditionalReferences: [{ table: 'workflow_task_definitions', column: 'form_id', discriminator: 'form_type', equals: 'tenant', parent: 'workflow_form_definitions', parentColumn: 'form_id', valueType: 'text' },
         { table: 'workflow_form_definitions', column: 'created_by', when: 'uuid', parent: 'users', parentColumn: 'user_id', otherwise: 'historical_label' }],
       dependencies, systemForms: [...new Set(records.workflow_task_definitions.filter(row => row.form_type === 'system' && row.form_id).map(row => row.form_id))].sort(),
       restorePolicy: { sponsorship: 'none', workflowStatus: 'draft', workflowsPaused: true, publishedVersions: 'historical_only', forms: 'draft',
         validation: 'rerun', secretReferences: 'reauthorize', connections: 'reauthorize', executionState: 'none', embeddedIdentityRemapping: 'review_before_activation', authoredContent: 'encrypted_package_required' } }));
     return { ...payload, sha256: createHash('sha256').update(JSON.stringify(payload)).digest('hex') };
-  }));
+  });
 }

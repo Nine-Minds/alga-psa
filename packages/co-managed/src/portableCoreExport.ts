@@ -73,7 +73,15 @@ export async function exportCoManagedPortableCore(db: Knex, inputActor: CoManage
   if (db.isTransaction) throw new Error('Portable export requires a root database connection');
   const actor = snapshotCoManagedSessionActor(inputActor);
   if (!isCoManagedUuid(packageId)) throw new CoManagedSharedWorkError();
-  return portableSnapshotTransaction(db, snapshot, trx => withCoManagedExportAdmin(trx, actor, async (current, verified, subject) => {
+  return portableSnapshotTransaction(db, snapshot, trx => retainCoManagedPortableCore(trx, actor, packageId, snapshot?.capturedAt));
+}
+
+/** Internal retained collector for a final package-wide current-source check. */
+export async function retainCoManagedPortableCore(trx: Knex.Transaction, inputActor: CoManagedSessionActor, packageId: string, capturedAt?: string) {
+  if (!trx.isTransaction) throw new Error('Portable retention requires a transaction');
+  const actor = snapshotCoManagedSessionActor(inputActor);
+  if (!isCoManagedUuid(packageId)) throw new CoManagedSharedWorkError();
+  return withCoManagedExportAdmin(trx, actor, async (current, verified, subject) => {
     for (const resource of ['user', 'team', 'client', 'contact', 'security_settings']) {
       if (!await hasCoManagedLocalPermission(current, verified, resource, 'read', true)) throw new CoManagedSharedWorkError();
     }
@@ -83,7 +91,7 @@ export async function exportCoManagedPortableCore(db: Knex, inputActor: CoManage
     const records = {} as CoManagedPortableCoreRecords;
     for (const table of Object.keys(CO_MANAGED_PORTABLE_CORE_COLUMNS) as CoManagedPortableCoreTable[]) {
       const columns = CO_MANAGED_PORTABLE_CORE_COLUMNS[table];
-      const query = own.table(table).select(...columns).limit(100_001);
+      const query = own.table(table).select(...columns).limit(100_001).forShare();
       // Fixed projection order gives a stable digest; table identities and
       // compound membership keys precede descriptive fields in each projection.
       for (const column of columns.slice(0, table === 'tenants' ? 1 : 2)) query.orderBy(column);
@@ -103,8 +111,8 @@ export async function exportCoManagedPortableCore(db: Knex, inputActor: CoManage
     validateCoManagedPortableCoreRecords(records);
     const [{ captured_at }] = (await current.raw('SELECT transaction_timestamp() AS captured_at')).rows;
     const payload = JSON.parse(JSON.stringify({ kind: 'alga-workspace-core', version: 1, packageId,
-      sourceTenant: verified.tenant, capturedAt: snapshot?.capturedAt ?? captured_at, records, references: CO_MANAGED_PORTABLE_CORE_REFERENCES,
+      sourceTenant: verified.tenant, capturedAt: capturedAt ?? captured_at, records, references: CO_MANAGED_PORTABLE_CORE_REFERENCES,
       restorePolicy: { authentication: 'reauthorize', sponsorship: 'none' } }));
     return { ...payload, sha256: createHash('sha256').update(JSON.stringify(payload)).digest('hex') };
-  }));
+  });
 }

@@ -89,7 +89,15 @@ export async function exportCoManagedPortableAssets(db: Knex, inputActor: CoMana
   if (db.isTransaction) throw new Error('Portable export requires a root database connection');
   const actor = snapshotCoManagedSessionActor(inputActor);
   if (!isCoManagedUuid(packageId)) throw new CoManagedSharedWorkError();
-  return portableSnapshotTransaction(db, snapshot, trx => withCoManagedExportAdmin(trx, actor, async (current, verified, subject) => {
+  return portableSnapshotTransaction(db, snapshot, trx => retainCoManagedPortableAssets(trx, actor, packageId, snapshot?.capturedAt));
+}
+
+/** Internal retained collector for a final package-wide current-source check. */
+export async function retainCoManagedPortableAssets(trx: Knex.Transaction, inputActor: CoManagedSessionActor, packageId: string, capturedAt?: string) {
+  if (!trx.isTransaction) throw new Error('Portable retention requires a transaction');
+  const actor = snapshotCoManagedSessionActor(inputActor);
+  if (!isCoManagedUuid(packageId)) throw new CoManagedSharedWorkError();
+  return withCoManagedExportAdmin(trx, actor, async (current, verified, subject) => {
     if (!await hasCoManagedLocalPermission(current, verified, 'asset', 'read', true)) throw new CoManagedSharedWorkError();
     const own = tenantDb(current, verified.tenant), records = {} as CoManagedPortableAssetRecords;
     for (const table of Object.keys(COLUMNS) as CoManagedPortableAssetTable[]) {
@@ -118,10 +126,10 @@ export async function exportCoManagedPortableAssets(db: Knex, inputActor: CoMana
     validateCoManagedPortableAssetRecords(records);
     const [{ captured_at }] = (await current.raw('SELECT transaction_timestamp() AS captured_at')).rows;
     const payload = JSON.parse(JSON.stringify({ kind: 'alga-workspace-assets', version: 1, packageId, sourceTenant: verified.tenant,
-      capturedAt: snapshot?.capturedAt ?? captured_at, records, references: CO_MANAGED_PORTABLE_ASSET_REFERENCES,
+      capturedAt: capturedAt ?? captured_at, records, references: CO_MANAGED_PORTABLE_ASSET_REFERENCES,
       polymorphicReferences: [{ table: 'asset_associations', column: 'entity_id', discriminator: 'entity_type', targets: ENTITY_REFERENCES }],
       typeReferences: [{ table: 'assets', column: 'asset_type', parent: 'asset_type_registry', parentColumn: 'slug', builtins: [...BUILTIN_TYPES] }],
       restorePolicy: { sponsorship: 'none', integrations: 'reauthorize', assetFacts: 'historical_snapshot', maintenanceSchedules: 'paused', maintenanceDispatch: 'none', procurement: 'excluded' } }));
     return { ...payload, sha256: createHash('sha256').update(JSON.stringify(payload)).digest('hex') };
-  }));
+  });
 }

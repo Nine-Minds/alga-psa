@@ -82,7 +82,15 @@ export async function exportCoManagedPortableOperational(db: Knex, inputActor: C
   if (db.isTransaction) throw new Error('Portable export requires a root database connection');
   const actor = snapshotCoManagedSessionActor(inputActor);
   if (!isCoManagedUuid(packageId)) throw new CoManagedSharedWorkError();
-  return portableSnapshotTransaction(db, snapshot, trx => withCoManagedExportAdmin(trx, actor, async (current, verified, subject) => {
+  return portableSnapshotTransaction(db, snapshot, trx => retainCoManagedPortableOperational(trx, actor, packageId, snapshot?.capturedAt));
+}
+
+/** Internal retained collector for a final package-wide current-source check. */
+export async function retainCoManagedPortableOperational(trx: Knex.Transaction, inputActor: CoManagedSessionActor, packageId: string, capturedAt?: string) {
+  if (!trx.isTransaction) throw new Error('Portable retention requires a transaction');
+  const actor = snapshotCoManagedSessionActor(inputActor);
+  if (!isCoManagedUuid(packageId)) throw new CoManagedSharedWorkError();
+  return withCoManagedExportAdmin(trx, actor, async (current, verified, subject) => {
     for (const resource of ['time_entry', 'time_sheet', 'time_period', 'user_schedule', 'sla_policy']) {
       if (!await hasCoManagedLocalPermission(current, verified, resource, 'read', true)) throw new CoManagedSharedWorkError();
     }
@@ -157,9 +165,9 @@ export async function exportCoManagedPortableOperational(db: Knex, inputActor: C
     }
     const [{ captured_at }] = (await current.raw('SELECT transaction_timestamp() AS captured_at')).rows;
     const payload = JSON.parse(JSON.stringify({ kind: 'alga-workspace-operational', version: 1, packageId, sourceTenant: verified.tenant,
-      capturedAt: snapshot?.capturedAt ?? captured_at, records, references: CO_MANAGED_PORTABLE_OPERATIONAL_REFERENCES,
+      capturedAt: capturedAt ?? captured_at, records, references: CO_MANAGED_PORTABLE_OPERATIONAL_REFERENCES,
       polymorphicReferences: CO_MANAGED_PORTABLE_OPERATIONAL_WORK_REFERENCES,
       restorePolicy: { sponsorship: 'none', timeBilling: 'operational', runningTimers: 'none', notificationDispatch: 'paused' } }));
     return { ...payload, sha256: createHash('sha256').update(JSON.stringify(payload)).digest('hex') };
-  }));
+  });
 }

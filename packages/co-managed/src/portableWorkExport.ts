@@ -88,7 +88,15 @@ export async function exportCoManagedPortableWork(db: Knex, inputActor: CoManage
   if (db.isTransaction) throw new Error('Portable export requires a root database connection');
   const actor = snapshotCoManagedSessionActor(inputActor);
   if (!isCoManagedUuid(packageId)) throw new CoManagedSharedWorkError();
-  return portableSnapshotTransaction(db, snapshot, trx => withCoManagedExportAdmin(trx, actor, async (current, verified, subject) => {
+  return portableSnapshotTransaction(db, snapshot, trx => retainCoManagedPortableWork(trx, actor, packageId, snapshot?.capturedAt));
+}
+
+/** Internal retained collector for a final package-wide current-source check. */
+export async function retainCoManagedPortableWork(trx: Knex.Transaction, inputActor: CoManagedSessionActor, packageId: string, capturedAt?: string) {
+  if (!trx.isTransaction) throw new Error('Portable retention requires a transaction');
+  const actor = snapshotCoManagedSessionActor(inputActor);
+  if (!isCoManagedUuid(packageId)) throw new CoManagedSharedWorkError();
+  return withCoManagedExportAdmin(trx, actor, async (current, verified, subject) => {
     for (const resource of ['ticket', 'project', 'ticket_settings']) {
       if (!await hasCoManagedLocalPermission(current, verified, resource, 'read', true)) throw new CoManagedSharedWorkError();
     }
@@ -98,7 +106,7 @@ export async function exportCoManagedPortableWork(db: Knex, inputActor: CoManage
     for (const table of Object.keys(CO_MANAGED_PORTABLE_WORK_COLUMNS) as CoManagedPortableWorkTable[]) {
       const columns = CO_MANAGED_PORTABLE_WORK_COLUMNS[table];
       const query = table === 'standard_statuses' ? current('standard_statuses') : own.table(table === 'handoff_history' ? 'co_management_ticket_handoffs' : table);
-      records[table] = await query.select(...columns).orderBy(columns[0]).limit(100_001);
+      records[table] = await query.select(...columns).orderBy(columns[0]).limit(100_001).forShare();
     }
     for (const row of records.tickets) {
       const decision = await authorizeCoManagedLocalRecord(current, verified, subject, 'ticket', 'read', {
@@ -118,8 +126,8 @@ export async function exportCoManagedPortableWork(db: Knex, inputActor: CoManage
     validateCoManagedPortableWorkRecords(records);
     const [{ captured_at }] = (await current.raw('SELECT transaction_timestamp() AS captured_at')).rows;
     const payload = JSON.parse(JSON.stringify({ kind: 'alga-workspace-work', version: 1, packageId, sourceTenant: verified.tenant,
-      capturedAt: snapshot?.capturedAt ?? captured_at, records, references: CO_MANAGED_PORTABLE_WORK_REFERENCES,
+      capturedAt: capturedAt ?? captured_at, records, references: CO_MANAGED_PORTABLE_WORK_REFERENCES,
       restorePolicy: { sponsorship: 'none', scheduledPublication: 'paused', handoffHistory: 'historical_activity' } }));
     return { ...payload, sha256: createHash('sha256').update(JSON.stringify(payload)).digest('hex') };
-  }));
+  });
 }

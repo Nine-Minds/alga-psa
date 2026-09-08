@@ -93,7 +93,15 @@ export async function exportCoManagedPortableEngagement(db: Knex, inputActor: Co
   if (db.isTransaction) throw new Error('Portable export requires a root database connection');
   const actor = snapshotCoManagedSessionActor(inputActor);
   if (!isCoManagedUuid(packageId)) throw new CoManagedSharedWorkError();
-  return portableSnapshotTransaction(db, snapshot, trx => withCoManagedExportAdmin(trx, actor, async (current, verified, subject) => {
+  return portableSnapshotTransaction(db, snapshot, trx => retainCoManagedPortableEngagement(trx, actor, packageId, snapshot?.capturedAt));
+}
+
+/** Internal retained collector for a final package-wide current-source check. */
+export async function retainCoManagedPortableEngagement(trx: Knex.Transaction, inputActor: CoManagedSessionActor, packageId: string, capturedAt?: string) {
+  if (!trx.isTransaction) throw new Error('Portable retention requires a transaction');
+  const actor = snapshotCoManagedSessionActor(inputActor);
+  if (!isCoManagedUuid(packageId)) throw new CoManagedSharedWorkError();
+  return withCoManagedExportAdmin(trx, actor, async (current, verified, subject) => {
     for (const resource of ['interaction', 'user_schedule', 'system_settings']) {
       if (!await hasCoManagedLocalPermission(current, verified, resource, 'read', true)) throw new CoManagedSharedWorkError();
     }
@@ -170,10 +178,10 @@ export async function exportCoManagedPortableEngagement(db: Knex, inputActor: Co
     validateCoManagedPortableEngagementRecords(records);
     const [{ captured_at }] = (await current.raw('SELECT transaction_timestamp() AS captured_at')).rows;
     const payload = JSON.parse(JSON.stringify({ kind: 'alga-workspace-engagement', version: 1, packageId, sourceTenant: verified.tenant,
-      capturedAt: snapshot?.capturedAt ?? captured_at, records, references: CO_MANAGED_PORTABLE_ENGAGEMENT_REFERENCES,
+      capturedAt: capturedAt ?? captured_at, records, references: CO_MANAGED_PORTABLE_ENGAGEMENT_REFERENCES,
       additionalReferences: CO_MANAGED_PORTABLE_ENGAGEMENT_ADDITIONAL_REFERENCES,
       restorePolicy: { sponsorship: 'none', providerConnections: 'reauthorize', meetings: 'historical_metadata',
         appointmentDispatch: 'paused', servicePricing: 'unconfigured', remoteArtifactContent: 'requires_separate_capture' } }));
     return { ...payload, sha256: createHash('sha256').update(JSON.stringify(payload)).digest('hex') };
-  }));
+  });
 }

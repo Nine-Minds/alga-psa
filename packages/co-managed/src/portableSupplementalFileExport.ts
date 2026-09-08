@@ -11,7 +11,14 @@ import { CoManagedSharedWorkError, isCoManagedUuid, snapshotCoManagedSessionActo
 const checksum = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 
 async function collect(db: Knex, actor: CoManagedSessionActor, databaseSnapshot?: CoManagedPortableSnapshot) {
-  return portableSnapshotTransaction(db, databaseSnapshot, trx => withCoManagedExportAdmin(trx, actor, async (current, verified) => {
+  return portableSnapshotTransaction(db, databaseSnapshot, trx => retainCoManagedPortableSupplementalFileSource(trx, actor));
+}
+
+/** Provider-free source retention for coordinated final delivery admission. */
+export async function retainCoManagedPortableSupplementalFileSource(trx: Knex.Transaction, inputActor: CoManagedSessionActor) {
+  if (!trx.isTransaction) throw new Error('Portable retention requires a transaction');
+  const actor = snapshotCoManagedSessionActor(inputActor);
+  return withCoManagedExportAdmin(trx, actor, async (current, verified) => {
     const own = tenantDb(current, verified.tenant);
     const hints = await own.table('online_meeting_artifacts').whereNotNull('file_id').orderBy('artifact_id').limit(100_001)
       .select('artifact_id', 'meeting_id', 'document_id', 'file_id', 'artifact_type', 'created_at', 'updated_at');
@@ -58,7 +65,7 @@ async function collect(db: Knex, actor: CoManagedSessionActor, databaseSnapshot?
       bindings: hints.map(row => ({ table: 'online_meeting_artifacts', recordId: row.artifact_id, field: 'file_id', blobId: `file:${row.file_id}` })),
       blobs: files.filter(file => !covered.has(file.file_id)).map(file => ({ id: `file:${file.file_id}`,
         path: coManagedPortableNativeFilePath(verified.tenant, file.storage_path), size: Number(file.file_size), name: file.original_name, mimeType: file.mime_type })) };
-  }));
+  });
 }
 
 /** Actual native artifact bytes missing from the document component. The
@@ -69,12 +76,15 @@ export async function exportCoManagedPortableSupplementalFiles(db: Knex, inputAc
   const actor = snapshotCoManagedSessionActor(inputActor);
   if (!isCoManagedUuid(packageId)) throw new CoManagedSharedWorkError();
   const snapshot = await collect(db, actor, databaseSnapshot), original = checksum(snapshot);
+  const assertCurrent = async (trx: Knex.Transaction) => {
+    if (checksum(await retainCoManagedPortableSupplementalFileSource(trx, actor)) !== original) throw new CoManagedSharedWorkError();
+  };
   const staged = await stageCoManagedPortableBlobs(snapshot.blobs);
   try {
-    if (checksum(await collect(db, actor)) !== original) throw new CoManagedSharedWorkError();
+    await portableSnapshotTransaction(db, undefined, assertCurrent);
     const payload = JSON.parse(JSON.stringify({ kind: 'alga-workspace-supplemental-files', version: 1, packageId, sourceTenant: actor.tenant,
       fileBindings: snapshot.bindings, restorePolicy: { sponsorship: 'none', providerConnections: 'none' },
       blobs: snapshot.blobs.map(({ path: _path, ...blob }) => ({ ...blob, sha256: staged.files.find(file => file.id === blob.id)!.sha256 })) }));
-    return { component: { ...payload, sha256: checksum(payload) }, files: staged.files, dispose: staged.dispose };
+    return { component: { ...payload, sha256: checksum(payload) }, files: staged.files, dispose: staged.dispose, assertCurrent };
   } catch (error) { await staged.dispose(); throw error; }
 }
