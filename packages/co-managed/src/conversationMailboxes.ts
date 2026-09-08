@@ -3,17 +3,19 @@ import { tenantDb } from '@alga-psa/db';
 import { assertCoManagedOperationalWrite } from '@alga-psa/licensing';
 import { withNamedTicketConversation } from './namedTicketConversations';
 import type { CoManagedSessionActor } from './sharedWorkIdentity';
+import type { CoManagedHomeActor } from './policy';
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
 import { hasCoManagedLocalPermission } from './localPermission';
 import { conversationUuid, TicketConversationError, type ConversationTicketReference, type TicketConversationReference, type NamedTicketConversation } from '@alga-psa/shared/lib/tickets/namedConversations';
 
 export interface ConversationMailbox { tenant: string; id: string; email: string; name: string | null }
 type Context = Parameters<Parameters<typeof withNamedTicketConversation>[5]>[0];
+export type ConversationMailboxPolicyContext = Pick<Context, 'trx' | 'ticket' | 'conversation' | 'hidden'> & { actor: CoManagedHomeActor };
 const forbidden = () => { throw new TicketConversationError('CONVERSATION_FORBIDDEN'); };
 const invalid = () => { throw new TicketConversationError('CONVERSATION_INVALID'); };
 const conflict = () => { throw new TicketConversationError('CONVERSATION_CONFLICT'); };
 function reference(conversation: NamedTicketConversation) { return { storeTenant: conversation.storeTenant, conversationId: conversation.conversationId }; }
-async function mailboxOwner(context: Context): Promise<string> {
+async function mailboxOwner(context: ConversationMailboxPolicyContext): Promise<string> {
   const { conversation, trx, ticket } = context;
   if (isCoManagedReadFieldHidden(context.hidden, ['mailbox', 'mailbox_id', 'mailbox_tenant', 'email_providers', 'ticket_conversation_sender_grants'])) return forbidden();
   if (conversation.transport !== 'email') return invalid();
@@ -23,13 +25,13 @@ async function mailboxOwner(context: Context): Promise<string> {
   if (!row?.created_by_tenant) return forbidden();
   return row.created_by_tenant;
 }
-function grants(context: Context, owner: string, mailboxId?: string) {
+function grants(context: ConversationMailboxPolicyContext, owner: string, mailboxId?: string) {
   return tenantDb(context.trx, owner).table('ticket_conversation_sender_grants').where({
     conversation_store_tenant: context.conversation.storeTenant, conversation_id: context.conversation.conversationId,
     ticket_tenant: context.ticket.tenant, ticket_id: context.ticket.ticketId, relationship_id: context.ticket.relationshipId,
   }).modify(query => { if (mailboxId) query.where('mailbox_id', mailboxId); });
 }
-async function authorizeMailbox(context: Context, owner: string, mailboxId: string): Promise<ConversationMailbox> {
+async function authorizeMailbox(context: ConversationMailboxPolicyContext, owner: string, mailboxId: string): Promise<ConversationMailbox> {
   await assertCoManagedOperationalWrite(context.trx, owner);
   if (context.actor.tenant !== owner) {
     if (!context.ticket.relationshipId || !await grants(context, owner, mailboxId)
@@ -39,6 +41,14 @@ async function authorizeMailbox(context: Context, owner: string, mailboxId: stri
     .forShare().first('id', 'mailbox', 'sender_display_name');
   if (!row || !/^[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+$/.test(row.mailbox) || /[\r\n\0]/.test(row.sender_display_name ?? '')) return forbidden();
   return { tenant: owner, id: row.id, email: row.mailbox, name: row.sender_display_name || null };
+}
+/** Credential admission belongs to the caller. This engine keeps the selected
+ * sender and its current mailbox/grant locks identical for browser and worker. */
+export async function authorizeNamedConversationMailbox(context: ConversationMailboxPolicyContext, expectedRevision: number) {
+  if (context.conversation.revision !== expectedRevision) return conflict();
+  const owner = await mailboxOwner(context);
+  if (!context.conversation.mailbox || context.conversation.mailbox.tenant !== owner) return forbidden();
+  return authorizeMailbox(context, owner, context.conversation.mailbox.id);
 }
 /** Options convey send capability only. Reading Shared IT never lends the
  * other organization's connected mailbox or credentials. */
@@ -72,10 +82,7 @@ export function selectNamedConversationMailbox(db: Knex, actor: CoManagedSession
 export function withNamedConversationMailbox<T>(db: Knex, actor: CoManagedSessionActor, ticket: ConversationTicketReference, ref: TicketConversationReference,
   expectedRevision: number, work: (context: Context, mailbox: ConversationMailbox) => Promise<T>) {
   return withNamedTicketConversation(db, actor, ticket, ref, 'update', async context => {
-    if (context.conversation.revision !== expectedRevision) return conflict();
-    const owner = await mailboxOwner(context);
-    if (!context.conversation.mailbox || context.conversation.mailbox.tenant !== owner) return forbidden();
-    return work(context, await authorizeMailbox(context, owner, context.conversation.mailbox.id));
+    return work(context, await authorizeNamedConversationMailbox(context, expectedRevision));
   });
 }
 /** Narrow per-conversation delegation. The mailbox owner's policy administrator

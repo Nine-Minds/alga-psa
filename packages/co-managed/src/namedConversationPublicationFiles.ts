@@ -12,6 +12,7 @@ import { assertCoManagedSessionUnexpired, snapshotCoManagedSessionActor, type Co
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
 import { coManagedConversationAttachmentSources } from './conversationPolicy';
 import { CoManagedAttachmentError, snapshotConversationFileBytes, transferProtectedConversationFile } from './protectedConversationFileTransfer';
+import type { ConversationMailboxPolicyContext } from './conversationMailboxes';
 
 export interface NamedConversationFileStorage {
   download(path: string): Promise<Uint8Array>;
@@ -130,14 +131,14 @@ export async function assertNamedConversationPublicationFiles(context: Context, 
 
 /** A retained Send is still subject to current file and source authority when
  * delivery resumes. Its descriptors are not a permanent download capability. */
-export async function assertNamedConversationDeliveryFiles(context: Context, operationId: string, files: NamedConversationEmailFile[] = []) {
-  if (!files.length) return;
+export async function assertNamedConversationDeliveryFiles(context: ConversationMailboxPolicyContext, operationId: string, files: NamedConversationEmailFile[] = []) {
   const owner = tenantDb(context.trx, context.conversation.storeTenant);
   const publication = await owner.table('ticket_conversation_publications').where({ operation_id: operationId,
     conversation_id: context.conversation.conversationId, ticket_tenant: context.ticket.tenant, ticket_id: context.ticket.ticketId,
     actor_tenant: context.actor.tenant, actor_user_id: context.actor.userId, mode: 'send' }).forShare().first();
   if (!publication) return conflict();
-  const { namedConversationMessageFileContext } = await import('./namedConversationAttachments');
+  const { namedConversationMessageContext, namedConversationMessageFileContext } = await import('./namedConversationAttachments');
+  if (!files.length) { await namedConversationMessageContext(context, publication.comment_id, publication.thread_id); return; }
   await namedConversationMessageFileContext(context, publication.comment_id, publication.thread_id);
   const rows = await owner.table(TABLE).where({ named_publication_operation_id: operationId, comment_id: publication.comment_id,
     thread_id: publication.thread_id, status: 'ready' }).whereNull('discarded_at').whereNull('purged_at').forShare();

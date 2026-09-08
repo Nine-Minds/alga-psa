@@ -6,7 +6,7 @@ import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { withNamedTicketConversation, getNamedConversationEditorDraft, sendNamedTicketConversationDraft,
   type NamedConversationPostContext } from './namedTicketConversations';
-import { withNamedConversationMailbox, type ConversationMailbox } from './conversationMailboxes';
+import { withNamedConversationMailbox, authorizeNamedConversationMailbox, type ConversationMailboxPolicyContext, type ConversationMailbox } from './conversationMailboxes';
 import { snapshotCoManagedSessionActor, type CoManagedSessionActor } from './sharedWorkIdentity';
 import { snapshotConversationContent, type CoManagedConversationContent } from './conversationContent';
 import type { CoManagedCommentInsert } from './ticketCommentCreation';
@@ -44,12 +44,12 @@ function snapshotRequest(input: NamedConversationEmailRequest): NamedConversatio
       !Number.isSafeInteger(input.expectedDraftRevision) || input.expectedDraftRevision < 1 || !Number.isSafeInteger(input.expectedConversationRevision) || input.expectedConversationRevision < 1) return invalid();
   return { operationId: input.operationId.toLowerCase(), expectedDraftRevision: input.expectedDraftRevision, expectedConversationRevision: input.expectedConversationRevision };
 }
-function operations(context: Context) {
+function operations(context: ConversationMailboxPolicyContext) {
   return tenantDb(context.trx, context.actor.tenant).table(TABLE).where({ actor_user_id: context.actor.userId,
     ticket_tenant: context.ticket.tenant, ticket_id: context.ticket.ticketId,
     conversation_store_tenant: context.conversation.storeTenant, conversation_id: context.conversation.conversationId });
 }
-function operation(context: Context, id: string) { return operations(context).where('operation_id', id); }
+function operation(context: ConversationMailboxPolicyContext, id: string) { return operations(context).where('operation_id', id); }
 async function latestEmail(context: Context) {
   const store = tenantDb(context.trx, context.conversation.storeTenant);
   const scope = { ticket_tenant: context.ticket.tenant, ticket_id: context.ticket.ticketId, conversation_id: context.conversation.conversationId };
@@ -227,25 +227,40 @@ export async function deliverNamedConversationEmail(db: Knex, inputActor: CoMana
   inputRef: TicketConversationReference, operationId: string, transport: NamedConversationEmailTransport) {
   if (db.isTransaction || !conversationUuid(operationId)) return invalid();
   const actor = snapshotCoManagedSessionActor(inputActor), ticket = snapshotConversationTicket(inputTicket), ref = snapshotConversationReference(inputRef), id = operationId.toLowerCase();
-  const attemptId = randomUUID();
-  const claimed = await withNamedTicketConversation(db, actor, ticket, ref, 'update', async context => {
+  return executeNamedConversationEmailDelivery(id, transport, work => withNamedTicketConversation(db, actor, ticket, ref, 'update', async context => {
     const row = await operation(context, id).forUpdate().first();
     if (!row) return conflict();
+    return work(context, row);
+  }));
+}
+
+/** The caller admits either a real browser credential or a retained accepted
+ * operation, independently on both sides of the committed attempt marker. */
+export async function executeNamedConversationEmailDelivery(id: string, transport: NamedConversationEmailTransport,
+  authorize: <T>(work: (context: ConversationMailboxPolicyContext, row: any) => Promise<T>) => Promise<T>) {
+  const attemptId = randomUUID();
+  const admitEnvelope = (context: ConversationMailboxPolicyContext) => {
+    if (isCoManagedReadFieldHidden(context.hidden, ['email', 'email_envelope', 'recipients', 'from', 'to', 'cc', 'subject', 'ticket_conversation_publications']))
+      throw new TicketConversationError('CONVERSATION_FORBIDDEN');
+  };
+  const claimed = await authorize(async (context, row) => {
     if (row.status !== 'pending') return { ready: false as const, result: state(row) };
-    return withNamedConversationMailbox(context.trx, context.actor, context.ticket, ref, row.conversation_revision, async (current, mailbox) => {
-      if (row.mailbox_tenant !== mailbox.tenant || row.mailbox_id !== mailbox.id) return conflict();
-      await assertNamedConversationDeliveryFiles(current, id, row.payload.files);
-      unchanged(row.review, await transport.recheck(row.payload, mailbox));
-      await operation(current, id).update({ status: 'sending', attempt_id: attemptId, attempted_at: current.trx.fn.now() });
-      return { ready: true as const, revision: row.conversation_revision };
-    });
+    admitEnvelope(context);
+    const mailbox = await authorizeNamedConversationMailbox(context, row.conversation_revision);
+    if (row.mailbox_tenant !== mailbox.tenant || row.mailbox_id !== mailbox.id) return conflict();
+    await assertNamedConversationDeliveryFiles(context, id, row.payload.files);
+    unchanged(row.review, await transport.recheck(row.payload, mailbox));
+    await operation(context, id).update({ status: 'sending', attempt_id: attemptId, attempted_at: context.trx.fn.now() });
+    return { ready: true as const, revision: row.conversation_revision };
   });
   if (!claimed.ready) return claimed.result;
-  // Reacquire authority after the committed marker. Any error leaves the marker;
-  // the caller can inspect the same operation but cannot blindly try SMTP again.
-  return withNamedConversationMailbox(db, actor, ticket, ref, claimed.revision, async (context, mailbox) => {
-    const row = await operation(context, id).forUpdate().first();
-    if (!row || row.attempt_id !== attemptId || row.status !== 'sending') return conflict();
+  // Lost acknowledgments or rollbacks after transport leave a durable marker.
+  // Neither a worker nor a new browser session may blindly send again.
+  return authorize(async (context, row) => {
+    if (row.attempt_id !== attemptId || row.status !== 'sending' || row.conversation_revision !== claimed.revision) return conflict();
+    admitEnvelope(context);
+    const mailbox = await authorizeNamedConversationMailbox(context, claimed.revision);
+    if (row.mailbox_tenant !== mailbox.tenant || row.mailbox_id !== mailbox.id) return conflict();
     await assertNamedConversationDeliveryFiles(context, id, row.payload.files);
     let status: 'delivered' | 'unknown' | 'blocked', errorCode: string | null = null;
     try {

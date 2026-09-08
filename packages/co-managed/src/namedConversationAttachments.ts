@@ -12,9 +12,9 @@ import type { CoManagedConversationItem } from './ticketConversation';
 
 const deny = (): never => { throw new TicketConversationError('CONVERSATION_FORBIDDEN'); };
 type Context = { trx: Knex.Transaction; ticket: ConversationTicketReference; conversation: NamedTicketConversation; hidden: readonly string[] };
-export async function namedConversationMessageFileContext(context: Context, commentId: string, threadId: string) {
+export async function namedConversationMessageContext(context: Context, commentId: string, threadId: string) {
   if (![commentId, threadId].every(conversationUuid) || isCoManagedReadFieldHidden(context.hidden,
-    [...coManagedConversationAttachmentSources, ...coManagedConversationBodySources])) return deny();
+    coManagedConversationBodySources)) return deny();
   const { trx, conversation, ticket } = context, owner = tenantDb(trx, conversation.storeTenant);
   if (conversation.storeTenant !== ticket.tenant) {
     const thread = await owner.table('co_management_private_threads').where({ conversation_id: conversation.conversationId, thread_id: threadId,
@@ -37,6 +37,10 @@ export async function namedConversationMessageFileContext(context: Context, comm
   const relationshipId = conversation.storeTenant === ticket.tenant && conversation.audience === 'requester' ? undefined : ticket.relationshipId;
   return { trx, resource: { tenant: ticket.tenant, id: ticket.ticketId, relationshipId },
     comment: { storeTenant: conversation.storeTenant, commentId, threadId }, audience: conversation.audience };
+}
+export async function namedConversationMessageFileContext(context: Context, commentId: string, threadId: string) {
+  if (isCoManagedReadFieldHidden(context.hidden, coManagedConversationAttachmentSources)) return deny();
+  return namedConversationMessageContext(context, commentId, threadId);
 }
 /** The caller already selected this authorized conversation before pagination.
  * Only published files inherit its message/root audience; paths never project. */

@@ -3,7 +3,7 @@ import { snapshotConversationEditorFiles } from '@alga-psa/shared/lib/tickets/co
 import { snapshotConversationEmailDraft } from '@alga-psa/shared/lib/tickets/conversationEmailEnvelope';
 import type { Knex } from 'knex';
 import { tenantDb, withTransaction } from '@alga-psa/db';
-import { assertCoManagedOperationalWrite, getCoManagedOperationalState, isCoManagedLifecycleError } from '@alga-psa/licensing';
+import { assertCoManagedOperationalWrite, isCoManagedLifecycleError } from '@alga-psa/licensing';
 import { resolveCommentAudience, type CommentAudience } from '@alga-psa/shared/lib/commentAudience';
 import {
   type ConversationTicketReference, type TicketConversationReference, type CreateTicketConversation,
@@ -15,7 +15,7 @@ import {
 import { withCoManagedSharedWork, type CoManagedSharedResource, type CoManagedSharedWorkContext } from './sharedWork';
 import { withCoManagedCustomerTicket } from './customerWork';
 import { snapshotCoManagedSessionActor, lockCoManagedSessionIdentity, assertCoManagedSessionUnexpired,
-  authorizeCoManagedWorkRecord, CoManagedSharedWorkError, type CoManagedSessionActor } from './sharedWorkIdentity';
+  CoManagedSharedWorkError, type CoManagedSessionActor } from './sharedWorkIdentity';
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
 import { coManagedConversationAttachmentSources, coManagedConversationBodySources } from './conversationPolicy';
 import { readConversationEditorDraft, saveConversationEditorDraft, snapshotConversationDraftParent, type ConversationDraftParent, type EditorDraftSaveRequest } from '@alga-psa/shared/lib/tickets/conversationEditorDrafts';
@@ -26,6 +26,8 @@ import type { CoManagedCommentInsert } from './ticketCommentCreation';
 import { conversationUuid } from '@alga-psa/shared/lib/tickets/namedConversations';
 import { encodeConversationContent, snapshotConversationContent, type CoManagedConversationContent } from './conversationContent';
 import { hasCoManagedLocalPermission } from './localPermission';
+import { authorizeNativeTicketConversation } from './nativeConversationAuthority';
+import type { CoManagedHomeActor } from './policy';
 
 interface ConversationAuthority {
   trx: Knex.Transaction;
@@ -35,6 +37,7 @@ interface ConversationAuthority {
   sharedContext?: CoManagedSharedWorkContext;
   hidden: readonly string[];
 }
+export type NamedConversationPolicyContext = Omit<ConversationAuthority, 'actor'> & { actor: CoManagedHomeActor };
 const fields = [...coManagedConversationBodySources, 'ticket_conversations', 'conversation_id', 'name', 'audience', 'default_slot', 'message_version', 'mailbox_id', 'mailbox_tenant'];
 const forbidden = () => { throw new TicketConversationError('CONVERSATION_FORBIDDEN'); };
 
@@ -63,24 +66,15 @@ async function withTicketAuthority<T>(db: Knex, inputActor: CoManagedSessionActo
       }));
     }
     if (ticket.relationshipId || actor.tenant !== ticket.tenant) return forbidden();
-    if (action === 'update') await assertCoManagedOperationalWrite(trx, ticket.tenant);
-    else await getCoManagedOperationalState(trx, ticket.tenant);
     const subject = await lockCoManagedSessionIdentity(trx, actor);
-    const query = owner.table('tickets').where('ticket_id', ticket.ticketId);
-    if (action === 'update') query.forUpdate(); else query.forShare();
-    const row = await query.first('ticket_id', 'client_id', 'board_id', 'entered_by', 'assigned_to', 'assigned_team_id');
-    if (!row) return forbidden();
-    const record = { id: row.ticket_id, clientId: row.client_id, boardId: row.board_id, ownerUserId: row.entered_by,
-      assignedUserIds: row.assigned_to ? [row.assigned_to] : [], teamIds: row.assigned_team_id ? [row.assigned_team_id] : [] };
-    const decision = await authorizeCoManagedWorkRecord(trx, actor, subject, 'ticket', action, record);
-    const read = action === 'read' ? decision : await authorizeCoManagedWorkRecord(trx, actor, subject, 'ticket', 'read', record);
+    const context = await authorizeNativeTicketConversation(trx, actor, subject, ticket, action);
     await assertCoManagedSessionUnexpired(trx, actor);
-    const result = await work({ trx, actor, ticket, shared: false, hidden: [...decision.redactedFields, ...read.redactedFields] });
+    const result = await work(context);
     await assertCoManagedSessionUnexpired(trx, actor);
     return result;
   });
 }
-function stores(context: ConversationAuthority): { scope: ConversationStoreScope; audiences: CommentAudience[] }[] {
+function stores(context: NamedConversationPolicyContext): { scope: ConversationStoreScope; audiences: CommentAudience[] }[] {
   const { trx, actor, ticket, hidden } = context;
   const foreign = actor.tenant !== ticket.tenant;
   const result: { scope: ConversationStoreScope; audiences: CommentAudience[] }[] = [];
@@ -99,7 +93,7 @@ function destinationScope(context: ConversationAuthority, audience: CommentAudie
   if (!entry) return forbidden();
   return entry.scope;
 }
-async function authorizedConversation(context: ConversationAuthority, reference: TicketConversationReference, write = false) {
+export async function authorizedConversation(context: NamedConversationPolicyContext, reference: TicketConversationReference, write = false) {
   const entry = stores(context).find(s => s.scope.storeTenant === reference.storeTenant);
   if (!entry) return forbidden();
   const conversation = await readStoredTicketConversation(entry.scope, reference.conversationId, write ? 'update' : 'read');

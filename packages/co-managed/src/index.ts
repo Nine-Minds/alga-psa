@@ -87,3 +87,5 @@ export { listNamedReplyReviews, getNamedReplyReview, resolveNamedReplyReview,
 export { uploadNamedConversationEditorFile, downloadNamedConversationEditorFile } from './namedConversationEditorFiles';
 
 export { prepareNamedConversationPublicationFiles, readNamedConversationFileBytes, type NamedConversationFileStorage, type NamedConversationEmailFile } from './namedConversationPublicationFiles';
+
+export { deliverNativeNamedConversationEmail, recoverNativeNamedConversationEmails } from './nativeConversationEmailDelivery';
