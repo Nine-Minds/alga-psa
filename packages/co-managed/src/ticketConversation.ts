@@ -13,7 +13,7 @@ import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
 export interface CoManagedConversationCursor { createdAt: string; storeTenant: string; commentId: string }
 export interface CoManagedConversationAuthor {
   tenant: string;
-  kind: 'user' | 'contact' | 'system' | 'unknown';
+  kind: 'user' | 'contact' | 'system' | 'unknown' | 'external';
   id: string | null;
   displayName: string | null;
   organizationName: string | null;
@@ -116,7 +116,7 @@ export async function readAuthorizedTicketConversationPage(context: {
       on: join => join.andOn('parent.thread_id', '=', 'c.thread_id') });
     privateComments.select({ store_tenant: 'c.tenant', comment_id: 'c.comment_id', thread_id: 'c.thread_id', parent_comment_id: 'parent.comment_id',
       audience: trx.raw("'organization_private'::text"), created_at: 'c.created_at', created_at_exact: timestamp(trx, 'c.created_at'), updated_at_exact: timestamp(trx, 'c.updated_at'),
-      deleted_at: 'c.deleted_at', note: 'c.note', markdown: 'c.markdown_content', revision: 'c.revision', actor_tenant: 'c.tenant', actor_kind: trx.raw("'user'::text"),
+      deleted_at: 'c.deleted_at', note: 'c.note', markdown: 'c.markdown_content', revision: 'c.revision', actor_tenant: 'c.tenant', actor_kind: 'c.actor_kind',
       actor_id: 'c.actor_user_id', actor_reference_id: trx.raw('NULL::uuid'), actor_display_name: 'c.actor_display_name', actor_organization_name: 'c.actor_organization_name' });
     queries.push(privateComments);
   }

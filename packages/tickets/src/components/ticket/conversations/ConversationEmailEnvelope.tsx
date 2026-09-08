@@ -4,6 +4,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { PublishedConversationEmail, ReviewedEmailAddress } from '@alga-psa/shared/lib/email/reviewedEmail';
 
 export const emailDeliveryLabels = {
+  received: 'Email received.',
   delivered: 'Email sent.',
   pending: 'Send accepted. Delivery has not started.',
   sending: 'Delivery is in progress. Check this send for its result.',

@@ -32,7 +32,7 @@ import {
 } from './inboundEmailSourceStager';
 import { processInboundEmailArtifactsBestEffort } from './processInboundEmailArtifacts';
 import { ORIGINAL_EMAIL_ATTACHMENT_ID, extractEmbeddedImageAttachments, sanitizeGeneratedFileName } from './inboundEmailArtifactHelpers';
-import { qualifiedReplyTokenFromBody } from './qualifiedReplyAdmission';
+import { hasNamedConversationReplyHint, qualifiedReplyTokenFromBody } from './qualifiedReplyAdmission';
 import type { QualifiedReplyArtifactProcessor, QualifiedReplyArtifactInput } from './qualifiedReplyArtifacts';
 
 const TERMINAL_ARTIFACT_STATUSES = new Set(['succeeded', 'skipped', 'terminal_failed']);
@@ -166,9 +166,10 @@ export async function processInboundArtifactJob(
   // Use the digest-verified original MIME, not editable comment metadata, to
   // select the protected artifact path. Its conversation adapter must preserve
   // current thread authority; native folder defaults cannot decide visibility.
-  if (/^cm2:/i.test(qualifiedReplyTokenFromBody(parsed.emailData.body) ?? '')) {
-    let reason = 'co_managed_artifact_admission_pending';
-    if (qualifiedReplyArtifacts) {
+  const namedReply = hasNamedConversationReplyHint(parsed.emailData);
+  if (namedReply || /^cm2:/i.test(qualifiedReplyTokenFromBody(parsed.emailData.body) ?? '')) {
+    let reason = namedReply ? 'named_conversation_artifact_admission_pending' : 'co_managed_artifact_admission_pending';
+    if (qualifiedReplyArtifacts && !namedReply) {
       try {
         await qualifiedReplyArtifacts(db, { tenant: job.tenantId, inboxId, artifactKey, sourceSha256: inbox.source_sha256!,
           claim: { owner, token, version }, payload: qualifiedArtifactPayload(artifact, parsed.emailData) }, async (path, content, mimeType) => {

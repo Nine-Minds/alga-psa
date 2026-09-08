@@ -1870,7 +1870,8 @@
       "sending": "Delivery is in progress. Check this send for its result.",
       "unknown": "Delivery could not be confirmed. Check the mailbox before sending this message again.",
       "blocked": "Email was not sent. The sender or delivery settings need attention.",
-      "reviewed": ""
+      "reviewed": "",
+      "received": "Email received."
     }
   }
 }

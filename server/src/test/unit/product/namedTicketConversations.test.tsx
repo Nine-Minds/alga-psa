@@ -3,11 +3,12 @@ import React from 'react';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { useNamedTicketConversations } from '../../../../../packages/tickets/src/components/ticket/conversations/useNamedTicketConversations';
-const mocks = vi.hoisted(() => ({ load: vi.fn(), page: vi.fn(), readDraft: vi.fn(), saveDraft: vi.fn(), post: vi.fn(), create: vi.fn(), status: vi.fn(), push: vi.fn(), mailboxes: vi.fn(), selectMailbox: vi.fn(), latestSend: vi.fn(), prepareEmail: vi.fn(), sendEmail: vi.fn(), emailStatus: vi.fn(),
+const mocks = vi.hoisted(() => ({ load: vi.fn(), page: vi.fn(), readDraft: vi.fn(), saveDraft: vi.fn(), post: vi.fn(), create: vi.fn(), status: vi.fn(), push: vi.fn(), mailboxes: vi.fn(), selectMailbox: vi.fn(), latestSend: vi.fn(), prepareEmail: vi.fn(), sendEmail: vi.fn(), emailStatus: vi.fn(), emailDefaults: vi.fn(),
   query: '', session: { session_id: 'session', user: { tenant: 'home', id: 'author' } } }));
 vi.mock('../../../../../packages/tickets/src/actions/namedTicketConversationActions', () => ({
   listNamedConversationMailboxesAction: mocks.mailboxes, selectNamedConversationMailboxAction: mocks.selectMailbox, getLatestNamedTicketEmailSendAction: mocks.latestSend,
   prepareNamedTicketEmailAction: mocks.prepareEmail, sendNamedTicketEmailAction: mocks.sendEmail, getNamedTicketEmailOperationAction: mocks.emailStatus,
+  getNamedConversationEmailDefaultsAction: mocks.emailDefaults,
   getNamedTicketConversationScreenAction: mocks.load, getNamedTicketConversationMessagesAction: mocks.page,
   getNamedConversationEditorDraftAction: mocks.readDraft, saveNamedConversationEditorDraftAction: mocks.saveDraft,
   postNamedTicketConversationAction: mocks.post, createNamedTicketConversationAction: mocks.create, setNamedTicketConversationStatusAction: mocks.status,
@@ -40,7 +41,7 @@ beforeEach(() => {
   mocks.saveDraft.mockImplementation(async (_ticket, _ref, request) => ({ content: request.content, revision: request.expectedRevision + 1, conversationRevision: 1 }));
   mocks.post.mockResolvedValue({ commentId: 'posted' });
   mocks.mailboxes.mockResolvedValue([{ id: 'mailbox', tenant: 'home', email: 'support@example.test', name: 'Support' }]);
-  mocks.latestSend.mockResolvedValue(null);
+  mocks.latestSend.mockResolvedValue(null); mocks.emailDefaults.mockResolvedValue(null);
 });
 afterEach(cleanup);
 
@@ -226,4 +227,23 @@ it('saves the email draft before selecting a mailbox and uses its new revision a
   fireEvent.click(screen.getByRole('button', { name: 'Review email' })); await screen.findByText('resolved@example.test');
   expect(mocks.selectMailbox.mock.calls[0].slice(2)).toEqual([1, 'mailbox']);
   expect(mocks.prepareEmail.mock.calls[0][2].expectedConversationRevision).toBe(2); expect(mocks.sendEmail).not.toHaveBeenCalled();
+});
+
+it('uses accepted recipient defaults without replacing an edited envelope on refresh or reload', async () => {
+  const f = emailFixture();
+  mocks.emailDefaults.mockResolvedValue({ to: ['new-vendor@example.test'], cc: ['colleague@example.test'], subject: 'Latest accepted subject' });
+  const first = render(<Harness />);
+  await screen.findByLabelText('Message');
+  expect(screen.getByLabelText('To')).toHaveValue('new-vendor@example.test');
+  fireEvent.change(screen.getByLabelText('To'), { target: { value: 'intentional-recipient@example.test' } });
+  await waitFor(() => expect(f.draft()?.email.to).toEqual(['intentional-recipient@example.test']));
+  mocks.emailDefaults.mockResolvedValue({ to: ['another-new-vendor@example.test'], cc: [], subject: 'Newer arrival' });
+  fireEvent.focus(window);
+  await waitFor(() => expect(mocks.load).toHaveBeenCalledTimes(2));
+  expect(screen.getByLabelText('To')).toHaveValue('intentional-recipient@example.test');
+  first.unmount(); render(<Harness />);
+  await screen.findByLabelText('Message');
+  expect(screen.getByLabelText('To')).toHaveValue('intentional-recipient@example.test');
+  expect(screen.getByLabelText('Subject')).toHaveValue('Latest accepted subject');
+  expect(mocks.emailDefaults).toHaveBeenCalledTimes(1);
 });

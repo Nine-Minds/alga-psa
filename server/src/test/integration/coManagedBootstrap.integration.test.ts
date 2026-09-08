@@ -94,7 +94,7 @@ beforeAll(async () => {
     '20260906080000_create_co_management_relationship_events.cjs',
     '20260906100000_add_external_file_metadata.cjs',
     '20260906110000_add_kb_import_batch_identity.cjs',
-    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs', '20260908013607_create_named_ticket_conversations.cjs', '20260908015652_create_ticket_conversation_editor_drafts.cjs', '20260908022249_scope_ticket_conversation_defaults_to_relationship.cjs', '20260908024119_create_ticket_conversation_publications.cjs', '20260908030840_retain_ticket_conversation_draft_reply_target.cjs', '20260908033011_create_ticket_conversation_sender_grants.cjs', '20260908034701_create_ticket_conversation_email_operations.cjs']) {
+    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs', '20260908013607_create_named_ticket_conversations.cjs', '20260908015652_create_ticket_conversation_editor_drafts.cjs', '20260908022249_scope_ticket_conversation_defaults_to_relationship.cjs', '20260908024119_create_ticket_conversation_publications.cjs', '20260908030840_retain_ticket_conversation_draft_reply_target.cjs', '20260908033011_create_ticket_conversation_sender_grants.cjs', '20260908034701_create_ticket_conversation_email_operations.cjs', '20260908042702_create_ticket_conversation_inbound_receipts.cjs']) {
     await require('../../../migrations/' + file).up(db);
   }
   for (const table of ['standard_statuses', 'standard_priorities', 'countries', 'notification_categories',
@@ -14612,5 +14612,95 @@ describe('named ticket conversation reviewed email operations against migrated P
       await f.sponsor.table('ticket_conversation_email_operations').where('operation_id', request.operationId).update({ attempted_at: db.raw("clock_timestamp() - interval '10 minutes'") });
       expect(await email.getNamedConversationEmailOperation(db, principal, ticket, ref, request.operationId)).toMatchObject({ status: 'unknown' });
     }
+  });
+});
+
+async function namedInboundFixture(audience: 'shared_it' | 'organization_private' = 'shared_it') {
+  const fixture = await namedEmailFixture(audience);
+  const prepared = await fixture.email.prepareNamedConversationEmail(db, fixture.principal, fixture.ticket, fixture.ref, fixture.request, fixture.transport);
+  await fixture.email.confirmNamedConversationEmail(db, fixture.principal, fixture.ticket, fixture.ref, fixture.request.operationId, prepared.review.messageHash, fixture.transport, fixture.publish);
+  const route = await fixture.sponsor.table('ticket_conversation_email_routes').first();
+  const operation = await fixture.sponsor.table('ticket_conversation_email_operations').where('operation_id', fixture.request.operationId).first();
+  const token = /\[ALGA-REPLY-TOKEN ([^\]]+)\]/.exec(operation.payload.text)![1];
+  const admission = await import('../../../../packages/co-managed/src/inboundNamedConversationEmail');
+  const senderAuth = { aligned: { spf: true, dkim: true, dmarc: true } } as any;
+  const makeInput = async (overrides: Record<string, any> = {}) => {
+    const inboxId = randomUUID(), sourceSha256 = 'b'.repeat(64), id = `<vendor-${inboxId}@example.test>`;
+    const { upsertIngress } = await import('../../../../shared/services/email/inboundEmailDurableStore');
+    const ingress = await upsertIngress(db, { tenant: fixture.principal.tenant, provider_id: fixture.mailboxId, provider_type: 'imap', ingress_key: inboxId, provider_pointer: { messageId: id } });
+    await fixture.sponsor.table('inbound_email_inbox').insert({ tenant: fixture.principal.tenant, inbox_id: inboxId, ingress_id: ingress.ingress_id, provider_id: fixture.mailboxId,
+      provider_type: 'imap', provider_message_id: id, rfc_message_id: id, normalized_message_id: id, status: 'processing', source_sha256: sourceSha256,
+      source_object_key: `test/vendor/${inboxId}`, source_size_bytes: 100, source_staged_at: new Date(), lease_token: randomUUID(), lease_version: 1, lease_owner: 'vendor-fixture',
+      lease_expires_at: new Date(Date.now() + 60000), attempt_count: 1, envelope: '{}' });
+    return { tenant: fixture.principal.tenant, providerId: fixture.mailboxId, inboxId, senderAuth,
+      email: { id, provider: 'imap' as const, providerId: fixture.mailboxId, tenant: fixture.principal.tenant, receivedAt: new Date().toISOString(),
+        from: { email: 'new-colleague@example.test', name: 'Vendor colleague' }, to: [{ email: 'support@example.test' }], cc: [{ email: 'vendor@example.test' }],
+        subject: 'Re: Circuit diagnosis', body: { text: `We found a carrier fault.\n\n[ALGA-REPLY-TOKEN ${token}]` }, sourceSha256, attachments: [],
+        inReplyTo: route.rfc_message_id, headers: { 'Authentication-Results': 'mx.example.test; spf=pass smtp.mailfrom=new-colleague@example.test; dkim=pass header.d=example.test' }, ...overrides } };
+  };
+  return { ...fixture, admission, makeInput, token, route };
+}
+describe('named ticket conversation inbound vendor admission against migrated PostgreSQL', () => {
+  it.each(['shared_it', 'organization_private'] as const)('accepts a new correspondent into the %s conversation once without requester effects', async audience => {
+    const f = await namedInboundFixture(audience), input = await f.makeInput();
+    const { getTenantInboundEmailPolicy } = await import('../../../../shared/services/email/inboundEmailDurableStore');
+    expect(await getTenantInboundEmailPolicy(f.principal.tenant, db)).toEqual({ mode: 'enforce', requiresDurable: true });
+    const before = await f.customer.table('tickets').where('ticket_id', f.ticket.ticketId).first();
+    await f.conversations.setNamedTicketConversationStatus(db, f.principal, f.ticket, f.ref, 2, 'done');
+    const actual = await vi.importActual<typeof import('../../../../shared/services/email/processInboundEmailInApp')>('../../../../shared/services/email/processInboundEmailInApp');
+    intake.process.mockReset(); intake.process.mockImplementation(actual.processInboundEmailInApp);
+    intake.read.mockReset(); intake.read.mockResolvedValue(Buffer.from('Vendor MIME'));
+    intake.parse.mockReset(); intake.parse.mockResolvedValue({ emailData: input.email });
+    await f.sponsor.table('inbound_email_inbox').where('inbox_id', input.inboxId).update({ status: 'received', lease_owner: null, lease_token: null, lease_expires_at: null });
+    const { processInboundInbox } = await import('../../../../shared/services/email/inboundEmailCoreProcessor');
+    const run = () => processInboundInbox({ tenantId: input.tenant, inboxId: input.inboxId, owner: randomUUID(), leaseTtlMs: 30000,
+      mode: 'enforce', namedConversationReplyAdmission: f.admission.admitNamedConversationEmailReply });
+    let result: Awaited<ReturnType<typeof run>>;
+    try { result = await run(); expect(await run()).toMatchObject({ disposition: 'ack', outcome: 'replied' }); }
+    finally { intake.process.mockReset(); intake.read.mockReset(); intake.parse.mockReset(); }
+    expect(result).toMatchObject({ disposition: 'ack', outcome: 'replied', ticketId: f.ticket.ticketId });
+    if (result.disposition !== 'ack' || !result.commentId) throw new Error('Expected vendor reply');
+    expect(await f.sponsor.table('inbound_email_effects').where('inbox_id', input.inboxId)).toHaveLength(1);
+    expect(await f.sponsor.table('inbound_email_inbox').where('inbox_id', input.inboxId).first()).toMatchObject({ status: 'succeeded', comment_id: result.commentId });
+    const owner = audience === 'shared_it' ? f.customer : f.sponsor;
+    expect(await owner.table('ticket_conversation_inbound_messages')).toHaveLength(1);
+    expect(await f.sponsor.table('ticket_conversation_inbound_receipts')).toHaveLength(1);
+    expect(await f.customer.table('ticket_conversation_inbound_receipts')).toHaveLength(0);
+    expect(await f.customer.table('tickets').where('ticket_id', f.ticket.ticketId).first()).toEqual(before);
+    expect(await f.conversations.getNamedTicketConversation(db, f.principal, f.ticket, f.ref)).toMatchObject({ status: 'open', revision: 4, messageVersion: '2' });
+    const row = await owner.table(audience === 'shared_it' ? 'comments' : 'co_management_private_comments').where('comment_id', result.commentId).first();
+    expect(row.note).toContain('We found a carrier fault.'); expect(row.note).not.toContain('ALGA-REPLY-TOKEN');
+    expect(audience === 'shared_it' ? row.user_id : row.actor_user_id).toBeNull();
+    if (audience === 'shared_it') expect(row).toMatchObject({ author_type: 'unknown', is_internal: true, is_resolution: false });
+    else expect(row).toMatchObject({ actor_kind: 'external', external_author_email: input.email.from.email });
+    expect(await owner.table('ticket_conversation_inbound_messages').first()).toMatchObject({ proposed_recipients: { to: [{ email: input.email.from.email }], cc: [{ email: 'vendor@example.test' }] } });
+    const page = await f.conversations.getNamedTicketConversationMessages(db, f.principal, f.ticket, f.ref);
+    expect(page.items).toHaveLength(2); expect(page.items[0]).toMatchObject({ author: { kind: 'external', id: null, displayName: 'Vendor colleague' }, email: { delivery: 'received' } });
+    expect(await f.email.getNamedConversationEmailDefaults(db, f.principal, f.ticket, f.ref)).toEqual({ subject: 'Re: Circuit diagnosis', to: [input.email.from.email], cc: ['vendor@example.test'] });
+    await f.conversations.saveNamedConversationEditorDraft(db, f.principal, f.ticket, f.ref,
+      { ...f.draft, operationId: randomUUID(), expectedRevision: 2, expectedConversationRevision: 4, content: { text: 'Please proceed with maintenance.' } });
+    const next = await f.email.prepareNamedConversationEmail(db, f.principal, f.ticket, f.ref,
+      { operationId: randomUUID(), expectedDraftRevision: 3, expectedConversationRevision: 4 }, f.transport);
+    const nextOperation = await f.sponsor.table('ticket_conversation_email_operations').where('operation_id', next.operationId).first('payload');
+    expect(nextOperation.payload.headers).toMatchObject({ 'In-Reply-To': input.email.id, References: `${f.route.rfc_message_id} ${input.email.id}` });
+    const headerOnly = await f.makeInput({ body: { text: 'Carrier maintenance scheduled.' } });
+    expect(await db.transaction(trx => f.admission.admitNamedConversationEmailReply(trx, headerOnly))).toMatchObject({ outcome: 'replied', matchedBy: 'thread_headers' });
+    await f.conversations.setNamedTicketConversationStatus(db, f.principal, f.ticket, f.ref, 4, 'done');
+    const automatic = await f.makeInput({ headers: { 'Auto-Submitted': 'auto-replied' } });
+    expect(await db.transaction(trx => f.admission.admitNamedConversationEmailReply(trx, automatic))).toEqual({ outcome: 'skipped', reason: 'self_notification' });
+    expect(await f.conversations.getNamedTicketConversation(db, f.principal, f.ticket, f.ref)).toMatchObject({ status: 'done', messageVersion: '3' });
+  });
+  it('quarantines wrong mailbox, competing route, failed sender authentication and revoked collaboration before writing', async () => {
+    const f = await namedInboundFixture(), input = await f.makeInput();
+    const other = await namedInboundFixture();
+    const conflicting = await f.makeInput({ references: [other.route.rfc_message_id] });
+    for (const request of [{ ...input, providerId: randomUUID() }, { ...input, senderAuth: null }, conflicting]) {
+      expect(await db.transaction(trx => f.admission.admitNamedConversationEmailReply(trx, request))).toMatchObject({ outcome: 'quarantined' });
+    }
+    await f.customer.table('co_management_ticket_work').where('ticket_id', f.ticket.ticketId).update({ can_collaborate: false });
+    await f.customer.table('co_management_board_scopes').where('relationship_id', f.ticket.relationshipId).update({ can_collaborate: false });
+    expect(await db.transaction(trx => f.admission.admitNamedConversationEmailReply(trx, input))).toMatchObject({ outcome: 'quarantined' });
+    expect(await f.sponsor.table('ticket_conversation_inbound_receipts')).toHaveLength(0);
+    expect(await f.customer.table('ticket_conversation_inbound_messages')).toHaveLength(0);
   });
 });

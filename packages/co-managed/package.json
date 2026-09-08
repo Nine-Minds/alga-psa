@@ -56,6 +56,10 @@
     "./localProjectSearchPolicy": {
       "types": "./src/localProjectSearchPolicy.ts",
       "import": "./dist/localProjectSearchPolicy.js"
+    },
+    "./inboundNamedConversationEmail": {
+      "types": "./src/inboundNamedConversationEmail.ts",
+      "import": "./dist/inboundNamedConversationEmail.js"
     }
   },
   "scripts": {

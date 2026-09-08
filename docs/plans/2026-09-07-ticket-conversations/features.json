@@ -314,7 +314,7 @@
   {
     "id": "F040",
     "description": "Derive proposed reply-all recipients from the latest accepted sender and To/CC with routing addresses and duplicates removed.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "6. Email, recipients and notification behavior"
     ]
@@ -330,7 +330,7 @@
   {
     "id": "F042",
     "description": "Store immutable historical sent envelopes separately from editable next-message recipient defaults.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "6. Email, recipients and notification behavior"
     ]
@@ -354,7 +354,7 @@
   {
     "id": "F045",
     "description": "Correlate replies to qualified ticket, named conversation, provider/mailbox and originating organization using existing accepted artifacts.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "6. Email, recipients and notification behavior"
     ]
@@ -362,7 +362,7 @@
   {
     "id": "F046",
     "description": "Accept validly correlated vendor replies from newly introduced colleagues within the same conversation.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "6. Email, recipients and notification behavior"
     ]
@@ -394,7 +394,7 @@
   {
     "id": "F050",
     "description": "Preserve accepted envelope evidence and sanitized content through existing inbound infrastructure.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "6. Email, recipients and notification behavior"
     ]

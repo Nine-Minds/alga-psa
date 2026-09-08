@@ -12,6 +12,7 @@ import { conversationUuid, snapshotConversationReference, snapshotConversationTi
   type ConversationTicketReference, type TicketConversationReference } from '@alga-psa/shared/lib/tickets/namedConversations';
 import type { PublishedConversationEmail, ReviewedEmailAddress, ReviewedEmailPreview } from '@alga-psa/shared/lib/email/reviewedEmail';
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
+import { coManagedConversationAuthorSources } from './conversationPolicy';
 import type { CoManagedConversationItem } from './ticketConversation';
 
 export interface NamedConversationEmailRequest { operationId: string; expectedDraftRevision: number; expectedConversationRevision: number }
@@ -43,6 +44,16 @@ function operations(context: Context) {
     conversation_store_tenant: context.conversation.storeTenant, conversation_id: context.conversation.conversationId });
 }
 function operation(context: Context, id: string) { return operations(context).where('operation_id', id); }
+async function latestEmail(context: Context) {
+  const store = tenantDb(context.trx, context.conversation.storeTenant);
+  const scope = { ticket_tenant: context.ticket.tenant, ticket_id: context.ticket.ticketId, conversation_id: context.conversation.conversationId };
+  const sent = store.table('ticket_conversation_publications').where({ ...scope, mode: 'send' }).whereNotNull('email_envelope')
+    .select('created_at', context.trx.raw('operation_id AS id, email_envelope AS envelope, email_envelope AS defaults'));
+  const received = store.table('ticket_conversation_inbound_messages').where(scope)
+    .select('created_at', context.trx.raw('comment_id AS id, envelope, proposed_recipients AS defaults'));
+  return context.trx.from(context.trx.unionAll([sent, received], true).as('email_history')).orderBy('created_at', 'desc').orderBy('id', 'desc').first();
+}
+
 function state(row: any) {
   const expiredAttempt = row.status === 'sending' && row.attempted_at && Date.now() - new Date(row.attempted_at).getTime() > 300000;
   return { operationId: row.operation_id, status: expiredAttempt ? 'unknown' as const : row.status as 'reviewed' | 'pending' | 'sending' | 'delivered' | 'unknown' | 'blocked',
@@ -77,8 +88,10 @@ export function prepareNamedConversationEmail(db: Knex, inputActor: CoManagedSes
     const messageId = `<conversation-${request.operationId}@${mailbox.email.split('@')[1]}>`;
     const prior = await tenantDb(context.trx, ref.storeTenant).table('ticket_conversation_publications')
       .where({ conversation_id: ref.conversationId, mode: 'send' }).whereNotNull('email_envelope').orderBy('created_at', 'desc').first('email_envelope');
-    const priorId = prior?.email_envelope?.messageId;
-    const headers = { 'Message-ID': messageId, ...(priorId ? { 'In-Reply-To': priorId, References: priorId } : {}) };
+    const latest = await latestEmail(context);
+    const priorId = latest?.envelope?.messageId ?? prior?.email_envelope?.messageId;
+    const references = [...new Set([prior?.email_envelope?.messageId, priorId].filter(Boolean))].join(' ');
+    const headers = { 'Message-ID': messageId, ...(priorId ? { 'In-Reply-To': priorId, References: references } : {}) };
     const prepared = await transport.prepare({ mailbox, content, envelope, headers, replyToken: token });
     if (prepared.review.files.length || !/^[0-9a-f]{64}$/.test(prepared.review.senderRevision) || !/^[0-9a-f]{64}$/.test(prepared.review.messageHash)) return invalid();
     if (prepared.review.providerType === 'microsoft' && prepared.review.from.email.toLowerCase() !== mailbox.email.toLowerCase()) return invalid();
@@ -142,8 +155,8 @@ export function getLatestNamedConversationEmailSend(db: Knex, actor: CoManagedSe
  * readers. The author's private review, payload and tokens remain unprojected. */
 export async function attachPublishedConversationEmails(context: Pick<Context, 'trx' | 'ticket' | 'conversation' | 'hidden'>, items: CoManagedConversationItem[]) {
   const visible = items.filter(item => !item.deleted);
-  if (!visible.length || isCoManagedReadFieldHidden(context.hidden, ['email', 'email_envelope', 'recipients', 'from', 'to', 'cc', 'subject',
-    'ticket_conversation_publications', 'ticket_conversation_email_operations'])) return;
+  if (!visible.length || isCoManagedReadFieldHidden(context.hidden, [...coManagedConversationAuthorSources, 'email', 'email_envelope', 'recipients', 'from', 'to', 'cc', 'subject',
+    'ticket_conversation_publications', 'ticket_conversation_email_operations', 'ticket_conversation_inbound_messages', 'proposed_recipients'])) return;
   const rows = await tenantDb(context.trx, context.conversation.storeTenant).table('ticket_conversation_publications')
     .where({ ticket_tenant: context.ticket.tenant, ticket_id: context.ticket.ticketId, conversation_id: context.conversation.conversationId, mode: 'send' })
     .whereIn('comment_id', visible.map(item => item.commentId)).whereNotNull('email_envelope')
@@ -159,6 +172,17 @@ export async function attachPublishedConversationEmails(context: Pick<Context, '
     const projected: PublishedConversationEmail = { from: envelope.from, replyTo: envelope.replyTo, to: envelope.to, cc: envelope.cc, subject: envelope.subject, delivery };
     const item = visible.find(value => value.commentId === row.comment_id && value.storeTenant === context.conversation.storeTenant);
     if (item) item.email = projected;
+  }
+  const inbound = await tenantDb(context.trx, context.conversation.storeTenant).table('ticket_conversation_inbound_messages')
+    .where({ ticket_tenant: context.ticket.tenant, ticket_id: context.ticket.ticketId, conversation_id: context.conversation.conversationId })
+    .whereIn('comment_id', visible.map(item => item.commentId)).select('comment_id', 'envelope');
+  for (const row of inbound) {
+    const item = visible.find(value => value.commentId === row.comment_id);
+    if (!item) continue;
+    const envelope = row.envelope;
+    item.email = { from: envelope.from, to: envelope.to, cc: envelope.cc, subject: envelope.subject, delivery: 'received' };
+    item.author = { tenant: context.conversation.storeTenant, kind: 'external', id: null, referenceId: null,
+      displayName: envelope.from.name || envelope.from.email, organizationName: null };
   }
 }
 /** A committed sending marker precedes transport. If the process or transaction
@@ -194,5 +218,18 @@ export async function deliverNamedConversationEmail(db: Knex, inputActor: CoMana
     } catch { status = 'unknown'; errorCode = 'delivery_unknown'; }
     const [saved] = await operation(context, id).update({ status, error_code: errorCode, completed_at: context.trx.fn.now() }).returning('*');
     return state(saved);
+  });
+}
+
+/** Editable reply defaults are projected independently from immutable history.
+ * They never modify an existing author draft or grant access to a correspondent. */
+export function getNamedConversationEmailDefaults(db: Knex, actor: CoManagedSessionActor, ticket: ConversationTicketReference, ref: TicketConversationReference) {
+  return withNamedTicketConversation(db, actor, ticket, ref, 'read', async context => {
+    if (context.conversation.transport !== 'email' || isCoManagedReadFieldHidden(context.hidden,
+      [...coManagedConversationAuthorSources, 'email', 'email_envelope', 'recipients', 'from', 'to', 'cc', 'subject', 'ticket_conversation_publications', 'ticket_conversation_inbound_messages', 'proposed_recipients'])) return null;
+    const row = await latestEmail(context);
+    if (!row) return null;
+    const envelope = row.defaults;
+    return { subject: envelope.subject, to: envelope.to.map((value: ReviewedEmailAddress) => value.email), cc: envelope.cc.map((value: ReviewedEmailAddress) => value.email) };
   });
 }

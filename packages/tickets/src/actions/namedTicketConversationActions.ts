@@ -102,3 +102,9 @@ export const getLatestNamedTicketEmailSendAction = withAuth(async (user, { tenan
   const { getLatestNamedConversationEmailSend } = await import('@alga-psa/co-managed');
   return getLatestNamedConversationEmailSend(knex, actor, ticket, conversation);
 });
+
+export const getNamedConversationEmailDefaultsAction = withAuth(async (user, { tenant }, ticket: ConversationTicketReference, conversation: TicketConversationReference) => {
+  const actor = await coManagedBrowserActor(user, tenant), { knex } = await createTenantKnex(tenant);
+  const { getNamedConversationEmailDefaults } = await import('@alga-psa/co-managed');
+  return getNamedConversationEmailDefaults(knex, actor, ticket, conversation);
+});

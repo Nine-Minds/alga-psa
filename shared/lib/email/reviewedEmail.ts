@@ -1,5 +1,5 @@
 export interface ReviewedEmailAddress { email: string; name?: string }
-export type ConversationEmailDeliveryState = 'pending' | 'sending' | 'delivered' | 'unknown' | 'blocked';
+export type ConversationEmailDeliveryState = 'pending' | 'sending' | 'delivered' | 'unknown' | 'blocked' | 'received';
 export interface PublishedConversationEmail {
   from: ReviewedEmailAddress;
   replyTo?: ReviewedEmailAddress;

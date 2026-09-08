@@ -1,3 +1,4 @@
+import type { NamedConversationReplyAdmission } from './namedConversationReplyAdmission';
 import { htmlToVisibleText } from '../../lib/email/replyParser';
 import { hasNamedConversationReplyHint, isQualifiedReplyToken, qualifiedReplyTokenFromBody, type EmailReplyAdmission, type AdmittedEmailReply } from './qualifiedReplyAdmission';
 import type { EmailMessageDetails } from '../../interfaces/inbound-email.interfaces';
@@ -88,6 +89,7 @@ export interface ProcessInboundEmailInAppOptions {
     trx: any;
     inboxId: string;
     qualifiedReplyAdmission?: EmailReplyAdmission;
+    namedConversationReplyAdmission?: NamedConversationReplyAdmission;
     eventPublishers?: {
       ticket?: IEventPublisher;
       comment?: IEventPublisher;
@@ -1068,10 +1070,12 @@ export async function processInboundEmailInApp(
 
   // Fast-path: if we've already created a ticket for this email, never create a second one.
   const reservedQualifiedToken = qualifiedReplyTokenFromBody(emailData.body);
-  // Named vendor admission is being connected separately from requester and
-  // technician token writers. Retain these messages in the owning inbox's
-  // protected review until that writer can preserve their conversation/store.
+  // Named replies use their own qualified destination writer. An unconfigured
+  // composition retains them in protected review without legacy matching.
   if (hasNamedConversationReplyHint(emailData)) {
+    if (durableExecution?.namedConversationReplyAdmission) return durableExecution.namedConversationReplyAdmission(durableExecution.trx, {
+      tenant: tenantId, providerId, inboxId: durableExecution.inboxId, email: emailData, senderAuth: senderAuthResults,
+    });
     return { outcome: 'quarantined', reason: 'conversation_reply_requires_admission', matchedBy: hasNamedConversationReplyHint({ body: emailData.body }) ? 'reply_token' : 'thread_headers' };
   }
   const existingTicket = reservedQualifiedToken ? null : await findExistingEmailTicket({

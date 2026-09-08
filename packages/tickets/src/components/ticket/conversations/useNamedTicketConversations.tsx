@@ -221,13 +221,16 @@ export function NamedConversationComposer({ id, ticket, conversation, flush, onD
   const read = useCallback(async () => {
     const generation = ++readGeneration.current;
     const draft = await actions.getNamedConversationEditorDraftAction(ticket, reference(conversation));
+    const defaults = isEmail && !draft?.email ? await actions.getNamedConversationEmailDefaultsAction(ticket, reference(conversation)) : null;
     if (!state.current.alive || generation !== readGeneration.current) return;
     const content = draft?.content ?? null;
     state.current.revision = draft?.revision ?? 0; state.current.content = content;
     state.current.dirty = Boolean(content && draft?.conversationRevision !== currentConversation.current.revision);
     state.current.generation++;
     state.current.parent = draft?.parent ?? null; setParent(state.current.parent);
-    state.current.email = draft?.email ?? null; setEmail(state.current.email ?? { subject: '', to: [], cc: [] });
+    state.current.email = draft?.email ?? defaults;
+    if (defaults) { state.current.content ??= { text: '' }; state.current.dirty = true; }
+    setEmail(state.current.email ?? { subject: '', to: [], cc: [] });
     state.current.conversationRevision = currentConversation.current.revision;
     state.current.invalid = false; invalidEmail.current = false;
     setDocument(content?.document ?? (content?.text ? conversationDocument(content.text) ?? [] : []));

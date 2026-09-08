@@ -1,3 +1,4 @@
+import type { NamedConversationReplyAdmission } from './namedConversationReplyAdmission';
 /**
  * Fenced core orchestrator for the durable inbound email pipeline.
  *
@@ -62,6 +63,7 @@ export interface ProcessInboundInboxParams {
   inboxId: string;
   owner: string;
   qualifiedReplyAdmission?: EmailReplyAdmission;
+  namedConversationReplyAdmission?: NamedConversationReplyAdmission;
   retainConversationEvent?: InboundConversationEventRetainer;
   leaseTtlMs: number;
   /** In shadow mode no core entities are created; used for source-stage coverage validation. */
@@ -259,6 +261,7 @@ export async function processInboundInbox(
         inbox: locked,
         emailData: parsed.emailData,
         qualifiedReplyAdmission: params.qualifiedReplyAdmission,
+        namedConversationReplyAdmission: params.namedConversationReplyAdmission,
         retainConversationEvent: params.retainConversationEvent,
       });
       return { terminalReplay: false as const, ...result };
@@ -326,6 +329,7 @@ async function runCommitPhase(params: {
   inboxId: string;
   owner: string;
   qualifiedReplyAdmission?: EmailReplyAdmission;
+  namedConversationReplyAdmission?: NamedConversationReplyAdmission;
   retainConversationEvent?: InboundConversationEventRetainer;
   mode?: 'shadow' | 'enforce';
   trx: Knex.Transaction;
@@ -367,6 +371,7 @@ async function runCommitPhase(params: {
         trx,
         inboxId: params.inboxId,
         qualifiedReplyAdmission: params.qualifiedReplyAdmission,
+        namedConversationReplyAdmission: params.namedConversationReplyAdmission,
         eventPublishers: { ticket: ticketPublisher, comment: commentPublisher },
       },
     }

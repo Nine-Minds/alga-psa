@@ -2,7 +2,7 @@
   {
     "id": "T001",
     "description": "Real migrated PostgreSQL: initialize a native requester ticket and a co-managed ticket; create additional named conversations and messages across existing reply roots; verify qualified ownership, exactly one default, correct FK associations and replay-safe defaults under concurrent initialization.",
-    "implemented": false,
+    "implemented": true,
     "type": "integration",
     "featureIds": [
       "F001",
