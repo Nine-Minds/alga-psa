@@ -498,7 +498,10 @@
       "organizations": {
         "msp": "MSP",
         "customer": "IT-afdeling van de klant"
-      }
+      },
+      "export": "CSV exporteren",
+      "exporting": "Exporteren…",
+      "exportError": "Tickets konden niet worden geëxporteerd. Vernieuw de wachtrij en probeer het opnieuw."
     },
     "conversation": {
       "title": "Gesprek",

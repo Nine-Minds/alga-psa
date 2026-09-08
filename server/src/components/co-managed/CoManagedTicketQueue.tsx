@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import type { CoManagedTicketQueuePage, CoManagedTicketQueueRequest } from '@alga-psa/co-managed';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -9,7 +9,7 @@ import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@alga-psa/ui/components/Table';
 import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
-import { getCoManagedTicketQueueAction } from '@/lib/actions/coManagedTicketQueueActions';
+import { getCoManagedTicketQueueAction, exportCoManagedTicketQueueAction } from '@/lib/actions/coManagedTicketQueueActions';
 
 export default function CoManagedTicketQueue() {
   const { t } = useTranslation('msp/licensing');
@@ -17,22 +17,47 @@ export default function CoManagedTicketQueue() {
   const [request, setRequest] = useState<CoManagedTicketQueueRequest>({ view: 'working', state: 'open', sort: 'updated', direction: 'desc', page: 1, pageSize: 25 });
   const [search, setSearch] = useState('');
   const [result, setResult] = useState<CoManagedTicketQueuePage | null>(null);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<'load' | 'export' | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const generation = useRef(0);
   const [refresh, setRefresh] = useState(0);
   useEffect(() => {
     // LEVERAGE: pattern qualified-queue-request-lifetime — ticket/task filters must discard older requests and clear stale rows/counts.
     let cancelled = false;
-    setResult(null); setError(false);
-    void getCoManagedTicketQueueAction(request).then(page => { if (!cancelled) setResult(page); }).catch(() => { if (!cancelled) setError(true); });
-    return () => { cancelled = true; };
+    generation.current += 1;
+    setResult(null); setError(null); setExporting(false);
+    void getCoManagedTicketQueueAction(request).then(page => { if (!cancelled) setResult(page); }).catch(() => { if (!cancelled) setError('load'); });
+    return () => { cancelled = true; generation.current += 1; };
   }, [request, refresh]);
+  const exportTickets = async () => {
+    if (!result || exporting) return;
+    const current = generation.current;
+    const { page: _page, pageSize: _pageSize, ...filters } = request;
+    setExporting(true);
+    try {
+      const exported = await exportCoManagedTicketQueueAction(filters);
+      if (generation.current !== current) return;
+      const url = URL.createObjectURL(new Blob([exported.csv], { type: 'text/csv;charset=utf-8' }));
+      const link = document.createElement('a');
+      link.id = 'co-queue-export-download'; link.href = url; link.download = exported.filename;
+      document.body.appendChild(link);
+      try { link.click(); } finally { link.remove(); setTimeout(() => URL.revokeObjectURL(url), 0); }
+    } catch {
+      if (generation.current === current) { setResult(null); setError('export'); }
+    } finally {
+      if (generation.current === current) setExporting(false);
+    }
+  };
   const change = (patch: Partial<CoManagedTicketQueueRequest>) => setRequest(current => ({ ...current, ...patch, page: 1 }));
   const unknown = t('coManaged.ticket.restricted');
   return <div className="mx-auto max-w-7xl space-y-5 p-6">
     <div className="flex flex-wrap items-start justify-between gap-3"><div>
       <h1 className="text-2xl font-semibold">{t('coManaged.queue.title')}</h1>
       <p className="mt-1 text-sm text-muted-foreground">{t(`coManaged.queue.${request.view}Description`)}</p>
-    </div><Button id="co-queue-refresh" variant="outline" onClick={() => setRefresh(value => value + 1)}>{t('coManaged.provisioning.refresh')}</Button></div>
+    </div><div className="flex gap-2">
+      <Button id="co-queue-export" variant="outline" disabled={!result || exporting} onClick={() => void exportTickets()}>{t(exporting ? 'coManaged.queue.exporting' : 'coManaged.queue.export')}</Button>
+      <Button id="co-queue-refresh" variant="outline" onClick={() => setRefresh(value => value + 1)}>{t('coManaged.provisioning.refresh')}</Button>
+    </div></div>
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
       <CustomSelect id="co-queue-view" label={t('coManaged.queue.view')} value={request.view}
         options={['working', 'oversight'].map(value => ({ value, label: t(`coManaged.queue.${value}`) }))} onValueChange={value => change({ view: value as 'working' | 'oversight', workspaceTenant: undefined })} />
@@ -51,7 +76,7 @@ export default function CoManagedTicketQueue() {
       <div className="min-w-64 flex-1"><Label htmlFor="co-queue-search">{t('coManaged.queue.search')}</Label><Input id="co-queue-search" value={search} maxLength={200} onChange={event => setSearch(event.target.value)} /></div>
       <Button id="co-queue-search-submit" type="submit">{t('coManaged.queue.search')}</Button>
     </form>
-    {error ? <p role="alert" className="text-destructive">{t('coManaged.queue.loadError')}</p> : !result ? <p role="status">{t('coManaged.ticket.loading')}</p> : <>
+    {error ? <p role="alert" className="text-destructive">{t(error === 'export' ? 'coManaged.queue.exportError' : 'coManaged.queue.loadError')}</p> : !result ? <p role="status">{t('coManaged.ticket.loading')}</p> : <>
       <p role="status" className="text-sm text-muted-foreground">{t('coManaged.queue.counts', { total: result.totalCount, open: result.openCount, closed: result.closedCount })}</p>
       {!result.items.length ? <p>{t('coManaged.queue.empty')}</p> : <div className="overflow-x-auto rounded-lg border">
         <Table><TableHeader><TableRow>{['ticket', 'workspace', 'state', 'priority', 'responsibility', 'updated'].map(field => <TableHead key={field}>{t(`coManaged.queue.columns.${field}`)}</TableHead>)}</TableRow></TableHeader>

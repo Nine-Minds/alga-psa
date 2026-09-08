@@ -15519,3 +15519,39 @@ it('customer interaction lifecycle rolls back insertion and deletion when creden
   await expect(create()).rejects.toBeDefined(); await expect(remove(id)).rejects.toBeDefined();
   expect(await customer.table('interactions').where('interaction_id', id).first()).toBeDefined();
 }));
+
+it('consolidated ticket export returns every matching row in global order regardless of page controls', async () => withTicketQueueFixture(async ({ principal, sponsor, nativeId, resource }: any) => {
+  const { exportCoManagedTicketQueue } = await import('../../../../packages/co-managed/src/ticketQueue');
+  const source = await sponsor.table('tickets').where('ticket_id', nativeId).first();
+  await sponsor.table('tickets').insert(Array.from({ length: 105 }, (_, n) => ({ tenant: principal.tenant, ticket_id: randomUUID(), ticket_number: `EXPORT-${String(n).padStart(3, '0')}`, title: `Export row ${String(n).padStart(3, '0')}`, client_id: source.client_id, board_id: source.board_id, status_id: source.status_id, entered_by: principal.userId })));
+  const rows = await exportCoManagedTicketQueue(db, principal, { view: 'working', state: 'all', sort: 'title', direction: 'asc', page: 100, pageSize: 1 } as any);
+  expect(rows).toHaveLength(107); expect(rows[0].ticketId).toBe(nativeId);
+  expect(new Set(rows.map(row => `${row.tenant}:${row.ticketId}`)).size).toBe(107);
+  expect(rows.find(row => row.ticketId === resource.id)).toMatchObject({ tenant: resource.tenant, relationshipId: resource.relationshipId });
+  const filtered = await exportCoManagedTicketQueue(db, principal, { view: 'working', search: 'Export row 10', sort: 'number', direction: 'desc' });
+  expect(filtered.map(row => row.fields.ticket_number)).toEqual(['EXPORT-104', 'EXPORT-103', 'EXPORT-102', 'EXPORT-101', 'EXPORT-100']);
+  expect(await exportCoManagedTicketQueue(db, principal, { view: 'working', workspaceTenant: randomUUID() })).toEqual([]);
+}));
+
+it('consolidated ticket export applies current field restrictions and removes revoked work from the downloadable relation', async () => withTicketQueueFixture(async ({ principal, resource, customerPrincipal, operation }: any) => {
+  const { exportCoManagedTicketQueue } = await import('../../../../packages/co-managed/src/ticketQueue');
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: principal.tenant, name: 'Export title restriction', actorUserId: principal.userId });
+  await bundles.upsertBundleRule(db, { tenant: principal.tenant, bundleId, revisionId, resourceType: 'ticket', action: 'read', templateKey: 'selected_clients', config: { selectedClientIds: [operation.request.clientId], redactedFields: ['title', 'status_id'] } });
+  await bundles.publishBundleRevision(db, { tenant: principal.tenant, bundleId, revisionId, actorUserId: principal.userId });
+  await bundles.createBundleAssignment(db, { tenant: principal.tenant, bundleId, targetType: 'user', targetId: principal.userId });
+  const exported = await exportCoManagedTicketQueue(db, principal, { view: 'oversight', state: 'all' });
+  expect(exported).toHaveLength(1); expect(exported[0].fields).not.toHaveProperty('title'); expect(exported[0].fields).not.toHaveProperty('status_name');
+  expect(await exportCoManagedTicketQueue(db, principal, { view: 'oversight', state: 'all', search: 'Customer issue' })).toEqual([]);
+  const { revokeCoManagedTicketGrant } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  await revokeCoManagedTicketGrant(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 1, note: 'End this disclosure' });
+  expect(await exportCoManagedTicketQueue(db, principal, { view: 'oversight', state: 'all' })).toEqual([]);
+}));
+
+it('consolidated ticket export remains available during license lapse but rejects expired sessions', async () => withTicketQueueFixture(async ({ principal, sponsor, resource }: any) => {
+  const { exportCoManagedTicketQueue } = await import('../../../../packages/co-managed/src/ticketQueue');
+  await expireCoManagedEntitlement(principal.tenant);
+  expect(await exportCoManagedTicketQueue(db, principal, { view: 'oversight' })).toEqual([expect.objectContaining({ tenant: resource.tenant, ticketId: resource.id })]);
+  await sponsor.table('sessions').where('session_id', principal.sessionId).update({ expires_at: new Date(0) });
+  await expect(exportCoManagedTicketQueue(db, principal, { view: 'working' })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+}));

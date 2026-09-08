@@ -587,7 +587,10 @@
       "organizations": {
         "msp": "MSP",
         "customer": "Customer IT"
-      }
+      },
+      "export": "Export CSV",
+      "exporting": "Exporting…",
+      "exportError": "Could not export tickets. Refresh the queue and try again."
     },
     "conversation": {
       "title": "Conversation",

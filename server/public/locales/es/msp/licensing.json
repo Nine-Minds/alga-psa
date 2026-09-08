@@ -500,7 +500,10 @@
       "organizations": {
         "msp": "MSP",
         "customer": "TI del cliente"
-      }
+      },
+      "export": "Exportar CSV",
+      "exporting": "Exportando…",
+      "exportError": "No se pudieron exportar los tickets. Actualice la cola e inténtelo de nuevo."
     },
     "conversation": {
       "title": "Conversación",

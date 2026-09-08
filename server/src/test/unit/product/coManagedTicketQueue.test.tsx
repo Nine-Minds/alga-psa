@@ -4,10 +4,10 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import CoManagedTicketQueue from '../../../components/co-managed/CoManagedTicketQueue';
 import { CoManagedFeatureBoundary } from '../../../components/co-managed/CoManagedFeatureBoundary';
-const mocks = vi.hoisted(() => ({ flag: vi.fn(), load: vi.fn() }));
+const mocks = vi.hoisted(() => ({ flag: vi.fn(), load: vi.fn(), export: vi.fn() }));
 vi.mock('@alga-psa/ui/hooks', () => ({ useFeatureFlag: mocks.flag }));
 vi.mock('../../../lib/actions/coManagedAcceptanceActions', () => ({}));
-vi.mock('../../../lib/actions/coManagedTicketQueueActions', () => ({ getCoManagedTicketQueueAction: mocks.load }));
+vi.mock('../../../lib/actions/coManagedTicketQueueActions', () => ({ getCoManagedTicketQueueAction: mocks.load, exportCoManagedTicketQueueAction: mocks.export }));
 vi.mock('@alga-psa/ui/ui-reflection/useAutomationIdAndRegister', () => ({ useAutomationIdAndRegister: ({ id }: any) => ({ automationIdProps: { id }, updateMetadata: () => {}, updateActions: () => {} }) }));
 vi.mock('@alga-psa/ui/components/CustomSelect', () => ({ default: ({ id, label, value, disabled, options, onValueChange }: any) =>
   <label>{label}<select id={id} value={value} disabled={disabled} onChange={event => onValueChange(event.target.value)}>
@@ -21,10 +21,41 @@ const page = () => ({ page: 1, pageSize: 25, totalCount: 51, openCount: 50, clos
     { tenant: 'customer', relationshipId: 'relationship', ticketId: 'same-id', workspaceName: 'Customer IT', fields: { title: 'Customer ticket', ticket_number: 'T-1', responsibility: 'customer' } }] });
 const mount = () => render(<CoManagedFeatureBoundary><CoManagedTicketQueue /></CoManagedFeatureBoundary>);
 beforeEach(() => { vi.resetAllMocks(); mocks.flag.mockReturnValue({ enabled: true, loading: false, error: null }); mocks.load.mockResolvedValue(page()); });
-afterEach(cleanup);
+afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 it('does not load or expose queue controls when the UI release flag is off', () => {
   mocks.flag.mockReturnValue({ enabled: false, loading: false, error: null }); mount();
   expect(mocks.load).not.toHaveBeenCalled(); expect(screen.queryByRole('button')).toBeNull();
+});
+
+it('exports all matching rows using applied filters and discards a download after navigation', async () => {
+  let resolveExport!: (value: any) => void;
+  mocks.export.mockReturnValue(new Promise(resolve => { resolveExport = resolve; }));
+  mount(); await screen.findByRole('link', { name: 'T-1 · Customer ticket' });
+  fireEvent.click(screen.getByRole('button', { name: 'coManaged.queue.export' }));
+  expect(mocks.export).toHaveBeenCalledWith({ view: 'working', state: 'open', sort: 'updated', direction: 'desc' });
+  expect(screen.getByRole('button', { name: 'coManaged.queue.exporting' })).toBeDisabled();
+  const createUrl = vi.fn(); Object.defineProperty(URL, 'createObjectURL', { value: createUrl, configurable: true });
+  fireEvent.change(screen.getByLabelText('coManaged.queue.view'), { target: { value: 'oversight' } });
+  await screen.findByRole('link', { name: 'T-1 · Customer ticket' });
+  await act(async () => resolveExport({ filename: 'old.csv', csv: 'Old data', rowCount: 2 }));
+  expect(createUrl).not.toHaveBeenCalled();
+});
+
+it('downloads the server export and clears stale queue contents when export authority is lost', async () => {
+  mocks.export.mockResolvedValue({ filename: 'co-managed-working-tickets.csv', csv: 'CSV content', rowCount: 51 });
+  const createUrl = vi.fn(() => 'blob:queue-export'), revokeUrl = vi.fn();
+  Object.defineProperty(URL, 'createObjectURL', { value: createUrl, configurable: true });
+  Object.defineProperty(URL, 'revokeObjectURL', { value: revokeUrl, configurable: true });
+  const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) { expect(this.download).toBe('co-managed-working-tickets.csv'); });
+  mount(); await screen.findByRole('link', { name: 'T-1 · Customer ticket' });
+  fireEvent.click(screen.getByRole('button', { name: 'coManaged.queue.export' }));
+  await waitFor(() => expect(click).toHaveBeenCalledOnce());
+  await waitFor(() => expect(revokeUrl).toHaveBeenCalledWith('blob:queue-export'));
+  mocks.export.mockRejectedValue(new Error('Revoked'));
+  fireEvent.click(screen.getByRole('button', { name: 'coManaged.queue.export' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('coManaged.queue.exportError');
+  expect(screen.queryByRole('link')).toBeNull();
+  expect(screen.getByRole('button', { name: 'coManaged.queue.export' })).toBeDisabled();
 });
 it('links identical IDs to their qualified native and shared routes and uses server pagination and totals', async () => {
   mount(); expect(await screen.findByRole('link', { name: 'T-1 · Local ticket' })).toHaveAttribute('href', '/msp/tickets/same-id');

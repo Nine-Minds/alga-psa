@@ -502,7 +502,10 @@
       "organizations": {
         "msp": "MSP",
         "customer": "IT klienta"
-      }
+      },
+      "export": "Eksportuj CSV",
+      "exporting": "Eksportowanie…",
+      "exportError": "Nie udało się wyeksportować zgłoszeń. Odśwież kolejkę i spróbuj ponownie."
     },
     "conversation": {
       "title": "Rozmowa",

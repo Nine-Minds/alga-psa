@@ -498,7 +498,10 @@
       "organizations": {
         "msp": "MSP",
         "customer": "Kunden-IT"
-      }
+      },
+      "export": "CSV exportieren",
+      "exporting": "Wird exportiert…",
+      "exportError": "Tickets konnten nicht exportiert werden. Aktualisieren Sie die Warteschlange und versuchen Sie es erneut."
     },
     "conversation": {
       "title": "Unterhaltung",

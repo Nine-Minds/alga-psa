@@ -61,6 +61,17 @@ function snapshotRequest(input: CoManagedTicketQueueRequest): Required<Omit<CoMa
 /** One authorized SQL relation drives search, sorting, pagination and counts.
  * No independently paginated tenant lists, cached permissions, or shadow tickets. */
 export async function getCoManagedTicketQueue(db: Knex, inputActor: CoManagedSessionActor, input: CoManagedTicketQueueRequest): Promise<CoManagedTicketQueuePage> {
+  return readCoManagedTicketQueue(db, inputActor, input, true);
+}
+
+/** Export the complete filtered relation in one snapshot. Page controls are
+ * deliberately absent: concatenating page reads can skip or duplicate tickets. */
+export async function exportCoManagedTicketQueue(db: Knex, actor: CoManagedSessionActor, input: Omit<CoManagedTicketQueueRequest, 'page' | 'pageSize'>): Promise<CoManagedTicketQueueItem[]> {
+  const result = await readCoManagedTicketQueue(db, actor, { ...input, page: 1, pageSize: 25 }, false);
+  return result.items;
+}
+
+async function readCoManagedTicketQueue(db: Knex, inputActor: CoManagedSessionActor, input: CoManagedTicketQueueRequest, paginate: boolean): Promise<CoManagedTicketQueuePage> {
   const actor = snapshotCoManagedSessionActor(inputActor), request = snapshotRequest(input);
   return withTransaction(db, async trx => {
     // LEVERAGE: pattern co-managed-read-admission — detail and federated query paths share trust/session locks but need distinct record projections.
@@ -139,7 +150,8 @@ export async function getCoManagedTicketQueue(db: Knex, inputActor: CoManagedSes
     }
     if (request.state !== 'all') filtered.where('is_closed', request.state === 'closed');
     const sort = { updated: 'updated_at', created: 'entered_at', title: 'title', number: 'ticket_number' }[request.sort];
-    const page = trx.from('filtered').select('*').orderBy(sort, request.direction, 'last').orderBy('tenant').orderBy('ticket_id').limit(request.pageSize).offset((request.page - 1) * request.pageSize);
+    const page = trx.from('filtered').select('*').orderBy(sort, request.direction, 'last').orderBy('tenant').orderBy('ticket_id');
+    if (paginate) page.limit(request.pageSize).offset((request.page - 1) * request.pageSize);
     // A single statement snapshot keeps rows and counts coherent during local ticket edits.
     const result = await trx.with('authorized', combined).with('filtered', filtered).with('page_rows', page)
       .select(trx.raw("COALESCE((SELECT json_agg(workspaces ORDER BY name, tenant) FROM (SELECT DISTINCT tenant, workspace_name AS name FROM authorized) workspaces), '[]'::json) AS workspaces"),
