@@ -2,13 +2,12 @@ import { it, expect, vi } from 'vitest';
 import fs from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import knex from 'knex';
-import dotenv from 'dotenv';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { createInvoiceTicketSourceFixture, addLongInvoiceSources } from '../../../test-utils/invoiceTicketProductionFixtures';
 
-// Generation variants use the isolated migrated test database; remaining opt-in
-// acceptance cases use the wired stack. Both create only synthetic source
-// records, and leaves the invoice for live designer/PDF inspection. Authentication is
+// All cases create synthetic sources in their own isolated migrated database.
+// Saved templates exercise the application save action; visual authoring requires
+// browser coverage. Authentication is
 // supplied by a real fixture user's identity; charge math, DB, transactions and reads
 // are not mocked. No completed snapshots are inserted.
 const evidenceDir = process.env.INVOICE_TICKET_EVIDENCE_DIR ?? '/tmp/invoice-ticket-evidence';
@@ -101,6 +100,228 @@ it('renders saved transformed detail and primary tables through preview and PDF'
   } finally { await db.destroy(); }
 }, 120000);
 
+async function generateProductionVariant(db: ReturnType<typeof knex>, variant: string, dir: string) {
+  fs.mkdirSync(dir, { recursive: true });
+  let projectConfigId: string | undefined;
+  let cappedProjectId: string | undefined;
+  const taskIds: string[] = [];
+  const blockEntryIds: string[] = [];
+  let blockId: string | undefined;
+  const ids = await createSourceFixture(db, async (ids) => {
+    const { tenant, clientId, lineId, serviceId, contractId } = ids;
+    if (variant === 'cap' || variant === 'recurring-cap') {
+      const projectId = randomUUID(), phaseId = randomUUID(), taskId = randomUUID();
+      projectConfigId = randomUUID();
+      cappedProjectId = projectId;
+      const baseProject = await db('projects').where({ tenant }).first();
+      const basePhase = await db('project_phases').where({ tenant }).first();
+      await db('projects').insert({ ...baseProject, project_id: projectId, client_id: clientId, project_name: 'Acceptance capped project', start_date: '2026-08-01', project_number: `CAP-${projectId.slice(0,6)}`, wbs_code: `CAP-${projectId}`, billing_profile_id: ids.profileId });
+      await db('project_phases').insert({ ...basePhase, phase_id: phaseId, project_id: projectId, phase_name: 'Acceptance phase', wbs_code: `CAP-${phaseId}` });
+      await db('project_tasks').insert({ tenant, task_id: taskId, phase_id: phaseId, task_name: 'Acceptance capped task', wbs_code: '1.1' });
+      await db('project_billing_configs').insert({ tenant, config_id: projectConfigId, project_id: projectId, billing_model: 'time_and_materials', currency: 'USD', invoice_mode: variant === 'cap' ? 'standalone' : 'recurring', contract_id: variant === 'cap' ? null : contractId, cap_amount: 20000, cap_behavior: 'hard_cap' });
+      const overtime = await db('time_entries').where({ tenant, contract_line_id: lineId, billable_duration: 120 }).first();
+      await db('time_entries').where({ tenant, work_item_id: overtime.work_item_id }).update({ work_item_type: 'project_task', work_item_id: taskId, contract_line_id: variant === 'cap' ? null : lineId });
+      // Standalone uncontracted project time exercises the supported cap path.
+      if (variant === 'cap') await db('client_contracts').where({ tenant, client_id: clientId }).delete();
+    }
+    if (variant === 'task-identities') {
+      const projectId = randomUUID(), phaseId = randomUUID();
+      const baseProject = await db('projects').where({ tenant }).first();
+      const basePhase = await db('project_phases').where({ tenant }).first();
+      await db('projects').insert({ ...baseProject, project_id: projectId, client_id: clientId,
+        project_name: 'Owned task identity acceptance', project_number: `TASK-${projectId.slice(0,6)}`,
+        wbs_code: `TASK-${projectId}`, billing_profile_id: ids.profileId });
+      await db('project_phases').insert({ ...basePhase, phase_id: phaseId, project_id: projectId, wbs_code: `TASK-${phaseId}` });
+      const secondService = randomUUID(), configId = randomUUID();
+      const original = await db('service_catalog').where({ tenant, service_id: serviceId }).first();
+      await db('service_catalog').insert({ ...original, service_id: secondService, service_name: 'Second task service', default_rate: 18000 });
+      await db('service_prices').insert({ tenant, price_id: randomUUID(), service_id: secondService, currency_code: 'USD', rate: 18000 });
+      await db('contract_line_services').insert({ tenant, contract_line_id: lineId, service_id: secondService, quantity: 1, custom_rate: 18000 });
+      await db('contract_line_service_configuration').insert({ tenant, config_id: configId, contract_line_id: lineId, service_id: secondService, configuration_type: 'Hourly', custom_rate: 18000, quantity: 1 });
+      await db('contract_line_service_hourly_config').insert({ tenant, config_id: configId, minimum_billable_time: 0, round_up_to_nearest: 0 });
+      const source = await db('time_entries').where({ tenant, contract_line_id: lineId, billable_duration: 60 }).first();
+      for (let index = 0; index < 3; index++) {
+        const taskId = randomUUID(); taskIds.push(taskId);
+        await db('project_tasks').insert({ tenant, task_id: taskId, phase_id: phaseId,
+          task_name: index < 2 ? 'Same public task name' : '', description: null, wbs_code: `1.${index + 1}` });
+        for (let entry = 0; entry < (index === 0 ? 2 : 1); entry++) {
+          await db('time_entries').insert({ ...source, entry_id: randomUUID(), work_item_type: 'project_task',
+            work_item_id: taskId, service_id: entry ? secondService : serviceId });
+        }
+      }
+    }
+    if (variant === 'hour-block') {
+      // Source setup: granted prepaid block, followed by the real FIFO allocator.
+      // The partially covered second entry supplies the supported non-contract
+      // due selector; the first is fully covered and must persist as information.
+      const blockService = randomUUID(); blockId = randomUUID();
+      const original = await db('service_catalog').where({ tenant, service_id: serviceId }).first();
+      await db('service_catalog').insert({ ...original, service_id: blockService, service_name: 'Acceptance prepaid support' });
+      await db('service_prices').insert({ tenant, price_id: randomUUID(), service_id: blockService, currency_code: 'USD', rate: 15000 });
+      await db('hour_blocks').insert({ tenant, block_id: blockId, client_id: clientId, service_id: blockService,
+        total_minutes: 180, remaining_minutes: 180, hourly_rate: 15000, purchase_amount: 45000,
+        currency_code: 'USD', status: 'active', purchased_at: '2026-09-01', created_by: ids.userId });
+      const source = await db('time_entries').where({ tenant, contract_line_id: lineId, billable_duration: 60 }).first();
+      const { allocateTimeEntry } = await import('@alga-psa/shared/billingClients/hourBlockService');
+      for (const minutes of [60, 180]) {
+        const entry = { ...source, entry_id: randomUUID(), contract_line_id: null, service_id: blockService,
+          start_time: '2026-09-15T10:00:00Z', end_time: minutes === 60 ? '2026-09-15T11:00:00Z' : '2026-09-15T13:00:00Z',
+          work_date: '2026-09-15', billable_duration: minutes };
+        blockEntryIds.push(entry.entry_id);
+        await db('time_entries').insert(entry);
+        const allocations = await db.transaction((tx) => allocateTimeEntry(tx, tenant, clientId, entry));
+        expect(allocations.reduce((sum, allocation) => sum + allocation.minutes, 0)).toBe(minutes === 60 ? 60 : 120);
+      }
+    }
+    if (variant === 'bucket') {
+      const bucketId = randomUUID();
+      await db('contract_line_service_configuration').insert({ tenant, config_id: bucketId, contract_line_id: lineId, service_id: serviceId, configuration_type: 'Bucket' });
+      await db('contract_line_service_bucket_config').insert({ tenant, config_id: bucketId, total_minutes: 60, overage_rate: 15000, allow_rollover: false });
+      await db('contract_line_buckets').insert({ tenant, bucket_id: bucketId, contract_line_id: lineId, bucket_name: 'Acceptance included hour', total_minutes: 60, overage_rate: 15000, allow_rollover: false, covers_all_services: false });
+      await db('contract_line_bucket_services').insert({ tenant, bucket_id: bucketId, contract_line_id: lineId, service_id: serviceId, burn_multiplier: 1 });
+      const { findOrCreateCurrentBucketUsageRecord, reconcileBucketUsageRecord } = await import('@alga-psa/shared/billingClients/bucketUsageService');
+      await db.transaction(async (tx) => {
+        const usage = await findOrCreateCurrentBucketUsageRecord(tx, clientId, serviceId, '2026-08-15', lineId, tenant);
+        await reconcileBucketUsageRecord(tx, usage.usage_id, tenant);
+        const actual = await tx('bucket_usage').where({ tenant, usage_id: usage.usage_id }).first();
+        expect(Number(actual.minutes_used)).toBe(300);
+        expect(Number(actual.overage_minutes)).toBe(240);
+        fs.writeFileSync(`${dir}/bucket-usage.json`, JSON.stringify(actual, null, 2));
+      });
+    }
+    if (variant === 'multi-tax-long') await addLongInvoiceSources(db, ids);
+  });
+  const { generateInvoice, generateProjectInvoice } = await import('@alga-psa/billing/actions/invoiceGeneration');
+  let result: any;
+  if (variant === 'hour-block') {
+    const { buildClientCadenceDueSelectionInput } = await import('@alga-psa/shared/billingClients/recurringRunExecutionIdentity');
+    const { generateInvoiceForSelectionInputs } = await import('@alga-psa/billing/actions/invoiceGeneration');
+    const periods = await db('recurring_service_periods').where({ tenant: ids.tenant, invoice_window_start: '2026-09-01', invoice_window_end: '2026-10-01' }).whereIn('obligation_id', [ids.lineId, ids.usageLineId]);
+    const selectors = periods.map((period) => buildClientCadenceDueSelectionInput({ clientId: ids.clientId,
+      scheduleKey: period.schedule_key, periodKey: period.period_key, windowStart: '2026-09-01', windowEnd: '2026-10-01' }));
+    selectors.push(buildClientCadenceDueSelectionInput({ clientId: ids.clientId,
+      scheduleKey: `schedule:${ids.tenant}:unresolved:time:${blockEntryIds[1]}`,
+      periodKey: `period:2026-09-01:2026-10-01:unresolved:time:${blockEntryIds[1]}`,
+      windowStart: '2026-09-01', windowEnd: '2026-10-01' }));
+    fs.writeFileSync(`${dir}/selectors.json`, JSON.stringify(selectors, null, 2));
+    result = await generateInvoiceForSelectionInputs(selectors);
+  } else result = await (variant === 'cap' ? generateProjectInvoice(cappedProjectId!) : generateInvoice(ids.cycleId));
+  expect(result.invoice_id, JSON.stringify(result)).toBeTruthy();
+  const { default: Invoice } = await import('@alga-psa/billing/models/invoice');
+  const { mapDbInvoiceToWasmViewModel } = await import('@alga-psa/billing/lib/adapters/invoiceAdapters');
+  const invoice = await Invoice.getFullInvoiceById(db, ids.tenant, result.invoice_id);
+  const vm = mapDbInvoiceToWasmViewModel(invoice)!;
+  const charges = await db('invoice_charges').where({ tenant: ids.tenant, invoice_id: result.invoice_id });
+  const links = await db('invoice_time_entries').where({ tenant: ids.tenant, invoice_id: result.invoice_id });
+  fs.writeFileSync(`${dir}/generated.json`, JSON.stringify({ ids, invoiceId: result.invoice_id, invoiceNumber: invoice!.invoice_number, charges, links, vm }, null, 2));
+  for (const charge of charges) {
+    const contributions = vm.ticketPresentationRows!.flatMap((r) => r.contributions).filter((c) => c.itemId === charge.item_id);
+    expect(contributions.reduce((sum, c) => sum + c.amount, 0)).toBe(Number(charge.net_amount));
+    if (contributions.some((c) => c.entryId === null)) expect(contributions).toHaveLength(1);
+  }
+  expect(vm.ticketPresentationRows!.reduce((sum, row) => sum + row.amount, 0)).toBe(vm.subtotal);
+  expect(vm.tax).toBe(charges.reduce((sum, row) => sum + Number(row.tax_amount), 0));
+  expect(vm.total).toBe(vm.subtotal + vm.tax);
+  if (variant === 'cap' || variant === 'recurring-cap') {
+    expect(vm.subtotal).toBe(variant === 'cap' ? 20000 : 55000); expect(vm.tax).toBe(variant === 'cap' ? 2000 : 5500);
+    const cappedLinks = links.filter((link) => link.work_item_snapshot.workItemType === 'project_task');
+    expect(cappedLinks).toHaveLength(2);
+    for (const link of cappedLinks) {
+      const charge = charges.find((c) => c.item_id === link.item_id)!;
+      expect(Number(charge.net_amount)).not.toBe(link.work_item_snapshot.netAmount);
+      expect(vm.ticketPresentationRows!.find((r) => r.id === link.item_id)).toMatchObject({ rateKind: 'unknown', rate: null });
+      expect(link.work_item_snapshot.rateKind).not.toBe('uniform');
+    }
+    const usage = await db('project_billing_cap_usage').where({ tenant: ids.tenant, config_id: projectConfigId }).first();
+    expect(Number(usage.billed_amount)).toBe(20000); expect(Number(usage.written_down_amount)).toBe(variant === 'cap' ? 25000 : 32500);
+    fs.writeFileSync(`${dir}/cap-usage.json`, JSON.stringify(usage, null, 2));
+    const { addManualItemsToInvoice } = await import('@alga-psa/billing/actions/invoiceModification');
+    const adjusted = await addManualItemsToInvoice(result.invoice_id, [
+      { description: 'Cap acceptance line discount', quantity: 1, rate: -1000, is_discount: true, discount_type: 'fixed', applies_to_item_id: charges.find((c) => Number(c.net_amount) > 0)!.item_id, is_taxable: false },
+      { description: 'Cap acceptance negative credit', quantity: 1, rate: -500, is_taxable: false },
+      { description: 'Cap acceptance information', quantity: 1, rate: 0, is_taxable: false },
+    ] as any) as any;
+    const adjustedVm = mapDbInvoiceToWasmViewModel(adjusted)!;
+    expect(adjustedVm.subtotal).toBe(vm.subtotal - 1500); expect(adjustedVm.tax).toBe(vm.tax); expect(adjustedVm.total).toBe(vm.total - 1500);
+    for (const description of ['Cap acceptance line discount', 'Cap acceptance negative credit', 'Cap acceptance information']) {
+      expect(adjustedVm.ticketPresentationRows!.filter((row) => row.description === description)).toHaveLength(1);
+    }
+    expect(await db('invoice_time_entries').where({ tenant: ids.tenant, invoice_id: result.invoice_id })).toEqual(links);
+    expect(adjustedVm.ticketPresentationRows!.reduce((sum, row) => sum + row.amount, 0)).toBe(adjustedVm.subtotal);
+    fs.writeFileSync(`${dir}/inline-adjustments.json`, JSON.stringify(adjustedVm, null, 2));
+
+  }
+  if (variant === 'bucket') {
+    const bucketCharges = charges.filter((charge) => charge.billing_charge_type === 'bucket');
+    expect(bucketCharges).toHaveLength(1);
+    expect(Number(bucketCharges[0].net_amount)).toBe(60000);
+    expect(vm.ticketPresentationRows!.find((row) => row.id === bucketCharges[0].item_id)?.contributions).toEqual([{ itemId: bucketCharges[0].item_id, entryId: null, amount: 60000 }]);
+    // Bucket-covered work is priced once: four overage hours at $150,
+    // plus one $50 usage unit. The hourly configuration must not rebill it.
+    expect(charges.filter((charge) => charge.billing_charge_type === 'hourly')).toHaveLength(0);
+    expect(vm.subtotal).toBe(4 * 15000 + 5000);
+    const periods = await db('recurring_service_periods').where({ tenant: ids.tenant, invoice_id: result.invoice_id });
+    expect(periods.length).toBeGreaterThan(0);
+    expect(periods.every((period) => period.lifecycle_state === 'billed' && period.invoice_charge_detail_id)).toBe(true);
+    fs.writeFileSync(`${dir}/recurring-periods.json`, JSON.stringify(periods, null, 2));
+    const before = await db('invoice_charges').where({ tenant: ids.tenant, invoice_id: result.invoice_id });
+    expect((await generateInvoice(ids.cycleId) as any)?.invoice_id).toBeUndefined();
+    expect(await db('invoice_charges').where({ tenant: ids.tenant, invoice_id: result.invoice_id })).toEqual(before);
+  }
+  if (variant === 'task-identities') {
+    expect(links).toHaveLength(8);
+    const tasks = vm.ticketGroups!.filter((group) => group.workItemType === 'project_task');
+    expect(tasks).toHaveLength(3);
+    expect(new Set(tasks.map((group) => group.workItemId))).toEqual(new Set(taskIds));
+    expect(tasks.filter((group) => group.label === 'Same public task name')).toHaveLength(2);
+    const mixed = tasks.find((group) => group.workItemId === taskIds[0])!;
+    expect(new Set(mixed.entries.map((entry) => entry.serviceId)).size).toBe(2);
+    expect(mixed).toMatchObject({ rateKind: 'mixed', rate: null, totalHours: 2, totalAmount: 33000 });
+    expect(tasks.find((group) => group.workItemId === taskIds[2])).toMatchObject({ labelKey: 'time.task', ticketNumber: null });
+    expect(vm.subtotal).toBe(150500);
+    const { attachInvoiceTimeCollections } = await import('@alga-psa/billing/lib/adapters/invoiceAdapters');
+    const reordered = attachInvoiceTimeCollections({ ...vm }, [...invoice!.invoice_charges!].reverse());
+    expect(reordered.ticketGroups).toEqual(vm.ticketGroups);
+    expect(reordered.timeEntries).toEqual(vm.timeEntries);
+    await db('project_tasks').where({ tenant: ids.tenant }).whereIn('task_id', taskIds).update({ task_name: 'EDITED PRIVATE SOURCE' });
+    expect(mapDbInvoiceToWasmViewModel(await Invoice.getFullInvoiceById(db, ids.tenant, result.invoice_id))).toEqual(vm);
+  }
+  if (variant === 'hour-block') {
+    const information = charges.filter((charge) => charge.billing_charge_type === 'hour_block');
+    expect(information).toHaveLength(1);
+    expect(Number(information[0].net_amount)).toBe(0);
+    expect(information[0].description).toContain('3.0 hrs consumed, 0.0 hrs remaining');
+    expect(vm.ticketPresentationRows!.filter((row) => row.id === information[0].item_id)).toHaveLength(1);
+    expect(vm.ticketPresentationRows!.find((row) => row.id === information[0].item_id)?.amount).toBe(0);
+    // Prepaid information is not a recurring contract obligation and has no
+    // configuration-backed detail. Preserve that accounting representation.
+    const details = await db('invoice_charge_details').where({ tenant: ids.tenant }).whereIn('item_id', charges.map((charge) => charge.item_id));
+    expect(details.length).toBeGreaterThan(0);
+    expect(details.every((detail) => new Date(detail.service_period_start).toISOString().startsWith('2026-08-01'))).toBe(true);
+    expect(details.every((detail) => new Date(detail.service_period_end).toISOString().startsWith('2026-08-31'))).toBe(true);
+    expect((await db('time_entries').where({ tenant: ids.tenant }).whereIn('entry_id', blockEntryIds)).every((entry) => entry.invoiced)).toBe(true);
+    expect(Number((await db('hour_blocks').where({ tenant: ids.tenant, block_id: blockId }).first()).remaining_minutes)).toBe(0);
+    fs.writeFileSync(`${dir}/persisted-prepaid.json`, JSON.stringify({ blockId, blockEntryIds, information, details }, null, 2));
+  }
+  if (variant === 'multi-tax-long') {
+    expect(links).toHaveLength(74);
+    expect(vm.subtotal).toBe(1137500); expect(vm.tax).toBe(167750);
+    expect(vm.ticketPresentationRows!.find((row) => row.contributions.length > 2)).not.toHaveProperty('taxRate');
+  }
+  const { PDFGenerationService } = await import('@alga-psa/billing/services/pdfGenerationService');
+  const standard = await db('standard_invoice_templates').where({ standard_invoice_template_code: 'standard-invoice-by-ticket' }).first();
+  const pdf = new PDFGenerationService(ids.tenant);
+  const preview = await pdf.renderInvoicePreview({ invoiceId: result.invoice_id, templateId: standard.template_id });
+  if (variant === 'hour-block') {
+    expect(preview.html).toContain('3.0 hrs consumed, 0.0 hrs remaining');
+    expect(preview.html).toContain('2026');
+    expect(vm.items.some((item) => item.servicePeriodStart?.startsWith('2026-08-01') && item.servicePeriodEnd?.startsWith('2026-08-31'))).toBe(true);
+  }
+  fs.writeFileSync(`${dir}/preview.html`, preview.html);
+  fs.writeFileSync(`${dir}/production.pdf`, await pdf.generatePDF({ invoiceId: result.invoice_id, userId: ids.userId, templateId: standard.template_id }));
+  return { ids, invoiceId: result.invoice_id, invoiceNumber: invoice!.invoice_number, variant, origin: 'production generation' };
+}
+
 it.each(['cap', 'recurring-cap', 'bucket', 'multi-tax-long', 'task-identities', 'hour-block'])('verifies %s production generation and persistence', async (variant) => {
   const dir = `${evidenceDir}/${variant}`;
   fs.mkdirSync(dir, { recursive: true });
@@ -113,223 +334,7 @@ it.each(['cap', 'recurring-cap', 'bucket', 'multi-tax-long', 'task-identities', 
       .select('u.*').orderBy('u.user_id').first();
     if (!state.user) throw new Error('Migrated test database must seed an internal fixture user');
     state.tenant = state.user.tenant;
-    let projectConfigId: string | undefined;
-    let cappedProjectId: string | undefined;
-    const taskIds: string[] = [];
-    const blockEntryIds: string[] = [];
-    let blockId: string | undefined;
-    const ids = await createSourceFixture(db, async (ids) => {
-      const { tenant, clientId, lineId, serviceId, contractId } = ids;
-      if (variant === 'cap' || variant === 'recurring-cap') {
-        const projectId = randomUUID(), phaseId = randomUUID(), taskId = randomUUID();
-        projectConfigId = randomUUID();
-        cappedProjectId = projectId;
-        const baseProject = await db('projects').where({ tenant }).first();
-        const basePhase = await db('project_phases').where({ tenant }).first();
-        await db('projects').insert({ ...baseProject, project_id: projectId, client_id: clientId, project_name: 'Acceptance capped project', start_date: '2026-08-01', project_number: `CAP-${projectId.slice(0,6)}`, wbs_code: `CAP-${projectId}`, billing_profile_id: ids.profileId });
-        await db('project_phases').insert({ ...basePhase, phase_id: phaseId, project_id: projectId, phase_name: 'Acceptance phase', wbs_code: `CAP-${phaseId}` });
-        await db('project_tasks').insert({ tenant, task_id: taskId, phase_id: phaseId, task_name: 'Acceptance capped task', wbs_code: '1.1' });
-        await db('project_billing_configs').insert({ tenant, config_id: projectConfigId, project_id: projectId, billing_model: 'time_and_materials', currency: 'USD', invoice_mode: variant === 'cap' ? 'standalone' : 'recurring', contract_id: variant === 'cap' ? null : contractId, cap_amount: 20000, cap_behavior: 'hard_cap' });
-        const overtime = await db('time_entries').where({ tenant, contract_line_id: lineId, billable_duration: 120 }).first();
-        await db('time_entries').where({ tenant, work_item_id: overtime.work_item_id }).update({ work_item_type: 'project_task', work_item_id: taskId, contract_line_id: variant === 'cap' ? null : lineId });
-        // Standalone uncontracted project time exercises the supported cap path.
-        if (variant === 'cap') await db('client_contracts').where({ tenant, client_id: clientId }).delete();
-      }
-      if (variant === 'task-identities') {
-        const projectId = randomUUID(), phaseId = randomUUID();
-        const baseProject = await db('projects').where({ tenant }).first();
-        const basePhase = await db('project_phases').where({ tenant }).first();
-        await db('projects').insert({ ...baseProject, project_id: projectId, client_id: clientId,
-          project_name: 'Owned task identity acceptance', project_number: `TASK-${projectId.slice(0,6)}`,
-          wbs_code: `TASK-${projectId}`, billing_profile_id: ids.profileId });
-        await db('project_phases').insert({ ...basePhase, phase_id: phaseId, project_id: projectId, wbs_code: `TASK-${phaseId}` });
-        const secondService = randomUUID(), configId = randomUUID();
-        const original = await db('service_catalog').where({ tenant, service_id: serviceId }).first();
-        await db('service_catalog').insert({ ...original, service_id: secondService, service_name: 'Second task service', default_rate: 18000 });
-        await db('service_prices').insert({ tenant, price_id: randomUUID(), service_id: secondService, currency_code: 'USD', rate: 18000 });
-        await db('contract_line_services').insert({ tenant, contract_line_id: lineId, service_id: secondService, quantity: 1, custom_rate: 18000 });
-        await db('contract_line_service_configuration').insert({ tenant, config_id: configId, contract_line_id: lineId, service_id: secondService, configuration_type: 'Hourly', custom_rate: 18000, quantity: 1 });
-        await db('contract_line_service_hourly_config').insert({ tenant, config_id: configId, minimum_billable_time: 0, round_up_to_nearest: 0 });
-        const source = await db('time_entries').where({ tenant, contract_line_id: lineId, billable_duration: 60 }).first();
-        for (let index = 0; index < 3; index++) {
-          const taskId = randomUUID(); taskIds.push(taskId);
-          await db('project_tasks').insert({ tenant, task_id: taskId, phase_id: phaseId,
-            task_name: index < 2 ? 'Same public task name' : '', description: null, wbs_code: `1.${index + 1}` });
-          for (let entry = 0; entry < (index === 0 ? 2 : 1); entry++) {
-            await db('time_entries').insert({ ...source, entry_id: randomUUID(), work_item_type: 'project_task',
-              work_item_id: taskId, service_id: entry ? secondService : serviceId });
-          }
-        }
-      }
-      if (variant === 'hour-block') {
-        // Source setup: granted prepaid block, followed by the real FIFO allocator.
-        // The partially covered second entry supplies the supported non-contract
-        // due selector; the first is fully covered and must persist as information.
-        const blockService = randomUUID(); blockId = randomUUID();
-        const original = await db('service_catalog').where({ tenant, service_id: serviceId }).first();
-        await db('service_catalog').insert({ ...original, service_id: blockService, service_name: 'Acceptance prepaid support' });
-        await db('service_prices').insert({ tenant, price_id: randomUUID(), service_id: blockService, currency_code: 'USD', rate: 15000 });
-        await db('hour_blocks').insert({ tenant, block_id: blockId, client_id: clientId, service_id: blockService,
-          total_minutes: 180, remaining_minutes: 180, hourly_rate: 15000, purchase_amount: 45000,
-          currency_code: 'USD', status: 'active', purchased_at: '2026-09-01', created_by: ids.userId });
-        const source = await db('time_entries').where({ tenant, contract_line_id: lineId, billable_duration: 60 }).first();
-        const { allocateTimeEntry } = await import('@alga-psa/shared/billingClients/hourBlockService');
-        for (const minutes of [60, 180]) {
-          const entry = { ...source, entry_id: randomUUID(), contract_line_id: null, service_id: blockService,
-            start_time: '2026-09-15T10:00:00Z', end_time: minutes === 60 ? '2026-09-15T11:00:00Z' : '2026-09-15T13:00:00Z',
-            work_date: '2026-09-15', billable_duration: minutes };
-          blockEntryIds.push(entry.entry_id);
-          await db('time_entries').insert(entry);
-          const allocations = await db.transaction((tx) => allocateTimeEntry(tx, tenant, clientId, entry));
-          expect(allocations.reduce((sum, allocation) => sum + allocation.minutes, 0)).toBe(minutes === 60 ? 60 : 120);
-        }
-      }
-      if (variant === 'bucket') {
-        const bucketId = randomUUID();
-        await db('contract_line_service_configuration').insert({ tenant, config_id: bucketId, contract_line_id: lineId, service_id: serviceId, configuration_type: 'Bucket' });
-        await db('contract_line_service_bucket_config').insert({ tenant, config_id: bucketId, total_minutes: 60, overage_rate: 15000, allow_rollover: false });
-        await db('contract_line_buckets').insert({ tenant, bucket_id: bucketId, contract_line_id: lineId, bucket_name: 'Acceptance included hour', total_minutes: 60, overage_rate: 15000, allow_rollover: false, covers_all_services: false });
-        await db('contract_line_bucket_services').insert({ tenant, bucket_id: bucketId, contract_line_id: lineId, service_id: serviceId, burn_multiplier: 1 });
-        const { findOrCreateCurrentBucketUsageRecord, reconcileBucketUsageRecord } = await import('@alga-psa/shared/billingClients/bucketUsageService');
-        await db.transaction(async (tx) => {
-          const usage = await findOrCreateCurrentBucketUsageRecord(tx, clientId, serviceId, '2026-08-15', lineId, tenant);
-          await reconcileBucketUsageRecord(tx, usage.usage_id, tenant);
-          const actual = await tx('bucket_usage').where({ tenant, usage_id: usage.usage_id }).first();
-          expect(Number(actual.minutes_used)).toBe(300);
-          expect(Number(actual.overage_minutes)).toBe(240);
-          fs.writeFileSync(`${dir}/bucket-usage.json`, JSON.stringify(actual, null, 2));
-        });
-      }
-      if (variant === 'multi-tax-long') await addLongInvoiceSources(db, ids);
-    });
-    const { generateInvoice, generateProjectInvoice } = await import('@alga-psa/billing/actions/invoiceGeneration');
-    let result: any;
-    if (variant === 'hour-block') {
-      const { buildClientCadenceDueSelectionInput } = await import('@alga-psa/shared/billingClients/recurringRunExecutionIdentity');
-      const { generateInvoiceForSelectionInputs } = await import('@alga-psa/billing/actions/invoiceGeneration');
-      const periods = await db('recurring_service_periods').where({ tenant: ids.tenant, invoice_window_start: '2026-09-01', invoice_window_end: '2026-10-01' }).whereIn('obligation_id', [ids.lineId, ids.usageLineId]);
-      const selectors = periods.map((period) => buildClientCadenceDueSelectionInput({ clientId: ids.clientId,
-        scheduleKey: period.schedule_key, periodKey: period.period_key, windowStart: '2026-09-01', windowEnd: '2026-10-01' }));
-      selectors.push(buildClientCadenceDueSelectionInput({ clientId: ids.clientId,
-        scheduleKey: `schedule:${ids.tenant}:unresolved:time:${blockEntryIds[1]}`,
-        periodKey: `period:2026-09-01:2026-10-01:unresolved:time:${blockEntryIds[1]}`,
-        windowStart: '2026-09-01', windowEnd: '2026-10-01' }));
-      fs.writeFileSync(`${dir}/selectors.json`, JSON.stringify(selectors, null, 2));
-      result = await generateInvoiceForSelectionInputs(selectors);
-    } else result = await (variant === 'cap' ? generateProjectInvoice(cappedProjectId!) : generateInvoice(ids.cycleId));
-    expect(result.invoice_id, JSON.stringify(result)).toBeTruthy();
-    const { default: Invoice } = await import('@alga-psa/billing/models/invoice');
-    const { mapDbInvoiceToWasmViewModel } = await import('@alga-psa/billing/lib/adapters/invoiceAdapters');
-    const invoice = await Invoice.getFullInvoiceById(db, ids.tenant, result.invoice_id);
-    const vm = mapDbInvoiceToWasmViewModel(invoice)!;
-    const charges = await db('invoice_charges').where({ tenant: ids.tenant, invoice_id: result.invoice_id });
-    const links = await db('invoice_time_entries').where({ tenant: ids.tenant, invoice_id: result.invoice_id });
-    fs.writeFileSync(`${dir}/generated.json`, JSON.stringify({ ids, invoiceId: result.invoice_id, invoiceNumber: invoice!.invoice_number, charges, links, vm }, null, 2));
-    for (const charge of charges) {
-      const contributions = vm.ticketPresentationRows!.flatMap((r) => r.contributions).filter((c) => c.itemId === charge.item_id);
-      expect(contributions.reduce((sum, c) => sum + c.amount, 0)).toBe(Number(charge.net_amount));
-      if (contributions.some((c) => c.entryId === null)) expect(contributions).toHaveLength(1);
-    }
-    expect(vm.ticketPresentationRows!.reduce((sum, row) => sum + row.amount, 0)).toBe(vm.subtotal);
-    expect(vm.tax).toBe(charges.reduce((sum, row) => sum + Number(row.tax_amount), 0));
-    expect(vm.total).toBe(vm.subtotal + vm.tax);
-    if (variant === 'cap' || variant === 'recurring-cap') {
-      expect(vm.subtotal).toBe(variant === 'cap' ? 20000 : 55000); expect(vm.tax).toBe(variant === 'cap' ? 2000 : 5500);
-      const cappedLinks = links.filter((link) => link.work_item_snapshot.workItemType === 'project_task');
-      expect(cappedLinks).toHaveLength(2);
-      for (const link of cappedLinks) {
-        const charge = charges.find((c) => c.item_id === link.item_id)!;
-        expect(Number(charge.net_amount)).not.toBe(link.work_item_snapshot.netAmount);
-        expect(vm.ticketPresentationRows!.find((r) => r.id === link.item_id)).toMatchObject({ rateKind: 'unknown', rate: null });
-        expect(link.work_item_snapshot.rateKind).not.toBe('uniform');
-      }
-      const usage = await db('project_billing_cap_usage').where({ tenant: ids.tenant, config_id: projectConfigId }).first();
-      expect(Number(usage.billed_amount)).toBe(20000); expect(Number(usage.written_down_amount)).toBe(variant === 'cap' ? 25000 : 32500);
-      fs.writeFileSync(`${dir}/cap-usage.json`, JSON.stringify(usage, null, 2));
-      const { addManualItemsToInvoice } = await import('@alga-psa/billing/actions/invoiceModification');
-      const adjusted = await addManualItemsToInvoice(result.invoice_id, [
-        { description: 'Cap acceptance line discount', quantity: 1, rate: -1000, is_discount: true, discount_type: 'fixed', applies_to_item_id: charges.find((c) => Number(c.net_amount) > 0)!.item_id, is_taxable: false },
-        { description: 'Cap acceptance negative credit', quantity: 1, rate: -500, is_taxable: false },
-        { description: 'Cap acceptance information', quantity: 1, rate: 0, is_taxable: false },
-      ] as any) as any;
-      const adjustedVm = mapDbInvoiceToWasmViewModel(adjusted)!;
-      expect(adjustedVm.subtotal).toBe(vm.subtotal - 1500); expect(adjustedVm.tax).toBe(vm.tax); expect(adjustedVm.total).toBe(vm.total - 1500);
-      for (const description of ['Cap acceptance line discount', 'Cap acceptance negative credit', 'Cap acceptance information']) {
-        expect(adjustedVm.ticketPresentationRows!.filter((row) => row.description === description)).toHaveLength(1);
-      }
-      expect(await db('invoice_time_entries').where({ tenant: ids.tenant, invoice_id: result.invoice_id })).toEqual(links);
-      expect(adjustedVm.ticketPresentationRows!.reduce((sum, row) => sum + row.amount, 0)).toBe(adjustedVm.subtotal);
-      fs.writeFileSync(`${dir}/inline-adjustments.json`, JSON.stringify(adjustedVm, null, 2));
-
-    }
-    if (variant === 'bucket') {
-      const bucketCharges = charges.filter((charge) => charge.billing_charge_type === 'bucket');
-      expect(bucketCharges).toHaveLength(1);
-      expect(Number(bucketCharges[0].net_amount)).toBe(60000);
-      expect(vm.ticketPresentationRows!.find((row) => row.id === bucketCharges[0].item_id)?.contributions).toEqual([{ itemId: bucketCharges[0].item_id, entryId: null, amount: 60000 }]);
-      // Bucket-covered work is priced once: four overage hours at $150,
-      // plus one $50 usage unit. The hourly configuration must not rebill it.
-      expect(charges.filter((charge) => charge.billing_charge_type === 'hourly')).toHaveLength(0);
-      expect(vm.subtotal).toBe(4 * 15000 + 5000);
-      const periods = await db('recurring_service_periods').where({ tenant: ids.tenant, invoice_id: result.invoice_id });
-      expect(periods.length).toBeGreaterThan(0);
-      expect(periods.every((period) => period.lifecycle_state === 'billed' && period.invoice_charge_detail_id)).toBe(true);
-      fs.writeFileSync(`${dir}/recurring-periods.json`, JSON.stringify(periods, null, 2));
-      const before = await db('invoice_charges').where({ tenant: ids.tenant, invoice_id: result.invoice_id });
-      expect((await generateInvoice(ids.cycleId) as any)?.invoice_id).toBeUndefined();
-      expect(await db('invoice_charges').where({ tenant: ids.tenant, invoice_id: result.invoice_id })).toEqual(before);
-    }
-    if (variant === 'task-identities') {
-      expect(links).toHaveLength(8);
-      const tasks = vm.ticketGroups!.filter((group) => group.workItemType === 'project_task');
-      expect(tasks).toHaveLength(3);
-      expect(new Set(tasks.map((group) => group.workItemId))).toEqual(new Set(taskIds));
-      expect(tasks.filter((group) => group.label === 'Same public task name')).toHaveLength(2);
-      const mixed = tasks.find((group) => group.workItemId === taskIds[0])!;
-      expect(new Set(mixed.entries.map((entry) => entry.serviceId)).size).toBe(2);
-      expect(mixed).toMatchObject({ rateKind: 'mixed', rate: null, totalHours: 2, totalAmount: 33000 });
-      expect(tasks.find((group) => group.workItemId === taskIds[2])).toMatchObject({ labelKey: 'time.task', ticketNumber: null });
-      expect(vm.subtotal).toBe(150500);
-      const { attachInvoiceTimeCollections } = await import('@alga-psa/billing/lib/adapters/invoiceAdapters');
-      const reordered = attachInvoiceTimeCollections({ ...vm }, [...invoice!.invoice_charges!].reverse());
-      expect(reordered.ticketGroups).toEqual(vm.ticketGroups);
-      expect(reordered.timeEntries).toEqual(vm.timeEntries);
-      await db('project_tasks').where({ tenant: ids.tenant }).whereIn('task_id', taskIds).update({ task_name: 'EDITED PRIVATE SOURCE' });
-      expect(mapDbInvoiceToWasmViewModel(await Invoice.getFullInvoiceById(db, ids.tenant, result.invoice_id))).toEqual(vm);
-    }
-    if (variant === 'hour-block') {
-      const information = charges.filter((charge) => charge.billing_charge_type === 'hour_block');
-      expect(information).toHaveLength(1);
-      expect(Number(information[0].net_amount)).toBe(0);
-      expect(information[0].description).toContain('3.0 hrs consumed, 0.0 hrs remaining');
-      expect(vm.ticketPresentationRows!.filter((row) => row.id === information[0].item_id)).toHaveLength(1);
-      expect(vm.ticketPresentationRows!.find((row) => row.id === information[0].item_id)?.amount).toBe(0);
-      // Prepaid information is not a recurring contract obligation and has no
-      // configuration-backed detail. Preserve that accounting representation.
-      const details = await db('invoice_charge_details').where({ tenant: ids.tenant }).whereIn('item_id', charges.map((charge) => charge.item_id));
-      expect(details.length).toBeGreaterThan(0);
-      expect(details.every((detail) => new Date(detail.service_period_start).toISOString().startsWith('2026-08-01'))).toBe(true);
-      expect(details.every((detail) => new Date(detail.service_period_end).toISOString().startsWith('2026-08-31'))).toBe(true);
-      expect((await db('time_entries').where({ tenant: ids.tenant }).whereIn('entry_id', blockEntryIds)).every((entry) => entry.invoiced)).toBe(true);
-      expect(Number((await db('hour_blocks').where({ tenant: ids.tenant, block_id: blockId }).first()).remaining_minutes)).toBe(0);
-      fs.writeFileSync(`${dir}/persisted-prepaid.json`, JSON.stringify({ blockId, blockEntryIds, information, details }, null, 2));
-    }
-    if (variant === 'multi-tax-long') {
-      expect(links).toHaveLength(74);
-      expect(vm.subtotal).toBe(1137500); expect(vm.tax).toBe(167750);
-      expect(vm.ticketPresentationRows!.find((row) => row.contributions.length > 2)).not.toHaveProperty('taxRate');
-    }
-    const { PDFGenerationService } = await import('@alga-psa/billing/services/pdfGenerationService');
-    const standard = await db('standard_invoice_templates').where({ standard_invoice_template_code: 'standard-invoice-by-ticket' }).first();
-    const pdf = new PDFGenerationService(ids.tenant);
-    const preview = await pdf.renderInvoicePreview({ invoiceId: result.invoice_id, templateId: standard.template_id });
-    if (variant === 'hour-block') {
-      expect(preview.html).toContain('3.0 hrs consumed, 0.0 hrs remaining');
-      expect(preview.html).toContain('2026');
-      expect(vm.items.some((item) => item.servicePeriodStart?.startsWith('2026-08-01') && item.servicePeriodEnd?.startsWith('2026-08-31'))).toBe(true);
-    }
-    fs.writeFileSync(`${dir}/preview.html`, preview.html);
-    fs.writeFileSync(`${dir}/production.pdf`, await pdf.generatePDF({ invoiceId: result.invoice_id, userId: ids.userId, templateId: standard.template_id }));
+    await generateProductionVariant(db, variant, dir);
   } finally { await db.destroy(); }
 }, 180000);
 
@@ -470,14 +475,44 @@ it('surfaces declared scalar and missing collection diagnostics through producti
   } finally { await db.destroy(); }
 }, 120000);
 
-it.runIf(process.env.INVOICE_TICKET_CLOSURE === '1')('verifies visually authored detail and historical locale matrix through persisted reads, preview and PDF', async () => {
+it('verifies saved detail and historical locale matrix through persisted reads, preview and PDF', async () => {
   const dir = `${evidenceDir}/locale-matrix`; fs.mkdirSync(dir, { recursive: true });
-  const env = dotenv.parse(fs.readFileSync('.env.local')); Object.assign(process.env, env, { DB_PORT: '5472' });
-  const db = knex({ client: 'pg', connection: { host: env.DB_HOST, port: 5472, database: env.DB_NAME_SERVER, user: env.DB_USER_ADMIN, password: env.DB_PASSWORD_ADMIN } });
+  const db = await createTestDbConnection();
   try {
-    state.user = await db('users').where({ email: 'invoice-draft-verifier@example.invalid' }).first(); state.tenant = state.user.tenant;
-    const templateId = process.env.INVOICE_TICKET_CLOSURE_TEMPLATE!;
-    expect(templateId).toBeTruthy();
+    state.user = await db('users as u')
+      .join('user_roles as ur', function () { this.on('ur.user_id', 'u.user_id').andOn('ur.tenant', 'u.tenant'); })
+      .join('roles as r', function () { this.on('r.role_id', 'ur.role_id').andOn('r.tenant', 'ur.tenant'); })
+      .where({ 'u.user_type': 'internal', 'r.role_name': 'Admin', 'r.msp': true })
+      .select('u.*').orderBy('u.user_id').first();
+    if (!state.user) throw new Error('Migrated test database must seed an internal fixture user');
+    state.tenant = state.user.tenant;
+    const { getStandardTemplateAstByCode } = await import('@alga-psa/billing/lib/invoice-template-ast/standardTemplates');
+    const { saveInvoiceTemplate } = await import('@alga-psa/billing/actions/invoiceTemplates');
+    const authored = structuredClone(getStandardTemplateAstByCode('standard-invoice-by-ticket'))!;
+    authored.bindings!.collections!.nestedEntries = { id: 'nestedEntries', kind: 'collection', path: 'group.entries' };
+    authored.transforms = { sourceBindingId: 'timeEntries', outputBindingId: 'datedDetail', operations: [
+      { id: 'sort-date', type: 'sort', keys: [{ path: 'date', direction: 'desc' }] },
+    ] };
+    const columns: any[] = [
+      { id: 'date', header: 'Date', value: { type: 'path', path: 'entry.date' }, format: 'date' },
+      { id: 'description', header: 'Description', value: { type: 'path', path: 'entry.description' } },
+      { id: 'ticket', header: 'Ticket', value: { type: 'path', path: 'entry.ticketNumber' } },
+      { id: 'hours', header: 'Hours', value: { type: 'path', path: 'entry.hours' }, format: 'number' },
+      { id: 'rate', header: 'Rate', value: { type: 'path', path: 'entry.rateDisplay' }, format: 'currency' },
+      { id: 'amount', header: 'Amount', value: { type: 'path', path: 'entry.amount' }, format: 'currency' },
+    ];
+    authored.layout.children!.push(
+      { id: 'detail-notice', type: 'text', content: { type: 'i18n', i18nKey: 'time.detail', defaultValue: 'Billed-time detail — included in the charges above' } },
+      { id: 'detail-coverage-note', type: 'text', content: { type: 'path', path: 'ticketDetailNote' } },
+      { id: 'dated-detail', type: 'dynamic-table', repeat: { sourceBinding: { bindingId: 'datedDetail' }, itemBinding: 'entry' }, columns },
+      { id: 'ticket-region', type: 'stack', direction: 'column', repeat: { sourceBinding: { bindingId: 'ticketGroups' }, itemBinding: 'group' }, children: [
+        { id: 'ticket-label', type: 'text', content: { type: 'path', path: 'group.label' } },
+        { id: 'entry-detail', type: 'dynamic-table', repeat: { sourceBinding: { bindingId: 'nestedEntries' }, itemBinding: 'entry' }, columns },
+      ] },
+    );
+    const saved = await saveInvoiceTemplate({ template_id: randomUUID(), name: 'Synthetic historical locale detail', version: 1, is_default: false, templateAst: authored } as any);
+    expect(saved.success, saved.error).toBe(true);
+    const templateId = saved.template!.template_id;
     const template = await db('invoice_templates').where({ tenant: state.tenant, template_id: templateId }).first();
     const ast = template.templateAst;
     const walk = (node: any): any[] => [node, ...(node.children ?? []).flatMap(walk)];
@@ -489,7 +524,7 @@ it.runIf(process.env.INVOICE_TICKET_CLOSURE === '1')('verifies visually authored
     const flat = nodes.find((node) => node.repeat?.sourceBinding.bindingId === ast.transforms.outputBindingId);
     expect(flat.columns).toHaveLength(6); expect(nested.columns).toHaveLength(6);
     expect(ast.transforms.operations).toContainEqual(expect.objectContaining({ type: 'sort', keys: [{ path: 'date', direction: 'desc' }] }));
-    fs.writeFileSync(`${dir}/ui-saved-template.json`, JSON.stringify(template, null, 2));
+    fs.writeFileSync(`${dir}/saved-template.json`, JSON.stringify(template, null, 2));
     const { generateInvoice } = await import('@alga-psa/billing/actions/invoiceGeneration');
     const { default: Invoice } = await import('@alga-psa/billing/models/invoice');
     const { mapDbInvoiceToWasmViewModel } = await import('@alga-psa/billing/lib/adapters/invoiceAdapters');
@@ -500,9 +535,12 @@ it.runIf(process.env.INVOICE_TICKET_CLOSURE === '1')('verifies visually authored
     const { localizeTimePresentation } = await import('@alga-psa/billing/lib/invoice-template-ast/timePresentationLocalization');
     const { localizeTemplateAstForLocale } = await import('@alga-psa/billing/lib/invoice-template-ast/i18nLabels');
     const { execFileSync } = await import('node:child_process');
-    const cases: any[] = ['task-identities', 'hour-block', 'multi-tax-long'].map((variant) => ({
-      ...JSON.parse(fs.readFileSync(`${evidenceDir}/${variant}/generated.json`, 'utf8')), variant, origin: 'production generation',
-    }));
+    // Own every generated invoice. No dependency on another test's execution
+    // order, persisted files, user identity, or disposable database lifetime.
+    const cases: any[] = [];
+    for (const variant of ['task-identities', 'hour-block', 'multi-tax-long']) {
+      cases.push(await generateProductionVariant(db, variant, `${dir}/sources/${variant}`));
+    }
     for (const variant of ['historical-fallbacks', 'historical-partial', 'historical-none']) {
       const ids = await createSourceFixture(db);
       const generated = await generateInvoice(ids.cycleId) as any;
@@ -571,7 +609,7 @@ it.runIf(process.env.INVOICE_TICKET_CLOSURE === '1')('verifies visually authored
         // -layout interleaves wrapped table columns, splitting labels; assert
         // containment against reading-order extraction and keep -layout as the
         // human-readable artifact.
-        const flowText = execFileSync('pdftotext', [`${prefix}.pdf`, '-'], { encoding: 'utf8' });
+        const flowText = execFileSync('pdftotext', ['-raw', `${prefix}.pdf`, '-'], { encoding: 'utf8' });
         const compact = (value: string) => value.replace(/\s/g, '');
         const expected: string[] = [localized.t?.('time.detail', { defaultValue: 'Billed-time detail — included in the charges above' }) ?? 'Billed-time detail — included in the charges above'];
         if (display.timeEntries?.some((entry) => entry.rateKind === 'mixed')) expected.push(locale === 'fr' ? 'Tarifs variables' : 'Mixed rates');
