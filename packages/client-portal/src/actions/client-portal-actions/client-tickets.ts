@@ -2,6 +2,8 @@
 
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- Client portal ticket actions intentionally compose ticketing feature APIs for client-facing workflows. */
 
+import { syncCoManagedTicketAwaitingClientSla, recordCoManagedTicketResolution, recordCoManagedTicketReopened } from '@alga-psa/co-managed';
+import { assertCoManagedOperationalWrite } from '@alga-psa/licensing/lifecycle';
 import { validateData } from '@alga-psa/validation';
 import { COMMENT_RESPONSE_SOURCES, IComment, ITicket, ITicketListItem, ITicketWithDetails, TICKET_ORIGINS } from '@alga-psa/types';
 import { IDocument } from '@alga-psa/types';
@@ -602,6 +604,7 @@ export const addClientTicketComment = withAuth(async (
     }
 
     await withTransaction(db, async (trx: Knex.Transaction) => {
+      await assertCoManagedOperationalWrite(trx, tenant);
       const userRecord = await tenantDb(trx, tenant).table('users')
         .where({
           user_id: userId
@@ -671,6 +674,7 @@ export const addClientTicketComment = withAuth(async (
             ticket_id: ticketId,
           })
           .update({ response_state: 'awaiting_internal' });
+        await syncCoManagedTicketAwaitingClientSla(trx, tenant, ticketId);
 
         await maybeReopenBundleMasterFromChildReply(trx, tenant, ticketId, userId);
       }
@@ -703,6 +707,7 @@ export const addClientTicketComment = withAuth(async (
         },
         updatedAt: newComment.created_at instanceof Date ? newComment.created_at.toISOString() : new Date().toISOString(),
       });
+      await assertCoManagedOperationalWrite(trx, tenant);
     });
 
     return true; // Return true to indicate success
@@ -836,6 +841,7 @@ export const updateTicketStatus = withAuth(async (
     }
 
     await withTransaction(db, async (trx: Knex.Transaction) => {
+      await assertCoManagedOperationalWrite(trx, tenant);
       const userRecord = await tenantDb(trx, tenant).table('users')
         .where({
           user_id: userId
@@ -921,6 +927,9 @@ export const updateTicketStatus = withAuth(async (
           updated_by: userId
         });
 
+      if (isClosing) await recordCoManagedTicketResolution(trx, tenant, ticketId);
+      else if (isReopening) await recordCoManagedTicketReopened(trx, tenant, ticketId);
+
       const statusChanges = {
         status_id: {
           old: oldStatusId,
@@ -1000,6 +1009,7 @@ export const updateTicketStatus = withAuth(async (
         occurredAt,
         changes: statusChanges,
       });
+      await assertCoManagedOperationalWrite(trx, tenant);
     });
 
   } catch (error) {

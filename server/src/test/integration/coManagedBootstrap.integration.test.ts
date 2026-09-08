@@ -8723,9 +8723,15 @@ it.each(['sender', 'authentication', 'contact', 'private', 'revoked', 'expired',
   }));
 
 it('rolls qualified requester reply writes and outbox back before retaining quarantine after expiry during the writer', async () => withRequesterInboundFixture(async ({
-  customer, resource, inbox, run,
+  customer, sponsor, resource, inbox, run,
 }) => {
+  const { syncCoManagedTicketAwaitingClientSla } = await import('../../../../packages/co-managed/src/ticketSla');
+  await db.transaction(async trx => {
+    await tenantDb(trx, resource.tenant).table('tickets').where('ticket_id', resource.id).update({ response_state: 'awaiting_client' });
+    await syncCoManagedTicketAwaitingClientSla(trx, resource.tenant, resource.id);
+  });
   const workflow = await import('../../../../shared/workflow/actions/emailWorkflowActions'), original = workflow.createCommentFromEmail;
+  const slaBefore = await sponsor.table('sla_organization_obligations').first();
   const before = await customer.table('comments').where('ticket_id', resource.id);
   const writer = vi.spyOn(workflow, 'createCommentFromEmail').mockImplementationOnce(async (...args) => {
     const comment = await original(...args);
@@ -8736,6 +8742,7 @@ it('rolls qualified requester reply writes and outbox back before retaining quar
   try {
     expect(await run()).toMatchObject({ disposition: 'ack', outcome: 'skipped', reason: 'quarantined:unauthorized_requester_reply' });
     expect(writer).toHaveBeenCalledTimes(1);
+    expect(await sponsor.table('sla_organization_obligations').first()).toEqual(slaBefore);
     expect(await customer.table('comments').where('ticket_id', resource.id)).toHaveLength(before.length);
     expect(await customer.table('inbound_email_outbox').where('inbox_id', inbox.inbox_id)).toHaveLength(0);
     expect(await customer.table('co_management_event_outbox')).toHaveLength(0);
@@ -9334,7 +9341,7 @@ it.each(['sender', 'spf_only', 'missing_auth', 'no_update', 'inactive', 'disclos
   }));
 
 it('rolls actual technician comment and outbox writes back before quarantining a late token rejection', async () => withTechnicianInboundFixture(async ({
-  customer, resource, inbox, run,
+  customer, sponsor, resource, inbox, run,
 }) => {
   const workflow = await import('../../../../shared/workflow/actions/emailWorkflowActions'), real = workflow.createCommentFromEmail;
   const writer = vi.spyOn(workflow, 'createCommentFromEmail').mockImplementation(async (...args: any[]) => {
@@ -9342,9 +9349,11 @@ it('rolls actual technician comment and outbox writes back before quarantining a
     await tenantDb(args[3].existingConnection, resource.tenant).table('co_management_customer_reply_tokens').update({ expires_at: new Date(Date.now() - 1000) });
     return result;
   });
+  const slaBefore = await sponsor.table('sla_organization_obligations').first();
   const before = await customer.table('comments').where('ticket_id', resource.id);
   try {
     expect(await run()).toMatchObject({ disposition: 'ack', outcome: 'skipped', reason: 'quarantined:unauthorized_technician_reply' });
+    expect(await sponsor.table('sla_organization_obligations').first()).toEqual(slaBefore);
     expect(await customer.table('comments').where('ticket_id', resource.id)).toHaveLength(before.length);
     expect(await customer.table('inbound_email_outbox').where('inbox_id', inbox.inbox_id)).toHaveLength(0);
     expect(await customer.table('co_management_event_outbox')).toHaveLength(0);
@@ -16748,4 +16757,82 @@ it('MSP SLA awaiting-client follows scheduled customer publication without inven
   await f.run();
   const current = await f.sponsor.table('sla_organization_obligations').first();
   expect(current.clock).toMatchObject({ pauseReasons: ['awaiting_client'], response: { completedAt: null }, resolution: { dueAt: null } });
+}));
+
+it.each(['generic', 'optimized'] as const)('MSP SLA reply adapters pause on native %s public comments and ignore private notes', async writer => withNativeCommentFixture(async f => {
+  const before = await f.sponsor.table('sla_organization_obligations').first();
+  await f.create(writer, true);
+  expect(await f.sponsor.table('sla_organization_obligations').first()).toEqual(before);
+  await f.create(writer, false);
+  const current = await f.sponsor.table('sla_organization_obligations').first();
+  expect(current.clock).toMatchObject({ pauseReasons: ['awaiting_client'], response: { completedAt: null }, resolution: { dueAt: null } });
+}));
+
+it('MSP SLA reply adapters resume after an actual qualified requester email and retain replay identity', async () => withRequesterInboundFixture(async f => {
+  const { syncCoManagedTicketAwaitingClientSla } = await import('../../../../packages/co-managed/src/ticketSla');
+  await db.transaction(async trx => {
+    await tenantDb(trx, f.resource.tenant).table('tickets').where('ticket_id', f.resource.id).update({ response_state: 'awaiting_client' });
+    await syncCoManagedTicketAwaitingClientSla(trx, f.resource.tenant, f.resource.id);
+  });
+  const paused = await f.sponsor.table('sla_organization_obligations').first();
+  expect(paused.clock.pauseReasons).toEqual(['awaiting_client']);
+  expect(await f.run()).toMatchObject({ disposition: 'ack', outcome: 'replied', ticketId: f.resource.id });
+  const current = await f.sponsor.table('sla_organization_obligations').first();
+  expect(current.clock).toMatchObject({ pauseReasons: [], elapsedMilliseconds: paused.clock.elapsedMilliseconds });
+  expect(await f.run()).toMatchObject({ disposition: 'ack', reason: 'terminal_replay' });
+  expect(await f.sponsor.table('sla_organization_obligations').first()).toEqual(current);
+}));
+
+it.each(['requester', 'shared_it', 'organization_private'] as const)('MSP SLA reply adapters apply actual customer email %s audience without an MSP response', async audience => withTechnicianInboundFixture(async f => {
+  const before = await f.sponsor.table('sla_organization_obligations').first();
+  expect(await f.run()).toMatchObject({ disposition: 'ack', outcome: 'replied', ticketId: f.resource.id });
+  const current = await f.sponsor.table('sla_organization_obligations').first();
+  if (audience === 'requester') expect(current.clock).toMatchObject({ pauseReasons: ['awaiting_client'], response: { completedAt: before.clock.response.completedAt } });
+  else expect(current).toEqual(before);
+}, audience));
+
+async function withSlaPortalWriter(work: (fixture: Parameters<Parameters<typeof withPortalConversationFixture>[0]>[0] & {
+  add: () => Promise<unknown>; status: (id: string) => Promise<unknown>;
+}) => Promise<void>) {
+  return withPortalConversationFixture(async f => {
+    const permission = await f.customer.table('permissions').where({ resource: 'ticket', action: 'update', msp: false, client: true }).first();
+    const role = await f.customer.table('user_roles').where('user_id', f.requester.user_id).first();
+    await f.customer.table('role_permissions').insert({ tenant: f.resource.tenant, role_id: role.role_id, permission_id: permission.permission_id });
+    const auth = await import('@alga-psa/auth');
+    const portal = await import('../../../../packages/client-portal/src/actions/client-portal-actions/client-tickets');
+    const run = (action: () => Promise<unknown>) => auth.runWithApiKeyUser(f.requester, () => runWithTenant(f.resource.tenant, action));
+    await work({ ...f, add: () => run(() => portal.addClientTicketComment(f.resource.id, 'Requester has confirmed the fix')),
+      status: id => run(() => portal.updateTicketStatus(f.resource.id, id)) });
+  });
+}
+
+it('MSP SLA reply adapters resume through the actual requester portal and close/reopen independently', async () => withSlaPortalWriter(async f => {
+  const { syncCoManagedTicketAwaitingClientSla } = await import('../../../../packages/co-managed/src/ticketSla');
+  await db.transaction(async trx => {
+    await tenantDb(trx, f.resource.tenant).table('tickets').where('ticket_id', f.resource.id).update({ response_state: 'awaiting_client' });
+    await syncCoManagedTicketAwaitingClientSla(trx, f.resource.tenant, f.resource.id);
+  });
+  const paused = await f.sponsor.table('sla_organization_obligations').first();
+  expect(paused.clock.pauseReasons).toEqual(['awaiting_client']);
+  expect(await f.add()).toBe(true);
+  const resumed = await f.sponsor.table('sla_organization_obligations').first();
+  expect(resumed.clock).toMatchObject({ pauseReasons: [], elapsedMilliseconds: paused.clock.elapsedMilliseconds });
+  const ticket = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  await f.status(f.closedStatusId);
+  const closed = await f.sponsor.table('sla_organization_obligations').first();
+  expect(closed.clock.resolution.completedAt).not.toBeNull();
+  await f.status(ticket.status_id);
+  const rows = await f.sponsor.table('sla_organization_obligations').orderBy('generation');
+  expect(rows).toHaveLength(2); expect(rows[0]).toEqual(closed); expect(rows[1].clock.resolution.completedAt).toBeNull();
+}));
+
+it.each(['reply', 'status'] as const)('MSP SLA reply adapters block read-only portal %s without changing source or MSP history', async action => withSlaPortalWriter(async f => {
+  await f.sponsor.table('co_managed_allocations').del();
+  const ticket = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  const comments = await f.customer.table('comments');
+  const obligation = await f.sponsor.table('sla_organization_obligations').first();
+  await expect(action === 'reply' ? f.add() : f.status(f.closedStatusId)).rejects.toThrow();
+  expect(await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).toEqual(ticket);
+  expect(await f.customer.table('comments')).toEqual(comments);
+  expect(await f.sponsor.table('sla_organization_obligations').first()).toEqual(obligation);
 }));
