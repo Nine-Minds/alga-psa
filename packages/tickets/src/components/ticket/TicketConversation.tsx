@@ -1,5 +1,6 @@
 'use client';
 
+import type { RequesterHistoryComposition } from './conversations/NativeRequesterConversation';
 import { useConversationReplyLink } from './conversations/useConversationReplyLink';
 
 import React, { useState, useMemo, useEffect, useCallback, useRef, Suspense } from 'react';
@@ -66,6 +67,7 @@ import TicketNotificationSuppressionControl, {
 } from './TicketNotificationSuppressionControl';
 
 interface TicketConversationProps {
+  composition?: RequesterHistoryComposition;
   id?: string;
   ticket: ITicket;
   conversations: IComment[];
@@ -156,6 +158,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   defaultNewestFirst = false,
   canViewCommentMetadataDebug = false,
   reactionRefreshVersion = 0,
+  composition,
 }) => {
   const { t } = useTranslation('features/tickets');
   const { t: tCore } = useTranslation('common');
@@ -185,7 +188,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   const [reactionUserNames, setReactionUserNames] = useState<Record<string, string>>({});
   const [openPanelCommentId, setOpenPanelCommentId] = useState<string | null>(null);
   const [replyingToCommentId, setReplyingToCommentId] = useState<string | null>(null);
-  const replyLinkError = useConversationReplyLink(!showEditor && !isEditing && !isSubmitting && !replyingToCommentId, target => {
+  const replyLinkError = useConversationReplyLink(!composition && !showEditor && !isEditing && !isSubmitting && !replyingToCommentId, target => {
     const source = conversations.find(item => item.comment_id === target.commentId && item.thread_id === target.threadId &&
       !item.deleted_at && !item.is_internal && (!item.publish_state || item.publish_state === 'published'));
     if (!source) return false;
@@ -322,10 +325,10 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     composeUploadSession.requestDiscard();
   };
 
-  usePageCreateShortcut(() => { handleAddCommentClick(headerAnchorVisible ? 'top' : 'bottom'); }, { enabled: !showEditor });
+  usePageCreateShortcut(() => { handleAddCommentClick(headerAnchorVisible ? 'top' : 'bottom'); }, { enabled: !composition && !showEditor });
   useDialogSubmitShortcut(() => { void handleSubmitComment(); }, {
-    active: showEditor,
-    enabled: !isSubmitting,
+    active: !composition && showEditor,
+    enabled: !composition && !isSubmitting,
   });
 
   const toggleCommentOrder = () => {
@@ -507,17 +510,21 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
           onContentChange={onContentChange}
           onSave={onSave}
           onClose={onClose}
-          onEdit={() => onEdit(mergedConversation)}
-          onDelete={onDelete}
-          onReply={() => setReplyingToCommentId(mergedConversation.comment_id ?? null)}
-          hideInternalTab={hideInternalTab}
+          onEdit={async () => { if (!composition || await composition.beforeEdit()) onEdit(mergedConversation); }}
+          onDelete={async comment => { if (!composition || await composition.beforeEdit()) onDelete(comment); }}
+          onReply={composition ? composition.ready && mergedConversation.publish_state !== 'scheduled' ? async () => { if (await composition.reply(mergedConversation)) closeCommentThreadPanel(); } : undefined : () => setReplyingToCommentId(mergedConversation.comment_id ?? null)}
+          hideInternalTab={hideInternalTab || Boolean(composition)}
+          mutationsDisabled={Boolean(composition && !composition.ready && !(isEditing && currentComment?.comment_id === mergedConversation.comment_id))}
+          beforeScheduleChange={composition?.beforeEdit}
+          onScheduleChanged={composition?.afterChange}
           uploadFile={existingCommentUploadSession.uploadFile}
           reactions={reactionsMap[mergedConversation.comment_id || ''] || []}
           onToggleReaction={handleToggleReaction}
           userNames={reactionUserNames}
           canViewCommentMetadataDebug={canViewCommentMetadataDebug}
         />
-        {replyingToCommentId === mergedConversation.comment_id && mergedConversation.comment_id && (
+        {!mergedConversation.deleted_at && composition?.renderDetails?.(mergedConversation)}
+        {!composition && replyingToCommentId === mergedConversation.comment_id && mergedConversation.comment_id && (
           <InlineReplyComposer
             id={`${compId}-reply-${mergedConversation.comment_id}`}
             parentCommentId={mergedConversation.comment_id}
@@ -627,7 +634,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
                 onClose={() => {}}
                 onEdit={() => {}}
                 onDelete={() => {}}
-                hideInternalTab={hideInternalTab}
+                hideInternalTab={hideInternalTab || Boolean(composition)}
                 canViewCommentMetadataDebug={canViewCommentMetadataDebug}
               />
             </div>
@@ -845,7 +852,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
         {replyLinkError && <p role="alert">{t('namedConversations.replyUnavailable', 'This reply target is unavailable. Your saved draft is unchanged.')}</p>}
         <div ref={headerAnchorRef} className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold">{t('conversation.comments', 'Comments')}</h2>
-          {!showEditor && (
+          {!composition && !showEditor && (
             <Button
               id={`${compId}-show-comment-editor-btn`}
               onClick={() => handleAddCommentClick('top')}
@@ -857,7 +864,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
         <StickyComposerDock
           id={`${compId}-composer-top`}
           side="top"
-          visible={showEditor && editorPlacement === 'top'}
+          visible={!composition && showEditor && editorPlacement === 'top'}
           expanded
         >
           <div className="p-3">{composerBlock}</div>
@@ -882,7 +889,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
             composer right here rather than sending the reader back up. */}
         <StickyComposerDock
           id={`${compId}-composer-dock`}
-          visible={showEditor ? editorPlacement === 'bottom' : !headerAnchorVisible}
+          visible={!composition && (showEditor ? editorPlacement === 'bottom' : !headerAnchorVisible)}
           expanded={showEditor && editorPlacement === 'bottom'}
           placeholder={t('conversation.typeComment', 'Type your comment here...')}
           onExpand={() => handleAddCommentClick('bottom')}
@@ -913,6 +920,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
         group={openPanelThreadGroup}
         getCommentId={(comment) => comment.comment_id}
         renderComment={(comment) => renderCommentItem(comment)}
+        canReply={!composition}
         replyParentCommentId={openPanelComment?.comment_id ?? null}
         replyRoomName={(parentCommentId) => `ticket-${ticket.ticket_id}-reply-${parentCommentId}`}
         initialInternal={Boolean(openPanelComment?.is_internal ?? openPanelThreadGroup?.root.is_internal)}

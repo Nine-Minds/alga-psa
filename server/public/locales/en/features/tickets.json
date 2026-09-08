@@ -1925,6 +1925,7 @@
     "scheduleEmail": "Schedule email",
     "scheduleReview": "Publish and email at:",
     "scheduleKeepsStatus": "Scheduled replies keep the current ticket status.",
-    "scheduleInvalid": "Choose a future publication time before reviewing this email."
+    "scheduleInvalid": "Choose a future publication time before reviewing this email.",
+    "detailsUnavailable": "Email and attachment details are unavailable."
   }
 }

@@ -96,3 +96,5 @@ export { assertNamedConversationDeliveryFiles } from './namedConversationPublica
 export { listNamedScheduledComments, type NamedScheduleCursor, admitNamedScheduledCommentCommand, retainNamedScheduledCommentCancellation } from './namedScheduledCommentCommands';
 
 export { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
+
+export { getNamedConversationMessageDetails } from './namedConversationMessageDetails';

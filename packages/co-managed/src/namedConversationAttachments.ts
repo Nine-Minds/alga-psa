@@ -44,7 +44,7 @@ export async function namedConversationMessageFileContext(context: Context, comm
 }
 /** The caller already selected this authorized conversation before pagination.
  * Only published files inherit its message/root audience; paths never project. */
-export async function attachNamedConversationFiles(context: Context, items: CoManagedConversationItem[]) {
+export async function attachNamedConversationFiles(context: Context, items: Pick<CoManagedConversationItem, 'commentId' | 'threadId' | 'storeTenant' | 'deleted' | 'attachments'>[]) {
   if (isCoManagedReadFieldHidden(context.hidden, [...coManagedConversationAttachmentSources, ...coManagedConversationBodySources])) return;
   for (const item of items) {
     if (item.deleted || item.storeTenant !== context.conversation.storeTenant) continue;

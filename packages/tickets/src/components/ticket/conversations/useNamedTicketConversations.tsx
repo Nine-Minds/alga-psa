@@ -7,7 +7,7 @@ import { useConversationReplyLink } from './useConversationReplyLink';
 import { ConversationDraftFiles } from './ConversationDraftFiles';
 import type { ConversationEditorFile } from '@alga-psa/shared/lib/tickets/conversationEditorFiles';
 
-import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject, type ReactNode } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject, type ReactNode } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
@@ -28,7 +28,7 @@ import * as actions from '../../../actions/namedTicketConversationActions';
 import { conversationDocument, conversationText } from './conversationText';
 import type { ConversationEmailDraft } from '@alga-psa/shared/lib/tickets/conversationEmailEnvelope';
 import { ConversationEmailControls } from './ConversationEmailControls';
-import { ConversationEmailEnvelope } from './ConversationEmailEnvelope';
+import { ConversationMessageDetails } from './ConversationMessageDetails';
 
 const Document = dynamic(() => import('./ConversationDocument'), { ssr: false });
 const reference = (c: NamedTicketConversation): TicketConversationReference => ({ storeTenant: c.storeTenant, conversationId: c.conversationId });
@@ -41,7 +41,7 @@ const audienceLabels = { requester: 'Requester', shared_it: 'Shared IT', organiz
 /** Hosts may retain their established requester history while attaching the
  * shared private-draft composer. Every sender remains conversation-scoped. */
 export function useNamedTicketConversations(input: ConversationTicketReference | null, enabled: boolean, id: string,
-  options: { onPublished?: () => void | Promise<void>; requesterPanel?: (props: { conversation: NamedTicketConversation; flush: Flush; onDirty: (dirty: boolean) => void; canWrite: boolean; onRefresh: () => void }) => ReactNode } = {}) {
+  options: { onPublished?: () => void | Promise<void>; requesterPanel?: (props: { conversation: NamedTicketConversation; flush: Flush; onDirty: (dirty: boolean) => void; canWrite: boolean; onRefresh: () => void; refreshVersion: number }) => ReactNode } = {}) {
   const { t } = useTranslation('features/tickets');
   const { data: session } = useSession(), router = useRouter(), params = useSearchParams();
   const ticket = useMemo(() => input ? { ...input } : null, [input?.tenant, input?.ticketId, input?.relationshipId]);
@@ -123,7 +123,7 @@ export function useNamedTicketConversations(input: ConversationTicketReference |
     {screen && <CreateConversation key={identity} id={id} ticket={ticket} open={creating} audiences={screen.writeAudiences}
       onClose={() => setCreating(false)} onCreated={async value => { setCreating(false); refresh(); await select(value); }} />}
   </section>;
-  return { navigator, panel: !screen ? (error ? unavailable : loading) : allActivity ? <NamedConversationActivity key={`${identity}:all`} id={id} ticket={ticket} refreshVersion={reload} audiences={screen.writeAudiences} onReply={select} /> : !selected ? unavailable : selected.defaultSlot === 'requester' ? options.requesterPanel?.({ conversation: selected, flush, onDirty: setDirty, canWrite: screen.writeAudiences.includes(selected.audience), onRefresh: refresh })
+  return { navigator, panel: !screen ? (error ? unavailable : loading) : allActivity ? <NamedConversationActivity key={`${identity}:all`} id={id} ticket={ticket} refreshVersion={reload} audiences={screen.writeAudiences} onReply={select} /> : !selected ? unavailable : selected.defaultSlot === 'requester' ? options.requesterPanel ? <Fragment key={`${identity}:${keyOf(selected)}`}>{options.requesterPanel?.({ conversation: selected, flush, onDirty: setDirty, canWrite: screen.writeAudiences.includes(selected.audience), onRefresh: refresh, refreshVersion: reload })}</Fragment> : undefined
     : <NamedConversationPanel key={`${identity}:${keyOf(selected)}`} id={id} ticket={ticket} conversation={selected}
       canWrite={screen.writeAudiences.includes(selected.audience)} flush={flush} onDirty={setDirty} onRefresh={refresh} onPublished={options.onPublished} /> };
 }
@@ -178,16 +178,7 @@ function NamedConversationMessage({ id, index, ticket, conversation, item, onRep
       <time dateTime={item.createdAt}>{formatDate(item.createdAt, { dateStyle: 'medium', timeStyle: 'short' })}</time></div>
     {label && <p className="mb-2 text-sm font-medium">{conversation.defaultSlot === 'requester' ? t('namedConversations.requester', 'Requester') : conversation.name} · {t(`namedConversations.audiences.${conversation.audience}`, audienceLabels[conversation.audience])}</p>}
     {item.isResolution && <p className="mb-2 text-xs font-medium">{t('namedConversations.resolution', 'Resolution')}</p>}
-    {!item.deleted && item.email && <ConversationEmailEnvelope email={item.email} />}
-    {!item.deleted && Boolean(item.attachments?.length) && <ul className="my-2 flex flex-wrap gap-2">
-      {item.attachments!.map(file => {
-        const query = new URLSearchParams({ ticketTenant: ticket.tenant, ticketId: ticket.ticketId, conversationId: conversation.conversationId,
-          storeTenant: file.storeTenant, threadId: file.threadId, commentId: file.commentId, ...(ticket.relationshipId ? { relationshipId: ticket.relationshipId } : {}) });
-        return <li key={file.attachmentId}><a id={`${id}-file-${file.attachmentId}`} download
-          href={`/api/tickets/conversation-attachments/${encodeURIComponent(file.attachmentId)}?${query}`}
-          className="inline-flex rounded border border-[rgb(var(--color-border-200))] px-2 py-1 text-sm text-primary-600 underline break-all">{file.fileName}</a></li>;
-      })}
-    </ul>}
+    {!item.deleted && <ConversationMessageDetails id={id} ticket={ticket} conversation={conversation} email={item.email} attachments={item.attachments} />}
     {item.deleted ? <p className="text-sm italic text-muted-foreground">{t('namedConversations.deleted', 'Message deleted')}</p>
       : document ? <Document id={`${id}-message-${index}`} document={document} /> : <p className="whitespace-pre-wrap break-words text-sm">{conversationText(item.note, item.markdown)}</p>}
     {item.parentCommentId && <p className="mt-2 text-xs text-muted-foreground">{t('namedConversations.reply', 'Reply')}</p>}
@@ -291,8 +282,8 @@ function NamedConversationPanel({ id, ticket, conversation, canWrite, flush, onD
   </section>;
 }
 
-export function NamedConversationComposer({ id, ticket, conversation, flush, onDirty, onPosted, onRefresh, reply, onReplyReady, replyItems = [], disabled = false }: { id: string; ticket: ConversationTicketReference;
-  conversation: NamedTicketConversation; flush: Flush; onDirty: (dirty: boolean) => void; onPosted: () => void | Promise<void>; onRefresh?: () => void; reply?: MutableRefObject<((parent: ConversationDraftParent) => Promise<boolean>) | null>; onReplyReady?: (ready: boolean) => void; replyItems?: Page['items']; disabled?: boolean }) {
+export function NamedConversationComposer({ id, ticket, conversation, flush, onDirty, onPosted, onRefresh, reply, onReplyReady, replyItems = [], disabled = false, showScheduledReplies = true, deliveryRefreshVersion = 0 }: { id: string; ticket: ConversationTicketReference;
+  conversation: NamedTicketConversation; flush: Flush; onDirty: (dirty: boolean) => void; onPosted: () => void | Promise<void>; onRefresh?: () => void; reply?: MutableRefObject<((parent: ConversationDraftParent) => Promise<boolean>) | null>; onReplyReady?: (ready: boolean) => void; replyItems?: Page['items']; disabled?: boolean; showScheduledReplies?: boolean; deliveryRefreshVersion?: number }) {
   const { t } = useTranslation('features/tickets');
   const [document, setDocument] = useState<CoManagedRichTextDocument>([]), [loaded, setLoaded] = useState(false), [epoch, setEpoch] = useState(0);
   const isEmail = conversation.transport === 'email';
@@ -300,6 +291,7 @@ export function NamedConversationComposer({ id, ticket, conversation, flush, onD
   const [emailLocked, setEmailLocked] = useState(false);
   const [publicationOptions, setPublicationOptions] = useState<RequesterPublicationOptions | null>(null);
   const [canSchedule, setCanSchedule] = useState(false);
+  const [deliveryRevision, setDeliveryRevision] = useState(0);
   const invalidSchedule = useRef(false);
   const [canMarkResolution, setCanMarkResolution] = useState(false);
   const [closeStatuses, setCloseStatuses] = useState<{ value: string; label: string }[]>([]);
@@ -456,7 +448,7 @@ export function NamedConversationComposer({ id, ticket, conversation, flush, onD
   let nonempty = false;
   try { snapshotConversationDocument(document); nonempty = true; } catch { /* An empty editor is a draft, not a message. */ }
   return <div className="space-y-3 border-t border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-background))] p-4">
-    {loaded && canSchedule && <NamedScheduledReplies id={id} ticket={ticket} conversation={conversation} revision={epoch} disabled={disabled || posting || emailLocked || fileLocked} />}
+    {loaded && canSchedule && showScheduledReplies && <NamedScheduledReplies id={id} ticket={ticket} conversation={conversation} revision={epoch} onChanged={() => setDeliveryRevision(value => value + 1)} disabled={disabled || posting || emailLocked || fileLocked} />}
     {replyLinkError && <p role="alert" className="text-sm text-destructive">{t('namedConversations.replyUnavailable', 'This reply target is unavailable. Your saved draft is unchanged.')}</p>}
     <div className="flex justify-between gap-2"><h3 className="text-sm font-medium">{isEmail ? conversation.audience === 'requester' ? t('namedConversations.requesterEmail', 'Requester email') : t('namedConversations.vendorEmail', 'Vendor email') : t('namedConversations.internalMessage', 'Internal message')}</h3>
       <span role="status" className="text-xs text-muted-foreground">{saving ? t('namedConversations.saving', 'Saving draft…') : loaded ? t('namedConversations.privateDraft', 'Draft visible only to you') : t('namedConversations.loading', 'Loading conversations…')}</span></div>
@@ -519,7 +511,7 @@ export function NamedConversationComposer({ id, ticket, conversation, flush, onD
         return save();
       }} />}
     {error && <p role="alert" className="text-sm text-destructive">{t(`namedConversations.${error}`, error === 'saveFailed' ? 'Could not save. Retry before switching conversations.' : error === 'postFailed' ? 'Could not confirm the post. Retry to check the same message.' : error === 'scheduleInvalid' ? 'Choose a future publication time before reviewing this email.' : error === 'invalid' ? 'This draft contains unsupported content. Edit it before saving.' : 'This conversation is unavailable.')}</p>}
-    {isEmail && loaded && <ConversationEmailControls id={id} ticket={ticket} conversation={conversation} closeStatuses={closeStatuses} ready={!disabled && !fileLocked && !invalidSchedule.current && (!publicationOptions?.schedule || Date.parse(publicationOptions.schedule.at) > Date.now()) && nonempty && Boolean(email.subject.trim()) && email.to.some(value => value.trim())}
+    {isEmail && loaded && <ConversationEmailControls id={id} refreshVersion={deliveryRefreshVersion + deliveryRevision} ticket={ticket} conversation={conversation} closeStatuses={closeStatuses} ready={!disabled && !fileLocked && !invalidSchedule.current && (!publicationOptions?.schedule || Date.parse(publicationOptions.schedule.at) > Date.now()) && nonempty && Boolean(email.subject.trim()) && email.to.some(value => value.trim())}
       saveDraft={reviewDraft} onLock={lockEmail} onMailbox={value => { state.current.conversationRevision = value.revision; if (state.current.content) { state.current.dirty = true; state.current.generation++; } onRefresh?.(); }} onSent={async () => { await read(); await onPosted(); }} />}
     <div className="flex items-center gap-2">{!isEmail && <Button id={`${id}-post`} disabled={disabled || !loaded || !nonempty || posting || fileLocked} onClick={() => void submit()}>{postRequest.current ? t('namedConversations.retryPost', 'Retry post') : t('namedConversations.post', 'Post')}</Button>}
       {error === 'saveFailed' && <Button id={`${id}-save-retry`} variant="outline" disabled={saving} onClick={() => void save()}>{t('namedConversations.retry', 'Retry')}</Button>}

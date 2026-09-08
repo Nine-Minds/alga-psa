@@ -190,7 +190,7 @@ export function getLatestNamedConversationEmailSend(db: Knex, actor: CoManagedSe
 }
 /** Only published envelope and delivery state are shared with destination
  * readers. The author's private review, payload and tokens remain unprojected. */
-export async function attachPublishedConversationEmails(context: Pick<Context, 'trx' | 'ticket' | 'conversation' | 'hidden'>, items: CoManagedConversationItem[]) {
+export async function attachPublishedConversationEmails(context: Pick<Context, 'trx' | 'ticket' | 'conversation' | 'hidden'>, items: Pick<CoManagedConversationItem, 'commentId' | 'storeTenant' | 'deleted' | 'email' | 'author'>[]) {
   const visible = items.filter(item => !item.deleted);
   if (!visible.length || isCoManagedReadFieldHidden(context.hidden, [...coManagedConversationAuthorSources, 'email', 'email_envelope', 'recipients', 'from', 'to', 'cc', 'subject',
     'ticket_conversation_publications', 'ticket_conversation_email_operations', 'ticket_conversation_inbound_messages', 'proposed_recipients'])) return;

@@ -112,8 +112,8 @@ vi.mock('@alga-psa/ui/components/bento/BentoTile', () => ({
 }));
 
 vi.mock('@alga-psa/ui/components', () => ({
-  buildCommentThreadGroups: () => [],
-  HybridThreadNode: () => null,
+  buildCommentThreadGroups: ({ comments }: any) => comments.map((comment: any) => ({ threadId: comment.thread_id, root: comment, comments: [comment], replyCount: 0 })),
+  HybridThreadNode: ({ comment, renderComment }: any) => renderComment(comment),
 }));
 
 vi.mock('@alga-psa/ui/components/InlineReplyComposer', () => ({
@@ -151,7 +151,7 @@ vi.mock('../../../actions/comment-actions/commentReactionActions', () => ({
 }));
 
 vi.mock('../CommentItem', () => ({
-  default: () => null,
+  default: ({ onReply, onEdit }: any) => <div>{onReply && <button onClick={onReply}>History reply</button>}<button onClick={onEdit}>History edit</button></div>,
 }));
 
 vi.mock('../TicketConversation', () => ({
@@ -310,4 +310,19 @@ it('opens the existing bento requester reply dock from All activity without send
   }]} />);
   await waitFor(() => expect(replyNavigation.replace).toHaveBeenCalled());
   expect(document.getElementById('ticket-timeline-reply-dock')).toBeInTheDocument(); expect(onReply).not.toHaveBeenCalled();
+});
+
+it('routes history replies and guarded edits to named composition without a legacy composer', async () => {
+  const comment = { comment_id: 'comment', thread_id: 'thread', created_at: '2026-08-23T10:00:00.000Z', note: 'Existing reply', is_internal: false } as any;
+  const composition = { ready: true, beforeEdit: vi.fn().mockResolvedValue(false), reply: vi.fn().mockResolvedValue(true), afterChange: vi.fn() };
+  const onEditComment = vi.fn();
+  render(<BentoTimelineTile {...defaultProps} conversations={[comment]} composition={composition} onEditComment={onEditComment} />);
+  expect(screen.queryByText('Add Comment')).toBeNull(); expect(screen.queryByTestId('composer-editor')).toBeNull();
+  fireEvent.click(await screen.findByRole('button', { name: 'History reply' }));
+  expect(composition.reply).toHaveBeenCalledWith(comment);
+  fireEvent.click(screen.getByRole('button', { name: 'History edit' }));
+  await waitFor(() => expect(composition.beforeEdit).toHaveBeenCalledOnce()); expect(onEditComment).not.toHaveBeenCalled();
+  composition.beforeEdit.mockResolvedValue(true);
+  fireEvent.click(screen.getByRole('button', { name: 'History edit' }));
+  await waitFor(() => expect(onEditComment).toHaveBeenCalledWith(comment));
 });

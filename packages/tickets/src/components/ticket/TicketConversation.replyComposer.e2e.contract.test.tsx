@@ -666,3 +666,15 @@ it('opens the existing requester reply composer from an admitted All activity li
   expect(screen.getByTestId('inline-reply-editor')).toBeInTheDocument();
   expect(onReply).not.toHaveBeenCalled();
 });
+
+it('uses named composition for entry-view replies and leaves the thread drawer without a second composer', async () => {
+  const user = userEvent.setup();
+  const composition = { ready: true, beforeEdit: vi.fn().mockResolvedValue(true), reply: vi.fn().mockResolvedValue(true), afterChange: vi.fn() };
+  render(<TicketConversation {...defaultProps} composition={composition} />);
+  expect(screen.queryByRole('button', { name: 'Add Comment' })).toBeNull();
+  await user.click(screen.getByRole('button', { name: 'Reply to comment' }));
+  await waitFor(() => expect(composition.reply).toHaveBeenCalledWith(defaultProps.conversations[0]));
+  expect(document.getElementById('ticket-1-conversation-reply-comment-1')).toBeNull();
+  expect(screen.queryByTestId('inline-reply-editor')).toBeNull();
+  expect(defaultProps.onAddReplyComment).not.toHaveBeenCalled();
+});

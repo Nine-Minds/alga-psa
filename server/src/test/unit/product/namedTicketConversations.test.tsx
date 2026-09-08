@@ -3,10 +3,12 @@ import React from 'react';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import CoManagedNamedTicketConversation from '../../../components/co-managed/CoManagedNamedTicketConversation';
+import { NativeRequesterConversation } from '../../../../../packages/tickets/src/components/ticket/conversations/NativeRequesterConversation';
 import { useNamedTicketConversations } from '../../../../../packages/tickets/src/components/ticket/conversations/useNamedTicketConversations';
-const mocks = vi.hoisted(() => ({ schedules: vi.fn(), reschedule: vi.fn(), cancelSchedule: vi.fn(), flag: true, onPublished: vi.fn(), requesterProps: vi.fn(), uploadOptions: vi.fn(), uploadFile: vi.fn(), load: vi.fn(), page: vi.fn(), activity: vi.fn(), capabilities: vi.fn(), replyTarget: vi.fn(), replace: vi.fn(), readDraft: vi.fn(), saveDraft: vi.fn(), post: vi.fn(), create: vi.fn(), status: vi.fn(), push: vi.fn(), mailboxes: vi.fn(), selectMailbox: vi.fn(), latestSend: vi.fn(), prepareEmail: vi.fn(), sendEmail: vi.fn(), emailStatus: vi.fn(), emailDefaults: vi.fn(),
+const mocks = vi.hoisted(() => ({ details: vi.fn(), schedules: vi.fn(), reschedule: vi.fn(), cancelSchedule: vi.fn(), flag: true, onPublished: vi.fn(), requesterProps: vi.fn(), uploadOptions: vi.fn(), uploadFile: vi.fn(), load: vi.fn(), page: vi.fn(), activity: vi.fn(), capabilities: vi.fn(), replyTarget: vi.fn(), replace: vi.fn(), readDraft: vi.fn(), saveDraft: vi.fn(), post: vi.fn(), create: vi.fn(), status: vi.fn(), push: vi.fn(), mailboxes: vi.fn(), selectMailbox: vi.fn(), latestSend: vi.fn(), prepareEmail: vi.fn(), sendEmail: vi.fn(), emailStatus: vi.fn(), emailDefaults: vi.fn(),
   query: '', session: { session_id: 'session', user: { tenant: 'home', id: 'author' } } }));
 vi.mock('../../../../../packages/tickets/src/actions/namedTicketConversationActions', () => ({
+  getNamedConversationMessageDetailsAction: mocks.details,
   listNamedScheduledCommentsAction: mocks.schedules,
   getNamedTicketConversationPublicationCapabilitiesAction: mocks.capabilities,
   getNamedTicketConversationActivityAction: mocks.activity, getNamedTicketConversationReplyTargetAction: mocks.replyTarget,
@@ -45,6 +47,19 @@ function Harness({ enabled = true }: { enabled?: boolean }) {
   const view = useNamedTicketConversations(ticket, enabled, 'named', { onPublished: mocks.onPublished });
   return <>{view.navigator}{view.panel ?? <p>Default requester panel</p>}</>;
 }
+function NativeHarness() {
+  const [editing, setEditing] = React.useState(false);
+  const view = useNamedTicketConversations(ticket, true, 'native', {
+    requesterPanel: props => <NativeRequesterConversation {...props} id="native-requester" editing={() => editing} onPublished={mocks.onPublished} historyComments={() => [{ comment_id: 'source', thread_id: 'root' } as any]}
+      renderHistory={composition => <div>
+        {composition.renderDetails?.({ comment_id: 'source', thread_id: 'root' } as any)}
+        <button disabled={!composition.ready} onClick={async () => { if (await composition.beforeEdit()) setEditing(true); }}>Edit old reply</button>
+        {editing && <button onClick={() => setEditing(false)}>Finish history edit</button>}
+        <button disabled={!composition.ready} onClick={() => void composition.reply({ comment_id: 'source', thread_id: 'root' } as any)}>Reply from history</button>
+      </div>} />,
+  });
+  return <>{view.navigator}{view.panel}</>;
+}
 const deferred = () => { let resolve!: (value: any) => void; const promise = new Promise<any>(done => { resolve = done; }); return { promise, resolve }; };
 beforeEach(() => {
   vi.resetAllMocks(); mocks.flag = true; mocks.query = 'conversation=private&conversationStore=home';
@@ -53,6 +68,7 @@ beforeEach(() => {
   mocks.page.mockResolvedValue({ conversation: side, items: [], nextBefore: null });
   mocks.capabilities.mockResolvedValue({ resolution: false });
   mocks.schedules.mockResolvedValue({ items: [], next: null });
+  mocks.details.mockResolvedValue([]);
   mocks.activity.mockResolvedValue({ items: [], nextBefore: null });
   mocks.replyTarget.mockImplementation(async (_ticket, _conversation, parent) => parent);
   mocks.readDraft.mockResolvedValue(null);
@@ -233,9 +249,11 @@ it('pages accepted replies and reschedules or cancels without replacing the comp
   fireEvent.click(screen.getByRole('button', { name: 'Cancel scheduled reply' }));
   expect(mocks.cancelSchedule).not.toHaveBeenCalled();
   mocks.schedules.mockResolvedValue({ items: [], next: null });
+  mocks.latestSend.mockResolvedValue({ operationId: 'first', status: 'canceled', errorCode: null, reviewHash: 'review-hash' });
   fireEvent.click(screen.getByRole('button', { name: 'Confirm cancellation' }));
   await waitFor(() => expect(mocks.cancelSchedule).toHaveBeenCalledWith('first'));
   await waitFor(() => expect(screen.queryByText('first accepted body')).toBeNull());
+  await screen.findByText('Scheduled email canceled.');
   expect(screen.getByLabelText('Message')).toHaveValue('Selected vendor question');
 });
 it('drops late scheduled rows after the author changes', async () => {
@@ -625,4 +643,51 @@ it('keeps close intent and the draft after a blocked Send and reviews an explici
   await waitFor(() => expect(screen.getByLabelText('Mark as resolution')).not.toBeChecked());
   expect(screen.queryByLabelText('After sending')).toBeNull();
   await waitFor(() => expect(mocks.onPublished).toHaveBeenCalledOnce());
+});
+
+it('uses the default Requester private composer while keeping history edits and refreshes independent', async () => {
+  const f = scheduledEmailFixture(); mocks.query = '';
+  mocks.load.mockResolvedValue({ conversations: [{ ...requester, mailbox: { id: 'mailbox', tenant: 'owner' } }, side], writeAudiences: ['requester', 'organization_private'], actor: { tenant: 'owner', userId: 'author' } });
+  mocks.details.mockResolvedValue([{ commentId: 'source', email: { ...f.preview, delivery: 'delivered' }, attachments: [{ attachmentId: 'selected-file', storeTenant: 'owner', commentId: 'source', threadId: 'root', fileName: 'Reviewed attachment.txt' }] }]);
+  render(<NativeHarness />); await writeEmail();
+  const file = await screen.findByRole('link', { name: 'Reviewed attachment.txt' });
+  const query = new URL(file.getAttribute('href')!, 'https://local.test').searchParams;
+  expect(Object.fromEntries(query)).toEqual({ ticketTenant: 'owner', ticketId: 'ticket', conversationId: 'requester', storeTenant: 'owner', threadId: 'root', commentId: 'source' });
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Edit old reply' })).toBeEnabled());
+  fireEvent.click(screen.getByRole('button', { name: 'Reply from history' }));
+  await waitFor(() => expect(f.draft().parent).toEqual({ commentId: 'source', threadId: 'root' }));
+  expect(mocks.saveDraft.mock.calls.at(-1)[1]).toEqual({ storeTenant: 'owner', conversationId: 'requester' });
+  fireEvent.focus(window); await waitFor(() => expect(mocks.load.mock.calls.length).toBeGreaterThan(1));
+  expect(mocks.readDraft).toHaveBeenCalledOnce(); expect(screen.getByLabelText('Message')).toHaveValue('Selected vendor question');
+  fireEvent.click(screen.getByRole('button', { name: 'Edit old reply' }));
+  await screen.findByRole('button', { name: 'Finish history edit' });
+  expect(screen.getByLabelText('Message')).toBeDisabled();
+  fireEvent.click(screen.getByRole('button', { name: /Diagnostics/ }));
+  expect(mocks.push).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: 'Finish history edit' }));
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Review email' })).toBeEnabled());
+  fireEvent.click(screen.getByRole('button', { name: 'Review email' })); await screen.findByRole('dialog');
+  expect(screen.getByRole('button', { name: 'Edit old reply' })).toBeDisabled();
+  expect(mocks.sendEmail).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: 'Send email' }));
+  await waitFor(() => expect(mocks.onPublished).toHaveBeenCalledOnce());
+  await waitFor(() => expect(screen.getByLabelText('Message')).toHaveValue(''));
+  expect(mocks.sendEmail.mock.calls[0][1]).toEqual({ storeTenant: 'owner', conversationId: 'requester' });
+  expect(mocks.schedules).not.toHaveBeenCalled(); // Native history already owns scheduled rows.
+});
+
+it('discards late default Requester details after a session change and displays a denied-refresh recovery', async () => {
+  scheduledEmailFixture(); mocks.query = '';
+  mocks.load.mockResolvedValue({ conversations: [requester], writeAudiences: ['requester'], actor: { tenant: 'owner', userId: 'author' } });
+  const old = deferred(); mocks.details.mockReturnValueOnce(old.promise);
+  const view = render(<NativeHarness />);
+  await waitFor(() => expect(mocks.details).toHaveBeenCalledOnce());
+  mocks.details.mockRejectedValue(new Error('Current details unavailable'));
+  mocks.session = { session_id: 'next-session', user: { tenant: 'owner', id: 'next-author' } };
+  view.rerender(<NativeHarness />);
+  await screen.findByText('Email and attachment details are unavailable.');
+  await act(async () => old.resolve([{ commentId: 'source', email: null, attachments: [{ attachmentId: 'late', fileName: 'Late attachment.txt', storeTenant: 'owner', commentId: 'source', threadId: 'root' }] }]));
+  expect(screen.queryByRole('link', { name: 'Late attachment.txt' })).toBeNull();
+  mocks.details.mockResolvedValue([]); fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+  await waitFor(() => expect(screen.queryByText('Email and attachment details are unavailable.')).toBeNull());
 });

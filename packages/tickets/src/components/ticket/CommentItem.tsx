@@ -34,6 +34,9 @@ import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
 
 interface CommentItemProps {
+  mutationsDisabled?: boolean;
+  beforeScheduleChange?: () => Promise<boolean>;
+  onScheduleChanged?: () => Promise<void>;
   id?: string;
   conversation: IComment;
   currentUserId?: string | null;
@@ -170,6 +173,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
   canViewCommentMetadataDebug = false,
   variant = 'default',
   accentBorderClassName,
+  mutationsDisabled = false, beforeScheduleChange, onScheduleChanged,
 }) => {
   const isCompact = variant === 'compact';
   const { t } = useTranslation('features/tickets');
@@ -252,9 +256,9 @@ const CommentItem: React.FC<CommentItemProps> = ({
 
   // Only allow users to edit their own comments
   const canEdit = useMemo(() => {
-    if (isDeleted || conversation.is_system_generated || resolvedAuthor.source === 'collaborator') return false;
+    if (mutationsDisabled || isDeleted || conversation.is_system_generated || resolvedAuthor.source === 'collaborator') return false;
     return Boolean(currentUserId) && currentUserId === conversation.user_id;
-  }, [conversation.user_id, conversation.is_system_generated, resolvedAuthor.source, currentUserId, isDeleted]);
+  }, [conversation.user_id, conversation.is_system_generated, resolvedAuthor.source, currentUserId, isDeleted, mutationsDisabled]);
 
   const plainTextForCopy = useMemo(
     () => extractTicketRichTextPlainText(conversation.note),
@@ -320,14 +324,28 @@ const CommentItem: React.FC<CommentItemProps> = ({
       setRescheduleError(error instanceof Error ? error.message : 'Choose a valid publication time');
       return;
     }
-    setIsScheduleMutating(true);
-    try { await rescheduleScheduledComment(commentId, date.toISOString(), timeZone); window.location.reload(); } finally { setIsScheduleMutating(false); }
+    setIsScheduleMutating(true); setRescheduleError(null);
+    try {
+      if (beforeScheduleChange && !await beforeScheduleChange()) return;
+      await rescheduleScheduledComment(commentId, date.toISOString(), timeZone);
+      if (onScheduleChanged) { await onScheduleChanged(); setIsRescheduleOpen(false); }
+      else window.location.reload();
+    } catch {
+      setRescheduleError(t('namedConversations.scheduleChangeFailed', 'Could not confirm the change. Refresh to check the current schedule before trying again.'));
+    } finally { setIsScheduleMutating(false); }
   };
   const handleCancelSchedule = async () => {
     if (!canEdit) return;
     if (!window.confirm(t('conversation.cancelScheduledCommentConfirm', 'Cancel this scheduled comment?'))) return;
-    setIsScheduleMutating(true);
-    try { await cancelScheduledComment(commentId); window.location.reload(); } finally { setIsScheduleMutating(false); }
+    setIsScheduleMutating(true); setRescheduleError(null);
+    try {
+      if (beforeScheduleChange && !await beforeScheduleChange()) return;
+      await cancelScheduledComment(commentId);
+      if (onScheduleChanged) await onScheduleChanged();
+      else window.location.reload();
+    } catch {
+      setRescheduleError(t('namedConversations.scheduleChangeFailed', 'Could not confirm the change. Refresh to check the current schedule before trying again.'));
+    } finally { setIsScheduleMutating(false); }
   };
 
   const editorContent = useMemo(() => {
@@ -680,6 +698,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
               </div>
             )}
           </div>
+            {rescheduleError && !isRescheduleOpen && <p role="alert" className="text-sm text-destructive">{rescheduleError}</p>}
             {isDeleted ? (
               <div
                 {...withDataAutomationId({ id: `${commentId}-content` })}

@@ -16,11 +16,11 @@ type Request = Parameters<typeof actions.prepareNamedTicketEmailAction>[2];
 
 /** This control owns only the review/Send interaction. Draft persistence remains
  * in the same serial writer used by internal Post and conversation navigation. */
-export function ConversationEmailControls({ id, ticket, conversation, ready, saveDraft, onLock, onMailbox, onSent, closeStatuses = [] }: {
+export function ConversationEmailControls({ id, ticket, conversation, ready, saveDraft, onLock, onMailbox, onSent, closeStatuses = [], refreshVersion = 0 }: {
   id: string; ticket: ConversationTicketReference; conversation: NamedTicketConversation; ready: boolean;
   saveDraft: () => Promise<Request | null>; onLock: (locked: boolean) => void;
   onMailbox: (conversation: NamedTicketConversation) => void; onSent: () => Promise<void>;
-  closeStatuses?: { value: string; label: string }[];
+  closeStatuses?: { value: string; label: string }[]; refreshVersion?: number;
 }) {
   const { t } = useTranslation('features/tickets');
   const ref = { storeTenant: conversation.storeTenant, conversationId: conversation.conversationId };
@@ -31,12 +31,13 @@ export function ConversationEmailControls({ id, ticket, conversation, ready, sav
   const live = useRef(true), working = useRef(false), request = useRef<Request | null>(null), confirmed = useRef(false);
   useEffect(() => { live.current = true; return () => { live.current = false; }; }, []);
   useEffect(() => {
+    if (working.current) return;
     let valid = true;
     Promise.all([actions.listNamedConversationMailboxesAction(ticket, ref), actions.getLatestNamedTicketEmailSendAction(ticket, ref)])
       .then(([options, last]) => { if (valid) { setMailboxes(options); setSend(last); setLoaded(true); setError(null); } })
       .catch(() => { if (valid) { setError('emailLoadFailed'); setLoaded(false); } });
     return () => { valid = false; };
-  }, [ticket, conversation.conversationId, reload]);
+  }, [ticket, conversation.conversationId, reload, refreshVersion]);
   const begin = () => { if (working.current) return false; working.current = true; setBusy(true); setError(null); onLock(true); return true; };
   const finish = (locked: boolean) => { working.current = false; if (live.current) { setBusy(false); onLock(locked); } };
   const chooseMailbox = async (mailboxId: string) => {

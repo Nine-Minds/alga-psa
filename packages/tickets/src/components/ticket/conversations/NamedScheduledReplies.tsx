@@ -15,8 +15,8 @@ type Reply = Page['items'][number];
 
 /** Accepted, withheld replies have their own lifecycle. Refreshing these must
  * never reload or replace the author's in-progress composer draft. */
-export function NamedScheduledReplies({ id, ticket, conversation, revision, disabled = false }: {
-  id: string; ticket: ConversationTicketReference; conversation: TicketConversationReference; revision: number; disabled?: boolean;
+export function NamedScheduledReplies({ id, ticket, conversation, revision, disabled = false, onChanged }: {
+  id: string; ticket: ConversationTicketReference; conversation: TicketConversationReference; revision: number; disabled?: boolean; onChanged?: () => void;
 }) {
   const { t } = useTranslation('features/tickets');
   const [page, setPage] = useState<Page>({ items: [], next: null });
@@ -57,7 +57,7 @@ export function NamedScheduledReplies({ id, ticket, conversation, revision, disa
       if (selected.mode === 'cancel') await cancelScheduledComment(selected.reply.commentId);
       else await rescheduleScheduledComment(selected.reply.commentId, timing!.at, timing!.timeZone);
       if (current !== generation.current) return;
-      setSelected(null); working.current = false; setBusy(false);
+      setSelected(null); working.current = false; setBusy(false); onChanged?.();
       await load();
     } catch {
       if (current === generation.current) setError('scheduleChangeFailed');
