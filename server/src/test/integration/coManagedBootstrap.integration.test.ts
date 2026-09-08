@@ -1,3 +1,4 @@
+import { registerCoManagedArchiveBoundaryTests } from './coManagedArchiveBoundaryCases';
 import { registerCoManagedTaskDisclosureCases } from './helpers/coManagedTaskDisclosureCases';
 import { registerCoManagedRequesterTaskEmailCases } from './helpers/coManagedRequesterTaskEmailCases';
 import { registerCoManagedProvisioningCleanupTests } from './helpers/coManagedProvisioningCleanupCases';
@@ -20368,3 +20369,5 @@ registerCoManagedProvisioningCleanupTests(() => db, prepare);
 registerCoManagedRequesterTaskEmailCases(() => db, withSharedProjectTaskFixture);
 
 registerCoManagedTaskDisclosureCases(() => db, withSharedProjectTaskFixture);
+
+registerCoManagedArchiveBoundaryTests(() => db, withAttachmentFixture, withTaskConversationFixture);

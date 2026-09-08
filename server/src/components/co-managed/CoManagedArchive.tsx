@@ -94,7 +94,7 @@ function ArchiveDetail({ resource }: { resource: CoManagedSharedResource }) {
     <div className="space-y-3"><h3 className="font-semibold">{t('coManaged.archive.files')}</h3>
       {!data.files.items.length && <p className="text-sm text-muted-foreground">{t('coManaged.archive.noFiles')}</p>}
       <ul className="space-y-2">{data.files.items.map(file => <li key={file.archiveFileId}>
-        <a id={`co-archive-file-${file.archiveFileId}`} className="break-words text-primary underline" href={`/api/co-management/archive-files/${file.archiveFileId}?${new URLSearchParams({ customerTenant: resource.tenant, relationshipId: resource.relationshipId, ticketId: resource.id })}`}>{file.fileName}</a>
+        <a id={`co-archive-file-${file.archiveFileId}`} className="break-words text-primary underline" href={`/api/co-management/archive-files/${file.archiveFileId}?${new URLSearchParams({ customerTenant: resource.tenant, relationshipId: resource.relationshipId, [resource.kind === 'project_task' ? 'taskId' : 'ticketId']: resource.id })}`}>{file.fileName}</a>
         <span className="ml-2 text-sm text-muted-foreground">{t('coManaged.archive.bytes', { value: formatNumber(file.size) })}</span>
         {file.audience === 'organization_private' && <span className="ml-2 text-sm font-medium">{t('coManaged.archive.privateFile')}</span>}
       </li>)}</ul>

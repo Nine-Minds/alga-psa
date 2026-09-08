@@ -10,9 +10,13 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     if (getApiKeyUserOverride() || !session?.session_id || session.user?.user_type !== 'internal' || !session.user.tenant || !session.user.id)
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers });
     const query = request.nextUrl.searchParams, { archiveFileId } = await params;
+    const task = query.has('taskId'), parent = task ? 'taskId' : 'ticketId';
+    const allowed = new Set(['customerTenant', 'relationshipId', parent]);
+    if ([...query.keys()].some(key => !allowed.has(key)) || query.getAll(parent).length !== 1 || task && query.has('ticketId') ||
+      query.getAll('customerTenant').length !== 1 || query.getAll('relationshipId').length !== 1) throw new CoManagedSharedWorkError();
     const { attachment, content } = await downloadCoManagedArchiveFile(await getConnection(session.user.tenant),
       { kind: 'session', tenant: session.user.tenant, userId: session.user.id, sessionId: session.session_id },
-      { kind: 'ticket', tenant: query.get('customerTenant') ?? '', relationshipId: query.get('relationshipId') ?? '', id: query.get('ticketId') ?? '' }, archiveFileId);
+      { kind: task ? 'project_task' : 'ticket', tenant: query.get('customerTenant') ?? '', relationshipId: query.get('relationshipId') ?? '', id: query.get(parent) ?? '' }, archiveFileId);
     return conversationAttachmentResponse(attachment, content);
   } catch (error) {
     return NextResponse.json({ error: error instanceof CoManagedSharedWorkError ? 'Not found' : 'Unable to download attachment' },

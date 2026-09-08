@@ -65,3 +65,14 @@ it('shows saved work context using display names without linking qualified sourc
   expect(document.body.textContent).not.toMatch(/hidden-status-id|hidden-phase-id|unknownAuthor/);
   expect(screen.queryByRole('link', { name: 'Resolved' })).toBeNull();
 });
+
+it('qualifies retained task downloads with taskId instead of the ticket parent', async () => {
+  const taskResource = { ...resource, kind: 'project_task' as const, id: 'task-a' };
+  const task = { ...work, resource: taskResource, title: 'Retained task', ticketNumber: null };
+  mocks.list.mockResolvedValue({ items: [task], nextPage: null });
+  mocks.history.mockResolvedValue({ ...history, work: task });
+  render(<CoManagedArchive />); fireEvent.click(await screen.findByRole('button', { name: /Retained task/ }));
+  const link = await screen.findByRole('link', { name: 'Evidence.txt' });
+  expect(link).toHaveAttribute('href', '/api/co-management/archive-files/file-a?customerTenant=customer-a&relationshipId=relationship-a&taskId=task-a');
+  expect(mocks.files).toHaveBeenCalledWith(taskResource, 0);
+});

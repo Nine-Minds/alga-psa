@@ -1,7 +1,7 @@
 import { coManagedAttachmentParent } from './attachmentParent';
 import { createHash } from 'node:crypto';
 import type { Knex } from 'knex';
-import type { AuthorizationRecord } from '@alga-psa/authorization';
+import { buildAuthorizationAwarePage, type AuthorizationRecord } from '@alga-psa/authorization';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { StorageProviderFactory } from '@alga-psa/storage/StorageProviderFactory';
 import { lockCoManagedLocalAuthentication, snapshotCoManagedAuthenticatedActor, type CoManagedAuthenticatedActor } from './localAuthentication';
@@ -75,16 +75,26 @@ export async function listCoManagedArchiveWork(db: Knex, inputActor: CoManagedAu
   const actor = snapshotCoManagedAuthenticatedActor(inputActor), page = pageNumber(inputPage);
   return withTransaction(db, async trx => {
     const credential = await lockCoManagedLocalAuthentication(trx, actor);
-    // Bound each scan. Denied candidates reveal neither identifiers nor totals.
-    const rows = await candidates(trx, actor.tenant).distinct('customer_tenant', 'relationship_id', 'resource_type', 'resource_id')
-      .orderBy(['customer_tenant', 'relationship_id', 'resource_type', 'resource_id']).offset(page * 25).limit(26);
-    const items: CoManagedArchiveWork[] = [];
-    for (const row of rows.slice(0, 25)) {
-      try { items.push((await admit(trx, credential, { tenant: row.customer_tenant, relationshipId: row.relationship_id, kind: row.resource_type, id: row.resource_id })).work); }
-      catch (error) { if (!(error instanceof CoManagedSharedWorkError)) throw error; }
-    }
+    const source = () => candidates(trx, actor.tenant).distinct('customer_tenant', 'relationship_id', 'resource_type', 'resource_id');
+    const count = await trx.from(source().as('archive_candidates')).count('* as total').first();
+    type Candidate = { customer_tenant: string; relationship_id: string; resource_type: CoManagedSharedResource['kind']; resource_id: string; work?: CoManagedArchiveWork };
+    // Page and lookahead derive exclusively from admitted records. A page of
+    // hidden candidates cannot expose its existence through an empty next page.
+    const result = await buildAuthorizationAwarePage<Candidate>({
+      page: page + 1, limit: 25,
+      fetchPage: async (sourcePage, limit) => ({
+        data: await source().orderBy(['customer_tenant', 'relationship_id', 'resource_type', 'resource_id']).offset((sourcePage - 1) * limit).limit(limit),
+        total: Number(count?.total ?? 0),
+      }),
+      authorizeRecord: async row => {
+        try {
+          row.work = (await admit(trx, credential, { tenant: row.customer_tenant, relationshipId: row.relationship_id, kind: row.resource_type, id: row.resource_id })).work;
+          return true;
+        } catch (error) { if (!(error instanceof CoManagedSharedWorkError)) throw error; return false; }
+      },
+    });
     await credential.assertCurrent();
-    return { items, nextPage: rows.length > 25 ? page + 1 : null };
+    return { items: result.data.map(row => row.work!), nextPage: result.total > (page + 1) * 25 ? page + 1 : null };
   });
 }
 
@@ -94,46 +104,54 @@ export async function getCoManagedArchiveHistory(db: Knex, inputActor: CoManaged
     const credential = await lockCoManagedLocalAuthentication(trx, actor), { work, fields, record } = await admit(trx, credential, resource);
     const entries: CoManagedArchiveEntry[] = [];
     if (evidenceHidden(fields, ['history', 'audit_logs', participationEvidenceTable])) return { work, entries, nextPage: null };
-    const rows = await tenantDb(trx, actor.tenant).table(participationEvidenceTable).where(sourceKey(resource))
-      .orderBy('occurred_at', 'desc').orderBy('evidence_id').offset(page * 50).limit(51);
-    for (const row of rows.slice(0, 50)) {
-      let rowFields = fields;
-      if (row.source_type !== 'work_snapshot' && evidenceHidden(fields, coManagedConversationBodySources)) continue;
-      if (row.source_type === 'conversation' && hidden(fields, ['comments', 'comment_threads', 'project_task_comments', ...coManagedConversationBodySources.flatMap(name => [`comments.${name}`, `project_task_comments.${name}`])])) continue;
-      if (row.source_type === 'ticket_handoff' && hidden(fields, coManagedConversationBodySources.map(name => `co_management_ticket_handoffs.${name}`))) continue;
-      if (row.source_type === 'private_conversation' && hidden(fields, ['co_management_private_comments', 'co_management_private_threads', ...coManagedConversationBodySources.flatMap(name => [`co_management_private_comments.${name}`, `co_management_private_threads.${name}`])])) continue;
-      if (row.source_type === 'time_entry') {
-        try { const decision = await authorizeCoManagedLocalRecord(trx, actor, credential.subject, 'time_entry', 'read', { ...record, id: row.source_id,
-          ownerUserId: row.actor_user_id, assignedUserIds: [row.actor_user_id] });
-          rowFields = [...fields, ...decision.redactedFields.map(field => field.replace(/^(fields\.)?time_entries\./, ''))];
-          if (hidden(rowFields, ['time_entries', 'entry_id', 'work_item_id', 'created_at'])) continue;
+    const source = () => tenantDb(trx, actor.tenant).table(participationEvidenceTable).where(sourceKey(resource));
+    const count = await source().count('* as total').first();
+    const result = await buildAuthorizationAwarePage<Record<string, any> & { entry?: CoManagedArchiveEntry }>({
+      page: page + 1, limit: 50,
+      fetchPage: async (sourcePage, limit) => ({
+        data: await source().orderBy('occurred_at', 'desc').orderBy('evidence_id').offset((sourcePage - 1) * limit).limit(limit),
+        total: Number(count?.total ?? 0),
+      }),
+      authorizeRecord: async row => {
+        let rowFields = fields;
+        if (row.source_type !== 'work_snapshot' && evidenceHidden(fields, coManagedConversationBodySources)) return false;
+        if (row.source_type === 'conversation' && hidden(fields, ['comments', 'comment_threads', 'project_task_comments', ...coManagedConversationBodySources.flatMap(name => [`comments.${name}`, `project_task_comments.${name}`])])) return false;
+        if (row.source_type === 'ticket_handoff' && hidden(fields, coManagedConversationBodySources.map(name => `co_management_ticket_handoffs.${name}`))) return false;
+        if (row.source_type === 'private_conversation' && hidden(fields, ['co_management_private_comments', 'co_management_private_threads', ...coManagedConversationBodySources.flatMap(name => [`co_management_private_comments.${name}`, `co_management_private_threads.${name}`])])) return false;
+        if (row.source_type === 'time_entry') {
+          try { const decision = await authorizeCoManagedLocalRecord(trx, actor, credential.subject, 'time_entry', 'read', { ...record, id: row.source_id,
+            ownerUserId: row.actor_user_id, assignedUserIds: [row.actor_user_id] });
+            rowFields = [...fields, ...decision.redactedFields.map(field => field.replace(/^(fields\.)?time_entries\./, ''))];
+            if (hidden(rowFields, ['time_entries', 'entry_id', 'work_item_id', 'created_at'])) return false;
+          }
+          catch (error) { if (error instanceof CoManagedSharedWorkError) return false; throw error; }
         }
-        catch (error) { if (error instanceof CoManagedSharedWorkError) continue; throw error; }
-      }
-      const payload = row.payload, deleted = payload.deleted === true;
-      const entry: CoManagedArchiveEntry = { id: row.evidence_id, kind: row.source_type, event: row.event_type, occurredAt: new Date(row.occurred_at).toISOString(),
-        audience: payload.audience, deleted, note: !deleted && typeof payload.note === 'string' ? payload.note : null,
-        markdown: !deleted && typeof payload.markdown === 'string' ? payload.markdown : null };
-      const authorTables = row.source_type === 'private_conversation' ? ['co_management_private_comments'] : row.source_type === 'ticket_handoff' ? ['co_management_ticket_handoffs'] : ['comments', 'project_task_comments'];
-      if (row.source_type !== 'work_snapshot' && !evidenceHidden(rowFields, [...authorSources, ...authorSources.flatMap(name => authorTables.map(table => `${table}.${name}`))])) entry.author = { tenant: row.actor_tenant, kind: row.actor_kind,
-        id: row.actor_user_id ?? row.actor_contact_id, name: row.actor_name, organization: row.actor_organization };
-      if (row.source_type === 'work_audit' && payload.changes) {
-        entry.changes = {};
-        for (const field of ['task_name', 'due_date', 'project_status_mapping_id', 'msp_assignment']) {
-          const value = payload.changes[field];
-          if ((typeof value === 'string' || value === null) && !evidenceHidden(fields, ['changed_data', `changes.${field}`, `audit_logs.changed_data.${field}`, field, ...(field === 'msp_assignment' ? ['assigned_to', 'assigned_team_id', 'assignment'] : [])])) entry.changes[field] = value;
+        const payload = row.payload, deleted = payload.deleted === true;
+        const entry: CoManagedArchiveEntry = { id: row.evidence_id, kind: row.source_type, event: row.event_type, occurredAt: new Date(row.occurred_at).toISOString(),
+          audience: payload.audience, deleted, note: !deleted && typeof payload.note === 'string' ? payload.note : null,
+          markdown: !deleted && typeof payload.markdown === 'string' ? payload.markdown : null };
+        const authorTables = row.source_type === 'private_conversation' ? ['co_management_private_comments'] : row.source_type === 'ticket_handoff' ? ['co_management_ticket_handoffs'] : ['comments', 'project_task_comments'];
+        if (row.source_type !== 'work_snapshot' && !evidenceHidden(rowFields, [...authorSources, ...authorSources.flatMap(name => authorTables.map(table => `${table}.${name}`))])) entry.author = { tenant: row.actor_tenant, kind: row.actor_kind,
+          id: row.actor_user_id ?? row.actor_contact_id, name: row.actor_name, organization: row.actor_organization };
+        if (row.source_type === 'work_audit' && payload.changes) {
+          entry.changes = {};
+          for (const field of ['task_name', 'due_date', 'project_status_mapping_id', 'msp_assignment']) {
+            const value = payload.changes[field];
+            if ((typeof value === 'string' || value === null) && !evidenceHidden(fields, ['changed_data', `changes.${field}`, `audit_logs.changed_data.${field}`, field, ...(field === 'msp_assignment' ? ['assigned_to', 'assigned_team_id', 'assignment'] : [])])) entry.changes[field] = value;
+          }
         }
-      }
-      if (row.source_type === 'work_snapshot' && payload.summary) {
-        entry.summary = {};
-        for (const [field, candidate] of Object.entries(payload.summary as Record<string, CoManagedSummaryCandidate>)) {
-          if (!evidenceHidden(fields, [field, ...candidate.sources, `summary.${field}`, ...(field === 'title' || field === 'task_name' ? ['resourceTitle', 'name'] : field === 'ticket_number' ? ['ticketNumber'] : [])])) entry.summary[field] = candidate.value;
+        if (row.source_type === 'work_snapshot' && payload.summary) {
+          entry.summary = {};
+          for (const [field, candidate] of Object.entries(payload.summary as Record<string, CoManagedSummaryCandidate>)) {
+            if (!evidenceHidden(fields, [field, ...candidate.sources, `summary.${field}`, ...(field === 'title' || field === 'task_name' ? ['resourceTitle', 'name'] : field === 'ticket_number' ? ['ticketNumber'] : [])])) entry.summary[field] = candidate.value;
+          }
         }
-      }
-      entries.push(entry);
-    }
+        row.entry = entry;
+        return true;
+      },
+    });
     await credential.assertCurrent();
-    return { work, entries, nextPage: rows.length > 50 ? page + 1 : null };
+    return { work, entries: result.data.map(row => row.entry!), nextPage: result.total > (page + 1) * 50 ? page + 1 : null };
   });
 }
 
