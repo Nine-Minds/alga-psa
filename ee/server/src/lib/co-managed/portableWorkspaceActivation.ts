@@ -2,11 +2,13 @@ import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { hashPassword } from '@alga-psa/core/encryption';
 import { validatePassword } from '@alga-psa/validation';
-import { activateTenantPsaLicense, retainTenantPsaLicense } from '@alga-psa/licensing';
+import { activateTenantPsaLicense, retainTenantPsaLicense, retainHostedPsaUpgradeCandidate } from '@alga-psa/licensing';
 import { isCoManagedUuid } from '../../../../../packages/co-managed/src/sharedWorkIdentity';
 import { assertPortableRestoreInstallationAuthority, type PortableRestoreReceipt } from './portableWorkspaceRestore';
 import { initializeIndependentPsa } from '../../../../temporal-workflows/src/db/product-upgrade-operations';
 import type { SeedRunLog } from '../../../../temporal-workflows/src/db/onboarding-seeds-operations';
+import { paidPsaUpgradeFromStripe, createIndependentPsaStripeReader, type HostedUpgradePrices } from '../stripe/coManagedIndependentEntitlement';
+import type { HostedUpgradeStripeReader } from '../../../../temporal-workflows/src/db/co-managed-hosted-upgrade';
 
 export interface PortableActivationReceipt {
   tenant: string; operation_id: string; administrator_user_id: string; entitlement_source: 'tenant_license' | 'hosted_subscription';
@@ -61,11 +63,59 @@ export async function activatePortableWorkspaceWithTenantLicense(db: Knex, input
     if (typeof request.administratorPassword !== 'string' || Buffer.byteLength(request.administratorPassword, 'utf8') > 1024 ||
         validatePassword(request.administratorPassword)) fail('new administrator password does not meet the password policy');
     const hashed = await hashPassword(request.administratorPassword); request.administratorPassword = '';
-    return await db.transaction(async trx => {
+    return await completeActivation(db, request, hashed, log, async trx => {
+      await activateTenantPsaLicense(trx, request.tenant, request.licenseToken);
+      return { source: 'tenant_license', ...await retainTenantPsaLicense(trx, request.tenant) };
+    });
+  } finally { request.licenseToken = ''; request.administratorPassword = ''; }
+}
+
+
+interface ActivationEntitlement { source: PortableActivationReceipt['entitlement_source']; reference: string; seats: number | null; validUntil: Date }
+
+/** Hosted installation operators activate only an already provisioned, paid
+ * destination subscription. This performs provider reads, not a purchase or
+ * transfer of the source/MSP subscription. Local ownership is retained again
+ * after the provider response and before any activation write. */
+export async function activatePortableWorkspaceWithHostedSubscription(db: Knex, input: {
+  tenant: string; operationId: string; administratorPassword: string;
+}, log: SeedRunLog, dependencies: { stripe?: HostedUpgradeStripeReader; prices?: HostedUpgradePrices } = {}): Promise<PortableActivationReceipt> {
+  const request = { ...input };
+  if (db.isTransaction || !isCoManagedUuid(request.tenant) || !isCoManagedUuid(request.operationId)) fail('installation connection and identities required');
+  request.tenant = request.tenant.toLowerCase(); request.operationId = request.operationId.toLowerCase();
+  const prices = { ...(dependencies.prices ?? { month: process.env.STRIPE_ALGAPSA_USER_PRICE_ID || process.env.STRIPE_PRO_PRICE_ID,
+    year: process.env.STRIPE_ALGAPSA_USER_ANNUAL_PRICE_ID || process.env.STRIPE_PRO_ANNUAL_PRICE_ID }) };
+  const ids = Object.values(prices).filter((id): id is string => typeof id === 'string' && Boolean(id));
+  try {
+    const prepared = await db.transaction(async trx => {
+      const current = await admit(trx, request.tenant, request.operationId);
+      if (current.kind === 'completed') return current;
+      return { kind: 'pending' as const, candidate: await retainHostedPsaUpgradeCandidate(trx, request.tenant, ids) };
+    });
+    if (prepared.kind === 'completed') return prepared.receipt;
+    if (typeof request.administratorPassword !== 'string' || Buffer.byteLength(request.administratorPassword, 'utf8') > 1024 ||
+        validatePassword(request.administratorPassword)) fail('new administrator password does not meet the password policy');
+    const stripe = dependencies.stripe ?? await createIndependentPsaStripeReader(), candidate = prepared.candidate;
+    const [customer, subscription] = await Promise.all([stripe.customers.retrieve(candidate.customerId),
+      stripe.subscriptions.retrieve(candidate.subscriptionId, { expand: ['latest_invoice'] })]);
+    const paid = paidPsaUpgradeFromStripe(candidate, customer, subscription, prices);
+    const hashed = await hashPassword(request.administratorPassword); request.administratorPassword = '';
+    return await completeActivation(db, request, hashed, log, async trx => {
+      const current = await retainHostedPsaUpgradeCandidate(trx, request.tenant, ids);
+      if (current.fingerprint !== candidate.fingerprint) fail('destination subscription changed');
+      return { ...paid, source: 'hosted_subscription' };
+    });
+  } finally { request.administratorPassword = ''; }
+}
+
+/** The two paid adapters share one atomic activation boundary. Provider reads
+ * happen before this function; entitlement retention happens inside it. */
+async function completeActivation(db: Knex, request: { tenant: string; operationId: string }, hashed: string, log: SeedRunLog,
+  retainEntitlement: (trx: Knex.Transaction) => Promise<ActivationEntitlement>): Promise<PortableActivationReceipt> {
+  return db.transaction(async trx => {
       const current = await admit(trx, request.tenant, request.operationId);
       if (current.kind === 'completed') return current.receipt;
-      await activateTenantPsaLicense(trx, request.tenant, request.licenseToken);
-      const entitlement = await retainTenantPsaLicense(trx, request.tenant);
+      const entitlement = await retainEntitlement(trx);
       await requirePausedDispatch(trx, request.tenant);
       await initializeIndependentPsa(request.tenant, log, trx);
       const own = tenantDb(trx, request.tenant);
@@ -82,12 +132,11 @@ export async function activatePortableWorkspaceWithTenantLicense(db: Knex, input
       const now = new Date((await trx.select({ at: trx.raw('clock_timestamp()') }).first()).at);
       if (entitlement.validUntil <= now) fail('independent license expired during activation');
       const receipt: PortableActivationReceipt = { tenant: request.tenant, operation_id: request.operationId,
-        administrator_user_id: current.restored.administrator_user_id, entitlement_source: 'tenant_license', entitlement_reference: entitlement.reference,
+        administrator_user_id: current.restored.administrator_user_id, entitlement_source: entitlement.source, entitlement_reference: entitlement.reference,
         seats: entitlement.seats, entitlement_valid_until: entitlement.validUntil, activated_at: now };
       await own.table('portable_workspace_activations').insert(receipt);
       if (await own.table('tenants').where('suspended_reason', 'portable_restore_pending_activation')
         .update({ suspended_at: null, suspended_reason: null, licensed_user_count: entitlement.seats }) !== 1) fail('restore suspension changed');
       return receipt;
     });
-  } finally { request.licenseToken = ''; request.administratorPassword = ''; }
 }

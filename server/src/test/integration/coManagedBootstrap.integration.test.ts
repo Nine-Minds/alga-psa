@@ -20107,4 +20107,4 @@ it('portable workspace graph validates cross-section identities and rejects dang
 
 registerCoManagedPortableSupplementalFileCases(() => db, ticketHandoffFixture, artifactStorage);
 registerCoManagedPortableRemoteMeetingCases(() => db, withMeetingCreationFixture);
-registerCoManagedPortableWorkspaceExportTests(() => db, withPortableVaultExportFixture, artifactStorage, withTenantLicenseFixture);
+registerCoManagedPortableWorkspaceExportTests(() => db, withPortableVaultExportFixture, artifactStorage, withTenantLicenseFixture, withHostedPsaUpgradeFixture);

@@ -1,5 +1,4 @@
-import Stripe from 'stripe';
-import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import type Stripe from 'stripe';
 import type { Knex } from 'knex';
 import { retainHostedPsaUpgradeCandidate } from '@alga-psa/licensing';
 import { prepareCoManagedIndependentUpgrade, upgradeCoManagedRelationship, snapshotCoManagedSessionActor,
@@ -13,15 +12,8 @@ export interface HostedUpgradeStripeReader {
   subscriptions: { retrieve(id: string, options: { expand: string[] }): Promise<Stripe.Subscription> };
 }
 export interface HostedUpgradePrices { month?: string; year?: string }
-import { paidPsaUpgradeFromStripe } from '@ee/lib/stripe/coManagedIndependentEntitlement.js';
+import { paidPsaUpgradeFromStripe, createIndependentPsaStripeReader } from '@ee/lib/stripe/coManagedIndependentEntitlement.js';
 export { paidPsaUpgradeFromStripe } from '@ee/lib/stripe/coManagedIndependentEntitlement.js';
-
-async function runtimeStripeReader(): Promise<HostedUpgradeStripeReader> {
-  const secrets = await getSecretProviderInstance();
-  const key = await secrets.getAppSecret('stripe_secret_key') || process.env.STRIPE_SECRET_KEY?.trim();
-  if (!key) throw new Error('STRIPE_SECRET_KEY is required for hosted PSA upgrade verification');
-  return new Stripe(key, { apiVersion: '2024-12-18.acacia' as any, typescript: true });
-}
 
 /** Provider reads happen after authenticated preparation and outside database
  * transactions. Completion rechecks the same records and actual session; retries
@@ -37,7 +29,7 @@ export async function upgradeCoManagedWorkspaceWithHostedSubscription(db: Knex, 
   const prepared = await prepareCoManagedIndependentUpgrade(db, actor, target, request,
     (trx, tenant) => retainHostedPsaUpgradeCandidate(trx, tenant, ids));
   if (prepared.kind === 'completed') return prepared.receipt;
-  const candidate = prepared.value, stripe = dependencies.stripe ?? await runtimeStripeReader();
+  const candidate = prepared.value, stripe = dependencies.stripe ?? await createIndependentPsaStripeReader();
   const [customer, subscription] = await Promise.all([
     stripe.customers.retrieve(candidate.customerId), stripe.subscriptions.retrieve(candidate.subscriptionId, { expand: ['latest_invoice'] }),
   ]);

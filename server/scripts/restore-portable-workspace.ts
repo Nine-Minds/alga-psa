@@ -16,6 +16,7 @@ Run from server with:
   --inspect --archive /absolute/backup.alga
   --restore --archive /absolute/backup.alga --destination-tenant <new UUID> --administrator-user-id <source UUID>
   --activate --destination-tenant <restored UUID> --operation-id <retained UUID> --license-file /absolute/own-pro-license.jwt
+  --activate-hosted --destination-tenant <restored UUID> --operation-id <retained UUID>
   --passphrase-stdin    Read exact UTF-8 passphrase bytes from a protected pipe (no trailing newline).
   --password-stdin      Read the new administrator password from a protected pipe for activation.
   --help               Show this help without connecting to the database.
@@ -23,13 +24,13 @@ Run from server with:
 The default passphrase prompt hides input. Passphrases are never command arguments.
 Inspect lists eligible source administrators after authenticating the archive.
 Restore requires database owner credentials and a destination UUID you retain for retries.
-The imported tenant remains suspended until activation with its own signed Pro license.
+The imported tenant remains suspended until activation with its own signed Pro license or verified paid hosted subscription.
 Activation enables its selected administrator; other users and restored dispatch remain inactive.
 `;
 
 function args(argv: string[]) {
   const values: Record<string, string | true> = {};
-  const flags = new Set(['--inspect', '--restore', '--activate', '--passphrase-stdin', '--password-stdin', '--help']);
+  const flags = new Set(['--inspect', '--restore', '--activate', '--activate-hosted', '--passphrase-stdin', '--password-stdin', '--help']);
   const fields = new Set(['--archive', '--destination-tenant', '--administrator-user-id', '--operation-id', '--license-file']);
   for (let i = 0; i < argv.length; i++) {
     const key = argv[i];
@@ -39,10 +40,11 @@ function args(argv: string[]) {
     else throw new Error('Unknown option or missing value');
   }
   if (values['--help']) return values;
-  if (['--inspect', '--restore', '--activate'].filter(key => values[key]).length !== 1) throw new Error('Choose inspect, restore or activate');
-  if (values['--activate']) {
-    if (['--destination-tenant', '--operation-id', '--license-file'].some(key => typeof values[key] !== 'string') ||
-        values['--archive'] || values['--administrator-user-id'] || values['--passphrase-stdin']) throw new Error('Activation requires destination, operation UUID and license file');
+  if (['--inspect', '--restore', '--activate', '--activate-hosted'].filter(key => values[key]).length !== 1) throw new Error('Choose inspect, restore or activate');
+  if (values['--activate'] || values['--activate-hosted']) {
+    if (['--destination-tenant', '--operation-id'].some(key => typeof values[key] !== 'string') ||
+        (values['--activate'] && typeof values['--license-file'] !== 'string') || (values['--activate-hosted'] && values['--license-file']) ||
+        values['--archive'] || values['--administrator-user-id'] || values['--passphrase-stdin']) throw new Error('Activation options are invalid');
     return values;
   }
   if (typeof values['--archive'] !== 'string' || values['--password-stdin'] || values['--operation-id'] || values['--license-file']) throw new Error('Archive operation options are invalid');
@@ -92,26 +94,29 @@ let phase = 'options';
 async function main() {
   const options = args(process.argv.slice(2));
   if (options['--help']) { process.stdout.write(HELP); return; }
+  const activating = Boolean(options['--activate'] || options['--activate-hosted']);
   phase = 'environment';
   config({ path: fileURLToPath(new URL('../../.env', import.meta.url)), quiet: true });
   phase = 'passphrase input';
-  let phrase = await passphrase(!!options[options['--activate'] ? '--password-stdin' : '--passphrase-stdin'],
-    options['--activate'] ? 'New administrator password' : 'Archive passphrase');
+  let phrase = await passphrase(!!options[activating ? '--password-stdin' : '--passphrase-stdin'],
+    activating ? 'New administrator password' : 'Archive passphrase');
   let db: import('knex').Knex | undefined;
   try {
-    if (options['--activate'] && !options['--password-stdin'] && phrase !== await passphrase(false, 'Confirm administrator password')) throw new Error('Passwords differ');
-    if (Buffer.byteLength(phrase, 'utf8') < (options['--activate'] ? 8 : 16) || Buffer.byteLength(phrase, 'utf8') > 1024) throw new Error('Invalid secret length');
+    if (activating && !options['--password-stdin'] && phrase !== await passphrase(false, 'Confirm administrator password')) throw new Error('Passwords differ');
+    if (Buffer.byteLength(phrase, 'utf8') < (activating ? 8 : 16) || Buffer.byteLength(phrase, 'utf8') > 1024) throw new Error('Invalid secret length');
     // EE sources are CJS under tsx; defer loading them until after help/input.
     phase = 'restore module loading';
     const require = createRequire(import.meta.url);
-    if (options['--activate']) {
-      const { activatePortableWorkspaceWithTenantLicense } = require('../../ee/server/src/lib/co-managed/portableWorkspaceActivation') as typeof import('../../ee/server/src/lib/co-managed/portableWorkspaceActivation');
+    if (activating) {
+      const { activatePortableWorkspaceWithTenantLicense, activatePortableWorkspaceWithHostedSubscription } = require('../../ee/server/src/lib/co-managed/portableWorkspaceActivation') as typeof import('../../ee/server/src/lib/co-managed/portableWorkspaceActivation');
       const { getAdminConnection } = require('@alga-psa/db/admin') as typeof import('@alga-psa/db/admin');
       phase = 'database connection'; db = await getAdminConnection();
       phase = 'workspace activation';
-      const receipt = await activatePortableWorkspaceWithTenantLicense(db, { tenant: String(options['--destination-tenant']), operationId: String(options['--operation-id']),
-        licenseToken: await licenseFile(String(options['--license-file'])), administratorPassword: phrase }, { info() {}, error() {} });
-      process.stdout.write(`${JSON.stringify({ ...receipt, status: 'activation recorded; restored workflows and other users remain inactive' }, null, 2)}\n`);
+      const activation = { tenant: String(options['--destination-tenant']), operationId: String(options['--operation-id']), administratorPassword: phrase };
+      const log = { info() {}, error() {} };
+      const receipt = options['--activate-hosted'] ? await activatePortableWorkspaceWithHostedSubscription(db, activation, log)
+        : await activatePortableWorkspaceWithTenantLicense(db, { ...activation, licenseToken: await licenseFile(String(options['--license-file'])) }, log);
+      process.stdout.write(`${JSON.stringify({ ...receipt, status: 'activation recorded; review current workspace and workflow state before use' }, null, 2)}\n`);
       return;
     }
     const restore = require('../../ee/server/src/lib/co-managed/portableWorkspaceRestore') as typeof import('../../ee/server/src/lib/co-managed/portableWorkspaceRestore');

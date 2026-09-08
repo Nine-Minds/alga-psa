@@ -1,7 +1,15 @@
-import type Stripe from 'stripe';
+import Stripe from 'stripe';
+import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import type { HostedPsaUpgradeCandidate } from '@alga-psa/licensing';
 import { CoManagedIndependentUpgradeError } from '@alga-psa/co-managed';
 export interface HostedUpgradePrices { month?: string; year?: string }
+
+export async function createIndependentPsaStripeReader(): Promise<Stripe> {
+  const secrets = await getSecretProviderInstance();
+  const key = await secrets.getAppSecret('stripe_secret_key') || process.env.STRIPE_SECRET_KEY?.trim();
+  if (!key) throw new Error('STRIPE_SECRET_KEY is required for independent PSA verification');
+  return new Stripe(key, { apiVersion: '2024-12-18.acacia' as any, typescript: true });
+}
 const referenceId = (value: unknown): string | undefined => typeof value === 'string' ? value
   : value && typeof value === 'object' && 'id' in value && typeof value.id === 'string' ? value.id : undefined;
 
@@ -29,4 +37,3 @@ export function paidPsaUpgradeFromStripe(candidate: HostedPsaUpgradeCandidate, c
       !Number.isFinite(end) || end <= now.getTime()) throw new CoManagedIndependentUpgradeError('PAID_ENTITLEMENT_REQUIRED');
   return { source: 'stripe' as const, reference: subscription.id, seats: candidate.seats, validUntil: new Date(end) };
 }
-

@@ -7,7 +7,8 @@ import type { Knex } from 'knex';
  * the actual staging/archive code into an isolated temporary directory. */
 export function registerCoManagedPortableWorkspaceExportTests(getDb: () => Knex,
   withVaultFixture: (work: (fixture: any) => Promise<void>) => Promise<void>, storage: { getReadStream: any },
-  withLicenseFixture: (work: (sign: (claims?: Record<string, unknown>) => string) => Promise<void>) => Promise<void>) {
+  withLicenseFixture: (work: (sign: (claims?: Record<string, unknown>) => string) => Promise<void>) => Promise<void>,
+  withHostedFixture: (work: (fixture: any) => Promise<void>) => Promise<void>) {
   async function workspace(work: (fixture: any) => Promise<void>) {
     await withVaultFixture(async f => {
       const fs = await import('node:fs/promises'), os = await import('node:os'), path = await import('node:path');
@@ -297,6 +298,42 @@ export function registerCoManagedPortableWorkspaceExportTests(getDb: () => Knex,
       expect((await own.table('users').where('user_id', receipt.administrator_user_id).first()).hashed_password).toBe(administrator.hashed_password);
       expect((await own.table('tenants').first()).suspended_reason).toBe('tenant_cancelled');
       await expect(activate(db, { ...activation, operationId: randomUUID() }, log)).rejects.toThrow('another activation');
+    });
+    await withHostedFixture(async hosted => {
+      const { activatePortableWorkspaceWithHostedSubscription: activate } = await import('../../../../../ee/server/src/lib/co-managed/portableWorkspaceActivation');
+      const tenant = randomUUID(), restored = await restorePortableWorkspaceForInstallation(db, { ...input, destinationTenant: tenant }, {}, createProvider);
+      const own = tenantDb(db, tenant), customerId = randomUUID(), subscriptionId = randomUUID();
+      const customer = { ...await hosted.customer.table('stripe_customers').first(), tenant, stripe_customer_id: customerId, stripe_customer_external_id: `cus_${customerId}` };
+      const subscription = { ...await hosted.customer.table('stripe_subscriptions').first(), tenant, stripe_subscription_id: subscriptionId,
+        stripe_customer_id: customerId, stripe_subscription_external_id: `sub_${subscriptionId}`, metadata: { tenant_id: tenant } };
+      await own.table('stripe_customers').insert(customer); await own.table('stripe_subscriptions').insert(subscription);
+      hosted.providerCustomer.id = customer.stripe_customer_external_id; hosted.providerCustomer.metadata.tenant_id = tenant;
+      Object.assign(hosted.providerSubscription, { id: subscription.stripe_subscription_external_id, customer: customer.stripe_customer_external_id, metadata: { tenant_id: tenant } });
+      Object.assign(hosted.providerSubscription.latest_invoice, { customer: customer.stripe_customer_external_id, subscription: subscription.stripe_subscription_external_id });
+      const activation = { tenant, operationId: randomUUID(), administratorPassword: 'Hosted!Desk47Secure' }, log = { info: vi.fn(), error: vi.fn() };
+      const dependencies = { stripe: hosted.stripe, prices: hosted.prices };
+      hosted.providerSubscription.latest_invoice.status = 'open';
+      await expect(activate(db, activation, log, dependencies)).rejects.toThrow();
+      expect((await own.table('tenants').first()).suspended_reason).toBe('portable_restore_pending_activation');
+      hosted.providerSubscription.latest_invoice.status = 'paid';
+      const read = hosted.stripe.subscriptions.retrieve.getMockImplementation();
+      hosted.stripe.subscriptions.retrieve.mockImplementationOnce(async (...args: any[]) => {
+        // A provider read must not retain the destination row lock. A changed
+        // local billing row must invalidate the already prepared candidate.
+        await db.transaction(async trx => { await trx.raw("SET LOCAL lock_timeout = '100ms'");
+          await tenantDb(trx, tenant).table('stripe_subscriptions').update({ updated_at: trx.raw("clock_timestamp() + interval '1 second'") }); });
+        return read(...args);
+      });
+      await expect(activate(db, activation, log, dependencies)).rejects.toThrow('destination subscription changed');
+      expect(await own.table('portable_workspace_activations').first()).toBeUndefined();
+      const activated = await activate(db, activation, log, dependencies);
+      expect(activated).toMatchObject({ tenant, administrator_user_id: restored.administrator_user_id, entitlement_source: 'hosted_subscription',
+        entitlement_reference: subscription.stripe_subscription_external_id, seats: 4 });
+      const reads = hosted.stripe.subscriptions.retrieve.mock.calls.length;
+      expect(await activate(db, activation, log, dependencies)).toEqual(activated);
+      expect(hosted.stripe.subscriptions.retrieve).toHaveBeenCalledTimes(reads);
+      expect(await own.table('tenant_license_state').first()).toBeUndefined();
+      expect(await own.table('stripe_subscriptions').first()).toMatchObject({ stripe_subscription_id: subscriptionId, status: 'active', quantity: 4 });
     });
   }));
 
