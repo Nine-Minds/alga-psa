@@ -13,6 +13,8 @@ import { retainNativeAppointmentRequest, nativeAppointmentRequestView, isAppoint
 import { applyNativeScheduleRelations, NativeScheduleRelationError } from './nativeScheduleRelations';
 
 type AppointmentEvent = { eventType: 'SCHEDULE_ENTRY_CREATED' | 'SCHEDULE_ENTRY_UPDATED'; payload: { tenantId: string; userId: string; entryId: string } };
+export type NativeAppointmentApprovalInput = { id: string; assignedUserId: string; finalDate?: string | null; finalTime?: string | null; ticketId?: string | null; internalNotes?: string | null };
+
 type AppointmentPublisher = (event: AppointmentEvent) => Promise<unknown>;
 
 /** Retain both old/proposed ticket roots before the appointment write lock. */
@@ -70,10 +72,33 @@ export async function associateCoManagedNativeAppointmentTicket(db: Knex, tenant
   });
 }
 
+/** Retained preparation shared by local approval and durable provider creation. */
+export async function retainAppointmentApprovalPlan(trx: Knex.Transaction, actor: CoManagedAuthenticatedActor, subject: AuthorizationSubject, input: NativeAppointmentApprovalInput) {
+  if (!trx.isTransaction || ![input.id, input.assignedUserId].every(isCoManagedUuid) || input.ticketId != null && !isCoManagedUuid(input.ticketId) || input.internalNotes != null && (typeof input.internalNotes !== 'string' || input.internalNotes.length > 2000)) throw new CoManagedSharedWorkError();
+  const owner = tenantDb(trx, actor.tenant);
+  const change = await retainAppointmentTicketChange(trx, actor, subject, input.id, input.ticketId), retained = change.retained, request = retained.request;
+  if (request.status !== 'pending') throw new NativeScheduleRelationError();
+  if (isAppointmentFieldHidden(retained.fields, ['requested_date', 'requested_time', 'requested_duration', 'requester_timezone', 'preferred_assigned_user_id', 'schedule_entry_id', 'approved_by_user_id', 'approved_at', 'description', 'service_id', 'service_name'])) throw new CoManagedSharedWorkError();
+  if (!await owner.table('users').where({ user_id: input.assignedUserId, user_type: 'internal', is_inactive: false }).forShare().first('user_id')) throw new CoManagedSharedWorkError();
+  const service = await owner.table('service_catalog').where('service_id', request.service_id).forShare().first('service_name');
+  if (!service) throw new NativeScheduleRelationError();
+  const date = input.finalDate ?? timePeriodCalendarDate(request.requested_date), time = input.finalTime ?? request.requested_time;
+  // Existing approval form overrides are UTC. With no override, interpret
+  // the stored wall-clock in the requester's zone, as the requester entered it.
+  const { start, end } = appointmentDateTime(date, time, !input.finalDate && !input.finalTime ? request.requester_timezone || 'UTC' : 'UTC', request.requested_duration);
+  const { schedule, assignments } = await retainAppointmentSchedule(trx, actor, retained);
+  const entryId = schedule?.entry_id ?? randomUUID(), proposedAssignments = [input.assignedUserId];
+  const fields = await retained.authorizeSchedule({ entry_id: entryId }, proposedAssignments, schedule ? 'update' : 'create');
+  if (isScheduleFieldHidden(fields, ['tenant', 'entry_id', 'title', 'notes', 'scheduled_start', 'scheduled_end', 'assigned_user_ids', 'work_item_id', 'work_item_type', 'is_private', 'status'])) throw new CoManagedSharedWorkError();
+  const values = { title: `Appointment: ${service.service_name}`, notes: [request.description, input.internalNotes].filter(Boolean).join('\n\n'), scheduled_start: start, scheduled_end: end,
+    work_item_type: 'appointment_request' as const, work_item_id: input.id, status: 'scheduled', is_recurring: false, is_private: schedule?.is_private ?? false };
+  return { change, retained, request, schedule, assignments, entryId, proposedAssignments, values };
+}
+
 /** Local approval transaction. This entry point does not create an external
  * meeting or deliver requester mail. */
 export async function approveCoManagedNativeAppointment(db: Knex, tenant: string,
-  input: { id: string; assignedUserId: string; finalDate?: string | null; finalTime?: string | null; ticketId?: string | null; internalNotes?: string | null },
+  input: NativeAppointmentApprovalInput,
   identify: () => Promise<CoManagedAuthenticatedActor>, publish: AppointmentPublisher) {
   input = { ...input };
   if (![input.id, input.assignedUserId].every(isCoManagedUuid) || input.ticketId != null && !isCoManagedUuid(input.ticketId) || input.internalNotes != null && (typeof input.internalNotes !== 'string' || input.internalNotes.length > 2000)) throw new CoManagedSharedWorkError();
@@ -82,22 +107,7 @@ export async function approveCoManagedNativeAppointment(db: Knex, tenant: string
     await assertCoManagedOperationalWrite(trx, tenant);
     const actor = snapshotCoManagedAuthenticatedActor(await identify()); if (actor.tenant !== tenant) throw new CoManagedSharedWorkError();
     const credential = await lockCoManagedLocalAuthentication(trx, actor), owner = tenantDb(trx, tenant);
-    const change = await retainAppointmentTicketChange(trx, actor, credential.subject, input.id, input.ticketId), retained = change.retained, request = retained.request;
-    if (request.status !== 'pending') throw new NativeScheduleRelationError();
-    if (isAppointmentFieldHidden(retained.fields, ['requested_date', 'requested_time', 'requested_duration', 'requester_timezone', 'preferred_assigned_user_id', 'schedule_entry_id', 'approved_by_user_id', 'approved_at', 'description', 'service_id', 'service_name'])) throw new CoManagedSharedWorkError();
-    if (!await owner.table('users').where({ user_id: input.assignedUserId, user_type: 'internal', is_inactive: false }).forShare().first('user_id')) throw new CoManagedSharedWorkError();
-    const service = await owner.table('service_catalog').where('service_id', request.service_id).forShare().first('service_name');
-    if (!service) throw new NativeScheduleRelationError();
-    const date = input.finalDate ?? timePeriodCalendarDate(request.requested_date), time = input.finalTime ?? request.requested_time;
-    // Existing approval form overrides are UTC. With no override, interpret
-    // the stored wall-clock in the requester's zone, as the requester entered it.
-    const { start, end } = appointmentDateTime(date, time, !input.finalDate && !input.finalTime ? request.requester_timezone || 'UTC' : 'UTC', request.requested_duration);
-    const { schedule, assignments } = await retainAppointmentSchedule(trx, actor, retained);
-    const entryId = schedule?.entry_id ?? randomUUID(), proposedAssignments = [input.assignedUserId];
-    const fields = await retained.authorizeSchedule({ entry_id: entryId }, proposedAssignments, schedule ? 'update' : 'create');
-    if (isScheduleFieldHidden(fields, ['tenant', 'entry_id', 'title', 'notes', 'scheduled_start', 'scheduled_end', 'assigned_user_ids', 'work_item_id', 'work_item_type', 'is_private', 'status'])) throw new CoManagedSharedWorkError();
-    const values = { title: `Appointment: ${service.service_name}`, notes: [request.description, input.internalNotes].filter(Boolean).join('\n\n'), scheduled_start: start, scheduled_end: end,
-      work_item_type: 'appointment_request' as const, work_item_id: input.id, status: 'scheduled', is_recurring: false, is_private: schedule?.is_private ?? false };
+    const { change, request, schedule, assignments, entryId, proposedAssignments, values } = await retainAppointmentApprovalPlan(trx, actor, credential.subject, input);
     let after: any;
     if (schedule) {
       [after] = await owner.table('schedule_entries').where('entry_id', entryId).update({ ...values, updated_at: trx.fn.now() }).returning('*');

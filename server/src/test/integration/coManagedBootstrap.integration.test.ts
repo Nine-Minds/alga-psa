@@ -90,7 +90,7 @@ beforeAll(async () => {
     '20260906080000_create_co_management_relationship_events.cjs',
     '20260906100000_add_external_file_metadata.cjs',
     '20260906110000_add_kb_import_batch_identity.cjs',
-    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs', '20260908011054_add_co_managed_meeting_sync_intents.cjs']) {
+    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs', '20260908011054_add_co_managed_meeting_sync_intents.cjs', '20260908021208_create_co_managed_meeting_creation_operations.cjs']) {
     await require('../../../migrations/' + file).up(db);
   }
   for (const table of ['standard_statuses', 'standard_priorities', 'countries', 'notification_categories',
@@ -14842,4 +14842,43 @@ it('customer appointment approval and association roll back assignments and bind
     expect(await customer.table('schedule_entry_assignees').where('entry_id', ownId)).toHaveLength(1);
     expect(publish).not.toHaveBeenCalled();
   } finally { await db.raw('DROP TRIGGER expire_appointment_approval_key ON appointment_requests'); await db.raw('DROP FUNCTION expire_appointment_approval_key()'); }
+}));
+
+it('customer meeting creation preparation reserves one immutable disclosure without approving or exposing credentials', async () => withAppointmentApprovalFixture(async ({ domain, actor, context, requestId, customer, ownId }: any) => {
+  const target = { microsoftTenantId: 'directory', organizerUserId: 'organizer', organizerUpn: 'organizer@example.invalid', sendMeetingInvites: true };
+  const prepare = () => domain.prepareCoManagedAppointmentMeeting(db, context.tenant, { id: requestId, assignedUserId: context.userId, internalNotes: 'Do not send this internal note' }, target, actor);
+  const [first, second] = await Promise.all([prepare(), prepare()]);
+  expect(first).toEqual(second); expect(first).toMatchObject({ handled: true, status: 'prepared' });
+  const rows = await customer.table('co_managed_meeting_creation_operations'); expect(rows).toHaveLength(1);
+  expect(rows[0]).toMatchObject({ requested_by: context.userId, credential_id: context.apiKeyId, credential_kind: 'api_key', external_attempted_at: null, status: 'prepared' });
+  expect(JSON.stringify(rows[0].provider_request)).not.toContain('Do not send this internal note');
+  expect(rows[0].approval_input.internalNotes).toBe('Do not send this internal note');
+  expect(JSON.stringify(first)).not.toContain(context.apiKeyId);
+  expect(await customer.table('appointment_requests').where('appointment_request_id', requestId).first()).toMatchObject({ status: 'pending', schedule_entry_id: ownId });
+  await expect(customer.table('co_managed_meeting_creation_operations').where('operation_id', first.operationId).update({ provider_request: '{}' })).rejects.toMatchObject({ code: '23514' });
+  await expect(require('../../../migrations/20260908021208_create_co_managed_meeting_creation_operations.cjs').down(db)).rejects.toThrow('retained meeting creation');
+}));
+
+it('customer meeting creation preparation rejects changed disclosures and revoked credentials while retaining the original operation', async () => withAppointmentApprovalFixture(async ({ domain, actor, context, requestId, customer }: any) => {
+  const target = { microsoftTenantId: 'directory', organizerUserId: 'organizer', organizerUpn: 'organizer@example.invalid', sendMeetingInvites: true };
+  const input = { id: requestId, assignedUserId: context.userId };
+  const prepare = (extra: any = {}) => domain.prepareCoManagedAppointmentMeeting(db, context.tenant, { ...input, ...extra }, target, actor);
+  const original = await prepare();
+  await expect(prepare({ finalTime: '10:00' })).rejects.toMatchObject({ code: 'MEETING_CREATION_OPERATION_CONFLICT' });
+  await customer.table('appointment_requests').where('appointment_request_id', requestId).update({ requester_email: 'changed@example.invalid' });
+  await expect(prepare()).rejects.toMatchObject({ code: 'MEETING_CREATION_OPERATION_CONFLICT' });
+  expect(await customer.table('co_managed_meeting_creation_operations')).toHaveLength(1);
+  expect(await customer.table('co_managed_meeting_creation_operations').first()).toMatchObject({ operation_id: original.operationId });
+  await customer.table('api_keys').where('api_key_id', context.apiKeyId).update({ active: false });
+  await expect(prepare()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+}));
+
+it('customer meeting creation preparation rolls back its reservation when credentials expire before commit', async () => withAppointmentApprovalFixture(async ({ domain, actor, context, requestId, customer }: any) => {
+  await db.raw(`CREATE FUNCTION expire_meeting_preparation_key() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN UPDATE api_keys SET expires_at = clock_timestamp() - interval '1 second' WHERE tenant = NEW.tenant AND api_key_id = '${context.apiKeyId}'::uuid; RETURN NEW; END $$`);
+  await db.raw('CREATE TRIGGER expire_meeting_preparation_key AFTER INSERT ON co_managed_meeting_creation_operations FOR EACH ROW EXECUTE FUNCTION expire_meeting_preparation_key()');
+  try {
+    await expect(domain.prepareCoManagedAppointmentMeeting(db, context.tenant, { id: requestId, assignedUserId: context.userId }, { microsoftTenantId: 'directory', organizerUserId: 'organizer', organizerUpn: 'organizer@example.invalid', sendMeetingInvites: true }, actor)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    expect(await customer.table('co_managed_meeting_creation_operations')).toHaveLength(0);
+    expect(await customer.table('appointment_requests').where('appointment_request_id', requestId).first()).toMatchObject({ status: 'pending' });
+  } finally { await db.raw('DROP TRIGGER expire_meeting_preparation_key ON co_managed_meeting_creation_operations'); await db.raw('DROP FUNCTION expire_meeting_preparation_key()'); }
 }));

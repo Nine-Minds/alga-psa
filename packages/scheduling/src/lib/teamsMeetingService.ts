@@ -10,6 +10,26 @@ export interface TeamsMeetingCapabilityResult {
   sendMeetingInvites?: boolean;
 }
 
+export interface TeamsMeetingCreationTarget {
+  microsoftTenantId: string;
+  organizerUserId: string;
+  organizerUpn: string;
+  sendMeetingInvites: boolean;
+}
+export interface TeamsMeetingCreationIdentity { operationId: string; target: TeamsMeetingCreationTarget }
+export interface CreatedTeamsEventReceipt {
+  eventId: string;
+  organizerUserId: string;
+  organizerUpn: string;
+  microsoftTenantId: string;
+  joinWebUrl: string | null;
+}
+export type TeamsMeetingCreationTargetOutcome = { status: 'ready'; target: TeamsMeetingCreationTarget }
+  | { status: 'skipped'; reason: TeamsMeetingSkipReason };
+export type RecoverTeamsMeetingCreationOutcome = { status: 'found'; event: CreatedTeamsEventReceipt; meetingId: string | null }
+  | { status: 'absent' } | { status: 'skipped'; reason: TeamsMeetingSkipReason }
+  | { status: 'failed'; errorCode: string; errorMessage: string; createdEvent?: CreatedTeamsEventReceipt };
+
 export interface CreateTeamsMeetingInput {
   tenantId: string;
   subject: string;
@@ -18,6 +38,7 @@ export interface CreateTeamsMeetingInput {
   attendees?: TeamsMeetingAttendee[];
   bodyHtml?: string | null;
   appointmentRequestId?: string | null;
+  creationIdentity?: TeamsMeetingCreationIdentity;
 }
 
 export type TeamsMeetingSkipReason = 'ee_disabled' | 'feature_disabled' | 'not_configured' | 'no_organizer';
@@ -89,6 +110,8 @@ export interface TeamsMeetingArtifact {
 }
 
 export interface TeamsMeetingService {
+  getTeamsMeetingCreationTarget: (tenantId: string) => Promise<TeamsMeetingCreationTargetOutcome>;
+  recoverTeamsMeetingCreation: (input: { tenantId: string; identity: TeamsMeetingCreationIdentity }) => Promise<RecoverTeamsMeetingCreationOutcome>;
   getTeamsMeetingCapability: (tenantId: string) => Promise<TeamsMeetingCapabilityResult>;
   createTeamsMeeting: (input: CreateTeamsMeetingInput) => Promise<CreateTeamsMeetingResult | null>;
   updateTeamsMeeting: (input: UpdateTeamsMeetingInput) => Promise<boolean>;
@@ -109,6 +132,8 @@ const eeDisabledCapability: TeamsMeetingCapabilityResult = {
 };
 
 const noOpTeamsMeetingService: TeamsMeetingService = {
+  async getTeamsMeetingCreationTarget() { return { status: 'skipped', reason: 'ee_disabled' }; },
+  async recoverTeamsMeetingCreation() { return { status: 'skipped', reason: 'ee_disabled' }; },
   async getTeamsMeetingCapability() {
     return eeDisabledCapability;
   },
@@ -160,6 +185,8 @@ export async function resolveTeamsMeetingService(): Promise<TeamsMeetingService>
   const ee = await loadEeTeamsMeetingModule();
 
   return {
+    getTeamsMeetingCreationTarget: ee.getTeamsMeetingCreationTarget ?? noOpTeamsMeetingService.getTeamsMeetingCreationTarget,
+    recoverTeamsMeetingCreation: ee.recoverTeamsMeetingCreation ?? noOpTeamsMeetingService.recoverTeamsMeetingCreation,
     getTeamsMeetingCapability: ee.getTeamsMeetingCapability ?? noOpTeamsMeetingService.getTeamsMeetingCapability,
     createTeamsMeeting: ee.createTeamsMeeting ?? noOpTeamsMeetingService.createTeamsMeeting,
     updateTeamsMeeting: ee.updateTeamsMeeting ?? noOpTeamsMeetingService.updateTeamsMeeting,
