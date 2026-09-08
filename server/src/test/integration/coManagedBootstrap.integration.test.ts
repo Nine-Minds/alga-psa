@@ -1,5 +1,5 @@
 import { retainCoManagedInboundCommentEvent } from '../../../../packages/co-managed/src/inboundConversationEvents';
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createRequire } from 'node:module';
 import { randomUUID } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
@@ -65,6 +65,10 @@ let admin: Knex, source: Knex, db: Knex;
 let created = false;
 const log = { info() {}, warn() {}, error() {} };
 
+// Factory mocks survive spy restoration in Vitest 4. Calls belong to one test;
+// keeping their history makes this shared-database suite depend on shuffle order.
+beforeEach(() => vi.clearAllMocks());
+
 // Copy SCHEMA ONLY from the running development database. All writes, fixtures,
 // migrations, and cleanup target a new random database. Only public reference
 // defaults are copied; no tenant records, credentials, or customer content.
@@ -90,7 +94,7 @@ beforeAll(async () => {
     '20260906080000_create_co_management_relationship_events.cjs',
     '20260906100000_add_external_file_metadata.cjs',
     '20260906110000_add_kb_import_batch_identity.cjs',
-    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs']) {
+    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs', '20260908013607_create_named_ticket_conversations.cjs', '20260908015652_create_ticket_conversation_editor_drafts.cjs']) {
     await require('../../../migrations/' + file).up(db);
   }
   for (const table of ['standard_statuses', 'standard_priorities', 'countries', 'notification_categories',
@@ -1545,6 +1549,9 @@ async function withProjectActionsFixture(work: (fixture: Awaited<ReturnType<type
     workflow,
   ];
   const publish = vi.spyOn(events, 'publishEvent').mockResolvedValue(undefined);
+  // These exports are already factory mocks. Vitest 4 reuses them when spying;
+  // begin this fixture with its own call history rather than a previous test's.
+  workflow.mockClear(); publish.mockClear();
   try {
     const actions = await import('../../../../packages/projects/src/actions/projectActions');
     const exports = await import('../../../../packages/projects/src/actions/projectTaskExportActions');
@@ -3515,13 +3522,14 @@ it('publishes ticket transitions only after the owning commit and rolls back clo
   for (const action of [legacy.updateTicket, optimized.updateTicketWithCache]) {
     publish.mockClear(); workflow.mockClear(); live.mockClear();
     await expect(dbModule.withTransaction(db, async trx => {
+      const previousConnection = vi.mocked(dbModule.createTenantKnex).getMockImplementation()!;
       const connection = vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: trx, tenant: actor.tenant });
       try {
         expect(await action(ticketId, { status_id: closedStatusId })).toBe('success');
         expect(await tenantDb(trx, actor.tenant).table('tickets').where('ticket_id', ticketId).first()).toMatchObject({ is_closed: true, closed_by: actor.userId });
         expect(workflow).not.toHaveBeenCalled(); expect(publish).not.toHaveBeenCalled(); expect(live).not.toHaveBeenCalled();
         throw new Error('Caller cancelled ticket edit');
-      } finally { connection.mockRestore(); }
+      } finally { connection.mockImplementation(previousConnection); }
     })).rejects.toThrow('Caller cancelled ticket edit');
     expect(await customer.table('tickets').where('ticket_id', ticketId).first()).toMatchObject({ status_id: openStatusId, is_closed: false, closed_at: null });
     expect(await customer.table('ticket_audit_logs').where('ticket_id', ticketId)).toEqual([]);
@@ -14030,3 +14038,157 @@ it('customer period settings roll changes back when the retained key expires aft
     expect(await customer.table('time_period_settings').where('time_period_settings_id', created.settings_id).first()).toMatchObject({ is_active: true, frequency: 1 });
   } finally { await db.raw('DROP TRIGGER expire_period_settings_key ON time_period_settings'); await db.raw('DROP FUNCTION expire_period_settings_key()'); }
 }));
+
+// Named conversation tests reuse the full-schema disposable DB and actual
+// relationship/session fixtures above; neither authorization nor queries are mocked.
+async function namedConversationFixture() {
+  const fixture = await sharedWorkFixture();
+  const { replaceCoManagedStaffAssignments } = await import('../../../../packages/co-managed/src/policy');
+  await replaceCoManagedStaffAssignments(db, fixture.sponsorActor, fixture.target, 2,
+    [{ kind: 'user', principalId: fixture.principal.userId, role: 'technician' }]);
+  const sessionId = randomUUID();
+  await fixture.customer.table('sessions').insert({ tenant: fixture.actor.tenant, user_id: fixture.actor.userId, session_id: sessionId,
+    expires_at: new Date(Date.now() + 3600000) });
+  return { ...fixture, customerPrincipal: { ...fixture.actor, kind: 'session' as const, sessionId },
+    ticket: { tenant: fixture.resource.tenant, ticketId: fixture.resource.id, relationshipId: fixture.resource.relationshipId },
+    conversations: await import('../../../../packages/co-managed/src/namedTicketConversations') };
+}
+
+describe('named ticket conversations against migrated PostgreSQL', () => {
+  it('keeps one requester default under concurrent reads and independently stores organization-private metadata', async () => {
+    const { conversations: api, principal, customerPrincipal, ticket, customer, sponsor } = await namedConversationFixture();
+    const lists = await Promise.all([api.listNamedTicketConversations(db, principal, ticket), api.listNamedTicketConversations(db, customerPrincipal, ticket)]);
+    expect(lists[0]).toHaveLength(1); expect(lists[0][0].conversationId).toBe(lists[1][0].conversationId);
+    const request = { operationId: randomUUID(), name: 'Carrier case', audience: 'organization_private' as const, transport: 'email' as const };
+    const vendor = await api.createNamedTicketConversation(db, principal, ticket, request);
+    expect(vendor).toMatchObject({ storeTenant: principal.tenant, audience: 'organization_private', defaultSlot: null, transport: 'email' });
+    expect(await api.createNamedTicketConversation(db, principal, ticket, request)).toEqual(vendor);
+    await expect(api.createNamedTicketConversation(db, principal, ticket, { ...request, name: 'Changed intent' })).rejects.toMatchObject({ code: 'CONVERSATION_CONFLICT' });
+    const privateCustomer = await api.createNamedTicketConversation(db, customerPrincipal, ticket,
+      { ...request, operationId: randomUUID(), name: 'Customer IT notes', transport: 'internal' });
+    const joint = await api.createNamedTicketConversation(db, principal, ticket,
+      { ...request, operationId: randomUUID(), name: 'Joint diagnostics', audience: 'shared_it', transport: 'internal' });
+    expect((await api.listNamedTicketConversations(db, principal, ticket)).map(c => c.conversationId)).toEqual(expect.arrayContaining([vendor.conversationId, joint.conversationId]));
+    expect((await api.listNamedTicketConversations(db, principal, ticket)).map(c => c.conversationId)).not.toContain(privateCustomer.conversationId);
+    expect((await api.listNamedTicketConversations(db, customerPrincipal, ticket)).map(c => c.conversationId)).not.toContain(vendor.conversationId);
+    expect(await sponsor.table('ticket_conversations').where('ticket_id', ticket.ticketId)).toHaveLength(1);
+    expect(await customer.table('ticket_conversations').where('name', 'Carrier case')).toHaveLength(0);
+    expect(() => api.getNamedTicketConversation(db, customerPrincipal, ticket, vendor)).toThrow('The conversation request is invalid.');
+    await expect(api.getNamedTicketConversation(db, customerPrincipal, ticket, { storeTenant: vendor.storeTenant, conversationId: vendor.conversationId })).rejects.toMatchObject({ code: 'CONVERSATION_FORBIDDEN' });
+  });
+
+  it('supports native MSP tickets with no co-managed license and prevents a same-ID foreign ticket from lending access', async () => {
+    const { conversations: api, principal, ticket, customer, sponsor, operation } = await namedConversationFixture();
+    const source = await customer.table('tickets').where('ticket_id', ticket.ticketId).first();
+    const status = await customer.table('statuses').where('status_id', source.status_id).first();
+    const priority = await customer.table('priorities').where('priority_id', source.priority_id).first();
+    await sponsor.table('statuses').insert({ ...status, tenant: principal.tenant, board_id: operation.escalation_board_id });
+    await sponsor.table('priorities').insert({ ...priority, tenant: principal.tenant });
+    await sponsor.table('tickets').insert({ tenant: principal.tenant, ticket_id: ticket.ticketId, ticket_number: 'NATIVE-1', title: 'Native service request',
+      client_id: operation.request.clientId, board_id: operation.escalation_board_id, status_id: status.status_id, priority_id: priority.priority_id, entered_by: principal.userId });
+    await sponsor.table('co_managed_entitlements').del();
+    const native = { tenant: principal.tenant, ticketId: ticket.ticketId };
+    const [requester] = await api.listNamedTicketConversations(db, principal, native);
+    const side = await api.createNamedTicketConversation(db, principal, native,
+      { operationId: randomUUID(), name: 'Vendor', audience: 'organization_private', transport: 'email' });
+    expect(requester.storeTenant).toBe(principal.tenant); expect(side.ticket.tenant).toBe(principal.tenant);
+    expect(await api.listNamedTicketConversations(db, principal, native)).toHaveLength(2);
+    await expect(api.createNamedTicketConversation(db, principal, native,
+      { operationId: randomUUID(), name: 'Invalid sharing', audience: 'shared_it', transport: 'internal' })).rejects.toMatchObject({ code: 'CONVERSATION_FORBIDDEN' });
+    await expect(api.getNamedTicketConversation(db, principal, { ...native, ticketId: randomUUID() },
+      { storeTenant: side.storeTenant, conversationId: side.conversationId })).rejects.toThrow();
+  });
+
+  it('rejects revoked sessions, removed scope and foreign private references without writing, and revisions protect Open/Done', async () => {
+    const { conversations: api, principal, customerPrincipal, ticket, customer, sponsor } = await namedConversationFixture();
+    const side = await api.createNamedTicketConversation(db, principal, ticket,
+      { operationId: randomUUID(), name: 'Vendor', audience: 'organization_private', transport: 'email' });
+    const reference = { storeTenant: side.storeTenant, conversationId: side.conversationId };
+    const ticketBefore = await customer.table('tickets').where('ticket_id', ticket.ticketId).first();
+    expect(await api.setNamedTicketConversationStatus(db, principal, ticket, reference, 1, 'done')).toMatchObject({ status: 'done', revision: 2 });
+    await expect(api.setNamedTicketConversationStatus(db, principal, ticket, reference, 1, 'open')).rejects.toMatchObject({ code: 'CONVERSATION_CONFLICT' });
+    expect(await customer.table('tickets').where('ticket_id', ticket.ticketId).first()).toEqual(ticketBefore);
+    await expect(api.setNamedTicketConversationStatus(db, customerPrincipal, ticket, reference, 2, 'open')).rejects.toMatchObject({ code: 'CONVERSATION_FORBIDDEN' });
+    await sponsor.table('sessions').where('session_id', principal.sessionId).update({ revoked_at: new Date() });
+    await expect(api.listNamedTicketConversations(db, principal, ticket)).rejects.toThrow();
+    await sponsor.table('sessions').where('session_id', principal.sessionId).update({ revoked_at: null });
+    await customer.table('co_management_board_scopes').del();
+    await expect(api.createNamedTicketConversation(db, principal, ticket,
+      { operationId: randomUUID(), name: 'Denied side', audience: 'organization_private', transport: 'email' })).rejects.toThrow();
+    expect(await sponsor.table('ticket_conversations').where('ticket_id', ticket.ticketId)).toHaveLength(1);
+  });
+
+  it('replays migration without splitting roots, preserves audience/parent/content and guards mismatched root linkage', async () => {
+    const { ticket, customer, customerPrincipal } = await namedConversationFixture();
+    const model = (await import('../../../../packages/tickets/src/models/comment')).default;
+    const store = await import('../../../../shared/lib/tickets/namedConversations');
+    const first = await model.insert(db, ticket.tenant, { ticket_id: ticket.ticketId, user_id: customerPrincipal.userId,
+      author_type: 'internal', note: 'First public root', is_internal: false });
+    const reply = await model.insert(db, ticket.tenant, { ticket_id: ticket.ticketId, user_id: customerPrincipal.userId,
+      author_type: 'internal', note: 'Reply stays linked', parent_comment_id: first, is_internal: false });
+    await model.insert(db, ticket.tenant, { ticket_id: ticket.ticketId, user_id: customerPrincipal.userId,
+      author_type: 'internal', note: 'Second public root', is_internal: false });
+    const internal = await model.insert(db, ticket.tenant, { ticket_id: ticket.ticketId, user_id: customerPrincipal.userId,
+      author_type: 'internal', note: 'Private root', is_internal: true });
+    const before = await customer.table('comments').where('ticket_id', ticket.ticketId).orderBy('comment_id');
+    const migration = require('../../../migrations/20260908013607_create_named_ticket_conversations.cjs');
+    await migration.up(db); await migration.up(db);
+    const rows = await customer.table('ticket_conversations').where('ticket_id', ticket.ticketId);
+    expect(rows).toHaveLength(2);
+    const roots = await customer.table('comment_threads').where('ticket_id', ticket.ticketId);
+    expect(new Set(roots.filter(r => !r.is_internal).map(r => r.conversation_id)).size).toBe(1);
+    expect(roots.find(r => r.root_comment_id === internal).conversation_id).toBe(rows.find(r => r.audience === 'organization_private').conversation_id);
+    expect(await customer.table('comments').where('ticket_id', ticket.ticketId).orderBy('comment_id')).toEqual(before);
+    expect(before.find(r => r.comment_id === reply).parent_comment_id).toBe(first);
+    await expect(db.transaction(trx => store.attachNativeRootToConversation({ trx, ticket, storeTenant: ticket.tenant },
+      roots.find(r => r.root_comment_id === internal).thread_id, rows.find(r => r.audience === 'requester').conversation_id))).rejects.toMatchObject({ code: 'CONVERSATION_CONFLICT' });
+    await expect(migration.down(db)).rejects.toThrow('Cannot discard retained named ticket conversations');
+  });
+});
+
+describe('named ticket conversation editor drafts against migrated PostgreSQL', () => {
+  it('keeps text-only drafts author-private across destinations and makes save retries and discard revision-safe', async () => {
+    const { conversations: api, ticket, principal, customerPrincipal, customer, sponsor } = await namedConversationFixture();
+    const [requester] = await api.listNamedTicketConversations(db, principal, ticket);
+    const reference = { storeTenant: requester.storeTenant, conversationId: requester.conversationId };
+    const request = { operationId: randomUUID(), expectedRevision: 0, expectedConversationRevision: 1, content: { text: 'Private work in progress' } };
+    const saved = await api.saveNamedConversationEditorDraft(db, principal, ticket, reference, request);
+    expect(saved).toMatchObject({ revision: 1, content: request.content });
+    expect(await api.saveNamedConversationEditorDraft(db, principal, ticket, reference, request)).toEqual(saved);
+    expect(await api.getNamedConversationEditorDraft(db, principal, ticket, reference)).toEqual(saved);
+    expect(await api.getNamedConversationEditorDraft(db, customerPrincipal, ticket, reference)).toBeNull();
+    expect(await sponsor.table('ticket_conversation_editor_drafts')).toHaveLength(1);
+    expect(await customer.table('ticket_conversation_editor_drafts')).toHaveLength(0);
+    expect(await customer.table('comments').where('ticket_id', ticket.ticketId)).toHaveLength(0);
+    expect(await customer.table('co_management_conversation_drafts')).toHaveLength(0);
+    const other = await api.createNamedTicketConversation(db, principal, ticket,
+      { operationId: randomUUID(), name: 'Another requester exchange', audience: 'requester', transport: 'email' });
+    const second = { storeTenant: other.storeTenant, conversationId: other.conversationId };
+    expect(await api.getNamedConversationEditorDraft(db, principal, ticket, second)).toBeNull();
+    await api.saveNamedConversationEditorDraft(db, principal, ticket, second, { ...request, operationId: randomUUID(), content: { text: 'Separate draft' } });
+    expect((await api.getNamedConversationEditorDraft(db, principal, ticket, reference))?.content).toEqual(request.content);
+    const discard = { operationId: randomUUID(), expectedRevision: 1, expectedConversationRevision: 1, content: null };
+    expect(await api.saveNamedConversationEditorDraft(db, principal, ticket, reference, discard)).toMatchObject({ revision: 2, content: null });
+    await expect(api.saveNamedConversationEditorDraft(db, principal, ticket, reference, request)).rejects.toMatchObject({ code: 'CONVERSATION_CONFLICT' });
+    expect((await api.getNamedConversationEditorDraft(db, principal, ticket, reference))?.content).toBeNull();
+  });
+
+  it('serializes competing edits, rejects stale audience intent and loses access immediately with the ticket grant', async () => {
+    const { conversations: api, ticket, principal, customer } = await namedConversationFixture();
+    const [requester] = await api.listNamedTicketConversations(db, principal, ticket);
+    const reference = { storeTenant: requester.storeTenant, conversationId: requester.conversationId };
+    const request = { operationId: randomUUID(), expectedRevision: 0, expectedConversationRevision: 1, content: { text: 'First revision' } };
+    await api.saveNamedConversationEditorDraft(db, principal, ticket, reference, request);
+    const outcomes = await Promise.allSettled(['Tab one', 'Tab two'].map(text => api.saveNamedConversationEditorDraft(db, principal, ticket, reference,
+      { operationId: randomUUID(), expectedRevision: 1, expectedConversationRevision: 1, content: { text } })));
+    expect(outcomes.filter(x => x.status === 'fulfilled')).toHaveLength(1);
+    expect(outcomes.find(x => x.status === 'rejected')).toMatchObject({ reason: { code: 'CONVERSATION_CONFLICT' } });
+    await api.setNamedTicketConversationStatus(db, principal, ticket, reference, 1, 'done');
+    await expect(api.saveNamedConversationEditorDraft(db, principal, ticket, reference,
+      { ...request, operationId: randomUUID(), expectedRevision: 2 })).rejects.toMatchObject({ code: 'CONVERSATION_CONFLICT' });
+    await customer.table('co_management_board_scopes').del();
+    await expect(api.getNamedConversationEditorDraft(db, principal, ticket, reference)).rejects.toThrow();
+    await expect(api.saveNamedConversationEditorDraft(db, principal, ticket, reference,
+      { ...request, operationId: randomUUID(), expectedRevision: 2, expectedConversationRevision: 2 })).rejects.toThrow();
+  });
+});

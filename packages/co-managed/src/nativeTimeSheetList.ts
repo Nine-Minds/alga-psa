@@ -62,6 +62,7 @@ export async function listCoManagedNativeTimeSheets(db: Knex, tenant: string,
         const hidden = (names: string[]) => isNativeTimeFieldHidden(fields, names.flatMap(name => [name, `time_sheets.${name}`]));
         if (hidden(['period_id', 'time_period', 'time_period.start_date', 'time_period.end_date', 'period_start_date', 'period_end_date'])) continue;
         const start = toCalendarDateString(period.start_date), end = toCalendarDateString(period.end_date);
+        if (!start || !end) throw new Error('Time period has invalid calendar dates');
         const entries = current?.entries.filter(entry => entry.work_date >= start && entry.work_date < end) ?? [];
         const dates = [...new Set<string>(entries.map(entry => entry.work_date))].sort();
         periods.push({ tenant, period_id: period.period_id, start_date: start, end_date: end,

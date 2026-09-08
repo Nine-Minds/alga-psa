@@ -92,7 +92,7 @@ export async function readCoManagedNativeTimePeriodSettings(db: Knex, tenant: st
     if (!await hasCoManagedLocalPermission(trx, actor, 'time_period', 'read', true)) throw new CoManagedSharedWorkError();
     const query = tenantDb(trx, tenant).table('time_period_settings').orderBy('effective_from', 'desc').orderBy('time_period_settings_id').forShare();
     if (options.activeOnly) query.where('is_active', true);
-    const settings = [];
+    const settings: ReturnType<typeof settingsView>[] = [];
     for (const row of await query) {
       try {
         const policy = await authorizeCoManagedLocalRecord(trx, actor, credential.subject, 'time_period', 'read', { id: row.time_period_settings_id });

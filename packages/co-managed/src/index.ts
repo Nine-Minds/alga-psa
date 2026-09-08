@@ -13,6 +13,7 @@ export * from './ticketEditing';
 export * from './ticketQueue';
 
 export * from './ticketConversation';
+export * from './namedTicketConversations';
 export * from './privateTicketConversation';
 export * from './ticketCommentCreation';
 export * from './ticketCommentNotification';

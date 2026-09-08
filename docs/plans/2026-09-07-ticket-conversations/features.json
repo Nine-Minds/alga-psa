@@ -2,7 +2,7 @@
   {
     "id": "F001",
     "description": "Create named conversation containers qualified to one authoritative ticket independently of existing reply roots.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "4. Conversation and access model"
     ]
@@ -10,7 +10,7 @@
   {
     "id": "F002",
     "description": "Guarantee exactly one default requester conversation per ticket, including concurrent initialization.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "4. Conversation and access model"
     ]
@@ -18,7 +18,7 @@
   {
     "id": "F003",
     "description": "Allow additional requester-facing conversations without implicitly changing the default.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "4. Conversation and access model"
     ]
@@ -50,7 +50,7 @@
   {
     "id": "F007",
     "description": "Provide native ticket conversation operations without requiring co-managed licensing or a relationship.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "4. Conversation and access model"
     ]
@@ -58,7 +58,7 @@
   {
     "id": "F008",
     "description": "Reuse co-managed qualified resource, relationship, lifecycle, redaction and operational-write authorization for shared tickets.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "4. Conversation and access model"
     ]
@@ -74,7 +74,7 @@
   {
     "id": "F010",
     "description": "Allow authorized technicians in an organization to collaborate without individual conversation invitations.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "4. Conversation and access model"
     ]
@@ -234,7 +234,7 @@
   {
     "id": "F030",
     "description": "Separate editable autosave revision handling from immutable attachment/publication reservations.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "5. UX \u2014 option C"
     ]
