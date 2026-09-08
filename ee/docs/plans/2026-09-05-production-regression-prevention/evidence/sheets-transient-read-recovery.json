@@ -37,5 +37,22 @@
     "durationSeconds": 145.587,
     "log": "test-results/node-tooling/runner.log"
   },
-  "additionalFix": "Malformed successful header JSON must never be treated as an empty tab; bounded read retry then fail without any writes. Before-fix mocked probe produced GET, PUT, POST."
+  "additionalFix": "Malformed successful header JSON must never be treated as an empty tab; bounded read retry then fail without any writes. Before-fix mocked probe produced GET, PUT, POST.",
+  "completeTooling": {
+    "revision": "cc29f6738e58146bb83b10cc24fb15b757677c26",
+    "status": "passed",
+    "counts": {
+      "tests": 509,
+      "passed": 509,
+      "failed": 0,
+      "skipped": 0,
+      "todo": 0,
+      "cancelled": 0
+    },
+    "failures": [],
+    "requiredFiles": 53,
+    "durationSeconds": 146.009566875,
+    "log": "test-results/node-tooling/runner.log",
+    "reportSha256": "36cb7069455685b63b888bfd00bef84ce92f3ed043166fd2fbfd4d46c3abd6ed"
+  }
 }
