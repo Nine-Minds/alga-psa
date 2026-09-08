@@ -420,6 +420,10 @@
         "escalated": "Geëscaleerd naar MSP",
         "handed_back": "Teruggegeven aan klant",
         "access_revoked": "Individuele tickettoegang ingetrokken"
+      },
+      "assignment": {
+        "needsHandoff": "Escaleer dit ticket voordat u MSP-medewerkers toewijst.",
+        "unavailable": "De toegewezen MSP-medewerker of het team is niet meer beschikbaar."
       }
     },
     "grants": {

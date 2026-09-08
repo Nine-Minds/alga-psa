@@ -19,7 +19,9 @@ same boundary for the unified conversation reader and its new-message, reply,
 edit and delete controls, including whole-thread audience disclosure confirmations and MSP-private transfers, comment attachment pickers and removal confirmations, staged new-message/reply file selection and cancellation, and download links. Requester attachment links in portal conversation cards use the same boundary through the portal composition provider. New collaboration controls must use the same boundary.
 The consolidated ticket queue, its CSV export control, and bulk handback selection,
 shared-note submission and retry controls also use this boundary.
-Export actions apply current ticket access independently of the flag.
+Customer and MSP ticket panels use the same boundary for assignment state, scoped
+user/team choices, assign/clear controls and uncertain-save retries.
+Export and assignment actions apply current ticket access independently of the flag.
 Ordinary PSA and AlgaDesk workspaces do not depend on this flag.
 
 This is a UI-only release switch. Routes remain registered. APIs, server actions,

@@ -420,6 +420,10 @@
         "escalated": "An MSP eskaliert",
         "handed_back": "An Kunden zurückgegeben",
         "access_revoked": "Individueller Ticketzugriff entzogen"
+      },
+      "assignment": {
+        "needsHandoff": "Eskalieren Sie dieses Ticket, bevor Sie MSP-Mitarbeiter zuweisen.",
+        "unavailable": "Der zugewiesene MSP-Mitarbeiter oder das Team ist nicht mehr verfügbar."
       }
     },
     "grants": {

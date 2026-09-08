@@ -422,6 +422,10 @@
         "escalated": "Inoltrato all’MSP",
         "handed_back": "Restituito al cliente",
         "access_revoked": "Accesso individuale al ticket revocato"
+      },
+      "assignment": {
+        "needsHandoff": "Inoltra questo ticket al MSP prima di assegnare il suo personale.",
+        "unavailable": "Il collaboratore MSP assegnato non è più disponibile."
       }
     },
     "grants": {

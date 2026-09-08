@@ -424,6 +424,10 @@
         "escalated": "Eskalowano do MSP",
         "handed_back": "Przekazano klientowi",
         "access_revoked": "Cofnięto indywidualny dostęp do zgłoszenia"
+      },
+      "assignment": {
+        "needsHandoff": "Eskaluj to zgłoszenie przed przypisaniem pracowników MSP.",
+        "unavailable": "Przypisany współpracownik MSP nie jest już dostępny."
       }
     },
     "grants": {

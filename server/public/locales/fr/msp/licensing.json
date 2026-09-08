@@ -422,6 +422,10 @@
         "escalated": "Transféré au MSP",
         "handed_back": "Rendu au client",
         "access_revoked": "Accès individuel au ticket révoqué"
+      },
+      "assignment": {
+        "needsHandoff": "Escaladez ce ticket avant d’affecter du personnel MSP.",
+        "unavailable": "Le collaborateur MSP affecté n’est plus disponible."
       }
     },
     "grants": {

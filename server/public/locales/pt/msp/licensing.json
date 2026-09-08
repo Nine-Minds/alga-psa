@@ -422,6 +422,10 @@
         "escalated": "Escalado para o MSP",
         "handed_back": "Devolvido ao cliente",
         "access_revoked": "Acesso individual ao chamado revogado"
+      },
+      "assignment": {
+        "needsHandoff": "Escale este ticket antes de atribuir pessoal do MSP.",
+        "unavailable": "O colaborador do MSP atribuído já não está disponível."
       }
     },
     "grants": {

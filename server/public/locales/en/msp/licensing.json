@@ -509,6 +509,10 @@
         "escalated": "Escalated to MSP",
         "handed_back": "Returned to customer",
         "access_revoked": "Explicit ticket access revoked"
+      },
+      "assignment": {
+        "needsHandoff": "Escalate this ticket before assigning MSP staff.",
+        "unavailable": "The assigned MSP collaborator is no longer available."
       }
     },
     "grants": {

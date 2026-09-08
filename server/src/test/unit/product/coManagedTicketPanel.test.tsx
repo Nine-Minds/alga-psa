@@ -5,9 +5,10 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import CoManagedTicketPanel from '../../../components/co-managed/CoManagedTicketPanel';
 import CoManagedExplicitTicketGrantsPanel from '../../../components/co-managed/CoManagedExplicitTicketGrantsPanel';
 import { CoManagedFeatureBoundary } from '../../../components/co-managed/CoManagedFeatureBoundary';
-const mocks = vi.hoisted(() => ({ flag: vi.fn(), load: vi.fn(), history: vi.fn(), grants: vi.fn(), escalate: vi.fn(), handback: vi.fn(), revoke: vi.fn() }));
+const mocks = vi.hoisted(() => ({ assignment: vi.fn(), flag: vi.fn(), load: vi.fn(), history: vi.fn(), grants: vi.fn(), escalate: vi.fn(), handback: vi.fn(), revoke: vi.fn() }));
 vi.mock('../../../components/co-managed/CoManagedTicketConversation', () => ({ default: () => null }));
 vi.mock('../../../components/co-managed/CoManagedTicketEditor', () => ({ default: () => null }));
+vi.mock('../../../components/co-managed/CoManagedTicketAssignment', () => ({ default: (props: any) => mocks.assignment(props) }));
 vi.mock('@alga-psa/ui/ui-reflection/useAutomationIdAndRegister', () => ({ useAutomationIdAndRegister: ({ id }: any) => ({ automationIdProps: { id }, updateMetadata: () => {}, updateActions: () => {} }) }));
 vi.mock('@alga-psa/ui/hooks', () => ({ useFeatureFlag: mocks.flag }));
 vi.mock('../../../lib/actions/coManagedAcceptanceActions', () => ({}));
@@ -24,7 +25,7 @@ const deferred = <T,>() => { let resolve!: (value: T) => void; let reject!: (err
 const button = (name: string) => screen.getByRole('button', { name: `coManaged.ticket.${name}` });
 const mount = () => render(<CoManagedFeatureBoundary><CoManagedTicketPanel target={{ kind: 'shared', resource }} showSummary /></CoManagedFeatureBoundary>);
 beforeEach(() => {
-  vi.resetAllMocks(); mocks.flag.mockReturnValue({ enabled: true, loading: false, error: null });
+  vi.resetAllMocks(); mocks.assignment.mockReturnValue(null); mocks.flag.mockReturnValue({ enabled: true, loading: false, error: null });
   mocks.load.mockResolvedValue(data()); mocks.history.mockResolvedValue({ items: [], nextBeforeRevision: null });
   mocks.grants.mockResolvedValue({ items: [{ resource, revision: 1, ticketNumber: 'A-1', title: 'Customer A issue' }], nextAfterTicketId: null });
   mocks.escalate.mockResolvedValue({ appliedRevision: 1 }); mocks.handback.mockResolvedValue({ appliedRevision: 2 }); mocks.revoke.mockResolvedValue({ appliedRevision: 2 });
@@ -133,4 +134,17 @@ it('paginates customer grant inventory and revokes a grant without requiring a r
   await screen.findByText('coManaged.grants.empty'); expect(mocks.grants).toHaveBeenLastCalledWith(resource.id);
   fireEvent.click(screen.getByRole('button', { name: 'coManaged.provisioning.previous' }));
   await waitFor(() => expect(mocks.grants).toHaveBeenLastCalledWith(undefined));
+});
+
+it.each(['customer', 'sponsor'])('connects assignment changes and access loss to the %s ticket panel', async side => {
+  mocks.load.mockResolvedValue({ ...data(), side });
+  mocks.assignment.mockImplementation(({ onSaved, onUnavailable }: any) => <div><button id="test-assignment-save" onClick={onSaved}>Assignment saved</button><button id="test-assignment-revoke" onClick={onUnavailable}>Assignment unavailable</button></div>);
+  mount(); await screen.findByText('A-1 · Customer A issue');
+  expect(mocks.assignment.mock.lastCall[0].resource).toEqual(resource);
+  fireEvent.click(screen.getByRole('button', { name: 'Assignment saved' }));
+  await waitFor(() => expect(mocks.load).toHaveBeenCalledTimes(2));
+  await screen.findByText('A-1 · Customer A issue');
+  fireEvent.click(screen.getByRole('button', { name: 'Assignment unavailable' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('coManaged.ticket.loadError');
+  expect(screen.queryByText('A-1 · Customer A issue')).toBeNull();
 });

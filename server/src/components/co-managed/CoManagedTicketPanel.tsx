@@ -7,6 +7,7 @@ import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { getCoManagedTicketScreenAction, getSharedTicketHandoffHistoryAction, type CoManagedTicketScreenTarget } from '@/lib/actions/coManagedSharedWorkActions';
 import CoManagedTicketEditor from './CoManagedTicketEditor';
 import CoManagedTicketConversation from './CoManagedTicketConversation';
+import CoManagedTicketAssignment from './CoManagedTicketAssignment';
 import CoManagedHandoffComposer, { type HandoffAction } from './CoManagedHandoffComposer';
 
 type Screen = Awaited<ReturnType<typeof getCoManagedTicketScreenAction>>;
@@ -33,6 +34,7 @@ function TicketPanel({ target, showSummary }: { target: CoManagedTicketScreenTar
   const generation = useRef(0);
   const historyRequest = useRef(false);
   function reload() { generation.current++; setScreen(null); setAction(null); setRefresh(value => value + 1); }
+  function unavailable() { generation.current++; setScreen(null); setAction(null); setHistory({ items: [], nextBeforeRevision: null }); setError(true); }
   useEffect(() => {
     const current = ++generation.current;
     setError(false); setHistoryError(false); setHistory({ items: [], nextBeforeRevision: null });
@@ -79,6 +81,7 @@ function TicketPanel({ target, showSummary }: { target: CoManagedTicketScreenTar
           {screen.canRevoke && <Button id="co-ticket-revoke" variant="outline" onClick={() => setAction('revoke')}>{t('coManaged.ticket.revoke')}</Button>}
         </div>}
       {showSummary && screen.side === 'sponsor' && <CoManagedTicketEditor resource={screen.summary.resource} onSaved={reload} onReload={reload} />}
+      <CoManagedTicketAssignment resource={screen.summary.resource} onSaved={reload} onReload={reload} onUnavailable={unavailable} />
       <CoManagedTicketConversation resource={screen.summary.resource} />
       <section className="space-y-3" aria-labelledby="co-ticket-history-title">
         <h2 id="co-ticket-history-title" className="font-semibold">{t('coManaged.ticket.history')}</h2>
