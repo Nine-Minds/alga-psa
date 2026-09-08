@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import { joinTimeEntryBillingWorkContext } from './timeEntryWorkContext';
 import { toISODate, toPlainDate } from '@alga-psa/core';
 import type { ISO8601String } from '@alga-psa/types';
 import {
@@ -114,10 +115,9 @@ async function loadWindowRecords(params: {
     .filter((projectId: unknown): projectId is string => typeof projectId === 'string');
 
   const timeQuery = db.table<any>('time_entries');
-  db.tenantJoin(timeQuery, 'project_tasks', 'time_entries.work_item_id', 'project_tasks.task_id', { type: 'left' });
-  db.tenantJoin(timeQuery, 'project_phases', 'project_tasks.phase_id', 'project_phases.phase_id', { type: 'left' });
-  db.tenantJoin(timeQuery, 'projects', 'project_phases.project_id', 'projects.project_id', { type: 'left' });
-  db.tenantJoin(timeQuery, 'tickets', 'time_entries.work_item_id', 'tickets.ticket_id', { type: 'left' });
+  // Reconciliation must see the same owner/type-qualified work and local
+  // billing default as charge calculation, including retained MSP references.
+  joinTimeEntryBillingWorkContext(trx, tenant, timeQuery);
 
   const timeEntriesQuery = timeQuery
       .where('time_entries.tenant', tenant)
@@ -128,13 +128,11 @@ async function loadWindowRecords(params: {
       .where('time_entries.billable_duration', '>', 0)
       .where('time_entries.start_time', '>=', windowStart)
       .where('time_entries.end_time', '<', windowEnd)
-      .where(function (this: Knex.QueryBuilder) {
-        this.where('projects.client_id', clientId).orWhere('tickets.client_id', clientId);
-      });
+      .where('billing_work.client_id', clientId);
   if (fixedPriceProjectIds.length > 0) {
     timeEntriesQuery.where(function (this: Knex.QueryBuilder) {
-      this.whereNull('projects.project_id').orWhereNotIn(
-        'projects.project_id',
+      this.whereNull('billing_work.project_id').orWhereNotIn(
+        'billing_work.project_id',
         fixedPriceProjectIds,
       );
     });
@@ -145,7 +143,7 @@ async function loadWindowRecords(params: {
         'time_entries.entry_id',
         'time_entries.service_id',
         'time_entries.start_time',
-        trx.raw('COALESCE(tickets.billing_profile_id, projects.billing_profile_id) as work_item_billing_profile_id'),
+        'billing_work.billing_profile_id as work_item_billing_profile_id',
       ),
     db.table<any>('usage_tracking')
       .where({
