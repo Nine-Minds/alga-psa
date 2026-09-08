@@ -12,7 +12,7 @@ export function registerCoManagedPortableOperationalCases(getDb: () => Knex, cre
     const f = await createFixture(), db = getDb(), tenant = f.actor.tenant, user = f.actor.userId;
     const periodId = randomUUID(), sheetId = randomUUID(), entryId = randomUUID(), scheduleId = randomUUID(), hoursId = randomUUID(), policyId = randomUUID();
     await f.customer.table('time_periods').insert({ tenant, period_id: periodId, start_date: '2026-09-07', end_date: '2026-09-14' });
-    await f.customer.table('time_sheets').insert({ tenant, id: sheetId, user_id: user, period_id: periodId, approval_status: 'DRAFT' });
+    await f.customer.table('time_sheets').insert({ tenant, id: sheetId, user_id: user, period_id: periodId, approval_status: 'DRAFT', notes: 'Customer whole-sheet notes' });
     await f.customer.table('time_entries').insert({ tenant, entry_id: entryId, user_id: user, time_sheet_id: sheetId,
       work_item_id: f.resource.id, work_item_type: 'ticket', notes: 'Customer operational time', start_time: '2026-09-08T09:00:00Z', end_time: '2026-09-08T10:00:00Z',
       billable_duration: 0, approval_status: 'DRAFT', work_date: '2026-09-08', work_timezone: 'America/New_York', created_by: user, updated_by: user });
@@ -38,6 +38,7 @@ export function registerCoManagedPortableOperationalCases(getDb: () => Knex, cre
     expect(result.records.time_entries.find((row: any) => row.entry_id === f.entryId)).toMatchObject({ notes: 'Customer operational time', work_item_id: f.resource.id, work_timezone: 'America/New_York' });
     const entry = result.records.time_entries.find((row: any) => row.entry_id === f.entryId);
     expect((Date.parse(entry.end_time) - Date.parse(entry.start_time)) / 60000).toBe(60);
+    expect(result.records.time_sheets.find((row: any) => row.id === f.sheetId)?.notes).toBe('Customer whole-sheet notes');
     expect(result.records.time_sheet_comments.map((row: any) => row.comment)).toContain('Customer review comment');
     expect(result.records.time_entry_change_requests.map((row: any) => row.comment)).toContain('Customer change request');
     expect(result.records.schedule_entries.find((row: any) => row.entry_id === f.scheduleId)).toMatchObject({ is_private: true, title: 'Customer ticket appointment' });
