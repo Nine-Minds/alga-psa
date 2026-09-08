@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { CoManagedDelegatedAdministrationLink } from './CoManagedDelegatedAdministrationLink';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CoManagedCustomerScope, CoManagedStaffAssignment } from '@alga-psa/co-managed';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -132,6 +133,7 @@ export default function CoManagedPolicyPanel({ operationId }: { operationId?: st
     {state && <Card><CardHeader><CardTitle>{state.counterpartName || t('coManaged.policy.title')}</CardTitle></CardHeader>
       <CardContent key={operationId || 'home'} className="space-y-5">
         <p>{t(`coManaged.policy.${state.side}Description`)}</p>
+        <CoManagedDelegatedAdministrationLink operationId={operationId} />
         {!state.canExpand && <p role="status">{t('coManaged.policy.readOnly')}</p>}
         {state.side === 'customer' ? <>
           <Link href="/msp/co-management/ticket-access" className="text-primary underline">{t('coManaged.grants.title')}</Link>

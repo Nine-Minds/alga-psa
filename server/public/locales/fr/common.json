@@ -55,7 +55,8 @@
     "settings": "Paramètres",
     "profile": "Profil",
     "logout": "Déconnexion",
-    "help": "Aide"
+    "help": "Aide",
+    "coManagedDelegation": "Administration déléguée"
   },
   "actions": {
     "save": "Enregistrer",

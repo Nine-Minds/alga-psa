@@ -138,3 +138,5 @@ export * from './ticketRoutingNotifications';
 export * from './ticketRoutingEmailDeliveries';
 
 export * from './requesterTaskConversation';
+
+export * from './delegatedAdministration';

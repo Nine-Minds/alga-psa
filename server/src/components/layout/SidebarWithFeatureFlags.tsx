@@ -201,6 +201,8 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
           !item.requiredPermission || userPermissions.includes(item.requiredPermission))
         .filter((item) => item.href !== '/msp/co-managed' || (coManagedEnabled && isPro))
         .filter((item) => item.href !== '/msp/co-management' || (coManagedEnabled && productCode === 'co_managed'))
+        .filter((item) => item.href !== '/msp/co-management/administration' || (coManagedEnabled &&
+          (productCode === 'co_managed' ? userPermissions.includes('co_management:manage') : isPro)))
         .filter((item) => item.name !== 'Marketing' || marketingEnabled)
         .filter((item) => item.name !== 'Passwords' || credentialsVaultEnabled)
         .map((item) => {

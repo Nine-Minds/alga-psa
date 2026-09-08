@@ -55,7 +55,8 @@
     "settings": "Configuración",
     "profile": "Perfil",
     "logout": "Cerrar sesión",
-    "help": "Ayuda"
+    "help": "Ayuda",
+    "coManagedDelegation": "Administración delegada"
   },
   "actions": {
     "save": "Guardar",

@@ -67,7 +67,8 @@
     "settings": "Ustawienia",
     "profile": "Profil",
     "logout": "Wyloguj",
-    "help": "Pomoc"
+    "help": "Pomoc",
+    "coManagedDelegation": "Administracja delegowana"
   },
   "actions": {
     "save": "Zapisz",

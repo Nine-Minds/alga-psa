@@ -55,7 +55,8 @@
     "settings": "Impostazioni",
     "profile": "Profilo",
     "logout": "Esci",
-    "help": "Aiuto"
+    "help": "Aiuto",
+    "coManagedDelegation": "Amministrazione delegata"
   },
   "actions": {
     "save": "Salva",

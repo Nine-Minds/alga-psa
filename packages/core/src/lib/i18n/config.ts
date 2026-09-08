@@ -258,7 +258,7 @@ export const ROUTE_NAMESPACES = {
   '/msp/platform-updates': ['common', 'msp/core', 'msp/profile'],
   '/msp/extensions': ['common', 'msp/core', 'msp/extensions'],
   '/msp/co-managed': ['common', 'msp/core', 'msp/licensing'],
-  '/msp/co-management': ['common', 'msp/core', 'msp/licensing'],
+  '/msp/co-management': ['common', 'msp/core', 'msp/licensing', 'features/co-management-delegation'],
   '/msp/licenses': ['common', 'msp/core', 'msp/licensing'],
   '/msp/account': ['common', 'msp/core', 'msp/account', 'msp/licensing'],
   '/msp/add-ons': ['common', 'msp/core', 'msp/account', 'msp/licensing'],

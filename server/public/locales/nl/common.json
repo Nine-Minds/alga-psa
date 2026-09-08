@@ -55,7 +55,8 @@
     "settings": "Instellingen",
     "profile": "Profiel",
     "logout": "Afmelden",
-    "help": "Hulp"
+    "help": "Hulp",
+    "coManagedDelegation": "Gedelegeerd beheer"
   },
   "actions": {
     "save": "Opslaan",
