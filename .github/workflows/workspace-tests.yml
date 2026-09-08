@@ -111,6 +111,9 @@ jobs:
         suite: [workspace-unit, workspace-runtime, server-colocated, nx-tooling, ui-kit-showcase]
     env:
       VITEST_SEED: '20260610'
+      # Nx graph/config tests do not launch a browser. Avoid Puppeteer's
+      # unrelated Chrome download (which failed with ECONNRESET in CI).
+      PUPPETEER_SKIP_DOWNLOAD: ${{ matrix.suite == 'nx-tooling' && 'true' || 'false' }}
       STORAGE_S3_ENDPOINT: http://127.0.0.1:59000
       STORAGE_S3_REGION: us-east-1
       STORAGE_S3_BUCKET: alga-regression-bundles

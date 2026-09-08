@@ -34,6 +34,9 @@ test('real Playwright discovery catches additions, moves, empty files and broken
   assert.equal(report.exitCode, 0);
   assert.equal(discoverBrowserTests(root, [report]).status, 'passed');
   assert.equal(discoverBrowserTests(root, [report]).executionVerified, false);
+  write('e2e-tests/upgrade-tests/retained.spec.js', body);
+  assert.deepEqual(discoverBrowserTests(root, [collect()]).unmatched, ['e2e-tests/upgrade-tests/retained.spec.js']);
+  rmSync(path.join(root, 'e2e-tests/upgrade-tests/retained.spec.js'));
   write('outside/new.playwright.test.js', body);
   assert.deepEqual(discoverBrowserTests(root, [collect()]).unmatched, ['outside/new.playwright.test.js']);
   renameSync(path.join(root, 'covered/base.playwright.test.js'), path.join(root, 'outside/moved.playwright.test.js'));
