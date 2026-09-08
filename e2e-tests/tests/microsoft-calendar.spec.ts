@@ -64,7 +64,7 @@ if (process.env.E2E_EDITION !== 'enterprise') {
         const config = await database('microsoft_calendar_provider_config').where(providerScope).first();
         const subscriptions = await emulators.state<Array<{ id: string; notificationUrl: string; resource: string }>>('msgraph', 'subscriptions');
         expect(subscriptions).toContainEqual(expect.objectContaining({ id: config.webhook_subscription_id,
-          notificationUrl: 'https://calendar-callback:3443/api/calendar/webhooks/microsoft', resource: '/me/calendar/events' }));
+          notificationUrl: `${process.env.E2E_CALENDAR_CALLBACK_BASE_URL || 'https://calendar-callback:3443'}/api/calendar/webhooks/microsoft`, resource: '/me/calendar/events' }));
 
         // Exercise outbound creation and deletion through the shipped calendar,
         // before the separate inbound event/recovery journey below.
@@ -74,14 +74,10 @@ if (process.env.E2E_EDITION !== 'enterprise') {
         const noonSlot = todayColumn.locator('.rbc-time-slot').nth(24);
         await noonSlot.scrollIntoViewIfNeeded();
         const slotBounds = await noonSlot.boundingBox();
-        const columnBounds = await todayColumn.boundingBox();
-        if (!slotBounds || !columnBounds) throw new Error('Today calendar column and noon slot must be visible');
-        // The event layer covers the visual slot grid. Click its owning day
-        // column at noon so the real calendar selection handler receives input.
-        await todayColumn.click({ position: {
-          x: slotBounds.x + slotBounds.width / 2 - columnBounds.x,
-          y: slotBounds.y + slotBounds.height / 2 - columnBounds.y,
-        } });
+        if (!slotBounds) throw new Error('Today noon slot must be visible');
+        // Click the measured viewport point. locator.click on the entire day
+        // column scrolls that tall element again and invalidates slot coordinates.
+        await page.mouse.click(slotBounds.x + slotBounds.width / 2, slotBounds.y + slotBounds.height / 2);
         const newEntryDialog = page.getByRole('dialog', { name: 'New Entry', exact: true });
         await newEntryDialog.locator('#title').fill(outboundTitle);
         await newEntryDialog.locator('#save-entry-btn').click();
