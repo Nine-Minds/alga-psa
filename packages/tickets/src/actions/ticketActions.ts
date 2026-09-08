@@ -3,6 +3,7 @@
 import { publishNativeCommentEvent, publishNativeCommentWorkflowEvent } from '../lib/nativeConversationEvents';
 
 import { assertCoManagedOperationalWrite, withCoManagedOperationalTransaction } from '@alga-psa/licensing';
+import { recordCoManagedTicketResolution, recordCoManagedTicketReopened } from '@alga-psa/co-managed';
 
 import type {
   ITicket,
@@ -1030,12 +1031,14 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
           .where({ ticket_id: id })
           .update({ closed_at: occurredAt, closed_by: user.user_id });
         updatedTicket.closed_at = occurredAt;
+        await recordCoManagedTicketResolution(trx, tenant, id);
         updatedTicket.closed_by = user.user_id;
       } else if (!newStatus?.is_closed && oldStatus?.is_closed) {
         await tenantScopedTable(trx, 'tickets', tenant)
           .where({ ticket_id: id })
           .update({ closed_at: null, closed_by: null });
         updatedTicket.closed_at = null;
+        await recordCoManagedTicketReopened(trx, tenant, id);
         updatedTicket.closed_by = null;
       }
 

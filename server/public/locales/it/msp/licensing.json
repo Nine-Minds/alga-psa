@@ -463,7 +463,8 @@
         "forbidden": "Il tuo accesso a questo ticket è cambiato. Ricarica per continuare.",
         "readOnly": "Questo spazio è di sola lettura. Ricarica per visualizzarne lo stato attuale.",
         "closeRules": "Il ticket deve soddisfare i requisiti di chiusura della sua bacheca prima di poter essere chiuso.",
-        "unknownOutcome": "Non è stato possibile confermare il salvataggio. Riprova con la stessa richiesta oppure scarta le modifiche e ricarica."
+        "unknownOutcome": "Non è stato possibile confermare il salvataggio. Riprova con la stessa richiesta oppure scarta le modifiche e ricarica.",
+        "slaSetupRequired": "Il MSP deve configurare la policy SLA e la corrispondenza delle priorità prima di riaprire questo ticket sotto la propria responsabilità."
       }
     },
     "queue": {

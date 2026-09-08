@@ -162,6 +162,8 @@ export async function editCoManagedTicket(db: Knex, inputActor: CoManagedSession
         const previous = await owner.table('co_management_command_receipts').where('operation_id', request.operationId).forShare().first();
         if (previous) {
           if (previous.request_hash !== hash) throw new CoManagedTicketEditError('TICKET_EDIT_OPERATION_CONFLICT');
+          await assertCoManagedSessionUnexpired(context.trx, actor);
+          await assertCoManagedOperationalWrite(context.trx, resource.tenant);
           return { operationId: request.operationId, appliedAt: normalizeValue(previous.applied_at)! };
         }
         if (Object.entries(request.expected).some(([field, value]) => normalizeValue(row[field]) !== value)) throw new CoManagedTicketEditError('TICKET_EDIT_CONFLICT');
@@ -182,6 +184,7 @@ export async function editCoManagedTicket(db: Knex, inputActor: CoManagedSession
           relationship_id: resource.relationshipId, resource_type: 'ticket', resource_id: resource.id, actor_tenant: actor.tenant,
           actor_user_id: actor.userId, command_type: 'ticket_edit', request_hash: hash, applied_at: context.trx.raw('clock_timestamp()'),
         }).returning('applied_at');
+        await assertWriteAuthority(context.trx);
         return { operationId: request.operationId, appliedAt: normalizeValue(receipt.applied_at)! };
       }));
   } catch (error) {

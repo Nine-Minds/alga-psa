@@ -15991,3 +15991,169 @@ it('handoff SLA and responsibility both roll back when the initiating session ex
     for (const table of ['co_managed_ticket_references', 'sla_organization_obligations', 'sla_organization_events']) expect(await f.sponsor.table(table)).toEqual([]);
   } finally { await db.raw('DROP TRIGGER expire_sla_handoff_session ON co_management_ticket_handoffs'); await db.raw('DROP FUNCTION expire_sla_handoff_session()'); }
 });
+
+it.each(['requester', 'shared_it'] as const)('MSP SLA response counts the first actual %s reply, not customer or MSP-private notes', async audience => withCommentCreationFixture(async f => {
+  const before = await f.sponsor.table('sla_organization_obligations').first();
+  await f.create(f.customerPrincipal, { operationId: randomUUID(), audience, text: 'Customer troubleshooting' });
+  const { mutateCoManagedPrivateTicketComment } = await import('../../../../packages/co-managed/src/privateTicketConversation');
+  await mutateCoManagedPrivateTicketComment(db, f.principal, f.resource, { operationId: randomUUID(), kind: 'create', text: 'MSP private diagnosis' });
+  expect(await f.sponsor.table('sla_organization_obligations').first()).toEqual(before);
+  const request = { operationId: randomUUID(), audience, text: 'MSP response' };
+  const first = await f.create(f.principal, request);
+  const after = await f.sponsor.table('sla_organization_obligations').first();
+  expect(after).toMatchObject({ revision: 2, clock: { response: { breached: false, completedAt: expect.any(String), completedElapsedMilliseconds: expect.any(Number) }, resolution: { completedAt: null } } });
+  const comment = await f.customer.table('comments').where('comment_id', first.commentId).first();
+  expect(Date.parse(after.clock.response.completedAt)).toBeGreaterThanOrEqual(new Date(comment.created_at).getTime());
+  expect(Date.parse(after.clock.response.completedAt)).toBeLessThanOrEqual(Date.parse(first.appliedAt));
+  expect(await f.create(f.principal, request)).toEqual(first);
+  await f.create(f.principal, { operationId: randomUUID(), parent: { storeTenant: first.storeTenant, threadId: first.threadId, commentId: first.commentId }, text: 'Further information' });
+  expect(await f.sponsor.table('sla_organization_obligations').first()).toEqual(after);
+  expect(await f.sponsor.table('sla_organization_events').where('event_type', 'responded')).toEqual([expect.objectContaining({ operation_id: first.commentId,
+    event: expect.objectContaining({ actorTenant: f.principal.tenant, audience }) })]);
+}));
+
+it('MSP SLA response while handed back records the paused elapsed time without restarting responsibility', async () => withCommentCreationFixture(async f => {
+  const { handBackCoManagedTicket } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  await handBackCoManagedTicket(db, f.principal, f.resource, { operationId: randomUUID(), expectedRevision: 1, note: 'Customer is checking' });
+  const paused = await f.sponsor.table('sla_organization_obligations').first();
+  await f.create(f.principal, { operationId: randomUUID(), audience: 'shared_it', text: 'Additional guidance' });
+  const updated = await f.sponsor.table('sla_organization_obligations').first();
+  expect(updated.clock).toMatchObject({ pauseReasons: ['customer_responsible'], elapsedMilliseconds: paused.clock.elapsedMilliseconds,
+    response: { completedElapsedMilliseconds: paused.clock.elapsedMilliseconds }, resolution: { completedAt: null, dueAt: null } });
+  expect((await f.customer.table('co_management_ticket_work').first()).responsibility).toBe('customer');
+}));
+
+it('MSP SLA response and published comment roll back together if the author expires at the final receipt', async () => withCommentCreationFixture(async f => {
+  const original = await f.sponsor.table('sla_organization_obligations').first();
+  await db.raw(`CREATE FUNCTION expire_sla_comment_session() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN UPDATE sessions SET expires_at = to_timestamp(0) WHERE tenant = '${f.principal.tenant}'::uuid AND session_id = '${f.principal.sessionId}'::uuid; RETURN NEW; END $$`);
+  await db.raw("CREATE TRIGGER expire_sla_comment_session AFTER INSERT ON co_management_command_receipts FOR EACH ROW WHEN (NEW.command_type = 'ticket_comment_create') EXECUTE FUNCTION expire_sla_comment_session()");
+  try {
+    await expect(f.create(f.principal, { operationId: randomUUID(), audience: 'requester', text: 'Uncommitted response' }))
+      .rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    expect(await f.sponsor.table('sla_organization_obligations').first()).toEqual(original);
+    expect(await f.sponsor.table('sla_organization_events').where('event_type', 'responded')).toEqual([]);
+    expect(await f.customer.table('comments')).toEqual([]);
+  } finally { await db.raw('DROP TRIGGER expire_sla_comment_session ON co_management_command_receipts'); await db.raw('DROP FUNCTION expire_sla_comment_session()'); }
+}));
+
+it.each(['customer', 'msp'] as const)('MSP SLA resolution closes during handback when %s closes the canonical ticket', async side => withSharedTicketMutationFixture(async f => {
+  const { handBackCoManagedTicket } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  await handBackCoManagedTicket(db, f.principal, f.resource, { operationId: randomUUID(), expectedRevision: 1, note: 'Please verify the fix' });
+  const paused = await f.sponsor.table('sla_organization_obligations').first();
+  if (side === 'msp') await f.mutate({ status_id: f.closedStatusId });
+  else {
+    const { updateTicketInTransaction } = await import('../../../../packages/tickets/src/actions/optimizedTicketActions');
+    const localUser = await f.customer.table('users').where('user_id', f.customerPrincipal.userId).first();
+    await db.transaction(trx => updateTicketInTransaction(trx, localUser, f.resource.tenant, f.resource.id, { status_id: f.closedStatusId }));
+  }
+  const resolved = await f.sponsor.table('sla_organization_obligations').first();
+  expect(resolved.clock).toMatchObject({ elapsedMilliseconds: paused.clock.elapsedMilliseconds,
+    resolution: { completedAt: expect.any(String), completedElapsedMilliseconds: paused.clock.elapsedMilliseconds, breached: false }, response: { completedAt: null } });
+  expect((await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).is_closed).toBe(true);
+  expect(await f.sponsor.table('sla_organization_events').where('event_type', 'resolved')).toHaveLength(1);
+  await f.mutate({ title: 'Resolved issue' });
+  expect(await f.sponsor.table('sla_organization_obligations').first()).toEqual(resolved);
+}));
+
+it('MSP SLA resolution preserves the frozen obligation after all ticket visibility is revoked', async () => withSharedTicketMutationFixture(async f => {
+  const { revokeCoManagedTicketGrant } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  await revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource, { operationId: randomUUID(), expectedRevision: 1, note: 'Keep this ticket private' });
+  const frozen = await f.sponsor.table('sla_organization_obligations').first();
+  const { updateTicketInTransaction } = await import('../../../../packages/tickets/src/actions/optimizedTicketActions');
+  const localUser = await f.customer.table('users').where('user_id', f.customerPrincipal.userId).first();
+  await db.transaction(trx => updateTicketInTransaction(trx, localUser, f.resource.tenant, f.resource.id, { status_id: f.closedStatusId }));
+  expect(await f.sponsor.table('sla_organization_obligations').first()).toEqual(frozen);
+  expect(await f.sponsor.table('sla_organization_events').where('event_type', 'resolved')).toEqual([]);
+  const { escalateCoManagedTicket } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  const shared = await escalateCoManagedTicket(db, f.customerPrincipal, f.resource,
+    { operationId: randomUUID(), expectedRevision: 2, note: 'Share the completed result' });
+  const resolved = await f.sponsor.table('sla_organization_obligations').first();
+  expect(resolved.clock).toMatchObject({ elapsedMilliseconds: frozen.clock.elapsedMilliseconds,
+    resolution: { completedAt: shared.occurredAt, completedElapsedMilliseconds: frozen.clock.elapsedMilliseconds } });
+
+}));
+
+it('MSP SLA resolution rolls back with canonical close validation and transaction failures', async () => withSharedTicketMutationFixture(async f => {
+  const original = await f.sponsor.table('sla_organization_obligations').first();
+  await f.customer.table('board_close_rules').insert({ tenant: f.resource.tenant, board_id: f.operation.customer_board_id, require_resolution_comment: true });
+  await expect(f.mutate({ status_id: f.closedStatusId })).rejects.toMatchObject({ name: 'TicketCloseValidationError' });
+  expect(await f.sponsor.table('sla_organization_obligations').first()).toEqual(original);
+  await f.customer.table('board_close_rules').del();
+  await expect(f.mutate({ status_id: f.closedStatusId }, undefined, async () => { throw new Error('Rollback close'); })).rejects.toThrow('Rollback close');
+  expect(await f.sponsor.table('sla_organization_obligations').first()).toEqual(original);
+  expect(await f.sponsor.table('sla_organization_events').where('event_type', 'resolved')).toEqual([]);
+}));
+
+it('MSP SLA reopen creates a new obligation only for a genuine reopening while MSP remains responsible', async () => withSharedTicketMutationFixture(async f => {
+  const ticket = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  const original = await f.sponsor.table('sla_organization_obligations').first();
+  await f.mutate({ status_id: f.closedStatusId });
+  const closed = await f.sponsor.table('sla_organization_obligations').first();
+  expect(closed.clock.resolution.completedAt).not.toBeNull();
+  await f.mutate({ status_id: ticket.status_id });
+  const rows = await f.sponsor.table('sla_organization_obligations').orderBy('generation');
+  expect(rows).toHaveLength(2); expect(rows[0]).toEqual(closed);
+  expect(rows[1]).toMatchObject({ generation: 2, work_id: original.work_id, clock: { elapsedMilliseconds: 0, response: { completedAt: null }, resolution: { completedAt: null } } });
+  expect(rows[1].obligation_id).not.toBe(original.obligation_id);
+  expect(Date.parse(rows[1].clock.startedAt)).toBeGreaterThanOrEqual(Date.parse(closed.clock.resolution.completedAt));
+  await f.mutate({ status_id: ticket.status_id });
+  expect(await f.sponsor.table('sla_organization_obligations').orderBy('generation')).toEqual(rows);
+  expect(await f.customer.table('co_management_ticket_handoffs')).toHaveLength(1);
+}));
+
+it('MSP SLA reopen under customer responsibility waits for a fresh escalation', async () => withSharedTicketMutationFixture(async f => {
+  const ticket = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  const { handBackCoManagedTicket, escalateCoManagedTicket } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  await handBackCoManagedTicket(db, f.principal, f.resource, { operationId: randomUUID(), expectedRevision: 1, note: 'Customer validates' });
+  await f.mutate({ status_id: f.closedStatusId });
+  const closed = await f.sponsor.table('sla_organization_obligations').first();
+  await f.mutate({ status_id: ticket.status_id });
+  expect(await f.sponsor.table('sla_organization_obligations')).toEqual([closed]);
+  const escalation = await escalateCoManagedTicket(db, f.customerPrincipal, f.resource, { operationId: randomUUID(), expectedRevision: 2, note: 'MSP please re-investigate' });
+  const rows = await f.sponsor.table('sla_organization_obligations').orderBy('generation');
+  expect(rows).toHaveLength(2); expect(rows[0]).toEqual(closed);
+  expect(rows[1]).toMatchObject({ generation: 2, clock: { startedAt: escalation.occurredAt, elapsedMilliseconds: 0, resolution: { completedAt: null } } });
+}));
+
+it('MSP SLA reopen rolls back on missing setup and leaves the closed obligation intact', async () => withSharedTicketMutationFixture(async f => {
+  const ticket = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  await f.mutate({ status_id: f.closedStatusId });
+  const closed = await f.sponsor.table('sla_organization_obligations').first();
+  await f.sponsor.table('co_managed_sla_priority_mappings').del();
+  await expect(f.mutate({ status_id: ticket.status_id })).rejects.toMatchObject({ code: 'CO_MANAGED_SLA_SETUP_REQUIRED' });
+  expect(await f.sponsor.table('sla_organization_obligations')).toEqual([closed]);
+  expect((await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).is_closed).toBe(true);
+}));
+
+it.each(['legacy', 'optimized'] as const)('MSP SLA native %s customer close/reopen actions update the independent obligation', async path => withSharedTicketMutationFixture(async f => {
+  const auth = await import('@alga-psa/auth'), dbModule = await import('@alga-psa/db');
+  const user = await f.customer.table('users').where('user_id', f.customerPrincipal.userId).first();
+  const ticket = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  const connection = vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: db, tenant: f.resource.tenant });
+  try {
+    const action = path === 'legacy' ? (await import('../../../../packages/tickets/src/actions/ticketActions')).updateTicket
+      : (await import('../../../../packages/tickets/src/actions/optimizedTicketActions')).updateTicketWithCache;
+    await auth.runWithApiKeyUser(user, () => runWithTenant(f.resource.tenant, async () => {
+      expect(await action(f.resource.id, { status_id: f.closedStatusId })).toBe('success');
+      const closed = await f.sponsor.table('sla_organization_obligations').first();
+      expect(closed.clock.resolution.completedAt).not.toBeNull();
+      expect(await action(f.resource.id, { status_id: ticket.status_id })).toBe('success');
+      const rows = await f.sponsor.table('sla_organization_obligations').orderBy('generation');
+      expect(rows).toHaveLength(2); expect(rows[0]).toEqual(closed); expect(rows[1].clock.resolution.completedAt).toBeNull();
+    }));
+  } finally { connection.mockRestore(); }
+}));
+
+it('MSP SLA shared edit checks the initiating session after its final close receipt', async () => withSharedTicketEditorFixture(async f => {
+  const before = await f.sponsor.table('sla_organization_obligations').first();
+  const ticket = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  await db.raw(`CREATE FUNCTION expire_sla_edit_session() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN UPDATE sessions SET expires_at = to_timestamp(0) WHERE tenant = '${f.principal.tenant}'::uuid AND session_id = '${f.principal.sessionId}'::uuid; RETURN NEW; END $$`);
+  await db.raw("CREATE TRIGGER expire_sla_edit_session AFTER INSERT ON co_management_command_receipts FOR EACH ROW WHEN (NEW.command_type = 'ticket_edit') EXECUTE FUNCTION expire_sla_edit_session()");
+  try {
+    await expect(f.save({ operationId: randomUUID(), expected: { status_id: ticket.status_id }, patch: { status_id: f.closedStatusId } }))
+      .rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    expect(await f.sponsor.table('sla_organization_obligations').first()).toEqual(before);
+    expect((await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).status_id).toBe(ticket.status_id);
+    expect(await f.customer.table('co_management_command_receipts').where('command_type', 'ticket_edit')).toEqual([]);
+  } finally { await db.raw('DROP TRIGGER expire_sla_edit_session ON co_management_command_receipts'); await db.raw('DROP FUNCTION expire_sla_edit_session()'); }
+}));

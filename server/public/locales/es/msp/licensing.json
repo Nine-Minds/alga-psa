@@ -463,7 +463,8 @@
         "forbidden": "Su acceso a este ticket ha cambiado. Vuelva a cargarlo para continuar.",
         "readOnly": "Este espacio es de solo lectura. Vuelva a cargarlo para ver su estado actual.",
         "closeRules": "El ticket debe cumplir los requisitos de cierre de su tablero antes de poder cerrarse.",
-        "unknownOutcome": "No pudimos confirmar si se guardó la modificación. Reintente el mismo guardado o descarte los cambios y vuelva a cargar."
+        "unknownOutcome": "No pudimos confirmar si se guardó la modificación. Reintente el mismo guardado o descarte los cambios y vuelva a cargar.",
+        "slaSetupRequired": "Su MSP debe configurar su política de SLA y la asignación de prioridades antes de reabrir este ticket bajo su responsabilidad."
       }
     },
     "queue": {

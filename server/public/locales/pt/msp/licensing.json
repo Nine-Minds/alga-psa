@@ -463,7 +463,8 @@
         "forbidden": "Seu acesso a este chamado mudou. Recarregue para continuar.",
         "readOnly": "Este espaço está em modo somente leitura. Recarregue para ver o estado atual.",
         "closeRules": "O chamado deve atender aos requisitos de encerramento do seu quadro antes de ser encerrado.",
-        "unknownOutcome": "Não foi possível confirmar o salvamento. Tente novamente com a mesma solicitação ou descarte as alterações e recarregue."
+        "unknownOutcome": "Não foi possível confirmar o salvamento. Tente novamente com a mesma solicitação ou descarte as alterações e recarregue.",
+        "slaSetupRequired": "Seu MSP precisa configurar a política de SLA e o mapeamento de prioridades antes de reabrir este chamado sob sua responsabilidade."
       }
     },
     "queue": {

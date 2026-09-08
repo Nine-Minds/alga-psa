@@ -461,7 +461,8 @@
         "forbidden": "Ihr Zugriff auf dieses Ticket hat sich geändert. Laden Sie es neu.",
         "readOnly": "Dieser Arbeitsbereich ist schreibgeschützt. Laden Sie den aktuellen Stand neu.",
         "closeRules": "Das Ticket muss die Abschlussbedingungen seines Boards erfüllen, bevor es geschlossen werden kann.",
-        "unknownOutcome": "Es konnte nicht bestätigt werden, ob die Änderung gespeichert wurde. Wiederholen Sie dieselbe Speicherung oder verwerfen Sie Ihre Änderungen und laden Sie neu."
+        "unknownOutcome": "Es konnte nicht bestätigt werden, ob die Änderung gespeichert wurde. Wiederholen Sie dieselbe Speicherung oder verwerfen Sie Ihre Änderungen und laden Sie neu.",
+        "slaSetupRequired": "Ihr MSP muss seine SLA-Richtlinie und Prioritätszuordnung konfigurieren, bevor dieses Ticket unter MSP-Verantwortung wieder geöffnet werden kann."
       }
     },
     "queue": {

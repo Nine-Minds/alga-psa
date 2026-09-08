@@ -3,7 +3,7 @@
 import { withAuth } from '@alga-psa/auth';
 import { createTenantKnex } from '@alga-psa/db';
 import { CoManagedLifecycleError } from '@alga-psa/licensing';
-import { getCoManagedTicketEditor, searchCoManagedTicketEditOptions, editCoManagedTicket,
+import { CoManagedSlaSetupError, getCoManagedTicketEditor, searchCoManagedTicketEditOptions, editCoManagedTicket,
   CoManagedTicketEditError, CoManagedSharedWorkError, type CoManagedSharedResource, type CoManagedTicketEditRequest,
   type CoManagedTicketEditReceipt } from '@alga-psa/co-managed';
 import { updateTicketInTransaction } from '@alga-psa/tickets/actions/optimizedTicketActions';
@@ -22,7 +22,7 @@ export const searchSharedTicketEditOptionsAction = withAuth(async (user, { tenan
 });
 
 export type SharedTicketEditResult = { ok: true; receipt: CoManagedTicketEditReceipt } |
-  { ok: false; code: 'invalid' | 'conflict' | 'operationConflict' | 'forbidden' | 'readOnly' | 'closeRules' | 'unknownOutcome' };
+  { ok: false; code: 'invalid' | 'conflict' | 'operationConflict' | 'forbidden' | 'readOnly' | 'closeRules' | 'slaSetupRequired' | 'unknownOutcome' };
 
 export const saveSharedTicketEditAction = withAuth(async (user, { tenant }, resource: CoManagedSharedResource,
   request: CoManagedTicketEditRequest): Promise<SharedTicketEditResult> => {
@@ -35,6 +35,7 @@ export const saveSharedTicketEditAction = withAuth(async (user, { tenant }, reso
     });
     return { ok: true, receipt };
   } catch (error) {
+    if (error instanceof CoManagedSlaSetupError) return { ok: false, code: 'slaSetupRequired' };
     if (error instanceof CoManagedSharedWorkError) return { ok: false, code: 'forbidden' };
     if (error instanceof CoManagedLifecycleError) return { ok: false, code: 'readOnly' };
     if (error instanceof TicketCloseValidationError) return { ok: false, code: 'closeRules' };

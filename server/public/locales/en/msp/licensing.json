@@ -550,7 +550,8 @@
         "forbidden": "Your access to this ticket changed. Reload to continue.",
         "readOnly": "This workspace is read-only. Reload to see its current state.",
         "closeRules": "The ticket must meet its board’s closing requirements before it can be closed.",
-        "unknownOutcome": "We could not confirm whether the edit was saved. Retry the same save, or discard your changes and reload."
+        "unknownOutcome": "We could not confirm whether the edit was saved. Retry the same save, or discard your changes and reload.",
+        "slaSetupRequired": "Your MSP must configure its SLA policy and priority mapping before this ticket can be reopened under MSP responsibility."
       }
     },
     "queue": {

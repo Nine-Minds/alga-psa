@@ -465,7 +465,8 @@
         "forbidden": "Twój dostęp do tego zgłoszenia uległ zmianie. Odśwież, aby kontynuować.",
         "readOnly": "Ten obszar jest tylko do odczytu. Odśwież, aby zobaczyć jego obecny stan.",
         "closeRules": "Przed zamknięciem zgłoszenie musi spełnić wymagania zamknięcia określone na jego tablicy.",
-        "unknownOutcome": "Nie udało się potwierdzić zapisu. Ponów to samo żądanie albo odrzuć zmiany i odśwież."
+        "unknownOutcome": "Nie udało się potwierdzić zapisu. Ponów to samo żądanie albo odrzuć zmiany i odśwież.",
+        "slaSetupRequired": "Twój MSP musi skonfigurować zasady SLA i mapowanie priorytetów, zanim zgłoszenie będzie można ponownie otworzyć pod odpowiedzialnością MSP."
       }
     },
     "queue": {

@@ -5,7 +5,7 @@ import { assertCoManagedOperationalWrite } from '@alga-psa/licensing';
 import { withCoManagedSharedWork, type CoManagedSharedResource, type CoManagedSharedWorkContext } from './sharedWork';
 import { lockCoManagedCustomerPolicy } from './policy';
 import { withCoManagedCustomerTicket } from './customerWork';
-import { applyCoManagedTicketHandoffSla } from './ticketSla';
+import { applyCoManagedTicketSlaTransition } from './ticketSla';
 import { CoManagedSharedWorkError, isCoManagedUuid, assertCoManagedSessionUnexpired, snapshotCoManagedSessionActor, lockCoManagedSessionIdentity, type CoManagedSessionActor } from './sharedWorkIdentity';
 
 export interface CoManagedTicketHandoffRequest {
@@ -84,7 +84,7 @@ async function transitionTicket(context: CoManagedSharedWorkContext, request: Co
   const occurredAt = (await trx.select({ at: trx.raw('clock_timestamp()') }).first()).at;
   const workId = work?.work_id ?? randomUUID();
   const revision = request.expectedRevision + 1;
-  await applyCoManagedTicketHandoffSla(trx, relationship, resource,
+  await applyCoManagedTicketSlaTransition(trx, relationship, resource,
     { workId, firstEscalatedAt: work?.first_escalated_at ?? null }, request.operationId, transition, occurredAt);
   if (!work) await customer.table('co_management_ticket_work').insert({ tenant: resource.tenant, ...key, work_id: workId,
     revision, responsibility, can_collaborate: true, first_escalated_at: occurredAt, last_transition_at: occurredAt });

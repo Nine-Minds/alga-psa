@@ -1,13 +1,13 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({ editor: vi.fn(), options: vi.fn(), edit: vi.fn(), core: vi.fn(), session: vi.fn(), override: vi.fn(), db: vi.fn(),
   user: { user_id: 'msp-user', tenant: 'msp-tenant', user_type: 'internal' }, knex: {},
-  Forbidden: class extends Error {}, Lifecycle: class extends Error {}, Close: class extends Error {},
+  Setup: class extends Error {}, Forbidden: class extends Error {}, Lifecycle: class extends Error {}, Close: class extends Error {},
   Edit: class extends Error { constructor(public code: string) { super(code); } },
 }));
 vi.mock('@alga-psa/auth', () => ({ withAuth: (fn: any) => (...args: any[]) => fn(mocks.user, { tenant: mocks.user.tenant }, ...args), getSession: mocks.session, getApiKeyUserOverride: mocks.override }));
 vi.mock('@alga-psa/db', () => ({ createTenantKnex: mocks.db }));
 vi.mock('@alga-psa/co-managed', () => ({ getCoManagedTicketEditor: mocks.editor, searchCoManagedTicketEditOptions: mocks.options, editCoManagedTicket: mocks.edit,
-  CoManagedSharedWorkError: mocks.Forbidden, CoManagedTicketEditError: mocks.Edit }));
+  CoManagedSlaSetupError: mocks.Setup, CoManagedSharedWorkError: mocks.Forbidden, CoManagedTicketEditError: mocks.Edit }));
 vi.mock('@alga-psa/licensing', () => ({ CoManagedLifecycleError: mocks.Lifecycle }));
 vi.mock('@alga-psa/tickets/actions/optimizedTicketActions', () => ({ updateTicketInTransaction: mocks.core }));
 vi.mock('@alga-psa/tickets/lib/validateTicketClosure', () => ({ TicketCloseValidationError: mocks.Close }));
@@ -44,7 +44,7 @@ it.each(['api', 'client', 'missing', 'foreign-session'])('rejects %s identity be
   expect(mocks.db).not.toHaveBeenCalled(); expect(mocks.edit).not.toHaveBeenCalled(); expect(mocks.core).not.toHaveBeenCalled();
 });
 it.each([
-  [new mocks.Forbidden(), 'forbidden'], [new mocks.Lifecycle(), 'readOnly'], [new mocks.Close(), 'closeRules'],
+  [new mocks.Setup(), 'slaSetupRequired'], [new mocks.Forbidden(), 'forbidden'], [new mocks.Lifecycle(), 'readOnly'], [new mocks.Close(), 'closeRules'],
   [new mocks.Edit('INVALID_TICKET_EDIT'), 'invalid'], [new mocks.Edit('TICKET_EDIT_CONFLICT'), 'conflict'],
   [new mocks.Edit('TICKET_EDIT_OPERATION_CONFLICT'), 'operationConflict'], [new Error('Lost COMMIT response'), 'unknownOutcome'],
 ])('returns a stable result for classified failures without claiming rollback on unknown outcomes', async (error, code) => {

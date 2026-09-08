@@ -463,7 +463,8 @@
         "forbidden": "Votre accès à ce ticket a changé. Rechargez pour continuer.",
         "readOnly": "Cet espace est en lecture seule. Rechargez pour consulter son état actuel.",
         "closeRules": "Le ticket doit satisfaire aux conditions de clôture de son tableau avant de pouvoir être fermé.",
-        "unknownOutcome": "Nous n’avons pas pu confirmer l’enregistrement. Réessayez avec la même demande ou abandonnez vos modifications et rechargez."
+        "unknownOutcome": "Nous n’avons pas pu confirmer l’enregistrement. Réessayez avec la même demande ou abandonnez vos modifications et rechargez.",
+        "slaSetupRequired": "Votre MSP doit configurer sa politique SLA et les correspondances de priorité avant de rouvrir ce ticket sous sa responsabilité."
       }
     },
     "queue": {

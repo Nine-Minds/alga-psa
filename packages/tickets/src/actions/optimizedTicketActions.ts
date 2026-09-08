@@ -4,6 +4,7 @@ import { publishNativeCommentEvent, publishNativeCommentWorkflowEvent } from '..
 
 import { hasCommentCollaborationAttribution } from '../lib/commentAuthorResolution';
 import { assertCoManagedOperationalWrite } from '@alga-psa/licensing';
+import { recordCoManagedTicketResolution, recordCoManagedTicketReopened } from '@alga-psa/co-managed';
 import { formatCollaborationActorName } from '@alga-psa/event-schemas/collaboration';
 import { resolveTicketMutationCollaborator, type TicketMutationCollaborationContext } from '../lib/ticketMutationActor';
 
@@ -2874,12 +2875,14 @@ export async function updateTicketInTransaction(
         .update({ closed_at: occurredAt, closed_by: closedBy });
       updatedTicket.closed_at = occurredAt;
       updatedTicket.closed_by = closedBy;
+      await recordCoManagedTicketResolution(trx, tenant, id);
     } else if (!newStatus?.is_closed && oldStatus?.is_closed) {
       await tenantScopedTable(trx, 'tickets', tenant)
         .where({ ticket_id: id })
         .update({ closed_at: null, closed_by: null });
       updatedTicket.closed_at = null;
       updatedTicket.closed_by = null;
+      await recordCoManagedTicketReopened(trx, tenant, id);
     }
 
     // Auto-apply checklist templates when the ticket's targeting attributes

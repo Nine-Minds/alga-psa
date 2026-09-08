@@ -461,7 +461,8 @@
         "forbidden": "Uw toegang tot dit ticket is gewijzigd. Vernieuw om verder te gaan.",
         "readOnly": "Deze werkruimte is alleen-lezen. Vernieuw om de huidige status te bekijken.",
         "closeRules": "Het ticket moet voldoen aan de sluitingsvereisten van het bord voordat het kan worden gesloten.",
-        "unknownOutcome": "We konden niet bevestigen of de wijziging is opgeslagen. Probeer hetzelfde verzoek opnieuw of verwerp uw wijzigingen en vernieuw."
+        "unknownOutcome": "We konden niet bevestigen of de wijziging is opgeslagen. Probeer hetzelfde verzoek opnieuw of verwerp uw wijzigingen en vernieuw.",
+        "slaSetupRequired": "Uw MSP moet het SLA-beleid en de prioriteitskoppeling configureren voordat dit ticket onder MSP-verantwoordelijkheid kan worden heropend."
       }
     },
     "queue": {
