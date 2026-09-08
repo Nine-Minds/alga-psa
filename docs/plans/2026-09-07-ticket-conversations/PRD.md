@@ -2,7 +2,7 @@
 
 - Slug: `ticket-conversations`
 - Date: 2026-09-07
-- Status: Planned from the agreed design; implementation has not begun.
+- Status: Scope planned from the agreed design; initial backend implementation is recorded in the checklists and scratchpad. The full feature remains incomplete.
 - Selected UI: **Option C — persistent conversation navigator**.
 - Dependency: [Co-Managed IT](../2026-09-06-co-managed-it-plan.md), branch `feature/co-managed-it`.
 - Checklists: [features.json](features.json), [tests.json](tests.json). Working evidence: [SCRATCHPAD.md](SCRATCHPAD.md).

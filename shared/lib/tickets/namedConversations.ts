@@ -88,7 +88,7 @@ export async function ensureDefaultTicketConversation(scope: ConversationStoreSc
     relationship_id: scope.storeTenant === scope.ticket.tenant ? null : scope.ticket.relationshipId,
     name: audience === 'requester' ? 'Requester' : audience === 'shared_it' ? 'Shared IT' : 'Internal',
     audience, transport: audience === 'requester' ? 'email' : 'internal', default_slot: audience,
-  }).onConflict(['tenant', 'ticket_tenant', 'ticket_id', 'default_slot']).ignore();
+  }).onConflict().ignore();
   const row = await scoped(scope).where('default_slot', audience).first();
   if (!row) throw new TicketConversationError('CONVERSATION_CONFLICT');
   return view(row);
@@ -149,5 +149,23 @@ export async function attachNativeRootToConversation(scope: ConversationStoreSco
   const destination = id ? await readStoredTicketConversation(scope, id) : await ensureDefaultTicketConversation(scope, audience);
   if (destination.audience !== audience) throw new TicketConversationError('CONVERSATION_FORBIDDEN');
   if (!thread.conversation_id) await owner.table('comment_threads').where('thread_id', threadId).update({ conversation_id: destination.conversationId });
+  return destination;
+}
+
+/** Private roots never cross their retained relationship or home store. */
+export async function attachPrivateRootToConversation(scope: ConversationStoreScope, threadId: string, conversationId?: string) {
+  if (scope.storeTenant === scope.ticket.tenant || !conversationUuid(threadId) || !scope.ticket.relationshipId) {
+    throw new TicketConversationError('CONVERSATION_FORBIDDEN');
+  }
+  const home = tenantDb(scope.trx, scope.storeTenant);
+  const thread = await home.table('co_management_private_threads').where({ thread_id: threadId,
+    customer_tenant: scope.ticket.tenant, relationship_id: scope.ticket.relationshipId,
+    resource_type: 'ticket', resource_id: scope.ticket.ticketId }).forUpdate().first();
+  if (!thread || thread.disclosure_operation_id) throw new TicketConversationError('CONVERSATION_FORBIDDEN');
+  if (conversationId && thread.conversation_id && thread.conversation_id !== conversationId) throw new TicketConversationError('CONVERSATION_CONFLICT');
+  const id = conversationId || thread.conversation_id;
+  const destination = id ? await readStoredTicketConversation(scope, id) : await ensureDefaultTicketConversation(scope, 'organization_private');
+  if (destination.audience !== 'organization_private') throw new TicketConversationError('CONVERSATION_FORBIDDEN');
+  if (!thread.conversation_id) await home.table('co_management_private_threads').where('thread_id', threadId).update({ conversation_id: destination.conversationId });
   return destination;
 }

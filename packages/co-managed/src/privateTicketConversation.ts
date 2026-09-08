@@ -2,6 +2,7 @@ import { encodeConversationContent, snapshotConversationContent, type CoManagedC
 import { createHash } from 'node:crypto';
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import { attachPrivateRootToConversation } from '@alga-psa/shared/lib/tickets/namedConversations';
 import { assertCoManagedOperationalWrite } from '@alga-psa/licensing';
 import { withCoManagedSharedWork, type CoManagedSharedResource, type CoManagedSharedWorkContext } from './sharedWork';
 import { snapshotCoManagedSessionActor, assertCoManagedSessionUnexpired, isCoManagedUuid, CoManagedSharedWorkError, type CoManagedSessionActor } from './sharedWorkIdentity';
@@ -110,6 +111,8 @@ async function mutateCoManagedPrivateResourceComment(db: Knex, inputActor: CoMan
           await home.table('co_management_private_comments').where('comment_id', commentId).update({ revision, updated_at: trx.raw('clock_timestamp()'),
             ...(request.kind === 'edit' ? encodeConversationContent(request) : { deleted_at: trx.raw('clock_timestamp()') }) });
         }
+        if (resource.kind === 'ticket') await attachPrivateRootToConversation({ trx, storeTenant: actor.tenant,
+          ticket: { tenant: resource.tenant, ticketId: resource.id, relationshipId: resource.relationshipId } }, threadId);
         await home.table('co_management_private_threads').where('thread_id', threadId).update({ last_activity_at: trx.raw('clock_timestamp()') });
         await assertWrite();
         const [saved] = await home.table('co_management_private_command_receipts').insert({ tenant: actor.tenant, operation_id: request.operationId,

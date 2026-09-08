@@ -4,6 +4,7 @@ import { tenantDb } from '@alga-psa/db';
 import { assertCoManagedOperationalWrite, withCoManagedOperationalTransaction } from '@alga-psa/licensing';
 import { assertCommentThreadAudience, type CommentAudience } from '@alga-psa/shared/lib/commentAudience';
 import logger from '@alga-psa/core/logger';
+import { attachNativeRootToConversation } from '@alga-psa/shared/lib/tickets/namedConversations';
 
 function tenantScopedTable<Row extends object = Record<string, unknown>>(
   conn: Knex | Knex.Transaction,
@@ -15,6 +16,8 @@ function tenantScopedTable<Row extends object = Record<string, unknown>>(
 
 /** Internal command context, never part of a browser-supplied comment DTO. */
 export interface CommentCollaborationContext {
+  /** Authorized named destination, supplied only by the command adapter. */
+  conversationId?: string;
   ticketId: string;
   actorTenant: string;
   actorUserId: string;
@@ -219,6 +222,8 @@ const Comment = {
             });
         }
 
+        await attachNativeRootToConversation({ trx, ticket: { tenant, ticketId: comment.ticket_id }, storeTenant: tenant },
+          threadId, collaboration?.conversationId);
         return inserted.comment_id as string;
       } catch (error) {
         logger.error('Error inserting comment:', error);

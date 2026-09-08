@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import { ensureDefaultTicketConversation } from '@alga-psa/shared/lib/tickets/namedConversations';
 import { assertCoManagedOperationalWrite } from '@alga-psa/licensing';
 import { snapshotCoManagedSessionActor, assertCoManagedSessionUnexpired, isCoManagedUuid, type CoManagedSessionActor } from './sharedWorkIdentity';
 import type { CoManagedSharedResource, CoManagedSharedWorkContext } from './sharedWork';
@@ -156,7 +157,10 @@ export async function discloseCoManagedPrivateTicketThread(db: Knex, inputActor:
       }
       await assertCoManagedSessionUnexpired(trx, actor); await assertCoManagedOperationalWrite(trx, resource.tenant);
       const clock = await trx.raw('SELECT clock_timestamp() AS value'), appliedAt = (clock.rows[0].value as Date).toISOString();
-      await customer.table('comment_threads').insert({ tenant: resource.tenant, thread_id: operationId, ticket_id: resource.id, root_comment_id: operationId,
+      const destination = await ensureDefaultTicketConversation({ trx, storeTenant: resource.tenant,
+        ticket: { tenant: resource.tenant, ticketId: resource.id } }, request.audience);
+      await customer.table('comment_threads').insert({ tenant: resource.tenant, conversation_id: destination.conversationId,
+        thread_id: operationId, ticket_id: resource.id, root_comment_id: operationId,
         is_internal: request.audience !== 'requester', collaboration_audience: request.audience, reply_count: source.comments.length - 1,
         created_at: source.thread.created_at_exact, last_activity_at: appliedAt, created_by: null });
       const ordered: any[] = [], remaining = [...source.comments];

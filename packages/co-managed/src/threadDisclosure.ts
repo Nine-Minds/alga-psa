@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import { ensureDefaultTicketConversation } from '@alga-psa/shared/lib/tickets/namedConversations';
 import { assertCoManagedOperationalWrite } from '@alga-psa/licensing';
 import { resolveCommentAudience, type CommentAudience } from '@alga-psa/shared/lib/commentAudience';
 import { type CoManagedSharedResource, type CoManagedSharedWorkContext } from './sharedWork';
@@ -77,7 +78,11 @@ export async function discloseCoManagedTicketThread(db: Knex, inputActor: CoMana
       if (preview.audience === request.audience) invalid();
       await assertCoManagedSessionUnexpired(trx, actor); await assertCoManagedOperationalWrite(trx, resource.tenant);
       const clock = await trx.raw('SELECT clock_timestamp() AS value'), appliedAt: Date = clock.rows[0].value;
-      await owner.table('comment_threads').where('thread_id', request.threadId).update({ collaboration_audience: request.audience,
+      const destination = await ensureDefaultTicketConversation({ trx, storeTenant: resource.tenant,
+        ticket: { tenant: resource.tenant, ticketId: resource.id } }, request.audience);
+      // Only this confirmed disclosure may move an existing root between audience
+      // containers. Ordinary replies and text edits cannot perform that transfer.
+      await owner.table('comment_threads').where('thread_id', request.threadId).update({ conversation_id: destination.conversationId, collaboration_audience: request.audience,
         is_internal: request.audience !== 'requester', last_activity_at: appliedAt });
       await owner.table('comments').where({ thread_id: request.threadId, ticket_id: resource.id }).update({ is_internal: request.audience !== 'requester',
         updated_at: trx.raw("GREATEST(clock_timestamp(), COALESCE(updated_at, '-infinity'::timestamptz) + interval '1 microsecond')") });

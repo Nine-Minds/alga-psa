@@ -3,7 +3,7 @@
 import { withAuth } from '@alga-psa/auth';
 import { createTenantKnex } from '@alga-psa/db';
 import { listNamedTicketConversations, getNamedTicketConversation, createNamedTicketConversation, setNamedTicketConversationStatus,
-  getNamedConversationEditorDraft, saveNamedConversationEditorDraft } from '@alga-psa/co-managed';
+  getNamedConversationEditorDraft, saveNamedConversationEditorDraft, getNamedTicketConversationMessages, type CoManagedConversationCursor } from '@alga-psa/co-managed';
 import type { CoManagedConversationContent } from '@alga-psa/co-managed/conversationContent';
 import type { ConversationTicketReference, TicketConversationReference, CreateTicketConversation } from '@alga-psa/shared/lib/tickets/namedConversations';
 import type { EditorDraftSaveRequest } from '@alga-psa/shared/lib/tickets/conversationEditorDrafts';
@@ -37,4 +37,10 @@ export const saveNamedConversationEditorDraftAction = withAuth(async (user, { te
   conversation: TicketConversationReference, request: EditorDraftSaveRequest<CoManagedConversationContent>) => {
   const actor = await coManagedBrowserActor(user, tenant), { knex } = await createTenantKnex(tenant);
   return saveNamedConversationEditorDraft(knex, actor, ticket, conversation, request);
+});
+
+export const getNamedTicketConversationMessagesAction = withAuth(async (user, { tenant }, ticket: ConversationTicketReference,
+  conversation: TicketConversationReference, before?: CoManagedConversationCursor) => {
+  const actor = await coManagedBrowserActor(user, tenant), { knex } = await createTenantKnex(tenant);
+  return getNamedTicketConversationMessages(knex, actor, ticket, conversation, before);
 });

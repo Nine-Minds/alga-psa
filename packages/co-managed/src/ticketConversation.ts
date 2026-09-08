@@ -3,9 +3,10 @@ import { isCoManagedLifecycleError } from '@alga-psa/licensing';
 import { coManagedConversationBodySources as historySources, coManagedConversationAuthorSources as authorSources, coManagedConversationAttachmentSources } from './conversationPolicy';
 import { tenantDb } from '@alga-psa/db';
 import { commentAudienceSql, type CommentAudience } from '@alga-psa/shared/lib/commentAudience';
-import { withCoManagedSharedWork, type CoManagedSharedResource, type CoManagedSharedWorkContext } from './sharedWork';
+import { withCoManagedSharedWork, type CoManagedSharedResource } from './sharedWork';
 import { withCoManagedCustomerTicket } from './customerWork';
 import { snapshotCoManagedSessionActor, isCoManagedUuid, assertCoManagedSessionUnexpired, CoManagedSharedWorkError, type CoManagedSessionActor } from './sharedWorkIdentity';
+import type { NamedTicketConversation } from '@alga-psa/shared/lib/tickets/namedConversations';
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
 
 export interface CoManagedConversationCursor { createdAt: string; storeTenant: string; commentId: string }
@@ -38,7 +39,7 @@ export interface CoManagedTicketConversation {
   nextBefore: CoManagedConversationCursor | null;
 }
 const iso = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?Z$/;
-function snapshotCursor(input?: CoManagedConversationCursor): CoManagedConversationCursor | undefined {
+export function snapshotConversationCursor(input?: CoManagedConversationCursor): CoManagedConversationCursor | undefined {
   if (input === undefined) return undefined;
   if (!input || !isCoManagedUuid(input.storeTenant) || !isCoManagedUuid(input.commentId) || typeof input.createdAt !== 'string' ||
       !iso.test(input.createdAt) || !Number.isFinite(Date.parse(input.createdAt))) throw new CoManagedSharedWorkError();
@@ -48,12 +49,21 @@ function timestamp(trx: Knex.Transaction, column: string) {
   // Preserve microseconds so a cursor cannot skip comments created in the same millisecond.
   return trx.raw(`to_char(?? AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')`, [column]);
 }
-async function readConversation(context: CoManagedSharedWorkContext, cursor?: CoManagedConversationCursor): Promise<CoManagedTicketConversation> {
+/** Query engine only: callers must retain ticket and selected-conversation authority
+ * in this transaction. Native tickets use the same projection without a relationship. */
+export async function readAuthorizedTicketConversationPage(context: {
+  trx: Knex.Transaction;
+  actor: { tenant: string; userId: string };
+  sessionId: string;
+  resource: { tenant: string; id: string; relationshipId?: string };
+  redactedFields: readonly string[];
+}, cursor?: CoManagedConversationCursor, selected?: NamedTicketConversation): Promise<Pick<CoManagedTicketConversation, 'items' | 'nextBefore'>> {
   const { trx, actor, resource, redactedFields } = context;
   const foreign = actor.tenant !== resource.tenant;
-  const hideCustomer = isCoManagedReadFieldHidden(redactedFields, [...historySources, 'comments', 'comment_threads']);
-  const hidePrivate = isCoManagedReadFieldHidden(redactedFields, [...historySources, 'co_management_private_threads', 'co_management_private_comments']);
-  if (hideCustomer && (!foreign || hidePrivate)) return { resource, items: [], nextBefore: null };
+  if (!trx.isTransaction || (foreign && !resource.relationshipId)) throw new CoManagedSharedWorkError();
+  const hideCustomer = (selected !== undefined && selected.storeTenant !== resource.tenant) || isCoManagedReadFieldHidden(redactedFields, [...historySources, 'comments', 'comment_threads']);
+  const hidePrivate = (selected !== undefined && (selected.storeTenant !== actor.tenant || selected.audience !== 'organization_private')) || isCoManagedReadFieldHidden(redactedFields, [...historySources, 'co_management_private_threads', 'co_management_private_comments']);
+  if (hideCustomer && (!foreign || hidePrivate)) return { items: [], nextBefore: null };
   const customer = tenantDb(trx, resource.tenant);
   const customerName = (await customer.table('tenants').first('client_name')).client_name;
   const comments = customer.table('comments as c').where('c.ticket_id', resource.id).where('c.publish_state', 'published');
@@ -63,6 +73,11 @@ async function readConversation(context: CoManagedSharedWorkContext, cursor?: Co
   comments.where('root.publish_state', 'published');
   const audience = commentAudienceSql(trx, 't', 'root', 'c');
   if (foreign) comments.whereRaw('? IN (?, ?)', [audience, 'requester', 'shared_it']);
+  if (selected) comments.where('t.conversation_id', selected.conversationId).whereRaw('? = ?', [audience, selected.audience]);
+  else comments.where(query => query.whereNull('t.conversation_id').orWhereExists(
+    customer.table('ticket_conversations as nc').select('nc.conversation_id')
+      .whereRaw('nc.conversation_id = t.conversation_id').where({ 'nc.ticket_tenant': resource.tenant, 'nc.ticket_id': resource.id })
+      .whereNotNull('nc.default_slot').whereRaw('nc.audience = ?', [audience])));
   customer.tenantJoin(comments, 'comments as parent', 'c.parent_comment_id', 'parent.comment_id', { type: 'left',
     on: join => join.andOn('parent.thread_id', '=', 't.thread_id').andOn('parent.ticket_id', '=', 'c.ticket_id') });
   customer.tenantJoin(comments, 'collaboration_actor_references as a', 'c.actor_reference_id', 'a.actor_reference_id', { type: 'left' });
@@ -70,7 +85,9 @@ async function readConversation(context: CoManagedSharedWorkContext, cursor?: Co
   customer.tenantJoin(comments, 'contacts as contact', 'c.contact_id', 'contact.contact_name_id', { type: 'left' });
   const parentAudience = commentAudienceSql(trx, 't', 'root', 'parent');
   comments.select({ store_tenant: 'c.tenant', comment_id: 'c.comment_id', thread_id: 'c.thread_id',
-    parent_comment_id: trx.raw(`CASE WHEN parent.publish_state = 'published' AND (? = false OR ? IN ('requester', 'shared_it')) THEN parent.comment_id ELSE NULL END`, [foreign, parentAudience]),
+    parent_comment_id: selected
+      ? trx.raw(`CASE WHEN parent.publish_state = 'published' AND ? = ? THEN parent.comment_id ELSE NULL END`, [parentAudience, selected.audience])
+      : trx.raw(`CASE WHEN parent.publish_state = 'published' AND (? = false OR ? IN ('requester', 'shared_it')) THEN parent.comment_id ELSE NULL END`, [foreign, parentAudience]),
     audience, created_at: 'c.created_at', created_at_exact: timestamp(trx, 'c.created_at'), updated_at_exact: timestamp(trx, 'c.updated_at'),
     deleted_at: 'c.deleted_at', note: 'c.note', markdown: 'c.markdown_content', revision: trx.raw('NULL::integer'),
     actor_tenant: trx.raw('COALESCE(a.actor_tenant, c.tenant)'),
@@ -87,6 +104,12 @@ async function readConversation(context: CoManagedSharedWorkContext, cursor?: Co
     const privateComments = home.table('co_management_private_comments as c');
     home.tenantJoin(privateComments, 'co_management_private_threads as t', 'c.thread_id', 't.thread_id');
     privateComments.where({ 't.customer_tenant': resource.tenant, 't.relationship_id': resource.relationshipId, 't.resource_type': 'ticket', 't.resource_id': resource.id }).whereNull('t.disclosure_operation_id');
+    if (selected) privateComments.where('t.conversation_id', selected.conversationId);
+    else privateComments.where(query => query.whereNull('t.conversation_id').orWhereExists(
+      home.table('ticket_conversations as nc').select('nc.conversation_id')
+        .whereRaw('nc.conversation_id = t.conversation_id')
+        .where({ 'nc.ticket_tenant': resource.tenant, 'nc.ticket_id': resource.id, 'nc.relationship_id': resource.relationshipId!,
+          'nc.default_slot': 'organization_private' })));
     home.tenantJoin(privateComments, 'co_management_private_comments as parent', 'c.parent_comment_id', 'parent.comment_id', { type: 'left',
       on: join => join.andOn('parent.thread_id', '=', 'c.thread_id') });
     privateComments.select({ store_tenant: 'c.tenant', comment_id: 'c.comment_id', thread_id: 'c.thread_id', parent_comment_id: 'parent.comment_id',
@@ -109,7 +132,7 @@ async function readConversation(context: CoManagedSharedWorkContext, cursor?: Co
       organizationName: row.actor_organization_name, referenceId: row.actor_reference_id } }),
   }));
   const last = items.at(-1);
-  return { resource, items, nextBefore: rows.length > 25 && last ? { createdAt: last.createdAt, storeTenant: last.storeTenant, commentId: last.commentId } : null };
+  return { items, nextBefore: rows.length > 25 && last ? { createdAt: last.createdAt, storeTenant: last.storeTenant, commentId: last.commentId } : null };
 }
 
 /** Published ticket conversation only. Caller adapters supply a verified home
@@ -118,11 +141,11 @@ async function readConversation(context: CoManagedSharedWorkContext, cursor?: Co
 // LEVERAGE: pattern qualified-conversation-page — ticket and task readers combine canonical and home-private stores with exact composite cursors.
 export async function getCoManagedTicketConversation(db: Knex, inputActor: CoManagedSessionActor,
   inputResource: CoManagedSharedResource, before?: CoManagedConversationCursor): Promise<CoManagedTicketConversation> {
-  const actor = snapshotCoManagedSessionActor(inputActor), cursor = snapshotCursor(before);
+  const actor = snapshotCoManagedSessionActor(inputActor), cursor = snapshotConversationCursor(before);
   if (!inputResource || inputResource.kind !== 'ticket') throw new CoManagedSharedWorkError();
   return actor.tenant === inputResource.tenant
-    ? withCoManagedCustomerTicket(db, actor, inputResource, 'read', context => readConversation(context, cursor))
-    : withCoManagedSharedWork(db, actor, inputResource, 'read', context => readConversation(context, cursor));
+    ? withCoManagedCustomerTicket(db, actor, inputResource, 'read', async context => ({ resource: context.resource, ...await readAuthorizedTicketConversationPage(context, cursor) }))
+    : withCoManagedSharedWork(db, actor, inputResource, 'read', async context => ({ resource: context.resource, ...await readAuthorizedTicketConversationPage(context, cursor) }));
 }
 
 /** Presentation hints only; every submission repeats command authorization.

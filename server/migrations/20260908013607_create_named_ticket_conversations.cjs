@@ -45,7 +45,7 @@ exports.up = async function (knex) {
   // No message is rewritten. One audience container collects many existing roots.
   await knex.raw(`INSERT INTO ticket_conversations (tenant, ticket_tenant, ticket_id, name, audience, transport, default_slot)
     SELECT tenant, tenant, ticket_id, 'Requester', 'requester', 'email', 'requester' FROM tickets
-    ON CONFLICT (tenant, ticket_tenant, ticket_id, default_slot) DO NOTHING`);
+    ON CONFLICT DO NOTHING`);
   // Leave inconsistent legacy root/reply flags for guarded read handling rather
   // than repairing them by silently widening their audience.
   const audience = `CASE WHEN t.collaboration_audience IS NOT NULL THEN t.collaboration_audience
@@ -59,14 +59,14 @@ exports.up = async function (knex) {
       CASE ${audience} WHEN 'requester' THEN 'Requester' WHEN 'shared_it' THEN 'Shared IT' ELSE 'Internal' END,
       ${audience}, CASE WHEN ${audience} = 'requester' THEN 'email' ELSE 'internal' END, ${audience}
     FROM comment_threads t WHERE ${valid}
-    ON CONFLICT (tenant, ticket_tenant, ticket_id, default_slot) DO NOTHING`);
+    ON CONFLICT DO NOTHING`);
   await knex.raw(`UPDATE comment_threads t SET conversation_id = n.conversation_id FROM ticket_conversations n
     WHERE n.tenant = t.tenant AND n.ticket_tenant = t.tenant AND n.ticket_id = t.ticket_id
       AND n.default_slot = (${audience}) AND ${valid}`);
   await knex.raw(`INSERT INTO ticket_conversations (tenant, ticket_tenant, ticket_id, relationship_id, name, audience, transport, default_slot)
     SELECT DISTINCT tenant, customer_tenant, resource_id, relationship_id, 'Internal', 'organization_private', 'internal', 'organization_private'
     FROM co_management_private_threads WHERE resource_type = 'ticket' AND conversation_id IS NULL AND disclosure_operation_id IS NULL
-    ON CONFLICT (tenant, ticket_tenant, ticket_id, default_slot) DO NOTHING`);
+    ON CONFLICT DO NOTHING`);
   await knex.raw(`UPDATE co_management_private_threads t SET conversation_id = n.conversation_id FROM ticket_conversations n
     WHERE t.resource_type = 'ticket' AND t.conversation_id IS NULL AND t.disclosure_operation_id IS NULL
       AND n.tenant = t.tenant AND n.ticket_tenant = t.customer_tenant AND n.ticket_id = t.resource_id

@@ -16,6 +16,7 @@ import { snapshotCoManagedSessionActor, lockCoManagedSessionIdentity, assertCoMa
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
 import { coManagedConversationBodySources } from './conversationPolicy';
 import { readConversationEditorDraft, saveConversationEditorDraft, type EditorDraftSaveRequest } from '@alga-psa/shared/lib/tickets/conversationEditorDrafts';
+import { readAuthorizedTicketConversationPage, snapshotConversationCursor, type CoManagedConversationCursor } from './ticketConversation';
 import { snapshotConversationContent, type CoManagedConversationContent } from './conversationContent';
 
 interface ConversationAuthority {
@@ -112,6 +113,19 @@ export function listNamedTicketConversations(db: Knex, actor: CoManagedSessionAc
 export function getNamedTicketConversation(db: Knex, actor: CoManagedSessionActor, ticket: ConversationTicketReference, input: TicketConversationReference) {
   const reference = snapshotConversationReference(input);
   return withTicketAuthority(db, actor, ticket, 'read', async context => (await authorizedConversation(context, reference)).conversation);
+}
+/** Selection is authorized before reading; the query constrains roots before its
+ * page limit so busy sibling conversations cannot hide or leak selected messages. */
+export function getNamedTicketConversationMessages(db: Knex, actor: CoManagedSessionActor, ticket: ConversationTicketReference,
+  input: TicketConversationReference, before?: CoManagedConversationCursor) {
+  const reference = snapshotConversationReference(input), cursor = snapshotConversationCursor(before);
+  return withTicketAuthority(db, actor, ticket, 'read', async context => {
+    const { conversation } = await authorizedConversation(context, reference);
+    const page = await readAuthorizedTicketConversationPage({ trx: context.trx, actor: context.actor,
+      sessionId: context.actor.sessionId, resource: { tenant: context.ticket.tenant, id: context.ticket.ticketId,
+        relationshipId: context.ticket.relationshipId }, redactedFields: context.hidden }, cursor, conversation);
+    return { conversation, ...page };
+  });
 }
 export function createNamedTicketConversation(db: Knex, actor: CoManagedSessionActor, ticket: ConversationTicketReference, input: CreateTicketConversation) {
   const request = snapshotCreateConversation(input);
