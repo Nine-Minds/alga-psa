@@ -236,6 +236,14 @@
       "dependsOn": [],
       "owner": "calendar_review",
       "notes": "Reproduced exact package-runner failure. Test-only auth barrel isolation fixes unrelated NextAuth loading; all 90 Graph package tests and both server-runner organizer cases pass."
+    },
+    {
+      "id": "R030",
+      "title": "Make Temporal email deadline test finish and clean up deterministically",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "stripe_protocol",
+      "notes": "Explicit activity barrier, test-side time advancement and finally cleanup preserve deadline rejection. Full native engine61/61 passes; missing-deadline mutation fails promptly and still drains worker. Original CI timeout not reproduced; current CI validation remains required."
     }
   ]
 }

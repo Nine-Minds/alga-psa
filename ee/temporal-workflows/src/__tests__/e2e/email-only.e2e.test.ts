@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import type { Client } from '@temporalio/client';
 import { TestWorkflowEnvironment } from '@temporalio/testing';
-import { Context } from '@temporalio/activity';
 import { randomUUID } from 'node:crypto';
 
 vi.hoisted(() => { vi.stubEnv('EMAIL_PROVIDER', 'mock'); });
@@ -17,6 +16,10 @@ describe('Email workflow with the explicit mock email provider', () => {
   let worker: Worker;
   let workerRun: Promise<void> | undefined;
   let delayedActivityStarted = false;
+  let releaseDelayedActivity!: () => void;
+  let finishDelayedActivity!: () => void;
+  const delayedActivityRelease = new Promise<void>(resolve => { releaseDelayedActivity = resolve; });
+  const delayedActivityFinished = new Promise<void>(resolve => { finishDelayedActivity = resolve; });
   const taskQueue = `email-engine-${randomUUID()}`;
 
   beforeAll(async () => {
@@ -32,7 +35,15 @@ describe('Email workflow with the explicit mock email provider', () => {
         sendWelcomeEmail: async (input: SendWelcomeEmailActivityInput) => {
           if (input.tenantName === 'Timeout Test Tenant') {
             delayedActivityStarted = true;
-            await Context.current().sleep(60_000);
+            // Keep the activity pending until the test observes the deadline.
+            // A release barrier leaves no activity timer or test-service sleep
+            // RPC behind when result() re-locks the time-skipping clock.
+            try {
+              await delayedActivityRelease;
+              return await sendWelcomeEmail(input);
+            } finally {
+              finishDelayedActivity();
+            }
           }
           return sendWelcomeEmail(input);
         },
@@ -258,8 +269,17 @@ describe('Email workflow with the explicit mock email provider', () => {
         workflowExecutionTimeout: '1s',
       });
 
-      await expect(handle.result()).rejects.toMatchObject({ cause: { name: 'TimeoutFailure' } });
-      expect(delayedActivityStarted).toBe(true);
+      try {
+        await expect.poll(() => delayedActivityStarted).toBe(true);
+        // Advance server time explicitly while the activity is held. Await the
+        // sleep RPC before result() so its clock lock cannot strand that RPC.
+        await environment.sleep(2_000);
+        expect((await handle.describe()).status.name).toBe('TIMED_OUT');
+        await expect(handle.result()).rejects.toMatchObject({ cause: { name: 'TimeoutFailure' } });
+      } finally {
+        releaseDelayedActivity();
+        if (delayedActivityStarted) await delayedActivityFinished;
+      }
     });
   });
 });
