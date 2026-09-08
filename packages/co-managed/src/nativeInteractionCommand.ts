@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { randomUUID } from 'node:crypto';
 import type { AuthorizationSubject } from '@alga-psa/authorization';
 import { tenantDb, withTransaction, registerAfterCommit } from '@alga-psa/db';
 import { assertCoManagedOperationalWrite } from '@alga-psa/licensing';
@@ -54,6 +55,91 @@ async function retainParents(trx: Knex.Transaction, actor: CoManagedAuthenticate
   }
 }
 
+async function retainClassification(trx: Knex.Transaction, tenant: string, row: any) {
+  const owner = tenantDb(trx, tenant);
+  if (!await owner.table('interaction_types').where('type_id', row.type_id).forShare().first('type_id') && !await owner.table('system_interaction_types').where('type_id', row.type_id).forShare().first('type_id')) throw new NativeInteractionCommandError('INTERACTION_INVALID');
+  if (row.status_id && !await owner.table('statuses').where({ status_id: row.status_id, status_type: 'interaction' }).forShare().first('status_id')) throw new NativeInteractionCommandError('INTERACTION_INVALID');
+}
+
+async function assertUnlinked(trx: Knex.Transaction, tenant: string, id: string, deleting = false) {
+  const owner = tenantDb(trx, tenant);
+  const schedules = await owner.table('schedule_entries').where({ work_item_type: 'interaction', work_item_id: id }).orderBy('entry_id').forShare().select('entry_id');
+  const meetings = await owner.table('online_meetings').where('interaction_id', id).orderBy('meeting_id').forShare().select('meeting_id');
+  const effort = await owner.table('time_entries').where({ work_item_type: 'interaction', work_item_id: id }).forShare().first('entry_id');
+  const clocks = owner.table('native_time_tracking_sessions').where({ work_item_type: 'interaction', work_item_id: id });
+  // Completed tracking receipts still refer to the source after its entry is removed.
+  if (!deleting) clocks.whereNull('completed_entry_id');
+  const clock = await clocks.forShare().first('session_id');
+  if (schedules.length || meetings.length || effort || clock) throw new NativeInteractionCommandError('INTERACTION_IN_USE');
+}
+
+type InteractionPublisher = (event: { eventType: 'INTERACTION_CREATED' | 'INTERACTION_DELETED'; payload: { tenantId: string; interactionId: string; userId: string } }) => Promise<unknown>;
+
+/** Create only local operational fields; commercial relationships and provider
+ * metadata are never accepted through the interaction form. */
+export async function createCoManagedNativeInteraction(db: Knex, tenant: string, supplied: Record<string, any>,
+  identify: () => Promise<CoManagedAuthenticatedActor>, publish: InteractionPublisher) {
+  const input = structuredClone(supplied);
+  return withTransaction(db, async trx => {
+    if (!await retainCoManagedTimeCalendar(trx, tenant)) return { handled: false as const };
+    if (!input || typeof input !== 'object' || Array.isArray(input)) throw new NativeInteractionCommandError('INTERACTION_INVALID');
+    await assertCoManagedOperationalWrite(trx, tenant);
+    const actor = snapshotCoManagedAuthenticatedActor(await identify()); if (actor.tenant !== tenant) throw new CoManagedSharedWorkError();
+    const credential = await lockCoManagedLocalAuthentication(trx, actor), owner = tenantDb(trx, tenant);
+    const id = randomUUID();
+    const { next: row } = normalize(input, { interaction_date: new Date() });
+    if (!row.client_id && row.contact_name_id) {
+      // Read only a hint here; retainParents locks and verifies the contact's
+      // actual client before any insertion, using the common parent lock order.
+      row.client_id = (await owner.table('contacts').where('contact_name_id', row.contact_name_id).first('client_id'))?.client_id;
+    }
+    if (!isCoManagedUuid(row.client_id)) throw new NativeInteractionCommandError('INTERACTION_INVALID');
+    await retainParents(trx, actor, credential.subject, {}, row);
+    if (!row.status_id) {
+      row.status_id = (await owner.table('statuses').where({ status_type: 'interaction', is_default: true }).orderBy('status_id').forShare().first('status_id'))?.status_id;
+      if (!row.status_id) throw new NativeInteractionCommandError('INTERACTION_INVALID');
+    }
+    await retainClassification(trx, tenant, row);
+    for (const action of ['read', 'create']) {
+      const decision = await authorizeCoManagedLocalRecord(trx, actor, credential.subject, 'interaction', action, { id, clientId: row.client_id, ownerUserId: row.user_id });
+      if (isCoManagedReadFieldHidden(decision.redactedFields, ['tenant', 'interaction_id', ...Object.keys(row)].flatMap(key => [key, `interactions.${key}`, `values.${key}`]))) throw new CoManagedSharedWorkError();
+    }
+    await owner.table('interactions').insert({ ...row, tenant, interaction_id: id });
+    const projected = await readCoManagedNativeInteractions(trx, tenant, async () => actor, { id });
+    if (!projected.handled || projected.interactions.length !== 1) throw new CoManagedSharedWorkError();
+    await credential.assertCurrent(); await assertCoManagedOperationalWrite(trx, tenant);
+    registerAfterCommit(trx, async () => { await publish({ eventType: 'INTERACTION_CREATED', payload: { tenantId: tenant, interactionId: id, userId: actor.userId } }); }, 'native-interaction-create');
+    return { handled: true as const, interaction: projected.interactions[0] };
+  });
+}
+
+/** Deletion does not imply authority to delete linked meetings, transcripts,
+ * calendars or recorded effort. Their own lifecycle operations retain them. */
+export async function deleteCoManagedNativeInteraction(db: Knex, tenant: string, id: string,
+  identify: () => Promise<CoManagedAuthenticatedActor>, publish: InteractionPublisher) {
+  return withTransaction(db, async trx => {
+    if (!await retainCoManagedTimeCalendar(trx, tenant)) return { handled: false as const };
+    if (!isCoManagedUuid(id)) throw new NativeInteractionCommandError('INTERACTION_INVALID');
+    await assertCoManagedOperationalWrite(trx, tenant);
+    const actor = snapshotCoManagedAuthenticatedActor(await identify()); if (actor.tenant !== tenant) throw new CoManagedSharedWorkError();
+    const credential = await lockCoManagedLocalAuthentication(trx, actor), owner = tenantDb(trx, tenant);
+    const hint = await owner.table('interactions').where('interaction_id', id).first();
+    if (!hint) throw new CoManagedSharedWorkError();
+    await retainParents(trx, actor, credential.subject, hint, hint);
+    const row = await owner.table('interactions').where('interaction_id', id).forUpdate().first();
+    if (!row || identity.some(key => !same(row[key], hint[key]))) throw new CoManagedSharedWorkError();
+    for (const action of ['read', 'delete']) {
+      const decision = await authorizeCoManagedLocalRecord(trx, actor, credential.subject, 'interaction', action, { id, clientId: row.client_id, ownerUserId: row.user_id });
+      if (decision.redactedFields.length) throw new CoManagedSharedWorkError();
+    }
+    await assertUnlinked(trx, tenant, id, true);
+    await owner.table('interactions').where('interaction_id', id).del();
+    await credential.assertCurrent(); await assertCoManagedOperationalWrite(trx, tenant);
+    registerAfterCommit(trx, async () => { await publish({ eventType: 'INTERACTION_DELETED', payload: { tenantId: tenant, interactionId: id, userId: actor.userId } }); }, 'native-interaction-delete');
+    return { handled: true as const };
+  });
+}
+
 /** Actual record, current credential and both sides of a relationship change
  * are retained before mutation. Linked calendar/media/effort keeps its original
  * ownership and timing until an explicit operation handles that linked work. */
@@ -77,14 +163,9 @@ export async function updateCoManagedNativeInteraction(db: Knex, tenant: string,
       const decision = await authorizeCoManagedLocalRecord(trx, actor, credential.subject, 'interaction', action, { id, clientId: record.client_id, ownerUserId: record.user_id });
       if (isCoManagedReadFieldHidden(decision.redactedFields, ['tenant', 'interaction_id', ...changed].flatMap(key => [key, `interactions.${key}`, `values.${key}`]))) throw new CoManagedSharedWorkError();
     }
-    if (!await owner.table('interaction_types').where('type_id', next.type_id).forShare().first('type_id') && !await owner.table('system_interaction_types').where('type_id', next.type_id).forShare().first('type_id')) throw new NativeInteractionCommandError('INTERACTION_INVALID');
-    if (next.status_id && !await owner.table('statuses').where({ status_id: next.status_id, status_type: 'interaction' }).forShare().first('status_id')) throw new NativeInteractionCommandError('INTERACTION_INVALID');
+    await retainClassification(trx, tenant, next);
     if (changed.some(key => identity.includes(key) || timing.includes(key))) {
-      const schedules = await owner.table('schedule_entries').where({ work_item_type: 'interaction', work_item_id: id }).orderBy('entry_id').forShare().select('entry_id');
-      const meetings = await owner.table('online_meetings').where('interaction_id', id).orderBy('meeting_id').forShare().select('meeting_id');
-      const effort = await owner.table('time_entries').where({ work_item_type: 'interaction', work_item_id: id }).forShare().first('entry_id');
-      const clock = await owner.table('native_time_tracking_sessions').where({ work_item_type: 'interaction', work_item_id: id }).whereNull('completed_entry_id').forShare().first('session_id');
-      if (schedules.length || meetings.length || effort || clock) throw new NativeInteractionCommandError('INTERACTION_IN_USE');
+      await assertUnlinked(trx, tenant, id);
     }
     if (changed.length) await owner.table('interactions').where('interaction_id', id).update(Object.fromEntries(changed.map(key => [key, patch[key]])));
     const projected = await readCoManagedNativeInteractions(trx, tenant, async () => actor, { id });

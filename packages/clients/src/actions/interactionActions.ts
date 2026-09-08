@@ -2,7 +2,7 @@
 
 'use server'
 
-import { readCoManagedNativeInteractions, updateCoManagedNativeInteraction, NativeInteractionCommandError, CoManagedSharedWorkError } from '@alga-psa/co-managed';
+import { readCoManagedNativeInteractions, createCoManagedNativeInteraction, updateCoManagedNativeInteraction, deleteCoManagedNativeInteraction, NativeInteractionCommandError, CoManagedSharedWorkError } from '@alga-psa/co-managed';
 import { resolveInteractionBrowserActor } from '../lib/coManagedInteractionReader';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -88,6 +88,13 @@ export const addInteraction = withAuth(async (
 
   try {
     const { knex: db } = await createTenantKnex();
+    const admitted = await createCoManagedNativeInteraction(db, tenant, interactionData, () => resolveInteractionBrowserActor(user, tenant), publishEvent);
+    if (admitted.handled) {
+      revalidatePath('/msp/interactions');
+      revalidatePath('/msp/contacts/[id]', 'page');
+      revalidatePath('/msp/clients/[id]', 'page');
+      return admitted.interaction;
+    }
 
     console.log('Received interaction data:', interactionData);
 
@@ -115,6 +122,8 @@ export const addInteraction = withAuth(async (
     await publishSideEffects?.();
     return newInteraction;
   } catch (error) {
+    if (error instanceof NativeInteractionCommandError) return actionError(error.message);
+    if (error instanceof CoManagedSharedWorkError) return permissionError('Permission denied: Cannot create this interaction.');
     console.error('Error adding interaction:', error)
     const expected = interactionActionErrorFrom(error);
     if (expected) return expected;
@@ -326,6 +335,12 @@ export const deleteInteraction = withAuth(async (user, { tenant }, interactionId
   try {
     const { knex } = await createTenantKnex();
 
+    const admitted = await deleteCoManagedNativeInteraction(knex, tenant, interactionId, () => resolveInteractionBrowserActor(user, tenant), publishEvent);
+    if (admitted.handled) {
+      revalidatePath('/');
+      return;
+    }
+
     const { existing, recordingFileIds } = await withTransaction(knex, async (trx: Knex.Transaction) => {
       const db = tenantDb(trx, tenant);
 
@@ -373,6 +388,8 @@ export const deleteInteraction = withAuth(async (user, { tenant }, interactionId
 
     revalidatePath('/'); // Revalidate to update any cached data
   } catch (error) {
+    if (error instanceof NativeInteractionCommandError) return actionError(error.message);
+    if (error instanceof CoManagedSharedWorkError) return permissionError('Permission denied: Cannot delete this interaction.');
     console.error('Error deleting interaction:', error);
     const expected = interactionActionErrorFrom(error);
     if (expected) return expected;

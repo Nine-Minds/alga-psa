@@ -15440,3 +15440,82 @@ it('customer interaction edits roll back on final credential expiry and reject r
   await expect(update({ title: 'Read-only change' })).rejects.toBeDefined();
   expect(await customer.table('interactions').where('interaction_id', interactionId).first()).toMatchObject({ title: 'Customer meeting follow-up' });
 }));
+
+async function withInteractionLifecycleFixture(work: (fixture: any) => Promise<void>) {
+  return withInteractionUpdateFixture(async (fixture: any) => {
+    const { domain, customer, context, typeId, clientId, actor, events } = fixture;
+    const statusId = (await customer.table('statuses').where({ status_type: 'interaction', is_default: true }).first())?.status_id ?? randomUUID();
+    if (!await customer.table('statuses').where('status_id', statusId).first()) await customer.table('statuses').insert({ tenant: context.tenant, status_id: statusId, name: 'Completed interaction', status_type: 'interaction', is_default: true, is_closed: true, order_number: 1 });
+    const input = { type_id: typeId, user_id: context.userId, client_id: clientId, title: 'Customer phone call', notes: 'Local call notes' };
+    const create = (patch: any = {}) => domain.createCoManagedNativeInteraction(db, context.tenant, { ...input, ...patch }, actor, events);
+    const remove = (id: string) => domain.deleteCoManagedNativeInteraction(db, context.tenant, id, actor, events);
+    await work({ ...fixture, input, statusId, create, remove });
+  });
+}
+
+it('customer interaction lifecycle creates and deletes an admitted local interaction through native actions without accepting forged relationships', async () => withInteractionLifecycleFixture(async ({ actions, input, context, customer, statusId, events }: any) => {
+  const forgedId = randomUUID();
+  const created = await actions.addInteraction({ ...input, tenant: randomUUID(), interaction_id: forgedId, opportunity_id: randomUUID(), client_name: 'Forged client', online_meeting: { join_url: 'https://forged.example.invalid' } });
+  expect(created).toMatchObject({ tenant: context.tenant, title: input.title, client_id: input.client_id, user_id: context.userId, status_id: statusId, online_meeting: null });
+  expect(created.interaction_id).not.toBe(forgedId);
+  expect(await customer.table('interactions').where('interaction_id', created.interaction_id).first()).toMatchObject({ opportunity_id: null, notes: input.notes });
+  expect(events.mock.lastCall[0]).toEqual({ eventType: 'INTERACTION_CREATED', payload: { tenantId: context.tenant, interactionId: created.interaction_id, userId: context.userId } });
+  events.mockClear();
+  expect(await actions.deleteInteraction(created.interaction_id)).toBeUndefined();
+  expect(await customer.table('interactions').where('interaction_id', created.interaction_id).first()).toBeUndefined();
+  expect(events.mock.lastCall[0]).toEqual({ eventType: 'INTERACTION_DELETED', payload: { tenantId: context.tenant, interactionId: created.interaction_id, userId: context.userId } });
+}));
+
+it('customer interaction lifecycle resolves a contact client and rejects mismatched parents and inactive owners', async () => withInteractionLifecycleFixture(async ({ create, customer, context, clientId }: any) => {
+  const contact = await customer.table('contacts').where('client_id', clientId).first();
+  expect(contact).toBeDefined();
+  expect(await create({ client_id: null, contact_name_id: contact.contact_name_id })).toMatchObject({ interaction: { client_id: clientId, contact_name_id: contact.contact_name_id } });
+  const otherClient = randomUUID(); await customer.table('clients').insert({ tenant: context.tenant, client_id: otherClient, client_name: 'Another client' });
+  await expect(create({ client_id: otherClient, contact_name_id: contact.contact_name_id })).rejects.toMatchObject({ code: 'INTERACTION_INVALID' });
+  const otherUser = randomUUID(), base = await customer.table('users').where('user_id', context.userId).first();
+  await customer.table('users').insert({ ...base, user_id: otherUser, username: `inactive-${otherUser}`, email: 'inactive-interaction@example.invalid', is_inactive: true });
+  await expect(create({ user_id: otherUser })).rejects.toMatchObject({ code: 'INTERACTION_INVALID' });
+}));
+
+it('customer interaction lifecycle keeps linked meetings and transcript documents when deletion is requested', async () => withInteractionLifecycleFixture(async ({ remove, actions, interactionId, customer, meetingId, documentId, events }: any) => {
+  await expect(remove(interactionId)).rejects.toMatchObject({ code: 'INTERACTION_IN_USE' });
+  expect(await actions.deleteInteraction(interactionId)).toHaveProperty('actionError');
+  expect(await customer.table('interactions').where('interaction_id', interactionId).first()).toBeDefined();
+  expect(await customer.table('online_meetings').where('meeting_id', meetingId).first()).toBeDefined();
+  expect(await customer.table('documents').where('document_id', documentId).first()).toBeDefined();
+  expect(await customer.table('online_meeting_artifacts').where('meeting_id', meetingId).select()).toHaveLength(2);
+  expect(events).not.toHaveBeenCalled();
+}));
+
+it('customer interaction lifecycle intersects API field scope and rejects revoked keys for creation and deletion', async () => withInteractionLifecycleFixture(async ({ create, remove, context, customer, user, actions, input, events }: any) => {
+  const created = await create(); events.mockClear();
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: context.tenant, name: 'Interaction lifecycle scope', actorUserId: user.user_id });
+  for (const action of ['read', 'create', 'delete']) await bundles.upsertBundleRule(db, { tenant: context.tenant, bundleId, revisionId, resourceType: 'interaction', action, templateKey: 'own', config: { redactedFields: ['notes'] } });
+  await bundles.publishBundleRevision(db, { tenant: context.tenant, bundleId, revisionId, actorUserId: user.user_id });
+  await bundles.createBundleAssignment(db, { tenant: context.tenant, bundleId, targetType: 'api_key', targetId: context.apiKeyId });
+  await expect(create()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await expect(remove(created.interaction.interaction_id)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(events).not.toHaveBeenCalled();
+  expect(await actions.addInteraction(input)).toHaveProperty('interaction_id');
+  await customer.table('api_keys').where('api_key_id', context.apiKeyId).update({ active: false });
+  await expect(create({ notes: undefined })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await expect(remove(created.interaction.interaction_id)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+}));
+
+it('customer interaction lifecycle rolls back insertion and deletion when credentials expire at the final check', async () => withInteractionLifecycleFixture(async ({ create, remove, customer, context, events, principal }: any) => {
+  const created = await create(), id = created.interaction.interaction_id; events.mockClear();
+  const before = await customer.table('interactions').count('* as count').first();
+  await db.raw(`CREATE FUNCTION expire_interaction_lifecycle_key() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN UPDATE api_keys SET expires_at = clock_timestamp() - interval '1 second' WHERE tenant = COALESCE(NEW.tenant, OLD.tenant) AND api_key_id = '${context.apiKeyId}'::uuid; RETURN COALESCE(NEW, OLD); END $$`);
+  await db.raw('CREATE TRIGGER expire_interaction_lifecycle_key AFTER INSERT OR DELETE ON interactions FOR EACH ROW EXECUTE FUNCTION expire_interaction_lifecycle_key()');
+  try {
+    await expect(create()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    await expect(remove(id)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    expect(await customer.table('interactions').where('interaction_id', id).first()).toBeDefined();
+    expect(await customer.table('interactions').count('* as count').first()).toEqual(before);
+    expect(events).not.toHaveBeenCalled();
+  } finally { await db.raw('DROP TRIGGER expire_interaction_lifecycle_key ON interactions'); await db.raw('DROP FUNCTION expire_interaction_lifecycle_key()'); }
+  await expireCoManagedEntitlement(principal.tenant);
+  await expect(create()).rejects.toBeDefined(); await expect(remove(id)).rejects.toBeDefined();
+  expect(await customer.table('interactions').where('interaction_id', id).first()).toBeDefined();
+}));
