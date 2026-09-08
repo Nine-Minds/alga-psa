@@ -103,10 +103,40 @@ gate. Unknown counts are blank; an unavailable evidence file is incomplete.
 The existing `executed` column remains the raw passed-plus-failed assertion count.
 Job summaries show the lane gate and collection counts before percentages.
 
-For charts, add a second tab with `=QUERY(metrics!A:T, "select A, J where B = 'unit-coverage'")`
-style pulls and chart those ranges. Native Sheets charts update as rows arrive.
-Columns are appended at the end as the schema grows, so existing ranges keep
-their meaning — widen the range, don't reorder.
+### Separate execution views from percentage charts
+
+The existing live `charts` and `chart_data` formulas were inspected on
+2026-09-08: they query `metrics!A2:P` by suite only. They therefore mix run kinds
+and do not read execution gate status or coverage methodology. These legacy
+charts are historical percentages, not readiness evidence. For example, the
+live integration summary showed 100% alongside 146 skipped tests.
+
+Use separate `readiness_pr`, `readiness_main`, and `readiness_nightly` views.
+The following is a **proposed formula pending isolated-workbook validation**,
+not a change already applied to the live workbook. On each new view, set B1 to
+the exact run kind (`pr`, `main`, or `nightly`) and put this spill formula in A3:
+
+```gs
+=QUERY(metrics!A:AB,"select A,B,AB,R,AA,Y,Z,Q,F,G,H,S,T,X,P where A is not null and U=2 and V='"&B1&"' order by A desc label A 'Timestamp',B 'Suite',AB 'Tested SHA',R 'Report status',AA 'Lane gate',Y 'Expected files',Z 'Collected tests',Q 'Executed tests',F 'Failed',G 'Skipped',H 'TODO',S 'Measured files',T 'Source files',X 'Methodology',P 'Run URL'",1)
+```
+
+Keep all lane outcomes in these views. Filtering to passed rows would conceal
+failed or incomplete executions. Blank gate/count fields mean unknown, not zero
+or success. A passed lane is not the global production-readiness verdict;
+consult the parent gate for the same tested SHA. Do not derive readiness from
+`pass_pct`, or label a run ready solely because its legacy status is `complete`.
+
+Keep unversioned history in its own view without inferring a run kind from the
+branch name. A separate coverage trend must select one suite, one run kind,
+schema version 2, and one exact `coverage_methodology`; show measured/source
+file counts beside the percentage. Do not connect a trend line across method
+versions or silently omit missing-run observations. A run cancelled before its
+metrics step still requires external reconciliation to appear at all.
+
+Validate these formulas and old readers with synthetic success, failure,
+cancelled, missing, and retry-only cases in an approved isolated copy before
+changing live charts. Existing A:P column positions retain their meanings;
+widen formula ranges without reordering them.
 
 Coverage percentages are only comparable while `coverage.include` in
 `server/vitest.config.ts` stays the same; widening or narrowing it changes
