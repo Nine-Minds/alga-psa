@@ -1,3 +1,4 @@
+import { captureOrganizationSlaNotifications } from './organizationSlaNotifications';
 import { createHash } from 'node:crypto';
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
@@ -92,5 +93,6 @@ export async function applyOrganizationSlaEvent(trx: Knex.Transaction, inputIden
   const stored = { tenant: identity.tenant, obligation_id: identity.obligationId, operation_id: operationId, revision,
     event_type: event.kind, request_fingerprint: hash, event: JSON.stringify(event), occurred_at: clock.observedAt };
   await owner.table('sla_organization_events').insert(stored);
+  await captureOrganizationSlaNotifications(trx, obligation.sla_policy_id, operationId, obligation.clock, clock);
   return receipt(stored);
 }

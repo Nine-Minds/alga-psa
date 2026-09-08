@@ -2,7 +2,8 @@ import { randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { getCoManagedOperationalState } from '@alga-psa/licensing/lifecycle';
-import type { OrganizationSlaIdentity, OrganizationSlaClock } from '@alga-psa/shared/lib/sla/organizationSlaClock';
+import { observeOrganizationSlaClock, type OrganizationSlaIdentity, type OrganizationSlaClock } from '@alga-psa/shared/lib/sla/organizationSlaClock';
+import { pendingOrganizationSlaNotifications } from '@alga-psa/shared/lib/sla/organizationSlaNotifications';
 import { resolveSlaPolicy, getBusinessHoursSchedule } from '@alga-psa/shared/lib/sla/slaPolicyResolver';
 import { startOrganizationSlaObligation, applyOrganizationSlaEvent } from '@alga-psa/shared/lib/sla/organizationSlaStore';
 import { acquireOrganizationSlaLock } from '@alga-psa/shared/lib/sla/organizationSlaLock';
@@ -30,8 +31,10 @@ export async function observeCoManagedTicketSla(db: Knex, input: OrganizationSla
     const clock: OrganizationSlaClock = retained.obligation.clock;
     if (clock.resolution.completedAt || clock.pauseReasons.length) return false;
     const at = (await trx.select({ at: trx.raw('clock_timestamp()') }).first()).at as Date;
-    if (![clock.response, clock.resolution].some(target => !target.completedAt && !target.breached &&
-        target.dueAt && new Date(target.dueAt).getTime() <= at.getTime())) return false;
+    const hasDueBreach = [clock.response, clock.resolution].some(target => !target.completedAt && !target.breached &&
+      target.dueAt && new Date(target.dueAt).getTime() < at.getTime());
+    const projected = observeOrganizationSlaClock(clock, at.toISOString());
+    if (!hasDueBreach && !(await pendingOrganizationSlaNotifications(trx, retained.obligation.sla_policy_id, clock, projected)).length) return false;
     await applyOrganizationSlaEvent(trx, retained.identity, randomUUID(), { kind: 'observed', occurredAt: at.toISOString() });
     // Grace can expire while waiting for the ticket or organization lock.
     if (!(await getCoManagedOperationalState(trx, identity.sourceTenant)).canWrite) {
@@ -60,6 +63,17 @@ export async function observeDueCoManagedTicketSlas(db: Knex, tenant: string, pa
           .whereRaw(`clock #>> '{${target},completedAt}' IS NULL`)
           .whereRaw(`clock #>> '{${target},breached}' = 'false'`)
           .whereRaw(`(clock #>> '{${target},dueAt}')::timestamptz <= ?`, [scanAt]));
+        // Calendars determine warning time in the retained reducer. Candidate
+        // discovery only finds policy thresholds that have not been captured.
+        q.orWhereExists(tenantDb(db, tenant).table('sla_notification_thresholds as nt')
+          .whereRaw('nt.sla_policy_id = sla_organization_obligations.sla_policy_id').where('nt.threshold_percent', '>', 0)
+          .where(targets => {
+            for (const target of ['response', 'resolution']) targets.orWhere(candidate => candidate
+              .whereRaw(`clock #>> '{${target},completedAt}' IS NULL AND clock #>> '{${target},targetMinutes}' IS NOT NULL`)
+              .whereNotExists(tenantDb(db, tenant).table('sla_organization_notification_events as notice')
+                .whereRaw('notice.obligation_id = sla_organization_obligations.obligation_id AND notice.threshold_percent = nt.threshold_percent')
+                .where('notice.sla_type', target)));
+          }));
       }).orderBy('obligation_id').limit(pageSize).select('obligation_id', 'source_tenant', 'ticket_id');
     if (cursor) query.where('obligation_id', '>', cursor);
     const rows = await query;

@@ -92,6 +92,7 @@ export default defineConfig({
     'lib/businessHours/businessHoursSegmentation': 'lib/businessHours/businessHoursSegmentation.ts',
     'lib/sla/organizationSlaClock': 'lib/sla/organizationSlaClock.ts',
     'lib/sla/organizationSlaStore': 'lib/sla/organizationSlaStore.ts',
+    'lib/sla/organizationSlaNotifications': 'lib/sla/organizationSlaNotifications.ts',
     'lib/sla/organizationSlaLock': 'lib/sla/organizationSlaLock.ts',
     'lib/sla/slaPolicyResolver': 'lib/sla/slaPolicyResolver.ts',
   },

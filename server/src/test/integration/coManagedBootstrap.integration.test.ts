@@ -90,7 +90,7 @@ beforeAll(async () => {
     '20260906080000_create_co_management_relationship_events.cjs',
     '20260906100000_add_external_file_metadata.cjs',
     '20260906110000_add_kb_import_batch_identity.cjs',
-    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs', '20260908011054_add_co_managed_meeting_sync_intents.cjs', '20260908021208_create_co_managed_meeting_creation_operations.cjs', '20260908043851_allow_co_managed_assignment_before_escalation.cjs', '20260908050419_create_organization_sla_obligations.cjs', '20260908051552_create_co_managed_sla_priority_mappings.cjs']) {
+    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs', '20260908011054_add_co_managed_meeting_sync_intents.cjs', '20260908021208_create_co_managed_meeting_creation_operations.cjs', '20260908043851_allow_co_managed_assignment_before_escalation.cjs', '20260908050419_create_organization_sla_obligations.cjs', '20260908051552_create_co_managed_sla_priority_mappings.cjs', '20260908062358_create_organization_sla_notification_events.cjs']) {
     await require('../../../migrations/' + file).up(db);
   }
   for (const table of ['standard_statuses', 'standard_priorities', 'countries', 'notification_categories',
@@ -16281,3 +16281,102 @@ it('MSP SLA display rejects revoked foreign readers and shows the customer only 
     response: { status: 'paused', dueAt: null } });
   expect(await f.sponsor.table('sla_organization_obligations').first()).toEqual(before);
 });
+
+async function addMspSlaThresholds(f: Awaited<ReturnType<typeof dueMspSlaFixture>>, percentages = [50, 75, 100]) {
+  const obligation = await f.read();
+  await f.sponsor.table('sla_notification_thresholds').insert(percentages.map(percent => ({ tenant: f.identity.tenant, threshold_id: randomUUID(),
+    sla_policy_id: obligation.sla_policy_id, threshold_percent: percent, notification_type: percent >= 100 ? 'breach' : 'warning',
+    notify_assignee: true, notify_board_manager: true, notify_escalation_manager: false, channels: ['in_app', 'email'] })));
+  return () => f.sponsor.table('sla_organization_notification_events').where('obligation_id', f.identity.obligationId)
+    .orderBy('sla_type').orderBy('threshold_percent');
+}
+
+it('MSP SLA threshold scan captures warning crossings before the due date once across workers', async () => {
+  const f = await dueMspSlaFixture(), notices = await addMspSlaThresholds(f);
+  const saved = await f.read();
+  const { startOrganizationSlaClock } = await import('../../../../shared/lib/sla/organizationSlaClock');
+  const clock = startOrganizationSlaClock(f.identity, saved.clock.schedule, { responseMinutes: 60, resolutionMinutes: 480 },
+    new Date(Date.now() - 50 * 60000).toISOString());
+  await f.sponsor.table('sla_organization_obligations').where('obligation_id', f.identity.obligationId).update({ clock: JSON.stringify(clock) });
+  const results = await Promise.all([f.observeDueCoManagedTicketSlas(db, f.identity.tenant), f.observeDueCoManagedTicketSlas(db, f.identity.tenant)]);
+  expect(results.reduce((total, result) => total + result.observed, 0)).toBe(1);
+  const rows = await notices();
+  expect(rows.map(row => [row.sla_type, row.threshold_percent, row.notification_type])).toEqual([['response', 50, 'warning'], ['response', 75, 'warning']]);
+  expect(rows.every(row => row.status === 'pending' && row.completed_at === null)).toBe(true);
+  expect(rows[0].configuration).toEqual({ notifyAssignee: true, notifyBoardManager: true, notifyEscalationManager: false, channels: ['in_app', 'email'] });
+  expect((await f.read()).clock.response.breached).toBe(false);
+  const event = await f.sponsor.table('sla_organization_events').where('operation_id', rows[0].source_operation_id).first();
+  expect(event.event_type).toBe('observed');
+  expect(await f.observeCoManagedTicketSla(db, f.identity)).toBe(false);
+  expect(await notices()).toEqual(rows);
+});
+
+it('MSP SLA threshold capture retains all missed warnings and breaches with immutable source configuration', async () => {
+  const f = await dueMspSlaFixture(), notices = await addMspSlaThresholds(f);
+  await f.observeCoManagedTicketSla(db, f.identity);
+  const rows = await notices();
+  expect(rows.map(row => [row.threshold_percent, row.notification_type])).toEqual([[50, 'warning'], [75, 'warning'], [100, 'breach']]);
+  expect(rows.every(row => row.sla_type === 'response' && row.tenant === f.identity.tenant)).toBe(true);
+  await f.sponsor.table('sla_notification_thresholds').update({ notify_assignee: false, channels: ['email'] });
+  expect(await f.observeCoManagedTicketSla(db, f.identity)).toBe(false);
+  expect(await notices()).toEqual(rows);
+  expect(rows[2].due_at.toISOString()).toBe((await f.read()).clock.response.breachedAt);
+});
+
+it('MSP SLA threshold capture rolls back with the source transaction and deduplicates exact retries', async () => {
+  const f = await dueMspSlaFixture(), notices = await addMspSlaThresholds(f);
+  const { applyOrganizationSlaEvent } = await import('../../../../shared/lib/sla/organizationSlaStore');
+  const operationId = randomUUID(), event = { kind: 'observed' as const, occurredAt: new Date().toISOString() };
+  const before = await f.read();
+  await expect(db.transaction(async trx => { await applyOrganizationSlaEvent(trx, f.identity, operationId, event); throw new Error('Caller rollback'); })).rejects.toThrow('Caller rollback');
+  expect(await f.read()).toEqual(before); expect(await notices()).toEqual([]);
+  await db.transaction(trx => applyOrganizationSlaEvent(trx, f.identity, operationId, event));
+  const rows = await notices();
+  await db.transaction(trx => applyOrganizationSlaEvent(trx, f.identity, operationId, event));
+  expect(await notices()).toEqual(rows); expect(rows).toHaveLength(3);
+});
+
+it('MSP SLA threshold capture catches handback crossings without later paused or completed targets gaining new notices', async () => {
+  const f = await dueMspSlaFixture(), notices = await addMspSlaThresholds(f);
+  const { handBackCoManagedTicket } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  await handBackCoManagedTicket(db, f.principal, f.resource, { operationId: randomUUID(), expectedRevision: 1, note: 'Please verify' });
+  expect(await notices()).toHaveLength(3);
+  const { applyOrganizationSlaEvent } = await import('../../../../shared/lib/sla/organizationSlaStore');
+  await db.transaction(trx => applyOrganizationSlaEvent(trx, f.identity, randomUUID(), { kind: 'resolved', occurredAt: new Date().toISOString() }));
+  const rows = await notices();
+  await addMspSlaThresholds(f, [80]);
+  await db.transaction(trx => applyOrganizationSlaEvent(trx, f.identity, randomUUID(), { kind: 'observed', occurredAt: new Date().toISOString() }));
+  expect(await notices()).toEqual(rows);
+});
+
+it('MSP SLA threshold migration replays safely and refuses retained history loss', async () => {
+  const f = await dueMspSlaFixture(), notices = await addMspSlaThresholds(f);
+  await f.observeCoManagedTicketSla(db, f.identity);
+  const migration = require('../../../migrations/20260908062358_create_organization_sla_notification_events.cjs');
+  await migration.up(db);
+  await expect(migration.down(db)).rejects.toThrow('retained organization SLA notifications');
+  const row = (await notices())[0];
+  await expect(f.sponsor.table('sla_organization_notification_events').insert({ ...row, notification_event_id: randomUUID(),
+    source_operation_id: randomUUID(), threshold_percent: 85 })).rejects.toMatchObject({ code: '23503' });
+  expect(await notices()).toHaveLength(3);
+});
+
+it('MSP SLA threshold capture commits a late first reply and its breach together before any timer run', async () => withCommentCreationFixture(async f => {
+  const row = await f.sponsor.table('sla_organization_obligations').first();
+  const { startOrganizationSlaClock } = await import('../../../../shared/lib/sla/organizationSlaClock');
+  const clock = startOrganizationSlaClock(row.clock.identity, row.clock.schedule, { responseMinutes: 60, resolutionMinutes: 480 },
+    new Date(Date.now() - 2 * 60 * 60000).toISOString());
+  await f.sponsor.table('sla_organization_obligations').where('obligation_id', row.obligation_id).update({ clock: JSON.stringify(clock) });
+  await f.sponsor.table('sla_notification_thresholds').insert({ tenant: f.principal.tenant, threshold_id: randomUUID(),
+    sla_policy_id: row.sla_policy_id, threshold_percent: 100, notification_type: 'breach', notify_assignee: true, channels: ['in_app'] });
+  const request = { operationId: randomUUID(), audience: 'shared_it' as const, text: 'We have investigated' };
+  const reply = await f.create(f.principal, request);
+  const notices = await f.sponsor.table('sla_organization_notification_events');
+  expect(notices).toHaveLength(1);
+  expect(notices[0]).toMatchObject({ obligation_id: row.obligation_id, sla_type: 'response', threshold_percent: 100,
+    notification_type: 'breach', source_operation_id: reply.commentId, status: 'pending' });
+  const updated = await f.sponsor.table('sla_organization_obligations').first();
+  expect(updated.clock.response).toMatchObject({ completedAt: expect.any(String), breached: true });
+  expect(await f.create(f.principal, request)).toEqual(reply);
+  expect(await f.sponsor.table('sla_organization_notification_events')).toEqual(notices);
+}));
