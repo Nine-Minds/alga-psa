@@ -1,0 +1,97 @@
+{
+  "revision": "f16a10345044f59a056f0bd9e2383c63f1c0a019",
+  "scope": "host validation of Node workflow aggregate",
+  "aggregate": {
+    "schemaVersion": 1,
+    "scope": "node-workflow",
+    "revision": "f16a10345044f59a056f0bd9e2383c63f1c0a019",
+    "status": "passed",
+    "results": [
+      {
+        "id": "node-tooling",
+        "status": "passed",
+        "counts": {
+          "tests": 511,
+          "passed": 511,
+          "failed": 0,
+          "skipped": 0,
+          "todo": 0,
+          "cancelled": 0
+        },
+        "executionVerified": true,
+        "failures": []
+      },
+      {
+        "id": "appliance",
+        "status": "passed",
+        "counts": {
+          "tests": 239,
+          "passed": 239,
+          "failed": 0,
+          "skipped": 0,
+          "todo": 0,
+          "cancelled": 0
+        },
+        "executionVerified": true,
+        "failures": []
+      },
+      {
+        "id": "browser-discovery",
+        "status": "passed",
+        "executionVerified": false,
+        "failures": []
+      }
+    ],
+    "failures": []
+  },
+  "sessions": {
+    "tooling": 37923,
+    "appliance": 84692,
+    "browserCollection": 95406
+  },
+  "toolingDurationMs": 158934.7035,
+  "validation": [
+    "Ten focused behavioral tests passed; aggregate fixture runs actual Node and Playwright collectors before corrupting artifacts",
+    "Failed/cancelled/skipped/missing job, missing/truncated artifact, dirty/stale source, omitted file, empty mandatory browser report and expired exclusion reject readiness",
+    "Valid owned manual exclusion remains explicit and allowed",
+    "actionlint passed for node-tests.yml; plan validator passed"
+  ],
+  "artifacts": [
+    {
+      "file": "test-results/node-tooling/evidence.json",
+      "bytes": 204895,
+      "sha256": "c0e7937e994b5060894482d3a91df66af10d7e721f14cd9b5ba1908c311911cc"
+    },
+    {
+      "file": "test-results/node-tooling/events.jsonl",
+      "bytes": 501982,
+      "sha256": "70fefff485f8cba1524f9f936998feecdefd77910c24bf45d39aa00e27e72782"
+    },
+    {
+      "file": "test-results/appliance/evidence.json",
+      "bytes": 100117,
+      "sha256": "a6fa0ed31bd0972a12f1ed3755169acc89d10911def5dd61a9fa22edb29ef5e0"
+    },
+    {
+      "file": "test-results/appliance/events.jsonl",
+      "bytes": 255528,
+      "sha256": "90aeadf3265949c42f3bc474155e601664c4ac754b5cd6eaa06d9b7054f0f05b"
+    },
+    {
+      "file": "test-results/browser-discovery/evidence.json",
+      "bytes": 33030,
+      "sha256": "00b8f768dcd0fa6dc37ddd640fa39a22ecc512089bc88cd5ee719dbd48341d4b"
+    },
+    {
+      "file": "test-results/node-workflow-gate/aggregate.json",
+      "bytes": 850,
+      "sha256": "e2a3856920fd4dff22583fbb98491c3a1ed7a8d49b70cab72aa3be4384ef15be"
+    }
+  ],
+  "limitations": [
+    "Local job outcomes supplied from observed completed host processes; not GitHub job enforcement evidence",
+    "No container builds; appliance status UI built on host",
+    "Repository-wide aggregate and effective required-check protection remain incomplete",
+    "Published draft PR head remains7b170294a755dfebba34cb8bbfc1069b6d8ba8bc with59successful/10failed/1skipped checks; these local changes are unpublished"
+  ]
+}
