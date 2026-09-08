@@ -14,6 +14,7 @@ export * from './ticketQueue';
 
 export * from './ticketConversation';
 export * from './namedTicketConversations';
+export * from './conversationMailboxes';
 export * from './privateTicketConversation';
 export * from './ticketCommentCreation';
 export * from './ticketCommentNotification';

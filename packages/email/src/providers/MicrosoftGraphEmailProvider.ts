@@ -63,6 +63,11 @@ export class MicrosoftGraphEmailProvider implements IEmailProvider {
     this.providerId = providerId;
   }
 
+  resolveFromAddress(requested: EmailAddress): EmailAddress {
+    this.ensureInitialized();
+    return { email: this.mailbox, ...(requested.name ? { name: requested.name } : {}) };
+  }
+
   async initialize(config: Record<string, any>): Promise<void> {
     try {
       const validated = this.validateConfig(config);

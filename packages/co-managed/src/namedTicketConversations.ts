@@ -32,7 +32,7 @@ interface ConversationAuthority {
   sharedContext?: CoManagedSharedWorkContext;
   hidden: readonly string[];
 }
-const fields = [...coManagedConversationBodySources, 'ticket_conversations', 'conversation_id', 'name', 'audience', 'default_slot', 'message_version'];
+const fields = [...coManagedConversationBodySources, 'ticket_conversations', 'conversation_id', 'name', 'audience', 'default_slot', 'message_version', 'mailbox_id', 'mailbox_tenant'];
 const forbidden = () => { throw new TicketConversationError('CONVERSATION_FORBIDDEN'); };
 
 /** Native and shared ticket entry points retain the actor's real home session.
@@ -294,4 +294,16 @@ export async function getNamedTicketConversationWriteAudiences(db: Knex, actor: 
     if (error instanceof TicketConversationError || error instanceof CoManagedSharedWorkError || isCoManagedLifecycleError(error)) return [];
     throw error;
   }
+}
+
+/** Extension point for conversation operations with retained resource, audience
+ * and session authority. Adapters cannot select a store before this admission. */
+export function withNamedTicketConversation<T>(db: Knex, actor: CoManagedSessionActor, ticket: ConversationTicketReference,
+  input: TicketConversationReference, action: 'read' | 'update',
+  work: (context: ConversationAuthority & { scope: ConversationStoreScope; conversation: NamedTicketConversation }) => Promise<T>): Promise<T> {
+  const reference = snapshotConversationReference(input);
+  return withTicketAuthority(db, actor, ticket, action, async context => {
+    const selected = await authorizedConversation(context, reference, action === 'update');
+    return work({ ...context, ...selected });
+  });
 }

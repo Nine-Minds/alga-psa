@@ -17,6 +17,7 @@ export interface ParsedTableExpression {
 
 export const tenantTableMetadata: Record<string, TenantTableScope> = {
   ticket_conversations: { scope: 'tenant' },
+  ticket_conversation_sender_grants: { scope: 'tenant' },
   ticket_conversation_publications: { scope: 'tenant' },
   ticket_conversation_editor_drafts: { scope: 'tenant' },
   co_management_relationships: { scope: 'tenant' },

@@ -94,7 +94,7 @@ beforeAll(async () => {
     '20260906080000_create_co_management_relationship_events.cjs',
     '20260906100000_add_external_file_metadata.cjs',
     '20260906110000_add_kb_import_batch_identity.cjs',
-    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs', '20260908013607_create_named_ticket_conversations.cjs', '20260908015652_create_ticket_conversation_editor_drafts.cjs', '20260908022249_scope_ticket_conversation_defaults_to_relationship.cjs', '20260908024119_create_ticket_conversation_publications.cjs', '20260908030840_retain_ticket_conversation_draft_reply_target.cjs']) {
+    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs', '20260908013607_create_named_ticket_conversations.cjs', '20260908015652_create_ticket_conversation_editor_drafts.cjs', '20260908022249_scope_ticket_conversation_defaults_to_relationship.cjs', '20260908024119_create_ticket_conversation_publications.cjs', '20260908030840_retain_ticket_conversation_draft_reply_target.cjs', '20260908033011_create_ticket_conversation_sender_grants.cjs']) {
     await require('../../../migrations/' + file).up(db);
   }
   for (const table of ['standard_statuses', 'standard_priorities', 'countries', 'notification_categories',
@@ -14100,6 +14100,14 @@ describe('named ticket conversations against migrated PostgreSQL', () => {
       { operationId: randomUUID(), name: 'Vendor', audience: 'organization_private', transport: 'email' });
     expect(requester.storeTenant).toBe(principal.tenant); expect(side.ticket.tenant).toBe(principal.tenant);
     expect(await api.listNamedTicketConversations(db, principal, native)).toHaveLength(2);
+    const mail = await import('../../../../packages/co-managed/src/conversationMailboxes');
+    const mailboxId = randomUUID();
+    await sponsor.table('email_providers').insert({ tenant: principal.tenant, id: mailboxId, provider_type: 'imap',
+      provider_name: 'Native intake', mailbox: 'native@example.test', status: 'connected', is_active: true });
+    const sideRef = { storeTenant: side.storeTenant, conversationId: side.conversationId };
+    const selectedMailbox = await mail.selectNamedConversationMailbox(db, principal, native, sideRef, 1, mailboxId);
+    expect(await mail.withNamedConversationMailbox(db, principal, native, sideRef, selectedMailbox.revision, async (_context, mailbox) => mailbox.email)).toBe('native@example.test');
+
     const model = (await import('../../../../packages/tickets/src/models/comment')).default;
     const storage = await import('../../../../shared/lib/tickets/namedConversations');
     const commentId = await model.insert(db, native.tenant, { ticket_id: native.ticketId, user_id: principal.userId,
@@ -14437,5 +14445,68 @@ describe('named ticket conversation internal publication against migrated Postgr
     await customer.table('co_management_board_scopes').del();
     await expect(post(db, principal, ticket, ref, request)).rejects.toThrow();
     expect(await customer.table('comments').where('ticket_id', ticket.ticketId)).toHaveLength(0);
+  });
+});
+
+describe('named ticket conversation mailbox authority against migrated PostgreSQL', () => {
+  it('retains the originating mailbox across handoff and requires explicit grants for Shared IT senders', async () => {
+    const { conversations: api, principal, customerPrincipal, ticket, customer, sponsor } = await namedConversationFixture();
+    const mail = await import('../../../../packages/co-managed/src/conversationMailboxes');
+    const mailboxId = randomUUID();
+    await sponsor.table('email_providers').insert({ tenant: principal.tenant, id: mailboxId, provider_type: 'imap',
+      provider_name: 'Support intake', mailbox: 'support@example.test', status: 'connected', is_active: true });
+    const conversation = await api.createNamedTicketConversation(db, principal, ticket,
+      { operationId: randomUUID(), name: 'Carrier support', audience: 'shared_it', transport: 'email' });
+    const ref = { storeTenant: conversation.storeTenant, conversationId: conversation.conversationId };
+    expect(await mail.listNamedConversationMailboxes(db, customerPrincipal, ticket, ref)).toEqual([]);
+    expect(await mail.listNamedConversationMailboxes(db, principal, ticket, ref)).toMatchObject([{ tenant: principal.tenant, id: mailboxId }]);
+    const bound = await mail.selectNamedConversationMailbox(db, principal, ticket, ref, 1, mailboxId);
+    expect(bound).toMatchObject({ mailbox: { tenant: principal.tenant, id: mailboxId }, revision: 2 });
+    await expect(mail.withNamedConversationMailbox(db, customerPrincipal, ticket, ref, 2, async () => 'send')).rejects.toThrow();
+    const granted = await mail.setNamedConversationSenderGrant(db, principal, ticket, ref,
+      { expectedRevision: 2, granteeTenant: customerPrincipal.tenant, granteeUserId: customerPrincipal.userId, enabled: true });
+    expect(await mail.withNamedConversationMailbox(db, customerPrincipal, ticket, ref, granted.revision, async (_context, mailbox) => mailbox))
+      .toMatchObject({ tenant: principal.tenant, id: mailboxId, email: 'support@example.test' });
+    const { handBackCoManagedTicket, escalateCoManagedTicket } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+    await escalateCoManagedTicket(db, customerPrincipal, { kind: 'ticket', tenant: ticket.tenant, id: ticket.ticketId, relationshipId: ticket.relationshipId },
+      { operationId: randomUUID(), expectedRevision: 0, note: 'MSP investigation requested' });
+    const work = await customer.table('co_management_ticket_work').where('ticket_id', ticket.ticketId).first('revision');
+    await handBackCoManagedTicket(db, principal, { kind: 'ticket', tenant: ticket.tenant, id: ticket.ticketId, relationshipId: ticket.relationshipId },
+      { operationId: randomUUID(), expectedRevision: work?.revision ?? 0, note: 'Customer IT continues' });
+    expect((await api.getNamedTicketConversation(db, customerPrincipal, ticket, ref)).mailbox).toEqual(bound.mailbox);
+    // The grant stays in the sender's home store; it never becomes customer mailbox ownership.
+    expect(await sponsor.table('ticket_conversation_sender_grants')).toHaveLength(1);
+    expect(await customer.table('ticket_conversation_sender_grants')).toHaveLength(0);
+    await sponsor.table('email_providers').where('id', mailboxId).update({ is_active: false });
+    await expect(mail.withNamedConversationMailbox(db, customerPrincipal, ticket, ref, granted.revision, async () => 'send')).rejects.toThrow();
+  });
+
+  it('uses the ticket owner for requester mail and rejects stale selection, foreign self-grants and revoked senders', async () => {
+    const { conversations: api, principal, customerPrincipal, ticket, customer } = await namedConversationFixture();
+    const mail = await import('../../../../packages/co-managed/src/conversationMailboxes');
+    const mailboxId = randomUUID();
+    await customer.table('email_providers').insert({ tenant: customerPrincipal.tenant, id: mailboxId, provider_type: 'imap',
+      provider_name: 'Ticket intake', mailbox: 'help@example.test', status: 'connected', is_active: true });
+    const [requester] = await api.listNamedTicketConversations(db, principal, ticket);
+    const ref = { storeTenant: requester.storeTenant, conversationId: requester.conversationId };
+    await expect(mail.selectNamedConversationMailbox(db, principal, ticket, ref, 1, mailboxId)).rejects.toThrow();
+    const bound = await mail.selectNamedConversationMailbox(db, customerPrincipal, ticket, ref, 1, mailboxId);
+    expect(bound.mailbox?.tenant).toBe(ticket.tenant);
+    await expect(mail.selectNamedConversationMailbox(db, customerPrincipal, ticket, ref, 1, mailboxId)).rejects.toMatchObject({ code: 'CONVERSATION_CONFLICT' });
+    await expect(mail.setNamedConversationSenderGrant(db, principal, ticket, ref,
+      { expectedRevision: 2, granteeTenant: principal.tenant, granteeUserId: principal.userId, enabled: true })).rejects.toThrow();
+    const granted = await mail.setNamedConversationSenderGrant(db, customerPrincipal, ticket, ref,
+      { expectedRevision: 2, granteeTenant: principal.tenant, granteeUserId: principal.userId, enabled: true });
+    const called = vi.fn(async () => 'sent');
+    expect(await mail.withNamedConversationMailbox(db, principal, ticket, ref, granted.revision, called)).toBe('sent');
+    const migration = require('../../../migrations/20260908033011_create_ticket_conversation_sender_grants.cjs');
+    await migration.up(db);
+    await expect(migration.down(db)).rejects.toThrow('Cannot discard retained conversation sender grants');
+
+    const revoked = await mail.setNamedConversationSenderGrant(db, customerPrincipal, ticket, ref,
+      { expectedRevision: granted.revision, granteeTenant: principal.tenant, granteeUserId: principal.userId, enabled: false });
+    await expect(mail.withNamedConversationMailbox(db, principal, ticket, ref, revoked.revision, called)).rejects.toThrow();
+    expect(called).toHaveBeenCalledOnce();
+    expect(await customer.table('ticket_conversation_sender_grants')).toHaveLength(0);
   });
 });

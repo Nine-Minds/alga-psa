@@ -60,3 +60,21 @@ export const getNamedTicketConversationScreenAction = withAuth(async (user, { te
   ]);
   return { conversations, writeAudiences, actor: { tenant: actor.tenant, userId: actor.userId } };
 });
+
+export const listNamedConversationMailboxesAction = withAuth(async (user, { tenant }, ticket: ConversationTicketReference, conversation: TicketConversationReference) => {
+  const actor = await coManagedBrowserActor(user, tenant), { knex } = await createTenantKnex(tenant);
+  const { listNamedConversationMailboxes } = await import('@alga-psa/co-managed');
+  return listNamedConversationMailboxes(knex, actor, ticket, conversation);
+});
+export const selectNamedConversationMailboxAction = withAuth(async (user, { tenant }, ticket: ConversationTicketReference, conversation: TicketConversationReference,
+  expectedRevision: number, mailboxId: string) => {
+  const actor = await coManagedBrowserActor(user, tenant), { knex } = await createTenantKnex(tenant);
+  const { selectNamedConversationMailbox } = await import('@alga-psa/co-managed');
+  return selectNamedConversationMailbox(knex, actor, ticket, conversation, expectedRevision, mailboxId);
+});
+export const setNamedConversationSenderGrantAction = withAuth(async (user, { tenant }, ticket: ConversationTicketReference, conversation: TicketConversationReference,
+  request: Parameters<typeof import('@alga-psa/co-managed').setNamedConversationSenderGrant>[4]) => {
+  const actor = await coManagedBrowserActor(user, tenant), { knex } = await createTenantKnex(tenant);
+  const { setNamedConversationSenderGrant } = await import('@alga-psa/co-managed');
+  return setNamedConversationSenderGrant(knex, actor, ticket, conversation, request);
+});
