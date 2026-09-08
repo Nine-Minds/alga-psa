@@ -1,3 +1,5 @@
+import { registerCoManagedPortableAssetTests } from './helpers/coManagedPortableAssetCases';
+import { registerCoManagedPortableOperationalCases } from './coManagedPortableOperational.cases';
 import { retainCoManagedInboundCommentEvent } from '../../../../packages/co-managed/src/inboundConversationEvents';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { createRequire } from 'node:module';
@@ -19876,3 +19878,66 @@ it('portable conversation export verifies stored checksums and removes staged fi
   await expect(f.exportFiles()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
   expect(artifactStorage.getReadStream).not.toHaveBeenCalled();
 }));
+
+registerCoManagedPortableOperationalCases(() => db, ticketHandoffFixture);
+
+registerCoManagedPortableAssetTests(() => db, ticketHandoffFixture);
+
+it.each(['customer', 'sponsor'])('public departure by %s retains an archive and releases seats once using the reviewed relationship', async side => {
+  const f = await ticketHandoffFixture();
+  const { getCoManagedDepartureScreen: review, departCoManagedRelationship: depart } = await import('../../../../packages/co-managed/src/departure');
+  const actor = side === 'customer' ? f.customerPrincipal : f.principal;
+  const provisioning = side === 'sponsor' ? f.operation.operation_id : undefined;
+  const screen = await review(db, actor, provisioning);
+  expect(screen).toMatchObject({ side, departed: false, relationshipId: f.resource.relationshipId });
+  const request = { provisioningOperationId: provisioning, operationId: randomUUID(), relationshipId: screen.relationshipId, expectedRevision: screen.revision };
+  await expect(depart(db, actor, { ...request, relationshipId: randomUUID() })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await expect(depart(db, actor, { ...request, expectedRevision: screen.revision + 1 })).rejects.toMatchObject({ code: 'CLOSURE_CHANGED' });
+  const receipt = await depart(db, actor, request);
+  expect(await depart(db, actor, request)).toEqual(receipt);
+  expect(await review(db, actor, provisioning)).toMatchObject({ departed: true, closedAt: receipt.closedAt });
+  expect(await f.sponsor.table('co_managed_allocations').where('customer_tenant', f.actor.tenant).first()).toMatchObject({ state: 'released' });
+  expect(await f.sponsor.table('co_managed_archive_manifests').where('relationship_id', screen.relationshipId)).toHaveLength(1);
+  expect(await f.customer.table('tenants').first()).toMatchObject({ product_code: 'co_managed' });
+  await tenantDb(db, actor.tenant).table('sessions').where('session_id', actor.sessionId).update({ revoked_at: db.fn.now() });
+  await expect(depart(db, actor, request)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await expect(review(db, actor, provisioning)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+});
+
+it('public departure rejects foreign provisioning selectors and rolls back closure if archive sealing fails', async () => {
+  const f = await ticketHandoffFixture();
+  const { getCoManagedDepartureScreen: review, departCoManagedRelationship: depart } = await import('../../../../packages/co-managed/src/departure');
+  await expect(review(db, f.principal, randomUUID())).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await expect(review(db, f.customerPrincipal, f.operation.operation_id)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  const screen = await review(db, f.customerPrincipal);
+  const constraint = `test_departure_${randomUUID().replaceAll('-', '')}`;
+  await db.raw(db.raw('ALTER TABLE co_managed_archive_manifests ADD CONSTRAINT ?? CHECK (tenant <> ?::uuid) NOT VALID', [constraint, f.principal.tenant]).toQuery());
+  try {
+    await expect(depart(db, f.customerPrincipal, { operationId: randomUUID(), relationshipId: screen.relationshipId, expectedRevision: screen.revision })).rejects.toThrow();
+    expect(await f.customer.table('co_management_relationships').first()).toMatchObject({ state: 'active', revision: screen.revision });
+    expect(await f.sponsor.table('co_managed_allocations').where('customer_tenant', f.actor.tenant).first()).not.toMatchObject({ state: 'released' });
+    expect(await f.sponsor.table('co_managed_relationship_closures')).toHaveLength(0);
+  } finally { await db.raw('ALTER TABLE co_managed_archive_manifests DROP CONSTRAINT ??', [constraint]); }
+});
+
+it('public departure browser actions derive customer authority and reject API override or mismatched tracked identity', async () => {
+  const f = await ticketHandoffFixture();
+  await withTenantLicenseBrowser(f, async browser => {
+    const auth = await import('@alga-psa/auth');
+    const user = await f.customer.table('users').where('user_id', f.customerPrincipal.userId).first();
+    await auth.runWithApiKeyUser(user, async () => {
+      const actions = await import('../../lib/actions/coManagedDepartureActions');
+      const screen = await actions.getCoManagedDepartureScreenAction();
+      const request = { operationId: randomUUID(), relationshipId: screen.relationshipId, expectedRevision: screen.revision };
+      browser.override.mockReturnValue({ tenant: f.actor.tenant, user_id: f.customerPrincipal.userId });
+      await expect(actions.departCoManagedRelationshipAction(request)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+      browser.override.mockReturnValue(undefined);
+      browser.session.mockResolvedValue({ session_id: f.principal.sessionId, user: { id: f.principal.userId, tenant: f.principal.tenant, user_type: 'internal' } });
+      await expect(actions.getCoManagedDepartureScreenAction()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+      browser.session.mockResolvedValue({ session_id: f.customerPrincipal.sessionId, user: { id: f.customerPrincipal.userId, tenant: f.customerPrincipal.tenant, user_type: 'internal' } });
+      const receipt = await actions.departCoManagedRelationshipAction({ ...request, actor: f.principal, customerTenant: f.principal.tenant } as any);
+      expect(receipt.customerTenant).toBe(f.actor.tenant);
+      expect(await actions.getCoManagedDepartureScreenAction()).toMatchObject({ departed: true });
+    });
+  });
+});

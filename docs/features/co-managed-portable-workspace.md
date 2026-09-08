@@ -55,3 +55,11 @@ SECRETS_PATH=../secrets npm exec -- vitest run src/test/integration/coManagedBoo
 ```
 
 The selected tests use a disposable schema-only copy of the development database. They cover actual record projections, secret/trust exclusion, saved attribution, reference integrity and customer permission/session denial. The vault cases exercise its audit and post-encryption authority checks. They do not prove a complete isolated workspace restore.
+
+## Inventory and operational configuration
+
+`portableAssetExport.ts` adds 19 explicit projections covering assets, custom types, typed device details, software inventory, relationships, maintenance history and document/ticket associations. It retains native asset association-derived access and rejects denied or redacted assets. RMM connection identifiers, integration bindings and procurement pointers are excluded, including direct copies in asset change history. Observed device facts remain historical snapshots. Restore must leave maintenance paused and require fresh integration authorization; notification dispatch rows are not exported.
+
+`portableOperationalExport.ts` adds 17 projections covering time entries, sheets and review records, time periods, schedules and assignments, working hours, holidays and SLA configuration. It reuses native employee, work-source, calendar privacy and field-redaction rules. Another employee's private event can therefore prevent a complete export under current permissions; this component does not introduce an administrator bypass. Time timestamps preserve elapsed effort: native co-managed time is operational and its persisted billing fields are empty by invariant. Running timers, commercial links and live notification dispatch are excluded. Interaction and appointment references are declared dependencies on future sections.
+
+The components use `portableRecordValidation.ts` for exact table/column rosters, UUID and composite identities, singleton counts and included parent relationships. The shared reference validator can require cross-section parents after assembly; component-local validation alone does not establish a complete archive. Each collector still captures its own snapshot. Coordinated capture, authenticated archive integrity, full reference remapping, workflow/interaction records, public export delivery and isolated restore remain unfinished.
