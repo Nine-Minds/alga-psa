@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-09-07",
+  "updatedAt": "2026-09-08",
   "purpose": "Track proven regression boundaries and verification limits; null incident identifiers must not be counted as production escapes.",
   "records": [
     {
@@ -686,7 +686,7 @@
       "missingBoundary": "Failed email transport result to invitation state and lifecycle event publication",
       "ownerRole": "Surveys and email maintainers",
       "testFiles": [
-        "packages/surveys/src/actions/surveyResponseActions.db.test.ts"
+        "server/src/services/surveyResponseActions.db.test.ts"
       ],
       "ci": {
         "workflow": ".github/workflows/integration-tests.yml",
@@ -701,7 +701,8 @@
       "limits": [
         "Synthetic transport rejection with actual database/template/token behavior.",
         "No production incident identifier supplied."
-      ]
+      ],
+      "relocationEvidence": "survey-server-test-relocation.json"
     }
   ]
 }
