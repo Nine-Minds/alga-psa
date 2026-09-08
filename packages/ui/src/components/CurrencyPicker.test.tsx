@@ -13,8 +13,13 @@ if (typeof (globalThis as Record<string, unknown>).ResizeObserver === 'undefined
     disconnect() {}
   };
 }
+// configurable: the whole unit suite shares one fork, and later suites redefine this.
 if (typeof HTMLElement.prototype.scrollIntoView !== 'function') {
-  Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', { value: vi.fn(), writable: true });
+  Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
+    value: vi.fn(),
+    configurable: true,
+    writable: true,
+  });
 }
 
 vi.mock('../ui-reflection/useAutomationIdAndRegister', () => ({
