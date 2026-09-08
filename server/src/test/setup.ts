@@ -194,6 +194,22 @@ if (typeof window !== 'undefined' && typeof window.matchMedia !== 'function') {
     }) as unknown as MediaQueryList;
 }
 
+// jsdom implements no scrolling, so scrollIntoView is absent and components
+// that call it (often inside a requestAnimationFrame, where the throw escapes
+// the test as an unhandled error and reds the whole run) need it stubbed. The
+// package-level setups polyfill it themselves; files pulled into this suite
+// from ../packages run against THIS setup instead, and only stayed green while
+// some earlier file in the shared fork happened to define it — a masking that
+// the shuffled file order can withdraw at any time. writable/configurable so
+// per-file stubs and their restores still work.
+if (typeof Element !== 'undefined' && typeof Element.prototype.scrollIntoView !== 'function') {
+  Object.defineProperty(Element.prototype, 'scrollIntoView', {
+    configurable: true,
+    writable: true,
+    value: () => undefined,
+  });
+}
+
 // Same reused-jsdom hazard for window.location: several suites replace it with
 // a plain stub (to swallow jsdom's not-implemented navigation), and an
 // unrestored stub has no .search/.pathname and detaches from
