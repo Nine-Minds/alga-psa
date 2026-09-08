@@ -678,6 +678,10 @@
         "not_configured": "Kein SLA konfiguriert",
         "unavailable": "SLA-Zeitdaten nicht verfügbar"
       }
+    },
+    "time": {
+      "log": "Zeit erfassen",
+      "unavailable": "Für diese Arbeit ist keine Zeiterfassung verfügbar. Laden Sie die Seite neu, um Ihren aktuellen Zugriff zu prüfen."
     }
   }
 }

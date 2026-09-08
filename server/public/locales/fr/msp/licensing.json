@@ -680,6 +680,10 @@
         "not_configured": "Aucun SLA configuré",
         "unavailable": "Délais SLA indisponibles"
       }
+    },
+    "time": {
+      "log": "Saisir du temps",
+      "unavailable": "La saisie de temps est indisponible pour ce travail. Rechargez la page pour vérifier vos droits actuels."
     }
   }
 }

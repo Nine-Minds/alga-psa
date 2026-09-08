@@ -65,7 +65,8 @@ const deriveDefaultTimes = (context: TimeEntryWorkItemContext) => {
   return { defaultStartTime: undefined, defaultEndTime: undefined };
 };
 
-export async function launchTimeEntryForWorkItem({ openDrawer, closeDrawer, context, onComplete, existingEntryId }: LaunchTimeEntryParams): Promise<void> {
+// Preparation is shared by drawer launchers and resource-scoped dialogs.
+export async function prepareTimeEntryForWorkItem(context: TimeEntryWorkItemContext, existingEntryId?: string) {
   try {
     const user = await getCurrentUser();
     if (!user?.user_id) {
@@ -112,40 +113,27 @@ export async function launchTimeEntryForWorkItem({ openDrawer, closeDrawer, cont
       ? new Date(existingEntry.start_time)
       : context.startTime || defaultStartTime || new Date();
 
-    openDrawer(
-      <TimeEntryDialog
-        isOpen={true}
-        onClose={closeDrawer}
-        onSave={async (timeEntry) => {
-          try {
-            const savedEntry = await saveTimeEntry(timeEntry);
-            if (isActionMessageError(savedEntry) || isActionPermissionError(savedEntry)) {
-              toast.error(getErrorMessage(savedEntry));
-              return;
-            }
-            closeDrawer();
-            if (onComplete) onComplete();
-          } catch (error) {
-            console.error('Failed to save time entry:', error);
-            toast.error(getErrorMessage(error));
-          }
-        }}
-        workItem={workItem}
-        date={baseDate}
-        existingEntries={existingEntry ? [existingEntry] : undefined}
-        timePeriod={currentTimePeriod}
-        isEditable={true}
-        defaultStartTime={defaultStartTime}
-        defaultEndTime={defaultEndTime}
-        timeSheetId={timeSheetId}
-        inDrawer={true}
-      />,
-      undefined,
-      undefined,
-      '900px'
-    );
+    return { workItem, date: baseDate, existingEntries: existingEntry ? [existingEntry] : undefined,
+      timePeriod: currentTimePeriod, defaultStartTime, defaultEndTime, timeSheetId };
+
   } catch (error) {
     console.error('Failed to launch time entry dialog:', error);
     toast.error('An error occurred while preparing the time entry. Please try again.');
   }
+}
+
+export { TimeEntryDialog };
+
+export async function launchTimeEntryForWorkItem({ openDrawer, closeDrawer, context, onComplete, existingEntryId }: LaunchTimeEntryParams): Promise<void> {
+  const prepared = await prepareTimeEntryForWorkItem(context, existingEntryId);
+  if (!prepared) return;
+  openDrawer(
+    <TimeEntryDialog {...prepared} isOpen={true} onClose={closeDrawer} isEditable={true} inDrawer={true}
+      onSave={async timeEntry => {
+        const savedEntry = await saveTimeEntry(timeEntry);
+        if (isActionMessageError(savedEntry) || isActionPermissionError(savedEntry)) throw new Error(getErrorMessage(savedEntry));
+        closeDrawer(); onComplete?.();
+      }} />,
+    undefined, undefined, '900px'
+  );
 }

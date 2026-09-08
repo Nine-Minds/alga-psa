@@ -1,10 +1,12 @@
 'use server';
 
 import { Knex } from 'knex';
-import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { IClientContractLine } from '@alga-psa/types';
 import { formatISO } from 'date-fns';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
+import { admitCoManagedNativeTimeSource, assertCoManagedTimeSaveFields, CoManagedSharedWorkError, isNativeTimeFieldHidden } from '@alga-psa/co-managed';
+import { resolveNativeTimeBrowserActor } from './nativeTimeReader';
 import {
   resolveDeterministicContractLineSelection,
   type ContractLineSelectionOptions,
@@ -300,7 +302,7 @@ export async function getEligibleContractLinesForUI(
   }
 }
 
-export async function getClientIdForWorkItem(workItemId: string, workItemType: string): Promise<string | null> {
+export async function getClientIdForWorkItem(workItemId: string, workItemType: string, existingEntryId?: string): Promise<string | null> {
   const currentUser = await getCurrentUser();
   if (!currentUser) {
     throw new Error('User not authenticated');
@@ -314,6 +316,24 @@ export async function getClientIdForWorkItem(workItemId: string, workItemType: s
   try {
     const db = tenantDb(knex, tenant);
 
+    if (workItemType === 'co_managed') {
+      const actor = await resolveNativeTimeBrowserActor(currentUser, tenant);
+      return withTransaction(knex, async trx => {
+        const entry = existingEntryId ? await tenantDb(trx, tenant).table('time_entries').where({ entry_id: existingEntryId,
+          work_item_type: 'co_managed', work_item_id: workItemId, co_managed_work_reference_id: workItemId }).first('user_id', 'time_sheet_id') : null;
+        if (existingEntryId && !entry) throw new CoManagedSharedWorkError();
+        const access = await admitCoManagedNativeTimeSource(trx, actor, { entry_id: existingEntryId, user_id: entry?.user_id ?? currentUser.user_id,
+          time_sheet_id: entry?.time_sheet_id, work_item_type: 'co_managed', work_item_id: workItemId }, entry ? 'read' : 'create');
+        if (!entry) assertCoManagedTimeSaveFields(access, 'co_managed');
+        if (entry) {
+          const current = await tenantDb(trx, tenant).table('time_entries').where({ entry_id: existingEntryId,
+            work_item_type: 'co_managed', work_item_id: workItemId, co_managed_work_reference_id: workItemId }).forShare().first('user_id', 'time_sheet_id');
+          if (!current || current.user_id !== entry.user_id || current.time_sheet_id !== entry.time_sheet_id) throw new CoManagedSharedWorkError();
+        }
+        await access.assertCurrent();
+        return isNativeTimeFieldHidden(access.redactedTimeFields, ['client_id', 'billing']) ? null : access.clientId ?? null;
+      });
+    }
     if (workItemType === 'project_task') {
       const query = db.table('project_tasks');
       db.tenantJoin(query, 'project_phases', 'project_tasks.phase_id', 'project_phases.phase_id');
@@ -335,6 +355,7 @@ export async function getClientIdForWorkItem(workItemId: string, workItemType: s
     }
     return null;
   } catch (error) {
+    if (workItemType === 'co_managed') throw error;
     console.error('Error getting client ID for work item:', error);
     return null;
   }

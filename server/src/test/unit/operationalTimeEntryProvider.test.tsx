@@ -46,3 +46,16 @@ describe('operational time entry initialization', () => {
     await waitFor(() => expect(context.entries[0].work_item_id).toBe('new-task'));
   });
 });
+
+it('initializes shared commercial work with the admitted MSP client and retains entry identity for history', async () => {
+  mocks.mode.mockResolvedValue('commercial'); mocks.clientId.mockResolvedValue('msp-client'); mocks.client.mockResolvedValue({ region_code: 'US-NY' });
+  mocks.services.mockResolvedValue([{ id: 'msp-labor', name: 'MSP labor' }]); mocks.tax.mockResolvedValue([]);
+  render(<TimeEntryProvider><Probe /></TimeEntryProvider>);
+  const shared = { ...params, workItem: { work_item_id: 'local-reference', type: 'co_managed', name: 'Shared issue' } };
+  await act(() => context.initializeEntries(shared));
+  expect(mocks.clientId).toHaveBeenCalledWith('local-reference', 'co_managed', undefined);
+  expect(mocks.client).toHaveBeenCalledWith('msp-client');
+  expect(context.entries[0]).toMatchObject({ work_item_id: 'local-reference', work_item_type: 'co_managed', client_id: 'msp-client', billable_duration: 90 });
+  await act(() => context.initializeEntries({ ...shared, existingEntries: [{ ...context.entries[0], entry_id: 'retained-entry' } as any] }));
+  expect(mocks.clientId).toHaveBeenLastCalledWith('local-reference', 'co_managed', 'retained-entry');
+});

@@ -678,6 +678,10 @@
         "not_configured": "Geen SLA ingesteld",
         "unavailable": "SLA-tijden niet beschikbaar"
       }
+    },
+    "time": {
+      "log": "Tijd registreren",
+      "unavailable": "Tijdregistratie is niet beschikbaar voor dit werk. Laad de pagina opnieuw om je huidige toegang te controleren."
     }
   }
 }

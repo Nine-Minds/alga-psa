@@ -1,3 +1,4 @@
+vi.mock('../../../components/co-managed/CoManagedTimeEntry', () => ({ default: () => null }));
 /** @vitest-environment jsdom */
 import React from 'react';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';

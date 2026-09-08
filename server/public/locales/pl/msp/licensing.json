@@ -682,6 +682,10 @@
         "not_configured": "Nie skonfigurowano SLA",
         "unavailable": "Czasy SLA są niedostępne"
       }
+    },
+    "time": {
+      "log": "Zarejestruj czas",
+      "unavailable": "Rejestracja czasu dla tego zadania jest niedostępna. Odśwież stronę, aby sprawdzić swoje aktualne uprawnienia."
     }
   }
 }

@@ -192,7 +192,7 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
         console.log('Attempting to get client ID from work item:', entry.work_item_id);
         try {
           // Pass tenant ID as the second argument
-          resolvedClientId = await getClientIdForWorkItem(entry.work_item_id, entry.work_item_type);
+          resolvedClientId = await getClientIdForWorkItem(entry.work_item_id, entry.work_item_type, entry.entry_id || undefined);
           console.log('Resolved client ID from work item:', resolvedClientId);
         } catch (error) {
           console.error('Error fetching client ID for work item:', error);

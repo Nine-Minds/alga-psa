@@ -14,7 +14,7 @@ export type CoManagedTaskEditPatch = Partial<Record<CoManagedTaskEditField, stri
 export interface CoManagedTaskEditRequest { operationId: string; expected: CoManagedTaskEditPatch; patch: CoManagedTaskEditPatch }
 export interface CoManagedTaskEditReceipt { operationId: string; appliedAt: string }
 export interface CoManagedTaskEditorState { resource: CoManagedSharedResource; values: CoManagedTaskEditPatch; editableFields: CoManagedTaskEditField[];
-  selectedStatus: { id: string; name: string } | null; projectName?: string; phaseName?: string; organizationName?: string }
+  canWrite: boolean; selectedStatus: { id: string; name: string } | null; projectName?: string; phaseName?: string; organizationName?: string }
 export class CoManagedTaskEditError extends Error {
   constructor(readonly code: 'INVALID_TASK_EDIT' | 'TASK_EDIT_CONFLICT' | 'TASK_EDIT_OPERATION_CONFLICT') { super(code); this.name = 'CoManagedTaskEditError'; }
 }
@@ -69,25 +69,25 @@ async function assertCurrent(context: CoManagedSharedWorkContext, write = false)
   await assertCoManagedSessionUnexpired(context.trx, { ...context.actor, kind: 'session', sessionId: context.sessionId });
   if (write) await assertCoManagedOperationalWrite(context.trx, context.resource.tenant);
 }
-async function editor(context: CoManagedSharedWorkContext, editableFields: CoManagedTaskEditField[] = []): Promise<CoManagedTaskEditorState> {
+async function editor(context: CoManagedSharedWorkContext, editableFields: CoManagedTaskEditField[] = [], canWrite = false): Promise<CoManagedTaskEditorState> {
   const row = await taskRow(context), values: CoManagedTaskEditPatch = {};
   for (const field of fields) if (!hidden(context, field)) values[field] = normalize(row[field]);
   const status = values.project_status_mapping_id ? await statusQuery(context, row).where('mapping.project_status_mapping_id', values.project_status_mapping_id)
     .first('mapping.project_status_mapping_id as id', context.trx.raw('COALESCE(mapping.custom_name, s.name, ss.name) as name')) : null;
-  await assertCurrent(context, editableFields.length > 0);
+  await assertCurrent(context, canWrite);
   const labels: { projectName?: string; phaseName?: string; organizationName?: string } = {};
   if (!isCoManagedReadFieldHidden(context.redactedFields, ['project', 'projectName', 'project_id', 'project_name', 'projects'])) labels.projectName = row.project_name;
   if (!isCoManagedReadFieldHidden(context.redactedFields, ['phase', 'phaseName', 'phase_id', 'phase_name', 'project_phases'])) labels.phaseName = row.phase_name;
   if (!isCoManagedReadFieldHidden(context.redactedFields, ['client_name', 'organizationName', 'tenants'])) labels.organizationName =
     (await tenantDb(context.trx, context.resource.tenant).table('tenants').first('client_name'))?.client_name;
-  await assertCurrent(context, editableFields.length > 0);
-  return { resource: context.resource, values, editableFields, selectedStatus: status ?? null, ...labels };
+  await assertCurrent(context, canWrite);
+  return { resource: context.resource, values, editableFields, canWrite, selectedStatus: status ?? null, ...labels };
 }
 export async function getCoManagedProjectTaskEditor(db: Knex, inputActor: CoManagedSessionActor, inputResource: CoManagedSharedResource) {
   const actor = snapshotCoManagedSessionActor(inputActor), resource = taskResource(inputResource), withWork = boundary(actor, resource);
   try {
     return await withWork(db, actor, resource, 'update', write => withWork(write.trx, actor, resource, 'read', read =>
-      editor(read, fields.filter(field => !hidden(write, field) && !hidden(read, field)))));
+      editor(read, fields.filter(field => !hidden(write, field) && !hidden(read, field)), true)));
   } catch (error) {
     if (!(error instanceof CoManagedSharedWorkError) && !isCoManagedLifecycleError(error)) throw error;
     return withWork(db, actor, resource, 'read', read => editor(read));

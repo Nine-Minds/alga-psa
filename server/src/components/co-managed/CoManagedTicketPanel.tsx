@@ -7,6 +7,7 @@ import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { getCoManagedTicketScreenAction, getSharedTicketHandoffHistoryAction, type CoManagedTicketScreenTarget } from '@/lib/actions/coManagedSharedWorkActions';
 import CoManagedTicketEditor from './CoManagedTicketEditor';
 import CoManagedTicketSla from './CoManagedTicketSla';
+import CoManagedTimeEntry from './CoManagedTimeEntry';
 import CoManagedTicketConversation from './CoManagedTicketConversation';
 import CoManagedTicketAssignment from './CoManagedTicketAssignment';
 import CoManagedHandoffComposer, { type HandoffAction } from './CoManagedHandoffComposer';
@@ -83,6 +84,7 @@ function TicketPanel({ target, showSummary }: { target: CoManagedTicketScreenTar
           {screen.canRevoke && <Button id="co-ticket-revoke" variant="outline" onClick={() => setAction('revoke')}>{t('coManaged.ticket.revoke')}</Button>}
         </div>}
       {showSummary && screen.side === 'sponsor' && <CoManagedTicketEditor resource={screen.summary.resource} onSaved={reload} onReload={reload} />}
+      {screen.side === 'sponsor' && <CoManagedTimeEntry resource={screen.summary.resource} canWrite={screen.canWrite} />}
       <CoManagedTicketAssignment resource={screen.summary.resource} onSaved={reload} onReload={reload} onUnavailable={unavailable} />
       <CoManagedTicketConversation resource={screen.summary.resource} />
       <section className="space-y-3" aria-labelledby="co-ticket-history-title">

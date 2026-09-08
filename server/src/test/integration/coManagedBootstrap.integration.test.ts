@@ -10481,6 +10481,7 @@ async function withSharedProjectTaskFixture(work: (fixture: any) => Promise<void
 it('lets both organizations edit one canonical task and retains foreign attribution without copied users or assignments', async () => withSharedProjectTaskFixture(async ({ customer, sponsor, principal, customerPrincipal, resource, mappings, domain, edit }: any) => {
   const beforeUsers = await customer.table('users');
   const first = await domain.getCoManagedProjectTaskEditor(db, principal, resource);
+  expect(first.canWrite).toBe(true);
   expect(first.editableFields).toEqual(['task_name', 'due_date', 'project_status_mapping_id']);
   expect(JSON.stringify(first)).not.toMatch(/Private detailed work|actual_hours|service_id|assigned_to/);
   const options = await domain.getCoManagedProjectTaskStatuses(db, principal, resource);
@@ -10525,7 +10526,7 @@ it.each(['revoked_project', 'viewer_staff', 'read_only_grant', 'inactive_actor',
     const before = await customer.table('project_tasks');
     await expect(edit(db, principal, resource, { operationId: randomUUID(), expected: { task_name: 'Verify rollout' }, patch: { task_name: 'Denied' } })).rejects.toThrow();
     expect(await customer.table('project_tasks')).toEqual(before); expect(await customer.table('co_management_command_receipts').where('resource_id', resource.id)).toHaveLength(0);
-    if (['viewer_staff','read_only_grant','lapsed_license'].includes(reason)) expect((await domain.getCoManagedProjectTaskEditor(db, principal, resource)).editableFields).toEqual([]);
+    if (['viewer_staff','read_only_grant','lapsed_license'].includes(reason)) expect(await domain.getCoManagedProjectTaskEditor(db, principal, resource)).toMatchObject({ editableFields: [], canWrite: false });
   }));
 
 it('rejects shared task status mappings from a different customer phase', async () => withSharedProjectTaskFixture(async ({ customer, principal, resource, phase, mappings, domain, edit }: any) => {
@@ -17675,4 +17676,46 @@ it('MSP shared timer references retain local integrity and cannot be removed by 
   await f.service.cancelTimeTracking(timer.session_id, f.context);
   await expect(f.sponsor.table('native_time_tracking_sessions').insert({ ...clock, session_id: randomUUID(),
     work_item_id: f.resource.id, co_managed_work_reference_id: f.resource.id })).rejects.toMatchObject({ code: '23503' });
+}));
+
+
+it('shared time UI actions register the current browser and resolve only the MSP billing client', async () => withMspSharedTimeSaveFixture(async f => {
+  const actions = await import('../../lib/actions/coManagedTimeActions');
+  const auth = await import('@alga-psa/auth');
+  const current = vi.spyOn(auth, 'getCurrentUser').mockResolvedValue(f.user);
+  const { getClientIdForWorkItem } = await import('../../../../packages/scheduling/src/lib/contractLineDisambiguation');
+  try {
+    expect(await actions.registerSharedTimeWorkAction({ ...f.resource, userId: randomUUID(), sessionId: randomUUID() } as any)).toMatchObject({ referenceId: f.referenceId, resource: f.resource });
+    const relationship = await f.customer.table('co_management_relationships').first();
+    expect(await getClientIdForWorkItem(f.referenceId, 'co_managed')).toBe(relationship.sponsor_client_id);
+    const entry = await f.save();
+    await (await import('../../../../packages/co-managed/src/ticketHandoffs')).revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource,
+      { operationId: randomUUID(), expectedRevision: 1, note: 'Keep MSP billing history' });
+    await expect(actions.registerSharedTimeWorkAction(f.resource)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    await expect(getClientIdForWorkItem(f.referenceId, 'co_managed')).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    expect(await getClientIdForWorkItem(f.referenceId, 'co_managed', entry.entry_id)).toBe(relationship.sponsor_client_id);
+    await expect(getClientIdForWorkItem(f.referenceId, 'co_managed', randomUUID())).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  } finally { current.mockRestore(); }
+}));
+
+it('shared time UI actions reject API overrides and redact current local client fields', async () => withMspSharedTimeSaveFixture(async f => {
+  const actions = await import('../../lib/actions/coManagedTimeActions');
+  const auth = await import('@alga-psa/auth');
+  const current = vi.spyOn(auth, 'getCurrentUser').mockResolvedValue(f.user);
+  const { getClientIdForWorkItem } = await import('../../../../packages/scheduling/src/lib/contractLineDisambiguation');
+  const entry = await f.save();
+  try {
+    vi.mocked(auth.getApiKeyUserOverride).mockReturnValue(f.user);
+    await expect(actions.registerSharedTimeWorkAction(f.resource)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    await expect(getClientIdForWorkItem(f.referenceId, 'co_managed', entry.entry_id)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    vi.mocked(auth.getApiKeyUserOverride).mockReturnValue(undefined);
+    const bundles = await import('@alga-psa/authorization');
+    const relationship = await f.customer.table('co_management_relationships').first();
+    const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: f.principal.tenant, name: 'Time client fields', actorUserId: f.principal.userId });
+    await bundles.upsertBundleRule(db, { tenant: f.principal.tenant, bundleId, revisionId, resourceType: 'time_entry', action: 'read', templateKey: 'selected_clients',
+      config: { selectedClientIds: [relationship.sponsor_client_id], redactedFields: ['client_id'] } });
+    await bundles.publishBundleRevision(db, { tenant: f.principal.tenant, bundleId, revisionId, actorUserId: f.principal.userId });
+    await bundles.createBundleAssignment(db, { tenant: f.principal.tenant, bundleId, targetType: 'user', targetId: f.principal.userId });
+    expect(await getClientIdForWorkItem(f.referenceId, 'co_managed', entry.entry_id)).toBeNull();
+  } finally { current.mockRestore(); }
 }));

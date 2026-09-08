@@ -680,6 +680,10 @@
         "not_configured": "Sin SLA configurado",
         "unavailable": "Tiempos de SLA no disponibles"
       }
+    },
+    "time": {
+      "log": "Registrar tiempo",
+      "unavailable": "No se puede registrar tiempo en este trabajo. Recarga la página para comprobar tu acceso actual."
     }
   }
 }
