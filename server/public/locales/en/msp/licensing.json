@@ -513,7 +513,8 @@
       "assignment": {
         "needsHandoff": "Escalate this ticket before assigning MSP staff.",
         "unavailable": "The assigned MSP collaborator is no longer available."
-      }
+      },
+      "slaSetupRequired": "Your MSP must configure its SLA policy and priority mapping before this ticket can be escalated."
     },
     "grants": {
       "title": "Individual ticket access",
@@ -736,6 +737,14 @@
       },
       "loadError": "Could not load this project or task.",
       "discard": "Discard changes and reload"
+    },
+    "sla": {
+      "title": "Co-managed SLA priorities",
+      "description": "Map customer priorities to MSP priorities. New escalations use your client, board, or default SLA policy. Existing clocks keep their targets.",
+      "missingPolicy": "Configure an MSP SLA policy before escalation.",
+      "settings": "Manage SLA policies",
+      "mappingFor": "MSP priority for {{name}}",
+      "unmapped": "Not mapped"
     }
   }
 }

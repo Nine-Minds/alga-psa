@@ -21,6 +21,9 @@ The consolidated ticket queue, its CSV export control, and bulk handback selecti
 shared-note submission and retry controls also use this boundary.
 Customer and MSP ticket panels use the same boundary for assignment state, scoped
 user/team choices, assign/clear controls and uncertain-save retries.
+The MSP SLA priority mapping page (`/msp/co-management/sla`), its access-editor link,
+and handoff setup feedback use the same boundary. Mapping configuration and SLA
+handoff processing remain callable independently of the flag.
 Export and assignment actions apply current ticket access independently of the flag.
 Ordinary PSA and AlgaDesk workspaces do not depend on this flag.
 

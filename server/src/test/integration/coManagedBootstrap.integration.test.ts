@@ -90,7 +90,7 @@ beforeAll(async () => {
     '20260906080000_create_co_management_relationship_events.cjs',
     '20260906100000_add_external_file_metadata.cjs',
     '20260906110000_add_kb_import_batch_identity.cjs',
-    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs', '20260908011054_add_co_managed_meeting_sync_intents.cjs', '20260908021208_create_co_managed_meeting_creation_operations.cjs', '20260908043851_allow_co_managed_assignment_before_escalation.cjs', '20260908050419_create_organization_sla_obligations.cjs']) {
+    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs', '20260908011054_add_co_managed_meeting_sync_intents.cjs', '20260908021208_create_co_managed_meeting_creation_operations.cjs', '20260908043851_allow_co_managed_assignment_before_escalation.cjs', '20260908050419_create_organization_sla_obligations.cjs', '20260908051552_create_co_managed_sla_priority_mappings.cjs']) {
     await require('../../../migrations/' + file).up(db);
   }
   for (const table of ['standard_statuses', 'standard_priorities', 'countries', 'notification_categories',
@@ -3148,6 +3148,17 @@ async function ticketHandoffFixture() {
   await policy.replaceCoManagedCustomerScope(db, fixture.actor, fixture.target, 2, { visibilityMode: 'escalation_only', boards: [], projects: [] });
   await policy.replaceCoManagedStaffAssignments(db, fixture.sponsorActor, fixture.target, 3,
     [{ kind: 'user', principalId: fixture.principal.userId, role: 'technician' }]);
+  // Explicit MSP policy and cross-organization priority mappings are part of handoff setup.
+  const priorities = await fixture.customer.table('priorities').where('item_type', 'ticket');
+  const mspPriorityId = randomUUID(), slaPolicyId = randomUUID();
+  await fixture.sponsor.table('priorities').insert({ ...priorities[0], tenant: fixture.principal.tenant,
+    priority_id: mspPriorityId, priority_name: 'MSP mapped priority', created_by: null });
+  await fixture.sponsor.table('sla_policies').insert({ tenant: fixture.principal.tenant, sla_policy_id: slaPolicyId, policy_name: 'MSP policy', is_default: true });
+  await fixture.sponsor.table('sla_policy_targets').insert({ tenant: fixture.principal.tenant, target_id: randomUUID(),
+    sla_policy_id: slaPolicyId, priority_id: mspPriorityId, response_time_minutes: 60, resolution_time_minutes: 480, is_24x7: true });
+  await fixture.sponsor.table('co_managed_sla_priority_mappings').insert(priorities.map(priority => ({ tenant: fixture.principal.tenant,
+    customer_tenant: fixture.resource.tenant, relationship_id: fixture.resource.relationshipId,
+    customer_priority_id: priority.priority_id, msp_priority_id: mspPriorityId })));
   return { ...fixture, customerPrincipal: { ...fixture.actor, kind: 'session' as const, sessionId } };
 }
 
@@ -15875,4 +15886,108 @@ describe('organization SLA durable clock', () => {
       .rejects.toMatchObject({ code: '23514' });
     expect((await f.read()).clock.identity).toEqual(f.identity);
   });
+});
+
+it('handoff SLA starts with actual escalation, resumes the original MSP target and leaves the customer timeline intact', async () => {
+  const f = await ticketHandoffFixture();
+  const { escalateCoManagedTicket: escalate, handBackCoManagedTicket: handback } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  const before = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  expect(await f.sponsor.table('sla_organization_obligations')).toEqual([]);
+  const request = { operationId: randomUUID(), expectedRevision: 0, note: 'Please investigate' };
+  const first = await escalate(db, f.customerPrincipal, f.resource, request);
+  const obligation = await f.sponsor.table('sla_organization_obligations').first();
+  const target = await f.sponsor.table('sla_policy_targets').first();
+  expect(obligation).toMatchObject({ source_tenant: f.resource.tenant, ticket_id: f.resource.id, sla_policy_id: target.sla_policy_id,
+    priority_id: target.priority_id, generation: 1, revision: 1, clock: { startedAt: first.occurredAt, response: { targetMinutes: 60 }, resolution: { targetMinutes: 480 } } });
+  expect(await escalate(db, f.customerPrincipal, f.resource, request)).toEqual(first);
+  const back = await handback(db, f.principal, f.resource, { operationId: randomUUID(), expectedRevision: 1, note: 'Check the hardware' });
+  const paused = await f.sponsor.table('sla_organization_obligations').first();
+  expect(paused.clock).toMatchObject({ pauseReasons: ['customer_responsible'], response: { dueAt: null } });
+  expect(paused.clock.elapsedMilliseconds).toBe(Date.parse(back.occurredAt) - Date.parse(first.occurredAt));
+  await f.sponsor.table('sla_policy_targets').update({ response_time_minutes: 9999 });
+  await f.sponsor.table('co_managed_sla_priority_mappings').del();
+  await escalate(db, f.customerPrincipal, f.resource, { operationId: randomUUID(), expectedRevision: 2, note: 'Hardware verified' });
+  const resumed = await f.sponsor.table('sla_organization_obligations').first();
+  expect(resumed).toMatchObject({ obligation_id: obligation.obligation_id, generation: 1, revision: 3,
+    clock: { startedAt: first.occurredAt, elapsedMilliseconds: paused.clock.elapsedMilliseconds, pauseReasons: [], response: { targetMinutes: 60 } } });
+  expect(await f.sponsor.table('sla_organization_events')).toHaveLength(3);
+  expect(await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).toEqual(before);
+});
+
+it.each(['mapping', 'policy', 'target'] as const)('handoff SLA rejects missing %s atomically without inventing a fallback', async missing => {
+  const f = await ticketHandoffFixture();
+  if (missing === 'mapping') await f.sponsor.table('co_managed_sla_priority_mappings').del();
+  if (missing === 'target') await f.sponsor.table('sla_policy_targets').del();
+  if (missing === 'policy') await f.sponsor.table('sla_policies').update({ is_default: false });
+  const { escalateCoManagedTicket } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  await expect(escalateCoManagedTicket(db, f.customerPrincipal, f.resource,
+    { operationId: randomUUID(), expectedRevision: 0, note: 'Escalate' })).rejects.toMatchObject({ code: 'CO_MANAGED_SLA_SETUP_REQUIRED' });
+  for (const table of ['co_management_ticket_work', 'co_management_ticket_handoffs']) expect(await f.customer.table(table)).toEqual([]);
+  for (const table of ['co_managed_ticket_references', 'sla_organization_obligations', 'sla_organization_events']) expect(await f.sponsor.table(table)).toEqual([]);
+});
+
+it('handoff SLA priority configuration requires the actual sponsor administrator and current revision/session', async () => {
+  const f = await ticketHandoffFixture();
+  const policy = await import('../../../../packages/co-managed/src/policy');
+  const state = await policy.getCoManagedSlaPriorityMappings(db, f.principal, f.target);
+  expect(state).toMatchObject({ revision: 4, canWrite: true });
+  expect(state.customerPriorities).toHaveLength(state.mappings.length);
+  await expect(policy.getCoManagedSlaPriorityMappings(db, f.customerPrincipal, f.target)).rejects.toMatchObject({ code: 'FORBIDDEN' });
+  const bad = [{ ...state.mappings[0], mspPriorityId: randomUUID() }];
+  await expect(policy.replaceCoManagedSlaPriorityMappings(db, f.principal, f.target, 4, bad)).rejects.toMatchObject({ code: 'RESOURCE_NOT_FOUND' });
+  expect(await policy.replaceCoManagedSlaPriorityMappings(db, f.principal, f.target, 4, state.mappings)).toBe(5);
+  expect(await policy.replaceCoManagedSlaPriorityMappings(db, f.principal, f.target, 4, [...state.mappings].reverse())).toBe(5);
+  await expect(policy.replaceCoManagedSlaPriorityMappings(db, f.principal, f.target, 4, [])).rejects.toMatchObject({ code: 'POLICY_CHANGED' });
+  const event = await f.customer.table('co_management_relationship_events').where('event_type', 'sla_priority_mappings_changed').first();
+  expect(event).toMatchObject({ actor_tenant: f.principal.tenant, actor_user_id: f.principal.userId, revision: 5 });
+  await f.sponsor.table('sessions').where('session_id', f.principal.sessionId).update({ expires_at: new Date(Date.now() - 1000) });
+  await expect(policy.replaceCoManagedSlaPriorityMappings(db, f.principal, f.target, 5, [])).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(await f.sponsor.table('co_managed_sla_priority_mappings')).toHaveLength(state.mappings.length);
+  expect((await f.customer.table('co_management_relationships').first()).revision).toBe(5);
+});
+
+it.each(['default', 'board', 'client'] as const)('handoff SLA uses the MSP %s policy through the existing precedence', async selection => {
+  const f = await ticketHandoffFixture();
+  const target = await f.sponsor.table('sla_policy_targets').first();
+  const boardPolicy = randomUUID(), clientPolicy = randomUUID();
+  for (const [id, minutes] of [[boardPolicy, 2], [clientPolicy, 3]] as const) {
+    await f.sponsor.table('sla_policies').insert({ tenant: f.principal.tenant, sla_policy_id: id, policy_name: `Policy ${minutes}`, is_default: false });
+    await f.sponsor.table('sla_policy_targets').insert({ ...target, target_id: randomUUID(), sla_policy_id: id, response_time_minutes: minutes });
+  }
+  if (selection !== 'default') await f.sponsor.table('boards').where('board_id', f.operation.escalation_board_id).update({ sla_policy_id: boardPolicy });
+  if (selection === 'client') await f.sponsor.table('clients').where('client_id', f.operation.request.clientId).update({ sla_policy_id: clientPolicy });
+  const { escalateCoManagedTicket } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  await escalateCoManagedTicket(db, f.customerPrincipal, f.resource, { operationId: randomUUID(), expectedRevision: 0, note: 'Escalate' });
+  expect(await f.sponsor.table('sla_organization_obligations').first()).toMatchObject({
+    sla_policy_id: selection === 'default' ? target.sla_policy_id : selection === 'board' ? boardPolicy : clientPolicy,
+    clock: { response: { targetMinutes: selection === 'default' ? 60 : selection === 'board' ? 2 : 3 } },
+  });
+});
+
+it('handoff SLA configuration blocks suspended workspaces and license-lapsed mutations', async () => {
+  const f = await ticketHandoffFixture(), policy = await import('../../../../packages/co-managed/src/policy');
+  const initial = await policy.getCoManagedSlaPriorityMappings(db, f.principal, f.target);
+  expect(initial.policyName).toBe('MSP policy');
+  for (const owner of [f.sponsor, f.customer]) {
+    await owner.table('tenants').update({ suspended_at: new Date() });
+    await expect(policy.getCoManagedSlaPriorityMappings(db, f.principal, f.target)).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    await expect(policy.replaceCoManagedSlaPriorityMappings(db, f.principal, f.target, 4, [])).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    await owner.table('tenants').update({ suspended_at: null });
+  }
+  await expireCoManagedEntitlement(f.operation.tenant);
+  expect(await policy.getCoManagedSlaPriorityMappings(db, f.principal, f.target)).toMatchObject({ canWrite: false, mappings: initial.mappings });
+  await expect(policy.replaceCoManagedSlaPriorityMappings(db, f.principal, f.target, 4, [])).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+});
+
+it('handoff SLA and responsibility both roll back when the initiating session expires at the final receipt', async () => {
+  const f = await ticketHandoffFixture(), actor = f.customerPrincipal;
+  await db.raw(`CREATE FUNCTION expire_sla_handoff_session() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN UPDATE sessions SET expires_at = to_timestamp(0) WHERE tenant = '${actor.tenant}'::uuid AND session_id = '${actor.sessionId}'::uuid; RETURN NEW; END $$`);
+  await db.raw('CREATE TRIGGER expire_sla_handoff_session AFTER INSERT ON co_management_ticket_handoffs FOR EACH ROW EXECUTE FUNCTION expire_sla_handoff_session()');
+  try {
+    const { escalateCoManagedTicket } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+    await expect(escalateCoManagedTicket(db, actor, f.resource, { operationId: randomUUID(), expectedRevision: 0, note: 'Escalate' }))
+      .rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    for (const table of ['co_management_ticket_work', 'co_management_ticket_handoffs']) expect(await f.customer.table(table)).toEqual([]);
+    for (const table of ['co_managed_ticket_references', 'sla_organization_obligations', 'sla_organization_events']) expect(await f.sponsor.table(table)).toEqual([]);
+  } finally { await db.raw('DROP TRIGGER expire_sla_handoff_session ON co_management_ticket_handoffs'); await db.raw('DROP FUNCTION expire_sla_handoff_session()'); }
 });

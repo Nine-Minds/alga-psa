@@ -3,6 +3,7 @@
 import { withAuth } from '@alga-psa/auth';
 import { coManagedBrowserActor as browserActor } from '../co-managed/browserActor';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import { CoManagedSlaSetupError } from '@alga-psa/co-managed';
 import { getCoManagedSharedWorkSummary, getCoManagedTicketScreen, getCoManagedTicketHandoffHistory, getCoManagedExplicitTicketGrants, escalateCoManagedTicket, handBackCoManagedTicket, revokeCoManagedTicketGrant, CoManagedSharedWorkError, type CoManagedSharedResource, type CoManagedTicketHandoffRequest } from '@alga-psa/co-managed';
 
 
@@ -15,7 +16,11 @@ export const getSharedWorkSummaryAction = withAuth(async (user, { tenant }, reso
 export const escalateSharedTicketAction = withAuth(async (user, { tenant }, resource: CoManagedSharedResource, request: CoManagedTicketHandoffRequest) => {
   const actor = await browserActor(user, tenant);
   const { knex } = await createTenantKnex(tenant);
-  return escalateCoManagedTicket(knex, actor, resource, request);
+  try { return await escalateCoManagedTicket(knex, actor, resource, request); }
+  catch (error) {
+    if (error instanceof CoManagedSlaSetupError) return { setupRequired: true as const };
+    throw error;
+  }
 });
 
 export const handBackSharedTicketAction = withAuth(async (user, { tenant }, resource: CoManagedSharedResource, request: CoManagedTicketHandoffRequest) => {

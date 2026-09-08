@@ -54,7 +54,11 @@
     "./lib/tickets/clientPortalVisibility.server": "./dist/lib/tickets/clientPortalVisibility.server.js",
     "./*": "./dist/*",
     "./lib/email/senderAuthVerification": "./dist/lib/email/senderAuthVerification.js",
-    "./utils/tenantSlug": "./dist/utils/tenantSlug.js"
+    "./utils/tenantSlug": "./dist/utils/tenantSlug.js",
+    "./lib/sla/organizationSlaClock": "./dist/lib/sla/organizationSlaClock.js",
+    "./lib/sla/organizationSlaStore": "./dist/lib/sla/organizationSlaStore.js",
+    "./lib/sla/organizationSlaLock": "./dist/lib/sla/organizationSlaLock.js",
+    "./lib/sla/slaPolicyResolver": "./dist/lib/sla/slaPolicyResolver.js"
   },
   "scripts": {
     "build": "tsup",

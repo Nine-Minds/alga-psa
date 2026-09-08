@@ -60,6 +60,11 @@
       "types": "./dist/services/organizationSlaStore.d.ts",
       "import": "./dist/services/organizationSlaStore.js",
       "require": "./dist/services/organizationSlaStore.js"
+    },
+    "./services/slaPolicyResolver": {
+      "types": "./dist/services/slaPolicyResolver.d.ts",
+      "import": "./dist/services/slaPolicyResolver.js",
+      "require": "./dist/services/slaPolicyResolver.js"
     }
   },
   "scripts": {

@@ -5,6 +5,7 @@ import { assertCoManagedOperationalWrite } from '@alga-psa/licensing';
 import { withCoManagedSharedWork, type CoManagedSharedResource, type CoManagedSharedWorkContext } from './sharedWork';
 import { lockCoManagedCustomerPolicy } from './policy';
 import { withCoManagedCustomerTicket } from './customerWork';
+import { applyCoManagedTicketHandoffSla } from './ticketSla';
 import { CoManagedSharedWorkError, isCoManagedUuid, assertCoManagedSessionUnexpired, snapshotCoManagedSessionActor, lockCoManagedSessionIdentity, type CoManagedSessionActor } from './sharedWorkIdentity';
 
 export interface CoManagedTicketHandoffRequest {
@@ -83,6 +84,8 @@ async function transitionTicket(context: CoManagedSharedWorkContext, request: Co
   const occurredAt = (await trx.select({ at: trx.raw('clock_timestamp()') }).first()).at;
   const workId = work?.work_id ?? randomUUID();
   const revision = request.expectedRevision + 1;
+  await applyCoManagedTicketHandoffSla(trx, relationship, resource,
+    { workId, firstEscalatedAt: work?.first_escalated_at ?? null }, request.operationId, transition, occurredAt);
   if (!work) await customer.table('co_management_ticket_work').insert({ tenant: resource.tenant, ...key, work_id: workId,
     revision, responsibility, can_collaborate: true, first_escalated_at: occurredAt, last_transition_at: occurredAt });
   else await customer.table('co_management_ticket_work').where(key).update({ revision, responsibility, last_transition_at: occurredAt,
@@ -104,6 +107,8 @@ async function transitionTicket(context: CoManagedSharedWorkContext, request: Co
     actor_name: [author.first_name, author.last_name].filter(Boolean).join(' ').trim() || author.username,
     actor_organization: organization.client_name, note: request.note, audience: 'shared_it', occurred_at: occurredAt };
   await customer.table('co_management_ticket_handoffs').insert(event);
+  await assertCoManagedSessionUnexpired(trx, { ...actor, kind: 'session', sessionId: context.sessionId });
+  if (transition !== 'access_revoked') await assertCoManagedOperationalWrite(trx, resource.tenant);
   return receipt(event);
 }
 

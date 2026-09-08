@@ -428,7 +428,8 @@
       "assignment": {
         "needsHandoff": "Eskaluj to zgłoszenie przed przypisaniem pracowników MSP.",
         "unavailable": "Przypisany współpracownik MSP nie jest już dostępny."
-      }
+      },
+      "slaSetupRequired": "Twój MSP musi skonfigurować zasady SLA i mapowanie priorytetów, zanim będzie można eskalować to zgłoszenie."
     },
     "grants": {
       "title": "Indywidualny dostęp do zgłoszeń",
@@ -651,6 +652,14 @@
       },
       "loadError": "Nie udało się wczytać tego projektu lub zadania.",
       "discard": "Odrzuć zmiany i odśwież"
+    },
+    "sla": {
+      "title": "Priorytety SLA współzarządzania",
+      "description": "Przypisz priorytety klienta do priorytetów MSP. Nowe eskalacje używają zasad SLA klienta, tablicy lub zasad domyślnych. Istniejące SLA zachowują swoje cele.",
+      "missingPolicy": "Przed eskalacją skonfiguruj zasady SLA MSP.",
+      "settings": "Zarządzaj zasadami SLA",
+      "mappingFor": "Priorytet MSP dla {{name}}",
+      "unmapped": "Nieprzypisany"
     }
   }
 }

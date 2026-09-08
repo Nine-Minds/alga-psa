@@ -426,7 +426,8 @@
       "assignment": {
         "needsHandoff": "Escale este ticket antes de asignar personal del MSP.",
         "unavailable": "El colaborador del MSP asignado ya no está disponible."
-      }
+      },
+      "slaSetupRequired": "Su MSP debe configurar su política de SLA y la asignación de prioridades antes de escalar este ticket."
     },
     "grants": {
       "title": "Acceso individual a tickets",
@@ -649,6 +650,14 @@
       },
       "loadError": "No se pudo cargar este proyecto o tarea.",
       "discard": "Descartar cambios y volver a cargar"
+    },
+    "sla": {
+      "title": "Prioridades de SLA de TI cogestionada",
+      "description": "Asigne las prioridades del cliente a las del MSP. Las nuevas escalaciones usan la política de SLA del cliente, del tablero o la predeterminada. Los SLA existentes conservan sus objetivos.",
+      "missingPolicy": "Configure una política de SLA del MSP antes de escalar.",
+      "settings": "Administrar políticas de SLA",
+      "mappingFor": "Prioridad del MSP para {{name}}",
+      "unmapped": "Sin asignar"
     }
   }
 }

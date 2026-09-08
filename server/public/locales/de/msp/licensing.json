@@ -424,7 +424,8 @@
       "assignment": {
         "needsHandoff": "Eskalieren Sie dieses Ticket, bevor Sie MSP-Mitarbeiter zuweisen.",
         "unavailable": "Der zugewiesene MSP-Mitarbeiter oder das Team ist nicht mehr verfügbar."
-      }
+      },
+      "slaSetupRequired": "Ihr MSP muss seine SLA-Richtlinie und Prioritätszuordnung konfigurieren, bevor dieses Ticket eskaliert werden kann."
     },
     "grants": {
       "title": "Individueller Ticketzugriff",
@@ -647,6 +648,14 @@
       },
       "loadError": "Projekt oder Aufgabe konnte nicht geladen werden.",
       "discard": "Änderungen verwerfen und neu laden"
+    },
+    "sla": {
+      "title": "SLA-Prioritäten für Co-Managed IT",
+      "description": "Ordnen Sie Kundenprioritäten MSP-Prioritäten zu. Neue Eskalationen verwenden die SLA-Richtlinie des Kunden, des Boards oder die Standardrichtlinie. Laufende SLAs behalten ihre Ziele.",
+      "missingPolicy": "Konfigurieren Sie vor der Eskalation eine MSP-SLA-Richtlinie.",
+      "settings": "SLA-Richtlinien verwalten",
+      "mappingFor": "MSP-Priorität für {{name}}",
+      "unmapped": "Nicht zugeordnet"
     }
   }
 }

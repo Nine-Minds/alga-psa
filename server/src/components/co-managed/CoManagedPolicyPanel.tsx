@@ -148,6 +148,7 @@ export default function CoManagedPolicyPanel({ operationId }: { operationId?: st
               onChange={entries => setScope(current => ({ ...current, [key]: entries.map(entry => ({ id: entry.id, canCollaborate: entry.collaborate })) }))} />;
           })}
         </> : <>
+          {operationId && <Link id="co-policy-sla" href={`/msp/co-management/sla?operationId=${encodeURIComponent(operationId)}`} className="text-primary underline">{t('coManaged.sla.title')}</Link>}
           <div className="space-y-2 text-sm"><h2 className="font-semibold">{t('coManaged.policy.approvedScope')}</h2>
             <p>{t(state.policy.visibilityMode === 'board_scope' ? 'coManaged.provisioning.board_scope' : 'coManaged.provisioning.escalation_only')}</p>
             {(['board', 'project'] as const).map(kind => <div key={kind}><h3 className="font-medium">{t(`coManaged.policy.kinds.${kind}`)}</h3>

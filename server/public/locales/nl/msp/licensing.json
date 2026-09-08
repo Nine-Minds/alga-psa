@@ -424,7 +424,8 @@
       "assignment": {
         "needsHandoff": "Escaleer dit ticket voordat u MSP-medewerkers toewijst.",
         "unavailable": "De toegewezen MSP-medewerker of het team is niet meer beschikbaar."
-      }
+      },
+      "slaSetupRequired": "Uw MSP moet het SLA-beleid en de prioriteitskoppeling configureren voordat dit ticket kan worden geëscaleerd."
     },
     "grants": {
       "title": "Individuele tickettoegang",
@@ -647,6 +648,14 @@
       },
       "loadError": "Dit project of deze taak kon niet worden geladen.",
       "discard": "Wijzigingen verwerpen en opnieuw laden"
+    },
+    "sla": {
+      "title": "SLA-prioriteiten voor gezamenlijk beheer",
+      "description": "Koppel klantprioriteiten aan MSP-prioriteiten. Nieuwe escalaties gebruiken het SLA-beleid van de klant, het bord of het standaardbeleid. Bestaande SLA-klokken behouden hun doelen.",
+      "missingPolicy": "Configureer een MSP-SLA-beleid voordat u escaleert.",
+      "settings": "SLA-beleid beheren",
+      "mappingFor": "MSP-prioriteit voor {{name}}",
+      "unmapped": "Niet gekoppeld"
     }
   }
 }

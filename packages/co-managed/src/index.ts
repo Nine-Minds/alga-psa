@@ -4,6 +4,7 @@ export * from './policy';
 export * from './sharedWork';
 export * from './sharedWorkRead';
 export * from './ticketHandoffs';
+export { CoManagedSlaSetupError } from './ticketSla';
 export * from './ticketCollaboration';
 
 export * from './actorReferences';

@@ -426,7 +426,8 @@
       "assignment": {
         "needsHandoff": "Escaladez ce ticket avant d’affecter du personnel MSP.",
         "unavailable": "Le collaborateur MSP affecté n’est plus disponible."
-      }
+      },
+      "slaSetupRequired": "Votre MSP doit configurer sa politique SLA et les correspondances de priorité avant de pouvoir escalader ce ticket."
     },
     "grants": {
       "title": "Accès individuels aux tickets",
@@ -649,6 +650,14 @@
       },
       "loadError": "Impossible de charger ce projet ou cette tâche.",
       "discard": "Abandonner les modifications et recharger"
+    },
+    "sla": {
+      "title": "Priorités SLA de la cogestion",
+      "description": "Associez les priorités du client à celles du MSP. Les nouvelles escalades utilisent la politique SLA du client, du tableau ou par défaut. Les SLA en cours conservent leurs objectifs.",
+      "missingPolicy": "Configurez une politique SLA du MSP avant toute escalade.",
+      "settings": "Gérer les politiques SLA",
+      "mappingFor": "Priorité MSP pour {{name}}",
+      "unmapped": "Non associée"
     }
   }
 }

@@ -426,7 +426,8 @@
       "assignment": {
         "needsHandoff": "Escale este ticket antes de atribuir pessoal do MSP.",
         "unavailable": "O colaborador do MSP atribuído já não está disponível."
-      }
+      },
+      "slaSetupRequired": "Seu MSP precisa configurar a política de SLA e o mapeamento de prioridades antes que este chamado possa ser escalonado."
     },
     "grants": {
       "title": "Acesso individual aos chamados",
@@ -649,6 +650,14 @@
       },
       "loadError": "Não foi possível carregar este projeto ou tarefa.",
       "discard": "Descartar alterações e recarregar"
+    },
+    "sla": {
+      "title": "Prioridades de SLA da cogestão",
+      "description": "Associe as prioridades do cliente às do MSP. Novos escalonamentos usam a política de SLA do cliente, do quadro ou a padrão. Os SLAs existentes mantêm suas metas.",
+      "missingPolicy": "Configure uma política de SLA do MSP antes de escalonar.",
+      "settings": "Gerenciar políticas de SLA",
+      "mappingFor": "Prioridade do MSP para {{name}}",
+      "unmapped": "Não associada"
     }
   }
 }

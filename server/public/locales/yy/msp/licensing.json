@@ -424,7 +424,8 @@
       "assignment": {
         "needsHandoff": "〖Ḗşƈȧŀȧŧḗ ŧħīş ŧīƈķḗŧ ƀḗƒȯřḗ ȧşşīɠƞīƞɠ ḾŞƤ şŧȧƒƒ. ····················〗",
         "unavailable": "〖Ŧħḗ ȧşşīɠƞḗḓ ḾŞƤ ƈȯŀŀȧƀȯřȧŧȯř īş ƞȯ ŀȯƞɠḗř ȧṽȧīŀȧƀŀḗ. ······················〗"
-      }
+      },
+      "slaSetupRequired": "[Your MSP must configure its SLA policy and priority mapping before this ticket can be escalated.]"
     },
     "grants": {
       "title": "〖Īƞḓīṽīḓŭȧŀ ŧīƈķḗŧ ȧƈƈḗşş ··········〗",
@@ -647,6 +648,14 @@
       },
       "loadError": "Could not load this project or task.",
       "discard": "Discard changes and reload"
+    },
+    "sla": {
+      "title": "[Co-managed SLA priorities]",
+      "description": "[Map customer priorities to MSP priorities. New escalations use your client, board, or default SLA policy. Existing clocks keep their targets.]",
+      "missingPolicy": "[Configure an MSP SLA policy before escalation.]",
+      "settings": "[Manage SLA policies]",
+      "mappingFor": "[MSP priority for {{name}}]",
+      "unmapped": "[Not mapped]"
     }
   }
 }

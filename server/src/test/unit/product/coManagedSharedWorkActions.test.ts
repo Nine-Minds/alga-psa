@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({ screen: vi.fn(), history: vi.fn(), grants: vi.fn(), first: vi.fn(), scoped: vi.fn(), session: vi.fn(), override: vi.fn(), db: vi.fn(), read: vi.fn(), escalate: vi.fn(), handback: vi.fn(), revoke: vi.fn(),
-  home: { user_id: 'home-user', tenant: 'home-tenant', user_type: 'internal' }, knex: {} }));
+  home: { user_id: 'home-user', tenant: 'home-tenant', user_type: 'internal' }, knex: {}, SetupError: class extends Error {} }));
 vi.mock('@alga-psa/auth', () => ({ withAuth: (fn: any) => (...args: any[]) => fn(mocks.home, { tenant: mocks.home.tenant }, ...args),
   getSession: mocks.session, getApiKeyUserOverride: mocks.override }));
 vi.mock('@alga-psa/db', () => ({ createTenantKnex: mocks.db, withTransaction: (db: any, callback: any) => callback(db), tenantDb: mocks.scoped }));
 vi.mock('@alga-psa/co-managed', () => ({ getCoManagedTicketScreen: mocks.screen, getCoManagedTicketHandoffHistory: mocks.history, getCoManagedExplicitTicketGrants: mocks.grants, getCoManagedSharedWorkSummary: mocks.read, escalateCoManagedTicket: mocks.escalate, handBackCoManagedTicket: mocks.handback, revokeCoManagedTicketGrant: mocks.revoke,
-  CoManagedSharedWorkError: class extends Error { code = 'CO_MANAGED_SHARED_WORK_FORBIDDEN'; } }));
+  CoManagedSlaSetupError: mocks.SetupError, CoManagedSharedWorkError: class extends Error { code = 'CO_MANAGED_SHARED_WORK_FORBIDDEN'; } }));
 import { getCoManagedTicketScreenAction, getSharedTicketHandoffHistoryAction, getExplicitTicketGrantsAction, getSharedWorkSummaryAction, escalateSharedTicketAction, handBackSharedTicketAction, revokeSharedTicketGrantAction } from '../../../lib/actions/coManagedSharedWorkActions';
 const resource = { tenant: 'customer-tenant', relationshipId: 'relationship', kind: 'ticket' as const, id: 'ticket' };
 beforeEach(() => {
@@ -76,4 +76,13 @@ it('passes qualified reads and cursors through the verified browser principal an
   await expect(getSharedTicketHandoffHistoryAction(resource)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
   await expect(getExplicitTicketGrantsAction()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
   expect(mocks.screen).toHaveBeenCalledTimes(1); expect(mocks.history).toHaveBeenCalledTimes(1); expect(mocks.grants).toHaveBeenCalledTimes(1);
+});
+
+
+it('returns an explicit safe SLA setup result and preserves uncertain failures', async () => {
+  const request = { operationId: 'operation', expectedRevision: 0, note: 'Escalate' };
+  mocks.escalate.mockRejectedValueOnce(new mocks.SetupError());
+  expect(await escalateSharedTicketAction(resource, request)).toEqual({ setupRequired: true });
+  mocks.escalate.mockRejectedValueOnce(new Error('Transport failed'));
+  await expect(escalateSharedTicketAction(resource, request)).rejects.toThrow('Transport failed');
 });

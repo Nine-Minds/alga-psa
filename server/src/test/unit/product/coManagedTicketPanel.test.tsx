@@ -148,3 +148,13 @@ it.each(['customer', 'sponsor'])('connects assignment changes and access loss to
   expect(await screen.findByRole('alert')).toHaveTextContent('coManaged.ticket.loadError');
   expect(screen.queryByText('A-1 · Customer A issue')).toBeNull();
 });
+
+
+it('explains missing SLA setup without reporting a successful or uncertain handoff', async () => {
+  mocks.escalate.mockResolvedValueOnce({ setupRequired: true });
+  mount(); await screen.findByText('A-1 · Customer A issue'); fireEvent.click(button('escalate'));
+  fireEvent.change(screen.getByLabelText('coManaged.ticket.note'), { target: { value: 'Please investigate' } }); fireEvent.click(button('escalate'));
+  expect(await screen.findByRole('alert')).toHaveTextContent('coManaged.ticket.slaSetupRequired');
+  expect(mocks.load).toHaveBeenCalledTimes(1); expect(screen.getByLabelText('coManaged.ticket.note')).not.toBeDisabled();
+  expect(screen.queryByText('coManaged.ticket.uncertain')).toBeNull();
+});
