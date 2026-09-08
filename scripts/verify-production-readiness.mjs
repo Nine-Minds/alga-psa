@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { readinessRequirements, evaluateProductionReadiness } from './lib/production-readiness.mjs';
 import { readChangedFiles, selectIntegration } from './lib/integration-selection.mjs';
 import { verifySupportedUpgrade } from './lib/supported-upgrade-evidence.mjs';
+import { verifyTeamsDevelopment } from './lib/teams-development-evidence.mjs';
 import { testRevision } from './lib/test-revision.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
@@ -18,6 +19,28 @@ try {
   const selection = selectIntegration(changed);
   for (const { artifact, revisionSuffix, conditionalWorkflow, job } of readinessRequirements) {
     if (conditionalWorkflow && !selection.shouldRun && jobs[job]?.result === 'skipped') continue;
+    if (artifact === 'teams-development-execution') {
+      if (!selection.shouldRun) {
+        artifacts[artifact] = { schemaVersion: 1, revision: source.revision, suite: 'teams-development-browser',
+          status: 'not-applicable', reason: selection.reason, failures: [], releaseValidation: false };
+        continue;
+      }
+      try {
+        const directory = path.join(root, 'test-results/readiness-input', artifact);
+        const read = name => JSON.parse(readFileSync(path.join(directory, `${name}.json`), 'utf8'));
+        const recorded = read('evidence');
+        const verified = verifyTeamsDevelopment({ revision: source.revision, root,
+          collected: read('collected'), report: read('results'), exitCode: read('runner').exitCode });
+        if (recorded.status !== 'passed' || recorded.releaseValidation !== false
+          || recorded.source?.before?.dirty !== false || recorded.source?.after?.dirty !== false
+          || recorded.source?.before?.revision !== source.revision || recorded.source?.after?.revision !== source.revision) {
+          verified.failures.push('Teams evidence is not a clean candidate development execution');
+          verified.status = 'failed';
+        }
+        artifacts[artifact] = verified;
+      } catch (error) { unreadable.push(`${artifact}: ${error.message}`); }
+      continue;
+    }
     if (['supported-upgrade-execution', 'supported-citus-upgrade-execution'].includes(artifact)) {
       if (!selection.shouldRun) {
         artifacts[artifact] = { schemaVersion: 1, revision: source.revision, scope: 'supported-upgrade',

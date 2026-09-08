@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { supportedUpgradeBaseline, upgradeBrowserFiles } from '../lib/supported-upgrade-evidence.mjs';
+import { teamsDevelopmentFiles } from '../lib/teams-development-evidence.mjs';
 import { readinessRequirements, evaluateProductionReadiness } from '../lib/production-readiness.mjs';
 
 // Formats emitted by candidate-execution, workspace-execution, test-sharding
@@ -26,10 +27,10 @@ function fixture() {
 }
 const evaluate = input => evaluateProductionReadiness(JSON.parse(JSON.stringify(input)));
 
-test('all required serialized workflow verdicts pass and preserve eleven separate requirements', () => {
+test('all required serialized workflow verdicts pass and preserve twelve separate requirements', () => {
   const result = evaluate(fixture());
   assert.equal(result.status, 'passed', result.failures.join('\n'));
-  assert.equal(result.results.length, 11);
+  assert.equal(result.results.length, 12);
 });
 
 for (const outcome of ['failure', 'cancelled', 'skipped', undefined]) {
@@ -116,7 +117,7 @@ test('CLI reads candidate artifacts, fails on missing JSON, and rejects a dirty 
   cpSync(new URL('../lib', import.meta.url), path.join(root, 'scripts/lib'), { recursive: true });
   cpSync(new URL('../verify-production-readiness.mjs', import.meta.url), path.join(root, 'scripts/verify-production-readiness.mjs'));
   write('.gitignore', 'test-results/\n');
-  for (const file of upgradeBrowserFiles) write(file, '// Runtime report fixture identity\n');
+  for (const file of [...upgradeBrowserFiles, ...teamsDevelopmentFiles]) write(file, '// Runtime report fixture identity\n');
   const git = args => execFileSync('git', args, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
   git(['init', '-q']); git(['add', '.']);
   git(['-c', 'user.name=Readiness fixture', '-c', 'user.email=readiness@example.test', 'commit', '--no-gpg-sign', '-qm', 'Fixture']);
@@ -152,6 +153,16 @@ test('CLI reads candidate artifacts, fails on missing JSON, and rejects a dirty 
   citusSchema.backend = 'citus';
   citusSchema.distribution = { baseline: distribution, upgraded: structuredClone(distribution) };
   write(`${citusDirectory}/schema.json`, citusSchema);
+  const teamsDirectory = 'test-results/readiness-input/teams-development-execution';
+  const teamsReport = structuredClone(rawBrowser);
+  teamsReport.stats.expected = 1;
+  teamsReport.suites = [teamsReport.suites[0]];
+  teamsReport.suites[0].specs[0].file = teamsDevelopmentFiles[0];
+  Object.assign(teamsReport.config.metadata, { releaseValidation: false, requiredServerNodeEnv: 'development', integrationSurface: 'teams' });
+  for (const name of ['collected', 'results']) write(`${teamsDirectory}/${name}.json`, teamsReport);
+  write(`${teamsDirectory}/runner.json`, { exitCode: 0 });
+  const teamsEvidence = { status: 'passed', revision, releaseValidation: false, source: { before: cleanSource, after: cleanSource } };
+  write(`${teamsDirectory}/evidence.json`, teamsEvidence);
   const run = () => {
     const child = spawnSync(process.execPath, ['scripts/verify-production-readiness.mjs'], {
       cwd: root, encoding: 'utf8', timeout: 10000,
@@ -162,6 +173,12 @@ test('CLI reads candidate artifacts, fails on missing JSON, and rejects a dirty 
     return output;
   };
   { const result = run(); assert.equal(result.status, 'passed', result.failures.join('\n')); }
+  write(`${teamsDirectory}/evidence.json`, { ...teamsEvidence, releaseValidation: true });
+  assert.equal(run().status, 'failed');
+  write(`${teamsDirectory}/evidence.json`, teamsEvidence);
+  write(`${teamsDirectory}/results.json`, { ...teamsReport, suites: [] });
+  assert.equal(run().status, 'failed');
+  write(`${teamsDirectory}/results.json`, teamsReport);
   write(`${citusDirectory}/schema.json`, { ...citusSchema, backend: 'postgres' });
   assert.equal(run().status, 'failed');
   write(`${citusDirectory}/schema.json`, citusSchema);

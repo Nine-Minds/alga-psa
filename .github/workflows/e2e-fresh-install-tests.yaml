@@ -77,7 +77,7 @@ jobs:
     needs: [changes, browser-collection]
     if: needs.changes.outputs.run_tests == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 100
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
@@ -204,7 +204,7 @@ jobs:
     needs: [changes, browser-collection, build-images]
     if: always()
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
@@ -1048,6 +1048,69 @@ jobs:
         with:
           name: supported-citus-upgrade-diagnostics
           path: e2e-tests/test-results/
+          retention-days: 7
+
+      - name: Start explicit Teams development configuration
+        id: teams_development_server
+        if: ${{ !cancelled() && matrix.edition == 'enterprise' && steps.api_database.outcome == 'success' }}
+        timeout-minutes: 10
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'JS'
+          import { writeFileSync } from 'node:fs';
+          const workspace = process.env.GITHUB_WORKSPACE;
+          const volumes = ['packages', 'ee'].map(part => ({ type: 'bind', source: `${workspace}/${part}`, target: `/app/${part}`, read_only: true }));
+          volumes.push({ type: 'bind', source: `${workspace}/e2e-tests/harness/start-teams-development-ci.mjs`, target: '/app/start-teams-development-ci.mjs', read_only: true });
+          const server = { entrypoint: ['node', '/app/start-teams-development-ci.mjs'], command: [], volumes,
+            environment: { NODE_ENV: 'development', TEAMS_EMULATOR_MODE: 'true', NEXT_DIST_DIR: '.next/teams-development',
+              DB_HOST: 'postgres', DB_PORT: '5432', DB_NAME_SERVER: 'server', REDIS_PREFIX: 'teams-development:',
+              NEXT_PUBLIC_APP_URL: 'http://localhost:3000', NODE_OPTIONS: '--max-old-space-size=8192' } };
+          writeFileSync(`${process.env.RUNNER_TEMP}/teams-development-compose.json`, JSON.stringify({ services: { server } }));
+          JS
+          export COMPOSE_FILE="$COMPOSE_FILE:$RUNNER_TEMP/teams-development-compose.json"
+          docker-compose -p alga-e2e-test up --no-build --no-deps --force-recreate -d server
+          ready=false
+          for _attempt in $(seq 1 90); do
+            if curl --max-time 15 --fail --silent http://localhost:3000/auth/msp/signin >/dev/null; then ready=true; break; fi
+            sleep 2
+          done
+          test "$ready" = true
+
+      - name: Run Teams development execution gate
+        id: teams_development_browser
+        if: ${{ !cancelled() && steps.teams_development_server.outcome == 'success' }}
+        timeout-minutes: 10
+        env:
+          E2E_TEAMS_DEVELOPMENT: 'true'
+          E2E_BASE_URL: http://localhost:3000
+          E2E_EDITION: enterprise
+          E2E_DATABASE_ISOLATED: 'true'
+          E2E_EMULATORS_ISOLATED: 'true'
+          ALGASIM_CONTROL_URL: http://localhost:9500
+          E2E_DB_HOST: 127.0.0.1
+          E2E_DB_PORT: '5432'
+          E2E_DB_NAME: server
+          E2E_DB_USER: postgres
+          E2E_DB_PASSWORD: placeholder-password
+          E2E_USER_EMAIL: ${{ steps.capture_creds.outputs.e2e_user_email }}
+          E2E_USER_PASSWORD: ${{ steps.capture_creds.outputs.e2e_user_password }}
+        run: xvfb-run --auto-servernum node e2e-tests/run-teams-development.mjs
+
+      - name: Upload Teams development execution
+        if: ${{ always() && steps.teams_development_browser.outcome != 'skipped' && matrix.edition == 'enterprise' && !env.ACT }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: teams-development-execution
+          path: test-results/teams-development/
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload Teams development diagnostics
+        if: ${{ always() && steps.teams_development_server.outcome == 'success' && !env.ACT }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: teams-development-diagnostics
+          path: e2e-tests/test-results/local/
           retention-days: 7
 
       - name: Collect all container logs on failure

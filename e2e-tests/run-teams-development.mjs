@@ -13,7 +13,7 @@ const cwd = fileURLToPath(new URL('.', import.meta.url));
 const root = path.resolve(cwd, '..');
 const output = path.join(root, 'test-results/teams-development');
 mkdirSync(output, { recursive: true });
-const files = Object.fromEntries(['collected', 'results', 'discovery', 'evidence'].map(name => [name, path.join(output, `${name}.json`)]));
+const files = Object.fromEntries(['collected', 'results', 'discovery', 'evidence', 'runner'].map(name => [name, path.join(output, `${name}.json`)]));
 for (const file of Object.values(files)) writeFileSync(file, 'null\n');
 const save = (file, data) => writeFileSync(file, JSON.stringify(data, null, 2) + '\n');
 let before;
@@ -39,6 +39,7 @@ try {
   save(files.discovery, discovery);
   if (discovery.status !== 'passed') throw new Error(discovery.failures.join('\n'));
   const result = run(['--reporter=list,json'], files.results);
+  save(files.runner, { exitCode: result.status });
   let report;
   try { report = JSON.parse(readFileSync(files.results, 'utf8')); } catch { report = null; }
   evidence = verifyTeamsDevelopment({ collected, report, root, revision: before.revision, exitCode: result.status });

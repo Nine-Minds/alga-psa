@@ -2967,3 +2967,29 @@ Built3smallnativeemulatorbundles; accountinghostsession81018 QBO56105/Xero56106/
 - Added run-teams-development.mjs: clean-source, nofilters, clearsoldoutputs, realPlaywright collection, repositorycandidate reconciliation, rawexecution and before/aftersource check. Uses separate test-results/teams-development and distinct teams-development-browser suite withreleaseValidationfalse.
 - Evidence verifier requires source/configdevelopmentmetadata and mandatoryprofilejourney; rejects productionclaim,missingjourney/execution,retryonlypass,failedrunner. Eightverifiertests plus browserdiscoverytest pass9total.
 - Globalbrowserinventory now collects development-tests through explicitTeamsconfiguration, so moving/addinguncollecteddevelopmentfiles failsdiscovery. Collection remains explicitlynotexecution. Next run committedgateonliveapp53016.
+
+### Teams clean-source gate and global discovery passed
+
+- Dedicated gate94671 terminal0 atcleanc68501f94f2bb0d1acb87614f5d3d0dbc0f2ba43:1passed~1.2min, no retries/skips, matching sourcebeforeafter; teams-development-browser,releaseValidationfalse. Evidence/host-teams-development-gate.json, rawtest-results/teams-development.
+- Prior gate3783 terminal1: HTML200 but JSassetsstalled/404 during devinstrumentation recompilation; evidencearchived/tmp/alga-teams-gate-c68501-assets-failure. Subsequent signin200/main-app.js200 verified serverrecovered; reranunchangedgate, no assertion relaxation.
+- Globalbrowserinventory91003 terminal0 with newTeamscollection, log/tmp/alga-browser-inventory-c68501.log. Discoverypassed; collectiondoesnotproveexecutionofotherbrowserfiles.
+- NativeTeamsapp57530 remainsactive53016. Need remainingCIexecutionwiring, meeting/botjourneys,SSO andglobalplanrequirements.
+
+### CI runtime budget correction and Teams startup investigation
+
+- Found previous CI edit mistakenly raised build-images timeout rather than production-browser. Corrected using895319 baseline: build-images60min restored, production-browser100min now covers PostgreSQL+Citus upgrade steps. actionlint passes.
+- TeamsCIcannot simply setNODE_ENVdevelopment onproductionimage: ee/server/Dockerfile.build finalstage omits fullpackages/ee source, andservernpmrundevisNxbuilddeps. Nextstep needsexplicitread-only source mounts/packages+ee anddirectNextdev--webpack entrypoint with existingsecret mounts, originalserverDB and distinctRedis prefix. Preserve existingproductionimage testresultsbefore switch. Noextraapplicationimagebuildrequired; developmentresultmustremainseparate.
+
+### Teams CI development startup wired locally
+
+- Added explicitstart-teams-development-ci.mjs: rejectproduction/missingoptin beforecredentialaccess, readexistingmountednextauth/appDBsecrets privately, encodeDBURL, directNextdev--webpack, forwardtermination, nonzerofailedexit. Productionentrypointunchanged.
+- EnterpriseCIafterupgrade phases mounts checkoutpackages+ee read-only plusentrypoint, reusesimage/no-build, returnsoriginalserverDB andnewRedis prefixteams-development, separate.next/teams-development. FullTeamsgate runswithcapturedsyntheticaccount; rawteams-development-execution anddiagnosticsuploadseparate.
+- Productionbrowserbudget120min now includesadditionaldevelopmentphase; imagebuildrestored60. actionlintpasses,10entrypoint/evidencebehavioraltestspass. No localDockerbuild or nativeCIrun.
+- Next parentreadinessmustdownload/reverifyrequiredTeamsartifact asdevelopmentonly; startupCIneedsnativeexecutiontoverifycompleteimage/source/dependencycomposition. Do notmarkF034complete.
+
+### Teams independent parent enforcement
+
+- Teams runner now records runner.json exitCode. Parentreadiness downloads/reverifies rawTeamscollection/execution/exitstatus, requirescleanbeforeafter and releaseValidationfalse, and retainsdistinctteams-development-browser suite. Readiness12requirements.
+- ConsumerCLIbehaviorrejects missingTeamsrawexecution despitegreenrecordedverdict and rejectsreleaseValidationtrue.27readiness/Teamsverifier/entrypointtestspass; actionlintbothworkflowspass.
+- FixedoptionalartifactdownloadsemanticsforCitus: downloadcontinue-on-error allows independentgate to justifydocs-onlyNA or fail missingmandatoryapp-changeevidence, consistentwithotherdownloads. This doesnotmakeCitusrequirementoptional.
+- Nextfullnativecurrenttooling+globalinventory, then nativeCIpublicationwhenauthorized. NativeCIcompositionstillunverified; nofullgoalcompletionclaim.
