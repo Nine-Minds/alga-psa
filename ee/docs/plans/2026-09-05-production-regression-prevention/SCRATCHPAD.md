@@ -2936,3 +2936,34 @@ Built3smallnativeemulatorbundles; accountinghostsession81018 QBO56105/Xero56106/
 - prepare-supported-upgrade-ci reads synthetic account and app_user credential hash from original source Postgres; creates app_user only on fresh Citus, targetschildUPGRADE_DB_PORT. Hash is never printed. Existing roles fail provisioning rather than being overwritten. Sequential grants runner fix handles mixed table layout.
 - Raw supported-citus-upgrade-execution plus separate diagnostics artifacts added; parent download and independent expectedBackend=citus verification required. Readiness now11requirements. Consumer CLI fixture rejects a green-looking Citus artifact replaced with Postgres schema.
 - Upgrade/readiness38tests pass; actionlint bothworkflows passes; diffcheck clean. Native workflow execution and full current-source tooling remain pending; F022 still false until required CI result exists.
+
+### Full native Citus CI tooling verification
+
+- Canonical native tooling session67269 exited0 atclean67d3b6689bfccde839a64beeeaf30c859ce75793 in136.8seconds. 636tests across65required files passed; evidence/host-tooling-citus-ci.json. No source changes during execution.
+- Live temporary role-transfer probe on ownedPG55432 andCitus55433 used the CI format/CREATE ROLE/pg_authid operations. Stored credential hash preserved exactly, destination login true/superuser false, duplicate creation rejected. Temporary random synthetic roles dropped on both services; no existing role modified and no password/hash printed. This probes transfer semantics, not the complete fresh CI service network/auth flow.
+- Native GitHub execution remains pending; full plan not achieved.
+
+### Microsoft coverage boundary audit
+
+- No Teams browser spec exists in current e2e-tests; Graph emulator smoke has meeting/bot/activity wire coverage, which cannot substitute for product UI evidence. Teams emulatorMode explicitly denies production regardless of opt-in, so next Teams UI work requires a separately labeled development-configuration lane; do not relax guard.
+- Native endpoint/OpenID override/serviceURL trust tests28passed at67d3b6. Initial sandbox18passed10skipped/error fromlistenEPERM; native rerun0exit in /tmp/alga-teams-guard-audit-native.log. No code changes or new claims about live-provider parity.
+- Added microsoft-coverage-boundaries.md mapping mailbox/calendar/Teams/SSO claims to concrete existing evidence and missing boundaries. F034/F037 remain false; next implement Teams UI lane and exact user OIDC flow rather than assuming bot discovery or prelinked accounts cover SSO.
+
+### Teams development browser scenario drafted
+
+- Added separate playwright.teams-development.config.ts, testDirdevelopment-tests, releaseValidationfalse and explicit development lifecycle. Production Teams security guard unchanged; no claim this lane tests production artifact configuration.
+- Teams setup scenario uses real signin, creates Microsoft profile viaUI, selects/saves Teams draft, injects persistent token503, checks visible error and actual vendorrequest, disarms, validates success, reloads and checks same saved profile/status with no duplicate profiles. No mock Alga API routes.
+- Headed Playwright collection succeeds1case; runtime execution not yet attempted. Next start nativeNext development app (dedicated dist/port, NODE_ENVdevelopment, TEAMS_EMULATOR_MODEtrue) on ownedPG with Graph endpoint and private writable secret store, run case and fix any real failure. Do not count collection as F034 completion.
+
+### Teams native development profile journey passed
+
+- NativeNext development app57530 remains active53016, /tmp/start-alga-teams-development.sh, log /tmp/alga-teams-development-app.log. NODE_ENVdevelopment, TEAMS_EMULATOR_MODEtrue, dist.next/teams-development, PGhost_ee_test_82cc, dedicatedRedis prefixalga-teams-dev-82cc, existing Graph41578/52620control52621. NoDockerbuild.
+- Browser82012 failed because Teams section hidden; added visibleMicrosoftTeams section navigation before selection/reload. Browser92619 failed AddProfile disabled whileloading; sharedcreateMicrosoftProfile now awaitstoBeEnabled under existingexpectbudget beforeclick. Productionbudget unchanged.
+- Browser5419 terminal0:1passed~1.4min, no retry/skip. Real503 tokenerror then200/recovery and savedprofileidentity preserved. Loadingresolved; no productloadingbug established. Evidence/host-teams-development-profile.json, raw e2e-tests/test-results/local/results.json.
+- Still need dedicated runner/CI collection and exclusion classification for development lane; full Teams meeting/bot behavior and SSO remain unverified. Do not markF034/F037complete.
+
+### Teams development execution gate
+
+- Added run-teams-development.mjs: clean-source, nofilters, clearsoldoutputs, realPlaywright collection, repositorycandidate reconciliation, rawexecution and before/aftersource check. Uses separate test-results/teams-development and distinct teams-development-browser suite withreleaseValidationfalse.
+- Evidence verifier requires source/configdevelopmentmetadata and mandatoryprofilejourney; rejects productionclaim,missingjourney/execution,retryonlypass,failedrunner. Eightverifiertests plus browserdiscoverytest pass9total.
+- Globalbrowserinventory now collects development-tests through explicitTeamsconfiguration, so moving/addinguncollecteddevelopmentfiles failsdiscovery. Collection remains explicitlynotexecution. Next run committedgateonliveapp53016.

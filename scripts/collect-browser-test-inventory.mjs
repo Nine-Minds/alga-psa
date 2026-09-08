@@ -10,6 +10,7 @@ const output = path.join(root, 'test-results/browser-discovery');
 mkdirSync(output, { recursive: true });
 // Use each suite's own installed Playwright version and real configuration.
 const runners = [
+  { runner: 'teams-development', cwd: 'e2e-tests', cli: 'node_modules/@playwright/test/cli.js', config: 'playwright.teams-development.config.ts', edition: 'enterprise' },
   { runner: 'server-legacy', cwd: 'server', cli: '../node_modules/@playwright/test/cli.js', config: 'playwright.config.ts' },
   { runner: 'enterprise-legacy', cwd: 'ee/server', cli: '../../node_modules/@playwright/test/cli.js', config: 'playwright.config.ts' },
   { runner: 'enterprise-deploy', cwd: 'ee/server', cli: '../../node_modules/@playwright/test/cli.js', config: 'playwright.deploy.config.ts' },

@@ -13,6 +13,7 @@ export async function createMicrosoftProfile(page: Page, input: {
   if (!(await addProfile.isVisible())) {
     await advancedToggle.click();
   }
+  await expect(addProfile).toBeEnabled();
   await addProfile.click();
   const dialog = page.getByRole('dialog');
   await dialog.locator('#microsoft-profile-display-name').fill(input.name);
