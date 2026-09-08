@@ -1,3 +1,4 @@
+import { validatePortableRecordSection } from './portableRecordValidation';
 import { createHash } from 'node:crypto';
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
@@ -58,35 +59,10 @@ export const CO_MANAGED_PORTABLE_CORE_REFERENCES = [
   ['contact_additional_email_addresses', 'custom_email_type_id', 'contact_email_type_definitions', 'contact_email_type_id'],
 ] as const;
 
-// LEVERAGE: pattern portable-record-section — core and work sections share strict columns/identities/references; keep their distinct scope projections explicit.
 export function validateCoManagedPortableCoreRecords(input: unknown): asserts input is CoManagedPortableCoreRecords {
-  if (!input || typeof input !== 'object' || Array.isArray(input)) throw new Error('Invalid portable workspace identity records');
-  const records = input as CoManagedPortableCoreRecords;
-  const tables = Object.keys(CO_MANAGED_PORTABLE_CORE_COLUMNS) as CoManagedPortableCoreTable[];
-  if (Object.keys(records).sort().join(',') !== [...tables].sort().join(',')) throw new Error('Incomplete portable workspace identity records');
-  for (const table of tables) {
-    const columns: readonly string[] = CO_MANAGED_PORTABLE_CORE_COLUMNS[table];
-    const keys = columns.slice(0, ['team_members', 'user_roles', 'role_permissions'].includes(table) ? 2 : 1);
-    const identities = new Set<string>();
-    if (!Array.isArray(records[table]) || records[table].length > 100_000) throw new Error('Invalid portable workspace record count');
-    for (const row of records[table]) {
-      if (!row || typeof row !== 'object' || Array.isArray(row) ||
-          Object.keys(row).sort().join(',') !== [...columns].sort().join(',')) throw new Error('Invalid portable workspace record columns');
-      if (table !== 'tenants') {
-        if (keys.some(key => !isCoManagedUuid(row[key]))) throw new Error('Invalid portable workspace record identity');
-        const identity = JSON.stringify(keys.map(key => row[key]));
-        if (identities.has(identity)) throw new Error('Duplicate portable workspace record identity');
-        identities.add(identity);
-      }
-    }
-  }
-  if (records.tenants.length !== 1) throw new Error('Portable workspace requires one owner');
-  for (const [table, column, parent, parentColumn] of CO_MANAGED_PORTABLE_CORE_REFERENCES) {
-    if (records[table].some(row => row[column] !== null && !isCoManagedUuid(row[column]))) throw new Error('Invalid portable workspace identity reference');
-    if (!(parent in records)) continue; // Cross-section reference checked by the enclosing manifest.
-    const ids = new Set(records[parent as CoManagedPortableCoreTable].map(row => row[parentColumn]));
-    if (records[table].some(row => row[column] !== null && !ids.has(row[column]))) throw new Error('Portable workspace identity reference is missing');
-  }
+  validatePortableRecordSection(input, { columns: CO_MANAGED_PORTABLE_CORE_COLUMNS,
+    identities: { tenants: [], team_members: ['team_id', 'user_id'], user_roles: ['user_id', 'role_id'], role_permissions: ['role_id', 'permission_id'] },
+    counts: { tenants: { min: 1, max: 1 } }, references: CO_MANAGED_PORTABLE_CORE_REFERENCES });
 }
 
 /** Captures identities and local directory configuration in one database

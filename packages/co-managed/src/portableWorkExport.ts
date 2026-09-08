@@ -1,3 +1,4 @@
+import { validatePortableRecordSection } from './portableRecordValidation';
 import { createHash } from 'node:crypto';
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
@@ -62,29 +63,9 @@ function portableAudit(row: Record<string, unknown>) {
   return { ...row, changes, details: Object.fromEntries(allowed.filter(key => Object.hasOwn(details, key) && scalar(details[key])).map(key => [key, details[key]])) };
 }
 
-// LEVERAGE: pattern portable-record-section — core and work sections share strict columns/identities/references; keep their distinct scope projections explicit.
 export function validateCoManagedPortableWorkRecords(input: unknown): asserts input is CoManagedPortableWorkRecords {
-  if (!input || typeof input !== 'object' || Array.isArray(input)) throw new Error('Invalid portable work records');
+  validatePortableRecordSection(input, { columns: CO_MANAGED_PORTABLE_WORK_COLUMNS, references: CO_MANAGED_PORTABLE_WORK_REFERENCES });
   const records = input as CoManagedPortableWorkRecords;
-  const tables = Object.keys(CO_MANAGED_PORTABLE_WORK_COLUMNS) as CoManagedPortableWorkTable[];
-  if (Object.keys(records).sort().join(',') !== [...tables].sort().join(',')) throw new Error('Incomplete portable work records');
-  for (const table of tables) {
-    const columns = CO_MANAGED_PORTABLE_WORK_COLUMNS[table];
-    if (!Array.isArray(records[table]) || records[table].length > 100_000) throw new Error('Invalid portable work record count');
-    const ids = new Set();
-    for (const row of records[table]) {
-      if (!row || typeof row !== 'object' || Array.isArray(row) || Object.keys(row).sort().join(',') !== [...columns].sort().join(',')) throw new Error('Invalid portable work columns');
-      const id = row[columns[0]];
-      if (!isCoManagedUuid(id) || ids.has(id)) throw new Error('Invalid or duplicate portable work identity');
-      ids.add(id);
-    }
-  }
-  for (const [table, column, parent, parentColumn] of CO_MANAGED_PORTABLE_WORK_REFERENCES) {
-    if (records[table].some(row => row[column] !== null && !isCoManagedUuid(row[column]))) throw new Error('Invalid portable work reference');
-    if (!(parent in records)) continue;
-    const ids = new Set(records[parent as CoManagedPortableWorkTable].map(row => row[parentColumn]));
-    if (records[table].some(row => row[column] !== null && !ids.has(row[column]))) throw new Error('Portable work reference is missing');
-  }
   for (const thread of records.comment_threads) {
     if ((thread.ticket_id === null) === (thread.project_task_id === null)) throw new Error('Invalid portable conversation source');
     const comments = thread.ticket_id ? records.comments : records.project_task_comments;

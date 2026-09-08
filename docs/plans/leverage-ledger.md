@@ -734,3 +734,8 @@ Session licensing checkpoint (2026-09-08): inspection narrowed the suspected edi
 - **Where:** `packages/co-managed/src/portableDocumentExport.ts`, `packages/co-managed/src/portableConversationExport.ts`.
 - **Gate:** Two callers, high byte-integrity/cleanup cost, stable transport shape. Domain-specific source admission and path ownership remain in their collectors.
 - **Status:** extracted / bounded-now (2026-09-08) into `portableBlobStaging.ts`. Optional expected SHA-256 supports immutable conversation objects; native document streams receive a calculated digest. Four focused source-mode database/real-staging checks pass.
+
+## portable-record-section — pattern
+- **What:** strict portable table/column rosters, composite identities and parent references repeated across core, work and documents, with two incoming collectors.
+- **Gate:** three stable existing sites; inconsistent validation admits malformed archives. ACT / bounded-now: a pure internal validator, without authorization, provider I/O or transaction orchestration.
+- **Status:** extracted into `portableRecordValidation.ts`; core/work/document callers migrated. Domain conversation/source checks stay local. The assembler can require cross-section parents using the same reference engine. Five direct tests and six actual PostgreSQL collector regressions pass; authenticated archive assembly and restore remain separate work.

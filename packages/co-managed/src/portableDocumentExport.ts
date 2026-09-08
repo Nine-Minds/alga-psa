@@ -1,3 +1,4 @@
+import { validatePortableRecordSection } from './portableRecordValidation';
 import { createHash } from 'node:crypto';
 import type { Knex } from 'knex';
 import type { IUser } from '@alga-psa/types';
@@ -22,20 +23,7 @@ const REFERENCES = [
 ] as const;
 
 function validateRecords(records: CoManagedPortableDocumentRecords) {
-  // LEVERAGE: pattern portable-record-section — document transport remains separate from common projection/identity/reference validation.
-  for (const table of Object.keys(COLUMNS) as CoManagedPortableDocumentTable[]) {
-    const columns = COLUMNS[table], ids = new Set();
-    if (records[table].length > 100_000) throw new Error('Portable document record limit exceeded');
-    for (const row of records[table]) {
-      const id = row[columns[0]];
-      if (!isCoManagedUuid(id) || ids.has(id)) throw new Error('Invalid portable document identity');
-      ids.add(id);
-    }
-  }
-  for (const [table, column, parent, parentColumn] of REFERENCES) {
-    const ids = new Set(records[parent].map(row => row[parentColumn]));
-    if (records[table].some(row => row[column] !== null && !ids.has(row[column]))) throw new Error('Portable document reference is missing');
-  }
+  validatePortableRecordSection(records, { columns: COLUMNS, references: REFERENCES });
 }
 
 function sourcePath(tenant: string, input: unknown): string {
