@@ -4,15 +4,18 @@ import { releaseManifestDigest, verifyReleaseTestEvidence, verifyReleasePromotio
 
 function fixture() {
   const revision = 'a'.repeat(40), edition = 'enterprise';
-  const requiredComponents = ['server', 'email-service', 'worker'];
+  const requiredComponents = ['server', 'email-service', 'worker'].map(name => `isolated/Deployment/${name}/containers/${name}`);
   const manifest = { schemaVersion: 1, revision, edition, components: requiredComponents.map((name, index) => ({
-    name, image: `registry.example.test/${name}@sha256:${String(index + 1).repeat(64)}`,
+    name, image: `registry.example.test/${name.split('/').at(-1)}@sha256:${String(index + 1).repeat(64)}`,
     revision: String(index + 1).repeat(40), build: { provider: 'github-actions', runId: 100 + index },
   })) };
   const input = { revision, edition, manifest, requiredComponents, requiredChecks: ['browser-ee', 'email-intake', 'worker-runtime'] };
   const digest = releaseManifestDigest(input);
-  const expectedTarget = { context: 'release-smoke', namespace: 'isolated', workloads: [{ kind: 'Deployment', name: 'server' }] };
-  return { ...input, expectedTarget, maxObservationAgeSeconds: 300,
+  const expectedTarget = { context: 'release-smoke', namespace: 'isolated', workloads: ['server', 'email-service', 'worker'].map(name => ({ kind: 'Deployment', name })) };
+  const renderedResources = manifest.components.map(component => ({ kind: 'Deployment',
+    metadata: { namespace: 'isolated', name: component.name.split('/')[2] },
+    spec: { template: { spec: { containers: [{ name: component.name.split('/').at(-1), image: component.image }] } } } }));
+  return { ...input, renderedResources, expectedTarget, maxObservationAgeSeconds: 300,
     runtimeEvidence: { schemaVersion: 1, scope: 'kubernetes-runtime-image-observations', target: structuredClone(expectedTarget),
       observedAt: new Date().toISOString(), observations: structuredClone(manifest.components) }, evidence: { schemaVersion: 1, revision, edition,
     manifestDigest: digest, results: input.requiredChecks.map(id => ({ id, status: 'passed', failures: [], manifestDigest: digest })) } };
@@ -33,7 +36,7 @@ test('manifest identity is independent of object key order, whitespace and compo
 for (const component of ['email-service', 'worker', 'server']) {
   for (const field of ['image', 'revision', 'build']) {
     test(`changing only ${component} ${field} invalidates prior green evidence`, () => {
-      const input = fixture(), changed = input.manifest.components.find(item => item.name === component);
+      const input = fixture(), changed = input.manifest.components.find(item => item.name.endsWith(`/containers/${component}`));
       if (field === 'image') changed.image = changed.image.replace(/sha256:.*/, `sha256:${'f'.repeat(64)}`);
       if (field === 'revision') changed.revision = 'e'.repeat(40);
       if (field === 'build') changed.build.runId++;
@@ -93,10 +96,10 @@ test('promotion CLI rejects an email-only replacement even when the runtime matc
   const input = fixture();
   const write = (name, value) => writeFileSync(path.join(root, name), JSON.stringify(value));
   write('policy.json', { revision: input.revision, edition: input.edition, requiredComponents: input.requiredComponents, requiredChecks: input.requiredChecks, expectedTarget: input.expectedTarget, maxObservationAgeSeconds: input.maxObservationAgeSeconds });
-  write('manifest.json', input.manifest); write('evidence.json', input.evidence); write('observations.json', input.runtimeEvidence);
+  write('rendered.json', input.renderedResources); write('manifest.json', input.manifest); write('evidence.json', input.evidence); write('observations.json', input.runtimeEvidence);
   const cli = fileURLToPath(new URL('../verify-release-promotion.mjs', import.meta.url));
   const run = () => {
-    const child = spawnSync(process.execPath, [cli, 'policy.json', 'manifest.json', 'evidence.json', 'observations.json', 'result.json'], { cwd: root, encoding: 'utf8', timeout: 10000 });
+    const child = spawnSync(process.execPath, [cli, 'policy.json', 'rendered.json', 'manifest.json', 'evidence.json', 'observations.json', 'result.json'], { cwd: root, encoding: 'utf8', timeout: 10000 });
     const result = JSON.parse(readFileSync(path.join(root, 'result.json'), 'utf8'));
     assert.equal(child.status, result.status === 'passed' ? 0 : 1, child.stderr);
     return result;
@@ -112,6 +115,9 @@ test('promotion CLI rejects an email-only replacement even when the runtime matc
   assert.equal(run().status, 'failed'); // Updating only the wrapper is insufficient.
   for (const result of input.evidence.results) result.manifestDigest = digest;
   write('evidence.json', input.evidence);
+  assert.equal(run().status, 'failed'); // Rendered deployment still selects the old image.
+  input.renderedResources[1].spec.template.spec.containers[0].image = input.manifest.components[1].image;
+  write('rendered.json', input.renderedResources);
   assert.equal(run().status, 'passed'); // Simulated replacement test evidence, not an actual new smoke run.
   rmSync(path.join(root, 'observations.json'));
   assert.equal(run().status, 'failed');
@@ -141,9 +147,54 @@ test('every release component requires an explicit source revision and identifia
       x => { x.build.runId = ' '; },
       x => { x.build.attempt = -1; },
     ]) {
-      const input = fixture(); mutate(input.manifest.components.find(item => item.name === component));
+      const input = fixture(); mutate(input.manifest.components.find(item => item.name.endsWith(`/containers/${component}`)));
       assert.throws(() => releaseManifestDigest(input), /source revision|build identity|build attempt/);
       assert.equal(verifyReleasePromotion(input).status, 'failed');
     }
   }
+});
+
+for (const omitted of ['workload', 'init-container']) {
+  test(`complete rendered inventory rejects consistently omitted ${omitted}`, () => {
+    const input = fixture();
+    if (omitted === 'workload') {
+      input.requiredComponents.pop(); input.manifest.components.pop(); input.runtimeEvidence.observations.pop();
+      input.expectedTarget.workloads.pop(); input.runtimeEvidence.target.workloads.pop();
+      const digest = releaseManifestDigest(input);
+      input.evidence.manifestDigest = digest;
+      for (const result of input.evidence.results) result.manifestDigest = digest;
+    } else {
+      input.renderedResources[0].spec.template.spec.initContainers = [
+        { name: 'migrate', image: `registry.example.test/migrate@sha256:${'9'.repeat(64)}` },
+      ];
+    }
+    assert.equal(verifyReleasePromotion(input).status, 'failed');
+  });
+}
+
+test('rendered input is mandatory and target workload inventory must match it exactly', () => {
+  for (const mutate of [
+    input => { delete input.renderedResources; },
+    input => { input.renderedResources = []; },
+    input => { input.expectedTarget.workloads.pop(); input.runtimeEvidence.target.workloads.pop(); },
+    input => { input.expectedTarget.workloads.push({ kind: 'Deployment', name: 'extra' }); input.runtimeEvidence.target = structuredClone(input.expectedTarget); },
+    input => { input.renderedResources[0].metadata.namespace = 'elsewhere'; },
+  ]) {
+    const input = fixture(); mutate(input);
+    assert.equal(verifyReleasePromotion(input).status, 'failed');
+  }
+});
+
+test('explicitly inventoried and tested init container passes with the same rendered workload target', () => {
+  const input = fixture();
+  const component = { name: 'isolated/Deployment/server/initContainers/migrate',
+    image: `registry.example.test/migrate@sha256:${'9'.repeat(64)}`, revision: '9'.repeat(40),
+    build: { provider: 'github-actions', runId: 999 } };
+  input.renderedResources[0].spec.template.spec.initContainers = [{ name: 'migrate', image: component.image }];
+  input.requiredComponents.push(component.name); input.manifest.components.push(component);
+  input.runtimeEvidence.observations.push(component);
+  const digest = releaseManifestDigest(input);
+  input.evidence.manifestDigest = digest;
+  for (const result of input.evidence.results) result.manifestDigest = digest;
+  assert.equal(verifyReleasePromotion(input).status, 'passed');
 });

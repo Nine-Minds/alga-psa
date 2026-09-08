@@ -20,10 +20,6 @@
       "types": "./src/runtime.ts",
       "import": "./src/runtime.ts"
     },
-    "./utils/calendar/calendarDateTime": {
-      "types": "./src/utils/calendar/calendarDateTime.ts",
-      "import": "./src/utils/calendar/calendarDateTime.ts"
-    },
     "./lib/*": {
       "types": "./src/lib/*.ts",
       "import": "./src/lib/*.ts"

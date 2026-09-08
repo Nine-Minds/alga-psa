@@ -84,6 +84,30 @@
       "dependsOn": [],
       "owner": "calendar_review",
       "notes": "Test-local scrolling spy restores descriptor and awaits real rAF. Six related UI files/30cases pass without unhandled errors."
+    },
+    {
+      "id": "R011",
+      "title": "Remove calendar parser build dependency cycle",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "calendar_review",
+      "notes": "Parser moved to core; core build and32mapping cases in Berlin/LA pass. Root verified58-taskserverbuild and114-taskaffectedtest graphs acyclic."
+    },
+    {
+      "id": "R012",
+      "title": "Match Stripe redirect failure semantics",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "stripe_protocol",
+      "notes": "Actual302/307 HTTP tests failedbefore fix; all26Stripecasespass withoutfollowingredirects, preserving othercallbacksignatures."
+    },
+    {
+      "id": "R013",
+      "title": "Bind promotion to complete rendered resource inventory",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "qbo_protocol",
+      "notes": "Requiredcomplete renderedresources bind policy/manifest/runtime target. All53release-relatedtests pass includingactualcollector envelope caller. Docs updated forrequired6argument CLI. Realpipelinewiring remainsF020open."
     }
   ]
 }

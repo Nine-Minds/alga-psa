@@ -623,6 +623,12 @@ rejects payload whitespace changes, a wrong endpoint secret, and a correctly
 signed but hour-old delivery. Historical event creation time remains distinct
 from the fresh signature time when an event is redelivered.
 
+Callback redirects are recorded as delivery failures without following their
+Location. Actual HTTP tests cover 302 and 307 responses, verify that the redirect
+destination receives no request, and confirm that another configured callback
+still receives a correctly signed event. This follows
+[Stripe's webhook HTTP status contract](https://docs.stripe.com/webhooks#fix-http-status-codes).
+
 Reference: [Stripe webhook signature verification](https://docs.stripe.com/webhooks/signature),
 reviewed 2026-09-08. This is callback authentication parity, not live sandbox
 verification or validation of every Stripe event payload/API field.

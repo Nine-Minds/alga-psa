@@ -9,7 +9,7 @@ import type {
   WorkItemType,
 } from '@alga-psa/types';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
-import { parseCalendarDateTime } from '@alga-psa/integrations/utils/calendar/calendarDateTime';
+import { parseCalendarDateTime } from '@alga-psa/core';
 import { convertRecurrencePatternToRRULE } from './recurrenceConverter';
 
 export async function mapScheduleEntryToExternalEvent(

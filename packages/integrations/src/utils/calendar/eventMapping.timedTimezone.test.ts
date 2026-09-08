@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as workspaceMapping from './eventMapping';
 import * as enterpriseMapping from '../../../../../ee/packages/calendar/src/lib/utils/calendar/eventMapping';
-import { parseCalendarDateTime } from './calendarDateTime';
+import { parseCalendarDateTime } from '@alga-psa/core';
 
 // Graph dateTimeTimeZone values can omit an offset. The separate timeZone
 // determines the instant, not the timezone of the worker importing the event.

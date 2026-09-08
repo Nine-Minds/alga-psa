@@ -27,6 +27,7 @@ export async function deliverEvent(core: StripeEmulatorCore, event: StripeEvent,
     try {
       const res = await fetch(target, {
         method: 'POST',
+        redirect: 'manual', // Stripe records redirects as delivery failures.
         headers: {
           'content-type': 'application/json',
           'stripe-signature': signature,

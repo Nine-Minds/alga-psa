@@ -106,12 +106,18 @@ test('collector envelope flows into promotion with target and freshness policy i
   const { collectKubernetesRelease } = await import('../lib/collect-kubernetes-release.mjs');
   const { releaseManifestDigest, verifyReleasePromotion } = await import('../lib/release-test-evidence.mjs');
   const input = fixture();
+  // This release intentionally deploys immutable images. Preserve its rendered
+  // workload independently before collecting runtime status or constructing the
+  // manifest; the collector's other tests still exercise mutable desired tags.
+  input.workloads[0].spec.template.spec.containers[0].image = image('app');
+  input.workloads[0].spec.template.spec.initContainers[0].image = image('setup');
+  const renderedResources = structuredClone(input.workloads);
   const expectedTarget = { context: 'release-smoke', namespace: 'isolated', workloads: [{ kind: 'Deployment', name: 'service' }] };
   const runtimeEvidence = collectKubernetesRelease(expectedTarget, { execute: (_command, args) => JSON.stringify(
     args.includes('pods,replicasets') ? { kind: 'List', items: [...input.pods, ...input.replicaSets] } : input.workloads[0]) });
   const revision = 'a'.repeat(40), edition = 'enterprise';
   const manifest = { schemaVersion: 1, revision, edition, components: kubernetesReleaseObservations(input).map(component => ({ ...component, revision, build: { provider: 'host-fixture', runId: 1 } })) };
-  const policy = { revision, edition, manifest, expectedTarget, maxObservationAgeSeconds: 300,
+  const policy = { revision, edition, manifest, renderedResources, expectedTarget, maxObservationAgeSeconds: 300,
     requiredComponents: manifest.components.map(component => component.name), requiredChecks: ['smoke'] };
   const manifestDigest = releaseManifestDigest(policy);
   const evidence = { schemaVersion: 1, revision, edition, manifestDigest,

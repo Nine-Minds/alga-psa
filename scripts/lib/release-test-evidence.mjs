@@ -1,3 +1,4 @@
+import { renderedReleaseComponents } from './rendered-release-components.mjs';
 import { verifyRuntimeObservationEvidence } from './runtime-observation-evidence.mjs';
 import { createHash } from 'node:crypto';
 import { validateReleaseManifest, compareReleaseDeployment } from './release-component-manifest.mjs';
@@ -62,10 +63,40 @@ export function verifyReleaseTestEvidence({ manifest, revision, edition, require
     status: failures.length ? 'failed' : 'passed', failures };
 }
 
+// The complete rendered release is a separate consumer input. A self-consistent
+// manifest/policy/readback cannot authorize silently omitting a workload.
+function verifyRenderedInventory(input) {
+  const failures = [];
+  try {
+    const components = renderedReleaseComponents(input.renderedResources, {
+      defaultNamespace: input.expectedTarget?.namespace,
+    });
+    const required = new Set(input.requiredComponents ?? []);
+    const rendered = new Map(components.map(component => [component.name, component.image]));
+    for (const name of rendered.keys()) if (!required.has(name)) failures.push(`Rendered component missing from release policy: ${name}`);
+    for (const name of required) if (!rendered.has(name)) failures.push(`Release policy component absent from rendered release: ${name}`);
+    for (const component of input.manifest?.components ?? []) {
+      if (rendered.get(component.name) !== component.image) failures.push(`Rendered image differs from release manifest: ${component.name}`);
+    }
+    const workloads = new Set();
+    for (const component of components) {
+      const [namespace, kind, name] = component.name.split('/');
+      if (namespace !== input.expectedTarget?.namespace) failures.push(`Rendered workload outside approved target namespace: ${namespace}/${kind}/${name}`);
+      workloads.add(`${kind}/${name}`);
+    }
+    const targets = new Set((input.expectedTarget?.workloads ?? []).map(workload => `${workload.kind}/${workload.name}`));
+    for (const workload of workloads) if (!targets.has(workload)) failures.push(`Rendered workload missing from runtime target: ${workload}`);
+    for (const workload of targets) if (!workloads.has(workload)) failures.push(`Runtime target workload absent from rendered release: ${workload}`);
+  } catch {
+    failures.push('Missing or invalid complete rendered release inventory');
+  }
+  return failures;
+}
+
 export function verifyReleasePromotion(input) {
   const tests = verifyReleaseTestEvidence(input);
   const freshness = verifyRuntimeObservationEvidence(input);
   const deployment = compareReleaseDeployment({ ...input, observations: input.runtimeEvidence?.observations });
-  const failures = [...tests.failures, ...freshness.failures, ...deployment.failures];
+  const failures = [...tests.failures, ...freshness.failures, ...deployment.failures, ...verifyRenderedInventory(input)];
   return { ...tests, scope: 'release-promotion-identities', status: failures.length ? 'failed' : 'passed', failures };
 }

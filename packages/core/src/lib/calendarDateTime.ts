@@ -1,4 +1,4 @@
-import { zonedWallTimeToUtc } from '@alga-psa/core';
+import { zonedWallTimeToUtc } from './dateTimeUtils';
 import { windowsTimeZones } from './windowsTimeZones';
 
 /** Convert a provider's timed value to an instant without using the worker timezone. */

@@ -5,7 +5,7 @@
 import type { IScheduleEntry, IRecurrencePattern, WorkItemType, ExternalCalendarEvent } from '@alga-psa/types';
 import { convertRecurrencePatternToRRULE } from './recurrenceConverter';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
-import { parseCalendarDateTime } from './calendarDateTime';
+import { parseCalendarDateTime } from '@alga-psa/core';
 
 /**
  * Map IScheduleEntry to ExternalCalendarEvent format
