@@ -1,0 +1,32 @@
+/** Explicit v1 projections; dispatch credentials, provider threading and billing pointers are excluded. */
+export const CO_MANAGED_PORTABLE_WORK_COLUMNS = {
+  boards: ['board_id', 'board_name', 'display_contact_name_id', 'display_priority', 'display_severity', 'display_urgency', 'display_impact', 'display_category', 'display_subcategory', 'display_assigned_to', 'display_status', 'display_due_date', 'is_inactive', 'is_default', 'display_itil_impact', 'display_itil_urgency', 'category_type', 'priority_type', 'display_order', 'description', 'default_assigned_to', 'default_priority_id', 'sla_policy_id', 'manager_user_id', 'default_assigned_team_id', 'enable_live_ticket_timer', 'inbound_reply_reopen_enabled', 'inbound_reply_reopen_cutoff_hours', 'inbound_reply_reopen_status_id', 'inbound_reply_ai_ack_suppression_enabled', 'is_pinned', 'list_view_settings'],
+  statuses: ['status_id', 'name', 'status_type', 'order_number', 'created_by', 'created_at', 'is_closed', 'item_type', 'is_default', 'color', 'icon', 'board_id'],
+  standard_statuses: ['standard_status_id', 'name', 'item_type', 'display_order', 'is_closed', 'is_default'],
+  priorities: ['priority_id', 'priority_name', 'created_by', 'created_at', 'order_number', 'color', 'item_type', 'updated_at', 'is_from_itil_standard', 'itil_priority_level'],
+  categories: ['category_id', 'category_name', 'parent_category', 'created_by', 'created_at', 'display_order', 'is_from_itil_standard', 'board_id'],
+  tickets: ['ticket_id', 'ticket_number', 'title', 'url', 'contact_name_id', 'status_id', 'category_id', 'subcategory_id', 'priority_id', 'severity_id', 'urgency_id', 'impact_id', 'entered_by', 'updated_by', 'assigned_to', 'closed_by', 'entered_at', 'updated_at', 'closed_at', 'is_closed', 'attributes', 'due_date', 'location_id', 'itil_impact', 'itil_urgency', 'itil_priority_level', 'escalated', 'escalation_level', 'escalated_at', 'escalated_by', 'board_id', 'client_id', 'response_state', 'master_ticket_id', 'source', 'ticket_origin', 'sla_policy_id', 'sla_started_at', 'sla_response_due_at', 'sla_response_at', 'sla_response_met', 'sla_resolution_due_at', 'sla_resolution_at', 'sla_resolution_met', 'sla_paused_at', 'sla_total_pause_minutes', 'assigned_team_id'],
+  ticket_resources: ['assignment_id', 'ticket_id', 'assigned_to', 'additional_user_id', 'role', 'assigned_at'],
+  comment_threads: ['thread_id', 'ticket_id', 'project_task_id', 'root_comment_id', 'is_internal', 'reply_count', 'last_activity_at', 'created_at', 'created_by', 'collaboration_audience'],
+  comments: ['comment_id', 'ticket_id', 'user_id', 'note', 'is_internal', 'is_resolution', 'created_at', 'updated_at', 'author_type', 'markdown_content', 'is_system_generated', 'contact_id', 'thread_id', 'parent_comment_id', 'deleted_at', 'publish_state', 'scheduled_publish_at', 'scheduled_publish_tz', 'published_at', 'actor_reference_id', 'actor_display_name', 'actor_organization_name'],
+  comment_reactions: ['reaction_id', 'comment_id', 'user_id', 'emoji', 'created_at'],
+  ticket_audit_logs: ['audit_id', 'ticket_id', 'event_type', 'entity_type', 'entity_id', 'actor_type', 'actor_user_id', 'actor_contact_id', 'actor_display_name', 'source', 'occurred_at', 'changes', 'details', 'created_at', 'actor_reference_id', 'actor_organization_name'],
+  checklist_templates: ['template_id', 'name', 'description', 'is_active', 'created_at', 'updated_at'],
+  checklist_template_items: ['template_item_id', 'template_id', 'item_name', 'description', 'order_number', 'is_required', 'created_at', 'updated_at'],
+  checklist_template_apply_rules: ['apply_rule_id', 'template_id', 'board_id', 'category_id', 'subcategory_id', 'priority_id', 'is_enabled', 'created_at', 'updated_at'],
+  ticket_checklist_items: ['checklist_item_id', 'ticket_id', 'item_name', 'description', 'order_number', 'assigned_to', 'is_required', 'completed', 'completed_by', 'completed_at', 'source', 'template_id', 'created_by', 'created_at', 'updated_at'],
+  projects: ['project_id', 'project_name', 'description', 'start_date', 'end_date', 'status', 'wbs_code', 'created_at', 'updated_at', 'is_inactive', 'assigned_to', 'contact_name_id', 'budgeted_hours', 'client_id', 'project_number', 'client_portal_config'],
+  project_phases: ['phase_id', 'project_id', 'phase_name', 'description', 'start_date', 'end_date', 'status', 'order_number', 'wbs_code', 'created_at', 'updated_at', 'order_key', 'completed_at'],
+  project_status_mappings: ['project_status_mapping_id', 'project_id', 'status_id', 'standard_status_id', 'custom_name', 'display_order', 'is_visible', 'is_standard', 'phase_id'],
+  project_tasks: ['task_id', 'phase_id', 'task_name', 'description', 'assigned_to', 'estimated_hours', 'due_date', 'actual_hours', 'status_id', 'wbs_code', 'created_at', 'updated_at', 'project_status_mapping_id', 'order_key', 'task_type_key', 'priority_id', 'service_id', 'assigned_team_id', 'description_rich_text'],
+  task_resources: ['assignment_id', 'task_id', 'assigned_to', 'additional_user_id', 'role', 'assigned_at'],
+  task_checklist_items: ['checklist_item_id', 'task_id', 'item_name', 'description', 'assigned_to', 'completed', 'due_date', 'created_at', 'updated_at', 'order_number'],
+  project_task_dependencies: ['dependency_id', 'predecessor_task_id', 'successor_task_id', 'dependency_type', 'lead_lag_days', 'notes', 'created_at', 'updated_at'],
+  project_ticket_links: ['link_id', 'project_id', 'phase_id', 'task_id', 'ticket_id', 'created_at'],
+  project_task_comments: ['task_comment_id', 'task_id', 'user_id', 'author_type', 'note', 'markdown_content', 'created_at', 'updated_at', 'edited_at', 'thread_id', 'parent_comment_id', 'deleted_at', 'actor_reference_id', 'actor_display_name', 'actor_organization_name', 'collaboration_revision'],
+  project_task_comment_reactions: ['reaction_id', 'task_comment_id', 'user_id', 'emoji', 'created_at'],
+  handoff_history: ['operation_id', 'ticket_id', 'revision', 'transition', 'actor_tenant', 'actor_user_id', 'actor_name', 'actor_organization', 'note', 'audience', 'occurred_at'],
+} as const;
+
+export type CoManagedPortableWorkTable = keyof typeof CO_MANAGED_PORTABLE_WORK_COLUMNS;
+export type CoManagedPortableWorkRecords = Record<CoManagedPortableWorkTable, Record<string, unknown>[]>;

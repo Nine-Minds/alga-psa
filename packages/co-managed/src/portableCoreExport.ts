@@ -58,6 +58,7 @@ export const CO_MANAGED_PORTABLE_CORE_REFERENCES = [
   ['contact_additional_email_addresses', 'custom_email_type_id', 'contact_email_type_definitions', 'contact_email_type_id'],
 ] as const;
 
+// LEVERAGE: pattern portable-record-section — core and work sections share strict columns/identities/references; keep their distinct scope projections explicit.
 export function validateCoManagedPortableCoreRecords(input: unknown): asserts input is CoManagedPortableCoreRecords {
   if (!input || typeof input !== 'object' || Array.isArray(input)) throw new Error('Invalid portable workspace identity records');
   const records = input as CoManagedPortableCoreRecords;

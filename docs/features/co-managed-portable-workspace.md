@@ -22,12 +22,20 @@ Validation requires the complete table/column roster, exactly one workspace owne
 
 Restore still needs an isolated destination, complete schema validation, identity mapping, destination permissions and paid entitlement where required, file import and atomic insertion. Reading this component does not execute any of those operations or restore live trust.
 
+## Ticket and project component
+
+`portableWorkCatalog.ts` and `portableWorkExport.ts` define 26 projections for ticket/project records, boards and status configuration, checklists, assignments, task dependencies and ticket links, canonical conversations/reactions, ticket activity and historical handoffs. The collector retains customer ticket/project/configuration permissions and record narrowing in a repeatable-read transaction. It preserves rich-text source, markdown, customer-private and shared audiences, tombstones that still have native rows, and saved foreign author names.
+
+MSP private stores are never queried. Comment/email transport metadata, provider thread identifiers, scheduling job/dispatch IDs, billing-profile pointers and live co-management relationship tables are absent. Ticket activity retains curated operational changes and explicit scalar detail fields; arbitrary metadata cannot introduce transport credentials. Handoffs are exported as inert `handoff_history` events without relationship IDs or command fingerprints. Restore must convert these to historical activity and leave imported scheduled publication paused.
+
+The work component declares source relationships and rejects missing included parents or invalid conversation roots. Additional cross-component user/service/SLA references, legacy histories with physically missing roots, project mutation audit coverage, attachments/blobs and complete destination reconstruction still need to be handled by the full package flow. This component alone is not a restorable workspace.
+
 ## Focused validation
 
 From `server/`, run:
 
 ```sh
-SECRETS_PATH=../secrets npm exec -- vitest run src/test/integration/coManagedBootstrap.integration.test.ts -t 'portable workspace core|portable vault export'
+SECRETS_PATH=../secrets npm exec -- vitest run src/test/integration/coManagedBootstrap.integration.test.ts -t 'portable workspace core|portable vault export|portable work export'
 ```
 
 The selected tests use a disposable schema-only copy of the development database. They cover actual record projections, secret/trust exclusion, saved attribution, reference integrity and customer permission/session denial. The vault cases exercise its audit and post-encryption authority checks. They do not prove a complete isolated workspace restore.

@@ -19690,3 +19690,47 @@ it('portable workspace core requires current customer directory permissions and 
   await f.customer.table('role_permissions').where('permission_id', permission.permission_id).delete();
   await expect(exportCoManagedPortableCore(db, f.customerPrincipal, packageId)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
 });
+
+it('portable work export preserves customer and shared ticket history while excluding MSP private notes and transport metadata', async () => withConversationFixture(async f => {
+  const { exportCoManagedPortableWork, validateCoManagedPortableWorkRecords } = await import('../../../../packages/co-managed/src/portableWorkExport');
+  await f.addCustomer({ note: 'Customer private portable history', internal: true, audience: 'organization_private' });
+  const shared = await f.addCustomer({ note: 'Shared portable history', internal: true, audience: 'shared_it', foreign: true });
+  await f.addPrivate({ note: 'MSP-private never portable' });
+  await f.customer.table('tickets').where('ticket_id', f.resource.id).update({ email_metadata: { authorization: 'never-portable-provider-token' } });
+  const auditId = randomUUID();
+  await f.customer.table('ticket_audit_logs').insert({ tenant: f.actor.tenant, audit_id: auditId, ticket_id: f.resource.id,
+    event_type: 'TICKET_UPDATED', entity_type: 'ticket', entity_id: f.resource.id, actor_type: 'user', actor_user_id: f.actor.userId,
+    actor_display_name: 'Customer administrator', source: 'ui', occurred_at: db.fn.now(), changes: {
+      title: { old: 'Previous title', new: 'Current title', credential: 'never-portable-audit-secret' },
+      email_metadata: { old: null, new: 'never-portable-audit-token' },
+    }, details: { thread_id: shared.threadId, authorization: 'never-portable-detail-token' } });
+  const result = await exportCoManagedPortableWork(db, f.customerPrincipal, randomUUID());
+  expect(result.records.comments.map((row: any) => row.note)).toEqual(expect.arrayContaining(['Customer private portable history', 'Shared portable history']));
+  expect(result.records.comments.find((row: any) => row.comment_id === shared.id)).toMatchObject({ user_id: null, actor_reference_id: expect.any(String), actor_display_name: expect.any(String) });
+  expect(result.records.handoff_history.length).toBeGreaterThan(0);
+  expect(result.records.ticket_audit_logs.find((row: any) => row.audit_id === auditId)).toMatchObject({ changes: { title: { old: 'Previous title', new: 'Current title' } }, details: { thread_id: shared.threadId } });
+  const serialized = JSON.stringify(result);
+  for (const excluded of ['MSP-private never portable', 'never-portable-provider-token', 'never-portable-audit-secret', 'never-portable-audit-token',
+    'never-portable-detail-token', 'never return metadata', 'request_fingerprint', 'relationship_id', 'co_management_private_threads']) expect(serialized).not.toContain(excluded);
+  expect(result.restorePolicy).toMatchObject({ sponsorship: 'none', scheduledPublication: 'paused', handoffHistory: 'historical_activity' });
+  const broken = structuredClone(result.records); broken.tickets = [];
+  expect(() => validateCoManagedPortableWorkRecords(broken)).toThrow('reference is missing');
+}));
+
+it('portable work export preserves project structure and task audiences and rejects missing current work permission', async () => withTaskConversationFixture(async f => {
+  const { exportCoManagedPortableWork } = await import('../../../../packages/co-managed/src/portableWorkExport');
+  await f.add(f.customerPrincipal, 'organization_private', 'Customer private task history');
+  const shared = await f.add(f.principal, 'shared_it', 'Shared task history');
+  await f.add(f.principal, 'organization_private', 'MSP private task history');
+  const result = await exportCoManagedPortableWork(db, f.customerPrincipal, randomUUID());
+  expect(result.records.projects.length).toBeGreaterThan(0);
+  expect(result.records.project_tasks.find((row: any) => row.task_id === f.resource.id)).toBeTruthy();
+  expect(result.records.project_task_comments.map((row: any) => row.markdown_content)).toEqual(expect.arrayContaining(['Customer private task history', 'Shared task history']));
+  expect(result.records.project_task_comments.find((row: any) => row.task_comment_id === shared.commentId)?.note).toBe(
+    (await f.customer.table('project_task_comments').where('task_comment_id', shared.commentId).first()).note);
+  expect(result.records.project_task_comments.find((row: any) => row.task_comment_id === shared.commentId)).toMatchObject({ actor_reference_id: expect.any(String), actor_display_name: expect.any(String) });
+  expect(JSON.stringify(result)).not.toContain('MSP private task history');
+  const permission = await f.customer.table('permissions').where({ resource: 'project', action: 'read', msp: true }).first();
+  await f.customer.table('role_permissions').where('permission_id', permission.permission_id).delete();
+  await expect(exportCoManagedPortableWork(db, f.customerPrincipal, randomUUID())).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+}));
