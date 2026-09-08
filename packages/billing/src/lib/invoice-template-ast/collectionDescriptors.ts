@@ -234,7 +234,9 @@ const documentItems = (kind: 'quote' | 'sales-order'): CollectionDescriptor => {
   const amount = kind === 'quote' ? 'total_price' : 'amount';
   return {
     documentKind: kind, id: 'lineItems', path: 'line_items',
-    fields: fields(['description', quantity, 'unit_price', amount], [quantity, 'unit_price', amount]),
+    // `service_name` is the catalog item name; `description` is its own column on
+    // these rows, so the inspector has to offer both to bind them separately.
+    fields: fields(['service_name', 'description', quantity, 'unit_price', amount], [quantity, 'unit_price', amount]),
     presets: (t) => buildColumnPresets(t).map((preset) => ({
       ...preset,
       key: preset.key.replace('quantity', quantity).replace('unitPrice', 'unit_price').replace('total', amount),
