@@ -35,7 +35,7 @@ export async function stageCoManagedConversationFiles(trx: Knex.Transaction, ten
   const query = owner.table('comments as c').where({ 'c.comment_id': commentId, 'c.ticket_id': ticketId });
   owner.tenantJoin(query, 'comment_threads as t', 'c.thread_id', 't.thread_id', { on: join => join.andOn('t.ticket_id', '=', 'c.ticket_id') });
   owner.tenantJoin(query, 'comments as root', 't.root_comment_id', 'root.comment_id', { on: join => join.andOn('root.thread_id', '=', 'c.thread_id').andOn('root.ticket_id', '=', 'c.ticket_id') });
-  const comment = await query.where('c.publish_state', 'published').where('root.publish_state', 'published').whereNull('c.deleted_at').whereNull('root.deleted_at')
+  const comment = await query.where('c.publish_state', 'published').where('root.publish_state', 'published').whereNull('c.deleted_at')
     .forShare('c', 't', 'root').select('c.thread_id', 'c.actor_reference_id', { audience: commentAudienceSql(trx, 't', 'root', 'c') }).first();
   if (!comment || !['requester', 'shared_it'].includes(comment.audience)) return;
   const sponsor = tenantDb(trx, relationship.sponsor_tenant), workKey = { customer_tenant: tenant, relationship_id: resource.relationshipId };

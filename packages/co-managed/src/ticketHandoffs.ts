@@ -6,6 +6,7 @@ import { withCoManagedSharedWork, type CoManagedSharedResource, type CoManagedSh
 import { lockCoManagedCustomerPolicy } from './policy';
 import { withCoManagedCustomerTicket } from './customerWork';
 import { applyCoManagedTicketSlaTransition } from './ticketSla';
+import { retainCoManagedSharedConversationBeforeReduction } from './conversationParticipationEvidence';
 import { retainCoManagedParticipationEvidence } from './participationEvidence';
 import { CoManagedSharedWorkError, isCoManagedUuid, assertCoManagedSessionUnexpired, snapshotCoManagedSessionActor, lockCoManagedSessionIdentity, type CoManagedSessionActor } from './sharedWorkIdentity';
 
@@ -83,6 +84,7 @@ async function transitionTicket(context: CoManagedSharedWorkContext, request: Co
   // Revocation is a security reduction, available even during a license pause.
   if (transition !== 'access_revoked') await assertCoManagedOperationalWrite(trx, resource.tenant);
   const occurredAt = (await trx.select({ at: trx.raw('clock_timestamp()') }).first()).at;
+  if (transition === 'access_revoked') await retainCoManagedSharedConversationBeforeReduction(trx, resource, request.operationId);
   const workId = work?.work_id ?? randomUUID();
   const revision = request.expectedRevision + 1;
   await applyCoManagedTicketSlaTransition(trx, relationship, resource,

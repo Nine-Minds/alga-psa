@@ -18439,3 +18439,75 @@ it('MSP-private archive capture rolls back with a private writer that expires af
   finally { capture.mockRestore(); }
   for (const table of ['co_management_private_comments', 'co_management_private_threads', 'co_management_private_command_receipts', 'co_managed_participation_evidence']) expect(await f.sponsor.table(table)).toHaveLength(0);
 }));
+
+it('sharing reduction archives legacy ticket history before revocation without copying hidden content or replaying capture', async () => withConversationFixture(async f => {
+  const root = await f.addCustomer({ note: 'Deleted original body', deleted: true });
+  const reply = await f.addCustomer({ note: 'Still visible legacy reply', parent: root });
+  await f.addCustomer({ note: 'Never shared customer secret', internal: true, audience: 'organization_private' });
+  await f.addCustomer({ note: 'Unpublished scheduled body', state: 'scheduled' });
+  const events = await f.customer.table('co_management_event_outbox');
+  const live = await f.read(db, f.principal, f.resource);
+  expect(live.items.find((item: any) => item.commentId === reply.id)?.markdown).toBe('Still visible legacy reply');
+  const { revokeCoManagedTicketGrant } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  const work = await f.customer.table('co_management_ticket_work').where('ticket_id', f.resource.id).first();
+  const request = { operationId: randomUUID(), expectedRevision: work.revision, note: 'Return to our desk' };
+  await revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource, request);
+  const evidence = () => f.sponsor.table('co_managed_participation_evidence').where({ resource_id: f.resource.id, event_type: 'TICKET_COMMENT_ARCHIVED' }).orderBy('source_id');
+  const saved = await evidence(); expect(saved).toHaveLength(2);
+  expect(saved.find((row: any) => row.payload.commentId === root.id)?.payload).toMatchObject({ deleted: true });
+  expect(saved.find((row: any) => row.payload.commentId === reply.id)?.payload).toMatchObject({ markdown: 'Still visible legacy reply', parentCommentId: root.id });
+  expect(JSON.stringify(saved)).not.toMatch(/Deleted original body|Never shared|Unpublished/);
+  expect(saved.every((row: any) => row.operation_id === request.operationId)).toBe(true);
+  await f.customer.table('comments').where('comment_id', reply.id).update({ note: 'Private later revision', markdown_content: 'Private later revision' });
+  await revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource, request);
+  expect(await evidence()).toEqual(saved);
+  expect(await f.customer.table('co_management_event_outbox')).toEqual(events);
+}));
+
+it('sharing reduction snapshots project history only after MSP participation and rolls back with failed scope changes', async () => withTaskConversationFixture(async f => {
+  const policy = await import('../../../../packages/co-managed/src/policy');
+  await f.add(f.customerPrincipal, 'shared_it', 'Older shared customer history');
+  await f.add(f.customerPrincipal, 'organization_private', 'Never capture customer private task');
+  const original = await policy.getCoManagedCollaborationPolicy(db, f.actor, f.target);
+  const reduced = { ...original, projects: [] };
+  // Oversight alone has not established participation.
+  await db.transaction(async trx => {
+    await policy.replaceCoManagedCustomerScope(trx, f.actor, f.target, original.revision, reduced);
+    expect(await tenantDb(trx, f.principal.tenant).table('co_managed_participation_evidence')).toHaveLength(0);
+    throw new Error('restore fixture scope');
+  }).catch(error => { expect(error.message).toBe('restore fixture scope'); });
+  await f.add(f.principal, 'shared_it', 'Actual MSP contribution');
+  const before = await f.sponsor.table('co_managed_participation_evidence');
+  await expect(db.transaction(async trx => {
+    await policy.replaceCoManagedCustomerScope(trx, f.actor, f.target, original.revision, reduced);
+    expect(await tenantDb(trx, f.principal.tenant).table('co_managed_participation_evidence').where('event_type', 'PROJECT_TASK_COMMENT_ARCHIVED')).toHaveLength(2);
+    throw new Error('scope transaction failed');
+  })).rejects.toThrow('scope transaction failed');
+  expect(await f.sponsor.table('co_managed_participation_evidence')).toEqual(before);
+  expect((await policy.getCoManagedCollaborationPolicy(db, f.actor, f.target)).revision).toBe(original.revision);
+  await policy.replaceCoManagedCustomerScope(db, f.actor, f.target, original.revision, reduced);
+  const evidence = () => f.sponsor.table('co_managed_participation_evidence').where('event_type', 'PROJECT_TASK_COMMENT_ARCHIVED').orderBy('source_id');
+  const saved = await evidence(); expect(saved).toHaveLength(2);
+  expect(saved.map((row: any) => row.payload.markdown).sort()).toEqual(['Actual MSP contribution', 'Older shared customer history']);
+  await f.add(f.customerPrincipal, 'shared_it', 'Newly private work after unsharing');
+  await policy.replaceCoManagedCustomerScope(db, f.actor, f.target, original.revision, reduced);
+  expect(await evidence()).toEqual(saved);
+}));
+
+it('sharing reduction archives board-only visibility using the persisted policy operation', async () => withConversationFixture(async f => {
+  const policy = await import('../../../../packages/co-managed/src/policy');
+  const initial = await policy.getCoManagedCollaborationPolicy(db, f.actor, f.target);
+  const ticket = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  await policy.replaceCoManagedCustomerScope(db, f.actor, f.target, initial.revision,
+    { ...initial, visibilityMode: 'board_scope', boards: [{ id: ticket.board_id, canCollaborate: true }] });
+  await f.customer.table('co_management_ticket_work').where('ticket_id', f.resource.id).update({ grant_revoked_at: new Date(), can_collaborate: false });
+  const comment = await f.addCustomer({ note: 'Legacy board-shared history' });
+  await policy.replaceCoManagedCustomerScope(db, f.actor, f.target, initial.revision + 1,
+    { ...initial, visibilityMode: 'escalation_only', boards: [] });
+  const saved = await f.sponsor.table('co_managed_participation_evidence').where({ resource_id: f.resource.id, event_type: 'TICKET_COMMENT_ARCHIVED' });
+  expect(saved).toHaveLength(1);
+  expect(saved[0].payload).toMatchObject({ commentId: comment.id, markdown: 'Legacy board-shared history' });
+  const operation = await f.customer.table('co_management_relationship_events').where('revision', initial.revision + 2).first();
+  expect(saved[0].operation_id).toBe(operation.event_id);
+  await expect(f.read(db, f.principal, f.resource)).rejects.toThrow();
+}));

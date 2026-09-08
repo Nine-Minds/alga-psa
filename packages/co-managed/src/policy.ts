@@ -4,6 +4,7 @@ import { tenantDb, withTransaction } from '@alga-psa/db';
 import { hasCoManagedLocalPermission } from './localPermission';
 import { getCoManagedOperationalState, CoManagedLifecycleError } from '@alga-psa/licensing/lifecycle';
 import { snapshotCoManagedSessionActor, lockCoManagedSessionIdentity, assertCoManagedSessionUnexpired, type CoManagedSessionActor } from './sharedWorkIdentity';
+import { retainCoManagedSharedConversationBeforeReduction } from './conversationParticipationEvidence';
 import { resolveSlaPolicy } from '@alga-psa/shared/lib/sla/slaPolicyResolver';
 
 /** Authentication adapters supply the live home identity, never request fields. */
@@ -103,11 +104,11 @@ async function isReplay(trx: Knex.Transaction, actor: CoManagedHomeActor, target
   throw new CoManagedPolicyError('POLICY_CHANGED');
 }
 async function recordPolicyChange(trx: Knex.Transaction, actor: CoManagedHomeActor, target: CoManagedPolicyTarget,
-  revision: number, eventType: string, scope: unknown): Promise<number> {
+  revision: number, eventType: string, scope: unknown, eventId = randomUUID()): Promise<number> {
   const customer = tenantDb(trx, target.customerTenant);
   await customer.table('co_management_relationships').where('relationship_id', target.relationshipId)
     .update({ revision: revision + 1, updated_at: trx.fn.now() });
-  await customer.table('co_management_relationship_events').insert({ tenant: target.customerTenant, event_id: randomUUID(),
+  await customer.table('co_management_relationship_events').insert({ tenant: target.customerTenant, event_id: eventId,
     relationship_id: target.relationshipId, actor_tenant: actor.tenant, actor_user_id: actor.userId,
     event_type: eventType, revision: revision + 1, scope, scope_fingerprint: hash(scope) });
   return revision + 1;
@@ -139,13 +140,30 @@ export async function replaceCoManagedCustomerScope(db: Knex, actor: CoManagedHo
       const rows = await customer.table(table).whereIn(idColumn, grants.map(grant => grant.id)).forShare().select(idColumn);
       if (rows.length !== grants.length) throw new CoManagedPolicyError('RESOURCE_NOT_FOUND');
     }
+    const removedBoards = previous.visibilityMode === 'board_scope' ? previous.boards.filter(old =>
+      desired.visibilityMode !== 'board_scope' || !desired.boards.some(next => next.id === old.id)).map(grant => grant.id) : [];
+    const removedProjects = previous.projects.filter(old => !desired.projects.some(next => next.id === old.id)).map(grant => grant.id);
+    const captureOperationId = randomUUID();
+    if (removedBoards.length) {
+      const tickets = await customer.table('tickets').whereIn('board_id', removedBoards).orderBy('ticket_id').select('ticket_id');
+      for (const ticket of tickets) await retainCoManagedSharedConversationBeforeReduction(trx,
+        { tenant: target.customerTenant, relationshipId: target.relationshipId, kind: 'ticket', id: ticket.ticket_id }, captureOperationId);
+    }
+    if (removedProjects.length) {
+      const tasks = customer.table('project_tasks as task');
+      customer.tenantJoin(tasks, 'project_phases as phase', 'task.phase_id', 'phase.phase_id');
+      for (const task of await tasks.whereIn('phase.project_id', removedProjects).orderBy('task.task_id').select('task.task_id')) {
+        await retainCoManagedSharedConversationBeforeReduction(trx,
+          { tenant: target.customerTenant, relationshipId: target.relationshipId, kind: 'project_task', id: task.task_id }, captureOperationId);
+      }
+    }
     await customer.table('co_management_relationships').where('relationship_id', target.relationshipId).update({ visibility_mode: desired.visibilityMode });
     for (const [table, idColumn, grants] of [['co_management_board_scopes', 'board_id', desired.boards], ['co_management_project_scopes', 'project_id', desired.projects]] as const) {
       await customer.table(table).where('relationship_id', target.relationshipId).del();
       if (grants.length) await customer.table(table).insert(grants.map(grant => ({ tenant: target.customerTenant,
         relationship_id: target.relationshipId, [idColumn]: grant.id, can_collaborate: grant.canCollaborate })));
     }
-    return recordPolicyChange(trx, actor, target, relationship.revision, 'customer_scope_changed', desired);
+    return recordPolicyChange(trx, actor, target, relationship.revision, 'customer_scope_changed', desired, captureOperationId);
   });
 }
 
