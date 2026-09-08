@@ -1,6 +1,7 @@
 'use server';
 
-import { approveCoManagedNativeAppointment, associateCoManagedNativeAppointmentTicket, readCoManagedNativeAppointmentRequests, declineCoManagedNativeAppointment, rescheduleCoManagedNativeAppointment } from '@alga-psa/co-managed';
+import { appointmentMeetingProvider } from '../lib/appointmentMeetingCreation';
+import { approveCoManagedAppointmentWithMeeting, approveCoManagedNativeAppointment, associateCoManagedNativeAppointmentTicket, readCoManagedNativeAppointmentRequests, declineCoManagedNativeAppointment, rescheduleCoManagedNativeAppointment } from '@alga-psa/co-managed';
 import { resolveNativeTimeBrowserActor } from '../lib/nativeTimeReader';
 
 import { createTenantKnex, tenantDb, User } from '@alga-psa/db';
@@ -601,6 +602,12 @@ export const approveAppointmentRequest = withAuth(async (
     if (!validatedData.generate_teams_meeting) {
       const admitted = await approveCoManagedNativeAppointment(db, tenant, { id: validatedData.appointment_request_id, assignedUserId: validatedData.assigned_user_id, finalDate: validatedData.final_date, finalTime: validatedData.final_time, ticketId: validatedData.ticket_id, internalNotes: validatedData.internal_notes }, () => resolveNativeTimeBrowserActor(user, tenant), publishEvent);
       if (admitted.handled) return { success: true, data: admitted.request };
+    } else {
+      const admitted = await approveCoManagedAppointmentWithMeeting(db, tenant, { id: validatedData.appointment_request_id, assignedUserId: validatedData.assigned_user_id, finalDate: validatedData.final_date, finalTime: validatedData.final_time, ticketId: validatedData.ticket_id, internalNotes: validatedData.internal_notes }, () => resolveNativeTimeBrowserActor(user, tenant), publishEvent, await appointmentMeetingProvider(tenant), validatedData.approve_without_meeting);
+      if (admitted.handled) {
+        if ('meetingCreationFailed' in admitted) return { success: false, meetingCreationFailed: true, error: 'The Teams meeting could not be created, so the appointment was not approved. Incomplete meeting cleanup is pending; you can approve without a meeting.' };
+        return { success: true, data: admitted.request, ...('warning' in admitted ? { teamsMeetingWarning: admitted.warning } : {}) };
+      }
     }
 
 

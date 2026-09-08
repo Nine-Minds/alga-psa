@@ -4,7 +4,7 @@ import { tenantDb, withTransaction } from '@alga-psa/db';
 import { assertCoManagedOperationalWrite } from '@alga-psa/licensing';
 import { retainCoManagedTimeCalendar } from './nativeTimePeriod';
 import { retainAppointmentApprovalPlan, type NativeAppointmentApprovalInput } from './nativeAppointmentApproval';
-import { nativeAppointmentRequestView } from './nativeAppointmentRequest';
+import { nativeAppointmentRequestView, isAppointmentFieldHidden } from './nativeAppointmentRequest';
 import { lockCoManagedLocalAuthentication, snapshotCoManagedAuthenticatedActor, type CoManagedAuthenticatedActor } from './localAuthentication';
 import { authorizeCoManagedLocalRecord, CoManagedSharedWorkError } from './sharedWorkIdentity';
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
@@ -31,6 +31,8 @@ export async function prepareCoManagedAppointmentMeeting(db: Knex, tenant: strin
     const actor = snapshotCoManagedAuthenticatedActor(await identify()); if (actor.tenant !== tenant) throw new CoManagedSharedWorkError();
     const credential = await lockCoManagedLocalAuthentication(trx, actor), owner = tenantDb(trx, tenant);
     const plan = await retainAppointmentApprovalPlan(trx, actor, credential.subject, input);
+    if (isAppointmentFieldHidden(plan.retained.fields, ['online_meeting_id', 'online_meeting_provider', 'online_meeting_url'])) throw new CoManagedSharedWorkError();
+    if (plan.request.online_meeting_id || await owner.table('online_meetings').where('appointment_request_id', input.id).forUpdate().first('meeting_id')) throw new MeetingCreationOperationConflict();
     const view = await nativeAppointmentRequestView(trx, actor, credential.subject, plan.retained);
     const technician = await owner.table('users').where({ user_id: input.assignedUserId, user_type: 'internal', is_inactive: false }).forShare().first('email', 'first_name', 'last_name');
     const userScope = await authorizeCoManagedLocalRecord(trx, actor, credential.subject, 'user', 'read', { id: input.assignedUserId, ownerUserId: input.assignedUserId });

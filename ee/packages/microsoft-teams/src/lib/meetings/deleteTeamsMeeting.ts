@@ -3,12 +3,15 @@ import { fetchMicrosoftGraphAppToken } from '../graphAuth';
 import { getMicrosoftGraphBaseUrl } from '../teams/microsoftEndpoints';
 import {
   resolveTeamsMeetingConfigState,
+  resolveTeamsMeetingGraphConfig,
   type TeamsMeetingConfigSkipReason,
 } from './meetingConfig';
 import { mapGraphStatusToMeetingErrorCode } from './createTeamsMeeting';
 
 export interface DeleteTeamsMeetingInput {
   tenantId: string;
+  /** Required directory binding for durable creation compensation. */
+  microsoftTenantId?: string;
   meetingId: string;
   eventId?: string | null;
   /** Original persisted organizer for reconciliation after configuration changes. */
@@ -33,7 +36,10 @@ export async function deleteTeamsMeetingWithResult(
   input: DeleteTeamsMeetingInput
 ): Promise<DeleteTeamsMeetingOutcome> {
   try {
-    const configState = await resolveTeamsMeetingConfigState(input.tenantId);
+    const graphConfig = input.microsoftTenantId ? await resolveTeamsMeetingGraphConfig(input.tenantId) : null;
+    const configState = input.microsoftTenantId
+      ? graphConfig ? { status: 'ready' as const, config: graphConfig } : { status: 'skipped' as const, reason: 'not_configured' as const }
+      : await resolveTeamsMeetingConfigState(input.tenantId);
     if (configState.status !== 'ready') {
       logger.warn('[TeamsMeetings] Unable to delete Teams meeting because the tenant is not ready', {
         tenant: input.tenantId,
@@ -46,6 +52,9 @@ export async function deleteTeamsMeetingWithResult(
       return { status: 'skipped', reason: configState.reason };
     }
     const config = configState.config;
+    if (input.microsoftTenantId && (!input.eventId || !input.organizerUserId || input.microsoftTenantId.toLowerCase() !== config.microsoftTenantId.toLowerCase())) {
+      return { status: 'failed', errorCode: 'creation_target_changed', errorMessage: 'The original meeting directory and event binding are required for cleanup.' };
+    }
 
     const accessToken = await fetchMicrosoftGraphAppToken({
       tenantAuthority: config.microsoftTenantId,
@@ -54,7 +63,7 @@ export async function deleteTeamsMeetingWithResult(
     });
 
     const response = await fetch(
-      `${getMicrosoftGraphBaseUrl()}/users/${encodeURIComponent(input.organizerUserId ?? config.organizerUpn)}/events/${encodeURIComponent(input.eventId ?? input.meetingId)}`,
+      `${getMicrosoftGraphBaseUrl()}/users/${encodeURIComponent(input.organizerUserId ?? config.organizerUpn ?? '')}/events/${encodeURIComponent(input.eventId ?? input.meetingId)}`,
       {
         method: 'DELETE',
         signal: AbortSignal.timeout(30_000),

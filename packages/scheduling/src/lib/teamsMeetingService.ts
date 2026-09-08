@@ -46,7 +46,7 @@ export type TeamsMeetingSkipReason = 'ee_disabled' | 'feature_disabled' | 'not_c
 export type CreateTeamsMeetingOutcome =
   | { status: 'created'; meeting: CreateTeamsMeetingResult }
   | { status: 'skipped'; reason: TeamsMeetingSkipReason }
-  | { status: 'failed'; errorCode: string; errorMessage: string };
+  | { status: 'failed'; errorCode: string; errorMessage: string; createdEvent?: CreatedTeamsEventReceipt };
 
 export type UpdateTeamsMeetingOutcome =
   | { status: 'updated' }
@@ -81,6 +81,7 @@ export interface UpdateTeamsMeetingInput {
 
 export interface DeleteTeamsMeetingInput {
   tenantId: string;
+  microsoftTenantId?: string;
   meetingId: string;
   eventId?: string | null;
   organizerUserId?: string | null;

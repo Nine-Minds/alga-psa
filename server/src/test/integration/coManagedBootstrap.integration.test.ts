@@ -14882,3 +14882,124 @@ it('customer meeting creation preparation rolls back its reservation when creden
     expect(await customer.table('appointment_requests').where('appointment_request_id', requestId).first()).toMatchObject({ status: 'pending' });
   } finally { await db.raw('DROP TRIGGER expire_meeting_preparation_key ON co_managed_meeting_creation_operations'); await db.raw('DROP FUNCTION expire_meeting_preparation_key()'); }
 }));
+
+async function withMeetingCreationFixture(work: (fixture: any) => Promise<void>) {
+  return withAppointmentApprovalFixture(async (fixture: any) => {
+    const { domain, context, requestId, actor, customer, events } = fixture;
+    const target = { microsoftTenantId: 'directory', organizerUserId: 'organizer', organizerUpn: 'organizer@example.invalid', sendMeetingInvites: true };
+    const receipt = { eventId: `created-event-${requestId}`, organizerUserId: target.organizerUserId, organizerUpn: target.organizerUpn, microsoftTenantId: target.microsoftTenantId, joinWebUrl: 'https://teams.example.invalid/join' };
+    const meeting = { ...receipt, meetingId: `created-online-${requestId}` };
+    const provider = { target: vi.fn(async () => ({ status: 'ready', target })), create: vi.fn(async () => ({ status: 'created', meeting })),
+      recover: vi.fn(async () => ({ status: 'found', event: receipt, meetingId: meeting.meetingId })), remove: vi.fn(async () => ({ status: 'deleted' })) };
+    const input = { id: requestId, assignedUserId: context.userId };
+    const create = (without = false) => domain.approveCoManagedAppointmentWithMeeting(db, context.tenant, input, actor, events, provider, without);
+    const operation = () => customer.table('co_managed_meeting_creation_operations').where('appointment_request_id', requestId).first();
+    const recover = async () => {
+      const row = await operation();
+      await customer.table('co_managed_meeting_creation_operations').where('operation_id', row.operation_id).update({ next_attempt_at: db.raw("clock_timestamp() - interval '1 second'") });
+      return domain.recoverCoManagedAppointmentMeeting(db, context.tenant, row.operation_id, provider, events);
+    };
+    await work({ ...fixture, target, receipt, meeting, provider, input, create, operation, recover });
+  });
+}
+
+it('customer meeting creation execution attaches one actual event and approves its retained allocation atomically', async () => withMeetingCreationFixture(async ({ create, provider, customer, requestId, ownId, operation, meeting, events }: any) => {
+  events.mockClear();
+  const result = await create();
+  expect(result).toMatchObject({ handled: true, request: { status: 'approved', schedule_entry_id: ownId, online_meeting_id: meeting.meetingId, online_meeting_url: meeting.joinWebUrl } });
+  const row = await operation(); expect(row).toMatchObject({ status: 'attached', provider_meeting_id: meeting.meetingId }); expect(row.completed_at).toBeInstanceOf(Date);
+  expect(provider.create).toHaveBeenCalledOnce();
+  expect(provider.create.mock.lastCall[1]).toEqual({ operationId: row.operation_id, target: row.creation_target });
+  expect(await customer.table('online_meetings').where('appointment_request_id', requestId).first()).toMatchObject({ meeting_id: row.meeting_id, provider_event_id: meeting.eventId, schedule_entry_id: ownId, organizer_user_id: 'organizer' });
+  expect(events).toHaveBeenCalledOnce();
+  await expect(create()).rejects.toBeDefined(); expect(provider.create).toHaveBeenCalledOnce();
+}));
+
+it('customer meeting creation execution keeps lost-response cleanup separate from explicit approval without a meeting', async () => withMeetingCreationFixture(async ({ create, recover, provider, operation, customer, requestId }: any) => {
+  provider.create.mockRejectedValue(new Error('transport failed with secret provider details'));
+  expect(await create()).toEqual({ handled: true, meetingCreationFailed: true });
+  expect(await operation()).toMatchObject({ status: 'cleanup_pending', event_receipt: null, last_error_code: 'provider_creation_failed' });
+  expect(await customer.table('appointment_requests').where('appointment_request_id', requestId).first()).toMatchObject({ status: 'pending' });
+  expect(await create(true)).toMatchObject({ handled: true, request: { status: 'approved', online_meeting_id: null } });
+  expect(provider.create).toHaveBeenCalledOnce();
+  expect(await recover()).toEqual({ status: 'cleaned' }); expect(provider.remove).toHaveBeenCalledOnce();
+  expect(await customer.table('online_meetings').where('appointment_request_id', requestId)).toHaveLength(0);
+  expect(JSON.stringify(await operation())).not.toContain('secret provider details');
+}));
+
+it('customer meeting creation execution preserves the provider receipt when the original credential expires before attachment', async () => withMeetingCreationFixture(async ({ create, recover, operation, context, customer, requestId, meeting, provider, events }: any) => {
+  await db.raw(`CREATE FUNCTION expire_created_meeting_key() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.status = 'created' THEN UPDATE api_keys SET expires_at = clock_timestamp() - interval '1 second' WHERE tenant = NEW.tenant AND api_key_id = '${context.apiKeyId}'::uuid; END IF; RETURN NEW; END $$`);
+  await db.raw('CREATE TRIGGER expire_created_meeting_key AFTER UPDATE ON co_managed_meeting_creation_operations FOR EACH ROW EXECUTE FUNCTION expire_created_meeting_key()');
+  events.mockClear();
+  try {
+    await expect(create()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    expect(await operation()).toMatchObject({ status: 'cleanup_pending', event_receipt: { eventId: meeting.eventId }, provider_meeting_id: meeting.meetingId });
+    expect(await customer.table('appointment_requests').where('appointment_request_id', requestId).first()).toMatchObject({ status: 'pending', online_meeting_id: null });
+    expect(events).not.toHaveBeenCalled();
+    expect(await recover()).toEqual({ status: 'cleaned' }); expect(provider.remove).toHaveBeenCalledOnce();
+  } finally { await db.raw('DROP TRIGGER expire_created_meeting_key ON co_managed_meeting_creation_operations'); await db.raw('DROP FUNCTION expire_created_meeting_key()'); }
+}));
+
+it('customer meeting creation recovery attaches an interrupted attempt only under its still-current captured authority', async () => withMeetingCreationFixture(async ({ domain, input, target, actor, context, customer, requestId, provider, recover, operation }: any) => {
+  const row = await domain.prepareCoManagedAppointmentMeeting(db, context.tenant, input, target, actor);
+  await customer.table('co_managed_meeting_creation_operations').where('operation_id', row.operationId).update({ status: 'uncertain', external_attempted_at: db.fn.now() });
+  expect(await recover()).toEqual({ status: 'attached' });
+  expect(provider.create).not.toHaveBeenCalled(); expect(provider.recover).toHaveBeenCalledOnce(); expect(provider.remove).not.toHaveBeenCalled();
+  expect(await operation()).toMatchObject({ status: 'attached' });
+  expect(await customer.table('appointment_requests').where('appointment_request_id', requestId).first()).toMatchObject({ status: 'approved' });
+}));
+
+it('customer meeting creation recovery retracts a changed disclosure instead of approving stale intent', async () => withMeetingCreationFixture(async ({ domain, input, target, actor, context, customer, requestId, provider, recover, operation }: any) => {
+  const row = await domain.prepareCoManagedAppointmentMeeting(db, context.tenant, input, target, actor);
+  await customer.table('co_managed_meeting_creation_operations').where('operation_id', row.operationId).update({ status: 'uncertain', external_attempted_at: db.fn.now() });
+  await customer.table('appointment_requests').where('appointment_request_id', requestId).update({ requester_email: 'new-recipient@example.invalid' });
+  expect(await recover()).toEqual({ status: 'retry' }); expect(await operation()).toMatchObject({ status: 'cleanup_pending' });
+  expect(await recover()).toEqual({ status: 'cleaned' });
+  expect(provider.create).not.toHaveBeenCalled(); expect(provider.remove).toHaveBeenCalledOnce();
+  expect(await customer.table('appointment_requests').where('appointment_request_id', requestId).first()).toMatchObject({ status: 'pending' });
+}));
+
+it('customer meeting creation UI approval uses the durable provider identity and admitted recipient payload', async () => withMeetingCreationFixture(async ({ approve, provider, target, meeting, operation, requestId }: any) => {
+  const registry = await import('../../../../packages/scheduling/src/lib/teamsMeetingService');
+  const createMeeting = vi.fn(async () => ({ status: 'created', meeting }));
+  const resolve = vi.spyOn(registry, 'resolveTeamsMeetingService').mockResolvedValue({ getTeamsMeetingCreationTarget: provider.target, createTeamsMeetingWithResult: createMeeting } as any);
+  try {
+    const result = await approve({ generate_teams_meeting: true, internal_notes: 'Local approval only' });
+    expect(result).toMatchObject({ success: true, data: { status: 'approved', online_meeting_id: meeting.meetingId } });
+    const row = await operation(), payload = createMeeting.mock.lastCall[0];
+    expect(payload).toMatchObject({ appointmentRequestId: requestId, creationIdentity: { operationId: row.operation_id, target } });
+    expect(payload.attendees.some((attendee: any) => attendee.emailAddress.address === 'requester@example.invalid')).toBe(true);
+    expect(payload.bodyHtml).toContain('Private appointment description'); expect(JSON.stringify(payload)).not.toContain('Local approval only');
+  } finally { resolve.mockRestore(); }
+}));
+
+it('customer meeting creation recovery preserves narrow cleanup after credential revocation source removal and suspension', async () => withMeetingCreationFixture(async ({ domain, input, target, actor, context, customer, requestId, provider, recover, operation }: any) => {
+  const row = await domain.prepareCoManagedAppointmentMeeting(db, context.tenant, input, target, actor);
+  await customer.table('co_managed_meeting_creation_operations').where('operation_id', row.operationId).update({ status: 'uncertain', external_attempted_at: db.fn.now() });
+  await customer.table('api_keys').where('api_key_id', context.apiKeyId).update({ active: false });
+  await customer.table('appointment_requests').where('appointment_request_id', requestId).del();
+  await customer.table('tenants').update({ suspended_at: db.fn.now() });
+  expect(await recover()).toEqual({ status: 'retry' }); expect(await operation()).toMatchObject({ status: 'cleanup_pending' });
+  expect(await recover()).toEqual({ status: 'cleaned' });
+  expect(provider.create).not.toHaveBeenCalled(); expect(provider.remove).toHaveBeenCalledOnce();
+}));
+
+it('customer meeting creation recovery keeps an ambiguous absent event pending without reissuing creation', async () => withMeetingCreationFixture(async ({ domain, input, target, actor, context, customer, provider, recover, operation }: any) => {
+  const row = await domain.prepareCoManagedAppointmentMeeting(db, context.tenant, input, target, actor);
+  await customer.table('co_managed_meeting_creation_operations').where('operation_id', row.operationId).update({ status: 'uncertain', external_attempted_at: db.fn.now() });
+  provider.recover.mockResolvedValue({ status: 'absent' });
+  expect(await recover()).toEqual({ status: 'retry' }); expect(await recover()).toEqual({ status: 'retry' });
+  expect(await operation()).toMatchObject({ status: 'uncertain', completed_at: null });
+  expect(provider.create).not.toHaveBeenCalled(); expect(provider.remove).not.toHaveBeenCalled();
+}));
+
+it('customer meeting creation recovery serializes duplicate cleanup workers against the actual operation', async () => withMeetingCreationFixture(async ({ domain, create, receipt, operation, context, customer, provider }: any) => {
+  provider.create.mockResolvedValue({ status: 'failed', errorCode: 'online_index_pending', createdEvent: receipt });
+  expect(await create()).toEqual({ handled: true, meetingCreationFailed: true });
+  const row = await operation();
+  await customer.table('co_managed_meeting_creation_operations').where('operation_id', row.operation_id).update({ next_attempt_at: db.raw("clock_timestamp() - interval '1 second'") });
+  const run = () => domain.recoverCoManagedAppointmentMeeting(db, context.tenant, row.operation_id, provider, vi.fn());
+  const results = await Promise.all([run(), run()]);
+  expect(results.map((result: any) => result.status).sort()).toEqual(['cleaned', 'obsolete']);
+  expect(provider.remove).toHaveBeenCalledOnce(); expect(provider.recover).not.toHaveBeenCalled();
+}));

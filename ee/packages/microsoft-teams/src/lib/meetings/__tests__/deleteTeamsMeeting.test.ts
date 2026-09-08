@@ -5,6 +5,7 @@ vi.mock('@alga-psa/core/logger', () => ({
 }));
 
 vi.mock('../meetingConfig', () => ({
+  resolveTeamsMeetingGraphConfig: vi.fn(async () => ({ microsoftTenantId: 'ms-tenant', clientId: 'client-id', clientSecret: 'client-secret' })),
   resolveTeamsMeetingConfigState: vi.fn(async () => ({
     status: 'ready',
     config: {
@@ -50,6 +51,18 @@ describe('deleteTeamsMeetingWithResult', () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+  });
+
+  it('compensates a creation in its original directory without a currently configured organizer', async () => {
+    fetchMock.mockResolvedValue(new Response(null, { status: 204 }));
+    expect(await deleteTeamsMeetingWithResult({ ...INPUT, organizerUserId: 'original-organizer', microsoftTenantId: 'ms-tenant' })).toEqual({ status: 'deleted', alreadyDeleted: false });
+    expect(fetchMock.mock.lastCall?.[0]).toBe('https://graph.example.com/v1.0/users/original-organizer/events/graph-event-1');
+  });
+
+  it('rejects a different directory or incomplete creation receipt before any delete request', async () => {
+    expect(await deleteTeamsMeetingWithResult({ ...INPUT, organizerUserId: 'original-organizer', microsoftTenantId: 'other-directory' })).toMatchObject({ status: 'failed', errorCode: 'creation_target_changed' });
+    expect(await deleteTeamsMeetingWithResult({ ...INPUT, microsoftTenantId: 'ms-tenant' })).toMatchObject({ status: 'failed', errorCode: 'creation_target_changed' });
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it('reconciles deletion against the persisted organizer after the configured organizer changes', async () => {

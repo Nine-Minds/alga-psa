@@ -59,6 +59,13 @@ const tenantsWithActiveTeams: TenantSelector = (db) => db
   .whereNotNull('selected_profile_id')
   .distinct('tenant');
 
+const tenantsWithTeamsMaintenance: TenantSelector = async (db) => {
+  const active = await tenantsWithActiveTeams(db);
+  const recovery = await db.unscoped<{ tenant: string }>('co_managed_meeting_creation_operations', 'Teams maintenance discovers retained creation recovery owners even after integration removal')
+    .whereNull('completed_at').distinct('tenant');
+  return [...new Map([...active, ...recovery].map(row => [row.tenant, row])).values()];
+};
+
 const tenantsWithAbandonedCoManagedUploads: TenantSelector = async (db) => {
   const drafts = await db.unscoped<{ tenant: string }>('co_management_conversation_drafts', 'upload cleanup discovers owners of abandoned drafts')
     .where('status', 'draft').whereNull('cleanup_completed_at')
@@ -127,7 +134,7 @@ const MAINTENANCE_JOBS: Record<string, MaintenanceJobDef> = {
   'renew-teams-meeting-artifact-subscriptions': { scope: 'tenant', run: (tenantId) => renewTeamsMeetingArtifactSubscriptions({ tenantId }), tenants: tenantsWithActiveTeams },
   'renew-telephony-call-subscriptions': { scope: 'tenant', run: (tenantId) => renewTelephonyCallSubscriptions({ tenantId }), tenants: tenantsWithActiveTeamsPhone },
   [TELEPHONY_CALL_ARTIFACT_SWEEP_JOB]: { scope: 'tenant', run: (tenantId) => telephonyCallArtifactSweepHandler({ tenantId }), tenants: tenantsWithPendingCallArtifacts },
-  [TEAMS_MEETING_SWEEP_JOB]: { scope: 'tenant', run: (tenantId) => teamsMeetingSweepHandler({ tenantId }), tenants: tenantsWithActiveTeams },
+  [TEAMS_MEETING_SWEEP_JOB]: { scope: 'tenant', run: (tenantId) => teamsMeetingSweepHandler({ tenantId }), tenants: tenantsWithTeamsMaintenance, includeSuspended: true },
   'workflow-quota-resume-scan': { scope: 'system', run: () => workflowQuotaResumeScanHandler({ tenantId: 'system', batchSize: WORKFLOW_QUOTA_RESUME_BATCH_SIZE }) },
   'cleanup-temporary-workflow-forms': { scope: 'system', run: () => cleanupTemporaryFormsJob() },
   'cleanup-webhook-deliveries': { scope: 'system', run: () => cleanupWebhookDeliveriesJob() },

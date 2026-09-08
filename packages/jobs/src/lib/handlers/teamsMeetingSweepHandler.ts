@@ -1,4 +1,5 @@
-import { getConnection } from '@alga-psa/db';
+import { recoverCoManagedAppointmentMeetings } from '@alga-psa/scheduling/lib/appointmentMeetingCreation';
+import { getConnection, tenantDb } from '@alga-psa/db';
 import { synchronizeCoManagedScheduleMeetings } from '@alga-psa/scheduling/lib/scheduleMeetingSynchronization';
 import logger from '@alga-psa/core/logger';
 import { OnlineMeetingModel } from '@alga-psa/clients/models';
@@ -63,6 +64,10 @@ async function loadEeTeamsMeetingConfigModule(): Promise<EeTeamsMeetingConfigMod
  * cleanup then skip when Teams Graph configuration is unavailable.
  */
 export async function teamsMeetingSweepHandler(data: TeamsMeetingSweepJobData): Promise<void> {
+  await recoverCoManagedAppointmentMeetings(await getConnection(data.tenantId), data.tenantId);
+  // Suspended workspaces retain compensation authority only.
+  const workspace = await tenantDb(await getConnection(data.tenantId), data.tenantId).table('tenants').first('suspended_at');
+  if (!workspace || workspace.suspended_at) return;
   await synchronizeCoManagedScheduleMeetings(await getConnection(data.tenantId), data.tenantId);
   const eeModule = await loadEeTeamsMeetingConfigModule();
   if (!eeModule) {
