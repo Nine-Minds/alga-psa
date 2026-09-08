@@ -5,6 +5,10 @@ integration and E2E tests without vendor accounts, and to smoke-test
 integration flows by hand. Design decisions and history live in
 [docs/plans/2026-07-26-emulator-suite-design.md](../../docs/plans/2026-07-26-emulator-suite-design.md).
 
+The [protocol coverage inventory](PROTOCOL_PARITY.md) separates documented vendor
+contracts, deliberate emulator choices, native consumer evidence and remaining
+browser/worker/sandbox gaps. Emulator success does not establish full parity.
+
 ## Run everything
 
 ```bash
@@ -46,8 +50,8 @@ dependencies; it never needs the monorepo at runtime.
 
 ## Point Alga at the emulators
 
-Emulators speak the vendors' real wire protocols. Redirect Alga with env
-overrides:
+Emulators implement the vendor protocol subsets listed in this guide and the
+[coverage inventory](PROTOCOL_PARITY.md). Redirect Alga with env overrides:
 
 | Vendor | Env vars |
 | --- | --- |
@@ -214,7 +218,9 @@ envelope. Deliberately changing the start field to a string, changing the create
 status, or removing the error envelope fails validation. This exposed missing
 error messages in the emulator, now supplied for Graph error objects. OAuth
 errors retain their separate format. This is partial contract coverage: callback,
-OAuth, bot and other provider contracts still require independent parity checks.
+Full OAuth, bot and other provider contracts still require independent parity
+checks; the bounded checks below and in the [inventory](PROTOCOL_PARITY.md) do
+not cover every operation.
 No live Microsoft sandbox drift verification has been performed.
 
 The following Microsoft contract boundaries are independently checked. These

@@ -11,6 +11,12 @@ const hoisted = vi.hoisted(() => ({
 vi.mock('@alga-psa/auth/withAuth', () => ({ withAuth: (action: any) => (...args: any[]) =>
   action(hoisted.state.mockUser, hoisted.state.mockCtx, ...args) }));
 vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: async () => true }));
+// EE also imports the SSO registry through notification delivery. Organizer
+// validation does not use SSO; keep that unrelated NextAuth runtime isolated
+// under the package runner as well as the server runner.
+vi.mock('@alga-psa/auth', () => ({ getSSORegistry: vi.fn(() => {
+  throw new Error('Organizer routing must not invoke SSO');
+}) }));
 vi.mock('@alga-psa/core/secrets', () => ({ getSecretProviderInstance: async () => ({
   getTenantSecret: async (tenant: string, key: string) => hoisted.secrets.get(`${tenant}:${key}`) ?? null,
 }) }));

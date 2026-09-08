@@ -842,6 +842,32 @@
         "Current-source CI has not run this new regression",
         "Isolated tenant selection; browser and authentication are outside scope"
       ]
+    },
+    {
+      "id": "client-creation-tax-initialization-atomicity",
+      "classification": "discovered-during-incident-audit",
+      "incident": null,
+      "journey": "Create a client when required tax setup cannot complete",
+      "missingBoundary": "Client/profile transaction to default tax initialization",
+      "ownerRole": "Client and billing maintainers (named owner pending)",
+      "testFiles": [
+        "server/src/test/integration/clientCreationAtomicity.integration.test.ts"
+      ],
+      "ci": {
+        "workflow": ".github/workflows/integration-tests.yml",
+        "selection": "Permanent Tier-1 manifest"
+      },
+      "evidence": "worker-inputs-client-atomicity-and-runner-fix.json",
+      "reproduction": {
+        "baseRevision": "defb153935ff976853be09c3fc42375ae548ef2e",
+        "defect": "Run the new regression against the unchanged base action in an isolated migrated test database: absence of active tax rates throws but leaves a persisted client and profile."
+      },
+      "status": "local-before-and-after-verified",
+      "limits": [
+        "Not attributed to the original cause of issue 3338",
+        "Current-source CI remains required",
+        "Auth/session and event publishing are outside this regression"
+      ]
     }
   ]
 }

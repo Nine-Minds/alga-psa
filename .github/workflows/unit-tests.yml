@@ -70,6 +70,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Verify workflow worker build workspace inputs
+        run: npm run check:build-workspaces --workspace=workflow-worker
+
       # A few contract tests shell out to ripgrep (execFileSync('rg', ...)) to
       # assert on source layout; it isn't on the runner by default. Installed
       # from its GitHub release, not apt — see the composite action for why.

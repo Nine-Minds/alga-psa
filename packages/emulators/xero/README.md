@@ -25,3 +25,11 @@ Native behavioral tests are in `tests/tokenLifecycle.test.ts`; they exercise the
 actual HTTP surface, refresh rejection, connection removal, repeat/unknown
 requests, and client isolation. Existing token and accounting smoke tests run
 alongside them.
+
+`tests/accountingCleanup.test.ts` additionally invokes Alga's real
+`revokeAccountingOAuthGrant` over HTTP, with request-journal assertions and a
+guard against external destinations. It verifies credential rejection and
+connection removal, plus best-effort failure handling that preserves the grant.
+Auth/state/logger dependencies are isolated; this is native consumer coverage,
+not the full OAuth callback, disconnect UI, or a running-worker journey. See the
+[suite parity inventory](../PROTOCOL_PARITY.md) for remaining gaps.

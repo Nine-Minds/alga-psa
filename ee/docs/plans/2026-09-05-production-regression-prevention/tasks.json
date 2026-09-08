@@ -204,6 +204,38 @@
       "dependsOn": [],
       "owner": "stripe_protocol and coordinator",
       "notes": "Two fast suites and one engine suite now registered and reconciled against actual collection. All 24 targeted tests and seven discovery tests pass; current-source CI pending."
+    },
+    {
+      "id": "R026",
+      "title": "Repair and reproduce workflow-worker build workspace inputs",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "stripe_protocol",
+      "notes": "Reviewed reusable native npm resolution checker: original staged inputs fail; 43 manifests and all 19 selectors now resolve. Node22 Debian stages align with root engines. Native CI preflight added; no clean image proof."
+    },
+    {
+      "id": "R027",
+      "title": "Document provider protocol evidence and unresolved capabilities",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "calendar_review",
+      "notes": "Reviewed bounded provider parity inventory and corrected Stripe redirect test link. Native/CI/browser/standards evidence distinguished; F037 remains open."
+    },
+    {
+      "id": "R028",
+      "title": "Make client creation atomic with default tax initialization",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "qbo_protocol",
+      "notes": "Real missing-tax failure reproduced orphan client. Tax initialization now shares transaction; all 31 focused and neighboring tests pass. Permanent Tier-1 manifest and canonical collection include regression."
+    },
+    {
+      "id": "R029",
+      "title": "Fix Teams HTTP test isolation under actual emulator runner",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "calendar_review",
+      "notes": "Reproduced exact package-runner failure. Test-only auth barrel isolation fixes unrelated NextAuth loading; all 90 Graph package tests and both server-runner organizer cases pass."
     }
   ]
 }
