@@ -42,8 +42,8 @@ const receipt = (row: any): CoManagedClosureReceipt => ({ operationId: row.opera
 
 /** Internal transaction boundary for departure and independent upgrade. The
  * production archive adapter MUST finish permitted evidence in this retained
- * transaction before returning. There is intentionally no default finalizer
- * and no public action exposing closure before that adapter is implemented.
+ * transaction before returning. Callers explicitly supply finalizeCoManagedArchive
+ * (and any additional source adapters) so source coverage is reviewable.
  * Independent upgrade additionally proves entitlement and seeds commercial
  * capability in its outer transaction; this primitive never grants PSA. */
 export async function closeCoManagedRelationship(db: Knex, inputActor: CoManagedSessionActor,

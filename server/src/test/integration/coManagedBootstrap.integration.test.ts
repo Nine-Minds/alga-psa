@@ -18763,3 +18763,78 @@ it('work snapshot captures ticket context before grant removal and does not refr
   await revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource, request);
   expect(await evidence()).toEqual(saved);
 }));
+
+it('archive finalizer composes legacy handoffs shared conversations private history and work context before sealing closure', async () => withConversationFixture(async f => {
+  const { finalizeCoManagedArchive } = await import('../../../../packages/co-managed/src/archiveFinalization');
+  const { closeCoManagedRelationship: close } = await import('../../../../packages/co-managed/src/relationshipClosure');
+  const { handBackCoManagedTicket } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  const work = await f.customer.table('co_management_ticket_work').where('ticket_id', f.resource.id).first();
+  const handback = { operationId: randomUUID(), expectedRevision: work.revision, note: 'Historical shared handback' };
+  await handBackCoManagedTicket(db, f.principal, f.resource, handback);
+  await f.sponsor.table('co_managed_participation_evidence').where({ source_type: 'ticket_handoff', source_id: handback.operationId }).del();
+  const original = await f.sponsor.table('co_managed_participation_evidence').where('source_type', 'ticket_handoff').first();
+  await f.addCustomer({ note: 'Legacy shared context' });
+  await f.addCustomer({ note: 'Never shared customer secret', audience: 'organization_private', internal: true });
+  await f.addPrivate({ note: 'Legacy MSP-owned private context' });
+  await f.customer.table('tickets').where('ticket_id', f.resource.id).update({ title: 'Final shared ticket caption' });
+  const relationship = await f.customer.table('co_management_relationships').first();
+  const target = { customerTenant: f.resource.tenant, relationshipId: f.resource.relationshipId };
+  const request = { operationId: randomUUID(), expectedRevision: relationship.revision, reason: 'departure' as const };
+  const receipt = await close(db, f.customerPrincipal, target, request, finalizeCoManagedArchive);
+  const saved = await f.sponsor.table('co_managed_participation_evidence').where({ customer_tenant: f.resource.tenant, relationship_id: f.resource.relationshipId });
+  expect(saved.find((row: any) => row.evidence_id === original.evidence_id)).toEqual(original);
+  expect(saved.find((row: any) => row.source_id === handback.operationId)?.payload.note).toBe('Historical shared handback');
+  expect(saved.some((row: any) => row.source_type === 'conversation' && row.payload.markdown === 'Legacy shared context')).toBe(true);
+  expect(saved.some((row: any) => row.source_type === 'private_conversation' && row.payload.markdown === 'Legacy MSP-owned private context')).toBe(true);
+  expect(saved.find((row: any) => row.source_type === 'work_snapshot')?.payload.resourceTitle).toBe('Final shared ticket caption');
+  expect(JSON.stringify(saved)).not.toContain('Never shared customer secret');
+  expect((await f.sponsor.table('co_managed_archive_manifests').first()).manifest.evidence).toHaveLength(saved.length);
+  expect(await close(db, f.customerPrincipal, target, request, finalizeCoManagedArchive)).toEqual(receipt);
+  expect(await f.sponsor.table('co_managed_participation_evidence').where({ customer_tenant: f.resource.tenant, relationship_id: f.resource.relationshipId })).toEqual(saved);
+}));
+
+it.each([true, false])('archive finalizer discovers legacy MSP task audits while enforcing current sharing=%s', async shared => withTaskConversationFixture(async f => {
+  const { finalizeCoManagedArchive } = await import('../../../../packages/co-managed/src/archiveFinalization');
+  const { closeCoManagedRelationship: close } = await import('../../../../packages/co-managed/src/relationshipClosure');
+  await f.edit(db, f.principal, f.resource, { operationId: randomUUID(), expected: { task_name: 'Verify rollout' }, patch: { task_name: 'Actual MSP audit contribution' } });
+  const audit = await f.customer.table('audit_logs').where({ table_name: 'project_tasks', record_id: f.resource.id, operation: 'co_managed_project_task_update' }).first();
+  await f.sponsor.table('co_managed_participation_evidence').where('resource_id', f.resource.id).del();
+  await f.add(f.customerPrincipal, 'shared_it', 'Earlier shared task history');
+  const otherTask = randomUUID();
+  await f.customer.table('project_tasks').insert({ tenant: f.resource.tenant, task_id: otherTask, phase_id: f.phase.phase_id, task_name: 'Oversight-only task', wbs_code: '1.1.2',
+    project_status_mapping_id: f.mappings[0].project_status_mapping_id, task_type_key: 'task' });
+  if (!shared) {
+    await f.customer.table('co_management_project_scopes').where('project_id', f.project.project_id).del();
+    await f.customer.table('project_tasks').where('task_id', f.resource.id).update({ task_name: 'Newly private task data' });
+  }
+  const relationship = await f.customer.table('co_management_relationships').first();
+  await close(db, f.customerPrincipal, { customerTenant: f.resource.tenant, relationshipId: f.resource.relationshipId },
+    { operationId: randomUUID(), expectedRevision: relationship.revision, reason: 'departure' }, finalizeCoManagedArchive);
+  const saved = await f.sponsor.table('co_managed_participation_evidence');
+  expect(saved.some((row: any) => row.resource_id === otherTask)).toBe(false);
+  if (shared) {
+    expect(saved.find((row: any) => row.source_id === audit.audit_id)).toMatchObject({ actor_name: audit.details.actor_display_name,
+      payload: { changes: { task_name: 'Actual MSP audit contribution' } } });
+    expect(saved.some((row: any) => row.source_type === 'conversation' && row.payload.markdown === 'Earlier shared task history')).toBe(true);
+    expect(saved.some((row: any) => row.source_type === 'work_snapshot')).toBe(true);
+  } else expect(saved).toHaveLength(0);
+  expect(JSON.stringify(saved)).not.toMatch(/Newly private task data|Private detailed work|Oversight-only task/);
+}));
+
+it('archive finalizer captures completed owned time but not unused time-reference registration', async () => withMspSharedTimeSaveFixture(async f => {
+  const { finalizeCoManagedArchive } = await import('../../../../packages/co-managed/src/archiveFinalization');
+  const { closeCoManagedRelationship: close } = await import('../../../../packages/co-managed/src/relationshipClosure');
+  const entry = await f.save();
+  await f.sponsor.table('co_managed_participation_evidence').where({ source_type: 'time_entry', source_id: entry.entry_id }).del();
+  const reference = await f.sponsor.table('co_managed_time_work_references').where('reference_id', f.referenceId).first();
+  const unusedSource = randomUUID();
+  await f.sponsor.table('co_managed_time_work_references').insert({ ...reference, reference_id: randomUUID(), source_id: unusedSource, title: 'Unused registered reference' });
+  const relationship = await f.customer.table('co_management_relationships').first();
+  await close(db, f.customerPrincipal, { customerTenant: f.resource.tenant, relationshipId: f.resource.relationshipId },
+    { operationId: randomUUID(), expectedRevision: relationship.revision, reason: 'departure' }, finalizeCoManagedArchive);
+  const saved = await f.sponsor.table('co_managed_participation_evidence');
+  expect(saved.filter((row: any) => row.source_type === 'time_entry')).toHaveLength(1);
+  expect(saved.find((row: any) => row.source_id === entry.entry_id)?.payload).toMatchObject({ entryId: entry.entry_id, audience: 'organization_private' });
+  expect(saved.some((row: any) => row.resource_id === unusedSource)).toBe(false);
+  expect(JSON.stringify(saved)).not.toContain('Unused registered reference');
+}));
