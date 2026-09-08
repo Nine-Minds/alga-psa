@@ -26,20 +26,41 @@ async function createSourceFixture(db: ReturnType<typeof knex>, customize?: (ids
   return createInvoiceTicketSourceFixture(db, { tenant: state.tenant, userId: state.user.user_id }, customize);
 }
 
-it.runIf(process.env.INVOICE_TICKET_CUSTOM === '1')('renders the UI-saved transformed detail and primary tables through preview and PDF', async () => {
+it('renders saved transformed detail and primary tables through preview and PDF', async () => {
   fs.mkdirSync(evidenceDir, { recursive: true });
-  const env = dotenv.parse(fs.readFileSync('.env.local'));
-  Object.assign(process.env, env, { DB_PORT: '5472' });
-  const db = knex({ client: 'pg', connection: { host: env.DB_HOST, port: 5472, database: env.DB_NAME_SERVER, user: env.DB_USER_ADMIN, password: env.DB_PASSWORD_ADMIN } });
+  const db = await createTestDbConnection();
   try {
-    state.user = await db('users').where({ email: 'invoice-draft-verifier@example.invalid' }).first();
+    state.user = await db('users as u')
+      .join('user_roles as ur', function () { this.on('ur.user_id', 'u.user_id').andOn('ur.tenant', 'u.tenant'); })
+      .join('roles as r', function () { this.on('r.role_id', 'ur.role_id').andOn('r.tenant', 'ur.tenant'); })
+      .where({ 'u.user_type': 'internal', 'r.role_name': 'Admin', 'r.msp': true })
+      .select('u.*').orderBy('u.user_id').first();
+    if (!state.user) throw new Error('Migrated test database must seed an internal fixture user');
     state.tenant = state.user.tenant;
     const tenant = state.tenant;
-    if (!process.env.INVOICE_TICKET_CUSTOM_NUMBER || !process.env.INVOICE_TICKET_CUSTOM_TEMPLATE) {
-      throw new Error('Set INVOICE_TICKET_CUSTOM_NUMBER and INVOICE_TICKET_CUSTOM_TEMPLATE to the UI-verified invoice and saved layout.');
-    }
-    const invoice = await db('invoices').where({ tenant, invoice_number: process.env.INVOICE_TICKET_CUSTOM_NUMBER }).first();
-    const template = await db('invoice_templates').where({ tenant, template_id: process.env.INVOICE_TICKET_CUSTOM_TEMPLATE }).first();
+    const ids = await createSourceFixture(db);
+    const { generateInvoice } = await import('@alga-psa/billing/actions/invoiceGeneration');
+    const invoice = await generateInvoice(ids.cycleId) as any;
+    expect(invoice.invoice_id, JSON.stringify(invoice)).toBeTruthy();
+    const { getStandardTemplateAstByCode } = await import('@alga-psa/billing/lib/invoice-template-ast/standardTemplates');
+    const { saveInvoiceTemplate } = await import('@alga-psa/billing/actions/invoiceTemplates');
+    // Exercise the designer's save action; visual authoring is a separate browser concern.
+    const authored = structuredClone(getStandardTemplateAstByCode('standard-invoice-by-ticket'))!;
+    authored.transforms = { sourceBindingId: 'timeEntries', outputBindingId: 'sortedDetail', operations: [
+      { id: 'sort-amount', type: 'sort', keys: [{ path: 'amount', direction: 'desc' }] },
+    ] };
+    authored.layout.children!.push(
+      { id: 'detail-notice', type: 'text', content: { type: 'literal', value: 'Billed-time detail — included in the charges above' } },
+      { id: 'sorted-detail', type: 'dynamic-table', repeat: { sourceBinding: { bindingId: 'sortedDetail' }, itemBinding: 'entry' }, columns: [
+        { id: 'description', header: 'Description', value: { type: 'path', path: 'entry.description' } },
+        { id: 'rate', header: 'Rate', value: { type: 'path', path: 'entry.rateDisplay' }, format: 'currency' },
+        { id: 'amount', header: 'Amount', value: { type: 'path', path: 'entry.amount' }, format: 'currency' },
+      ] },
+    );
+    const saved = await saveInvoiceTemplate({ template_id: randomUUID(), name: 'Synthetic sorted invoice detail', version: 1, is_default: false, templateAst: authored } as any);
+    expect(saved.success, saved.error).toBe(true);
+    await db('clients').where({ tenant, client_id: ids.clientId }).update({ properties: { defaultLocale: 'fr' } });
+    const template = await db('invoice_templates').where({ tenant, template_id: saved.template!.template_id }).first();
     expect(template.templateAst.transforms.sourceBindingId).toBe('timeEntries');
     const { default: Invoice } = await import('@alga-psa/billing/models/invoice');
     const { mapDbInvoiceToWasmViewModel } = await import('@alga-psa/billing/lib/adapters/invoiceAdapters');
