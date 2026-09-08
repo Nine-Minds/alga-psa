@@ -2,9 +2,9 @@
 
 import React from 'react';
 import { CurrencyInput } from '@alga-psa/ui/components/CurrencyInput';
-import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import CurrencyPicker from '@alga-psa/ui/components/CurrencyPicker';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { CURRENCY_OPTIONS, currencyFractionDigits, getCurrencySymbol, toMinorUnits } from '@alga-psa/core';
+import { currencyFractionDigits, getCurrencySymbol, toMinorUnits } from '@alga-psa/core';
 
 /** Major-unit amounts as typed by the user; undefined means "left blank". */
 export interface OpportunityValueAmounts {
@@ -69,10 +69,9 @@ export function OpportunityValueFields({
   return (
     <div className="space-y-3">
       {onCurrencyChange ? (
-        <CustomSelect
+        <CurrencyPicker
           id={`${idPrefix}-currency`}
           label={t('opportunities.valuesDialog.currency', 'Currency')}
-          options={CURRENCY_OPTIONS.map((option) => ({ value: option.value, label: option.label }))}
           value={currencyCode}
           onValueChange={onCurrencyChange}
           disabled={disabled}
