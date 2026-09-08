@@ -4,8 +4,9 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { TicketDetails } from '../../../../../packages/client-portal/src/components/tickets/TicketDetails';
 
+vi.mock('next/navigation', () => ({ useSearchParams: () => new URLSearchParams(mocks.query) }));
 vi.mock('next-auth/react', () => ({ useSession: () => ({ data: { session_id: mocks.session, user: { tenant: 'owner', id: 'requester' } } }) }));
-const mocks = vi.hoisted(() => ({ session: 'portal-session', enabled: true, read: vi.fn(), post: vi.fn(), edit: vi.fn(), remove: vi.fn(), error: vi.fn() }));
+const mocks = vi.hoisted(() => ({ query: '', session: 'portal-session', enabled: true, read: vi.fn(), post: vi.fn(), edit: vi.fn(), remove: vi.fn(), error: vi.fn() }));
 vi.mock('@alga-psa/ui/hooks/useFeatureFlag', () => ({ useFeatureFlag: () => ({ enabled: mocks.enabled }) }));
 vi.mock('@alga-psa/client-portal/actions', () => ({
   getClientTicketDetails: mocks.read, addClientTicketComment: mocks.post, updateClientTicketComment: mocks.edit,
@@ -36,7 +37,7 @@ vi.mock('react-hot-toast', () => ({ default: { success: vi.fn(), error: vi.fn() 
 vi.mock('@alga-psa/tickets/components', () => ({
   TicketDocumentsSection: () => null, TicketAppointmentRequests: () => null, TicketOriginBadge: () => null,
   TicketConversation: (props: any) => <div>
-    <span>{props.ticket.selectedConversationId} history</span>
+    <span>{props.ticket.selectedConversationId} history</span><output aria-label="Focused message">{props.focusedMessageId}</output>
     <textarea aria-label="Reply" onChange={event => props.onNewCommentContentChange([{ type: 'paragraph', content: [{ type: 'text', text: event.target.value }] }])} />
     <button onClick={() => props.onAddNewComment(false, false)}>Post reply</button>
     <button onClick={() => props.onEdit({ comment_id: 'message', user_id: 'requester', note: 'Earlier reply' })}>Edit reply</button>
@@ -51,7 +52,7 @@ const base = { tenant: 'owner', ticket_id: 'ticket', entered_at: '2026-01-01T00:
 function view(ticket: any = base) { return <TicketDetails ticketId={ticket.ticket_id} initialTicket={ticket} initialDocuments={[]} initialStatusOptions={[]} isOpen asStandalone onClose={() => {}} />; }
 const deferred = () => { let resolve!: (value: any) => void; const promise = new Promise<any>(done => { resolve = done; }); return { promise, resolve }; };
 beforeEach(() => {
-  vi.clearAllMocks(); mocks.enabled = true; mocks.session = 'portal-session';
+  vi.clearAllMocks(); mocks.query = ''; mocks.enabled = true; mocks.session = 'portal-session';
   mocks.read.mockImplementation(async (id, selected = 'default') => ({ ...base, ticket_id: id, selectedConversationId: selected }));
   mocks.post.mockResolvedValue(true); mocks.edit.mockResolvedValue(undefined); mocks.remove.mockResolvedValue(undefined);
 });
@@ -112,4 +113,18 @@ it('removes prefetched ticket content when the authenticated account changes', (
   mocks.session = 'another-session'; rendered.rerender(view());
   expect(screen.queryByText('default history')).not.toBeInTheDocument();
   expect(screen.getByText('Reopen this ticket after switching accounts.')).toBeInTheDocument();
+});
+
+
+it('focuses only a published message in the selected authorized portal history and disables focus with the release UI', () => {
+  mocks.query = 'conversation=default&message=visible';
+  const ticket = { ...base, conversations: [{ comment_id: 'visible', note: 'Current requester reply', is_internal: false }] };
+  const mounted = render(view(ticket)); expect(screen.getByLabelText('Focused message')).toHaveTextContent('visible');
+  mocks.query = 'conversation=default&message=private-or-unknown'; mounted.rerender(view(ticket));
+  expect(screen.getByLabelText('Focused message')).toBeEmptyDOMElement();
+  expect(screen.getByRole('alert')).toHaveTextContent('This message is unavailable in this conversation.');
+  mocks.query = 'conversation=delivery&message=visible'; mounted.rerender(view(ticket));
+  expect(screen.getByLabelText('Focused message')).toBeEmptyDOMElement();
+  mocks.enabled = false; mocks.query = 'conversation=default&message=visible'; mounted.rerender(view(ticket));
+  expect(screen.getByLabelText('Focused message')).toBeEmptyDOMElement();
 });

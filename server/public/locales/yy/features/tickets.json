@@ -1804,6 +1804,8 @@
     }
   },
   "namedConversations": {
+    "messageUnavailable": "55555",
+    "latest": "55555",
     "reply": "22222",
     "replying": "22222222 22 2 2222222 22 2222 222222222222",
     "clearReply": "222 2222222 2222222",

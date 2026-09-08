@@ -1804,6 +1804,8 @@
     }
   },
   "namedConversations": {
+    "messageUnavailable": "Dit bericht is niet beschikbaar in dit gesprek.",
+    "latest": "Nieuwste berichten weergeven",
     "readFailed": "Deze berichten konden niet als gelezen worden gemarkeerd."
   }
 }

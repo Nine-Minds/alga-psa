@@ -40,9 +40,9 @@ export const saveNamedConversationEditorDraftAction = withAuth(async (user, { te
 });
 
 export const getNamedTicketConversationMessagesAction = withAuth(async (user, { tenant }, ticket: ConversationTicketReference,
-  conversation: TicketConversationReference, before?: CoManagedConversationCursor) => {
+  conversation: TicketConversationReference, before?: CoManagedConversationCursor, messageId?: string) => {
   const actor = await coManagedBrowserActor(user, tenant), { knex } = await createTenantKnex(tenant);
-  return getNamedTicketConversationMessages(knex, actor, ticket, conversation, before);
+  return getNamedTicketConversationMessages(knex, actor, ticket, conversation, before, messageId);
 });
 
 export const postNamedTicketConversationAction = withAuth(async (user, { tenant }, ticket: ConversationTicketReference,

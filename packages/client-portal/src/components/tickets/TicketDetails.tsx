@@ -4,6 +4,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSession } from 'next-auth/react';
+import { useConversationMessageTarget } from '@alga-psa/tickets/components/ticket/conversations/useConversationMessageFocus';
 import { useFeatureFlag } from '@alga-psa/ui/hooks/useFeatureFlag';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
@@ -106,6 +107,11 @@ function TicketDetailsContent({
   const isAlgaDeskPortal = productCode === 'algadesk';
   // Use pre-fetched data from server component
   const [ticket, setTicket] = useState<ITicketWithDetails>(initialTicket);
+  const selectedConversation = ticket.requesterConversations?.find(conversation => conversation.conversationId === ticket.selectedConversationId);
+  const messageTarget = useConversationMessageTarget(ticket.tenant ?? '', namedConversationsEnabled && ticket.tenant && selectedConversation
+    ? { storeTenant: ticket.tenant, conversationId: selectedConversation.conversationId, defaultSlot: selectedConversation.isDefault ? 'requester' : null } : null);
+  const focusedMessageId = messageTarget && ticket.conversations?.some(comment => comment.comment_id?.toLowerCase() === messageTarget.toLowerCase() &&
+    !comment.deleted_at && !comment.is_internal && (!comment.publish_state || comment.publish_state === 'published')) ? messageTarget.toLowerCase() : null;
   const [documents, setDocuments] = useState<IDocument[]>(initialDocuments);
   const [error, setError] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<{ id: string; name?: string | null; email?: string | null; avatarUrl?: string | null } | null>(null);
@@ -892,7 +898,9 @@ function TicketDetailsContent({
                 {unfinishedConversation && <p role="status" className="text-sm text-muted-foreground">{t('namedConversations.finishRequesterEdit', 'Finish or cancel your current edit before switching conversations.')}</p>}
               </div>}
               <fieldset disabled={conversationBusy} inert={conversationBusy} aria-busy={conversationBusy} className="min-w-0">
+              {messageTarget && !focusedMessageId && <p role="alert" className="text-sm">{t('namedConversations.messageUnavailable', 'This message is unavailable in this conversation.')}</p>}
               <TicketConversation
+                focusedMessageId={conversationBusy ? null : focusedMessageId}
                 key={`conv-${conversationVersion}`}
                 ticket={ticket}
                 conversations={ticket.conversations}

@@ -2,6 +2,7 @@
 
 import { ConversationAttentionControls } from './ConversationAttentionControls';
 import { ConversationReadAcknowledgment } from './ConversationReadAcknowledgment';
+import { useConversationMessageTarget, useConversationMessageFocus } from './useConversationMessageFocus';
 import { ConversationSchedulePicker } from './ConversationSchedulePicker';
 import { NamedScheduledReplies } from './NamedScheduledReplies';
 import { getUserTimeZone } from '@alga-psa/core';
@@ -176,8 +177,12 @@ function NamedConversationMessage({ id, index, ticket, conversation, item, onRep
   onReply?: (parent: ConversationDraftParent) => unknown; replyReady?: boolean; label?: boolean;
 }) {
   const { t } = useTranslation('features/tickets'), { formatDate } = useFormatters();
+  const element = useRef<HTMLElement | null>(null);
+  const target = useConversationMessageTarget(ticket.tenant, label || item.deleted ? null : conversation);
+  const highlighted = useConversationMessageFocus(target, item.commentId, element);
   const document = item.deleted ? null : conversationDocument(item.note);
-  return <article key={`${item.storeTenant}:${item.commentId}`} data-comment-id={item.commentId} className="rounded-md border border-[rgb(var(--color-border-200))] p-3">
+  return <article ref={element} tabIndex={-1} key={`${item.storeTenant}:${item.commentId}`} data-comment-id={item.commentId}
+    className={`rounded-md border border-[rgb(var(--color-border-200))] p-3 ${highlighted ? 'ring-2 ring-primary-500' : ''}`}>
     <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground"><span className="font-medium text-[rgb(var(--color-text-700))]">{item.author?.displayName ?? t('namedConversations.author', 'Ticket participant')}</span>
       <time dateTime={item.createdAt}>{formatDate(item.createdAt, { dateStyle: 'medium', timeStyle: 'short' })}</time></div>
     {label && <p className="mb-2 text-sm font-medium">{conversation.defaultSlot === 'requester' ? t('namedConversations.requester', 'Requester') : conversation.name} · {t(`namedConversations.audiences.${conversation.audience}`, audienceLabels[conversation.audience])}</p>}
@@ -240,6 +245,7 @@ function NamedConversationActivity({ id, ticket, refreshVersion, audiences, onRe
 function NamedConversationPanel({ id, ticket, conversation, canWrite, flush, onDirty, onRefresh, onPublished }: { id: string; ticket: ConversationTicketReference;
   conversation: NamedTicketConversation; canWrite: boolean; flush: Flush; onDirty: (dirty: boolean) => void; onRefresh: () => void; onPublished?: () => void | Promise<void> }) {
   const { t } = useTranslation('features/tickets');
+  const messageId = useConversationMessageTarget(ticket.tenant, conversation), router = useRouter(), params = useSearchParams();
   const [page, setPage] = useState<Page | null>(null), [error, setError] = useState(false), [busy, setBusy] = useState(false), [version, setVersion] = useState(0);
   const current = useRef(true), pageGeneration = useRef(0);
   const reply = useRef<((parent: ConversationDraftParent) => Promise<boolean>) | null>(null);
@@ -248,10 +254,16 @@ function NamedConversationPanel({ id, ticket, conversation, canWrite, flush, onD
   useEffect(() => {
     let valid = true;
     pageGeneration.current++;
-    actions.getNamedTicketConversationMessagesAction(ticket, reference(conversation)).then(value => { if (valid) { setPage(value); setError(false); } })
+    const read = messageId ? actions.getNamedTicketConversationMessagesAction(ticket, reference(conversation), undefined, messageId)
+      : actions.getNamedTicketConversationMessagesAction(ticket, reference(conversation));
+    read.then(value => { if (valid) { setPage(value); setError(false); } })
       .catch(() => { if (valid) { setPage(null); setError(true); onDirty(false); } });
     return () => { valid = false; };
-  }, [ticket, conversation.revision, conversation.messageVersion, version]);
+  }, [ticket, conversation.revision, conversation.messageVersion, version, messageId]);
+  const latest = () => {
+    const query = new URLSearchParams(params?.toString()); query.delete('message');
+    router.push(`${window.location.pathname}${query.size ? `?${query}` : ''}`, { scroll: false });
+  };
   const loadMore = async () => {
     if (!page?.nextBefore || busy) return;
     const generation = pageGeneration.current;
@@ -276,8 +288,10 @@ function NamedConversationPanel({ id, ticket, conversation, canWrite, flush, onD
     {error && <p role="alert" className="p-4 text-destructive">{t('namedConversations.unavailable', 'This conversation is unavailable.')}</p>}
     {!page && !error && <p role="status" className="p-4 text-sm">{t('namedConversations.loading', 'Loading conversations…')}</p>}
     {page && <><div className="space-y-4 p-4">
-      <ConversationReadAcknowledgment id={id} ticket={ticket} conversation={conversation}
-        messages={page.items.filter(item => !item.deleted)} onChanged={onRefresh} />
+      {'messageUnavailable' in page && page.messageUnavailable === true && <p role="alert" className="text-sm">{t('namedConversations.messageUnavailable', 'This message is unavailable in this conversation.')}</p>}
+      {messageId && <Button id={`${id}-latest`} variant="ghost" size="sm" onClick={latest}>{t('namedConversations.latest', 'Show latest messages')}</Button>}
+      {!('messageUnavailable' in page && page.messageUnavailable) && <ConversationReadAcknowledgment id={id} ticket={ticket} conversation={conversation}
+        messages={page.items.filter(item => !item.deleted)} onChanged={onRefresh} />}
       {page.nextBefore && <Button id={`${id}-older`} size="sm" variant="ghost" disabled={busy} onClick={() => void loadMore()}>{t('namedConversations.older', 'Load earlier messages')}</Button>}
       {!page.items.length && <p className="py-8 text-center text-sm text-muted-foreground">{t('namedConversations.empty', 'Start the conversation. Keep this exchange focused on its audience.')}</p>}
       {[...page.items].reverse().map((item, index) => <NamedConversationMessage key={`${item.storeTenant}:${item.commentId}`}

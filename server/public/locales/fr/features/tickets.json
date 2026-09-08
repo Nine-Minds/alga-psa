@@ -1804,6 +1804,8 @@
     }
   },
   "namedConversations": {
+    "messageUnavailable": "Ce message est indisponible dans cette conversation.",
+    "latest": "Afficher les derniers messages",
     "readFailed": "Impossible de marquer ces messages comme lus."
   }
 }

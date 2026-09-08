@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useConversationMessageFocus } from './conversations/useConversationMessageFocus';
 import { PartialBlock } from '@blocknote/core';
 import { RichTextViewer, TextEditor } from '@alga-psa/ui/editor';
 import { Pencil, Trash, Lock, CheckCircle, Check, Cog, Copy, CornerUpLeft, MessageCircle } from 'lucide-react';
@@ -34,6 +35,7 @@ import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
 
 interface CommentItemProps {
+  focusedMessageId?: string | null;
   mutationsDisabled?: boolean;
   beforeScheduleChange?: () => Promise<boolean>;
   onScheduleChanged?: () => Promise<void>;
@@ -151,6 +153,7 @@ async function writeCommentToClipboard(html: string, text: string): Promise<void
 }
 
 const CommentItem: React.FC<CommentItemProps> = ({
+  focusedMessageId,
   id,
   conversation,
   currentUserId,
@@ -175,6 +178,8 @@ const CommentItem: React.FC<CommentItemProps> = ({
   accentBorderClassName,
   mutationsDisabled = false, beforeScheduleChange, onScheduleChanged,
 }) => {
+  const focusElement = useRef<HTMLDivElement | null>(null);
+  const messageHighlighted = useConversationMessageFocus(focusedMessageId ?? null, conversation.comment_id ?? '', focusElement);
   const isCompact = variant === 'compact';
   const { t } = useTranslation('features/tickets');
   // toLocaleString() follows the browser; comment timestamps belong to the app locale.
@@ -472,6 +477,8 @@ const CommentItem: React.FC<CommentItemProps> = ({
 
   return (
     <div
+      ref={focusElement}
+      tabIndex={-1}
       {...withDataAutomationId({ id: commentId })}
       className={`group/comment w-full max-w-full min-w-0 rounded-lg border ${
         accentBorderClassName ??
@@ -479,7 +486,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
       } bg-white dark:bg-[rgb(var(--color-card))] ${
         isCompact ? 'p-2.5' : 'p-2 mb-2 shadow-sm'
       } ${
-        isSearchHighlighted ? 'search-highlight ring-2 ring-yellow-400 bg-yellow-50' : ''
+        isSearchHighlighted || messageHighlighted ? 'search-highlight ring-2 ring-yellow-400 bg-yellow-50' : ''
       }`}
     >
       <div className={`flex items-start min-w-0 max-w-full ${isCompact ? 'mb-0.5' : 'mb-1'}`}>

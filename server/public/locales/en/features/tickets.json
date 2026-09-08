@@ -1804,6 +1804,8 @@
     }
   },
   "namedConversations": {
+    "messageUnavailable": "This message is unavailable in this conversation.",
+    "latest": "Show latest messages",
     "reply": "Reply",
     "replying": "Replying to a message in this conversation",
     "clearReply": "New message instead",

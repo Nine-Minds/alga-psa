@@ -14232,6 +14232,50 @@ describe('named ticket conversation editor drafts against migrated PostgreSQL', 
 });
 
 describe('named ticket conversation message pages against migrated PostgreSQL', () => {
+  it('opens an older exact message without skipping tied timestamps and returns opaque unavailable targets', async () => {
+    const { conversations: api, principal, customerPrincipal, ticket, customer } = await namedConversationFixture();
+    const model = (await import('../../../../packages/tickets/src/models/comment')).default;
+    const selected = await api.createNamedTicketConversation(db, customerPrincipal, ticket,
+      { operationId: randomUUID(), name: 'Message links', audience: 'requester', transport: 'email' });
+    const reference = { storeTenant: selected.storeTenant, conversationId: selected.conversationId };
+    const ids: string[] = [];
+    for (let index = 0; index < 60; index++) ids.push(await db.transaction(trx => model.insert(trx, ticket.tenant,
+      { ticket_id: ticket.ticketId, user_id: customerPrincipal.userId, author_type: 'internal', is_internal: false,
+        note: `Linked history ${index}`, ...(index ? { parent_comment_id: ids[0] } : {}) },
+      { ticketId: ticket.ticketId, actorTenant: customerPrincipal.tenant, actorUserId: customerPrincipal.userId,
+        audience: 'requester', conversationId: selected.conversationId, assertWriteAuthority: async () => {} })));
+    await customer.table('comments').whereIn('comment_id', ids).update({ created_at: db.raw('?::timestamptz', ['2026-09-01T10:00:00.123456Z']) });
+    const sorted = [...ids].sort().reverse(), target = sorted[30];
+    const page = await api.getNamedTicketConversationMessages(db, principal, ticket, reference, undefined, target.toUpperCase());
+    expect(page).toMatchObject({ focusedMessageId: target });
+    expect(page.items.map(item => item.commentId)).toEqual(sorted.slice(30, 55));
+    expect(page.nextBefore?.createdAt).toBe('2026-09-01T10:00:00.123456Z');
+    const next = await api.getNamedTicketConversationMessages(db, principal, ticket, reference, page.nextBefore!);
+    expect(next.items.map(item => item.commentId)).toEqual(sorted.slice(55)); expect(next.nextBefore).toBeNull();
+    const native = await api.getNamedTicketConversationMessages(db, customerPrincipal, { tenant: ticket.tenant, ticketId: ticket.ticketId }, reference, undefined, target);
+    expect(native.items).toEqual(page.items);
+    const legacyId = await model.insert(db, ticket.tenant, { ticket_id: ticket.ticketId, user_id: customerPrincipal.userId,
+      author_type: 'internal', is_internal: false, note: 'A different conversation' });
+    const latest = await api.getNamedTicketConversationMessages(db, principal, ticket, reference);
+    for (const unavailable of [randomUUID(), 'invalid', legacyId]) {
+      expect(await api.getNamedTicketConversationMessages(db, principal, ticket, reference, undefined, unavailable))
+        .toEqual({ ...latest, messageUnavailable: true });
+    }
+    await customer.table('comments').where('comment_id', target).update({ deleted_at: new Date() });
+    expect(await api.getNamedTicketConversationMessages(db, principal, ticket, reference, undefined, target)).toMatchObject({ messageUnavailable: true });
+    await customer.table('comments').where('comment_id', target).update({ deleted_at: null, publish_state: 'scheduled', scheduled_publish_at: new Date('2099-01-01') });
+    const scheduled = await api.getNamedTicketConversationMessages(db, principal, ticket, reference, undefined, target);
+    expect(scheduled).toMatchObject({ messageUnavailable: true }); expect(scheduled.items.map(item => item.commentId)).not.toContain(target);
+    expect(() => api.getNamedTicketConversationMessages(db, principal, ticket, reference, page.nextBefore!, target)).toThrow('The conversation request is invalid.');
+    const survivingReply = ids.find(id => id !== ids[0] && id !== target)!;
+    await customer.table('comments').where('comment_id', ids[0]).update({ deleted_at: new Date(), publish_state: 'published' });
+    expect(await api.getNamedTicketConversationMessages(db, principal, ticket, reference, undefined, survivingReply))
+      .toMatchObject({ focusedMessageId: survivingReply });
+
+    await customer.table('co_management_board_scopes').del();
+    await expect(api.getNamedTicketConversationMessages(db, principal, ticket, reference, undefined, target)).rejects.toThrow();
+  });
+
   it('filters roots before pagination, preserves exact cursors and tombstones, and excludes side content from legacy history', async () => {
     const { conversations: api, principal, customerPrincipal, ticket, customer, resource } = await namedConversationFixture();
     const model = (await import('../../../../packages/tickets/src/models/comment')).default;
@@ -14319,6 +14363,10 @@ describe('named ticket conversation message pages against migrated PostgreSQL', 
     expect(page.items).toHaveLength(1);
     expect(page.items[0]).toMatchObject({ commentId: message.commentId, storeTenant: principal.tenant, audience: 'organization_private',
       markdown: 'Private troubleshooting', revision: 1, author: { tenant: principal.tenant, id: principal.userId } });
+    expect(await api.getNamedTicketConversationMessages(db, principal, ticket, reference, undefined, message.commentId))
+      .toMatchObject({ focusedMessageId: message.commentId, items: page.items });
+    await expect(api.getNamedTicketConversationMessages(db, customerPrincipal, ticket, reference, undefined, message.commentId))
+      .rejects.toMatchObject({ code: 'CONVERSATION_FORBIDDEN' });
     const all = await api.getNamedTicketConversationActivity(db, principal, ticket);
     expect(all.items).toHaveLength(1); expect(all.items[0].conversation.name).toBe('Private diagnostic exchange');
     expect(JSON.stringify(await api.getNamedTicketConversationActivity(db, customerPrincipal, ticket))).not.toContain('Private diagnostic');
@@ -14333,6 +14381,8 @@ describe('named ticket conversation message pages against migrated PostgreSQL', 
       { download: async () => { throw new Error('No files expected'); }, upload: async () => { throw new Error('No files expected'); } },
       async () => {});
     expect((await api.getNamedTicketConversationMessages(db, principal, ticket, reference)).items).toEqual([]);
+    expect(await api.getNamedTicketConversationMessages(db, principal, ticket, reference, undefined, message.commentId))
+      .toMatchObject({ messageUnavailable: true, items: [] });
     const destination = (await api.listNamedTicketConversations(db, customerPrincipal, ticket)).find(row => row.defaultSlot === 'shared_it')!;
     expect((await api.getNamedTicketConversationMessages(db, customerPrincipal, ticket,
       { storeTenant: destination.storeTenant, conversationId: destination.conversationId })).items).toHaveLength(1);

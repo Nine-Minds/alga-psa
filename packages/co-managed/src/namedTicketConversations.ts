@@ -10,7 +10,7 @@ import {
   type ConversationStoreScope, type NamedTicketConversation, TicketConversationError,
   snapshotConversationTicket, snapshotConversationReference, snapshotCreateConversation,
   ensureDefaultTicketConversation, listStoredTicketConversations, readStoredTicketConversation,
-  createStoredTicketConversation, setStoredConversationStatus,
+  createStoredTicketConversation, setStoredConversationStatus, conversationUuid,
 } from '@alga-psa/shared/lib/tickets/namedConversations';
 import { withCoManagedSharedWork, type CoManagedSharedResource, type CoManagedSharedWorkContext } from './sharedWork';
 import { withCoManagedCustomerTicket } from './customerWork';
@@ -19,11 +19,10 @@ import { snapshotCoManagedSessionActor, lockCoManagedSessionIdentity, assertCoMa
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
 import { coManagedConversationAttachmentSources, coManagedConversationBodySources } from './conversationPolicy';
 import { readConversationEditorDraft, saveConversationEditorDraft, snapshotConversationDraftParent, type ConversationDraftParent, type EditorDraftSaveRequest } from '@alga-psa/shared/lib/tickets/conversationEditorDrafts';
-import { readAuthorizedTicketConversationPage, snapshotConversationCursor, type CoManagedConversationCursor } from './ticketConversation';
+import { readAuthorizedTicketConversationPage, readAuthorizedTicketConversationMessage, snapshotConversationCursor, type CoManagedConversationCursor, type CoManagedConversationItem } from './ticketConversation';
 import { ensureCoManagedActorReference } from './actorReferences';
 import { mutateCoManagedPrivateTicketComment } from './privateTicketConversation';
 import type { CoManagedCommentInsert } from './ticketCommentCreation';
-import { conversationUuid } from '@alga-psa/shared/lib/tickets/namedConversations';
 import { encodeConversationContent, snapshotConversationContent, type CoManagedConversationContent } from './conversationContent';
 import { hasCoManagedLocalPermission } from './localPermission';
 import { authorizeNativeTicketConversation } from './nativeConversationAuthority';
@@ -160,22 +159,53 @@ export function getNamedTicketConversationReplyTarget(db: Knex, actor: CoManaged
 /** Selection is authorized before reading; the query constrains roots before its
  * page limit so busy sibling conversations cannot hide or leak selected messages. */
 export function getNamedTicketConversationMessages(db: Knex, actor: CoManagedSessionActor, ticket: ConversationTicketReference,
-  input: TicketConversationReference, before?: CoManagedConversationCursor) {
+  input: TicketConversationReference, before?: CoManagedConversationCursor, messageId?: string) {
   const reference = snapshotConversationReference(input), cursor = snapshotConversationCursor(before);
-  return withTicketAuthority(db, actor, ticket, 'read', context => readAuthorizedConversationMessages(context, reference, cursor));
+  if (cursor && messageId !== undefined) throw new TicketConversationError('CONVERSATION_INVALID');
+  return withTicketAuthority(db, actor, ticket, 'read', context => messageId === undefined
+    ? readAuthorizedConversationMessages(context, reference, cursor) : readConversationMessagePage(context, reference, messageId));
 }
 async function readAuthorizedConversationMessages(context: ConversationAuthority, reference: TicketConversationReference, cursor?: CoManagedConversationCursor) {
   const { conversation } = await authorizedConversation(context, reference);
   const page = await readAuthorizedTicketConversationPage({ trx: context.trx, actor: context.actor,
     sessionId: context.actor.sessionId, resource: { tenant: context.ticket.tenant, id: context.ticket.ticketId,
       relationshipId: context.ticket.relationshipId }, redactedFields: context.hidden }, cursor, conversation);
+  await decorateConversationMessages(context, conversation, page.items);
+  return { conversation, ...page };
+}
+
+async function decorateConversationMessages(context: ConversationAuthority, conversation: NamedTicketConversation, items: CoManagedConversationItem[]) {
   if (conversation.transport === 'email') {
     const { attachPublishedConversationEmails } = await import('./conversationEmailOperations');
-    await attachPublishedConversationEmails({ ...context, conversation }, page.items);
+    await attachPublishedConversationEmails({ ...context, conversation }, items);
   }
   const { attachNamedConversationFiles } = await import('./namedConversationAttachments');
-  await attachNamedConversationFiles({ ...context, conversation }, page.items);
-  return { conversation, ...page };
+  await attachNamedConversationFiles({ ...context, conversation }, items);
+}
+
+/** Jump directly to a message without scanning every newer page. Permission,
+ * audience and publication filtering use the same projection as normal history.
+ * Missing, deleted and foreign targets return the same opaque result within an
+ * independently authorized conversation; they never change its destination. */
+async function readConversationMessagePage(context: ConversationAuthority, reference: TicketConversationReference, messageId: string) {
+  const { conversation } = await authorizedConversation(context, reference);
+  const unavailable = async () => ({ ...await readAuthorizedConversationMessages(context, reference), messageUnavailable: true as const });
+  if (!conversationUuid(messageId)) return unavailable();
+  messageId = messageId.toLowerCase();
+  const source = await tenantDb(context.trx, conversation.storeTenant)
+    .table(conversation.storeTenant === context.ticket.tenant ? 'comments' : 'co_management_private_comments')
+    .where('comment_id', messageId).first('thread_id');
+  if (!source?.thread_id) return unavailable();
+  const item = await readAuthorizedTicketConversationMessage({ trx: context.trx, actor: context.actor,
+    resource: { tenant: context.ticket.tenant, id: context.ticket.ticketId, relationshipId: context.ticket.relationshipId }, redactedFields: context.hidden },
+    conversation, { commentId: messageId, threadId: source.thread_id });
+  if (!item || item.deleted) return unavailable();
+  const previous = await readAuthorizedConversationMessages(context, reference,
+    { createdAt: item.createdAt, storeTenant: item.storeTenant, commentId: item.commentId });
+  await decorateConversationMessages(context, conversation, [item]);
+  const items = [item, ...previous.items].slice(0, 25), last = items.at(-1)!;
+  const nextBefore = previous.items.length >= 25 ? { createdAt: last.createdAt, storeTenant: last.storeTenant, commentId: last.commentId } : previous.nextBefore;
+  return { conversation, items, nextBefore, focusedMessageId: item.commentId };
 }
 /** Merge bounded pages within one current ticket admission. Each source retains
  * its own audience lock, file admission and email redactions. The global cursor

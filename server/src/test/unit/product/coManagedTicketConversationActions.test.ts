@@ -37,7 +37,7 @@ it('qualifies the default Requester page before projection and narrows legacy cr
   const page = await getCoManagedTicketConversationScreenAction(resource, undefined, selected);
   expect(page.writeAudiences).toEqual(['requester']); expect(page.draftAttachments.audiences).toEqual(['requester']);
   expect(page.items).toEqual([{ commentId: 'public' }]);
-  expect(mocks.named.mock.calls[0].slice(2)).toEqual([{ tenant: resource.tenant, ticketId: resource.id, relationshipId: resource.relationshipId }, selected, undefined]);
+  expect(mocks.named.mock.calls[0].slice(2)).toEqual([{ tenant: resource.tenant, ticketId: resource.id, relationshipId: resource.relationshipId }, selected, undefined, undefined]);
   expect(mocks.read).not.toHaveBeenCalled();
   mocks.named.mockResolvedValue({ conversation: { ...selected, audience: 'organization_private', defaultSlot: null }, items: [{ note: 'private' }], nextBefore: null });
   await expect(getCoManagedTicketConversationScreenAction(resource, undefined, selected)).rejects.toMatchObject({ code: 'CONVERSATION_FORBIDDEN' });

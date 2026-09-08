@@ -4,7 +4,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import CoManagedTicketConversation from '../../../components/co-managed/CoManagedTicketConversation';
 import { CoManagedFeatureBoundary } from '../../../components/co-managed/CoManagedFeatureBoundary';
-const mocks = vi.hoisted(() => ({ acknowledge: vi.fn(), flag: vi.fn(), load: vi.fn(), create: vi.fn(), mutate: vi.fn(), private: vi.fn(), prepare: vi.fn(), submitDraft: vi.fn(), abandon: vi.fn(), preview: vi.fn(), disclose: vi.fn(),
+const mocks = vi.hoisted(() => ({ query: '', push: vi.fn(), acknowledge: vi.fn(), flag: vi.fn(), load: vi.fn(), create: vi.fn(), mutate: vi.fn(), private: vi.fn(), prepare: vi.fn(), submitDraft: vi.fn(), abandon: vi.fn(), preview: vi.fn(), disclose: vi.fn(),
   session: { user: { tenant: 'msp', id: 'technician' } } }));
 vi.mock('../../../../../packages/tickets/src/actions/namedTicketConversationActions', () => ({ acknowledgeNamedConversationMessagesAction: mocks.acknowledge }));
 vi.mock('../../../lib/actions/coManagedThreadDisclosureActions', () => ({ previewCoManagedThreadDisclosureAction: mocks.preview, discloseCoManagedThreadAction: mocks.disclose }));
@@ -15,6 +15,7 @@ vi.mock('next/dynamic', () => ({ default: () => ({ id, label, document, editable
   ? <label>{label}<textarea id={id} disabled={!editable} value={document.map((block: any) => block.content?.map((part: any) => part.text ?? '').join('') ?? '').join('\n')}
       onChange={event => onChange([{ type: 'paragraph', content: [{ type: 'text', text: event.target.value, styles: {} }] }])} /></label>
   : <div id={id}>{document.map((block: any) => block.content?.map((part: any) => part.text ?? '').join('') ?? '').join('\n')}</div> }));
+vi.mock('next/navigation', () => ({ useSearchParams: () => new URLSearchParams(mocks.query), useRouter: () => ({ push: mocks.push }) }));
 vi.mock('next-auth/react', () => ({ useSession: () => ({ data: mocks.session }) }));
 vi.mock('@alga-psa/ui/hooks', () => ({ useFeatureFlag: mocks.flag }));
 vi.mock('../../../lib/actions/coManagedAcceptanceActions', () => ({}));
@@ -37,7 +38,7 @@ const button = (name: string) => screen.getByRole('button', { name: `coManaged.c
 const message = () => screen.getByLabelText('coManaged.conversation.message');
 const deferred = () => { let resolve!: (value: any) => void; const promise = new Promise<any>(done => { resolve = done; }); return { promise, resolve }; };
 beforeEach(() => {
-  vi.resetAllMocks(); mocks.session = { user: { tenant: 'msp', id: 'technician' } };
+  vi.resetAllMocks(); mocks.query = ''; mocks.session = { user: { tenant: 'msp', id: 'technician' } };
   mocks.acknowledge.mockResolvedValue({ changed: false });
   mocks.flag.mockReturnValue({ enabled: true, loading: false, error: null }); mocks.load.mockResolvedValue(data());
   mocks.prepare.mockImplementation(async input => ({ resource: input.resource, storeTenant: input.resource.tenant, request: { operationId: input.operationId }, files: input.files }));
@@ -334,4 +335,23 @@ it('acknowledges only a successfully loaded named requester history in the co-ma
     expect(mocks.acknowledge).toHaveBeenCalledWith({ tenant: 'customer', ticketId: 'ticket', relationshipId: 'relationship' },
       { storeTenant: 'customer', conversationId: 'requester' }, [{ commentId: 'comment', threadId: 'thread' }]);
   } finally { focused.mockRestore(); }
+});
+
+it('opens the qualified Requester message and preserves local editing across an unavailable message link', async () => {
+  Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', { configurable: true, value: vi.fn() });
+  mocks.query = 'conversation=requester&conversationStore=customer&message=comment';
+  const requester = { storeTenant: 'customer', conversationId: 'requester' };
+  mocks.load.mockResolvedValue({ ...data(), items: [{ ...item(), audience: 'requester' }] });
+  const view = render(<CoManagedTicketConversation resource={resource} requester={requester} />);
+  await waitFor(() => expect(screen.getByText('Shared content').closest('li')).toHaveFocus());
+  expect(mocks.load).toHaveBeenCalledWith(resource, undefined, requester, 'comment');
+  fireEvent.click(button('reply')); fireEvent.change(message(), { target: { value: 'Unsent linked reply' } });
+  mocks.query = 'conversation=requester&conversationStore=customer&message=missing';
+  mocks.load.mockResolvedValue({ ...data(), items: [{ ...item(), audience: 'requester' }], messageUnavailable: true });
+  view.rerender(<CoManagedTicketConversation resource={resource} requester={requester} />);
+  await screen.findByText('namedConversations.messageUnavailable');
+  expect(message()).toHaveValue('Unsent linked reply'); expect(mocks.create).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: 'namedConversations.latest' }));
+  expect(mocks.push.mock.calls.at(-1)![0]).toContain('conversation=requester');
+  expect(mocks.push.mock.calls.at(-1)![0]).not.toContain('message=');
 });

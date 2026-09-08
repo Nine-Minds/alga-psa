@@ -1804,6 +1804,8 @@
     }
   },
   "namedConversations": {
+    "messageUnavailable": "Esta mensagem não está disponível nesta conversa.",
+    "latest": "Mostrar as mensagens mais recentes",
     "readFailed": "Não foi possível marcar estas mensagens como lidas."
   }
 }

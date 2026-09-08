@@ -162,7 +162,7 @@
   {
     "id": "F021",
     "description": "Open Requester for normal entry and honor authorized conversation/message deep links.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "5. UX — option C"
     ]

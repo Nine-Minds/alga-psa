@@ -2,7 +2,8 @@
 
 import type { TicketConversationReference } from '@alga-psa/shared/lib/tickets/namedConversations';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import type { CoManagedSharedResource, CoManagedConversationCursor, CoManagedConversationItem, CoManagedCommentCreateRequest, CoManagedCommentMutationRequest, CoManagedPrivateCommentCommand } from '@alga-psa/co-managed';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -21,6 +22,7 @@ import CoManagedThreadDisclosure from './CoManagedThreadDisclosure';
 import CoManagedCommentAttachments from './CoManagedCommentAttachments';
 import { ConversationEmailEnvelope } from '@alga-psa/tickets/components/ticket/conversations/ConversationEmailEnvelope';
 import { ConversationReadAcknowledgment } from '@alga-psa/tickets/components/ticket/conversations/ConversationReadAcknowledgment';
+import { useConversationMessageTarget, useConversationMessageFocus } from '@alga-psa/tickets/components/ticket/conversations/useConversationMessageFocus';
 import { conversationText, conversationDocument } from './conversationText';
 
 const Document = dynamic(() => import('./CoManagedConversationDocument'), { ssr: false });
@@ -166,6 +168,9 @@ export default function CoManagedTicketConversation({ resource, requester, onDra
 }
 function Conversation({ resource, homeTenant, userId, requester, onDraftState, composition }: { resource: CoManagedSharedResource; homeTenant?: string; userId?: string; requester?: TicketConversationReference; onDraftState?: (active: boolean) => void; composition?: CoManagedConversationComposition }) {
   const { t } = useTranslation('msp/licensing'), { formatDate } = useFormatters();
+  const { t: ticketText } = useTranslation('features/tickets'), router = useRouter(), params = useSearchParams();
+  const messageTarget = useConversationMessageTarget(resource.tenant, requester ? { ...requester, defaultSlot: 'requester' } : null);
+  const focusTarget = useRef(messageTarget), previousTarget = useRef(messageTarget); focusTarget.current = messageTarget;
   const [state, setState] = useState<Screen | null>(null), [error, setError] = useState(false), [busy, setBusy] = useState(true);
   const [disclosure, setDisclosure] = useState<CoManagedConversationItem | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null), [revision, setRevision] = useState(0);
@@ -177,7 +182,9 @@ function Conversation({ resource, homeTenant, userId, requester, onDraftState, c
     if (loading.current) { queued.current = true; return; }
     const current = ++generation.current; loading.current = true; setBusy(true);
     try {
-      const page = requester ? await getCoManagedTicketConversationScreenAction(target.current, cursors.current.at(-1), requester)
+      const page = requester && focusTarget.current && !cursors.current.at(-1)
+        ? await getCoManagedTicketConversationScreenAction(target.current, undefined, requester, focusTarget.current)
+        : requester ? await getCoManagedTicketConversationScreenAction(target.current, cursors.current.at(-1), requester)
         : await getCoManagedTicketConversationScreenAction(target.current, cursors.current.at(-1));
       if (!mounted.current || current !== generation.current) return;
       if (page.actor.tenant !== homeTenant || page.actor.userId !== userId) throw new Error('Conversation session changed');
@@ -198,6 +205,10 @@ function Conversation({ resource, homeTenant, userId, requester, onDraftState, c
   useEffect(() => {
     if (composition?.refreshVersion) { cursors.current = [undefined]; void refresh(); }
   }, [composition?.refreshVersion]);
+  useEffect(() => {
+    if (previousTarget.current === messageTarget) return;
+    previousTarget.current = messageTarget; cursors.current = [undefined]; void refresh();
+  }, [messageTarget]);
   const open = (next: Draft) => { setDraft(next); setRevision(value => value + 1); };
   const edit = async (next: Draft) => {
     if (composition && (!composition.ready || !await composition.beforeEdit())) return;
@@ -212,7 +223,12 @@ function Conversation({ resource, homeTenant, userId, requester, onDraftState, c
     {error && <p role="alert">{t('coManaged.conversation.loadError')}</p>}
     {!state && busy && <p role="status">{t('coManaged.ticket.loading')}</p>}
     {state && <>
-      {requester && !busy && !error && <ConversationReadAcknowledgment id="co-conversation" ticket={{ tenant: resource.tenant, ticketId: resource.id, relationshipId: resource.relationshipId }}
+      {'messageUnavailable' in state && state.messageUnavailable && <p role="alert">{ticketText('namedConversations.messageUnavailable', 'This message is unavailable in this conversation.')}</p>}
+      {messageTarget && <Button id="co-conversation-latest" variant="ghost" onClick={() => {
+        const query = new URLSearchParams(params?.toString()); query.delete('message');
+        router.push(`${window.location.pathname}${query.size ? `?${query}` : ''}`, { scroll: false });
+      }}>{ticketText('namedConversations.latest', 'Show latest messages')}</Button>}
+      {requester && !busy && !error && !('messageUnavailable' in state && state.messageUnavailable) && <ConversationReadAcknowledgment id="co-conversation" ticket={{ tenant: resource.tenant, ticketId: resource.id, relationshipId: resource.relationshipId }}
         conversation={requester} messages={state.items.filter(item => !item.deleted)} onChanged={composition?.onRead} />}
       {state.writeAudiences.length > 0 && !composition && !draft && !disclosure && <Button id="co-conversation-new" onClick={() => open({ kind: 'new' })}>{t('coManaged.conversation.new')}</Button>}
       {disclosure && <CoManagedThreadDisclosure resource={target.current} thread={{ storeTenant: disclosure.storeTenant, threadId: disclosure.threadId }} actor={state.actor}
@@ -226,7 +242,7 @@ function Conversation({ resource, homeTenant, userId, requester, onDraftState, c
         const content = item.deleted ? null : conversationDocument(item.note);
         const own = item.author?.kind === 'user' && item.author.tenant === state.actor.tenant && item.author.id === state.actor.userId;
         const writable = state.writeAudiences.includes(item.audience) && !item.deleted && (item.storeTenant === resource.tenant || item.revision !== null);
-        return <li id={id} key={id} className="space-y-2 rounded-lg border border-[rgb(var(--color-border-200))] p-4">
+        return <ConversationMessageShell id={id} key={id} messageId={item.commentId} target={item.deleted ? null : messageTarget}>
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <p className="text-sm font-medium">{item.author?.displayName || t('coManaged.conversation.restrictedAuthor')}{item.author?.organizationName && <span className="font-normal text-muted-foreground"> · {item.author.organizationName}</span>}</p>
             <span className="rounded-md border px-2 py-0.5 text-xs font-medium">{t(`coManaged.conversation.audiences.${item.audience}`)}</span>
@@ -244,7 +260,7 @@ function Conversation({ resource, homeTenant, userId, requester, onDraftState, c
             {own && !requester && !item.parentCommentId && <Button id={`${id}-audience`} variant="ghost" size="sm" onClick={() => setDisclosure(item)}>{t('coManaged.disclosure.title')}</Button>}
             {own && <Button id={`${id}-delete`} variant="ghost" size="sm" disabled={composition && !composition.ready} onClick={() => void edit({ kind: 'delete', item })}>{t('coManaged.conversation.delete')}</Button>}
           </div>}
-        </li>;
+        </ConversationMessageShell>;
       })}</ol>
       <div className="flex gap-2">
         {cursors.current.length > 1 && <Button id="co-conversation-newer" variant="outline" disabled={busy || Boolean(draft || disclosure)} onClick={() => { cursors.current.pop(); void refresh(); }}>{t('coManaged.conversation.newer')}</Button>}
@@ -252,4 +268,9 @@ function Conversation({ resource, homeTenant, userId, requester, onDraftState, c
       </div>
     </>}
   </section>;
+}
+
+function ConversationMessageShell({ id, messageId, target, children }: { id: string; messageId: string; target: string | null; children: ReactNode }) {
+  const element = useRef<HTMLLIElement | null>(null), highlighted = useConversationMessageFocus(target, messageId, element);
+  return <li id={id} ref={element} tabIndex={-1} className={`space-y-2 rounded-lg border border-[rgb(var(--color-border-200))] p-4 ${highlighted ? 'ring-2 ring-primary-500' : ''}`}>{children}</li>;
 }

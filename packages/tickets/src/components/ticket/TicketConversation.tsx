@@ -67,6 +67,7 @@ import TicketNotificationSuppressionControl, {
 } from './TicketNotificationSuppressionControl';
 
 interface TicketConversationProps {
+  focusedMessageId?: string | null;
   composition?: RequesterHistoryComposition;
   id?: string;
   ticket: ITicket;
@@ -126,6 +127,7 @@ const defaultNotificationSuppression = (): TicketNotificationSuppressionValue =>
 });
 
 const TicketConversation: React.FC<TicketConversationProps> = ({
+  focusedMessageId: requestedMessageId,
   id,
   ticket,
   conversations,
@@ -188,6 +190,8 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   const [reactionUserNames, setReactionUserNames] = useState<Record<string, string>>({});
   const [openPanelCommentId, setOpenPanelCommentId] = useState<string | null>(null);
   const [replyingToCommentId, setReplyingToCommentId] = useState<string | null>(null);
+  const focusedMessageId = composition?.focusedMessageId ?? requestedMessageId;
+  useEffect(() => { if (focusedMessageId) onTabChange(ALL_COMMENTS_TAB_ID); }, [focusedMessageId]);
   const replyLinkError = useConversationReplyLink(!composition && !showEditor && !isEditing && !isSubmitting && !replyingToCommentId, target => {
     const source = conversations.find(item => item.comment_id === target.commentId && item.thread_id === target.threadId &&
       !item.deleted_at && !item.is_internal && (!item.publish_state || item.publish_state === 'published'));
@@ -499,6 +503,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
       return (
       <>
         <CommentItem
+          focusedMessageId={focusedMessageId}
           id={mergedConversation.comment_id ? `comment-${mergedConversation.comment_id}` : `${id}-comment-unknown`}
           conversation={mergedConversation}
           currentUserId={currentUser?.id}
@@ -564,6 +569,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
             renderComment={(comment) => renderCommentItem(comment)}
             onOpenPanel={openCommentThreadPanel}
             autoCollapseAfter={3}
+            revealCommentId={group.comments.some(comment => comment.comment_id === focusedMessageId) ? focusedMessageId : null}
           />
         )}
       />

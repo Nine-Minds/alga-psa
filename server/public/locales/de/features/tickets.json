@@ -1804,6 +1804,8 @@
     }
   },
   "namedConversations": {
+    "messageUnavailable": "Diese Nachricht ist in dieser Unterhaltung nicht verfügbar.",
+    "latest": "Neueste Nachrichten anzeigen",
     "readFailed": "Diese Nachrichten konnten nicht als gelesen markiert werden."
   }
 }

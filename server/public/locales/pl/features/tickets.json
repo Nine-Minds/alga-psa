@@ -1946,6 +1946,8 @@
     }
   },
   "namedConversations": {
+    "messageUnavailable": "Ta wiadomość jest niedostępna w tej rozmowie.",
+    "latest": "Pokaż najnowsze wiadomości",
     "readFailed": "Nie udało się oznaczyć tych wiadomości jako przeczytane."
   }
 }

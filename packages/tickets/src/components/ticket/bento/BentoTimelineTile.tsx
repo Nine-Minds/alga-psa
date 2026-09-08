@@ -360,6 +360,7 @@ export function BentoTimelineTile({
   const skipFirstEntriesFetch = useRef(Boolean(initialEntries));
   const skipFirstReactionsFetch = useRef(Boolean(initialReactions));
   const [filter, setFilter] = useState<LaneFilter>('everything');
+  useEffect(() => { if (composition?.focusedMessageId) setFilter('everything'); }, [composition?.focusedMessageId]);
   const [order, setOrder] = useState<'asc' | 'desc'>(initialOrder);
   const [composerLane, setComposerLane] = useState<'client' | 'internal' | 'resolution'>('client');
   const [isScheduleToggle, setIsScheduleToggle] = useState(false);
@@ -706,6 +707,7 @@ export function BentoTimelineTile({
     return (
       <>
         <CommentItem
+          focusedMessageId={composition?.focusedMessageId}
           variant="compact"
           accentBorderClassName={accent || undefined}
           id={commentId ? `${id}-comment-${commentId}` : `${id}-comment-unknown`}
@@ -1028,6 +1030,7 @@ export function BentoTimelineTile({
                           getCommentId={(comment) => comment.comment_id}
                           renderComment={(comment) => renderThreadComment(comment)}
                           autoCollapseAfter={3}
+                          revealCommentId={group.comments.some(comment => comment.comment_id === composition?.focusedMessageId) ? composition?.focusedMessageId : null}
                         />
                       );
                     })() : (

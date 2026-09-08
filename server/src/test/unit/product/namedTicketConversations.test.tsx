@@ -54,6 +54,7 @@ function NativeHarness() {
   const view = useNamedTicketConversations(ticket, true, 'native', {
     requesterPanel: props => <NativeRequesterConversation {...props} id="native-requester" editing={() => editing} onPublished={mocks.onPublished} historyComments={() => [{ comment_id: 'source', thread_id: 'root' } as any]}
       renderHistory={composition => <div>
+        <output aria-label="Native focused message">{composition.focusedMessageId}</output>
         {composition.renderDetails?.({ comment_id: 'source', thread_id: 'root' } as any)}
         <button disabled={!composition.ready} onClick={async () => { if (await composition.beforeEdit()) setEditing(true); }}>Edit old reply</button>
         {editing && <button onClick={() => setEditing(false)}>Finish history edit</button>}
@@ -792,4 +793,42 @@ it('acknowledges native requester history after its current source details are a
     await waitFor(() => expect(mocks.acknowledge).toHaveBeenCalledOnce());
     expect(mocks.acknowledge).toHaveBeenCalledWith(ticket, { conversationId: 'requester', storeTenant: 'owner' }, [{ commentId: 'source', threadId: 'root' }]);
   } finally { focused.mockRestore(); }
+});
+
+it('loads an exact older message and keeps the composer draft when returning to latest or visiting an unavailable target', async () => {
+  Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', { configurable: true, value: vi.fn() });
+  const focus = vi.spyOn(document, 'hasFocus').mockReturnValue(true);
+  const row = { commentId: 'older', threadId: 'root', storeTenant: 'home', note: 'Linked older message', markdown: null,
+    createdAt: '2026-09-08T10:00:00.000001Z', deleted: false, audience: 'organization_private' };
+  mocks.query += '&message=older&tab=details';
+  mocks.page.mockResolvedValue({ conversation: side, items: [row], nextBefore: null, focusedMessageId: 'older' });
+  try {
+    const view = render(<Harness />); await screen.findByLabelText('Message');
+    expect(mocks.page).toHaveBeenCalledWith(ticket, { conversationId: 'private', storeTenant: 'home' }, undefined, 'older');
+    await waitFor(() => expect(screen.getByText('Linked older message').closest('article')).toHaveFocus());
+    fireEvent.change(screen.getByLabelText('Message'), { target: { value: 'Keep these edits' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Show latest messages' }));
+    const requested = new URL(mocks.push.mock.calls.at(-1)![0], 'https://example.test');
+    expect(requested.searchParams.has('message')).toBe(false); expect(requested.searchParams.get('conversation')).toBe('private');
+    expect(requested.searchParams.get('tab')).toBe('details'); expect(screen.getByLabelText('Message')).toHaveValue('Keep these edits');
+    mocks.query = 'conversation=private&conversationStore=home&message=missing';
+    mocks.page.mockResolvedValue({ conversation: side, items: [{ ...row, commentId: 'new', note: 'Newest unread reply' }], nextBefore: null, messageUnavailable: true });
+    const before = mocks.acknowledge.mock.calls.length; view.rerender(<Harness />);
+    await screen.findByText('This message is unavailable in this conversation.');
+    expect(screen.getByLabelText('Message')).toHaveValue('Keep these edits');
+    expect(mocks.acknowledge.mock.calls.length).toBe(before);
+    expect(mocks.post).not.toHaveBeenCalled();
+  } finally { focus.mockRestore(); }
+});
+
+
+it('passes an exact native requester focus only after the selected history has loaded successfully', async () => {
+  mocks.query = 'message=source'; const details = deferred(); mocks.details.mockReturnValue(details.promise);
+  const view = render(<NativeHarness />); await screen.findByLabelText('Native focused message');
+  expect(screen.getByLabelText('Native focused message')).toBeEmptyDOMElement();
+  await act(async () => details.resolve([{ commentId: 'source', threadId: 'root' }]));
+  await waitFor(() => expect(screen.getByLabelText('Native focused message')).toHaveTextContent('source'));
+  mocks.query = 'conversation=requester&conversationStore=owner&message=unknown'; view.rerender(<NativeHarness />);
+  expect(screen.getByLabelText('Native focused message')).toBeEmptyDOMElement();
+  await screen.findByText('This message is unavailable in this conversation.');
 });
