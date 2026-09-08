@@ -3,7 +3,7 @@ import { assertCoManagedOperationalWrite } from '@alga-psa/licensing/lifecycle';
 import type { Knex } from 'knex';
 import { hasCoManagedConversationOwnership } from '@alga-psa/co-managed/nativeConversationEvents';
 import { assertCoManagedScheduledCommentPublication } from '@alga-psa/co-managed/scheduledCommentPublication';
-import type { CoManagedEventPublication } from '@alga-psa/co-managed';
+import { syncCoManagedTicketAwaitingClientSla, type CoManagedEventPublication } from '@alga-psa/co-managed';
 import { queueCoManagedConversationEvent } from './coManagedConversationEventPublication';
 import { randomUUID } from 'node:crypto';
 import { tenantDb } from '@alga-psa/db';
@@ -95,7 +95,10 @@ export async function publishScheduledComment(knex: Knex, data: PublishScheduled
         .returning('*');
       const transitioned = rows[0];
       if (!transitioned) return rows;
-      if (responseChanges) await trxDb.table('tickets').where({ ticket_id: data.ticketId }).update({ response_state: 'awaiting_client' });
+      if (responseChanges) {
+        await trxDb.table('tickets').where({ ticket_id: data.ticketId }).update({ response_state: 'awaiting_client' });
+        await syncCoManagedTicketAwaitingClientSla(trx, data.tenantId, data.ticketId);
+      }
       await writeTicketActivity(trx, {
         tenant: data.tenantId, ticketId: transitioned.ticket_id, eventType: 'TICKET_COMMENT_PUBLISHED',
         entityType: TICKET_ACTIVITY_ENTITY.COMMENT, entityId: transitioned.comment_id,

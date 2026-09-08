@@ -9,7 +9,7 @@ import { snapshotCoManagedSessionActor, assertCoManagedSessionUnexpired, isCoMan
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
 import { ensureCoManagedActorReference } from './actorReferences';
 import { encodeConversationContent, snapshotConversationContent, type CoManagedConversationContent } from './conversationContent';
-import { recordCoManagedTicketFirstResponse } from './ticketSla';
+import { recordCoManagedTicketFirstResponse, syncCoManagedTicketAwaitingClientSla } from './ticketSla';
 
 export interface CoManagedCommentReference { storeTenant: string; threadId: string; commentId: string }
 export type CoManagedCommentCreateRequest = { operationId: string } & CoManagedConversationContent & (
@@ -105,6 +105,7 @@ export async function createCoManagedTicketComment(db: Knex, inputActor: CoManag
         parent_comment_id: request.parent?.commentId ?? null, ...encodeConversationContent(request), is_internal: audience !== 'requester', is_resolution: false,
         author_type: 'internal', user_id: foreign ? null : actor.userId, publish_state: 'published' });
       await recordCoManagedTicketFirstResponse(context, request.operationId, actorReferenceId);
+      await syncCoManagedTicketAwaitingClientSla(trx, resource.tenant, resource.id);
       await assertWriteAuthority(trx);
       const [saved] = await owner.table('co_management_command_receipts').insert({ tenant: resource.tenant, operation_id: request.operationId,
         relationship_id: resource.relationshipId, resource_type: 'ticket', resource_id: resource.id, actor_tenant: actor.tenant, actor_user_id: actor.userId,

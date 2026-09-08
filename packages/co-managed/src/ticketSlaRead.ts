@@ -37,7 +37,7 @@ export async function readCoManagedTicketSlaDisplay(context: CoManagedSharedWork
   if (context.action !== 'read' || context.resource.kind !== 'ticket') throw new CoManagedSharedWorkError();
   const { trx, resource } = context, customer = tenantDb(trx, resource.tenant);
   const hidden = (names: string[]) => isCoManagedReadFieldHidden(context.redactedFields,
-    ['sla', 'status', 'status_id', 'statuses', 'priority', 'priority_id', ...names].flatMap(name => [name, `tickets.${name}`]));
+    ['sla', 'response_state', 'status', 'status_id', 'statuses', 'priority', 'priority_id', ...names].flatMap(name => [name, `tickets.${name}`]));
   const customerHidden = hidden(['sla.customer', 'customer_sla', 'sla_policy_id', 'sla_started_at', 'sla_paused_at',
     'sla_response_due_at', 'sla_response_at', 'sla_response_met', 'sla_resolution_due_at', 'sla_resolution_at', 'sla_resolution_met']);
   const mspHidden = hidden(['sla.msp', 'msp_sla', 'sla_organization_obligations', 'clock', 'work', 'co_management_ticket_work',

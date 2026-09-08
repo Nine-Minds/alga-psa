@@ -107,7 +107,7 @@ async function currentTicketObligation(trx: Knex.Transaction, customerTenant: st
   if (relationshipId) query.where('relationship_id', relationshipId);
   const relationship = await query.forShare().first();
   if (!relationship) return null;
-  const ticket = await customer.table('tickets').where('ticket_id', ticketId).forUpdate().first('ticket_id', 'board_id', 'status_id');
+  const ticket = await customer.table('tickets').where('ticket_id', ticketId).forUpdate().first('ticket_id', 'board_id', 'status_id', 'response_state');
   if (!ticket) return null;
   const work = await customer.table('co_management_ticket_work').where({ relationship_id: relationship.relationship_id, ticket_id: ticketId }).forUpdate().first();
   if (!work?.first_escalated_at) return null;
@@ -125,6 +125,42 @@ async function currentTicketObligation(trx: Knex.Transaction, customerTenant: st
   await acquireOrganizationSlaLock(trx, identity);
   const current = await owner.table('sla_organization_obligations').where('obligation_id', identity.obligationId).forUpdate().first();
   return { customer, relationship, ticket, work, identity, obligation: current };
+}
+
+/** Only the MSP's pause setting controls its obligation. Both tenants must
+ * enable response tracking before the canonical customer's response state has
+ * pause semantics. Customer-specific status pause configuration is independent. */
+async function syncAwaitingClientPause(trx: Knex.Transaction, identity: OrganizationSlaIdentity,
+  responseState: string | null, clock: OrganizationSlaClock, at: string): Promise<void> {
+  if (clock.resolution.completedAt) return;
+  const owner = tenantDb(trx, identity.tenant), customer = tenantDb(trx, identity.sourceTenant);
+  const settings = await owner.table('sla_settings').forShare().first('pause_on_awaiting_client');
+  const ownerDisplay = await owner.table('tenant_settings').forShare().first('ticket_display_settings');
+  const customerDisplay = await customer.table('tenant_settings').forShare().first('ticket_display_settings');
+  const shouldPause = responseState === 'awaiting_client' && (settings?.pause_on_awaiting_client ?? true)
+    && (ownerDisplay?.ticket_display_settings?.responseStateTrackingEnabled ?? true)
+    && (customerDisplay?.ticket_display_settings?.responseStateTrackingEnabled ?? true);
+  if (shouldPause === clock.pauseReasons.includes('awaiting_client')) return;
+  await applyOrganizationSlaEvent(trx, identity, randomUUID(), {
+    kind: shouldPause ? 'paused' : 'resumed', reason: 'awaiting_client', occurredAt: at,
+  });
+}
+
+/** Called after an admitted canonical response-state mutation, in its source
+ * transaction. Retained source/organization locks precede the timestamp; private
+ * periods and read-only lifecycle states do not publish new MSP clock facts. */
+export async function syncCoManagedTicketAwaitingClientSla(trx: Knex.Transaction, customerTenant: string, ticketId: string): Promise<void> {
+  if (!trx.isTransaction) throw new Error('Organization SLA effects require the source transaction');
+  const source = await tenantDb(trx, customerTenant).table('tenants').first('product_code');
+  if (source?.product_code !== 'co_managed') return;
+  if (!(await getCoManagedOperationalState(trx, customerTenant)).canWrite) return;
+  const retained = await currentTicketObligation(trx, customerTenant, ticketId);
+  if (!retained || retained.obligation.clock.resolution.completedAt) return;
+  const at = (await trx.select({ at: trx.raw('clock_timestamp()') }).first()).at as Date;
+  await syncAwaitingClientPause(trx, retained.identity, retained.ticket.response_state, retained.obligation.clock, at.toISOString());
+  if (!(await getCoManagedOperationalState(trx, customerTenant)).canWrite) {
+    throw new Error('Co-managed SLA lifecycle changed during response-state mutation');
+  }
 }
 
 /** Count an actually inserted MSP reply, using the persisted actor reference and
@@ -197,13 +233,15 @@ export async function applyCoManagedTicketSlaTransition(trx: Knex.Transaction,
     return;
   }
   if (transition === 'reopened' && !obligation?.clock.resolution.completedAt) return;
-  const ticket = await customer.table('tickets').where('ticket_id', resource.id).first('priority_id', 'status_id');
+  const ticket = await customer.table('tickets').where('ticket_id', resource.id).first('priority_id', 'status_id', 'response_state');
   if (!ticket) throw new CoManagedSlaSetupError();
   const status = await customer.table('statuses').where('status_id', ticket.status_id).forShare().first('is_closed');
   if (!status) throw new CoManagedSlaSetupError();
   if (obligation && !obligation.clock.resolution.completedAt) {
     // A newly shared closed ticket ends the retained obligation at this new
     // visibility boundary; do not read its private-period closure timestamp.
+    // Establish the response pause before removing responsibility's pause.
+    if (!status.is_closed) await syncAwaitingClientPause(trx, identity, ticket.response_state, obligation.clock, at);
     await applyOrganizationSlaEvent(trx, identity, operationId, status.is_closed
       ? { kind: 'resolved', occurredAt: at } : { kind: 'resumed', reason: 'customer_responsible', occurredAt: at });
     return;
@@ -231,4 +269,8 @@ export async function applyCoManagedTicketSlaTransition(trx: Knex.Transaction,
     targets: { responseMinutes: target.response_time_minutes, resolutionMinutes: target.resolution_time_minutes }, occurredAt: at });
   // Match native SLA's created-in-closed-status behavior without recording a response.
   if (status?.is_closed) await applyOrganizationSlaEvent(trx, identity, randomUUID(), { kind: 'resolved', occurredAt: at });
+  else {
+    const started = await owner.table('sla_organization_obligations').where('obligation_id', identity.obligationId).first('clock');
+    await syncAwaitingClientPause(trx, identity, ticket.response_state, started.clock, at);
+  }
 }

@@ -4,7 +4,7 @@ export * from './policy';
 export * from './sharedWork';
 export * from './sharedWorkRead';
 export * from './ticketHandoffs';
-export { CoManagedSlaSetupError, recordCoManagedTicketResolution, recordCoManagedTicketReopened } from './ticketSla';
+export { CoManagedSlaSetupError, recordCoManagedTicketResolution, recordCoManagedTicketReopened, syncCoManagedTicketAwaitingClientSla } from './ticketSla';
 export * from './ticketCollaboration';
 
 export * from './actorReferences';

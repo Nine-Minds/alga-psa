@@ -16253,7 +16253,7 @@ it('MSP SLA display distinguishes pre-escalation from unavailable historical tim
   expect((await read(db, f.principal, f.resource)).sla.msp).toEqual({ state: 'unavailable' });
 });
 
-it.each(['sla', 'tickets.sla_response_at', 'work', 'fields.priority.name'] as const)
+it.each(['sla', 'tickets.sla_response_at', 'work', 'fields.priority.name', 'tickets.response_state'] as const)
 ('MSP SLA display obeys %s source redaction', async field => {
   const f = await dueMspSlaFixture();
   const bundles = await import('@alga-psa/authorization');
@@ -16477,7 +16477,7 @@ it('MSP SLA inbox uses fresh redacted content, qualified counts and actual brows
   } finally { for (const spy of spies.reverse()) spy.mockRestore(); }
 });
 
-it.each(['title', 'sla', 'work'] as const)('MSP SLA notices apply %s redaction at delivery time', async field => {
+it.each(['title', 'sla', 'work', 'response_state'] as const)('MSP SLA notices apply %s redaction at delivery time', async field => {
   const f = await mspSlaNoticeFixture();
   await f.persist(db, f.identity.tenant);
   const notice = await f.sponsor.table('internal_notifications').first();
@@ -16620,3 +16620,132 @@ it('MSP SLA email warning uses current remaining time without rewriting its capt
   expect(send).toHaveBeenCalledTimes(1);
   expect((await f.sponsor.table('sla_organization_notification_events').first()).elapsed_milliseconds).toBe(event.elapsed_milliseconds);
 });
+
+it('MSP SLA awaiting-client pause composes with handback and preserves elapsed time and breaches', async () => {
+  const f = await dueMspSlaFixture();
+  const { handBackCoManagedTicket, escalateCoManagedTicket } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  const mutate = (state: string) => db.transaction(async trx => {
+    await tenantDb(trx, f.resource.tenant).table('tickets').where('ticket_id', f.resource.id).update({ response_state: state });
+    await f.syncCoManagedTicketAwaitingClientSla(trx, f.resource.tenant, f.resource.id);
+  });
+  const customerBefore = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  await mutate('awaiting_client');
+  const paused = await f.read();
+  expect(paused.clock).toMatchObject({ pauseReasons: ['awaiting_client'], response: { dueAt: null, breached: true } });
+  expect(paused.clock.elapsedMilliseconds).toBeGreaterThanOrEqual(7200000);
+  await mutate('awaiting_client');
+  expect(await f.read()).toEqual(paused);
+  await handBackCoManagedTicket(db, f.principal, f.resource, { operationId: randomUUID(), expectedRevision: 1, note: 'Please check' });
+  await mutate('awaiting_internal');
+  const handback = await f.read();
+  expect(handback.clock).toMatchObject({ pauseReasons: ['customer_responsible'], elapsedMilliseconds: paused.clock.elapsedMilliseconds,
+    response: { dueAt: null, breached: true, breachedAt: paused.clock.response.breachedAt } });
+  await escalateCoManagedTicket(db, f.customerPrincipal, f.resource, { operationId: randomUUID(), expectedRevision: 2, note: 'Checked' });
+  const resumed = await f.read();
+  expect(resumed.clock).toMatchObject({ pauseReasons: [], elapsedMilliseconds: paused.clock.elapsedMilliseconds,
+    response: { breached: true, breachedAt: paused.clock.response.breachedAt } });
+  expect(await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).toEqual({ ...customerBefore, response_state: 'awaiting_internal' });
+});
+
+it.each(['msp-pause-disabled', 'msp-tracking-disabled', 'customer-tracking-disabled', 'customer-pause-disabled'] as const)
+('MSP SLA awaiting-client initial escalation respects %s independently', async condition => {
+  const f = await ticketHandoffFixture();
+  const { escalateCoManagedTicket } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  if (condition.endsWith('pause-disabled')) {
+    const scope = condition.startsWith('msp') ? f.sponsor : f.customer;
+    const tenant = condition.startsWith('msp') ? f.principal.tenant : f.resource.tenant;
+    await scope.table('sla_settings').insert({ tenant, pause_on_awaiting_client: false }).onConflict('tenant').merge({ pause_on_awaiting_client: false });
+  } else {
+    const scope = condition.startsWith('msp') ? f.sponsor : f.customer;
+    const tenant = condition.startsWith('msp') ? f.principal.tenant : f.resource.tenant;
+    await scope.table('tenant_settings').insert({ tenant, settings: {}, ticket_display_settings: { responseStateTrackingEnabled: false } })
+      .onConflict('tenant').merge({ ticket_display_settings: { responseStateTrackingEnabled: false } });
+  }
+  await f.customer.table('tickets').where('ticket_id', f.resource.id).update({ response_state: 'awaiting_client' });
+  const result = await escalateCoManagedTicket(db, f.customerPrincipal, f.resource, { operationId: randomUUID(), expectedRevision: 0, note: 'Please investigate' });
+  const clock = (await f.sponsor.table('sla_organization_obligations').first()).clock;
+  expect(clock.pauseReasons).toEqual(condition === 'customer-pause-disabled' ? ['awaiting_client'] : []);
+  expect(clock.elapsedMilliseconds).toBe(0);
+  expect(clock.startedAt).toBe(result.occurredAt);
+});
+
+it.each(['revoked', 'terminated', 'suspended', 'read-only'] as const)
+('MSP SLA awaiting-client does not expose new response state after %s', async reason => {
+  const f = await dueMspSlaFixture();
+  if (reason === 'revoked') {
+    const { revokeCoManagedTicketGrant } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+    await revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource, { operationId: randomUUID(), expectedRevision: 1, note: 'Private work' });
+  }
+  if (reason === 'terminated') await f.customer.table('co_management_relationships').update({ state: 'terminated', ended_at: new Date() });
+  if (reason === 'suspended') await f.customer.table('tenants').update({ suspended_at: new Date() });
+  if (reason === 'read-only') await f.sponsor.table('co_managed_allocations').del();
+  const before = await f.read();
+  await db.transaction(async trx => {
+    await tenantDb(trx, f.resource.tenant).table('tickets').where('ticket_id', f.resource.id).update({ response_state: 'awaiting_client' });
+    await f.syncCoManagedTicketAwaitingClientSla(trx, f.resource.tenant, f.resource.id);
+  });
+  expect(await f.read()).toEqual(before);
+});
+
+it.each(['legacy', 'optimized'] as const)('MSP SLA awaiting-client follows native %s response-state edits atomically', async path => withSharedTicketMutationFixture(async f => {
+  const auth = await import('@alga-psa/auth'), dbModule = await import('@alga-psa/db');
+  const user = await f.customer.table('users').where('user_id', f.customerPrincipal.userId).first();
+  const connection = vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: db, tenant: f.resource.tenant });
+  try {
+    const action = path === 'legacy' ? (await import('../../../../packages/tickets/src/actions/ticketActions')).updateTicket
+      : (await import('../../../../packages/tickets/src/actions/optimizedTicketActions')).updateTicketWithCache;
+    await auth.runWithApiKeyUser(user, () => runWithTenant(f.resource.tenant, async () => {
+      expect(await action(f.resource.id, { response_state: 'awaiting_client' })).toBe('success');
+      const paused = await f.sponsor.table('sla_organization_obligations').first();
+      expect(paused.clock.pauseReasons).toEqual(['awaiting_client']);
+      expect(await action(f.resource.id, { response_state: 'awaiting_internal' })).toBe('success');
+      const resumed = await f.sponsor.table('sla_organization_obligations').first();
+      expect(resumed.clock).toMatchObject({ pauseReasons: [], elapsedMilliseconds: paused.clock.elapsedMilliseconds });
+    }));
+  } finally { connection.mockRestore(); }
+}));
+
+it('MSP SLA awaiting-client records the actual public MSP response before pausing and rolls back with the source', async () => withCommentCreationFixture(async f => {
+  const { createSharedTicketComment } = await import('../../lib/co-managed/createTicketComment');
+  const before = await f.sponsor.table('sla_organization_obligations').first();
+  const request = { operationId: randomUUID(), audience: 'requester' as const, text: 'Please confirm the fix' };
+  await expect(db.transaction(async trx => {
+    await createSharedTicketComment(trx, f.principal, f.resource, request);
+    throw new Error('rollback response');
+  })).rejects.toThrow('rollback response');
+  expect(await f.sponsor.table('sla_organization_obligations').first()).toEqual(before);
+  await createSharedTicketComment(db, f.principal, f.resource, request);
+  const paused = await f.sponsor.table('sla_organization_obligations').first();
+  expect(paused.clock.pauseReasons).toEqual(['awaiting_client']);
+  expect(paused.clock.response.completedAt).not.toBeNull();
+  expect(paused.clock.resolution.dueAt).toBeNull();
+  const events = await f.sponsor.table('sla_organization_events').where('obligation_id', paused.obligation_id).orderBy('revision');
+  expect(events.slice(-2).map(row => row.event_type)).toEqual(['responded', 'paused']);
+}));
+
+it('MSP SLA awaiting-client re-escalation preserves the pause until an actual response-state change', async () => {
+  const f = await ticketHandoffFixture();
+  const { escalateCoManagedTicket, handBackCoManagedTicket } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  await escalateCoManagedTicket(db, f.customerPrincipal, f.resource, { operationId: randomUUID(), expectedRevision: 0, note: 'Investigate' });
+  await handBackCoManagedTicket(db, f.principal, f.resource, { operationId: randomUUID(), expectedRevision: 1, note: 'Check locally' });
+  const before = await f.sponsor.table('sla_organization_obligations').first();
+  await f.customer.table('tickets').where('ticket_id', f.resource.id).update({ response_state: 'awaiting_client' });
+  await escalateCoManagedTicket(db, f.customerPrincipal, f.resource, { operationId: randomUUID(), expectedRevision: 2, note: 'Please assist' });
+  const current = await f.sponsor.table('sla_organization_obligations').first();
+  expect(current.clock).toMatchObject({ pauseReasons: ['awaiting_client'], elapsedMilliseconds: before.clock.elapsedMilliseconds });
+});
+
+it('MSP SLA awaiting-client reopening starts a paused new generation at zero elapsed', async () => withSharedTicketMutationFixture(async f => {
+  const ticket = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  await f.mutate({ status_id: f.closedStatusId });
+  await f.mutate({ status_id: ticket.status_id, response_state: 'awaiting_client' });
+  const current = await f.sponsor.table('sla_organization_obligations').orderBy('generation', 'desc').first();
+  expect(current).toMatchObject({ generation: 2, clock: { pauseReasons: ['awaiting_client'], elapsedMilliseconds: 0,
+    response: { completedAt: null, dueAt: null }, resolution: { completedAt: null, dueAt: null } } });
+}));
+
+it('MSP SLA awaiting-client follows scheduled customer publication without inventing an MSP first response', async () => withScheduledCommentFixture(async f => {
+  await f.run();
+  const current = await f.sponsor.table('sla_organization_obligations').first();
+  expect(current.clock).toMatchObject({ pauseReasons: ['awaiting_client'], response: { completedAt: null }, resolution: { dueAt: null } });
+}));

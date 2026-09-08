@@ -4,7 +4,7 @@ import { publishNativeCommentEvent, publishNativeCommentWorkflowEvent } from '..
 
 import { hasCommentCollaborationAttribution } from '../lib/commentAuthorResolution';
 import { assertCoManagedOperationalWrite } from '@alga-psa/licensing';
-import { recordCoManagedTicketResolution, recordCoManagedTicketReopened } from '@alga-psa/co-managed';
+import { recordCoManagedTicketResolution, recordCoManagedTicketReopened, syncCoManagedTicketAwaitingClientSla } from '@alga-psa/co-managed';
 import { formatCollaborationActorName } from '@alga-psa/event-schemas/collaboration';
 import { resolveTicketMutationCollaborator, type TicketMutationCollaborationContext } from '../lib/ticketMutationActor';
 
@@ -387,6 +387,7 @@ async function updateTicketResponseStateFromComment(
     await tenantScopedTable(trx, 'tickets', tenant)
       .where({ ticket_id: ticketId })
       .update({ response_state: newState });
+    await syncCoManagedTicketAwaitingClientSla(trx, tenant, ticketId);
 
     registerAfterCommit(trx, () =>
       publishEvent({
@@ -2884,6 +2885,8 @@ export async function updateTicketInTransaction(
       updatedTicket.closed_by = null;
       await recordCoManagedTicketReopened(trx, tenant, id);
     }
+
+    if ('response_state' in updateData) await syncCoManagedTicketAwaitingClientSla(trx, tenant, id);
 
     // Auto-apply checklist templates when the ticket's targeting attributes
     // (board/category/subcategory/priority) changed. Idempotent per template.

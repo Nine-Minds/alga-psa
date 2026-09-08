@@ -90,7 +90,7 @@ export async function withCoManagedSlaNotification<T>(db: Knex, input: CoManaged
   const read = async (context: CoManagedNotificationRecipientContext): Promise<T | null> => {
     const hidden = (names: string[]) => isCoManagedReadFieldHidden(context.redactedFields, names.flatMap(name => [name, `tickets.${name}`]));
     if (hidden(['sla', 'msp_sla', 'sla_organization_obligations', 'sla_organization_notification_events', 'work', 'co_management_ticket_work',
-      'clock', 'status', 'status_id', 'statuses', 'priority', 'priority_id', 'first_escalated_at', 'responsibility',
+      'clock', 'response_state', 'status', 'status_id', 'statuses', 'priority', 'priority_id', 'first_escalated_at', 'responsibility',
       'dueAt', 'due_at', 'occurredAt', 'occurred_at', 'thresholdPercent', 'threshold_percent', 'elapsedMilliseconds', 'elapsed_milliseconds',
       'targetMinutes', 'target_minutes', 'slaType', 'sla_type'])) return null;
     const current = await source(context.trx, actor.tenant, eventId, true);

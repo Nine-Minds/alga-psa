@@ -3,7 +3,7 @@
 import { publishNativeCommentEvent, publishNativeCommentWorkflowEvent } from '../lib/nativeConversationEvents';
 
 import { assertCoManagedOperationalWrite, withCoManagedOperationalTransaction } from '@alga-psa/licensing';
-import { recordCoManagedTicketResolution, recordCoManagedTicketReopened } from '@alga-psa/co-managed';
+import { recordCoManagedTicketResolution, recordCoManagedTicketReopened, syncCoManagedTicketAwaitingClientSla } from '@alga-psa/co-managed';
 
 import type {
   ITicket,
@@ -1087,6 +1087,8 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
         responseStateChanged = true;
         responseTrigger = 'manual';
       }
+
+      if (responseStateChanged) await syncCoManagedTicketAwaitingClientSla(trx, tenant, id);
 
       // Publish response state change event if needed
       if (responseStateChanged) {
