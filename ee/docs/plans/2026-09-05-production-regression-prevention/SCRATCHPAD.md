@@ -3095,3 +3095,8 @@ Built3smallnativeemulatorbundles; accountinghostsession81018 QBO56105/Xero56106/
 - Full native Teams gate at clean 401b76904f5b015f6f700627ccde43baae827ab0 passed: 1 product journey in 2.0 minutes, no retries/skips/failures, clean before and after. Fresh 12 GiB Next process showed no memory restart. Graph emulator was rebuilt with the current contract fixes. Evidence: evidence/host-teams-production-callback-separation.json, raw test-results/teams-development, runner `/tmp/alga-teams-full-401b.log`.
 - Production browser discovery passed both editions: community 42 tests /20 files; enterprise 46 tests /20 files. Discovery proves collection only. Callback cases execute in the production workflow before switching to development Teams mode; no extra development heap or Docker build needed.
 - Prior combined five-case failure remains preserved; this pass does not replace it or establish current native GitHub CI. Publication approval still pending.
+
+### Parent readiness report fixture synchronized with mandatory Teams identity
+
+- Full native tooling gate at clean 3cb3ff4b76 failed on the production-readiness CLI fixture: it fabricated a Teams report with an upgrade-test title and `ee` project, now correctly rejected by the mandatory journey verifier. Raw failure saved at `/tmp/alga-tooling-3cb3-failure`; original runner log `/tmp/alga-tooling-3cb3.log`.
+- Updated the complete-run fixture to the actual Teams title and enterprise-chromium project. Added a parent CLI mutation proving matching collected/executed green reports with an unrelated same-file case still fail readiness. Focused readiness suite passes (`/tmp/alga-readiness-teams-fixture-fixed.log`). No production gate weakened.

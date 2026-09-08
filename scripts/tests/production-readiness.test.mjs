@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { supportedUpgradeBaseline, upgradeBrowserFiles } from '../lib/supported-upgrade-evidence.mjs';
-import { teamsDevelopmentFiles } from '../lib/teams-development-evidence.mjs';
+import { teamsDevelopmentFiles, teamsDevelopmentJourneys } from '../lib/teams-development-evidence.mjs';
 import { readinessRequirements, evaluateProductionReadiness } from '../lib/production-readiness.mjs';
 
 // Formats emitted by candidate-execution, workspace-execution, test-sharding
@@ -158,6 +158,10 @@ test('CLI reads candidate artifacts, fails on missing JSON, and rejects a dirty 
   teamsReport.stats.expected = 1;
   teamsReport.suites = [teamsReport.suites[0]];
   teamsReport.suites[0].specs[0].file = teamsDevelopmentFiles[0];
+  teamsReport.suites[0].specs[0].title = teamsDevelopmentJourneys[0];
+  Object.assign(teamsReport.suites[0].specs[0].tests[0], {
+    projectId: 'enterprise-chromium', projectName: 'enterprise-chromium',
+  });
   Object.assign(teamsReport.config.metadata, { releaseValidation: false, requiredServerNodeEnv: 'development', integrationSurface: 'teams' });
   for (const name of ['collected', 'results']) write(`${teamsDirectory}/${name}.json`, teamsReport);
   write(`${teamsDirectory}/runner.json`, { exitCode: 0 });
@@ -173,6 +177,11 @@ test('CLI reads candidate artifacts, fails on missing JSON, and rejects a dirty 
     return output;
   };
   { const result = run(); assert.equal(result.status, 'passed', result.failures.join('\n')); }
+  const unrelatedTeams = structuredClone(teamsReport);
+  unrelatedTeams.suites[0].specs[0].title = 'unrelated passing callback';
+  for (const name of ['collected', 'results']) write(`${teamsDirectory}/${name}.json`, unrelatedTeams);
+  assert.equal(run().status, 'failed');
+  for (const name of ['collected', 'results']) write(`${teamsDirectory}/${name}.json`, teamsReport);
   write(`${teamsDirectory}/evidence.json`, { ...teamsEvidence, releaseValidation: true });
   assert.equal(run().status, 'failed');
   write(`${teamsDirectory}/evidence.json`, teamsEvidence);
