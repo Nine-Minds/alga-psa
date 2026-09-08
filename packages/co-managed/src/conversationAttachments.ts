@@ -229,6 +229,14 @@ export async function listPublishedCoManagedAttachments(context: CoManagedAttach
   const rows = await visibleAttachmentQuery(context).where('status', 'ready').forShare().orderBy('created_at').orderBy('attachment_id');
   return rows.map((row: any) => summary(row, context.audience));
 }
+/** Internal transformation guard; a digest is never an attachment capability. */
+export async function assertPublishedCoManagedAttachmentFingerprint(context: CoManagedAttachmentReadContext, attachmentId: string, contentHash: string) {
+  if (!context.trx.isTransaction || !isCoManagedUuid(attachmentId) || !/^[a-f0-9]{64}$/.test(contentHash)) deny();
+  const row = await visibleAttachmentQuery(context).where({ attachment_id: attachmentId, status: 'ready' }).forShare().first();
+  if (!row) deny();
+  assertCoManagedAttachmentPath(row);
+  if (row.content_hash !== contentHash) throw new CoManagedAttachmentError('ATTACHMENT_CONTENT_MISMATCH');
+}
 export async function readPublishedCoManagedAttachment(context: CoManagedAttachmentReadContext, attachmentId: string,
   download: (path: string) => Promise<Uint8Array>): Promise<{ attachment: CoManagedConversationAttachment; content: Uint8Array }> {
   if (!context.trx.isTransaction || !isCoManagedUuid(attachmentId)) deny();

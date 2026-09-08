@@ -1,7 +1,7 @@
 import { retainCoManagedInboundCommentEvent } from '../../../../packages/co-managed/src/inboundConversationEvents';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createRequire } from 'node:module';
-import { randomUUID } from 'node:crypto';
+import { randomUUID, createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import knex, { type Knex } from 'knex';
 import { assertCoManagedSeatAdmission, changeCoManagedAllocation, countCoManagedCommittedSeats } from '@alga-psa/licensing';
@@ -95,7 +95,7 @@ beforeAll(async () => {
     '20260906080000_create_co_management_relationship_events.cjs',
     '20260906100000_add_external_file_metadata.cjs',
     '20260906110000_add_kb_import_batch_identity.cjs',
-    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs', '20260908013607_create_named_ticket_conversations.cjs', '20260908015652_create_ticket_conversation_editor_drafts.cjs', '20260908022249_scope_ticket_conversation_defaults_to_relationship.cjs', '20260908024119_create_ticket_conversation_publications.cjs', '20260908030840_retain_ticket_conversation_draft_reply_target.cjs', '20260908033011_create_ticket_conversation_sender_grants.cjs', '20260908034701_create_ticket_conversation_email_operations.cjs', '20260908042702_create_ticket_conversation_inbound_receipts.cjs', '20260908045632_track_named_conversation_correspondents.cjs', '20260908051006_retain_named_reply_review_resolutions.cjs', '20260908052731_extend_conversation_files_to_native_vendor_replies.cjs', '20260908054601_retain_named_editor_file_bindings.cjs', '20260908060651_retain_named_file_publication_operations.cjs', '20260908091259_retain_named_requester_publication_options.cjs', '20260908094308_retain_named_requester_close_intent.cjs', '20260908101532_retain_named_email_recovery_due.cjs', '20260908102605_retain_named_requester_schedule_intent.cjs', '20260908115747_create_ticket_conversation_attention.cjs', '20260908122807_retain_named_conversation_notification_receipts.cjs', '20260908125648_retain_named_conversation_email_notifications.cjs', '20260908133439_retain_native_ticket_email_recipient_policy.cjs']) {
+    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs', '20260908013607_create_named_ticket_conversations.cjs', '20260908015652_create_ticket_conversation_editor_drafts.cjs', '20260908022249_scope_ticket_conversation_defaults_to_relationship.cjs', '20260908024119_create_ticket_conversation_publications.cjs', '20260908030840_retain_ticket_conversation_draft_reply_target.cjs', '20260908033011_create_ticket_conversation_sender_grants.cjs', '20260908034701_create_ticket_conversation_email_operations.cjs', '20260908042702_create_ticket_conversation_inbound_receipts.cjs', '20260908045632_track_named_conversation_correspondents.cjs', '20260908051006_retain_named_reply_review_resolutions.cjs', '20260908052731_extend_conversation_files_to_native_vendor_replies.cjs', '20260908054601_retain_named_editor_file_bindings.cjs', '20260908060651_retain_named_file_publication_operations.cjs', '20260908091259_retain_named_requester_publication_options.cjs', '20260908094308_retain_named_requester_close_intent.cjs', '20260908101532_retain_named_email_recovery_due.cjs', '20260908102605_retain_named_requester_schedule_intent.cjs', '20260908115747_create_ticket_conversation_attention.cjs', '20260908122807_retain_named_conversation_notification_receipts.cjs', '20260908125648_retain_named_conversation_email_notifications.cjs', '20260908133439_retain_native_ticket_email_recipient_policy.cjs', '20260908152720_retain_ticket_conversation_share_lineage.cjs']) {
     await require('../../../migrations/' + file).up(db);
   }
   for (const table of ['standard_statuses', 'standard_priorities', 'countries', 'notification_categories',
@@ -14583,21 +14583,23 @@ describe('named ticket conversation mailbox authority against migrated PostgreSQ
   });
 });
 
+async function makeNamedConversationFixtureNative(fixture: Awaited<ReturnType<typeof namedConversationFixture>>) {
+  const source = await fixture.customer.table('tickets').where('ticket_id', fixture.ticket.ticketId).first();
+  const status = await fixture.customer.table('statuses').where('status_id', source.status_id).first();
+  const priority = await fixture.customer.table('priorities').where('priority_id', source.priority_id).first();
+  await fixture.sponsor.table('statuses').insert({ ...status, tenant: fixture.principal.tenant, board_id: fixture.operation.escalation_board_id });
+  await fixture.sponsor.table('priorities').insert({ ...priority, tenant: fixture.principal.tenant });
+  await fixture.sponsor.table('tickets').insert({ tenant: fixture.principal.tenant, ticket_id: fixture.ticket.ticketId, ticket_number: 'NATIVE-FILES',
+    title: 'Native vendor exchange', client_id: fixture.operation.request.clientId, board_id: fixture.operation.escalation_board_id,
+    status_id: status.status_id, priority_id: priority.priority_id, entered_by: fixture.principal.userId });
+  await fixture.sponsor.table('co_managed_entitlements').del();
+  fixture.ticket.tenant = fixture.principal.tenant;
+  Reflect.deleteProperty(fixture.ticket, 'relationshipId');
+}
+
 async function namedEmailFixture(audience: 'shared_it' | 'organization_private' | 'requester' = 'shared_it', native = false) {
   const fixture = await namedConversationFixture();
-  if (native) {
-    const source = await fixture.customer.table('tickets').where('ticket_id', fixture.ticket.ticketId).first();
-    const status = await fixture.customer.table('statuses').where('status_id', source.status_id).first();
-    const priority = await fixture.customer.table('priorities').where('priority_id', source.priority_id).first();
-    await fixture.sponsor.table('statuses').insert({ ...status, tenant: fixture.principal.tenant, board_id: fixture.operation.escalation_board_id });
-    await fixture.sponsor.table('priorities').insert({ ...priority, tenant: fixture.principal.tenant });
-    await fixture.sponsor.table('tickets').insert({ tenant: fixture.principal.tenant, ticket_id: fixture.ticket.ticketId, ticket_number: 'NATIVE-FILES',
-      title: 'Native vendor exchange', client_id: fixture.operation.request.clientId, board_id: fixture.operation.escalation_board_id,
-      status_id: status.status_id, priority_id: priority.priority_id, entered_by: fixture.principal.userId });
-    await fixture.sponsor.table('co_managed_entitlements').del();
-    fixture.ticket.tenant = fixture.principal.tenant;
-    Reflect.deleteProperty(fixture.ticket, 'relationshipId');
-  }
+  if (native) await makeNamedConversationFixtureNative(fixture);
   const mail = await import('../../../../packages/co-managed/src/conversationMailboxes');
   const email = await import('../../../../packages/co-managed/src/conversationEmailOperations');
   const { previewReviewedEmail } = await import('../../../../packages/email/src/reviewedEmail');
@@ -16844,8 +16846,9 @@ it.each(['native', 'shared_it', 'organization_private'] as const)('displayed %s 
 
 async function namedShareFixture(native = false) {
   const f = await namedConversationFixture();
-  const actor = native ? f.customerPrincipal : f.principal;
-  const ticket = native ? { tenant: f.ticket.tenant, ticketId: f.ticket.ticketId } : f.ticket;
+  if (native) await makeNamedConversationFixtureNative(f);
+  const actor = f.principal;
+  const ticket = f.ticket;
   const source = await f.conversations.createNamedTicketConversation(db, actor, ticket,
     { operationId: randomUUID(), name: 'Private source exchange', audience: 'organization_private', transport: 'internal' });
   const sourceRef = { storeTenant: source.storeTenant, conversationId: source.conversationId };
@@ -16862,7 +16865,7 @@ async function namedShareFixture(native = false) {
   const home = tenantDb(db, actor.tenant);
   const draftRow = () => home.table('ticket_conversation_editor_drafts').where({ actor_user_id: actor.userId,
     conversation_store_tenant: ref.storeTenant, conversation_id: ref.conversationId }).first();
-  return { ...f, actor, ticket, sourceRef, ref, message, share, request, home, draftRow };
+  return { ...f, customer: native ? f.sponsor : f.customer, actor, ticket, sourceRef, ref, message, share, request, home, draftRow };
 }
 
 describe('selective conversation share preparation against migrated PostgreSQL', () => {
@@ -16963,4 +16966,226 @@ it('selective conversation share preparation preserves readable replies below de
   await expect(f.share(db, f.actor, f.ticket, f.ref, { ...request, operationId: randomUUID(), expectedDraftRevision: 2 }))
     .rejects.toMatchObject({ code: 'CONVERSATION_FORBIDDEN' });
   expect((await f.draftRow()).content).toBeNull();
+});
+
+it.each([false, true])('selective conversation share lineage survives independent publication and source deletion (native=%s)', async native => {
+  const f = await namedShareFixture(native), api = f.conversations;
+  const { postNamedTicketConversation: post } = await import('../../../../packages/tickets/src/lib/postNamedTicketConversation');
+  const { getNamedConversationShareSourceLink: link } = await import('../../../../packages/co-managed/src/namedConversationShares');
+  const destination = await api.createNamedTicketConversation(db, f.actor, f.ticket,
+    { operationId: randomUUID(), name: 'Reviewed destination', audience: native ? 'organization_private' : 'shared_it', transport: 'internal' });
+  const ref = { storeTenant: destination.storeTenant, conversationId: destination.conversationId };
+  await f.share(db, f.actor, f.ticket, ref, f.request);
+  const lineage = await f.home.table('ticket_conversation_shares').where('operation_id', f.request.operationId).first();
+  expect(lineage).toMatchObject({ tenant: f.actor.tenant, actor_user_id: f.actor.userId, destination_store_tenant: ref.storeTenant,
+    destination_conversation_id: ref.conversationId, published_comment_id: null, source: { ...f.sourceRef, commentId: f.message.commentId } });
+  await api.saveNamedConversationEditorDraft(db, f.actor, f.ticket, ref, { operationId: randomUUID(), expectedRevision: 1,
+    expectedConversationRevision: 1, content: { text: 'Reviewed independent copy' } });
+  const publish = { operationId: randomUUID(), expectedDraftRevision: 2, expectedConversationRevision: 1 };
+  const receipt = await post(db, f.actor, f.ticket, ref, publish);
+  expect(await post(db, f.actor, f.ticket, ref, publish)).toEqual(receipt);
+  const page = await api.getNamedTicketConversationMessages(db, f.actor, f.ticket, ref);
+  expect(page.items).toMatchObject([{ commentId: receipt.commentId, author: { tenant: f.actor.tenant, id: f.actor.userId } }]);
+  expect(page.items[0].note).toContain('Reviewed independent copy');
+  expect(JSON.stringify(page)).not.toContain(f.message.commentId);
+  expect(await link(db, f.actor, f.ticket, ref, { commentId: receipt.commentId, threadId: receipt.threadId }))
+    .toMatchObject({ conversation: { ...f.sourceRef, name: 'Private source exchange' }, commentId: f.message.commentId });
+  if (!native) {
+    expect((await api.getNamedTicketConversationMessages(db, f.customerPrincipal, f.ticket, ref)).items[0].note).toContain('Reviewed independent copy');
+    expect(await link(db, f.customerPrincipal, f.ticket, ref, { commentId: receipt.commentId, threadId: receipt.threadId })).toBeNull();
+    expect(await f.customer.table('ticket_conversation_shares').where('operation_id', f.request.operationId)).toEqual([]);
+  }
+  const sourceTable = native ? 'comments' : 'co_management_private_comments';
+  await f.home.table(sourceTable).where('comment_id', f.message.commentId).update({ note: 'Changed original', deleted_at: db.fn.now() });
+  expect((await api.getNamedTicketConversationMessages(db, f.actor, f.ticket, ref)).items).toEqual(page.items);
+  expect(await link(db, f.actor, f.ticket, ref, { commentId: receipt.commentId, threadId: receipt.threadId })).toBeNull();
+  const retained = await f.home.table('ticket_conversation_shares').where('operation_id', f.request.operationId).first();
+  expect(retained.source).toEqual(lineage.source);
+  expect(retained).toMatchObject({ published_comment_id: receipt.commentId, published_thread_id: receipt.threadId, published_editor_attachment_ids: [] });
+  expect(await api.getNamedConversationEditorDraft(db, f.actor, f.ticket, ref)).toMatchObject({ content: null });
+  const migration = require('../../../migrations/20260908152720_retain_ticket_conversation_share_lineage.cjs');
+  await migration.up(db);
+  await expect(migration.down(db)).rejects.toThrow('Cannot discard retained conversation share lineage');
+});
+
+it.each([false, true])('selective conversation share publication preserves a draft when its source disappears or its lineage is altered (native=%s)', async native => {
+  const f = await namedShareFixture(native);
+  const sourceTable = native ? 'comments' : 'co_management_private_comments';
+  const events = await import('@alga-psa/event-bus/publishers');
+  const { postNamedTicketConversation: post } = await import('../../../../packages/tickets/src/lib/postNamedTicketConversation');
+  const side = await f.conversations.createNamedTicketConversation(db, f.actor, f.ticket,
+    { operationId: randomUUID(), name: 'Guarded destination', audience: native ? 'organization_private' : 'shared_it', transport: 'internal' });
+  const ref = { storeTenant: side.storeTenant, conversationId: side.conversationId };
+  await f.share(db, f.actor, f.ticket, ref, f.request);
+  const publish = { operationId: randomUUID(), expectedDraftRevision: 1, expectedConversationRevision: 1 };
+  await f.home.table(sourceTable).where('comment_id', f.message.commentId).update({ deleted_at: db.fn.now() });
+  vi.mocked(events.publishEvent).mockClear(); vi.mocked(events.publishWorkflowEvent).mockClear();
+  await expect(post(db, f.actor, f.ticket, ref, publish)).rejects.toMatchObject({ code: 'CONVERSATION_FORBIDDEN' });
+  expect(events.publishEvent).not.toHaveBeenCalled(); expect(events.publishWorkflowEvent).not.toHaveBeenCalled();
+  expect((await f.conversations.getNamedTicketConversationMessages(db, f.actor, f.ticket, ref)).items).toEqual([]);
+  expect(await f.conversations.getNamedConversationEditorDraft(db, f.actor, f.ticket, ref)).toMatchObject({ content: { text: 'Selected diagnosis' }, revision: 1 });
+  expect(await f.home.table('ticket_conversation_shares').where('operation_id', f.request.operationId).first()).toMatchObject({ published_comment_id: null });
+  await f.home.table(sourceTable).where('comment_id', f.message.commentId).update({ deleted_at: null });
+  const draftQuery = () => f.home.table('ticket_conversation_editor_drafts').where({ actor_user_id: f.actor.userId, conversation_id: ref.conversationId });
+  const draft = await draftQuery().first();
+  await draftQuery().update({ provenance: JSON.stringify({ ...draft.provenance, source: { ...draft.provenance.source, snapshot: '0'.repeat(64) } }) });
+  await expect(post(db, f.actor, f.ticket, ref, publish)).rejects.toMatchObject({ code: 'CONVERSATION_CONFLICT' });
+  expect((await f.conversations.getNamedTicketConversationMessages(db, f.actor, f.ticket, ref)).items).toEqual([]);
+});
+
+async function namedShareFilesFixture(native = false) {
+  const f = await namedShareFixture(native);
+  const objects = new Map<string, Buffer>();
+  const storage = {
+    download: vi.fn(async (path: string) => { const bytes = objects.get(path); if (!bytes) throw new Error('Missing test object'); return Buffer.from(bytes); }),
+    upload: vi.fn(async (_tenant: string, path: string, bytes: Uint8Array) => { objects.set(path, Buffer.from(bytes)); }),
+  };
+  const files = [];
+  for (const name of ['Selected report', 'Unselected report']) {
+    const id = randomUUID(), content = Buffer.from(name), path = `co-management/${f.actor.tenant}/${id}`;
+    objects.set(path, content);
+    await f.home.table('co_management_conversation_attachments').insert({ tenant: f.actor.tenant, attachment_id: id,
+      customer_tenant: f.ticket.tenant, relationship_id: f.ticket.relationshipId ?? null, ticket_id: f.ticket.ticketId,
+      thread_id: f.message.threadId, comment_id: f.message.commentId, actor_tenant: f.actor.tenant, actor_user_id: f.actor.userId,
+      file_name: `${name}.txt`, mime_type: 'text/plain', file_size: content.length, content_hash: createHash('sha256').update(content).digest('hex'),
+      request_hash: 'a'.repeat(64), storage_path: path, status: 'ready', ready_at: db.fn.now() });
+    files.push({ id, content, path });
+  }
+  return { ...f, files, storage, objects };
+}
+
+it.each([false, true])('selective conversation share files copy only explicit bytes and publish independent destination attachments (native=%s)', async native => {
+  const f = await namedShareFilesFixture(native), api = f.conversations;
+  const { prepareNamedConversationPublicationFiles: prepareFiles } = await import('../../../../packages/co-managed/src/namedConversationPublicationFiles');
+  const { downloadNamedConversationAttachment: download } = await import('../../../../packages/co-managed/src/namedConversationAttachments');
+  const { applyNamedTicketConversationPost: apply } = await import('../../../../packages/tickets/src/lib/postNamedTicketConversation');
+  const destination = await api.createNamedTicketConversation(db, f.actor, f.ticket,
+    { operationId: randomUUID(), name: 'Shared file destination', audience: native ? 'organization_private' : 'shared_it', transport: 'internal' });
+  const ref = { storeTenant: destination.storeTenant, conversationId: destination.conversationId };
+  const request = { ...f.request, attachments: [{ attachmentId: f.files[0].id }] };
+  const draft = await f.share(db, f.actor, f.ticket, ref, request, f.storage);
+  expect(draft?.attachments).toHaveLength(1);
+  const editorFile = draft!.attachments[0];
+  expect(editorFile).toMatchObject({ fileName: 'Selected report.txt', size: f.files[0].content.length });
+  expect(editorFile.attachmentId).not.toBe(f.files[0].id);
+  expect(f.storage.download).toHaveBeenCalledTimes(1);
+  expect(f.storage.download).toHaveBeenCalledWith(f.files[0].path);
+  expect(f.storage.upload).toHaveBeenCalledTimes(1);
+  expect(await f.share(db, f.actor, f.ticket, ref, request, f.storage)).toEqual(draft);
+  expect(f.storage.upload).toHaveBeenCalledTimes(1);
+  expect((await api.getNamedTicketConversationMessages(db, f.actor, f.ticket, ref)).items).toEqual([]);
+  const post = { operationId: randomUUID(), expectedConversationRevision: 1, expectedDraftRevision: 1 };
+  await prepareFiles(db, f.actor, f.ticket, ref, post, 'post', f.storage);
+  const receipt = await api.postNamedTicketConversationDraft(db, f.actor, f.ticket, ref, post, apply);
+  const page = await api.getNamedTicketConversationMessages(db, f.actor, f.ticket, ref);
+  expect(page.items[0].attachments).toHaveLength(1);
+  const published = page.items[0].attachments![0];
+  expect(published.storeTenant).toBe(ref.storeTenant);
+  expect(published.attachmentId).not.toBe(editorFile.attachmentId);
+  expect(published.attachmentId).not.toBe(f.files[0].id);
+  expect(JSON.stringify(page)).not.toContain(f.files[1].id);
+  expect(JSON.stringify(page)).not.toContain('Unselected report');
+  const lineage = await f.home.table('ticket_conversation_shares').where('operation_id', request.operationId).first();
+  expect(lineage.attachment_manifest).toEqual([{ sourceAttachmentId: f.files[0].id, editorAttachmentId: editorFile.attachmentId,
+    contentHash: editorFile.contentHash }]);
+  expect(lineage.published_editor_attachment_ids).toEqual([editorFile.attachmentId]);
+  await f.home.table('co_management_conversation_attachments').whereIn('attachment_id', [f.files[0].id, editorFile.attachmentId]).update({ discarded_at: db.fn.now() });
+  f.objects.delete(f.files[0].path); f.objects.delete(`co-management/${f.actor.tenant}/${editorFile.attachmentId}`);
+  const bytes = await download(db, f.actor, f.ticket, ref,
+    { commentId: receipt.commentId, threadId: receipt.threadId, attachmentId: published.attachmentId }, f.storage.download);
+  expect(Buffer.from(bytes.content)).toEqual(f.files[0].content);
+});
+
+it('selective conversation share files preserve existing drafts across lost upload acknowledgments and reject unrelated or changed source bytes', async () => {
+  const f = await namedShareFilesFixture();
+  await f.conversations.saveNamedConversationEditorDraft(db, f.actor, f.ticket, f.ref, { operationId: randomUUID(), expectedRevision: 0,
+    expectedConversationRevision: 1, content: { text: 'Keep this unfinished work' } });
+  const request = { ...f.request, expectedDraftRevision: 1, replaceExisting: true, attachments: [{ attachmentId: f.files[0].id }] };
+  f.storage.upload.mockImplementationOnce(async (_tenant, path, bytes) => { f.objects.set(path, Buffer.from(bytes)); throw new Error('Upload acknowledgment lost'); });
+  await expect(f.share(db, f.actor, f.ticket, f.ref, request, f.storage)).rejects.toThrow('Upload acknowledgment lost');
+  expect(await f.draftRow()).toMatchObject({ content: { text: 'Keep this unfinished work' }, revision: 1, provenance: null });
+  expect(await f.home.table('ticket_conversation_shares').where('operation_id', request.operationId)).toEqual([]);
+  const pending = await f.home.table('co_management_conversation_attachments').where('named_editor_conversation_id', f.ref.conversationId).first();
+  expect(pending).toMatchObject({ status: 'pending', actor_user_id: f.actor.userId });
+  const prepared = await f.share(db, f.actor, f.ticket, f.ref, request, f.storage);
+  expect(prepared).toMatchObject({ revision: 2, content: { text: 'Selected diagnosis' }, attachments: [{ attachmentId: pending.attachment_id }] });
+  const unrelated = { ...request, operationId: randomUUID(), expectedDraftRevision: 2, attachments: [{ attachmentId: randomUUID() }] };
+  f.storage.download.mockClear();
+  await expect(f.share(db, f.actor, f.ticket, f.ref, unrelated, f.storage)).rejects.toThrow();
+  expect(f.storage.download).not.toHaveBeenCalled();
+  f.objects.set(f.files[1].path, Buffer.from('Changed source bytes'));
+  await expect(f.share(db, f.actor, f.ticket, f.ref, { ...unrelated, attachments: [{ attachmentId: f.files[1].id }] }, f.storage))
+    .rejects.toMatchObject({ code: 'ATTACHMENT_CONTENT_MISMATCH' });
+  expect((await f.draftRow()).revision).toBe(2);
+});
+
+it('selective conversation share scheduled publication rechecks its source before any delayed external delivery', async () => withNamedRequesterInboundFixture(async f => {
+  const api = await import('../../../../packages/co-managed/src/namedTicketConversations');
+  const email = await import('../../../../packages/co-managed/src/conversationEmailOperations');
+  const { prepareNamedConversationShare: share } = await import('../../../../packages/tickets/src/lib/prepareNamedConversationShare');
+  const { postNamedTicketConversation: post, applyNamedTicketConversationPost: apply } = await import('../../../../packages/tickets/src/lib/postNamedTicketConversation');
+  await f.customer.table('tenants').update({ product_code: 'psa' });
+  const ticket = { tenant: f.ticket.tenant, ticketId: f.ticket.ticketId }, actor = f.customerPrincipal;
+  const source = await api.createNamedTicketConversation(db, actor, ticket,
+    { operationId: randomUUID(), name: 'Private scheduling source', audience: 'organization_private', transport: 'internal' });
+  const sourceRef = { storeTenant: source.storeTenant, conversationId: source.conversationId };
+  await api.saveNamedConversationEditorDraft(db, actor, ticket, sourceRef,
+    { operationId: randomUUID(), expectedRevision: 0, expectedConversationRevision: 1, content: { text: 'Selected private diagnosis' } });
+  const original = await post(db, actor, ticket, sourceRef, { operationId: randomUUID(), expectedDraftRevision: 1, expectedConversationRevision: 1 });
+  const previous = await api.getNamedConversationEditorDraft(db, actor, ticket, f.ref);
+  const operationId = randomUUID();
+  const copied = await share(db, actor, ticket, f.ref, { operationId, source: sourceRef,
+    commentId: original.commentId, threadId: original.threadId, expectedDraftRevision: previous?.revision ?? 0,
+    expectedConversationRevision: 2, replaceExisting: true, quote: false });
+  const draft = await api.saveNamedConversationEditorDraft(db, actor, ticket, f.ref, { operationId: randomUUID(), expectedRevision: copied!.revision,
+    expectedConversationRevision: 2, content: { text: 'Reviewed requester update' },
+    publicationOptions: { schedule: { at: new Date(Date.now() + 60000).toISOString(), timeZone: 'UTC' } },
+    email: { subject: 'Scheduled shared update', to: ['recipient@example.test'], cc: [] } });
+  const request = { operationId: randomUUID(), expectedDraftRevision: draft.revision, expectedConversationRevision: 2 };
+  const review = await email.prepareNamedConversationEmail(db, actor, ticket, f.ref, request, f.transport);
+  expect(await email.confirmNamedConversationEmail(db, actor, ticket, f.ref, request.operationId, review.review.messageHash, f.transport, apply))
+    .toMatchObject({ status: 'scheduled' });
+  expect(await f.customer.table('ticket_conversation_publications').where('operation_id', request.operationId).first())
+    .toMatchObject({ share_operation_id: operationId });
+  const payload = (await f.customer.table('ticket_conversation_email_operations').where('operation_id', request.operationId).first()).payload;
+  expect(JSON.stringify(payload)).not.toContain(original.commentId);
+  expect(JSON.stringify(payload)).not.toContain('Private scheduling source');
+  await f.customer.table('comments').where('comment_id', request.operationId).update({ scheduled_publish_at: new Date(0) });
+  await f.customer.table('comments').where('comment_id', original.commentId).update({ deleted_at: db.fn.now() });
+  const outgoing = await import('../../../../packages/tickets/src/lib/namedConversationEmail');
+  const savedTransport = { ...outgoing.namedConversationEmailTransport };
+  Object.assign(outgoing.namedConversationEmailTransport, f.transport); f.transport.send.mockClear();
+  try {
+    const { publishScheduledConversationEmail: publish } = await import('../../../../packages/tickets/src/lib/publishScheduledConversationEmail');
+    const input = { tenantId: ticket.tenant, ticketId: ticket.ticketId, commentId: request.operationId };
+    await expect(publish(db, input)).rejects.toMatchObject({ code: 'CONVERSATION_FORBIDDEN' });
+    expect(f.transport.send).not.toHaveBeenCalled();
+    expect(await f.customer.table('comments').where('comment_id', request.operationId).first()).toMatchObject({ publish_state: 'scheduled' });
+    await f.customer.table('comments').where('comment_id', original.commentId).update({ deleted_at: null });
+    expect(await publish(db, input)).toBe(true);
+    expect(f.transport.send).toHaveBeenCalledOnce();
+    expect(await f.customer.table('comments').where('comment_id', request.operationId).first()).toMatchObject({ publish_state: 'published' });
+  } finally { Object.assign(outgoing.namedConversationEmailTransport, savedTransport); }
+}));
+
+it('selective conversation share lineage records final deselection without requiring a removed source file for a text-only post', async () => {
+  const f = await namedShareFilesFixture();
+  const { prepareNamedConversationPublicationFiles: prepareFiles } = await import('../../../../packages/co-managed/src/namedConversationPublicationFiles');
+  const { applyNamedTicketConversationPost: apply } = await import('../../../../packages/tickets/src/lib/postNamedTicketConversation');
+  const side = await f.conversations.createNamedTicketConversation(db, f.actor, f.ticket,
+    { operationId: randomUUID(), name: 'Final review', audience: 'shared_it', transport: 'internal' });
+  const ref = { storeTenant: side.storeTenant, conversationId: side.conversationId };
+  const request = { ...f.request, attachments: [{ attachmentId: f.files[0].id }] };
+  await f.share(db, f.actor, f.ticket, ref, request, f.storage);
+  await f.conversations.saveNamedConversationEditorDraft(db, f.actor, f.ticket, ref, { operationId: randomUUID(), expectedRevision: 1,
+    expectedConversationRevision: 1, content: { text: 'Reviewed text without a file' }, attachments: [] });
+  await f.home.table('co_management_conversation_attachments').where('attachment_id', f.files[0].id).update({ discarded_at: db.fn.now() });
+  const post = { operationId: randomUUID(), expectedConversationRevision: 1, expectedDraftRevision: 2 };
+  f.storage.download.mockClear(); f.storage.upload.mockClear();
+  await prepareFiles(db, f.actor, f.ticket, ref, post, 'post', f.storage);
+  await f.conversations.postNamedTicketConversationDraft(db, f.actor, f.ticket, ref, post, apply);
+  expect(f.storage.download).not.toHaveBeenCalled(); expect(f.storage.upload).not.toHaveBeenCalled();
+  expect((await f.conversations.getNamedTicketConversationMessages(db, f.actor, f.ticket, ref)).items[0].attachments).toEqual([]);
+  expect(await f.home.table('ticket_conversation_shares').where('operation_id', request.operationId).first())
+    .toMatchObject({ published_editor_attachment_ids: [] });
 });

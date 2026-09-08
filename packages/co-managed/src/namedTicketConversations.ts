@@ -417,6 +417,8 @@ function publishNamedTicketConversationDraft(db: Knex, actor: CoManagedSessionAc
     const threadId = parent?.threadId ?? request.operationId;
     if (parent) await assertConversationReplyParent(context, conversation, parent);
     await assertNamedConversationPublicationFiles({ ...context, conversation, scope: { trx, ticket: context.ticket, storeTenant: reference.storeTenant } }, draft, request, mode);
+    const { retainNamedConversationSharePublication } = await import('./namedConversationShares');
+    const shareOperationId = await retainNamedConversationSharePublication({ ...context, conversation }, draft, { commentId: request.operationId, threadId });
     if (privateStore) {
       await mutateCoManagedPrivateTicketComment(trx, context.actor,
         { kind: 'ticket', tenant: context.ticket.tenant, id: context.ticket.ticketId, relationshipId: context.ticket.relationshipId! },
@@ -450,7 +452,7 @@ function publishNamedTicketConversationDraft(db: Knex, actor: CoManagedSessionAc
       operation_id: request.operationId, conversation_id: reference.conversationId, ticket_tenant: context.ticket.tenant,
       ticket_id: context.ticket.ticketId, actor_tenant: context.actor.tenant, actor_user_id: context.actor.userId,
       publication_options: publicationOptions ? JSON.stringify(publicationOptions) : null,
-      request_hash: hash, mode, thread_id: threadId, comment_id: request.operationId }).returning('*');
+      request_hash: hash, mode, thread_id: threadId, comment_id: request.operationId, share_operation_id: shareOperationId ?? null }).returning('*');
     return receipt(saved);
   });
 }

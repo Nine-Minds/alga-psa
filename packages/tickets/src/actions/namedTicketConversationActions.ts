@@ -39,6 +39,19 @@ export const saveNamedConversationEditorDraftAction = withAuth(async (user, { te
   return saveNamedConversationEditorDraft(knex, actor, ticket, conversation, request);
 });
 
+export const prepareNamedConversationShareAction = withAuth(async (user, { tenant }, ticket: ConversationTicketReference,
+  destination: TicketConversationReference, request: import('../lib/prepareNamedConversationShare').NamedConversationShareRequest) => {
+  const actor = await coManagedBrowserActor(user, tenant), { knex } = await createTenantKnex(tenant);
+  const { prepareNamedConversationShare } = await import('../lib/prepareNamedConversationShare');
+  return prepareNamedConversationShare(knex, actor, ticket, destination, request);
+});
+export const getNamedConversationShareSourceLinkAction = withAuth(async (user, { tenant }, ticket: ConversationTicketReference,
+  conversation: TicketConversationReference, message: { commentId: string; threadId: string }) => {
+  const actor = await coManagedBrowserActor(user, tenant), { knex } = await createTenantKnex(tenant);
+  const { getNamedConversationShareSourceLink } = await import('@alga-psa/co-managed');
+  return getNamedConversationShareSourceLink(knex, actor, ticket, conversation, message);
+});
+
 export const getNamedTicketConversationMessagesAction = withAuth(async (user, { tenant }, ticket: ConversationTicketReference,
   conversation: TicketConversationReference, before?: CoManagedConversationCursor, messageId?: string) => {
   const actor = await coManagedBrowserActor(user, tenant), { knex } = await createTenantKnex(tenant);

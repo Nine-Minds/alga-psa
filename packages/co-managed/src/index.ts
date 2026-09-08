@@ -107,3 +107,7 @@ export { recoverNamedConversationAttention } from './namedConversationNotificati
 export { recoverNamedConversationEmailNotifications } from './commentEmailDeliveries';
 
 export { enqueueNativeTicketCommentEmails } from './customerEmailDeliveries';
+
+export { readNamedConversationShareSource, retainNamedConversationShareDraft, getNamedConversationShareSourceLink, assertScheduledConversationShareSource, type NamedConversationShareProvenance, type NamedConversationShareSource } from './namedConversationShares';
+
+export { prepareNamedConversationShareFiles, assertNamedConversationShareFiles } from './namedConversationShareFiles';
