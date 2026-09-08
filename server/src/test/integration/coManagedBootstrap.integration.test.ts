@@ -2968,6 +2968,36 @@ async function withPolicyActionFixture(work: (fixture: Awaited<ReturnType<typeof
   } finally { spy.mockRestore(); }
 }
 
+it('co-managed admins cannot configure Teams or telephony through direct actions or EE availability', async () => withPolicyActionFixture(async f => {
+  const adminDb = await import('@alga-psa/db/admin'), secrets = await import('@alga-psa/core/secrets');
+  const adminConnection = vi.spyOn(adminDb, 'getAdminConnection').mockResolvedValue(db);
+  const secretProvider = vi.spyOn(secrets, 'getSecretProviderInstance');
+  const oldEdition = process.env.EDITION; process.env.EDITION = 'ee';
+  try {
+    const teams = await import('../../../../packages/integrations/src/actions/integrations/teamsActions');
+    const telephony = await import('../../../../packages/integrations/src/actions/integrations/telephonyActions');
+    const availability = await import('../../../../packages/integrations/src/lib/teamsAvailability');
+    const ee = await import('../../../../ee/packages/microsoft-teams/src/lib/teams/teamsAvailability');
+    const realAuth = await import('../../../../packages/auth/src/lib/apiKeyUserContext');
+    const user = await f.customer.table('users').where('user_id', f.actor.userId).first();
+    const expected = { enabled: false, reason: 'product_unavailable' };
+    expect(await availability.getTeamsAvailability({ tenantId: f.actor.tenant })).toMatchObject(expected);
+    expect(await ee.getTeamsAvailability({ tenantId: f.actor.tenant })).toMatchObject(expected);
+    for (const call of [
+      () => teams.saveTeamsIntegrationSettings({} as any),
+      () => teams.getTeamsIntegrationStatus(),
+      () => telephony.setTelephonyProviderEnabled({ provider: 'teams_phone', enabled: true }),
+      () => telephony.setTelephonyAutoTicketPolicy({ provider: 'teams_phone', autoCreateTickets: true }),
+    ]) expect(await f.asActor(f.actor, () => realAuth.runWithApiKeyUser(user, call))).toMatchObject({ success: false, error: expect.stringContaining('not available for this product') });
+    expect(secretProvider).not.toHaveBeenCalled();
+    expect(await availability.getTeamsAvailability({ tenantId: f.operation.tenant })).toEqual({ enabled: true, reason: 'enabled' });
+    expect(await ee.getTeamsAvailability({ tenantId: f.operation.tenant })).toEqual({ enabled: true, reason: 'enabled' });
+  } finally {
+    secretProvider.mockRestore(); adminConnection.mockRestore();
+    if (oldEdition === undefined) delete process.env.EDITION; else process.env.EDITION = oldEdition;
+  }
+}));
+
 it('co-managed admins cannot invoke excluded RMM actions or background engines despite settings permission', async () => withPolicyActionFixture(async f => {
   const adminDb = await import('@alga-psa/db/admin'), secrets = await import('@alga-psa/core/secrets');
   const adminConnection = vi.spyOn(adminDb, 'getAdminConnection').mockResolvedValue(db);

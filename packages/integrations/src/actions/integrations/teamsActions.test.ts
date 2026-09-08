@@ -1,3 +1,5 @@
+vi.mock('@shared/services/productAccessGuard', () => ({ assertPsaOnlyTenantAccess: vi.fn(async () => undefined), ProductAccessError: class extends Error {} }));
+
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';

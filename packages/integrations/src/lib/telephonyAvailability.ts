@@ -1,4 +1,5 @@
-import { resolveTelephonyAvailability } from './telephonyAvailabilityCore';
+import { assertPsaOnlyTenantAccess, ProductAccessError } from '@shared/services/productAccessGuard';
+import { resolveTelephonyAvailability, disabledTelephonyAvailability } from './telephonyAvailabilityCore';
 import type {
   GetTelephonyAvailabilityInput,
   TelephonyAvailability,
@@ -19,5 +20,12 @@ export type {
 export async function getTelephonyAvailability(
   input: GetTelephonyAvailabilityInput = {},
 ): Promise<TelephonyAvailability> {
-  return resolveTelephonyAvailability(input);
+  const availability = resolveTelephonyAvailability(input);
+  if (!availability.enabled || !input.tenantId?.trim()) return availability;
+  try { await assertPsaOnlyTenantAccess(input.tenantId, 'telephony_integration'); }
+  catch (error) {
+    if (error instanceof ProductAccessError) return disabledTelephonyAvailability('product_unavailable');
+    throw error;
+  }
+  return availability;
 }

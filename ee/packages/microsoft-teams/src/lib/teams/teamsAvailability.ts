@@ -1,7 +1,9 @@
+import { assertPsaOnlyTenantAccess, ProductAccessError } from '@shared/services/productAccessGuard';
 export type TeamsAvailabilityDisabledReason =
   | 'ce_unavailable'
   | 'tenant_not_configured'
-  | 'feature_disabled';
+  | 'feature_disabled'
+  | 'product_unavailable';
 
 export type TeamsAvailability =
   | {
@@ -32,6 +34,7 @@ export const TEAMS_AVAILABILITY_MESSAGES: Record<TeamsAvailabilityDisabledReason
   ce_unavailable: 'Microsoft Teams integration is only available in Enterprise Edition.',
   tenant_not_configured: 'Microsoft Teams integration requires tenant context.',
   feature_disabled: 'Microsoft Teams integration is not enabled for this tenant.',
+  product_unavailable: 'Microsoft Teams integration is not available for this product.',
 };
 
 export function isTeamsEnterpriseEdition(env: NodeJS.ProcessEnv = process.env): boolean {
@@ -66,5 +69,12 @@ export function resolveTeamsAvailability(input: ResolveTeamsAvailabilityInput = 
 }
 
 export async function getTeamsAvailability(input: GetTeamsAvailabilityInput = {}): Promise<TeamsAvailability> {
-  return resolveTeamsAvailability(input);
+  const availability = resolveTeamsAvailability(input);
+  if (!availability.enabled || !input.tenantId?.trim()) return availability;
+  try { await assertPsaOnlyTenantAccess(input.tenantId, 'teams_integration'); }
+  catch (error) {
+    if (error instanceof ProductAccessError) return disabledAvailability('product_unavailable');
+    throw error;
+  }
+  return availability;
 }

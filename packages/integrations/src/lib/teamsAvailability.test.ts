@@ -1,6 +1,8 @@
+vi.mock('@shared/services/productAccessGuard', async importOriginal => ({ ...await importOriginal<typeof import('@shared/services/productAccessGuard')>(), assertPsaOnlyTenantAccess: vi.fn(async () => undefined) }));
+import { assertPsaOnlyTenantAccess, ProductAccessError } from '@shared/services/productAccessGuard';
 import fs from 'node:fs';
 import path from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { getTeamsAvailability, resolveTeamsAvailability } from './teamsAvailability';
 
@@ -44,4 +46,16 @@ describe('teamsAvailability', () => {
     expect(clientSafeSource).toContain('export function resolveTeamsAvailability');
     expect(serverSource).toContain('export async function getTeamsAvailability');
   });
+});
+
+// Product admission remains independent of the presentation release flag.
+afterEach(() => { vi.mocked(assertPsaOnlyTenantAccess).mockReset().mockResolvedValue(undefined); });
+it('rejects an excluded product before exposing integration availability', async () => {
+  vi.mocked(assertPsaOnlyTenantAccess).mockRejectedValue(new ProductAccessError('teams_integration', 'co_managed'));
+  await expect(getTeamsAvailability({ isEnterpriseEdition: true, tenantId: 'customer' })).resolves.toMatchObject({ enabled: false, reason: 'product_unavailable' });
+  expect(assertPsaOnlyTenantAccess).toHaveBeenCalledWith('customer', 'teams_integration');
+});
+it('does not convert database admission failure into enabled availability', async () => {
+  vi.mocked(assertPsaOnlyTenantAccess).mockRejectedValue(new Error('Unavailable database'));
+  await expect(getTeamsAvailability({ isEnterpriseEdition: true, tenantId: 'customer' })).rejects.toThrow('Unavailable database');
 });
