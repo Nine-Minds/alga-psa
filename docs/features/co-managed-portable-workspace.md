@@ -38,14 +38,20 @@ Referenced native files and legacy documents with a storage path are streamed in
 
 Provider reads happen outside database transactions. Before returning the staging lease, the collector repeats source selection and authority checks and rejects a changed snapshot. Failures remove staged files. The trusted archive assembler must call the lease's `dispose()` in `finally`; temporary filesystem paths must never be returned to a browser. The portable component contains blob identities, sizes, names, MIME types, checksums and document bindings, without provider buckets or storage paths.
 
-This stages bytes for the archive; it does not yet publish a downloadable backup or insert files into a destination. Conversation-specific attachment stores, other inline/media references, archive-wide authenticated integrity and coordinated capture remain part of the full package work.
+This stages bytes for the archive; it does not yet publish a downloadable backup or insert files into a destination. Other inline/media references, archive-wide authenticated integrity and coordinated capture remain part of the full package work.
+
+## Published conversation files
+
+`portableConversationExport.ts` selects ready customer-owned files attached to published canonical ticket comments. It uses the existing published-attachment query and purpose-specific path validation, retains the actual ticket/comment/root and read permissions, and preserves each attachment's thread, audience and qualified author. A surviving reply can retain its file when the root is a soft-deleted tombstone. Pending/unpublished uploads, discarded/purged files, and MSP-private stores are excluded. Customer-owned published files remain exportable after departure.
+
+The shared `portableBlobStaging.ts` transport handles both document and conversation bytes. Conversation files must match their previously stored SHA-256 as well as their declared size. After streaming, the collector rechecks its source and current authority; failures dispose the lease. The component contains no storage path or live relationship identity. Its restore policy requires converting the bindings to native ticket documents and rewriting file links, without restoring co-management download routes or trust. That destination conversion remains part of the unfinished full restore.
 
 ## Focused validation
 
 From `server/`, run:
 
 ```sh
-SECRETS_PATH=../secrets npm exec -- vitest run src/test/integration/coManagedBootstrap.integration.test.ts -t 'portable workspace core|portable vault export|portable work export|portable document export'
+SECRETS_PATH=../secrets npm exec -- vitest run src/test/integration/coManagedBootstrap.integration.test.ts -t 'portable workspace core|portable vault export|portable work export|portable document export|portable conversation export'
 ```
 
 The selected tests use a disposable schema-only copy of the development database. They cover actual record projections, secret/trust exclusion, saved attribution, reference integrity and customer permission/session denial. The vault cases exercise its audit and post-encryption authority checks. They do not prove a complete isolated workspace restore.

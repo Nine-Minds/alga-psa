@@ -728,3 +728,9 @@ Session licensing checkpoint (2026-09-08): inspection narrowed the suspected edi
 - **Where:** `packages/documents/src/actions/documentActions.ts`, `packages/co-managed/src/portableDocumentExport.ts`.
 - **Gate:** Two callers; high permission-drift cost; existing resolver is stable. Keep network/file transport separate from database authority.
 - **Status:** revised / bounded-now (2026-09-08). Moved the resolver unchanged to `shared/lib/documents/authorizationRecords.ts`, added optional retained association/parent locks for export, and kept native reads on the default behavior. Focused export database checks and existing document authorization wiring checks pass.
+
+## portable-blob-staging — pattern
+- **What:** Document and conversation exports need the same private streamed staging, size/checksum verification, lease and cleanup behavior.
+- **Where:** `packages/co-managed/src/portableDocumentExport.ts`, `packages/co-managed/src/portableConversationExport.ts`.
+- **Gate:** Two callers, high byte-integrity/cleanup cost, stable transport shape. Domain-specific source admission and path ownership remain in their collectors.
+- **Status:** extracted / bounded-now (2026-09-08) into `portableBlobStaging.ts`. Optional expected SHA-256 supports immutable conversation objects; native document streams receive a calculated digest. Four focused source-mode database/real-staging checks pass.

@@ -1,14 +1,8 @@
 import { createHash } from 'node:crypto';
-import { createWriteStream } from 'node:fs';
-import { chmod, mkdtemp, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { Transform } from 'node:stream';
-import { pipeline } from 'node:stream/promises';
 import type { Knex } from 'knex';
 import type { IUser } from '@alga-psa/types';
 import { tenantDb } from '@alga-psa/db';
-import { StorageProviderFactory } from '@alga-psa/storage/StorageProviderFactory';
+import { stageCoManagedPortableBlobs } from './portableBlobStaging';
 import { resolveDocumentAuthorizationRecords } from '@alga-psa/shared/lib/documents/authorizationRecords';
 import { withCoManagedExportAdmin } from './portableExport';
 import { hasCoManagedLocalPermission } from './localPermission';
@@ -126,32 +120,13 @@ export async function exportCoManagedPortableDocuments(db: Knex, inputActor: CoM
   const actor = snapshotCoManagedSessionActor(inputActor);
   if (!isCoManagedUuid(packageId)) throw new CoManagedSharedWorkError();
   const snapshot = await collect(db, actor), original = checksum(snapshot);
-  const directory = await mkdtemp(join(tmpdir(), 'alga-portable-documents-'));
-  const dispose = () => rm(directory, { recursive: true, force: true });
+  const staged = await stageCoManagedPortableBlobs(snapshot.blobs);
   try {
-    await chmod(directory, 0o700);
-    const files: { id: string; path: string; size: number; sha256: string }[] = [];
-    if (snapshot.blobs.length) {
-      const provider = await StorageProviderFactory.createProvider();
-      for (const blob of snapshot.blobs) {
-        let size = 0;
-        const hash = createHash('sha256'), path = join(directory, blob.id.replace(':', '-'));
-        try {
-          const source = await provider.getReadStream(blob.path);
-          await pipeline(source, new Transform({ transform(chunk, _encoding, callback) {
-            size += chunk.length;
-            if (size > blob.size) return callback(new Error('Portable document file size changed'));
-            hash.update(chunk); callback(null, chunk);
-          } }), createWriteStream(path, { flags: 'wx', mode: 0o600 }));
-          if (size !== blob.size) throw new Error('Portable document file size changed');
-        } catch { throw new Error('Portable document file could not be staged'); }
-        files.push({ id: blob.id, path, size, sha256: hash.digest('hex') });
-      }
-    }
+    const { files } = staged;
     if (checksum(await collect(db, actor)) !== original) throw new CoManagedSharedWorkError();
     const payload = JSON.parse(JSON.stringify({ kind: 'alga-workspace-documents', version: 1, packageId, sourceTenant: actor.tenant,
       records: snapshot.records, references: REFERENCES, fileBindings: snapshot.bindings,
       blobs: snapshot.blobs.map(({ path: _path, ...blob }) => ({ ...blob, sha256: files.find(file => file.id === blob.id)!.sha256 })) }));
-    return { component: { ...payload, sha256: checksum(payload) }, files, dispose };
-  } catch (error) { await dispose(); throw error; }
+    return { component: { ...payload, sha256: checksum(payload) }, files, dispose: staged.dispose };
+  } catch (error) { await staged.dispose(); throw error; }
 }

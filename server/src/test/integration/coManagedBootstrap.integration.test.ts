@@ -19805,3 +19805,74 @@ it('portable document export removes staged bytes on short streams, final sessio
   expect(artifactStorage.getReadStream).not.toHaveBeenCalled();
   expect(await f.fs.readdir(f.root)).toEqual([]);
 }));
+
+async function withPortableConversationFileFixture(work: (fixture: any) => Promise<void>) {
+  await withAttachmentFixture(async f => {
+    const fs = await import('node:fs/promises'), os = await import('node:os'), path = await import('node:path');
+    const { Readable } = await import('node:stream');
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'co-managed-conversation-export-test-'));
+    const previousTmp = process.env.TMPDIR; process.env.TMPDIR = root;
+    const { exportCoManagedPortableConversationFiles } = await import('../../../../packages/co-managed/src/portableConversationExport');
+    const sharedRoot = await f.create(f.principal, { operationId: randomUUID(), audience: 'shared_it', text: 'Shared root' });
+    const shared = await f.create(f.principal, { operationId: randomUUID(), parent: attachmentComment(sharedRoot), text: 'Surviving shared reply' });
+    const customerPrivate = await f.create(f.customerPrincipal, { operationId: randomUUID(), audience: 'organization_private', text: 'Customer private message' });
+    const { mutateCoManagedPrivateTicketComment } = await import('../../../../packages/co-managed/src/privateTicketConversation');
+    const mspPrivate = await mutateCoManagedPrivateTicketComment(db, f.principal, f.resource, { operationId: randomUUID(), kind: 'create', text: 'MSP private file message' });
+    const uploaded = [];
+    for (const [comment, actor, name] of [[shared, f.principal, 'shared.txt'], [customerPrivate, f.customerPrincipal, 'customer-private.txt'], [mspPrivate, f.principal, 'msp-private.txt']] as const) {
+      uploaded.push(await f.attachments.uploadCoManagedConversationAttachment(db, actor, f.resource, {
+        attachmentId: randomUUID(), comment: attachmentComment(comment), fileName: name, mimeType: 'text/plain', content: Buffer.from(`Bytes for ${name}`),
+      }, f.upload));
+    }
+    await f.customer.table('comments').where('comment_id', sharedRoot.commentId).update({ deleted_at: new Date() });
+    const pendingId = randomUUID();
+    await expect(f.attachments.uploadCoManagedConversationAttachment(db, f.principal, f.resource, {
+      attachmentId: pendingId, comment: attachmentComment(shared), fileName: 'pending-never-export.txt', mimeType: 'text/plain', content: Buffer.from('Pending bytes'),
+    }, async () => { throw new Error('Interrupted upload'); })).rejects.toThrow('Interrupted upload');
+    const stream = async (source: string) => { const value = f.objects.get(source); if (!value) throw new Error('Unexpected object'); return Readable.from([Buffer.from(value)]); };
+    artifactStorage.getReadStream.mockReset().mockImplementation(stream);
+    const exportFiles = () => exportCoManagedPortableConversationFiles(db, f.customerPrincipal, randomUUID());
+    try { await work({ ...f, fs, root, sharedRoot, shared, customerPrivate, uploaded, stream, exportFiles }); }
+    finally { artifactStorage.getReadStream.mockReset(); if (previousTmp === undefined) delete process.env.TMPDIR; else process.env.TMPDIR = previousTmp; await fs.rm(root, { recursive: true, force: true }); }
+  });
+}
+
+it('portable conversation export preserves published customer/shared files after departure without MSP private or pending uploads', async () => withPortableConversationFileFixture(async f => {
+  await f.customer.table('co_management_relationships').update({ state: 'terminated', ended_at: new Date() });
+  const lease = await f.exportFiles();
+  try {
+    expect(lease.component.attachments.map((row: any) => row.fileName).sort()).toEqual(['customer-private.txt', 'shared.txt']);
+    expect(lease.component.attachments.find((row: any) => row.fileName === 'shared.txt')).toMatchObject({ commentId: f.shared.commentId, threadId: f.shared.threadId,
+      audience: 'shared_it', actorTenant: f.principal.tenant, actorReferenceId: expect.any(String), actorDisplayName: expect.any(String) });
+    expect(lease.component.attachments.find((row: any) => row.fileName === 'customer-private.txt').audience).toBe('organization_private');
+    expect(lease.component.restorePolicy).toEqual({ attachmentStore: 'native_ticket_documents', sponsorship: 'none' });
+    for (const entry of lease.component.attachments) {
+      const file = lease.files.find((row: any) => row.id === entry.blobId);
+      expect(await f.fs.readFile(file.path)).toEqual(Buffer.from(`Bytes for ${entry.fileName}`));
+      expect(file.sha256).toBe(entry.sha256);
+    }
+    const serialized = JSON.stringify(lease.component);
+    for (const excluded of [f.root, 'storage_path', 'co-management/', 'msp-private.txt', 'pending-never-export.txt', 'relationship_id', 'disclosure_operation_id']) expect(serialized).not.toContain(excluded);
+  } finally { await lease.dispose(); }
+  expect(await f.fs.readdir(f.root)).toEqual([]);
+}));
+
+it('portable conversation export verifies stored checksums and removes staged files after parent access or path changes', async () => withPortableConversationFileFixture(async f => {
+  const first = await f.customer.table('co_management_conversation_attachments').where('attachment_id', f.uploaded[0].attachmentId).first();
+  const original = f.objects.get(first.storage_path), changed = Uint8Array.from(original); changed[0] ^= 1;
+  f.objects.set(first.storage_path, changed);
+  await expect(f.exportFiles()).rejects.toThrow('could not be staged');
+  expect(await f.fs.readdir(f.root)).toEqual([]);
+  f.objects.set(first.storage_path, original);
+  artifactStorage.getReadStream.mockImplementation(async (source: string) => {
+    await f.customer.table('comments').where('comment_id', f.shared.commentId).update({ deleted_at: new Date() });
+    return f.stream(source);
+  });
+  await expect(f.exportFiles()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(await f.fs.readdir(f.root)).toEqual([]);
+  await f.customer.table('comments').where('comment_id', f.shared.commentId).update({ deleted_at: null });
+  artifactStorage.getReadStream.mockClear().mockImplementation(f.stream);
+  await f.customer.table('co_management_conversation_attachments').where('attachment_id', first.attachment_id).update({ storage_path: `co-management/${f.principal.tenant}/${first.attachment_id}` });
+  await expect(f.exportFiles()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(artifactStorage.getReadStream).not.toHaveBeenCalled();
+}));
