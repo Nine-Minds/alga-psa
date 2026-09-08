@@ -1,5 +1,5 @@
+import { assertPortableTransferActive, awaitPortableTransfer, createPortableWriteStream, portableTransferSignal } from '../../../../../packages/co-managed/src/portableTransfer';
 import { createHash } from 'node:crypto';
-import { createWriteStream } from 'node:fs';
 import { chmod, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -74,7 +74,7 @@ function identity(config: TeamsMeetingGraphConfig) {
     graph: endpoint(getMicrosoftGraphBaseUrl()), token: endpoint(getMicrosoftTokenUrl(config.microsoftTenantId)) });
 }
 async function currentConfig(tenant: string, sources: { provider: Locator }[], expected?: string) {
-  const config = await resolveTeamsMeetingGraphConfig(tenant);
+  const config = await awaitPortableTransfer(() => resolveTeamsMeetingGraphConfig(tenant));
   if (!config || !config.clientId || !config.clientSecret || !config.microsoftTenantId ||
       sources.some(source => source.provider.microsoftTenantId.toLowerCase() !== config.microsoftTenantId.toLowerCase()) || expected && identity(config) !== expected) throw new Error(FAILURE);
   segment(config.microsoftTenantId);
@@ -83,10 +83,13 @@ async function currentConfig(tenant: string, sources: { provider: Locator }[], e
 
 /** Use the same gated Teams endpoint builders, with redirects disabled for
  * both credential-bearing requests. Error bodies never enter logs or errors. */
+function combinedSignal(local: AbortSignal) {
+  const request = portableTransferSignal(); return request ? AbortSignal.any([local, request]) : local;
+}
 async function tokenFor(config: TeamsMeetingGraphConfig) {
   const abort = new AbortController(), timer = setTimeout(() => abort.abort(), IDLE_MS);
   try {
-    const response = await fetch(endpoint(getMicrosoftTokenUrl(config.microsoftTenantId)), { method: 'POST', redirect: 'error', signal: abort.signal,
+    const response = await fetch(endpoint(getMicrosoftTokenUrl(config.microsoftTenantId)), { method: 'POST', redirect: 'error', signal: combinedSignal(abort.signal),
       headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept-Encoding': 'identity' },
       body: new URLSearchParams({ client_id: config.clientId, client_secret: config.clientSecret, scope: 'https://graph.microsoft.com/.default', grant_type: 'client_credentials' }) });
     if (response.status !== 200 || !response.body) { await response.body?.cancel(); throw new Error(FAILURE); }
@@ -112,7 +115,7 @@ async function stageRemote(source: { artifactId: string; type: 'recording' | 'tr
   try {
     const p = source.provider;
     const url = `${endpoint(getMicrosoftGraphBaseUrl())}/users/${segment(p.organizerUserId)}/onlineMeetings/${segment(p.meetingId)}/${source.type === 'transcript' ? 'transcripts' : 'recordings'}/${segment(p.artifactId)}/content`;
-    const response = await fetch(url, { headers: { Authorization: `Bearer ${token}`, 'Accept-Encoding': 'identity' }, redirect: 'error', signal: abort.signal });
+    const response = await fetch(url, { headers: { Authorization: `Bearer ${token}`, 'Accept-Encoding': 'identity' }, redirect: 'error', signal: combinedSignal(abort.signal) });
     const length = response.headers.get('content-length'), encoding = response.headers.get('content-encoding');
     const expected = length === null ? null : /^\d+$/.test(length) ? Number(length) : NaN;
     if (response.status !== 200 || !response.body || encoding && encoding.toLowerCase() !== 'identity' ||
@@ -124,7 +127,7 @@ async function stageRemote(source: { artifactId: string; type: 'recording' | 'tr
       touch(); size += chunk.length;
       if (size > MAX_FILE || size > remaining || expected !== null && size > expected) return callback(new Error(FAILURE));
       hash.update(chunk); callback(null, chunk);
-    } }), createWriteStream(path, { flags: 'wx', mode: 0o600 }), { signal: abort.signal });
+    } }), createPortableWriteStream(path), { signal: combinedSignal(abort.signal) });
     if (expected !== null && size !== expected) throw new Error(FAILURE);
     return { id, path, size, sha256: hash.digest('hex') };
   } finally { clearTimeout(timer); abort.abort(); }
@@ -132,6 +135,7 @@ async function stageRemote(source: { artifactId: string; type: 'recording' | 'tr
 
 export async function exportCoManagedPortableRemoteMeetingFiles(db: Knex, inputActor: CoManagedSessionActor, packageId: string, databaseSnapshot?: CoManagedPortableSnapshot) {
   if (db.isTransaction) throw new Error('Portable export requires a root database connection');
+  assertPortableTransferActive();
   const actor = snapshotCoManagedSessionActor(inputActor);
   if (!isCoManagedUuid(packageId)) throw new CoManagedSharedWorkError();
   const snapshot = await collect(db, actor, databaseSnapshot), original = digest(snapshot);

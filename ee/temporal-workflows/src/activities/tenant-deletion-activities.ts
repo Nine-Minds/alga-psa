@@ -403,6 +403,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'co_managed_archive_manifests',
   'tenant_license_state',
   'co_managed_independent_upgrades',
+  'portable_workspace_restores',
   'co_managed_upgrade_purchases',
   'co_management_notification_deliveries',
   'co_management_in_app_receipts',

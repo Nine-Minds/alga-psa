@@ -52,6 +52,9 @@ export async function getTenantSelfHostLicenseState(tenant: string, connection?:
   if (await db.schema.hasTable('co_managed_independent_upgrades') &&
       await tenantDb(db, tenant).table('co_managed_independent_upgrades').where('entitlement_source', 'tenant_license').first('operation_id'))
     return { edition_choice: 'ee', trial_started_at: null, license_token: null, license_scope: 'tenant' };
+  if (await db.schema.hasTable('portable_workspace_restores') &&
+      await tenantDb(db, tenant).table('portable_workspace_restores').first('tenant'))
+    return { edition_choice: 'ee', trial_started_at: null, license_token: null, license_scope: 'tenant' };
   // Retain legacy installation licensing for tenants without an independent row.
   return await db<LicenseStateRow>('license_state').orderBy('id').first() ?? null;
 }
@@ -66,6 +69,7 @@ export async function getTenantLicenseManagementScope(db: Knex, tenant: string):
   if (workspace.product_code === 'co_managed') return 'tenant';
   if (await db.schema.hasTable('tenant_license_state') && await owner.table('tenant_license_state').first('tenant')) return 'tenant';
   if (await db.schema.hasTable('co_managed_independent_upgrades') && await owner.table('co_managed_independent_upgrades').first('operation_id')) return 'tenant';
+  if (await db.schema.hasTable('portable_workspace_restores') && await owner.table('portable_workspace_restores').first('tenant')) return 'tenant';
   return 'installation';
 }
 

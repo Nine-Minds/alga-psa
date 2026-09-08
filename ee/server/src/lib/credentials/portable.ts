@@ -1,4 +1,5 @@
 import { createCipheriv, createDecipheriv, randomBytes, scrypt } from 'node:crypto';
+import { assertPortableTransferActive, awaitPortableTransfer } from '../../../../../packages/co-managed/src/portableTransfer';
 import {
   decryptCredentialValue, encryptCredentialValues, isCredentialEncryptionScheme,
   type EncryptedCredentialValues,
@@ -107,11 +108,12 @@ export async function sealPortableCredentialVault(
     const values: PlainCredential[] = [];
     let size = 2;
     for (const row of snapshot) {
+      assertPortableTransferActive();
       if (!isCredentialEncryptionScheme(row.scheme)) invalid();
       const value = {
         credentialId: row.credentialId,
-        password: await decryptCredentialValue(row.passwordCiphertext, row.scheme),
-        otpSecret: await decryptCredentialValue(row.otpSecretCiphertext, row.scheme),
+        password: await awaitPortableTransfer(() => decryptCredentialValue(row.passwordCiphertext, row.scheme)),
+        otpSecret: await awaitPortableTransfer(() => decryptCredentialValue(row.otpSecretCiphertext, row.scheme)),
       };
       size += Buffer.byteLength(JSON.stringify(value), 'utf8') + 1;
       if (size > MAX_BYTES) invalid();
@@ -179,7 +181,7 @@ export async function restorePortableCredentialVault(
     if (expected.size !== 0) invalid();
     const restored: StoredPortableCredential[] = [];
     for (const value of values as PlainCredential[]) {
-      restored.push({ credentialId: value.credentialId, ...await encryptCredentialValues(value) });
+      restored.push({ credentialId: value.credentialId, ...await awaitPortableTransfer(() => encryptCredentialValues(value)) });
     }
     return restored;
   } catch {

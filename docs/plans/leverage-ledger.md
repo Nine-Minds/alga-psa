@@ -739,3 +739,10 @@ Session licensing checkpoint (2026-09-08): inspection narrowed the suspected edi
 - **What:** strict portable table/column rosters, composite identities and parent references repeated across core, work and documents, with two incoming collectors.
 - **Gate:** three stable existing sites; inconsistent validation admits malformed archives. ACT / bounded-now: a pure internal validator, without authorization, provider I/O or transaction orchestration.
 - **Status:** extracted into `portableRecordValidation.ts`; core/work/document callers migrated. Domain conversation/source checks stay local. The assembler can require cross-section parents using the same reference engine. Five direct tests and six actual PostgreSQL collector regressions pass; authenticated archive assembly and restore remain separate work.
+
+
+## portable-transfer-resource-context — pattern
+- **What:** Native staging, remote capture, encryption and extraction need one cancellation and temporary-write budget per operation.
+- **Where:** portableBlobStaging, portableArchive, portableRemoteMeetingExport, credential portable envelope and workspace coordinators.
+- **Gate:** Repeated streaming boundaries share stable byte/deadline admission; missing a check risks retaining sensitive staging or exhausting disk. ACT / bounded-now.
+- **Status:** extracted into portableTransfer; provider upload cancellation and durable crash cleanup remain distinct lifecycle work.

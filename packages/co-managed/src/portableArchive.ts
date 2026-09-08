@@ -1,5 +1,6 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes, randomUUID, scrypt } from 'node:crypto';
-import { constants, createWriteStream } from 'node:fs';
+import { constants } from 'node:fs';
+import { assertPortableTransferActive, createPortableWriteStream, portableTransferSignal, writePortableBytes } from './portableTransfer';
 import { chmod, mkdtemp, open, rename, rm, type FileHandle } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { isAbsolute, join } from 'node:path';
@@ -16,7 +17,7 @@ const MAX_CONTAINER = 1024 ** 4;
 const MAX_FRAMES = Math.ceil(MAX_CONTAINER / FRAME_BYTES) + 1;
 const MAX_ARCHIVE = HEADER_BYTES + MAX_CONTAINER + MAX_FRAMES * 21;
 const FORMAT = 'alga-workspace-archive';
-export const PORTABLE_ARCHIVE_LIMITS = Object.freeze({ metadataBytes: MAX_METADATA, blobBytes: MAX_BLOB, totalBytes: MAX_CONTAINER, blobs: 100_000, frameBytes: FRAME_BYTES, metadataDepth: 128 });
+export const PORTABLE_ARCHIVE_LIMITS = Object.freeze({ archiveBytes: MAX_ARCHIVE, metadataBytes: MAX_METADATA, blobBytes: MAX_BLOB, totalBytes: MAX_CONTAINER, blobs: 100_000, frameBytes: FRAME_BYTES, metadataDepth: 128 });
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const BLOB_ID = /^[a-z][a-z_]{0,31}:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
 const HASH = /^[0-9a-f]{64}$/;
@@ -120,12 +121,11 @@ async function regularFile(path: string, maxBytes: number) {
 }
 async function readAt(file: FileHandle, size: number, position: number): Promise<Buffer> {
   const result = Buffer.alloc(size); let offset = 0;
-  while (offset < size) { const { bytesRead } = await file.read(result, offset, size - offset, position + offset); if (!bytesRead) invalid(); offset += bytesRead; }
+  while (offset < size) { assertPortableTransferActive(); const { bytesRead } = await file.read(result, offset, size - offset, position + offset); if (!bytesRead) invalid(); offset += bytesRead; }
   return result;
 }
 async function writeAll(file: FileHandle, bytes: Buffer) {
-  let offset = 0;
-  while (offset < bytes.length) { const { bytesWritten } = await file.write(bytes, offset, bytes.length - offset); if (!bytesWritten) invalid(); offset += bytesWritten; }
+  return writePortableBytes(file, bytes);
 }
 function frameContext(header: Buffer, index: number, final: boolean, size: number) {
   if (!Number.isInteger(index) || index < 0 || index >= MAX_FRAMES || index > 0xffffffff || size > FRAME_BYTES || size < 0 || final !== (size === 0)) invalid();
@@ -162,6 +162,7 @@ async function* encryptFrames(source: AsyncIterable<Buffer>, key: Buffer, header
 export async function sealPortableArchive(input: { context: PortableArchiveContext; manifest: Record<string, unknown>; files: readonly PortableStagedBlob[] }, passphrase: string) {
   let key: Buffer | undefined, metadata: Buffer | undefined, lease: Awaited<ReturnType<typeof privateDirectory>> | undefined;
   try {
+    assertPortableTransferActive();
     const context = contextCopy(input.context);
     if (!object(input.manifest) || !Array.isArray(input.files) || input.files.length > 100_000) invalid();
     const files = input.files.map(row => ({ id: row.id, path: row.path, size: row.size, sha256: row.sha256 }));
@@ -189,7 +190,7 @@ export async function sealPortableArchive(input: { context: PortableArchiveConte
     let size = 0; const hash = createHash('sha256');
     await pipeline(encryptFrames(plaintext(), key, header), new Transform({ transform(chunk, _encoding, callback) {
       size += chunk.length; if (size > MAX_ARCHIVE) return callback(new Error(MESSAGE)); hash.update(chunk); callback(null, chunk);
-    } }), createWriteStream(partial, { flags: 'wx', mode: 0o600 }));
+    } }), createPortableWriteStream(partial), { signal: portableTransferSignal() });
     await rename(partial, path);
     return { context, path, size, sha256: hash.digest('hex'), dispose: lease.dispose };
   } catch { if (lease) await lease.dispose().catch(() => {}); return invalid(); }
@@ -204,6 +205,7 @@ export async function openPortableArchive(path: string, passphrase: string, expe
   let quarantine: FileHandle | undefined, lease: Awaited<ReturnType<typeof privateDirectory>> | undefined;
   try {
     const expected = expectedContext ? contextCopy(expectedContext) : undefined;
+    assertPortableTransferActive();
     source = await regularFile(path, MAX_ARCHIVE);
     if (source.size < HEADER_BYTES + 21) invalid();
     const header = await readAt(source.file, HEADER_BYTES, 0);
@@ -244,12 +246,12 @@ export async function openPortableArchive(path: string, passphrase: string, expe
     const files: PortableStagedBlob[] = []; let offset = metadataLength + 4;
     for (const blob of blobs) {
       const filePath = join(lease.directory, randomUUID()), hash = createHash('sha256'); let seen = 0;
-      const output = createWriteStream(filePath, { flags: 'wx', mode: 0o600 });
+      const output = createPortableWriteStream(filePath);
       if (blob.size) {
         await pipeline(quarantine.createReadStream({ start: offset, end: offset + blob.size - 1, autoClose: false }), new Transform({ transform(chunk, _encoding, callback) {
           seen += chunk.length; if (seen > blob.size) return callback(new Error(MESSAGE)); hash.update(chunk); callback(null, chunk);
-        } }), output);
-      } else { await pipeline((async function* () {})(), output); }
+        } }), output, { signal: portableTransferSignal() });
+      } else { await pipeline((async function* () {})(), output, { signal: portableTransferSignal() }); }
       if (seen !== blob.size || hash.digest('hex') !== blob.sha256) invalid();
       files.push({ ...blob, path: filePath }); offset += blob.size;
     }

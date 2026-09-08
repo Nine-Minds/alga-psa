@@ -154,7 +154,8 @@ export function registerCoManagedPortableWorkspaceExportTests(getDb: () => Knex,
           const bytes = Buffer.concat(chunks); objects.set(path, bytes); return { path, size: bytes.length, mime_type: options.mime_type }; },
         delete: async (path: string) => { objects.delete(path); },
       } as any);
-      const input = { preparedRecords: files, externalFiles: lease.externalFiles, vault };
+      const input = { preparedRecords: files, externalFiles: lease.externalFiles, vault, archive: { packageId: handle.packageId, sha256: handle.sha256,
+        sourceAdministratorUserId: f.actor.userId, administratorUserId: String(records.records.users[0].user_id) } };
       await expect(getDb().transaction(async trx => {
         await insertCoManagedPortableWorkspaceDatabase(trx, input); throw new Error('Caller rollback');
       })).rejects.toThrow('Caller rollback');
@@ -184,6 +185,10 @@ export function registerCoManagedPortableWorkspaceExportTests(getDb: () => Knex,
       const suspension = await import('@alga-psa/db');
       expect(await suspension.resumeTenant(getDb(), destinationTenant, 'tenant_cancelled')).toBe(false);
       expect(await suspension.isTenantSuspended(getDb(), destinationTenant)).toBe(true);
+      const licensing = await import('../../../../../packages/licensing/src/lib/tenant-license-state');
+      expect(await licensing.getTenantLicenseManagementScope(getDb(), destinationTenant)).toBe('tenant');
+      expect(await licensing.getTenantSelfHostLicenseState(destinationTenant, getDb())).toMatchObject({ license_scope: 'tenant', license_token: null });
+      await expect(own.table('portable_workspace_restores').update({ source_tenant: randomUUID() })).rejects.toThrow('immutable');
       const migration = (await import('../../../../../server/migrations/20260908191851_add_portable_restore_suspension.cjs')).default;
       await expect(migration.down(getDb())).rejects.toThrow('awaits activation');
       expect((await own.table('tickets')).map((row: any) => row.title)).toEqual(records.records.tickets.map(row => row.title));
@@ -203,5 +208,83 @@ export function registerCoManagedPortableWorkspaceExportTests(getDb: () => Knex,
     const abandoned = await f.prepare(); await abandoned.dispose();
     expect(await f.fs.readdir(f.root)).toEqual([]);
     await expect(abandoned.consume(vi.fn())).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  }));
+
+  it('portable installation restore authenticates owner authority and converges retries without replacing tenants', async () => workspace(async f => {
+    const { restorePortableWorkspaceForInstallation, inspectPortableWorkspaceArchive, assertPortableRestoreInstallationAuthority } =
+      await import('../../../../../ee/server/src/lib/co-managed/portableWorkspaceRestore');
+    const { tenantDb } = await import('@alga-psa/db');
+    const db = getDb(), handle = await f.prepare(), archivePath = `${f.root}/operator.alga`;
+    await handle.consume(async (artifact: any) => f.fs.copyFile(artifact.path, archivePath));
+    const info = await inspectPortableWorkspaceArchive(archivePath, f.passphrase);
+    expect(info).toMatchObject({ sourceTenant: f.actor.tenant, packageId: handle.packageId, sha256: handle.sha256 });
+    expect(info.administrators.some(user => user.userId === f.actor.userId)).toBe(true);
+    const { spawn } = await import('node:child_process'), { createRequire } = await import('node:module'), { resolve } = await import('node:path');
+    const cli = createRequire(import.meta.url).resolve('tsx/cli');
+    const inspected = await new Promise<string>((resolveResult, reject) => {
+      const child = spawn(process.execPath, [cli, '--tsconfig', resolve('../ee/server/tsconfig.json'),
+        resolve('scripts/restore-portable-workspace.ts'), '--inspect', '--archive', archivePath, '--passphrase-stdin'], { stdio: ['pipe', 'pipe', 'pipe'] });
+      let output = '', errors = '';
+      const timer = setTimeout(() => { child.kill('SIGKILL'); reject(new Error('Restore CLI timed out')); }, 15_000);
+      child.stdout.on('data', chunk => { output += chunk; }); child.stderr.on('data', chunk => { errors += chunk; });
+      child.once('error', error => { clearTimeout(timer); reject(error); });
+      child.once('close', code => { clearTimeout(timer); code === 0 ? resolveResult(output) : reject(new Error(`Restore CLI exited ${code}: ${errors}`)); });
+      child.stdin.end(f.passphrase);
+    });
+    expect(JSON.parse(inspected)).toEqual(info);
+    const objects = new Map<string, Buffer>();
+    const provider = { getCapabilities: () => ({ supportsStreaming: true, maxFileSize: 1024 ** 3 }),
+      upload: vi.fn(async (stream: AsyncIterable<Buffer>, path: string, options: any) => {
+        const chunks: Buffer[] = []; for await (const chunk of stream) chunks.push(Buffer.from(chunk));
+        const bytes = Buffer.concat(chunks); objects.set(path, bytes);
+        return { path, size: bytes.length, mime_type: options.mime_type };
+      }), delete: vi.fn(async (path: string) => { objects.delete(path); }) };
+    const createProvider = vi.fn(async () => provider as any);
+    const input = { archivePath, passphrase: f.passphrase, destinationTenant: randomUUID(), sourceAdministratorUserId: f.actor.userId };
+    await expect(restorePortableWorkspaceForInstallation(db, { ...input, sourceAdministratorUserId: randomUUID() }, {}, createProvider)).rejects.toThrow('administrator');
+    expect(createProvider).not.toHaveBeenCalled();
+    const role = `portable_restore_test_${randomUUID().replaceAll('-', '')}`;
+    await expect(db.transaction(async trx => {
+      await trx.raw(`CREATE ROLE "${role}" NOLOGIN`);
+      await trx.raw(`SET LOCAL ROLE "${role}"`);
+      await assertPortableRestoreInstallationAuthority(trx);
+    })).rejects.toThrow('database owner authority');
+    expect(await db('pg_roles').where('rolname', role).first()).toBeUndefined();
+    const failedTenant = randomUUID(), upload = provider.upload.getMockImplementation()!;
+    provider.upload.mockImplementationOnce(async (...args: Parameters<typeof upload>) => { await upload(...args); throw new Error('Provider failed after storing bytes'); });
+    await expect(restorePortableWorkspaceForInstallation(db, { ...input, destinationTenant: failedTenant }, {}, createProvider)).rejects.toThrow('Provider failed');
+    expect(objects.size).toBe(0); expect(await tenantDb(db, failedTenant).table('tenants').first()).toBeUndefined();
+    createProvider.mockClear();
+    const receipt = await restorePortableWorkspaceForInstallation(db, input, {}, createProvider);
+    expect(receipt).toMatchObject({ tenant: input.destinationTenant, source_tenant: f.actor.tenant, package_id: info.packageId,
+      archive_sha256: info.sha256, source_administrator_user_id: f.actor.userId });
+    expect((await tenantDb(db, input.destinationTenant).table('tenants').first()).suspended_reason).toBe('portable_restore_pending_activation');
+    const uploads = provider.upload.mock.calls.length, reads = f.provider.mock.calls.length;
+    expect([...objects.values()].some(bytes => bytes.equals(f.bytes))).toBe(true);
+    expect(await restorePortableWorkspaceForInstallation(db, input, {}, createProvider)).toEqual(receipt);
+    expect(createProvider).toHaveBeenCalledTimes(1); expect(provider.upload).toHaveBeenCalledTimes(uploads); expect(f.provider).toHaveBeenCalledTimes(reads);
+    const changed = await f.prepare(), changedPath = `${f.root}/different.alga`;
+    await changed.consume(async (artifact: any) => f.fs.copyFile(artifact.path, changedPath));
+    await expect(restorePortableWorkspaceForInstallation(db, { ...input, archivePath: changedPath }, {}, createProvider)).rejects.toThrow('destination already');
+    expect(createProvider).toHaveBeenCalledTimes(1);
+    // The real tsx child retains its own IPC/cache directory, not restore data.
+    expect((await f.fs.readdir(f.root)).sort()).toEqual(['different.alga', 'operator.alga', `tsx-${process.getuid!()}`]);
+  }));
+
+  it('portable workspace preparation enforces cumulative disk limits and cancels provider work without retained staging', async () => workspace(async f => {
+    for (const options of [{ maxWrittenBytes: f.bytes.length - 1 }, { minFreeBytes: Number.MAX_SAFE_INTEGER }]) {
+      await expect(f.prepareCoManagedPortableWorkspaceExport(getDb(), f.customerPrincipal, f.passphrase, options)).rejects.toThrow();
+      expect(await f.fs.readdir(f.root)).toEqual([]);
+    }
+    const { Readable } = await import('node:stream'), abort = new AbortController();
+    const late = new Readable({ read() {} });
+    storage.getReadStream.mockImplementation(async () => { abort.abort(); return late; });
+    await expect(f.prepareCoManagedPortableWorkspaceExport(getDb(), f.customerPrincipal, f.passphrase, { signal: abort.signal })).rejects.toThrow();
+    expect(late.destroyed).toBe(true); expect(await f.fs.readdir(f.root)).toEqual([]);
+    storage.getReadStream.mockImplementation(f.stream);
+    const vaultAbort = new AbortController(), provider = f.provider.getMockImplementation();
+    f.provider.mockImplementation(async (...args: any[]) => { vaultAbort.abort(); return provider(...args); });
+    await expect(f.prepareCoManagedPortableWorkspaceExport(getDb(), f.customerPrincipal, f.passphrase, { signal: vaultAbort.signal })).rejects.toThrow();
+    expect(await f.fs.readdir(f.root)).toEqual([]);
   }));
 }

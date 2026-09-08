@@ -1,5 +1,4 @@
 import { createHash } from 'node:crypto';
-import { createWriteStream } from 'node:fs';
 import { chmod, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -7,6 +6,7 @@ import { Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { StorageProviderFactory } from '@alga-psa/storage/StorageProviderFactory';
 import { isCoManagedUuid } from './sharedWorkIdentity';
+import { assertPortableTransferActive, awaitPortableTransfer, createPortableWriteStream, portableTransferSignal } from './portableTransfer';
 
 export interface PortableSourceBlob { id: string; path: string; size: number; sha256?: string }
 export interface PortableStagedBlob { id: string; path: string; size: number; sha256: string }
@@ -15,6 +15,7 @@ export interface PortableStagedBlob { id: string; path: string; size: number; sh
  * owner-specific storage path first, then recheck authority before delivery.
  * A successful lease is disposed by its caller; every failure disposes itself. */
 export async function stageCoManagedPortableBlobs(input: readonly PortableSourceBlob[]) {
+  assertPortableTransferActive();
   const blobs = input.map(blob => ({ id: blob.id, path: blob.path, size: blob.size, sha256: blob.sha256 }));
   const ids = new Set<string>();
   for (const blob of blobs) {
@@ -30,17 +31,17 @@ export async function stageCoManagedPortableBlobs(input: readonly PortableSource
     await chmod(directory, 0o700);
     const files: PortableStagedBlob[] = [];
     if (blobs.length) {
-      const provider = await StorageProviderFactory.createProvider();
+      const provider = await awaitPortableTransfer(() => StorageProviderFactory.createProvider());
       for (const blob of blobs) {
         let size = 0;
         const hash = createHash('sha256'), path = join(directory, blob.id.replace(':', '-'));
         try {
-          const source = await provider.getReadStream(blob.path);
+          const source = await awaitPortableTransfer(() => provider.getReadStream(blob.path), stream => { stream.destroy(); });
           await pipeline(source, new Transform({ transform(chunk, _encoding, callback) {
             size += chunk.length;
             if (size > blob.size) return callback(new Error('Portable file size changed'));
             hash.update(chunk); callback(null, chunk);
-          } }), createWriteStream(path, { flags: 'wx', mode: 0o600 }));
+          } }), createPortableWriteStream(path), { signal: portableTransferSignal() });
           if (size !== blob.size) throw new Error('Portable file size changed');
           const sha256 = hash.digest('hex');
           if (blob.sha256 !== undefined && sha256 !== blob.sha256) throw new Error('Portable file checksum changed');

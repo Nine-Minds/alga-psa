@@ -79,10 +79,15 @@ async function schema(trx: Knex.Transaction, tables: string[]) {
  * trust, sessions, subscriptions, event publication or activation occurs here. */
 export async function insertCoManagedPortableWorkspaceDatabase(trx: Knex.Transaction, input: {
   preparedRecords: Prepared; externalFiles: readonly Row[]; vault: Vault;
+  archive: { packageId: string; sha256: string; sourceAdministratorUserId: string; administratorUserId: string };
 }) {
   if (!trx.isTransaction) fail('retained transaction required');
   const request = structuredClone(input), prepared = request.preparedRecords, tenant = prepared.destinationTenant;
   if (!isCoManagedUuid(tenant) || !isCoManagedUuid(prepared.sourceTenant) || same(tenant, prepared.sourceTenant)) fail('fresh destination required');
+  if (!isCoManagedUuid(request.archive?.packageId) || !/^[a-f0-9]{64}$/.test(request.archive?.sha256)) fail('authenticated archive identity required');
+  if (!isCoManagedUuid(request.archive.sourceAdministratorUserId) || !isCoManagedUuid(request.archive.administratorUserId) ||
+      !prepared.domains.find(domain => domain.table === 'users' && domain.column === 'user_id')?.mappings.some(pair =>
+        same(pair.source, request.archive.sourceAdministratorUserId) && same(pair.destination, request.archive.administratorUserId))) fail('restored administrator identity required');
   const validated = validateCoManagedPortableWorkspaceRecords(prepared.sections, { sourceTenant: tenant });
   if (JSON.stringify(validated.records) !== JSON.stringify(prepared.records)) fail('record sections disagree');
   const records: Record<string, Row[]> = validated.records;
@@ -211,6 +216,9 @@ export async function insertCoManagedPortableWorkspaceDatabase(trx: Knex.Transac
       const key = Object.fromEntries(primary.get(table)!.map(column => [column, row[column]]));
       if (Object.values(key).some(value => value == null) || await own.table(table).where(key).update(update) !== 1) fail('cycle repair lost native row');
     }
+    await own.table('portable_workspace_restores').insert({ tenant, source_tenant: prepared.sourceTenant,
+      package_id: request.archive.packageId, archive_sha256: request.archive.sha256,
+      source_administrator_user_id: request.archive.sourceAdministratorUserId, administrator_user_id: request.archive.administratorUserId });
     return { tenant, inserted: Object.fromEntries(tables.map(table => [table, records[table].length])), suspended: true as const };
   });
 }

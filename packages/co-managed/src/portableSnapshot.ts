@@ -1,3 +1,4 @@
+import { assertPortableTransferActive } from './portableTransfer';
 import type { Knex } from 'knex';
 
 /** An internal, short-lived capability for a single database MVCC cutoff.
@@ -36,7 +37,9 @@ export function portableSnapshotTransaction<T>(db: Knex, snapshot: CoManagedPort
       // PostgreSQL utility statements require a literal, not a bind parameter.
       await trx.raw(trx.raw('SET TRANSACTION SNAPSHOT ?', [state.id]).toQuery());
     }
+    assertPortableTransferActive();
     const result = await work(trx);
+    assertPortableTransferActive();
     if (state && !state.active) throw new Error('Portable snapshot is unavailable');
     return result;
   }, { isolationLevel: 'repeatable read' });

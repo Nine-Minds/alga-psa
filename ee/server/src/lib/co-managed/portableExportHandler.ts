@@ -51,7 +51,7 @@ export async function handleCoManagedPortableExport(request: Request): Promise<R
     try { passphrase = await readPassphrase(request); } catch { return failure(400, 'Use a recovery passphrase between 16 and 1024 UTF-8 bytes.'); }
     try {
       prepared = await prepareCoManagedPortableWorkspaceExport(await getConnection(session.user.tenant),
-        { kind: 'session', tenant: session.user.tenant, userId: session.user.id, sessionId: session.session_id }, passphrase);
+        { kind: 'session', tenant: session.user.tenant, userId: session.user.id, sessionId: session.session_id }, passphrase, { signal: request.signal });
     } finally { passphrase = ''; }
     download = await prepared.acquireDownload(request.signal);
     return new Response(download.stream, { headers: { ...headers, 'Content-Type': 'application/octet-stream', 'Content-Length': String(download.size),

@@ -1,3 +1,4 @@
+import { withPortableTransfer, assertPortableTransferActive, type PortableTransferOptions } from '../../../../../packages/co-managed/src/portableTransfer';
 import { createHash, randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
 import { withCoManagedPortableSnapshot } from '../../../../../packages/co-managed/src/portableSnapshot';
@@ -61,7 +62,14 @@ export interface CoManagedPortableWorkspaceArtifact {
  * under admission, then streams only after transaction commit without retaining
  * database locks. The descriptor closes on EOF/cancel/error. Always dispose unused
  * handles. No passphrase is retained by the returned handle or sent to a job. */
-export async function prepareCoManagedPortableWorkspaceExport(db: Knex, inputActor: CoManagedSessionActor, passphrase: string) {
+export async function prepareCoManagedPortableWorkspaceExport(db: Knex, inputActor: CoManagedSessionActor, passphrase: string, options: PortableTransferOptions = {}) {
+  let prepared: Awaited<ReturnType<typeof prepareWorkspace>> | undefined;
+  try { return await withPortableTransfer(options, async () => { prepared = await prepareWorkspace(db, inputActor, passphrase); return prepared; }); }
+  catch (error) { await prepared?.dispose(); throw error; }
+  finally { passphrase = ''; }
+}
+
+async function prepareWorkspace(db: Knex, inputActor: CoManagedSessionActor, passphrase: string) {
   if (db.isTransaction) throw new Error('Portable export requires a root database connection');
   const actor = snapshotCoManagedSessionActor(inputActor), packageId = randomUUID();
   const leases: SourceLease[] = [];
@@ -72,6 +80,7 @@ export async function prepareCoManagedPortableWorkspaceExport(db: Knex, inputAct
       const sections = {} as Record<RecordSection, Record<string, unknown>>;
       const fingerprints = {} as Record<RecordSection, string>;
       for (const name of Object.keys(recordCollectors) as RecordSection[]) {
+        assertPortableTransferActive();
         sections[name] = await recordCollectors[name][0](db, actor, packageId, snapshot);
         fingerprints[name] = sourceFingerprint(sections[name]);
       }
@@ -87,6 +96,7 @@ export async function prepareCoManagedPortableWorkspaceExport(db: Knex, inputAct
         remoteMeetingFiles: remoteMeetingFiles.component, credentialVault, files });
       return { context, manifest, files, fingerprints, checks: [...leases.map(lease => lease.assertCurrent), assertVaultCurrent] };
     });
+    assertPortableTransferActive();
     archive = await sealPortableArchive({ context: { packageId, sourceTenant: actor.tenant }, manifest: { ...capture.manifest }, files: capture.files }, passphrase);
     await disposeAll(leases); leases.length = 0;
     const sealed = archive, currentCapture = { context: capture.context, fingerprints: capture.fingerprints, checks: capture.checks };
