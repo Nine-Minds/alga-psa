@@ -90,7 +90,7 @@ beforeAll(async () => {
     '20260906080000_create_co_management_relationship_events.cjs',
     '20260906100000_add_external_file_metadata.cjs',
     '20260906110000_add_kb_import_batch_identity.cjs',
-    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs', '20260908011054_add_co_managed_meeting_sync_intents.cjs', '20260908021208_create_co_managed_meeting_creation_operations.cjs', '20260908043851_allow_co_managed_assignment_before_escalation.cjs']) {
+    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs', '20260908011054_add_co_managed_meeting_sync_intents.cjs', '20260908021208_create_co_managed_meeting_creation_operations.cjs', '20260908043851_allow_co_managed_assignment_before_escalation.cjs', '20260908050419_create_organization_sla_obligations.cjs']) {
     await require('../../../migrations/' + file).up(db);
   }
   for (const table of ['standard_statuses', 'standard_priorities', 'countries', 'notification_categories',
@@ -15790,3 +15790,89 @@ it('pre-handoff assignment rolls back new work routing and receipts on final cre
     expect(await customer.table('co_management_command_receipts').where('resource_id', resource.id)).toHaveLength(0);
   } finally { await db.raw('DROP TRIGGER expire_first_assignment_session ON co_management_command_receipts'); await db.raw('DROP FUNCTION expire_first_assignment_session()'); }
 }));
+
+async function organizationSlaStoreFixture() {
+  const fixture = await ticketHandoffFixture();
+  const domain = await import('../../../../packages/sla/src/services/organizationSlaStore');
+  const identity = { tenant: fixture.principal.tenant, obligationId: randomUUID(), sourceTenant: fixture.resource.tenant, ticketId: fixture.resource.id };
+  const input = { workId: randomUUID(), generation: 1, policyId: randomUUID(), priorityId: randomUUID(),
+    schedule: { timezone: 'UTC', is_24x7: true, entries: [] }, targets: { responseMinutes: 1, resolutionMinutes: 10 }, occurredAt: '2026-09-08T12:00:00.000Z' };
+  const operationId = randomUUID();
+  const start = () => db.transaction(trx => domain.startOrganizationSlaObligation(trx, identity, operationId, input));
+  const apply = (operation: string, event: Parameters<typeof domain.applyOrganizationSlaEvent>[3]) =>
+    db.transaction(trx => domain.applyOrganizationSlaEvent(trx, identity, operation, event));
+  const read = () => fixture.sponsor.table('sla_organization_obligations').where('obligation_id', identity.obligationId).first();
+  return { ...fixture, domain, identity, input, operationId, start, apply, read };
+}
+
+describe('organization SLA durable clock', () => {
+  it('deduplicates concurrent starts and handoffs, keeps customer SLA fields unchanged, and retains exact receipts', async () => {
+    const f = await organizationSlaStoreFixture();
+    const before = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+    const starts = await Promise.all([f.start(), f.start()]);
+    expect(starts[0]).toEqual(starts[1]);
+    const pauseId = randomUUID(), event = { kind: 'paused' as const, reason: 'customer_responsible', occurredAt: '2026-09-08T12:01:30.000Z' };
+    const pauses = await Promise.all([f.apply(pauseId, event), f.apply(pauseId, event)]);
+    expect(pauses[0]).toEqual(pauses[1]);
+    await f.apply(randomUUID(), { kind: 'resumed', reason: 'customer_responsible', occurredAt: '2026-09-08T13:00:00.000Z' });
+    expect(await f.apply(pauseId, event)).toEqual(pauses[0]);
+    expect(await f.start()).toEqual(starts[0]);
+    expect(await db.transaction(trx => f.domain.startOrganizationSlaObligation(trx, f.identity, f.operationId,
+      { occurredAt: f.input.occurredAt, targets: { resolutionMinutes: 10, responseMinutes: 1 },
+        schedule: { entries: [], is_24x7: true, timezone: 'UTC' }, priorityId: f.input.priorityId,
+        policyId: f.input.policyId, generation: 1, workId: f.input.workId }))).toEqual(starts[0]);
+    const row = await f.read();
+    expect(row).toMatchObject({ tenant: f.principal.tenant, revision: 3, source_tenant: f.resource.tenant,
+      clock: { elapsedMilliseconds: 90000, startedAt: f.input.occurredAt, response: { breached: true, breachedAt: '2026-09-08T12:01:00.000Z' },
+        resolution: { dueAt: '2026-09-08T13:08:30.000Z' } } });
+    expect(await f.sponsor.table('sla_organization_events').where('obligation_id', f.identity.obligationId)).toHaveLength(3);
+    expect(await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).toEqual(before);
+    expect(await f.customer.table('sla_organization_obligations')).toEqual([]);
+    expect(await f.sponsor.table('tickets')).toEqual([]);
+    await expect(f.apply(pauseId, { ...event, reason: 'different' })).rejects.toThrow('operation changed');
+    expect(await f.read()).toEqual(row);
+  });
+
+  it('qualifies source identity and owning tenant even when obligation UUIDs collide', async () => {
+    const f = await organizationSlaStoreFixture();
+    await f.start();
+    const other = { ...f.identity, tenant: f.resource.tenant, sourceTenant: f.principal.tenant };
+    await db.transaction(trx => f.domain.startOrganizationSlaObligation(trx, other, f.operationId, f.input));
+    await expect(db.transaction(trx => f.domain.applyOrganizationSlaEvent(trx,
+      { ...f.identity, sourceTenant: randomUUID() }, randomUUID(), { kind: 'observed', occurredAt: '2026-09-08T12:02:00.000Z' })))
+      .rejects.toThrow('source does not match');
+    await f.apply(randomUUID(), { kind: 'responded', actorTenant: f.principal.tenant, audience: 'shared_it', occurredAt: '2026-09-08T12:00:30.000Z' });
+    expect((await f.read()).clock.response.completedAt).toBe('2026-09-08T12:00:30.000Z');
+    expect((await f.customer.table('sla_organization_obligations').where('obligation_id', other.obligationId).first()).clock.response.completedAt).toBeNull();
+  });
+
+  it('rolls the clock and event receipt back together and rejects out-of-order events', async () => {
+    const f = await organizationSlaStoreFixture();
+    await f.start();
+    const original = await f.read(), operationId = randomUUID();
+    await expect(db.transaction(async trx => {
+      await f.domain.applyOrganizationSlaEvent(trx, f.identity, operationId, { kind: 'resolved', occurredAt: '2026-09-08T12:02:00.000Z' });
+      throw new Error('Original credential expired');
+    })).rejects.toThrow('credential expired');
+    expect(await f.read()).toEqual(original);
+    expect(await f.sponsor.table('sla_organization_events').where({ obligation_id: f.identity.obligationId, operation_id: operationId })).toEqual([]);
+    await expect(f.apply(operationId, { kind: 'resolved', occurredAt: '2026-09-08T11:59:59.000Z' })).rejects.toThrow('causal order');
+    expect(await f.read()).toEqual(original);
+    await f.apply(operationId, { kind: 'resolved', occurredAt: '2026-09-08T12:02:00.000Z' });
+    expect((await f.read()).clock.resolution).toMatchObject({ completedAt: '2026-09-08T12:02:00.000Z', breached: false });
+  });
+
+  it('replays migration safely, refuses history loss, and rejects mismatched clock identities', async () => {
+    const f = await organizationSlaStoreFixture();
+    await f.start();
+    const migration = require('../../../../server/migrations/20260908050419_create_organization_sla_obligations.cjs');
+    await migration.up(db);
+    await expect(migration.down(db)).rejects.toThrow('retained organization SLA history');
+    await expect(f.sponsor.table('sla_organization_obligations').where('obligation_id', f.identity.obligationId)
+      .update({ clock: JSON.stringify({}) })).rejects.toMatchObject({ code: '23514' });
+    const row = await f.read();
+    await expect(f.sponsor.table('sla_organization_obligations').insert({ ...row, obligation_id: randomUUID(), clock: JSON.stringify(row.clock) }))
+      .rejects.toMatchObject({ code: '23514' });
+    expect((await f.read()).clock.identity).toEqual(f.identity);
+  });
+});

@@ -50,6 +50,16 @@
       "types": "./dist/services/itilSlaService.d.ts",
       "import": "./dist/services/itilSlaService.js",
       "require": "./dist/services/itilSlaService.js"
+    },
+    "./services/organizationSlaClock": {
+      "types": "./dist/services/organizationSlaClock.d.ts",
+      "import": "./dist/services/organizationSlaClock.js",
+      "require": "./dist/services/organizationSlaClock.js"
+    },
+    "./services/organizationSlaStore": {
+      "types": "./dist/services/organizationSlaStore.d.ts",
+      "import": "./dist/services/organizationSlaStore.js",
+      "require": "./dist/services/organizationSlaStore.js"
     }
   },
   "scripts": {
