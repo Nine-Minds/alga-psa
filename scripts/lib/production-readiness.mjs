@@ -2,6 +2,7 @@ import { selectIntegration } from './integration-selection.mjs';
 import { workspaceRequirements } from './workspace-execution-gate.mjs';
 
 export const readinessRequirements = [
+  { job: 'inventory', artifact: 'repository-inventory', scope: 'repository-inventory', conditional: true, collectionOnly: true },
   { job: 'unit', artifact: 'server-unit-aggregate', scope: 'server-unit-execution', members: ['server-unit'] },
   { job: 'node', artifact: 'node-workflow-gate', scope: 'node-workflow', members: ['node-tooling', 'appliance', 'browser-discovery'], revisionSuffix: true },
   { job: 'workspace', artifact: 'workspace-execution-gate', scope: 'additional-workspace-tests', members: workspaceRequirements.map(({ suite }) => suite) },
@@ -38,6 +39,13 @@ export function evaluateProductionReadiness({ revision, changed, jobs, artifacts
     const notApplicable = verdict?.status === 'not-applicable';
     if (notApplicable) {
       if (!requirement.conditional || selection.shouldRun || typeof verdict.reason !== 'string' || !verdict.reason.trim()) problems.push('Unjustified not-applicable selection');
+    } else if (requirement.collectionOnly) {
+      if (verdict?.status !== 'passed' || verdict.executionVerified !== false
+        || !Array.isArray(verdict.candidates) || !verdict.candidates.length
+        || !Array.isArray(verdict.unmatched) || verdict.unmatched.length
+        || !Array.isArray(verdict.runners) || !verdict.runners.length) {
+        problems.push('Missing or incomplete repository collection');
+      }
     } else {
       if (verdict?.status !== 'passed') problems.push(`Incomplete verdict: ${verdict?.status ?? 'missing'}`);
       const members = requirement.members ? verdict?.results ?? verdict?.suites : [verdict];

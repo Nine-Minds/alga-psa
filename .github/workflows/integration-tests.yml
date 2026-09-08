@@ -527,6 +527,19 @@ jobs:
         env:
           NODE_OPTIONS: '--max-old-space-size=8192'
 
+      - name: Collect small manual suites without executing test bodies
+        if: always()
+        run: node scripts/collect-manual-vitest-inventory.mjs
+
+      - name: Preserve manual collection and review metadata
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: manual-test-inventory
+          path: test-results/repository-discovery/manual-vitest/
+          if-no-files-found: error
+          retention-days: 30
+
       - name: Upload workspace database execution evidence
         if: always()
         uses: actions/upload-artifact@v4

@@ -44,6 +44,10 @@ jobs:
     uses: ./.github/workflows/unit-tests.yml
     secrets: inherit
 
+  mobile:
+    uses: ./.github/workflows/mobile-checks.yml
+    secrets: inherit
+
   node:
     uses: ./.github/workflows/node-tests.yml
     secrets: inherit
@@ -72,10 +76,48 @@ jobs:
     uses: ./.github/workflows/citus-migration-smoke.yml
     secrets: inherit
 
+  inventory:
+    name: Repository test inventory
+    if: always()
+    needs: [selection, unit, node, workspace, integration, browser, temporal, citus, mobile]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      # Only collection/evidence bundles; image archives are intentionally absent.
+      # Keep directories separate so equal report filenames cannot overwrite.
+      - name: Download runner collection artifacts from this run
+        if: needs.selection.outputs.should_run == 'true'
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          pattern: "{server-unit-execution,workspace-unit-${{ github.sha }},workspace-runtime-${{ github.sha }},server-colocated-${{ github.sha }},nx-tooling-${{ github.sha }},ui-kit-showcase-${{ github.sha }},enterprise-integration-${{ github.sha }},ai-gateway-${{ github.sha }},enterprise-unit-shard-1,enterprise-unit-shard-2,enterprise-unit-shard-3,server-integration-shard-1,server-integration-shard-2,server-integration-shard-3,server-integration-shard-4,infrastructure-shard-1,infrastructure-shard-2,infrastructure-shard-3,workspace-db-evidence,fresh-install-api-community,temporal-readiness-execution,temporal-engine-execution,temporal-database-execution,mobile-execution,node-tooling-${{ github.sha }},appliance-node-${{ github.sha }},browser-discovery-${{ github.sha }},manual-test-inventory}"
+          path: test-results/inventory-input
+          merge-multiple: false
+      - name: Reconcile tracked candidates against actual runner registrations
+        if: always()
+        run: node scripts/verify-repository-inventory.mjs
+        env:
+          INVENTORY_JOBS: ${{ toJSON(needs) }}
+          TIER1_BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+      - name: Preserve repository inventory
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: repository-inventory
+          path: test-results/repository-inventory/
+          if-no-files-found: error
+          retention-days: 30
+
   readiness:
     name: Production regression readiness
     if: always()
-    needs: [selection, unit, node, workspace, integration, browser, temporal, citus]
+    needs: [selection, unit, node, workspace, integration, browser, temporal, citus, mobile, inventory]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -159,6 +201,12 @@ jobs:
         with:
           name: teams-development-execution
           path: test-results/readiness-input/teams-development-execution
+      - name: Download repository inventory
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: repository-inventory
+          path: test-results/readiness-input/repository-inventory
       - name: Require every mandatory workflow and execution verdict
         if: always()
         run: node scripts/verify-production-readiness.mjs

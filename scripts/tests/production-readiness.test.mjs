@@ -17,6 +17,8 @@ function fixture() {
     const verdict = { schemaVersion: 1, revision, status: 'passed', failures: [],
       ...(requirement.scope ? { scope: requirement.scope } : { suite: requirement.suite }),
       ...(requirement.members ? { results: requirement.members.map(member) } : { counts: member('single').counts }) };
+    if (requirement.collectionOnly) Object.assign(verdict, { executionVerified: false,
+      candidates: ['fixture.test.js'], unmatched: [], runners: [{ runner: 'fixture' }] });
     if (['workspace', 'temporal'].includes(requirement.job)) {
       verdict.suites = verdict.results.map(({ id, ...rest }) => ({ suite: id, ...rest }));
       delete verdict.results;
@@ -27,10 +29,10 @@ function fixture() {
 }
 const evaluate = input => evaluateProductionReadiness(JSON.parse(JSON.stringify(input)));
 
-test('all required serialized workflow verdicts pass and preserve twelve separate requirements', () => {
+test('all required serialized workflow verdicts pass and preserve thirteen separate requirements', () => {
   const result = evaluate(fixture());
   assert.equal(result.status, 'passed', result.failures.join('\n'));
-  assert.equal(result.results.length, 12);
+  assert.equal(result.results.length, 13);
 });
 
 for (const outcome of ['failure', 'cancelled', 'skipped', undefined]) {
@@ -52,16 +54,19 @@ for (const damage of ['absent', 'stale', 'wrong-scope', 'malformed', 'empty', 'f
       if (damage === 'wrong-scope') { verdict.scope = 'other'; verdict.suite = 'other'; }
       if (damage === 'malformed') verdict.failures = null;
       if (damage === 'empty') {
-        if (members) members.splice(0); else verdict.counts.passed = 0;
+        if (requirement.collectionOnly) verdict.candidates = [];
+        else if (members) members.splice(0); else verdict.counts.passed = 0;
       }
       if (damage === 'failed-member') {
         if (members) members[0].status = 'failed'; else verdict.status = 'failed';
       }
       if (damage === 'partial-member') {
-        (members ? members[0] : verdict).counts.skipped = 1;
+        if (requirement.collectionOnly) verdict.unmatched = ['new.test.js'];
+        else (members ? members[0] : verdict).counts.skipped = 1;
       }
       if (damage === 'duplicate-member') {
-        if (members) members.push(structuredClone(members[0])); else verdict.counts.pending = 1;
+        if (requirement.collectionOnly) verdict.executionVerified = true;
+        else if (members) members.push(structuredClone(members[0])); else verdict.counts.pending = 1;
       }
       assert.equal(evaluate(input).status, 'failed', requirement.artifact);
     }
