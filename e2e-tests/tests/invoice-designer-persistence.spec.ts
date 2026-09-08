@@ -3,7 +3,8 @@ import { test, expect, signIn } from '../fixtures/auth';
 import { createTimeBillingFixture } from '../fixtures/time-billing';
 import { createBrowserInvoiceTicketSourceFixture } from '../fixtures/invoice-ticket';
 import { createBrowserApiKey } from '../fixtures/api-key';
-import { readInvoiceDownload } from '../fixtures/invoice-document';
+import { addLongInvoiceSources } from '../../server/test-utils/invoiceTicketProductionFixtures';
+import { readInvoiceDocument, readInvoiceDownload } from '../fixtures/invoice-document';
 
 test('an administrator authors a billed-time date sort and reopens its persisted invoice layout', async ({ page, credentials, database }, testInfo) => {
   const { tenant } = await createTimeBillingFixture(database, credentials.email);
@@ -118,25 +119,29 @@ test('an administrator authors a billed-time date sort and reopens its persisted
     .update({ invoice_template_id: saved.template_id });
   const key = await createBrowserApiKey(database, tenant.admin.userId, tenant.tenantId);
   try {
-    const period = await database('recurring_service_periods')
-      .where({ tenant: tenant.tenantId, obligation_id: ids.lineId, invoice_window_start: '2026-09-01' }).first();
-    expect(period).toBeTruthy();
-    const selector = {
-      clientId: ids.clientId, windowStart: '2026-09-01', windowEnd: '2026-10-01',
-      executionWindow: {
-        kind: 'client_cadence_window', cadenceOwner: 'client', clientId: ids.clientId,
-        scheduleKey: period.schedule_key, periodKey: period.period_key,
-        windowStart: '2026-09-01', windowEnd: '2026-10-01',
-        identityKey: ['client_cadence_window', 'client', ids.clientId, period.schedule_key,
-          period.period_key, '2026-09-01', '2026-10-01'].join(':'),
-      },
+    const generate = async (ids: Awaited<ReturnType<typeof createBrowserInvoiceTicketSourceFixture>>) => {
+      const period = await database('recurring_service_periods')
+        .where({ tenant: tenant.tenantId, obligation_id: ids.lineId, invoice_window_start: '2026-09-01' }).first();
+      expect(period).toBeTruthy();
+      const selector = {
+        clientId: ids.clientId, windowStart: '2026-09-01', windowEnd: '2026-10-01',
+        executionWindow: {
+          kind: 'client_cadence_window', cadenceOwner: 'client', clientId: ids.clientId,
+          scheduleKey: period.schedule_key, periodKey: period.period_key,
+          windowStart: '2026-09-01', windowEnd: '2026-10-01',
+          identityKey: ['client_cadence_window', 'client', ids.clientId, period.schedule_key,
+            period.period_key, '2026-09-01', '2026-10-01'].join(':'),
+        },
+      };
+      const generated = await page.request.post('/api/v1/invoices/generate', {
+        headers: { 'x-api-key': key.api_key, 'x-tenant-id': tenant.tenantId }, data: { selector_input: selector },
+      });
+      expect(generated.status(), await generated.text()).toBe(201);
+      const generatedId = (await generated.json()).data.invoice_id;
+      return await database('invoices').where({ tenant: tenant.tenantId, invoice_id: generatedId }).first();
     };
-    const generated = await page.request.post('/api/v1/invoices/generate', {
-      headers: { 'x-api-key': key.api_key, 'x-tenant-id': tenant.tenantId }, data: { selector_input: selector },
-    });
-    expect(generated.status(), await generated.text()).toBe(201);
-    const invoiceId = (await generated.json()).data.invoice_id;
-    const invoice = await database('invoices').where({ tenant: tenant.tenantId, invoice_id: invoiceId }).first();
+    const invoice = await generate(ids);
+    const invoiceId = invoice.invoice_id;
     const readSnapshots = () => database('invoice_time_entries')
       .where({ tenant: tenant.tenantId, invoice_id: invoiceId }).orderBy('invoice_time_entry_id');
     const snapshots = await readSnapshots();
@@ -220,6 +225,51 @@ test('an administrator authors a billed-time date sort and reopens its persisted
           .update({ work_item_snapshot: snapshot.work_item_snapshot });
       }
     }
+    await test.step('long invoice preserves all detail rows across pages and tax rates', async () => {
+      const longIds = await createBrowserInvoiceTicketSourceFixture(database, { tenant: tenant.tenantId, userId: tenant.admin.userId });
+      await addLongInvoiceSources(database, longIds);
+      await database('clients').where({ tenant: tenant.tenantId, client_id: longIds.clientId })
+        .update({ invoice_template_id: saved.template_id });
+      const longInvoice = await generate(longIds);
+      const longLinks = await database('invoice_time_entries')
+        .where({ tenant: tenant.tenantId, invoice_id: longInvoice.invoice_id }).orderBy('invoice_time_entry_id');
+      const longCharges = await database('invoice_charges')
+        .where({ tenant: tenant.tenantId, invoice_id: longInvoice.invoice_id }).orderBy('item_id');
+      expect(longLinks).toHaveLength(74);
+      expect([...new Set(longCharges.map(charge => Number(charge.tax_rate)))].sort((a, b) => a - b)).toEqual([10, 20]);
+      // 36 single-hour entries at 20%; remaining $5,925 of time at 10%.
+      expect(Number(longInvoice.subtotal)).toBe(1_132_500);
+      expect(Number(longInvoice.tax)).toBe(167_250);
+      expect(Number(longInvoice.total_amount)).toBe(1_299_750);
+      expect(Number(longInvoice.tax)).toBe(longCharges.reduce((sum, charge) => sum + Number(charge.tax_amount), 0));
+      await page.goto(`/msp/billing?tab=invoicing&subtab=drafts&invoiceId=${longInvoice.invoice_id}`);
+      for (const locale of ['en', 'fr', 'zz-unavailable']) {
+        await database('clients').where({ tenant: tenant.tenantId, client_id: longIds.clientId })
+          .update({ properties: { defaultLocale: locale } });
+        await page.reload();
+        const document = await readInvoiceDocument(page, testInfo, longInvoice.invoice_number, `${longInvoice.invoice_number}-long-${locale}`);
+        expect(document.pages.length).toBeGreaterThan(1);
+        await testInfo.attach(`long-invoice-pagination-${locale}`, {
+          body: JSON.stringify({ pages: document.pages.length, invoiceId: longInvoice.invoice_id,
+            sourceEntries: longLinks.length, expectedDetailRows: 148, subtotal: longInvoice.subtotal,
+            tax: longInvoice.tax, total: longInvoice.total_amount }), contentType: 'application/json',
+        });
+        const datePattern = locale === 'fr' ? /\d+\/08\/2026/g : /8\/\d+\/2026/g;
+        expect(document.text.match(datePattern) ?? []).toHaveLength(148);
+        for (const pageText of document.pages.filter(text => text.match(datePattern))) {
+          expect(pageText).toContain('Date');
+          expect(pageText).toContain('Ticket');
+        }
+        const compact = document.text.replace(/\s/g, '');
+        expect(compact).toContain(locale === 'fr' ? 'Tarifsvariables' : 'Mixedrates');
+        expect(compact).toContain(new Intl.NumberFormat(locale === 'fr' ? 'fr-FR' : 'en-US', {
+          minimumFractionDigits: 2, maximumFractionDigits: 2,
+        }).format(Number(longInvoice.total_amount) / 100).replace(/\s/g, ''));
+        expect(compact).not.toContain('PRIVATE');
+        expect(await database('invoice_time_entries').where({ tenant: tenant.tenantId, invoice_id: longInvoice.invoice_id }).orderBy('invoice_time_entry_id')).toEqual(longLinks);
+        expect(await database('invoice_charges').where({ tenant: tenant.tenantId, invoice_id: longInvoice.invoice_id }).orderBy('item_id')).toEqual(longCharges);
+      }
+    });
   } finally {
     await database('api_keys').where({ tenant: tenant.tenantId, api_key_id: key.api_key_id }).delete();
   }

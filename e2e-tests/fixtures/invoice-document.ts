@@ -3,7 +3,7 @@ import type { Page, TestInfo } from '@playwright/test';
 import { expect } from '@playwright/test';
 
 /** Parse the bytes downloaded by the shipped UI, not its HTML preview. */
-export async function readInvoiceDownload(page: Page, testInfo: TestInfo, number: string, artifactName = number): Promise<string> {
+export async function readInvoiceDocument(page: Page, testInfo: TestInfo, number: string, artifactName = number): Promise<{ text: string; pages: string[] }> {
   const [download] = await Promise.all([
     page.waitForEvent('download', { timeout: 90000 }),
     page.locator('#invoice-download-pdf').click(),
@@ -29,8 +29,12 @@ export async function readInvoiceDownload(page: Page, testInfo: TestInfo, number
     const text = pages.join('\n');
     await testInfo.attach('invoice-pdf-text', { body: text, contentType: 'text/plain' });
     await testInfo.attach('invoice-pdf', { path: file, contentType: 'application/pdf' });
-    return text;
+    return { text, pages };
   } finally { await task.destroy(); }
+}
+
+export async function readInvoiceDownload(page: Page, testInfo: TestInfo, number: string, artifactName = number): Promise<string> {
+  return (await readInvoiceDocument(page, testInfo, number, artifactName)).text;
 }
 
 export async function assertInvoiceDownload(page: Page, testInfo: TestInfo, invoice: {
