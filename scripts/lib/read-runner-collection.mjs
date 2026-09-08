@@ -24,6 +24,22 @@ export function readRunnerCollection(collection, manifestDirectory) {
       suite: evidence.suite, revision: evidence.revision, exitCode: evidence.status === 'passed' ? 0 : 1 });
     if (verified.status !== 'passed') throw new Error(`Invalid Node collection ${collection.runner}: ${verified.failures.join('; ')}`);
     files = verified.executedFiles;
+  } else if (collection.format === 'vitest') {
+    if (!collection.casesFile) throw new Error(`Vitest collection requires casesFile: ${collection.runner}`);
+    files = JSON.parse(raw);
+    const cases = JSON.parse(read(collection.casesFile));
+    if (!Array.isArray(files) || !files.length || !Array.isArray(cases) || !cases.length) {
+      throw new Error(`Empty Vitest collection: ${collection.runner}`);
+    }
+    const normalize = entry => normalizeTestFile(typeof entry === 'string' ? entry : entry.file, collection.sourceRoot);
+    const fileSet = new Set(files.map(normalize));
+    if (fileSet.size !== files.length) throw new Error(`Duplicate Vitest file: ${collection.runner}`);
+    const registered = new Set(cases.map(entry => {
+      if (typeof entry.name !== 'string' || !entry.name.trim()) throw new Error(`Invalid Vitest case: ${collection.runner}`);
+      return normalize(entry);
+    }));
+    for (const file of fileSet) if (!registered.has(file)) throw new Error(`No registered test cases: ${file}`);
+    for (const file of registered) if (!fileSet.has(file)) throw new Error(`Case outside file collection: ${file}`);
   } else {
     if (collection.format && collection.format !== 'file-list') throw new Error(`Unknown collection format: ${collection.format}`);
     files = JSON.parse(raw);

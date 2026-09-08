@@ -3232,3 +3232,12 @@ Current-source run 34235374733 is live. Nx tooling job 102091593709 failed befor
 Actual browser collection at clean 8f4b62b709 passes all seven runners: Teams 1/1 files/tests, supported upgrade 3/3, server legacy 16/33, enterprise legacy 53/411, enterprise deploy 1/2, CE production 20/42 and EE production 20/46. The renamed collaborative test and upgrade fixtures are included. Collection is not execution proof. Workflow actionlint and plan validation pass.
 
 Citus run 34235374733 job 102091752163 passes all eight invoice/workflow cases, then fails Temporal database collection because source-loaded emailWorkflowActions imports an unbuilt event-schemas package. Added root/subpath source aliases alongside the existing Temporal aliases. Real six-file tenant/upgrade suite passes all 27 tests on existing isolated Citus DB upgrade_citus_layout_82cc_20260908, no skips, Docker image builds or database-wide reset. Evidence: temporal-citus-event-schema-resolution.json. Actual new-source CI remains required.
+
+
+### 2026-09-08 — Reuse collection artifacts instead of repeating suites
+
+The prior unit CI job spent approximately 33 minutes collecting before execution (12:34:00 to 13:07:19). Removed the prototype full-repository recollection dispatcher/registry in favor of a small manual-only registry. Global inventory should reuse the mandatory lanes’ existing raw collected.json and collected-tests.json artifacts at the same revision. Added a Vitest artifact reader that checks registered-case/file agreement; a real temporary Vitest project proves collection does not run test bodies, and that empty modules and mismatched artifact identities fail. The global CI reconciliation gate remains incomplete. Manual legacy email and invoice visual collections are not runtime or release evidence.
+
+Current run 34235374733 now has all four integration shards, the integration aggregate, workspace DB, infrastructure and Nx affected unit tests green; server unit remains live. Six S3 test calls used the unsupported third-argument options overload under EE Vitest typings; retained their existing 30/60 second timeouts using the numeric overload accepted by both versions. Full EE typecheck is being rerun after correcting the sixth call.
+
+Full EE TypeScript check passes after all six timeout overload corrections (/tmp/alga-ee-timeout-typecheck-green.log empty, exit 0). Inventory artifact adapter checks pass: 1 real-Vitest collector test plus all 15 existing discovery/Node/Playwright evidence regression tests.

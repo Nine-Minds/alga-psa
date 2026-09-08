@@ -146,7 +146,7 @@ describe("S3 bundle store - MinIO integration", () => {
       expect(head.exists).toBe(false);
       expect(head.eTag).toBeUndefined();
     },
-    { timeout: TEST_TIMEOUT_MS }
+    TEST_TIMEOUT_MS
   );
 
   it(
@@ -166,7 +166,7 @@ describe("S3 bundle store - MinIO integration", () => {
         expect(head.contentType).toContain("text/plain");
       }
     },
-    { timeout: TEST_TIMEOUT_MS }
+    TEST_TIMEOUT_MS
   );
 
   it(
@@ -185,7 +185,7 @@ describe("S3 bundle store - MinIO integration", () => {
       }
       expect(threw).toBe(true);
     },
-    { timeout: TEST_TIMEOUT_MS }
+    TEST_TIMEOUT_MS
   );
 
   it(
@@ -205,7 +205,7 @@ describe("S3 bundle store - MinIO integration", () => {
       }
       expect(typeof got.eTag === "string" || typeof got.eTag === "undefined").toBe(true);
     },
-    { timeout: TEST_TIMEOUT_MS }
+    TEST_TIMEOUT_MS
   );
 
   it(
@@ -236,7 +236,7 @@ describe("S3 bundle store - MinIO integration", () => {
       expect(getRes.status).toBe(200);
       expect(getRes.body?.equals(payload)).toBe(true);
     },
-    { timeout: TEST_TIMEOUT_MS }
+    TEST_TIMEOUT_MS
   );
 
   it(
@@ -291,6 +291,6 @@ describe("S3 bundle store - MinIO integration", () => {
       expect(head.exists).toBe(true);
       expect(head.contentLength).toBe(totalLen);
     },
-    { timeout: 2 * TEST_TIMEOUT_MS }
+    2 * TEST_TIMEOUT_MS
   );
 });

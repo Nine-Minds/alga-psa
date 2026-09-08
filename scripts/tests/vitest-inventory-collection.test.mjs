@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { collectVitestInventory } from '../lib/vitest-inventory-collection.mjs';
+import { readRunnerCollection } from '../lib/read-runner-collection.mjs';
 
 test('real Vitest inventory loads cases without executing bodies and rejects empty or broken modules', t => {
   const root = realpathSync(mkdtempSync(path.join(tmpdir(), 'vitest-inventory-')));
@@ -25,10 +26,18 @@ test('real Vitest inventory loads cases without executing bodies and rejects emp
   assert.equal(valid.status, 'passed');
   assert.deepEqual(valid.files, ['base.test.js']);
   assert.equal(valid.collectedTests, 1);
+  const artifact = { runner: 'fixture', format: 'vitest', sourceRoot: root,
+    collectionFile: 'reports/fixture/collected.json', casesFile: 'reports/fixture/collected-tests.json' };
+  assert.deepEqual(readRunnerCollection(artifact, root).files, ['base.test.js']);
   writeFileSync(path.join(root, 'empty.test.js'), 'export const noCases = true;');
   const empty = collect();
   assert.equal(empty.status, 'failed');
   assert.ok(empty.failures.includes('No registered test cases: empty.test.js'));
+  assert.throws(() => readRunnerCollection(artifact, root), /No registered test cases: empty.test.js/);
+  writeFileSync(path.join(root, artifact.collectionFile), JSON.stringify(['empty.test.js']));
+  writeFileSync(path.join(root, artifact.casesFile), JSON.stringify([{ file: 'outside.test.js', name: 'extra' },
+    { file: 'empty.test.js', name: 'present' }]));
+  assert.throws(() => readRunnerCollection(artifact, root), /Case outside file collection: outside.test.js/);
   writeFileSync(path.join(root, 'empty.test.js'), 'import "./missing.js";');
   assert.throws(collect, /collection exited/);
 });
