@@ -37,7 +37,7 @@ function parseBasicAuth(req: Request): { clientId: string; clientSecret: string 
  * appcenter authorize (GET /connect/oauth2), the OAuth token endpoint
  * (POST /oauth2/v1/tokens/bearer), and the v3 accounting API
  * (/v3/company/:realmId/...). Point QBO_OAUTH_AUTHORIZE_URL,
- * QBO_OAUTH_TOKEN_URL, and QBO_API_BASE_URL here.
+ * QBO_OAUTH_TOKEN_URL, QBO_OAUTH_REVOKE_URL, and QBO_API_BASE_URL here.
  */
 export function wire(router: Router, core: QboEmulatorCore, _env: HostEnv): void {
   router.use(express.json());
@@ -68,6 +68,12 @@ export function wire(router: Router, core: QboEmulatorCore, _env: HostEnv): void
   router.post('/oauth2/v1/tokens/bearer', (req, res) => {
     const { clientId, clientSecret } = parseBasicAuth(req);
     res.json(core.grantToken(clientId, clientSecret, req.body ?? {}));
+  });
+
+  router.post('/v2/oauth2/tokens/revoke', (req, res) => {
+    const { clientId, clientSecret } = parseBasicAuth(req);
+    core.revokeToken(clientId, clientSecret, req.body?.token);
+    res.status(200).end();
   });
 
   const company = express.Router({ mergeParams: true });

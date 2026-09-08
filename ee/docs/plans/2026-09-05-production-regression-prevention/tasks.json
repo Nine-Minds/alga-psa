@@ -132,6 +132,38 @@
       "dependsOn": [],
       "owner": "qbo_protocol",
       "notes": "Reviewed9native helper tests and actionlint pass. Workflow writes separate per-service archive records from action outputs. Registry publication and actual CI metadata remain unverified."
+    },
+    {
+      "id": "R017",
+      "title": "Implement QBO grant revocation with wire-level behavioral evidence",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "qbo_protocol",
+      "notes": "Reviewed 6 pre-fix HTTP 404 failures, 23 passing QBO tests and package typecheck. Grant family and foreign-client isolation are covered; RFC edge semantics are distinguished from live parity."
+    },
+    {
+      "id": "R018",
+      "title": "Implement Xero grant revocation with wire-level behavioral evidence",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "calendar_review",
+      "notes": "Reviewed 4 pre-fix HTTP 404 failures, 20 passing Xero tests and package typecheck. Resource-owner scope and JWT timing limits are documented."
+    },
+    {
+      "id": "R019",
+      "title": "Route actual Temporal Stripe clients through configured endpoints",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "stripe_protocol",
+      "notes": "Reviewed actual service POST and deletion DELETE. Deletion-only revert is blocked before live network connection. All 20 related tests pass, both new cases are collected, and Temporal build-graph typecheck passes."
+    },
+    {
+      "id": "R020",
+      "title": "Wire revocation endpoints into the isolated provider environment",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "coordinator",
+      "notes": "Rendered CE/EE compose confirms three revocation variables on server, email-service and workflow-worker. Probe syntax and actionlint pass. Actual running-process CI remains unverified."
     }
   ]
 }

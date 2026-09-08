@@ -106,6 +106,23 @@ export class XeroEmulatorCore implements EmulatorCore {
     }
   }
 
+  revokeRefreshToken(params: Record<string, string>): void {
+    this.authenticateClient(params.client_id, params.client_secret);
+    if (!params.token) throw new XeroWireError(400, { error: 'invalid_request' });
+    const record = this.refreshTokens.get(params.token);
+    // RFC 7009 returns success for invalid tokens without disclosing ownership.
+    if (!record || record.clientId !== params.client_id) return;
+    // This emulator models one resource owner per application. Revocation
+    // removes that owner's connected organisations and all rotated credentials.
+    for (const [token, value] of this.refreshTokens) {
+      if (value.clientId === record.clientId) this.refreshTokens.delete(token);
+    }
+    for (const [token, value] of this.accessTokens) {
+      if (value.clientId === record.clientId) this.accessTokens.delete(token);
+    }
+    this.clientConnections.delete(record.clientId);
+  }
+
   authorize(query: Record<string, string>): { redirectUri: string; code: string; state: string } {
     const redirectUri = query.redirect_uri ?? '';
     if (!query.client_id || !redirectUri) {

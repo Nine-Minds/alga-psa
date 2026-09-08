@@ -46,6 +46,17 @@ export function wire(router: Router, core: XeroEmulatorCore, _env: HostEnv): voi
     res.json(core.grantToken(params));
   });
 
+  // Xero revokes refresh tokens using HTTP Basic client authentication and a
+  // form body. PKCE clients keep the colon with an empty client secret.
+  router.post('/connect/revocation', (req, res) => {
+    const match = /^Basic ([A-Za-z0-9+/]+={0,2})$/i.exec(req.headers.authorization ?? '');
+    const decoded = match ? Buffer.from(match[1], 'base64').toString('utf8') : '';
+    const separator = decoded.indexOf(':');
+    if (separator < 1) throw new XeroWireError(401, { error: 'invalid_client' });
+    core.revokeRefreshToken({ ...req.body, client_id: decoded.slice(0, separator), client_secret: decoded.slice(separator + 1) });
+    res.status(200).end();
+  });
+
   const authenticate = (req: Request, res: Response, next: NextFunction) => {
     const bearer = String(req.headers.authorization ?? '').replace(/^Bearer\s+/i, '');
     res.locals.access = core.authenticate(bearer);
