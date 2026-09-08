@@ -1575,6 +1575,17 @@
         "totals-row": {
           "title": "Fila de totales"
         },
+        "totals-emphasis-style": {
+          "title": "Estilo de fila destacada",
+          "fields": {
+            "totalsEmphasisBackgroundColor": {
+              "label": "Fondo"
+            },
+            "totalsEmphasisColor": {
+              "label": "Color de texto"
+            }
+          }
+        },
         "action-button": {
           "title": "Botón",
           "fields": {

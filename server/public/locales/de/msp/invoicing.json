@@ -1575,6 +1575,17 @@
         "totals-row": {
           "title": "Summenzeile"
         },
+        "totals-emphasis-style": {
+          "title": "Stil der hervorgehobenen Zeile",
+          "fields": {
+            "totalsEmphasisBackgroundColor": {
+              "label": "Hintergrund"
+            },
+            "totalsEmphasisColor": {
+              "label": "Textfarbe"
+            }
+          }
+        },
         "action-button": {
           "title": "Schaltfläche",
           "fields": {

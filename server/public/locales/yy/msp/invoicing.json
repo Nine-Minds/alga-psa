@@ -1575,6 +1575,17 @@
         "totals-row": {
           "title": "〖Ŧȯŧȧŀş Řȯẇ ····〗"
         },
+        "totals-emphasis-style": {
+          "title": "〖Ħīɠħŀīɠħŧ Řȯẇ Şŧẏŀḗ ········〗",
+          "fields": {
+            "totalsEmphasisBackgroundColor": {
+              "label": "〖Ɓȧƈķɠřȯŭƞḓ ····〗"
+            },
+            "totalsEmphasisColor": {
+              "label": "〖Ŧḗẋŧ ƈȯŀȯř ····〗"
+            }
+          }
+        },
         "action-button": {
           "title": "〖Ɓŭŧŧȯƞ ···〗",
           "fields": {

@@ -1625,6 +1625,17 @@
         "totals-row": {
           "title": "Wiersz sum"
         },
+        "totals-emphasis-style": {
+          "title": "Styl wyróżnionego wiersza",
+          "fields": {
+            "totalsEmphasisBackgroundColor": {
+              "label": "Tło"
+            },
+            "totalsEmphasisColor": {
+              "label": "Kolor tekstu"
+            }
+          }
+        },
         "action-button": {
           "title": "Przycisk",
           "fields": {
