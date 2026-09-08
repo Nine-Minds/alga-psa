@@ -749,6 +749,30 @@
       "activating": "Activeren…",
       "activate": "Licentiesleutel activeren",
       "activated": "Licentiesleutel voor de werkruimte geactiveerd."
+    },
+    "upgrade": {
+      "title": "Upgraden naar AlgaPSA",
+      "description": "Beheer deze werkruimte zelfstandig met uw eigen betaalde AlgaPSA-licentie.",
+      "preserved": "Uw tickets, projecten, documenten en geschiedenis blijven in deze werkruimte.",
+      "trustEnds": "De upgrade beëindigt de directe toegang van uw MSP en geeft uw co-managed plaatsen vrij. Uw MSP behoudt het toegestane archief van zijn deelname.",
+      "alreadyDeparted": "Uw MSP-relatie is al beëindigd. Het bestaande archief blijft ongewijzigd.",
+      "seats": "Vereiste betaalde technicusplaatsen: {{count}}",
+      "hosting": "Deze upgrade behoudt uw huidige hosting. Deze installatie verlaten vereist een afzonderlijke export en herstel.",
+      "licenseRequired": "Activeer vóór de upgrade een tenantgebonden Pro-licentie met voldoende plaatsen.",
+      "subscriptionRequired": "Voor de upgrade is een actief, betaald AlgaPSA-abonnement van deze werkruimte vereist.",
+      "manageLicense": "Werkruimtelicentie beheren",
+      "running": "Uw upgrade wordt uitgevoerd. Deze pagina wordt bijgewerkt zodra deze klaar is.",
+      "failed": "De upgrade is niet voltooid. Controleer uw licentie en probeer opnieuw.",
+      "unavailable": "De voortgang is tijdelijk niet beschikbaar. Vernieuw om opnieuw te controleren.",
+      "start": "Werkruimte upgraden",
+      "refresh": "Status vernieuwen",
+      "completed": "Deze werkruimte is nu een zelfstandige AlgaPSA-werkruimte.",
+      "openPsa": "AlgaPSA openen",
+      "loadError": "De upgradestatus kan niet worden geladen. Vernieuw om opnieuw te proberen.",
+      "startError": "De upgrade kan niet worden gestart. U kunt het verzoek opnieuw proberen.",
+      "confirmTitle": "Deze werkruimte upgraden?",
+      "confirmMessage": "Hiermee wordt uw werkruimte omgezet naar AlgaPSA en wordt elke actieve MSP-relatie beëindigd. Uw eigen betaalde licentie dekt deze werkruimte. De hosting van uw gegevens verandert niet.",
+      "cancel": "Annuleren"
     }
   }
 }

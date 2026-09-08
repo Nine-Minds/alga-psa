@@ -838,6 +838,30 @@
       "activating": "Activating…",
       "activate": "Activate license key",
       "activated": "Workspace license key activated."
+    },
+    "upgrade": {
+      "title": "Upgrade to AlgaPSA",
+      "description": "Run this workspace independently with your own paid AlgaPSA license.",
+      "preserved": "Your tickets, projects, documents and history stay in this workspace.",
+      "trustEnds": "The upgrade ends your MSP’s live access and releases your co-managed seats. Your MSP keeps its permitted participation archive.",
+      "alreadyDeparted": "Your MSP relationship has already ended. Its existing archive stays unchanged.",
+      "seats": "Paid technician seats required: {{count}}",
+      "hosting": "This upgrade keeps your current hosting. Leaving this installation requires a separate export and restore.",
+      "licenseRequired": "Activate a tenant-bound Pro license with enough seats before upgrading.",
+      "subscriptionRequired": "An active, paid AlgaPSA subscription belonging to this workspace is required before upgrading.",
+      "manageLicense": "Manage workspace license",
+      "running": "Your upgrade is running. This page will update when it finishes.",
+      "failed": "The upgrade did not finish. Review your entitlement and try again.",
+      "unavailable": "Upgrade progress is temporarily unavailable. Refresh to check again.",
+      "start": "Upgrade workspace",
+      "refresh": "Refresh status",
+      "completed": "This workspace is now an independent AlgaPSA workspace.",
+      "openPsa": "Open AlgaPSA",
+      "loadError": "Unable to load upgrade status. Refresh to try again.",
+      "startError": "Unable to start the upgrade. Your request can be retried.",
+      "confirmTitle": "Upgrade this workspace?",
+      "confirmMessage": "This converts your workspace to AlgaPSA and ends any live MSP relationship. Your own paid entitlement covers this workspace. This does not change who hosts your data.",
+      "cancel": "Cancel"
     }
   }
 }

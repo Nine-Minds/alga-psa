@@ -11,6 +11,9 @@ import { coManagedArchiveManifestHash } from './archiveManifest';
 import type { CoManagedPolicyTarget } from './policy';
 
 export interface CoManagedIndependentUpgradeRequest { operationId: string; expectedRevision: number }
+export interface CoManagedIndependentUpgradeCommand {
+  actor: CoManagedSessionActor; target: CoManagedPolicyTarget; request: CoManagedIndependentUpgradeRequest;
+}
 export interface CoManagedIndependentEntitlement {
   source: 'tenant_license' | 'stripe'; reference: string; seats: number | null; validUntil: Date;
 }

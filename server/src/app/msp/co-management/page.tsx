@@ -1,7 +1,8 @@
 import { CoManagedFeatureBoundary } from '@/components/co-managed/CoManagedFeatureBoundary';
+import { CoManagedUpgradeEntry } from '@/components/co-managed/CoManagedUpgrade';
 import CoManagedPolicyPanel from '@/components/co-managed/CoManagedPolicyPanel';
 
 export default async function CoManagedPolicyPage({ searchParams }: { searchParams?: Promise<{ operationId?: string }> }) {
   const operationId = (await searchParams)?.operationId;
-  return <CoManagedFeatureBoundary><CoManagedPolicyPanel operationId={operationId} /></CoManagedFeatureBoundary>;
+  return <CoManagedFeatureBoundary><CoManagedUpgradeEntry /><CoManagedPolicyPanel operationId={operationId} /></CoManagedFeatureBoundary>;
 }

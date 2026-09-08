@@ -753,6 +753,30 @@
       "activating": "Aktywowanie…",
       "activate": "Aktywuj klucz licencyjny",
       "activated": "Aktywowano klucz licencyjny obszaru roboczego."
+    },
+    "upgrade": {
+      "title": "Przejdź na AlgaPSA",
+      "description": "Prowadź ten obszar roboczy niezależnie z własną płatną licencją AlgaPSA.",
+      "preserved": "Zgłoszenia, projekty, dokumenty i historia pozostają w tym obszarze roboczym.",
+      "trustEnds": "Aktualizacja kończy bezpośredni dostęp MSP i zwalnia współzarządzane miejsca. MSP zachowuje dozwolone archiwum swojego udziału.",
+      "alreadyDeparted": "Relacja z MSP została już zakończona. Istniejące archiwum pozostaje bez zmian.",
+      "seats": "Wymagane płatne miejsca techników: {{count}}",
+      "hosting": "Aktualizacja zachowuje obecny hosting. Opuszczenie tej instalacji wymaga osobnego eksportu i odtworzenia danych.",
+      "licenseRequired": "Przed aktualizacją aktywuj licencję Pro przypisaną do tego obszaru z wystarczającą liczbą miejsc.",
+      "subscriptionRequired": "Przed aktualizacją wymagana jest aktywna, opłacona subskrypcja AlgaPSA należąca do tego obszaru.",
+      "manageLicense": "Zarządzaj licencją obszaru",
+      "running": "Aktualizacja trwa. Strona zostanie odświeżona po zakończeniu.",
+      "failed": "Aktualizacja nie została zakończona. Sprawdź licencję i spróbuj ponownie.",
+      "unavailable": "Postęp jest chwilowo niedostępny. Odśwież, aby sprawdzić ponownie.",
+      "start": "Zaktualizuj obszar",
+      "refresh": "Odśwież status",
+      "completed": "Ten obszar roboczy jest teraz niezależnym obszarem AlgaPSA.",
+      "openPsa": "Otwórz AlgaPSA",
+      "loadError": "Nie udało się wczytać statusu. Odśwież, aby spróbować ponownie.",
+      "startError": "Nie udało się rozpocząć aktualizacji. Możesz ponowić żądanie.",
+      "confirmTitle": "Zaktualizować ten obszar?",
+      "confirmMessage": "Spowoduje to przejście obszaru na AlgaPSA i zakończenie każdej aktywnej relacji z MSP. Obszar obejmie własna płatna licencja. Hosting danych pozostanie bez zmian.",
+      "cancel": "Anuluj"
     }
   }
 }

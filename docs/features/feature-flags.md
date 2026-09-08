@@ -336,3 +336,5 @@ const isEnabled = typeof featureFlag === 'boolean' ? featureFlag : featureFlag?.
 - The construction image is located at `/images/under-construction.png`
 - All text is included in the image itself (no additional text rendering)
 - Service Types and Service Catalog remain accessible regardless of billing feature flag
+
+The co-managed independent upgrade entry and `/msp/co-management/upgrade` screen use the existing `release-v1-6-feature` client boundary. Upgrade actions, readiness reads, workflow scheduling and worker execution do not evaluate this release flag.

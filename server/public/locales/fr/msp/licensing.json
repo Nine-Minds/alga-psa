@@ -751,6 +751,30 @@
       "activating": "Activation…",
       "activate": "Activer la clé de licence",
       "activated": "Clé de licence de l’espace de travail activée."
+    },
+    "upgrade": {
+      "title": "Passer à AlgaPSA",
+      "description": "Gérez cet espace de manière indépendante avec votre propre licence AlgaPSA payante.",
+      "preserved": "Vos tickets, projets, documents et historiques restent dans cet espace.",
+      "trustEnds": "La mise à niveau met fin à l’accès direct de votre MSP et libère vos places cogérées. Votre MSP conserve les archives de sa participation autorisée.",
+      "alreadyDeparted": "Votre relation avec le MSP est déjà terminée. Ses archives existantes restent inchangées.",
+      "seats": "Places de technicien payantes requises : {{count}}",
+      "hosting": "Cette mise à niveau conserve votre hébergement actuel. Quitter cette installation nécessite un export et une restauration distincts.",
+      "licenseRequired": "Activez une licence Pro liée à cet espace avec suffisamment de places avant la mise à niveau.",
+      "subscriptionRequired": "Un abonnement AlgaPSA actif et payé appartenant à cet espace est requis avant la mise à niveau.",
+      "manageLicense": "Gérer la licence de l’espace",
+      "running": "La mise à niveau est en cours. Cette page sera actualisée à la fin.",
+      "failed": "La mise à niveau n’a pas abouti. Vérifiez votre licence et réessayez.",
+      "unavailable": "La progression est temporairement indisponible. Actualisez pour vérifier.",
+      "start": "Mettre à niveau l’espace",
+      "refresh": "Actualiser le statut",
+      "completed": "Cet espace est désormais un espace AlgaPSA indépendant.",
+      "openPsa": "Ouvrir AlgaPSA",
+      "loadError": "Impossible de charger le statut. Actualisez pour réessayer.",
+      "startError": "Impossible de démarrer la mise à niveau. Vous pouvez réessayer.",
+      "confirmTitle": "Mettre à niveau cet espace ?",
+      "confirmMessage": "Cette opération convertit votre espace en AlgaPSA et met fin à toute relation MSP active. Votre propre licence payante couvre cet espace. L’hébergeur de vos données ne change pas.",
+      "cancel": "Annuler"
     }
   }
 }

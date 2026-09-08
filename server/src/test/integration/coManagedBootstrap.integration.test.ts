@@ -19219,6 +19219,9 @@ async function withHostedPsaUpgradeFixture(work: (f: any) => Promise<void>) {
 
 it('hosted PSA upgrade verifies its own paid subscription outside locks and preserves MSP billing and another allocation', async () => {
   await withHostedPsaUpgradeFixture(async f => {
+    const { getCoManagedIndependentUpgradeScreen: readScreen } = await import('@alga-psa/co-managed');
+    expect(await readScreen(db, f.customerPrincipal)).toMatchObject({ state: 'eligible', selfHosted: false, entitlementReady: false });
+    expect(await readScreen(db, f.customerPrincipal, Object.values(f.prices))).toMatchObject({ state: 'eligible', selfHosted: false, entitlementReady: true });
     await f.sponsor.table('co_managed_entitlements').update({ capacity: 4 });
     const clientId = randomUUID();
     await f.sponsor.table('clients').insert({ tenant: f.principal.tenant, client_id: clientId, client_name: 'Another customer' });
@@ -19301,5 +19304,54 @@ it('hosted PSA upgrade rejects unpaid or foreign provider state and rechecks loc
     expect(await f.sponsor.table('co_managed_relationship_closures').where('customer_tenant', f.resource.tenant)).toHaveLength(0);
     await f.customer.table('sessions').where('session_id', f.customerPrincipal.sessionId).update({ revoked_at: null });
     expect((await f.upgrade()).productCode).toBe('psa');
+  });
+});
+
+it('public PSA upgrade binds the browser customer and worker to current authority and refreshes the completed state', async () => {
+  const f = await ticketHandoffFixture();
+  await withTenantLicenseFixture(async sign => {
+    await withTenantLicenseBrowser(f, async browser => {
+      const authContext = await import('@alga-psa/auth');
+      const user = await f.customer.table('users').where('user_id', f.customerPrincipal.userId).first();
+      await authContext.runWithApiKeyUser(user, async () => {
+      const actions = await import('../../../../ee/server/src/lib/actions/coManagedUpgradeActions');
+      const workflows = await import('../../../../ee/server/src/lib/tenant-management/workflowClient');
+      const licensing = await import('@alga-psa/licensing');
+      const temporal = await import('@temporalio/activity');
+      const worker = await import('../../../../ee/temporal-workflows/src/activities/product-upgrade-activities');
+      const schedule = vi.spyOn(workflows, 'startTenantProductUpgradeWorkflow').mockResolvedValue({ available: true,
+        workflowId: 'fixture-upgrade', alreadyRunning: false });
+      const status = vi.spyOn(workflows, 'getTenantProductUpgradeStatus').mockResolvedValue({ available: true, data: { state: 'idle' } });
+      const activityContext = vi.spyOn(temporal.Context, 'current').mockReturnValue({ log } as any);
+      try {
+        expect(await actions.getCoManagedUpgradeScreenAction()).toMatchObject({ state: 'eligible', selfHosted: true, entitlementReady: false });
+        await db.transaction(trx => licensing.activateTenantPsaLicense(trx, f.resource.tenant, sign({ aud: f.resource.tenant, seats: 10 })));
+        const screen = await actions.getCoManagedUpgradeScreenAction();
+        expect(screen).toMatchObject({ state: 'eligible', entitlementReady: true });
+        if (screen.state !== 'eligible') throw new Error('Expected eligible customer');
+        const input = { relationshipId: screen.relationshipId, expectedRevision: screen.revision, operationId: randomUUID() };
+        expect(await actions.startCoManagedUpgradeAction({ ...input, actor: f.principal, customerTenant: f.principal.tenant } as any))
+          .toEqual({ completed: false, enqueued: true });
+        const invocation = schedule.mock.calls[0][0];
+        expect(invocation).toMatchObject({ tenantId: f.resource.tenant, requestedByUserId: f.customerPrincipal.userId,
+          coManaged: { actor: f.customerPrincipal, target: f.target,
+            request: { operationId: input.operationId, expectedRevision: screen.revision } } });
+        await f.customer.table('sessions').where('session_id', f.customerPrincipal.sessionId).update({ revoked_at: new Date() });
+        await expect(worker.product_upgrade_co_managed(invocation.coManaged!)).rejects.toThrow('CO_MANAGED_SHARED_WORK_FORBIDDEN');
+        expect((await f.customer.table('tenants').first()).product_code).toBe('co_managed');
+        await f.customer.table('sessions').where('session_id', f.customerPrincipal.sessionId).update({ revoked_at: null });
+        expect(await worker.product_upgrade_co_managed(invocation.coManaged!)).toMatchObject({ productCode: 'psa', seats: 10 });
+        status.mockClear();
+        expect(await actions.getCoManagedUpgradeScreenAction()).toEqual({ state: 'completed', operationId: input.operationId, progress: 'completed' });
+        expect(status).not.toHaveBeenCalled();
+        expect(await actions.startCoManagedUpgradeAction(input)).toEqual({ completed: true, enqueued: false });
+        expect(schedule).toHaveBeenCalledTimes(1);
+        const auth = await import('@alga-psa/auth');
+        const override = vi.spyOn(auth, 'getApiKeyUserOverride').mockReturnValue({} as any);
+        try { await expect(actions.startCoManagedUpgradeAction(input)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' }); }
+        finally { override.mockRestore(); }
+      } finally { activityContext.mockRestore(); schedule.mockRestore(); status.mockRestore(); }
+      });
+    });
   });
 });

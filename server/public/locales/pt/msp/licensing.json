@@ -751,6 +751,30 @@
       "activating": "Ativando…",
       "activate": "Ativar chave de licença",
       "activated": "Chave de licença do espaço de trabalho ativada."
+    },
+    "upgrade": {
+      "title": "Atualizar para AlgaPSA",
+      "description": "Gira este espaço de forma independente com a sua própria licença paga do AlgaPSA.",
+      "preserved": "Os seus tickets, projetos, documentos e histórico permanecem neste espaço.",
+      "trustEnds": "A atualização termina o acesso direto do MSP e liberta os seus lugares cogeridos. O MSP mantém o arquivo permitido da sua participação.",
+      "alreadyDeparted": "A relação com o MSP já terminou. O arquivo existente mantém-se inalterado.",
+      "seats": "Lugares de técnico pagos necessários: {{count}}",
+      "hosting": "Esta atualização mantém o alojamento atual. Sair desta instalação exige uma exportação e um restauro separados.",
+      "licenseRequired": "Ative uma licença Pro vinculada a este espaço com lugares suficientes antes de atualizar.",
+      "subscriptionRequired": "É necessária uma subscrição AlgaPSA ativa e paga pertencente a este espaço antes de atualizar.",
+      "manageLicense": "Gerir licença do espaço",
+      "running": "A atualização está em curso. Esta página será atualizada quando terminar.",
+      "failed": "A atualização não terminou. Verifique a licença e tente novamente.",
+      "unavailable": "O progresso está temporariamente indisponível. Atualize para verificar novamente.",
+      "start": "Atualizar espaço",
+      "refresh": "Atualizar estado",
+      "completed": "Este espaço é agora um espaço AlgaPSA independente.",
+      "openPsa": "Abrir AlgaPSA",
+      "loadError": "Não foi possível carregar o estado. Atualize para tentar novamente.",
+      "startError": "Não foi possível iniciar a atualização. Pode repetir o pedido.",
+      "confirmTitle": "Atualizar este espaço?",
+      "confirmMessage": "Esta operação converte o espaço para AlgaPSA e termina qualquer relação MSP ativa. A sua própria licença paga cobre este espaço. O alojamento dos dados não muda.",
+      "cancel": "Cancelar"
     }
   }
 }

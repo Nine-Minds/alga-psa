@@ -749,6 +749,30 @@
       "activating": "Wird aktiviert…",
       "activate": "Lizenzschlüssel aktivieren",
       "activated": "Lizenzschlüssel des Arbeitsbereichs aktiviert."
+    },
+    "upgrade": {
+      "title": "Auf AlgaPSA umsteigen",
+      "description": "Betreiben Sie diesen Arbeitsbereich unabhängig mit Ihrer eigenen kostenpflichtigen AlgaPSA-Lizenz.",
+      "preserved": "Ihre Tickets, Projekte, Dokumente und Verläufe bleiben in diesem Arbeitsbereich.",
+      "trustEnds": "Das Upgrade beendet den direkten Zugriff Ihres MSP und gibt Ihre Co-Managed-Plätze frei. Ihr MSP behält das zulässige Archiv seiner Beteiligung.",
+      "alreadyDeparted": "Ihre MSP-Beziehung ist bereits beendet. Das vorhandene Archiv bleibt unverändert.",
+      "seats": "Erforderliche kostenpflichtige Technikerplätze: {{count}}",
+      "hosting": "Das aktuelle Hosting bleibt bestehen. Ein Wechsel von dieser Installation erfordert einen separaten Export und eine Wiederherstellung.",
+      "licenseRequired": "Aktivieren Sie vor dem Upgrade eine mandantengebundene Pro-Lizenz mit genügend Plätzen.",
+      "subscriptionRequired": "Vor dem Upgrade ist ein aktives, bezahltes AlgaPSA-Abonnement dieses Arbeitsbereichs erforderlich.",
+      "manageLicense": "Arbeitsbereichslizenz verwalten",
+      "running": "Das Upgrade läuft. Diese Seite wird nach Abschluss aktualisiert.",
+      "failed": "Das Upgrade wurde nicht abgeschlossen. Prüfen Sie Ihre Lizenz und versuchen Sie es erneut.",
+      "unavailable": "Der Fortschritt ist vorübergehend nicht verfügbar. Aktualisieren Sie den Status.",
+      "start": "Arbeitsbereich upgraden",
+      "refresh": "Status aktualisieren",
+      "completed": "Dieser Arbeitsbereich ist jetzt ein unabhängiger AlgaPSA-Arbeitsbereich.",
+      "openPsa": "AlgaPSA öffnen",
+      "loadError": "Der Upgrade-Status konnte nicht geladen werden. Versuchen Sie es erneut.",
+      "startError": "Das Upgrade konnte nicht gestartet werden. Sie können die Anfrage wiederholen.",
+      "confirmTitle": "Diesen Arbeitsbereich upgraden?",
+      "confirmMessage": "Dies wandelt Ihren Arbeitsbereich in AlgaPSA um und beendet jede aktive MSP-Beziehung. Ihre eigene kostenpflichtige Lizenz deckt diesen Arbeitsbereich ab. Der Hoster Ihrer Daten bleibt unverändert.",
+      "cancel": "Abbrechen"
     }
   }
 }

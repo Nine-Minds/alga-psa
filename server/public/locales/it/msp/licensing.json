@@ -751,6 +751,30 @@
       "activating": "Attivazione…",
       "activate": "Attiva chiave di licenza",
       "activated": "Chiave di licenza dello spazio di lavoro attivata."
+    },
+    "upgrade": {
+      "title": "Passa ad AlgaPSA",
+      "description": "Gestisci questo spazio in modo indipendente con la tua licenza AlgaPSA a pagamento.",
+      "preserved": "Ticket, progetti, documenti e cronologia rimangono in questo spazio.",
+      "trustEnds": "L’aggiornamento termina l’accesso diretto del tuo MSP e libera i posti cogestiti. Il tuo MSP conserva l’archivio consentito della propria partecipazione.",
+      "alreadyDeparted": "La relazione con il tuo MSP è già terminata. L’archivio esistente resta invariato.",
+      "seats": "Posti tecnico a pagamento necessari: {{count}}",
+      "hosting": "L’hosting attuale rimane invariato. Per lasciare questa installazione occorrono un’esportazione e un ripristino separati.",
+      "licenseRequired": "Attiva una licenza Pro vincolata a questo spazio con posti sufficienti prima di procedere.",
+      "subscriptionRequired": "Prima di procedere è necessario un abbonamento AlgaPSA attivo e pagato appartenente a questo spazio.",
+      "manageLicense": "Gestisci licenza dello spazio",
+      "running": "L’aggiornamento è in corso. La pagina si aggiornerà al termine.",
+      "failed": "L’aggiornamento non è terminato. Verifica la licenza e riprova.",
+      "unavailable": "L’avanzamento non è temporaneamente disponibile. Aggiorna per verificare.",
+      "start": "Aggiorna spazio",
+      "refresh": "Aggiorna stato",
+      "completed": "Questo spazio è ora uno spazio AlgaPSA indipendente.",
+      "openPsa": "Apri AlgaPSA",
+      "loadError": "Impossibile caricare lo stato. Aggiorna per riprovare.",
+      "startError": "Impossibile avviare l’aggiornamento. Puoi riprovare la richiesta.",
+      "confirmTitle": "Aggiornare questo spazio?",
+      "confirmMessage": "Questa operazione converte lo spazio in AlgaPSA e termina qualsiasi relazione MSP attiva. La tua licenza a pagamento copre questo spazio. Il fornitore di hosting dei dati non cambia.",
+      "cancel": "Annulla"
     }
   }
 }

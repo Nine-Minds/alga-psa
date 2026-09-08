@@ -751,6 +751,30 @@
       "activating": "Activando…",
       "activate": "Activar clave de licencia",
       "activated": "Clave de licencia del espacio de trabajo activada."
+    },
+    "upgrade": {
+      "title": "Actualizar a AlgaPSA",
+      "description": "Gestiona este espacio de forma independiente con tu propia licencia de pago de AlgaPSA.",
+      "preserved": "Tus tickets, proyectos, documentos e historial permanecen en este espacio.",
+      "trustEnds": "La actualización termina el acceso directo de tu MSP y libera tus plazas cogestionadas. Tu MSP conserva el archivo permitido de su participación.",
+      "alreadyDeparted": "La relación con tu MSP ya ha terminado. Su archivo existente no cambia.",
+      "seats": "Plazas de técnico de pago necesarias: {{count}}",
+      "hosting": "Esta actualización mantiene el alojamiento actual. Salir de esta instalación requiere una exportación y restauración independientes.",
+      "licenseRequired": "Activa una licencia Pro vinculada a este espacio con suficientes plazas antes de actualizar.",
+      "subscriptionRequired": "Se requiere una suscripción activa y pagada de AlgaPSA perteneciente a este espacio antes de actualizar.",
+      "manageLicense": "Gestionar licencia del espacio",
+      "running": "La actualización está en curso. Esta página se actualizará al terminar.",
+      "failed": "La actualización no terminó. Revisa tu licencia e inténtalo de nuevo.",
+      "unavailable": "El progreso no está disponible temporalmente. Actualiza para comprobarlo.",
+      "start": "Actualizar espacio",
+      "refresh": "Actualizar estado",
+      "completed": "Este espacio ya es un espacio independiente de AlgaPSA.",
+      "openPsa": "Abrir AlgaPSA",
+      "loadError": "No se pudo cargar el estado. Actualiza para intentarlo de nuevo.",
+      "startError": "No se pudo iniciar la actualización. Puedes volver a intentarlo.",
+      "confirmTitle": "¿Actualizar este espacio?",
+      "confirmMessage": "Esto convierte tu espacio a AlgaPSA y termina cualquier relación activa con el MSP. Tu propia licencia de pago cubre este espacio. No cambia quién aloja tus datos.",
+      "cancel": "Cancelar"
     }
   }
 }
