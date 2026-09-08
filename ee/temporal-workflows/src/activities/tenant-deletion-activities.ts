@@ -400,6 +400,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'co_managed_relationship_closures',
   'co_managed_participation_evidence',
   'co_managed_archive_files',
+  'co_managed_archive_manifests',
   'co_management_notification_deliveries',
   'co_management_in_app_receipts',
   'co_management_private_comments',

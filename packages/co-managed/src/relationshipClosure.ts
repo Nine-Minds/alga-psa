@@ -1,3 +1,4 @@
+import { sealCoManagedArchive } from './archiveManifest';
 import { createHash } from 'node:crypto';
 import type { Knex } from 'knex';
 import { tenantDb, withTransaction } from '@alga-psa/db';
@@ -79,7 +80,9 @@ export async function closeCoManagedRelationship(db: Knex, inputActor: CoManaged
     if (relationship.state !== 'active' || owner.product_code !== 'co_managed' || home.product_code !== 'psa') throw new CoManagedSharedWorkError();
     if (relationship.revision !== request.expectedRevision) throw new CoManagedClosureError('CLOSURE_CHANGED');
     const cutoffAt = new Date((await trx.select({ at: trx.raw('clock_timestamp()') }).first()).at);
-    await finalizeEvidence({ trx, sponsorTenant: found.sponsor_tenant, ...target, operationId: request.operationId, cutoffAt: new Date(cutoffAt) });
+    const evidenceContext = { trx, sponsorTenant: found.sponsor_tenant, ...target, operationId: request.operationId, cutoffAt: new Date(cutoffAt) };
+    await finalizeEvidence(evidenceContext);
+    await sealCoManagedArchive({ trx, sponsorTenant: found.sponsor_tenant, ...target, operationId: request.operationId, cutoffAt: new Date(cutoffAt) });
     await assertCoManagedSessionUnexpired(trx, actor);
     const work = await customer.table('co_management_ticket_work').where('relationship_id', target.relationshipId).orderBy('ticket_id').forUpdate();
     for (const ticket of work) {
