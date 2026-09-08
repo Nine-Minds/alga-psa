@@ -3,6 +3,7 @@ export { retainCoManagedConversationBeforeSourceChange } from './sourceChangeRet
 export * from './provisioning';
 export * from './acceptance';
 export * from './relationshipClosure';
+export * from './departure';
 export * from './policy';
 export * from './sharedWork';
 export * from './sharedWorkRead';

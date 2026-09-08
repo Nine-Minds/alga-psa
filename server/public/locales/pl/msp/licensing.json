@@ -791,6 +791,21 @@
       "paidSeats": "Płatne miejsca techników",
       "reviewSeatChange": "Sprawdź zmianę liczby miejsc",
       "billingError": "Nie udało się otworzyć rozliczeń. Odśwież status i spróbuj ponownie."
+    },
+    "departure": {
+      "title": "Zakończ współzarządzanie",
+      "description": "Sprawdź, co się stanie po zakończeniu tej relacji.",
+      "immediate": "Dostęp między tymi organizacjami kończy się natychmiast po potwierdzeniu.",
+      "preserved": "Klient zachowuje swój obszar roboczy i dane. Odczyt, eksport i przejście na niezależną subskrypcję AlgaPSA pozostają dostępne.",
+      "archive": "MSP zachowuje własne zapisy i dozwolone historyczne dowody wspólnej pracy, w której uczestniczył.",
+      "billing": "Przydzielone licencje wracają do puli MSP. Subskrypcje nie są anulowane, a obszary robocze nie są usuwane.",
+      "completed": "Ta relacja współzarządzania została zakończona. Dostęp między organizacjami jest zamknięty.",
+      "review": "Sprawdź zakończenie",
+      "confirmTitle": "Zakończyć tę relację?",
+      "confirmMessage": "Zakończyć współzarządzanie z {{name}}? Współpraca ustaje natychmiast. Dane klienta i dozwolone archiwum historyczne MSP zostaną zachowane.",
+      "end": "Zakończ relację",
+      "loadError": "Nie można załadować tej relacji. Odśwież, aby sprawdzić bieżący dostęp.",
+      "endError": "Nie można potwierdzić zakończenia. Ponów to samo żądanie lub odśwież, aby sprawdzić, czy zostało ukończone."
     }
   }
 }

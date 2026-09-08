@@ -789,6 +789,21 @@
       "paidSeats": "Places de technicien payantes",
       "reviewSeatChange": "Vérifier la modification des places",
       "billingError": "Impossible d’ouvrir la facturation. Actualisez le statut et réessayez."
+    },
+    "departure": {
+      "title": "Mettre fin à la cogestion",
+      "description": "Vérifiez les conséquences de la fin de cette relation.",
+      "immediate": "L’accès entre ces organisations prend fin immédiatement après confirmation.",
+      "preserved": "Le client conserve son espace et ses données. La lecture, l’export et le passage à un abonnement AlgaPSA indépendant restent disponibles.",
+      "archive": "Le MSP conserve ses propres dossiers et les preuves historiques autorisées du travail partagé auquel il a participé.",
+      "billing": "Les licences allouées retournent au pool du MSP. Aucun abonnement n’est annulé et aucun espace n’est supprimé.",
+      "completed": "Cette relation de cogestion est terminée. L’accès entre les organisations est fermé.",
+      "review": "Examiner le départ",
+      "confirmTitle": "Mettre fin à cette relation ?",
+      "confirmMessage": "Mettre fin à la cogestion avec {{name}} ? La collaboration cesse immédiatement. Les données du client et les archives historiques autorisées du MSP sont conservées.",
+      "end": "Mettre fin à la relation",
+      "loadError": "Impossible de charger cette relation. Actualisez pour vérifier votre accès actuel.",
+      "endError": "Impossible de confirmer le départ. Réessayez la même demande ou actualisez pour vérifier si elle a abouti."
     }
   }
 }

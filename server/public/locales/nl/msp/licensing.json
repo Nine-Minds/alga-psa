@@ -787,6 +787,21 @@
       "paidSeats": "Betaalde technicusplaatsen",
       "reviewSeatChange": "Plaatswijziging bekijken",
       "billingError": "De facturering kan niet worden geopend. Vernieuw de status en probeer opnieuw."
+    },
+    "departure": {
+      "title": "Co-management beëindigen",
+      "description": "Bekijk wat er gebeurt wanneer deze relatie eindigt.",
+      "immediate": "De toegang tussen deze organisaties stopt direct na uw bevestiging.",
+      "preserved": "De klant behoudt zijn werkruimte en gegevens. Lezen, exporteren en overstappen naar een onafhankelijk AlgaPSA-abonnement blijven beschikbaar.",
+      "archive": "De MSP behoudt eigen gegevens en toegestane historische bewijzen van gedeeld werk waaraan deze heeft deelgenomen.",
+      "billing": "Toegewezen licenties keren terug naar de pool van de MSP. Abonnementen worden niet opgezegd en werkruimtes worden niet verwijderd.",
+      "completed": "Deze co-managementrelatie is beëindigd. De toegang tussen organisaties is gesloten.",
+      "review": "Vertrek bekijken",
+      "confirmTitle": "Deze relatie beëindigen?",
+      "confirmMessage": "Co-management met {{name}} beëindigen? De samenwerking stopt direct. Klantgegevens en het toegestane historische archief van de MSP blijven bewaard.",
+      "end": "Relatie beëindigen",
+      "loadError": "Deze relatie kon niet worden geladen. Vernieuw om uw huidige toegang te controleren.",
+      "endError": "Het vertrek kon niet worden bevestigd. Probeer hetzelfde verzoek opnieuw of vernieuw om te controleren of het is voltooid."
     }
   }
 }

@@ -787,6 +787,21 @@
       "paidSeats": "Kostenpflichtige Technikerplätze",
       "reviewSeatChange": "Platzänderung prüfen",
       "billingError": "Die Abrechnung konnte nicht geöffnet werden. Aktualisieren Sie den Status und versuchen Sie es erneut."
+    },
+    "departure": {
+      "title": "Co-Management beenden",
+      "description": "Prüfen Sie die Folgen der Beendigung dieser Beziehung.",
+      "immediate": "Der Zugriff zwischen diesen Organisationen endet sofort nach Ihrer Bestätigung.",
+      "preserved": "Der Kunde behält seinen Arbeitsbereich und seine Daten. Lesezugriff, Export und der Wechsel zu einem unabhängigen AlgaPSA-Abonnement bleiben verfügbar.",
+      "archive": "Der MSP behält eigene Unterlagen und zulässige historische Nachweise gemeinsamer Arbeit, an der er beteiligt war.",
+      "billing": "Zugewiesene Lizenzen kehren in den Pool des MSP zurück. Abonnements werden nicht gekündigt und Arbeitsbereiche nicht gelöscht.",
+      "completed": "Diese Co-Management-Beziehung wurde beendet. Der organisationsübergreifende Zugriff ist geschlossen.",
+      "review": "Austritt prüfen",
+      "confirmTitle": "Diese Beziehung beenden?",
+      "confirmMessage": "Co-Management mit {{name}} beenden? Die Zusammenarbeit endet sofort. Kundendaten und das zulässige historische Archiv des MSP bleiben erhalten.",
+      "end": "Beziehung beenden",
+      "loadError": "Diese Beziehung konnte nicht geladen werden. Aktualisieren Sie, um Ihren aktuellen Zugriff zu prüfen.",
+      "endError": "Der Austritt konnte nicht bestätigt werden. Wiederholen Sie dieselbe Anfrage oder aktualisieren Sie, um den Abschluss zu prüfen."
     }
   }
 }

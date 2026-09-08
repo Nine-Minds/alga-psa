@@ -789,6 +789,21 @@
       "paidSeats": "Plazas de técnico de pago",
       "reviewSeatChange": "Revisar cambio de plazas",
       "billingError": "No se pudo abrir la facturación. Actualiza el estado e inténtalo de nuevo."
+    },
+    "departure": {
+      "title": "Finalizar la cogestión",
+      "description": "Revise qué ocurre al finalizar esta relación.",
+      "immediate": "El acceso entre estas organizaciones termina inmediatamente al confirmar.",
+      "preserved": "El cliente conserva su espacio y sus datos. La lectura, la exportación y el cambio a una suscripción independiente de AlgaPSA siguen disponibles.",
+      "archive": "El MSP conserva sus propios registros y las pruebas históricas permitidas del trabajo compartido en el que participó.",
+      "billing": "Las licencias asignadas vuelven al grupo del MSP. Esto no cancela suscripciones ni elimina ningún espacio.",
+      "completed": "Esta relación de cogestión ha finalizado. El acceso entre organizaciones está cerrado.",
+      "review": "Revisar salida",
+      "confirmTitle": "¿Finalizar esta relación?",
+      "confirmMessage": "¿Finalizar la cogestión con {{name}}? La colaboración termina inmediatamente. Se conservan los datos del cliente y el archivo histórico permitido del MSP.",
+      "end": "Finalizar relación",
+      "loadError": "No se pudo cargar esta relación. Actualice para comprobar su acceso actual.",
+      "endError": "No se pudo confirmar la salida. Reintente la misma solicitud o actualice para comprobar si se completó."
     }
   }
 }

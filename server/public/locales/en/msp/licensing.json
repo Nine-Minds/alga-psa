@@ -876,6 +876,21 @@
       "paidSeats": "Paid technician seats",
       "reviewSeatChange": "Review seat change",
       "billingError": "Unable to open billing. Refresh the status and try again."
+    },
+    "departure": {
+      "title": "End co-management",
+      "description": "Review what happens when this relationship ends.",
+      "immediate": "Live access between these organizations ends immediately when you confirm.",
+      "preserved": "The customer keeps its workspace and data. Read access, export, and upgrade to an independent AlgaPSA subscription remain available.",
+      "archive": "The MSP retains its own records and permitted historical evidence of shared work it participated in.",
+      "billing": "Allocated co-managed seats return to the MSP’s pool. This does not cancel subscriptions or delete either workspace.",
+      "completed": "This co-management relationship has ended. Live cross-organization access is closed.",
+      "review": "Review departure",
+      "confirmTitle": "End this relationship?",
+      "confirmMessage": "End co-management with {{name}}? Live collaboration stops immediately. Customer data and the MSP’s permitted historical archive are retained.",
+      "end": "End relationship",
+      "loadError": "Unable to load this relationship. Refresh to check your current access.",
+      "endError": "Unable to confirm departure. Retry the same request, or refresh to check whether it completed."
     }
   }
 }
