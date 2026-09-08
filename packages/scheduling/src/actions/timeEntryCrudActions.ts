@@ -39,7 +39,7 @@ import { recalculateProjectTaskActualHoursForEntryChange } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { productTimeEntryMode, type IUser } from '@alga-psa/types';
 import { lockTimeEntryBillingMode, operationalTimeEntryFields, admitCoManagedNativeTimeSave,
-  CoManagedSharedWorkError, assertCoManagedTimeSaveFields, reviewCoManagedNativeTimeEntry, deleteCoManagedNativeTimeEntry, readCoManagedNativeTimeEntry, readCoManagedNativeTimeSheet, type CoManagedNativeTimeAccess } from '@alga-psa/co-managed';
+  CoManagedSharedWorkError, retainCoManagedTimeParticipation, assertCoManagedTimeSaveFields, reviewCoManagedNativeTimeEntry, deleteCoManagedNativeTimeEntry, readCoManagedNativeTimeEntry, readCoManagedNativeTimeSheet, type CoManagedNativeTimeAccess } from '@alga-psa/co-managed';
 import { hasCoManagedConversationOwnership } from '@alga-psa/co-managed/nativeConversationEvents';
 import { reverseDeletedTimeEntryBilling } from '../lib/timeEntryDeletionBilling';
 import { resolveNativeTimeBrowserActor } from '../lib/nativeTimeReader';
@@ -320,7 +320,9 @@ export const saveTimeEntry = withAuth(async (user, { tenant }, timeEntry: Omit<I
       }
       if (access) assertCoManagedTimeSaveFields(access, timeEntry.work_item_type);
       const mode = await lockTimeEntryBillingMode(trx, tenant, timeEntry.entry_id || undefined);
+      if (stored?.work_item_type === 'co_managed') await retainCoManagedTimeParticipation(trx, tenant, timeEntry.entry_id);
       const result = await saveTimeEntryWithConnection(user, tenant, timeEntry, trx, mode === 'operational', access);
+      if (result.work_item_type === 'co_managed') await retainCoManagedTimeParticipation(trx, tenant, result.entry_id);
       await access?.assertCurrent();
       return result;
     });

@@ -1,9 +1,8 @@
-import { createHash, randomUUID } from 'node:crypto';
 import { tenantDb } from '@alga-psa/db';
+import { appendParticipationEvidence, participationEvidenceTable as TABLE, type ParticipationEvidenceIdentity } from './participationEvidenceStore';
 import type { CoManagedSharedWorkContext } from './sharedWork';
 import { CoManagedSharedWorkError, isCoManagedUuid } from './sharedWorkIdentity';
 
-const TABLE = 'co_managed_participation_evidence';
 type Source = 'ticket_handoff' | 'work_audit';
 const object = (value: any): Record<string, any> => typeof value === 'string' ? JSON.parse(value) : value ?? {};
 
@@ -53,13 +52,9 @@ export async function retainCoManagedParticipationEvidence(context: CoManagedSha
     payload = { changes: allowed, audience: 'shared_it' };
   }
   if (typeof name !== 'string' || typeof organization !== 'string') throw new CoManagedSharedWorkError();
-  const key = { tenant: relationship.sponsor_tenant, customer_tenant: resource.tenant, relationship_id: resource.relationshipId,
-    resource_type: resource.kind, resource_id: resource.id, source_type: source, source_id: sourceId };
+  const key: ParticipationEvidenceIdentity = { tenant: relationship.sponsor_tenant, customer_tenant: resource.tenant, relationship_id: resource.relationshipId,
+    resource_type: resource.kind as 'ticket' | 'project_task', resource_id: resource.id, source_type: source, source_id: sourceId };
   const retained = { client_id: relationship.sponsor_client_id, operation_id: operationId, event_type: eventType,
     actor_tenant: actor.tenant, actor_user_id: actor.userId, actor_name: name, actor_organization: organization, occurred_at: occurredAt, payload };
-  const hash = createHash('sha256').update(JSON.stringify(retained)).digest('hex');
-  await sponsor.table(TABLE).insert({ ...key, ...retained, evidence_id: randomUUID(), payload_hash: hash, captured_at: trx.raw('clock_timestamp()') })
-    .onConflict(Object.keys(key)).ignore();
-  const saved = await sponsor.table(TABLE).where(key).first('payload_hash');
-  if (saved?.payload_hash !== hash) throw new Error('Retained participation evidence does not match its original event');
+  await appendParticipationEvidence(trx, key, retained);
 }

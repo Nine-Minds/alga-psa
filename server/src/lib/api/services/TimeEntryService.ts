@@ -27,7 +27,7 @@ import { buildTicketTimeEntryAddedWorkflowEvent } from './timeEntryWorkflowEvent
 import { hasPermission } from '../../auth/rbac';
 import { recalculateProjectTaskActualHoursForEntryChange, withTransaction, registerAfterCommit } from '@alga-psa/db';
 import { lockTimeEntryBillingMode, operationalTimeEntryFields, admitCoManagedNativeTimeSave, lockCoManagedLocalAuthentication, assertCoManagedTimeSaveFields,
-  CoManagedSharedWorkError, TimeEntryBillingModeError, startNativeTimeTracking, stopNativeTimeTracking, getNativeActiveTimeTracking,
+  CoManagedSharedWorkError, retainCoManagedTimeParticipation, TimeEntryBillingModeError, startNativeTimeTracking, stopNativeTimeTracking, getNativeActiveTimeTracking,
   NativeTimeTrackingError, NativeTimeDeletionError, NativeTimeReviewError, reviewCoManagedNativeTimeEntry, openCoManagedNativeTimeSheet, deleteCoManagedNativeTimeEntry, readCoManagedNativeTimeEntry, readCoManagedNativeTimeEntries, cancelNativeTimeTracking, admitCoManagedNativeTimeSource, type CoManagedNativeTimeAccess } from '@alga-psa/co-managed';
 import { CoManagedLifecycleError } from '@alga-psa/licensing';
 import { hasCoManagedConversationOwnership } from '@alga-psa/co-managed/nativeConversationEvents';
@@ -493,6 +493,7 @@ export class TimeEntryService extends BaseService<any> {
       const [created] = await tenantDb(trx, context.tenant).table('time_entries')
         .insert(timeEntryData)
         .returning('*');
+      if (created.work_item_type === 'co_managed') await retainCoManagedTimeParticipation(trx, context.tenant, created.entry_id);
       await recalculateProjectTaskActualHoursForEntryChange(trx, context.tenant, null, created);
       await reconcileTimeEntryBillingAllocations(trx, context.tenant, null, created);
       return created;
@@ -611,11 +612,13 @@ export class TimeEntryService extends BaseService<any> {
       }));
     }
     const saved = await withTransaction(knex, async (trx) => {
+      if (existing.work_item_type === 'co_managed') await retainCoManagedTimeParticipation(trx, context.tenant, id);
       const [updated] = await tenantDb(trx, context.tenant).table('time_entries')
         .where({ [this.primaryKey]: id })
         .update(updateData)
         .returning('*');
       if (!updated) throw new NotFoundError('Time entry not found');
+      if (updated.work_item_type === 'co_managed') await retainCoManagedTimeParticipation(trx, context.tenant, id);
       await recalculateProjectTaskActualHoursForEntryChange(trx, context.tenant, existing, updated);
       await reconcileTimeEntryBillingAllocations(trx, context.tenant, existing, updated);
       return updated;

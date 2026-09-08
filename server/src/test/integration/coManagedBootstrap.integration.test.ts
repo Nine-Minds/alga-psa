@@ -90,7 +90,7 @@ beforeAll(async () => {
     '20260906080000_create_co_management_relationship_events.cjs',
     '20260906100000_add_external_file_metadata.cjs',
     '20260906110000_add_kb_import_batch_identity.cjs',
-    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs', '20260908011054_add_co_managed_meeting_sync_intents.cjs', '20260908021208_create_co_managed_meeting_creation_operations.cjs', '20260908043851_allow_co_managed_assignment_before_escalation.cjs', '20260908050419_create_organization_sla_obligations.cjs', '20260908051552_create_co_managed_sla_priority_mappings.cjs', '20260908062358_create_organization_sla_notification_events.cjs', '20260908063356_create_organization_sla_notification_recipients.cjs', '20260908065525_add_organization_sla_email_retry_state.cjs', '20260908081909_create_co_managed_workflow_ticket_emails.cjs', '20260908084034_create_co_managed_time_work_references.cjs', '20260908091756_allow_co_managed_time_tracking.cjs', '20260908102610_create_co_managed_relationship_closures.cjs', '20260908103849_create_co_managed_participation_evidence.cjs']) {
+    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs', '20260908011054_add_co_managed_meeting_sync_intents.cjs', '20260908021208_create_co_managed_meeting_creation_operations.cjs', '20260908043851_allow_co_managed_assignment_before_escalation.cjs', '20260908050419_create_organization_sla_obligations.cjs', '20260908051552_create_co_managed_sla_priority_mappings.cjs', '20260908062358_create_organization_sla_notification_events.cjs', '20260908063356_create_organization_sla_notification_recipients.cjs', '20260908065525_add_organization_sla_email_retry_state.cjs', '20260908081909_create_co_managed_workflow_ticket_emails.cjs', '20260908084034_create_co_managed_time_work_references.cjs', '20260908091756_allow_co_managed_time_tracking.cjs', '20260908102610_create_co_managed_relationship_closures.cjs', '20260908103849_create_co_managed_participation_evidence.cjs', '20260908105022_allow_co_managed_time_participation.cjs']) {
     await require('../../../migrations/' + file).up(db);
   }
   for (const table of ['standard_statuses', 'standard_priorities', 'countries', 'notification_categories',
@@ -18060,5 +18060,72 @@ it('participation evidence rolls back with the canonical task when the writer ex
     await expect(f.edit(db, f.principal, f.resource, { operationId: randomUUID(), expected: { task_name: 'Verify rollout' }, patch: { task_name: 'Uncommitted contribution' } })).rejects.toThrow();
     expect(await f.sponsor.table('co_managed_participation_evidence')).toHaveLength(0);
     expect((await f.customer.table('project_tasks').where('task_id', f.resource.id).first()).task_name).toBe('Verify rollout');
+  } finally { capture.mockRestore(); }
+}));
+
+it('time participation evidence requires a completed entry and native timer retries retain one proof', async () => withMspSharedTimerFixture(async f => {
+  const evidence = () => f.sponsor.table('co_managed_participation_evidence').where('source_type', 'time_entry');
+  await f.register(); expect(await evidence()).toHaveLength(0);
+  const timer = await f.start(); expect(await evidence()).toHaveLength(0);
+  const entry = await f.stop(timer); await f.stop(timer);
+  const rows = await evidence(); expect(rows).toHaveLength(1);
+  expect(rows[0]).toMatchObject({ source_id: entry.entry_id, resource_id: f.resource.id, customer_tenant: f.resource.tenant,
+    actor_tenant: f.principal.tenant, payload: { entryId: entry.entry_id, workReferenceId: f.referenceId, audience: 'organization_private' } });
+  await f.service.getById(entry.entry_id, f.context); expect(await evidence()).toEqual(rows);
+  const migration = require('../../../migrations/20260908105022_allow_co_managed_time_participation.cjs');
+  await migration.up(db); await expect(migration.down(db)).rejects.toThrow('retained time participation');
+}));
+
+it('time participation evidence preserves first attribution through edits renames and deletion without private timesheet fields', async () => withMspSharedTimeSaveFixture(async f => {
+  const entry = await f.save({ notes: 'MSP private timesheet detail' });
+  const evidence = () => f.sponsor.table('co_managed_participation_evidence').where({ source_type: 'time_entry', source_id: entry.entry_id });
+  const original = await evidence(); expect(original).toHaveLength(1);
+  expect(JSON.stringify(original)).not.toMatch(/MSP private timesheet detail|billable_duration|service_id|contract_line|approval_status|default_rate/);
+  await f.sponsor.table('users').where('user_id', f.principal.userId).update({ first_name: 'Renamed technician' });
+  await f.save({ entry_id: entry.entry_id, end_time: '2026-09-08T10:30:00Z', billable_duration: 90 });
+  expect(await evidence()).toEqual(original);
+  await f.actions.deleteTimeEntry(entry.entry_id); expect(await evidence()).toEqual(original);
+}));
+
+it('time participation evidence records both qualified work identities when existing time moves through the API', async () => withMspSharedTimerFixture(async f => {
+  const entry = await f.save();
+  // Simulate an entry predating evidence capture; the admitted move must retain
+  // its old MSP-owned work identity before replacing it.
+  await f.sponsor.table('co_managed_participation_evidence').where({ source_type: 'time_entry', source_id: entry.entry_id }).del();
+  const ticket = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  const otherId = randomUUID();
+  const { title_index: generatedTitleIndex, ...ticketFields } = ticket;
+  await f.customer.table('tickets').insert({ ...ticketFields, ticket_id: otherId, ticket_number: 'MOVE-SECOND' });
+  const other = { ...f.resource, id: otherId };
+  await (await import('../../../../packages/co-managed/src/ticketHandoffs')).escalateCoManagedTicket(db, f.customerPrincipal, other,
+    { operationId: randomUUID(), expectedRevision: 0, note: 'Second shared work item' });
+  const reference = await f.register(other);
+  await f.service.update(entry.entry_id, { work_item_type: 'co_managed', work_item_id: reference.referenceId }, f.context);
+  const rows = await f.sponsor.table('co_managed_participation_evidence').where({ source_type: 'time_entry', source_id: entry.entry_id });
+  expect(rows).toHaveLength(2); expect(rows.map((row: any) => row.resource_id).sort()).toEqual([f.resource.id, otherId].sort());
+  expect(new Set(rows.map((row: any) => row.payload.workReferenceId))).toEqual(new Set([f.referenceId, reference.referenceId]));
+}));
+
+it('time participation evidence can finish retained MSP clocks after revocation without reading newly private customer content', async () => withMspSharedTimerFixture(async f => {
+  const timer = await f.start();
+  await (await import('../../../../packages/co-managed/src/ticketHandoffs')).revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource,
+    { operationId: randomUUID(), expectedRevision: 1, note: 'End live sharing' });
+  await f.customer.table('tickets').where('ticket_id', f.resource.id).update({ title: 'Newly private customer title' });
+  const entry = await f.stop(timer);
+  const evidence = await f.sponsor.table('co_managed_participation_evidence').where({ source_type: 'time_entry', source_id: entry.entry_id }).first();
+  expect(evidence).toMatchObject({ resource_id: f.resource.id, payload: { title: 'Customer issue' } });
+  expect(JSON.stringify(evidence)).not.toContain('Newly private');
+}));
+
+it('time participation evidence rolls back with a native save when the current writer expires after capture', async () => withMspSharedTimeSaveFixture(async f => {
+  const module = await import('../../../../packages/co-managed/src/timeParticipationEvidence'), original = module.retainCoManagedTimeParticipation;
+  const capture = vi.spyOn(module, 'retainCoManagedTimeParticipation').mockImplementation(async (...args) => {
+    await original(...args);
+    await tenantDb(args[0], f.principal.tenant).table('sessions').where('session_id', f.principal.sessionId).update({ expires_at: new Date(0) });
+  });
+  try {
+    await expect(f.save()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    expect(await f.sponsor.table('time_entries')).toHaveLength(0);
+    expect(await f.sponsor.table('co_managed_participation_evidence').where('source_type', 'time_entry')).toHaveLength(0);
   } finally { capture.mockRestore(); }
 }));
