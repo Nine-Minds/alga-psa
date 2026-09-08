@@ -90,7 +90,7 @@ beforeAll(async () => {
     '20260906080000_create_co_management_relationship_events.cjs',
     '20260906100000_add_external_file_metadata.cjs',
     '20260906110000_add_kb_import_batch_identity.cjs',
-    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs', '20260908011054_add_co_managed_meeting_sync_intents.cjs', '20260908021208_create_co_managed_meeting_creation_operations.cjs']) {
+    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs', '20260908011054_add_co_managed_meeting_sync_intents.cjs', '20260908021208_create_co_managed_meeting_creation_operations.cjs', '20260908043851_allow_co_managed_assignment_before_escalation.cjs']) {
     await require('../../../migrations/' + file).up(db);
   }
   for (const table of ['standard_statuses', 'standard_priorities', 'countries', 'notification_categories',
@@ -15694,4 +15694,99 @@ it('shared ticket assignment requires collaboration scope and honors a retained 
   await assignments.assignCoManagedTicket(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 1, assignee: selected });
   expect(await assignments.getCoManagedTicketAssignment(db, principal, resource)).toMatchObject({ revision: 2, mspAssignment: selected });
   expect((await customer.table('co_management_ticket_work').where('ticket_id', resource.id).first()).grant_revoked_at).not.toBeNull();
+}));
+
+async function withPreHandoffAssignmentFixture(work: (fixture: any) => Promise<void>) {
+  const fixture = await ticketHandoffFixture(), { customer, resource } = fixture;
+  const ticket = await customer.table('tickets').where('ticket_id', resource.id).first();
+  await customer.table('co_management_relationships').where('relationship_id', resource.relationshipId).update({ visibility_mode: 'board_scope' });
+  await customer.table('co_management_board_scopes').insert({ tenant: resource.tenant, relationship_id: resource.relationshipId, board_id: ticket.board_id, can_collaborate: true });
+  await work({ ...fixture, ticket, domain: await import('@alga-psa/co-managed'), selected: { tenant: fixture.principal.tenant, kind: 'user', id: fixture.principal.userId } });
+}
+
+it.each(['customer', 'sponsor'])('pre-handoff assignment lets the %s assign visible collaborative work without starting escalation', async side => withPreHandoffAssignmentFixture(async ({ domain, customer, sponsor, principal, customerPrincipal, resource, selected, ticket }: any) => {
+  const actor = side === 'customer' ? customerPrincipal : principal;
+  expect(await domain.getCoManagedTicketAssignment(db, actor, resource)).toMatchObject({ revision: 0, canEdit: true, canAssign: true, hasAssignment: false });
+  expect((await domain.getCoManagedTicketQueue(db, principal, { view: 'working' })).totalCount).toBe(0);
+  expect((await domain.getCoManagedTicketQueue(db, principal, { view: 'oversight' })).totalCount).toBe(1);
+  const request = { operationId: randomUUID(), expectedRevision: 0, assignee: selected };
+  const receipt = await domain.assignCoManagedTicket(db, actor, resource, request);
+  expect(await domain.assignCoManagedTicket(db, actor, resource, request)).toEqual(receipt);
+  expect(await customer.table('co_management_ticket_work').where('ticket_id', resource.id).first()).toMatchObject({ revision: 1, responsibility: 'customer', first_escalated_at: null, last_transition_at: null, can_collaborate: false });
+  expect((await domain.getCoManagedSharedWorkSummary(db, principal, resource)).fields).toMatchObject({ responsibility: 'customer', first_escalated_at: null, explicit_grant_active: false });
+  expect((await domain.getCoManagedTicketQueue(db, principal, { view: 'working' })).items).toEqual([expect.objectContaining({ tenant: resource.tenant, ticketId: resource.id, fields: expect.objectContaining({ responsibility: 'customer' }) })]);
+  expect(await customer.table('tickets').where('ticket_id', resource.id).first()).toEqual(ticket);
+  expect(await customer.table('co_management_ticket_handoffs').where('ticket_id', resource.id)).toHaveLength(0);
+  await domain.assignCoManagedTicket(db, actor, resource, { operationId: randomUUID(), expectedRevision: 1, assignee: null });
+  expect((await domain.getCoManagedTicketQueue(db, principal, { view: 'working' })).totalCount).toBe(0);
+  expect(await sponsor.table('co_managed_ticket_references').where('ticket_id', resource.id).first()).toMatchObject({ assigned_to: null, assigned_team_id: null });
+  const migration = require('../../../migrations/20260908043851_allow_co_managed_assignment_before_escalation.cjs');
+  await migration.up(db); await expect(migration.down(db)).rejects.toThrow('not been escalated');
+}));
+
+it('pre-handoff assignment preserves its identity through actual escalation and clears working assignment on handback', async () => withPreHandoffAssignmentFixture(async ({ domain, customer, sponsor, principal, customerPrincipal, resource, selected }: any) => {
+  await domain.assignCoManagedTicket(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 0, assignee: selected });
+  const before = await customer.table('co_management_ticket_work').where('ticket_id', resource.id).first();
+  const escalation = await domain.escalateCoManagedTicket(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 1, note: 'MSP is now responsible' });
+  const escalated = await customer.table('co_management_ticket_work').where('ticket_id', resource.id).first();
+  expect(escalated).toMatchObject({ work_id: before.work_id, revision: 2, responsibility: 'msp', grant_revoked_at: null });
+  expect(new Date(escalated.first_escalated_at).toISOString()).toBe(escalation.occurredAt);
+  await domain.handBackCoManagedTicket(db, principal, resource, { operationId: randomUUID(), expectedRevision: 2, note: 'Customer continues' });
+  expect(await sponsor.table('co_managed_ticket_references').where('ticket_id', resource.id).first()).toMatchObject({ assigned_to: null, assigned_team_id: null });
+  expect((await domain.getCoManagedTicketQueue(db, principal, { view: 'working' })).totalCount).toBe(0);
+  expect((await domain.getCoManagedTicketQueue(db, principal, { view: 'oversight' })).totalCount).toBe(1);
+  await domain.escalateCoManagedTicket(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 3, note: 'MSP resumes' });
+  expect((await customer.table('co_management_ticket_work').where('ticket_id', resource.id).first()).first_escalated_at).toEqual(escalated.first_escalated_at);
+  expect((await domain.getCoManagedTicketQueue(db, principal, { view: 'working' })).totalCount).toBe(1);
+}));
+
+it('pre-handoff assignment does not preserve live access after its board grant is removed or manufacture an explicit grant', async () => withPreHandoffAssignmentFixture(async ({ domain, customer, principal, customerPrincipal, resource, selected }: any) => {
+  await domain.assignCoManagedTicket(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 0, assignee: selected });
+  await expect(customer.table('co_management_ticket_work').where('ticket_id', resource.id).update({ grant_revoked_at: null })).rejects.toMatchObject({ code: '23514' });
+  await customer.table('co_management_board_scopes').where('relationship_id', resource.relationshipId).del();
+  await expect(domain.getCoManagedTicketAssignment(db, principal, resource)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect((await domain.getCoManagedTicketQueue(db, principal, { view: 'working' })).totalCount).toBe(0);
+  expect((await domain.getCoManagedTicketQueue(db, principal, { view: 'oversight' })).totalCount).toBe(0);
+  expect(await domain.getCoManagedTicketAssignment(db, customerPrincipal, resource)).toMatchObject({ canAssign: false, canEdit: true, hasAssignment: true, mspAssignment: null });
+}));
+
+it('pre-handoff assignment requires collaborative board sharing before any routing record is created', async () => withPreHandoffAssignmentFixture(async ({ domain, customer, sponsor, principal, customerPrincipal, resource, selected }: any) => {
+  await customer.table('co_management_board_scopes').where('relationship_id', resource.relationshipId).update({ can_collaborate: false });
+  await expect(domain.assignCoManagedTicket(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 0, assignee: selected })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(await customer.table('co_management_ticket_work').where('ticket_id', resource.id)).toHaveLength(0);
+  expect(await sponsor.table('co_managed_ticket_references').where('ticket_id', resource.id)).toHaveLength(0);
+  expect(await domain.getCoManagedTicketAssignment(db, customerPrincipal, resource)).toMatchObject({ canAssign: false, canEdit: false });
+  expect((await domain.getCoManagedTicketQueue(db, principal, { view: 'working' })).totalCount).toBe(0);
+}));
+
+it('pre-handoff assignment serializes initial creation across both organizations', async () => withPreHandoffAssignmentFixture(async ({ domain, customer, sponsor, principal, customerPrincipal, resource, selected }: any) => {
+  const request = () => ({ operationId: randomUUID(), expectedRevision: 0, assignee: selected });
+  const results = await Promise.allSettled([domain.assignCoManagedTicket(db, customerPrincipal, resource, request()), domain.assignCoManagedTicket(db, principal, resource, request())]);
+  expect(results.filter(result => result.status === 'fulfilled')).toHaveLength(1);
+  expect(results.find(result => result.status === 'rejected')).toMatchObject({ reason: { code: 'TICKET_ASSIGNMENT_CONFLICT' } });
+  expect(await customer.table('co_management_ticket_work').where('ticket_id', resource.id)).toHaveLength(1);
+  expect(await sponsor.table('co_managed_ticket_references').where('ticket_id', resource.id)).toHaveLength(1);
+}));
+
+it('pre-handoff assignment is excluded from working counts when assignment visibility is masked', async () => withPreHandoffAssignmentFixture(async ({ domain, principal, customerPrincipal, resource, selected, operation }: any) => {
+  await domain.assignCoManagedTicket(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 0, assignee: selected });
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: principal.tenant, name: 'Working assignment privacy', actorUserId: principal.userId });
+  await bundles.upsertBundleRule(db, { tenant: principal.tenant, bundleId, revisionId, resourceType: 'ticket', action: 'read', templateKey: 'selected_clients', config: { selectedClientIds: [operation.request.clientId], redactedFields: ['msp_assignment'] } });
+  await bundles.publishBundleRevision(db, { tenant: principal.tenant, bundleId, revisionId, actorUserId: principal.userId });
+  await bundles.createBundleAssignment(db, { tenant: principal.tenant, bundleId, targetType: 'user', targetId: principal.userId });
+  expect((await domain.getCoManagedTicketQueue(db, principal, { view: 'working' })).totalCount).toBe(0);
+  expect((await domain.getCoManagedTicketQueue(db, principal, { view: 'oversight' })).totalCount).toBe(1);
+  expect(await domain.exportCoManagedTicketQueue(db, principal, { view: 'working' })).toEqual([]);
+}));
+
+it('pre-handoff assignment rolls back new work routing and receipts on final credential expiry', async () => withPreHandoffAssignmentFixture(async ({ domain, principal, customer, sponsor, resource, selected }: any) => {
+  await db.raw(`CREATE FUNCTION expire_first_assignment_session() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN UPDATE sessions SET expires_at = to_timestamp(0) WHERE tenant = '${principal.tenant}'::uuid AND session_id = '${principal.sessionId}'::uuid; RETURN NEW; END $$`);
+  await db.raw("CREATE TRIGGER expire_first_assignment_session AFTER INSERT ON co_management_command_receipts FOR EACH ROW WHEN (NEW.command_type = 'ticket_assignment') EXECUTE FUNCTION expire_first_assignment_session()");
+  try {
+    await expect(domain.assignCoManagedTicket(db, principal, resource, { operationId: randomUUID(), expectedRevision: 0, assignee: selected })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    expect(await customer.table('co_management_ticket_work').where('ticket_id', resource.id)).toHaveLength(0);
+    expect(await sponsor.table('co_managed_ticket_references').where('ticket_id', resource.id)).toHaveLength(0);
+    expect(await customer.table('co_management_command_receipts').where('resource_id', resource.id)).toHaveLength(0);
+  } finally { await db.raw('DROP TRIGGER expire_first_assignment_session ON co_management_command_receipts'); await db.raw('DROP FUNCTION expire_first_assignment_session()'); }
 }));

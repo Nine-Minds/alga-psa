@@ -96,6 +96,7 @@ async function readCoManagedTicketQueue(db: Knex, inputActor: CoManagedSessionAc
       .filter(rule => rule.resource === 'ticket' && rule.action === 'read');
     const redactions = rules.flatMap(rule => rule.redactedFields ?? []);
     const visible = Object.fromEntries(Object.entries(sources).map(([field, aliases]) => [field, !isCoManagedReadFieldHidden(redactions, aliases)]));
+    const assignmentVisible = !isCoManagedReadFieldHidden(redactions, ['mspAssignment', 'msp_assignment', 'assigned_to', 'assigned_team_id', 'assignee', 'work', 'co_managed_ticket_references'].flatMap(name => [name, `values.${name}`, `tickets.${name}`]));
     const queries: Knex.QueryBuilder[] = [];
     function projection(ownerTenant: string, name: string, relationship?: any, boardIds: string[] = []) {
       const owner = tenantDb(trx, ownerTenant), shared = Boolean(relationship);
@@ -113,8 +114,11 @@ async function readCoManagedTicketQueue(db: Knex, inputActor: CoManagedSessionAc
         base.where(function () {
           this.where(function () { this.whereNotNull('w.work_id').whereNull('w.grant_revoked_at'); }).orWhereIn('t.board_id', boardIds);
         });
-        if (request.view === 'working') base.where('w.responsibility', 'msp').whereNotNull('r.reference_id');
-        if (request.view === 'working' && !visible.responsibility) base.whereRaw('false');
+        if (request.view === 'working') base.whereNotNull('r.reference_id').where(function () {
+          if (visible.responsibility) this.where('w.responsibility', 'msp');
+          if (assignmentVisible) this.orWhereNotNull('r.assigned_to').orWhereNotNull('r.assigned_team_id');
+          if (!visible.responsibility && !assignmentVisible) this.whereRaw('false');
+        });
       }
       const policyColumns = shared
         ? { auth_owner: trx.raw('NULL::uuid'), auth_client: trx.raw('?::uuid', [relationship.sponsor_client_id]), auth_board: 'r.board_id', auth_assigned: 'r.assigned_to', auth_team: 'r.assigned_team_id' }

@@ -22,9 +22,10 @@ afterEach(cleanup);
 it.each([{ enabled: false }, { enabled: true, loading: true }, { enabled: undefined }, { enabled: true, error: new Error('Flag unavailable') }])('gates assignment UI and reads for flag state %j', flag => {
   mocks.flag.mockReturnValue({ loading: false, error: null, ...flag }); mount(); expect(mocks.read).not.toHaveBeenCalled(); expect(screen.queryByRole('button')).toBeNull();
 });
-it('assigns the qualified option with the retained work revision and refreshes after success', async () => {
+it.each([0, 2])('assigns the qualified option with retained revision %s and refreshes after success', async revision => {
+  mocks.read.mockResolvedValue({ ...state(), revision });
   mount(); await choose(); save(); await waitFor(() => expect(mocks.saved).toHaveBeenCalledOnce());
-  expect(mocks.save).toHaveBeenCalledWith(resource, { operationId: expect.any(String), expectedRevision: 2, assignee: { tenant: 'msp', kind: 'user', id: 'user' } });
+  expect(mocks.save).toHaveBeenCalledWith(resource, { operationId: expect.any(String), expectedRevision: revision, assignee: { tenant: 'msp', kind: 'user', id: 'user' } });
 });
 it('loads further scoped options and switches between technician and team choices', async () => {
   mocks.choices.mockImplementation(async (_resource, kind, after) => kind === 'team' ? { options: [{ ...person, kind: 'team', id: 'team', name: 'Service desk' }], nextAfterId: null } : { options: after ? [{ ...person, id: 'second', name: 'Pat' }] : [person], nextAfterId: after ? null : 'cursor' });
