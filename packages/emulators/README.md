@@ -662,5 +662,8 @@ newly issued tokens retain their own lifetime and client/scope binding.
 `xero/tests/tokenLifecycle.test.ts` verifies recovery and expiry over HTTP with
 an isolated emulator clock. These rules follow the
 [Xero OAuth FAQ](https://developer.xero.com/faq/oauth2), reviewed 2026-09-08.
-This covers token lifetime behavior, not live sandbox drift, JWT signatures,
-or complete scope-dependent token issuance parity.
+Refresh tokens are issued only when the granted scope includes `offline_access`;
+code exchange no longer inserts implicit default scopes. This follows the
+[Xero authorization flow](https://developer.xero.com/documentation/guides/oauth2/auth-flow/).
+This covers token lifetime and offline-consent behavior, not live sandbox drift,
+JWT signatures, or complete authorization-scope validation.

@@ -120,7 +120,7 @@ describe('xero emulator', { shuffle: false }, () => {
   it('binds codes and refresh tokens to the originating client and redirect', async () => {
     const redirectUri = 'http://localhost/bound-callback';
     const authorize = new URL(`${base}/identity/connect/authorize`);
-    authorize.search = new URLSearchParams({ response_type: 'code', client_id: 'bound-app', redirect_uri: redirectUri }).toString();
+    authorize.search = new URLSearchParams({ response_type: 'code', client_id: 'bound-app', redirect_uri: redirectUri, scope: SCOPE }).toString();
     const response = await fetch(authorize, { redirect: 'manual' });
     const code = new URL(response.headers.get('location')!).searchParams.get('code')!;
     const exchange = (body: Record<string, string>, basic?: string) => fetch(`${base}/connect/token`, {

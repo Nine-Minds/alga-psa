@@ -35,13 +35,11 @@ interface OrgData {
 
 export interface XeroTokenResponse {
   access_token: string;
-  refresh_token: string;
+  refresh_token?: string;
   expires_in: number;
   token_type: 'Bearer';
   scope: string;
 }
-
-const DEFAULT_SCOPE = 'offline_access accounting.settings.read accounting.invoices accounting.contacts';
 
 /**
  * Pure state machine behind the Xero vendor surface: the identity authorize +
@@ -151,7 +149,7 @@ export class XeroEmulatorCore implements EmulatorCore {
         }
       }
       this.codes.delete(String(params.code));
-      return this.issueTokens(record.scope || DEFAULT_SCOPE, record.clientId);
+      return this.issueTokens(record.scope, record.clientId);
     }
     if (params.grant_type === 'refresh_token') {
       const record = this.refreshTokens.get(String(params.refresh_token));
@@ -169,12 +167,12 @@ export class XeroEmulatorCore implements EmulatorCore {
 
   private issueTokens(scope: string, clientId: string): XeroTokenResponse {
     const accessToken = this.newId('access');
-    const refreshToken = this.newId('refresh');
+    const refreshToken = scope.split(/\s+/).includes('offline_access') ? this.newId('refresh') : undefined;
     this.accessTokens.set(accessToken, { expiresAt: this.nowMs() + this.accessTokenTtlSeconds * 1000, scope, clientId });
-    this.refreshTokens.set(refreshToken, { scope, clientId, expiresAt: this.nowMs() + 60 * 24 * 60 * 60 * 1000 });
+    if (refreshToken) this.refreshTokens.set(refreshToken, { scope, clientId, expiresAt: this.nowMs() + 60 * 24 * 60 * 60 * 1000 });
     return {
       access_token: accessToken,
-      refresh_token: refreshToken,
+      ...(refreshToken ? { refresh_token: refreshToken } : {}),
       expires_in: this.accessTokenTtlSeconds,
       token_type: 'Bearer',
       scope,

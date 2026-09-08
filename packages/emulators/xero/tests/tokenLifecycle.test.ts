@@ -28,9 +28,9 @@ const tokenRequest = (params: Record<string, string>, auth = authorization) => f
   method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded', authorization: auth },
   body: new URLSearchParams(params),
 });
-async function authorize() {
+async function authorize(requestedScope = scope) {
   const response = await fetch(`${vendor}/identity/connect/authorize?${new URLSearchParams({
-    client_id: 'lifecycle-app', redirect_uri: redirectUri, response_type: 'code', scope, state: 'fixture-state',
+    client_id: 'lifecycle-app', redirect_uri: redirectUri, response_type: 'code', scope: requestedScope, state: 'fixture-state',
   })}`, { redirect: 'manual' });
   expect(response.status).toBe(302);
   const callback = new URL(response.headers.get('location')!);
@@ -39,6 +39,13 @@ async function authorize() {
   expect(exchanged.status).toBe(200);
   return exchanged.json();
 }
+
+it('does not issue a refresh token without offline_access consent', async () => {
+  const tokens = await authorize('accounting.invoices');
+  expect(tokens.scope).toBe('accounting.invoices');
+  expect(tokens.access_token).toEqual(expect.any(String));
+  expect(tokens).not.toHaveProperty('refresh_token');
+});
 
 it('recovers a lost refresh response within 30 minutes without extending the old token deadline', async () => {
   const initial = await authorize();

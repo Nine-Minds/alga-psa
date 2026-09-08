@@ -11,7 +11,7 @@
     ]
   },
   "after": {
-    "testsPassed": 15,
+    "testsPassed": 16,
     "filesPassed": 2,
     "testsFailed": 0
   },
@@ -19,5 +19,11 @@
   "limitations": [
     "No current-source GitHub proof for this follow-up yet.",
     "No live Xero sandbox, full scope issuance or JWT signature parity claim."
-  ]
+  ],
+  "offlineConsent": {
+    "reference": "https://developer.xero.com/documentation/guides/oauth2/auth-flow/",
+    "before": "Request with accounting.invoices alone incorrectly received a refresh_token",
+    "after": "Response preserves the granted scope and omits refresh_token"
+  },
+  "typecheck": "passed"
 }
