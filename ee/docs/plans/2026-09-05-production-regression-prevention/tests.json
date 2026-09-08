@@ -179,7 +179,7 @@
   {
     "id": "T019",
     "description": "Write success, failure, cancelled, missing and retry-only rows to an isolated metrics workbook with representative historical data; verify additive schema, existing-reader compatibility, separate PR/main/nightly views, explicit non-ready states and visible measured/total file counts.",
-    "implemented": false,
+    "implemented": true,
     "kind": "metrics-integration",
     "featureIds": [
       "F024",
