@@ -116,6 +116,18 @@ async function getTicketIdForAppointmentRequest(
   return row?.ticket_id || undefined;
 }
 
+function nativeScheduleView(entry: any): IScheduleEntry {
+  const pattern = typeof entry.recurrence_pattern === 'string' ? JSON.parse(entry.recurrence_pattern) : entry.recurrence_pattern;
+  return { ...entry, scheduled_start: new Date(entry.scheduled_start), scheduled_end: new Date(entry.scheduled_end),
+    ...(entry.created_at ? { created_at: new Date(entry.created_at) } : {}),
+    ...(entry.updated_at ? { updated_at: new Date(entry.updated_at) } : {}),
+    recurrence_pattern: pattern ? { ...pattern, startDate: new Date(pattern.startDate),
+      ...(pattern.endDate ? { endDate: new Date(pattern.endDate) } : {}),
+      ...(pattern.exceptions ? { exceptions: pattern.exceptions.map((value: string | Date) => new Date(value)) } : {}),
+    } : null,
+  };
+}
+
 /**
  * Fetches schedule entries based on date range and user permissions.
  * - Users with 'user_schedule:update' can view all entries, optionally filtered by technicianIds.
@@ -131,6 +143,11 @@ export const getScheduleEntries = withAuth(async (
 ): Promise<ScheduleActionResult<IScheduleEntry[]>> => {
   try {
     const { knex: db } = await createTenantKnex();
+
+    const current = await readCoManagedNativeSchedules(db, tenant, () => resolveNativeTimeBrowserActor(user, tenant), {
+      calendar: { start: start.toISOString(), end: end.toISOString(), technicianIds },
+    });
+    if (current.handled) return { success: true, entries: current.entries.map(nativeScheduleView) };
 
     // Check for basic read permission
     const canRead = await hasPermission(user, 'user_schedule', 'read', db);
@@ -1166,7 +1183,7 @@ export const getScheduleEntryById = withAuth(async (
     const current = await readCoManagedNativeSchedules(db, tenant, () => resolveNativeTimeBrowserActor(user, tenant), { id: entryId });
     if (current.handled) {
       const entry = current.entries[0];
-      return entry ? { ...entry, scheduled_start: new Date(entry.scheduled_start), scheduled_end: new Date(entry.scheduled_end) } : null;
+      return entry ? nativeScheduleView(entry) : null;
     }
     return withTransaction(db, async (trx: Knex.Transaction) => {
       const scopedDb = tenantDb(trx, tenant) as any;

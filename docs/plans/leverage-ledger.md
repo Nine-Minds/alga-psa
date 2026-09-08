@@ -519,3 +519,9 @@ Inline markers are the per-site ledger; `grep -rn "LEVERAGE:"` is the count.
 - **Where:** `nativeTimeEntryAccess` and `nativeScheduleRead`.
 - **Gate:** Real duplication with meaningful lock/field-projection cost; schedule commands and recurrence are still evolving. WAIT for the command boundary before extracting a shared work-source engine.
 - **Status:** Watching; source authority is explicit in both domains, and scheduling does not require time-entry permission.
+
+## native-schedule-calendar-projection — friction
+- **What:** Native calendar reads bypassed retained detail authority; the model excluded recurring masters while the recurrence engine also excluded their first occurrence.
+- **Where:** `nativeScheduleRead`, `getScheduleEntries`, shared recurrence utilities and model expansion.
+- **Gate:** Existing admitted master/source projection is the appropriate layer for every occurrence; an explicit pure-engine master-inclusion option fixes the calendar contract without changing subsequent-only consumers. ACT / bounded-now.
+- **Status:** Native calendar expansion retains actual master/assignment/source scope and projects each occurrence after holiday/exception processing. Half-open overlap includes spanning events; first occurrences are represented once. Three focused PostgreSQL cases, 18 pure recurrence cases and four existing model cases pass using fast Node source tests. Schedule commands and broader timezone/workday/scale checks remain pending.

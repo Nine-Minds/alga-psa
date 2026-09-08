@@ -235,7 +235,7 @@ const ScheduleEntry = {
           entry.recurrence_pattern.endDate && entry.recurrence_pattern.endDate < end
             ? entry.recurrence_pattern.endDate
             : end;
-        const occurrences = generateOccurrences(entry, start, effectiveEnd, { holidays });
+        const occurrences = generateOccurrences(entry, start, effectiveEnd, { holidays, includeMaster: true });
 
         // Create virtual entries for each occurrence
         const duration =

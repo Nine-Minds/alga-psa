@@ -14208,3 +14208,51 @@ it('customer schedule reads reject the whole collection when its key expires whi
   } finally { await blocker.rollback(); }
   await rejected;
 }));
+
+async function withScheduleCalendarFixture(work: (fixture: any) => Promise<void>) {
+  await withScheduleReadFixture(async (fixture: any) => {
+    const { customer, context, ownId, busyId, taskId } = fixture;
+    await customer.table('schedule_entries').whereIn('entry_id', [ownId, busyId, taskId]).update({ is_recurring: true, recurrence_pattern: JSON.stringify({
+      frequency: 'daily', interval: 1, startDate: '2026-09-07T00:00:00Z', endDate: '2026-09-10T23:59:59Z', exceptions: ['2026-09-08T00:00:00Z'],
+    }) });
+    await customer.table('holidays').insert({ tenant: context.tenant, holiday_name: 'Local closure', holiday_date: '2026-09-09', is_recurring: false });
+    const calendar = (start = '2026-09-07T00:00:00Z', end = '2026-09-11T00:00:00Z', ids?: string[]) => fixture.native.getScheduleEntries(new Date(start), new Date(end), ids);
+    await work({ ...fixture, calendar });
+  });
+}
+
+it('customer schedule calendar retains the first occurrence exceptions holidays and private Busy projection', async () => withScheduleCalendarFixture(async ({ calendar, ownId, busyId, taskId }: any) => {
+  const result = await calendar(); expect(result.success).toBe(true);
+  expect(result.entries).toHaveLength(6);
+  for (const id of [ownId, busyId, taskId]) {
+    const rows = result.entries.filter((row: any) => row.entry_id.startsWith(id));
+    expect(rows.map((row: any) => row.scheduled_start.toISOString())).toEqual(['2026-09-07T09:00:00.000Z', '2026-09-10T09:00:00.000Z']);
+    if (id === busyId) for (const row of rows) expect(row).toMatchObject({ title: 'Busy', notes: '', recurrence_pattern: null, work_item_id: null });
+    else for (const row of rows) expect(row.recurrence_pattern.startDate).toBeInstanceOf(Date);
+  }
+}));
+
+it('customer schedule calendar includes spanning events and overlapping occurrences with exclusive range ends', async () => withScheduleCalendarFixture(async ({ calendar, context, customer }: any) => {
+  const spanId = randomUUID();
+  await customer.table('schedule_entries').insert({ tenant: context.tenant, entry_id: spanId, title: 'Extended allocation', notes: '', work_item_type: 'ad_hoc', status: 'scheduled', scheduled_start: '2026-09-01T00:00:00Z', scheduled_end: '2026-09-30T00:00:00Z' });
+  await customer.table('schedule_entry_assignees').insert({ tenant: context.tenant, entry_id: spanId, user_id: context.userId });
+  expect((await calendar('2026-09-10T09:30:00Z', '2026-09-10T10:00:00Z')).entries).toHaveLength(4);
+  expect((await calendar('2026-09-10T10:30:00Z', '2026-09-10T11:00:00Z')).entries.map((row: any) => row.entry_id)).toEqual([spanId]);
+  expect((await calendar('2026-09-10T08:30:00Z', '2026-09-10T09:00:00Z')).entries.map((row: any) => row.entry_id)).toEqual([spanId]);
+}));
+
+it('customer schedule calendar filters actual assignments sources and recurrence field masks before disclosure', async () => withScheduleCalendarFixture(async ({ calendar, context, customer, ownId, resource, user }: any) => {
+  expect((await calendar(undefined, undefined, [context.userId])).entries).toHaveLength(4);
+  await customer.table('role_permissions').whereIn('permission_id', customer.table('permissions').where({ resource: 'user_schedule', action: 'update' }).select('permission_id')).del();
+  expect((await calendar(undefined, undefined, [randomUUID()])).entries).toHaveLength(4);
+  await customer.table('role_permissions').whereIn('permission_id', customer.table('permissions').where({ resource: 'project', action: 'read' }).select('permission_id')).del();
+  const visible = await calendar(); expect(visible.entries).toHaveLength(2); expect(visible.entries.every((row: any) => row.entry_id.startsWith(ownId))).toBe(true);
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: resource.tenant, name: 'Calendar recurrence mask', actorUserId: user.user_id });
+  await bundles.upsertBundleRule(db, { tenant: resource.tenant, bundleId, revisionId, resourceType: 'user_schedule', action: 'read', templateKey: 'assigned', config: { redactedFields: ['recurrence_pattern'] } });
+  await bundles.publishBundleRevision(db, { tenant: resource.tenant, bundleId, revisionId, actorUserId: user.user_id });
+  await bundles.createBundleAssignment(db, { tenant: resource.tenant, bundleId, targetType: 'user', targetId: user.user_id });
+  expect((await calendar()).entries).toEqual([]);
+  await customer.table('role_permissions').whereIn('permission_id', customer.table('permissions').where({ resource: 'user_schedule', action: 'read' }).select('permission_id')).del();
+  expect(await calendar()).toMatchObject({ success: false });
+}));
