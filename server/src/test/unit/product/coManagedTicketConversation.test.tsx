@@ -4,8 +4,9 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import CoManagedTicketConversation from '../../../components/co-managed/CoManagedTicketConversation';
 import { CoManagedFeatureBoundary } from '../../../components/co-managed/CoManagedFeatureBoundary';
-const mocks = vi.hoisted(() => ({ flag: vi.fn(), load: vi.fn(), create: vi.fn(), mutate: vi.fn(), private: vi.fn(), prepare: vi.fn(), submitDraft: vi.fn(), abandon: vi.fn(), preview: vi.fn(), disclose: vi.fn(),
+const mocks = vi.hoisted(() => ({ acknowledge: vi.fn(), flag: vi.fn(), load: vi.fn(), create: vi.fn(), mutate: vi.fn(), private: vi.fn(), prepare: vi.fn(), submitDraft: vi.fn(), abandon: vi.fn(), preview: vi.fn(), disclose: vi.fn(),
   session: { user: { tenant: 'msp', id: 'technician' } } }));
+vi.mock('../../../../../packages/tickets/src/actions/namedTicketConversationActions', () => ({ acknowledgeNamedConversationMessagesAction: mocks.acknowledge }));
 vi.mock('../../../lib/actions/coManagedThreadDisclosureActions', () => ({ previewCoManagedThreadDisclosureAction: mocks.preview, discloseCoManagedThreadAction: mocks.disclose }));
 vi.mock('../../../components/co-managed/CoManagedCommentAttachments', () => ({ default: () => null }));
 vi.mock('../../../components/co-managed/conversationDraftSubmission', () => ({ prepareConversationDraft: mocks.prepare, submitConversationDraft: mocks.submitDraft }));
@@ -37,6 +38,7 @@ const message = () => screen.getByLabelText('coManaged.conversation.message');
 const deferred = () => { let resolve!: (value: any) => void; const promise = new Promise<any>(done => { resolve = done; }); return { promise, resolve }; };
 beforeEach(() => {
   vi.resetAllMocks(); mocks.session = { user: { tenant: 'msp', id: 'technician' } };
+  mocks.acknowledge.mockResolvedValue({ changed: false });
   mocks.flag.mockReturnValue({ enabled: true, loading: false, error: null }); mocks.load.mockResolvedValue(data());
   mocks.prepare.mockImplementation(async input => ({ resource: input.resource, storeTenant: input.resource.tenant, request: { operationId: input.operationId }, files: input.files }));
   mocks.submitDraft.mockResolvedValue({ ok: true, receipt: {} });
@@ -318,4 +320,18 @@ it('retains history editing while routing requester replies to the supplied comp
   fireEvent.click(button('send'));
   await waitFor(() => expect(mocks.mutate).toHaveBeenCalledOnce());
   expect(mocks.mutate.mock.calls[0][1]).toMatchObject({ kind: 'edit', comment: { commentId: 'comment', threadId: 'thread' } });
+});
+
+it('acknowledges only a successfully loaded named requester history in the co-managed screen', async () => {
+  const focused = vi.spyOn(document, 'hasFocus').mockReturnValue(true), pending = deferred();
+  mocks.load.mockReturnValueOnce(pending.promise);
+  try {
+    render(<CoManagedTicketConversation resource={resource} requester={{ storeTenant: 'customer', conversationId: 'requester' }} />);
+    expect(mocks.acknowledge).not.toHaveBeenCalled();
+    await act(async () => pending.resolve({ ...data(), items: [{ ...item(), audience: 'requester' }] }));
+    await screen.findByText('Shared content');
+    await waitFor(() => expect(mocks.acknowledge).toHaveBeenCalledOnce());
+    expect(mocks.acknowledge).toHaveBeenCalledWith({ tenant: 'customer', ticketId: 'ticket', relationshipId: 'relationship' },
+      { storeTenant: 'customer', conversationId: 'requester' }, [{ commentId: 'comment', threadId: 'thread' }]);
+  } finally { focused.mockRestore(); }
 });

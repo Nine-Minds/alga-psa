@@ -44,7 +44,7 @@ function RequesterConversation({ resource, conversation, flush, onDirty, canWrit
     {editing && <p role="status" className="text-sm text-muted-foreground">{t('namedConversations.finishRequesterEdit', 'Finish or cancel your current edit before switching conversations.')}</p>}
     <CoManagedTicketConversation resource={resource}
       requester={{ storeTenant: conversation.storeTenant, conversationId: conversation.conversationId }} onDraftState={onDraftState}
-      composition={{ ready: canWrite && replyReady, beforeEdit, reply: respond, refreshVersion }} />
+      composition={{ ready: canWrite && replyReady, beforeEdit, reply: respond, refreshVersion, onRead: onRefresh }} />
     {canWrite && <fieldset disabled={editing} inert={editing} className="min-w-0" aria-label={t('namedConversations.requesterEmail', 'Requester email')}>
       <NamedConversationComposer id="co-ticket-named" ticket={ticket} conversation={conversation} flush={composerFlush}
         onDirty={setDraft} disabled={editing} reply={reply} onReplyReady={onReady} onRefresh={onRefresh}

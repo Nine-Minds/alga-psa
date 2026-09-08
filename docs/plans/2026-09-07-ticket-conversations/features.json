@@ -410,7 +410,7 @@
   {
     "id": "F052",
     "description": "Persist per-qualified-viewer conversation read cursors and clear unread state only for the opened permitted conversation.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "6. Email, recipients and notification behavior"
     ]

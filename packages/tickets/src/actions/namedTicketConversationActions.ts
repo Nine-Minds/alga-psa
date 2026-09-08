@@ -174,6 +174,12 @@ export const getNamedConversationAttentionAction = withAuth(async (user, { tenan
   const { getNamedConversationAttention } = await import('@alga-psa/co-managed');
   return getNamedConversationAttention(knex, actor, ticket, conversation);
 });
+export const acknowledgeNamedConversationMessagesAction = withAuth(async (user, { tenant }, ticket: ConversationTicketReference,
+  conversation: TicketConversationReference, messages: { commentId: string; threadId: string }[]) => {
+  const actor = await coManagedBrowserActor(user, tenant), { knex } = await createTenantKnex(tenant);
+  const { acknowledgeNamedConversationMessages } = await import('@alga-psa/co-managed');
+  return acknowledgeNamedConversationMessages(knex, actor, ticket, conversation, messages);
+});
 export const updateNamedConversationPreferenceAction = withAuth(async (user, { tenant }, ticket: ConversationTicketReference,
   conversation: TicketConversationReference, preference: { following?: boolean; readThrough?: string }) => {
   const actor = await coManagedBrowserActor(user, tenant), { knex } = await createTenantKnex(tenant);

@@ -1802,5 +1802,8 @@
       "internalLabel": "Non notificare anche agenti e osservatori",
       "internalHelper": "Salta anche le loro e-mail e notifiche in-app"
     }
+  },
+  "namedConversations": {
+    "readFailed": "Impossibile contrassegnare questi messaggi come letti."
   }
 }

@@ -8,6 +8,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { usePageCreateShortcut, useDialogSubmitShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 import { getNamedConversationMessageDetailsAction } from '../../../actions/namedTicketConversationActions';
 import { ConversationMessageDetails } from './ConversationMessageDetails';
+import { ConversationReadAcknowledgment } from './ConversationReadAcknowledgment';
 import { Button } from '@alga-psa/ui/components/Button';
 import { NamedConversationComposer } from './useNamedTicketConversations';
 
@@ -33,10 +34,12 @@ export function NativeRequesterConversation({ id, conversation, flush, onDirty, 
   const [ready, setReady] = useState(false), [draft, setDraft] = useState(false);
   const [details, setDetails] = useState<Awaited<ReturnType<typeof getNamedConversationMessageDetailsAction>>>([]);
   const [detailsError, setDetailsError] = useState(false), [retryDetails, setRetryDetails] = useState(0);
+  const [loadedDetailsKey, setLoadedDetailsKey] = useState<string | null>(null);
   const selectedComments = (historyComments?.() ?? []).filter(comment => !comment.deleted_at && !comment.is_internal &&
     (!comment.publish_state || comment.publish_state === 'published') && comment.comment_id && comment.thread_id)
     .map(comment => ({ commentId: comment.comment_id!, threadId: comment.thread_id! }));
   const commentsKey = JSON.stringify(selectedComments);
+  const detailsKey = `${conversation.storeTenant}:${conversation.conversationId}:${commentsKey}:${refreshVersion}:${retryDetails}`;
   useEffect(() => {
     let current = true;
     setDetails([]); setDetailsError(false);
@@ -49,7 +52,7 @@ export function NativeRequesterConversation({ id, conversation, flush, onDirty, 
         if (!current) return;
         all.push(...items);
       }
-      if (current) setDetails(all);
+      if (current) { setDetails(all); setLoadedDetailsKey(detailsKey); }
     };
     read().catch(() => { if (current) { setDetails([]); setDetailsError(true); } });
     return () => { current = false; };
@@ -83,6 +86,8 @@ export function NativeRequesterConversation({ id, conversation, flush, onDirty, 
     active: draft && canWrite && ready && !editingNow, enabled: draft && canWrite && ready && !editingNow,
   });
   return <div className="space-y-3">
+    {!detailsError && loadedDetailsKey === detailsKey && <ConversationReadAcknowledgment id={id} ticket={ticket}
+      conversation={conversation} messages={selectedComments.filter(comment => details.some(item => item.commentId === comment.commentId))} onChanged={onRefresh} />}
     {editingNow && <p role="status" className="text-sm text-muted-foreground">{t('namedConversations.finishRequesterEdit', 'Finish or cancel your current edit before switching conversations.')}</p>}
     {detailsError && <div role="alert" className="text-sm"><p>{t('namedConversations.detailsUnavailable', 'Email and attachment details are unavailable.')}</p><Button id={`${id}-details-retry`} variant="ghost" onClick={() => setRetryDetails(value => value + 1)}>{t('namedConversations.retry', 'Retry')}</Button></div>}
     {renderHistory({ renderDetails, ready: canWrite && ready && !editingNow, beforeEdit, reply: respond, afterChange: async () => { await onPublished(); onRefresh(); } })}

@@ -1802,5 +1802,8 @@
       "internalLabel": "Ne pas notifier non plus les agents et observateurs",
       "internalHelper": "Ignore aussi leurs e-mails et notifications dans l'application"
     }
+  },
+  "namedConversations": {
+    "readFailed": "Impossible de marquer ces messages comme lus."
   }
 }

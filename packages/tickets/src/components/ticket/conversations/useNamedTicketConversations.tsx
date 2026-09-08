@@ -1,6 +1,7 @@
 'use client';
 
 import { ConversationAttentionControls } from './ConversationAttentionControls';
+import { ConversationReadAcknowledgment } from './ConversationReadAcknowledgment';
 import { ConversationSchedulePicker } from './ConversationSchedulePicker';
 import { NamedScheduledReplies } from './NamedScheduledReplies';
 import { getUserTimeZone } from '@alga-psa/core';
@@ -275,6 +276,8 @@ function NamedConversationPanel({ id, ticket, conversation, canWrite, flush, onD
     {error && <p role="alert" className="p-4 text-destructive">{t('namedConversations.unavailable', 'This conversation is unavailable.')}</p>}
     {!page && !error && <p role="status" className="p-4 text-sm">{t('namedConversations.loading', 'Loading conversations…')}</p>}
     {page && <><div className="space-y-4 p-4">
+      <ConversationReadAcknowledgment id={id} ticket={ticket} conversation={conversation}
+        messages={page.items.filter(item => !item.deleted)} onChanged={onRefresh} />
       {page.nextBefore && <Button id={`${id}-older`} size="sm" variant="ghost" disabled={busy} onClick={() => void loadMore()}>{t('namedConversations.older', 'Load earlier messages')}</Button>}
       {!page.items.length && <p className="py-8 text-center text-sm text-muted-foreground">{t('namedConversations.empty', 'Start the conversation. Keep this exchange focused on its audience.')}</p>}
       {[...page.items].reverse().map((item, index) => <NamedConversationMessage key={`${item.storeTenant}:${item.commentId}`}

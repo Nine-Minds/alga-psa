@@ -1802,5 +1802,8 @@
       "internalLabel": "Ook agenten en volgers niet informeren",
       "internalHelper": "Slaat ook hun e-mails en in-app-meldingen over"
     }
+  },
+  "namedConversations": {
+    "readFailed": "Deze berichten konden niet als gelezen worden gemarkeerd."
   }
 }

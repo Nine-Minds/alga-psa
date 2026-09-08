@@ -99,7 +99,7 @@ export { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
 
 export { getNamedConversationMessageDetails } from './namedConversationMessageDetails';
 
-export { recordNamedConversationAttention, getNamedConversationAttention, updateNamedConversationPreference } from './namedConversationAttention';
+export { recordNamedConversationAttention, getNamedConversationAttention, updateNamedConversationPreference, acknowledgeNamedConversationMessages } from './namedConversationAttention';
 
 export { withNamedConversationNotification, namedConversationNotificationCandidates, namedConversationNotificationKey, type NamedConversationNotification, type NamedConversationNotificationSource, type NamedNotificationContext } from './namedConversationNotifications';
 

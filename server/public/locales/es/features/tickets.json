@@ -1802,5 +1802,8 @@
       "internalLabel": "Tampoco notificar a agentes y observadores",
       "internalHelper": "Omite también sus correos y notificaciones en la aplicación"
     }
+  },
+  "namedConversations": {
+    "readFailed": "No se pudieron marcar estos mensajes como leídos."
   }
 }

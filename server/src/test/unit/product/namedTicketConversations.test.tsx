@@ -5,9 +5,10 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import CoManagedNamedTicketConversation from '../../../components/co-managed/CoManagedNamedTicketConversation';
 import { NativeRequesterConversation } from '../../../../../packages/tickets/src/components/ticket/conversations/NativeRequesterConversation';
 import { useNamedTicketConversations } from '../../../../../packages/tickets/src/components/ticket/conversations/useNamedTicketConversations';
-const mocks = vi.hoisted(() => ({ preference: vi.fn(), details: vi.fn(), schedules: vi.fn(), reschedule: vi.fn(), cancelSchedule: vi.fn(), flag: true, onPublished: vi.fn(), requesterProps: vi.fn(), uploadOptions: vi.fn(), uploadFile: vi.fn(), load: vi.fn(), page: vi.fn(), activity: vi.fn(), capabilities: vi.fn(), replyTarget: vi.fn(), replace: vi.fn(), readDraft: vi.fn(), saveDraft: vi.fn(), post: vi.fn(), create: vi.fn(), status: vi.fn(), push: vi.fn(), mailboxes: vi.fn(), selectMailbox: vi.fn(), latestSend: vi.fn(), prepareEmail: vi.fn(), sendEmail: vi.fn(), emailStatus: vi.fn(), emailDefaults: vi.fn(),
+const mocks = vi.hoisted(() => ({ acknowledge: vi.fn(), preference: vi.fn(), details: vi.fn(), schedules: vi.fn(), reschedule: vi.fn(), cancelSchedule: vi.fn(), flag: true, onPublished: vi.fn(), requesterProps: vi.fn(), uploadOptions: vi.fn(), uploadFile: vi.fn(), load: vi.fn(), page: vi.fn(), activity: vi.fn(), capabilities: vi.fn(), replyTarget: vi.fn(), replace: vi.fn(), readDraft: vi.fn(), saveDraft: vi.fn(), post: vi.fn(), create: vi.fn(), status: vi.fn(), push: vi.fn(), mailboxes: vi.fn(), selectMailbox: vi.fn(), latestSend: vi.fn(), prepareEmail: vi.fn(), sendEmail: vi.fn(), emailStatus: vi.fn(), emailDefaults: vi.fn(),
   query: '', session: { session_id: 'session', user: { tenant: 'home', id: 'author' } } }));
 vi.mock('../../../../../packages/tickets/src/actions/namedTicketConversationActions', () => ({
+  acknowledgeNamedConversationMessagesAction: mocks.acknowledge,
   updateNamedConversationPreferenceAction: mocks.preference,
   getNamedConversationMessageDetailsAction: mocks.details,
   listNamedScheduledCommentsAction: mocks.schedules,
@@ -64,6 +65,7 @@ function NativeHarness() {
 const deferred = () => { let resolve!: (value: any) => void; const promise = new Promise<any>(done => { resolve = done; }); return { promise, resolve }; };
 beforeEach(() => {
   vi.resetAllMocks(); mocks.flag = true; mocks.query = 'conversation=private&conversationStore=home';
+  mocks.acknowledge.mockResolvedValue({ changed: false });
   mocks.session = { session_id: 'session', user: { tenant: 'home', id: 'author' } };
   mocks.load.mockResolvedValue({ conversations: [requester, side], writeAudiences: ['requester', 'organization_private'], actor: { tenant: 'home', userId: 'author' } });
   mocks.page.mockResolvedValue({ conversation: side, items: [], nextBefore: null });
@@ -754,4 +756,40 @@ it('retries the original read cursor after failure and drops controls and counts
   expect(mocks.load).toHaveBeenCalledTimes(reads);
   expect(screen.queryByLabelText('3 unread')).toBeNull();
   expect(screen.queryByRole('button', { name: 'Following' })).toBeNull();
+});
+
+it('acknowledges a selected side history only after its messages load and leaves All activity unread', async () => {
+  const focused = vi.spyOn(document, 'hasFocus').mockReturnValue(true);
+  const row = { commentId: 'loaded', threadId: 'loaded-root', storeTenant: 'home', note: 'Loaded diagnostic message', markdown: null,
+    audience: 'organization_private', deleted: false, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', attachments: [], email: null };
+  const pending = deferred(); mocks.page.mockReturnValueOnce(pending.promise);
+  try {
+    const rendered = render(<Harness />);
+    await screen.findAllByText('Diagnostics');
+    expect(mocks.acknowledge).not.toHaveBeenCalled();
+    await act(async () => pending.resolve({ conversation: side, items: [row], nextBefore: null }));
+    await screen.findByText('Loaded diagnostic message');
+    await waitFor(() => expect(mocks.acknowledge).toHaveBeenCalledOnce());
+    expect(mocks.acknowledge).toHaveBeenCalledWith(ticket, { conversationId: 'private', storeTenant: 'home' }, [{ commentId: 'loaded', threadId: 'loaded-root' }]);
+    mocks.query = 'conversationView=all';
+    mocks.activity.mockResolvedValue({ items: [{ ...row, conversation: side }], nextBefore: null });
+    rendered.rerender(<Harness />);
+    await screen.findByText('All activity', { selector: 'h2' });
+    await screen.findByText('Loaded diagnostic message');
+    expect(mocks.acknowledge).toHaveBeenCalledOnce();
+  } finally { focused.mockRestore(); }
+});
+
+it('acknowledges native requester history after its current source details are admitted', async () => {
+  mocks.query = '';
+  const focused = vi.spyOn(document, 'hasFocus').mockReturnValue(true), pending = deferred();
+  mocks.details.mockReturnValueOnce(pending.promise);
+  try {
+    render(<NativeHarness />);
+    await waitFor(() => expect(mocks.details).toHaveBeenCalled());
+    expect(mocks.acknowledge).not.toHaveBeenCalled();
+    await act(async () => pending.resolve([{ commentId: 'source', attachments: [], email: null }]));
+    await waitFor(() => expect(mocks.acknowledge).toHaveBeenCalledOnce());
+    expect(mocks.acknowledge).toHaveBeenCalledWith(ticket, { conversationId: 'requester', storeTenant: 'owner' }, [{ commentId: 'source', threadId: 'root' }]);
+  } finally { focused.mockRestore(); }
 });

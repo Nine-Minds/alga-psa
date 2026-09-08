@@ -1944,5 +1944,8 @@
       "internalLabel": "Nie powiadamiaj też agentów i obserwatorów",
       "internalHelper": "Pomija także ich e-maile i powiadomienia w aplikacji"
     }
+  },
+  "namedConversations": {
+    "readFailed": "Nie udało się oznaczyć tych wiadomości jako przeczytane."
   }
 }

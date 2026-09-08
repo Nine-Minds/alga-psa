@@ -12,6 +12,7 @@ const EVENTS = 'ticket_conversation_message_events', PREFS = 'ticket_conversatio
 export const namedConversationAttentionSources = [...coManagedConversationBodySources, EVENTS, PREFS,
   'attention', 'attention_version', 'last_read_version', 'unread_count', 'following'];
 type Context = { trx: Knex.Transaction; ticket: ConversationTicketReference; conversation: NamedTicketConversation; hidden: readonly string[] };
+type ViewerContext = Context & { actor: { tenant: string; userId: string } };
 const invalid = (): never => { throw new TicketConversationError('CONVERSATION_INVALID'); };
 
 /** Publication engine: callers retain their source-writing admission. The
@@ -80,16 +81,42 @@ export function updateNamedConversationPreference(db: Knex, actor: CoManagedSess
     (input.readThrough !== undefined && (typeof input.readThrough !== 'string' || !/^(0|[1-9][0-9]{0,18})$/.test(input.readThrough) || BigInt(input.readThrough) > 9223372036854775807n))) return invalid();
   const request = { ...input };
   return withNamedTicketConversation(db, actor, ticket, reference, 'read', async context => {
-    if (isCoManagedReadFieldHidden(context.hidden, namedConversationAttentionSources)) throw new TicketConversationError('CONVERSATION_FORBIDDEN');
-    await assertCoManagedOperationalWrite(context.trx, context.conversation.storeTenant);
-    const store = tenantDb(context.trx, context.conversation.storeTenant), key = { conversation_id: context.conversation.conversationId, actor_tenant: context.actor.tenant, actor_user_id: context.actor.userId };
-    const current = await store.table('ticket_conversations').where('conversation_id', context.conversation.conversationId).first('attention_version');
-    if (request.readThrough !== undefined && BigInt(request.readThrough) > BigInt(current.attention_version)) return invalid();
-    await store.table(PREFS).insert({ tenant: context.conversation.storeTenant, ...key }).onConflict(['tenant', 'conversation_id', 'actor_tenant', 'actor_user_id']).ignore();
-    const row = await store.table(PREFS).where(key).forUpdate().first();
-    await store.table(PREFS).where(key).update({ ...(request.following !== undefined ? { following: request.following } : {}),
-      last_read_version: request.readThrough !== undefined && BigInt(request.readThrough) > BigInt(row.last_read_version) ? request.readThrough : row.last_read_version,
-      updated_at: context.trx.fn.now() });
-    await assertCoManagedOperationalWrite(context.trx, context.conversation.storeTenant);
+    await persistPreference(context, request);
   });
+}
+
+/** Automatic read acknowledgment names the messages actually displayed. The
+ * server derives their cursor under current source admission; a later reply
+ * cannot be acknowledged by fetching a newer navigator count after rendering. */
+export function acknowledgeNamedConversationMessages(db: Knex, actor: CoManagedSessionActor, ticket: ConversationTicketReference,
+  reference: TicketConversationReference, input: { commentId: string; threadId: string }[]) {
+  if (!Array.isArray(input) || input.length < 1 || input.length > 100 || input.some(item => !item ||
+    ![item.commentId, item.threadId].every(conversationUuid) || Object.keys(item).some(key => !['commentId', 'threadId'].includes(key)))) return invalid();
+  const messages = input.map(item => ({ commentId: item.commentId.toLowerCase(), threadId: item.threadId.toLowerCase() }));
+  return withNamedTicketConversation(db, actor, ticket, reference, 'read', async context => {
+    if (isCoManagedReadFieldHidden(context.hidden, namedConversationAttentionSources)) throw new TicketConversationError('CONVERSATION_FORBIDDEN');
+    for (const message of messages) await namedConversationMessageContext(context, message.commentId, message.threadId);
+    const last = await tenantDb(context.trx, context.conversation.storeTenant).table(EVENTS)
+      .where({ conversation_id: context.conversation.conversationId, ticket_tenant: context.ticket.tenant, ticket_id: context.ticket.ticketId })
+      .where(query => { for (const message of messages) query.orWhere({ comment_id: message.commentId, thread_id: message.threadId }); })
+      .orderBy('sequence', 'desc').first('sequence');
+    if (!last) return { changed: false };
+    return persistPreference(context, { readThrough: String(last.sequence) });
+  });
+}
+
+async function persistPreference(context: ViewerContext, request: { following?: boolean; readThrough?: string }) {
+  if (isCoManagedReadFieldHidden(context.hidden, namedConversationAttentionSources)) throw new TicketConversationError('CONVERSATION_FORBIDDEN');
+  await assertCoManagedOperationalWrite(context.trx, context.conversation.storeTenant);
+  const store = tenantDb(context.trx, context.conversation.storeTenant), key = { conversation_id: context.conversation.conversationId, actor_tenant: context.actor.tenant, actor_user_id: context.actor.userId };
+  const current = await store.table('ticket_conversations').where('conversation_id', context.conversation.conversationId).first('attention_version');
+  if (request.readThrough !== undefined && BigInt(request.readThrough) > BigInt(current.attention_version)) return invalid();
+  await store.table(PREFS).insert({ tenant: context.conversation.storeTenant, ...key }).onConflict(['tenant', 'conversation_id', 'actor_tenant', 'actor_user_id']).ignore();
+  const row = await store.table(PREFS).where(key).forUpdate().first();
+  const readThrough = request.readThrough !== undefined && BigInt(request.readThrough) > BigInt(row.last_read_version) ? request.readThrough : String(row.last_read_version);
+  const changed = readThrough !== String(row.last_read_version) || (request.following !== undefined && request.following !== row.following);
+  if (changed) await store.table(PREFS).where(key).update({ ...(request.following !== undefined ? { following: request.following } : {}),
+    last_read_version: readThrough, updated_at: context.trx.fn.now() });
+  await assertCoManagedOperationalWrite(context.trx, context.conversation.storeTenant);
+  return { changed };
 }

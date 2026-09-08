@@ -1930,6 +1930,7 @@
     "follow": "Follow",
     "following": "Following",
     "markRead": "Mark as read",
+    "readFailed": "Could not mark these messages as read.",
     "unread": "unread",
     "attentionUpdateFailed": "Could not update your conversation preference."
   }

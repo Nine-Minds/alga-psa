@@ -1802,5 +1802,8 @@
       "internalLabel": "Auch Agenten und Beobachter nicht benachrichtigen",
       "internalHelper": "Überspringt auch deren E-Mails und In-App-Benachrichtigungen"
     }
+  },
+  "namedConversations": {
+    "readFailed": "Diese Nachrichten konnten nicht als gelesen markiert werden."
   }
 }

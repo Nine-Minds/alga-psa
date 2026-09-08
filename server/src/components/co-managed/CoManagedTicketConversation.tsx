@@ -20,6 +20,7 @@ import { saveCoManagedPrivateTicketCommentAction } from '@/lib/actions/coManaged
 import CoManagedThreadDisclosure from './CoManagedThreadDisclosure';
 import CoManagedCommentAttachments from './CoManagedCommentAttachments';
 import { ConversationEmailEnvelope } from '@alga-psa/tickets/components/ticket/conversations/ConversationEmailEnvelope';
+import { ConversationReadAcknowledgment } from '@alga-psa/tickets/components/ticket/conversations/ConversationReadAcknowledgment';
 import { conversationText, conversationDocument } from './conversationText';
 
 const Document = dynamic(() => import('./CoManagedConversationDocument'), { ssr: false });
@@ -156,6 +157,7 @@ export interface CoManagedConversationComposition {
   refreshVersion: number;
   beforeEdit: () => Promise<boolean>;
   reply: (parent: { threadId: string; commentId: string }) => Promise<boolean>;
+  onRead?: () => void;
 }
 export default function CoManagedTicketConversation({ resource, requester, onDraftState, composition }: { resource: CoManagedSharedResource; requester?: TicketConversationReference; onDraftState?: (active: boolean) => void; composition?: CoManagedConversationComposition }) {
   const { data: session } = useSession();
@@ -210,6 +212,8 @@ function Conversation({ resource, homeTenant, userId, requester, onDraftState, c
     {error && <p role="alert">{t('coManaged.conversation.loadError')}</p>}
     {!state && busy && <p role="status">{t('coManaged.ticket.loading')}</p>}
     {state && <>
+      {requester && !busy && !error && <ConversationReadAcknowledgment id="co-conversation" ticket={{ tenant: resource.tenant, ticketId: resource.id, relationshipId: resource.relationshipId }}
+        conversation={requester} messages={state.items.filter(item => !item.deleted)} onChanged={composition?.onRead} />}
       {state.writeAudiences.length > 0 && !composition && !draft && !disclosure && <Button id="co-conversation-new" onClick={() => open({ kind: 'new' })}>{t('coManaged.conversation.new')}</Button>}
       {disclosure && <CoManagedThreadDisclosure resource={target.current} thread={{ storeTenant: disclosure.storeTenant, threadId: disclosure.threadId }} actor={state.actor}
         audiences={state.actor.tenant === resource.tenant ? state.writeAudiences : state.writeAudiences.filter(value => value !== 'organization_private')}

@@ -16297,6 +16297,9 @@ it.each(['note', 'attention_version'])('named conversation attention withholds m
     expect((await api.listNamedTicketConversationOverview(db, f.customerPrincipal, ticket)).find(row => row.conversationId === f.ref.conversationId)?.attention).toBeNull();
   }
   await expect(attention.updateNamedConversationPreference(db, f.customerPrincipal, ticket, f.ref, { following: true })).rejects.toThrow();
+  const source = await f.customer.table('comments').where('comment_id', f.route.operation_id).first('thread_id');
+  await expect(attention.acknowledgeNamedConversationMessages(db, f.customerPrincipal, ticket, f.ref,
+    [{ commentId: f.route.operation_id, threadId: source.thread_id }])).rejects.toThrow();
   expect(await f.customer.table('ticket_conversation_preferences')).toHaveLength(0);
   const migration = require('../../../migrations/20260908115747_create_ticket_conversation_attention.cjs');
   await migration.up(db);
@@ -16753,4 +16756,38 @@ it('native ticket email subscriber keeps external delivery separate and recovers
     await subscriber.handleTicketCommentAdded({ ...event, id: randomUUID(), payload: { ...event.payload, suppressInternalNotifications: true, suppressContactNotifications: true } });
     expect(internal).toHaveBeenCalledTimes(4); expect(native).toHaveBeenCalledTimes(2);
   } finally { internal.mockRestore(); native.mockRestore(); for (const spy of spies.reverse()) spy.mockRestore(); }
+});
+
+it.each(['native', 'shared_it', 'organization_private'] as const)('displayed %s conversation messages acknowledge only their current qualified cursor', async kind => {
+  const f = await namedInboundFixture(kind === 'shared_it' ? 'shared_it' : 'organization_private', kind === 'native');
+  const { acknowledgeNamedConversationMessages: acknowledge, getNamedConversationAttention: read } = await import('../../../../packages/co-managed/src/namedConversationAttention');
+  const accept = async () => {
+    const input = await f.makeInput();
+    const result = await db.transaction(trx => f.admission.admitNamedConversationEmailReply(trx, input));
+    if (!result || result.outcome !== 'replied') throw new Error('Expected substantive vendor reply');
+    const current = await f.conversations.getNamedTicketConversationMessages(db, f.principal, f.ticket, f.ref);
+    const posted = current.items.find(item => item.commentId === result.commentId)!;
+    return { commentId: posted.commentId, threadId: posted.threadId };
+  };
+  const visible = await accept();
+  const page = await f.conversations.getNamedTicketConversationMessages(db, f.principal, f.ticket, f.ref);
+  expect(page.items.some(item => item.commentId === visible.commentId)).toBe(true);
+  const snapshot = await read(db, f.principal, f.ticket, f.ref);
+  const later = await accept();
+  expect(await acknowledge(db, f.principal, f.ticket, f.ref, [visible])).toEqual({ changed: true });
+  expect(await read(db, f.principal, f.ticket, f.ref)).toMatchObject({ lastReadVersion: snapshot!.attentionVersion, unreadCount: 1, following: false });
+  expect(await acknowledge(db, f.principal, f.ticket, f.ref, [visible])).toEqual({ changed: false });
+  const defaultConversation = (await f.conversations.listNamedTicketConversations(db, f.principal, f.ticket)).find(row => row.defaultSlot === 'requester')!;
+  const untouched = { storeTenant: defaultConversation.storeTenant, conversationId: defaultConversation.conversationId };
+  expect(await read(db, f.principal, f.ticket, untouched)).toMatchObject({ lastReadVersion: '0', following: false });
+  await expect(acknowledge(db, f.principal, f.ticket, untouched, [visible])).rejects.toThrow();
+  await expect(acknowledge(db, f.principal, f.ticket, f.ref, [{ ...visible, threadId: randomUUID() }])).rejects.toThrow();
+  if (kind === 'organization_private') await expect(acknowledge(db, f.customerPrincipal, f.ticket, f.ref, [visible])).rejects.toThrow();
+  await Promise.all([acknowledge(db, f.principal, f.ticket, f.ref, [later]), acknowledge(db, f.principal, f.ticket, f.ref, [visible])]);
+  expect(await read(db, f.principal, f.ticket, f.ref)).toMatchObject({ unreadCount: 0, following: false });
+  const owner = tenantDb(db, f.ref.storeTenant);
+  const before = await owner.table('ticket_conversation_preferences').where({ conversation_id: f.ref.conversationId, actor_user_id: f.principal.userId }).first();
+  await f.sponsor.table('sessions').where('session_id', f.principal.sessionId).update({ revoked_at: new Date() });
+  await expect(acknowledge(db, f.principal, f.ticket, f.ref, [later])).rejects.toThrow();
+  expect(await owner.table('ticket_conversation_preferences').where({ conversation_id: f.ref.conversationId, actor_user_id: f.principal.userId }).first()).toEqual(before);
 });
