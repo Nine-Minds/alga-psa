@@ -81,6 +81,8 @@ services:
     ports: !reset []
     environment:
       <<: *provider-environment
+      TEMPORAL_ADDRESS: temporal-dev:7233
+      TEMPORAL_NAMESPACE: default
       IMAP_WEBHOOK_SECRET: regression-imap-only
       SECRET_FS_BASE_PATH: /run/secrets
       STORAGE_LOCAL_BASE_PATH: /data/files
@@ -112,8 +114,102 @@ services:
     ports: !reset []
   postgres:
     ports: !reset []
+  # This frontend owns separate Temporal schemas in this job's disposable
+  # PostgreSQL instance. It has no host ports or live provider access.
+  temporal-dev:
+    image: temporalio/auto-setup:1.24.2
+    environment:
+      DB: postgres12
+      DB_PORT: '5432'
+      POSTGRES_SEEDS: postgres
+      POSTGRES_USER: postgres
+    entrypoint: ['/bin/sh']
+    command:
+      - -c
+      - |
+        export POSTGRES_PWD=$$(cat /run/secrets/postgres_password)
+        exec /etc/temporal/entrypoint.sh autosetup
+    secrets:
+      - postgres_password
+    healthcheck:
+      test: ['CMD', 'tctl', '--address', '127.0.0.1:7233', '--namespace', 'default', 'namespace', 'describe']
+      interval: 5s
+      timeout: 5s
+      retries: 60
+      start_period: 30s
+    networks:
+      - app-network
+    depends_on:
+      postgres:
+        condition: service_healthy
   workflow-worker:
-    environment: *provider-environment
+    image: alga-e2e-test-workflow-worker:latest
+    init: true
+    ports: !reset []
+    environment:
+      <<: *provider-environment
+      NODE_ENV: production
+      DEV_MODE: 'false'
+      TEMPORAL_ADDRESS: temporal-dev:7233
+      TEMPORAL_NAMESPACE: default
+      SECRET_FS_BASE_PATH: /run/secrets
+      STORAGE_LOCAL_BASE_PATH: /data/files
+      PORT: '4000'
+    # Exercise the candidate image's entrypoint, not a checkout bind mount.
+    volumes: !override
+      - email_test_tenant_secrets:/run/secrets/tenants
+      - files_data:/data/files
+    depends_on:
+      temporal-dev:
+        condition: service_healthy
+  # Explicitly started only in the EE job. Authored workflows belong to the
+  # workflow-worker; this worker also adds its existing SLA queue internally.
+  temporal-worker:
+    profiles: ['enterprise']
+    image: alga-e2e-test-temporal-worker:latest
+    init: true
+    environment:
+      <<: *provider-environment
+      NODE_ENV: production
+      EDITION: enterprise
+      SECRET_READ_CHAIN: env,filesystem
+      SECRET_WRITE_PROVIDER: filesystem
+      SECRET_FS_BASE_PATH: /run/secrets
+      STORAGE_LOCAL_BASE_PATH: /data/files
+      DB_HOST: pgbouncer
+      DB_PORT: '6432'
+      DB_NAME_SERVER: server
+      DB_USER_SERVER: app_user
+      DB_USER_ADMIN: postgres
+      REDIS_HOST: redis
+      REDIS_PORT: '6379'
+      TEMPORAL_ADDRESS: temporal-dev:7233
+      TEMPORAL_NAMESPACE: default
+      TEMPORAL_TASK_QUEUE: alga-jobs
+      TEMPORAL_TASK_QUEUES: tenant-workflows,portal-domain-workflows,email-domain-workflows,alga-jobs
+      ENABLE_HEALTH_CHECK: 'true'
+      HEALTH_CHECK_PORT: '8080'
+    secrets:
+      - db_password_server
+      - source: postgres_password
+        target: DB_PASSWORD_ADMIN
+      - alga_auth_key
+      - nextauth_secret
+      - redis_password
+      - crypto_key
+      - credential_encryption_key
+    volumes:
+      - email_test_tenant_secrets:/run/secrets/tenants
+      - files_data:/data/files
+    networks:
+      - app-network
+    depends_on:
+      temporal-dev:
+        condition: service_healthy
+      pgbouncer:
+        condition: service_started
+      redis:
+        condition: service_started
 
 # Provider clients cannot fall back to live vendor endpoints. Only test-ingress
 # has a routable network; it forwards published ports to fixed internal targets.

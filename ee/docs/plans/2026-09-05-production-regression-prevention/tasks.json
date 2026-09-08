@@ -244,6 +244,54 @@
       "dependsOn": [],
       "owner": "stripe_protocol",
       "notes": "Explicit activity barrier, test-side time advancement and finally cleanup preserve deadline rejection. Full native engine61/61 passes; missing-deadline mutation fails promptly and still drains worker. Original CI timeout not reproduced; current CI validation remains required."
+    },
+    {
+      "id": "R031",
+      "title": "Prove compiled workflow-worker startup against isolated native services",
+      "status": "done",
+      "dependsOn": [
+        "R026"
+      ],
+      "owner": "stripe_protocol",
+      "notes": "Actual compiled entrypoint returns200 with temporal/eventStream/dataStoreSweep ready. Private migratedDB, Redis and Temporal cleaned. Reused installed dependencies and compiled packages; no cleanimage or graceful-shutdown claim."
+    },
+    {
+      "id": "R032",
+      "title": "Require explicit background-worker readiness with native HTTP tests",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "calendar_review",
+      "notes": "Nine realHTTP behavioral checks pass, including unready/malformed/hung responses and actual CLI. Canonical node-tooling discovery includes suite automatically."
+    },
+    {
+      "id": "R033",
+      "title": "Repair Temporal image health probe and target architecture",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "qbo_protocol",
+      "notes": "Reviewed Node22, architecture-aware kubectl and exact200/no-redirect /ready probes. Twelve realHTTP extracted-command cases and three architecture checks pass. Clean Linux image install and currentCI pending."
+    },
+    {
+      "id": "R034",
+      "title": "Start and probe candidate background workers in isolated browser CI",
+      "status": "in_progress",
+      "dependsOn": [
+        "R031",
+        "R032",
+        "R033"
+      ],
+      "owner": "coordinator",
+      "notes": "Image records cover new worker candidates, namespace andprocess readiness gates, allprocessprovider probes. Native CE/EE compose rendering and actionlint pass. Peer review found/fixed serverTemporaldestination and crossdatabaseconsumer conflict. Current-source CI pending."
+    },
+    {
+      "id": "R035",
+      "title": "Align isolated CI tenant-secret writer identities and validate cross-process grants",
+      "status": "todo",
+      "dependsOn": [
+        "R034"
+      ],
+      "owner": "coordinator",
+      "notes": "Current root server/workflow-worker and nonroot Temporal worker cannot share hardened filesystem writes: owned secret root,0700dirs and0600files require common writer UID. Do not weaken production permission checks. Design owned shared secret root and common nonroot UID, then test actual crossprocess read/write and provider activity."
     }
   ]
 }

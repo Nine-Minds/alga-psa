@@ -1,0 +1,87 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-09-08T19:31:26.200825+00:00",
+  "baseRevision": "890ec575f5a6a0847313b0b5e153cdfb0c477d37",
+  "workingTreeDirty": true,
+  "scope": "Temporal non-authored worker image native preflight; no container or deployment proof",
+  "sourceSha256": {
+    "ee/temporal-workflows/Dockerfile": "4d8a98988e1249b5b9cbc80cfc9c1d6256f8bc4423d86667aa153f065377f3e2",
+    "ee/temporal-workflows/src/worker.ts": "bacaaa12ed382d05f37c11395dab3109e0143140a763eb612ac134c29574fa70",
+    "ee/temporal-workflows/src/workerConfig.ts": "979e83d4df325461948e3750011de82c0d68f4ff9467004cf2d97cc9250c39f5",
+    "ee/temporal-workflows/src/config/startupValidation.ts": "1ca5dcacf7f0b82df2e0f4723fab17fe1617fc6c88b1700418cfb1805d0e0580",
+    "ee/temporal-workflows/tsconfig.build.json": "04b700450b868967ad2e8eb097ac8b8cf76850a0f4992b901258d4a7551292e3",
+    "ee/temporal-workflows/tsconfig.json": "fa76a694e5e7f6060e624a3e02f24b8930a2f169e36d587f21ddb5e81c1a7865"
+  },
+  "runtime": {
+    "testedNode": "25.5.0",
+    "testedPlatform": "darwin-arm64",
+    "imageNode": "22-bullseye",
+    "rootNodeEngine": ">=22 <27"
+  },
+  "checks": [
+    {
+      "name": "Production and production-prebuilt Dockerfile readiness commands",
+      "passed": 12,
+      "commandSource": "Actual CMD node -e commands extracted from Dockerfile and executed as child processes",
+      "casesPerStage": [
+        "HTTP 200 exits 0",
+        "HTTP 503 exits 1",
+        "HTTP 302 redirect exits 1",
+        "HTTP 204 exits 1",
+        "No response times out and exits 1",
+        "Closed port exits 1"
+      ],
+      "customHealthCheckPort": true,
+      "log": "/tmp/alga-temporal-health-probe.log"
+    },
+    {
+      "name": "kubectl target architecture selection",
+      "passed": 3,
+      "method": "Actual Dockerfile RUN shell executed with curl/chmod stubs; no downloads",
+      "cases": [
+        "amd64 selects linux/amd64",
+        "arm64 selects linux/arm64",
+        "s390x fails before download"
+      ],
+      "log": "/tmp/alga-temporal-arch-probe.log"
+    },
+    {
+      "name": "Current Temporal worker TypeScript compilation and alias rewrite",
+      "status": "passed",
+      "commands": [
+        "tsc -p tsconfig.build.json --outDir /tmp/alga-temporal-compiled-audit",
+        "tsc-alias -p tsconfig.build.json -f --outDir /tmp/alga-temporal-compiled-audit"
+      ],
+      "logs": [
+        "/tmp/alga-temporal-build-audit.log",
+        "/tmp/alga-temporal-alias-audit.log"
+      ]
+    },
+    {
+      "name": "Compiled worker module import",
+      "status": "passed",
+      "entrypoint": "/tmp/alga-temporal-compiled-audit/ee/temporal-workflows/src/worker.js",
+      "dependencies": "Private symlink union of existing repository root and Temporal node_modules",
+      "startupInvoked": false,
+      "log": "/tmp/alga-temporal-import-audit.log"
+    }
+  ],
+  "sources": [
+    "https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/",
+    "node_modules/@temporalio/core-bridge/common.js",
+    "node_modules/@temporalio/core-bridge/package.json",
+    "node_modules/sharp/package.json",
+    "package.json"
+  ],
+  "limits": [
+    "No Docker build, image startup, Linux execution or registry publication was performed.",
+    "Node 22 is selected to match repository engines but no local Node 22 executable was available; native commands ran Node 25.5.0.",
+    "Online clean-install resolution was rejected by automatic approval review because internal package names could be sent to the public npm registry; no retry was made.",
+    "Offline clean-install resolution stopped on uncached axios (ENOTCACHED), so clean dependency installation remains unproven.",
+    "Compiled module import used existing installed dependencies and did not invoke main, connect to a database or Temporal, initialize schedules, or prove poller readiness.",
+    "The existing /ready endpoint is unconditional after startup and does not monitor ongoing Temporal poller health.",
+    "Architecture verification exercised shell selection with stubbed downloads; it did not execute Linux kubectl binaries.",
+    "Native command harnesses and logs are local temporary artifacts, not permanent CI test registration.",
+    "Source hashes were recorded after the Docker-only edits; the isolated worker compilation used unchanged worker and TypeScript configuration sources."
+  ]
+}

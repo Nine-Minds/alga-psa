@@ -3320,3 +3320,15 @@ Committed reviewed batch849ae8edb3 and merged origin/main1ea8c942f6 cleanly into
 ### Current CI parser cycle and parallel plan follow-up
 
 Run34256378317 exposed a new ee-calendar→integrations→ee-calendar build cycle. Moved shared parser and Unicode data to core; actual58taskserverbuild graph and114taskaffectedtest graph are acyclic, with no new projectcycles. Corebuild, fullserverTypeScript and32mappercasesperBerlin/LA pass. Stripe redirect contract now preserves302/307 without followingLocation; bothredcasesfailedbefore and all26Stripecasespassafter. Promotion verifier nowrequiresindependentcomplete renderedresources, rejecting consistentlyomittedworkers/initcontainers and wrongtargets/images; all53relatednativecasespass. UpdatedCLIcallersanddocumentation. F020/F037remainincomplete pendingactualpipeline/protocolrequirements. CurrentCIcontinues; deferpushuntilremainingjobsfinish toavoidcancellingusefulevidence.
+
+### Background workers: native proof and candidate CI wiring
+
+Coordinator plus three agents delivered actual compiled workflow-worker startup against a private migrated database, isolated Redis and Temporal. HTTP200 reported temporal/eventStream/dataStoreSweep ready; owned resources were removed. Nine native readiness-checker cases pass, and canonical node-tooling automatically discovers the new suite. Temporal Dockerfile now uses Node22, architecture-aware kubectl and an exact200/no-redirect /ready check;12 actual extracted-command HTTP cases and3 architecture checks pass. Clean Linux image install is still unverified.
+
+Browser CI now builds both worker candidates, verifies their archive/loaded-image identity, starts an isolated Temporal frontend with namespace readiness, starts authored worker in CE/EE and traditional Temporal worker only in EE, and probes provider routing from each process. Review caught and corrected the missing server Temporal address and workers consuming against the wrong DB during later API/upgrade phases; consumers stop before those phases. CE/EE Compose rendering and actionlint pass without building/running Docker.
+
+Synthetic app secrets are readable by the nonroot worker. This does not prove tenant-secret parity: hardened filesystem writes require a common owner for the entire secret root and0700/0600 tenant paths. Mixed service UIDs remain a concrete F031 gap tracked inR035; no production permission weakening or comprehensive worker-journey claim.
+
+Current published run34266401070 built CE,EE,email,setup,hocuspocus,Redis andPgBouncer successfully; algasim failed the package-runner issue already fixed locally. Temporal deadline failure also has a locally passing fix. Server unit suite and one integration shard remain active, so no replacement push yet.
+
+Canonical native tooling completed689/689 tests across73files in160seconds, with no failures/skips/TODOs. Working-tree configuration/documentation changes overlapped execution; this is native behavior evidence, not an immutable release claim.

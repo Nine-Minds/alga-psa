@@ -1,4 +1,5 @@
-FROM node:20-bullseye AS base
+FROM node:22-bullseye AS base
+ARG TARGETARCH
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -7,7 +8,8 @@ RUN apt-get update && apt-get install -y \
     git \
     && rm -rf /var/lib/apt/lists/*
 
-RUN curl -sSL "https://storage.googleapis.com/kubernetes-release/release/$(curl -sSL https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl" -o /usr/local/bin/kubectl \
+RUN case "$TARGETARCH" in amd64|arm64) ;; *) echo "Unsupported kubectl architecture" >&2; exit 1 ;; esac \
+    && curl -fsSL "https://dl.k8s.io/release/$(curl -fsSL https://dl.k8s.io/release/stable.txt)/bin/linux/${TARGETARCH}/kubectl" -o /usr/local/bin/kubectl \
     && chmod +x /usr/local/bin/kubectl
 
 WORKDIR /app
@@ -191,7 +193,7 @@ USER temporal
 WORKDIR /app/ee/temporal-workflows
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD node -e "console.log('Health check: OK')" || exit 1
+    CMD node -e "fetch('http://127.0.0.1:' + (process.env.HEALTH_CHECK_PORT || '8080') + '/ready', { redirect: 'error', signal: AbortSignal.timeout(5000) }).then(r => { if (r.status !== 200) process.exitCode = 1; }).catch(() => { process.exitCode = 1; })"
 
 EXPOSE 8080
 
@@ -269,7 +271,7 @@ WORKDIR /app/ee/temporal-workflows
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD node -e "console.log('Health check: OK')" || exit 1
+    CMD node -e "fetch('http://127.0.0.1:' + (process.env.HEALTH_CHECK_PORT || '8080') + '/ready', { redirect: 'error', signal: AbortSignal.timeout(5000) }).then(r => { if (r.status !== 200) process.exitCode = 1; }).catch(() => { process.exitCode = 1; })"
 
 # Expose health check port
 EXPOSE 8080
