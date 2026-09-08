@@ -1,3 +1,5 @@
+import { registerCoManagedPortableWorkspaceExportTests } from './helpers/coManagedPortableWorkspaceExportCases';
+import { registerCoManagedPortableRemoteMeetingCases } from './coManagedPortableRemoteMeeting.cases';
 import { registerCoManagedPortableSupplementalFileCases } from './coManagedPortableSupplementalFiles.cases';
 import { registerCoManagedPortableEngagementCases } from './coManagedPortableEngagement.cases';
 import { registerCoManagedPortableWorkflowTests } from './helpers/coManagedPortableWorkflowCases';
@@ -19862,6 +19864,36 @@ it('portable conversation export preserves published customer/shared files after
   expect(await f.fs.readdir(f.root)).toEqual([]);
 }));
 
+it('portable workspace coordinator binds actual private and shared conversation files to authenticated package records', async () => withPortableConversationFileFixture(async f => {
+  const { prepareCoManagedPortableWorkspaceExport } = await import('../../../../ee/server/src/lib/co-managed/portableWorkspaceExport');
+  const { openPortableArchive } = await import('../../../../packages/co-managed/src/portableArchive');
+  const { validateCoManagedPortableWorkspaceManifest } = await import('../../../../packages/co-managed/src/portableWorkspaceManifest');
+  let read = await f.customer.table('permissions').where({ resource: 'credential', action: 'read' }).first();
+  if (!read) {
+    const existing = await f.customer.table('permissions').where({ resource: 'co_management', action: 'manage' }).first();
+    read = { ...existing, permission_id: randomUUID(), resource: 'credential', action: 'read' };
+    await f.customer.table('permissions').insert(read);
+  }
+  const role = await f.customer.table('user_roles').where('user_id', f.actor.userId).first();
+  await f.customer.table('role_permissions').insert({ tenant: f.actor.tenant, role_id: role.role_id, permission_id: read.permission_id }).onConflict().ignore();
+  const passphrase = 'Customer-owned complete conversation recovery';
+  const prepared = await prepareCoManagedPortableWorkspaceExport(db, f.customerPrincipal, passphrase);
+  try {
+    await prepared.consume(async artifact => {
+      const opened = await openPortableArchive(artifact.path, passphrase, { packageId: artifact.packageId, sourceTenant: artifact.sourceTenant });
+      try {
+        const manifest = validateCoManagedPortableWorkspaceManifest(opened.manifest, opened.context, opened.files);
+        expect(manifest.conversationFiles.attachments.map((row: any) => row.fileName).sort()).toEqual(['customer-private.txt', 'shared.txt']);
+        for (const attachment of manifest.conversationFiles.attachments) {
+          const file = opened.files.find(row => row.id === attachment.blobId)!;
+          expect((await f.fs.readFile(file.path)).equals(Buffer.from(`Bytes for ${attachment.fileName}`))).toBe(true);
+        }
+      } finally { await opened.dispose(); }
+    });
+  } finally { await prepared.dispose(); }
+  expect(await f.fs.readdir(f.root)).toEqual([]);
+}));
+
 it('portable conversation export verifies stored checksums and removes staged files after parent access or path changes', async () => withPortableConversationFileFixture(async f => {
   const first = await f.customer.table('co_management_conversation_attachments').where('attachment_id', f.uploaded[0].attachmentId).first();
   const original = f.objects.get(first.storage_path), changed = Uint8Array.from(original); changed[0] ^= 1;
@@ -20041,6 +20073,15 @@ it('portable workspace graph validates cross-section identities and rejects dang
         engagement: (await exportCoManagedPortableEngagement(db, f.customerPrincipal, packageId, snapshot)).records };
       expect(validate(sections, { sourceTenant: f.actor.tenant }).records.project_tasks.some(row => row.task_id === f.resource.id)).toBe(true);
       expect(sections.documents.documents.some((row: any) => row.source_template_id === 'standard-invoice-by-location')).toBe(true);
+      const { prepareCoManagedPortableWorkspaceRecords, CO_MANAGED_PORTABLE_RESTORE_GLOBALS } = await import('../../../../packages/co-managed/src/portableWorkspaceRestoreRecords');
+      const allRecords = validate(sections, { sourceTenant: f.actor.tenant }).records;
+      const globalColumns = ['standard_status_id', 'type_id', 'type_id', 'id'];
+      const destinationCatalogMappings = Object.fromEntries(CO_MANAGED_PORTABLE_RESTORE_GLOBALS.map((table, index) =>
+        [table, Object.fromEntries(allRecords[table].map(row => [row[globalColumns[index]], row[globalColumns[index]]]))]));
+      const prepared = prepareCoManagedPortableWorkspaceRecords({ sourceTenant: f.actor.tenant, destinationTenant: randomUUID(), sections, destinationCatalogMappings: destinationCatalogMappings as any });
+      expect(prepared.records.users.every(row => row.is_inactive)).toBe(true);
+      expect(prepared.records.project_tasks[0].task_id).not.toBe(sections.work.project_tasks[0].task_id);
+      expect(prepared.records.project_task_comments[0].task_id).toBe(prepared.records.project_tasks[0].task_id);
       const { sealPortableArchive, openPortableArchive } = await import('../../../../packages/co-managed/src/portableArchive');
       const context = { packageId, sourceTenant: f.actor.tenant };
       const encrypted = await sealPortableArchive({ context, manifest: { sections }, files: documents.files }, 'Customer-owned complete archive passphrase');
@@ -20065,3 +20106,5 @@ it('portable workspace graph validates cross-section identities and rejects dang
 }));
 
 registerCoManagedPortableSupplementalFileCases(() => db, ticketHandoffFixture, artifactStorage);
+registerCoManagedPortableRemoteMeetingCases(() => db, withMeetingCreationFixture);
+registerCoManagedPortableWorkspaceExportTests(() => db, withPortableVaultExportFixture, artifactStorage);
