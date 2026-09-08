@@ -699,7 +699,7 @@ const ScheduleEntry = {
       (!entry.recurrence_pattern || Object.keys(entry.recurrence_pattern).length === 0);
 
     // Build update data
-    const updateData: Record<string, unknown> = {};
+    const updateData: Record<string, unknown> = { updated_at: new Date() };
 
     if (isRemovingRecurrence) {
       updateData.recurrence_pattern = null;

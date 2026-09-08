@@ -30,7 +30,7 @@ import { publishEvent } from 'server/src/lib/eventBus/publishers';
 import { TimePeriod } from '@alga-psa/scheduling/models/timePeriod';
 import { hasPermission } from '../../auth/rbac';
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '../middleware/apiMiddleware';
-import { readCoManagedNativeSchedules, NativeTimePeriodSettingsError, readCoManagedNativeTimePeriodSettings, commandCoManagedNativeTimePeriodSettings, readCoManagedNativeTimePeriods, commandCoManagedNativeTimePeriods, generateTimePeriodCalendar, NativeTimeSheetError, createCoManagedNativeTimeSheet, editCoManagedNativeTimeSheet, CoManagedSharedWorkError, NativeTimeReviewError, readCoManagedNativeTimeSheet, listCoManagedNativeTimeSheets, commandCoManagedNativeTimeSheets, deleteCoManagedNativeTimeSheet, addCoManagedNativeTimeSheetComment } from '@alga-psa/co-managed';
+import { commandCoManagedNativeSchedule, NativeScheduleError, readCoManagedNativeSchedules, NativeTimePeriodSettingsError, readCoManagedNativeTimePeriodSettings, commandCoManagedNativeTimePeriodSettings, readCoManagedNativeTimePeriods, commandCoManagedNativeTimePeriods, generateTimePeriodCalendar, NativeTimeSheetError, createCoManagedNativeTimeSheet, editCoManagedNativeTimeSheet, CoManagedSharedWorkError, NativeTimeReviewError, readCoManagedNativeTimeSheet, listCoManagedNativeTimeSheets, commandCoManagedNativeTimeSheets, deleteCoManagedNativeTimeSheet, addCoManagedNativeTimeSheetComment } from '@alga-psa/co-managed';
 import { CoManagedLifecycleError } from '@alga-psa/licensing';
 import { exportTimeSheetProjections, timeSheetStatistics, timeSheetDto, timeSheetCommentDto, filterTimeSheets, sortTimeSheets } from './timeSheetCollection';
 
@@ -80,6 +80,11 @@ export class TimeSheetService extends BaseService<any> {
     try { return await work(); } catch (error) {
       if (error instanceof CoManagedSharedWorkError) throw new ForbiddenError(`Permission denied: Cannot access this ${resource}`);
       if (error instanceof CoManagedLifecycleError) throw Object.assign(new ForbiddenError(error.message), { code: error.code });
+      if (error instanceof NativeScheduleError) {
+        if (error.code === 'SCHEDULE_INVALID') throw new BadRequestError(error.message);
+        if (error.code === 'SCHEDULE_NOT_FOUND') throw new NotFoundError(error.message);
+        throw new ConflictError(error.message);
+      }
       if (error instanceof NativeTimePeriodSettingsError) {
         if (error.code === 'SETTINGS_INVALID') throw new BadRequestError(error.message);
         if (error.code === 'SETTINGS_NOT_FOUND') throw new NotFoundError(error.message);
@@ -1159,12 +1164,14 @@ export class TimeSheetService extends BaseService<any> {
 
   async createScheduleEntry(data: CreateScheduleEntryData, context: ServiceContext): Promise<any> {
       const { knex } = await this.getKnex();
+      const current = await this.withSheetErrors(() => commandCoManagedNativeSchedule(knex, context.tenant, { action: 'create', data }, async () => this.sheetActor(context), event => publishEvent(event)), 'schedule');
+      if (current.handled) return current.entry;
       const ScheduleEntry = (await import('@alga-psa/shared/models/scheduleEntry')).default;
 
       const entry = await withTransaction(knex, async (trx) => {
         // Map work_item_type to valid WorkItemType or default
         let workItemType: 'ticket' | 'project_task' | 'non_billable_category' | 'ad_hoc' | 'interaction';
-        if (data.work_item_type === 'ticket' || data.work_item_type === 'project_task') {
+        if (data.work_item_type === 'ticket' || data.work_item_type === 'project_task' || data.work_item_type === 'interaction' || data.work_item_type === 'non_billable_category') {
           workItemType = data.work_item_type;
         } else {
           // Map other types to non_billable_category or ad_hoc
@@ -1178,9 +1185,9 @@ export class TimeSheetService extends BaseService<any> {
           scheduled_end: new Date(data.scheduled_end),
           work_item_id: data.work_item_id ?? null,
           work_item_type: workItemType,
-          notes: data.notes,
+          notes: data.notes ?? undefined,
           is_private: data.is_private,
-          recurrence_pattern: data.recurrence_pattern ? JSON.parse(data.recurrence_pattern) : null,
+          recurrence_pattern: typeof data.recurrence_pattern === 'string' ? JSON.parse(data.recurrence_pattern) : data.recurrence_pattern ?? null,
           assigned_user_ids: data.assigned_user_ids || [],
           status: 'scheduled'
         }, {
@@ -1212,6 +1219,8 @@ export class TimeSheetService extends BaseService<any> {
 
   async updateScheduleEntry(id: string, data: UpdateScheduleEntryData, context: ServiceContext): Promise<any> {
       const { knex } = await this.getKnex();
+      const current = await this.withSheetErrors(() => commandCoManagedNativeSchedule(knex, context.tenant, { action: 'update', id, data }, async () => this.sheetActor(context), event => publishEvent(event)), 'schedule');
+      if (current.handled) return current.entry;
       
       const result = await withTransaction(knex, async (trx) => {
         const existing = await tenantDb(trx, context.tenant).table('schedule_entries')
@@ -1300,6 +1309,8 @@ export class TimeSheetService extends BaseService<any> {
 
   async deleteScheduleEntry(id: string, context: ServiceContext): Promise<void> {
       const { knex } = await this.getKnex();
+      const current = await this.withSheetErrors(() => commandCoManagedNativeSchedule(knex, context.tenant, { action: 'delete', id }, async () => this.sheetActor(context), event => publishEvent(event)), 'schedule');
+      if (current.handled) return;
       
       const existing = await withTransaction(knex, async (trx) => {
         const existing = await tenantDb(trx, context.tenant).table('schedule_entries')

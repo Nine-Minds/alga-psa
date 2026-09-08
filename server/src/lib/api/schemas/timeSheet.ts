@@ -288,12 +288,12 @@ const baseScheduleEntrySchema = z.object({
   title: z.string().min(1, 'Title is required'),
   scheduled_start: z.string().datetime(),
   scheduled_end: z.string().datetime(),
-  work_item_id: uuidSchema.optional(),
-  work_item_type: z.enum(['ticket', 'project_task', 'meeting', 'break', 'other']).optional(),
+  work_item_id: uuidSchema.nullable().optional(),
+  work_item_type: z.enum(['ticket', 'project_task', 'ad_hoc', 'interaction', 'non_billable_category', 'meeting', 'break', 'other']).optional(),
   assigned_user_ids: z.array(uuidSchema).optional(),
-  notes: z.string().optional(),
+  notes: z.string().nullable().optional(),
   is_private: z.boolean().optional().default(false),
-  recurrence_pattern: z.string().optional()
+  recurrence_pattern: z.union([z.string(), z.record(z.unknown())]).nullable().optional()
 });
 
 // Schedule entry schemas (simplified for time management context)

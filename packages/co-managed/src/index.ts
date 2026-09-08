@@ -77,3 +77,4 @@ export * from './nativeTimePeriod';
 export * from './nativeTimePeriodSettings';
 export * from './timePeriodJob';
 export * from './nativeScheduleRead';
+export * from './nativeScheduleCommand';

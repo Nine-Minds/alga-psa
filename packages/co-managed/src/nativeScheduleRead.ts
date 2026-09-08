@@ -8,10 +8,10 @@ import { authorizeCoManagedLocalRecord, CoManagedSharedWorkError, isCoManagedUui
 import { hasCoManagedLocalPermission } from './localPermission';
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
 
-interface ScheduleSource { record: AuthorizationRecord; fields: readonly string[]; workItem: { id: string; type: string; title: string } | null }
+export interface ScheduleSource { record: AuthorizationRecord; fields: readonly string[]; workItem: { id: string; type: string; title: string } | null }
 
 // LEVERAGE: pattern native-operational-source-admission — time and schedule read the same work roots; keep schedule authority independent of time-entry permissions.
-async function retainScheduleSource(trx: Knex.Transaction, actor: CoManagedAuthenticatedActor, subject: AuthorizationSubject,
+export async function retainScheduleSource(trx: Knex.Transaction, actor: CoManagedAuthenticatedActor, subject: AuthorizationSubject,
   entry: { work_item_type: string; work_item_id: string | null }): Promise<ScheduleSource> {
   const owner = tenantDb(trx, actor.tenant), id = entry.work_item_id;
   if (['ad_hoc', 'non_billable_category'].includes(entry.work_item_type) && (!id || id === '__non_billable__')) return { record: {}, fields: [], workItem: null };
@@ -56,11 +56,11 @@ async function retainScheduleSource(trx: Knex.Transaction, actor: CoManagedAuthe
   return { record, fields, workItem: { id: id!, type: entry.work_item_type, title: hiddenTitle ? '' : title } };
 }
 
-function isScheduleFieldHidden(fields: readonly string[], names: readonly string[]) {
+export function isScheduleFieldHidden(fields: readonly string[], names: readonly string[]) {
   return isCoManagedReadFieldHidden(fields, names.flatMap(name => [name, `values.${name}`, `schedule_entries.${name}`]));
 }
 
-function scheduleView(row: any, assignments: string[], actor: CoManagedAuthenticatedActor, fields: readonly string[], source: ScheduleSource) {
+export function scheduleView(row: any, assignments: string[], actor: CoManagedAuthenticatedActor, fields: readonly string[], source: ScheduleSource) {
   const hidden = (...names: string[]) => isScheduleFieldHidden(fields, names);
   if (hidden('tenant', 'entry_id', 'scheduled_start', 'scheduled_end', 'assigned_user_ids', 'assigned_users', 'is_private')) throw new CoManagedSharedWorkError();
   const privateBusy = row.is_private && !assignments.includes(actor.userId);
@@ -134,7 +134,7 @@ export async function readCoManagedNativeSchedules(db: Knex, tenant: string, ide
         const assignments = (await owner.table('schedule_entry_assignees').where('entry_id', row.entry_id).orderBy('user_id').forShare().select('user_id')).map(item => item.user_id);
         if (!canReadOthers && !assignments.includes(actor.userId)) throw new CoManagedSharedWorkError();
         const policy = await authorizeCoManagedLocalRecord(trx, actor, credential.subject, 'user_schedule', 'read', {
-          ...source.record, id: row.entry_id, ownerUserId: row.created_by, assignedUserIds: assignments,
+          ...source.record, id: row.entry_id, ownerUserId: assignments.length === 1 ? assignments[0] : undefined, assignedUserIds: assignments,
         });
         // Admit critical fields before expanding. An explicit recurrence-field
         // restriction also withholds derived occurrences; private Busy entries

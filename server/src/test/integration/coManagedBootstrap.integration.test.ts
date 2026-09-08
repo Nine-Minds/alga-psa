@@ -14256,3 +14256,91 @@ it('customer schedule calendar filters actual assignments sources and recurrence
   await customer.table('role_permissions').whereIn('permission_id', customer.table('permissions').where({ resource: 'user_schedule', action: 'read' }).select('permission_id')).del();
   expect(await calendar()).toMatchObject({ success: false });
 }));
+
+it('customer schedule commands create edit and delete actual API entries without leaking event content', async () => withScheduleReadFixture(async ({ sheetService, context, resource, customer, publish }: any) => {
+  const { createScheduleEntrySchema, updateScheduleEntrySchema, scheduleEntryResponseSchema } = await import('../../lib/api/schemas/timeSheet');
+  publish.mockClear();
+  const created = await sheetService.createScheduleEntry(createScheduleEntrySchema.parse({ title: 'API allocation', notes: 'Private allocation details', scheduled_start: '2026-09-15T09:00:00Z', scheduled_end: '2026-09-15T10:00:00Z', work_item_type: 'project_task', work_item_id: resource.id }), context);
+  expect(created).toMatchObject({ title: 'API allocation', assigned_user_ids: [context.userId], work_item: { title: 'Verify rollout' }, duration_hours: 1 });
+  scheduleEntryResponseSchema.parse(created);
+  const changed = await sheetService.updateScheduleEntry(created.entry_id, updateScheduleEntrySchema.parse({ notes: '', work_item_type: 'ad_hoc', scheduled_end: '2026-09-15T10:30:00Z' }), context);
+  expect(changed).toMatchObject({ notes: '', work_item_id: null, work_item_type: 'ad_hoc', duration_hours: 1.5 });
+  await sheetService.updateScheduleEntry(created.entry_id, { tenant: randomUUID(), entry_id: randomUUID(), assigned_user_ids: [context.userId, context.userId] }, context);
+  expect(await customer.table('schedule_entry_assignees').where('entry_id', created.entry_id)).toHaveLength(1);
+  await sheetService.deleteScheduleEntry(created.entry_id, context);
+  expect(await sheetService.getScheduleEntry(created.entry_id, context)).toBeNull();
+  expect(await customer.table('schedule_entry_assignees').where('entry_id', created.entry_id)).toHaveLength(0);
+  expect(publish).toHaveBeenCalledTimes(4);
+  for (const [event] of publish.mock.calls) expect(Object.keys(event.payload).sort()).toEqual(['entryId', 'tenantId', 'userId']);
+}));
+
+it('customer schedule commands retain own-calendar permission and enforce actual write bundle rules', async () => withScheduleReadFixture(async ({ sheetService, context, customer, ownId, busyId, user, resource }: any) => {
+  await customer.table('role_permissions').whereIn('permission_id', customer.table('permissions').where('resource', 'user_schedule').whereNot('action', 'read').select('permission_id')).del();
+  expect(await sheetService.updateScheduleEntry(ownId, { title: 'Own calendar edit' }, context)).toMatchObject({ title: 'Own calendar edit' });
+  await expect(sheetService.updateScheduleEntry(ownId, { assigned_user_ids: [] }, context)).rejects.toMatchObject({ statusCode: 403 });
+  await expect(sheetService.deleteScheduleEntry(busyId, context)).rejects.toMatchObject({ statusCode: 403 });
+  const input = { title: 'Own new entry', scheduled_start: '2026-09-15T09:00:00Z', scheduled_end: '2026-09-15T10:00:00Z', work_item_type: 'ad_hoc' };
+  const created = await sheetService.createScheduleEntry(input, context);
+  await sheetService.deleteScheduleEntry(created.entry_id, context);
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: resource.tenant, name: 'Schedule command scope', actorUserId: user.user_id });
+  for (const action of ['create', 'update', 'delete']) await bundles.upsertBundleRule(db, { tenant: resource.tenant, bundleId, revisionId, resourceType: 'user_schedule', action, templateKey: 'selected_clients', config: { selectedClientIds: [randomUUID()] } });
+  await bundles.publishBundleRevision(db, { tenant: resource.tenant, bundleId, revisionId, actorUserId: user.user_id });
+  await bundles.createBundleAssignment(db, { tenant: resource.tenant, bundleId, targetType: 'api_key', targetId: context.apiKeyId });
+  await expect(sheetService.createScheduleEntry(input, context)).rejects.toMatchObject({ statusCode: 403 });
+  await expect(sheetService.updateScheduleEntry(ownId, { title: 'Forbidden edit' }, context)).rejects.toMatchObject({ statusCode: 403 });
+  await expect(sheetService.deleteScheduleEntry(ownId, context)).rejects.toMatchObject({ statusCode: 403 });
+}));
+
+it('customer schedule commands validate current assignments partial dates recurrence and retained time dependencies', async () => withScheduleReadFixture(async ({ sheetService, context, customer, ownId, create, resource }: any) => {
+  await expect(sheetService.updateScheduleEntry(ownId, { scheduled_end: '2026-09-07T08:00:00Z' }, context)).rejects.toMatchObject({ statusCode: 400 });
+  await expect(sheetService.updateScheduleEntry(ownId, { recurrence_pattern: '{invalid' }, context)).rejects.toMatchObject({ statusCode: 400 });
+  await expect(sheetService.updateScheduleEntry(ownId, { assigned_user_ids: [randomUUID()] }, context)).rejects.toMatchObject({ statusCode: 403 });
+  const updated = await sheetService.updateScheduleEntry(ownId, { recurrence_pattern: { frequency: 'daily', interval: 1, startDate: '2026-09-07T00:00:00Z', count: 3 } }, context);
+  expect(updated).toMatchObject({ is_recurring: true, recurrence_pattern: { count: 3 } });
+  expect(await sheetService.updateScheduleEntry(ownId, { recurrence_pattern: null }, context)).toMatchObject({ is_recurring: false, recurrence_pattern: null });
+  await create({ work_item_type: 'ad_hoc', work_item_id: ownId, start_time: '2026-09-07T12:00:00Z', end_time: '2026-09-07T13:00:00Z' });
+  await expect(sheetService.deleteScheduleEntry(ownId, context)).rejects.toMatchObject({ statusCode: 409 });
+  await expect(sheetService.updateScheduleEntry(ownId, { work_item_type: 'project_task', work_item_id: resource.id }, context)).rejects.toMatchObject({ statusCode: 409 });
+  expect(await customer.table('schedule_entries').where('entry_id', ownId).first()).toMatchObject({ work_item_type: 'ad_hoc', work_item_id: null });
+}));
+
+it('customer schedule commands respect current source scope and field masks without blind replacement', async () => withScheduleReadFixture(async ({ sheetService, context, customer, taskId, user, resource }: any) => {
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: resource.tenant, name: 'Schedule write masks', actorUserId: user.user_id });
+  await bundles.upsertBundleRule(db, { tenant: resource.tenant, bundleId, revisionId, resourceType: 'user_schedule', action: 'update', templateKey: 'assigned', config: { redactedFields: ['notes'] } });
+  await bundles.publishBundleRevision(db, { tenant: resource.tenant, bundleId, revisionId, actorUserId: user.user_id });
+  await bundles.createBundleAssignment(db, { tenant: resource.tenant, bundleId, targetType: 'api_key', targetId: context.apiKeyId });
+  await expect(sheetService.updateScheduleEntry(taskId, { notes: 'Blind edit' }, context)).rejects.toMatchObject({ statusCode: 403 });
+  expect(await sheetService.updateScheduleEntry(taskId, { title: 'Allowed edit' }, context)).toMatchObject({ title: 'Allowed edit', notes: '' });
+  expect(await customer.table('schedule_entries').where('entry_id', taskId).first()).toMatchObject({ notes: 'Private schedule notes' });
+  await customer.table('role_permissions').whereIn('permission_id', customer.table('permissions').where({ resource: 'project', action: 'read' }).select('permission_id')).del();
+  await expect(sheetService.updateScheduleEntry(taskId, { title: 'Hidden root' }, context)).rejects.toMatchObject({ statusCode: 403 });
+}));
+
+it('customer schedule commands roll back writes assignments and events when the actual key expires before commit', async () => withScheduleReadFixture(async ({ sheetService, context, customer, ownId, publish }: any) => {
+  await db.raw(`CREATE FUNCTION expire_schedule_command_key() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN UPDATE api_keys SET expires_at = clock_timestamp() - interval '1 second' WHERE tenant = COALESCE(NEW.tenant, OLD.tenant) AND api_key_id = '${context.apiKeyId}'::uuid; RETURN COALESCE(NEW, OLD); END $$`);
+  await db.raw('CREATE TRIGGER expire_schedule_command_key AFTER INSERT OR UPDATE OR DELETE ON schedule_entries FOR EACH ROW EXECUTE FUNCTION expire_schedule_command_key()');
+  publish.mockClear();
+  try {
+    await expect(sheetService.createScheduleEntry({ title: 'Rolled back create', scheduled_start: '2026-09-15T09:00:00Z', scheduled_end: '2026-09-15T10:00:00Z' }, context)).rejects.toMatchObject({ statusCode: 403 });
+    await expect(sheetService.updateScheduleEntry(ownId, { title: 'Rolled back edit', assigned_user_ids: [] }, context)).rejects.toMatchObject({ statusCode: 403 });
+    await expect(sheetService.deleteScheduleEntry(ownId, context)).rejects.toMatchObject({ statusCode: 403 });
+    expect(await customer.table('schedule_entries')).toHaveLength(3);
+    expect(await customer.table('schedule_entries').where('entry_id', ownId).first()).toMatchObject({ title: 'Own appointment' });
+    expect(await customer.table('schedule_entry_assignees').where('entry_id', ownId)).toHaveLength(1);
+    expect(publish).not.toHaveBeenCalled();
+  } finally { await db.raw('DROP TRIGGER expire_schedule_command_key ON schedule_entries'); await db.raw('DROP FUNCTION expire_schedule_command_key()'); }
+}));
+
+it('customer schedule commands protect active clocks and reject mutations after entitlement lapse', async () => withScheduleReadFixture(async ({ sheetService, service, context, customer, ownId, principal }: any) => {
+  const timer = await service.startTimeTracking({ work_item_type: 'ad_hoc', work_item_id: ownId }, context);
+  await expect(sheetService.deleteScheduleEntry(ownId, context)).rejects.toMatchObject({ statusCode: 409 });
+  await service.cancelTimeTracking(timer.session_id, context);
+  await expireCoManagedEntitlement(principal.tenant);
+  await expect(sheetService.updateScheduleEntry(ownId, { title: 'Expired write' }, context)).rejects.toMatchObject({ statusCode: 403, code: 'CO_MANAGED_READ_ONLY' });
+  await expect(sheetService.deleteScheduleEntry(ownId, context)).rejects.toMatchObject({ statusCode: 403, code: 'CO_MANAGED_READ_ONLY' });
+  await expect(sheetService.createScheduleEntry({ title: 'Expired create', scheduled_start: '2026-09-15T09:00:00Z', scheduled_end: '2026-09-15T10:00:00Z' }, context)).rejects.toMatchObject({ statusCode: 403, code: 'CO_MANAGED_READ_ONLY' });
+  expect(await sheetService.getScheduleEntry(ownId, context)).toMatchObject({ title: 'Own appointment' });
+  expect(await customer.table('schedule_entries')).toHaveLength(3);
+}));
