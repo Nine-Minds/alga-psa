@@ -2,7 +2,7 @@
 
 'use server'
 
-import { readCoManagedNativeInteractions } from '@alga-psa/co-managed';
+import { readCoManagedNativeInteractions, updateCoManagedNativeInteraction, NativeInteractionCommandError, CoManagedSharedWorkError } from '@alga-psa/co-managed';
 import { resolveInteractionBrowserActor } from '../lib/coManagedInteractionReader';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -11,6 +11,7 @@ import { StorageService } from '@alga-psa/storage/StorageService';
 import InteractionModel from '../models/interactions';
 import type { InteractionPageFilters, InteractionPageResult } from '../models/interactions';
 import { IInteractionType, IInteraction } from '@alga-psa/types'
+import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { withAuth } from '@alga-psa/auth';
 import {
   createInteractionWithSideEffects,
@@ -226,6 +227,11 @@ export const updateInteraction = withAuth(async (
 
   try {
     const { knex } = await createTenantKnex();
+    const admitted = await updateCoManagedNativeInteraction(knex, tenant, interactionId, updateData, () => resolveInteractionBrowserActor(user, tenant), publishEvent);
+    if (admitted.handled) {
+      revalidatePath('/msp/interactions/[id]', 'page');
+      return admitted.interaction;
+    }
     const updatedInteraction = await withTransaction(knex, async (trx: Knex.Transaction) => {
       return await InteractionModel.updateInteraction(interactionId, updateData, tenant);
     });
@@ -238,6 +244,8 @@ export const updateInteraction = withAuth(async (
     revalidatePath('/msp/interactions/[id]', 'page');
     return updatedInteraction;
   } catch (error) {
+    if (error instanceof NativeInteractionCommandError) return actionError(error.message);
+    if (error instanceof CoManagedSharedWorkError) return permissionError('Permission denied: Cannot update this interaction.');
     console.error('Error updating interaction:', error);
     const expected = interactionActionErrorFrom(error);
     if (expected) return expected;

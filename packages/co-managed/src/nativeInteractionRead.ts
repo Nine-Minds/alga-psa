@@ -15,13 +15,14 @@ export interface NativeInteractionFilters {
 /** Lists and their totals are built from admitted current projections. Hidden
  * parent labels and masked free text cannot become search/filter oracles. */
 export async function readCoManagedNativeInteractions(db: Knex, tenant: string, identify: () => Promise<CoManagedAuthenticatedActor>,
-  options: { filters?: NativeInteractionFilters; entity?: { id: string; type: 'client' | 'contact' | 'ticket' }; paginated?: boolean } = {}) {
+  options: { id?: string; filters?: NativeInteractionFilters; entity?: { id: string; type: 'client' | 'contact' | 'ticket' }; paginated?: boolean } = {}) {
   const filters = { ...options.filters }, entity = options.entity ? { ...options.entity } : undefined;
   const page = filters.page ?? 1, pageSize = filters.pageSize ?? 10;
   return withTransaction(db, async trx => {
     if (!await retainCoManagedTimeCalendar(trx, tenant)) return { handled: false as const };
     if (!Number.isInteger(page) || page < 1 || !Number.isInteger(pageSize) || pageSize < 1 || pageSize > 100 ||
     [filters.dateFrom, filters.dateTo].some(date => date !== undefined && !Number.isFinite(new Date(date).getTime()))) throw new CoManagedSharedWorkError();
+    if (options.id && !isCoManagedUuid(options.id)) throw new CoManagedSharedWorkError();
     const actor = snapshotCoManagedAuthenticatedActor(await identify()); if (actor.tenant !== tenant) throw new CoManagedSharedWorkError();
     const credential = await lockCoManagedLocalAuthentication(trx, actor), owner = tenantDb(trx, tenant);
     if (entity) {
@@ -34,7 +35,9 @@ export async function readCoManagedNativeInteractions(db: Knex, tenant: string, 
         await authorizeCoManagedLocalRecord(trx, actor, credential.subject, entity.type, 'read', { id: entity.id, clientId: parent.client_id });
       }
     }
-    const ids = await owner.table('interactions').orderBy('interaction_id').select('interaction_id'), rows: any[] = [];
+    const query = owner.table('interactions').orderBy('interaction_id');
+    if (options.id) query.where('interaction_id', options.id);
+    const ids = await query.select('interaction_id'), rows: any[] = [];
     for (const { interaction_id: id } of ids) {
       try {
         const source = await retainScheduleSource(trx, actor, credential.subject, { work_item_type: 'interaction', work_item_id: id });
@@ -76,7 +79,7 @@ export async function readCoManagedNativeInteractions(db: Knex, tenant: string, 
         if (search && !['title', 'notes', 'contact_name', 'client_name', 'user_name'].some(key => String(view[key] ?? '').toLowerCase().includes(search))) continue;
         view.online_meeting = source.fields.length ? null : await nativeInteractionMeetingView(trx, actor, credential.subject, id);
         rows.push(view);
-      } catch (error) { if (!(error instanceof CoManagedSharedWorkError)) throw error; }
+      } catch (error) { if (!(error instanceof CoManagedSharedWorkError) || options.id) throw error; }
     }
     rows.sort((a, b) => (new Date(b.interaction_date ?? 0).getTime() - new Date(a.interaction_date ?? 0).getTime()) || a.interaction_id.localeCompare(b.interaction_id));
     await credential.assertCurrent();

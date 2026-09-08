@@ -15365,3 +15365,78 @@ it('customer interaction meeting reads reject expired credentials after waiting 
   try { await db.raw('SELECT pg_sleep(1.3)'); } finally { await blocker.rollback(); }
   await rejected;
 }));
+
+async function withInteractionUpdateFixture(work: (fixture: any) => Promise<void>) {
+  return withInteractionMeetingReadFixture(async (fixture: any) => {
+    const { domain, context, interactionId, actor, events } = fixture;
+    events.mockClear();
+    const update = (data: any, id = interactionId) => domain.updateCoManagedNativeInteraction(db, context.tenant, id, data, actor, events);
+    await work({ ...fixture, update });
+  });
+}
+
+it('customer interaction edits persist only writable fields and return the admitted meeting projection from the native action', async () => withInteractionUpdateFixture(async ({ actions, interactionId, customer, context, events }: any) => {
+  const result = await actions.updateInteraction(interactionId, { title: 'Updated local interaction', notes: 'New private interaction note', tenant: randomUUID(), interaction_id: randomUUID(), client_name: 'Forged customer label', online_meeting: { join_url: 'https://forged.example.invalid' } } as any);
+  expect(result).toMatchObject({ tenant: context.tenant, interaction_id: interactionId, title: 'Updated local interaction', notes: 'New private interaction note' });
+  expect(result.online_meeting.artifacts).toHaveLength(2);
+  expect(JSON.stringify(result)).not.toMatch(/provider_event_id|provider_artifact_id|untrusted.example.invalid|Forged customer label|forged.example.invalid/);
+  expect(await customer.table('interactions').where('interaction_id', interactionId).first()).toMatchObject({ title: 'Updated local interaction', notes: 'New private interaction note' });
+  expect(events).toHaveBeenCalledOnce();
+  expect(events.mock.lastCall[0]).toEqual({ eventType: 'INTERACTION_UPDATED', payload: { tenantId: context.tenant, interactionId, userId: context.userId, changedFields: ['title', 'notes'] } });
+  events.mockClear(); await actions.updateInteraction(interactionId, { title: 'Updated local interaction' }); expect(events).not.toHaveBeenCalled();
+}));
+
+it('customer interaction edits cannot reveal a private appointment meeting through their mutation response', async () => withInteractionUpdateFixture(async ({ actions, interactionId, customer, ownId }: any) => {
+  await customer.table('schedule_entries').where('entry_id', ownId).update({ is_private: true });
+  await customer.table('schedule_entry_assignees').where('entry_id', ownId).del();
+  expect(await actions.updateInteraction(interactionId, { notes: 'Editable interaction note' })).toMatchObject({ interaction_id: interactionId, notes: 'Editable interaction note', online_meeting: null });
+}));
+
+it('customer interaction edits enforce changed-field scope while allowing unrelated masked fields to remain private', async () => withInteractionUpdateFixture(async ({ update, context, user, customer, interactionId }: any) => {
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: context.tenant, name: 'Interaction edit scope', actorUserId: user.user_id });
+  for (const action of ['read', 'update']) await bundles.upsertBundleRule(db, { tenant: context.tenant, bundleId, revisionId, resourceType: 'interaction', action, templateKey: 'own', config: { redactedFields: ['notes'] } });
+  await bundles.publishBundleRevision(db, { tenant: context.tenant, bundleId, revisionId, actorUserId: user.user_id });
+  await bundles.createBundleAssignment(db, { tenant: context.tenant, bundleId, targetType: 'api_key', targetId: context.apiKeyId });
+  await expect(update({ notes: 'Forbidden new note' })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  const result = await update({ title: 'Permitted title change' }); expect(result.interaction).not.toHaveProperty('notes'); expect(result.interaction.online_meeting).toBeNull();
+  expect(await customer.table('interactions').where('interaction_id', interactionId).first()).toMatchObject({ title: 'Permitted title change', notes: 'Private interaction details' });
+  await customer.table('api_keys').where('api_key_id', context.apiKeyId).update({ active: false });
+  await expect(update({ title: 'Revoked key change' })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+}));
+
+it('customer interaction edits preserve ownership and timing of linked meetings and reject invalid local fields', async () => withInteractionUpdateFixture(async ({ update, customer, context, interactionId, actions }: any) => {
+  const otherClientId = randomUUID(); await customer.table('clients').insert({ tenant: context.tenant, client_id: otherClientId, client_name: 'Other interaction client' });
+  const before = await customer.table('interactions').where('interaction_id', interactionId).first();
+  for (const patch of [{ client_id: otherClientId }, { duration: 30 }, { start_time: '2026-09-10T09:00:00Z', end_time: '2026-09-10T10:00:00Z' }]) await expect(update(patch)).rejects.toMatchObject({ code: 'INTERACTION_IN_USE' });
+  for (const patch of [{ title: '' }, { type_id: randomUUID() }, { status_id: randomUUID() }, { duration: -1 }, { start_time: 'not-a-date' }]) await expect(update(patch)).rejects.toMatchObject({ code: 'INTERACTION_INVALID' });
+  expect(await customer.table('interactions').where('interaction_id', interactionId).first()).toEqual(before);
+  expect(await actions.updateInteraction(interactionId, { duration: 30 })).toHaveProperty('actionError');
+}));
+
+it('customer interaction edits support standalone reparenting only when both old and proposed record scopes admit it', async () => withInteractionUpdateFixture(async ({ update, customer, context, user, typeId, clientId }: any) => {
+  const id = randomUUID(), nextClientId = randomUUID();
+  await customer.table('clients').insert({ tenant: context.tenant, client_id: nextClientId, client_name: 'Admitted destination' });
+  await customer.table('interactions').insert({ tenant: context.tenant, interaction_id: id, type_id: typeId, user_id: context.userId, client_id: clientId, title: 'Standalone call' });
+  expect(await update({ client_id: nextClientId, start_time: '2026-09-10T09:00:00Z', end_time: '2026-09-10T10:00:00Z', duration: 60 }, id)).toMatchObject({ handled: true, interaction: { client_id: nextClientId, duration: 60, online_meeting: null } });
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: context.tenant, name: 'Interaction destination scope', actorUserId: user.user_id });
+  for (const action of ['read', 'update']) await bundles.upsertBundleRule(db, { tenant: context.tenant, bundleId, revisionId, resourceType: 'interaction', action, templateKey: 'selected_clients', config: { selectedClientIds: [nextClientId] } });
+  await bundles.publishBundleRevision(db, { tenant: context.tenant, bundleId, revisionId, actorUserId: user.user_id });
+  await bundles.createBundleAssignment(db, { tenant: context.tenant, bundleId, targetType: 'api_key', targetId: context.apiKeyId });
+  await expect(update({ client_id: clientId }, id)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(await customer.table('interactions').where('interaction_id', id).first()).toMatchObject({ client_id: nextClientId });
+}));
+
+it('customer interaction edits roll back on final credential expiry and reject read-only lifecycle writes', async () => withInteractionUpdateFixture(async ({ update, customer, context, interactionId, events, principal }: any) => {
+  await db.raw(`CREATE FUNCTION expire_interaction_edit_key() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN UPDATE api_keys SET expires_at = clock_timestamp() - interval '1 second' WHERE tenant = NEW.tenant AND api_key_id = '${context.apiKeyId}'::uuid; RETURN NEW; END $$`);
+  await db.raw('CREATE TRIGGER expire_interaction_edit_key AFTER UPDATE ON interactions FOR EACH ROW EXECUTE FUNCTION expire_interaction_edit_key()');
+  try {
+    await expect(update({ notes: 'Must roll back' })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    expect(await customer.table('interactions').where('interaction_id', interactionId).first()).toMatchObject({ notes: 'Private interaction details' });
+    expect(events).not.toHaveBeenCalled();
+  } finally { await db.raw('DROP TRIGGER expire_interaction_edit_key ON interactions'); await db.raw('DROP FUNCTION expire_interaction_edit_key()'); }
+  await expireCoManagedEntitlement(principal.tenant);
+  await expect(update({ title: 'Read-only change' })).rejects.toBeDefined();
+  expect(await customer.table('interactions').where('interaction_id', interactionId).first()).toMatchObject({ title: 'Customer meeting follow-up' });
+}));
