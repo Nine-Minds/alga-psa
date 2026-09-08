@@ -1980,6 +1980,29 @@
         "unknown": "Nie udało się potwierdzić przygotowania. Ponów to samo żądanie lub otwórz miejsce docelowe, aby sprawdzić szkic."
       },
       "sourceLink": "Udostępniono z {{name}}"
+    },
+    "synthesis": {
+      "title": "Podsumuj rozmowę",
+      "stop": "Anuluj generowanie",
+      "generating": "Generowanie…",
+      "retry": "Ponów generowanie",
+      "replace": "Zastąp szkic i wygeneruj",
+      "generate": "Wygeneruj szkic",
+      "wholeSource": "Wykorzystaj całą opublikowaną rozmowę, aby przygotować podsumowanie dla odbiorców. Wynik pozostaje prywatny do czasu sprawdzenia i wysłania lub opublikowania.",
+      "existingHelp": "Otwórz szkic, aby kontynuować, lub świadomie zastąp go nowym podsumowaniem.",
+      "prompt": "Na czym ma się skupić podsumowanie? (opcjonalnie)",
+      "sourceChanged": "Rozmowa źródłowa się zmieniła. Zmiany w szkicu zostały zachowane; wygeneruj ponownie, gdy zechcesz.",
+      "review": "AI przygotowała ten prywatny szkic. Sprawdź go przed wysłaniem lub opublikowaniem.",
+      "sourceUnavailable": "Nie można sprawdzić źródła szkicu. Odśwież, aby sprawdzić dostęp.",
+      "regenerate": "Wygeneruj podsumowanie ponownie…",
+      "action": "Podsumuj z AI",
+      "errors": {
+        "AI_CONTEXT_TOO_LARGE": "Cała rozmowa przekracza dostępny kontekst AI. Nie zapisano częściowego podsumowania. Nadal możesz pisać ręcznie.",
+        "AI_SOURCE_CHANGED": "Źródło zmieniło się podczas generowania. Wczytaj ponownie miejsce docelowe i spróbuj jeszcze raz.",
+        "AI_SOURCE_INVALID": "Ta rozmowa nie zawiera opublikowanych wiadomości nadających się do podsumowania.",
+        "AI_UNAVAILABLE": "AI jest obecnie niedostępna w Twoim obszarze roboczym. Szkic został zachowany; możesz kontynuować pisanie ręcznie.",
+        "AI_CANCELLED": "Generowanie anulowano. Szkic został zachowany."
+      }
     }
   }
 }

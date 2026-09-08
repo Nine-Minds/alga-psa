@@ -3,7 +3,7 @@ import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { assertCoManagedOperationalWrite } from '@alga-psa/licensing';
 import { recordNamedConversationAttention, withNativeAcceptedConversationEmail, deliverNativeNamedConversationEmail } from '@alga-psa/co-managed';
-import { authorizeNamedConversationMailbox, assertNamedConversationDeliveryFiles, assertScheduledConversationShareSource } from '@alga-psa/co-managed';
+import { authorizeNamedConversationMailbox, assertNamedConversationDeliveryFiles, assertScheduledConversationShareSource, assertScheduledConversationSynthesisSource } from '@alga-psa/co-managed';
 import { assertCoManagedScheduledCommentPublication } from '@alga-psa/co-managed/scheduledCommentPublication';
 import { snapshotRequesterPublicationOptions } from '@alga-psa/shared/lib/tickets/requesterPublicationOptions';
 import { TicketConversationError } from '@alga-psa/shared/lib/tickets/namedConversations';
@@ -37,6 +37,7 @@ export async function publishScheduledConversationEmail(db: Knex, input: { tenan
     const current = await namedConversationEmailTransport.recheck(operation.payload, mailbox);
     if (current.messageHash !== operation.review.messageHash || current.senderRevision !== operation.review.senderRevision) throw new TicketConversationError('CONVERSATION_CONFLICT');
     await assertScheduledConversationShareSource({ ...context, shared: false }, publication);
+    await assertScheduledConversationSynthesisSource({ ...context, shared: false }, publication);
     await store.table('comments').where({ comment_id: input.commentId, publish_state: 'scheduled' }).update({ publish_state: 'published',
       published_at: context.trx.fn.now(), updated_at: context.trx.fn.now(), schedule_job_id: null, scheduled_publish_retry_at: null });
     await assertNamedConversationDeliveryFiles(context, operation.operation_id, operation.payload.files);

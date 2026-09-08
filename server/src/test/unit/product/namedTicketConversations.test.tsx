@@ -6,8 +6,14 @@ import { ConversationShareDialog } from '../../../../../packages/tickets/src/com
 import CoManagedNamedTicketConversation from '../../../components/co-managed/CoManagedNamedTicketConversation';
 import { NativeRequesterConversation } from '../../../../../packages/tickets/src/components/ticket/conversations/NativeRequesterConversation';
 import { useNamedTicketConversations } from '../../../../../packages/tickets/src/components/ticket/conversations/useNamedTicketConversations';
-const mocks = vi.hoisted(() => ({ share: vi.fn(), getConversation: vi.fn(), acknowledge: vi.fn(), preference: vi.fn(), details: vi.fn(), schedules: vi.fn(), reschedule: vi.fn(), cancelSchedule: vi.fn(), flag: true, onPublished: vi.fn(), requesterProps: vi.fn(), uploadOptions: vi.fn(), uploadFile: vi.fn(), load: vi.fn(), page: vi.fn(), activity: vi.fn(), capabilities: vi.fn(), replyTarget: vi.fn(), replace: vi.fn(), readDraft: vi.fn(), saveDraft: vi.fn(), post: vi.fn(), create: vi.fn(), status: vi.fn(), push: vi.fn(), mailboxes: vi.fn(), selectMailbox: vi.fn(), latestSend: vi.fn(), prepareEmail: vi.fn(), sendEmail: vi.fn(), emailStatus: vi.fn(), emailDefaults: vi.fn(),
+const mocks = vi.hoisted(() => ({ aiCapability: vi.fn(), synthesis: vi.fn(), synthesisStatus: vi.fn(), synthesisCancel: vi.fn(), synthesisDraft: vi.fn(), share: vi.fn(), getConversation: vi.fn(), acknowledge: vi.fn(), preference: vi.fn(), details: vi.fn(), schedules: vi.fn(), reschedule: vi.fn(), cancelSchedule: vi.fn(), flag: true, onPublished: vi.fn(), requesterProps: vi.fn(), uploadOptions: vi.fn(), uploadFile: vi.fn(), load: vi.fn(), page: vi.fn(), activity: vi.fn(), capabilities: vi.fn(), replyTarget: vi.fn(), replace: vi.fn(), readDraft: vi.fn(), saveDraft: vi.fn(), post: vi.fn(), create: vi.fn(), status: vi.fn(), push: vi.fn(), mailboxes: vi.fn(), selectMailbox: vi.fn(), latestSend: vi.fn(), prepareEmail: vi.fn(), sendEmail: vi.fn(), emailStatus: vi.fn(), emailDefaults: vi.fn(),
   query: '', session: { session_id: 'session', user: { tenant: 'home', id: 'author' } } }));
+vi.mock('../../../../../packages/tickets/src/components/ticket/conversations/conversationSynthesisRequest', () => ({ requestConversationSynthesis: mocks.synthesis }));
+vi.mock('../../../../../packages/tickets/src/actions/conversationAiActions', () => ({
+  getConversationAiCapabilityAction: mocks.aiCapability, prepareNamedConversationSynthesisAction: mocks.synthesis,
+  getNamedConversationSynthesisStatusAction: mocks.synthesisStatus, cancelNamedConversationSynthesisAction: mocks.synthesisCancel,
+  getNamedConversationDraftSynthesisAction: mocks.synthesisDraft,
+}));
 vi.mock('../../../../../packages/tickets/src/actions/namedTicketConversationActions', () => ({
   prepareNamedConversationShareAction: mocks.share, getNamedTicketConversationAction: mocks.getConversation,
   acknowledgeNamedConversationMessagesAction: mocks.acknowledge,
@@ -68,7 +74,7 @@ function NativeHarness() {
 }
 const deferred = () => { let resolve!: (value: any) => void; const promise = new Promise<any>(done => { resolve = done; }); return { promise, resolve }; };
 beforeEach(() => {
-  vi.resetAllMocks(); mocks.flag = true; mocks.query = 'conversation=private&conversationStore=home';
+  vi.resetAllMocks(); mocks.aiCapability.mockResolvedValue({ available: false }); mocks.synthesisDraft.mockResolvedValue({ ok: true, result: null }); mocks.flag = true; mocks.query = 'conversation=private&conversationStore=home';
   mocks.share.mockResolvedValue({ ok: true, draft: { content: { text: 'Copied source' }, revision: 1, conversationRevision: 1 } });
   mocks.getConversation.mockImplementation(async (_ticket, ref) => ref.conversationId === requester.conversationId ? requester : side);
   mocks.acknowledge.mockResolvedValue({ changed: false });
@@ -860,7 +866,7 @@ it('flushes and pauses the source editor, defaults sharing to Requester, and rel
   });
   render(<Harness />);
   fireEvent.change(await screen.findByLabelText('Message'), { target: { value: 'Unsaved latest source draft' } });
-  fireEvent.click(screen.getByRole('button', { name: 'Share' }));
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Share' })).toBeEnabled()); fireEvent.click(screen.getByRole('button', { name: 'Share' }));
   const dialog = await screen.findByRole('dialog');
   await waitFor(() => expect(within(dialog).getByLabelText('Destination')).toHaveValue('owner:requester'));
   expect(screen.getByLabelText('Message')).toBeDisabled();
@@ -937,7 +943,7 @@ it('retries uncertain sharing with the same operation and ignores completion aft
   mocks.share.mockResolvedValueOnce({ ok: false, code: 'unknown' }).mockImplementationOnce(() => pending.promise);
   const view = render(<Harness />);
   await screen.findByLabelText('Message');
-  fireEvent.click(screen.getByRole('button', { name: 'Share' }));
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Share' })).toBeEnabled()); fireEvent.click(screen.getByRole('button', { name: 'Share' }));
   await waitFor(() => expect(screen.getByRole('button', { name: 'Prepare draft' })).toBeEnabled());
   fireEvent.click(screen.getByRole('button', { name: 'Prepare draft' }));
   await screen.findByText('Could not confirm preparation. Retry the same request, or open the destination to check its draft.');
@@ -1002,7 +1008,7 @@ it('selects a prepared destination immediately while its private draft and URL n
   mocks.readDraft.mockImplementation(async (_ticket, ref) => prepared && ref.conversationId === destination.conversationId ? draft.promise : null);
   mocks.share.mockImplementation(async () => { prepared = true; return { ok: true, draft: { content: { text: 'Prepared draft content' }, revision: 1 } }; });
   const view = render(<Harness />);
-  await screen.findByLabelText('Message'); fireEvent.click(screen.getByRole('button', { name: 'Share' }));
+  await screen.findByLabelText('Message'); await waitFor(() => expect(screen.getByRole('button', { name: 'Share' })).toBeEnabled()); fireEvent.click(screen.getByRole('button', { name: 'Share' }));
   fireEvent.change(await screen.findByLabelText('Destination'), { target: { value: 'home:prepared-destination' } });
   await waitFor(() => expect(screen.getByRole('button', { name: 'Prepare draft' })).toBeEnabled());
   fireEvent.click(screen.getByRole('button', { name: 'Prepare draft' }));
@@ -1013,4 +1019,119 @@ it('selects a prepared destination immediately while its private draft and URL n
   mocks.query = 'conversation=prepared-destination&conversationStore=home'; view.rerender(<Harness />);
   expect(screen.getByLabelText('Message')).toHaveValue('Prepared draft content');
   expect(mocks.saveDraft).not.toHaveBeenCalled();
+});
+
+it('generates from the full selected conversation into an explicit requester destination without publishing', async () => {
+  const opened = vi.fn();
+  mocks.synthesis.mockResolvedValue({ ok: true, result: { status: 'completed', sourceChanged: false } });
+  render(<ConversationShareDialog id="synthesis" ticket={ticket} selection={{ kind: 'synthesis', conversation: shareSelection.conversation }} onClose={vi.fn()} onOpen={opened} />);
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Generate draft' })).toBeEnabled());
+  expect(screen.getByLabelText('Destination')).toHaveValue('owner:requester');
+  expect(screen.queryByLabelText('Format as a quote')).toBeNull(); expect(screen.queryByLabelText('Selected report.txt')).toBeNull();
+  fireEvent.change(screen.getByLabelText('What should the summary focus on? (optional)'), { target: { value: 'Explain the fix and next steps.' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Generate draft' }));
+  await waitFor(() => expect(opened).toHaveBeenCalledWith(requester));
+  expect(mocks.synthesis.mock.calls[0]).toEqual([ticket, { storeTenant: 'owner', conversationId: 'requester' }, {
+    operationId: expect.any(String), source: shareSelection.conversation, expectedDraftRevision: 0, expectedConversationRevision: 1,
+    replaceExisting: false, prompt: 'Explain the fix and next steps.',
+  }]);
+  expect(mocks.page).not.toHaveBeenCalled(); expect(mocks.share).not.toHaveBeenCalled();
+  expect(mocks.post).not.toHaveBeenCalled(); expect(mocks.sendEmail).not.toHaveBeenCalled();
+});
+
+it('preserves explicit new requester recipients and retries an uncertain synthesis using the same operation', async () => {
+  const destination = { ...requester, conversationId: 'new-requester', name: 'Resolution update', defaultSlot: null };
+  const opened = vi.fn(); mocks.create.mockResolvedValue(destination);
+  mocks.synthesis.mockResolvedValueOnce({ ok: false, code: 'unknown' }).mockResolvedValueOnce({ ok: true, result: { status: 'completed' } });
+  render(<ConversationShareDialog id="synthesis" ticket={ticket} selection={{ kind: 'synthesis', conversation: shareSelection.conversation }} onClose={vi.fn()} onOpen={opened} />);
+  fireEvent.change(await screen.findByLabelText('Destination'), { target: { value: '__new__' } });
+  fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Resolution update' } });
+  fireEvent.change(screen.getByLabelText('To'), { target: { value: 'requester@example.test' } });
+  fireEvent.change(screen.getByLabelText('CC'), { target: { value: 'manager@example.test' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Generate draft' }));
+  await screen.findByRole('button', { name: 'Retry generation' });
+  expect(screen.getByLabelText('To')).toBeDisabled();
+  fireEvent.click(screen.getByRole('button', { name: 'Retry generation' }));
+  await waitFor(() => expect(opened).toHaveBeenCalledWith(destination));
+  expect(mocks.create).toHaveBeenCalledOnce(); expect(mocks.synthesis.mock.calls[1]).toEqual(mocks.synthesis.mock.calls[0]);
+  expect(mocks.synthesis.mock.calls[0][2].email).toEqual({ subject: 'Resolution update', to: ['requester@example.test'], cc: ['manager@example.test'] });
+  expect(mocks.sendEmail).not.toHaveBeenCalled();
+});
+
+it('keeps edited drafts on a changed source and requires a refreshed explicit replacement before regeneration', async () => {
+  mocks.aiCapability.mockResolvedValue({ available: true });
+  mocks.synthesisDraft.mockResolvedValue({ ok: true, result: { operationId: 'previous', source: shareSelection.conversation, sourceChanged: true } });
+  mocks.readDraft.mockResolvedValue({ content: { text: 'My revised response' }, revision: 4, conversationRevision: 1 });
+  mocks.synthesis.mockResolvedValueOnce({ ok: false, code: 'conflict' }).mockResolvedValueOnce({ ok: true, result: { status: 'completed' } });
+  render(<Harness />);
+  await screen.findByText('The source conversation changed. Your draft edits are kept; regenerate when you are ready.');
+  expect(await screen.findByLabelText('Message')).toHaveValue('My revised response'); expect(mocks.synthesis).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: 'Regenerate summary…' }));
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Replace draft and generate' })).toBeEnabled());
+  expect(screen.getByLabelText('Destination')).toHaveValue('home:private');
+  fireEvent.click(screen.getByRole('button', { name: 'Replace draft and generate' }));
+  await screen.findByText('The destination draft or conversation changed. Reload it before preparing a copy.');
+  expect(screen.getByRole('button', { name: 'Retry generation' })).toBeDisabled();
+  mocks.readDraft.mockResolvedValue({ content: { text: 'A newer edit' }, revision: 5, conversationRevision: 1 });
+  fireEvent.click(screen.getByRole('button', { name: 'Reload destination draft' }));
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Replace draft and generate' })).toBeEnabled());
+  fireEvent.click(screen.getByRole('button', { name: 'Replace draft and generate' }));
+  await waitFor(() => expect(mocks.synthesis).toHaveBeenCalledTimes(2));
+  expect(mocks.synthesis.mock.calls[1][2]).toMatchObject({ expectedDraftRevision: 5, replaceExisting: true });
+  expect(mocks.synthesis.mock.calls[1][2].operationId).not.toBe(mocks.synthesis.mock.calls[0][2].operationId);
+  expect(mocks.post).not.toHaveBeenCalled();
+});
+
+it('cancels an admitted generation without opening a late result or replacing the current draft', async () => {
+  const pending = deferred(), opened = vi.fn(), closed = vi.fn();
+  mocks.synthesis.mockImplementation(() => pending.promise);
+  mocks.synthesisCancel.mockResolvedValue({ ok: true, result: { status: 'cancelled' } });
+  const view = render(<ConversationShareDialog id="synthesis" ticket={ticket} selection={{ kind: 'synthesis', conversation: shareSelection.conversation }} onClose={closed} onOpen={opened} />);
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Generate draft' })).toBeEnabled());
+  fireEvent.click(screen.getByRole('button', { name: 'Generate draft' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Cancel generation' }));
+  await waitFor(() => expect(closed).toHaveBeenCalledOnce());
+  expect(mocks.synthesisCancel).toHaveBeenCalledWith(ticket, { storeTenant: 'owner', conversationId: 'requester' }, mocks.synthesis.mock.calls[0][2].operationId);
+  view.unmount();
+  await act(async () => pending.resolve({ ok: true, result: { status: 'completed' } }));
+  expect(opened).not.toHaveBeenCalled(); expect(mocks.saveDraft).not.toHaveBeenCalled();
+});
+
+it('reports full-context failure without preparing a partial draft and hides AI when capability is unavailable', async () => {
+  const opened = vi.fn(); mocks.synthesis.mockResolvedValue({ ok: false, code: 'AI_CONTEXT_TOO_LARGE' });
+  const view = render(<ConversationShareDialog id="synthesis" ticket={ticket} selection={{ kind: 'synthesis', conversation: shareSelection.conversation }} onClose={vi.fn()} onOpen={opened} />);
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Generate draft' })).toBeEnabled());
+  fireEvent.click(screen.getByRole('button', { name: 'Generate draft' }));
+  await screen.findByText('The complete conversation exceeds the available AI context. No partial summary was saved. You can still compose manually.');
+  expect(opened).not.toHaveBeenCalled(); expect(mocks.saveDraft).not.toHaveBeenCalled();
+  view.unmount(); render(<Harness />); await screen.findByLabelText('Message');
+  expect(screen.queryByRole('button', { name: 'Summarize with AI' })).toBeNull();
+  expect(screen.getByRole('button', { name: 'Post' })).toBeInTheDocument();
+});
+
+it('removes cached source and destination details when synthesis reports lost access', async () => {
+  mocks.synthesis.mockResolvedValue({ ok: false, code: 'unavailable' });
+  render(<ConversationShareDialog id="synthesis" ticket={ticket} selection={{ kind: 'synthesis', conversation: shareSelection.conversation }} onClose={vi.fn()} onOpen={vi.fn()} />);
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Generate draft' })).toBeEnabled());
+  fireEvent.click(screen.getByRole('button', { name: 'Generate draft' }));
+  await screen.findByText('The source or destination is no longer available. Refresh to check your access.');
+  expect(screen.queryByLabelText('Destination')).toBeNull();
+  expect(screen.queryByText('From conversation: Diagnostics')).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Open existing draft' })).toBeNull();
+});
+
+
+it('cancels an uncertain synthesis before closing instead of leaving an unconfirmed generation running', async () => {
+  const closed = vi.fn(), cancelled = deferred();
+  mocks.synthesis.mockResolvedValue({ ok: false, code: 'unknown' });
+  mocks.synthesisCancel.mockImplementation(() => cancelled.promise);
+  render(<ConversationShareDialog id="synthesis" ticket={ticket} selection={{ kind: 'synthesis', conversation: shareSelection.conversation }} onClose={closed} onOpen={vi.fn()} />);
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Generate draft' })).toBeEnabled());
+  fireEvent.click(screen.getByRole('button', { name: 'Generate draft' }));
+  await screen.findByRole('button', { name: 'Retry generation' });
+  fireEvent.click(screen.getByRole('button', { name: 'Cancel', exact: true }));
+  await waitFor(() => expect(mocks.synthesisCancel).toHaveBeenCalledOnce());
+  expect(closed).not.toHaveBeenCalled();
+  await act(async () => cancelled.resolve({ ok: true, result: { status: 'cancelled' } }));
+  await waitFor(() => expect(closed).toHaveBeenCalledOnce());
 });

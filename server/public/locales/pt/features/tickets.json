@@ -1838,6 +1838,29 @@
         "unknown": "Não foi possível confirmar a preparação. Repita a mesma solicitação ou abra o destino para verificar o rascunho."
       },
       "sourceLink": "Compartilhado de {{name}}"
+    },
+    "synthesis": {
+      "title": "Resumir conversa",
+      "stop": "Cancelar geração",
+      "generating": "A gerar…",
+      "retry": "Tentar gerar novamente",
+      "replace": "Substituir rascunho e gerar",
+      "generate": "Gerar rascunho",
+      "wholeSource": "Utilize toda a conversa publicada para preparar um resumo para os destinatários. O resultado permanece privado até o rever e enviar ou publicar.",
+      "existingHelp": "Abra-o para continuar ou substitua-o explicitamente por um novo resumo.",
+      "prompt": "Em que deve o resumo focar-se? (opcional)",
+      "sourceChanged": "A conversa de origem mudou. As alterações ao rascunho foram mantidas; gere novamente quando quiser.",
+      "review": "A IA preparou este rascunho privado. Reveja-o antes de enviar ou publicar.",
+      "sourceUnavailable": "Não foi possível verificar a origem deste rascunho. Atualize para verificar o seu acesso.",
+      "regenerate": "Gerar resumo novamente…",
+      "action": "Resumir com IA",
+      "errors": {
+        "AI_CONTEXT_TOO_LARGE": "A conversa completa excede o contexto de IA disponível. Não foi guardado nenhum resumo parcial. Pode continuar a escrever manualmente.",
+        "AI_SOURCE_CHANGED": "A origem mudou durante a geração. Recarregue o destino e gere novamente quando quiser.",
+        "AI_SOURCE_INVALID": "Esta conversa não tem mensagens publicadas utilizáveis para resumir.",
+        "AI_UNAVAILABLE": "A IA está indisponível no seu espaço de trabalho. O rascunho foi mantido; pode continuar a escrever manualmente.",
+        "AI_CANCELLED": "A geração foi cancelada. O rascunho foi mantido."
+      }
     }
   }
 }

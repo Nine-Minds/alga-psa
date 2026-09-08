@@ -95,7 +95,7 @@ beforeAll(async () => {
     '20260906080000_create_co_management_relationship_events.cjs',
     '20260906100000_add_external_file_metadata.cjs',
     '20260906110000_add_kb_import_batch_identity.cjs',
-    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs', '20260908013607_create_named_ticket_conversations.cjs', '20260908015652_create_ticket_conversation_editor_drafts.cjs', '20260908022249_scope_ticket_conversation_defaults_to_relationship.cjs', '20260908024119_create_ticket_conversation_publications.cjs', '20260908030840_retain_ticket_conversation_draft_reply_target.cjs', '20260908033011_create_ticket_conversation_sender_grants.cjs', '20260908034701_create_ticket_conversation_email_operations.cjs', '20260908042702_create_ticket_conversation_inbound_receipts.cjs', '20260908045632_track_named_conversation_correspondents.cjs', '20260908051006_retain_named_reply_review_resolutions.cjs', '20260908052731_extend_conversation_files_to_native_vendor_replies.cjs', '20260908054601_retain_named_editor_file_bindings.cjs', '20260908060651_retain_named_file_publication_operations.cjs', '20260908091259_retain_named_requester_publication_options.cjs', '20260908094308_retain_named_requester_close_intent.cjs', '20260908101532_retain_named_email_recovery_due.cjs', '20260908102605_retain_named_requester_schedule_intent.cjs', '20260908115747_create_ticket_conversation_attention.cjs', '20260908122807_retain_named_conversation_notification_receipts.cjs', '20260908125648_retain_named_conversation_email_notifications.cjs', '20260908133439_retain_native_ticket_email_recipient_policy.cjs', '20260908152720_retain_ticket_conversation_share_lineage.cjs']) {
+    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs', '20260908013607_create_named_ticket_conversations.cjs', '20260908015652_create_ticket_conversation_editor_drafts.cjs', '20260908022249_scope_ticket_conversation_defaults_to_relationship.cjs', '20260908024119_create_ticket_conversation_publications.cjs', '20260908030840_retain_ticket_conversation_draft_reply_target.cjs', '20260908033011_create_ticket_conversation_sender_grants.cjs', '20260908034701_create_ticket_conversation_email_operations.cjs', '20260908042702_create_ticket_conversation_inbound_receipts.cjs', '20260908045632_track_named_conversation_correspondents.cjs', '20260908051006_retain_named_reply_review_resolutions.cjs', '20260908052731_extend_conversation_files_to_native_vendor_replies.cjs', '20260908054601_retain_named_editor_file_bindings.cjs', '20260908060651_retain_named_file_publication_operations.cjs', '20260908091259_retain_named_requester_publication_options.cjs', '20260908094308_retain_named_requester_close_intent.cjs', '20260908101532_retain_named_email_recovery_due.cjs', '20260908102605_retain_named_requester_schedule_intent.cjs', '20260908115747_create_ticket_conversation_attention.cjs', '20260908122807_retain_named_conversation_notification_receipts.cjs', '20260908125648_retain_named_conversation_email_notifications.cjs', '20260908133439_retain_native_ticket_email_recipient_policy.cjs', '20260908152720_retain_ticket_conversation_share_lineage.cjs', '20260908165830_retain_ticket_conversation_ai_runs.cjs']) {
     await require('../../../migrations/' + file).up(db);
   }
   for (const table of ['standard_statuses', 'standard_priorities', 'countries', 'notification_categories',
@@ -17232,4 +17232,255 @@ it('selective conversation share lineage records final deselection without requi
   expect((await f.conversations.getNamedTicketConversationMessages(db, f.actor, f.ticket, ref)).items[0].attachments).toEqual([]);
   expect(await f.home.table('ticket_conversation_shares').where('operation_id', request.operationId).first())
     .toMatchObject({ published_editor_attachment_ids: [] });
+});
+
+describe('ticket conversation AI input against migrated PostgreSQL', () => {
+  it.each([false, true])('reads a complete multi-page source in reply order and exposes only permitted model fields (native=%s)', async native => {
+    const f = await namedShareFilesFixture(native);
+    const ai = await import('../../../../packages/tickets/src/lib/conversationAiContext');
+    const table = native ? 'comments' : 'co_management_private_comments';
+    const root = await f.home.table(table).where('comment_id', f.message.commentId).first();
+    delete root.note_index;
+    const rich = [{ type: 'paragraph', content: [{ type: 'text', text: 'Published root diagnosis', styles: {} },
+      { type: 'link', href: 'https://private.example.test/protected-source', content: [{ type: 'text', text: ' readable label', styles: {} }] }] },
+      { type: 'file', props: { url: 'https://private.example.test/unselected-file', name: 'Hidden embedded filename' } }];
+    await f.home.table(table).where('comment_id', f.message.commentId).update({ note: JSON.stringify(rich) });
+    const rows = Array.from({ length: 35 }, (_, index) => ({ ...root, comment_id: randomUUID(), parent_comment_id: f.message.commentId,
+      note: `Published reply ${index}`, created_at: new Date(Date.UTC(2026, 0, 1, 0, 0, index)), updated_at: new Date(Date.UTC(2026, 0, 1, 0, 0, index)) }));
+    await f.home.table(table).insert(rows);
+    await f.home.table(table).insert({ ...rows[0], comment_id: randomUUID(), note: 'Deleted body must be excluded', deleted_at: db.fn.now() });
+    if (native) await f.home.table(table).insert({ ...rows[0], comment_id: randomUUID(), note: 'Scheduled body must be excluded', publish_state: 'scheduled' });
+    await f.conversations.saveNamedConversationEditorDraft(db, f.actor, f.ticket, f.sourceRef,
+      { operationId: randomUUID(), expectedRevision: 2, expectedConversationRevision: 1, content: { text: 'Unpublished private editor draft' } });
+    const request = { kind: 'synthesis' as const, source: f.sourceRef };
+    const snapshot = await ai.readConversationAiSnapshot(db, f.actor, f.ticket, f.ref, request);
+    expect(snapshot.input.audience).toBe('requester');
+    expect(snapshot.input.conversations).toHaveLength(1);
+    const source = snapshot.input.conversations[0];
+    expect(source.name).toBe('Source conversation');
+    expect(source.messages).toHaveLength(36);
+    expect(source.messages[0]).toMatchObject({ key: 'message-1', text: 'Published root diagnosis readable label' });
+    expect(source.messages[0].files.map(file => file.name).sort()).toEqual(['Selected report.txt', 'Unselected report.txt']);
+    expect(source.messages.slice(1).map(item => item.text)).toEqual(rows.map(row => row.note));
+    expect(source.messages.slice(1).every(item => item.replyTo === 'message-1')).toBe(true);
+    const modelInput = JSON.stringify(snapshot.input);
+    for (const hidden of ['Deleted body', 'Scheduled body', 'Unpublished private editor draft', 'private.example.test',
+      'Hidden embedded filename', 'Private source exchange', f.actor.tenant, f.actor.userId, f.message.commentId, f.files[0].path, f.files[0].id])
+      expect(modelInput).not.toContain(hidden);
+    expect(f.storage.download).not.toHaveBeenCalled();
+    expect(snapshot.sources[0].messages).toHaveLength(36);
+    expect(await ai.revalidateConversationAiSnapshot(db, f.actor, f.ticket, snapshot)).toEqual({ newSourceMessages: false });
+    await expect(ai.readConversationAiSnapshot(db, f.actor, f.ticket, f.ref, request, { messages: 25, bytes: 100000 }))
+      .rejects.toMatchObject({ code: 'AI_CONTEXT_TOO_LARGE' });
+    await expect(ai.readConversationAiSnapshot(db, f.actor, f.ticket, f.ref, request, { messages: 100, bytes: 100 }))
+      .rejects.toMatchObject({ code: 'AI_CONTEXT_TOO_LARGE' });
+    expect(await f.draftRow()).toBeUndefined();
+  });
+
+  it('intersects Shared IT context before inference and keeps private-source synthesis a distinct deliberate mode', async () => {
+    const f = await namedShareFixture(), api = f.conversations;
+    const ai = await import('../../../../packages/tickets/src/lib/conversationAiContext');
+    const joint = await api.createNamedTicketConversation(db, f.actor, f.ticket,
+      { operationId: randomUUID(), name: 'Joint troubleshooting', audience: 'shared_it', transport: 'internal' });
+    const jointRef = { storeTenant: joint.storeTenant, conversationId: joint.conversationId };
+    const customerPrivate = await api.createNamedTicketConversation(db, f.customerPrincipal, f.ticket,
+      { operationId: randomUUID(), name: 'Other organization private label', audience: 'organization_private', transport: 'internal' });
+    const foreignRef = { storeTenant: customerPrivate.storeTenant, conversationId: customerPrivate.conversationId };
+    const choices = await ai.getConversationAiSources(db, f.actor, f.ticket, jointRef);
+    expect(choices.map(item => item.conversationId)).toEqual(expect.arrayContaining([f.ref.conversationId, joint.conversationId]));
+    expect(choices.some(item => item.audience === 'organization_private')).toBe(false);
+    expect(JSON.stringify(choices)).not.toMatch(/Private source exchange|Other organization private label/);
+    expect((await ai.getConversationAiSources(db, f.actor, f.ticket, f.sourceRef)).map(item => item.conversationId)).toContain(f.sourceRef.conversationId);
+    for (const source of [f.sourceRef, foreignRef]) {
+      await expect(ai.readConversationAiSnapshot(db, f.actor, f.ticket, jointRef, { kind: 'conversation', sources: [source] }))
+        .rejects.toMatchObject({ code: 'CONVERSATION_FORBIDDEN' });
+    }
+    const shared = await ai.readConversationAiSnapshot(db, f.actor, f.ticket, jointRef, { kind: 'conversation', sources: [f.ref, jointRef] });
+    expect(shared.input.conversations.map(item => item.name)).toEqual(['Requester', 'Joint troubleshooting']);
+    expect(JSON.stringify(shared.input)).not.toContain('Selected diagnosis');
+    await expect(ai.readConversationAiSnapshot(db, f.actor, f.ticket, f.ref, { kind: 'conversation', sources: [f.ref] }))
+      .rejects.toMatchObject({ code: 'CONVERSATION_FORBIDDEN' });
+    const transformed = await ai.readConversationAiSnapshot(db, f.actor, f.ticket, f.ref, { kind: 'synthesis', source: f.sourceRef });
+    expect(transformed.input.conversations[0].messages[0].text).toBe('Selected diagnosis');
+    await expect(ai.readConversationAiSnapshot(db, f.actor, f.ticket, f.ref, { kind: 'synthesis', source: foreignRef }))
+      .rejects.toMatchObject({ code: 'CONVERSATION_FORBIDDEN' });
+    expect(await f.draftRow()).toBeUndefined();
+  });
+
+  it.each([false, true])('distinguishes appended source messages from changed or revoked original input (native=%s)', async native => {
+    const f = await namedShareFilesFixture(native);
+    const ai = await import('../../../../packages/tickets/src/lib/conversationAiContext');
+    const table = native ? 'comments' : 'co_management_private_comments';
+    const snapshot = await ai.readConversationAiSnapshot(db, f.actor, f.ticket, f.ref, { kind: 'synthesis', source: f.sourceRef });
+    const root = await f.home.table(table).where('comment_id', f.message.commentId).first();
+    delete root.note_index;
+    const extra = { ...root, comment_id: randomUUID(), parent_comment_id: root.comment_id, note: 'Later permitted information', created_at: db.fn.now() };
+    await f.home.table(table).insert(extra);
+    expect(await ai.revalidateConversationAiSnapshot(db, f.actor, f.ticket, snapshot)).toEqual({ newSourceMessages: true });
+    await f.home.table(table).where('comment_id', root.comment_id).update({ note: 'Changed input' });
+    await expect(ai.revalidateConversationAiSnapshot(db, f.actor, f.ticket, snapshot)).rejects.toMatchObject({ code: 'AI_SOURCE_CHANGED' });
+    await f.home.table(table).where('comment_id', root.comment_id).update({ note: root.note });
+    await f.home.table('co_management_conversation_attachments').where('attachment_id', f.files[0].id).del();
+    await expect(ai.revalidateConversationAiSnapshot(db, f.actor, f.ticket, snapshot)).rejects.toMatchObject({ code: 'AI_SOURCE_CHANGED' });
+    await f.home.table('users').where('user_id', f.actor.userId).update({ is_inactive: true });
+    await expect(ai.revalidateConversationAiSnapshot(db, f.actor, f.ticket, snapshot)).rejects.toThrow();
+    expect(await f.draftRow()).toBeUndefined();
+  });
+});
+
+async function namedSynthesisFixture(native = false) {
+  const f = await namedShareFilesFixture(native);
+  const api = await import('../../../../packages/tickets/src/lib/prepareNamedConversationSynthesis');
+  const destination = await f.conversations.createNamedTicketConversation(db, f.actor, f.ticket,
+    { operationId: randomUUID(), name: 'Synthesis destination', audience: native ? 'organization_private' : 'shared_it', transport: 'internal' });
+  const target = { storeTenant: destination.storeTenant, conversationId: destination.conversationId };
+  const request = { operationId: randomUUID(), source: f.sourceRef, expectedDraftRevision: 0, expectedConversationRevision: destination.revision,
+    replaceExisting: false, prompt: 'Summarize the diagnosis and next steps.' };
+  const provider = { assertAvailable: vi.fn(async () => {}), generate: vi.fn(async (_request: import('../../../../shared/lib/tickets/conversationAi').ConversationAiGeneration) => 'Generated private summary') };
+  const run = (input = request) => api.prepareNamedConversationSynthesis(db, f.actor, f.ticket, target, input, provider);
+  const record = () => f.home.table('ticket_conversation_ai_runs').where('operation_id', request.operationId).first();
+  const draft = () => f.conversations.getNamedConversationEditorDraft(db, f.actor, f.ticket, target);
+  return { ...f, api, target, request, provider, run, record, draft };
+}
+describe('ticket conversation synthesis runs against migrated PostgreSQL', () => {
+  it.each([false, true])('retains a private complete-source result until reviewed publication and preserves later edited drafts on retry (native=%s)', async native => {
+    const f = await namedSynthesisFixture(native);
+    const beforeEvents = await f.customer.table('co_management_event_outbox').count('* as count').first();
+    const result = await f.run();
+    expect(result).toMatchObject({ status: 'completed', draft: { content: { text: 'Generated private summary' }, revision: 1, attachments: [] } });
+    expect(f.provider.generate).toHaveBeenCalledOnce();
+    expect(f.provider.generate.mock.calls[0][0]).toMatchObject({ actor: f.actor, kind: 'synthesis', input: { audience: native ? 'organization_private' : 'shared_it',
+      conversations: [{ messages: [{ text: 'Selected diagnosis' }] }] } });
+    expect(await f.api.getNamedConversationDraftSynthesis(db, f.actor, f.ticket, f.target)).toEqual({ operationId: f.request.operationId, source: f.sourceRef, sourceChanged: false });
+    const retained = await f.record();
+    expect(retained).toMatchObject({ tenant: f.actor.tenant, actor_user_id: f.actor.userId, status: 'completed', kind: 'synthesis', generated_text: 'Generated private summary', prepared_draft_revision: 1 });
+    expect(retained.source_snapshot.input).toBeUndefined();
+    expect(JSON.stringify(retained.source_snapshot)).not.toContain('Selected diagnosis');
+    expect(await f.customer.table('co_management_event_outbox').count('* as count').first()).toEqual(beforeEvents);
+    expect((await f.conversations.getNamedTicketConversationMessages(db, f.actor, f.ticket, f.target)).items).toEqual([]);
+    if (!native) {
+      expect(await f.conversations.getNamedConversationEditorDraft(db, f.customerPrincipal, f.ticket, f.target)).toBeNull();
+      expect(await f.customer.table('ticket_conversation_ai_runs').where('operation_id', f.request.operationId)).toEqual([]);
+    }
+    await f.conversations.saveNamedConversationEditorDraft(db, f.actor, f.ticket, f.target, { operationId: randomUUID(), expectedRevision: 1,
+      expectedConversationRevision: 1, content: { text: 'Technician reviewed this summary' } });
+    expect(await f.run()).toMatchObject({ status: 'completed', draft: { content: { text: 'Technician reviewed this summary' }, revision: 2 } });
+    expect(f.provider.generate).toHaveBeenCalledOnce();
+    await expect(f.run({ ...f.request, prompt: 'Changed request using the same operation' })).rejects.toMatchObject({ code: 'CONVERSATION_CONFLICT' });
+    const post = (await import('../../../../packages/tickets/src/lib/postNamedTicketConversation')).postNamedTicketConversation;
+    const publication = await post(db, f.actor, f.ticket, f.target, { operationId: randomUUID(), expectedDraftRevision: 2, expectedConversationRevision: 1 });
+    expect(await f.record()).toMatchObject({ published_comment_id: publication.commentId, published_thread_id: publication.threadId });
+    const stored = await tenantDb(db, f.target.storeTenant).table('ticket_conversation_publications').where('comment_id', publication.commentId).first();
+    expect(stored.ai_run_operation_id).toBe(f.request.operationId); expect(stored.share_operation_id).toBeNull();
+    const page = await f.conversations.getNamedTicketConversationMessages(db, f.actor, f.ticket, f.target);
+    expect(page.items[0].note).toContain('Technician reviewed this summary');
+    expect(page.items[0].author).toMatchObject({ tenant: f.actor.tenant, id: f.actor.userId });
+    expect(JSON.stringify(page)).not.toContain(f.request.operationId);
+    await f.home.table(native ? 'comments' : 'co_management_private_comments').where('comment_id', f.message.commentId).update({ deleted_at: db.fn.now() });
+    expect((await f.conversations.getNamedTicketConversationMessages(db, f.actor, f.ticket, f.target)).items).toEqual(page.items);
+    const migration = require('../../../migrations/20260908165830_retain_ticket_conversation_ai_runs.cjs');
+    await migration.up(db); await expect(migration.down(db)).rejects.toThrow('Cannot discard retained conversation AI runs');
+  });
+
+  it.each([false, true])('rechecks source file-metadata access before publication and permits explicit regeneration from the remaining source (native=%s)', async native => {
+    const f = await namedSynthesisFixture(native);
+    await f.run();
+    await f.home.table('co_management_conversation_attachments').where('attachment_id', f.files[0].id).del();
+    const post = (await import('../../../../packages/tickets/src/lib/postNamedTicketConversation')).postNamedTicketConversation;
+    await expect(post(db, f.actor, f.ticket, f.target, { operationId: randomUUID(), expectedDraftRevision: 1, expectedConversationRevision: 1 }))
+      .rejects.toMatchObject({ code: 'CONVERSATION_FORBIDDEN' });
+    expect(await f.draft()).toMatchObject({ revision: 1, content: { text: 'Generated private summary' } });
+    expect(await tenantDb(db, f.target.storeTenant).table('ticket_conversation_publications').where('conversation_id', f.target.conversationId)).toEqual([]);
+    expect(await f.api.getNamedConversationDraftSynthesis(db, f.actor, f.ticket, f.target)).toMatchObject({ sourceChanged: true });
+    await f.run({ ...f.request, operationId: randomUUID(), expectedDraftRevision: 1, replaceExisting: true });
+    await post(db, f.actor, f.ticket, f.target, { operationId: randomUUID(), expectedDraftRevision: 2, expectedConversationRevision: 1 });
+    expect((await f.conversations.getNamedTicketConversationMessages(db, f.actor, f.ticket, f.target)).items).toHaveLength(1);
+    expect(f.storage.download).not.toHaveBeenCalled(); expect(f.storage.upload).not.toHaveBeenCalled();
+  });
+
+  it('retains cancellation before generation reservation so a delayed admission cannot revive the operation', async () => {
+    const f = await namedSynthesisFixture(true);
+    let resume!: () => void;
+    f.provider.assertAvailable.mockImplementationOnce(() => new Promise<void>(resolve => { resume = resolve; }));
+    const running = f.run();
+    await vi.waitFor(() => expect(resume).toBeTypeOf('function'));
+    expect(await f.api.cancelNamedConversationSynthesis(db, f.actor, f.ticket, f.target, f.request.operationId)).toEqual({ status: 'cancelled' });
+    resume();
+    expect(await running).toEqual({ status: 'cancelled' });
+    expect(await f.run()).toEqual({ status: 'cancelled' });
+    expect(f.provider.generate).not.toHaveBeenCalled(); expect(await f.draft()).toBeNull();
+    expect(await f.record()).toMatchObject({ status: 'cancelled', generated_text: null, request: { cancelledBeforeStart: true } });
+  });
+
+  it('runs inference without database locks, coalesces active retries and rejects a stale completion over newer human edits', async () => {
+    const f = await namedSynthesisFixture(true);
+    let complete!: (text: string) => void;
+    f.provider.generate.mockImplementation(() => new Promise<string>(resolve => { complete = resolve; }));
+    const running = f.run();
+    await vi.waitFor(() => expect(f.provider.generate).toHaveBeenCalledOnce());
+    expect(await f.run()).toEqual({ status: 'running' });
+    // A separate connection can write the same ticket and destination draft
+    // while the provider is pending; inference is outside the DB transaction.
+    await f.home.table('tickets').where('ticket_id', f.ticket.ticketId).update({ title: 'Independent update during inference' });
+    await f.conversations.saveNamedConversationEditorDraft(db, f.actor, f.ticket, f.target, { operationId: randomUUID(), expectedRevision: 0,
+      expectedConversationRevision: 1, content: { text: 'Newer human draft' } });
+    complete('Stale generated output');
+    await expect(running).rejects.toMatchObject({ code: 'CONVERSATION_CONFLICT' });
+    expect(await f.draft()).toMatchObject({ content: { text: 'Newer human draft' }, revision: 1 });
+    expect(await f.record()).toMatchObject({ status: 'failed', generated_text: null });
+    expect(f.provider.generate).toHaveBeenCalledOnce();
+  });
+
+  it('requires explicit replacement, retains drafts on cancellation, and discards late results from an expired attempt', async () => {
+    const f = await namedSynthesisFixture();
+    await f.conversations.saveNamedConversationEditorDraft(db, f.actor, f.ticket, f.target, { operationId: randomUUID(), expectedRevision: 0,
+      expectedConversationRevision: 1, content: { text: 'Existing unsent work' } });
+    await expect(f.run({ ...f.request, expectedDraftRevision: 1 })).rejects.toMatchObject({ code: 'CONVERSATION_CONFLICT' });
+    expect(f.provider.generate).not.toHaveBeenCalled();
+    const input = { ...f.request, expectedDraftRevision: 1, replaceExisting: true };
+    let complete!: (text: string) => void;
+    f.provider.generate.mockImplementationOnce(() => new Promise<string>(resolve => { complete = resolve; }));
+    const first = f.run(input); await vi.waitFor(() => expect(f.provider.generate).toHaveBeenCalledOnce());
+    await f.home.table('ticket_conversation_ai_runs').where('operation_id', input.operationId).update({ lease_expires_at: new Date(0) });
+    expect(await f.api.getNamedConversationSynthesisStatus(db, f.actor, f.ticket, f.target, input.operationId)).toEqual({ status: 'failed', sourceChanged: false });
+    const retried = await f.run(input);
+    expect(retried).toMatchObject({ status: 'completed', draft: { content: { text: 'Generated private summary' }, revision: 2 } });
+    complete('Late original attempt'); await expect(first).rejects.toMatchObject({ code: 'AI_CANCELLED' });
+    expect(await f.draft()).toMatchObject({ content: { text: 'Generated private summary' }, revision: 2 });
+    let cancelledComplete!: (text: string) => void;
+    const cancellation = { ...input, operationId: randomUUID(), expectedDraftRevision: 2 };
+    f.provider.generate.mockImplementationOnce(() => new Promise<string>(resolve => { cancelledComplete = resolve; }));
+    const cancelled = f.run(cancellation); await vi.waitFor(() => expect(f.provider.generate).toHaveBeenCalledTimes(3));
+    expect(await f.api.cancelNamedConversationSynthesis(db, f.actor, f.ticket, f.target, cancellation.operationId)).toEqual({ status: 'cancelled' });
+    cancelledComplete('Cancelled result'); await expect(cancelled).rejects.toMatchObject({ code: 'AI_CANCELLED' });
+    expect(await f.draft()).toMatchObject({ content: { text: 'Generated private summary' }, revision: 2 });
+    expect(await f.run(cancellation)).toEqual({ status: 'cancelled' });
+    expect(f.provider.generate).toHaveBeenCalledTimes(3);
+  });
+
+  it('withholds generation and publication after source changes or access loss and leaves source/drafts intact on unavailable AI', async () => {
+    const f = await namedSynthesisFixture(true);
+    f.provider.assertAvailable.mockRejectedValueOnce(new Error('AI unavailable'));
+    await expect(f.run()).rejects.toThrow('AI unavailable'); expect(await f.record()).toBeUndefined(); expect(await f.draft()).toBeNull();
+    f.provider.generate.mockImplementationOnce(async () => {
+      await f.home.table('comments').where('comment_id', f.message.commentId).update({ note: 'Changed during inference' });
+      return 'Now-stale output';
+    });
+    await expect(f.run()).rejects.toMatchObject({ code: 'AI_SOURCE_CHANGED' });
+    expect(await f.draft()).toBeNull(); expect(await f.record()).toMatchObject({ status: 'failed', generated_text: null });
+    await f.run();
+    expect(await f.api.getNamedConversationSynthesisStatus(db, f.actor, f.ticket, f.target, f.request.operationId)).toEqual({ status: 'completed', sourceChanged: false });
+    await f.home.table('comments').where('comment_id', f.message.commentId).update({ note: 'New source correction' });
+    expect(await f.api.getNamedConversationSynthesisStatus(db, f.actor, f.ticket, f.target, f.request.operationId)).toEqual({ status: 'completed', sourceChanged: true });
+    expect(await f.run()).toMatchObject({ status: 'completed', sourceChanged: true, draft: { revision: 1 } });
+    expect(await f.api.getNamedConversationDraftSynthesis(db, f.actor, f.ticket, f.target)).toMatchObject({ sourceChanged: true });
+    await f.home.table('comments').where('comment_id', f.message.commentId).update({ deleted_at: db.fn.now() });
+    const events = await f.home.table('co_management_event_outbox').count('* as count').first();
+    const post = (await import('../../../../packages/tickets/src/lib/postNamedTicketConversation')).postNamedTicketConversation;
+    await expect(post(db, f.actor, f.ticket, f.target, { operationId: randomUUID(), expectedDraftRevision: 1, expectedConversationRevision: 1 }))
+      .rejects.toMatchObject({ code: 'CONVERSATION_FORBIDDEN' });
+    expect(await f.draft()).toMatchObject({ content: { text: 'Generated private summary' }, revision: 1 });
+    expect(await f.home.table('co_management_event_outbox').count('* as count').first()).toEqual(events);
+    expect(await f.home.table('ticket_conversation_publications').where('conversation_id', f.target.conversationId)).toEqual([]);
+  });
 });

@@ -1838,6 +1838,29 @@
         "unknown": "De voorbereiding kon niet worden bevestigd. Probeer hetzelfde verzoek opnieuw of open de bestemming om het concept te controleren."
       },
       "sourceLink": "Gedeeld vanuit {{name}}"
+    },
+    "synthesis": {
+      "title": "Gesprek samenvatten",
+      "stop": "Genereren annuleren",
+      "generating": "Bezig met genereren…",
+      "retry": "Genereren opnieuw proberen",
+      "replace": "Concept vervangen en genereren",
+      "generate": "Concept genereren",
+      "wholeSource": "Gebruik het volledige gepubliceerde gesprek voor een samenvatting voor de doelgroep. Het resultaat blijft privé totdat u het controleert en verzendt of plaatst.",
+      "existingHelp": "Open het om verder te werken of vervang het uitdrukkelijk door een nieuwe samenvatting.",
+      "prompt": "Waar moet de samenvatting op gericht zijn? (optioneel)",
+      "sourceChanged": "Het brongesprek is gewijzigd. Uw conceptwijzigingen blijven behouden; genereer opnieuw wanneer u wilt.",
+      "review": "AI heeft dit privéconcept opgesteld. Controleer het voordat u het verzendt of plaatst.",
+      "sourceUnavailable": "De bron van dit concept kon niet worden gecontroleerd. Vernieuw om uw toegang te controleren.",
+      "regenerate": "Samenvatting opnieuw genereren…",
+      "action": "Samenvatten met AI",
+      "errors": {
+        "AI_CONTEXT_TOO_LARGE": "Het volledige gesprek overschrijdt de beschikbare AI-context. Er is geen gedeeltelijke samenvatting opgeslagen. U kunt handmatig blijven schrijven.",
+        "AI_SOURCE_CHANGED": "De bron is tijdens het genereren gewijzigd. Laad de bestemming opnieuw en genereer wanneer u wilt.",
+        "AI_SOURCE_INVALID": "Dit gesprek bevat geen bruikbare gepubliceerde berichten om samen te vatten.",
+        "AI_UNAVAILABLE": "AI is momenteel niet beschikbaar in uw werkruimte. Uw concept blijft behouden; u kunt handmatig verder schrijven.",
+        "AI_CANCELLED": "Het genereren is geannuleerd. Uw concept is behouden."
+      }
     }
   }
 }

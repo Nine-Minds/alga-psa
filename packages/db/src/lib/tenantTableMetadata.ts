@@ -30,6 +30,7 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   ticket_conversation_publications: { scope: 'tenant' },
   ticket_conversation_editor_drafts: { scope: 'tenant' },
   ticket_conversation_shares: { scope: 'tenant' },
+  ticket_conversation_ai_runs: { scope: 'tenant' },
   co_management_relationships: { scope: 'tenant' },
   co_management_board_scopes: { scope: 'tenant' },
   co_management_project_scopes: { scope: 'tenant' },

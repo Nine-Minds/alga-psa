@@ -1838,6 +1838,29 @@
         "unknown": "Die Vorbereitung konnte nicht bestätigt werden. Wiederholen Sie dieselbe Anfrage oder öffnen Sie das Ziel, um den Entwurf zu prüfen."
       },
       "sourceLink": "Geteilt aus {{name}}"
+    },
+    "synthesis": {
+      "title": "Unterhaltung zusammenfassen",
+      "stop": "Generierung abbrechen",
+      "generating": "Wird generiert…",
+      "retry": "Generierung erneut versuchen",
+      "replace": "Entwurf ersetzen und generieren",
+      "generate": "Entwurf generieren",
+      "wholeSource": "Verwenden Sie die gesamte veröffentlichte Unterhaltung, um eine Zusammenfassung für die Zielgruppe zu erstellen. Das Ergebnis bleibt privat, bis Sie es prüfen und senden oder veröffentlichen.",
+      "existingHelp": "Öffnen Sie den Entwurf zum Weiterarbeiten oder ersetzen Sie ihn ausdrücklich durch eine neue Zusammenfassung.",
+      "prompt": "Worauf soll sich die Zusammenfassung konzentrieren? (optional)",
+      "sourceChanged": "Die Quellunterhaltung hat sich geändert. Ihre Änderungen bleiben erhalten; generieren Sie bei Bedarf erneut.",
+      "review": "Die KI hat diesen privaten Entwurf erstellt. Prüfen Sie ihn vor dem Senden oder Veröffentlichen.",
+      "sourceUnavailable": "Die Quelle dieses Entwurfs konnte nicht geprüft werden. Aktualisieren Sie, um Ihren Zugriff zu prüfen.",
+      "regenerate": "Zusammenfassung neu generieren…",
+      "action": "Mit KI zusammenfassen",
+      "errors": {
+        "AI_CONTEXT_TOO_LARGE": "Die vollständige Unterhaltung überschreitet den verfügbaren KI-Kontext. Es wurde keine teilweise Zusammenfassung gespeichert. Sie können weiterhin manuell schreiben.",
+        "AI_SOURCE_CHANGED": "Die Quelle hat sich während der Generierung geändert. Laden Sie das Ziel neu und generieren Sie bei Bedarf erneut.",
+        "AI_SOURCE_INVALID": "Diese Unterhaltung enthält keine verwendbaren veröffentlichten Nachrichten für eine Zusammenfassung.",
+        "AI_UNAVAILABLE": "KI ist in Ihrem Arbeitsbereich derzeit nicht verfügbar. Ihr Entwurf bleibt erhalten; Sie können manuell weiterschreiben.",
+        "AI_CANCELLED": "Die Generierung wurde abgebrochen. Ihr Entwurf blieb erhalten."
+      }
     }
   }
 }

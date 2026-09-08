@@ -111,3 +111,5 @@ export { enqueueNativeTicketCommentEmails } from './customerEmailDeliveries';
 export { readNamedConversationShareSource, retainNamedConversationShareDraft, getNamedConversationShareSourceLink, assertScheduledConversationShareSource, type NamedConversationShareProvenance, type NamedConversationShareSource } from './namedConversationShares';
 
 export { prepareNamedConversationShareFiles, assertNamedConversationShareFiles } from './namedConversationShareFiles';
+
+export { assertScheduledConversationSynthesisSource } from './conversationSynthesisPublication';

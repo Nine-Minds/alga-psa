@@ -1838,6 +1838,29 @@
         "unknown": "No se pudo confirmar la preparación. Reintenta la misma solicitud o abre el destino para comprobar su borrador."
       },
       "sourceLink": "Compartido desde {{name}}"
+    },
+    "synthesis": {
+      "title": "Resumir conversación",
+      "stop": "Cancelar generación",
+      "generating": "Generando…",
+      "retry": "Reintentar generación",
+      "replace": "Reemplazar borrador y generar",
+      "generate": "Generar borrador",
+      "wholeSource": "Use toda la conversación publicada para preparar un resumen para los destinatarios. El resultado será privado hasta que lo revise y lo envíe o publique.",
+      "existingHelp": "Ábralo para seguir trabajando o reemplácelo explícitamente por un nuevo resumen.",
+      "prompt": "¿En qué debe centrarse el resumen? (opcional)",
+      "sourceChanged": "La conversación de origen cambió. Sus cambios se conservan; vuelva a generar cuando quiera.",
+      "review": "La IA preparó este borrador privado. Revíselo antes de enviarlo o publicarlo.",
+      "sourceUnavailable": "No se pudo comprobar el origen de este borrador. Actualice para comprobar su acceso.",
+      "regenerate": "Volver a generar resumen…",
+      "action": "Resumir con IA",
+      "errors": {
+        "AI_CONTEXT_TOO_LARGE": "La conversación completa supera el contexto de IA disponible. No se guardó ningún resumen parcial. Puede seguir redactando manualmente.",
+        "AI_SOURCE_CHANGED": "El origen cambió durante la generación. Recargue el destino y vuelva a generar cuando quiera.",
+        "AI_SOURCE_INVALID": "Esta conversación no tiene mensajes publicados utilizables para resumir.",
+        "AI_UNAVAILABLE": "La IA no está disponible en su espacio de trabajo. Su borrador se conserva; puede seguir redactando manualmente.",
+        "AI_CANCELLED": "Se canceló la generación. Se conservó su borrador."
+      }
     }
   }
 }

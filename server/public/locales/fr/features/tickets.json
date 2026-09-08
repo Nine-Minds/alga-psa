@@ -1838,6 +1838,29 @@
         "unknown": "La préparation n’a pas pu être confirmée. Réessayez la même demande ou ouvrez la destination pour vérifier son brouillon."
       },
       "sourceLink": "Partagé depuis {{name}}"
+    },
+    "synthesis": {
+      "title": "Résumer la conversation",
+      "stop": "Annuler la génération",
+      "generating": "Génération…",
+      "retry": "Réessayer la génération",
+      "replace": "Remplacer le brouillon et générer",
+      "generate": "Générer un brouillon",
+      "wholeSource": "Utilisez toute la conversation publiée pour préparer un résumé adapté au public destinataire. Le résultat reste privé jusqu’à votre relecture et son envoi ou sa publication.",
+      "existingHelp": "Ouvrez-le pour continuer ou remplacez-le explicitement par un nouveau résumé.",
+      "prompt": "Sur quoi le résumé doit-il porter ? (facultatif)",
+      "sourceChanged": "La conversation source a changé. Vos modifications sont conservées ; relancez la génération quand vous le souhaitez.",
+      "review": "L’IA a préparé ce brouillon privé. Relisez-le avant de l’envoyer ou de le publier.",
+      "sourceUnavailable": "Impossible de vérifier la source de ce brouillon. Actualisez pour vérifier votre accès.",
+      "regenerate": "Régénérer le résumé…",
+      "action": "Résumer avec l’IA",
+      "errors": {
+        "AI_CONTEXT_TOO_LARGE": "La conversation complète dépasse le contexte IA disponible. Aucun résumé partiel n’a été enregistré. Vous pouvez toujours rédiger manuellement.",
+        "AI_SOURCE_CHANGED": "La source a changé pendant la génération. Rechargez la destination et réessayez quand vous le souhaitez.",
+        "AI_SOURCE_INVALID": "Cette conversation ne contient aucun message publié utilisable pour un résumé.",
+        "AI_UNAVAILABLE": "L’IA est actuellement indisponible dans votre espace de travail. Votre brouillon est conservé ; vous pouvez continuer à rédiger manuellement.",
+        "AI_CANCELLED": "La génération a été annulée. Votre brouillon a été conservé."
+      }
     }
   }
 }

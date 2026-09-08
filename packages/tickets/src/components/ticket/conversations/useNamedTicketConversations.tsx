@@ -1,7 +1,8 @@
 'use client';
 
+import { ConversationSynthesisControls } from './ConversationSynthesisControls';
 import { ConversationShareDialog } from './ConversationShareDialog';
-import { ConversationShareButton, ConversationSharingContext, useConversationSharing, type ConversationShareSelection } from './ConversationSharingContext';
+import { ConversationShareButton, ConversationSharingContext, useConversationSharing, type ConversationShareSelection, type ConversationSynthesisSelection } from './ConversationSharingContext';
 import { ConversationAttentionControls } from './ConversationAttentionControls';
 import { ConversationReadAcknowledgment } from './ConversationReadAcknowledgment';
 import { useConversationMessageTarget, useConversationMessageFocus } from './useConversationMessageFocus';
@@ -55,7 +56,7 @@ export function useNamedTicketConversations(input: ConversationTicketReference |
   const [error, setError] = useState(false), [reload, setReload] = useState(0), [creating, setCreating] = useState(false);
   const flush = useRef<() => Promise<boolean>>(async () => true);
   const [dirty, setDirty] = useState(false);
-  const [sharing, setSharing] = useState<{ identity: string; selection: ConversationShareSelection } | null>(null);
+  const [sharing, setSharing] = useState<{ identity: string; selection: ConversationShareSelection | ConversationSynthesisSelection } | null>(null);
   const [panelEpoch, setPanelEpoch] = useState(0);
   const currentIdentity = useRef(identity); currentIdentity.current = identity;
   const openingShare = useRef(false);
@@ -114,7 +115,7 @@ export function useNamedTicketConversations(input: ConversationTicketReference |
     if (activeShare || !await flush.current() || currentIdentity.current !== identity) return;
     navigate(conversation, parent);
   };
-  const share = async (value: ConversationShareSelection) => {
+  const share = async (value: ConversationShareSelection | ConversationSynthesisSelection) => {
     if (openingShare.current || activeShare || !screen?.writeAudiences.length) return;
     openingShare.current = true;
     try {
@@ -164,7 +165,7 @@ export function useNamedTicketConversations(input: ConversationTicketReference |
         for (const key of ['conversation', 'conversationStore', 'message', 'replyTo', 'replyThread']) query.delete(key);
         query.set('conversationView', 'all'); router.push(`${window.location.pathname}?${query}`, { scroll: false });
       }}>{t('namedConversations.allActivity', 'All activity')}</button></nav>}
-    {activeShare && <ConversationShareDialog key={`${identity}:${activeShare.commentId}`} id={id} ticket={ticket} selection={activeShare} onClose={closeShare} onOpen={openSharedDraft} />}
+    {activeShare && <ConversationShareDialog key={`${identity}:${'commentId' in activeShare ? activeShare.commentId : 'synthesis'}`} id={id} ticket={ticket} selection={activeShare} onClose={closeShare} onOpen={openSharedDraft} />}
     {screen && <CreateConversation key={identity} id={id} ticket={ticket} open={creating} audiences={screen.writeAudiences}
       onClose={() => setCreating(false)} onCreated={async value => { setCreating(false); refresh(); await select(value); }} />}
   </section>;
@@ -176,7 +177,11 @@ export function useNamedTicketConversations(input: ConversationTicketReference |
       if (activeShare || !await flush.current() || currentIdentity.current !== identity) return;
       navigate({ ...source.conversation, defaultSlot: null }, undefined, source.commentId);
     } }}>
-    <div key={`${identity}:${panelEpoch}`} inert={Boolean(activeShare)} className="min-w-0">{panel}</div>
+    <div key={`${identity}:${panelEpoch}`} inert={Boolean(activeShare)} className="min-w-0">
+      {selected && !allActivity && Boolean(screen?.writeAudiences.length) && <ConversationSynthesisControls key={`${identity}:synthesis:${keyOf(selected)}`} id={id}
+        ticket={ticket} conversation={reference(selected)} refreshVersion={reload} disabled={Boolean(activeShare)} onSynthesize={share} />}
+      {panel}
+    </div>
   </ConversationSharingContext.Provider> };
 }
 

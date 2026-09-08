@@ -1961,6 +1961,29 @@
         "unknown": "11111 111 1111111 11111111111. 11111 111 1111 1111111, 11 1111 111 11111111111 11 11111 111 11111."
       },
       "sourceLink": "111111 1111 {{name}}"
+    },
+    "synthesis": {
+      "title": "11111",
+      "stop": "11111",
+      "generating": "11111",
+      "retry": "11111",
+      "replace": "11111",
+      "generate": "11111",
+      "wholeSource": "11111",
+      "existingHelp": "11111",
+      "prompt": "11111",
+      "sourceChanged": "11111",
+      "review": "11111",
+      "sourceUnavailable": "11111",
+      "regenerate": "11111",
+      "action": "11111",
+      "errors": {
+        "AI_CONTEXT_TOO_LARGE": "11111",
+        "AI_SOURCE_CHANGED": "11111",
+        "AI_SOURCE_INVALID": "11111",
+        "AI_UNAVAILABLE": "11111",
+        "AI_CANCELLED": "11111"
+      }
     }
   }
 }

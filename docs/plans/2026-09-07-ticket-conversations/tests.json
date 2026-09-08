@@ -339,7 +339,7 @@
   {
     "id": "T026",
     "description": "Actual application: prepare a share and complete-conversation synthesis into new internal and new requester-directed destinations; require name, intended audience and explicit email recipients; creation/generation sends nothing and leaves an author-private editable composer.",
-    "implemented": false,
+    "implemented": true,
     "type": "browser",
     "featureIds": [
       "F003",
@@ -356,7 +356,7 @@
   {
     "id": "T027",
     "description": "Real migrated PostgreSQL with captured AI request: synthesize all published permitted source messages/replies into a private requester draft, excluding deleted/redacted/unpublished content; private prompt/source metadata never enters the destination public stream or ordinary Shared IT context.",
-    "implemented": false,
+    "implemented": true,
     "type": "integration",
     "featureIds": [
       "F073",
@@ -387,7 +387,7 @@
   {
     "id": "T029",
     "description": "AI adapter: exercise full-source input beyond a single model context using a controlled provider; verify complete bounded processing or explicit unavailable result, accurate source cursor and no silently truncated complete-summary claim.",
-    "implemented": false,
+    "implemented": true,
     "type": "integration",
     "featureIds": [
       "F077",

@@ -602,7 +602,7 @@
   {
     "id": "F076",
     "description": "Protect an existing destination draft from silent replacement by share or synthesis.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "8. Selective sharing and whole-conversation synthesis"
     ]
@@ -610,7 +610,7 @@
   {
     "id": "F077",
     "description": "Synthesize the complete permitted published source conversation rather than only a selected message.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "8. Selective sharing and whole-conversation synthesis"
     ]
@@ -618,7 +618,7 @@
   {
     "id": "F078",
     "description": "Select intended destination/audience before generation and support a new requester-directed conversation with explicit recipients.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "8. Selective sharing and whole-conversation synthesis"
     ]
@@ -626,7 +626,7 @@
   {
     "id": "F079",
     "description": "Permit deliberate private-source to outward-draft transformation while keeping prompts and generation artifacts author-private.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "8. Selective sharing and whole-conversation synthesis"
     ]
@@ -634,7 +634,7 @@
   {
     "id": "F080",
     "description": "Generate audience-appropriate editable text and record the source revision/cursor.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "8. Selective sharing and whole-conversation synthesis"
     ]
@@ -642,7 +642,7 @@
   {
     "id": "F081",
     "description": "Exclude unpublished, deleted, redacted and inaccessible source content from synthesis input.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "8. Selective sharing and whole-conversation synthesis"
     ]
@@ -650,7 +650,7 @@
   {
     "id": "F082",
     "description": "Show source-change availability without automatically replacing the draft.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "8. Selective sharing and whole-conversation synthesis"
     ]
@@ -658,7 +658,7 @@
   {
     "id": "F083",
     "description": "Regenerate only on explicit replacement confirmation and protect newer edits from stale asynchronous completion.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "8. Selective sharing and whole-conversation synthesis"
     ]
@@ -666,7 +666,7 @@
   {
     "id": "F084",
     "description": "Handle complete-source context limits explicitly through bounded full synthesis or an honest unavailable result.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "8. Selective sharing and whole-conversation synthesis"
     ]
@@ -674,7 +674,7 @@
   {
     "id": "F085",
     "description": "Preserve source and draft on failure/cancel/unavailable AI and never publish or send through generation alone.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "8. Selective sharing and whole-conversation synthesis"
     ]
@@ -682,7 +682,7 @@
   {
     "id": "F086",
     "description": "Reuse existing AI provider/entitlement behavior while leaving manual conversations and sharing available without AI.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "9. AI participation and context"
     ]

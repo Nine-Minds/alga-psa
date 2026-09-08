@@ -1966,6 +1966,29 @@
         "unknown": "Could not confirm preparation. Retry the same request, or open the destination to check its draft."
       },
       "sourceLink": "Shared from {{name}}"
+    },
+    "synthesis": {
+      "title": "Summarize conversation",
+      "stop": "Cancel generation",
+      "generating": "Generating…",
+      "retry": "Retry generation",
+      "replace": "Replace draft and generate",
+      "generate": "Generate draft",
+      "wholeSource": "Use the entire published conversation to prepare a summary for the destination audience. The result stays private until you review it and send or post it.",
+      "existingHelp": "Open it to keep working, or explicitly replace it with a newly generated summary.",
+      "prompt": "What should the summary focus on? (optional)",
+      "sourceChanged": "The source conversation changed. Your draft edits are kept; regenerate when you are ready.",
+      "review": "AI prepared this private draft. Review it before sending or posting.",
+      "sourceUnavailable": "Could not check this draft’s source. Refresh to check your access.",
+      "regenerate": "Regenerate summary…",
+      "action": "Summarize with AI",
+      "errors": {
+        "AI_CONTEXT_TOO_LARGE": "The complete conversation exceeds the available AI context. No partial summary was saved. You can still compose manually.",
+        "AI_SOURCE_CHANGED": "The source changed during generation. Reload the destination and generate again when ready.",
+        "AI_SOURCE_INVALID": "This conversation has no usable published messages to summarize.",
+        "AI_UNAVAILABLE": "AI is unavailable in your workspace right now. Your existing draft is safe; you can continue writing manually.",
+        "AI_CANCELLED": "Generation was cancelled. Your existing draft was kept."
+      }
     }
   }
 }

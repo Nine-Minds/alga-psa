@@ -1838,6 +1838,29 @@
         "unknown": "Impossibile confermare la preparazione. Riprova la stessa richiesta o apri la destinazione per controllarne la bozza."
       },
       "sourceLink": "Condiviso da {{name}}"
+    },
+    "synthesis": {
+      "title": "Riassumi conversazione",
+      "stop": "Annulla generazione",
+      "generating": "Generazione…",
+      "retry": "Riprova generazione",
+      "replace": "Sostituisci bozza e genera",
+      "generate": "Genera bozza",
+      "wholeSource": "Usa tutta la conversazione pubblicata per preparare un riepilogo adatto ai destinatari. Il risultato resta privato finché non lo rivedi e lo invii o pubblichi.",
+      "existingHelp": "Aprila per continuare o sostituiscila esplicitamente con un nuovo riepilogo.",
+      "prompt": "Su cosa deve concentrarsi il riepilogo? (facoltativo)",
+      "sourceChanged": "La conversazione di origine è cambiata. Le modifiche alla bozza sono conservate; rigenera quando vuoi.",
+      "review": "L’IA ha preparato questa bozza privata. Rivedila prima di inviarla o pubblicarla.",
+      "sourceUnavailable": "Impossibile verificare l’origine di questa bozza. Aggiorna per verificare il tuo accesso.",
+      "regenerate": "Rigenera riepilogo…",
+      "action": "Riassumi con IA",
+      "errors": {
+        "AI_CONTEXT_TOO_LARGE": "La conversazione completa supera il contesto IA disponibile. Nessun riepilogo parziale è stato salvato. Puoi continuare a scrivere manualmente.",
+        "AI_SOURCE_CHANGED": "L’origine è cambiata durante la generazione. Ricarica la destinazione e rigenera quando vuoi.",
+        "AI_SOURCE_INVALID": "Questa conversazione non contiene messaggi pubblicati utilizzabili per un riepilogo.",
+        "AI_UNAVAILABLE": "L’IA non è al momento disponibile nel tuo spazio di lavoro. La bozza è conservata; puoi continuare a scrivere manualmente.",
+        "AI_CANCELLED": "La generazione è stata annullata. La bozza è stata conservata."
+      }
     }
   }
 }

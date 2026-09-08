@@ -8,9 +8,15 @@ import type { TicketConversationReference } from '@alga-psa/shared/lib/tickets/n
 import type { CoManagedConversationItem } from '@alga-psa/co-managed';
 
 export interface ConversationShareSelection {
+  kind?: 'share';
   conversation: TicketConversationReference;
   commentId: string;
   threadId: string;
+}
+export interface ConversationSynthesisSelection {
+  kind: 'synthesis';
+  conversation: TicketConversationReference;
+  destination?: TicketConversationReference;
 }
 export const ConversationSharingContext = createContext<{
   canShare: boolean;

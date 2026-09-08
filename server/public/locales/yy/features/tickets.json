@@ -1961,6 +1961,29 @@
         "unknown": "22222 222 2222222 22222222222. 22222 222 2222 2222222, 22 2222 222 22222222222 22 22222 222 22222."
       },
       "sourceLink": "222222 2222 {{name}}"
+    },
+    "synthesis": {
+      "title": "55555",
+      "stop": "55555",
+      "generating": "55555",
+      "retry": "55555",
+      "replace": "55555",
+      "generate": "55555",
+      "wholeSource": "55555",
+      "existingHelp": "55555",
+      "prompt": "55555",
+      "sourceChanged": "55555",
+      "review": "55555",
+      "sourceUnavailable": "55555",
+      "regenerate": "55555",
+      "action": "55555",
+      "errors": {
+        "AI_CONTEXT_TOO_LARGE": "55555",
+        "AI_SOURCE_CHANGED": "55555",
+        "AI_SOURCE_INVALID": "55555",
+        "AI_UNAVAILABLE": "55555",
+        "AI_CANCELLED": "55555"
+      }
     }
   }
 }

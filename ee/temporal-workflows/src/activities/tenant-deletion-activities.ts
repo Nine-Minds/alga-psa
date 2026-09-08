@@ -146,7 +146,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'ticket_bundle_mirrors',
 
   // Messages and comments
-  'ticket_conversation_notification_receipts', 'ticket_conversation_message_events', 'ticket_conversation_preferences', 'ticket_conversation_reply_resolutions', 'ticket_conversation_email_correspondents', 'ticket_conversation_inbound_receipts', 'ticket_conversation_inbound_messages', 'ticket_conversation_email_routes', 'ticket_conversation_email_operations', 'ticket_conversation_sender_grants', 'ticket_conversation_publications', 'ticket_conversation_shares', 'ticket_conversation_editor_drafts',
+  'ticket_conversation_notification_receipts', 'ticket_conversation_message_events', 'ticket_conversation_preferences', 'ticket_conversation_reply_resolutions', 'ticket_conversation_email_correspondents', 'ticket_conversation_inbound_receipts', 'ticket_conversation_inbound_messages', 'ticket_conversation_email_routes', 'ticket_conversation_email_operations', 'ticket_conversation_sender_grants', 'ticket_conversation_publications', 'ticket_conversation_shares', 'ticket_conversation_ai_runs', 'ticket_conversation_editor_drafts',
   // vectors and email_reply_tokens reference comments with NO ACTION, so they
   // must be deleted before comments to avoid FK violations.
   // comment_threads is the parent of comments.thread_id / project_task_comments.thread_id
