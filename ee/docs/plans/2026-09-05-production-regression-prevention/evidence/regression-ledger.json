@@ -729,6 +729,32 @@
         "Current-source browser and GitHub CI verification remain pending.",
         "No production incident identifier supplied."
       ]
+    },
+    {
+      "id": "invoice-preview-unfinished-transform",
+      "classification": "behavioral-defect-replay",
+      "incident": null,
+      "journey": "Author a transform and recover from incomplete edits in the invoice designer",
+      "missingBoundary": "Workspace export validation to structured preview diagnostics",
+      "ownerRole": "Billing maintainers",
+      "testFiles": [
+        "packages/billing/src/actions/invoiceTemplatePreview.integration.test.ts"
+      ],
+      "ci": {
+        "workflow": ".github/workflows/unit-tests.yml",
+        "job": "Server unit suite + coverage"
+      },
+      "evidence": "invoice-preview-unfinished-transform.json",
+      "reproduction": {
+        "command": "cd server && npx vitest run ../packages/billing/src/actions/invoiceTemplatePreview.integration.test.ts",
+        "defect": "Remove the workspace-export error boundary; the unfinished-transform case rejects instead of returning its diagnostic."
+      },
+      "status": "local-before-and-after-verified",
+      "limits": [
+        "Authentication is stubbed; workspace export, AST validation, evaluation and rendering are real.",
+        "Does not establish the cause or resolution of the separate save-navigation failure.",
+        "Current-source GitHub CI verification remains required."
+      ]
     }
   ]
 }
