@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createTenantKnex, runWithTenant } from '@alga-psa/db';
-import { getCurrentUser } from '@alga-psa/user-composition/actions';
+import { resolveMeetingArtifactActor } from '@/lib/api/auth/meetingArtifactActor';
 import { consumeCoManagedMeetingArtifact, CoManagedSharedWorkError } from '@alga-psa/co-managed';
-import { resolveNativeTimeBrowserActor } from '@alga-psa/scheduling/lib/nativeTimeReader';
 import { StorageService } from '@alga-psa/storage/StorageService';
 import { isEnterprise } from '@alga-psa/core/features';
 
@@ -14,13 +13,14 @@ function transcriptText(input: unknown): string {
 }
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ artifactId: string }> }) {
-  const user = await getCurrentUser().catch(() => null), tenant = user?.tenant;
-  if (!user || !tenant) return new NextResponse('Unauthorized', { status: 401 });
   const { artifactId } = await params;
   try {
+    const actor = await resolveMeetingArtifactActor(request);
+    if (!actor) return new NextResponse('Unauthorized', { status: 401 });
+    const tenant = actor.tenant;
     return await runWithTenant(tenant, async () => {
       const { knex } = await createTenantKnex(tenant);
-      const result = await consumeCoManagedMeetingArtifact(knex, tenant, artifactId, () => resolveNativeTimeBrowserActor(user, tenant), async content => {
+      const result = await consumeCoManagedMeetingArtifact(knex, tenant, artifactId, async () => actor, async content => {
         const headers = new Headers({ 'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff',
           'Content-Disposition': `attachment; filename="meeting-${artifactId}.${content.type === 'transcript' ? 'vtt' : 'mp4'}"`,
           'Content-Type': content.type === 'transcript' ? 'text/plain; charset=utf-8' : 'video/mp4' });

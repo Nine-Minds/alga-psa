@@ -15222,3 +15222,67 @@ it('customer meeting artifact document admission rejects masked transcript bytes
   expect(await domain.admitCoManagedMeetingDocuments(db, context.tenant, [documentId], actor)).toMatchObject({ handled: true, deniedDocumentIds: [documentId] });
   await expect(consume(transcriptId)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
 }));
+
+async function withMeetingArtifactApiFixture(work: (fixture: any) => Promise<void>) {
+  return withMeetingArtifactFixture(async (fixture: any) => {
+    const { customer, context, user, transcriptId } = fixture;
+    const { createHash } = await import('node:crypto'), plaintext = `artifact-test-${randomUUID()}`;
+    await customer.table('api_keys').where('api_key_id', context.apiKeyId).update({ api_key: createHash('sha256').update(plaintext).digest('hex') });
+    const auth = await import('@alga-psa/auth'), dbModule = await import('@alga-psa/db');
+    const browser = vi.spyOn(auth, 'getCurrentUser').mockResolvedValue(user), connection = vi.spyOn(dbModule, 'getConnection').mockResolvedValue(db);
+    const route = await import('../../app/api/online-meetings/artifacts/[artifactId]/route');
+    const request = (key: string | null = plaintext, extra: Record<string, string> = {}) => new Request('http://localhost/api/online-meetings/artifacts/test', { headers: { ...(key !== null ? { 'x-api-key': key } : {}), ...extra } }) as any;
+    const download = (key: string | null = plaintext, extra: Record<string, string> = {}) => route.GET(request(key, extra), { params: Promise.resolve({ artifactId: transcriptId }) });
+    try { await work({ ...fixture, plaintext, request, download, browser }); }
+    finally { browser.mockRestore(); connection.mockRestore(); }
+  });
+}
+
+it('customer meeting artifact API authenticates the actual key through both download URLs without trusting tenant headers or cookies', async () => withMeetingArtifactApiFixture(async ({ download, request, browser, transcriptId }: any) => {
+  const response = await download(undefined, { 'x-tenant-id': randomUUID(), 'x-user-id': randomUUID(), 'x-api-key-id': randomUUID() });
+  expect(response.status).toBe(200); expect(await response.text()).toContain('Private transcript content');
+  const legacy = await import('../../app/api/online-meetings/recordings/[artifactId]/route');
+  const alias = await legacy.GET(request(), { params: Promise.resolve({ artifactId: transcriptId }) });
+  expect(alias.status).toBe(200); expect(alias.headers.get('cache-control')).toBe('private, no-store');
+  expect(browser).not.toHaveBeenCalled();
+}));
+
+it('customer meeting artifact API rejects invalid empty expired and exhausted keys without browser fallback', async () => withMeetingArtifactApiFixture(async ({ download, browser, customer, context }: any) => {
+  for (const key of ['', 'invalid-artifact-key']) expect((await download(key)).status).toBe(401);
+  await customer.table('api_keys').where('api_key_id', context.apiKeyId).update({ expires_at: new Date(0) });
+  expect((await download()).status).toBe(401);
+  await customer.table('api_keys').where('api_key_id', context.apiKeyId).update({ expires_at: null, usage_limit: 1, usage_count: 1 });
+  expect((await download()).status).toBe(401);
+  expect(await customer.table('api_keys').where('api_key_id', context.apiKeyId).first()).toMatchObject({ active: false });
+  expect(browser).not.toHaveBeenCalled();
+  expect((await download(null)).status).toBe(200); expect(browser).toHaveBeenCalledOnce();
+}));
+
+it('customer meeting artifact API applies key-specific document narrowing even when the same browser user can read the transcript', async () => withMeetingArtifactApiFixture(async ({ download, user, context }: any) => {
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: context.tenant, name: 'Artifact HTTP key scope', actorUserId: user.user_id });
+  await bundles.upsertBundleRule(db, { tenant: context.tenant, bundleId, revisionId, resourceType: 'document', action: 'read', templateKey: 'own', config: { redactedFields: ['block_data'] } });
+  await bundles.publishBundleRevision(db, { tenant: context.tenant, bundleId, revisionId, actorUserId: user.user_id });
+  await bundles.createBundleAssignment(db, { tenant: context.tenant, bundleId, targetType: 'api_key', targetId: context.apiKeyId });
+  const denied = await download(); expect(denied.status).toBe(403); expect(await denied.text()).not.toContain('Private transcript');
+  expect((await download(null)).status).toBe(200);
+}));
+
+it('customer meeting artifact API rechecks revocation after initial key validation before delivering content', async () => withMeetingArtifactApiFixture(async ({ download, context, customer }: any) => {
+  const { ApiKeyServiceForApi } = await import('../../lib/services/apiKeyServiceForApi');
+  const validate = ApiKeyServiceForApi.validateApiKeyAnyTenant.bind(ApiKeyServiceForApi);
+  const lookup = vi.spyOn(ApiKeyServiceForApi, 'validateApiKeyAnyTenant').mockImplementation(async (plaintext: string) => {
+    const key = await validate(plaintext);
+    await customer.table('api_keys').where('api_key_id', context.apiKeyId).update({ active: false });
+    return key;
+  });
+  try { const response = await download(); expect(response.status).toBe(403); expect(await response.text()).not.toContain('Private transcript'); }
+  finally { lookup.mockRestore(); }
+}));
+
+it('customer meeting artifact API cannot use a sponsoring MSP key to select customer content with a tenant header', async () => withMeetingArtifactApiFixture(async ({ download, principal, context }: any) => {
+  const { createHash } = await import('node:crypto'), plaintext = `sponsor-artifact-${randomUUID()}`;
+  await tenantDb(db, principal.tenant).table('api_keys').insert({ tenant: principal.tenant, api_key_id: randomUUID(), api_key: createHash('sha256').update(plaintext).digest('hex'), user_id: principal.userId, active: true });
+  const response = await download(plaintext, { 'x-tenant-id': context.tenant });
+  expect([403, 404]).toContain(response.status); expect(await response.text()).not.toContain('Private transcript');
+}));

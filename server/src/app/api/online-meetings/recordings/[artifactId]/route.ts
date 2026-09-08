@@ -83,6 +83,9 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ artifactId: string }> },
 ) {
+  // Key-authenticated co-managed callers use the same retained delivery path
+  // as artifact links, including when a browser cookie is also present.
+  if (request.headers.has('x-api-key')) return downloadCoManagedArtifact(request, { params });
   if (!isEnterprise) {
     return new NextResponse('Teams recording proxy is available in Enterprise Edition only', { status: 404 });
   }
