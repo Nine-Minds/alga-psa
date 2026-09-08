@@ -161,7 +161,7 @@ describe('runMaintenanceJob', () => {
     const result = await runMaintenanceJob(jobName);
     expect(selectorTablesSeen).toEqual(jobName === 'co-managed-notification-recovery'
       ? [table, 'co_management_event_outbox', 'co_management_event_consumers', 'co_management_email_deliveries', 'co_management_customer_email_deliveries', 'co_management_requester_email_deliveries', 'comments']
-      : jobName === 'co-managed-sla-observation' ? [table, 'sla_organization_notification_events'] : [table]);
+      : jobName === 'co-managed-sla-observation' ? [table, 'sla_organization_notification_events', 'sla_organization_notification_recipients'] : [table]);
     expect(tenantHandlerMock).toHaveBeenCalledTimes(1);
     expect(tenantHandlerMock).toHaveBeenCalledWith(jobName, { tenantId: 't2' });
     expect(result.total).toBe(1);
@@ -240,4 +240,12 @@ it('discovers SLA notification recovery even when every obligation has completed
   const result = await runMaintenanceJob('co-managed-sla-observation');
   expect(result.total).toBe(1);
   expect(tenantHandlerMock).toHaveBeenCalledWith('co-managed-sla-observation', { tenantId: 'msp' });
+});
+
+it('discovers pending SLA email after clock and notification fanout completion', async () => {
+  listTenantsMock.mockReturnValue([{ tenant: 'msp-email' }]);
+  selectTenantsMock.mockImplementation((table: string) => table === 'sla_organization_notification_recipients' ? [{ tenant: 'msp-email' }] : []);
+  tenantHandlerMock.mockClear(); selectorTablesSeen.length = 0;
+  expect((await runMaintenanceJob('co-managed-sla-observation')).total).toBe(1);
+  expect(tenantHandlerMock).toHaveBeenCalledWith('co-managed-sla-observation', { tenantId: 'msp-email' });
 });

@@ -1,7 +1,7 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 
-export async function coManagedInternalEmailRecipient(context: { trx: Knex.Transaction; actor: { tenant: string; userId: string } }, subtypeName: 'Ticket Comment Added' | 'Task Comment Added' = 'Ticket Comment Added') {
+export async function coManagedInternalEmailRecipient(context: { trx: Knex.Transaction; actor: { tenant: string; userId: string } }, subtypeName: 'Ticket Comment Added' | 'Task Comment Added' | 'SLA Warning' | 'SLA Breach' = 'Ticket Comment Added') {
   const home = tenantDb(context.trx, context.actor.tenant);
   const user = await home.table('users').where({ user_id: context.actor.userId, user_type: 'internal', is_inactive: false }).forShare().first('email');
   if (!user || typeof user.email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(user.email.trim())) return null;
@@ -14,7 +14,7 @@ export async function coManagedInternalEmailRecipient(context: { trx: Knex.Trans
 
 /** Requesters share tenant notification gates, without borrowing an internal
  * user's preferences or requiring a portal account. */
-export async function coManagedCommentEmailSettings(trx: Knex.Transaction, tenant: string, subtypeName: 'Ticket Comment Added' | 'Task Comment Added' = 'Ticket Comment Added') {
+export async function coManagedCommentEmailSettings(trx: Knex.Transaction, tenant: string, subtypeName: 'Ticket Comment Added' | 'Task Comment Added' | 'SLA Warning' | 'SLA Breach' = 'Ticket Comment Added') {
   const home = tenantDb(trx, tenant);
   const settings = await home.table('notification_settings').forShare().first('is_enabled');
   if (settings?.is_enabled === false) return null;

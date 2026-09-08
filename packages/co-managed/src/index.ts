@@ -106,3 +106,5 @@ export type { CoManagedSlaTargetDisplay, CoManagedSlaDisplay, CoManagedTicketSla
 
 export { fanoutCoManagedSlaNotification, withCoManagedSlaNotification, type CoManagedSlaNotification, type CoManagedSlaNotificationChannel } from './slaNotification';
 export { withCoManagedStoredSlaNotification, type CoManagedStoredSlaNotification } from './storedSlaNotification';
+
+export { processCoManagedSlaEmailDeliveries, type CoManagedSlaEmailDelivery } from './slaEmailDeliveries';

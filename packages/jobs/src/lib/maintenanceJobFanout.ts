@@ -126,7 +126,9 @@ const MAINTENANCE_JOBS: Record<string, MaintenanceJobDef> = {
         .whereRaw("clock #>> '{resolution,completedAt}' IS NULL").distinct('tenant');
       const pending = await db.unscoped<{ tenant: string }>('sla_organization_notification_events', 'SLA fanout also recovers crossings from already completed obligations')
         .where('status', 'pending').distinct('tenant');
-      return [...new Map([...active, ...pending].map(row => [row.tenant, row])).values()];
+      const email = await db.unscoped<{ tenant: string }>('sla_organization_notification_recipients', 'SLA email recovery discovers pending sends after fanout completion')
+        .where({ channel: 'email', status: 'pending' }).where('next_attempt_at', '<=', new Date()).distinct('tenant');
+      return [...new Map([...active, ...pending, ...email].map(row => [row.tenant, row])).values()];
     } },
   'expired-credits': { scope: 'tenant', run: (tenantId) => expiredCreditsHandler({ tenantId }) },
   'expiring-credits-notification': { scope: 'tenant', run: (tenantId) => expiringCreditsNotificationHandler({ tenantId }) },

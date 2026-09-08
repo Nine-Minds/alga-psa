@@ -90,7 +90,7 @@ beforeAll(async () => {
     '20260906080000_create_co_management_relationship_events.cjs',
     '20260906100000_add_external_file_metadata.cjs',
     '20260906110000_add_kb_import_batch_identity.cjs',
-    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs', '20260908011054_add_co_managed_meeting_sync_intents.cjs', '20260908021208_create_co_managed_meeting_creation_operations.cjs', '20260908043851_allow_co_managed_assignment_before_escalation.cjs', '20260908050419_create_organization_sla_obligations.cjs', '20260908051552_create_co_managed_sla_priority_mappings.cjs', '20260908062358_create_organization_sla_notification_events.cjs', '20260908063356_create_organization_sla_notification_recipients.cjs']) {
+    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs', '20260908011054_add_co_managed_meeting_sync_intents.cjs', '20260908021208_create_co_managed_meeting_creation_operations.cjs', '20260908043851_allow_co_managed_assignment_before_escalation.cjs', '20260908050419_create_organization_sla_obligations.cjs', '20260908051552_create_co_managed_sla_priority_mappings.cjs', '20260908062358_create_organization_sla_notification_events.cjs', '20260908063356_create_organization_sla_notification_recipients.cjs', '20260908065525_add_organization_sla_email_retry_state.cjs']) {
     await require('../../../migrations/' + file).up(db);
   }
   for (const table of ['standard_statuses', 'standard_priorities', 'countries', 'notification_categories',
@@ -16514,4 +16514,109 @@ it('MSP SLA notices suppress obsolete warning delivery once the target is breach
   expect(await f.sponsor.table('sla_organization_notification_events').where('notification_type', 'warning')).toHaveLength(1);
   await f.persist(db, f.identity.tenant);
   expect((await f.sponsor.table('internal_notifications')).map(row => row.template_name)).toEqual(['sla-breach']);
+});
+
+async function mspSlaEmailFixture() {
+  const f = await mspSlaNoticeFixture();
+  await f.sponsor.table('users').where('user_id', f.principal.userId).update({ email: 'original@example.test' });
+  await f.persist(db, f.identity.tenant);
+  const { processCoManagedSlaEmailDeliveries: processEmail } = await import('../../../../packages/co-managed/src/slaEmailDeliveries');
+  const readEmail = () => f.sponsor.table('sla_organization_notification_recipients').where('channel', 'email').first();
+  return { ...f, processEmail, readEmail };
+}
+
+it('MSP SLA email retries with a stable Message-ID and fresh recipient/content, then delivers once under concurrent workers', async () => {
+  const f = await mspSlaEmailFixture();
+  const attempts: any[] = [];
+  await f.processEmail(db, f.identity.tenant, async delivery => { attempts.push(delivery); return { status: 'failed', retryable: true, errorCode: 'rate_limited', retryAfterMs: 120000 }; });
+  const pending = await f.readEmail();
+  expect(pending).toMatchObject({ status: 'pending', attempt_count: 1, completed_at: null, error_code: 'rate_limited' });
+  expect(pending.next_attempt_at.getTime()).toBeGreaterThan(Date.now() + 110000);
+  expect(attempts[0].email).toBe('original@example.test');
+  await f.sponsor.table('users').where('user_id', f.principal.userId).update({ email: 'current@example.test' });
+  await f.customer.table('tickets').where('ticket_id', f.resource.id).update({ title: 'Current SLA email title' });
+  await f.sponsor.table('sla_organization_notification_recipients').where('channel', 'email').update({ next_attempt_at: new Date(Date.now() - 1000) });
+  const send = vi.fn(async delivery => { attempts.push(delivery); return { status: 'delivered' as const }; });
+  await Promise.all([f.processEmail(db, f.identity.tenant, send), f.processEmail(db, f.identity.tenant, send)]);
+  expect(send).toHaveBeenCalledTimes(1);
+  expect(attempts[1]).toMatchObject({ email: 'current@example.test', messageId: attempts[0].messageId, message: { ticketTitle: 'Current SLA email title' } });
+  expect((await f.readEmail())).toMatchObject({ status: 'delivered', attempt_count: 2, next_attempt_at: null, completed_at: expect.any(Date) });
+  expect((await f.sponsor.table('sla_organization_notification_recipients').where('channel', 'in_app').first()).status).toBe('created');
+});
+
+it.each(['revoked', 'unassigned', 'preference', 'tenant-settings', 'inactive', 'field-redaction'] as const)
+('MSP SLA email skips a queued recipient after %s changes', async condition => {
+  const f = await mspSlaEmailFixture();
+  if (condition === 'revoked') {
+    const { revokeCoManagedTicketGrant } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+    await revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource, { operationId: randomUUID(), expectedRevision: 1, note: 'Remove access' });
+  }
+  if (condition === 'unassigned') await f.sponsor.table('co_managed_ticket_references').update({ assigned_to: null });
+  if (condition === 'inactive') await f.sponsor.table('users').where('user_id', f.principal.userId).update({ is_inactive: true });
+  if (condition === 'preference') {
+    const subtype = await db('notification_subtypes').where('name', 'SLA Breach').first();
+    await f.sponsor.table('user_notification_preferences').insert({ tenant: f.identity.tenant, user_id: f.principal.userId, subtype_id: subtype.id, is_enabled: false });
+  }
+  if (condition === 'tenant-settings') {
+    if (await f.sponsor.table('notification_settings').first()) await f.sponsor.table('notification_settings').update({ is_enabled: false });
+    else await f.sponsor.table('notification_settings').insert({ tenant: f.identity.tenant, is_enabled: false });
+  }
+  if (condition === 'field-redaction') {
+    const bundles = await import('@alga-psa/authorization');
+    const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: f.principal.tenant, name: 'Hidden SLA email', actorUserId: f.principal.userId });
+    await bundles.upsertBundleRule(db, { tenant: f.principal.tenant, bundleId, revisionId, resourceType: 'ticket', action: 'read',
+      templateKey: 'selected_clients', config: { selectedClientIds: [f.operation.request.clientId], redactedFields: ['sla'] } });
+    await bundles.publishBundleRevision(db, { tenant: f.principal.tenant, bundleId, revisionId, actorUserId: f.principal.userId });
+    await bundles.createBundleAssignment(db, { tenant: f.principal.tenant, bundleId, targetType: 'user', targetId: f.principal.userId });
+  }
+  const send = vi.fn(async () => ({ status: 'delivered' as const }));
+  await f.processEmail(db, f.identity.tenant, send);
+  expect(send).not.toHaveBeenCalled();
+  expect(await f.readEmail()).toMatchObject({ status: 'skipped', attempt_count: 1, next_attempt_at: null });
+});
+
+it.each(['permanent', 'exhausted'] as const)('MSP SLA email records %s provider failure without repeated sending', async reason => {
+  const f = await mspSlaEmailFixture();
+  if (reason === 'exhausted') await f.sponsor.table('sla_organization_notification_recipients').where('channel', 'email').update({ attempt_count: 9 });
+  const send = vi.fn(async () => ({ status: 'failed' as const, retryable: reason !== 'permanent', errorCode: 'provider_failed' }));
+  await f.processEmail(db, f.identity.tenant, send);
+  await f.processEmail(db, f.identity.tenant, send);
+  expect(send).toHaveBeenCalledTimes(1);
+  expect(await f.readEmail()).toMatchObject({ status: 'failed', next_attempt_at: null, completed_at: expect.any(Date), error_code: 'provider_failed' });
+});
+
+it('MSP SLA email retry migration replays safely and refuses to discard retained delivery state', async () => {
+  const f = await mspSlaEmailFixture();
+  const migration = require('../../../migrations/20260908065525_add_organization_sla_email_retry_state.cjs');
+  await migration.up(db);
+  await expect(migration.down(db)).rejects.toThrow('retained SLA email retry state');
+  await expect(f.sponsor.table('sla_organization_notification_recipients').where('channel', 'email').update({ next_attempt_at: null })).rejects.toMatchObject({ code: '23514' });
+  expect((await f.readEmail()).status).toBe('pending');
+});
+
+it('MSP SLA email warning uses current remaining time without rewriting its captured crossing', async () => {
+  const f = await dueMspSlaFixture();
+  await addMspSlaThresholds(f, [50]);
+  await f.sponsor.table('sla_notification_thresholds').update({ channels: ['email'] });
+  await f.sponsor.table('co_managed_ticket_references').update({ assigned_to: f.principal.userId });
+  const { startOrganizationSlaClock } = await import('../../../../shared/lib/sla/organizationSlaClock');
+  const { applyOrganizationSlaEvent } = await import('../../../../shared/lib/sla/organizationSlaStore');
+  const old = await f.read(), now = Date.now();
+  const clock = startOrganizationSlaClock(f.identity, old.clock.schedule, { responseMinutes: 60, resolutionMinutes: 480 }, new Date(now - 45 * 60000).toISOString());
+  await f.sponsor.table('sla_organization_obligations').where('obligation_id', f.identity.obligationId).update({ clock: JSON.stringify(clock) });
+  await db.transaction(trx => applyOrganizationSlaEvent(trx, f.identity, randomUUID(), { kind: 'observed', occurredAt: new Date(now - 5 * 60000).toISOString() }));
+  const event = await f.sponsor.table('sla_organization_notification_events').first();
+  expect(Number(event.elapsed_milliseconds)).toBe(40 * 60000);
+  const { persistCoManagedSlaNotifications } = await import('@alga-psa/notifications/lib/coManagedSlaNotifications');
+  await persistCoManagedSlaNotifications(db, f.identity.tenant);
+  const { processCoManagedSlaEmailDeliveries } = await import('../../../../packages/co-managed/src/slaEmailDeliveries');
+  const send = vi.fn(async delivery => {
+    expect(delivery.message.notificationType).toBe('warning');
+    expect(delivery.message.elapsedMilliseconds).toBeGreaterThanOrEqual(45 * 60000);
+    expect(delivery.message.dueAt).toBe(clock.response.dueAt);
+    return { status: 'delivered' as const };
+  });
+  await processCoManagedSlaEmailDeliveries(db, f.identity.tenant, send);
+  expect(send).toHaveBeenCalledTimes(1);
+  expect((await f.sponsor.table('sla_organization_notification_events').first()).elapsed_milliseconds).toBe(event.elapsed_milliseconds);
 });

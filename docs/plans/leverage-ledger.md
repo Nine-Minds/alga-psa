@@ -623,3 +623,11 @@ Organization SLA notification checkpoint (2026-09-08): the shared organization e
 - **Where:** `coManagedInbox.ts`, `notificationDelivery.ts`, and the new organization SLA notice readers.
 - **Gate:** Two high-risk authorization/presentation callers with a stable source-qualified contract; ACT / bounded-now within planned notification integration.
 - **Status:** Both callers now use `withCoManagedStoredPresentation`, which dispatches to comment or SLA verification under the owning transaction. Actual comment/inbox regressions and SLA recipient/redaction/queue cases passed. Transport-specific effects remain in the existing delivery queue/runtime; email notices are retained pending their send adapter.
+
+Organization SLA email checkpoint (2026-09-08): recipient preference gates reuse `coManagedInternalEmailRecipient` with the existing SLA subtype catalog. The dedicated SLA receipt queue reuses the current source verifier and the existing tenant email service; channel completion is kept separate from fanout and in-app delivery. Retry-state repetition is marked alongside the existing comment/email queues; source identities and authority remain distinct, so no transaction/transport abstraction was extracted in this pass. Eleven focused PostgreSQL cases and 30 job/transport unit cases passed with mocked sends.
+
+## email-template-context-escaping — friction
+- **What:** The generic database template processor substitutes raw strings into HTML, text, and subjects using one operation; authorized ticket text still needs output-context escaping.
+- **Where:** `packages/email/src/templateProcessors.ts` and `coManagedSlaEmailTransport.ts`.
+- **Gate:** High correctness cost but wide existing-caller impact. ACT / staged migration when revising the generic renderer; do not silently change every existing email template in an SLA delivery task.
+- **Status:** SLA transport loads existing template definitions without raw data substitution, then safely fills its flat admitted data. Existing processor semantics remain compatible; general engine revision remains staged work.

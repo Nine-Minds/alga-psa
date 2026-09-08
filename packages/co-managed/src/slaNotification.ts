@@ -90,9 +90,13 @@ export async function withCoManagedSlaNotification<T>(db: Knex, input: CoManaged
   const read = async (context: CoManagedNotificationRecipientContext): Promise<T | null> => {
     const hidden = (names: string[]) => isCoManagedReadFieldHidden(context.redactedFields, names.flatMap(name => [name, `tickets.${name}`]));
     if (hidden(['sla', 'msp_sla', 'sla_organization_obligations', 'sla_organization_notification_events', 'work', 'co_management_ticket_work',
-      'clock', 'status', 'status_id', 'statuses', 'priority', 'priority_id', 'first_escalated_at', 'responsibility'])) return null;
+      'clock', 'status', 'status_id', 'statuses', 'priority', 'priority_id', 'first_escalated_at', 'responsibility',
+      'dueAt', 'due_at', 'occurredAt', 'occurred_at', 'thresholdPercent', 'threshold_percent', 'elapsedMilliseconds', 'elapsed_milliseconds',
+      'targetMinutes', 'target_minutes', 'slaType', 'sla_type'])) return null;
     const current = await source(context.trx, actor.tenant, eventId, true);
     if (!current || ['source_tenant', 'ticket_id', 'work_id', 'obligation_id'].some(key => current[key] !== found[key])) return null;
+    let elapsedMilliseconds = Number(current.elapsed_milliseconds), targetMinutes = Number(current.target_minutes);
+    let dueAt = current.due_at ? new Date(current.due_at).toISOString() : null;
     if (actor.kind === 'notification_recipient') {
       if (!(await recipients(context.trx, actor.tenant, current, resource, channel, true)).includes(actor.userId)) return null;
       // An old warning is no longer useful after the target finishes. A breach
@@ -103,6 +107,9 @@ export async function withCoManagedSlaNotification<T>(db: Knex, input: CoManaged
           ? observeOrganizationSlaClock(current.clock, at.toISOString()) : current.clock;
         if (clock[current.sla_type as 'response' | 'resolution'].completedAt || clock[current.sla_type as 'response' | 'resolution'].breached ||
             clock.resolution.completedAt || clock.pauseReasons.length) return null;
+        elapsedMilliseconds = clock.elapsedMilliseconds;
+        targetMinutes = clock[current.sla_type as 'response' | 'resolution'].targetMinutes ?? targetMinutes;
+        dueAt = clock[current.sla_type as 'response' | 'resolution'].dueAt;
       }
     }
     const ticket = await tenantDb(context.trx, resource.tenant).table('tickets').where('ticket_id', resource.id).first('ticket_number', 'title');
@@ -110,8 +117,8 @@ export async function withCoManagedSlaNotification<T>(db: Knex, input: CoManaged
     if (actor.kind === 'session') await assertCoManagedSessionUnexpired(context.trx, actor);
     return consume(context, { resource, eventId, obligationId: current.obligation_id, slaType: current.sla_type,
       notificationType: current.notification_type, thresholdPercent: current.threshold_percent,
-      dueAt: current.due_at ? new Date(current.due_at).toISOString() : null, occurredAt: new Date(current.occurred_at).toISOString(),
-      elapsedMilliseconds: Number(current.elapsed_milliseconds), targetMinutes: Number(current.target_minutes),
+      dueAt, occurredAt: new Date(current.occurred_at).toISOString(),
+      elapsedMilliseconds, targetMinutes,
       ...(!hidden(['ticket_number']) ? { ticketNumber: ticket.ticket_number } : {}), ...(!hidden(['title']) ? { ticketTitle: ticket.title } : {}) });
   };
   try {
