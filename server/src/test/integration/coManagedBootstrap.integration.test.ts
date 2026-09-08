@@ -27,7 +27,7 @@ const delivery = vi.hoisted(() => ({ send: vi.fn() }));
 const statusEmail = vi.hoisted(() => ({ create: vi.fn(), send: vi.fn() }));
 const intake = vi.hoisted(() => ({ read: vi.fn(), parse: vi.fn(), process: vi.fn(), stage: vi.fn() }));
 const durableTransport = vi.hoisted(() => ({ enqueue: vi.fn() }));
-const artifactStorage = vi.hoisted(() => ({ upload: vi.fn(), delete: vi.fn(), download: vi.fn() }));
+const artifactStorage = vi.hoisted(() => ({ upload: vi.fn(), delete: vi.fn(), download: vi.fn(), getReadStream: vi.fn() }));
 vi.mock('@alga-psa/storage/config/storage', () => ({
   validateFileUpload: async () => {},
   getStorageConfig: async () => ({ defaultProvider: 'local' }),
@@ -19733,4 +19733,75 @@ it('portable work export preserves project structure and task audiences and reje
   const permission = await f.customer.table('permissions').where({ resource: 'project', action: 'read', msp: true }).first();
   await f.customer.table('role_permissions').where('permission_id', permission.permission_id).delete();
   await expect(exportCoManagedPortableWork(db, f.customerPrincipal, randomUUID())).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+}));
+
+async function withPortableDocumentFixture(work: (fixture: any) => Promise<void>) {
+  const f = await ticketHandoffFixture();
+  const fs = await import('node:fs/promises'), os = await import('node:os'), path = await import('node:path');
+  const { Readable } = await import('node:stream');
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'co-managed-document-test-'));
+  const previousTmp = process.env.TMPDIR; process.env.TMPDIR = root;
+  const { exportCoManagedPortableDocuments } = await import('../../../../packages/co-managed/src/portableDocumentExport');
+  const documentId = randomUUID(), legacyId = randomUUID(), fileId = randomUUID(), versionId = randomUUID();
+  const bytes = Buffer.from('Customer file bytes\u0000with binary data'), legacyBytes = Buffer.from('Legacy customer document');
+  const storagePath = `/${f.actor.tenant}/portable-file.bin`, legacyPath = `/${f.actor.tenant}/portable-legacy.bin`;
+  await f.customer.table('external_files').insert({ tenant: f.actor.tenant, file_id: fileId, file_name: 'instructions.bin', original_name: 'instructions.bin',
+    mime_type: 'application/octet-stream', file_size: bytes.length, storage_path: storagePath, uploaded_by_id: f.actor.userId });
+  await f.customer.table('documents').insert([{ tenant: f.actor.tenant, document_id: documentId, document_name: 'Customer portable instructions',
+    created_by: f.actor.userId, user_id: f.actor.userId, file_id: fileId, file_size: bytes.length, mime_type: 'application/octet-stream' },
+  { tenant: f.actor.tenant, document_id: legacyId, document_name: 'Legacy portable instructions', created_by: f.actor.userId, user_id: f.actor.userId,
+    storage_path: legacyPath, file_size: legacyBytes.length, mime_type: 'application/octet-stream' }]);
+  await f.customer.table('document_associations').insert({ tenant: f.actor.tenant, association_id: randomUUID(), document_id: documentId, entity_id: f.resource.id, entity_type: 'ticket' });
+  await f.customer.table('document_versions').insert({ tenant: f.actor.tenant, document_id: documentId, version_id: versionId, version_number: 1, is_active: true, created_by: f.actor.userId });
+  await f.customer.table('document_block_content').insert({ tenant: f.actor.tenant, document_id: documentId, version_id: versionId, content_id: randomUUID(),
+    block_data: JSON.stringify([{ type: 'paragraph', content: [{ type: 'text', text: 'Customer article rich text', styles: {} }] }]) });
+  await f.customer.table('kb_articles').insert({ tenant: f.actor.tenant, article_id: randomUUID(), document_id: documentId, slug: `portable-${documentId}`,
+    article_type: 'how_to', audience: 'internal', status: 'draft', created_by: f.actor.userId, updated_by: f.actor.userId });
+  await f.sponsor.table('documents').insert({ tenant: f.principal.tenant, document_id: randomUUID(), document_name: 'MSP-private document never export', created_by: f.principal.userId, user_id: f.principal.userId });
+  const objects = new Map([[storagePath, bytes], [legacyPath, legacyBytes]]);
+  const stream = async (source: string) => { const value = objects.get(source); if (!value) throw new Error('Unexpected source object'); return Readable.from([value]); };
+  artifactStorage.getReadStream.mockReset().mockImplementation(stream);
+  const exportDocuments = () => exportCoManagedPortableDocuments(db, f.customerPrincipal, randomUUID());
+  try { await work({ ...f, fs, root, documentId, legacyId, fileId, versionId, bytes, legacyBytes, storagePath, legacyPath, objects, stream, exportDocuments }); }
+  finally { artifactStorage.getReadStream.mockReset(); if (previousTmp === undefined) delete process.env.TMPDIR; else process.env.TMPDIR = previousTmp; await fs.rm(root, { recursive: true, force: true }); }
+}
+
+it('portable document export stages real native and legacy bytes with document versions and KB content under a private lease', async () => withPortableDocumentFixture(async f => {
+  const lease = await f.exportDocuments();
+  try {
+    expect(lease.component.records.documents).toHaveLength(2);
+    expect(lease.component.records.document_versions[0]).toMatchObject({ version_id: f.versionId, document_id: f.documentId });
+    expect(JSON.stringify(lease.component.records.document_block_content)).toContain('Customer article rich text');
+    expect(lease.component.records.kb_articles[0]).toMatchObject({ document_id: f.documentId, audience: 'internal' });
+    expect(lease.component.fileBindings).toEqual(expect.arrayContaining([{ documentId: f.documentId, field: 'file_id', blobId: `file:${f.fileId}` },
+      { documentId: f.legacyId, field: 'file_id', blobId: `document:${f.legacyId}` }]));
+    for (const [id, expected] of [[`file:${f.fileId}`, f.bytes], [`document:${f.legacyId}`, f.legacyBytes]]) {
+      const file = lease.files.find((row: any) => row.id === id);
+      expect(await f.fs.readFile(file.path)).toEqual(expected);
+      expect((await f.fs.stat(file.path)).mode & 0o777).toBe(0o600);
+      expect(file.sha256).toBe((await import('node:crypto')).createHash('sha256').update(expected).digest('hex'));
+    }
+    const component = JSON.stringify(lease.component);
+    for (const excluded of [f.root, f.storagePath, f.legacyPath, 'MSP-private document never export', 'storage_path', 'storage_bucket_id']) expect(component).not.toContain(excluded);
+  } finally { await lease.dispose(); }
+  expect(await f.fs.readdir(f.root)).toEqual([]);
+}));
+
+it('portable document export removes staged bytes on short streams, final session revocation and foreign storage paths', async () => withPortableDocumentFixture(async f => {
+  const { Readable } = await import('node:stream');
+  artifactStorage.getReadStream.mockImplementation(async () => Readable.from([Buffer.from('short')]));
+  await expect(f.exportDocuments()).rejects.toThrow('could not be staged');
+  expect(await f.fs.readdir(f.root)).toEqual([]);
+  artifactStorage.getReadStream.mockImplementation(async (source: string) => {
+    await f.customer.table('sessions').where('session_id', f.customerPrincipal.sessionId).update({ revoked_at: db.fn.now() });
+    return f.stream(source);
+  });
+  await expect(f.exportDocuments()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(await f.fs.readdir(f.root)).toEqual([]);
+  await f.customer.table('sessions').where('session_id', f.customerPrincipal.sessionId).update({ revoked_at: null });
+  artifactStorage.getReadStream.mockClear().mockImplementation(f.stream);
+  await f.customer.table('external_files').where('file_id', f.fileId).update({ storage_path: `/${f.principal.tenant}/private.bin` });
+  await expect(f.exportDocuments()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(artifactStorage.getReadStream).not.toHaveBeenCalled();
+  expect(await f.fs.readdir(f.root)).toEqual([]);
 }));

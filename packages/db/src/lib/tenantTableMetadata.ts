@@ -16,6 +16,8 @@ export interface ParsedTableExpression {
 }
 
 export const tenantTableMetadata: Record<string, TenantTableScope> = {
+  document_templates: { scope: 'tenant' },
+  document_template_assignments: { scope: 'tenant' },
   co_management_relationships: { scope: 'tenant' },
   co_management_board_scopes: { scope: 'tenant' },
   co_management_project_scopes: { scope: 'tenant' },

@@ -30,12 +30,22 @@ MSP private stores are never queried. Comment/email transport metadata, provider
 
 The work component declares source relationships and rejects missing included parents or invalid conversation roots. Additional cross-component user/service/SLA references, legacy histories with physically missing roots, project mutation audit coverage, attachments/blobs and complete destination reconstruction still need to be handled by the full package flow. This component alone is not a restorable workspace.
 
+## Document and KB component
+
+`portableDocumentCatalog.ts` and `portableDocumentExport.ts` select 15 document/KB projections, including versions, block/text content, associations, folders, templates and article review records. The collector reuses the normal document association resolver from `shared/lib/documents/authorizationRecords.ts`, with optional retained association/parent locks. It requires current document and system-configuration permissions, applies document narrowing/redactions, and retains the existing co-managed meeting-artifact admission.
+
+Referenced native files and legacy documents with a storage path are streamed into a private temporary directory. File byte counts must match the selected source metadata. Each staged file has a SHA-256 digest and mode `0600`; the directory has mode `0700`. Storage paths must match the customer's native or generated-PDF layout and cannot contain traversal segments. File bindings connect the portable blob identity to the document's main, thumbnail or preview slot.
+
+Provider reads happen outside database transactions. Before returning the staging lease, the collector repeats source selection and authority checks and rejects a changed snapshot. Failures remove staged files. The trusted archive assembler must call the lease's `dispose()` in `finally`; temporary filesystem paths must never be returned to a browser. The portable component contains blob identities, sizes, names, MIME types, checksums and document bindings, without provider buckets or storage paths.
+
+This stages bytes for the archive; it does not yet publish a downloadable backup or insert files into a destination. Conversation-specific attachment stores, other inline/media references, archive-wide authenticated integrity and coordinated capture remain part of the full package work.
+
 ## Focused validation
 
 From `server/`, run:
 
 ```sh
-SECRETS_PATH=../secrets npm exec -- vitest run src/test/integration/coManagedBootstrap.integration.test.ts -t 'portable workspace core|portable vault export|portable work export'
+SECRETS_PATH=../secrets npm exec -- vitest run src/test/integration/coManagedBootstrap.integration.test.ts -t 'portable workspace core|portable vault export|portable work export|portable document export'
 ```
 
 The selected tests use a disposable schema-only copy of the development database. They cover actual record projections, secret/trust exclusion, saved attribution, reference integrity and customer permission/session denial. The vault cases exercise its audit and post-encryption authority checks. They do not prove a complete isolated workspace restore.
