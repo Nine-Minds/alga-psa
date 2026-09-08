@@ -2,6 +2,7 @@ import { afterAll, beforeAll, beforeEach, expect, it } from 'vitest';
 import { EmulatorHost } from '@alga-psa/emulator-host';
 import msgraph from '../src/index';
 import http from 'node:http';
+import { calendarCreateResponse, graphErrorResponse } from './contracts/calendar';
 
 let host: EmulatorHost;
 let base: string;
@@ -329,4 +330,23 @@ it('distinguishes unsupported Graph operations from missing items on supported r
   const missing = await graph('/me/calendar/events/missing-event');
   expect(missing.status).toBe(404);
   expect((await missing.json()).error.code).not.toBe('EmulatorUnsupportedOperation');
+});
+
+it('matches the documented calendar response contract and detects malformed provider responses', async () => {
+  const response = await graph('/me/calendar/events', 'POST', event);
+  const observed = { status: response.status, body: await response.json() };
+  expect(calendarCreateResponse.safeParse(observed).success).toBe(true);
+  // Simulate wire-contract drift rather than inspecting implementation text.
+  const malformed = structuredClone(observed);
+  malformed.body.start = '2026-09-20T10:00:00Z';
+  const validation = calendarCreateResponse.safeParse(malformed);
+  expect(validation.success).toBe(false);
+  if (!validation.success) expect(validation.error.issues[0].path).toEqual(['body', 'start']);
+  expect(calendarCreateResponse.safeParse({ ...observed, status: 200 }).success).toBe(false);
+
+  const missing = await graph('/me/calendar/events/contract-missing-event');
+  const errorResponse = { status: missing.status, body: await missing.json() };
+  expect(missing.status).toBe(404);
+  expect(graphErrorResponse.safeParse(errorResponse).success).toBe(true);
+  expect(graphErrorResponse.safeParse({ ...errorResponse, body: { message: 'Missing' } }).success).toBe(false);
 });

@@ -205,6 +205,18 @@ teams-user id>`, `user_id=<PSA user>`); the bot then runs commands as that user.
 
 ### Unsupported Graph operations
 
+Calendar wire-contract validation lives in `msgraph/tests/contracts/calendar.ts`
+and runs against the actual HTTP responses in `calendar.test.ts`. Its independent
+references are Microsoft's [create-event response](https://learn.microsoft.com/en-us/graph/api/user-post-events?view=graph-rest-1.0)
+and [Graph error format](https://learn.microsoft.com/en-us/graph/errors), reviewed
+2026-09-08. It checks the create status and consumed event fields, plus the error
+envelope. Deliberately changing the start field to a string, changing the create
+status, or removing the error envelope fails validation. This exposed missing
+error messages in the emulator, now supplied for Graph error objects. OAuth
+errors retain their separate format. This is partial contract coverage: callback,
+OAuth, bot and other provider contracts still require independent parity checks.
+No live Microsoft sandbox drift verification has been performed.
+
 Unimplemented `/v1.0` Graph routes return HTTP 501 with
 `error.code: EmulatorUnsupportedOperation`. This is an emulator capability
 error, not a claim that Microsoft Graph returns the same response. Implemented

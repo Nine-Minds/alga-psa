@@ -538,7 +538,17 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
 
   router.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
     if (err instanceof GraphApiError) {
-      res.status(err.status).json(err.body);
+      const body = err.body as { error?: { code?: string; message?: string } } | null;
+      // Graph errors require a developer-facing message alongside the code.
+      // OAuth uses a string error and a different envelope; preserve it.
+      if (body && typeof body.error === 'object' && body.error !== null &&
+          typeof body.error.code === 'string' && typeof body.error.message !== 'string') {
+        res.status(err.status).json({ ...body, error: {
+          ...body.error, message: `The emulated Graph request failed (${body.error.code}).`,
+        } });
+      } else {
+        res.status(err.status).json(err.body);
+      }
       return;
     }
     res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
