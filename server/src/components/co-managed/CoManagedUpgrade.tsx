@@ -11,6 +11,7 @@ import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getCoManagedUpgradeScreenAction, startCoManagedUpgradeAction } from '@ee/lib/actions/coManagedUpgradeActions';
 
+import CoManagedUpgradeBilling from './CoManagedUpgradeBilling';
 import CoManagedUpgradePurchase from './CoManagedUpgradePurchase';
 
 type Screen = Awaited<ReturnType<typeof getCoManagedUpgradeScreenAction>>;
@@ -95,6 +96,8 @@ function UpgradeContent() {
               <Link href="/msp/licenses">{t('coManaged.upgrade.manageLicense')}</Link>
             </Button>}
           </div>}
+          {!screen.selfHosted && screen.hasOwnBilling && <CoManagedUpgradeBilling key={`${screen.paidSeats}:${screen.seatsRequired}`}
+            seatsRequired={screen.seatsRequired} paidSeats={screen.paidSeats} canChangeSeats={!screen.pendingPurchase && screen.paidSeats !== null} />}
           {screen.progress === 'running' && <p role="status">{t('coManaged.upgrade.running')}</p>}
           {screen.progress === 'failed' && <p role="alert">{t('coManaged.upgrade.failed')}</p>}
           {screen.progress === 'unavailable' && <p role="alert">{t('coManaged.upgrade.unavailable')}</p>}

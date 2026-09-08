@@ -36,3 +36,17 @@ export const purchaseCoManagedUpgradeAction = withAuth(async (user, { tenant }, 
   const { purchaseCoManagedIndependentPsa } = await import('../stripe/coManagedUpgradeCheckout');
   return purchaseCoManagedIndependentPsa(knex, actor, input);
 });
+
+export const retryCoManagedUpgradePaymentAction = withAuth(async (user, { tenant }, operationId: string) => {
+  const { knex } = await createTenantKnex(tenant);
+  const actor = await coManagedBrowserActor(user, tenant);
+  const { retryCoManagedIndependentPayment } = await import('../stripe/coManagedUpgradeCheckout');
+  return retryCoManagedIndependentPayment(knex, actor, operationId);
+});
+
+export const manageCoManagedUpgradeBillingAction = withAuth(async (user, { tenant }, input: { kind: 'payment_method' | 'seats'; quantity?: number }) => {
+  const { knex } = await createTenantKnex(tenant);
+  const actor = await coManagedBrowserActor(user, tenant);
+  const { openCoManagedIndependentBilling } = await import('../stripe/coManagedUpgradeCheckout');
+  return openCoManagedIndependentBilling(knex, actor, input);
+});

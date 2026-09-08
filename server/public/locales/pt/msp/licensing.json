@@ -779,7 +779,16 @@
       "month": "Mensal",
       "year": "Anual",
       "paymentProcessing": "O pagamento está a ser processado. Atualize o estado ou retome a compra para verificar.",
-      "purchaseScope": "Esta compra paga este espaço. O acesso do MSP termina apenas quando confirmar a atualização após o pagamento."
+      "purchaseScope": "Esta compra paga este espaço. O acesso do MSP termina apenas quando confirmar a atualização após o pagamento.",
+      "paymentFailed": "O pagamento inicial falhou. Pode iniciar um novo pagamento após fechar esta tentativa não paga.",
+      "retryPayment": "Tentar pagar novamente",
+      "retryTitle": "Repetir este pagamento?",
+      "retryMessage": "Feche esta tentativa falhada e abra um novo pagamento. O acesso MSP e os lugares cogeridos mantêm-se.",
+      "billingTitle": "A sua faturação AlgaPSA",
+      "paymentMethod": "Atualizar método de pagamento",
+      "paidSeats": "Lugares de técnico pagos",
+      "reviewSeatChange": "Rever alteração de lugares",
+      "billingError": "Não foi possível abrir a faturação. Atualize o estado e tente novamente."
     }
   }
 }

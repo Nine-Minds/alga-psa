@@ -8,7 +8,7 @@ import { hasCoManagedLocalPermission } from './localPermission';
 export interface CoManagedUpgradePurchaseRequest { operationId: string; quantity: number; interval: 'month' | 'year' }
 export interface CoManagedUpgradePurchase {
   tenant: string; operation_id: string; requested_by: string; quantity: number; billing_interval: 'month' | 'year'; price_id: string;
-  state: 'preparing' | 'checkout' | 'paid' | 'expired'; customer_id: string | null; checkout_session_id: string | null;
+  state: 'preparing' | 'checkout' | 'paid' | 'expired' | 'payment_failed'; customer_id: string | null; checkout_session_id: string | null;
   subscription_id: string | null; created_at: Date; updated_at: Date;
 }
 
@@ -44,7 +44,7 @@ export function prepareCoManagedUpgradePurchase(db: Knex, actor: CoManagedSessio
       return previous;
     }
     if ((await own.table('tenants').first('product_code'))?.product_code !== 'co_managed') throw new CoManagedSharedWorkError();
-    if (await own.table('co_managed_upgrade_purchases').whereIn('state', ['preparing', 'checkout']).first('operation_id')) throw new Error('Resume the pending independent PSA purchase');
+    if (await own.table('co_managed_upgrade_purchases').whereIn('state', ['preparing', 'checkout', 'payment_failed']).first('operation_id')) throw new Error('Resume the pending independent PSA purchase');
     if (await own.table('stripe_subscriptions').whereNotIn('status', ['canceled', 'incomplete_expired'])
       .whereRaw("COALESCE(metadata->>'addon_key', '') = ''").first('stripe_subscription_id')) throw new Error('This workspace already has a PSA subscription');
     if (request.quantity < await countCoManagedCommittedSeats(trx, current.tenant)) throw new Error('Purchase enough seats for current technicians and invitations');

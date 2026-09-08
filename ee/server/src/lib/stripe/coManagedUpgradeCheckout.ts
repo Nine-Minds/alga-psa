@@ -1,8 +1,9 @@
 import Stripe from 'stripe';
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import { countCoManagedCommittedSeats, retainHostedPsaUpgradeCandidate } from '@alga-psa/licensing';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
-import { prepareCoManagedUpgradePurchase, withCoManagedUpgradePurchaseAdmin, isCoManagedUuid,
+import { prepareCoManagedUpgradePurchase, withCoManagedUpgradePurchaseAdmin, isCoManagedUuid, snapshotCoManagedSessionActor,
   type CoManagedSessionActor, type CoManagedUpgradePurchase, type CoManagedUpgradePurchaseRequest } from '@alga-psa/co-managed';
 import { paidPsaUpgradeFromStripe } from './coManagedIndependentEntitlement';
 
@@ -12,7 +13,7 @@ const metadata = (operation: CoManagedUpgradePurchase) => ({ tenant_id: operatio
   source: INDEPENDENT_UPGRADE_SOURCE, billing_interval: operation.billing_interval });
 const matches = (value: Stripe.Metadata | null | undefined, operation: CoManagedUpgradePurchase) =>
   value?.tenant_id === operation.tenant && value?.operation_id === operation.operation_id && value?.source === INDEPENDENT_UPGRADE_SOURCE;
-export type IndependentCheckoutResult = { kind: 'checkout'; clientSecret: string; publishableKey: string } | { kind: 'paid' | 'processing' | 'expired' };
+export type IndependentCheckoutResult = { kind: 'checkout'; clientSecret: string; publishableKey: string } | { kind: 'paid' | 'processing' | 'expired' | 'payment_failed' };
 
 export async function independentCheckoutStripeContext() {
   const secrets = await getSecretProviderInstance();
@@ -127,24 +128,31 @@ export async function reconcileCoManagedUpgradeCheckout(db: Knex, stripe: Stripe
   assertSession(session, purchase);
   let paid: ReturnType<typeof paidPsaUpgradeFromStripe> | undefined;
   let subscription: Stripe.Subscription | undefined;
-  if (session.status === 'complete' && ['paid', 'no_payment_required'].includes(session.payment_status)) {
+  if (session.status === 'complete' && id(session.subscription)) {
     const subscriptionId = id(session.subscription);
     if (!subscriptionId) throw new Error('Paid checkout has no subscription');
     const customer = await stripe.customers.retrieve(purchase.customer_id!);
+    assertCustomer(customer, tenant);
     subscription = await stripe.subscriptions.retrieve(subscriptionId, { expand: ['latest_invoice', 'items.data.price.product'] });
     if (!matches(subscription.metadata, purchase)) throw new Error('Subscription does not match the independent purchase');
     const item = subscription.items.data[0];
     const end = (subscription as Stripe.Subscription & { current_period_end?: number }).current_period_end ?? item?.current_period_end;
-    paid = paidPsaUpgradeFromStripe({ tenant, subscriptionId, customerId: purchase.customer_id!, itemId: item?.id,
+    if (['paid', 'no_payment_required'].includes(session.payment_status)) paid = paidPsaUpgradeFromStripe({ tenant, subscriptionId, customerId: purchase.customer_id!, itemId: item?.id,
       priceId: purchase.price_id, seats: purchase.quantity, validUntil: new Date((end ?? 0) * 1000).toISOString(), fingerprint: '' },
       customer, subscription, { [purchase.billing_interval]: purchase.price_id });
   }
-  const kind = paid ? 'paid' : session.status === 'expired' ? 'expired' : session.status === 'complete' ? 'processing' : 'checkout';
+  const invoice = subscription?.latest_invoice;
+  const failed = session.payment_status === 'unpaid' && invoice && typeof invoice === 'object' && 'status' in invoice &&
+    invoice.status === 'void' && invoice.amount_paid === 0 && invoice.amount_remaining === 0 &&
+    id(invoice.customer) === purchase.customer_id && id((invoice as any).subscription ?? (invoice as any).parent?.subscription_details?.subscription) === subscription?.id;
+  const terminal = subscription && ['canceled', 'incomplete_expired'].includes(subscription.status);
+  const kind = paid ? 'paid' : session.status === 'expired' || terminal ? 'expired' : failed ? 'payment_failed'
+    : session.status === 'complete' ? 'processing' : 'checkout';
   await db.transaction(async trx => {
     const current = await retainOperation(trx, tenant, operationId), own = tenantDb(trx, tenant);
     if (current.state === 'paid') return;
     if (current.customer_id !== purchase.customer_id || (current.checkout_session_id && current.checkout_session_id !== sessionId)) throw new Error('Purchase changed during provider verification');
-    if (paid && subscription) await storeUpgradeSubscription(trx, purchase, subscription, paid.validUntil);
+    if (subscription && (paid || failed || terminal)) await storeUpgradeSubscription(trx, purchase, subscription, paid?.validUntil);
     await own.table('co_managed_upgrade_purchases').where('operation_id', operationId).update({ checkout_session_id: sessionId,
       subscription_id: paid?.reference ?? id(session.subscription) ?? current.subscription_id, state: kind === 'processing' ? 'checkout' : kind,
       updated_at: trx.fn.now() });
@@ -204,7 +212,7 @@ export async function purchaseCoManagedIndependentPsa(db: Knex, inputActor: CoMa
  * the customer has closed the browser; they cannot convert the workspace. */
 export async function handleCoManagedUpgradePaymentEvent(db: Knex, stripe: Stripe, tenant: string, event: Stripe.Event): Promise<boolean> {
   const relevant = ['checkout.session.completed', 'checkout.session.async_payment_succeeded', 'checkout.session.expired',
-    'customer.subscription.created', 'customer.subscription.updated', 'customer.subscription.deleted', 'invoice.paid', 'invoice.payment_failed'];
+    'checkout.session.async_payment_failed', 'customer.subscription.created', 'customer.subscription.updated', 'customer.subscription.deleted', 'invoice.paid', 'invoice.payment_failed'];
   if (!relevant.includes(event.type)) return false;
   let value = event.data.object as any;
   if (event.type.startsWith('invoice.')) {
@@ -255,4 +263,89 @@ export async function handleCoManagedUpgradePaymentEvent(db: Knex, stripe: Strip
   if (!sessionId) throw new Error('Independent checkout is not visible yet; retry payment reconciliation');
   await reconcileCoManagedUpgradeCheckout(db, stripe, tenant, purchase.operation_id, sessionId);
   return true;
+}
+
+/** Explicitly retire only a verified unpaid, failed initial attempt. A retry
+ * after a lost cancellation response observes the canceled subscription first. */
+export async function retryCoManagedIndependentPayment(db: Knex, inputActor: CoManagedSessionActor, operationId: string,
+  provider?: Stripe): Promise<{ kind: 'expired' }> {
+  const actor = snapshotCoManagedSessionActor(inputActor);
+  const purchase = await withCoManagedUpgradePurchaseAdmin(db, actor, async trx => {
+    const row = await operation(trx, actor.tenant, operationId);
+    if (!['payment_failed', 'expired'].includes(row.state) || !row.customer_id || !row.checkout_session_id || !row.subscription_id)
+      throw new Error('This purchase has no failed payment to retry');
+    if ((await tenantDb(trx, actor.tenant).table('tenants').first('product_code'))?.product_code !== 'co_managed') throw new Error('This workspace has already upgraded');
+    return row;
+  });
+  const stripe = provider ?? (await independentCheckoutStripeContext()).stripe;
+  const session = await stripe.checkout.sessions.retrieve(purchase.checkout_session_id!, { expand: ['line_items.data.price'] });
+  assertSession(session, purchase);
+  const customer = await stripe.customers.retrieve(purchase.customer_id!);
+  assertCustomer(customer, actor.tenant);
+  let subscription = await stripe.subscriptions.retrieve(purchase.subscription_id!, { expand: ['latest_invoice', 'items.data.price.product'] });
+  if (id(session.subscription) !== subscription.id || id(subscription.customer) !== customer.id || !matches(subscription.metadata, purchase))
+    throw new Error('Failed payment ownership changed');
+  if (!['canceled', 'incomplete_expired'].includes(subscription.status)) {
+    const invoice = subscription.latest_invoice;
+    if (session.payment_status !== 'unpaid' || !invoice || typeof invoice !== 'object' || !('status' in invoice) ||
+        invoice.status !== 'void' || invoice.amount_paid !== 0 || invoice.amount_remaining !== 0 ||
+        id(invoice.customer) !== customer.id || id((invoice as any).subscription ?? (invoice as any).parent?.subscription_details?.subscription) !== subscription.id)
+      throw new Error('The initial payment is no longer a failed unpaid attempt; refresh its status');
+    await stripe.subscriptions.cancel(subscription.id, { invoice_now: false, prorate: false });
+    subscription = await stripe.subscriptions.retrieve(subscription.id, { expand: ['items.data.price.product'] });
+  }
+  if (!['canceled', 'incomplete_expired'].includes(subscription.status)) throw new Error('Failed subscription cancellation is not confirmed');
+  return withCoManagedUpgradePurchaseAdmin(db, actor, async trx => {
+    const current = await retainOperation(trx, actor.tenant, operationId);
+    if (current.state === 'paid' || current.customer_id !== purchase.customer_id || current.subscription_id !== purchase.subscription_id)
+      throw new Error('Payment state changed during recovery');
+    await storeUpgradeSubscription(trx, current, subscription);
+    await tenantDb(trx, actor.tenant).table('co_managed_upgrade_purchases').where('operation_id', operationId)
+      .update({ state: 'expired', updated_at: trx.fn.now() });
+    return { kind: 'expired' as const };
+  });
+}
+
+/** Stripe displays proration/payment confirmation. This creates a scoped portal
+ * session; it does not directly change paid seats or the MSP subscription. */
+export async function openCoManagedIndependentBilling(db: Knex, inputActor: CoManagedSessionActor,
+  input: { kind: 'payment_method' | 'seats'; quantity?: number },
+  dependencies?: { stripe: Stripe; prices: string[]; returnBaseUrl: string }): Promise<{ url: string }> {
+  const actor = snapshotCoManagedSessionActor(inputActor);
+  const request = { kind: input?.kind, quantity: input?.quantity };
+  if (!['payment_method', 'seats'].includes(request.kind) || (request.kind === 'seats' &&
+      (!Number.isSafeInteger(request.quantity) || request.quantity! < 1 || request.quantity! > 100000))) throw new Error('Invalid billing request');
+  const prices = dependencies?.prices ?? [process.env.STRIPE_ALGAPSA_USER_PRICE_ID || process.env.STRIPE_PRO_PRICE_ID,
+    process.env.STRIPE_ALGAPSA_USER_ANNUAL_PRICE_ID || process.env.STRIPE_PRO_ANNUAL_PRICE_ID].filter((v): v is string => Boolean(v));
+  const selected = await withCoManagedUpgradePurchaseAdmin(db, actor, async trx => {
+    const customers = await tenantDb(trx, actor.tenant).table('stripe_customers').select('stripe_customer_external_id');
+    if (customers.length !== 1) throw new Error('Workspace billing customer is unavailable');
+    if (request.kind === 'seats' && request.quantity! < await countCoManagedCommittedSeats(trx, actor.tenant))
+      throw new Error('Keep enough paid seats for current technicians and invitations');
+    return { customerId: customers[0].stripe_customer_external_id as string,
+      candidate: request.kind === 'seats' ? await retainHostedPsaUpgradeCandidate(trx, actor.tenant, prices) : null };
+  });
+  const stripe = dependencies?.stripe ?? (await independentCheckoutStripeContext()).stripe;
+  const customer = await stripe.customers.retrieve(selected.customerId);
+  assertCustomer(customer, actor.tenant);
+  const returnUrl = `${dependencies?.returnBaseUrl ?? (process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'https://localhost:3000').replace(/^http:\/\//, 'https://')}/msp/co-management/upgrade`;
+  let flow: Stripe.BillingPortal.SessionCreateParams.FlowData = { type: 'payment_method_update' };
+  if (selected.candidate) {
+    const subscription = await stripe.subscriptions.retrieve(selected.candidate.subscriptionId, { expand: ['latest_invoice'] });
+    const interval = subscription.items.data[0]?.price.recurring?.interval;
+    paidPsaUpgradeFromStripe(selected.candidate, customer, subscription,
+      interval === 'month' || interval === 'year' ? { [interval]: selected.candidate.priceId } : {});
+    flow = { type: 'subscription_update_confirm', subscription_update_confirm: { subscription: selected.candidate.subscriptionId,
+      items: [{ id: selected.candidate.itemId, price: selected.candidate.priceId, quantity: request.quantity }] } };
+  }
+  const portal = await stripe.billingPortal.sessions.create({ customer: selected.customerId, return_url: returnUrl,
+    flow_data: { ...flow, after_completion: { type: 'redirect', redirect: { return_url: returnUrl } } } });
+  if (new URL(portal.url).protocol !== 'https:') throw new Error('Billing portal URL is invalid');
+  return withCoManagedUpgradePurchaseAdmin(db, actor, async trx => {
+    const customers = await tenantDb(trx, actor.tenant).table('stripe_customers').select('stripe_customer_external_id');
+    if (customers.length !== 1 || customers[0].stripe_customer_external_id !== selected.customerId) throw new Error('Billing customer changed');
+    if (selected.candidate && ((await retainHostedPsaUpgradeCandidate(trx, actor.tenant, prices)).fingerprint !== selected.candidate.fingerprint ||
+        request.quantity! < await countCoManagedCommittedSeats(trx, actor.tenant))) throw new Error('Paid seat requirements changed');
+    return { url: portal.url };
+  });
 }

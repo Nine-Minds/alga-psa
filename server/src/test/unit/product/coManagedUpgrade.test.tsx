@@ -4,8 +4,8 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import CoManagedUpgrade from '../../../components/co-managed/CoManagedUpgrade';
 import { CoManagedFeatureBoundary } from '../../../components/co-managed/CoManagedFeatureBoundary';
-const mocks = vi.hoisted(() => ({ load: vi.fn(), start: vi.fn(), purchase: vi.fn(), update: vi.fn(), push: vi.fn(), refresh: vi.fn(), flag: true, tenant: 'customer' }));
-vi.mock('@ee/lib/actions/coManagedUpgradeActions', () => ({ getCoManagedUpgradeScreenAction: mocks.load, startCoManagedUpgradeAction: mocks.start, purchaseCoManagedUpgradeAction: mocks.purchase }));
+const mocks = vi.hoisted(() => ({ load: vi.fn(), start: vi.fn(), purchase: vi.fn(), retryPayment: vi.fn(), manageBilling: vi.fn(), update: vi.fn(), push: vi.fn(), refresh: vi.fn(), flag: true, tenant: 'customer' }));
+vi.mock('@ee/lib/actions/coManagedUpgradeActions', () => ({ getCoManagedUpgradeScreenAction: mocks.load, startCoManagedUpgradeAction: mocks.start, purchaseCoManagedUpgradeAction: mocks.purchase, retryCoManagedUpgradePaymentAction: mocks.retryPayment, manageCoManagedUpgradeBillingAction: mocks.manageBilling }));
 vi.mock('@alga-psa/ui/hooks', () => ({ useFeatureFlag: () => ({ enabled: mocks.flag }) }));
 vi.mock('../../../lib/actions/coManagedAcceptanceActions', () => ({}));
 vi.mock('@/context/ProductContext', () => ({ useProduct: () => ({ productCode: 'co_managed' }) }));
@@ -72,4 +72,34 @@ it('resumes a hosted checkout with its original terms and requires separate conv
   await waitFor(() => expect(screen.queryByRole('button', { name: 'Complete fixture payment' })).toBeNull());
   expect(mocks.start).not.toHaveBeenCalled();
   expect(screen.getByRole('button', { name: 'coManaged.upgrade.start' })).toBeEnabled();
+});
+
+it('requires confirmation before resetting a failed payment and opens a new checkout with the original seat terms', async () => {
+  const failed = { operationId: 'failed-operation', quantity: 5, interval: 'year', paymentFailed: true };
+  mocks.load.mockResolvedValue({ ...eligible, selfHosted: false, entitlementReady: false, pendingPurchase: failed });
+  mocks.retryPayment.mockResolvedValue({ kind: 'expired' });
+  mocks.purchase.mockResolvedValue({ kind: 'checkout', clientSecret: 'new-fixture', publishableKey: 'pk_fixture' });
+  mount();
+  fireEvent.click(await screen.findByRole('button', { name: 'coManaged.upgrade.retryPayment' }));
+  expect(mocks.retryPayment).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: 'Confirm upgrade' }));
+  await screen.findByRole('button', { name: 'Complete fixture payment' });
+  expect(mocks.retryPayment).toHaveBeenCalledWith('failed-operation');
+  expect(mocks.purchase.mock.calls[0][0]).toMatchObject({ quantity: 5, interval: 'year' });
+  expect(mocks.purchase.mock.calls[0][0].operationId).not.toBe('failed-operation');
+  expect(mocks.start).not.toHaveBeenCalled();
+});
+it('reviews a paid seat change separately and prevents selecting fewer seats than currently needed', async () => {
+  mocks.load.mockResolvedValue({ ...eligible, selfHosted: false, hasOwnBilling: true, paidSeats: 4, pendingPurchase: null });
+  mocks.manageBilling.mockRejectedValue(new Error('Provider unavailable'));
+  mount();
+  const input = await screen.findByLabelText('coManaged.upgrade.paidSeats');
+  expect(input).toHaveValue(4);
+  fireEvent.change(input, { target: { value: '1' } });
+  expect(screen.getByRole('button', { name: 'coManaged.upgrade.reviewSeatChange' })).toBeDisabled();
+  fireEvent.change(input, { target: { value: '6' } });
+  fireEvent.click(screen.getByRole('button', { name: 'coManaged.upgrade.reviewSeatChange' }));
+  await screen.findByText('coManaged.upgrade.billingError');
+  expect(mocks.manageBilling).toHaveBeenCalledWith({ kind: 'seats', quantity: 6 });
+  expect(mocks.start).not.toHaveBeenCalled();
 });

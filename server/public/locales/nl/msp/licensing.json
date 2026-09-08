@@ -777,7 +777,16 @@
       "month": "Maandelijks",
       "year": "Jaarlijks",
       "paymentProcessing": "Uw betaling wordt verwerkt. Vernieuw de status of hervat de aankoop om opnieuw te controleren.",
-      "purchaseScope": "Deze aankoop betaalt voor deze werkruimte. De MSP-toegang eindigt pas wanneer u de upgrade na betaling bevestigt."
+      "purchaseScope": "Deze aankoop betaalt voor deze werkruimte. De MSP-toegang eindigt pas wanneer u de upgrade na betaling bevestigt.",
+      "paymentFailed": "De eerste betaling is mislukt. U kunt een nieuwe checkout starten nadat u deze onbetaalde poging sluit.",
+      "retryPayment": "Betaling opnieuw proberen",
+      "retryTitle": "Deze betaling opnieuw proberen?",
+      "retryMessage": "Sluit deze mislukte betaalpoging en open een nieuwe checkout. Uw MSP-toegang en co-managed plaatsen blijven behouden.",
+      "billingTitle": "Uw AlgaPSA-facturering",
+      "paymentMethod": "Betaalmethode bijwerken",
+      "paidSeats": "Betaalde technicusplaatsen",
+      "reviewSeatChange": "Plaatswijziging bekijken",
+      "billingError": "De facturering kan niet worden geopend. Vernieuw de status en probeer opnieuw."
     }
   }
 }

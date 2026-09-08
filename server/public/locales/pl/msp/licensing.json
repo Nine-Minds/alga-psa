@@ -781,7 +781,16 @@
       "month": "Miesięcznie",
       "year": "Rocznie",
       "paymentProcessing": "Płatność jest przetwarzana. Odśwież status lub wznów zakup, aby sprawdzić ponownie.",
-      "purchaseScope": "Ten zakup opłaca ten obszar roboczy. Dostęp MSP kończy się dopiero po potwierdzeniu aktualizacji po płatności."
+      "purchaseScope": "Ten zakup opłaca ten obszar roboczy. Dostęp MSP kończy się dopiero po potwierdzeniu aktualizacji po płatności.",
+      "paymentFailed": "Pierwsza płatność nie powiodła się. Po zamknięciu tej nieopłaconej próby możesz rozpocząć nową płatność.",
+      "retryPayment": "Ponów płatność",
+      "retryTitle": "Ponowić tę płatność?",
+      "retryMessage": "Zamknij nieudaną próbę i otwórz nową płatność. Dostęp MSP i współzarządzane miejsca pozostaną bez zmian.",
+      "billingTitle": "Twoje rozliczenia AlgaPSA",
+      "paymentMethod": "Zaktualizuj metodę płatności",
+      "paidSeats": "Płatne miejsca techników",
+      "reviewSeatChange": "Sprawdź zmianę liczby miejsc",
+      "billingError": "Nie udało się otworzyć rozliczeń. Odśwież status i spróbuj ponownie."
     }
   }
 }

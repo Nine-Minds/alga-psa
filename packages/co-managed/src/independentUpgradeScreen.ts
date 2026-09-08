@@ -26,7 +26,7 @@ export async function getCoManagedIndependentUpgradeScreen(db: Knex, input: CoMa
     if (!relationship) throw new CoManagedSharedWorkError();
     const seatsRequired = Math.max(1, await countCoManagedCommittedSeats(trx, actor.tenant));
     const selfHosted = Boolean(await trx('license_state').first('id'));
-    let entitlementReady = false;
+    let entitlementReady = false, paidSeats: number | null = null;
     if (selfHosted) {
       const license = await own.table('tenant_license_state').first('license_token');
       const resolved = resolveSelfHostTier({ edition_choice: 'ee', trial_started_at: null,
@@ -35,15 +35,17 @@ export async function getCoManagedIndependentUpgradeScreen(db: Knex, input: CoMa
       entitlementReady = resolved?.state === 'licensed' && resolved.tier === 'pro' && signed?.valid === true &&
         (signed.claims.seats === undefined || signed.claims.seats >= seatsRequired);
     } else if (hostedPriceIds.length) {
-      try { entitlementReady = (await retainHostedPsaUpgradeCandidate(trx, actor.tenant, hostedPriceIds)).seats >= seatsRequired; }
+      try { paidSeats = (await retainHostedPsaUpgradeCandidate(trx, actor.tenant, hostedPriceIds)).seats; entitlementReady = paidSeats >= seatsRequired; }
       catch (error) { if (!(error instanceof HostedPsaUpgradeAdmissionError)) throw error; }
     }
-    const pending = selfHosted ? undefined : await own.table('co_managed_upgrade_purchases').whereIn('state', ['preparing', 'checkout'])
-      .first('operation_id', 'quantity', 'billing_interval');
+    const pending = selfHosted ? undefined : await own.table('co_managed_upgrade_purchases').whereIn('state', ['preparing', 'checkout', 'payment_failed'])
+      .first('operation_id', 'quantity', 'billing_interval', 'state');
     const pendingPurchase = pending ? { operationId: pending.operation_id as string, quantity: Number(pending.quantity),
-      interval: pending.billing_interval as 'month' | 'year' } : null;
+      interval: pending.billing_interval as 'month' | 'year', paymentFailed: pending.state === 'payment_failed' } : null;
+    const hasOwnBilling = !selfHosted && Boolean(await own.table('stripe_customers').first('stripe_customer_id'));
+    if (pending?.state === 'payment_failed') entitlementReady = false;
     await assertCoManagedSessionUnexpired(trx, actor);
     return { state: 'eligible' as const, relationshipId: relationship.relationship_id as string,
-      revision: Number(relationship.revision), departed: relationship.state === 'terminated', selfHosted, seatsRequired, entitlementReady, pendingPurchase };
+      revision: Number(relationship.revision), departed: relationship.state === 'terminated', selfHosted, seatsRequired, entitlementReady, pendingPurchase, hasOwnBilling, paidSeats };
   });
 }

@@ -777,7 +777,16 @@
       "month": "Monatlich",
       "year": "Jährlich",
       "paymentProcessing": "Ihre Zahlung wird verarbeitet. Aktualisieren Sie den Status oder setzen Sie den Kauf fort.",
-      "purchaseScope": "Dieser Kauf bezahlt diesen Arbeitsbereich. Der MSP-Zugriff endet erst, wenn Sie das Upgrade nach der Zahlung bestätigen."
+      "purchaseScope": "Dieser Kauf bezahlt diesen Arbeitsbereich. Der MSP-Zugriff endet erst, wenn Sie das Upgrade nach der Zahlung bestätigen.",
+      "paymentFailed": "Die erste Zahlung ist fehlgeschlagen. Nach dem Schließen dieses unbezahlten Versuchs können Sie einen neuen Checkout starten.",
+      "retryPayment": "Zahlung erneut versuchen",
+      "retryTitle": "Diese Zahlung erneut versuchen?",
+      "retryMessage": "Schließen Sie diesen fehlgeschlagenen Zahlungsversuch und öffnen Sie einen neuen Checkout. MSP-Zugriff und Co-Managed-Plätze bleiben bestehen.",
+      "billingTitle": "Ihre AlgaPSA-Abrechnung",
+      "paymentMethod": "Zahlungsmethode aktualisieren",
+      "paidSeats": "Kostenpflichtige Technikerplätze",
+      "reviewSeatChange": "Platzänderung prüfen",
+      "billingError": "Die Abrechnung konnte nicht geöffnet werden. Aktualisieren Sie den Status und versuchen Sie es erneut."
     }
   }
 }

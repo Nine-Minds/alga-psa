@@ -866,7 +866,16 @@
       "month": "Monthly",
       "year": "Annually",
       "paymentProcessing": "Your payment is processing. Refresh the status or resume the purchase to check again.",
-      "purchaseScope": "This purchase pays for this workspace. MSP access ends only when you confirm the upgrade after payment."
+      "purchaseScope": "This purchase pays for this workspace. MSP access ends only when you confirm the upgrade after payment.",
+      "paymentFailed": "The initial payment failed. You can start a new checkout after closing this unpaid attempt.",
+      "retryPayment": "Try payment again",
+      "retryTitle": "Retry this payment?",
+      "retryMessage": "Close this failed payment attempt and open a new checkout. Your MSP access and co-managed seats stay in place.",
+      "billingTitle": "Your AlgaPSA billing",
+      "paymentMethod": "Update payment method",
+      "paidSeats": "Paid technician seats",
+      "reviewSeatChange": "Review seat change",
+      "billingError": "Unable to open billing. Refresh the status and try again."
     }
   }
 }
