@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import {
   Home,
@@ -24,6 +24,8 @@ import { useBranding } from '@alga-psa/tenancy/components';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { CollapseToggleButton } from '@alga-psa/ui/components/CollapseToggleButton';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
+import { useSurfaceIsLight } from '@alga-psa/ui/hooks/useSurfaceIsLight';
+import { pickLogoForSurface } from '@alga-psa/ui/lib/surfaceColor';
 import {
   getPreferenceWithFallback,
   savePreference,
@@ -69,6 +71,9 @@ export function ClientPortalSidebar({
   const pathname = usePathname();
   const { t } = useTranslation('client-portal');
   const { branding } = useBranding();
+
+  const panelRef = useRef<HTMLElement | null>(null);
+  const [failedWideLogoUrl, setFailedWideLogoUrl] = useState<string | null>(null);
 
   // Initialize from server-provided cookie value to avoid hydration flicker.
   const [collapsed, setCollapsedState] = useState<boolean>(initialCollapsed);
@@ -239,7 +244,7 @@ export function ClientPortalSidebar({
     if (sidebarOpen && section.title) {
       return (
         <p
-          className={`text-xs uppercase tracking-wide text-gray-400 px-2 mb-2 ${
+          className={`text-xs uppercase tracking-wide text-sidebar-text/60 px-2 mb-2 ${
             idx === 0 ? 'mt-0' : 'mt-6'
           }`}
           aria-label={section.title}
@@ -251,7 +256,7 @@ export function ClientPortalSidebar({
     if (section.title) {
       return (
         <div
-          className={`h-px bg-gray-700 ${idx === 0 ? 'mt-0 mb-3' : 'my-3'}`}
+          className={`h-px bg-sidebar-text/20 ${idx === 0 ? 'mt-0 mb-3' : 'my-3'}`}
           aria-hidden
         />
       );
@@ -285,8 +290,14 @@ export function ClientPortalSidebar({
 
   const visibleSections = sections.filter((s) => s.items.length > 0);
   const brandLabel = branding?.clientName || (isAlgaDeskPortal ? 'AlgaDesk' : 'AlgaPSA');
-  // The side panel is dark in both themes, so it prefers the dark-surface logo.
-  const sidebarLogoUrl = branding?.logoDarkUrl || branding?.logoUrl;
+  // Portal admins can hand-pick the side panel colour, so the artwork drawn on
+  // it has to follow the colour that was actually painted.
+  const panelIsLight = useSurfaceIsLight(panelRef, '--color-sidebar-bg');
+  const sidebarLogoUrl = pickLogoForSurface(branding?.logoUrl, branding?.logoDarkUrl, panelIsLight);
+  // The wordmark carries the company name itself, so wherever it renders the
+  // panel drops its own name — the brand row and the organization row both.
+  const wideLogoUrl = pickLogoForSurface(branding?.logoWideUrl, branding?.logoWideDarkUrl, panelIsLight);
+  const showWideLogo = sidebarOpen && !!wideLogoUrl && failedWideLogoUrl !== wideLogoUrl;
   const transitionClass = transitionsEnabled
     ? 'transition-all duration-300 ease-in-out'
     : '';
@@ -294,6 +305,7 @@ export function ClientPortalSidebar({
   return (
     <Tooltip.Provider delayDuration={300}>
       <aside
+        ref={panelRef}
         data-automation-id="client-portal-sidebar"
         data-collapsed={collapsed ? 'true' : 'false'}
         className={`bg-sidebar-bg text-sidebar-text h-screen flex flex-col relative ${transitionClass} ${
@@ -304,39 +316,50 @@ export function ClientPortalSidebar({
         <Link
           prefetch={false}
           href="/client-portal/dashboard"
-          className="p-4 flex items-center space-x-2 hover:bg-white/10 cursor-pointer"
+          className="p-4 flex items-center space-x-2 hover:bg-sidebar-hover cursor-pointer"
           aria-label={t('sidebar.goToDashboard', 'Go to dashboard')}
           id="client-portal-logo-home-link"
         >
-          {sidebarLogoUrl ? (
-            <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center overflow-hidden flex-shrink-0">
-              {/* Logo URL is arbitrary tenant input; <img> avoids next/image domain allowlist. */}
-              <img
-                src={sidebarLogoUrl}
-                alt={branding.clientName || 'Client Logo'}
-                className="w-full h-full object-contain"
-              />
-            </div>
+          {/* Logo URLs are arbitrary tenant input; <img> avoids the next/image domain allowlist. */}
+          {showWideLogo && wideLogoUrl ? (
+            <img
+              src={wideLogoUrl}
+              alt={brandLabel}
+              className="h-8 w-auto max-w-full object-contain"
+              onError={() => setFailedWideLogoUrl(wideLogoUrl)}
+            />
           ) : (
-            <div className="w-8 h-8 bg-[rgb(var(--color-primary-600))] rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
-              <Image
-                src="/images/avatar-purple-background.png"
-                alt={t('sidebar.logoAlt', 'Client Portal Logo')}
-                width={200}
-                height={200}
-                className="w-full h-full object-cover"
-              />
-            </div>
+            <>
+              {sidebarLogoUrl ? (
+                <div className="w-8 h-8 rounded-full bg-sidebar-text/5 flex items-center justify-center overflow-hidden flex-shrink-0">
+                  <img
+                    src={sidebarLogoUrl}
+                    alt={branding?.clientName || 'Client Logo'}
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+              ) : (
+                <div className="w-8 h-8 bg-[rgb(var(--color-primary-600))] rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
+                  <Image
+                    src="/images/avatar-purple-background.png"
+                    alt={t('sidebar.logoAlt', 'Client Portal Logo')}
+                    width={200}
+                    height={200}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              )}
+              <span className={`text-xl font-semibold truncate ${sidebarOpen ? '' : 'hidden'}`}>
+                {brandLabel}
+              </span>
+            </>
           )}
-          <span className={`text-xl font-semibold truncate ${sidebarOpen ? '' : 'hidden'}`}>
-            {brandLabel}
-          </span>
         </Link>
 
-        {/* Organization label */}
-        {sidebarOpen && branding?.clientName && (
+        {/* Organization label — redundant once the wordmark spells the name out. */}
+        {sidebarOpen && !showWideLogo && branding?.clientName && (
           <div className="px-4 pb-3">
-            <div className="text-[10px] uppercase tracking-wider text-gray-400">
+            <div className="text-[10px] uppercase tracking-wider text-sidebar-text/60">
               {t('nav.organization', 'Organization')}
             </div>
             <div className="mt-0.5 text-sm font-medium truncate">{branding.clientName}</div>

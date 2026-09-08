@@ -1132,6 +1132,8 @@
         "companyName": "Bedrijfsnaam",
         "companyLogo": "Bedrijfslogo",
         "companyLogoDark": "Logo voor donkere achtergronden",
+        "companyLogoWide": "Breed logo (optioneel)",
+        "companyLogoWideDark": "Breed logo voor donkere achtergronden (optioneel)",
         "colorPalette": "Kleurenpalet",
         "primaryColor": "Primaire kleur",
         "secondaryColor": "Secundaire kleur",
@@ -1148,6 +1150,8 @@
         "companyLogo": "Aanbevolen: PNG of SVG, maximaal 2 MB, transparante achtergrond",
         "companyLogoMsp": "Dit logo vervangt ook het Alga-merk in het MSP-zijmenu.",
         "companyLogoDark": "Optioneel. Wordt gebruikt in het zijpaneel van het portaal en in de donkere modus. Zonder logo wordt het bedrijfslogo gebruikt.",
+        "companyLogoWide": "Wordt bovenaan het uitgeklapte zijpaneel van het portaal getoond, 32 px hoog. Zet uw bedrijfsnaam in de afbeelding — het paneel schrijft die dan niet meer apart.",
+        "companyLogoWideDark": "Optioneel. Wordt gebruikt zolang de achtergrond van het zijpaneel donker is. Valt terug op het brede logo.",
         "primaryColor": "Wordt gebruikt voor knoppen, links en accenten",
         "secondaryColor": "Wordt gebruikt voor accenten en secundaire acties",
         "supportEmail": "Wordt aan klanten getoond in afspraakbevestigingen en andere uitgaande e-mails als contactadres voor hulp.",
@@ -1177,7 +1181,11 @@
         "previewSignIn": "Voorbeeld aanmeldpagina",
         "hideSignIn": "Aanmeldpagina verbergen"
       },
-      "customDomainRequired": "Aangepast domein moet zijn ingesteld"
+      "customDomainRequired": "Aangepast domein moet zijn ingesteld",
+      "warnings": {
+        "expectSquare": "Die afbeelding is veel breder dan hoog. Deze plek vult vierkante ruimtes — u bedoelt waarschijnlijk de plek voor het brede logo.",
+        "expectWide": "Die afbeelding is bijna vierkant. De plek voor het brede logo verwacht een liggend logo — een vierkant merkteken hoort in de plek hierboven."
+      }
     },
     "dashboardPreview": {
       "title": "Uw klantenportaal",
@@ -1423,10 +1431,24 @@
     "whiteLabel": {
       "title": "Eigen merk voor de MSP-app",
       "description": "Upload uw logo één keer. Het vervangt het Alga-merk in het MSP-zijmenu en het klantenportaal gebruikt dezelfde afbeeldingen.",
-      "logoHelp": "Het MSP-zijmenu is in beide thema’s donker en gebruikt daarom het logo voor donkere achtergronden als u dat toevoegt, en anders het hoofdlogo.",
+      "logoHelp": "Het vierkante merkteken wordt gebruikt overal waar de ruimte vierkant is: in het ingeklapte zijmenu en in ronde kaders. Het optionele brede logo vervangt het merkteken en de naam in het uitgeklapte zijmenu, dus upload er een waarin uw bedrijfsnaam al staat. Het zijmenu volgt zijn eigen achtergrond: bij een donker menu de varianten voor donkere achtergronden, bij een licht menu de lichte, en anders de variant die u hebt geüpload.",
       "fields": {
-        "logo": "Logo",
-        "logoDark": "Logo voor donkere achtergronden"
+        "mark": "Vierkant merkteken",
+        "markDark": "Vierkant merkteken voor donkere achtergronden",
+        "wide": "Breed logo (optioneel)",
+        "wideDark": "Breed logo voor donkere achtergronden (optioneel)",
+        "favicon": "Browserpictogram (favicon)"
+      },
+      "hints": {
+        "mark": "Wordt gebruikt in het ingeklapte zijmenu en in elk rond kader. Vierkant werkt het best.",
+        "markDark": "Optioneel. Valt terug op het vierkante merkteken.",
+        "wide": "Wordt alleen in het uitgeklapte zijmenu getoond, 32 px hoog. Zet uw bedrijfsnaam in de afbeelding.",
+        "wideDark": "Optioneel. Wordt gebruikt zolang de achtergrond van het zijmenu donker is, zoals in alle meegeleverde thema’s.",
+        "favicon": "PNG, SVG of ICO. Rasterafbeeldingen worden verkleind naar 32x32. Geldt voor de MSP-app en het klantenportaal van uw organisatie."
+      },
+      "warnings": {
+        "expectSquare": "Die afbeelding is veel breder dan hoog. De plek voor het vierkante merkteken wordt in vierkante ruimtes gebruikt — u bedoelt waarschijnlijk de plek voor het brede logo.",
+        "expectWide": "Die afbeelding is bijna vierkant. De brede plek verwacht een liggend logo — u bedoelt waarschijnlijk de plek voor het vierkante merkteken."
       },
       "colors": {
         "label": "Uw merkkleuren in de MSP-app gebruiken",

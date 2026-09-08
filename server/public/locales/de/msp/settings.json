@@ -1132,6 +1132,8 @@
         "companyName": "Firmenname",
         "companyLogo": "Firmenlogo",
         "companyLogoDark": "Logo für dunkle Hintergründe",
+        "companyLogoWide": "Breites Logo (optional)",
+        "companyLogoWideDark": "Breites Logo für dunkle Hintergründe (optional)",
         "colorPalette": "Farbpalette",
         "primaryColor": "Primärfarbe",
         "secondaryColor": "Sekundärfarbe",
@@ -1148,6 +1150,8 @@
         "companyLogo": "Empfohlen: PNG oder SVG, max. 2 MB, transparenter Hintergrund",
         "companyLogoMsp": "Dieses Logo ersetzt außerdem die Alga-Marke im MSP-Seitenmenü.",
         "companyLogoDark": "Optional. Wird in der Seitenleiste des Portals und im dunklen Modus verwendet. Ohne Angabe wird das Firmenlogo verwendet.",
+        "companyLogoWide": "Wird oben im ausgeklappten Seitenbereich des Portals angezeigt, 32 px hoch. Nehmen Sie Ihren Firmennamen mit ins Bild auf — der Seitenbereich gibt ihn dann nicht mehr separat aus.",
+        "companyLogoWideDark": "Optional. Wird verwendet, solange der Hintergrund des Seitenbereichs dunkel ist. Fällt auf das breite Logo zurück.",
         "primaryColor": "Wird für Schaltflächen, Links und Hervorhebungen verwendet",
         "secondaryColor": "Wird für Akzente und sekundäre Aktionen verwendet",
         "supportEmail": "Wird Kunden in Terminbestätigungen und anderen ausgehenden E-Mails als Kontaktadresse für den Support angezeigt.",
@@ -1177,7 +1181,11 @@
         "previewSignIn": "Anmeldeseite-Vorschau",
         "hideSignIn": "Anmeldeseite ausblenden"
       },
-      "customDomainRequired": "Benutzerdefinierte Domain muss eingerichtet sein"
+      "customDomainRequired": "Benutzerdefinierte Domain muss eingerichtet sein",
+      "warnings": {
+        "expectSquare": "Dieses Bild ist deutlich breiter als hoch. Dieser Platz füllt quadratische Flächen — gemeint ist vermutlich der Platz für das breite Logo.",
+        "expectWide": "Dieses Bild ist nahezu quadratisch. Der Platz für das breite Logo erwartet ein Querformat-Logo — ein quadratisches Zeichen gehört in den Platz darüber."
+      }
     },
     "dashboardPreview": {
       "title": "Ihr Kundenportal",
@@ -1423,10 +1431,24 @@
     "whiteLabel": {
       "title": "MSP-App mit eigener Marke",
       "description": "Laden Sie Ihr Logo einmal hoch. Es ersetzt die Alga-Marke im MSP-Seitenmenü, und das Kundenportal verwendet dieselben Bilder.",
-      "logoHelp": "Das MSP-Seitenmenü ist in beiden Designs dunkel. Es verwendet daher das Logo für dunkle Hintergründe, sofern vorhanden, und sonst das Hauptlogo.",
+      "logoHelp": "Das quadratische Zeichen wird überall dort verwendet, wo der Platz quadratisch ist: im eingeklappten Seitenmenü und in runden Rahmen. Das optionale breite Logo ersetzt im ausgeklappten Seitenmenü das Zeichen und den Namen — laden Sie daher eines hoch, das Ihren Firmennamen bereits enthält. Das Seitenmenü richtet sich nach seinem eigenen Hintergrund: bei dunklem Menü die Varianten für dunkle Hintergründe, bei hellem Menü die hellen — und andernfalls die Variante, die Sie hochgeladen haben.",
       "fields": {
-        "logo": "Logo",
-        "logoDark": "Logo für dunkle Hintergründe"
+        "mark": "Quadratisches Zeichen",
+        "markDark": "Quadratisches Zeichen für dunkle Hintergründe",
+        "wide": "Breites Logo (optional)",
+        "wideDark": "Breites Logo für dunkle Hintergründe (optional)",
+        "favicon": "Browsersymbol (Favicon)"
+      },
+      "hints": {
+        "mark": "Wird im eingeklappten Seitenmenü und in jedem runden Rahmen verwendet. Quadratisch funktioniert am besten.",
+        "markDark": "Optional. Fällt auf das quadratische Zeichen zurück.",
+        "wide": "Wird nur im ausgeklappten Seitenmenü angezeigt, 32 px hoch. Nehmen Sie Ihren Firmennamen mit ins Bild auf.",
+        "wideDark": "Optional. Wird verwendet, solange der Hintergrund des Seitenmenüs dunkel ist — wie in allen mitgelieferten Designs.",
+        "favicon": "PNG, SVG oder ICO. Rasterbilder werden auf 32x32 verkleinert. Gilt für die MSP-App und das Kundenportal Ihrer Organisation."
+      },
+      "warnings": {
+        "expectSquare": "Dieses Bild ist deutlich breiter als hoch. Der Platz für das quadratische Zeichen ist quadratisch — gemeint ist vermutlich der Platz für das breite Logo.",
+        "expectWide": "Dieses Bild ist nahezu quadratisch. Der breite Platz erwartet ein Querformat-Logo — gemeint ist vermutlich der Platz für das quadratische Zeichen."
       },
       "colors": {
         "label": "Markenfarben in der MSP-App verwenden",
