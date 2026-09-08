@@ -457,6 +457,8 @@ export async function runTenantCreationOrchestration(
     const isHostedStripeSignup =
       !!stripeDetails.stripeSubscriptionId &&
       (input.billingSource === undefined || input.billingSource === 'stripe') &&
+      // AlgaDesk is sold without a trial, so there is no first payment to warn about.
+      input.productCode !== 'algadesk' &&
       !input.skipWelcomeEmail &&
       !input.skipCustomerTracking;
 

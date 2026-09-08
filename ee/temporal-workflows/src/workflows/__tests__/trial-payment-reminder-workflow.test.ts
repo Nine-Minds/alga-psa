@@ -287,12 +287,18 @@ describe('tenantCreationWorkflow trial reminder scheduling', () => {
     }
   });
 
-  it('does not start the reminder when the signup is not stripe-billed', async () => {
+  // Any signup that must NOT get a reminder: run tenant creation with the
+  // reminder activities stubbed out and assert the child never existed.
+  async function expectNoReminderChild(options: {
+    tenantId: string;
+    label: string;
+    input: TenantCreationInput;
+  }) {
     const env = await TestWorkflowEnvironment.createTimeSkipping();
-    const taskQueue = `test-tenant-creation-no-reminder-${Date.now()}`;
+    const taskQueue = `test-tenant-creation-${options.label}-${Date.now()}`;
 
     const activities = {
-      createTenant: async () => ({ tenantId: 'tenant-43', clientId: 'client-1' }),
+      createTenant: async () => ({ tenantId: options.tenantId, clientId: 'client-1' }),
       run_onboarding_seeds: async () => ({ success: true, seedsApplied: [] }),
       createAdminUser: async () => ({
         userId: 'user-1',
@@ -327,18 +333,36 @@ describe('tenantCreationWorkflow trial reminder scheduling', () => {
     try {
       const result = await worker.runUntil(
         env.client.workflow.execute(tenantCreationWorkflow, {
-          args: [{ ...tenantCreationInput, billingSource: 'apple_iap' }],
+          args: [options.input],
           taskQueue,
-          workflowId: `tenant-creation-no-reminder-${Date.now()}`,
+          workflowId: `tenant-creation-${options.label}-${Date.now()}`,
         })
       );
 
       expect(result.success).toBe(true);
       await expect(
-        env.client.workflow.getHandle('trial-payment-reminder-tenant-43').describe()
+        env.client.workflow.getHandle(`trial-payment-reminder-${options.tenantId}`).describe()
       ).rejects.toThrow();
     } finally {
       await env.teardown();
     }
+  }
+
+  it('does not start the reminder when the signup is not stripe-billed', async () => {
+    await expectNoReminderChild({
+      tenantId: 'tenant-43',
+      label: 'no-reminder',
+      input: { ...tenantCreationInput, billingSource: 'apple_iap' },
+    });
+  });
+
+  // AlgaDesk is sold without a trial: scheduling a reminder would burn a child
+  // workflow and a Stripe call per signup only to skip with 'no_trial'.
+  it('does not start the reminder for an algadesk signup', async () => {
+    await expectNoReminderChild({
+      tenantId: 'tenant-44',
+      label: 'algadesk-no-reminder',
+      input: { ...tenantCreationInput, productCode: 'algadesk' },
+    });
   });
 });
