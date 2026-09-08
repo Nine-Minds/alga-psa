@@ -177,7 +177,7 @@ const resolveWorkflowTicketAssignment = async (
         user_type: 'internal',
         is_inactive: false,
       })
-      .first();
+      .forShare().first();
 
     if (!user) {
       throwActionError(ctx, {
@@ -192,7 +192,7 @@ const resolveWorkflowTicketAssignment = async (
   } else if (primary.type === 'team') {
     const team = await tenantScopedTable(tx, 'teams')
       .where('team_id', primary.id)
-      .first();
+      .forShare().first();
 
     if (!team) {
       throwActionError(ctx, {
@@ -218,7 +218,7 @@ const resolveWorkflowTicketAssignment = async (
         user_type: 'internal',
         is_inactive: false,
       })
-      .first();
+      .forShare().first();
 
     if (!manager) {
       throwActionError(ctx, {
@@ -239,7 +239,7 @@ const resolveWorkflowTicketAssignment = async (
       .where('team_members.team_id', primary.id)
       .andWhere('users.user_type', 'internal')
       .andWhere('users.is_inactive', false)
-      .select('team_members.user_id as user_id') as Array<{ user_id: string }>;
+      .forShare('team_members', 'users').select('team_members.user_id as user_id') as Array<{ user_id: string }>;
 
     implicitAdditionalUsers.push(
       ...teamMembers
@@ -251,7 +251,7 @@ const resolveWorkflowTicketAssignment = async (
     const member = await tenantScopedTable(tx, 'team_members')
       .where('team_id', primary.id)
       .orderBy('created_at', 'asc')
-      .first();
+      .forShare().first();
 
     if (!member?.user_id) {
       throwActionError(ctx, {
@@ -268,7 +268,7 @@ const resolveWorkflowTicketAssignment = async (
         user_type: 'internal',
         is_inactive: false,
       })
-      .first();
+      .forShare().first();
 
     if (!resolvedUser) {
       throwActionError(ctx, {
@@ -286,7 +286,7 @@ const resolveWorkflowTicketAssignment = async (
     ? await tenantScopedTable(tx, 'users')
         .where({ user_type: 'internal', is_inactive: false })
         .whereIn('user_id', explicitAdditionalUserIds)
-        .select('user_id')
+        .forShare().select('user_id')
     : [];
 
   const validExplicitUserIds = new Set(
@@ -840,6 +840,7 @@ export function registerTicketActions(): void {
     },
     handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => withWorkflowTicketMutation(tx.trx, {
       tenant: tx.tenantId, ticketId: input.ticket_id, workflowRunId: ctx.runId, actorUserId: tx.actorUserId, fields: Object.keys(input.patch),
+      readFields: ['ticket_id', 'updated_at', 'status_id', 'status', 'statuses', 'priority_id', 'priority', 'tags', 'attributes.tags'],
     }, async () => {
       await requirePermission(ctx, tx, { resource: 'ticket', action: 'update' });
 
@@ -1043,7 +1044,11 @@ export function registerTicketActions(): void {
       category: 'Business Operations',
       description: 'Assign a ticket using the canonical workflow assignment model'
     },
-    handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
+    handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => withWorkflowTicketMutation(tx.trx, {
+      tenant: tx.tenantId, ticketId: input.ticket_id, workflowRunId: ctx.runId, actorUserId: tx.actorUserId,
+      fields: ['assignment', ...(input.comment ? ['conversation', 'comments', 'note'] : [])],
+      readFields: ['ticket_id', 'updated_at', 'assignment', 'assigned_to', 'assigned_team_id', 'ticket_resources'],
+    }, async () => {
       await requirePermission(ctx, tx, { resource: 'ticket', action: 'update' });
 
       const ticket = await tenantScopedTable(tx, 'tickets').where('ticket_id', input.ticket_id).first();
@@ -1161,7 +1166,7 @@ export function registerTicketActions(): void {
         assigned_to: (updated.assigned_to as string | null) ?? null,
         updated_at: new Date(updated.updated_at ?? new Date().toISOString()).toISOString()
       };
-    })
+    }))
   });
 
   // ---------------------------------------------------------------------------

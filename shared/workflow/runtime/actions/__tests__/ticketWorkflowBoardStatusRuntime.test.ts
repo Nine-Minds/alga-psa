@@ -347,7 +347,7 @@ class FakeQueryBuilder {
 }
 
 function createFakeTrx(tables: TableMap) {
-  return ((tableName: string) => new FakeQueryBuilder(tableName, tables)) as any;
+  return Object.assign((tableName: string) => new FakeQueryBuilder(tableName, tables), { isTransaction: true }) as any;
 }
 
 function setTenantTx(tables: TableMap): void {
@@ -726,7 +726,7 @@ describe('ticket workflow runtime board-scoped statuses', () => {
       }),
       'tenant-1',
       expect.any(Function),
-      undefined,
+      expect.objectContaining({ transactionalCommentEvents: true, publishCommentCreated: expect.any(Function) }),
       undefined,
       'user-1'
     );

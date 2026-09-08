@@ -36,7 +36,7 @@ export const withCoManagedWorkflowTicketMutation: WorkflowTicketMutationAdapter 
       assignedUserIds: ticket.assigned_to ? [ticket.assigned_to] : [], teamIds: ticket.assigned_team_id ? [ticket.assigned_team_id] : [] };
     for (const action of ['read', 'update'] as const) {
       const decision = await authorizeCoManagedWorkRecord(trx, actor, subject, 'ticket', action, record);
-      const sources = action === 'read' ? [...fields, 'ticket_id', 'updated_at', 'status_id', 'status', 'statuses', 'priority_id', 'priority', 'tags', 'attributes.tags'] : fields;
+      const sources = action === 'read' ? [...fields, ...input.readFields] : fields;
       if (isCoManagedReadFieldHidden(decision.redactedFields, sources.flatMap(field => [field, `tickets.${field}`]))) throw new CoManagedSharedWorkError();
     }
   };

@@ -17141,3 +17141,83 @@ it.each(['response_state', 'priority.name'] as const)('MSP SLA workflow updates 
     .rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
   expect(await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).toEqual(before);
 }));
+
+async function withWorkflowAssignmentFixture(work: (fixture: any) => Promise<void>) {
+  return withWorkflowSlaFixture(async f => {
+    const baseUser = await f.customer.table('users').where('user_id', f.customerPrincipal.userId).first();
+    const userIds = [randomUUID(), randomUUID()];
+    for (const userId of userIds) await f.customer.table('users').insert({ ...baseUser, user_id: userId, username: `wf-assign-${userId}`, email: `${userId}@example.test` });
+    const assign = (primary: any = { type: 'user', id: userIds[0] }, extra: any = {}) => f.act('tickets.assign', {
+      ticket_id: f.resource.id, assignment: { primary, additional_user_ids: [userIds[1]] }, ...extra,
+    });
+    await work({ ...f, userIds, assign });
+  });
+}
+
+it.each(['user', 'team', 'queue'] as const)('co-managed workflow assignment retains actual %s targets, resources and no-op state without resetting SLA', async kind => withWorkflowAssignmentFixture(async f => {
+  let id = f.userIds[0];
+  if (kind !== 'user') {
+    id = randomUUID();
+    await f.customer.table('teams').insert({ tenant: f.resource.tenant, team_id: id, team_name: 'Workflow assignment team', manager_id: f.userIds[0] });
+    for (let index = 0; index < f.userIds.length; index++) await f.customer.table('team_members').insert({ tenant: f.resource.tenant, team_id: id, user_id: f.userIds[index], created_at: new Date(1000 + index) });
+  }
+  const clock = await f.sponsor.table('sla_organization_obligations').first();
+  const result = await f.assign({ type: kind, id });
+  expect(result).toMatchObject({ assigned_type: kind, assigned_id: id, assigned_to: f.userIds[0] });
+  const ticket = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  expect(ticket).toMatchObject({ assigned_to: f.userIds[0], assigned_team_id: kind === 'team' ? id : null });
+  const resources = await f.customer.table('ticket_resources').where('ticket_id', f.resource.id);
+  expect(resources).toEqual([expect.objectContaining({ assigned_to: f.userIds[0], additional_user_id: f.userIds[1] })]);
+  expect(await f.assign({ type: kind, id })).toEqual(result);
+  expect(await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).toEqual(ticket);
+  expect(await f.customer.table('ticket_resources').where('ticket_id', f.resource.id)).toEqual(resources);
+  expect(await f.sponsor.table('sla_organization_obligations').first()).toEqual(clock);
+}));
+
+it.each(['expired_lease', 'missing_role', 'read_only', 'missing_composition'] as const)('co-managed workflow assignment rejects %s before changing the ticket', async reason => withWorkflowAssignmentFixture(async f => {
+  if (reason === 'expired_lease') await f.customer.table('workflow_runs').where('run_id', f.runId).update({ lease_expires_at: new Date(0) });
+  if (reason === 'missing_role') await f.customer.table('user_roles').where('user_id', f.customerPrincipal.userId).del();
+  if (reason === 'read_only') await f.sponsor.table('co_managed_allocations').del();
+  if (reason === 'missing_composition') f.mutationRegistry.resetWorkflowTicketMutationAdapter();
+  const before = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  await expect(f.assign()).rejects.toThrow();
+  expect(await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).toEqual(before);
+  expect(await f.customer.table('ticket_resources').where('ticket_id', f.resource.id)).toHaveLength(0);
+}));
+
+it('co-managed workflow assignment rolls back the ticket, resources and audit after late lease expiry', async () => withWorkflowAssignmentFixture(async f => {
+  const { TicketModel } = await import('../../../../shared/models/ticketModel');
+  const original = TicketModel.updateTicket;
+  const before = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  const writer = vi.spyOn(TicketModel, 'updateTicket').mockImplementationOnce(async (...args) => {
+    const result = await original.apply(TicketModel, args);
+    await tenantDb(args[3], f.resource.tenant).table('workflow_runs').where('run_id', f.runId).update({ lease_expires_at: new Date(0) });
+    return result;
+  });
+  try {
+    await expect(f.assign()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    expect(await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).toEqual(before);
+    expect(await f.customer.table('ticket_resources').where('ticket_id', f.resource.id)).toHaveLength(0);
+    expect(await f.customer.table('audit_logs').where({ record_id: f.runId, operation: 'workflow_action:tickets.assign' })).toHaveLength(0);
+  } finally { writer.mockRestore(); }
+}));
+
+it('co-managed workflow assignment retains its optional public comment exactly once on a no-op retry', async () => withWorkflowAssignmentFixture(async f => {
+  const extra = { comment: { body: 'Customer assignment context', visibility: 'public' } };
+  await f.assign(undefined, extra); await f.assign(undefined, extra);
+  const comments = await f.customer.table('comments').where('ticket_id', f.resource.id);
+  expect(comments).toHaveLength(1);
+  expect(comments[0]).toMatchObject({ is_internal: false, publish_state: 'published' });
+  expect(await f.customer.table('co_management_event_outbox').where({ comment_id: comments[0].comment_id, event_type: 'TICKET_COMMENT_ADDED' })).toHaveLength(1);
+}));
+
+it.each(['assigned_to', 'priority.name'] as const)('co-managed workflow assignment applies action-specific read fields for %s', async field => withWorkflowAssignmentFixture(async f => {
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: f.resource.tenant, name: 'Assignment output restriction', actorUserId: f.customerPrincipal.userId });
+  await bundles.upsertBundleRule(db, { tenant: f.resource.tenant, bundleId, revisionId, resourceType: 'ticket', action: 'read', templateKey: 'selected_clients',
+    config: { selectedClientIds: [f.operation.customer_client_id], redactedFields: [field] } });
+  await bundles.publishBundleRevision(db, { tenant: f.resource.tenant, bundleId, revisionId, actorUserId: f.customerPrincipal.userId });
+  await bundles.createBundleAssignment(db, { tenant: f.resource.tenant, bundleId, targetType: 'user', targetId: f.customerPrincipal.userId });
+  if (field === 'assigned_to') await expect(f.assign()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  else expect(await f.assign()).toMatchObject({ assigned_to: f.userIds[0] });
+}));
