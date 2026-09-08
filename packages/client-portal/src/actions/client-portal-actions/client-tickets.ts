@@ -1,5 +1,8 @@
 'use server'
 
+import { readPortalTicketConversations } from '@alga-psa/tickets/lib/portalTicketConversations';
+import { TicketConversationError } from '@alga-psa/shared/lib/tickets/namedConversations';
+
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- Client portal ticket actions intentionally compose ticketing feature APIs for client-facing workflows. */
 
 import { validateData } from '@alga-psa/validation';
@@ -94,6 +97,7 @@ function zodErrorMessage(error: z.ZodError): {
 }
 
 function toClientTicketActionError(error: unknown): ClientTicketActionError | null {
+  if (error instanceof TicketConversationError) return actionError('This conversation is unavailable.', 'features/tickets:namedConversations.unavailable');
   if (error instanceof ExpectedClientTicketActionError) {
     return error.kind === 'permission'
       ? permissionError(error.message, error.messageKey, error.messageParams)
@@ -293,7 +297,7 @@ export const getClientTickets = withAuth(async (user, { tenant }, status: string
   }
 });
 
-export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId: string): Promise<ClientTicketActionResult<ITicketWithDetails>> => {
+export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId: string, conversationId?: string): Promise<ClientTicketActionResult<ITicketWithDetails>> => {
   try {
     const userId = clientPortalUserIdOrError(user);
     if (typeof userId !== 'string') {
@@ -351,6 +355,10 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
         })
         .first();
 
+      const ticket = await ticketQuery;
+      if (!ticket) throw expectedClientTicketActionError('Ticket not found or access denied', 'client-portal:errors.tickets.notFoundOrDenied');
+      const selectedConversation = await readPortalTicketConversations(trx, tenant, ticketId, conversationId);
+
       const documentsQuery = scopedDb.table('documents as d').select('d.*');
       scopedDb.tenantJoin(documentsQuery, 'document_associations as da', 'd.document_id', 'da.document_id');
       documentsQuery.where({
@@ -374,6 +382,13 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
         'comments.publish_state': 'published',
         'root.publish_state': 'published',
       }).whereRaw('? = ?', [commentAudienceSql(trx, 'ct', 'root', 'comments'), 'requester']);
+      visibleCommentsQuery.where(query => {
+        query.where('ct.conversation_id', selectedConversation.selectedConversationId);
+        // Unassociated legacy roots remain in Requester until their canonical
+        // writer associates them. Never fold an explicitly named side into it.
+        if (selectedConversation.requesterConversations.some(row => row.isDefault && row.conversationId === selectedConversation.selectedConversationId))
+          query.orWhereNull('ct.conversation_id');
+      });
       const commentUserIdsSubquery = visibleCommentsQuery.clone().select('comments.user_id')
         .whereNull('comments.actor_reference_id')
         .whereNull('comments.actor_display_name')
@@ -450,9 +465,7 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
           [commentAudienceSql(trx, 'ct', 'root', 'parent')]),
       }).orderBy('comments.created_at', 'asc');
 
-      const [ticket, conversations, documents, users, linkedAssets] = await Promise.all([
-        ticketQuery,
-
+      const [conversations, documents, users, linkedAssets] = await Promise.all([
         // Get conversations (client-visible comments only)
         conversationsQuery,
 
@@ -467,7 +480,7 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
         linkedAssetsQuery
       ]);
 
-      return { ticket, conversations, documents, users, linkedAssets };
+      return { ticket, conversations, documents, users, linkedAssets, ...selectedConversation };
     }) as any;
 
     if (!result.ticket) {
@@ -554,6 +567,7 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
       updated_at: result.ticket.updated_at instanceof Date ? result.ticket.updated_at.toISOString() : result.ticket.updated_at,
       closed_at: result.ticket.closed_at instanceof Date ? result.ticket.closed_at.toISOString() : result.ticket.closed_at,
       conversations: result.conversations,
+      selectedConversationId: result.selectedConversationId, requesterConversations: result.requesterConversations,
       documents: result.documents,
       // Linked assets joined from asset_associations; the type is broadened on
       // the consumer side via a small augmentation since ITicketWithDetails
@@ -573,7 +587,8 @@ export const addClientTicketComment = withAuth(async (
   ticketId: string,
   content: string,
   isInternal: boolean = false,
-  isResolution: boolean = false
+  isResolution: boolean = false,
+  conversationId?: string
 ): Promise<ClientTicketActionResult<boolean>> => {
   // Client portal contacts can never create internal notes/threads. Force the
   // flag server-side — the portal UI always passes false, but server actions
@@ -613,6 +628,7 @@ export const addClientTicketComment = withAuth(async (
       }
 
       await resolveVisibleTicket(trx, tenant, userRecord.contact_id, ticketId);
+      const selectedConversation = await readPortalTicketConversations(trx, tenant, ticketId, conversationId, 'update');
 
       let markdownContent = "";
       try {
@@ -639,6 +655,7 @@ export const addClientTicketComment = withAuth(async (
         tenant,
         thread_id: clientGeneratedIds.thread_id,
         ticket_id: ticketId,
+        conversation_id: selectedConversation.selectedConversationId,
         project_task_id: null,
         root_comment_id: clientGeneratedIds.comment_id,
         is_internal: isInternal,
@@ -664,6 +681,9 @@ export const addClientTicketComment = withAuth(async (
         user_id: userId,
         markdown_content: markdownContent
       }).returning('*');
+
+      await tenantDb(trx, tenant).table('ticket_conversations').where({ ticket_tenant: tenant, ticket_id: ticketId, conversation_id: selectedConversation.selectedConversationId })
+        .increment('message_version', 1).update({ status: 'open', updated_at: trx.fn.now() });
 
       if (!isInternal) {
         await tenantDb(trx, tenant).table('tickets')

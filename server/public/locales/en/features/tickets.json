@@ -1883,6 +1883,9 @@
     "removeFile": "Remove",
     "uploadingFile": "Attaching {{name}}…",
     "retryFile": "Retry attachment",
-    "cancelFile": "Cancel attachment"
+    "cancelFile": "Cancel attachment",
+    "finishRequesterEdit": "Finish or cancel your current edit before switching conversations.",
+    "portalSelector": "Conversation",
+    "reopenAfterAccountChange": "Reopen this ticket after switching accounts."
   }
 }

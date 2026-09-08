@@ -1,5 +1,7 @@
 'use client';
 
+import type { TicketConversationReference } from '@alga-psa/shared/lib/tickets/namedConversations';
+
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import type { CoManagedSharedResource, CoManagedConversationCursor, CoManagedConversationItem, CoManagedCommentCreateRequest, CoManagedCommentMutationRequest, CoManagedPrivateCommentCommand } from '@alga-psa/co-managed';
@@ -148,16 +150,17 @@ function Composer({ resource, actor, audiences, draftAttachments, draft, onSaved
   </form>;
 }
 
-export default function CoManagedTicketConversation({ resource }: { resource: CoManagedSharedResource }) {
+export default function CoManagedTicketConversation({ resource, requester, onDraftState }: { resource: CoManagedSharedResource; requester?: TicketConversationReference; onDraftState?: (active: boolean) => void }) {
   const { data: session } = useSession();
-  const identity = `${session?.session_id}:${resource.tenant}:${resource.relationshipId}:${resource.id}:${session?.user?.tenant}:${session?.user?.id}`;
-  return <Conversation key={identity} resource={resource} homeTenant={session?.user?.tenant} userId={session?.user?.id} />;
+  const identity = `${session?.session_id}:${resource.tenant}:${resource.relationshipId}:${resource.id}:${session?.user?.tenant}:${session?.user?.id}:${requester?.storeTenant}:${requester?.conversationId}`;
+  return <Conversation key={identity} resource={resource} requester={requester} onDraftState={onDraftState} homeTenant={session?.user?.tenant} userId={session?.user?.id} />;
 }
-function Conversation({ resource, homeTenant, userId }: { resource: CoManagedSharedResource; homeTenant?: string; userId?: string }) {
+function Conversation({ resource, homeTenant, userId, requester, onDraftState }: { resource: CoManagedSharedResource; homeTenant?: string; userId?: string; requester?: TicketConversationReference; onDraftState?: (active: boolean) => void }) {
   const { t } = useTranslation('msp/licensing'), { formatDate } = useFormatters();
   const [state, setState] = useState<Screen | null>(null), [error, setError] = useState(false), [busy, setBusy] = useState(true);
   const [disclosure, setDisclosure] = useState<CoManagedConversationItem | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null), [revision, setRevision] = useState(0);
+  useEffect(() => { onDraftState?.(Boolean(draft || disclosure)); return () => onDraftState?.(false); }, [draft, disclosure, onDraftState]);
   const target = useRef({ ...resource }), cursors = useRef<Array<CoManagedConversationCursor | undefined>>([undefined]);
   const generation = useRef(0), mounted = useRef(false), loading = useRef(false), queued = useRef(false);
   async function refresh() {
@@ -165,7 +168,8 @@ function Conversation({ resource, homeTenant, userId }: { resource: CoManagedSha
     if (loading.current) { queued.current = true; return; }
     const current = ++generation.current; loading.current = true; setBusy(true);
     try {
-      const page = await getCoManagedTicketConversationScreenAction(target.current, cursors.current.at(-1));
+      const page = requester ? await getCoManagedTicketConversationScreenAction(target.current, cursors.current.at(-1), requester)
+        : await getCoManagedTicketConversationScreenAction(target.current, cursors.current.at(-1));
       if (!mounted.current || current !== generation.current) return;
       if (page.actor.tenant !== homeTenant || page.actor.userId !== userId) throw new Error('Conversation session changed');
       setState(page); setError(false);
@@ -217,7 +221,7 @@ function Conversation({ resource, homeTenant, userId }: { resource: CoManagedSha
           {writable && !draft && !disclosure && <div className="flex flex-wrap gap-2">
             <Button id={`${id}-reply`} variant="ghost" size="sm" onClick={() => open({ kind: 'reply', item })}>{t('coManaged.conversation.reply')}</Button>
             {own && content !== null && <Button id={`${id}-edit`} variant="ghost" size="sm" onClick={() => open({ kind: 'edit', item })}>{t('coManaged.conversation.edit')}</Button>}
-            {own && !item.parentCommentId && <Button id={`${id}-audience`} variant="ghost" size="sm" onClick={() => setDisclosure(item)}>{t('coManaged.disclosure.title')}</Button>}
+            {own && !requester && !item.parentCommentId && <Button id={`${id}-audience`} variant="ghost" size="sm" onClick={() => setDisclosure(item)}>{t('coManaged.disclosure.title')}</Button>}
             {own && <Button id={`${id}-delete`} variant="ghost" size="sm" onClick={() => open({ kind: 'delete', item })}>{t('coManaged.conversation.delete')}</Button>}
           </div>}
         </li>;

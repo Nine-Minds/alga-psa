@@ -5068,7 +5068,7 @@ it('does not use public comment side effects to mutate a restricted response-sta
 }));
 
 async function withPortalConversationFixture(work: (fixture: Parameters<Parameters<typeof withConversationFixture>[0]>[0] & {
-  portalRead: (ticketId?: string) => Promise<any>; requester: any; avatars: ReturnType<typeof vi.spyOn>;
+  portalRead: (ticketId?: string, conversationId?: string) => Promise<any>; portalPost: (content: string, conversationId?: string) => Promise<any>; requester: any; avatars: ReturnType<typeof vi.spyOn>;
 }) => Promise<void>) {
   await withConversationFixture(async fixture => {
     const { customer, resource, operation } = fixture;
@@ -5093,9 +5093,11 @@ async function withPortalConversationFixture(work: (fixture: Parameters<Paramete
     const spies = [vi.spyOn(dbModule, 'getConnection').mockResolvedValue(db), avatars,
       vi.spyOn(avatarActions, 'getContactAvatarUrlAction').mockResolvedValue(null)];
     try {
-      const portalRead = (ticketId = resource.id) => auth.runWithApiKeyUser(requester,
-        () => runWithTenant(resource.tenant, () => portal.getClientTicketDetails(ticketId)));
-      await work({ ...fixture, requester, portalRead, avatars });
+      const portalRead = (ticketId = resource.id, conversationId?: string) => auth.runWithApiKeyUser(requester,
+        () => runWithTenant(resource.tenant, () => portal.getClientTicketDetails(ticketId, conversationId)));
+      const portalPost = (content: string, conversationId?: string) => auth.runWithApiKeyUser(requester,
+        () => runWithTenant(resource.tenant, () => portal.addClientTicketComment(resource.id, content, false, false, conversationId)));
+      await work({ ...fixture, requester, portalRead, portalPost, avatars });
     } finally {
       for (const spy of spies.reverse()) spy.mockRestore();
       permissionMock.mockImplementation(previousPermissionImplementation!);
@@ -15173,3 +15175,43 @@ describe('named ticket conversation file publication against migrated PostgreSQL
     } finally { instance.mockRestore(); provider.mockRestore(); }
   });
 });
+
+
+it('portal named requester selection keeps reads and canonical replies in the selected conversation', async () => withPortalConversationFixture(async ({
+  customer, customerPrincipal, resource, requester, addCustomer, portalRead, portalPost,
+}) => {
+  const { createStoredTicketConversation } = await import('@alga-psa/shared/lib/tickets/namedConversations');
+  const create = (name: string, audience: 'requester' | 'shared_it' | 'organization_private') => db.transaction(trx =>
+    createStoredTicketConversation({ trx, storeTenant: resource.tenant, ticket: { tenant: resource.tenant, ticketId: resource.id } }, customerPrincipal,
+      { operationId: randomUUID(), name, audience, transport: audience === 'requester' ? 'email' : 'internal' }));
+  await addCustomer({ note: 'Default customer exchange' });
+  const other = await create('Delivery arrangements', 'requester');
+  const hidden = await create('Hidden organization title', 'organization_private');
+  await create('Hidden joint title', 'shared_it');
+  const root = await addCustomer({ note: 'Only in delivery arrangements' });
+  await customer.table('comment_threads').where('thread_id', root.threadId).update({ conversation_id: other.conversationId });
+  const original = await portalRead();
+  expect(original.requesterConversations.map((c: any) => c.name)).toEqual(['Requester', 'Delivery arrangements']);
+  expect(original.conversations.map((c: any) => c.note)).toEqual(['Default customer exchange']);
+  const selected = await portalRead(resource.id, other.conversationId);
+  expect(selected.selectedConversationId).toBe(other.conversationId);
+  expect(selected.conversations.map((c: any) => c.note)).toEqual(['Only in delivery arrangements']);
+  expect(JSON.stringify(selected)).not.toContain('Hidden');
+  const role = await customer.table('user_roles').where('user_id', requester.user_id).first();
+  const permission = await customer.table('permissions').where({ resource: 'ticket', action: 'update', msp: false, client: true }).first();
+  await customer.table('role_permissions').insert({ tenant: resource.tenant, role_id: role.role_id, permission_id: permission.permission_id });
+  await customer.table('ticket_conversations').where('conversation_id', other.conversationId).update({ status: 'done' });
+  expect(await portalPost('Customer delivery reply', other.conversationId)).toBe(true);
+  const reply = await customer.table('comments').where('note', 'Customer delivery reply').first();
+  expect(await customer.table('comment_threads').where('thread_id', reply.thread_id).first()).toMatchObject({ conversation_id: other.conversationId, is_internal: false });
+  expect(await customer.table('ticket_conversations').where('conversation_id', other.conversationId).first()).toMatchObject({ status: 'open', message_version: '1' });
+  expect(await customer.table('tickets').where('ticket_id', resource.id).first()).toMatchObject({ response_state: 'awaiting_internal' });
+  expect((await portalRead()).conversations.map((c: any) => c.note)).toEqual(['Default customer exchange']);
+  expect((await portalRead(resource.id, other.conversationId)).conversations).toHaveLength(2);
+  const before = await customer.table('comments').count('* as count').first();
+  for (const id of [hidden.conversationId, randomUUID(), 'invalid']) {
+    expect(await portalRead(resource.id, id)).toMatchObject({ actionError: 'This conversation is unavailable.' });
+    expect(await portalPost('Must never publish', id)).toMatchObject({ actionError: 'This conversation is unavailable.' });
+  }
+  expect(await customer.table('comments').count('* as count').first()).toEqual(before);
+}));

@@ -7,6 +7,7 @@ import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { getCoManagedTicketScreenAction, getSharedTicketHandoffHistoryAction, type CoManagedTicketScreenTarget } from '@/lib/actions/coManagedSharedWorkActions';
 import CoManagedTicketEditor from './CoManagedTicketEditor';
 import CoManagedTicketConversation from './CoManagedTicketConversation';
+import CoManagedNamedTicketConversation from './CoManagedNamedTicketConversation';
 import CoManagedHandoffComposer, { type HandoffAction } from './CoManagedHandoffComposer';
 
 type Screen = Awaited<ReturnType<typeof getCoManagedTicketScreenAction>>;
@@ -79,7 +80,7 @@ function TicketPanel({ target, showSummary }: { target: CoManagedTicketScreenTar
           {screen.canRevoke && <Button id="co-ticket-revoke" variant="outline" onClick={() => setAction('revoke')}>{t('coManaged.ticket.revoke')}</Button>}
         </div>}
       {showSummary && screen.side === 'sponsor' && <CoManagedTicketEditor resource={screen.summary.resource} onSaved={reload} onReload={reload} />}
-      <CoManagedTicketConversation resource={screen.summary.resource} />
+      {showSummary ? <CoManagedNamedTicketConversation resource={screen.summary.resource} /> : <CoManagedTicketConversation resource={screen.summary.resource} />}
       <section className="space-y-3" aria-labelledby="co-ticket-history-title">
         <h2 id="co-ticket-history-title" className="font-semibold">{t('coManaged.ticket.history')}</h2>
         {!history.items.length && !historyBusy && !historyError && <p className="text-sm text-muted-foreground">{t('coManaged.ticket.noHistory')}</p>}

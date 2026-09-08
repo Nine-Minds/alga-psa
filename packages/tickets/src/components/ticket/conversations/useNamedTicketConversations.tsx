@@ -3,7 +3,7 @@
 import { ConversationDraftFiles } from './ConversationDraftFiles';
 import type { ConversationEditorFile } from '@alga-psa/shared/lib/tickets/conversationEditorFiles';
 
-import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject, type ReactNode } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
@@ -33,7 +33,8 @@ const audienceLabels = { requester: 'Requester', shared_it: 'Shared IT', organiz
 
 /** The host provides the established requester panel. Additional conversations
  * have their own history and composer; they never reuse a ticket-wide sender. */
-export function useNamedTicketConversations(input: ConversationTicketReference | null, enabled: boolean, id: string) {
+export function useNamedTicketConversations(input: ConversationTicketReference | null, enabled: boolean, id: string,
+  options: { requesterPanel?: (props: { conversation: NamedTicketConversation; flush: Flush; onDirty: (dirty: boolean) => void }) => ReactNode } = {}) {
   const { t } = useTranslation('features/tickets');
   const { data: session } = useSession(), router = useRouter(), params = useSearchParams();
   const ticket = useMemo(() => input ? { ...input } : null, [input?.tenant, input?.ticketId, input?.relationshipId]);
@@ -107,7 +108,7 @@ export function useNamedTicketConversations(input: ConversationTicketReference |
     {screen && <CreateConversation id={id} ticket={ticket} open={creating} audiences={screen.writeAudiences.filter(a => a !== 'requester')}
       onClose={() => setCreating(false)} onCreated={async value => { setCreating(false); refresh(); await select(value); }} />}
   </section>;
-  return { navigator, panel: !screen ? (error ? unavailable : loading) : !selected ? unavailable : selected.defaultSlot === 'requester' ? undefined
+  return { navigator, panel: !screen ? (error ? unavailable : loading) : !selected ? unavailable : selected.defaultSlot === 'requester' ? options.requesterPanel?.({ conversation: selected, flush, onDirty: setDirty })
     : <NamedConversationPanel key={`${identity}:${keyOf(selected)}`} id={id} ticket={ticket} conversation={selected}
       canWrite={screen.writeAudiences.includes(selected.audience)} flush={flush} onDirty={setDirty} onRefresh={refresh} /> };
 }

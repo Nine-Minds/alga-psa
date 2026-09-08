@@ -810,7 +810,7 @@
   {
     "id": "F102",
     "description": "Provide minimal requester conversation navigation in the existing portal while preserving its access model.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "11. Compatibility, migration and release"
     ]

@@ -1883,6 +1883,9 @@
     "removeFile": "222222",
     "uploadingFile": "222222222 {{name}}…",
     "retryFile": "22222 2222222222",
-    "cancelFile": "222222 2222222222"
+    "cancelFile": "222222 2222222222",
+    "finishRequesterEdit": "222222 22 222222 2222 2222222 2222 222222 222222222 2222222222222.",
+    "portalSelector": "2Conversation",
+    "reopenAfterAccountChange": "2Reopen this ticket after switching accounts."
   }
 }

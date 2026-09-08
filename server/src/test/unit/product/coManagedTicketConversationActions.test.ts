@@ -1,9 +1,9 @@
 import { beforeEach, expect, it, vi } from 'vitest';
-const mocks = vi.hoisted(() => ({ read: vi.fn(), permissions: vi.fn(), session: vi.fn(), override: vi.fn(), db: vi.fn(),
+const mocks = vi.hoisted(() => ({ named: vi.fn(), read: vi.fn(), permissions: vi.fn(), session: vi.fn(), override: vi.fn(), db: vi.fn(),
   user: { user_id: 'home-user', tenant: 'home-tenant', user_type: 'internal' }, knex: {}, Forbidden: class extends Error {} }));
 vi.mock('@alga-psa/auth', () => ({ withAuth: (fn: any) => (...args: any[]) => fn(mocks.user, { tenant: mocks.user.tenant }, ...args), getSession: mocks.session, getApiKeyUserOverride: mocks.override }));
 vi.mock('@alga-psa/db', () => ({ createTenantKnex: mocks.db }));
-vi.mock('@alga-psa/co-managed', () => ({ getCoManagedTicketConversation: mocks.read, getCoManagedConversationContributionHints: mocks.permissions, CoManagedSharedWorkError: mocks.Forbidden }));
+vi.mock('@alga-psa/co-managed', () => ({ getNamedTicketConversationMessages: mocks.named, getCoManagedTicketConversation: mocks.read, getCoManagedConversationContributionHints: mocks.permissions, CoManagedSharedWorkError: mocks.Forbidden }));
 import { getCoManagedTicketConversationAction, getCoManagedTicketConversationScreenAction } from '../../../lib/actions/coManagedTicketConversationActions';
 const resource = { tenant: 'customer', relationshipId: 'relationship', kind: 'ticket' as const, id: 'ticket' };
 beforeEach(() => { vi.resetAllMocks(); mocks.user.user_type = 'internal'; mocks.db.mockResolvedValue({ knex: mocks.knex });
@@ -27,4 +27,18 @@ it('returns the actual home actor and current write hints with each authorized c
   mocks.permissions.mockResolvedValue({ writeAudiences: ['shared_it'], attachmentAudiences: [] }); mocks.read.mockResolvedValue({ resource, items: [], nextBefore: null });
   expect(await getCoManagedTicketConversationScreenAction(resource)).toEqual({ resource, items: [], nextBefore: null,
     actor: { tenant: 'home-tenant', userId: 'home-user' }, writeAudiences: ['shared_it'], draftAttachments: { audiences: [], maxBytes: 20905984, maxFiles: 20 } });
+});
+
+
+it('qualifies the default Requester page before projection and narrows legacy creation and attachment hints', async () => {
+  const selected = { storeTenant: 'customer', conversationId: 'requester' };
+  mocks.permissions.mockResolvedValue({ writeAudiences: ['requester', 'shared_it', 'organization_private'], attachmentAudiences: ['requester', 'shared_it'] });
+  mocks.named.mockResolvedValue({ conversation: { ...selected, audience: 'requester', defaultSlot: 'requester' }, items: [{ commentId: 'public' }], nextBefore: null });
+  const page = await getCoManagedTicketConversationScreenAction(resource, undefined, selected);
+  expect(page.writeAudiences).toEqual(['requester']); expect(page.draftAttachments.audiences).toEqual(['requester']);
+  expect(page.items).toEqual([{ commentId: 'public' }]);
+  expect(mocks.named.mock.calls[0].slice(2)).toEqual([{ tenant: resource.tenant, ticketId: resource.id, relationshipId: resource.relationshipId }, selected, undefined]);
+  expect(mocks.read).not.toHaveBeenCalled();
+  mocks.named.mockResolvedValue({ conversation: { ...selected, audience: 'organization_private', defaultSlot: null }, items: [{ note: 'private' }], nextBefore: null });
+  await expect(getCoManagedTicketConversationScreenAction(resource, undefined, selected)).rejects.toMatchObject({ code: 'CONVERSATION_FORBIDDEN' });
 });

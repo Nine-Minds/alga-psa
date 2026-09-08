@@ -2,8 +2,9 @@
 import React from 'react';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import CoManagedNamedTicketConversation from '../../../components/co-managed/CoManagedNamedTicketConversation';
 import { useNamedTicketConversations } from '../../../../../packages/tickets/src/components/ticket/conversations/useNamedTicketConversations';
-const mocks = vi.hoisted(() => ({ uploadOptions: vi.fn(), uploadFile: vi.fn(), load: vi.fn(), page: vi.fn(), readDraft: vi.fn(), saveDraft: vi.fn(), post: vi.fn(), create: vi.fn(), status: vi.fn(), push: vi.fn(), mailboxes: vi.fn(), selectMailbox: vi.fn(), latestSend: vi.fn(), prepareEmail: vi.fn(), sendEmail: vi.fn(), emailStatus: vi.fn(), emailDefaults: vi.fn(),
+const mocks = vi.hoisted(() => ({ flag: true, requesterProps: vi.fn(), uploadOptions: vi.fn(), uploadFile: vi.fn(), load: vi.fn(), page: vi.fn(), readDraft: vi.fn(), saveDraft: vi.fn(), post: vi.fn(), create: vi.fn(), status: vi.fn(), push: vi.fn(), mailboxes: vi.fn(), selectMailbox: vi.fn(), latestSend: vi.fn(), prepareEmail: vi.fn(), sendEmail: vi.fn(), emailStatus: vi.fn(), emailDefaults: vi.fn(),
   query: '', session: { session_id: 'session', user: { tenant: 'home', id: 'author' } } }));
 vi.mock('../../../../../packages/tickets/src/actions/namedTicketConversationActions', () => ({
   getNamedConversationUploadOptionsAction: mocks.uploadOptions, uploadNamedConversationEditorFileAction: mocks.uploadFile,
@@ -14,6 +15,11 @@ vi.mock('../../../../../packages/tickets/src/actions/namedTicketConversationActi
   getNamedConversationEditorDraftAction: mocks.readDraft, saveNamedConversationEditorDraftAction: mocks.saveDraft,
   postNamedTicketConversationAction: mocks.post, createNamedTicketConversationAction: mocks.create, setNamedTicketConversationStatusAction: mocks.status,
 }));
+vi.mock('@alga-psa/ui/hooks/useFeatureFlag', () => ({ useFeatureFlag: () => ({ enabled: mocks.flag }) }));
+vi.mock('../../../components/co-managed/CoManagedTicketConversation', () => ({ default: (props: any) => {
+  mocks.requesterProps(props);
+  return <div>Canonical Requester<button onClick={() => props.onDraftState?.(true)}>Start requester edit</button><button onClick={() => props.onDraftState?.(false)}>Finish requester edit</button></div>;
+} }));
 vi.mock('next-auth/react', () => ({ useSession: () => ({ data: mocks.session }) }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: mocks.push }), useSearchParams: () => new URLSearchParams(mocks.query) }));
 vi.mock('next/dynamic', () => ({ default: () => ({ id, document, editable, onChange }: any) => editable !== undefined
@@ -34,7 +40,7 @@ function Harness({ enabled = true }: { enabled?: boolean }) {
 }
 const deferred = () => { let resolve!: (value: any) => void; const promise = new Promise<any>(done => { resolve = done; }); return { promise, resolve }; };
 beforeEach(() => {
-  vi.resetAllMocks(); mocks.query = 'conversation=private&conversationStore=home';
+  vi.resetAllMocks(); mocks.flag = true; mocks.query = 'conversation=private&conversationStore=home';
   mocks.session = { session_id: 'session', user: { tenant: 'home', id: 'author' } };
   mocks.load.mockResolvedValue({ conversations: [requester, side], writeAudiences: ['requester', 'organization_private'], actor: { tenant: 'home', userId: 'author' } });
   mocks.page.mockResolvedValue({ conversation: side, items: [], nextBefore: null });
@@ -294,4 +300,26 @@ it('retries the same private upload, preserves file selection through edits and 
   fireEvent.click(screen.getByRole('button', { name: 'Remove' }));
   await waitFor(() => expect(draft.attachments).toEqual([]));
   expect(screen.queryByRole('link', { name: /diagnosis.txt/ })).toBeNull();
+});
+
+
+it('connects the shared ticket navigator to a scoped canonical Requester and preserves an active requester edit', async () => {
+  mocks.query = '';
+  const resource = { kind: 'ticket' as const, tenant: 'owner', id: 'ticket', relationshipId: 'relationship' };
+  const view = render(<CoManagedNamedTicketConversation resource={resource} />);
+  await screen.findByText('Canonical Requester');
+  expect(mocks.requesterProps.mock.calls.at(-1)?.[0]).toMatchObject({ resource, requester: { storeTenant: 'owner', conversationId: 'requester' } });
+  expect(mocks.load).toHaveBeenCalledWith({ tenant: 'owner', ticketId: 'ticket', relationshipId: 'relationship' });
+  fireEvent.click(screen.getByRole('button', { name: 'Start requester edit' }));
+  await screen.findByText('Finish or cancel your current edit before switching conversations.');
+  fireEvent.click(screen.getByRole('button', { name: /Diagnostics/ })); expect(mocks.push).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: 'Finish requester edit' }));
+  fireEvent.click(screen.getByRole('button', { name: /Diagnostics/ })); await waitFor(() => expect(mocks.push).toHaveBeenCalledTimes(1));
+  mocks.query = 'conversation=private&conversationStore=home'; view.rerender(<CoManagedNamedTicketConversation resource={resource} />);
+  await screen.findByLabelText('Message');
+  expect(screen.queryByText('Canonical Requester')).toBeNull();
+  view.unmount(); mocks.flag = false; mocks.load.mockClear();
+  render(<CoManagedNamedTicketConversation resource={resource} />);
+  expect(screen.getByText('Canonical Requester')).toBeInTheDocument(); expect(mocks.load).not.toHaveBeenCalled();
+  expect(mocks.requesterProps.mock.calls.at(-1)?.[0].requester).toBeUndefined();
 });
