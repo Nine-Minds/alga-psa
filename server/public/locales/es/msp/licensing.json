@@ -503,7 +503,15 @@
       },
       "export": "Exportar CSV",
       "exporting": "Exportando…",
-      "exportError": "No se pudieron exportar los tickets. Actualice la cola e inténtelo de nuevo."
+      "exportError": "No se pudieron exportar los tickets. Actualice la cola e inténtelo de nuevo.",
+      "bulkHandback": {
+        "title": "Devolver tickets al equipo de TI del cliente",
+        "select": "Seleccione tickets de esta página. Se añadirá la misma nota compartida de TI a cada ticket seleccionado.",
+        "returned": "Devuelto al equipo de TI del cliente",
+        "forbidden": "Acceso denegado",
+        "changed": "El ticket ha cambiado. Actualice antes de volver a intentarlo.",
+        "invalid": "Selección no válida"
+      }
     },
     "conversation": {
       "title": "Conversación",

@@ -11,6 +11,7 @@ export * from './actorReferences';
 export * from './ticketEditing';
 
 export * from './ticketQueue';
+export * from './ticketBulkHandback';
 
 export * from './ticketConversation';
 export * from './privateTicketConversation';

@@ -501,7 +501,15 @@
       },
       "export": "CSV exporteren",
       "exporting": "Exporteren…",
-      "exportError": "Tickets konden niet worden geëxporteerd. Vernieuw de wachtrij en probeer het opnieuw."
+      "exportError": "Tickets konden niet worden geëxporteerd. Vernieuw de wachtrij en probeer het opnieuw.",
+      "bulkHandback": {
+        "title": "Tickets teruggeven aan de IT-afdeling van de klant",
+        "select": "Selecteer tickets op deze pagina. Dezelfde gedeelde IT-notitie wordt aan elk geselecteerd ticket toegevoegd.",
+        "returned": "Teruggegeven aan de IT-afdeling van de klant",
+        "forbidden": "Toegang geweigerd",
+        "changed": "Het ticket is gewijzigd. Vernieuw voordat u het opnieuw probeert.",
+        "invalid": "Ongeldige selectie"
+      }
     },
     "conversation": {
       "title": "Gesprek",

@@ -590,7 +590,15 @@
       },
       "export": "Export CSV",
       "exporting": "Exporting…",
-      "exportError": "Could not export tickets. Refresh the queue and try again."
+      "exportError": "Could not export tickets. Refresh the queue and try again.",
+      "bulkHandback": {
+        "title": "Return tickets to customer IT",
+        "select": "Select tickets from this page. The same shared IT note will be added to each selected ticket.",
+        "returned": "Returned to customer IT",
+        "forbidden": "Access denied",
+        "changed": "Ticket changed. Refresh before trying again.",
+        "invalid": "Invalid selection"
+      }
     },
     "conversation": {
       "title": "Conversation",

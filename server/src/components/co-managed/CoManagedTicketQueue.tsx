@@ -10,6 +10,7 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@alga-psa/ui/components/Table';
 import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { getCoManagedTicketQueueAction, exportCoManagedTicketQueueAction } from '@/lib/actions/coManagedTicketQueueActions';
+import CoManagedTicketBulkHandback from './CoManagedTicketBulkHandback';
 
 export default function CoManagedTicketQueue() {
   const { t } = useTranslation('msp/licensing');
@@ -78,6 +79,7 @@ export default function CoManagedTicketQueue() {
     </form>
     {error ? <p role="alert" className="text-destructive">{t(error === 'export' ? 'coManaged.queue.exportError' : 'coManaged.queue.loadError')}</p> : !result ? <p role="status">{t('coManaged.ticket.loading')}</p> : <>
       <p role="status" className="text-sm text-muted-foreground">{t('coManaged.queue.counts', { total: result.totalCount, open: result.openCount, closed: result.closedCount })}</p>
+      <CoManagedTicketBulkHandback items={result.items} onDone={() => setRefresh(value => value + 1)} />
       {!result.items.length ? <p>{t('coManaged.queue.empty')}</p> : <div className="overflow-x-auto rounded-lg border">
         <Table><TableHeader><TableRow>{['ticket', 'workspace', 'state', 'priority', 'responsibility', 'updated'].map(field => <TableHead key={field}>{t(`coManaged.queue.columns.${field}`)}</TableHead>)}</TableRow></TableHeader>
           <TableBody>{result.items.map((item, index) => <TableRow key={`${item.tenant}:${item.relationshipId ?? 'native'}:${item.ticketId}`}>

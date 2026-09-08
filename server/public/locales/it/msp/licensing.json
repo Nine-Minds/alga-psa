@@ -503,7 +503,15 @@
       },
       "export": "Esporta CSV",
       "exporting": "Esportazione…",
-      "exportError": "Impossibile esportare i ticket. Aggiorna la coda e riprova."
+      "exportError": "Impossibile esportare i ticket. Aggiorna la coda e riprova.",
+      "bulkHandback": {
+        "title": "Restituisci i ticket al team IT del cliente",
+        "select": "Seleziona i ticket di questa pagina. La stessa nota IT condivisa verrà aggiunta a ogni ticket selezionato.",
+        "returned": "Restituito al team IT del cliente",
+        "forbidden": "Accesso negato",
+        "changed": "Il ticket è cambiato. Aggiorna prima di riprovare.",
+        "invalid": "Selezione non valida"
+      }
     },
     "conversation": {
       "title": "Conversazione",

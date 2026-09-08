@@ -503,7 +503,15 @@
       },
       "export": "Exporter en CSV",
       "exporting": "Exportation…",
-      "exportError": "Impossible d’exporter les tickets. Actualisez la file et réessayez."
+      "exportError": "Impossible d’exporter les tickets. Actualisez la file et réessayez.",
+      "bulkHandback": {
+        "title": "Renvoyer les tickets à l’équipe informatique du client",
+        "select": "Sélectionnez les tickets de cette page. La même note informatique partagée sera ajoutée à chaque ticket sélectionné.",
+        "returned": "Renvoyé à l’équipe informatique du client",
+        "forbidden": "Accès refusé",
+        "changed": "Le ticket a changé. Actualisez avant de réessayer.",
+        "invalid": "Sélection non valide"
+      }
     },
     "conversation": {
       "title": "Conversation",

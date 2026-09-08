@@ -15555,3 +15555,60 @@ it('consolidated ticket export remains available during license lapse but reject
   await sponsor.table('sessions').where('session_id', principal.sessionId).update({ expires_at: new Date(0) });
   await expect(exportCoManagedTicketQueue(db, principal, { view: 'working' })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
 }));
+
+it('bulk handback retains individual authorization and receipts while returning mixed outcomes without copying tickets', async () => withTicketQueueFixture(async ({ principal, customerPrincipal, resource, customer, sponsor, nativeId }: any) => {
+  const { bulkHandBackCoManagedTickets, escalateCoManagedTicket } = await import('@alga-psa/co-managed');
+  const source = await customer.table('tickets').where('ticket_id', resource.id).first(), otherId = randomUUID();
+  const { title_index, ...copy } = source;
+  await customer.table('tickets').insert({ ...copy, ticket_id: otherId, ticket_number: 'BULK-2' });
+  const second = { ...resource, id: otherId };
+  await escalateCoManagedTicket(db, customerPrincipal, second, { operationId: randomUUID(), expectedRevision: 0, note: 'Second escalation' });
+  const foreign = await ticketHandoffFixture();
+  const input = { note: 'Customer IT can continue', items: [
+    { resource, operationId: randomUUID(), expectedRevision: 1 },
+    { resource: foreign.resource, operationId: randomUUID(), expectedRevision: 1 },
+    { resource: second, operationId: randomUUID(), expectedRevision: 9 },
+    { resource: { ...resource, tenant: principal.tenant, id: nativeId }, operationId: randomUUID(), expectedRevision: 1 },
+  ] };
+  const results = await bulkHandBackCoManagedTickets(db, principal, input);
+  expect(results).toMatchObject([{ index: 0, ok: true, receipt: { transition: 'handed_back', appliedRevision: 2 } }, { index: 1, ok: false, code: 'forbidden' }, { index: 2, ok: false, code: 'changed' }, { index: 3, ok: false, code: 'invalid' }]);
+  expect(await bulkHandBackCoManagedTickets(db, principal, input)).toEqual(results);
+  expect(await customer.table('co_management_ticket_handoffs').where({ ticket_id: resource.id, transition: 'handed_back' })).toHaveLength(1);
+  expect(await customer.table('co_management_ticket_work').where('ticket_id', otherId).first()).toMatchObject({ revision: 1, responsibility: 'msp' });
+  expect(await customer.table('tickets').where('ticket_id', resource.id).first()).toEqual(source);
+  expect(await sponsor.table('tickets').where('ticket_id', resource.id).first()).toBeUndefined();
+}));
+
+it('bulk handback rejects masked handoff fields and checks read permission as well as update', async () => withTicketQueueFixture(async ({ principal, resource, operation, sponsor, customer }: any) => {
+  const { bulkHandBackCoManagedTickets } = await import('@alga-psa/co-managed');
+  const input = { note: 'Do not write this note', items: [{ resource, operationId: randomUUID(), expectedRevision: 1 }] };
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: principal.tenant, name: 'Handoff note restrictions', actorUserId: principal.userId });
+  for (const action of ['read', 'update']) await bundles.upsertBundleRule(db, { tenant: principal.tenant, bundleId, revisionId, resourceType: 'ticket', action, templateKey: 'selected_clients', config: { selectedClientIds: [operation.request.clientId], redactedFields: ['values.notes'] } });
+  await bundles.publishBundleRevision(db, { tenant: principal.tenant, bundleId, revisionId, actorUserId: principal.userId });
+  await bundles.createBundleAssignment(db, { tenant: principal.tenant, bundleId, targetType: 'user', targetId: principal.userId });
+  expect(await bulkHandBackCoManagedTickets(db, principal, input)).toEqual([{ index: 0, ok: false, code: 'forbidden' }]);
+  await sponsor.table('authorization_bundle_assignments').where('bundle_id', bundleId).del();
+  await sponsor.table('role_permissions').whereIn('permission_id', sponsor.table('permissions').where({ resource: 'ticket', action: 'read' }).select('permission_id')).del();
+  expect(await bulkHandBackCoManagedTickets(db, principal, input)).toEqual([{ index: 0, ok: false, code: 'forbidden' }]);
+  expect(await customer.table('co_management_ticket_work').where('ticket_id', resource.id).first()).toMatchObject({ revision: 1 });
+}));
+
+it('bulk handback returns read-only and per-item invalid results without applying writes', async () => withTicketQueueFixture(async ({ principal, resource, customer }: any) => {
+  const { bulkHandBackCoManagedTickets } = await import('@alga-psa/co-managed');
+  await expireCoManagedEntitlement(principal.tenant);
+  const input = { note: 'Paused', items: [{ resource, operationId: randomUUID(), expectedRevision: 1 }, { resource, operationId: 'invalid', expectedRevision: 1 }] };
+  expect(await bulkHandBackCoManagedTickets(db, principal, input)).toEqual([{ index: 0, ok: false, code: 'readOnly' }, { index: 1, ok: false, code: 'invalid' }]);
+  expect(await customer.table('co_management_ticket_work').where('ticket_id', resource.id).first()).toMatchObject({ revision: 1, responsibility: 'msp' });
+}));
+
+it('bulk handback rolls back an individual handoff if its retained session expires before commit', async () => withTicketQueueFixture(async ({ principal, resource, customer }: any) => {
+  const { bulkHandBackCoManagedTickets } = await import('@alga-psa/co-managed');
+  await db.raw(`CREATE FUNCTION expire_bulk_handoff_session() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN UPDATE sessions SET expires_at = clock_timestamp() - interval '1 second' WHERE tenant = '${principal.tenant}'::uuid AND session_id = '${principal.sessionId}'::uuid; RETURN NEW; END $$`);
+  await db.raw('CREATE TRIGGER expire_bulk_handoff_session AFTER INSERT ON co_management_ticket_handoffs FOR EACH ROW EXECUTE FUNCTION expire_bulk_handoff_session()');
+  try {
+    expect(await bulkHandBackCoManagedTickets(db, principal, { note: 'Must roll back', items: [{ resource, operationId: randomUUID(), expectedRevision: 1 }] })).toEqual([{ index: 0, ok: false, code: 'forbidden' }]);
+    expect(await customer.table('co_management_ticket_work').where('ticket_id', resource.id).first()).toMatchObject({ revision: 1, responsibility: 'msp' });
+    expect(await customer.table('co_management_ticket_handoffs').where({ ticket_id: resource.id, transition: 'handed_back' })).toHaveLength(0);
+  } finally { await db.raw('DROP TRIGGER expire_bulk_handoff_session ON co_management_ticket_handoffs'); await db.raw('DROP FUNCTION expire_bulk_handoff_session()'); }
+}));

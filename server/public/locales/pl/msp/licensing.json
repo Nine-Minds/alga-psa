@@ -505,7 +505,15 @@
       },
       "export": "Eksportuj CSV",
       "exporting": "Eksportowanie…",
-      "exportError": "Nie udało się wyeksportować zgłoszeń. Odśwież kolejkę i spróbuj ponownie."
+      "exportError": "Nie udało się wyeksportować zgłoszeń. Odśwież kolejkę i spróbuj ponownie.",
+      "bulkHandback": {
+        "title": "Zwróć zgłoszenia do zespołu IT klienta",
+        "select": "Wybierz zgłoszenia z tej strony. Do każdego wybranego zgłoszenia zostanie dodana ta sama wspólna notatka IT.",
+        "returned": "Zwrócono do zespołu IT klienta",
+        "forbidden": "Odmowa dostępu",
+        "changed": "Zgłoszenie uległo zmianie. Odśwież przed ponowną próbą.",
+        "invalid": "Nieprawidłowy wybór"
+      }
     },
     "conversation": {
       "title": "Rozmowa",

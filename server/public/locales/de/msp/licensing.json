@@ -501,7 +501,15 @@
       },
       "export": "CSV exportieren",
       "exporting": "Wird exportiert…",
-      "exportError": "Tickets konnten nicht exportiert werden. Aktualisieren Sie die Warteschlange und versuchen Sie es erneut."
+      "exportError": "Tickets konnten nicht exportiert werden. Aktualisieren Sie die Warteschlange und versuchen Sie es erneut.",
+      "bulkHandback": {
+        "title": "Tickets an die Kunden-IT zurückgeben",
+        "select": "Wählen Sie Tickets auf dieser Seite aus. Jedem ausgewählten Ticket wird dieselbe gemeinsame IT-Notiz hinzugefügt.",
+        "returned": "An die Kunden-IT zurückgegeben",
+        "forbidden": "Zugriff verweigert",
+        "changed": "Ticket geändert. Aktualisieren Sie vor einem erneuten Versuch.",
+        "invalid": "Ungültige Auswahl"
+      }
     },
     "conversation": {
       "title": "Unterhaltung",

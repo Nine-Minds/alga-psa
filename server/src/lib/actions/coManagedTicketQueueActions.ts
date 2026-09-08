@@ -2,7 +2,7 @@
 
 import { withAuth } from '@alga-psa/auth';
 import { createTenantKnex } from '@alga-psa/db';
-import { getCoManagedTicketQueue, exportCoManagedTicketQueue, type CoManagedTicketQueueRequest } from '@alga-psa/co-managed';
+import { getCoManagedTicketQueue, exportCoManagedTicketQueue, bulkHandBackCoManagedTickets, type CoManagedBulkHandbackRequest, type CoManagedTicketQueueRequest } from '@alga-psa/co-managed';
 import { coManagedBrowserActor } from '../co-managed/browserActor';
 import { unparseCSV } from '../utils/csvParser';
 
@@ -10,6 +10,12 @@ export const getCoManagedTicketQueueAction = withAuth(async (user, { tenant }, r
   const actor = await coManagedBrowserActor(user, tenant);
   const { knex } = await createTenantKnex(tenant);
   return getCoManagedTicketQueue(knex, actor, request);
+});
+
+export const bulkHandBackCoManagedTicketsAction = withAuth(async (user, { tenant }, request: CoManagedBulkHandbackRequest) => {
+  const actor = await coManagedBrowserActor(user, tenant);
+  const { knex } = await createTenantKnex(tenant);
+  return bulkHandBackCoManagedTickets(knex, actor, request);
 });
 
 export const exportCoManagedTicketQueueAction = withAuth(async (user, { tenant }, request: Omit<CoManagedTicketQueueRequest, 'page' | 'pageSize'>) => {

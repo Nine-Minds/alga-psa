@@ -17,7 +17,8 @@ use this boundary. Customer access navigation and the MSP workspace access link
 are also hidden while the flag is off. Shared and customer ticket screens use the
 same boundary for the unified conversation reader and its new-message, reply,
 edit and delete controls, including whole-thread audience disclosure confirmations and MSP-private transfers, comment attachment pickers and removal confirmations, staged new-message/reply file selection and cancellation, and download links. Requester attachment links in portal conversation cards use the same boundary through the portal composition provider. New collaboration controls must use the same boundary.
-The consolidated ticket queue and its CSV export control also use this boundary.
+The consolidated ticket queue, its CSV export control, and bulk handback selection,
+shared-note submission and retry controls also use this boundary.
 Export actions apply current ticket access independently of the flag.
 Ordinary PSA and AlgaDesk workspaces do not depend on this flag.
 
