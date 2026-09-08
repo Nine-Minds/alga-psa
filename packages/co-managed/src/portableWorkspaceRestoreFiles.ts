@@ -62,7 +62,11 @@ export function prepareCoManagedPortableWorkspaceFiles(input: {
   for (const group of [manifest.sections.documents, manifest.supplementalFiles, manifest.remoteMeetingFiles]) {
     for (const blob of group.blobs) names.set(blob.id.toLowerCase(), { name: blob.name, mimeType: blob.mimeType });
   }
-  for (const attachment of manifest.conversationFiles.attachments) names.set(attachment.blobId.toLowerCase(), { name: attachment.fileName, mimeType: attachment.mimeType });
+  const conversations = [
+    ...manifest.conversationFiles.attachments.map((attachment: Record<string, any>) => ({ attachment, task: false })),
+    ...(manifest.conversationFiles.taskAttachments ?? []).map((attachment: Record<string, any>) => ({ attachment, task: true })),
+  ];
+  for (const { attachment } of conversations) names.set(attachment.blobId.toLowerCase(), { name: attachment.fileName, mimeType: attachment.mimeType });
   const sources = new Map(request.files.map(file => [file.id.toLowerCase(), file]));
   const externalFiles: ExternalFileMetadata[] = [], transfers: Transfer[] = [], fileIds = new Map<string, string>();
   for (const descriptor of manifest.blobs) {
@@ -85,9 +89,10 @@ export function prepareCoManagedPortableWorkspaceFiles(input: {
   // receive distinct native integer values without relying on a source sequence.
   let order = records.documents.reduce((max, row) => Math.max(max, Number(row.order_number) || 0), 0);
   const filesById = new Map(externalFiles.map(file => [file.file_id, file]));
-  for (const attachment of manifest.conversationFiles.attachments) {
-    const ticketId = mapped('tickets', 'ticket_id', attachment.ticketId), threadId = mapped('comment_threads', 'thread_id', attachment.threadId),
-      commentId = mapped('comments', 'comment_id', attachment.commentId);
+  for (const { attachment, task } of conversations) {
+    const parentId = task ? mapped('project_tasks', 'task_id', attachment.taskId) : mapped('tickets', 'ticket_id', attachment.ticketId),
+      threadId = mapped('comment_threads', 'thread_id', attachment.threadId),
+      commentId = mapped(task ? 'project_task_comments' : 'comments', task ? 'task_comment_id' : 'comment_id', attachment.commentId);
     const localUser = same(attachment.actorTenant, prepared.sourceTenant)
       ? domains.get(JSON.stringify(['users', 'user_id']))?.get(attachment.actorUserId.toLowerCase()) : undefined;
     const actorTenant = localUser ? prepared.destinationTenant : attachment.actorTenant, actorUserId = localUser ?? attachment.actorUserId;
@@ -99,10 +104,11 @@ export function prepareCoManagedPortableWorkspaceFiles(input: {
       file_id: fileId(attachment.blobId), mime_type: attachment.mimeType, file_size: attachment.size,
       is_client_visible: attachment.audience === 'requester' });
     records.documents.push(document);
-    records.document_associations.push({ association_id: allocate(), document_id: documentId, entity_id: ticketId,
-      entity_type: 'ticket', created_at: attachment.createdAt, is_entity_logo: false, entity_logo_variant: 'default' });
+    records.document_associations.push({ association_id: allocate(), document_id: documentId, entity_id: parentId,
+      entity_type: task ? 'project_task' : 'ticket', created_at: attachment.createdAt, is_entity_logo: false, entity_logo_variant: 'default' });
     const file = filesById.get(fileId(attachment.blobId))!;
-    file.metadata = { ...(file.metadata as NativeRow), conversation: { ticket_id: ticketId, thread_id: threadId, comment_id: commentId,
+    file.metadata = { ...(file.metadata as NativeRow), conversation: { [task ? 'task_id' : 'ticket_id']: parentId,
+      thread_id: threadId, [task ? 'task_comment_id' : 'comment_id']: commentId,
       document_id: documentId, audience: attachment.audience, created_at: attachment.createdAt, actor_tenant: actorTenant, actor_user_id: actorUserId,
       actor_reference_id: attachment.actorReferenceId === null ? null : mapped('collaboration_actor_references', 'actor_reference_id', attachment.actorReferenceId),
       actor_display_name: attachment.actorDisplayName, actor_organization_name: attachment.actorOrganizationName } };

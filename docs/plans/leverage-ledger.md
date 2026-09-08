@@ -788,3 +788,10 @@ Session licensing checkpoint (2026-09-08): inspection narrowed the suspected edi
 - **Where:** Portable file preparation and declared document/comment/task/KB content columns.
 - **Gate:** A concrete native restore showed usable copied bytes behind broken embedded references. Source document routes and editor formats are established. ACT / bounded-now.
 - **Status:** Added explicit route mapping and editor-field traversal, plus parser-position replacement for Markdown/HTML. The file adapter supplies verified file/document mappings after allocation. Literal content and unknown external references remain outside rewriting authority.
+
+
+## co-managed-attachment-work-parent — friction
+- **What:** The established upload/archive engine accepted only ticket parents although task comments already used the same qualified audience and actor model.
+- **Where:** Conversation attachments, archive capture/reads and portable conversation export/restore.
+- **Gate:** A concrete task UI needs the same storage integrity and retention boundaries. Parent ambiguity is an isolation risk. ACT / bounded-now.
+- **Status:** Revised the shared engine around an explicit ticket-or-task parent helper and database exclusivity constraint, retaining ticket compatibility. Kept task publication separate from ticket drafts/disclosure until that protocol is implemented.

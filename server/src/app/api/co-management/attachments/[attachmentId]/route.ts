@@ -11,9 +11,11 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     if (getApiKeyUserOverride() || !session?.session_id || session.user?.user_type !== 'internal' || !session.user.tenant || !session.user.id)
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers });
     const query = request.nextUrl.searchParams, { attachmentId } = await params;
+    const task = query.has('taskId'), parent = task ? 'taskId' : 'ticketId';
+    if (query.getAll(parent).length !== 1 || task && query.has('ticketId')) throw new CoManagedSharedWorkError();
     const { attachment, content } = await downloadConversationAttachment(await getConnection(session.user.tenant),
       { kind: 'session', tenant: session.user.tenant, userId: session.user.id, sessionId: session.session_id },
-      { kind: 'ticket', tenant: query.get('customerTenant') ?? '', relationshipId: query.get('relationshipId') ?? '', id: query.get('ticketId') ?? '' },
+      { kind: task ? 'project_task' : 'ticket', tenant: query.get('customerTenant') ?? '', relationshipId: query.get('relationshipId') ?? '', id: query.get(parent) ?? '' },
       { attachmentId, storeTenant: query.get('storeTenant') ?? '', threadId: query.get('threadId') ?? '', commentId: query.get('commentId') ?? '' });
     return conversationAttachmentResponse(attachment, content);
   } catch (error) {

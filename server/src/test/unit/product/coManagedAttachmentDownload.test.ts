@@ -29,3 +29,13 @@ it('returns an opaque denial and never exposes transport details or storage path
   mocks.download.mockRejectedValue(new Error('private/storage/path')); const failed = await GET(request(), params); expect(failed.status).toBe(503);
   expect(await failed.text()).not.toContain('private/storage/path'); expect(failed.headers.get('cache-control')).toBe('no-store, private');
 });
+it('qualifies a task parent and rejects mixed or repeated parent selectors before transport', async () => {
+  mocks.download.mockResolvedValue({ attachment: { fileName: 'task.txt' }, content: Buffer.from('Task') });
+  const task = request(); task.nextUrl.searchParams.delete('ticketId'); task.nextUrl.searchParams.set('taskId', 'task');
+  expect((await GET(task, params)).status).toBe(200);
+  expect(mocks.download.mock.calls[0][2]).toEqual({ kind: 'project_task', tenant: 'customer', relationshipId: 'relationship', id: 'task' });
+  mocks.download.mockClear(); task.nextUrl.searchParams.append('taskId', 'other');
+  expect((await GET(task, params)).status).toBe(404); expect(mocks.download).not.toHaveBeenCalled();
+  task.nextUrl.searchParams.set('taskId', 'task'); task.nextUrl.searchParams.set('ticketId', 'task');
+  expect((await GET(task, params)).status).toBe(404); expect(mocks.download).not.toHaveBeenCalled();
+});

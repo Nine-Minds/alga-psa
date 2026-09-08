@@ -7,6 +7,8 @@ import { CoManagedFeatureBoundary } from '../../../components/co-managed/CoManag
 const mocks = vi.hoisted(() => ({ load: vi.fn(), save: vi.fn(), flag: vi.fn(), unavailable: vi.fn(), session: { user: { tenant: 'msp', id: 'technician' } } }));
 vi.mock('../../../lib/actions/coManagedProjectTaskConversationActions', () => ({ getSharedProjectTaskConversationAction: mocks.load, saveSharedProjectTaskCommentAction: mocks.save }));
 vi.mock('next-auth/react', () => ({ useSession: () => ({ data: mocks.session }) }));
+vi.mock('../../../components/co-managed/CoManagedCommentAttachments', () => ({ default: ({ resource, comment }: any) =>
+  <div data-testid="task-attachments" data-kind={resource.kind} data-comment={comment.commentId} /> }));
 vi.mock('@alga-psa/ui/hooks', () => ({ useFeatureFlag: mocks.flag }));
 vi.mock('../../../lib/actions/coManagedAcceptanceActions', () => ({}));
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({ useTranslation: () => ({ t: (key: string) => key }), useFormatters: () => ({ formatDate: () => 'date' }), useOptionalI18n: () => null }));
@@ -29,6 +31,8 @@ it.each([{ enabled: false }, { enabled: true, loading: true }, { enabled: true, 
 });
 it('shows durable foreign authorship and sends an explicit private audience with a qualified task', async () => {
   mount(); await screen.findByText('Shared diagnosis'); expect(screen.getByText(/Provider IT/)).toBeInTheDocument();
+  expect(screen.getByTestId('task-attachments')).toHaveAttribute('data-kind', 'project_task');
+  expect(screen.getByTestId('task-attachments')).toHaveAttribute('data-comment', 'comment');
   fireEvent.click(button('new')); fireEvent.change(screen.getByLabelText('coManaged.conversation.audience'), { target: { value: 'organization_private' } });
   fireEvent.change(message(), { target: { value: 'MSP private diagnosis' } }); fireEvent.click(button('send'));
   await waitFor(() => expect(mocks.save).toHaveBeenCalledOnce()); expect(mocks.save.mock.calls[0]).toEqual([resource, { kind: 'create', operationId: expect.any(String), audience: 'organization_private', document: expect.any(Array) }]);

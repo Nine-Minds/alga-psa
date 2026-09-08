@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { isCoManagedUuid } from './sharedWorkIdentity';
+import { projectTaskAudience } from './projectTaskAudience';
 import { validateCoManagedPortableWorkspaceRecords, type CoManagedPortableRecordSections } from './portableWorkspaceGraph';
 
 type ObjectValue = Record<string, any>;
@@ -72,7 +73,8 @@ export function validateCoManagedPortableWorkspaceManifest(input: unknown,
     sections[name] = component(manifest.sections[name], name, sectionFields[name], context).records;
   }
   const { records } = validateCoManagedPortableWorkspaceRecords(sections, { sourceTenant: context.sourceTenant });
-  const conversation = component(manifest.conversationFiles, 'conversation-files', ['restorePolicy', 'attachments'], context);
+  const conversation = component(manifest.conversationFiles, 'conversation-files', ['restorePolicy', 'attachments',
+    ...(Object.hasOwn(object(manifest.conversationFiles), 'taskAttachments') ? ['taskAttachments'] : [])], context);
   const supplemental = component(manifest.supplementalFiles, 'supplemental-files', ['restorePolicy', 'fileBindings', 'blobs'], context);
   const remote = component(manifest.remoteMeetingFiles, 'remote-meeting-files', ['restorePolicy', 'fileBindings', 'blobs'], context);
   const documents = manifest.sections.documents;
@@ -123,19 +125,22 @@ export function validateCoManagedPortableWorkspaceManifest(input: unknown,
     const hasBlocks = documentsWithBlocks.has(String(doc.document_id).toLowerCase());
     if (!doc.file_id && !(artifact.artifact_type === 'transcript' && hasBlocks)) fail();
   }
-  for (const attachment of rows(conversation.attachments)) {
-    keys(attachment, ['attachmentId', 'blobId', 'ticketId', 'threadId', 'commentId', 'audience', 'fileName', 'mimeType', 'size', 'sha256',
+  for (const [entries, task] of [[conversation.attachments, false], [Object.hasOwn(conversation, 'taskAttachments') ? conversation.taskAttachments : [], true]] as const) for (const attachment of rows(entries)) {
+    keys(attachment, ['attachmentId', 'blobId', task ? 'taskId' : 'ticketId', 'threadId', 'commentId', 'audience', 'fileName', 'mimeType', 'size', 'sha256',
       'createdAt', 'actorTenant', 'actorUserId', 'actorReferenceId', 'actorDisplayName', 'actorOrganizationName']);
     if (!isCoManagedUuid(attachment.attachmentId) || !same(attachment.blobId, `attachment:${attachment.attachmentId}`)) fail();
     add(descriptor({ id: attachment.blobId, size: attachment.size, sha256: attachment.sha256, name: attachment.fileName, mimeType: attachment.mimeType }, true));
-    const comment = find('comments', 'comment_id', attachment.commentId), thread = find('comment_threads', 'thread_id', attachment.threadId);
-    const root = find('comments', 'comment_id', thread.root_comment_id);
+    const commentTable = task ? 'project_task_comments' : 'comments', commentKey = task ? 'task_comment_id' : 'comment_id';
+    const comment = find(commentTable, commentKey, attachment.commentId), thread = find('comment_threads', 'thread_id', attachment.threadId);
+    const root = find(commentTable, commentKey, thread.root_comment_id);
     // Match the canonical SQL audience facet, including inconsistent legacy flags.
-    const audience = [thread, root, comment].every(row => row.is_internal === false) &&
+    const audience = task ? projectTaskAudience(thread) : [thread, root, comment].every(row => row.is_internal === false) &&
       (thread.collaboration_audience === null || thread.collaboration_audience === 'requester') ? 'requester' :
       [thread, root, comment].every(row => row.is_internal === true) && thread.collaboration_audience === 'shared_it' ? 'shared_it' : 'organization_private';
-    if (!same(comment.ticket_id, attachment.ticketId) || !same(thread.ticket_id, attachment.ticketId) || !same(comment.thread_id, attachment.threadId) ||
-        comment.publish_state !== 'published' || root.publish_state !== 'published' || comment.deleted_at !== null ||
+    const parent = task ? attachment.taskId : attachment.ticketId, parentColumn = task ? 'task_id' : 'ticket_id';
+    if (!same(comment[parentColumn], parent) || !same(root[parentColumn], parent) || !same(thread[task ? 'project_task_id' : 'ticket_id'], parent) ||
+        !same(comment.thread_id, attachment.threadId) || !same(root.thread_id, attachment.threadId) ||
+        (task ? thread.ticket_id !== null : comment.publish_state !== 'published' || root.publish_state !== 'published') || comment.deleted_at !== null ||
         attachment.audience !== audience || attachment.actorReferenceId !== comment.actor_reference_id ||
         attachment.actorDisplayName !== comment.actor_display_name || attachment.actorOrganizationName !== comment.actor_organization_name) fail();
     if (!isCoManagedUuid(attachment.actorTenant) || !isCoManagedUuid(attachment.actorUserId)) fail();

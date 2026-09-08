@@ -13,7 +13,7 @@ const context = { packageId: id(1), sourceTenant: id(2), capturedAt: '2026-09-08
 const destinationTenant = id(3), importedByUserId = id(1000);
 const hash = (value: Buffer | string) => createHash('sha256').update(value).digest('hex');
 const sign = (value: Record<string, unknown>) => ({ ...value, sha256: hash(JSON.stringify(value)) });
-function fixture() {
+function fixture(includeTask = false) {
   const sectionRecords: Record<string, Record<string, any[]>> = Object.fromEntries(Object.entries(CO_MANAGED_PORTABLE_RESTORE_SECTIONS)
     .map(([section, tables]) => [section, Object.fromEntries(Object.keys(tables).map(table => [table, []]))]));
   const add = (table: string, values: Record<string, unknown>) => {
@@ -52,6 +52,17 @@ function fixture() {
       actorTenant: n === 1 ? id(80) : context.sourceTenant, actorUserId: n === 0 ? id(11) : n === 1 ? id(81) : id(12),
       actorReferenceId: n === 1 ? id(90) : null, actorDisplayName: 'Saved author', actorOrganizationName: 'Saved organization' };
   });
+  const taskAttachments = includeTask ? ['requester', 'shared_it', 'organization_private'].map((audience, n) => {
+    if (!n) add('project_tasks', { task_id: id(101) });
+    add('comment_threads', { thread_id: id(110 + n), project_task_id: id(101), root_comment_id: id(120 + n), is_internal: n !== 0, collaboration_audience: audience });
+    add('project_task_comments', { task_comment_id: id(120 + n), task_id: id(101), thread_id: id(110 + n),
+      actor_reference_id: n === 1 ? id(90) : null, actor_display_name: 'Task author', actor_organization_name: 'Task organization' });
+    const descriptor = blob(`attachment:${id(130 + n)}`);
+    return { attachmentId: id(130 + n), blobId: descriptor.id, taskId: id(101), threadId: id(110 + n), commentId: id(120 + n), audience,
+      fileName: descriptor.name, mimeType: descriptor.mimeType, size: descriptor.size, sha256: descriptor.sha256, createdAt: context.capturedAt,
+      actorTenant: n === 1 ? id(80) : context.sourceTenant, actorUserId: n === 1 ? id(81) : id(11),
+      actorReferenceId: n === 1 ? id(90) : null, actorDisplayName: 'Task author', actorOrganizationName: 'Task organization' };
+  }) : [];
   const component = (kind: string, values: Record<string, unknown>) => sign({ kind: `alga-workspace-${kind}`, version: 1, packageId: context.packageId, sourceTenant: context.sourceTenant, ...values });
   const sections = Object.fromEntries(Object.entries(sectionRecords).map(([section, records]) => [section, component(section, {
     records, references: [], ...(section === 'documents' ? documents : { capturedAt: context.capturedAt, restorePolicy: {} }),
@@ -61,7 +72,7 @@ function fixture() {
   })]));
   const files = [...blobs.values()].map(({ id, size, sha256 }, n) => ({ id, size, sha256, path: `/tmp/restore-fixture-${n}` }));
   const manifest = buildCoManagedPortableWorkspaceManifest({ context, sections: sections as any, files,
-    conversationFiles: component('conversation-files', { attachments, restorePolicy: {} }),
+    conversationFiles: component('conversation-files', { attachments, ...(includeTask ? { taskAttachments } : {}), restorePolicy: {} }),
     supplementalFiles: component('supplemental-files', { ...supplemental, restorePolicy: {} }), remoteMeetingFiles: component('remote-meeting-files', { ...remote, restorePolicy: {} }),
     credentialVault: { vault: { format: 'alga-credential-vault:scrypt-aes-256-gcm:v1', packageId: context.packageId, sourceTenant: context.sourceTenant,
       salt: Buffer.alloc(16).toString('base64'), iv: Buffer.alloc(12).toString('base64'), tag: Buffer.alloc(16).toString('base64'), ciphertext: Buffer.from('opaque encrypted vault').toString('base64') }, credentials: [], grants: [], associations: [] } });
@@ -96,6 +107,33 @@ it('restores ticket attachment documents with precise historical audiences and q
   expect(metadata[2]).toMatchObject({ actor_tenant: context.sourceTenant, actor_user_id: id(12) });
   expect(docs[1].created_by).toBe(importedByUserId); expect(docs[0].created_by).toBe(restored.records.users[0].user_id);
   expect(restored.records.comments.map(row => row.note)).toEqual(f.preparedRecords.records.comments.map(row => row.note));
+});
+
+it('restores task file parents, comment identities and visibility independently of ticket files', () => {
+  const f = fixture(true), restored = f.prepare(), docs = restored.records.documents.slice(-3);
+  expect(docs.map(row => row.is_client_visible)).toEqual([true, false, false]);
+  expect(restored.records.document_associations.slice(-3)).toEqual(expect.arrayContaining([
+    expect.objectContaining({ entity_type: 'project_task', entity_id: restored.records.project_tasks[0].task_id }),
+  ]));
+  const metadata = restored.externalFiles.slice(-3).map(file => (file.metadata as any).conversation);
+  expect(metadata.map(row => row.task_comment_id)).toEqual(restored.records.project_task_comments.map(row => row.task_comment_id));
+  expect(metadata.every(row => row.task_id === restored.records.project_tasks[0].task_id && !Object.hasOwn(row, 'ticket_id'))).toBe(true);
+  expect(metadata[1]).toMatchObject({ actor_tenant: id(80), actor_user_id: id(81), actor_display_name: 'Task author' });
+  expect(docs[1].created_by).toBe(importedByUserId);
+});
+
+it.each(['parent', 'thread', 'audience', 'deleted', 'malformed'])('rejects task attachment %s corruption even with a recomputed component checksum', fault => {
+  const f = fixture(true), work = f.manifest.sections.work;
+  if (fault === 'parent') f.manifest.conversationFiles.taskAttachments[0].taskId = id(10);
+  if (fault === 'thread') f.manifest.conversationFiles.taskAttachments[0].threadId = id(50);
+  if (fault === 'audience') work.records.comment_threads.find((row: any) => row.thread_id === id(110)).collaboration_audience = null;
+  if (fault === 'deleted') work.records.project_task_comments[0].deleted_at = context.capturedAt;
+  if (fault === 'malformed') f.manifest.conversationFiles.taskAttachments = null;
+  const { sha256: _workHash, ...workPayload } = work;
+  f.manifest.sections.work = sign(workPayload);
+  const { sha256: _filesHash, ...filesPayload } = f.manifest.conversationFiles;
+  f.manifest.conversationFiles = sign(filesPayload);
+  expect(() => f.prepare()).toThrow('Invalid portable workspace manifest');
 });
 
 it('rejects missing blobs, wrong source bindings and allocated identity collisions before transport', () => {

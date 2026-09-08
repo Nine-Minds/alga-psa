@@ -41,6 +41,14 @@ it('uploads the selected file to its qualified comment and freezes an uncertain 
   expect(mocks.upload.mock.calls[1][2]).toBe(original[2]); expect(mocks.upload.mock.calls[1][3].get('file')).toBe(file);
   await waitFor(() => expect(screen.queryByLabelText('coManaged.attachments.choose')).toBeNull());
 });
+it('keeps task attachment links distinct from ticket links with the same work ID', async () => {
+  const task = { ...resource, kind: 'project_task' as const };
+  render(<CoManagedFeatureBoundary><Attachments resource={task} comment={comment} /></CoManagedFeatureBoundary>);
+  const link = await screen.findByRole('link', { name: attachment.fileName });
+  const url = new URL(link.getAttribute('href')!, 'https://alga.test');
+  expect(url.searchParams.get('taskId')).toBe(resource.id); expect(url.searchParams.has('ticketId')).toBe(false);
+  expect(mocks.load).toHaveBeenCalledWith(task, comment);
+});
 it('rejects oversized selections before submitting an action and permits choosing another file', async () => {
   mount(); await screen.findByText(attachment.fileName); choose(new File(['x'.repeat(1001)], 'Large.txt'));
   fireEvent.click(button('coManaged.attachments.upload')); await screen.findByText('coManaged.attachments.invalid'); expect(mocks.upload).not.toHaveBeenCalled(); expect(picker()).not.toBeDisabled();

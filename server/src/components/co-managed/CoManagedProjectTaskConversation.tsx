@@ -1,5 +1,7 @@
 'use client';
 
+import CoManagedCommentAttachments from './CoManagedCommentAttachments';
+
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import dynamic from 'next/dynamic';
@@ -123,6 +125,7 @@ function Conversation({ resource, actor, onUnavailable }: { resource: CoManagedS
           <p className="text-xs text-muted-foreground"><time dateTime={item.createdAt}>{formatDate(new Date(item.createdAt), { dateStyle: 'medium', timeStyle: 'short' })}</time>
             {item.parentCommentId && <span> · {t('coManaged.conversation.reply')}</span>}</p>
           {document ? <Document key={`${id}:${item.revision}`} id={`${id}-body`} document={document} /> : <p className="whitespace-pre-wrap break-words text-sm">{item.deleted ? t('coManaged.conversation.deleted') : conversationText(item.note, item.markdown)}</p>}
+          {!item.deleted && <CoManagedCommentAttachments resource={resource} comment={reference(item)} />}
           {writable && !draft && <div className="flex gap-2">
             {item.canReply && <Button id={`${id}-reply`} variant="ghost" size="sm" onClick={() => open({ kind: 'reply', item })}>{t('coManaged.conversation.reply')}</Button>}
             {own && document !== null && <Button id={`${id}-edit`} variant="ghost" size="sm" onClick={() => open({ kind: 'edit', item })}>{t('coManaged.conversation.edit')}</Button>}

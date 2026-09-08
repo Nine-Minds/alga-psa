@@ -1,7 +1,7 @@
 import { retainCoManagedWorkSnapshot } from './workSnapshotEvidence';
 import { randomUUID } from 'node:crypto';
 import type { CoManagedSharedResource } from './sharedWork';
-import { stageCoManagedConversationFiles } from './archiveFiles';
+import { stageCoManagedCanonicalConversationFiles } from './archiveFiles';
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { commentAudienceSql } from '@alga-psa/shared/lib/commentAudience';
@@ -118,5 +118,5 @@ async function captureSharedConversation(trx: Knex.Transaction,
       ...(deleted ? {} : { note: comment.note, markdown: comment.markdown_content }) },
   };
   await appendParticipationEvidence(trx, { tenant: relationship.sponsor_tenant, ...workKey, source_type: 'conversation', source_id: capture.sourceId }, content);
-  if (!task && !deleted) await stageCoManagedConversationFiles(trx, tenant, resource.id, commentId);
+  if (!deleted) await stageCoManagedCanonicalConversationFiles(trx, tenant, resource, commentId);
 }

@@ -12,14 +12,14 @@ import CoManagedAttachmentRemoval from './CoManagedAttachmentRemoval';
 
 type Screen = Awaited<ReturnType<typeof getCoManagedAttachmentsScreenAction>>;
 function downloadUrl(resource: CoManagedSharedResource, attachment: CoManagedConversationAttachment) {
-  const query = new URLSearchParams({ customerTenant: resource.tenant, relationshipId: resource.relationshipId, ticketId: resource.id,
+  const query = new URLSearchParams({ customerTenant: resource.tenant, relationshipId: resource.relationshipId, [resource.kind === 'project_task' ? 'taskId' : 'ticketId']: resource.id,
     storeTenant: attachment.storeTenant, threadId: attachment.threadId, commentId: attachment.commentId });
   return `/api/co-management/attachments/${encodeURIComponent(attachment.attachmentId)}?${query}`;
 }
 export default function CoManagedCommentAttachments({ resource, comment }: { resource: CoManagedSharedResource; comment: CoManagedCommentReference }) {
   const { data: session } = useSession();
   const actor = { tenant: session?.user?.tenant, userId: session?.user?.id };
-  const identity = `${session?.session_id}:${resource.tenant}:${resource.relationshipId}:${resource.id}:${comment.storeTenant}:${comment.threadId}:${comment.commentId}:${actor.tenant}:${actor.userId}`;
+  const identity = `${session?.session_id}:${resource.tenant}:${resource.relationshipId}:${resource.kind}:${resource.id}:${comment.storeTenant}:${comment.threadId}:${comment.commentId}:${actor.tenant}:${actor.userId}`;
   return <Attachments key={identity} resource={resource} comment={comment} actor={actor} />;
 }
 function Attachments({ resource, comment, actor }: { resource: CoManagedSharedResource; comment: CoManagedCommentReference; actor: { tenant?: string; userId?: string } }) {

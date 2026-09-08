@@ -76,6 +76,6 @@ async function capturePrivateComment(trx: Knex.Transaction, source: {
       commentId: comment.comment_id, threadId: comment.thread_id, parentCommentId: comment.parent_comment_id, revision: comment.revision, audience: 'organization_private',
       createdAt: iso(comment.created_at), updatedAt: iso(comment.updated_at), deletedAt: iso(comment.deleted_at), deleted: Boolean(comment.deleted_at),
       ...(comment.deleted_at ? {} : { note: comment.note, markdown: comment.markdown_content }) } });
-  if (source.resource_type === 'ticket' && !comment.deleted_at) await stageCoManagedPrivateConversationFiles(trx, source.tenant,
-    { tenant: source.customer_tenant, relationshipId: source.relationship_id, kind: 'ticket', id: source.resource_id }, comment.comment_id);
+  if (['ticket', 'project_task'].includes(source.resource_type) && !comment.deleted_at) await stageCoManagedPrivateConversationFiles(trx, source.tenant,
+    { tenant: source.customer_tenant, relationshipId: source.relationship_id, kind: source.resource_type, id: source.resource_id }, comment.comment_id);
 }
