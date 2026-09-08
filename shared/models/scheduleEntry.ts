@@ -480,7 +480,7 @@ const ScheduleEntry = {
     }
 
     // Handle recurring entries with scope
-    if (originalEntry.recurrence_pattern && updateType) {
+    if (originalEntry.recurrence_pattern && updateType && !(updateType === 'all' && entry.recurrence_pattern === null)) {
       const originalPattern = ScheduleEntry.parseRecurrencePattern(originalEntry.recurrence_pattern);
 
       if (originalPattern) {
@@ -496,13 +496,13 @@ const ScheduleEntry = {
             const standaloneId = uuidv4();
             await tenantScopedTable(knexOrTrx, 'schedule_entries', tenant).insert({
               entry_id: standaloneId,
-              title: entry.title || originalEntry.title,
-              scheduled_start: entry.scheduled_start || originalEntry.scheduled_start,
-              scheduled_end: entry.scheduled_end || originalEntry.scheduled_end,
-              notes: entry.notes || originalEntry.notes,
-              status: entry.status || originalEntry.status,
-              work_item_id: entry.work_item_id || originalEntry.work_item_id,
-              work_item_type: entry.work_item_type || originalEntry.work_item_type,
+              title: entry.title ?? originalEntry.title,
+              scheduled_start: entry.scheduled_start ?? originalEntry.scheduled_start,
+              scheduled_end: entry.scheduled_end ?? originalEntry.scheduled_end,
+              notes: entry.notes ?? originalEntry.notes,
+              status: entry.status ?? originalEntry.status,
+              work_item_id: entry.work_item_id !== undefined ? entry.work_item_id : originalEntry.work_item_id,
+              work_item_type: entry.work_item_type ?? originalEntry.work_item_type,
               tenant,
               is_recurring: false,
               original_entry_id: null,
@@ -525,7 +525,7 @@ const ScheduleEntry = {
             // standalone override.
             const exceptionDate = virtualTimestamp
               ? new Date(virtualTimestamp)
-              : new Date(entry.scheduled_start || originalEntry.scheduled_start);
+              : new Date(entry.scheduled_start ?? originalEntry.scheduled_start);
             exceptionDate.setUTCHours(0, 0, 0, 0);
             const updatedPattern = {
               ...originalPattern,
@@ -541,13 +541,13 @@ const ScheduleEntry = {
             return {
               ...originalEntry,
               entry_id: standaloneId,
-              title: entry.title || originalEntry.title,
-              scheduled_start: entry.scheduled_start || originalEntry.scheduled_start,
-              scheduled_end: entry.scheduled_end || originalEntry.scheduled_end,
-              notes: entry.notes || originalEntry.notes,
-              status: entry.status || originalEntry.status,
-              work_item_id: entry.work_item_id || originalEntry.work_item_id,
-              work_item_type: entry.work_item_type || originalEntry.work_item_type,
+              title: entry.title ?? originalEntry.title,
+              scheduled_start: entry.scheduled_start ?? originalEntry.scheduled_start,
+              scheduled_end: entry.scheduled_end ?? originalEntry.scheduled_end,
+              notes: entry.notes ?? originalEntry.notes,
+              status: entry.status ?? originalEntry.status,
+              work_item_id: entry.work_item_id !== undefined ? entry.work_item_id : originalEntry.work_item_id,
+              work_item_type: entry.work_item_type ?? originalEntry.work_item_type,
               is_recurring: false,
               original_entry_id: null,
               is_private: entry.is_private !== undefined ? entry.is_private : originalEntry.is_private,
@@ -583,12 +583,16 @@ const ScheduleEntry = {
               });
 
             // Create new master starting at the current instance
-            const newStartDate = entry.scheduled_start || virtualTimestamp;
-            const newPattern = entry.recurrence_pattern
+            const newStartDate = entry.scheduled_start ?? virtualTimestamp;
+            const elapsedCount = originalPattern.count ? generateOccurrences(
+              { ...originalEntry, recurrence_pattern: { ...originalPattern, exceptions: [] } } as IScheduleEntry,
+              new Date(originalPattern.startDate), virtualTimestamp, { includeMaster: true }
+            ).filter(date => date < virtualTimestamp).length : 0;
+            const newPattern = entry.recurrence_pattern === null ? null : entry.recurrence_pattern
               ? {
                   ...entry.recurrence_pattern,
                   startDate: newStartDate,
-                  exceptions: [],
+                  exceptions: originalPattern.exceptions?.filter(d => new Date(d) >= virtualTimestamp),
                 }
               : {
                   ...originalPattern,
@@ -599,18 +603,21 @@ const ScheduleEntry = {
                   ),
                 };
 
+            if (newPattern && originalPattern.count && (entry.recurrence_pattern?.count === undefined || entry.recurrence_pattern.count === originalPattern.count)) {
+              newPattern.count = Math.max(1, originalPattern.count - elapsedCount);
+            }
             const newMasterEntry = {
               entry_id: newMasterId,
-              title: entry.title || originalEntry.title,
+              title: entry.title ?? originalEntry.title,
               scheduled_start: newStartDate,
-              scheduled_end: entry.scheduled_end || originalEntry.scheduled_end,
-              notes: entry.notes || originalEntry.notes,
-              status: entry.status || originalEntry.status,
-              work_item_id: entry.work_item_id || originalEntry.work_item_id,
-              work_item_type: entry.work_item_type || originalEntry.work_item_type,
+              scheduled_end: entry.scheduled_end ?? new Date(new Date(newStartDate).getTime() + new Date(originalEntry.scheduled_end).getTime() - new Date(originalEntry.scheduled_start).getTime()),
+              notes: entry.notes ?? originalEntry.notes,
+              status: entry.status ?? originalEntry.status,
+              work_item_id: entry.work_item_id !== undefined ? entry.work_item_id : originalEntry.work_item_id,
+              work_item_type: entry.work_item_type ?? originalEntry.work_item_type,
               tenant,
-              recurrence_pattern: JSON.stringify(newPattern),
-              is_recurring: true,
+              recurrence_pattern: newPattern ? JSON.stringify(newPattern) : null,
+              is_recurring: !!newPattern,
               original_entry_id: null,
               is_private: entry.is_private !== undefined ? entry.is_private : originalEntry.is_private,
             };
@@ -639,32 +646,23 @@ const ScheduleEntry = {
           case 'all': {
             // ALL: Update the master entry directly, preserving exceptions
             const allUpdatePattern = entry.recurrence_pattern
-              ? {
-                  frequency: entry.recurrence_pattern.frequency,
-                  interval: entry.recurrence_pattern.interval,
-                  startDate: originalPattern.startDate,
-                  endDate: entry.recurrence_pattern.endDate || originalPattern.endDate,
-                  exceptions: originalPattern.exceptions || [],
-                  daysOfWeek: entry.recurrence_pattern.daysOfWeek || originalPattern.daysOfWeek,
-                  dayOfMonth: entry.recurrence_pattern.dayOfMonth || originalPattern.dayOfMonth,
-                  monthOfYear:
-                    entry.recurrence_pattern.monthOfYear || originalPattern.monthOfYear,
-                  count: entry.recurrence_pattern.count || originalPattern.count,
-                }
+              ? { ...entry.recurrence_pattern, startDate: originalPattern.startDate, exceptions: originalPattern.exceptions || [] }
               : originalPattern;
 
             const [updatedMasterEntry] = await tenantScopedTable(knexOrTrx, 'schedule_entries', tenant)
               .where('entry_id', masterEntryId)
               .update({
-                title: entry.title || originalEntry.title,
-                scheduled_start: entry.scheduled_start || originalEntry.scheduled_start,
-                scheduled_end: entry.scheduled_end || originalEntry.scheduled_end,
-                notes: entry.notes || originalEntry.notes,
-                status: entry.status || originalEntry.status,
-                work_item_id: entry.work_item_id || originalEntry.work_item_id,
-                work_item_type: entry.work_item_type || originalEntry.work_item_type,
+                title: entry.title ?? originalEntry.title,
+                scheduled_start: entry.scheduled_start ?? originalEntry.scheduled_start,
+                scheduled_end: entry.scheduled_end ?? originalEntry.scheduled_end,
+                notes: entry.notes ?? originalEntry.notes,
+                status: entry.status ?? originalEntry.status,
+                work_item_id: entry.work_item_id !== undefined ? entry.work_item_id : originalEntry.work_item_id,
+                work_item_type: entry.work_item_type ?? originalEntry.work_item_type,
                 recurrence_pattern: JSON.stringify(allUpdatePattern),
                 is_recurring: true,
+                is_private: entry.is_private ?? originalEntry.is_private,
+                updated_at: new Date(),
               })
               .returning('*');
 

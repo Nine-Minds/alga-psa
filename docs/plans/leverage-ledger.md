@@ -531,3 +531,9 @@ Inline markers are the per-site ledger; `grep -rn "LEVERAGE:"` is the count.
 - **Where:** `nativeScheduleCommand`, shared schedule read/source helpers, `TimeSheetService`, schedule schemas and model update.
 - **Gate:** Create/update/delete share stable current actor/source/assignment and response-admission requirements. ACT / bounded-now for API master commands; native recurrence scopes follow.
 - **Status:** Commands retain current credentials, write lifecycle and actual assignments, map own/dispatcher RBAC from locked state while retaining actual bundle actions, normalize model inputs, protect time dependencies and publish IDs after commit. Six focused scenarios verified across corrected runs; eight existing model-update cases pass in under a second. Native adapters, recurrence command scopes and appointment/workflow consequences remain pending.
+
+## native-schedule-recurrence-commands — friction
+- **What:** Native mutations bypassed API command authority; model recurrence branches conflated empty/null updates with absence, reused master dates for future splits and reset counted series. Stored-master replacement on first-occurrence cancellation could also discard historical source identity.
+- **Where:** `nativeScheduleCommand`, native schedule actions and shared schedule model recurrence branches.
+- **Gate:** Existing retained command admission fits occurrence mutations when master membership is verified first; the model must preserve explicit fields and count/duration semantics. ACT / bounded-now.
+- **Status:** Native mutations share current credentials/scope; exact occurrence checks, single/future/all behavior, stable cancellation identity and actual-row events are verified by eight focused PostgreSQL scenarios and 22 fast model cases. Native branches now publish identity-only schedule events; appointment/Teams cleanup and derived workflow consequences still need retained integration.

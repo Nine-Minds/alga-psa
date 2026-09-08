@@ -14344,3 +14344,126 @@ it('customer schedule commands protect active clocks and reject mutations after 
   expect(await sheetService.getScheduleEntry(ownId, context)).toMatchObject({ title: 'Own appointment' });
   expect(await customer.table('schedule_entries')).toHaveLength(3);
 }));
+
+async function withNativeScheduleCommandFixture(work: (fixture: any) => Promise<void>) {
+  await withScheduleReadFixture(async (fixture: any) => {
+    const { native, context } = fixture;
+    const events = vi.mocked((await import('@alga-psa/event-bus/publishers')).publishEvent);
+    const createSchedule = (data: any = {}) => native.addScheduleEntry({ title: 'Native allocation', notes: 'Private recurring notes', scheduled_start: new Date('2026-10-05T09:00:00Z'), scheduled_end: new Date('2026-10-05T10:30:00Z'), work_item_type: 'ad_hoc', work_item_id: null, assigned_user_ids: [context.userId], status: 'scheduled', ...data });
+    const createSeries = async (data: any = {}) => {
+      const created = await createSchedule({ recurrence_pattern: { frequency: 'daily', interval: 1, startDate: new Date('2026-10-05T00:00:00Z'), count: 5 }, ...data });
+      expect(created.success).toBe(true); return created.entry;
+    };
+    const calendar = () => native.getScheduleEntries(new Date('2026-10-05T00:00:00Z'), new Date('2026-10-15T00:00:00Z'));
+    await work({ ...fixture, createSchedule, createSeries, calendar, events });
+  });
+}
+
+it('native schedule commands share current authority and ordinary create edit delete projections', async () => withNativeScheduleCommandFixture(async ({ createSchedule, native, sheetService, context, customer, events }: any) => {
+  events.mockClear();
+  const created = await createSchedule({ assigned_user_ids: [] });
+  expect(created).toMatchObject({ success: true, entry: { assigned_user_ids: [context.userId] } });
+  expect(created.entry.scheduled_start).toBeInstanceOf(Date);
+  expect(await native.updateScheduleEntry(created.entry.entry_id, { notes: '', title: 'Native changed' })).toMatchObject({ success: true, entry: { title: 'Native changed', notes: '' } });
+  expect(await sheetService.getScheduleEntry(created.entry.entry_id, context)).toMatchObject({ title: 'Native changed' });
+  expect(await native.deleteScheduleEntry(created.entry.entry_id)).toMatchObject({ success: true, deleted: true });
+  expect(await customer.table('schedule_entries').where('entry_id', created.entry.entry_id)).toHaveLength(0);
+  expect(events).toHaveBeenCalledTimes(3);
+  for (const [event] of events.mock.calls) expect(Object.keys(event.payload).sort()).toEqual(['entryId', 'tenantId', 'userId']);
+}));
+
+it('native schedule commands edit one actual occurrence while preserving its siblings and explicit clears', async () => withNativeScheduleCommandFixture(async ({ createSeries, native, calendar, customer, events, resource }: any) => {
+  const series = await createSeries({ work_item_type: 'project_task', work_item_id: resource.id });
+  const before = await calendar(); expect(before.entries).toHaveLength(5);
+  const second = before.entries[1]; events.mockClear();
+  const updated = await native.updateScheduleEntry(second.entry_id, { updateType: 'single', title: 'Rescheduled one', notes: '', work_item_type: 'ad_hoc', work_item_id: null,
+    scheduled_start: new Date('2026-10-06T11:00:00Z'), scheduled_end: new Date('2026-10-06T12:30:00Z') });
+  expect(updated).toMatchObject({ success: true, entry: { title: 'Rescheduled one', notes: '', work_item_id: null, is_recurring: false, recurrence_pattern: null } });
+  const after = await calendar(); expect(after.entries).toHaveLength(5);
+  expect(after.entries.some((row: any) => row.entry_id === second.entry_id)).toBe(false);
+  expect(after.entries.find((row: any) => row.entry_id === updated.entry.entry_id).scheduled_start.toISOString()).toBe('2026-10-06T11:00:00.000Z');
+  expect(await customer.table('schedule_entries').where('entry_id', series.entry_id).first()).toMatchObject({ work_item_type: 'project_task', work_item_id: resource.id });
+  expect(events.mock.calls.map(([event]: any) => [event.eventType, event.payload.entryId])).toEqual([['SCHEDULE_ENTRY_UPDATED', series.entry_id], ['SCHEDULE_ENTRY_CREATED', updated.entry.entry_id]]);
+  expect(await native.updateScheduleEntry(second.entry_id, { updateType: 'single', title: 'Stale retry' })).toMatchObject({ success: false });
+}));
+
+it('native schedule commands split future occurrences without restarting their count or duration', async () => withNativeScheduleCommandFixture(async ({ createSeries, native, calendar, events }: any) => {
+  const series = await createSeries(); const third = (await calendar()).entries[2]; events.mockClear();
+  const updated = await native.updateScheduleEntry(third.entry_id, { updateType: 'future', title: 'Future allocation', notes: '' });
+  expect(updated).toMatchObject({ success: true, entry: { notes: '', recurrence_pattern: { count: 3 } } });
+  expect(updated.entry.scheduled_start.toISOString()).toBe('2026-10-07T09:00:00.000Z');
+  expect(updated.entry.scheduled_end.toISOString()).toBe('2026-10-07T10:30:00.000Z');
+  const after = await calendar(); expect(after.entries).toHaveLength(5);
+  expect(after.entries.map((row: any) => row.title)).toEqual(['Native allocation', 'Native allocation', 'Future allocation', 'Future allocation', 'Future allocation']);
+  expect(events.mock.calls.map(([event]: any) => event.payload.entryId)).toEqual([series.entry_id, updated.entry.entry_id]);
+}));
+
+it('native schedule commands update all occurrences from a virtual ID while retaining the original series anchor', async () => withNativeScheduleCommandFixture(async ({ createSeries, native, calendar }: any) => {
+  const series = await createSeries(); const fourth = (await calendar()).entries[3];
+  const updated = await native.updateScheduleEntry(fourth.entry_id, { updateType: 'all', title: 'All changed', notes: '', is_private: true,
+    scheduled_start: new Date('2026-10-08T11:00:00Z'), scheduled_end: new Date('2026-10-08T12:00:00Z') });
+  expect(updated).toMatchObject({ success: true, entry: { entry_id: series.entry_id, title: 'All changed', notes: '', is_private: true } });
+  expect(updated.entry.scheduled_start.toISOString()).toBe('2026-10-05T11:00:00.000Z');
+  const after = await calendar(); expect(after.entries).toHaveLength(5);
+  expect(after.entries.every((row: any) => row.scheduled_start.getUTCHours() === 11)).toBe(true);
+  expect(await native.updateScheduleEntry(series.entry_id, { updateType: 'all', recurrence_pattern: null })).toMatchObject({ success: true, entry: { is_recurring: false, recurrence_pattern: null } });
+  expect((await calendar()).entries).toHaveLength(1);
+}));
+
+it('native schedule commands cancel single future and all scopes without dropping the retained master early', async () => withNativeScheduleCommandFixture(async ({ createSeries, native, calendar, customer, events }: any) => {
+  const series = await createSeries(); events.mockClear();
+  expect(await native.deleteScheduleEntry(series.entry_id, 'single')).toMatchObject({ success: true });
+  expect(await customer.table('schedule_entries').where('entry_id', series.entry_id)).toHaveLength(1);
+  let rows = (await calendar()).entries; expect(rows).toHaveLength(4);
+  expect(events.mock.calls[0][0]).toMatchObject({ eventType: 'SCHEDULE_ENTRY_UPDATED', payload: { entryId: series.entry_id } });
+  expect(await native.deleteScheduleEntry(rows[2].entry_id, 'future')).toMatchObject({ success: true });
+  rows = (await calendar()).entries; expect(rows).toHaveLength(2);
+  expect(await native.deleteScheduleEntry(rows[0].entry_id, 'all')).toMatchObject({ success: true });
+  expect((await calendar()).entries).toHaveLength(0);
+  expect(await customer.table('schedule_entries').where('entry_id', series.entry_id)).toHaveLength(0);
+  expect(events.mock.calls.at(-1)[0]).toMatchObject({ eventType: 'SCHEDULE_ENTRY_DELETED' });
+}));
+
+it('native schedule commands reject forged excluded and out-of-scope virtual occurrences', async () => withNativeScheduleCommandFixture(async ({ createSeries, native, calendar, customer, context, resource, user }: any) => {
+  const series = await createSeries();
+  expect(await native.updateScheduleEntry(`${series.entry_id}_${Date.parse('2026-10-20T09:00:00Z')}`, { updateType: 'single', title: 'Forged future' })).toMatchObject({ success: false });
+  expect(await native.deleteScheduleEntry(`${series.entry_id}_${Date.parse('2026-10-06T09:01:00Z')}`, 'all')).toMatchObject({ success: false });
+  const second = (await calendar()).entries[1];
+  await customer.table('holidays').insert({ tenant: context.tenant, holiday_name: 'Excluded appointment day', holiday_date: '2026-10-06', is_recurring: false });
+  expect(await native.deleteScheduleEntry(second.entry_id, 'single')).toMatchObject({ success: false });
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: resource.tenant, name: 'Native recurrence command mask', actorUserId: user.user_id });
+  await bundles.upsertBundleRule(db, { tenant: resource.tenant, bundleId, revisionId, resourceType: 'user_schedule', action: 'update', templateKey: 'assigned', config: { redactedFields: ['recurrence_pattern'] } });
+  await bundles.publishBundleRevision(db, { tenant: resource.tenant, bundleId, revisionId, actorUserId: user.user_id });
+  await bundles.createBundleAssignment(db, { tenant: resource.tenant, bundleId, targetType: 'user', targetId: user.user_id });
+  const first = (await calendar()).entries[0];
+  expect(await native.updateScheduleEntry(first.entry_id, { updateType: 'single', title: 'Masked change' })).toMatchObject({ success: false });
+  expect((await calendar()).entries).toHaveLength(4);
+}));
+
+it('native schedule commands roll series children assignments and events back on final session expiry', async () => withNativeScheduleCommandFixture(async ({ createSeries, native, calendar, customer, sessionId, events }: any) => {
+  const series = await createSeries(); const third = (await calendar()).entries[2];
+  await db.raw(`CREATE FUNCTION expire_native_schedule_session() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN UPDATE sessions SET expires_at = clock_timestamp() - interval '1 second' WHERE tenant = COALESCE(NEW.tenant, OLD.tenant) AND session_id = '${sessionId}'::uuid; RETURN COALESCE(NEW, OLD); END $$`);
+  await db.raw('CREATE TRIGGER expire_native_schedule_session AFTER INSERT OR UPDATE OR DELETE ON schedule_entries FOR EACH ROW EXECUTE FUNCTION expire_native_schedule_session()');
+  events.mockClear();
+  try {
+    expect(await native.updateScheduleEntry(third.entry_id, { updateType: 'future', title: 'Rolled back split' })).toMatchObject({ success: false });
+    expect(await native.deleteScheduleEntry(third.entry_id, 'single')).toMatchObject({ success: false });
+    expect(await native.deleteScheduleEntry(series.entry_id, 'all')).toMatchObject({ success: false });
+    expect((await calendar()).entries).toHaveLength(5);
+    expect(await customer.table('schedule_entries').where('title', 'Rolled back split')).toHaveLength(0);
+    expect(await customer.table('schedule_entry_assignees').where('entry_id', series.entry_id)).toHaveLength(1);
+    expect(events).not.toHaveBeenCalled();
+  } finally { await db.raw('DROP TRIGGER expire_native_schedule_session ON schedule_entries'); await db.raw('DROP FUNCTION expire_native_schedule_session()'); }
+}));
+
+it('native schedule commands preserve recorded time when cancelling an occurrence and refuse destruction of its master', async () => withNativeScheduleCommandFixture(async ({ createSeries, native, calendar, sheetService, create, context, customer }: any) => {
+  const series = await createSeries();
+  await sheetService.createTimePeriod({ start_date: '2026-10-05', end_date: '2026-10-12' }, context);
+  const time = await create({ work_item_type: 'ad_hoc', work_item_id: series.entry_id, start_time: '2026-10-05T09:00:00Z', end_time: '2026-10-05T10:00:00Z' });
+  expect(await native.deleteScheduleEntry(series.entry_id, 'single')).toMatchObject({ success: true });
+  expect((await calendar()).entries).toHaveLength(4);
+  expect(await native.deleteScheduleEntry(series.entry_id, 'all')).toMatchObject({ success: false });
+  expect(await customer.table('schedule_entries').where('entry_id', series.entry_id)).toHaveLength(1);
+  expect(await customer.table('time_entries').where('entry_id', time.entry_id).first()).toMatchObject({ work_item_id: series.entry_id });
+}));
