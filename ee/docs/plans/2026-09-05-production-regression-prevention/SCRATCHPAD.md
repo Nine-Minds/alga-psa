@@ -3013,3 +3013,11 @@ Built3smallnativeemulatorbundles; accountinghostsession81018 QBO56105/Xero56106/
 - Lifecycle checks provider subject, attendees, HTML context, reschedule time, cancellation and idempotent repeated cancellation. Throttled creation returns graph_throttled, leaves no event, and recovery produces exactly one event.
 - Initial test assumed unsupported GET event route; switched assertions to the existing calendar-events control state. Operation fault uses the actual encoded request path. Final full Graph suite: 62/62 tests in 6 files, terminal session18074 exit0, ~1 second. Evidence/host-teams-meeting-adapter.json. No Docker build.
 - Existing fresh-install emulator CI step runs the entire msgraph workspace suite, so the new file is included without a workflow filter. F034 remains incomplete pending product meeting UI, bot, SSO and native CI evidence.
+
+### Teams calendar product browser journey
+
+- Extended the development journey after profile outage/recovery: installed integration/organizer fixture, real UI calendar entry creation, real Create Teams meeting action, provider-event identity and online_meetings persistence, Save then reload, retained Join button and notes, exactly one meeting row.
+- Enabled release-v1-6-feature:true explicitly in the Teams CI development environment and host launcher. No production endpoint guard change.
+- First run31671 exit1 at navigation to calendar: connection refused; app log explicitly recorded Next automatic restart at 80% of 12 GiB heap. Failed artifacts preserved /tmp/alga-teams-calendar-memory-failure.
+- Verified Mac physical RAM48GiB. Restarted owned app with20GiB heap (session44003, port53016); unchanged browser run62198 exit0,1passed~2.2min, no retries/skips. Evidence/host-teams-calendar-meeting.json records dirty source and memory limitation. No Docker build.
+- CI remains8GiB and unverified; do not infer CI success from the larger native heap. Background artifact jobs log Temporal unavailable, so do not claim artifact-job coverage. Meeting UI gap is partially closed; bot/SSO and remaining full plan gates remain incomplete.

@@ -61,3 +61,9 @@ Stripe keys/webhook secrets and a callback base reachable from the emulator.
 `evidence/host-accounting-provider-journeys.json` records QuickBooks and Xero
 passes plus all three Stripe cases after fixing the return-origin configuration.
 These use the same existing application build without Docker image builds.
+
+## Teams calendar development journey
+
+Start the host app with `NODE_ENV=development`, `TEAMS_EMULATOR_MODE=true`, and `NEXT_PUBLIC_FORCE_FEATURE_FLAGS=release-v1-6-feature:true`, in addition to the shared Graph endpoint and isolated database configuration. The calendar meeting button is behind this release flag; declare it on the server process so Next compiles the browser setting. The dedicated Teams CI development phase sets the same flag.
+
+The browser fixture marks a validated Teams profile active and assigns a synthetic organizer. This prepares an installed tenant; it does not automate installation into a live Microsoft tenant. Calendar entry creation and meeting creation must then use the real UI, with database and provider-state assertions plus a reload check. Keep this lane separate from production-artifact evidence.

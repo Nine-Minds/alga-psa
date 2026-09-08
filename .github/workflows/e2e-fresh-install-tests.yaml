@@ -1062,7 +1062,7 @@ jobs:
           const volumes = ['packages', 'ee'].map(part => ({ type: 'bind', source: `${workspace}/${part}`, target: `/app/${part}`, read_only: true }));
           volumes.push({ type: 'bind', source: `${workspace}/e2e-tests/harness/start-teams-development-ci.mjs`, target: '/app/start-teams-development-ci.mjs', read_only: true });
           const server = { entrypoint: ['node', '/app/start-teams-development-ci.mjs'], command: [], volumes,
-            environment: { NODE_ENV: 'development', TEAMS_EMULATOR_MODE: 'true', NEXT_DIST_DIR: '.next/teams-development',
+            environment: { NODE_ENV: 'development', TEAMS_EMULATOR_MODE: 'true', NEXT_PUBLIC_FORCE_FEATURE_FLAGS: 'release-v1-6-feature:true', NEXT_DIST_DIR: '.next/teams-development',
               DB_HOST: 'postgres', DB_PORT: '5432', DB_NAME_SERVER: 'server', REDIS_PREFIX: 'teams-development:',
               NEXT_PUBLIC_APP_URL: 'http://localhost:3000', NODE_OPTIONS: '--max-old-space-size=8192' } };
           writeFileSync(`${process.env.RUNNER_TEMP}/teams-development-compose.json`, JSON.stringify({ services: { server } }));
