@@ -144,6 +144,10 @@ describe('tenantCreationWorkflow appliance mode', () => {
       expect(calls.customerTracking).toBe(0);
       expect(calls.welcomeEmail).toBe(0);
       expect(result.emailSent).toBe(false);
+      // Appliance installs are not Stripe-billed: no trial payment reminder.
+      await expect(
+        env.client.workflow.getHandle('trial-payment-reminder-pre-minted-tenant-id').describe()
+      ).rejects.toThrow();
     } finally {
       await env.teardown();
     }
@@ -168,6 +172,10 @@ describe('tenantCreationWorkflow appliance mode', () => {
       expect(calls.customerTracking).toBe(3);
       expect(calls.welcomeEmail).toBe(1);
       expect(result.emailSent).toBe(true);
+      // No Stripe subscription on this input, so no reminder is scheduled either.
+      await expect(
+        env.client.workflow.getHandle('trial-payment-reminder-generated-tenant-id').describe()
+      ).rejects.toThrow();
     } finally {
       await env.teardown();
     }

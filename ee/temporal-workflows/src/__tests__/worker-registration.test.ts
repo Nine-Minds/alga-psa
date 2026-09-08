@@ -31,6 +31,13 @@ describe('temporal worker registration', () => {
     expect(activities.applianceLicenseCheckInActivity).toBeDefined();
   });
 
+  it('exports trial payment reminder workflow and activities', () => {
+    expect(workflows.trialPaymentReminderWorkflow).toBeDefined();
+    expect(activities.resolveTrialEndFromStripe).toBeDefined();
+    expect(activities.verifyTenantBillableForTrialReminder).toBeDefined();
+    expect(activities.sendTrialPaymentReminderEmail).toBeDefined();
+  });
+
   it('exports tenant product upgrade workflow and activities', () => {
     expect(workflows.tenantProductUpgradeWorkflow).toBeDefined();
     expect(activities.product_upgrade_preflight).toBeDefined();
