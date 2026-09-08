@@ -206,25 +206,32 @@ Controls discovery of the Contract Simulator while it is being rolled out.
 - Simulator routes, APIs, server actions, and all other entry points remain unchanged. This
   flag controls only the Contract Details tab and is not an authorization boundary.
 
-### 14. `service-request-store-only`
-Gates newly authoring/selecting the store-only execution provider for service request definitions (server-side).
+### 14. `release-v1-6-feature`
+Controls discovery of the v1.6 UI options. Defaults to false.
 
-**Affected Areas:**
-- **MSP Portal:**
-  - Service Request definition editor at `/msp/service-requests/:definitionId` — the
-    execution provider dropdown
-- **Server actions:** `getServiceRequestDefinitionEditorDataAction` (filters the selectable
-  providers) / `updateServiceRequestExecutionProviderAction` (rejects the selection)
+**Flag-off behavior:**
+- Fixed/Usage configuration panels hide new pricing/measurement choices for legacy
+  configurations; existing unit-priced and period-total configurations remain editable.
+- Contract overview hides the legacy quantity conversion shortcuts. Recorded usage,
+  existing period totals, billing reports and calculations remain available.
+- Invoice Layouts, invoice-preview selectors and client billing settings hide the new
+  standard by-ticket layout, retaining existing/default selections and saved custom layouts.
+- Designer source selectors, billed-time presets and ticket-time sample choices hide
+  new billed-time options. Saved bindings and rendering continue to work.
+- MSP and portal ticket comment editors hide the Attach files toolbar. Existing files,
+  inline images, email delivery, downloads and cleanup continue to work.
+- Schedule entries hide Create Teams meeting; existing Join, reschedule and delete work.
+- Automatic Invoices hides the manual month-end close action and confirmation. Australian
+  date formatting, ordinary generation and recurring-period claims are unchanged.
+- Service-request editor options hide Store Only unless the definition already uses it.
+  This replaces `service-request-store-only`; the old flag is no longer evaluated.
 
-**Behavior:**
-- When disabled (default): "Store Only" is filtered out of the editor's execution provider
-  options, and the server action rejects an attempt to select it with a 403 error.
-  Definitions that already use store-only keep the provider visible in their editor so the
-  current selection renders faithfully.
-- When enabled: Store-only is selectable exactly as before.
-- Existing published store-only definitions remain fully functional regardless of flag
-  state: portal catalog listing, submission execution, migrations, and historical
-  submission reads are not gated.
+**Flag-on behavior:** all these options are available subject to existing permissions and
+capability checks. Xero account-code exports are not part of this release gate.
+
+This is UI-only rollout control, not an authorization or execution boundary. No new API,
+route, migration or runtime restrictions are introduced. The previous store-only action
+restrictions are removed; publishing, duplication and submission execution remain available.
 
 ## Implementation Details
 

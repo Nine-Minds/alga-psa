@@ -211,6 +211,12 @@
       "updateError": "Échec de la mise à jour de l'enregistrement d'utilisation",
       "deleteSuccess": "Enregistrement d'utilisation supprimé avec succès",
       "deleteError": "Échec de la suppression de l'enregistrement d'utilisation"
+    },
+    "periodReport": "Rapport d'utilisation de la période",
+    "periodAlreadyInvoiced": "Cette période est déjà facturée. Corrigez-la via le processus d'ajustement de facture.",
+    "periodFilter": {
+      "notice": "Affichage de l'utilisation pour la période de service du {{start}} au {{end}}",
+      "clear": "Effacer"
     }
   },
   "lineItem": {
@@ -666,7 +672,9 @@
     },
     "recurringRun": {
       "selectPeriods": "Sélectionnez au moins une période de facturation récurrente à générer.",
-      "invoicePermission": "Autorisation refusée : autorisation de création ou de génération de factures requise"
+      "invoicePermission": "Autorisation refusée : autorisation de création ou de génération de factures requise",
+      "monthEndCloseNotMaterialized": "Aucune période de service récurrente n'a été matérialisée pour cette fenêtre d'exécution récurrente.",
+      "monthEndCloseNotEligible": "La période {{servicePeriod}} ne peut être clôturée en fin de mois que le {{finalCalendarDay}}. Seules les périodes de service facturées à terme échu qui couvrent un mois calendaire complet peuvent être clôturées par anticipation le dernier jour calendaire."
     },
     "recurringServicePeriod": {
       "scheduleKeyRequiredInspect": "Une clé de planning est requise pour inspecter les périodes de service récurrentes.",

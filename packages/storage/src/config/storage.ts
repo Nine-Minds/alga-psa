@@ -80,7 +80,7 @@ export async function validateFileUpload(mimeType: string, fileSize: number): Pr
   if (!allowsAllTypes) {
     const isAllowedMimeType = provider.allowedMimeTypes.some((allowed) => {
       if (allowed.endsWith('/*')) {
-        const prefix = allowed.slice(0, -2);
+        const prefix = allowed.slice(0, -1);
         return mimeType.startsWith(prefix);
       }
       return mimeType === allowed;

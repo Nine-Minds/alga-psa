@@ -1,4 +1,6 @@
 'use client';
+import { getNextContractServiceBoundary } from '../../../actions/contractLineSemanticsActions';
+import { Input } from '@alga-psa/ui/components/Input';
 
 import React, { useMemo, useState, useEffect } from 'react';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
@@ -21,6 +23,7 @@ import {
   getConfigurationForService,
   getConfigurationWithDetails
 } from '@alga-psa/billing/actions/contractLineServiceConfigurationActions';
+import type { UsageMeasurementMode } from '@alga-psa/types';
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 import { ServiceConfigurationPanel } from '../service-configurations/ServiceConfigurationPanel';
 import {
@@ -75,7 +78,7 @@ const ContractLineServiceForm: React.FC<ContractLineServiceFormProps> = ({
     contract_line_id: planService.contract_line_id,
     service_id: planService.service_id,
     configuration_type: 'Fixed',
-    quantity: planService.quantity || 1,
+    quantity: planService.quantity ?? 1,
     custom_rate: planService.custom_rate
   });
 
@@ -86,6 +89,11 @@ const ContractLineServiceForm: React.FC<ContractLineServiceFormProps> = ({
   });
   const [rateTiers, setRateTiers] = useState<IContractLineServiceRateTier[]>([]);
   const [userTypeRates, setUserTypeRates] = useState<IUserTypeRate[]>([]);
+  // Measurement mode is a semantic transition, not a plain column edit: the
+  // saved value is compared against what was loaded so an unchanged mode never
+  // runs the conversion guard, and a changed one always does.
+  const [effectiveBoundary, setEffectiveBoundary] = useState<string | null>(null);
+  const [initialMeasurementMode, setInitialMeasurementMode] = useState<UsageMeasurementMode>('additive');
 
   // Bucket overlay state
   const [bucketOverlay, setBucketOverlay] = useState<BucketOverlayInput | null>(null);
@@ -118,7 +126,8 @@ const ContractLineServiceForm: React.FC<ContractLineServiceFormProps> = ({
 
         if (config) {
           // Load full configuration details
-          const configDetails = await getConfigurationWithDetails(config.config_id);
+          const boundary = await getNextContractServiceBoundary(planService.contract_line_id);
+          const configDetails = await getConfigurationWithDetails(config.config_id, typeof boundary === 'string' ? boundary : undefined);
           if (isReturnedActionError(configDetails)) {
             setError(getErrorMessage(configDetails));
             return;
@@ -127,11 +136,17 @@ const ContractLineServiceForm: React.FC<ContractLineServiceFormProps> = ({
 
           setBaseConfig({
             ...configDetails.baseConfig,
-            quantity: planService.quantity || configDetails.baseConfig.quantity,
-            custom_rate: planService.custom_rate !== undefined ? planService.custom_rate : configDetails.baseConfig.custom_rate
+            quantity: configDetails.baseConfig.quantity ?? planService.quantity,
+            custom_rate: configDetails.baseConfig.custom_rate ?? planService.custom_rate
           });
 
           setTypeConfig(configDetails.typeConfig);
+          if (typeof boundary === 'string') setEffectiveBoundary(boundary);
+          setInitialMeasurementMode(
+            (configDetails.typeConfig as Partial<IContractLineServiceUsageConfig> | null)?.measurement_mode === 'period_total'
+              ? 'period_total'
+              : 'additive'
+          );
 
           // Set plan fixed config if available
           if (details.planFixedConfig) {
@@ -152,7 +167,7 @@ const ContractLineServiceForm: React.FC<ContractLineServiceFormProps> = ({
             contract_line_id: planService.contract_line_id,
             service_id: planService.service_id,
             configuration_type: defaultMode,
-            quantity: planService.quantity || 1,
+            quantity: planService.quantity ?? 1,
             custom_rate: planService.custom_rate
           });
         }
@@ -236,6 +251,8 @@ const ContractLineServiceForm: React.FC<ContractLineServiceFormProps> = ({
     setError(null);
 
     try {
+      const typeConfigToPersist = typeConfig || undefined;
+
       // Update the plan service with the new configuration
       const updateResult = await updateContractLineService(
         planService.contract_line_id,
@@ -243,7 +260,7 @@ const ContractLineServiceForm: React.FC<ContractLineServiceFormProps> = ({
         {
           quantity: baseConfig.quantity,
           customRate: baseConfig.custom_rate,
-          typeConfig: typeConfig || undefined
+          typeConfig: typeConfigToPersist && effectiveBoundary ? {...typeConfigToPersist, effective_period_start: effectiveBoundary} : typeConfigToPersist
         },
         rateTiers // Pass the rateTiers state here
       );
@@ -317,6 +334,13 @@ const ContractLineServiceForm: React.FC<ContractLineServiceFormProps> = ({
       className="max-w-4xl"
     >
       <DialogContent>
+        {effectiveBoundary && (baseConfig.configuration_type === 'Fixed' || baseConfig.configuration_type === 'Usage') && (
+          <div className="mb-4">
+            <label htmlFor="service-configuration-effective-boundary">{t('forms.serviceForm.effectiveFrom', {defaultValue: 'Quantity or measurement change effective from'})}</label>
+            <Input id="service-configuration-effective-boundary" type="date" value={effectiveBoundary} onChange={event => setEffectiveBoundary(event.target.value)} />
+            <p>{t('forms.serviceForm.effectiveHelp', {defaultValue: 'Changes take effect at this service-period boundary. Earlier periods retain their pricing and measurement.'})}</p>
+          </div>
+        )}
 
           {isLoading ? (
             <div className="py-8 text-center">

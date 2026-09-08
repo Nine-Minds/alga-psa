@@ -3,6 +3,9 @@
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
+const attachmentDiscard = vi.hoisted(() => vi.fn());
+vi.mock('../../actions/comment-actions/commentAttachmentDraftActions', () => ({ discardCommentAttachmentDrafts: attachmentDiscard }));
+
 vi.mock('@alga-psa/documents/actions/documentActions', () => ({
   uploadDocument: vi.fn(),
 }));
@@ -295,4 +298,34 @@ describe('useTicketRichTextUploadSession', () => {
     expect(resolvedUrl).toBe('/algadesk/attachments/file-42');
     expect(result.current.draftClipboardImages[0]?.url).toBe('/algadesk/attachments/file-42');
   });
+  it('tracks reply/edit files and cancels an in-flight upload even with legacy tracking disabled', async () => {
+    const {useTicketRichTextUploadSession}=await loadHook();
+    let complete!: (value:any)=>void;
+    const uploadDocumentAction=vi.fn(()=>new Promise(resolve=>{complete=resolve;}));
+    attachmentDiscard.mockResolvedValue({deletedDocumentIds:['reply-pdf'],failures:[]});
+    const onDiscard=vi.fn();
+    const {result}=renderHook(()=>useTicketRichTextUploadSession({componentLabel:'reply',commentAttachments:true,
+      ticketId:'ticket-1',userId:'user-1',trackDraftUploads:false,onDiscard,uploadDocumentAction,toastApi:{error:vi.fn(),success:vi.fn()}}));
+    let upload!: Promise<string>, canceled!: Promise<void>;
+    await act(async()=>{upload=result.current.uploadFile(new File(['%PDF'],'reply.pdf',{type:'application/pdf'}));});
+    const rejected=expect(upload).rejects.toThrow('canceled');
+    await act(async()=>{canceled=Promise.resolve(result.current.requestDiscard());});
+    expect(onDiscard).not.toHaveBeenCalled();
+    await act(async()=>{complete(createUploadResult('reply-pdf'));await rejected;await canceled;});
+    expect(attachmentDiscard).toHaveBeenCalledWith({ticketId:'ticket-1',documentIds:['reply-pdf']});
+    expect(onDiscard).toHaveBeenCalledOnce();
+    expect(result.current.draftClipboardImages).toEqual([]);
+  });
+  it('failed file uploads create no cancellation candidates', async () => {
+    const {useTicketRichTextUploadSession}=await loadHook();
+    attachmentDiscard.mockClear();
+    const onDiscard=vi.fn();
+    const {result}=renderHook(()=>useTicketRichTextUploadSession({componentLabel:'edit',commentAttachments:true,
+      ticketId:'ticket-1',userId:'user-1',trackDraftUploads:false,onDiscard,
+      uploadDocumentAction:async()=>({success:false,error:'unsupported file'}),toastApi:{error:vi.fn(),success:vi.fn()}}));
+    await act(async()=>{await expect(result.current.uploadFile(new File(['bad'],'bad.mp4',{type:'video/mp4'}))).rejects.toThrow('unsupported file');});
+    await act(async()=>{await result.current.requestDiscard();});
+    expect(attachmentDiscard).not.toHaveBeenCalled(); expect(onDiscard).toHaveBeenCalledOnce();
+  });
+
 });

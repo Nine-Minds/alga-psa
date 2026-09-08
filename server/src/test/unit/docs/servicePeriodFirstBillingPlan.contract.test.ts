@@ -120,6 +120,11 @@ const billingCycleAlignmentPostInventoryRefs = new Set([
   'server/src/test/integration/contractLineBucketsMigration.integration.test.ts',
   'shared/workflow/runtime/actions/__tests__/businessOperations.time.db.test.ts',
   'shared/workflow/runtime/actions/businessOperations/crmWorkerDal.ts',
+  // Explicit usage-contract semantics work split ContractLines authoring into
+  // CreateCustomContractLineDialog and added the fixed pricing-basis coverage
+  // after the pass-0 snapshot.
+  'packages/billing/src/components/billing-dashboard/contracts/CreateCustomContractLineDialog.tsx',
+  'packages/billing/tests/ContractLineServiceForm.fixedPricingBasis.test.tsx',
 ]);
 
 // Files whose billing_cycle_alignment references were removed after the pass-0
@@ -135,6 +140,31 @@ const billingCycleAlignmentPostInventoryRemovals = new Set([
 // pass-0 inventory snapshot was taken (recurring service-period ledger work
 // landed after the inventory was captured).
 const servicePeriodPostInventoryRefs = new Set([
+  // Invoice ticket presentation (origin/main a81661446e) added template
+  // descriptors and behavioral coverage after this historical snapshot.
+  'packages/billing/src/lib/invoice-template-ast/collectionDescriptors.ts',
+  'server/src/test/integration/invoiceTicketProduction.integration.test.ts',
+  'server/src/test/unit/billing/invoiceTicketPresentation.test.ts',
+  // Explicit usage-contract measurement semantics (usage period totals, seat
+  // revisions, unit-pricing revisions) added persisted service-period readers
+  // and fixtures after the pass-0 snapshot.
+  'packages/billing/src/actions/contractLineUnitPricingActions.ts',
+  'packages/billing/src/components/billing-dashboard/UsagePeriodTotalQuickEntry.tsx',
+  'packages/billing/src/components/billing-dashboard/UsageTracking.tsx',
+  'packages/billing/src/lib/billing/seatRevisions.ts',
+  'packages/billing/src/lib/billing/usagePeriodTotalIdentity.ts',
+  'packages/billing/tests/automaticInvoices.duplicateIdentityDedupe.test.tsx',
+  'server/src/test/infrastructure/billing/invoices/contractQuantityUsageSemantics.test.ts',
+  // Calendar month-end close and grouped zero-dollar claims added persisted
+  // window readers and regression fixtures after the pass-0 snapshot.
+  'packages/billing/src/actions/calendarMonthEndCloseActions.db.test.ts',
+  'packages/billing/src/actions/groupedZeroDollarRecurringClaim.db.test.ts',
+  'packages/billing/src/actions/recurringBillingRunActions.ts',
+  'packages/billing/src/lib/billing/clientCadenceWindowMaterialization.ts',
+  'server/src/test/integration/billing/recurringInvoiceHistory.db.test.tsx',
+  'server/src/test/unit/billing/calendarMonthEndCloseActions.test.ts',
+  'server/src/test/unit/billing/calendarMonthEndClosePolicy.test.ts',
+  'shared/billingClients/calendarMonthEndClosePolicy.ts',
   'packages/billing/src/actions/billingAndTax.ts',
   'packages/billing/src/actions/billingCycleActions.ts',
   // Deferred-revenue reporting reads persisted service-period boundaries to

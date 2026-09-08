@@ -11,6 +11,7 @@ export {
   isSupportedLocale,
   normalizeLocale,
   getBestMatchingLocale,
+  getTranslationLanguageCode,
 } from '@alga-psa/core/i18n/config';
 
 export type { SupportedLocale } from '@alga-psa/core/i18n/config';

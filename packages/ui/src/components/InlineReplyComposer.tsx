@@ -79,6 +79,7 @@ export function InlineReplyComposer({
         </div>
       )}
       <TextEditor
+        allowFileAttachments={roomName?.startsWith('ticket-')}
         {...withDataAutomationId({ id: `${componentId}-editor` })}
         roomName={roomName}
         initialContent={editorInitialContent}

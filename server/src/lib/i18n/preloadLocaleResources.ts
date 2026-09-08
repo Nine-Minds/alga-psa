@@ -2,7 +2,7 @@ import 'server-only';
 import { readFile } from 'fs/promises';
 import path from 'path';
 import { headers } from 'next/headers';
-import { getNamespacesForRoute } from '@alga-psa/core/i18n/config';
+import { getNamespacesForRoute, getTranslationLanguageCode, type SupportedLocale } from '@alga-psa/core/i18n/config';
 import type { PreloadedNamespaceResources } from '@alga-psa/ui/lib/i18n/client';
 
 /**
@@ -42,7 +42,11 @@ export async function preloadLocaleResources(
     'features/documents',
   ];
   const namespaces = Array.from(new Set([...SHELL_NAMESPACES, ...getNamespacesForRoute(pathname)]));
-  const localesDir = path.join(process.cwd(), 'public', 'locales', locale);
+  // Translation packs are language-only; a regional tag (en-AU) reads the same
+  // resources as its language code (en). The client seeds i18next under the
+  // translation-language code, so keying the read on it keeps them in sync.
+  const packLocale = getTranslationLanguageCode(locale as SupportedLocale);
+  const localesDir = path.join(process.cwd(), 'public', 'locales', packLocale);
 
   const entries = await Promise.all(
     namespaces.map(async (namespace) => {

@@ -1632,5 +1632,21 @@
   },
   "callLink": {
     "teamsCall": "Zadzwoń w Microsoft Teams"
+  },
+  "editor": {
+    "attachFiles": "Załącz pliki",
+    "uploadingFiles": "Przesyłanie plików…",
+    "fileUploadFailed": "Nie udało się przesłać pliku."
+  },
+  "emailPreferences": {
+    "loading": "Ładowanie preferencji e-mail…",
+    "saving": "Zapisywanie preferencji e-mail…",
+    "slow": "To trwa dłużej niż zwykle. Poczekaj na potwierdzenie przed wprowadzeniem kolejnych zmian.",
+    "loadError": "Nie udało się wczytać zapisanych preferencji e-mail. Spróbuj ponownie, aby potwierdzić ustawienia.",
+    "saveError": "Nie udało się potwierdzić zapisu. Sprawdź zapisane preferencje i spróbuj ponownie.",
+    "retry": "Spróbuj ponownie",
+    "disabledByAdmin": "Wyłączone przez administratora",
+    "mixed": "Częściowo włączone",
+    "empty": "Brak kategorii powiadomień e-mail."
   }
 }

@@ -358,6 +358,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
           </div>
         </div>
         <TextEditor
+            allowFileAttachments
           {...withDataAutomationId({ id: `${commentId}-text-editor` })}
           roomName={`ticket-${ticketId}-comment-${currentComment.comment_id}`}
           initialContent={editedContent}

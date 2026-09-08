@@ -489,6 +489,9 @@ function logConfiguration() {
 
 // Helper function to initialize job scheduler
 async function initializeJobScheduler(storageService: StorageService) {
+  const { startCommentRecoveryScheduleDiscovery } = await import('./jobs/commentRecoveryScheduleDiscovery');
+  // The discovery timer survives failed initialization and sees tenants created later.
+  await startCommentRecoveryScheduleDiscovery(initializeJobRunner);
   // Initialize the new job runner abstraction (handles all core handler registration)
   try {
     const jobRunner = await initializeJobRunner();

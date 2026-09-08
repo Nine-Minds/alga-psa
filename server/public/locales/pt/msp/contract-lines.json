@@ -411,7 +411,9 @@
         "missingPlanOrServiceInformation": "Informações de plano ou serviço ausentes"
       },
       "loading": "Carregando configuração do serviço...",
-      "title": "Editar configuração de serviço"
+      "title": "Editar configuração de serviço",
+      "effectiveFrom": "Alteração de quantidade ou medição em vigor a partir de",
+      "effectiveHelp": "As alterações entram em vigor no limite deste período de serviço. Os períodos anteriores mantêm seus preços e sua medição."
     },
     "tierEditor": {
       "actions": {

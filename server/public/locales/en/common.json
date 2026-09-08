@@ -1598,5 +1598,21 @@
   },
   "callLink": {
     "teamsCall": "Call in Microsoft Teams"
+  },
+  "editor": {
+    "attachFiles": "Attach files",
+    "uploadingFiles": "Uploading files…",
+    "fileUploadFailed": "File upload failed."
+  },
+  "emailPreferences": {
+    "loading": "Loading email preferences…",
+    "saving": "Saving email preferences…",
+    "slow": "This is taking longer than usual. Waiting for confirmation before allowing more changes.",
+    "loadError": "Could not load saved email preferences. Retry to confirm your current settings.",
+    "saveError": "Could not confirm the save. Please check your saved preferences and try again.",
+    "retry": "Retry",
+    "disabledByAdmin": "Disabled by administrator",
+    "mixed": "Partially enabled",
+    "empty": "No email notification categories available."
   }
 }

@@ -66,6 +66,7 @@ export const buildInvoiceTemplateBindings = (): NonNullable<TemplateAst['binding
     // templates binding them render an empty collection there.
     ticketGroups: { id: 'ticketGroups', kind: 'collection', path: 'ticketGroups' },
     timeEntries: { id: 'timeEntries', kind: 'collection', path: 'timeEntries' },
+    ticketPresentationRows: { id: 'ticketPresentationRows', kind: 'collection', path: 'ticketPresentationRows' },
   },
 });
 
@@ -830,25 +831,8 @@ const buildStandardByLocationAst = (): TemplateAst => ({
   },
 });
 
-/**
- * Standard Invoice By Ticket — the classic line-items table followed by a
- * "Billed Time by Ticket" summary sourced from the `ticketGroups` snapshot
- * collection: one rolled-up row per ticket (or project task / ad-hoc
- * fallback) with the ticket's customer-visible description, total billed
- * hours, rate, and amount. Multiple time entries on a ticket aggregate into
- * that single row; the Rate column renders `rateDisplay`, which is the
- * uniform hourly rate (currency-formatted at render time) or "Mixed rates"
- * when entries bill at more than one rate — never a blended figure.
- *
- * Individual time entries are deliberately not printed: a note under the
- * summary directs the client to the portal for the per-entry breakdown.
- * Custom layouts can still opt into per-entry detail via the `timeEntries`
- * collection.
- *
- * Invoices without snapshot data (anything generated before the feature)
- * render the summary's explicit empty state — totals stay driven by the line
- * items and are unchanged.
- */
+/** Complete primary charge presentation. Eligible time charges are replaced
+ * atomically; supporting entries are an explicit custom-layout choice. */
 const buildStandardByTicketAst = (): TemplateAst => ({
   kind: 'invoice-template-ast',
   version: TEMPLATE_AST_VERSION,
@@ -932,36 +916,11 @@ const buildStandardByTicketAst = (): TemplateAst => ({
           },
         ],
       },
-      // ── Line items table (all charges — totals reconcile here) ────
-      {
-        id: 'line-items',
-        type: 'dynamic-table',
-        style: { inline: { margin: '0 0 16px 0', border: '1px solid #e5e7eb', borderRadius: '10px' } },
-        repeat: { sourceBinding: { bindingId: 'lineItems' }, itemBinding: 'item' },
-        emptyStateText: { i18nKey: 'labels.emptyState.noBillableLineItems', defaultValue: 'No billable line items' },
-        columns: [
-          { id: 'description', header: { i18nKey: 'labels.description', defaultValue: 'Description' }, value: { type: 'path', path: 'description' }, style: { inline: { width: '50%' } } },
-          { id: 'quantity', header: { i18nKey: 'labels.qty', defaultValue: 'Qty' }, value: { type: 'path', path: 'quantity' }, format: 'number', style: { inline: { textAlign: 'right', width: '14%' } } },
-          { id: 'unit-price', header: { i18nKey: 'labels.rate', defaultValue: 'Rate' }, value: { type: 'path', path: 'unitPrice' }, format: 'currency', style: { inline: { textAlign: 'right', width: '18%' } } },
-          { id: 'line-total', header: { i18nKey: 'labels.amount', defaultValue: 'Amount' }, value: { type: 'path', path: 'total' }, format: 'currency', style: { inline: { textAlign: 'right', width: '18%' } } },
-        ],
-      },
-      // ── Billed time by ticket (rolled-up summary) ─────────────────
-      // One row per ticketGroups entry: all of a ticket's time entries
-      // aggregate into a single Ticket | Description | Hours | Rate | Amount
-      // row. Legacy invoices (no snapshot data) render the explicit empty
-      // state instead of fabricated detail.
-      {
-        id: 'billed-time-heading',
-        type: 'text',
-        content: { type: 'i18n', i18nKey: 'labels.billedTimeByTicket', defaultValue: 'Billed Time by Ticket' },
-        style: { inline: { fontSize: '14px', fontWeight: 700, margin: '0 0 6px 0' } },
-      },
       {
         id: 'ticket-time-summary',
         type: 'dynamic-table',
         style: { inline: { margin: '0 0 6px 0', border: '1px solid #e5e7eb', borderRadius: '10px' } },
-        repeat: { sourceBinding: { bindingId: 'ticketGroups' }, itemBinding: 'item' },
+        repeat: { sourceBinding: { bindingId: 'ticketPresentationRows' }, itemBinding: 'item' },
         emptyStateText: {
           i18nKey: 'labels.emptyState.noBilledTimeDetail',
           defaultValue: 'No billed-time detail is available for this invoice.',
@@ -969,9 +928,9 @@ const buildStandardByTicketAst = (): TemplateAst => ({
         columns: [
           { id: 'ticket', header: { i18nKey: 'labels.ticket', defaultValue: 'Ticket' }, value: { type: 'path', path: 'label' }, style: { inline: { width: '26%' } } },
           { id: 'ticket-description', header: { i18nKey: 'labels.description', defaultValue: 'Description' }, value: { type: 'path', path: 'description' }, style: { inline: { width: '34%' } } },
-          { id: 'ticket-hours', header: { i18nKey: 'labels.hours', defaultValue: 'Hours' }, value: { type: 'path', path: 'totalHours' }, format: 'number', style: { inline: { textAlign: 'right', width: '10%' } } },
+          { id: 'ticket-hours', header: { i18nKey: 'time.quantityHours', defaultValue: 'Qty / Hours' }, value: { type: 'path', path: 'quantity' }, format: 'number', style: { inline: { textAlign: 'right', width: '10%' } } },
           { id: 'ticket-rate', header: { i18nKey: 'labels.rate', defaultValue: 'Rate' }, value: { type: 'path', path: 'rateDisplay' }, format: 'currency', style: { inline: { textAlign: 'right', width: '14%' } } },
-          { id: 'ticket-amount', header: { i18nKey: 'labels.amount', defaultValue: 'Amount' }, value: { type: 'path', path: 'totalAmount' }, format: 'currency', style: { inline: { textAlign: 'right', width: '16%' } } },
+          { id: 'ticket-amount', header: { i18nKey: 'labels.amount', defaultValue: 'Amount' }, value: { type: 'path', path: 'amount' }, format: 'currency', style: { inline: { textAlign: 'right', width: '16%' } } },
         ],
       },
       {
@@ -979,10 +938,15 @@ const buildStandardByTicketAst = (): TemplateAst => ({
         type: 'text',
         content: {
           type: 'i18n',
-          i18nKey: 'labels.note.billedTimePortalDetail',
-          defaultValue: 'A detailed breakdown of the time entries behind each ticket is available in the client portal.',
+          i18nKey: 'time.breakdown',
+          defaultValue: 'Contact your service provider for a billed-time breakdown.',
         },
         style: { inline: { color: '#6b7280', fontSize: '11px', margin: '0 0 16px 0' } },
+      },
+      {
+        id: 'ticket-coverage-note', type: 'text',
+        content: { type: 'path', path: 'ticketCoverageNote' },
+        style: { inline: { fontSize: '11px', margin: '0 0 12px 0' } },
       },
       // ── Grand totals ──────────────────────────────────────────────
       {

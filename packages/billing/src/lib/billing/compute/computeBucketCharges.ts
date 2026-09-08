@@ -7,6 +7,7 @@ import type {
 } from "@alga-psa/types";
 import type {
   ChargeComputeClient,
+  ChargeComputeTiming,
   ChargeComputeTaxPorts,
   ChargeProfileAssignments,
 } from "./types";
@@ -125,6 +126,7 @@ export function computeBucketPeriodState(
 }
 
 export interface BucketChargeComputeInputs {
+  timing?: ChargeComputeTiming;
   billingPeriod: IBillingPeriod;
   clientContractLine: IClientContractLine;
   client: ChargeComputeClient;
@@ -462,6 +464,7 @@ export function computeBucketCharges(
         config_id: config.config_id,
         tax_amount: taxAmount,
         is_taxable: isTaxable,
+        servicePeriodRecordId: inputs.timing?.servicePeriodRecordId,
         servicePeriodStart: period.periodStart,
         servicePeriodEnd: period.periodEnd,
         billingTiming: "arrears",

@@ -39,7 +39,8 @@ exports.seed = async function (knex) {
         {
             order_number: 5,
             name: 'Enchanted Closure',
-            status_type: 'ticket'
+            status_type: 'ticket',
+            is_closed: true
         }
     ];
 

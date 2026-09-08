@@ -1598,5 +1598,21 @@
   },
   "callLink": {
     "teamsCall": "Ligar no Microsoft Teams"
+  },
+  "editor": {
+    "attachFiles": "Anexar arquivos",
+    "uploadingFiles": "Carregando arquivos…",
+    "fileUploadFailed": "Falha ao carregar o arquivo."
+  },
+  "emailPreferences": {
+    "loading": "Carregando preferências de e-mail…",
+    "saving": "Salvando preferências de e-mail…",
+    "slow": "Isso está demorando mais que o normal. Aguarde a confirmação antes de fazer mais alterações.",
+    "loadError": "Não foi possível carregar as preferências salvas. Tente novamente para confirmar suas configurações.",
+    "saveError": "Não foi possível confirmar o salvamento. Confira suas preferências salvas e tente novamente.",
+    "retry": "Tentar novamente",
+    "disabledByAdmin": "Desativado pelo administrador",
+    "mixed": "Parcialmente ativado",
+    "empty": "Nenhuma categoria de notificação por e-mail disponível."
   }
 }
