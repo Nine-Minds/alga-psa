@@ -125,3 +125,4 @@ export type { CoManagedArchiveWork, CoManagedArchiveEntry, CoManagedArchiveFile,
 export * from './independentUpgrade';
 export { getCoManagedTenantLicenseStatus, submitCoManagedTenantLicense } from './tenantLicenseManagement';
 export * from './independentUpgradeScreen';
+export * from './upgradePurchase';

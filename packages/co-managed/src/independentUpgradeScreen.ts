@@ -38,8 +38,12 @@ export async function getCoManagedIndependentUpgradeScreen(db: Knex, input: CoMa
       try { entitlementReady = (await retainHostedPsaUpgradeCandidate(trx, actor.tenant, hostedPriceIds)).seats >= seatsRequired; }
       catch (error) { if (!(error instanceof HostedPsaUpgradeAdmissionError)) throw error; }
     }
+    const pending = selfHosted ? undefined : await own.table('co_managed_upgrade_purchases').whereIn('state', ['preparing', 'checkout'])
+      .first('operation_id', 'quantity', 'billing_interval');
+    const pendingPurchase = pending ? { operationId: pending.operation_id as string, quantity: Number(pending.quantity),
+      interval: pending.billing_interval as 'month' | 'year' } : null;
     await assertCoManagedSessionUnexpired(trx, actor);
     return { state: 'eligible' as const, relationshipId: relationship.relationship_id as string,
-      revision: Number(relationship.revision), departed: relationship.state === 'terminated', selfHosted, seatsRequired, entitlementReady };
+      revision: Number(relationship.revision), departed: relationship.state === 'terminated', selfHosted, seatsRequired, entitlementReady, pendingPurchase };
   });
 }

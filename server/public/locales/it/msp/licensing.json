@@ -774,7 +774,12 @@
       "startError": "Impossibile avviare l’aggiornamento. Puoi riprovare la richiesta.",
       "confirmTitle": "Aggiornare questo spazio?",
       "confirmMessage": "Questa operazione converte lo spazio in AlgaPSA e termina qualsiasi relazione MSP attiva. La tua licenza a pagamento copre questo spazio. Il fornitore di hosting dei dati non cambia.",
-      "cancel": "Annulla"
+      "cancel": "Annulla",
+      "billingInterval": "Frequenza di fatturazione",
+      "month": "Mensile",
+      "year": "Annuale",
+      "paymentProcessing": "Il pagamento è in elaborazione. Aggiorna lo stato o riprendi l’acquisto per verificare.",
+      "purchaseScope": "Questo acquisto copre questo spazio. L’accesso del MSP termina solo quando confermi l’aggiornamento dopo il pagamento."
     }
   }
 }

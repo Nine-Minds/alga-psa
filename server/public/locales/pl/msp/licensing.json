@@ -776,7 +776,12 @@
       "startError": "Nie udało się rozpocząć aktualizacji. Możesz ponowić żądanie.",
       "confirmTitle": "Zaktualizować ten obszar?",
       "confirmMessage": "Spowoduje to przejście obszaru na AlgaPSA i zakończenie każdej aktywnej relacji z MSP. Obszar obejmie własna płatna licencja. Hosting danych pozostanie bez zmian.",
-      "cancel": "Anuluj"
+      "cancel": "Anuluj",
+      "billingInterval": "Częstotliwość rozliczeń",
+      "month": "Miesięcznie",
+      "year": "Rocznie",
+      "paymentProcessing": "Płatność jest przetwarzana. Odśwież status lub wznów zakup, aby sprawdzić ponownie.",
+      "purchaseScope": "Ten zakup opłaca ten obszar roboczy. Dostęp MSP kończy się dopiero po potwierdzeniu aktualizacji po płatności."
     }
   }
 }

@@ -772,7 +772,12 @@
       "startError": "De upgrade kan niet worden gestart. U kunt het verzoek opnieuw proberen.",
       "confirmTitle": "Deze werkruimte upgraden?",
       "confirmMessage": "Hiermee wordt uw werkruimte omgezet naar AlgaPSA en wordt elke actieve MSP-relatie beëindigd. Uw eigen betaalde licentie dekt deze werkruimte. De hosting van uw gegevens verandert niet.",
-      "cancel": "Annuleren"
+      "cancel": "Annuleren",
+      "billingInterval": "Factureringsfrequentie",
+      "month": "Maandelijks",
+      "year": "Jaarlijks",
+      "paymentProcessing": "Uw betaling wordt verwerkt. Vernieuw de status of hervat de aankoop om opnieuw te controleren.",
+      "purchaseScope": "Deze aankoop betaalt voor deze werkruimte. De MSP-toegang eindigt pas wanneer u de upgrade na betaling bevestigt."
     }
   }
 }

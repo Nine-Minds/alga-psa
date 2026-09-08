@@ -774,7 +774,12 @@
       "startError": "No se pudo iniciar la actualización. Puedes volver a intentarlo.",
       "confirmTitle": "¿Actualizar este espacio?",
       "confirmMessage": "Esto convierte tu espacio a AlgaPSA y termina cualquier relación activa con el MSP. Tu propia licencia de pago cubre este espacio. No cambia quién aloja tus datos.",
-      "cancel": "Cancelar"
+      "cancel": "Cancelar",
+      "billingInterval": "Frecuencia de facturación",
+      "month": "Mensual",
+      "year": "Anual",
+      "paymentProcessing": "Tu pago se está procesando. Actualiza el estado o reanuda la compra para comprobarlo.",
+      "purchaseScope": "Esta compra paga este espacio. El acceso del MSP termina solo cuando confirmas la actualización después del pago."
     }
   }
 }

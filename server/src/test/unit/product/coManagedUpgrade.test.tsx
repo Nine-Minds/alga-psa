@@ -4,8 +4,8 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import CoManagedUpgrade from '../../../components/co-managed/CoManagedUpgrade';
 import { CoManagedFeatureBoundary } from '../../../components/co-managed/CoManagedFeatureBoundary';
-const mocks = vi.hoisted(() => ({ load: vi.fn(), start: vi.fn(), update: vi.fn(), push: vi.fn(), refresh: vi.fn(), flag: true, tenant: 'customer' }));
-vi.mock('@ee/lib/actions/coManagedUpgradeActions', () => ({ getCoManagedUpgradeScreenAction: mocks.load, startCoManagedUpgradeAction: mocks.start }));
+const mocks = vi.hoisted(() => ({ load: vi.fn(), start: vi.fn(), purchase: vi.fn(), update: vi.fn(), push: vi.fn(), refresh: vi.fn(), flag: true, tenant: 'customer' }));
+vi.mock('@ee/lib/actions/coManagedUpgradeActions', () => ({ getCoManagedUpgradeScreenAction: mocks.load, startCoManagedUpgradeAction: mocks.start, purchaseCoManagedUpgradeAction: mocks.purchase }));
 vi.mock('@alga-psa/ui/hooks', () => ({ useFeatureFlag: () => ({ enabled: mocks.flag }) }));
 vi.mock('../../../lib/actions/coManagedAcceptanceActions', () => ({}));
 vi.mock('@/context/ProductContext', () => ({ useProduct: () => ({ productCode: 'co_managed' }) }));
@@ -14,6 +14,8 @@ vi.mock('next/navigation', () => ({ useRouter: () => ({ push: mocks.push, refres
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({ useTranslation: () => ({ t: (key: string) => key }), useOptionalI18n: () => null }));
 vi.mock('@alga-psa/ui/components/ConfirmationDialog', () => ({ ConfirmationDialog: ({ isOpen, onConfirm, onClose, message }: any) => isOpen
   ? <div role="dialog"><p>{message}</p><button onClick={onConfirm}>Confirm upgrade</button><button onClick={onClose}>Cancel upgrade</button></div> : null }));
+vi.mock('@enterprise/components/co-managed/CoManagedCheckout', () => ({ default: ({ onComplete }: any) => <button onClick={onComplete}>Complete fixture payment</button> }));
+vi.mock('@alga-psa/ui/components/CustomSelect', () => ({ default: ({ id, label, value, disabled, options, onValueChange }: any) => <label>{label}<select id={id} value={value} disabled={disabled} onChange={e => onValueChange(e.target.value)}>{options.map((o: any) => <option key={o.value} value={o.value}>{o.label}</option>)}</select></label> }));
 const eligible = { state: 'eligible', relationshipId: 'relationship', revision: 4, departed: false, selfHosted: true,
   seatsRequired: 2, entitlementReady: true, progress: 'idle' };
 const mount = () => render(<CoManagedFeatureBoundary><CoManagedUpgrade /></CoManagedFeatureBoundary>);
@@ -55,4 +57,19 @@ it('discards an old customer response when the session switches workspaces', asy
   await screen.findByText('coManaged.upgrade.licenseRequired');
   await act(async () => resolve({ state: 'completed', operationId: 'old-operation', progress: 'completed' }));
   expect(screen.queryByText('coManaged.upgrade.completed')).toBeNull();
+});
+
+it('resumes a hosted checkout with its original terms and requires separate conversion after payment', async () => {
+  const pending = { operationId: 'paid-operation', quantity: 5, interval: 'year' };
+  mocks.load.mockResolvedValue({ ...eligible, selfHosted: false, entitlementReady: false, pendingPurchase: pending });
+  mocks.purchase.mockResolvedValueOnce({ kind: 'checkout', clientSecret: 'fixture', publishableKey: 'pk_fixture' }).mockResolvedValueOnce({ kind: 'paid' });
+  mount();
+  fireEvent.click(await screen.findByRole('button', { name: 'coManaged.resumePurchase' }));
+  expect(await screen.findByRole('button', { name: 'Complete fixture payment' })).toBeVisible();
+  expect(mocks.purchase).toHaveBeenCalledWith(pending);
+  mocks.load.mockResolvedValue({ ...eligible, selfHosted: false, entitlementReady: true, pendingPurchase: null });
+  fireEvent.click(screen.getByRole('button', { name: 'Complete fixture payment' }));
+  await waitFor(() => expect(screen.queryByRole('button', { name: 'Complete fixture payment' })).toBeNull());
+  expect(mocks.start).not.toHaveBeenCalled();
+  expect(screen.getByRole('button', { name: 'coManaged.upgrade.start' })).toBeEnabled();
 });

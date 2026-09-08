@@ -774,7 +774,12 @@
       "startError": "Impossible de démarrer la mise à niveau. Vous pouvez réessayer.",
       "confirmTitle": "Mettre à niveau cet espace ?",
       "confirmMessage": "Cette opération convertit votre espace en AlgaPSA et met fin à toute relation MSP active. Votre propre licence payante couvre cet espace. L’hébergeur de vos données ne change pas.",
-      "cancel": "Annuler"
+      "cancel": "Annuler",
+      "billingInterval": "Fréquence de facturation",
+      "month": "Mensuelle",
+      "year": "Annuelle",
+      "paymentProcessing": "Votre paiement est en cours de traitement. Actualisez le statut ou reprenez l’achat pour vérifier.",
+      "purchaseScope": "Cet achat couvre cet espace. L’accès du MSP prend fin uniquement lorsque vous confirmez la mise à niveau après le paiement."
     }
   }
 }

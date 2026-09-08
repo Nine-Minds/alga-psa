@@ -11,6 +11,8 @@ import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getCoManagedUpgradeScreenAction, startCoManagedUpgradeAction } from '@ee/lib/actions/coManagedUpgradeActions';
 
+import CoManagedUpgradePurchase from './CoManagedUpgradePurchase';
+
 type Screen = Awaited<ReturnType<typeof getCoManagedUpgradeScreenAction>>;
 type Request = Parameters<typeof startCoManagedUpgradeAction>[0];
 
@@ -88,6 +90,7 @@ function UpgradeContent() {
           {screen.selfHosted && <p className="text-sm text-muted-foreground">{t('coManaged.upgrade.hosting')}</p>}
           {!screen.entitlementReady && <div className="space-y-3 rounded-md border border-[rgb(var(--color-border-200))] p-4">
             <p>{t(screen.selfHosted ? 'coManaged.upgrade.licenseRequired' : 'coManaged.upgrade.subscriptionRequired')}</p>
+            {!screen.selfHosted && <CoManagedUpgradePurchase seatsRequired={screen.seatsRequired} pendingPurchase={screen.pendingPurchase} onChanged={reload} />}
             {screen.selfHosted && <Button id="co-upgrade-license" variant="outline" asChild>
               <Link href="/msp/licenses">{t('coManaged.upgrade.manageLicense')}</Link>
             </Button>}

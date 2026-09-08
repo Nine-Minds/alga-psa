@@ -29,3 +29,10 @@ export const startCoManagedUpgradeAction = withAuth(async (user, { tenant }, inp
     coManaged: { actor, target, request } });
   return { completed: false, enqueued: result.available };
 });
+
+export const purchaseCoManagedUpgradeAction = withAuth(async (user, { tenant }, input: import('@alga-psa/co-managed').CoManagedUpgradePurchaseRequest) => {
+  const { knex } = await createTenantKnex(tenant);
+  const actor = await coManagedBrowserActor(user, tenant);
+  const { purchaseCoManagedIndependentPsa } = await import('../stripe/coManagedUpgradeCheckout');
+  return purchaseCoManagedIndependentPsa(knex, actor, input);
+});

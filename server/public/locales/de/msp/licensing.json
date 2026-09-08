@@ -772,7 +772,12 @@
       "startError": "Das Upgrade konnte nicht gestartet werden. Sie können die Anfrage wiederholen.",
       "confirmTitle": "Diesen Arbeitsbereich upgraden?",
       "confirmMessage": "Dies wandelt Ihren Arbeitsbereich in AlgaPSA um und beendet jede aktive MSP-Beziehung. Ihre eigene kostenpflichtige Lizenz deckt diesen Arbeitsbereich ab. Der Hoster Ihrer Daten bleibt unverändert.",
-      "cancel": "Abbrechen"
+      "cancel": "Abbrechen",
+      "billingInterval": "Abrechnungsintervall",
+      "month": "Monatlich",
+      "year": "Jährlich",
+      "paymentProcessing": "Ihre Zahlung wird verarbeitet. Aktualisieren Sie den Status oder setzen Sie den Kauf fort.",
+      "purchaseScope": "Dieser Kauf bezahlt diesen Arbeitsbereich. Der MSP-Zugriff endet erst, wenn Sie das Upgrade nach der Zahlung bestätigen."
     }
   }
 }
