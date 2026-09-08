@@ -61,16 +61,7 @@ jobs:
     # `needs` is skipped entirely on schedule; `always()` lets the nightly run proceed.
     if: always() && (github.event_name == 'schedule' || needs.check-changes.outputs.should_run == 'true')
     runs-on: ubuntu-latest
-    # Sized for the widened gate, not the manifest subset. A PR touching
-    # migrations or seeds runs the whole integration directory (see
-    # FULL_SUITE_TRIGGERS in scripts/run-tier1-integration.mjs), and PR runners
-    # have measured 2.5-3.9x slower per test than the nightly runner — 279 files
-    # at ~40s each is ~190 minutes. At 120 the job was cancelled mid-suite on
-    # #3350 and #3346, which reports as a red check carrying no signal at all.
-    # No step-level timeout on the suite: the job timeout cancelling the run is
-    # what keeps a partial suite out of the metrics sheet (see "Which runs
-    # record" in docs/reference/test-metrics.md).
-    timeout-minutes: 240
+    timeout-minutes: 120
 
     services:
       postgres:
