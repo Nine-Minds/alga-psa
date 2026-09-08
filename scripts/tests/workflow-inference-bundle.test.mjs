@@ -35,12 +35,8 @@ test('enterprise production aliases bundle a callable workflow inference service
       resolve: { extensions: ['.ts', '.js', '.json'], alias: {} },
       module: { rules: [{ test: /\.ts$/, use: loader }] }, plugins: [],
       externals: [({ context, request }, callback) => {
-        if (request === '@alga-psa/ee-stubs/lib/aiGateway/notifications') {
-          // Notification delivery is another external side-effect boundary.
-          return callback(null, `commonjs ${provider}`);
-        }
         const requestedPath = path.resolve(context, request).replace(/\.ts$/, '');
-        if (['services/chatProviderResolver', 'lib/aiGateway/errors'].some(relative =>
+        if (['services/chatProviderResolver', 'lib/aiGateway/errors', 'lib/aiGateway/notifications'].some(relative =>
           requestedPath === path.join(root, 'ee/server/src', relative))) {
           // Only the external provider boundary is replaced; edition resolution,
           // wrappers and schema/retry implementation use production source.

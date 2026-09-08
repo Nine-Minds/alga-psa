@@ -1,8 +1,19 @@
 import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
 
-import type { toAiCreditsError } from '../../../packages/ee/src/lib/aiGateway/errors';
-import type { resolveChatProvider, ChatProviderId, ResolvedChatProvider } from '../../../packages/ee/src/services/chatProviderResolver';
+import type OpenAI from 'openai';
+
+// The shared algorithm owns its input contract; edition adapters supply effects.
+type ChatProviderId = 'gateway' | 'openrouter' | 'vertex';
+type ResolvedChatProvider = {
+  providerId: ChatProviderId;
+  model: string;
+  client: OpenAI;
+  requestOverrides: { resolveTurnOverrides: () => Record<string, unknown> };
+};
+type CreditsError = Error & {
+  reason: 'no_subscription' | 'out_of_credits' | 'consent_required';
+};
 
 type WorkflowJsonSchema = {
   type?: string | string[];
@@ -206,10 +217,11 @@ const createStructuredOutputRequest = (
 });
 
 export function createWorkflowInferenceService(dependencies: {
-  resolveChatProvider: typeof resolveChatProvider;
-  toAiCreditsError: typeof toAiCreditsError;
+  resolveChatProvider: (tenantId: string | null | undefined, feature: 'workflow-inference', providerOverride?: ChatProviderId) => Promise<ResolvedChatProvider>;
+  toAiCreditsError: (error: unknown) => CreditsError | null;
+  notifyAiCreditsUnavailable: (tenantId: string, feature: 'workflow-inference', error: CreditsError) => Promise<void>;
 }) {
-  const { resolveChatProvider, toAiCreditsError } = dependencies;
+  const { resolveChatProvider, toAiCreditsError, notifyAiCreditsUnavailable } = dependencies;
   return async function inferWorkflowStructuredOutput(
     request: WorkflowStructuredOutputRequest
   ): Promise<Record<string, unknown>> {
@@ -260,11 +272,6 @@ export function createWorkflowInferenceService(dependencies: {
         const creditsError = toAiCreditsError(error);
         if (creditsError) {
           if (request.tenantId) {
-            // Resolved by the `@alga-psa/ee-stubs` build alias: the EE server
-            // implementation in EE builds, the log-only CE stub otherwise.
-            const { notifyAiCreditsUnavailable } = await import(
-              '@alga-psa/ee-stubs/lib/aiGateway/notifications'
-            );
             await notifyAiCreditsUnavailable(
               request.tenantId,
               'workflow-inference',

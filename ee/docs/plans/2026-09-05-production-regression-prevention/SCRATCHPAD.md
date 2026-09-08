@@ -3142,3 +3142,10 @@ Built3smallnativeemulatorbundles; accountinghostsession81018 QBO56105/Xero56106/
 - Wire validation serialization now emits ErrorNumber 10, ValidationException, Message and Elements[].ValidationErrors. Tests also check archived account and missing contact name rejection. Existing application Xero client already extracts Elements[].ValidationErrors. OAuth/problem responses remain distinct.
 - Combined native server CI-config run across msgraph/qbo/stripe/xero: 130 tests /11 files passed in 4.09 seconds (`/tmp/alga-provider-contracts-combined.log`). Xero typecheck passed (`/tmp/alga-xero-error-typecheck.log`). No Docker builds. This was focused dirty-tree execution, not clean-source current CI evidence; no full-plan completion claim. Running external emulator processes may still use prior bundles.
 - Publication, full-workbook isolated-copy approval and tax-policy/exclusion decision remain pending. Current source must be published and evaluated by GitHub before any main protection or release-enforcement completion claim.
+
+### 2026-09-08 — Published CI dependency-boundary fixes
+
+- PR #3343 now contains the implementation; translation checks passed on b6d7b55bdb after regenerating survey pseudo-locales and accepting exact Dutch loanword labels.
+- Current CI found shared inference importing its edition adapter (including notification delivery) and a package test importing the EE server. Removed the upward dependencies: shared inference declares its consumed contract and receives notification delivery from each edition wrapper. Moved edition behavior coverage into the server suite.
+- Native validation: shared and surveys tsc --noEmit passed; 16 focused behavior tests passed; actual enterprise production-alias webpack bundling passed. Nx is absent from this native dependency tree; CI must verify the complete graph, with no baseline exceptions added.
+- Approved metrics copy created and metadata verified: https://docs.google.com/spreadsheets/d/1v7rjj0_8tMOGbibDghxcjmSgN1Ejvyvjkyz0jOUHl7I/edit . It retains the six source tabs. Synthetic export/formula validation remains outstanding; original workbook unchanged.

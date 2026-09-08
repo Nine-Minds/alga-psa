@@ -1,11 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const resolveChatProviderMock = vi.fn();
-const resolveEnterpriseProviderMock = vi.fn();
-vi.mock('../../../../../ee/server/src/services/chatProviderResolver', () => ({
-  resolveChatProvider: (...args: unknown[]) => resolveEnterpriseProviderMock(...args),
-}));
-
 vi.mock('../chatProviderResolver', () => ({
   resolveChatProvider: (...args: unknown[]) => resolveChatProviderMock(...args),
 }));
@@ -195,16 +190,4 @@ describe('workflowInferenceService', () => {
     await expect(promise).resolves.toEqual({ category: 'ops' });
     expect(createMock).toHaveBeenCalledTimes(2);
   });
-});
-
-it('enterprise workflow inference uses its own provider rather than re-entering the CE service', async () => {
-  const create = vi.fn(async () => ({ choices: [{ message: { content: '{"ok":true}' } }] }));
-  resolveEnterpriseProviderMock.mockResolvedValue(buildProvider(create));
-  resolveChatProviderMock.mockRejectedValue(new Error('Wrong edition provider'));
-  const { inferWorkflowStructuredOutput: inferEnterprise } = await import('../../../../../ee/server/src/services/workflowInferenceService');
-  const result = await inferEnterprise({ tenantId: 'enterprise-tenant', runId: 'upgrade-run', stepPath: 'root.ai',
-    prompt: 'Return success', schema: { type: 'object', properties: { ok: { type: 'boolean' } }, required: ['ok'] } });
-  expect(result).toEqual({ ok: true });
-  expect(resolveEnterpriseProviderMock).toHaveBeenCalledWith('enterprise-tenant', 'workflow-inference', undefined);
-  expect(create).toHaveBeenCalledTimes(1);
 });

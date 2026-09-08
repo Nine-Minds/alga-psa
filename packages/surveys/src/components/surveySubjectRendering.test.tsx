@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import React from 'react';
+import '@testing-library/jest-dom/vitest';
 import { render, screen, cleanup } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { SurveyResponseListItem } from '@alga-psa/types';
