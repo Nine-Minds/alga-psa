@@ -7,6 +7,7 @@ import { readNamedConversationShareSource, retainNamedConversationShareDraft, pr
 import { conversationUuid, snapshotConversationReference, snapshotConversationTicket, TicketConversationError,
   type ConversationTicketReference, type TicketConversationReference } from '@alga-psa/shared/lib/tickets/namedConversations';
 import { snapshotConversationEditorFiles, type ConversationEditorFileReference } from '@alga-psa/shared/lib/tickets/conversationEditorFiles';
+import { snapshotConversationEmailDraft, reviewConversationEmailDraft, type ConversationEmailDraft } from '@alga-psa/shared/lib/tickets/conversationEmailEnvelope';
 import { snapshotCoManagedSessionActor } from '@alga-psa/co-managed';
 import { extractTicketRichTextPlainText } from './ticketRichText';
 import { namedConversationFileStorage } from './conversationFileStorage';
@@ -21,6 +22,7 @@ export interface NamedConversationShareRequest {
   replaceExisting: boolean;
   quote: boolean;
   attachments?: ConversationEditorFileReference[];
+  email?: ConversationEmailDraft;
 }
 const invalid = (): never => { throw new TicketConversationError('CONVERSATION_INVALID'); };
 const conflict = (): never => { throw new TicketConversationError('CONVERSATION_CONFLICT'); };
@@ -44,7 +46,7 @@ function sourceSnapshot(message: Source['message']) {
 export async function prepareNamedConversationShare(db: Knex, inputActor: CoManagedSessionActor, inputTicket: ConversationTicketReference,
   destination: TicketConversationReference, input: NamedConversationShareRequest, storage: NamedConversationFileStorage = namedConversationFileStorage) {
   if (db.isTransaction || !input || Object.keys(input).some(key => !['operationId', 'source', 'commentId', 'threadId',
-    'expectedDraftRevision', 'expectedConversationRevision', 'replaceExisting', 'quote', 'attachments'].includes(key)) ||
+    'expectedDraftRevision', 'expectedConversationRevision', 'replaceExisting', 'quote', 'attachments', 'email'].includes(key)) ||
     ![input.operationId, input.commentId, input.threadId].every(conversationUuid) ||
     !Number.isSafeInteger(input.expectedDraftRevision) || input.expectedDraftRevision < 0 ||
     !Number.isSafeInteger(input.expectedConversationRevision) || input.expectedConversationRevision < 1 ||
@@ -52,13 +54,16 @@ export async function prepareNamedConversationShare(db: Knex, inputActor: CoMana
   const actor = snapshotCoManagedSessionActor(inputActor), ticket = snapshotConversationTicket(inputTicket);
   const source = snapshotConversationReference(input.source), ref = snapshotConversationReference(destination);
   const attachments = snapshotConversationEditorFiles(input.attachments ?? []);
+  const email = snapshotConversationEmailDraft(input.email);
+  if (email) reviewConversationEmailDraft(email, []);
   const request = { operationId: input.operationId.toLowerCase(), source,
     commentId: input.commentId.toLowerCase(), threadId: input.threadId.toLowerCase(),
     expectedDraftRevision: input.expectedDraftRevision, expectedConversationRevision: input.expectedConversationRevision,
-    replaceExisting: input.replaceExisting, quote: input.quote, attachments };
+    replaceExisting: input.replaceExisting, quote: input.quote, attachments, ...(email ? { email } : {}) };
   const sourceRef = { ...source, commentId: request.commentId, threadId: request.threadId };
   const requestHash = digest({ destination: ref, ...request });
   const withState = <T>(work: (state: State) => Promise<T>) => withNamedTicketConversation(db, actor, ticket, ref, 'update', async context => {
+    if (email && context.conversation.transport !== 'email') return invalid();
     if (context.conversation.revision !== request.expectedConversationRevision) return conflict();
     const selected = await readNamedConversationShareSource(context, sourceRef);
     // Apply draft-field redactions before inspecting even an existing revision.
@@ -97,7 +102,7 @@ export async function prepareNamedConversationShare(db: Knex, inputActor: CoMana
       const draft = await saveNamedConversationEditorDraft(context.trx, context.actor, context.ticket, ref, {
         operationId: request.operationId, expectedRevision: request.expectedDraftRevision,
         expectedConversationRevision: request.expectedConversationRevision, content,
-        attachments: copies.map(file => ({ attachmentId: file.editorAttachmentId })), email: null, parent: null, publicationOptions: null,
+        attachments: copies.map(file => ({ attachmentId: file.editorAttachmentId })), email, parent: null, publicationOptions: null,
       });
       const provenance: NamedConversationShareProvenance = { kind: 'message_share', operationId: request.operationId, requestHash,
         source: { ...sourceRef, revision: message.revision, updatedAt: message.updatedAt, snapshot: initial.snapshot },

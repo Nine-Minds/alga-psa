@@ -16869,6 +16869,34 @@ async function namedShareFixture(native = false) {
 }
 
 describe('selective conversation share preparation against migrated PostgreSQL', () => {
+  it.each([false, true])('retains explicitly selected share recipients privately and rejects invalid or changed retry envelopes (native=%s)', async native => {
+    const f = await namedShareFixture(native);
+    const destination = await f.conversations.createNamedTicketConversation(db, f.actor, f.ticket,
+      { operationId: randomUUID(), name: 'Reviewed update', audience: 'requester', transport: 'email' });
+    const ref = { storeTenant: destination.storeTenant, conversationId: destination.conversationId };
+    const email = { subject: 'Reviewed update', to: ['Recipient <recipient@example.test>'], cc: ['colleague@example.test'] };
+    const request = { ...f.request, expectedConversationRevision: destination.revision, email };
+    const row = () => f.home.table('ticket_conversation_editor_drafts').where({ actor_user_id: f.actor.userId,
+      conversation_store_tenant: ref.storeTenant, conversation_id: ref.conversationId }).first();
+    const events = await f.customer.table('co_management_event_outbox').count('* as count').first();
+    for (const invalidEmail of [{ ...email, to: [] }, { ...email, to: ['invalid-address'] }, { ...email, subject: 'Injected\r\nHeader' }]) {
+      await expect(f.share(db, f.actor, f.ticket, ref, { ...request, email: invalidEmail })).rejects.toMatchObject({ code: 'CONVERSATION_INVALID' });
+      expect(await row()).toBeUndefined();
+    }
+    await expect(f.share(db, f.actor, f.ticket, f.sourceRef, { ...request, expectedDraftRevision: 2 }))
+      .rejects.toMatchObject({ code: 'CONVERSATION_INVALID' });
+    const draft = await f.share(db, f.actor, f.ticket, ref, request);
+    expect(draft).toMatchObject({ content: { text: 'Selected diagnosis' }, email, revision: 1, attachments: [] });
+    expect(await f.share(db, f.actor, f.ticket, ref, request)).toEqual(draft);
+    await expect(f.share(db, f.actor, f.ticket, ref, { ...request, email: { ...email, to: ['different@example.test'] } }))
+      .rejects.toMatchObject({ code: 'CONVERSATION_CONFLICT' });
+    expect(await f.conversations.getNamedConversationEditorDraft(db, f.actor, f.ticket, ref)).toEqual(draft);
+    if (!native) expect(await f.conversations.getNamedConversationEditorDraft(db, f.customerPrincipal, f.ticket, ref)).toBeNull();
+    expect((await f.conversations.getNamedTicketConversationMessages(db, f.actor, f.ticket, ref)).items).toEqual([]);
+    expect(await f.customer.table('ticket_conversation_publications').where('conversation_id', ref.conversationId)).toEqual([]);
+    expect(await f.customer.table('co_management_event_outbox').count('* as count').first()).toEqual(events);
+  });
+
   it.each([false, true])('prepares an author-private text snapshot without publication or metadata disclosure (native=%s)', async native => {
     const f = await namedShareFixture(native), api = f.conversations;
     const sourceTable = native ? 'comments' : 'co_management_private_comments';
@@ -16987,17 +17015,33 @@ it.each([false, true])('selective conversation share lineage survives independen
   const page = await api.getNamedTicketConversationMessages(db, f.actor, f.ticket, ref);
   expect(page.items).toMatchObject([{ commentId: receipt.commentId, author: { tenant: f.actor.tenant, id: f.actor.userId } }]);
   expect(page.items[0].note).toContain('Reviewed independent copy');
-  expect(JSON.stringify(page)).not.toContain(f.message.commentId);
+  const expectedLink = { conversation: { ...f.sourceRef, name: 'Private source exchange' }, commentId: f.message.commentId, threadId: f.message.threadId };
+  expect(page.items[0].sharedFrom).toEqual(expectedLink);
+  expect((await api.getNamedTicketConversationActivity(db, f.actor, f.ticket)).items.find(item => item.commentId === receipt.commentId)?.sharedFrom).toEqual(expectedLink);
+  const details = await (await import('../../../../packages/co-managed/src/namedConversationMessageDetails')).getNamedConversationMessageDetails(
+    db, f.actor, f.ticket, ref, [{ commentId: receipt.commentId, threadId: receipt.threadId }]);
+  expect(details[0].sharedFrom).toEqual(expectedLink);
+  await api.withNamedTicketConversation(db, f.actor, f.ticket, ref, 'read', async context => {
+    const items = [{ ...page.items[0] }];
+    await (await import('../../../../packages/co-managed/src/namedConversationShares')).attachNamedConversationShareLinks({ ...context, hidden: ['source_link'] }, items);
+    expect(items[0].sharedFrom).toBeUndefined();
+  });
   expect(await link(db, f.actor, f.ticket, ref, { commentId: receipt.commentId, threadId: receipt.threadId }))
     .toMatchObject({ conversation: { ...f.sourceRef, name: 'Private source exchange' }, commentId: f.message.commentId });
   if (!native) {
-    expect((await api.getNamedTicketConversationMessages(db, f.customerPrincipal, f.ticket, ref)).items[0].note).toContain('Reviewed independent copy');
+    const otherReader = await api.getNamedTicketConversationMessages(db, f.customerPrincipal, f.ticket, ref);
+    expect(otherReader.items[0].note).toContain('Reviewed independent copy');
+    expect(otherReader.items[0].sharedFrom).toBeUndefined();
+    expect(JSON.stringify(otherReader)).not.toContain('Private source exchange');
+    expect(JSON.stringify(otherReader)).not.toContain(f.message.commentId);
     expect(await link(db, f.customerPrincipal, f.ticket, ref, { commentId: receipt.commentId, threadId: receipt.threadId })).toBeNull();
     expect(await f.customer.table('ticket_conversation_shares').where('operation_id', f.request.operationId)).toEqual([]);
   }
   const sourceTable = native ? 'comments' : 'co_management_private_comments';
   await f.home.table(sourceTable).where('comment_id', f.message.commentId).update({ note: 'Changed original', deleted_at: db.fn.now() });
-  expect((await api.getNamedTicketConversationMessages(db, f.actor, f.ticket, ref)).items).toEqual(page.items);
+  const afterDeletion = await api.getNamedTicketConversationMessages(db, f.actor, f.ticket, ref);
+  expect(afterDeletion.items[0].sharedFrom).toBeUndefined();
+  expect(afterDeletion.items).toEqual(page.items.map(({ sharedFrom, ...item }) => item));
   expect(await link(db, f.actor, f.ticket, ref, { commentId: receipt.commentId, threadId: receipt.threadId })).toBeNull();
   const retained = await f.home.table('ticket_conversation_shares').where('operation_id', f.request.operationId).first();
   expect(retained.source).toEqual(lineage.source);

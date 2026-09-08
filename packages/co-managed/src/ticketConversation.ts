@@ -35,6 +35,7 @@ export interface CoManagedConversationItem {
   markdown: string | null;
   author?: CoManagedConversationAuthor;
   email?: PublishedConversationEmail;
+  sharedFrom?: import('./namedConversationShares').NamedConversationShareLink;
   attachments?: import('./conversationAttachments').CoManagedConversationAttachment[];
 }
 export interface CoManagedTicketConversation {

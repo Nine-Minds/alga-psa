@@ -2,12 +2,14 @@
 import React from 'react';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { ConversationShareDialog } from '../../../../../packages/tickets/src/components/ticket/conversations/ConversationShareDialog';
 import CoManagedNamedTicketConversation from '../../../components/co-managed/CoManagedNamedTicketConversation';
 import { NativeRequesterConversation } from '../../../../../packages/tickets/src/components/ticket/conversations/NativeRequesterConversation';
 import { useNamedTicketConversations } from '../../../../../packages/tickets/src/components/ticket/conversations/useNamedTicketConversations';
-const mocks = vi.hoisted(() => ({ acknowledge: vi.fn(), preference: vi.fn(), details: vi.fn(), schedules: vi.fn(), reschedule: vi.fn(), cancelSchedule: vi.fn(), flag: true, onPublished: vi.fn(), requesterProps: vi.fn(), uploadOptions: vi.fn(), uploadFile: vi.fn(), load: vi.fn(), page: vi.fn(), activity: vi.fn(), capabilities: vi.fn(), replyTarget: vi.fn(), replace: vi.fn(), readDraft: vi.fn(), saveDraft: vi.fn(), post: vi.fn(), create: vi.fn(), status: vi.fn(), push: vi.fn(), mailboxes: vi.fn(), selectMailbox: vi.fn(), latestSend: vi.fn(), prepareEmail: vi.fn(), sendEmail: vi.fn(), emailStatus: vi.fn(), emailDefaults: vi.fn(),
+const mocks = vi.hoisted(() => ({ share: vi.fn(), getConversation: vi.fn(), acknowledge: vi.fn(), preference: vi.fn(), details: vi.fn(), schedules: vi.fn(), reschedule: vi.fn(), cancelSchedule: vi.fn(), flag: true, onPublished: vi.fn(), requesterProps: vi.fn(), uploadOptions: vi.fn(), uploadFile: vi.fn(), load: vi.fn(), page: vi.fn(), activity: vi.fn(), capabilities: vi.fn(), replyTarget: vi.fn(), replace: vi.fn(), readDraft: vi.fn(), saveDraft: vi.fn(), post: vi.fn(), create: vi.fn(), status: vi.fn(), push: vi.fn(), mailboxes: vi.fn(), selectMailbox: vi.fn(), latestSend: vi.fn(), prepareEmail: vi.fn(), sendEmail: vi.fn(), emailStatus: vi.fn(), emailDefaults: vi.fn(),
   query: '', session: { session_id: 'session', user: { tenant: 'home', id: 'author' } } }));
 vi.mock('../../../../../packages/tickets/src/actions/namedTicketConversationActions', () => ({
+  prepareNamedConversationShareAction: mocks.share, getNamedTicketConversationAction: mocks.getConversation,
   acknowledgeNamedConversationMessagesAction: mocks.acknowledge,
   updateNamedConversationPreferenceAction: mocks.preference,
   getNamedConversationMessageDetailsAction: mocks.details,
@@ -36,12 +38,13 @@ vi.mock('next/dynamic', () => ({ default: () => ({ id, document, editable, onCha
       onChange={event => onChange([{ type: 'paragraph', content: [{ type: 'text', text: event.target.value, styles: {} }] }])} />
   : <div id={id}>{document.map((block: any) => block.content?.map((part: any) => part.text ?? '').join('') ?? '').join('\n')}</div> }));
 vi.mock('@alga-psa/ui/components/Button', () => ({ Button: ({ children, variant, size, ...props }: any) => <button {...props}>{children}</button> }));
+vi.mock('@alga-psa/ui/components/Checkbox', () => ({ Checkbox: ({ label, ...props }: any) => <label><input type="checkbox" {...props} />{label}</label> }));
 vi.mock('@alga-psa/ui/components/Switch', () => ({ Switch: ({ checked, onCheckedChange, ...props }: any) => <input type="checkbox" checked={checked} onChange={event => onCheckedChange(event.target.checked)} {...props} /> }));
 vi.mock('@alga-psa/ui/components/Label', () => ({ Label: ({ children, ...props }: any) => <label {...props}>{children}</label> }));
 vi.mock('@alga-psa/ui/components/Input', () => ({ Input: ({ label, ...props }: any) => <label>{label}<input {...props} /></label> }));
 vi.mock('@alga-psa/ui/components/Dialog', () => ({ Dialog: ({ isOpen, children, footer }: any) => isOpen ? <div role="dialog">{children}{footer}</div> : null, DialogContent: ({ children }: any) => <div>{children}</div> }));
 vi.mock('@alga-psa/ui/components/CustomSelect', () => ({ default: ({ options, value, onValueChange, label, ...props }: any) => <label>{label}<select {...props} value={value} onChange={event => onValueChange(event.target.value)}>{options.map((o: any) => <option key={o.value} value={o.value}>{o.label}</option>)}</select></label> }));
-vi.mock('@alga-psa/ui/lib/i18n/client', () => ({ useTranslation: () => ({ t: (_key: string, fallback: string) => fallback }), useFormatters: () => ({ formatDate: (value: string) => value }) }));
+vi.mock('@alga-psa/ui/lib/i18n/client', () => ({ useTranslation: () => ({ t: (_key: string, fallback: any) => typeof fallback === 'string' ? fallback : fallback?.defaultValue?.replace('{{name}}', fallback.name) }), useFormatters: () => ({ formatDate: (value: string) => value }) }));
 const ticket = { tenant: 'owner', ticketId: 'ticket' };
 const requester = { storeTenant: 'owner', conversationId: 'requester', ticket, name: 'Requester', audience: 'requester', transport: 'email', defaultSlot: 'requester', status: 'open', revision: 1, messageVersion: '0', mailbox: null, createdAt: '2026-01-01T00:00:00Z' };
 const side = { ...requester, storeTenant: 'home', conversationId: 'private', name: 'Diagnostics', audience: 'organization_private', transport: 'internal', defaultSlot: null };
@@ -66,6 +69,8 @@ function NativeHarness() {
 const deferred = () => { let resolve!: (value: any) => void; const promise = new Promise<any>(done => { resolve = done; }); return { promise, resolve }; };
 beforeEach(() => {
   vi.resetAllMocks(); mocks.flag = true; mocks.query = 'conversation=private&conversationStore=home';
+  mocks.share.mockResolvedValue({ ok: true, draft: { content: { text: 'Copied source' }, revision: 1, conversationRevision: 1 } });
+  mocks.getConversation.mockImplementation(async (_ticket, ref) => ref.conversationId === requester.conversationId ? requester : side);
   mocks.acknowledge.mockResolvedValue({ changed: false });
   mocks.session = { session_id: 'session', user: { tenant: 'home', id: 'author' } };
   mocks.load.mockResolvedValue({ conversations: [requester, side], writeAudiences: ['requester', 'organization_private'], actor: { tenant: 'home', userId: 'author' } });
@@ -831,4 +836,181 @@ it('passes an exact native requester focus only after the selected history has l
   mocks.query = 'conversation=requester&conversationStore=owner&message=unknown'; view.rerender(<NativeHarness />);
   expect(screen.getByLabelText('Native focused message')).toBeEmptyDOMElement();
   await screen.findByText('This message is unavailable in this conversation.');
+});
+
+const shareMessage = { storeTenant: 'home', commentId: 'source-message', threadId: 'source-root', parentCommentId: null,
+  audience: 'organization_private', createdAt: '2026-09-01T10:00:00Z', updatedAt: null, revision: 1, deleted: false,
+  note: 'Original private message', markdown: 'Original private message', attachments: [
+    { storeTenant: 'home', commentId: 'source-message', threadId: 'source-root', attachmentId: 'selected-file', fileName: 'Selected report.txt', mimeType: 'text/plain', size: 12, audience: 'organization_private' },
+    { storeTenant: 'home', commentId: 'source-message', threadId: 'source-root', attachmentId: 'other-file', fileName: 'Other report.txt', mimeType: 'text/plain', size: 16, audience: 'organization_private' },
+  ] };
+const shareSelection = { conversation: { storeTenant: 'home', conversationId: 'private' }, commentId: 'source-message', threadId: 'source-root' };
+
+it('flushes and pauses the source editor, defaults sharing to Requester, and reloads a replaced same-conversation draft', async () => {
+  mocks.page.mockResolvedValue({ conversation: side, items: [shareMessage], nextBefore: null });
+  const drafts: Record<string, any> = { private: { content: { text: 'Earlier source draft' }, revision: 4, conversationRevision: 1 } };
+  mocks.readDraft.mockImplementation(async (_ticket, ref) => drafts[ref.conversationId] ?? null);
+  mocks.saveDraft.mockImplementation(async (_ticket, ref, request) => {
+    const draft = { content: request.content, revision: request.expectedRevision + 1, conversationRevision: 1 };
+    drafts[ref.conversationId] = draft; return draft;
+  });
+  mocks.share.mockImplementation(async (_ticket, ref, request) => {
+    const draft = { content: { text: 'Copied source ready for editing' }, revision: request.expectedDraftRevision + 1, conversationRevision: 1 };
+    drafts[ref.conversationId] = draft; return { ok: true, draft };
+  });
+  render(<Harness />);
+  fireEvent.change(await screen.findByLabelText('Message'), { target: { value: 'Unsaved latest source draft' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Share' }));
+  const dialog = await screen.findByRole('dialog');
+  await waitFor(() => expect(within(dialog).getByLabelText('Destination')).toHaveValue('owner:requester'));
+  expect(screen.getByLabelText('Message')).toBeDisabled();
+  expect(within(dialog).getByLabelText('Selected report.txt')).not.toBeChecked();
+  expect(within(dialog).getByLabelText('Other report.txt')).not.toBeChecked();
+  fireEvent.change(within(dialog).getByLabelText('Destination'), { target: { value: 'home:private' } });
+  await within(dialog).findByText('You already have a draft here.');
+  expect(mocks.share).not.toHaveBeenCalled();
+  fireEvent.click(within(dialog).getByLabelText('Selected report.txt'));
+  fireEvent.click(within(dialog).getByLabelText('Format as a quote'));
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Replace draft and prepare copy' }));
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  await waitFor(() => expect(screen.getByLabelText('Message')).toHaveValue('Copied source ready for editing'));
+  expect(mocks.share).toHaveBeenCalledOnce();
+  expect(mocks.share.mock.calls[0]).toMatchObject([ticket, { storeTenant: 'home', conversationId: 'private' }, {
+    source: shareSelection.conversation, commentId: 'source-message', threadId: 'source-root',
+    expectedDraftRevision: 5, expectedConversationRevision: 1, replaceExisting: true, quote: true, attachments: [{ attachmentId: 'selected-file' }],
+  }]);
+  expect(mocks.saveDraft).toHaveBeenCalledOnce();
+  expect(mocks.prepareEmail).not.toHaveBeenCalled(); expect(mocks.sendEmail).not.toHaveBeenCalled(); expect(mocks.post).not.toHaveBeenCalled();
+});
+
+it('creates a requester-directed sharing destination once after an uncertain result and retains explicit recipients without sending', async () => {
+  mocks.page.mockResolvedValue({ conversation: side, items: [shareMessage], nextBefore: null });
+  const created = { ...requester, conversationId: 'new-requester', defaultSlot: null, name: 'Delivery update' };
+  mocks.create.mockRejectedValueOnce(new Error('Lost creation acknowledgement')).mockResolvedValue(created);
+  const onOpen = vi.fn();
+  render(<ConversationShareDialog id="share" ticket={ticket} selection={shareSelection} onClose={vi.fn()} onOpen={onOpen} />);
+  fireEvent.change(await screen.findByLabelText('Destination'), { target: { value: '__new__' } });
+  fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Delivery update' } });
+  expect(screen.getByRole('button', { name: 'Prepare draft' })).toBeDisabled();
+  fireEvent.change(screen.getByLabelText('To'), { target: { value: 'Requester <requester@example.test>; colleague@example.test' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Prepare draft' }));
+  await screen.findByText('Could not confirm preparation. Retry the same request, or open the destination to check its draft.');
+  expect(screen.getByLabelText('Name')).toBeDisabled(); expect(mocks.share).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: 'Retry preparation' }));
+  await waitFor(() => expect(onOpen).toHaveBeenCalledWith(created));
+  expect(mocks.create.mock.calls[1]).toEqual(mocks.create.mock.calls[0]);
+  expect(mocks.create.mock.calls[0][1]).toMatchObject({ name: 'Delivery update', audience: 'requester', transport: 'email' });
+  expect(mocks.share.mock.calls[0][2]).toMatchObject({ expectedDraftRevision: 0, replaceExisting: false, attachments: [],
+    email: { subject: 'Delivery update', to: ['Requester <requester@example.test>', 'colleague@example.test'], cc: [] } });
+  expect(mocks.prepareEmail).not.toHaveBeenCalled(); expect(mocks.sendEmail).not.toHaveBeenCalled(); expect(mocks.post).not.toHaveBeenCalled();
+});
+
+it('discards a late destination load and requires a fresh explicit replacement after a sharing conflict', async () => {
+  mocks.page.mockResolvedValue({ conversation: side, items: [shareMessage], nextBefore: null });
+  const oldDestination = deferred();
+  mocks.getConversation.mockImplementationOnce(() => oldDestination.promise).mockResolvedValue(side);
+  mocks.readDraft.mockImplementation(async (_ticket, ref) => ref.conversationId === 'private' ? { content: { text: 'Current draft' }, revision: 4, conversationRevision: 1 } : null);
+  mocks.share.mockResolvedValueOnce({ ok: false, code: 'conflict' }).mockResolvedValue({ ok: true, draft: { revision: 6 } });
+  const onOpen = vi.fn();
+  render(<ConversationShareDialog id="share" ticket={ticket} selection={shareSelection} onClose={vi.fn()} onOpen={onOpen} />);
+  fireEvent.change(await screen.findByLabelText('Destination'), { target: { value: 'home:private' } });
+  await screen.findByText('You already have a draft here.');
+  await act(async () => oldDestination.resolve(requester));
+  expect(screen.getByLabelText('Destination')).toHaveValue('home:private');
+  fireEvent.click(screen.getByRole('button', { name: 'Replace draft and prepare copy' }));
+  await screen.findByText('The destination draft or conversation changed. Reload it before preparing a copy.');
+  expect(onOpen).not.toHaveBeenCalled();
+  mocks.readDraft.mockResolvedValue({ content: { text: 'Another tab edited this' }, revision: 5, conversationRevision: 1 });
+  fireEvent.click(screen.getByRole('button', { name: 'Reload destination draft' }));
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Replace draft and prepare copy' })).toBeEnabled());
+  expect(mocks.share).toHaveBeenCalledOnce();
+  fireEvent.click(screen.getByRole('button', { name: 'Replace draft and prepare copy' }));
+  await waitFor(() => expect(onOpen).toHaveBeenCalledWith(side));
+  expect(mocks.share.mock.calls[0][2].expectedDraftRevision).toBe(4);
+  expect(mocks.share.mock.calls[1][2].expectedDraftRevision).toBe(5);
+  expect(mocks.share.mock.calls[1][2].operationId).not.toBe(mocks.share.mock.calls[0][2].operationId);
+});
+
+it('retries uncertain sharing with the same operation and ignores completion after an identity change', async () => {
+  mocks.page.mockResolvedValue({ conversation: side, items: [shareMessage], nextBefore: null });
+  const pending = deferred();
+  mocks.share.mockResolvedValueOnce({ ok: false, code: 'unknown' }).mockImplementationOnce(() => pending.promise);
+  const view = render(<Harness />);
+  await screen.findByLabelText('Message');
+  fireEvent.click(screen.getByRole('button', { name: 'Share' }));
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Prepare draft' })).toBeEnabled());
+  fireEvent.click(screen.getByRole('button', { name: 'Prepare draft' }));
+  await screen.findByText('Could not confirm preparation. Retry the same request, or open the destination to check its draft.');
+  fireEvent.click(screen.getByRole('button', { name: 'Retry preparation' }));
+  await waitFor(() => expect(mocks.share).toHaveBeenCalledTimes(2));
+  expect(mocks.share.mock.calls[1]).toEqual(mocks.share.mock.calls[0]);
+  mocks.session = { session_id: 'new-session', user: { tenant: 'new-home', id: 'new-author' } };
+  mocks.load.mockRejectedValue(new Error('No access'));
+  view.rerender(<Harness />);
+  await act(async () => pending.resolve({ ok: true, draft: { content: { text: 'Old author private copy' }, revision: 1 } }));
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  expect(mocks.push).not.toHaveBeenCalled();
+  expect(screen.queryByText('Old author private copy')).toBeNull();
+});
+
+
+it('opens an authorized shared source at its exact message after flushing the current draft', async () => {
+  const source = { conversation: { storeTenant: 'home', conversationId: 'source-conversation', name: 'Source exchange' }, commentId: 'original-message', threadId: 'original-root' };
+  mocks.query += '&view=details';
+  mocks.page.mockResolvedValue({ conversation: side, items: [{ ...shareMessage, attachments: [], sharedFrom: source }], nextBefore: null });
+  const saved = deferred(); mocks.saveDraft.mockReturnValue(saved.promise);
+  render(<Harness />);
+  fireEvent.change(await screen.findByLabelText('Message'), { target: { value: 'Keep destination edits' } });
+  const link = screen.getByRole('link', { name: 'Shared from Source exchange' });
+  expect(link).toHaveAttribute('href', '?conversation=source-conversation&conversationStore=home&view=details&message=original-message');
+  fireEvent.click(link);
+  await waitFor(() => expect(mocks.saveDraft).toHaveBeenCalledOnce());
+  expect(mocks.push).not.toHaveBeenCalled();
+  await act(async () => saved.resolve({ content: { text: 'Keep destination edits' }, revision: 1, conversationRevision: 1 }));
+  await waitFor(() => expect(mocks.push).toHaveBeenCalledOnce());
+  const url = new URL(mocks.push.mock.calls[0][0], 'https://example.test');
+  expect(url.searchParams.get('conversation')).toBe('source-conversation');
+  expect(url.searchParams.get('conversationStore')).toBe('home');
+  expect(url.searchParams.get('message')).toBe('original-message');
+  expect(url.searchParams.get('view')).toBe('details');
+  expect(mocks.post).not.toHaveBeenCalled(); expect(mocks.sendEmail).not.toHaveBeenCalled();
+});
+
+it('allows a readable source to be shared to a writable audience without requiring source write access', async () => {
+  mocks.load.mockResolvedValue({ conversations: [requester, side], writeAudiences: ['requester'] });
+  mocks.page.mockResolvedValue({ conversation: side, items: [shareMessage], nextBefore: null });
+  render(<Harness />);
+  const share = await screen.findByRole('button', { name: 'Share' });
+  expect(share).toBeEnabled(); expect(screen.queryByLabelText('Message')).toBeNull();
+  fireEvent.click(share);
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Prepare draft' })).toBeEnabled());
+  expect(screen.getByLabelText('Destination')).toHaveValue('owner:requester');
+  expect(within(screen.getByLabelText('Destination')).queryByRole('option', { name: /Diagnostics/ })).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: 'Prepare draft' }));
+  await waitFor(() => expect(mocks.share).toHaveBeenCalledOnce());
+  expect(mocks.share.mock.calls[0][1]).toEqual({ storeTenant: 'owner', conversationId: 'requester' });
+  expect(mocks.share.mock.calls[0][2].source).toEqual({ storeTenant: 'home', conversationId: 'private' });
+});
+
+it('selects a prepared destination immediately while its private draft and URL navigation are still loading', async () => {
+  const destination = { ...side, conversationId: 'prepared-destination', name: 'Prepared destination' };
+  mocks.load.mockResolvedValue({ conversations: [requester, side, destination], writeAudiences: ['requester', 'organization_private'] });
+  mocks.getConversation.mockImplementation(async (_ticket, ref) => ref.conversationId === destination.conversationId ? destination : requester);
+  mocks.page.mockImplementation(async (_ticket, ref) => ({ conversation: ref.conversationId === destination.conversationId ? destination : side,
+    items: ref.conversationId === destination.conversationId ? [] : [shareMessage], nextBefore: null }));
+  const draft = deferred(); let prepared = false;
+  mocks.readDraft.mockImplementation(async (_ticket, ref) => prepared && ref.conversationId === destination.conversationId ? draft.promise : null);
+  mocks.share.mockImplementation(async () => { prepared = true; return { ok: true, draft: { content: { text: 'Prepared draft content' }, revision: 1 } }; });
+  const view = render(<Harness />);
+  await screen.findByLabelText('Message'); fireEvent.click(screen.getByRole('button', { name: 'Share' }));
+  fireEvent.change(await screen.findByLabelText('Destination'), { target: { value: 'home:prepared-destination' } });
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Prepare draft' })).toBeEnabled());
+  fireEvent.click(screen.getByRole('button', { name: 'Prepare draft' }));
+  await screen.findByRole('heading', { name: 'Prepared destination' });
+  expect(screen.queryByRole('dialog')).toBeNull();
+  await act(async () => draft.resolve({ content: { text: 'Prepared draft content' }, revision: 1, conversationRevision: 1 }));
+  await waitFor(() => expect(screen.getByLabelText('Message')).toHaveValue('Prepared draft content'));
+  mocks.query = 'conversation=prepared-destination&conversationStore=home'; view.rerender(<Harness />);
+  expect(screen.getByLabelText('Message')).toHaveValue('Prepared draft content');
+  expect(mocks.saveDraft).not.toHaveBeenCalled();
 });

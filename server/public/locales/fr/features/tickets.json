@@ -1809,6 +1809,35 @@
     "returnToRequester": "Ouvrir la conversation avec le demandeur",
     "messageUnavailable": "Ce message est indisponible dans cette conversation.",
     "latest": "Afficher les derniers messages",
-    "readFailed": "Impossible de marquer ces messages comme lus."
+    "readFailed": "Impossible de marquer ces messages comme lus.",
+    "share": {
+      "action": "Partager",
+      "title": "Partager le message",
+      "from": "Conversation source",
+      "destination": "Destination",
+      "new": "Nouvelle conversation…",
+      "openDraft": "Ouvrir le brouillon existant",
+      "preparing": "Préparation…",
+      "retry": "Réessayer la préparation",
+      "replace": "Remplacer le brouillon et préparer la copie",
+      "prepare": "Préparer un brouillon",
+      "existingDraft": "Vous avez déjà un brouillon ici.",
+      "existingHelp": "Ouvrez-le pour continuer ou remplacez-le explicitement par cette copie.",
+      "quote": "Mettre en forme comme citation",
+      "files": "Choisir les pièces jointes à copier",
+      "reviewHelp": "La copie reste privée jusqu’à ce que vous la relisiez et choisissiez Envoyer ou Publier dans la conversation de destination.",
+      "loadingDraft": "Vérification du brouillon de destination…",
+      "reloadDraft": "Recharger le brouillon de destination",
+      "recipientsHelp": "Séparez les destinataires par des points-virgules. Choisissez une boîte d’envoi et relisez l’e-mail dans le brouillon de destination.",
+      "errors": {
+        "load": "Ce message est indisponible. Actualisez pour vérifier votre accès.",
+        "target": "Cette destination est indisponible. Choisissez une autre conversation ou réessayez.",
+        "conflict": "Le brouillon de destination ou la conversation a changé. Rechargez-le avant de préparer une copie.",
+        "invalid": "Vérifiez les destinataires et les fichiers sélectionnés, puis rechargez la destination pour réessayer.",
+        "unavailable": "La source ou la destination n’est plus disponible. Actualisez pour vérifier votre accès.",
+        "unknown": "La préparation n’a pas pu être confirmée. Réessayez la même demande ou ouvrez la destination pour vérifier son brouillon."
+      },
+      "sourceLink": "Partagé depuis {{name}}"
+    }
   }
 }

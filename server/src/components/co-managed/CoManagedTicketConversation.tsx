@@ -1,5 +1,8 @@
 'use client';
 
+import { ConversationShareButton } from '@alga-psa/tickets/components/ticket/conversations/ConversationSharingContext';
+import { ConversationShareSourceLink } from '@alga-psa/tickets/components/ticket/conversations/ConversationMessageDetails';
+
 import type { TicketConversationReference } from '@alga-psa/shared/lib/tickets/namedConversations';
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
@@ -250,9 +253,12 @@ function Conversation({ resource, homeTenant, userId, requester, onDraftState, c
           <p className="text-xs text-muted-foreground"><time dateTime={item.createdAt}>{formatDate(new Date(item.createdAt), { dateStyle: 'medium', timeStyle: 'short' })}</time>
             {item.parentCommentId && <span> · {t('coManaged.conversation.reply')}</span>}</p>
           {!item.deleted && item.email && <ConversationEmailEnvelope email={item.email} />}
+          {!item.deleted && item.sharedFrom && <ConversationShareSourceLink id={id} source={item.sharedFrom} />}
           {content ? <Document key={`${id}:${item.updatedAt}`} id={`${id}-body`} document={content} />
             : <p className="whitespace-pre-wrap break-words text-sm">{item.deleted ? t('coManaged.conversation.deleted') : conversationText(item.note, item.markdown)}</p>}
           {!item.deleted && <CoManagedCommentAttachments resource={target.current} comment={reference(item)} conversation={requester} />}
+          {requester && !item.deleted && item.note != null && <ConversationShareButton id={id} conversation={requester}
+            commentId={item.commentId} threadId={item.threadId} disabled={Boolean(draft || disclosure || (writable && composition && !composition.ready))} />}
           {writable && !draft && !disclosure && <div className="flex flex-wrap gap-2">
             <Button id={`${id}-reply`} variant="ghost" size="sm" disabled={composition && !composition.ready}
               onClick={() => composition ? void composition.reply({ threadId: item.threadId, commentId: item.commentId }) : open({ kind: 'reply', item })}>{t('coManaged.conversation.reply')}</Button>

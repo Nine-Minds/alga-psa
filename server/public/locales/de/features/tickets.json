@@ -1809,6 +1809,35 @@
     "returnToRequester": "Unterhaltung mit dem Anfragenden öffnen",
     "messageUnavailable": "Diese Nachricht ist in dieser Unterhaltung nicht verfügbar.",
     "latest": "Neueste Nachrichten anzeigen",
-    "readFailed": "Diese Nachrichten konnten nicht als gelesen markiert werden."
+    "readFailed": "Diese Nachrichten konnten nicht als gelesen markiert werden.",
+    "share": {
+      "action": "Teilen",
+      "title": "Nachricht teilen",
+      "from": "Aus Unterhaltung",
+      "destination": "Ziel",
+      "new": "Neue Unterhaltung…",
+      "openDraft": "Vorhandenen Entwurf öffnen",
+      "preparing": "Wird vorbereitet…",
+      "retry": "Vorbereitung erneut versuchen",
+      "replace": "Entwurf ersetzen und Kopie vorbereiten",
+      "prepare": "Entwurf vorbereiten",
+      "existingDraft": "Hier ist bereits ein Entwurf vorhanden.",
+      "existingHelp": "Öffnen Sie ihn zum Weiterarbeiten oder ersetzen Sie ihn ausdrücklich durch diese Kopie.",
+      "quote": "Als Zitat formatieren",
+      "files": "Zu kopierende Anhänge auswählen",
+      "reviewHelp": "Die Kopie bleibt privat, bis Sie sie prüfen und in der Zielunterhaltung Senden oder Veröffentlichen wählen.",
+      "loadingDraft": "Zielentwurf wird geprüft…",
+      "reloadDraft": "Zielentwurf neu laden",
+      "recipientsHelp": "Trennen Sie Empfänger durch Semikolons. Wählen Sie im Zielentwurf ein Absenderpostfach und prüfen Sie die E-Mail.",
+      "errors": {
+        "load": "Diese Nachricht ist nicht verfügbar. Aktualisieren Sie, um Ihren Zugriff zu prüfen.",
+        "target": "Dieses Ziel ist nicht verfügbar. Wählen Sie eine andere Unterhaltung oder versuchen Sie es erneut.",
+        "conflict": "Der Zielentwurf oder die Unterhaltung wurde geändert. Laden Sie ihn vor dem Vorbereiten einer Kopie neu.",
+        "invalid": "Prüfen Sie die Empfänger und ausgewählten Dateien und laden Sie dann das Ziel neu, um es erneut zu versuchen.",
+        "unavailable": "Quelle oder Ziel ist nicht mehr verfügbar. Aktualisieren Sie, um Ihren Zugriff zu prüfen.",
+        "unknown": "Die Vorbereitung konnte nicht bestätigt werden. Wiederholen Sie dieselbe Anfrage oder öffnen Sie das Ziel, um den Entwurf zu prüfen."
+      },
+      "sourceLink": "Geteilt aus {{name}}"
+    }
   }
 }

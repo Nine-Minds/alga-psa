@@ -41,9 +41,20 @@ export const saveNamedConversationEditorDraftAction = withAuth(async (user, { te
 
 export const prepareNamedConversationShareAction = withAuth(async (user, { tenant }, ticket: ConversationTicketReference,
   destination: TicketConversationReference, request: import('../lib/prepareNamedConversationShare').NamedConversationShareRequest) => {
-  const actor = await coManagedBrowserActor(user, tenant), { knex } = await createTenantKnex(tenant);
+  const { TicketConversationError } = await import('@alga-psa/shared/lib/tickets/namedConversations');
+  const { CoManagedSharedWorkError, CoManagedAttachmentError } = await import('@alga-psa/co-managed');
   const { prepareNamedConversationShare } = await import('../lib/prepareNamedConversationShare');
-  return prepareNamedConversationShare(knex, actor, ticket, destination, request);
+  try {
+    const actor = await coManagedBrowserActor(user, tenant), { knex } = await createTenantKnex(tenant);
+    const draft = await prepareNamedConversationShare(knex, actor, ticket, destination, request);
+    return draft ? { ok: true as const, draft } : { ok: false as const, code: 'conflict' as const };
+  } catch (error) {
+    if (error instanceof TicketConversationError) return { ok: false as const, code: error.code === 'CONVERSATION_CONFLICT' ? 'conflict' as const
+      : error.code === 'CONVERSATION_INVALID' ? 'invalid' as const : 'unavailable' as const };
+    if (error instanceof CoManagedSharedWorkError) return { ok: false as const, code: 'unavailable' as const };
+    if (error instanceof CoManagedAttachmentError) return { ok: false as const, code: 'invalid' as const };
+    return { ok: false as const, code: 'unknown' as const };
+  }
 });
 export const getNamedConversationShareSourceLinkAction = withAuth(async (user, { tenant }, ticket: ConversationTicketReference,
   conversation: TicketConversationReference, message: { commentId: string; threadId: string }) => {

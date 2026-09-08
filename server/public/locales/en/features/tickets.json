@@ -1937,6 +1937,35 @@
     "markRead": "Mark as read",
     "readFailed": "Could not mark these messages as read.",
     "unread": "unread",
-    "attentionUpdateFailed": "Could not update your conversation preference."
+    "attentionUpdateFailed": "Could not update your conversation preference.",
+    "share": {
+      "action": "Share",
+      "title": "Share message",
+      "from": "From conversation",
+      "destination": "Destination",
+      "new": "New conversation…",
+      "openDraft": "Open existing draft",
+      "preparing": "Preparing…",
+      "retry": "Retry preparation",
+      "replace": "Replace draft and prepare copy",
+      "prepare": "Prepare draft",
+      "existingDraft": "You already have a draft here.",
+      "existingHelp": "Open it to keep working, or explicitly replace it with this copy.",
+      "quote": "Format as a quote",
+      "files": "Choose attachments to copy",
+      "reviewHelp": "The copy stays private until you review it and choose Send or Post in the destination conversation.",
+      "loadingDraft": "Checking the destination draft…",
+      "reloadDraft": "Reload destination draft",
+      "recipientsHelp": "Separate recipients with semicolons. Choose a sending mailbox and review the email in the destination draft.",
+      "errors": {
+        "load": "This message is unavailable. Refresh to check your access.",
+        "target": "This destination is unavailable. Choose another conversation or retry.",
+        "conflict": "The destination draft or conversation changed. Reload it before preparing a copy.",
+        "invalid": "Check the recipients and selected files, then reload the destination to try again.",
+        "unavailable": "The source or destination is no longer available. Refresh to check your access.",
+        "unknown": "Could not confirm preparation. Retry the same request, or open the destination to check its draft."
+      },
+      "sourceLink": "Shared from {{name}}"
+    }
   }
 }

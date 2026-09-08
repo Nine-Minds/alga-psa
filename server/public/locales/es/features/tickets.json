@@ -1809,6 +1809,35 @@
     "returnToRequester": "Abrir la conversación con el solicitante",
     "messageUnavailable": "Este mensaje no está disponible en esta conversación.",
     "latest": "Mostrar los mensajes más recientes",
-    "readFailed": "No se pudieron marcar estos mensajes como leídos."
+    "readFailed": "No se pudieron marcar estos mensajes como leídos.",
+    "share": {
+      "action": "Compartir",
+      "title": "Compartir mensaje",
+      "from": "Conversación de origen",
+      "destination": "Destino",
+      "new": "Nueva conversación…",
+      "openDraft": "Abrir borrador existente",
+      "preparing": "Preparando…",
+      "retry": "Reintentar preparación",
+      "replace": "Reemplazar borrador y preparar copia",
+      "prepare": "Preparar borrador",
+      "existingDraft": "Ya tienes un borrador aquí.",
+      "existingHelp": "Ábrelo para seguir trabajando o reemplázalo explícitamente por esta copia.",
+      "quote": "Dar formato de cita",
+      "files": "Elegir archivos adjuntos para copiar",
+      "reviewHelp": "La copia permanece privada hasta que la revises y elijas Enviar o Publicar en la conversación de destino.",
+      "loadingDraft": "Comprobando el borrador de destino…",
+      "reloadDraft": "Recargar borrador de destino",
+      "recipientsHelp": "Separa los destinatarios con punto y coma. Elige un buzón de envío y revisa el correo en el borrador de destino.",
+      "errors": {
+        "load": "Este mensaje no está disponible. Actualiza para comprobar tu acceso.",
+        "target": "Este destino no está disponible. Elige otra conversación o vuelve a intentarlo.",
+        "conflict": "El borrador de destino o la conversación ha cambiado. Recárgalo antes de preparar una copia.",
+        "invalid": "Comprueba los destinatarios y los archivos seleccionados, y recarga el destino para volver a intentarlo.",
+        "unavailable": "El origen o el destino ya no está disponible. Actualiza para comprobar tu acceso.",
+        "unknown": "No se pudo confirmar la preparación. Reintenta la misma solicitud o abre el destino para comprobar su borrador."
+      },
+      "sourceLink": "Compartido desde {{name}}"
+    }
   }
 }

@@ -1809,6 +1809,35 @@
     "returnToRequester": "Gesprek met de aanvrager openen",
     "messageUnavailable": "Dit bericht is niet beschikbaar in dit gesprek.",
     "latest": "Nieuwste berichten weergeven",
-    "readFailed": "Deze berichten konden niet als gelezen worden gemarkeerd."
+    "readFailed": "Deze berichten konden niet als gelezen worden gemarkeerd.",
+    "share": {
+      "action": "Delen",
+      "title": "Bericht delen",
+      "from": "Bronconversatie",
+      "destination": "Bestemming",
+      "new": "Nieuwe conversatie…",
+      "openDraft": "Bestaand concept openen",
+      "preparing": "Voorbereiden…",
+      "retry": "Voorbereiding opnieuw proberen",
+      "replace": "Concept vervangen en kopie voorbereiden",
+      "prepare": "Concept voorbereiden",
+      "existingDraft": "Je hebt hier al een concept.",
+      "existingHelp": "Open het om verder te werken of vervang het uitdrukkelijk door deze kopie.",
+      "quote": "Als citaat opmaken",
+      "files": "Bijlagen kiezen om te kopiëren",
+      "reviewHelp": "De kopie blijft privé totdat je deze controleert en Verzenden of Plaatsen kiest in de doelconversatie.",
+      "loadingDraft": "Doelconcept controleren…",
+      "reloadDraft": "Doelconcept opnieuw laden",
+      "recipientsHelp": "Scheid ontvangers met puntkomma’s. Kies een afzenderpostvak en controleer de e-mail in het doelconcept.",
+      "errors": {
+        "load": "Dit bericht is niet beschikbaar. Vernieuw om je toegang te controleren.",
+        "target": "Deze bestemming is niet beschikbaar. Kies een andere conversatie of probeer het opnieuw.",
+        "conflict": "Het doelconcept of de conversatie is gewijzigd. Laad het opnieuw voordat je een kopie voorbereidt.",
+        "invalid": "Controleer de ontvangers en geselecteerde bestanden en laad de bestemming opnieuw om het nogmaals te proberen.",
+        "unavailable": "De bron of bestemming is niet meer beschikbaar. Vernieuw om je toegang te controleren.",
+        "unknown": "De voorbereiding kon niet worden bevestigd. Probeer hetzelfde verzoek opnieuw of open de bestemming om het concept te controleren."
+      },
+      "sourceLink": "Gedeeld vanuit {{name}}"
+    }
   }
 }

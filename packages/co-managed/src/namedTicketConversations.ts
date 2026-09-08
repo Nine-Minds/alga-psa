@@ -181,6 +181,8 @@ async function decorateConversationMessages(context: ConversationAuthority, conv
   }
   const { attachNamedConversationFiles } = await import('./namedConversationAttachments');
   await attachNamedConversationFiles({ ...context, conversation }, items);
+  const { attachNamedConversationShareLinks } = await import('./namedConversationShares');
+  await attachNamedConversationShareLinks({ ...context, conversation }, items);
 }
 
 /** Jump directly to a message without scanning every newer page. Permission,

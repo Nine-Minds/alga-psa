@@ -8,6 +8,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { usePageCreateShortcut, useDialogSubmitShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 import { getNamedConversationMessageDetailsAction } from '../../../actions/namedTicketConversationActions';
 import { ConversationMessageDetails } from './ConversationMessageDetails';
+import { ConversationShareButton } from './ConversationSharingContext';
 import { ConversationReadAcknowledgment } from './ConversationReadAcknowledgment';
 import { useConversationMessageTarget } from './useConversationMessageFocus';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -65,7 +66,9 @@ export function NativeRequesterConversation({ id, conversation, flush, onDirty, 
   }, [ticket, conversation.storeTenant, conversation.conversationId, commentsKey, refreshVersion, retryDetails]);
   const renderDetails = (comment: IComment) => {
     const item = details.find(value => value.commentId === comment.comment_id);
-    return item ? <ConversationMessageDetails id={id} ticket={ticket} conversation={conversation} {...item} /> : null;
+    return <>{item && <ConversationMessageDetails id={`${id}-${comment.comment_id}`} ticket={ticket} conversation={conversation} {...item} />}
+      {!comment.deleted_at && comment.note != null && loadedDetailsKey === detailsKey && !detailsError && <ConversationShareButton id={id}
+        conversation={conversation} commentId={comment.comment_id} threadId={comment.thread_id} disabled={editingNow || (canWrite && !ready)} />}</>;
   };
   const editingNow = editing();
   const state = useRef({ editing: editingNow, ready, canWrite }); state.current = { editing: editingNow, ready, canWrite };

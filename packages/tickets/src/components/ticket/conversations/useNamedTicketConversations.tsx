@@ -1,5 +1,7 @@
 'use client';
 
+import { ConversationShareDialog } from './ConversationShareDialog';
+import { ConversationShareButton, ConversationSharingContext, useConversationSharing, type ConversationShareSelection } from './ConversationSharingContext';
 import { ConversationAttentionControls } from './ConversationAttentionControls';
 import { ConversationReadAcknowledgment } from './ConversationReadAcknowledgment';
 import { useConversationMessageTarget, useConversationMessageFocus } from './useConversationMessageFocus';
@@ -53,16 +55,22 @@ export function useNamedTicketConversations(input: ConversationTicketReference |
   const [error, setError] = useState(false), [reload, setReload] = useState(0), [creating, setCreating] = useState(false);
   const flush = useRef<() => Promise<boolean>>(async () => true);
   const [dirty, setDirty] = useState(false);
+  const [sharing, setSharing] = useState<{ identity: string; selection: ConversationShareSelection } | null>(null);
+  const [panelEpoch, setPanelEpoch] = useState(0);
+  const currentIdentity = useRef(identity); currentIdentity.current = identity;
+  const openingShare = useRef(false);
+  const preparedDestination = useRef<{ identity: string; previousQuery: string; key: string } | null>(null);
   const refresh = useCallback(() => setReload(n => n + 1), []);
   const requestedId = params?.get('conversation'), requestedStore = params?.get('conversationStore');
   const requestedActivity = params?.get('conversationView') === 'all';
   const screen = state?.identity === identity ? state.screen : null;
+  const activeShare = enabled && screen && sharing?.identity === identity ? sharing.selection : null;
   useEffect(() => {
     if (!enabled || !ticket || !session?.user?.id) { setState(null); return; }
     let current = true;
     actions.getNamedTicketConversationScreenAction(ticket).then(value => {
       if (current) { setState({ identity, screen: value }); setError(false); }
-    }).catch(() => { if (current) { setState(null); setError(true); setDirty(false); } });
+    }).catch(() => { if (current) { setState(null); setError(true); setDirty(false); setSharing(null); } });
     return () => { current = false; };
   }, [enabled, ticket, identity, reload]);
   useEffect(() => {
@@ -72,7 +80,7 @@ export function useNamedTicketConversations(input: ConversationTicketReference |
     const timer = window.setInterval(onFocus, 30000);
     return () => { window.removeEventListener('focus', onFocus); window.clearInterval(timer); };
   }, [enabled, refresh]);
-  useEffect(() => { setCreating(false); setDirty(false); }, [identity]);
+  useEffect(() => { setCreating(false); setDirty(false); setSharing(null); }, [identity]);
   const [selection, setSelection] = useState<{ identity: string; key: string } | null>(null);
   const candidate = screen?.conversations.find(c => requestedId
     ? c.conversationId === requestedId && c.storeTenant === (requestedStore || ticket?.tenant)
@@ -80,21 +88,52 @@ export function useNamedTicketConversations(input: ConversationTicketReference |
   const desiredKey = requestedActivity ? '__all__' : candidate ? keyOf(candidate) : requestedId ? `${requestedStore}:${requestedId}` : '';
   const selected = selection?.identity === identity ? screen?.conversations.find(c => keyOf(c) === selection.key) : candidate;
   const allActivity = selection?.identity === identity ? selection.key === '__all__' : requestedActivity;
+  const queryString = params?.toString() ?? '';
   useEffect(() => {
-    if (!screen || (selection?.identity === identity && selection.key === desiredKey)) return;
+    const prepared = preparedDestination.current;
+    if (prepared) {
+      if (prepared.identity === identity && prepared.key !== desiredKey && prepared.previousQuery === queryString) return;
+      preparedDestination.current = null;
+    }
+    if (activeShare || !screen || (selection?.identity === identity && selection.key === desiredKey)) return;
     let valid = true;
     flush.current().then(saved => { if (valid && saved) { setSelection({ identity, key: desiredKey }); setDirty(false); } });
     return () => { valid = false; };
-  }, [identity, desiredKey, screen, selection]);
-  const select = async (conversation: NamedTicketConversation, parent?: ConversationDraftParent) => {
-    if (!await flush.current()) return;
+  }, [identity, desiredKey, screen, selection, activeShare, panelEpoch, queryString]);
+  const navigate = (conversation: Pick<NamedTicketConversation, 'conversationId' | 'storeTenant' | 'defaultSlot'>, parent?: ConversationDraftParent, messageId?: string) => {
     const query = new URLSearchParams(params?.toString());
     query.delete('message'); query.delete('conversationView'); query.delete('replyTo'); query.delete('replyThread');
     if (parent) { query.set('replyTo', parent.commentId); query.set('replyThread', parent.threadId); }
     if (conversation.defaultSlot === 'requester') { query.delete('conversation'); query.delete('conversationStore'); }
     else { query.set('conversation', conversation.conversationId); query.set('conversationStore', conversation.storeTenant); }
+    if (messageId) query.set('message', messageId);
     router.push(`${window.location.pathname}${query.size ? `?${query}` : ''}`, { scroll: false });
     setDirty(false);
+  };
+  const select = async (conversation: NamedTicketConversation, parent?: ConversationDraftParent) => {
+    if (activeShare || !await flush.current() || currentIdentity.current !== identity) return;
+    navigate(conversation, parent);
+  };
+  const share = async (value: ConversationShareSelection) => {
+    if (openingShare.current || activeShare || !screen?.writeAudiences.length) return;
+    openingShare.current = true;
+    try {
+      if (await flush.current() && currentIdentity.current === identity) setSharing({ identity, selection: value });
+    } finally { openingShare.current = false; }
+  };
+  const closeShare = () => { setSharing(null); setPanelEpoch(value => value + 1); refresh(); };
+  const openSharedDraft = (conversation: NamedTicketConversation) => {
+    if (currentIdentity.current !== identity) return;
+    // Preparation already flushed the source. Select the destination directly;
+    // its newly mounted composer cannot flush until its private draft has loaded.
+    preparedDestination.current = { identity, previousQuery: queryString, key: keyOf(conversation) };
+    setSelection({ identity, key: keyOf(conversation) });
+    setState(previous => previous?.identity === identity ? { ...previous, screen: { ...previous.screen,
+      conversations: previous.screen.conversations.some(value => keyOf(value) === keyOf(conversation))
+        ? previous.screen.conversations.map(value => keyOf(value) === keyOf(conversation) ? { ...value, ...conversation } : value)
+        : [...previous.screen.conversations, { ...conversation, attention: null }],
+    } } : previous);
+    closeShare(); navigate(conversation);
   };
   if (!enabled || !ticket) return { navigator: undefined, panel: undefined };
   const unavailable = <div role="alert" className="rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-4">
@@ -125,12 +164,20 @@ export function useNamedTicketConversations(input: ConversationTicketReference |
         for (const key of ['conversation', 'conversationStore', 'message', 'replyTo', 'replyThread']) query.delete(key);
         query.set('conversationView', 'all'); router.push(`${window.location.pathname}?${query}`, { scroll: false });
       }}>{t('namedConversations.allActivity', 'All activity')}</button></nav>}
+    {activeShare && <ConversationShareDialog key={`${identity}:${activeShare.commentId}`} id={id} ticket={ticket} selection={activeShare} onClose={closeShare} onOpen={openSharedDraft} />}
     {screen && <CreateConversation key={identity} id={id} ticket={ticket} open={creating} audiences={screen.writeAudiences}
       onClose={() => setCreating(false)} onCreated={async value => { setCreating(false); refresh(); await select(value); }} />}
   </section>;
-  return { navigator, panel: !screen ? (error ? unavailable : loading) : allActivity ? <NamedConversationActivity key={`${identity}:all`} id={id} ticket={ticket} refreshVersion={reload} audiences={screen.writeAudiences} onReply={select} /> : !selected ? unavailable : selected.defaultSlot === 'requester' ? options.requesterPanel ? <Fragment key={`${identity}:${keyOf(selected)}`}>{options.requesterPanel?.({ conversation: selected, flush, onDirty: setDirty, canWrite: screen.writeAudiences.includes(selected.audience), onRefresh: refresh, refreshVersion: reload })}</Fragment> : undefined
+  const panel = !screen ? (error ? unavailable : loading) : allActivity ? <NamedConversationActivity key={`${identity}:all`} id={id} ticket={ticket} refreshVersion={reload} audiences={screen.writeAudiences} onReply={select} /> : !selected ? unavailable : selected.defaultSlot === 'requester' ? options.requesterPanel ? <Fragment key={`${identity}:${keyOf(selected)}`}>{options.requesterPanel?.({ conversation: selected, flush, onDirty: setDirty, canWrite: screen.writeAudiences.includes(selected.audience), onRefresh: refresh, refreshVersion: reload })}</Fragment> : undefined
     : <NamedConversationPanel key={`${identity}:${keyOf(selected)}`} id={id} ticket={ticket} conversation={selected}
-      canWrite={screen.writeAudiences.includes(selected.audience)} flush={flush} onDirty={setDirty} onRefresh={refresh} onPublished={options.onPublished} /> };
+      canWrite={screen.writeAudiences.includes(selected.audience)} flush={flush} onDirty={setDirty} onRefresh={refresh} onPublished={options.onPublished} />;
+  return { navigator, panel: panel === undefined ? undefined : <ConversationSharingContext.Provider value={{ canShare: Boolean(screen?.writeAudiences.length), paused: Boolean(activeShare), share,
+    openSource: async source => {
+      if (activeShare || !await flush.current() || currentIdentity.current !== identity) return;
+      navigate({ ...source.conversation, defaultSlot: null }, undefined, source.commentId);
+    } }}>
+    <div key={`${identity}:${panelEpoch}`} inert={Boolean(activeShare)} className="min-w-0">{panel}</div>
+  </ConversationSharingContext.Provider> };
 }
 
 function CreateConversation({ id, ticket, open, audiences, onClose, onCreated }: { id: string; ticket: ConversationTicketReference; open: boolean;
@@ -187,10 +234,11 @@ function NamedConversationMessage({ id, index, ticket, conversation, item, onRep
       <time dateTime={item.createdAt}>{formatDate(item.createdAt, { dateStyle: 'medium', timeStyle: 'short' })}</time></div>
     {label && <p className="mb-2 text-sm font-medium">{conversation.defaultSlot === 'requester' ? t('namedConversations.requester', 'Requester') : conversation.name} · {t(`namedConversations.audiences.${conversation.audience}`, audienceLabels[conversation.audience])}</p>}
     {item.isResolution && <p className="mb-2 text-xs font-medium">{t('namedConversations.resolution', 'Resolution')}</p>}
-    {!item.deleted && <ConversationMessageDetails id={id} ticket={ticket} conversation={conversation} email={item.email} attachments={item.attachments} />}
+    {!item.deleted && <ConversationMessageDetails id={`${id}-${item.commentId}`} ticket={ticket} conversation={conversation} email={item.email} attachments={item.attachments} sharedFrom={item.sharedFrom} />}
     {item.deleted ? <p className="text-sm italic text-muted-foreground">{t('namedConversations.deleted', 'Message deleted')}</p>
       : document ? <Document id={`${id}-message-${index}`} document={document} /> : <p className="whitespace-pre-wrap break-words text-sm">{conversationText(item.note, item.markdown)}</p>}
     {item.parentCommentId && <p className="mt-2 text-xs text-muted-foreground">{t('namedConversations.reply', 'Reply')}</p>}
+    {!item.deleted && <ConversationShareButton id={`${id}-message-${index}`} conversation={conversation} commentId={item.commentId} threadId={item.threadId} disabled={!replyReady} />}
     {onReply && !item.deleted && <Button id={`${id}-message-${index}-reply`} variant="ghost" size="sm" disabled={!replyReady}
       onClick={() => void onReply?.({ threadId: item.threadId, commentId: item.commentId })}>{t('namedConversations.reply', 'Reply')}</Button>}
   </article>;
@@ -295,17 +343,20 @@ function NamedConversationPanel({ id, ticket, conversation, canWrite, flush, onD
       {page.nextBefore && <Button id={`${id}-older`} size="sm" variant="ghost" disabled={busy} onClick={() => void loadMore()}>{t('namedConversations.older', 'Load earlier messages')}</Button>}
       {!page.items.length && <p className="py-8 text-center text-sm text-muted-foreground">{t('namedConversations.empty', 'Start the conversation. Keep this exchange focused on its audience.')}</p>}
       {[...page.items].reverse().map((item, index) => <NamedConversationMessage key={`${item.storeTenant}:${item.commentId}`}
-        id={id} index={index} item={item} ticket={ticket} conversation={conversation} replyReady={replyReady}
+        id={id} index={index} item={item} ticket={ticket} conversation={conversation} replyReady={!canWrite || replyReady}
         onReply={canWrite ? parent => reply.current?.(parent) : undefined} />)}
     </div>{canWrite && <NamedConversationComposer id={id} ticket={ticket} conversation={conversation} flush={flush} onDirty={onDirty} reply={reply} onReplyReady={setReplyReady} replyItems={page.items}
       onRefresh={onRefresh} onPosted={async () => { setVersion(n => n + 1); onRefresh(); await onPublished?.(); }} />}</>}
   </section>;
 }
 
-export function NamedConversationComposer({ id, ticket, conversation, flush, onDirty, onPosted, onRefresh, reply, onReplyReady, replyItems = [], disabled = false, showScheduledReplies = true, deliveryRefreshVersion = 0 }: { id: string; ticket: ConversationTicketReference;
+export function NamedConversationComposer({ id, ticket, conversation, flush, onDirty, onPosted, onRefresh, reply, onReplyReady, replyItems = [], disabled: externallyDisabled = false, showScheduledReplies = true, deliveryRefreshVersion = 0 }: { id: string; ticket: ConversationTicketReference;
   conversation: NamedTicketConversation; flush: Flush; onDirty: (dirty: boolean) => void; onPosted: () => void | Promise<void>; onRefresh?: () => void; reply?: MutableRefObject<((parent: ConversationDraftParent) => Promise<boolean>) | null>; onReplyReady?: (ready: boolean) => void; replyItems?: Page['items']; disabled?: boolean; showScheduledReplies?: boolean; deliveryRefreshVersion?: number }) {
   const { t } = useTranslation('features/tickets');
   const [document, setDocument] = useState<CoManagedRichTextDocument>([]), [loaded, setLoaded] = useState(false), [epoch, setEpoch] = useState(0);
+  const sharing = useConversationSharing();
+  const paused = useRef(false); paused.current = Boolean(sharing?.paused);
+  const disabled = externallyDisabled || Boolean(sharing?.paused);
   const isEmail = conversation.transport === 'email';
   const [email, setEmail] = useState<ConversationEmailDraft>({ subject: '', to: [], cc: [] });
   const [emailLocked, setEmailLocked] = useState(false);
@@ -359,13 +410,14 @@ export function NamedConversationComposer({ id, ticket, conversation, flush, onD
     return () => { state.current.alive = false; };
   }, [read]);
   const save = useCallback((): Promise<boolean> => {
-    if (state.current.invalid || invalidEmail.current || invalidSchedule.current) return Promise.resolve(false);
+    if (paused.current || state.current.invalid || invalidEmail.current || invalidSchedule.current) return Promise.resolve(false);
     if (flight.current) return flight.current;
     const task = async () => {
       await Promise.resolve(); // Install the flight before a clean draft can resolve synchronously.
       setSaving(true);
       try {
         while (state.current.alive && (state.current.dirty || pending.current)) {
+          if (paused.current) return false;
           if (!pending.current && (state.current.invalid || invalidEmail.current || invalidSchedule.current)) return false;
           pending.current ??= { generation: state.current.generation, request: { operationId: crypto.randomUUID(), expectedRevision: state.current.revision,
             expectedConversationRevision: state.current.conversationRevision, content: state.current.content, publicationOptions: state.current.publicationOptions, parent: state.current.parent, email: state.current.email, attachments: state.current.attachments.map(file => ({ attachmentId: file.attachmentId })) } };
@@ -410,7 +462,7 @@ export function NamedConversationComposer({ id, ticket, conversation, flush, onD
     flush.current = flushDraft; return () => { if (flush.current === flushDraft) flush.current = async () => true; };
   }, [flush, save]);
   useEffect(() => {
-    if (!loaded || state.current.conversationRevision === conversation.revision) return;
+    if (paused.current || !loaded || state.current.conversationRevision === conversation.revision) return;
     state.current.conversationRevision = conversation.revision;
     if (state.current.content) { state.current.dirty = true; state.current.generation++; void save(); }
   }, [conversation.revision, loaded, save]);

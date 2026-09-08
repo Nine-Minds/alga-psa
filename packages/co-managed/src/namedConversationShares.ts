@@ -122,22 +122,50 @@ export function getNamedConversationShareSourceLink(db: Knex, actor: CoManagedSe
     if (isCoManagedReadFieldHidden(context.hidden, namedConversationShareSources)) return null;
     await readNamedConversationShareSource(context, { storeTenant: context.conversation.storeTenant,
       conversationId: context.conversation.conversationId, ...selected });
-    const publication = await tenantDb(context.trx, context.conversation.storeTenant).table('ticket_conversation_publications')
-      .where({ conversation_id: context.conversation.conversationId, ticket_tenant: context.ticket.tenant, ticket_id: context.ticket.ticketId,
-        comment_id: selected.commentId, thread_id: selected.threadId }).forShare().first('actor_tenant', 'actor_user_id', 'share_operation_id');
-    if (!publication?.share_operation_id) return null;
-    const retained = await tenantDb(context.trx, publication.actor_tenant).table(TABLE).where({ operation_id: publication.share_operation_id, actor_user_id: publication.actor_user_id,
-      ticket_tenant: context.ticket.tenant, ticket_id: context.ticket.ticketId, destination_store_tenant: context.conversation.storeTenant,
-      destination_conversation_id: context.conversation.conversationId, published_comment_id: selected.commentId,
-      published_thread_id: selected.threadId }).forShare().first('source');
-    if (!retained) return null;
+    const item = { ...selected, storeTenant: context.conversation.storeTenant, deleted: false };
+    await attachNamedConversationShareLinks(context, [item]);
+    return (item as { sharedFrom?: NamedConversationShareLink }).sharedFrom ?? null;
+  });
+}
+
+
+export interface NamedConversationShareLink {
+  conversation: TicketConversationReference & { name: string };
+  commentId: string;
+  threadId: string;
+}
+
+/** Only technician history readers call this projection. Accepted publications
+ * qualify receipt ownership; source admission independently controls each link.
+ * Fetch candidate publications as one page query, not one query per history row. */
+export async function attachNamedConversationShareLinks(context: Context, items: Array<{
+  commentId: string; threadId: string; storeTenant: string; deleted: boolean; sharedFrom?: NamedConversationShareLink;
+}>) {
+  for (const item of items) delete item.sharedFrom;
+  if (isCoManagedReadFieldHidden(context.hidden, namedConversationShareSources)) return;
+  const selected = items.filter(item => !item.deleted && item.storeTenant === context.conversation.storeTenant);
+  if (!selected.length) return;
+  const user = await tenantDb(context.trx, context.actor.tenant).table('users').where('user_id', context.actor.userId).first('user_type');
+  if (user?.user_type !== 'internal') return;
+  const publications = await tenantDb(context.trx, context.conversation.storeTenant).table('ticket_conversation_publications')
+    .where({ conversation_id: context.conversation.conversationId, ticket_tenant: context.ticket.tenant, ticket_id: context.ticket.ticketId })
+    .whereNotNull('share_operation_id').whereIn(['comment_id', 'thread_id'], selected.map(item => [item.commentId, item.threadId]))
+    .forShare().select('comment_id', 'thread_id', 'actor_tenant', 'actor_user_id', 'share_operation_id');
+  for (const publication of publications) {
+    const item = selected.find(item => item.commentId === publication.comment_id && item.threadId === publication.thread_id)!;
     try {
+      await readNamedConversationShareSource(context, { storeTenant: context.conversation.storeTenant,
+        conversationId: context.conversation.conversationId, commentId: item.commentId, threadId: item.threadId });
+      const retained = await tenantDb(context.trx, publication.actor_tenant).table(TABLE).where({ operation_id: publication.share_operation_id,
+        actor_user_id: publication.actor_user_id, ticket_tenant: context.ticket.tenant, ticket_id: context.ticket.ticketId,
+        destination_store_tenant: context.conversation.storeTenant, destination_conversation_id: context.conversation.conversationId,
+        published_comment_id: item.commentId, published_thread_id: item.threadId }).forShare().first('source');
+      if (!retained) continue;
       const { conversation, message } = await readNamedConversationShareSource(context, retained.source);
-      return { conversation: { storeTenant: conversation.storeTenant, conversationId: conversation.conversationId, name: conversation.name },
+      item.sharedFrom = { conversation: { storeTenant: conversation.storeTenant, conversationId: conversation.conversationId, name: conversation.name },
         commentId: message.commentId, threadId: message.threadId };
     } catch (error) {
-      if (error instanceof TicketConversationError && error.code === 'CONVERSATION_FORBIDDEN') return null;
-      throw error;
+      if (!(error instanceof TicketConversationError && error.code === 'CONVERSATION_FORBIDDEN')) throw error;
     }
-  });
+  }
 }

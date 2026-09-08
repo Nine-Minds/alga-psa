@@ -1809,6 +1809,35 @@
     "returnToRequester": "Apri la conversazione con il richiedente",
     "messageUnavailable": "Questo messaggio non è disponibile in questa conversazione.",
     "latest": "Mostra gli ultimi messaggi",
-    "readFailed": "Impossibile contrassegnare questi messaggi come letti."
+    "readFailed": "Impossibile contrassegnare questi messaggi come letti.",
+    "share": {
+      "action": "Condividi",
+      "title": "Condividi messaggio",
+      "from": "Conversazione di origine",
+      "destination": "Destinazione",
+      "new": "Nuova conversazione…",
+      "openDraft": "Apri bozza esistente",
+      "preparing": "Preparazione…",
+      "retry": "Riprova preparazione",
+      "replace": "Sostituisci bozza e prepara copia",
+      "prepare": "Prepara bozza",
+      "existingDraft": "Hai già una bozza qui.",
+      "existingHelp": "Aprila per continuare a lavorare oppure sostituiscila esplicitamente con questa copia.",
+      "quote": "Formatta come citazione",
+      "files": "Scegli gli allegati da copiare",
+      "reviewHelp": "La copia resta privata finché non la rivedi e scegli Invia o Pubblica nella conversazione di destinazione.",
+      "loadingDraft": "Verifica della bozza di destinazione…",
+      "reloadDraft": "Ricarica bozza di destinazione",
+      "recipientsHelp": "Separa i destinatari con punti e virgola. Scegli una casella di invio e rivedi l’e-mail nella bozza di destinazione.",
+      "errors": {
+        "load": "Questo messaggio non è disponibile. Aggiorna per verificare il tuo accesso.",
+        "target": "Questa destinazione non è disponibile. Scegli un’altra conversazione o riprova.",
+        "conflict": "La bozza di destinazione o la conversazione è cambiata. Ricaricala prima di preparare una copia.",
+        "invalid": "Controlla i destinatari e i file selezionati, poi ricarica la destinazione per riprovare.",
+        "unavailable": "L’origine o la destinazione non è più disponibile. Aggiorna per verificare il tuo accesso.",
+        "unknown": "Impossibile confermare la preparazione. Riprova la stessa richiesta o apri la destinazione per controllarne la bozza."
+      },
+      "sourceLink": "Condiviso da {{name}}"
+    }
   }
 }

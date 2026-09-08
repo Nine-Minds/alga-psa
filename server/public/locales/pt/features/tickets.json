@@ -1809,6 +1809,35 @@
     "returnToRequester": "Abrir conversa com o solicitante",
     "messageUnavailable": "Esta mensagem não está disponível nesta conversa.",
     "latest": "Mostrar as mensagens mais recentes",
-    "readFailed": "Não foi possível marcar estas mensagens como lidas."
+    "readFailed": "Não foi possível marcar estas mensagens como lidas.",
+    "share": {
+      "action": "Compartilhar",
+      "title": "Compartilhar mensagem",
+      "from": "Conversa de origem",
+      "destination": "Destino",
+      "new": "Nova conversa…",
+      "openDraft": "Abrir rascunho existente",
+      "preparing": "Preparando…",
+      "retry": "Tentar preparação novamente",
+      "replace": "Substituir rascunho e preparar cópia",
+      "prepare": "Preparar rascunho",
+      "existingDraft": "Você já tem um rascunho aqui.",
+      "existingHelp": "Abra-o para continuar trabalhando ou substitua-o explicitamente por esta cópia.",
+      "quote": "Formatar como citação",
+      "files": "Escolher anexos para copiar",
+      "reviewHelp": "A cópia permanece privada até você revisá-la e escolher Enviar ou Publicar na conversa de destino.",
+      "loadingDraft": "Verificando o rascunho de destino…",
+      "reloadDraft": "Recarregar rascunho de destino",
+      "recipientsHelp": "Separe os destinatários com ponto e vírgula. Escolha uma caixa de envio e revise o e-mail no rascunho de destino.",
+      "errors": {
+        "load": "Esta mensagem não está disponível. Atualize para verificar seu acesso.",
+        "target": "Este destino não está disponível. Escolha outra conversa ou tente novamente.",
+        "conflict": "O rascunho de destino ou a conversa mudou. Recarregue-o antes de preparar uma cópia.",
+        "invalid": "Verifique os destinatários e os arquivos selecionados e recarregue o destino para tentar novamente.",
+        "unavailable": "A origem ou o destino não está mais disponível. Atualize para verificar seu acesso.",
+        "unknown": "Não foi possível confirmar a preparação. Repita a mesma solicitação ou abra o destino para verificar o rascunho."
+      },
+      "sourceLink": "Compartilhado de {{name}}"
+    }
   }
 }

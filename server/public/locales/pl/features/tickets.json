@@ -1951,6 +1951,35 @@
     "returnToRequester": "Otwórz rozmowę ze zgłaszającym",
     "messageUnavailable": "Ta wiadomość jest niedostępna w tej rozmowie.",
     "latest": "Pokaż najnowsze wiadomości",
-    "readFailed": "Nie udało się oznaczyć tych wiadomości jako przeczytane."
+    "readFailed": "Nie udało się oznaczyć tych wiadomości jako przeczytane.",
+    "share": {
+      "action": "Udostępnij",
+      "title": "Udostępnij wiadomość",
+      "from": "Rozmowa źródłowa",
+      "destination": "Miejsce docelowe",
+      "new": "Nowa rozmowa…",
+      "openDraft": "Otwórz istniejący szkic",
+      "preparing": "Przygotowywanie…",
+      "retry": "Ponów przygotowanie",
+      "replace": "Zastąp szkic i przygotuj kopię",
+      "prepare": "Przygotuj szkic",
+      "existingDraft": "Masz już tutaj szkic.",
+      "existingHelp": "Otwórz go, aby kontynuować pracę, lub świadomie zastąp go tą kopią.",
+      "quote": "Formatuj jako cytat",
+      "files": "Wybierz załączniki do skopiowania",
+      "reviewHelp": "Kopia pozostaje prywatna, dopóki jej nie sprawdzisz i nie wybierzesz Wyślij lub Opublikuj w rozmowie docelowej.",
+      "loadingDraft": "Sprawdzanie szkicu docelowego…",
+      "reloadDraft": "Wczytaj ponownie szkic docelowy",
+      "recipientsHelp": "Oddziel odbiorców średnikami. Wybierz skrzynkę nadawczą i sprawdź wiadomość w szkicu docelowym.",
+      "errors": {
+        "load": "Ta wiadomość jest niedostępna. Odśwież, aby sprawdzić swój dostęp.",
+        "target": "To miejsce docelowe jest niedostępne. Wybierz inną rozmowę lub spróbuj ponownie.",
+        "conflict": "Szkic docelowy lub rozmowa uległy zmianie. Wczytaj ponownie przed przygotowaniem kopii.",
+        "invalid": "Sprawdź odbiorców i wybrane pliki, a następnie wczytaj ponownie miejsce docelowe, aby spróbować jeszcze raz.",
+        "unavailable": "Źródło lub miejsce docelowe nie jest już dostępne. Odśwież, aby sprawdzić swój dostęp.",
+        "unknown": "Nie udało się potwierdzić przygotowania. Ponów to samo żądanie lub otwórz miejsce docelowe, aby sprawdzić szkic."
+      },
+      "sourceLink": "Udostępniono z {{name}}"
+    }
   }
 }
