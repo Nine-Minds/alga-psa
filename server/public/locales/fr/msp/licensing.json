@@ -694,6 +694,39 @@
       "unavailable": "Indisponible",
       "hours": "{{value}} heures",
       "error": "Impossible de charger les totaux de temps."
+    },
+    "archive": {
+      "title": "Archives des travaux partagés",
+      "description": "Historique et fichiers conservés des travaux auxquels votre organisation a participé.",
+      "error": "Les archives sont indisponibles. Actualisez pour vérifier vos accès actuels.",
+      "work": "Travaux conservés",
+      "empty": "Aucun travail conservé disponible sur cette page.",
+      "ticket": "Ticket conservé",
+      "project_task": "Tâche de projet conservée",
+      "unknownClient": "Client indisponible",
+      "select": "Sélectionnez un travail pour afficher son historique et ses fichiers.",
+      "history": "Historique conservé",
+      "noHistory": "Aucun historique disponible sur cette page.",
+      "unknownAuthor": "Auteur inconnu",
+      "deleted": "Message supprimé",
+      "files": "Fichiers conservés",
+      "noFiles": "Aucun fichier disponible sur cette page.",
+      "bytes": "{{value}} octets",
+      "cleared": "Effacé",
+      "events": {
+        "conversation": "Conversation",
+        "escalated": "Transmis au MSP",
+        "handed_back": "Renvoyé au service informatique du client",
+        "access_revoked": "Partage terminé",
+        "work_audit": "Travail mis à jour",
+        "time_entry": "Temps enregistré"
+      },
+      "changes": {
+        "task_name": "Nom de la tâche",
+        "due_date": "Échéance",
+        "project_status_mapping_id": "Statut modifié",
+        "msp_assignment": "Affectation MSP modifiée"
+      }
     }
   }
 }

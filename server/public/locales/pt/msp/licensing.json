@@ -694,6 +694,39 @@
       "unavailable": "Indisponível",
       "hours": "{{value}} horas",
       "error": "Não foi possível carregar os totais de tempo."
+    },
+    "archive": {
+      "title": "Arquivo de trabalho partilhado",
+      "description": "Histórico e ficheiros guardados do trabalho em que a sua organização participou.",
+      "error": "O arquivo não está disponível. Atualize para verificar o seu acesso atual.",
+      "work": "Trabalho guardado",
+      "empty": "Não há trabalho guardado disponível nesta página.",
+      "ticket": "Ticket guardado",
+      "project_task": "Tarefa de projeto guardada",
+      "unknownClient": "Cliente indisponível",
+      "select": "Selecione um trabalho para ver o histórico e os ficheiros.",
+      "history": "Histórico guardado",
+      "noHistory": "Não há histórico disponível nesta página.",
+      "unknownAuthor": "Autor desconhecido",
+      "deleted": "Mensagem eliminada",
+      "files": "Ficheiros guardados",
+      "noFiles": "Não há ficheiros disponíveis nesta página.",
+      "bytes": "{{value}} bytes",
+      "cleared": "Limpo",
+      "events": {
+        "conversation": "Conversa",
+        "escalated": "Encaminhado para o MSP",
+        "handed_back": "Devolvido à equipa de TI do cliente",
+        "access_revoked": "Partilha terminada",
+        "work_audit": "Trabalho atualizado",
+        "time_entry": "Tempo registado"
+      },
+      "changes": {
+        "task_name": "Nome da tarefa",
+        "due_date": "Data de vencimento",
+        "project_status_mapping_id": "Estado alterado",
+        "msp_assignment": "Atribuição do MSP alterada"
+      }
     }
   }
 }

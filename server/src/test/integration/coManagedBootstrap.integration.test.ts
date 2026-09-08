@@ -18275,3 +18275,97 @@ it('archive files roll back publication on corrupt source bytes and retain stagi
   expect(await storeCoManagedArchiveFiles(db, f.principal.tenant)).toEqual({ stored: 1, failed: 0 });
   expect(artifactStorage.upload.mock.calls[0][1]).toBe(artifactStorage.upload.mock.calls[1][1]);
 }));
+
+it('archive reads retain qualified shared history after customer source deletion without restoring live access', async () => withTaskConversationFixture(async f => {
+  const archive = await import('../../../../packages/co-managed/src/archiveReads');
+  await f.add(f.principal, 'shared_it', 'Retained MSP contribution');
+  await f.add(f.customerPrincipal, 'organization_private', 'Never archived customer secret');
+  const before = await archive.getCoManagedArchiveHistory(db, f.principal, f.resource);
+  expect(before.entries).toHaveLength(1); expect(before.entries[0]).toMatchObject({ kind: 'conversation', author: { id: f.principal.userId }, markdown: 'Retained MSP contribution' });
+  expect((await archive.listCoManagedArchiveWork(db, f.principal)).items.map(item => item.resource)).toContainEqual(f.resource);
+  await f.customer.table('co_management_relationships').where('relationship_id', f.resource.relationshipId).update({ state: 'terminated', ended_at: new Date() });
+  await f.customer.table('project_tasks').where('task_id', f.resource.id).del();
+  expect(await archive.getCoManagedArchiveHistory(db, f.principal, f.resource)).toEqual(before);
+  await expect(f.read(f.principal)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(JSON.stringify(before)).not.toContain('Never archived');
+  for (const target of [{ ...f.resource, tenant: randomUUID() }, { ...f.resource, relationshipId: randomUUID() }, { ...f.resource, kind: 'ticket' as const }])
+    await expect(archive.getCoManagedArchiveHistory(db, f.principal, target)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await expect(archive.getCoManagedArchiveHistory(db, f.customerPrincipal, f.resource)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+}));
+
+it('archive reads enforce current MSP client scope and field restrictions on history authors and files', async () => withAttachmentFixture(async f => {
+  const archive = await import('../../../../packages/co-managed/src/archiveReads'), bundles = await import('@alga-psa/authorization');
+  const { createSharedTicketComment } = await import('../../lib/co-managed/createTicketComment');
+  const root = await createSharedTicketComment(db, f.principal, f.resource, { operationId: randomUUID(), audience: 'shared_it', text: 'Scoped archive content' });
+  await f.attachments.uploadCoManagedConversationAttachment(db, f.principal, f.resource,
+    { attachmentId: randomUUID(), comment: attachmentComment(root), fileName: 'Scoped.txt', mimeType: 'text/plain', content: Buffer.from('Scoped bytes') }, f.upload);
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: f.principal.tenant, name: 'Archive current scope', actorUserId: f.principal.userId });
+  await bundles.upsertBundleRule(db, { tenant: f.principal.tenant, bundleId, revisionId, resourceType: 'ticket', action: 'read', templateKey: 'selected_clients',
+    config: { selectedClientIds: [f.operation.request.clientId], redactedFields: ['author'] } });
+  await bundles.publishBundleRevision(db, { tenant: f.principal.tenant, bundleId, revisionId, actorUserId: f.principal.userId });
+  await bundles.createBundleAssignment(db, { tenant: f.principal.tenant, bundleId, targetType: 'user', targetId: f.principal.userId });
+  const history = await archive.getCoManagedArchiveHistory(db, f.principal, f.resource); expect(history.entries.length).toBeGreaterThan(0);
+  expect(history.entries.every(entry => entry.author === undefined)).toBe(true);
+  const files = await archive.listCoManagedArchiveFiles(db, f.principal, f.resource); expect(files.items).toHaveLength(1);
+  const rule = () => f.sponsor.table('authorization_bundle_rules').where({ bundle_id: bundleId, resource_type: 'ticket', action: 'read' });
+  await rule().update({ config: { selectedClientIds: [f.operation.request.clientId], redactedFields: ['co_managed_participation_evidence.actor_name', 'payload.resourceTitle'] } });
+  const masked = await archive.getCoManagedArchiveHistory(db, f.principal, f.resource);
+  expect(masked.work.title).toBeNull(); expect(masked.entries.every(entry => entry.author === undefined)).toBe(true);
+  await rule().update({ config: { selectedClientIds: [f.operation.request.clientId], redactedFields: ['co_managed_archive_files.file_name'] } });
+  expect((await archive.listCoManagedArchiveFiles(db, f.principal, f.resource)).items).toEqual([]);
+  await rule().update({ config: { selectedClientIds: [f.operation.request.clientId], redactedFields: ['comments'] } });
+  expect((await archive.getCoManagedArchiveHistory(db, f.principal, f.resource)).entries.every(entry => entry.kind !== 'conversation')).toBe(true);
+  expect((await archive.listCoManagedArchiveFiles(db, f.principal, f.resource)).items).toEqual([]);
+  await expect(archive.downloadCoManagedArchiveFile(db, f.principal, f.resource, files.items[0].archiveFileId)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await rule().update({ config: { selectedClientIds: [randomUUID()], redactedFields: [] } });
+  expect((await archive.listCoManagedArchiveWork(db, f.principal)).items).toEqual([]);
+  await expect(archive.getCoManagedArchiveHistory(db, f.principal, f.resource)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+}));
+
+it('archive reads deliver pending and stored bytes with integrity and final session checks', async () => withAttachmentFixture(async f => {
+  const archive = await import('../../../../packages/co-managed/src/archiveReads');
+  const { storeCoManagedArchiveFiles, coManagedArchiveFilePath } = await import('../../../../packages/co-managed/src/archiveFiles');
+  const root = await f.create(f.principal, { operationId: randomUUID(), audience: 'shared_it', text: 'File archive' }), bytes = Buffer.from('Actual retained bytes');
+  await f.attachments.uploadCoManagedConversationAttachment(db, f.principal, f.resource,
+    { attachmentId: randomUUID(), comment: attachmentComment(root), fileName: 'Retained.txt', mimeType: 'text/plain', content: bytes }, f.upload);
+  const file = (await archive.listCoManagedArchiveFiles(db, f.principal, f.resource)).items[0];
+  artifactStorage.download.mockClear();
+  expect((await archive.downloadCoManagedArchiveFile(db, f.principal, f.resource, file.archiveFileId)).content).toEqual(bytes);
+  expect(artifactStorage.download).not.toHaveBeenCalled();
+  await f.customer.table('co_management_relationships').where('relationship_id', f.resource.relationshipId).update({ state: 'terminated', ended_at: new Date() });
+  artifactStorage.upload.mockReset().mockImplementation(async (content: Buffer, path: string) => ({ path, size: content.length }));
+  await storeCoManagedArchiveFiles(db, f.principal.tenant);
+  artifactStorage.download.mockImplementation(async path => { expect(path).toBe(coManagedArchiveFilePath(f.principal.tenant, file.archiveFileId)); return bytes; });
+  expect((await archive.downloadCoManagedArchiveFile(db, f.principal, f.resource, file.archiveFileId)).content).toEqual(bytes);
+  artifactStorage.download.mockResolvedValueOnce(Buffer.from('corrupt'));
+  await expect(archive.downloadCoManagedArchiveFile(db, f.principal, f.resource, file.archiveFileId)).rejects.toThrow('integrity verification');
+  await expect(archive.downloadCoManagedArchiveFile(db, f.principal, { ...f.resource, relationshipId: randomUUID() }, file.archiveFileId)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await f.sponsor.table('sessions').where('session_id', f.principal.sessionId).update({ expires_at: new Date(Date.now() + 600) });
+  artifactStorage.download.mockImplementationOnce(async () => { await new Promise(resolve => setTimeout(resolve, 800)); return bytes; });
+  await expect(archive.downloadCoManagedArchiveFile(db, f.principal, f.resource, file.archiveFileId)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+}));
+
+it('archive reads download route binds the actual MSP session and returns non-cacheable attachment bytes', async () => withAttachmentFixture(async f => {
+  const auth = await import('@alga-psa/auth'), dbModule = await import('@alga-psa/db');
+  const root = await f.create(f.principal, { operationId: randomUUID(), audience: 'shared_it', text: 'Route evidence' }), bytes = Buffer.from('Route retained bytes');
+  await f.attachments.uploadCoManagedConversationAttachment(db, f.principal, f.resource,
+    { attachmentId: randomUUID(), comment: attachmentComment(root), fileName: 'Evidence.txt', mimeType: 'text/plain', content: bytes }, f.upload);
+  const file = await f.sponsor.table('co_managed_archive_files').first();
+  const session = vi.spyOn(auth, 'getSession').mockResolvedValue({ session_id: f.principal.sessionId, user: { tenant: f.principal.tenant, id: f.principal.userId, user_type: 'internal' } } as any);
+  const override = vi.spyOn(auth, 'getApiKeyUserOverride').mockReturnValue(undefined), connection = vi.spyOn(dbModule, 'getConnection').mockResolvedValue(db);
+  try {
+    const { GET } = await import('../../app/api/co-management/archive-files/[archiveFileId]/route');
+    const { NextRequest } = await import('next/server');
+    const query = new URLSearchParams({ customerTenant: f.resource.tenant, relationshipId: f.resource.relationshipId, ticketId: f.resource.id });
+    const request = new NextRequest(`http://localhost/api/co-management/archive-files/${file.archive_file_id}?${query}`);
+    const response = await GET(request, { params: Promise.resolve({ archiveFileId: file.archive_file_id }) });
+    expect(response.status).toBe(200); expect(Buffer.from(await response.arrayBuffer())).toEqual(bytes);
+    expect(response.headers.get('cache-control')).toBe('no-store, private'); expect(response.headers.get('content-type')).toBe('application/octet-stream');
+    expect(response.headers.get('content-disposition')).toContain('attachment;'); expect(response.headers.get('x-content-type-options')).toBe('nosniff');
+    override.mockReturnValue({ user_id: f.principal.userId } as any);
+    expect((await GET(request, { params: Promise.resolve({ archiveFileId: file.archive_file_id }) })).status).toBe(401);
+    override.mockReturnValue(undefined);
+    session.mockResolvedValue({ session_id: f.customerPrincipal.sessionId, user: { tenant: f.resource.tenant, id: f.customerPrincipal.userId, user_type: 'internal' } } as any);
+    expect((await GET(request, { params: Promise.resolve({ archiveFileId: file.archive_file_id }) })).status).toBe(404);
+  } finally { session.mockRestore(); override.mockRestore(); connection.mockRestore(); }
+}));

@@ -696,6 +696,39 @@
       "unavailable": "Niedostępne",
       "hours": "{{value}} godz.",
       "error": "Nie udało się wczytać sum czasu."
+    },
+    "archive": {
+      "title": "Archiwum współdzielonej pracy",
+      "description": "Zachowana historia i pliki pracy, w której uczestniczyła Twoja organizacja.",
+      "error": "Archiwum jest niedostępne. Odśwież, aby sprawdzić aktualne uprawnienia.",
+      "work": "Zachowana praca",
+      "empty": "Na tej stronie nie ma dostępnej zachowanej pracy.",
+      "ticket": "Zachowane zgłoszenie",
+      "project_task": "Zachowane zadanie projektowe",
+      "unknownClient": "Klient niedostępny",
+      "select": "Wybierz pracę, aby zobaczyć jej historię i pliki.",
+      "history": "Zachowana historia",
+      "noHistory": "Na tej stronie nie ma dostępnej historii.",
+      "unknownAuthor": "Nieznany autor",
+      "deleted": "Usunięta wiadomość",
+      "files": "Zachowane pliki",
+      "noFiles": "Na tej stronie nie ma dostępnych plików.",
+      "bytes": "{{value}} bajtów",
+      "cleared": "Wyczyszczono",
+      "events": {
+        "conversation": "Rozmowa",
+        "escalated": "Przekazano do MSP",
+        "handed_back": "Zwrócono do IT klienta",
+        "access_revoked": "Zakończono udostępnianie",
+        "work_audit": "Zaktualizowano pracę",
+        "time_entry": "Zarejestrowano czas"
+      },
+      "changes": {
+        "task_name": "Nazwa zadania",
+        "due_date": "Termin",
+        "project_status_mapping_id": "Zmieniono status",
+        "msp_assignment": "Zmieniono przypisanie MSP"
+      }
     }
   }
 }

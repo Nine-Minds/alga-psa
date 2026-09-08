@@ -692,6 +692,39 @@
       "unavailable": "Nicht verfügbar",
       "hours": "{{value}} Stunden",
       "error": "Die Aufwandssummen konnten nicht geladen werden."
+    },
+    "archive": {
+      "title": "Archiv geteilter Arbeit",
+      "description": "Aufbewahrter Verlauf und Dateien von Arbeiten, an denen Ihre Organisation beteiligt war.",
+      "error": "Das Archiv ist nicht verfügbar. Aktualisieren Sie die Seite, um Ihre aktuellen Zugriffsrechte zu prüfen.",
+      "work": "Aufbewahrte Arbeit",
+      "empty": "Auf dieser Seite ist keine aufbewahrte Arbeit verfügbar.",
+      "ticket": "Aufbewahrtes Ticket",
+      "project_task": "Aufbewahrte Projektaufgabe",
+      "unknownClient": "Kunde nicht verfügbar",
+      "select": "Wählen Sie eine Arbeit aus, um Verlauf und Dateien anzuzeigen.",
+      "history": "Aufbewahrter Verlauf",
+      "noHistory": "Auf dieser Seite ist kein Verlauf verfügbar.",
+      "unknownAuthor": "Unbekannter Autor",
+      "deleted": "Gelöschte Nachricht",
+      "files": "Aufbewahrte Dateien",
+      "noFiles": "Auf dieser Seite sind keine Dateien verfügbar.",
+      "bytes": "{{value}} Bytes",
+      "cleared": "Gelöscht",
+      "events": {
+        "conversation": "Unterhaltung",
+        "escalated": "An MSP eskaliert",
+        "handed_back": "An Kunden-IT zurückgegeben",
+        "access_revoked": "Freigabe beendet",
+        "work_audit": "Arbeit aktualisiert",
+        "time_entry": "Zeit erfasst"
+      },
+      "changes": {
+        "task_name": "Aufgabenname",
+        "due_date": "Fälligkeitsdatum",
+        "project_status_mapping_id": "Status geändert",
+        "msp_assignment": "MSP-Zuweisung geändert"
+      }
     }
   }
 }

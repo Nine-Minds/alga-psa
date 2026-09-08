@@ -75,11 +75,13 @@ export async function retainCoManagedConversationParticipation(trx: Knex.Transac
   const organization = !attribution ? await owner.table('tenants').first('client_name') : null;
   const name = comment.actor_display_name ?? ([user?.first_name, user?.last_name].filter(Boolean).join(' ') || user?.email || contact?.full_name || '');
   const organizationName = comment.actor_organization_name ?? organization?.client_name ?? '';
+  const source = await owner.table(task ? 'project_tasks' : 'tickets').where(task ? 'task_id' : 'ticket_id', resource.id)
+    .first(task ? 'task_name' : 'title', ...(task ? [] : ['ticket_number']));
   const content: ParticipationEvidenceContent = {
     client_id: relationship.sponsor_client_id, operation_id: eventId, event_type: event.event_type,
     actor_tenant: actorTenant, actor_user_id: userId, actor_kind: actorKind, actor_contact_id: contactId,
     actor_name: name, actor_organization: organizationName, occurred_at: instant(event.created_at)!,
-    payload: { commentId: event.comment_id, threadId: event.thread_id, parentCommentId: comment.parent_comment_id, audience: comment.audience,
+    payload: { resourceTitle: source?.title ?? source?.task_name ?? null, ticketNumber: source?.ticket_number ?? null, commentId: event.comment_id, threadId: event.thread_id, parentCommentId: comment.parent_comment_id, audience: comment.audience,
       revision: task ? comment.collaboration_revision : null, createdAt: instant(comment.created_at),
       updatedAt: instant(comment.updated_at), deletedAt: instant(comment.deleted_at), deleted,
       ...(deleted ? {} : { note: comment.note, markdown: comment.markdown_content }) },

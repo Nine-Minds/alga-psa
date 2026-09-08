@@ -692,6 +692,39 @@
       "unavailable": "Niet beschikbaar",
       "hours": "{{value}} uur",
       "error": "De tijdtotalen konden niet worden geladen."
+    },
+    "archive": {
+      "title": "Archief van gedeeld werk",
+      "description": "Bewaarde geschiedenis en bestanden van werk waaraan uw organisatie heeft deelgenomen.",
+      "error": "Het archief is niet beschikbaar. Vernieuw om uw huidige toegang te controleren.",
+      "work": "Bewaard werk",
+      "empty": "Op deze pagina is geen bewaard werk beschikbaar.",
+      "ticket": "Bewaard ticket",
+      "project_task": "Bewaarde projecttaak",
+      "unknownClient": "Klant niet beschikbaar",
+      "select": "Selecteer werk om de geschiedenis en bestanden te bekijken.",
+      "history": "Bewaarde geschiedenis",
+      "noHistory": "Op deze pagina is geen geschiedenis beschikbaar.",
+      "unknownAuthor": "Onbekende auteur",
+      "deleted": "Verwijderd bericht",
+      "files": "Bewaarde bestanden",
+      "noFiles": "Op deze pagina zijn geen bestanden beschikbaar.",
+      "bytes": "{{value}} bytes",
+      "cleared": "Gewist",
+      "events": {
+        "conversation": "Gesprek",
+        "escalated": "Geëscaleerd naar MSP",
+        "handed_back": "Teruggegeven aan IT van de klant",
+        "access_revoked": "Delen beëindigd",
+        "work_audit": "Werk bijgewerkt",
+        "time_entry": "Tijd geregistreerd"
+      },
+      "changes": {
+        "task_name": "Taaknaam",
+        "due_date": "Vervaldatum",
+        "project_status_mapping_id": "Status gewijzigd",
+        "msp_assignment": "MSP-toewijzing gewijzigd"
+      }
     }
   }
 }

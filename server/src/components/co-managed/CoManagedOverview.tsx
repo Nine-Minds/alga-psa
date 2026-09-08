@@ -14,6 +14,7 @@ import { getCoManagedBillingState } from '@/lib/actions/coManagedActions';
 import CoManagedProvisioningPanel from './CoManagedProvisioningPanel';
 import CoManagedProjectTaskQueueLink from './CoManagedProjectTaskQueueLink';
 import CoManagedTicketQueueLink from './CoManagedTicketQueueLink';
+import { CoManagedFeatureBoundary } from './CoManagedFeatureBoundary';
 
 export default function CoManagedOverview({ initialClientId }: { initialClientId?: string }) {
   const { t } = useTranslation('msp/licensing');
@@ -66,6 +67,7 @@ export default function CoManagedOverview({ initialClientId }: { initialClientId
       <p className="mt-2 text-muted-foreground">{t('coManaged.description')}</p></div>
     <CoManagedTicketQueueLink />
     <CoManagedProjectTaskQueueLink />
+    <CoManagedFeatureBoundary><Link id="co-managed-archive-link" className="block px-6 text-primary underline" href="/msp/co-managed/archive">{t('coManaged.archive.title')}</Link></CoManagedFeatureBoundary>
     {error && <p role="alert" className="text-destructive">{error}</p>}
     {!state ? (!error && <p role="status">{t('coManaged.loading')}</p>) : <>
       <div className="grid gap-4 sm:grid-cols-3">

@@ -54,6 +54,9 @@ export async function retainCoManagedParticipationEvidence(context: CoManagedSha
   if (typeof name !== 'string' || typeof organization !== 'string') throw new CoManagedSharedWorkError();
   const key: ParticipationEvidenceIdentity = { tenant: relationship.sponsor_tenant, customer_tenant: resource.tenant, relationship_id: resource.relationshipId,
     resource_type: resource.kind as 'ticket' | 'project_task', resource_id: resource.id, source_type: source, source_id: sourceId };
+  const work = await customer.table(resource.kind === 'ticket' ? 'tickets' : 'project_tasks').where(resource.kind === 'ticket' ? 'ticket_id' : 'task_id', resource.id)
+    .first(resource.kind === 'ticket' ? 'title' : 'task_name', ...(resource.kind === 'ticket' ? ['ticket_number'] : []));
+  payload = { ...payload, resourceTitle: work?.title ?? work?.task_name ?? null, ticketNumber: work?.ticket_number ?? null };
   const retained = { client_id: relationship.sponsor_client_id, operation_id: operationId, event_type: eventType,
     actor_tenant: actor.tenant, actor_user_id: actor.userId, actor_name: name, actor_organization: organization, occurred_at: occurredAt, payload };
   await appendParticipationEvidence(trx, key, retained);

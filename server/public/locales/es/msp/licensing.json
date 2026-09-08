@@ -694,6 +694,39 @@
       "unavailable": "No disponible",
       "hours": "{{value}} horas",
       "error": "No se pudieron cargar los totales de tiempo."
+    },
+    "archive": {
+      "title": "Archivo de trabajo compartido",
+      "description": "Historial y archivos conservados del trabajo en el que participó su organización.",
+      "error": "El archivo no está disponible. Actualice para comprobar su acceso actual.",
+      "work": "Trabajo conservado",
+      "empty": "No hay trabajo conservado disponible en esta página.",
+      "ticket": "Ticket conservado",
+      "project_task": "Tarea de proyecto conservada",
+      "unknownClient": "Cliente no disponible",
+      "select": "Seleccione un trabajo para ver su historial y archivos.",
+      "history": "Historial conservado",
+      "noHistory": "No hay historial disponible en esta página.",
+      "unknownAuthor": "Autor desconocido",
+      "deleted": "Mensaje eliminado",
+      "files": "Archivos conservados",
+      "noFiles": "No hay archivos disponibles en esta página.",
+      "bytes": "{{value}} bytes",
+      "cleared": "Borrado",
+      "events": {
+        "conversation": "Conversación",
+        "escalated": "Escalado al MSP",
+        "handed_back": "Devuelto al equipo de TI del cliente",
+        "access_revoked": "Uso compartido finalizado",
+        "work_audit": "Trabajo actualizado",
+        "time_entry": "Tiempo registrado"
+      },
+      "changes": {
+        "task_name": "Nombre de la tarea",
+        "due_date": "Fecha de vencimiento",
+        "project_status_mapping_id": "Estado modificado",
+        "msp_assignment": "Asignación del MSP modificada"
+      }
     }
   }
 }

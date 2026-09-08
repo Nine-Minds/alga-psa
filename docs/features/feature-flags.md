@@ -28,6 +28,11 @@ Shared ticket/task Log time controls and their native time-entry dialogs use thi
 boundary. Organization effort totals on ticket, task and customer/shared project
 screens, including the customer native task form, also use it; disabled UI does not fetch totals. Registration, time writes
 and aggregate actions retain normal authorization independently of the flag.
+The retained shared-work archive (`/msp/co-managed/archive`), its overview link,
+history/file pagination and download links also use this boundary. Disabling it
+unmounts archive state and prevents UI fetches. Archive actions, storage recovery
+and `/api/co-management/archive-files/[archiveFileId]` keep their normal current
+MSP authorization without checking the release flag.
 Export and assignment actions apply current ticket access independently of the flag.
 Ordinary PSA and AlgaDesk workspaces do not depend on this flag.
 

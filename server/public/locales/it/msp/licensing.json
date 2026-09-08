@@ -694,6 +694,39 @@
       "unavailable": "Non disponibile",
       "hours": "{{value}} ore",
       "error": "Impossibile caricare i totali del tempo."
+    },
+    "archive": {
+      "title": "Archivio del lavoro condiviso",
+      "description": "Cronologia e file conservati del lavoro a cui ha partecipato la tua organizzazione.",
+      "error": "Archivio non disponibile. Aggiorna per verificare i tuoi accessi attuali.",
+      "work": "Lavoro conservato",
+      "empty": "Nessun lavoro conservato disponibile in questa pagina.",
+      "ticket": "Ticket conservato",
+      "project_task": "Attività di progetto conservata",
+      "unknownClient": "Cliente non disponibile",
+      "select": "Seleziona un lavoro per visualizzarne cronologia e file.",
+      "history": "Cronologia conservata",
+      "noHistory": "Nessuna cronologia disponibile in questa pagina.",
+      "unknownAuthor": "Autore sconosciuto",
+      "deleted": "Messaggio eliminato",
+      "files": "File conservati",
+      "noFiles": "Nessun file disponibile in questa pagina.",
+      "bytes": "{{value}} byte",
+      "cleared": "Rimosso",
+      "events": {
+        "conversation": "Conversazione",
+        "escalated": "Inoltrato al MSP",
+        "handed_back": "Restituito al reparto IT del cliente",
+        "access_revoked": "Condivisione terminata",
+        "work_audit": "Lavoro aggiornato",
+        "time_entry": "Tempo registrato"
+      },
+      "changes": {
+        "task_name": "Nome attività",
+        "due_date": "Scadenza",
+        "project_status_mapping_id": "Stato modificato",
+        "msp_assignment": "Assegnazione MSP modificata"
+      }
     }
   }
 }

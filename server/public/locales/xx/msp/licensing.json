@@ -692,6 +692,39 @@
       "unavailable": "11111",
       "hours": "11111 {{value}}",
       "error": "11111"
+    },
+    "archive": {
+      "title": "11111",
+      "description": "11111",
+      "error": "11111",
+      "work": "11111",
+      "empty": "11111",
+      "ticket": "11111",
+      "project_task": "11111",
+      "unknownClient": "11111",
+      "select": "11111",
+      "history": "11111",
+      "noHistory": "11111",
+      "unknownAuthor": "11111",
+      "deleted": "11111",
+      "files": "11111",
+      "noFiles": "11111",
+      "bytes": "11111 {{value}}",
+      "cleared": "11111",
+      "events": {
+        "conversation": "11111",
+        "escalated": "11111",
+        "handed_back": "11111",
+        "access_revoked": "11111",
+        "work_audit": "11111",
+        "time_entry": "11111"
+      },
+      "changes": {
+        "task_name": "11111",
+        "due_date": "11111",
+        "project_status_mapping_id": "11111",
+        "msp_assignment": "11111"
+      }
     }
   }
 }
