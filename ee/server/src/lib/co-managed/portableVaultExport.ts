@@ -7,7 +7,8 @@ import { withCoManagedExportAdmin } from '../../../../../packages/co-managed/src
 import { hasCoManagedLocalPermission } from '../../../../../packages/co-managed/src/localPermission';
 import { snapshotCoManagedSessionActor, isCoManagedUuid, CoManagedSharedWorkError,
   type CoManagedSessionActor } from '../../../../../packages/co-managed/src/sharedWorkIdentity';
-import { authorizeCredentialRecord, type CredentialRow, type CredentialGrantRow } from '../credentials/credentialAuthorization';
+import { buildCredentialAuthorizationKernel, toCredentialAuthorizationRecord,
+  type CredentialRow, type CredentialGrantRow } from '../credentials/credentialAuthorization';
 import { isCredentialEncryptionScheme } from '../credentials/encryption';
 import { sealPortableCredentialVault } from '../credentials/portable';
 import { writeCredentialAudit } from '../credentials/audit';
@@ -32,8 +33,11 @@ async function collect(trx: Knex.Transaction, actor: CoManagedSessionActor, subj
   const grantsById = new Map<string, CredentialGrantRow[]>();
   for (const grant of grants) grantsById.set(grant.credential_id, [...(grantsById.get(grant.credential_id) ?? []), grant]);
   for (const row of rows) {
-    if (!isCredentialEncryptionScheme(row.encryption_scheme) ||
-        !await authorizeCredentialRecord(trx, context, row, grantsById.get(row.credential_id) ?? [])) throw new CoManagedSharedWorkError();
+    const decision = await buildCredentialAuthorizationKernel(context, row.is_restricted, trx).authorizeResource({
+      knex: trx, subject, resource: { type: 'credential', action: 'read', id: row.credential_id },
+      record: toCredentialAuthorizationRecord(row, grantsById.get(row.credential_id) ?? []), requestCache,
+    });
+    if (!isCredentialEncryptionScheme(row.encryption_scheme) || !decision.allowed || decision.redactedFields.length) throw new CoManagedSharedWorkError();
   }
   const ids = new Set(rows.map(row => row.credential_id));
   // Do not silently emit a partial vault when an association cannot be reconstructed.

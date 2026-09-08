@@ -19645,3 +19645,48 @@ it('portable vault export fails closed on restricted ACL, audit failure and auth
   });
   await expect(f.exportVault()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
 }));
+
+it('portable workspace core preserves local identity relationships and saved authors while excluding authentication and live trust', async () => {
+  const f = await ticketHandoffFixture();
+  const { exportCoManagedPortableCore, validateCoManagedPortableCoreRecords } = await import('../../../../packages/co-managed/src/portableCoreExport');
+  await f.customer.table('users').where('user_id', f.actor.userId).update({ hashed_password: 'never-export-password-hash',
+    two_factor_secret: 'never-export-mfa-secret', client_portal_entra_metadata: { token: 'never-export-entra-login' } });
+  await f.customer.table('tenants').update({ payment_platform_id: 'never-export-billing-customer' });
+  const actorReferenceId = randomUUID();
+  await f.customer.table('collaboration_actor_references').insert({ tenant: f.actor.tenant, actor_reference_id: actorReferenceId,
+    actor_tenant: f.principal.tenant, actor_user_id: f.principal.userId, display_name: 'Retained collaborator', organization_name: 'Former service partner' });
+  const packageId = randomUUID();
+  const result = await exportCoManagedPortableCore(db, f.customerPrincipal, packageId);
+  expect(result).toMatchObject({ kind: 'alga-workspace-core', version: 1, packageId, sourceTenant: f.actor.tenant,
+    restorePolicy: { authentication: 'reauthorize', sponsorship: 'none' } });
+  expect(result.records.users.some((row: any) => row.user_id === f.actor.userId)).toBe(true);
+  expect(result.records.collaboration_actor_references).toMatchObject([{ actor_reference_id: actorReferenceId, display_name: 'Retained collaborator' }]);
+  expect(result.records.user_roles.length).toBeGreaterThan(0);
+  const serialized = JSON.stringify(result);
+  for (const secret of ['never-export-password-hash', 'never-export-mfa-secret', 'never-export-entra-login', 'never-export-billing-customer',
+    'hashed_password', 'two_factor_secret', 'client_portal_entra_metadata', 'co_management_relationships', 'sessions']) expect(serialized).not.toContain(secret);
+  expect(result.records.users.some((row: any) => row.user_id === f.principal.userId)).toBe(false);
+  const { sha256, ...payload } = result;
+  expect(sha256).toBe((await import('node:crypto')).createHash('sha256').update(JSON.stringify(payload)).digest('hex'));
+  expect(() => validateCoManagedPortableCoreRecords(result.records)).not.toThrow();
+  const forged = structuredClone(result.records);
+  forged.users[0].hashed_password = 'injected-authentication';
+  expect(() => validateCoManagedPortableCoreRecords(forged)).toThrow('record columns');
+  const missing = structuredClone(result.records); missing.roles = [];
+  expect(() => validateCoManagedPortableCoreRecords(missing)).toThrow('reference is missing');
+  const duplicate = structuredClone(result.records); duplicate.users.push({ ...duplicate.users[0] });
+  expect(() => validateCoManagedPortableCoreRecords(duplicate)).toThrow('Duplicate portable workspace record identity');
+});
+
+it('portable workspace core requires current customer directory permissions and rejects revoked or MSP sessions', async () => {
+  const f = await ticketHandoffFixture();
+  const { exportCoManagedPortableCore } = await import('../../../../packages/co-managed/src/portableCoreExport');
+  const packageId = randomUUID();
+  await expect(exportCoManagedPortableCore(db, f.principal, packageId)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await f.customer.table('sessions').where('session_id', f.customerPrincipal.sessionId).update({ revoked_at: db.fn.now() });
+  await expect(exportCoManagedPortableCore(db, f.customerPrincipal, packageId)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await f.customer.table('sessions').where('session_id', f.customerPrincipal.sessionId).update({ revoked_at: null });
+  const permission = await f.customer.table('permissions').where({ resource: 'user', action: 'read', msp: true }).first();
+  await f.customer.table('role_permissions').where('permission_id', permission.permission_id).delete();
+  await expect(exportCoManagedPortableCore(db, f.customerPrincipal, packageId)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+});

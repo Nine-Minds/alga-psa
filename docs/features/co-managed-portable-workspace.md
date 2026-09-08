@@ -1,0 +1,33 @@
+# Portable workspace components
+
+The customer export is being assembled from explicit, versioned components. A component is not a complete workspace backup. The public export and restore flow must combine identities and configuration, operational records and histories, document blobs, and the [encrypted native vault](co-managed-portable-vault.md), then validate their cross-component references before delivery or restore.
+
+## Identity and directory component
+
+`packages/co-managed/src/portableCoreExport.ts` captures 16 explicit table projections in a repeatable-read database transaction. It derives the tenant from a tracked customer session, retains customer administration and directory/security read permissions, checks record-level narrowing and redactions, and checks session expiry before returning. Explicit departure and licensing lapse do not disable customer export.
+
+The component contains:
+
+- Workspace name and contact information.
+- Local users and reporting relationships, teams and memberships.
+- Role definitions, permission definitions, and local assignments.
+- Clients, locations, contacts, phone/email values and their custom type definitions.
+- Saved collaborator names and qualified historical identities already owned by the customer workspace.
+
+Column allowlists exclude password hashes, MFA secrets, login/account bindings, directory authentication metadata, platform billing identifiers, licenses and active sessions. No live relationship, allocation, MSP user row, or MSP-owned record is copied. Saved collaborator references are historical attribution; they do not provision an external login.
+
+The returned component identifies `kind: alga-workspace-core`, `version: 1`, package UUID, source workspace UUID, snapshot timestamp, records, declared relationships and a restore policy requiring fresh authentication and no sponsorship. Its SHA-256 covers the compact JSON payload before the checksum field is added. This checksum detects content changes; it is not a signature or proof of export authorization. The enclosing package still needs authenticated integrity and coordinated component capture.
+
+Validation requires the complete table/column roster, exactly one workspace owner, unique valid identities, valid reference identities and the presence of referenced records within the component. Document references remain explicit dependencies for the document component. Unknown columns cannot smuggle authentication state into this projection. The 100,000-row limit per table fails explicitly rather than truncating the result.
+
+Restore still needs an isolated destination, complete schema validation, identity mapping, destination permissions and paid entitlement where required, file import and atomic insertion. Reading this component does not execute any of those operations or restore live trust.
+
+## Focused validation
+
+From `server/`, run:
+
+```sh
+SECRETS_PATH=../secrets npm exec -- vitest run src/test/integration/coManagedBootstrap.integration.test.ts -t 'portable workspace core|portable vault export'
+```
+
+The selected tests use a disposable schema-only copy of the development database. They cover actual record projections, secret/trust exclusion, saved attribution, reference integrity and customer permission/session denial. The vault cases exercise its audit and post-encryption authority checks. They do not prove a complete isolated workspace restore.
