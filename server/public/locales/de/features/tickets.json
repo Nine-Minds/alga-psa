@@ -1804,6 +1804,9 @@
     }
   },
   "namedConversations": {
+    "finishNavigation": "Beenden oder verwerfen Sie Ihre aktuelle Bearbeitung, um die angeforderte Unterhaltung zu öffnen.",
+    "returnToCurrent": "Zur aktuellen Unterhaltung zurückkehren",
+    "returnToRequester": "Unterhaltung mit dem Anfragenden öffnen",
     "messageUnavailable": "Diese Nachricht ist in dieser Unterhaltung nicht verfügbar.",
     "latest": "Neueste Nachrichten anzeigen",
     "readFailed": "Diese Nachrichten konnten nicht als gelesen markiert werden."

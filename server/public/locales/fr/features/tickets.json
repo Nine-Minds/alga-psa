@@ -1804,6 +1804,9 @@
     }
   },
   "namedConversations": {
+    "finishNavigation": "Terminez ou annulez la modification en cours pour ouvrir la conversation demandée.",
+    "returnToCurrent": "Revenir à la conversation actuelle",
+    "returnToRequester": "Ouvrir la conversation avec le demandeur",
     "messageUnavailable": "Ce message est indisponible dans cette conversation.",
     "latest": "Afficher les derniers messages",
     "readFailed": "Impossible de marquer ces messages comme lus."

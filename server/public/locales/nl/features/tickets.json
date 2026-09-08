@@ -1804,6 +1804,9 @@
     }
   },
   "namedConversations": {
+    "finishNavigation": "Voltooi of annuleer je huidige bewerking om het gevraagde gesprek te openen.",
+    "returnToCurrent": "Terug naar het huidige gesprek",
+    "returnToRequester": "Gesprek met de aanvrager openen",
     "messageUnavailable": "Dit bericht is niet beschikbaar in dit gesprek.",
     "latest": "Nieuwste berichten weergeven",
     "readFailed": "Deze berichten konden niet als gelezen worden gemarkeerd."

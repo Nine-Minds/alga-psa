@@ -1946,6 +1946,9 @@
     }
   },
   "namedConversations": {
+    "finishNavigation": "Zakończ lub anuluj bieżącą edycję, aby otworzyć żądaną rozmowę.",
+    "returnToCurrent": "Wróć do bieżącej rozmowy",
+    "returnToRequester": "Otwórz rozmowę ze zgłaszającym",
     "messageUnavailable": "Ta wiadomość jest niedostępna w tej rozmowie.",
     "latest": "Pokaż najnowsze wiadomości",
     "readFailed": "Nie udało się oznaczyć tych wiadomości jako przeczytane."

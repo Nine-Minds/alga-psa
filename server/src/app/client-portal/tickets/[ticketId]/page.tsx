@@ -53,8 +53,12 @@ export default async function TicketPage({ params, searchParams }: TicketPagePro
   const { ticketId } = resolvedParams;
   const { t } = await getServerTranslation(undefined, 'features/tickets');
 
+  const query = await searchParams ?? {};
+  const requesterUrl = new URL(`/client-portal/tickets/${encodeURIComponent(ticketId)}`, 'https://alga.invalid');
+  if (typeof query.tenant === 'string') requesterUrl.searchParams.set('tenant', query.tenant);
+  const recovery = (query.conversation !== undefined || query.conversationStore !== undefined) && <a className="mt-2 inline-block underline" href={`${requesterUrl.pathname}${requesterUrl.search}`}>{t('namedConversations.returnToRequester', { defaultValue: 'Open Requester conversation' })}</a>;
+  const unavailable = t('namedConversations.unavailable', { defaultValue: 'This conversation is unavailable.' });
   try {
-    const query = await searchParams ?? {};
     if ((query.conversation !== undefined && typeof query.conversation !== 'string') ||
         (query.conversationStore !== undefined && (typeof query.conversationStore !== 'string' || !query.conversation)))
       throw new Error(t('namedConversations.unavailable', { defaultValue: 'This conversation is unavailable.' }));
@@ -62,7 +66,7 @@ export default async function TicketPage({ params, searchParams }: TicketPagePro
     if (!isReturnedActionError(ticketData) && query.conversationStore && query.conversationStore !== ticketData.tenant)
       throw new Error(t('namedConversations.unavailable', { defaultValue: 'This conversation is unavailable.' }));
     if (isReturnedActionError(ticketData)) {
-      const message = getErrorMessage(ticketData);
+      const message = query.conversation !== undefined ? unavailable : getErrorMessage(ticketData);
       logger.warn('[ClientPortal] Ticket details returned action error', {
         ticketId,
         error: message
@@ -72,6 +76,7 @@ export default async function TicketPage({ params, searchParams }: TicketPagePro
         <Alert id="ticket-error-message" variant="destructive">
           <AlertDescription>
             {t('messages.errorWithMessage', { message, defaultValue: 'Error: {{message}}' })}
+            {recovery}
           </AlertDescription>
         </Alert>
       );
@@ -83,7 +88,7 @@ export default async function TicketPage({ params, searchParams }: TicketPagePro
     return (
       <div className="w-full">
         <TicketDetailsContainer
-          key={`${ticketId}:${ticketData.selectedConversationId ?? "default"}`}
+          key={ticketId}
           ticketId={ticketId}
           ticketData={ticketData}
           statuses={statuses}
@@ -102,11 +107,12 @@ export default async function TicketPage({ params, searchParams }: TicketPagePro
       <Alert id="ticket-error-message" variant="destructive">
         <AlertDescription>
           {t('messages.errorWithMessage', {
-            message: error instanceof Error
+            message: query.conversation !== undefined || query.conversationStore !== undefined ? unavailable : error instanceof Error
               ? error.message
               : t('messages.loadError', { defaultValue: 'Failed to load ticket details' }),
             defaultValue: 'Error: {{message}}',
           })}
+          {recovery}
         </AlertDescription>
       </Alert>
     );

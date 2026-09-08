@@ -1804,6 +1804,9 @@
     }
   },
   "namedConversations": {
+    "finishNavigation": "Completa o annulla la modifica corrente per aprire la conversazione richiesta.",
+    "returnToCurrent": "Torna alla conversazione corrente",
+    "returnToRequester": "Apri la conversazione con il richiedente",
     "messageUnavailable": "Questo messaggio non è disponibile in questa conversazione.",
     "latest": "Mostra gli ultimi messaggi",
     "readFailed": "Impossibile contrassegnare questi messaggi come letti."

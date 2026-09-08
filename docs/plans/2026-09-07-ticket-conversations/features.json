@@ -170,7 +170,7 @@
   {
     "id": "F022",
     "description": "Preserve selected conversation through URL navigation and browser back/forward with opaque denied-link handling.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "5. UX — option C"
     ]

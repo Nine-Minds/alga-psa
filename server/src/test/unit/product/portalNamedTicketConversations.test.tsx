@@ -20,6 +20,7 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({ useTranslation: () => ({ t: (_k
 vi.mock('@alga-psa/ui', () => ({ getDateFnsLocale: () => undefined }));
 vi.mock('@alga-psa/ui/components', () => ({ ResponseStateBadge: () => null }));
 vi.mock('@alga-psa/ui/components/Dialog', () => ({ Dialog: ({ isOpen, children }: any) => isOpen ? <div>{children}</div> : null, DialogContent: ({ children }: any) => <div>{children}</div> }));
+vi.mock('@alga-psa/ui/components/Button', () => ({ Button: ({ children, variant, ...props }: any) => <button {...props}>{children}</button> }));
 vi.mock('@alga-psa/ui/components/Card', () => ({ Card: ({ children }: any) => <div>{children}</div> }));
 vi.mock('@alga-psa/ui/components/Badge', () => ({ Badge: ({ children }: any) => <span>{children}</span> }));
 vi.mock('@alga-psa/ui/components/UserAvatar', () => ({ default: () => null }));
@@ -52,6 +53,7 @@ const base = { tenant: 'owner', ticket_id: 'ticket', entered_at: '2026-01-01T00:
 function view(ticket: any = base) { return <TicketDetails ticketId={ticket.ticket_id} initialTicket={ticket} initialDocuments={[]} initialStatusOptions={[]} isOpen asStandalone onClose={() => {}} />; }
 const deferred = () => { let resolve!: (value: any) => void; const promise = new Promise<any>(done => { resolve = done; }); return { promise, resolve }; };
 beforeEach(() => {
+  window.history.replaceState(null, '', '/client-portal/tickets/ticket?tenant=portal-slug');
   vi.clearAllMocks(); mocks.query = ''; mocks.enabled = true; mocks.session = 'portal-session';
   mocks.read.mockImplementation(async (id, selected = 'default') => ({ ...base, ticket_id: id, selectedConversationId: selected }));
   mocks.post.mockResolvedValue(true); mocks.edit.mockResolvedValue(undefined); mocks.remove.mockResolvedValue(undefined);
@@ -127,4 +129,59 @@ it('focuses only a published message in the selected authorized portal history a
   expect(screen.getByLabelText('Focused message')).toBeEmptyDOMElement();
   mocks.enabled = false; mocks.query = 'conversation=default&message=visible'; mounted.rerender(view(ticket));
   expect(screen.getByLabelText('Focused message')).toBeEmptyDOMElement();
+});
+
+
+it('publishes selector navigation to the URL and follows back/forward while retaining an unfinished edit', async () => {
+  const rendered = render(view());
+  fireEvent.change(screen.getByLabelText('Conversation'), { target: { value: 'delivery' } });
+  await screen.findByText('delivery history');
+  expect(window.location.search).toContain('conversation=delivery'); expect(window.location.search).toContain('tenant=portal-slug');
+  mocks.query = window.location.search; rendered.rerender(view());
+  fireEvent.change(screen.getByLabelText('Reply'), { target: { value: 'Unsent delivery reply' } });
+  const count = mocks.read.mock.calls.length;
+  mocks.query = 'tenant=portal-slug'; rendered.rerender(view());
+  await screen.findByText('Finish or cancel your current edit to open the requested conversation.');
+  expect(screen.getByText('delivery history')).toBeInTheDocument(); expect(screen.getByLabelText('Reply')).toHaveValue('Unsent delivery reply');
+  expect(mocks.read).toHaveBeenCalledTimes(count);
+  fireEvent.change(screen.getByLabelText('Reply'), { target: { value: '' } });
+  await screen.findByText('default history');
+  mocks.query = 'tenant=portal-slug&conversation=delivery&conversationStore=owner'; rendered.rerender(view());
+  await screen.findByText('delivery history');
+  expect(screen.queryByText('Finish or cancel your current edit to open the requested conversation.')).toBeNull();
+});
+
+it('ignores stale navigation responses and leaves denied URL destinations opaque with a return path', async () => {
+  const pending = deferred(); const rendered = render(view());
+  mocks.read.mockReturnValueOnce(pending.promise);
+  mocks.query = 'conversation=delivery&conversationStore=owner'; rendered.rerender(view());
+  await waitFor(() => expect(mocks.read).toHaveBeenCalledWith('ticket', 'delivery'));
+  mocks.query = 'conversation=unknown&conversationStore=owner'; rendered.rerender(view());
+  mocks.read.mockResolvedValueOnce({ permissionError: 'Protected source title must not be shown' });
+  await act(async () => pending.resolve({ ...base, selectedConversationId: 'delivery' }));
+  await screen.findByText('This conversation is unavailable.');
+  expect(screen.queryByText('delivery history')).toBeNull(); expect(screen.getByText('default history')).toBeInTheDocument();
+  expect(document.body.textContent).not.toContain('Protected source title');
+  fireEvent.click(screen.getByRole('button', { name: 'Return to current conversation' }));
+  expect(window.location.search).toBe('?tenant=portal-slug');
+  expect(screen.queryByText('This conversation is unavailable.')).toBeNull();
+});
+
+it('does not load a foreign URL store or modify a surrounding page when selecting in a dialog', async () => {
+  mocks.query = 'conversation=delivery&conversationStore=foreign';
+  const rendered = render(view()); await screen.findByText('This conversation is unavailable.');
+  expect(mocks.read).not.toHaveBeenCalled();
+  rendered.unmount();
+  render(<TicketDetails ticketId="ticket" initialTicket={base as any} initialDocuments={[]} initialStatusOptions={[]} isOpen onClose={() => {}} />);
+  fireEvent.change(screen.getByLabelText('Conversation'), { target: { value: 'delivery' } });
+  await screen.findByText('delivery history'); expect(window.location.search).toBe('?tenant=portal-slug');
+});
+
+it('retries a denied navigation but rejects a response for another conversation before rendering it', async () => {
+  const rendered = render(view()); mocks.read.mockResolvedValueOnce({ ...base, selectedConversationId: 'unexpected', title: 'Wrong response' });
+  mocks.query = 'conversation=delivery&conversationStore=owner'; rendered.rerender(view());
+  await screen.findByText('This conversation is unavailable.');
+  expect(screen.queryByText('unexpected history')).toBeNull();
+  mocks.read.mockResolvedValueOnce({ ...base, selectedConversationId: 'delivery' });
+  fireEvent.click(screen.getByRole('button', { name: 'Retry' })); await screen.findByText('delivery history');
 });

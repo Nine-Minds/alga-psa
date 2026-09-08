@@ -1804,6 +1804,9 @@
     }
   },
   "namedConversations": {
+    "finishNavigation": "Finish or cancel your current edit to open the requested conversation.",
+    "returnToCurrent": "Return to current conversation",
+    "returnToRequester": "Open Requester conversation",
     "messageUnavailable": "This message is unavailable in this conversation.",
     "latest": "Show latest messages",
     "reply": "Reply",

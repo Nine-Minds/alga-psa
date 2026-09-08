@@ -1804,6 +1804,9 @@
     }
   },
   "namedConversations": {
+    "finishNavigation": "Conclua ou cancele a edição atual para abrir a conversa solicitada.",
+    "returnToCurrent": "Voltar à conversa atual",
+    "returnToRequester": "Abrir conversa com o solicitante",
     "messageUnavailable": "Esta mensagem não está disponível nesta conversa.",
     "latest": "Mostrar as mensagens mais recentes",
     "readFailed": "Não foi possível marcar estas mensagens como lidas."

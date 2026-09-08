@@ -4,6 +4,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSession } from 'next-auth/react';
+import { usePortalConversationNavigation } from './usePortalConversationNavigation';
+import { Button } from '@alga-psa/ui/components/Button';
 import { useConversationMessageTarget } from '@alga-psa/tickets/components/ticket/conversations/useConversationMessageFocus';
 import { useFeatureFlag } from '@alga-psa/ui/hooks/useFeatureFlag';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -297,18 +299,10 @@ function TicketDetailsContent({
       hasDraftContent(node.content) || hasDraftContent(node.children));
   };
   const unfinishedConversation = isEditing || hasDraftContent(newCommentContent);
-  const handleConversationChange = async (conversationId: string) => {
-    if (!namedConversationsEnabled || unfinishedConversation || conversationId === ticket.selectedConversationId || !beginConversationRequest()) return;
-    try {
-      const details = await getClientTicketDetails(ticketId, conversationId);
-      if (!mounted.current) return;
-      if (isReturnedActionError(details)) { handleReturnedActionError(details); return; }
-      setTicket(details); setCommentOverrides({}); setError(null);
-      setConversationVersion(value => value + 1);
-    } catch (error) {
-      if (mounted.current) handleError(error, t('namedConversations.unavailable', 'This conversation is unavailable.'));
-    } finally { endConversationRequest(); }
-  };
+  const navigation = usePortalConversationNavigation({ ticket, enabled: namedConversationsEnabled, bindUrl: asStandalone,
+    busy: conversationBusy, blocked: unfinishedConversation, begin: beginConversationRequest, end: endConversationRequest,
+    onLoaded: details => { setTicket(details); setCommentOverrides({}); setError(null); setConversationVersion(value => value + 1); },
+  });
 
   const handleNewCommentContentChange = (content: PartialBlock[]) => {
     setNewCommentContent(content);
@@ -894,8 +888,14 @@ function TicketDetailsContent({
                 <CustomSelect id="portal-ticket-conversation" label={t('namedConversations.portalSelector', 'Conversation')}
                   value={ticket.selectedConversationId ?? ''}
                   options={ticket.requesterConversations!.map(conversation => ({ value: conversation.conversationId, label: conversation.name }))}
-                  onValueChange={handleConversationChange} disabled={conversationBusy || unfinishedConversation} />
-                {unfinishedConversation && <p role="status" className="text-sm text-muted-foreground">{t('namedConversations.finishRequesterEdit', 'Finish or cancel your current edit before switching conversations.')}</p>}
+                  onValueChange={navigation.select} disabled={conversationBusy || unfinishedConversation} />
+                {unfinishedConversation && !navigation.pending && <p role="status" className="text-sm text-muted-foreground">{t('namedConversations.finishRequesterEdit', 'Finish or cancel your current edit before switching conversations.')}</p>}
+              </div>}
+              {navigation.pending && unfinishedConversation && <p role="status" className="mb-3 text-sm">{t('namedConversations.finishNavigation', 'Finish or cancel your current edit to open the requested conversation.')}</p>}
+              {navigation.unavailable && <div role="alert" className="mb-3 space-y-2">
+                <p>{t('namedConversations.unavailable', 'This conversation is unavailable.')}</p>
+                <Button id="portal-conversation-retry" variant="ghost" disabled={conversationBusy} onClick={navigation.retry}>{t('namedConversations.retry', 'Retry')}</Button>
+                <Button id="portal-conversation-return" variant="ghost" disabled={conversationBusy} onClick={navigation.returnToCurrent}>{t('namedConversations.returnToCurrent', 'Return to current conversation')}</Button>
               </div>}
               <fieldset disabled={conversationBusy} inert={conversationBusy} aria-busy={conversationBusy} className="min-w-0">
               {messageTarget && !focusedMessageId && <p role="alert" className="text-sm">{t('namedConversations.messageUnavailable', 'This message is unavailable in this conversation.')}</p>}

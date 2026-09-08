@@ -19,7 +19,7 @@ it('loads the selected requester conversation through the existing authorized ac
   const result = await page({ tenant: 'portal-slug', conversation: 'delivery', conversationStore: 'owner', message: 'message' });
   expect(mocks.read).toHaveBeenCalledExactlyOnceWith('ticket', 'delivery');
   expect(result.props.children.props.ticketData.selectedConversationId).toBe('delivery');
-  expect(result.props.children.key).toBe('ticket:delivery');
+  expect(result.props.children.key).toBe('ticket');
 });
 it.each([{ conversation: 'private', conversationStore: 'foreign' }, { conversation: ['one', 'two'] }, { conversationStore: 'owner' }])('does not render ticket content for inconsistent route scope %j', async query => {
   const result = await page(query);
@@ -31,4 +31,15 @@ it('keeps the action denial opaque and preserves normal default entry', async ()
   expect((await page({ conversation: 'private', conversationStore: 'owner' })).props.id).toBe('ticket-error-message');
   const result = await page({ tenant: 'portal-slug' });
   expect(result.props.children.props.ticketData.selectedConversationId).toBe('default');
+});
+
+it('keeps a stable ticket component across selections and offers an opaque recovery URL with portal context', async () => {
+  const normal = await page({ tenant: 'portal-slug' });
+  const selected = await page({ tenant: 'portal-slug', conversation: 'delivery' });
+  expect(normal.props.children.key).toBe(selected.props.children.key);
+  mocks.read.mockRejectedValueOnce(new Error('Protected private source metadata'));
+  const denied = await page({ tenant: 'portal-slug', conversation: 'private', message: 'hidden' });
+  expect(JSON.stringify(denied)).not.toContain('Protected private source metadata');
+  const recovery = denied.props.children.props.children.find((child: any) => child?.type === 'a');
+  expect(recovery.props.href).toBe('/client-portal/tickets/ticket?tenant=portal-slug');
 });

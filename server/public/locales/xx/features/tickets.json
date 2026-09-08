@@ -1804,6 +1804,9 @@
     }
   },
   "namedConversations": {
+    "finishNavigation": "11111",
+    "returnToCurrent": "11111",
+    "returnToRequester": "11111",
     "messageUnavailable": "11111",
     "latest": "11111",
     "reply": "11111",
