@@ -1,0 +1,818 @@
+[
+  {
+    "id": "F001",
+    "description": "Create named conversation containers qualified to one authoritative ticket independently of existing reply roots.",
+    "implemented": false,
+    "prdRefs": [
+      "4. Conversation and access model"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Guarantee exactly one default requester conversation per ticket, including concurrent initialization.",
+    "implemented": false,
+    "prdRefs": [
+      "4. Conversation and access model"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Allow additional requester-facing conversations without implicitly changing the default.",
+    "implemented": false,
+    "prdRefs": [
+      "4. Conversation and access model"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Represent audience, content ownership, transport, mailbox ownership and participant capability as independent attributes.",
+    "implemented": false,
+    "prdRefs": [
+      "4. Conversation and access model"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Preserve existing qualified message authors, root/parent relationships and explicit AI attribution inside a named conversation.",
+    "implemented": false,
+    "prdRefs": [
+      "4. Conversation and access model"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Keep organization-private conversation metadata and messages in the private owning store.",
+    "implemented": false,
+    "prdRefs": [
+      "4. Conversation and access model"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Provide native ticket conversation operations without requiring co-managed licensing or a relationship.",
+    "implemented": false,
+    "prdRefs": [
+      "4. Conversation and access model"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Reuse co-managed qualified resource, relationship, lifecycle, redaction and operational-write authorization for shared tickets.",
+    "implemented": false,
+    "prdRefs": [
+      "4. Conversation and access model"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Filter conversation names, snippets, counts and read results by both ticket permission and conversation audience.",
+    "implemented": false,
+    "prdRefs": [
+      "4. Conversation and access model"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Allow authorized technicians in an organization to collaborate without individual conversation invitations.",
+    "implemented": false,
+    "prdRefs": [
+      "4. Conversation and access model"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Exclude requester/portal users from vendor, Shared IT, private internal and AI conversations.",
+    "implemented": false,
+    "prdRefs": [
+      "4. Conversation and access model"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Reauthorize writes, downloads, asynchronous completions and delivery against current grants and session.",
+    "implemented": false,
+    "prdRefs": [
+      "4. Conversation and access model"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Clear inaccessible visible content and private draft state after resource, identity or permission changes.",
+    "implemented": false,
+    "prdRefs": [
+      "4. Conversation and access model"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Require explicit authorized disclosure of existing history/files when widening an organizational audience.",
+    "implemented": false,
+    "prdRefs": [
+      "4. Conversation and access model"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Reuse cross-store disclosure transfer semantics without treating a private store flag change as a transfer.",
+    "implemented": false,
+    "prdRefs": [
+      "4. Conversation and access model"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Preserve private conversation ownership through handoffs, relationship termination and existing archive/export/deletion operations.",
+    "implemented": false,
+    "prdRefs": [
+      "4. Conversation and access model"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Render the persistent conversation navigator above contact details in the existing ticket grid left column.",
+    "implemented": false,
+    "prdRefs": [
+      "5. UX \u2014 option C"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Pin Requester first and display supporting conversation names with audience subtitles.",
+    "implemented": false,
+    "prdRefs": [
+      "5. UX \u2014 option C"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Show active selection, unread/attention, Open/Done and the current author draft indicator on accessible rows.",
+    "implemented": false,
+    "prdRefs": [
+      "5. UX \u2014 option C"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Keep a requester-only ticket compact without precreating empty vendor or AI conversations.",
+    "implemented": false,
+    "prdRefs": [
+      "5. UX \u2014 option C"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Open Requester for normal entry and honor authorized conversation/message deep links.",
+    "implemented": false,
+    "prdRefs": [
+      "5. UX \u2014 option C"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Preserve selected conversation through URL navigation and browser back/forward with opaque denied-link handling.",
+    "implemented": false,
+    "prdRefs": [
+      "5. UX \u2014 option C"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "Provide a named conversation creation flow with explicit transport, permitted audience and validated email recipients.",
+    "implemented": false,
+    "prdRefs": [
+      "5. UX \u2014 option C"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "Provide equivalent audience/navigation behavior in entry layout, embedded ticket drawers and narrow layouts.",
+    "implemented": false,
+    "prdRefs": [
+      "5. UX \u2014 option C"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "Use existing theme, localization, focus/keyboard conventions and stable interaction IDs for new controls.",
+    "implemented": false,
+    "prdRefs": [
+      "5. UX \u2014 option C"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "Render All activity with authorized conversation labels, resolution markers and replies routed to their original composer.",
+    "implemented": false,
+    "prdRefs": [
+      "5. UX \u2014 option C"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "Show active audience and transport in the center panel and distinguish Send, Post and Ask AI.",
+    "implemented": false,
+    "prdRefs": [
+      "5. UX \u2014 option C"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "Persist editable drafts per qualified author and destination, including text-only composition and selected files.",
+    "implemented": false,
+    "prdRefs": [
+      "5. UX \u2014 option C"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "Restore a draft on conversation switching and reload while preventing another author from seeing it.",
+    "implemented": false,
+    "prdRefs": [
+      "5. UX \u2014 option C"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "Separate editable autosave revision handling from immutable attachment/publication reservations.",
+    "implemented": false,
+    "prdRefs": [
+      "5. UX \u2014 option C"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "Publish prepared content and attachments atomically through existing canonical comment operations.",
+    "implemented": false,
+    "prdRefs": [
+      "5. UX \u2014 option C"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "Preview exact From, To/CC, body and selected files before external sending.",
+    "implemented": false,
+    "prdRefs": [
+      "5. UX \u2014 option C"
+    ]
+  },
+  {
+    "id": "F033",
+    "description": "Reject stale audience/envelope/draft intent at publication and preserve the draft for refreshed review.",
+    "implemented": false,
+    "prdRefs": [
+      "5. UX \u2014 option C"
+    ]
+  },
+  {
+    "id": "F034",
+    "description": "Keep failed or uncertain publications recoverable using a stable operation identity without duplicate messages or sends.",
+    "implemented": false,
+    "prdRefs": [
+      "5. UX \u2014 option C"
+    ]
+  },
+  {
+    "id": "F035",
+    "description": "Preserve existing authorized comment edits, deletion, reactions, reply relationships and chronological-order preferences.",
+    "implemented": false,
+    "prdRefs": [
+      "5. UX \u2014 option C"
+    ]
+  },
+  {
+    "id": "F036",
+    "description": "Use the ticket-owning workspace mailbox for requester email and the originating organization mailbox for vendor email.",
+    "implemented": false,
+    "prdRefs": [
+      "6. Email, recipients and notification behavior"
+    ]
+  },
+  {
+    "id": "F037",
+    "description": "Keep mailbox identity stable across assignment and responsibility changes.",
+    "implemented": false,
+    "prdRefs": [
+      "6. Email, recipients and notification behavior"
+    ]
+  },
+  {
+    "id": "F038",
+    "description": "Require explicit mailbox sending authority independently of Shared IT read/post permission.",
+    "implemented": false,
+    "prdRefs": [
+      "6. Email, recipients and notification behavior"
+    ]
+  },
+  {
+    "id": "F039",
+    "description": "Allow intentional authorized mailbox selection/change and block unavailable or revoked senders while preserving drafts.",
+    "implemented": false,
+    "prdRefs": [
+      "6. Email, recipients and notification behavior"
+    ]
+  },
+  {
+    "id": "F040",
+    "description": "Derive proposed reply-all recipients from the latest accepted sender and To/CC with routing addresses and duplicates removed.",
+    "implemented": false,
+    "prdRefs": [
+      "6. Email, recipients and notification behavior"
+    ]
+  },
+  {
+    "id": "F041",
+    "description": "Highlight new correspondents and allow recipient editing in the normal email review.",
+    "implemented": false,
+    "prdRefs": [
+      "6. Email, recipients and notification behavior"
+    ]
+  },
+  {
+    "id": "F042",
+    "description": "Store immutable historical sent envelopes separately from editable next-message recipient defaults.",
+    "implemented": false,
+    "prdRefs": [
+      "6. Email, recipients and notification behavior"
+    ]
+  },
+  {
+    "id": "F043",
+    "description": "Ensure email recipients gain no portal, ticket, follower or historical-message access merely by being added.",
+    "implemented": false,
+    "prdRefs": [
+      "6. Email, recipients and notification behavior"
+    ]
+  },
+  {
+    "id": "F044",
+    "description": "Send only the explicitly reviewed body, quotes and selected attachments without automatically appending conversation or ticket history.",
+    "implemented": false,
+    "prdRefs": [
+      "6. Email, recipients and notification behavior"
+    ]
+  },
+  {
+    "id": "F045",
+    "description": "Correlate replies to qualified ticket, named conversation, provider/mailbox and originating organization using existing accepted artifacts.",
+    "implemented": false,
+    "prdRefs": [
+      "6. Email, recipients and notification behavior"
+    ]
+  },
+  {
+    "id": "F046",
+    "description": "Accept validly correlated vendor replies from newly introduced colleagues within the same conversation.",
+    "implemented": false,
+    "prdRefs": [
+      "6. Email, recipients and notification behavior"
+    ]
+  },
+  {
+    "id": "F047",
+    "description": "Route ambiguous, contradictory or untrusted side replies to protected review without a subject-only requester fallback.",
+    "implemented": false,
+    "prdRefs": [
+      "6. Email, recipients and notification behavior"
+    ]
+  },
+  {
+    "id": "F048",
+    "description": "Allow an authorized reviewer to choose the intended destination for an unresolved reply without bypassing admission.",
+    "implemented": false,
+    "prdRefs": [
+      "6. Email, recipients and notification behavior"
+    ]
+  },
+  {
+    "id": "F049",
+    "description": "Deduplicate provider/message retries and attachment imports so accepted delivery produces one message and effect set.",
+    "implemented": false,
+    "prdRefs": [
+      "6. Email, recipients and notification behavior"
+    ]
+  },
+  {
+    "id": "F050",
+    "description": "Preserve accepted envelope evidence and sanitized content through existing inbound infrastructure.",
+    "implemented": false,
+    "prdRefs": [
+      "6. Email, recipients and notification behavior"
+    ]
+  },
+  {
+    "id": "F051",
+    "description": "Maintain local and co-managed legacy requester/reply-token compatibility when adding conversation correlation.",
+    "implemented": false,
+    "prdRefs": [
+      "6. Email, recipients and notification behavior"
+    ]
+  },
+  {
+    "id": "F052",
+    "description": "Persist per-qualified-viewer conversation read cursors and clear unread state only for the opened permitted conversation.",
+    "implemented": false,
+    "prdRefs": [
+      "6. Email, recipients and notification behavior"
+    ]
+  },
+  {
+    "id": "F053",
+    "description": "Provide follow/unfollow as an internal notification preference independent of access and email recipients.",
+    "implemented": false,
+    "prdRefs": [
+      "6. Email, recipients and notification behavior"
+    ]
+  },
+  {
+    "id": "F054",
+    "description": "Notify currently authorized followers and assignee of relevant human messages with exact conversation links and existing preferences.",
+    "implemented": false,
+    "prdRefs": [
+      "6. Email, recipients and notification behavior"
+    ]
+  },
+  {
+    "id": "F055",
+    "description": "Produce no external delivery or follower notification from draft saves, share preparation or synthesis generation.",
+    "implemented": false,
+    "prdRefs": [
+      "6. Email, recipients and notification behavior"
+    ]
+  },
+  {
+    "id": "F056",
+    "description": "Prevent AI token/answer fanout to external recipients or automatic follower email.",
+    "implemented": false,
+    "prdRefs": [
+      "6. Email, recipients and notification behavior"
+    ]
+  },
+  {
+    "id": "F057",
+    "description": "Classify side/internal/AI activity distinctly from qualifying requester replies and customer-visible responses.",
+    "implemented": false,
+    "prdRefs": [
+      "6. Email, recipients and notification behavior"
+    ]
+  },
+  {
+    "id": "F058",
+    "description": "Prevent private activity from leaking through generic events, public counters/timestamps, snippets or notification payloads.",
+    "implemented": false,
+    "prdRefs": [
+      "6. Email, recipients and notification behavior"
+    ]
+  },
+  {
+    "id": "F059",
+    "description": "Provide independent Open/Done conversation state without automatically changing ticket status.",
+    "implemented": false,
+    "prdRefs": [
+      "7. Conversation state and existing reopen policy"
+    ]
+  },
+  {
+    "id": "F060",
+    "description": "Reopen and mark attention on an accepted substantive external conversation reply while preserving existing noise protections.",
+    "implemented": false,
+    "prdRefs": [
+      "7. Conversation state and existing reopen policy"
+    ]
+  },
+  {
+    "id": "F061",
+    "description": "Allow ticket resolution with an informative nonblocking warning about open external conversations.",
+    "implemented": false,
+    "prdRefs": [
+      "7. Conversation state and existing reopen policy"
+    ]
+  },
+  {
+    "id": "F062",
+    "description": "Add the board side-conversation reply opt-in defaulting off without enabling the master reopen policy.",
+    "implemented": false,
+    "prdRefs": [
+      "7. Conversation state and existing reopen policy"
+    ]
+  },
+  {
+    "id": "F063",
+    "description": "Reuse existing enabled, cutoff, status fallback, acknowledgment, auto-reply and rate-limit policy when the side option is on.",
+    "implemented": false,
+    "prdRefs": [
+      "7. Conversation state and existing reopen policy"
+    ]
+  },
+  {
+    "id": "F064",
+    "description": "Preserve legacy requester and internal-technician reply behavior and cutoff-before-suppression precedence.",
+    "implemented": false,
+    "prdRefs": [
+      "7. Conversation state and existing reopen policy"
+    ]
+  },
+  {
+    "id": "F065",
+    "description": "Create policy-required late-reply follow-ups with equivalent qualified side-conversation audience, ownership and envelope.",
+    "implemented": false,
+    "prdRefs": [
+      "7. Conversation state and existing reopen policy"
+    ]
+  },
+  {
+    "id": "F066",
+    "description": "Prevent side traffic from implicitly reopening bundles or starting/satisfying/resetting unrelated response and SLA obligations.",
+    "implemented": false,
+    "prdRefs": [
+      "7. Conversation state and existing reopen policy"
+    ]
+  },
+  {
+    "id": "F067",
+    "description": "Use canonical lifecycle effects for a parent reopen explicitly authorized by the existing board policy.",
+    "implemented": false,
+    "prdRefs": [
+      "7. Conversation state and existing reopen policy"
+    ]
+  },
+  {
+    "id": "F068",
+    "description": "Offer selective sharing from an authorized published vendor, internal, requester or AI message to a same-ticket destination.",
+    "implemented": false,
+    "prdRefs": [
+      "8. Selective sharing and whole-conversation synthesis"
+    ]
+  },
+  {
+    "id": "F069",
+    "description": "Default sharing to the requester composer while supporting other existing or newly created permitted conversations.",
+    "implemented": false,
+    "prdRefs": [
+      "8. Selective sharing and whole-conversation synthesis"
+    ]
+  },
+  {
+    "id": "F070",
+    "description": "Prepare plain editable text under the sending technician identity with optional quote formatting.",
+    "implemented": false,
+    "prdRefs": [
+      "8. Selective sharing and whole-conversation synthesis"
+    ]
+  },
+  {
+    "id": "F071",
+    "description": "Start source attachments unselected and copy only explicitly chosen permitted files into destination publication.",
+    "implemented": false,
+    "prdRefs": [
+      "8. Selective sharing and whole-conversation synthesis"
+    ]
+  },
+  {
+    "id": "F072",
+    "description": "Keep sharing in an author-private draft until an explicit reviewed destination Send/Post.",
+    "implemented": false,
+    "prdRefs": [
+      "8. Selective sharing and whole-conversation synthesis"
+    ]
+  },
+  {
+    "id": "F073",
+    "description": "Protect qualified source lineage and expose source links/names only to independent authorized source readers.",
+    "implemented": false,
+    "prdRefs": [
+      "8. Selective sharing and whole-conversation synthesis"
+    ]
+  },
+  {
+    "id": "F074",
+    "description": "Exclude protected provenance from external email, requester portal and unauthorized destination metadata.",
+    "implemented": false,
+    "prdRefs": [
+      "8. Selective sharing and whole-conversation synthesis"
+    ]
+  },
+  {
+    "id": "F075",
+    "description": "Keep published shared copies independent of later source edits/deletion and preserve source access/membership.",
+    "implemented": false,
+    "prdRefs": [
+      "8. Selective sharing and whole-conversation synthesis"
+    ]
+  },
+  {
+    "id": "F076",
+    "description": "Protect an existing destination draft from silent replacement by share or synthesis.",
+    "implemented": false,
+    "prdRefs": [
+      "8. Selective sharing and whole-conversation synthesis"
+    ]
+  },
+  {
+    "id": "F077",
+    "description": "Synthesize the complete permitted published source conversation rather than only a selected message.",
+    "implemented": false,
+    "prdRefs": [
+      "8. Selective sharing and whole-conversation synthesis"
+    ]
+  },
+  {
+    "id": "F078",
+    "description": "Select intended destination/audience before generation and support a new requester-directed conversation with explicit recipients.",
+    "implemented": false,
+    "prdRefs": [
+      "8. Selective sharing and whole-conversation synthesis"
+    ]
+  },
+  {
+    "id": "F079",
+    "description": "Permit deliberate private-source to outward-draft transformation while keeping prompts and generation artifacts author-private.",
+    "implemented": false,
+    "prdRefs": [
+      "8. Selective sharing and whole-conversation synthesis"
+    ]
+  },
+  {
+    "id": "F080",
+    "description": "Generate audience-appropriate editable text and record the source revision/cursor.",
+    "implemented": false,
+    "prdRefs": [
+      "8. Selective sharing and whole-conversation synthesis"
+    ]
+  },
+  {
+    "id": "F081",
+    "description": "Exclude unpublished, deleted, redacted and inaccessible source content from synthesis input.",
+    "implemented": false,
+    "prdRefs": [
+      "8. Selective sharing and whole-conversation synthesis"
+    ]
+  },
+  {
+    "id": "F082",
+    "description": "Show source-change availability without automatically replacing the draft.",
+    "implemented": false,
+    "prdRefs": [
+      "8. Selective sharing and whole-conversation synthesis"
+    ]
+  },
+  {
+    "id": "F083",
+    "description": "Regenerate only on explicit replacement confirmation and protect newer edits from stale asynchronous completion.",
+    "implemented": false,
+    "prdRefs": [
+      "8. Selective sharing and whole-conversation synthesis"
+    ]
+  },
+  {
+    "id": "F084",
+    "description": "Handle complete-source context limits explicitly through bounded full synthesis or an honest unavailable result.",
+    "implemented": false,
+    "prdRefs": [
+      "8. Selective sharing and whole-conversation synthesis"
+    ]
+  },
+  {
+    "id": "F085",
+    "description": "Preserve source and draft on failure/cancel/unavailable AI and never publish or send through generation alone.",
+    "implemented": false,
+    "prdRefs": [
+      "8. Selective sharing and whole-conversation synthesis"
+    ]
+  },
+  {
+    "id": "F086",
+    "description": "Reuse existing AI provider/entitlement behavior while leaving manual conversations and sharing available without AI.",
+    "implemented": false,
+    "prdRefs": [
+      "9. AI participation and context"
+    ]
+  },
+  {
+    "id": "F087",
+    "description": "Allow explicit optional AI invocation and record qualified human prompts and attributed AI replies in internal history.",
+    "implemented": false,
+    "prdRefs": [
+      "9. AI participation and context"
+    ]
+  },
+  {
+    "id": "F088",
+    "description": "Support mixed human/AI internal discussion without granting autonomous external-send or ticket-mutation capability.",
+    "implemented": false,
+    "prdRefs": [
+      "9. AI participation and context"
+    ]
+  },
+  {
+    "id": "F089",
+    "description": "Build private AI input from currently permitted own-organization, requester and shared context only.",
+    "implemented": false,
+    "prdRefs": [
+      "9. AI participation and context"
+    ]
+  },
+  {
+    "id": "F090",
+    "description": "Build Shared IT AI input only from context allowed for both organizations regardless of the invoking users private access.",
+    "implemented": false,
+    "prdRefs": [
+      "9. AI participation and context"
+    ]
+  },
+  {
+    "id": "F091",
+    "description": "Display the actual permitted source conversation list and allow the user to narrow it.",
+    "implemented": false,
+    "prdRefs": [
+      "9. AI participation and context"
+    ]
+  },
+  {
+    "id": "F092",
+    "description": "Filter source bodies, filenames, snippets, citations and linked-resource retrieval before model inference.",
+    "implemented": false,
+    "prdRefs": [
+      "9. AI participation and context"
+    ]
+  },
+  {
+    "id": "F093",
+    "description": "Treat source content as untrusted data and bind any existing retrieval tools to the same audience/resource boundary.",
+    "implemented": false,
+    "prdRefs": [
+      "9. AI participation and context"
+    ]
+  },
+  {
+    "id": "F094",
+    "description": "Reauthorize output/citation visibility on completion and discard output invalidated by grants, audience or identity changes.",
+    "implemented": false,
+    "prdRefs": [
+      "9. AI participation and context"
+    ]
+  },
+  {
+    "id": "F095",
+    "description": "Map legacy public, internal and Shared IT history to corresponding named containers without one sidebar row per reply root.",
+    "implemented": false,
+    "prdRefs": [
+      "11. Compatibility, migration and release"
+    ]
+  },
+  {
+    "id": "F096",
+    "description": "Preserve reply roots/parents, author attribution, resolution markers, files and scheduled/publication state during migration.",
+    "implemented": false,
+    "prdRefs": [
+      "11. Compatibility, migration and release"
+    ]
+  },
+  {
+    "id": "F097",
+    "description": "Initialize defaults and route legacy writes idempotently under concurrent creation and retries.",
+    "implemented": false,
+    "prdRefs": [
+      "11. Compatibility, migration and release"
+    ]
+  },
+  {
+    "id": "F098",
+    "description": "Keep strict handling of inconsistent legacy audience data instead of broadening its visibility.",
+    "implemented": false,
+    "prdRefs": [
+      "11. Compatibility, migration and release"
+    ]
+  },
+  {
+    "id": "F099",
+    "description": "Update tenant-owned persistence, qualified/distributed keys, file cleanup and ownership-aware archive/export/deletion selectors for new records.",
+    "implemented": false,
+    "prdRefs": [
+      "11. Compatibility, migration and release"
+    ]
+  },
+  {
+    "id": "F100",
+    "description": "Guard newly introduced UI and side-policy controls with release-v1-6-feature while leaving routes, APIs and backend logic unflagged.",
+    "implemented": false,
+    "prdRefs": [
+      "11. Compatibility, migration and release"
+    ]
+  },
+  {
+    "id": "F101",
+    "description": "Keep flag-off legacy UI functional without flattening newly created side/private/AI content into requester history.",
+    "implemented": false,
+    "prdRefs": [
+      "11. Compatibility, migration and release"
+    ]
+  },
+  {
+    "id": "F102",
+    "description": "Provide minimal requester conversation navigation in the existing portal while preserving its access model.",
+    "implemented": false,
+    "prdRefs": [
+      "11. Compatibility, migration and release"
+    ]
+  }
+]

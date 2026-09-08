@@ -1,0 +1,482 @@
+[
+  {
+    "id": "T001",
+    "description": "Real migrated PostgreSQL: initialize a native requester ticket and a co-managed ticket; create additional named conversations and messages across existing reply roots; verify qualified ownership, exactly one default, correct FK associations and replay-safe defaults under concurrent initialization.",
+    "implemented": false,
+    "type": "integration",
+    "featureIds": [
+      "F001",
+      "F002",
+      "F003",
+      "F004",
+      "F005",
+      "F006",
+      "F007",
+      "F008",
+      "F097"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Real migrated PostgreSQL guard: attempt foreign ticket/store IDs, unapproved relationship scope, redacted content and expired/lapsed writes; assert denial with no rows, files or outbox side effects and no leaked private metadata.",
+    "implemented": false,
+    "type": "integration",
+    "featureIds": [
+      "F006",
+      "F008",
+      "F009",
+      "F012",
+      "F058"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Real migrated PostgreSQL audience matrix: native technician, both co-managed organizations, requester and unrelated principal list/read requester, Shared IT and both organizations private conversations; assert exact row/count/title/file filtering and no co-managed license requirement for native operations.",
+    "implemented": false,
+    "type": "integration",
+    "featureIds": [
+      "F006",
+      "F007",
+      "F008",
+      "F009",
+      "F010",
+      "F011",
+      "F102"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Real migrated PostgreSQL: widen a private conversation through authorized disclosure; reject unauthorized/stale confirmation; verify transfer/ownership of history and files, source protection, and that a mere edit or follow does not disclose content.",
+    "implemented": false,
+    "type": "integration",
+    "featureIds": [
+      "F014",
+      "F015",
+      "F053"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "Real migrated PostgreSQL: hand back responsibility, end a relationship and exercise existing archive/export/deletion selection over conversations, private drafts, AI artifacts, lineage and files; verify each organization receives only owned/permitted data and no private public-event side effects.",
+    "implemented": false,
+    "type": "integration",
+    "featureIds": [
+      "F016",
+      "F058",
+      "F099"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Actual application: requester-only native ticket opens compact Requester by default; create two side conversations; switch, type, reload and use back/forward; verify active labels, per-author drafts, unread/Done indicators and exact message deep links.",
+    "implemented": false,
+    "type": "browser",
+    "featureIds": [
+      "F017",
+      "F018",
+      "F019",
+      "F020",
+      "F021",
+      "F022",
+      "F023",
+      "F028",
+      "F029",
+      "F059"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "Actual application: compare MSP, customer IT and requester/portal views on a co-managed ticket; test denied deep links and permission loss during an in-flight read; no inaccessible titles/snippets/drafts may appear or return after the switch.",
+    "implemented": false,
+    "type": "browser",
+    "featureIds": [
+      "F009",
+      "F011",
+      "F012",
+      "F013",
+      "F021",
+      "F022",
+      "F102"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "Actual application: inspect option C at desktop/narrow widths, grid/entry and embedded drawer; exercise keyboard selection/dialog focus, dark/light themes and localized copy; preserve comment ordering, authorized edits/reactions and resolution markers.",
+    "implemented": false,
+    "type": "browser",
+    "featureIds": [
+      "F017",
+      "F024",
+      "F025",
+      "F035"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Actual application All activity: mixed authorized messages show conversation labels chronologically; replying opens its source composer with a preserved draft; the aggregate view never sends to multiple conversations.",
+    "implemented": false,
+    "type": "browser",
+    "featureIds": [
+      "F026",
+      "F035"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "Real migrated PostgreSQL: save text-only and file drafts, restore only for the qualified author/destination, deny another author and stale revision, and prove autosave never mutates an immutable publication reservation or creates email/outbox delivery.",
+    "implemented": false,
+    "type": "integration",
+    "featureIds": [
+      "F012",
+      "F028",
+      "F029",
+      "F030",
+      "F055"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "Real migrated PostgreSQL: stage attachments and atomically publish a message; inject incomplete upload, conflicting operation ID, concurrent exact retries and lost acknowledgment; assert one message/file set/outbox intent with recoverable draft state.",
+    "implemented": false,
+    "type": "integration",
+    "featureIds": [
+      "F030",
+      "F031",
+      "F034",
+      "F071"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "Actual application: review From, To/CC, edited body and selected files; change recipients/audience/mailbox grant before submission; require refreshed review or denial, preserve draft, and confirm one explicit publication using the reviewed intent.",
+    "implemented": false,
+    "type": "browser",
+    "featureIds": [
+      "F027",
+      "F032",
+      "F033",
+      "F038",
+      "F039",
+      "F041",
+      "F044",
+      "F072"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "Real migrated PostgreSQL and captured email transport: requester uses owner mailbox and vendor uses originating mailbox through assignment/handoff; Shared IT read/post alone cannot send; explicit delegation allows it; revoked/disabled sender and queued grant revocation prevent delivery.",
+    "implemented": false,
+    "type": "integration",
+    "featureIds": [
+      "F012",
+      "F036",
+      "F037",
+      "F038",
+      "F039"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "Test email infrastructure: send independent requester and two vendor messages, then reply with correct provider/header artifacts; each body/file returns only to its originating conversation and correct organizational store. Assert no appended ticket history or cross-recipient broadcast.",
+    "implemented": false,
+    "type": "email",
+    "featureIds": [
+      "F036",
+      "F044",
+      "F045",
+      "F050",
+      "F051"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "Test email infrastructure: valid vendor reply introduces a new sender/CC; deduplicate latest reply-all and remove own routing addresses; highlight/edit additions before next send; confirm immutable old envelopes and no portal/access/follower grants.",
+    "implemented": false,
+    "type": "email",
+    "featureIds": [
+      "F040",
+      "F041",
+      "F042",
+      "F043",
+      "F046"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "Test email infrastructure guard: conflicting headers, wrong mailbox, forged/invalid token and ticket-number-only side replies enter protected review with no requester insertion; authorized resolution admits one chosen destination without bypassing audience or sender admission.",
+    "implemented": false,
+    "type": "email",
+    "featureIds": [
+      "F009",
+      "F012",
+      "F045",
+      "F047",
+      "F048"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "Real migrated PostgreSQL: replay the same provider delivery and concurrent import after partial attachment failure; verify one accepted message, one attachment set and deduplicated allowed notification effects.",
+    "implemented": false,
+    "type": "integration",
+    "featureIds": [
+      "F031",
+      "F034",
+      "F049",
+      "F050",
+      "F054"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "Real migrated PostgreSQL with captured notifications: follow/unfollow, reassign, revoke access and receive a private vendor reply; resolve subscribers/assignee at delivery time, omit unauthorized users/public counters, link exact conversation and keep read cursors viewer-local.",
+    "implemented": false,
+    "type": "integration",
+    "featureIds": [
+      "F009",
+      "F012",
+      "F052",
+      "F053",
+      "F054",
+      "F058"
+    ]
+  },
+  {
+    "id": "T019",
+    "description": "Capture external/internal delivery across draft save, share preparation, AI invocation/output, internal Post and human reviewed destination Send; assert only intended human destination actions produce external delivery and AI does not spam followers.",
+    "implemented": false,
+    "type": "integration",
+    "featureIds": [
+      "F055",
+      "F056",
+      "F057",
+      "F072",
+      "F087",
+      "F088"
+    ]
+  },
+  {
+    "id": "T020",
+    "description": "Actual application: mark vendor Done and resolve ticket despite open external work; a substantive reply with side option off reopens only vendor, sets its unread attention and preserves parent status; verify opening another conversation does not clear that attention.",
+    "implemented": false,
+    "type": "browser",
+    "featureIds": [
+      "F019",
+      "F052",
+      "F059",
+      "F060",
+      "F061",
+      "F062"
+    ]
+  },
+  {
+    "id": "T021",
+    "description": "Real migrated PostgreSQL board-policy matrix: master disabled, side disabled, both enabled; inside cutoff including exact boundary, explicit/default status, and beyond cutoff; assert legacy requester/internal-technician behavior and side results including qualified follow-up audience/files/envelope.",
+    "implemented": false,
+    "type": "integration",
+    "featureIds": [
+      "F051",
+      "F062",
+      "F063",
+      "F064",
+      "F065",
+      "F067"
+    ]
+  },
+  {
+    "id": "T022",
+    "description": "Real migrated PostgreSQL email policy regression: automated/bounce/ack suppression and rate limiting preserve existing ordering (cutoff before suppression); suppressed side traffic cannot reopen through bundle child reply or mark requester response fulfilled.",
+    "implemented": false,
+    "type": "integration",
+    "featureIds": [
+      "F057",
+      "F060",
+      "F063",
+      "F064",
+      "F066"
+    ]
+  },
+  {
+    "id": "T023",
+    "description": "Real migrated PostgreSQL co-managed obligations: vendor/internal/AI work never starts/satisfies/resets unrelated requester/customer/MSP SLA; a genuine board-authorized reopen uses canonical lifecycle events and correct organization clocks.",
+    "implemented": false,
+    "type": "integration",
+    "featureIds": [
+      "F057",
+      "F066",
+      "F067"
+    ]
+  },
+  {
+    "id": "T024",
+    "description": "Actual application: share one vendor message as editable text and then as quote to existing Requester; select one source attachment explicitly; guard an existing destination draft; edit/review/send and verify source audience/membership unchanged.",
+    "implemented": false,
+    "type": "browser",
+    "featureIds": [
+      "F032",
+      "F068",
+      "F069",
+      "F070",
+      "F071",
+      "F072",
+      "F075",
+      "F076"
+    ]
+  },
+  {
+    "id": "T025",
+    "description": "Real migrated PostgreSQL plus email/portal projections: publish a private-source snapshot outward; verify only explicitly selected content/files are copied, source lineage is qualified and visible only to source readers, and later source edits/deletion do not rewrite the destination copy.",
+    "implemented": false,
+    "type": "integration",
+    "featureIds": [
+      "F012",
+      "F071",
+      "F073",
+      "F074",
+      "F075"
+    ]
+  },
+  {
+    "id": "T026",
+    "description": "Actual application: prepare a share and complete-conversation synthesis into new internal and new requester-directed destinations; require name, intended audience and explicit email recipients; creation/generation sends nothing and leaves an author-private editable composer.",
+    "implemented": false,
+    "type": "browser",
+    "featureIds": [
+      "F003",
+      "F023",
+      "F068",
+      "F069",
+      "F072",
+      "F076",
+      "F077",
+      "F078",
+      "F079"
+    ]
+  },
+  {
+    "id": "T027",
+    "description": "Real migrated PostgreSQL with captured AI request: synthesize all published permitted source messages/replies into a private requester draft, excluding deleted/redacted/unpublished content; private prompt/source metadata never enters the destination public stream or ordinary Shared IT context.",
+    "implemented": false,
+    "type": "integration",
+    "featureIds": [
+      "F073",
+      "F074",
+      "F077",
+      "F079",
+      "F080",
+      "F081",
+      "F090",
+      "F092"
+    ]
+  },
+  {
+    "id": "T028",
+    "description": "Actual application with controlled AI responses: edit a synthesis draft, receive new source content, decline then accept regeneration; simulate a late response, generation failure and cancellation; preserve edits and draft privacy, never send automatically.",
+    "implemented": false,
+    "type": "browser",
+    "featureIds": [
+      "F028",
+      "F033",
+      "F076",
+      "F080",
+      "F082",
+      "F083",
+      "F085"
+    ]
+  },
+  {
+    "id": "T029",
+    "description": "AI adapter: exercise full-source input beyond a single model context using a controlled provider; verify complete bounded processing or explicit unavailable result, accurate source cursor and no silently truncated complete-summary claim.",
+    "implemented": false,
+    "type": "integration",
+    "featureIds": [
+      "F077",
+      "F080",
+      "F084",
+      "F085"
+    ]
+  },
+  {
+    "id": "T030",
+    "description": "Real migrated PostgreSQL with captured model/tool inputs: compare private and Shared IT invocations from both organizations, source narrowing and linked-resource restrictions; forbidden body/filename/snippet/citation data never reaches inference even when personally readable elsewhere.",
+    "implemented": false,
+    "type": "integration",
+    "featureIds": [
+      "F008",
+      "F009",
+      "F089",
+      "F090",
+      "F091",
+      "F092"
+    ]
+  },
+  {
+    "id": "T031",
+    "description": "AI adapter and real permission reads: prompt injection in source material cannot expand context/tools or trigger email/status/recipient mutations; permission/audience revocation before completion discards output and citations without reintroducing cleared UI data.",
+    "implemented": false,
+    "type": "integration",
+    "featureIds": [
+      "F012",
+      "F013",
+      "F056",
+      "F088",
+      "F093",
+      "F094"
+    ]
+  },
+  {
+    "id": "T032",
+    "description": "Actual application: explicitly invoke AI in private and mixed Shared IT discussion, observe attributed stored human/AI messages and source picker; provider/entitlement unavailable leaves manual conversation, selective sharing and drafts usable.",
+    "implemented": false,
+    "type": "browser",
+    "featureIds": [
+      "F027",
+      "F086",
+      "F087",
+      "F088",
+      "F091"
+    ]
+  },
+  {
+    "id": "T033",
+    "description": "Real migrated PostgreSQL: migrate representative legacy public/internal/Shared IT roots and scheduled content with reply tokens/files/resolution markers; repeat migration and concurrent legacy writes; preserve all relationships/audiences without one named conversation per root or default broadening.",
+    "implemented": false,
+    "type": "integration",
+    "featureIds": [
+      "F001",
+      "F002",
+      "F005",
+      "F051",
+      "F095",
+      "F096",
+      "F097",
+      "F098"
+    ]
+  },
+  {
+    "id": "T034",
+    "description": "Actual application flag matrix: new conversation and side-policy UI hidden when release flag off, legacy surfaces still work and exclude side/private/AI content; direct backend/actions remain authorized and operational independently of the release flag.",
+    "implemented": false,
+    "type": "browser",
+    "featureIds": [
+      "F009",
+      "F024",
+      "F100",
+      "F101",
+      "F102"
+    ]
+  },
+  {
+    "id": "T035",
+    "description": "Real migrated PostgreSQL failure/guard: retained data blocks destructive rollback, malformed/mixed audience metadata cannot be promoted to requester/shared visibility, and new draft/file cleanup honors existing ownership and unpublished-file boundaries.",
+    "implemented": false,
+    "type": "integration",
+    "featureIds": [
+      "F006",
+      "F012",
+      "F031",
+      "F098",
+      "F099"
+    ]
+  }
+]
