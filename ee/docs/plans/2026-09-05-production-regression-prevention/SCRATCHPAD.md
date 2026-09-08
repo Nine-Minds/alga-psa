@@ -2675,3 +2675,12 @@ Follow-up browser guard rejects newly executed specs unless added to permanent c
 ### Require recorded component source and build identity
 
 Found release digest accepted missing per-component source/build metadata despite R4 requiring both. Added behavioral matrix for server/email/worker missing or malformed source SHA, build provider/runId and optional attempt. Baseline accepted missing revision (red); digest/promotion now reject. Explicitly distinct component revisions remain supported and all recorded metadata is hashed. Kubernetes-to-promotion fixture now supplies disclosed synthetic build records. Focused release/runtime suites pass66tests; runbook updated. Evidence: evidence/host-release-build-metadata.json. No claim of authenticated build provenance or actual CI smoke production; F020 stays open. No Docker builds. Publication approval remains pending.
+
+
+### Actual production publisher located and audited
+
+Repository search found only fresh-install CI builds and manual worker/dev push helpers. Asked publisher location asynchronously, then resolved it from ee/docs/premise/talos-release-model.md: nm-kube-config/alga-psa/workflows/composite/alga-psa-build-migrate-deploy.yaml. The local external checkout exists at0efc640af5ad5ae869b877dd1be7c3835a2bb2f1. Relevant workflow files are clean; unrelated user changes exist elsewhere and were not touched. Publisher-location question is resolved without further user input.
+
+Critical checked-out configuration gap: alga-psa-ci-cd run-tests(805) merely echoes success; npm test is commented. verify-images(238) accepts run-tests success or skip; existing-image path bypasses new-build test task. Composite preview-smoke-test(414) requests root and ignores health/version failure. DAG has build→deploy preview→smoke→manual approval→traffic promotion→appliance OCI publication, establishing concrete place for exact-source readiness plus manifest-bound real business smoke. App, email and worker have separate build publishers. Evidence: evidence/production-publisher-source-audit.json with file hashes and clean-file checks.
+
+This is local source evidence, not proof these templates are deployed unchanged. No external edits, live cluster reads, Docker builds or publication occurred. Next work must adapt the real Argo boundary rather than treating GitHub fresh-install tar builds as production publication. Preserve manual approval and user changes. F001/F020 remain incomplete pending actual wiring and observed execution. Publication approval remains pending.
