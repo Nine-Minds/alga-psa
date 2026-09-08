@@ -1032,7 +1032,8 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
       const updatedEvent: IScheduleEntry = {
         ...event,
         scheduled_start: lastValidStart,
-        scheduled_end: lastValidEnd
+        scheduled_end: lastValidEnd,
+        is_all_day: false,
       };
 
       // Update the event locally for immediate feedback
@@ -1057,6 +1058,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
         ...event,
         scheduled_start: lastValidStart,
         scheduled_end: lastValidEnd,
+        is_all_day: false,
         assigned_user_ids: event.assigned_user_ids,
         ...(event.entry_id.includes('_') ? { original_entry_id: event.original_entry_id } : {})
       };

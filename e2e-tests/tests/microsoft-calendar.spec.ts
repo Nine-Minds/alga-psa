@@ -125,6 +125,7 @@ if (process.env.E2E_EDITION !== 'enterprise') {
         expect(await database('schedule_entries').where(entryScope).first()).toMatchObject({ title });
         const assertStoredDates = async () => {
           const entry = await database('schedule_entries').where(entryScope).first();
+          expect(entry.is_all_day).toBe(allDay);
           expect(new Date(entry.scheduled_start).toISOString()).toBe(start.toISOString());
           expect(new Date(entry.scheduled_end).toISOString()).toBe(end.toISOString());
         };
@@ -132,6 +133,7 @@ if (process.env.E2E_EDITION !== 'enterprise') {
         await page.goto('/msp/schedule');
         const calendarEvent = (text: string) => page.locator('.rbc-event').filter({ hasText: text }).first();
         await expect(calendarEvent(title)).toBeVisible();
+        if (allDay) await expect(page.locator('.rbc-event').filter({ hasText: title })).toHaveCount(1);
 
         // A persistent provider failure makes the local save/error/retry transition
         // observable even when multiple background handlers attempt synchronization.
@@ -186,6 +188,10 @@ if (process.env.E2E_EDITION !== 'enterprise') {
         await expect.poll(async () => (await database('schedule_entries').where(entryScope).first())?.title, { timeout: 60000 }).toBe(vendorTitle);
         await page.goto('/msp/schedule');
         await expect(calendarEvent(vendorTitle)).toBeVisible();
+        if (allDay) {
+          await assertStoredDates();
+          await expect(page.locator('.rbc-event').filter({ hasText: vendorTitle })).toHaveCount(1);
+        }
         await emulators.action('msgraph', 'calendar-change', { changeType: 'deleted', eventId: created.event.id });
         await expect.poll(async () => (await database('schedule_entries').where(entryScope)).length, { timeout: 60000 }).toBe(0);
         expect(await database('calendar_event_mappings').where(mappingQuery)).toEqual([]);

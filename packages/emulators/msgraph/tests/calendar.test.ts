@@ -70,11 +70,13 @@ it('preserves an all-day exclusive end through a title-only update', async () =>
   expect(await response.json()).toMatchObject({ ...boundaries, isAllDay: true, subject: 'Renamed all-day event' });
 });
 
-it('round-trips all-day dates through the real Microsoft adapter and can convert back to timed', async () => {
+it.each(['integrations', 'enterprise'] as const)('round-trips all-day dates through the real %s Microsoft adapter and can convert back to timed', async implementation => {
   const previous = process.env.MICROSOFT_GRAPH_BASE_URL;
   process.env.MICROSOFT_GRAPH_BASE_URL = `${base}/v1.0`;
   try {
-    const { MicrosoftCalendarAdapter } = await import('../../../integrations/src/services/calendar/providers/MicrosoftCalendarAdapter');
+    const { MicrosoftCalendarAdapter } = implementation === 'enterprise'
+      ? await import('../../../../ee/packages/calendar/src/lib/services/calendar/providers/MicrosoftCalendarAdapter')
+      : await import('../../../integrations/src/services/calendar/providers/MicrosoftCalendarAdapter');
     const adapter = new MicrosoftCalendarAdapter({
       id: 'calendar-contract', tenant: 'isolated-calendar-contract', provider_type: 'microsoft',
       provider_config: { accessToken: token, refreshToken: 'unused', tokenExpiresAt: new Date(Date.now() + 3600_000).toISOString() },

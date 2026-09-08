@@ -382,7 +382,7 @@ describe('ScheduleCalendar refreshes its events after a Teams meeting is created
   });
 
   it('supplies local all-day grid dates and persists exclusive UTC dates after resize and drop', async () => {
-    const entry = baseEntry({ entry_id: 'all-day-grid', scheduled_start: new Date('2026-10-25T00:00:00Z'),
+    const entry = baseEntry({ entry_id: 'all-day-grid', is_all_day: true, scheduled_start: new Date('2026-10-25T00:00:00Z'),
       scheduled_end: new Date('2026-10-26T00:00:00Z') });
     serverEvents = [entry];
     render(<ScheduleCalendar />);

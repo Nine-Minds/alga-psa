@@ -20,12 +20,21 @@ if (process.env.UPGRADE_DB_BACKEND === 'citus') {
   if (!process.env.UPGRADE_DB_PORT || !appRole?.rolpassword) throw new Error('Citus destination and source app credential are required');
   const target = knex({ client: 'pg', connection: { host: process.env.DB_HOST, port: Number(process.env.UPGRADE_DB_PORT),
     user: process.env.DB_USER_ADMIN, password: process.env.DB_PASSWORD_ADMIN, database: 'postgres' } });
+  let phase = 'connect';
   try {
+    await target.raw('SELECT 1');
+    phase = 'render-role-ddl';
     // Fresh CI service only: never overwrite an existing role or print its hash.
     const { rows } = await target.raw('SELECT format(?::text, ?::text, ?::text) AS ddl',
       ['CREATE ROLE %I LOGIN PASSWORD %L', 'app_user', appRole.rolpassword]);
+    phase = 'execute-role-ddl';
     await target.raw(rows[0].ddl);
-  } catch { throw new Error('Cannot provision application role on fresh Citus upgrade service'); }
+  } catch (error) {
+    // Error messages can embed the credential-bearing DDL; expose only the
+    // protocol/connection code so CI failures remain diagnosable without it.
+    const code = /^[A-Z0-9_]{3,32}$/.test(String(error?.code)) ? error.code : 'UNKNOWN';
+    throw new Error(`Cannot provision application role on fresh Citus upgrade service (${phase}: ${code})`);
+  }
   finally { await target.destroy(); }
 }
 const child = spawnSync(process.execPath, ['node_modules/tsx/dist/cli.mjs', 'scripts/run-supported-upgrade.ts'], {

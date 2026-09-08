@@ -977,7 +977,7 @@ jobs:
           docker-compose -p alga-e2e-test up --no-build --no-deps -d upgrade-citus
           ready=false
           for _attempt in $(seq 1 60); do
-            if docker-compose -p alga-e2e-test exec -T upgrade-citus pg_isready -U postgres; then ready=true; break; fi
+            if docker-compose -p alga-e2e-test exec -T upgrade-citus pg_isready -h 127.0.0.1 -U postgres; then ready=true; break; fi
             sleep 2
           done
           test "$ready" = true
@@ -1065,6 +1065,7 @@ jobs:
           const workspace = process.env.GITHUB_WORKSPACE;
           const volumes = ['packages', 'ee'].map(part => ({ type: 'bind', source: `${workspace}/${part}`, target: `/app/${part}`, read_only: true }));
           volumes.push({ type: 'bind', source: `${workspace}/e2e-tests/harness/start-teams-development-ci.mjs`, target: '/app/start-teams-development-ci.mjs', read_only: true });
+          volumes.push({ type: 'bind', source: `${workspace}/e2e-tests/harness/check-teams-development-auth.mjs`, target: '/app/check-teams-development-auth.mjs', read_only: true });
           const server = { entrypoint: ['node', '/app/start-teams-development-ci.mjs'], command: [], volumes,
             environment: { NODE_ENV: 'development', TEAMS_EMULATOR_MODE: 'true', NEXT_PUBLIC_FORCE_FEATURE_FLAGS: 'release-v1-6-feature:true', NEXT_DIST_DIR: '.next/teams-development',
               DB_HOST: 'postgres', DB_PORT: '5432', DB_NAME_SERVER: 'server', REDIS_PREFIX: 'teams-development:',
@@ -1085,9 +1086,22 @@ jobs:
           done
           test "$ready" = true
 
+      - name: Check Teams source authentication configuration
+        id: teams_auth_preflight
+        if: ${{ !cancelled() && steps.teams_development_server.outcome == 'success' }}
+        timeout-minutes: 2
+        env:
+          E2E_DATABASE_ISOLATED: 'true'
+          E2E_USER_EMAIL: ${{ steps.capture_creds.outputs.e2e_user_email }}
+          E2E_USER_PASSWORD: ${{ steps.capture_creds.outputs.e2e_user_password }}
+        run: |
+          docker-compose -p alga-e2e-test exec -T \
+            -e E2E_DATABASE_ISOLATED -e E2E_USER_EMAIL -e E2E_USER_PASSWORD server \
+            node --import /app/node_modules/tsx/dist/loader.mjs /app/check-teams-development-auth.mjs
+
       - name: Run Teams development execution gate
         id: teams_development_browser
-        if: ${{ !cancelled() && steps.teams_development_server.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.teams_development_server.outcome == 'success' && steps.teams_auth_preflight.outcome == 'success' }}
         timeout-minutes: 10
         env:
           E2E_TEAMS_DEVELOPMENT: 'true'

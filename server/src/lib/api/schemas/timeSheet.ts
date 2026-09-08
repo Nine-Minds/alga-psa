@@ -284,6 +284,7 @@ const baseScheduleEntrySchema = z.object({
   assigned_user_ids: z.array(uuidSchema).optional(),
   notes: z.string().optional(),
   is_private: z.boolean().optional().default(false),
+  is_all_day: z.boolean().optional(),
   recurrence_pattern: z.string().optional()
 });
 
@@ -314,6 +315,7 @@ export const scheduleEntryResponseSchema = z.object({
   work_item_type: z.string().nullable(),
   notes: z.string().nullable(),
   is_private: z.boolean(),
+  is_all_day: z.boolean(),
   status: z.string(),
   recurrence_pattern: z.string().nullable(),
   created_by: uuidSchema,

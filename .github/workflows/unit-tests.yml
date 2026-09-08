@@ -193,6 +193,34 @@ jobs:
           NODE_OPTIONS: '--max-old-space-size=8192'
       - name: Verify per-file worker isolation
         run: node --test scripts/tests/vitest-worker-isolation.test.mjs
+      - name: Exercise calendar boundaries in non-UTC timezones
+        working-directory: ./server
+        run: |
+          mkdir -p ../test-results/calendar-timezones
+          for zone in Europe/Berlin America/Los_Angeles; do
+            report=${zone//\//-}
+            TZ="$zone" npx vitest run \
+              ../packages/scheduling/tests/entryPopup.startEndSync.test.tsx \
+              ../packages/scheduling/tests/calendarDateDisplay.test.ts \
+              ../packages/scheduling/tests/scheduleCalendar.teamsMeetingRefresh.test.tsx \
+              ../packages/integrations/src/utils/calendar/eventMapping.allDaySemantics.test.ts \
+              ../packages/integrations/src/utils/calendar/eventMapping.timedTimezone.test.ts \
+              --poolOptions.forks.singleFork=false --maxWorkers=2 \
+              --reporter=default --reporter=json --outputFile.json="../test-results/calendar-timezones/$report.json"
+          done
+        env:
+          NODE_OPTIONS: '--max-old-space-size=8192'
+          SKIP_DB_TESTS: '1'
+          DB_USER_ADMIN: ''
+          DB_PASSWORD_ADMIN: ''
+      - name: Upload calendar timezone execution
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: calendar-timezone-execution
+          path: test-results/calendar-timezones/
+          if-no-files-found: error
+          retention-days: 7
       # A shared worker stalled during InvoicePreviewPanel module import after
       # 20 minutes of successful files, before the test timeout could start.
       # Recycle the process between files; retain serial execution and the same

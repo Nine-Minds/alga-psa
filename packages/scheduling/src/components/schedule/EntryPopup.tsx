@@ -104,6 +104,18 @@ interface EntryPopupProps {
   initialWorkItem?: Omit<IWorkItem, 'tenant'> | null;
 }
 
+// All-day recurrence dates share the entry's UTC calendar-date representation.
+// Date pickers work in local calendar dates, so convert only at the UI boundary.
+function recurrenceDateForDisplay(value: Date, allDay: boolean): Date {
+  const date = new Date(value);
+  return allDay ? new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()) : date;
+}
+
+function recurrenceDateForStorage(value: Date): Date {
+  const date = new Date(value);
+  return new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+}
+
 const EntryPopup: React.FC<EntryPopupProps> = ({
   event,
   slot,
@@ -377,8 +389,9 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
         if (event.recurrence_pattern) {
           setRecurrencePattern({
             ...event.recurrence_pattern,
-            startDate: new Date(event.recurrence_pattern.startDate),
-            endDate: event.recurrence_pattern.endDate ? new Date(event.recurrence_pattern.endDate) : undefined,
+            startDate: recurrenceDateForDisplay(event.recurrence_pattern.startDate, displayDates.is_all_day === true),
+            endDate: event.recurrence_pattern.endDate
+              ? recurrenceDateForDisplay(event.recurrence_pattern.endDate, displayDates.is_all_day === true) : undefined,
           });
         }
 
@@ -890,10 +903,16 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
     }
 
     // Prepare entry data
+    const storedDates = calendarStoredDates(entryData, event);
+    const storedPattern = recurrencePattern && storedDates.is_all_day ? {
+      ...recurrencePattern,
+      startDate: recurrenceDateForStorage(recurrencePattern.startDate),
+      endDate: recurrencePattern.endDate ? recurrenceDateForStorage(recurrencePattern.endDate) : undefined,
+    } : recurrencePattern;
     const savedEntryData = {
       ...entryData,
-      ...calendarStoredDates(entryData, event),
-      recurrence_pattern: recurrencePattern || null,
+      ...storedDates,
+      recurrence_pattern: storedPattern || null,
       work_item_id: entryData.work_item_type === 'ad_hoc' ? null : entryData.work_item_id,
       status: entryData.status || 'scheduled',
       assigned_user_ids: Array.isArray(entryData.assigned_user_ids) ? entryData.assigned_user_ids : [],

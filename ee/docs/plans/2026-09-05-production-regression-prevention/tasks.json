@@ -1,0 +1,81 @@
+{
+  "version": 1,
+  "tasks": [
+    {
+      "id": "R001",
+      "title": "Review all-day calendar, recurrence and API changes",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "calendar_review",
+      "notes": "Reviewed calendar changes and fixed recurrence editor date boundaries. Two regressions failed before; 11 component cases pass in UTC, Berlin and Los Angeles. Coordinator reviewed diff. Current full browser rerun remains R005."
+    },
+    {
+      "id": "R002",
+      "title": "Diagnose Citus supported-upgrade role provisioning failure",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "qbo_protocol",
+      "notes": "Investigation complete; actual CI cause remains unknown. Recorded service timestamps rule out startup race for observed run. Coordinator added fixed phase labels and sanitized error codes; next CI execution must establish cause."
+    },
+    {
+      "id": "R003",
+      "title": "Verify mobile editor generator portability and reproducibility",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "stripe_protocol",
+      "notes": "Generator reproducibility and runtime portability verified, including mobile-versus-root shadowing, nested dependency and rejection of root fallback. Current-source CI still required."
+    },
+    {
+      "id": "R004",
+      "title": "Diagnose Teams development CI sign-in failure",
+      "status": "in_progress",
+      "dependsOn": [],
+      "owner": "qbo_protocol",
+      "notes": "Added actual-source read-only auth preflight and 5 real-crypto behavioral tests. Root wired preflight before Teams browser; CI must still diagnose actual failure."
+    },
+    {
+      "id": "R005",
+      "title": "Integrate reviewed changes and validate current source",
+      "status": "in_progress",
+      "dependsOn": [
+        "R001",
+        "R002",
+        "R003"
+      ],
+      "owner": "coordinator",
+      "notes": "Review and native validation can proceed while Teams diagnosis continues; retain unresolved CI requirements explicitly."
+    },
+    {
+      "id": "R006",
+      "title": "Locate existing authoritative tax policy for pending TODOs",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "stripe_protocol",
+      "notes": "No authoritative policy resolves three TODOs. Repository describes international jurisdiction rules as future, defines taxable brackets rather than caps, and has conflicting invoice tax dates. Pending user decisions remain required."
+    },
+    {
+      "id": "R007",
+      "title": "Verify registration of new calendar behavioral tests",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "calendar_review",
+      "notes": "Actual runners collect 64 focused unit cases, 42 DB recurrence cases and 4 Microsoft browser cases. Coordinator added targeted Berlin/Los Angeles CI runs; 39 cases pass in each zone."
+    },
+    {
+      "id": "R008",
+      "title": "Apply and test calendar semantics through actual enterprise mapper",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "calendar_review",
+      "notes": "Actual EE mapper now shares strict datetime parser and explicit provenance semantics. Both mapper implementations run the same behavioral contracts: 7 pre-fix failures; 32 cases pass in each of three timezones."
+    },
+    {
+      "id": "R009",
+      "title": "Apply and test Graph all-day HTTP contract through enterprise adapter",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "stripe_protocol",
+      "notes": "Real HTTP test reproduced EE createEvent Graph400; both adapters now run the same date contract. All45 Graph calendarcases pass."
+    }
+  ]
+}
