@@ -364,6 +364,15 @@
   },
   "coManaged": {
     "provisioning": {
+      "cancelSetup": "Anuluj konfigurację",
+      "cancelTitle": "Anulować konfigurację przestrzeni?",
+      "cancelDescription": "Spowoduje to usunięcie nieprzejętej przestrzeni klienta. Stanowiska pozostaną zarezerwowane do zakończenia czyszczenia.",
+      "confirmCancel": "Usuń przestrzeń i anuluj",
+      "keepSetup": "Zachowaj konfigurację",
+      "cancelError": "Nie udało się anulować konfiguracji. Odśwież, aby sprawdzić, czy klient przejął przestrzeń.",
+      "cleanupPending": "Czyszczenie oczekuje. Stanowiska pozostają zarezerwowane do jego zakończenia.",
+      "cleanupFailed": "Czyszczenie nie zostało zakończone. Stanowiska pozostają zarezerwowane; możesz bezpiecznie ponowić próbę.",
+      "retryCleanup": "Ponów czyszczenie",
       "invitationExpired": "Zaproszenie administratora wygasło. Wyślij nowy link do tego samego administratora.",
       "resendInvitation": "Wyślij ponownie zaproszenie administratora"
     },

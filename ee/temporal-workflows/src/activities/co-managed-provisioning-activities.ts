@@ -1,9 +1,11 @@
 import { Context } from '@temporalio/activity';
 import { getAdminConnection } from '@alga-psa/db/admin.js';
 import { tenantDb } from '@alga-psa/db';
-import { recordCoManagedProvisioningFailure, deliverCoManagedInitialAdministratorInvitation } from '@alga-psa/co-managed';
+import { recordCoManagedProvisioningFailure, deliverCoManagedInitialAdministratorInvitation, runCoManagedProvisioningCleanup, recordCoManagedProvisioningCleanupFailure } from '@alga-psa/co-managed';
 import { sendTeamInvitationEmail } from '@alga-psa/email';
 import { bootstrapCoManagedWorkspace } from '../db/co-managed-provisioning-operations.js';
+import { deleteCoManagedProvisioningRows } from '../db/co-managed-provisioning-cleanup.js';
+import { TENANT_TABLES_DELETION_ORDER } from './tenant-deletion-activities.js';
 
 export interface CoManagedProvisioningWorkflowInput { sponsorTenant: string; operationId: string }
 
@@ -49,4 +51,17 @@ async function deliverInvitation(input: CoManagedProvisioningWorkflowInput): Pro
       teamMemberName: invitation.administratorName, tenantName: invitation.workspaceName, roleName: 'Admin',
       invitedByName: owner?.client_name || 'Your IT provider', inviteLink: link.toString(), expirationTime: '24 hours' });
   });
+}
+
+/** Cancellation is a durable database state, not a Temporal cancellation signal.
+ * Existing bootstrap/invitation workers observe it under the same admission locks. */
+export async function cleanupCoManagedCustomer(input: CoManagedProvisioningWorkflowInput): Promise<void> {
+  const db = await getAdminConnection();
+  try {
+    await runCoManagedProvisioningCleanup(db, input.sponsorTenant, input.operationId,
+      (trx, operation) => deleteCoManagedProvisioningRows(trx, operation, TENANT_TABLES_DELETION_ORDER));
+  } catch (error) {
+    await recordCoManagedProvisioningCleanupFailure(db, input.sponsorTenant, input.operationId).catch(() => undefined);
+    throw error;
+  }
 }

@@ -12,7 +12,7 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@alga-psa/ui/components/Table';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getCoManagedProvisioningOptions, getCoManagedProvisioningStatus, changeCoManagedWorkspaceSeats } from '@/lib/actions/coManagedActions';
-import { provisionCoManagedWorkspaceAction, retryCoManagedProvisioningAction } from '@enterprise/lib/actions/coManagedProvisioningActions';
+import { provisionCoManagedWorkspaceAction, retryCoManagedProvisioningAction, cancelCoManagedProvisioningAction } from '@enterprise/lib/actions/coManagedProvisioningActions';
 
 type Request = Omit<CoManagedProvisioningRequest, 'sponsorTenant' | 'requestedBy'>;
 const emptyForm = (): Omit<Request, 'operationId'> => ({ clientId: '', workspaceName: '', seats: 1,
@@ -32,6 +32,7 @@ export default function CoManagedProvisioningPanel({ available, canGrow, initial
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState<Request | null>(null);
   const [allocation, setAllocation] = useState<{ operationId: string; seats: number; workspaceName: string } | null>(null);
+  const [cancellation, setCancellation] = useState<{ operationId: string; workspaceName: string } | null>(null);
   const [allocatedSeats, setAllocatedSeats] = useState(1);
   const autoOpened = useRef(false);
   const operationId = useRef<string | null>(null);
@@ -98,6 +99,17 @@ export default function CoManagedProvisioningPanel({ available, canGrow, initial
     } catch { setError(t('coManaged.provisioning.resizeError')); }
     finally { setBusy(false); }
   };
+  const cancelSetup = async () => {
+    if (!cancellation) return;
+    setBusy(true); setError(null);
+    try {
+      const result = await cancelCoManagedProvisioningAction(cancellation.operationId);
+      setCancellation(null);
+      if (!result.enqueued) setError(t('coManaged.provisioning.workerUnavailable'));
+      await reload(); await onChanged();
+    } catch { setError(t('coManaged.provisioning.cancelError')); }
+    finally { setBusy(false); }
+  };
   const valid = form.clientId && form.workspaceName.trim() && form.administrator.firstName.trim() && form.administrator.lastName.trim() &&
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.administrator.email) && form.escalationBoardId && Number.isInteger(form.seats) && form.seats >= 1 && form.seats <= available;
   return <Card><CardHeader><CardTitle>{t('coManaged.provisioning.title')}</CardTitle></CardHeader><CardContent className="space-y-4">
@@ -116,6 +128,7 @@ export default function CoManagedProvisioningPanel({ available, canGrow, initial
       <TableBody>{status.items.map(item => <TableRow key={item.operationId}>
         <TableCell>{item.workspaceName ?? t('coManaged.provisioning.workspace')}</TableCell><TableCell>{item.administratorEmail}</TableCell><TableCell>{item.seats}</TableCell>
         <TableCell>{t(`coManaged.provisioning.states.${item.state}`)}
+          {item.state === 'cleanup_requested' && <p className="text-muted-foreground">{t(item.cleanupFailed ? 'coManaged.provisioning.cleanupFailed' : 'coManaged.provisioning.cleanupPending')}</p>}
           {item.state === 'pending_acceptance' && <p className="text-muted-foreground">{t(item.invitationExpired ? 'coManaged.provisioning.invitationExpired' : item.invitationSent
             ? 'coManaged.provisioning.invitationSent' : item.deliveryFailed ? 'coManaged.provisioning.deliveryFailed' : 'coManaged.provisioning.invitationPending')}</p>}
         </TableCell>
@@ -124,7 +137,9 @@ export default function CoManagedProvisioningPanel({ available, canGrow, initial
           {status.canManage && item.canChangeSeats && <Button id={`co-managed-resize-${item.operationId}`} variant="outline" disabled={busy}
             onClick={() => { setAllocation({ operationId: item.operationId, seats: item.seats, workspaceName: item.workspaceName ?? t('coManaged.provisioning.workspace') }); setAllocatedSeats(item.seats); setError(null); }}>{t('coManaged.provisioning.resize')}</Button>}
           {status.canManage && item.canRetry && <Button id={`co-managed-retry-${item.operationId}`} variant="outline" disabled={busy}
-            onClick={() => void retry(item.operationId)}>{t(item.invitationExpired ? 'coManaged.provisioning.resendInvitation' : 'coManaged.provisioning.retry')}</Button>}
+            onClick={() => void retry(item.operationId)}>{t(item.state === 'cleanup_requested' ? 'coManaged.provisioning.retryCleanup' : item.invitationExpired ? 'coManaged.provisioning.resendInvitation' : 'coManaged.provisioning.retry')}</Button>}
+          {status.canManage && item.canCancel && <Button id={`co-managed-cancel-${item.operationId}`} variant="outline" disabled={busy}
+            onClick={() => setCancellation({ operationId: item.operationId, workspaceName: item.workspaceName ?? t('coManaged.provisioning.workspace') })}>{t('coManaged.provisioning.cancelSetup')}</Button>}
         </div></TableCell>
       </TableRow>)}</TableBody>
     </Table></div>}
@@ -167,6 +182,13 @@ export default function CoManagedProvisioningPanel({ available, canGrow, initial
           {t(submitted ? 'coManaged.provisioning.retry' : 'coManaged.provisioning.submit')}
         </Button>
       </form>
+    </Dialog>
+    <Dialog id="co-managed-cancel-setup" isOpen={Boolean(cancellation)} onClose={() => { if (!busy) setCancellation(null); }} title={t('coManaged.provisioning.cancelTitle')}>
+      {cancellation && <div className="space-y-4">
+        <p>{cancellation.workspaceName}</p><p>{t('coManaged.provisioning.cancelDescription')}</p>
+        <div className="flex gap-2"><Button id="co-managed-confirm-cancel" disabled={busy} onClick={() => void cancelSetup()}>{t('coManaged.provisioning.confirmCancel')}</Button>
+          <Button id="co-managed-keep-setup" variant="outline" disabled={busy} onClick={() => setCancellation(null)}>{t('coManaged.provisioning.keepSetup')}</Button></div>
+      </div>}
     </Dialog>
     <Dialog id="co-managed-resize-allocation" isOpen={Boolean(allocation)} onClose={() => { if (!busy) setAllocation(null); }} title={t('coManaged.provisioning.resize')}>
       {allocation && <div className="space-y-4">

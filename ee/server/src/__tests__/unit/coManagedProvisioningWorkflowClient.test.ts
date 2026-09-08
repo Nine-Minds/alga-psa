@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { startCoManagedProvisioningWorkflow } from '../../lib/co-managed/workflowClient';
+import { startCoManagedProvisioningWorkflow, startCoManagedProvisioningCleanupWorkflow } from '../../lib/co-managed/workflowClient';
 const mocks = vi.hoisted(() => ({ connect: vi.fn(), close: vi.fn(), start: vi.fn() }));
 vi.mock('@temporalio/client', () => ({ Connection: { connect: mocks.connect },
   Client: class { workflow = { start: mocks.start }; } }));
@@ -24,4 +24,13 @@ describe('co-managed worker scheduling', () => {
     expect(await startCoManagedProvisioningWorkflow({ sponsorTenant: 'sponsor', operationId: 'operation' })).toEqual({ enqueued: false });
     expect(mocks.close).toHaveBeenCalledOnce();
   });
+});
+
+it('schedules cleanup independently of a still-running bootstrap with its own stable operation identity', async () => {
+  const input = { sponsorTenant: 'sponsor', operationId: 'operation' };
+  expect(await startCoManagedProvisioningCleanupWorkflow(input)).toEqual({ enqueued: true });
+  expect(mocks.start).toHaveBeenCalledWith('coManagedProvisioningCleanupWorkflow', expect.objectContaining({
+    workflowId: 'co-managed-provisioning-cleanup:sponsor:operation', workflowIdReusePolicy: 'ALLOW_DUPLICATE', args: [input],
+  }));
+  expect(mocks.close).toHaveBeenCalledOnce();
 });

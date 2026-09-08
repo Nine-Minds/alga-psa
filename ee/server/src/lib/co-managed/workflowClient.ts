@@ -1,6 +1,6 @@
 /** Schedule only an already-reserved operation. Durable database progress is
  * authoritative even after Temporal history or provider deduplication expires. */
-export async function startCoManagedProvisioningWorkflow(input: {
+async function scheduleCoManagedProvisioningWorkflow(workflow: 'coManagedProvisioningWorkflow' | 'coManagedProvisioningCleanupWorkflow', input: {
   sponsorTenant: string; operationId: string;
 }): Promise<{ enqueued: boolean }> {
   let connection: import('@temporalio/client').Connection | undefined;
@@ -9,8 +9,8 @@ export async function startCoManagedProvisioningWorkflow(input: {
     connection = await mod.Connection.connect({ address: process.env.TEMPORAL_ADDRESS || 'temporal-frontend.temporal.svc.cluster.local:7233' });
     const client = new mod.Client({ connection,
       namespace: process.env.TEMPORAL_NAMESPACE || 'default' });
-    await client.workflow.start('coManagedProvisioningWorkflow', {
-      args: [input], workflowId: `co-managed-provisioning:${input.sponsorTenant}:${input.operationId}`,
+    await client.workflow.start(workflow, {
+      args: [input], workflowId: `${workflow === 'coManagedProvisioningCleanupWorkflow' ? 'co-managed-provisioning-cleanup' : 'co-managed-provisioning'}:${input.sponsorTenant}:${input.operationId}`,
       taskQueue: process.env.TEMPORAL_TASK_QUEUE || 'tenant-workflows',
       workflowIdReusePolicy: 'ALLOW_DUPLICATE',
       workflowExecutionTimeout: '1h', workflowTaskTimeout: '1m',
@@ -26,3 +26,8 @@ export async function startCoManagedProvisioningWorkflow(input: {
     await connection?.close().catch(() => undefined);
   }
 }
+
+export const startCoManagedProvisioningWorkflow = (input: { sponsorTenant: string; operationId: string }) =>
+  scheduleCoManagedProvisioningWorkflow('coManagedProvisioningWorkflow', input);
+export const startCoManagedProvisioningCleanupWorkflow = (input: { sponsorTenant: string; operationId: string }) =>
+  scheduleCoManagedProvisioningWorkflow('coManagedProvisioningCleanupWorkflow', input);

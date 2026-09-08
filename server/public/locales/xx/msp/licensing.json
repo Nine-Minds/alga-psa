@@ -360,6 +360,15 @@
   },
   "coManaged": {
     "provisioning": {
+      "cancelSetup": "[Cancel setup]",
+      "cancelTitle": "[Cancel workspace setup?]",
+      "cancelDescription": "[This deletes the unclaimed customer workspace. Seats remain reserved until cleanup completes.]",
+      "confirmCancel": "[Delete workspace and cancel]",
+      "keepSetup": "[Keep setup]",
+      "cancelError": "[Setup could not be cancelled. Refresh to check whether the customer has claimed the workspace.]",
+      "cleanupPending": "[Cleanup is pending. Seats remain reserved until it finishes.]",
+      "cleanupFailed": "[Cleanup did not finish. Seats remain reserved; you can retry safely.]",
+      "retryCleanup": "[Retry cleanup]",
       "invitationExpired": "[Administrator invitation expired. Send a new link to the same administrator.]",
       "resendInvitation": "[Resend administrator invitation]"
     },

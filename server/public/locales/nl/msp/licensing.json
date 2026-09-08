@@ -360,6 +360,15 @@
   },
   "coManaged": {
     "provisioning": {
+      "cancelSetup": "Configuratie annuleren",
+      "cancelTitle": "Configuratie van werkruimte annuleren?",
+      "cancelDescription": "Dit verwijdert de nog niet geclaimde klantwerkruimte. Licenties blijven gereserveerd totdat het opruimen is voltooid.",
+      "confirmCancel": "Werkruimte verwijderen en annuleren",
+      "keepSetup": "Configuratie behouden",
+      "cancelError": "De configuratie kon niet worden geannuleerd. Vernieuw om te controleren of de klant de werkruimte heeft geclaimd.",
+      "cleanupPending": "Opruimen staat klaar. Licenties blijven gereserveerd totdat dit is voltooid.",
+      "cleanupFailed": "Het opruimen is niet voltooid. Licenties blijven gereserveerd; u kunt het veilig opnieuw proberen.",
+      "retryCleanup": "Opruimen opnieuw proberen",
       "invitationExpired": "De uitnodiging voor de beheerder is verlopen. Stuur dezelfde beheerder een nieuwe link.",
       "resendInvitation": "Beheerdersuitnodiging opnieuw verzenden"
     },

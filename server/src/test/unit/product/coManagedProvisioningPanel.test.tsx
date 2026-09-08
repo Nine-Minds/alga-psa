@@ -4,11 +4,11 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import CoManagedProvisioningPanel from '../../../components/co-managed/CoManagedProvisioningPanel';
 import { CoManagedFeatureBoundary } from '../../../components/co-managed/CoManagedFeatureBoundary';
-const mocks = vi.hoisted(() => ({ flag: vi.fn(), status: vi.fn(), options: vi.fn(), provision: vi.fn(), retry: vi.fn(), resize: vi.fn(), changed: vi.fn() }));
+const mocks = vi.hoisted(() => ({ flag: vi.fn(), status: vi.fn(), options: vi.fn(), provision: vi.fn(), retry: vi.fn(), cancel: vi.fn(), resize: vi.fn(), changed: vi.fn() }));
 vi.mock('@alga-psa/ui/hooks', () => ({ useFeatureFlag: mocks.flag }));
 vi.mock('../../../lib/actions/coManagedAcceptanceActions', () => ({}));
 vi.mock('../../../lib/actions/coManagedActions', () => ({ getCoManagedProvisioningStatus: mocks.status, getCoManagedProvisioningOptions: mocks.options, changeCoManagedWorkspaceSeats: mocks.resize }));
-vi.mock('@enterprise/lib/actions/coManagedProvisioningActions', () => ({ provisionCoManagedWorkspaceAction: mocks.provision, retryCoManagedProvisioningAction: mocks.retry }));
+vi.mock('@enterprise/lib/actions/coManagedProvisioningActions', () => ({ provisionCoManagedWorkspaceAction: mocks.provision, retryCoManagedProvisioningAction: mocks.retry, cancelCoManagedProvisioningAction: mocks.cancel }));
 vi.mock('@alga-psa/ui/components/CustomSelect', () => ({ default: ({ id, label, value, disabled, options, onValueChange }: any) =>
   <label>{label}<select id={id} value={value} disabled={disabled} onChange={event => onValueChange(event.target.value)}>
     <option value="">Choose</option>{options.map((option: any) => <option key={option.value} value={option.value}>{option.label}</option>)}
@@ -18,7 +18,7 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({ useTranslation: () => ({ t: tra
 beforeEach(() => { vi.resetAllMocks(); mocks.flag.mockReturnValue({ enabled: true, loading: false, error: null });
   mocks.status.mockResolvedValue({ items: [], hasMore: false, canManage: true, canCreate: true });
   mocks.options.mockResolvedValue({ clients: [{ id: 'client', name: 'Customer' }], boards: [{ id: 'board', name: 'MSP escalations' }] });
-  mocks.provision.mockResolvedValue({ operationId: 'operation', enqueued: true }); mocks.retry.mockResolvedValue({ enqueued: true }); });
+  mocks.provision.mockResolvedValue({ operationId: 'operation', enqueued: true }); mocks.retry.mockResolvedValue({ enqueued: true }); mocks.cancel.mockResolvedValue({ enqueued: true }); });
 afterEach(cleanup);
 const panel = (canGrow = true) => render(<CoManagedFeatureBoundary><CoManagedProvisioningPanel available={2} canGrow={canGrow} onChanged={mocks.changed} /></CoManagedFeatureBoundary>);
 async function fillForm() {
@@ -127,4 +127,34 @@ it('hides per-workspace management controls when home policy allows reading but 
   expect(screen.queryByRole('link', { name: 'coManaged.policy.manage' })).toBeNull();
   expect(screen.queryByRole('button', { name: 'coManaged.provisioning.resize' })).toBeNull();
   expect(screen.queryByRole('button', { name: 'coManaged.provisioning.retry' })).toBeNull();
+});
+
+it('requires confirmation before cancelling the exact unclaimed workspace and keeps cleanup retryable after scheduling failure', async () => {
+  const operation = { operationId: 'unclaimed-operation', workspaceName: 'Unclaimed customer', administratorEmail: 'admin@example.test',
+    seats: 1, state: 'failed', canCancel: true, canRetry: true };
+  mocks.status.mockResolvedValue({ canManage: true, canCreate: true, hasMore: false, items: [operation] });
+  panel(false); fireEvent.click(await screen.findByRole('button', { name: 'coManaged.provisioning.cancelSetup' }));
+  expect(mocks.cancel).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: 'coManaged.provisioning.keepSetup' }));
+  expect(mocks.cancel).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: 'coManaged.provisioning.cancelSetup' }));
+  mocks.cancel.mockResolvedValue({ enqueued: false });
+  mocks.status.mockResolvedValue({ canManage: true, canCreate: true, hasMore: false,
+    items: [{ ...operation, state: 'cleanup_requested', canCancel: false, cleanupFailed: false }] });
+  fireEvent.click(screen.getByRole('button', { name: 'coManaged.provisioning.confirmCancel' }));
+  await waitFor(() => expect(mocks.cancel).toHaveBeenCalledWith('unclaimed-operation'));
+  await screen.findByText('coManaged.provisioning.cleanupPending');
+  expect(screen.getByText('coManaged.provisioning.workerUnavailable')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'coManaged.provisioning.retryCleanup' }));
+  await waitFor(() => expect(mocks.retry).toHaveBeenCalledWith('unclaimed-operation'));
+  expect(mocks.provision).not.toHaveBeenCalled(); expect(mocks.resize).not.toHaveBeenCalled();
+});
+
+it('hides cancellation after the customer claims the administrator account', async () => {
+  mocks.status.mockResolvedValue({ canManage: true, canCreate: true, hasMore: false, items: [
+    { operationId: 'claimed-operation', workspaceName: 'Claimed customer', administratorEmail: 'admin@example.test',
+      seats: 1, state: 'pending_acceptance', canCancel: false, canRetry: false },
+  ] });
+  panel(); await screen.findByText('Claimed customer');
+  expect(screen.queryByRole('button', { name: 'coManaged.provisioning.cancelSetup' })).toBeNull();
 });

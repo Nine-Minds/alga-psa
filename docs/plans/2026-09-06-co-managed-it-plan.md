@@ -969,3 +969,7 @@ The client portal now opens requester task conversations from list and kanban vi
 ### Implementation checkpoint — customer-approved delegated administration (2026-09-08)
 
 Customers can approve an assigned MSP technician/team for one specific board display setting, non-administrator profile, or unchanged customer-created invitation resend. The MSP uses a dedicated, labelled workspace view under its own session; immutable approval IDs prevent stale commands from being redirected. Current home policy, customer grant, staff membership, lifecycle and seat admission remain authoritative through commands. Picker authorization and display-label search precede pagination, including hidden records spanning multiple batches. Eleven focused PostgreSQL journeys and 16 UI/action/policy tests passed. Navigation has supported-locale labels; the new feature namespace currently uses English fallback. Full browser/provider/Citus acceptance remains pending.
+
+### Implementation checkpoint — provisioning cancellation (2026-09-08)
+
+Unclaimed workspace setup can now be cancelled and retried through a durable cleanup workflow. Cleanup rechecks reservation, relationship, and administrator claim under the existing admission locks; seats release only after transactional deletion and residual-data proof. Unexpected external-resource handles retain the reservation for recovery. Validation: 15 focused PostgreSQL cases, 23 server UI checks, and 22 enterprise action/workflow checks passed. Live Temporal dispatch remains a deployment smoke check.

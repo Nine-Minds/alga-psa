@@ -1,3 +1,4 @@
+import { registerCoManagedProvisioningCleanupTests } from './helpers/coManagedProvisioningCleanupCases';
 import { registerCoManagedDelegatedAdministrationCases } from './helpers/coManagedDelegatedAdministrationCases';
 import { registerCoManagedRequesterTaskCases } from './helpers/coManagedRequesterTaskCases';
 import { registerCoManagedTicketRoutingNotificationTests } from './helpers/coManagedTicketRoutingNotificationCases';
@@ -20359,3 +20360,5 @@ registerCoManagedTicketRoutingNotificationTests(() => db, ticketHandoffFixture, 
 registerCoManagedRequesterTaskCases(() => db, withSharedProjectTaskFixture);
 
 registerCoManagedDelegatedAdministrationCases(() => db, ticketHandoffFixture);
+
+registerCoManagedProvisioningCleanupTests(() => db, prepare);

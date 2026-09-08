@@ -11,3 +11,7 @@ export async function provisionCoManagedWorkspaceAction(_input: Omit<CoManagedPr
 export async function retryCoManagedProvisioningAction(_operationId: string): Promise<{ enqueued: boolean }> {
   throw new Error('Co-managed provisioning requires a licensed Pro installation with the tenant workflow worker.');
 }
+
+export async function cancelCoManagedProvisioningAction(_operationId: string): Promise<{ enqueued: boolean }> {
+  throw new Error('Co-managed provisioning requires a licensed Pro installation with the tenant workflow worker.');
+}

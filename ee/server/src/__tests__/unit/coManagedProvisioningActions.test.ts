@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CoManagedProvisioningError } from '@alga-psa/co-managed';
-import { provisionCoManagedWorkspaceAction, retryCoManagedProvisioningAction } from '../../lib/actions/coManagedProvisioningActions';
-const mocks = vi.hoisted(() => ({ permission: vi.fn(), prepare: vi.fn(), schedule: vi.fn(), invitation: vi.fn(), browser: vi.fn(), admission: vi.fn(),
+import { provisionCoManagedWorkspaceAction, retryCoManagedProvisioningAction, cancelCoManagedProvisioningAction } from '../../lib/actions/coManagedProvisioningActions';
+const mocks = vi.hoisted(() => ({ permission: vi.fn(), prepare: vi.fn(), schedule: vi.fn(), invitation: vi.fn(), browser: vi.fn(), admission: vi.fn(), cancel: vi.fn(), cleanup: vi.fn(),
   user: { tenant: 'home-sponsor', user_id: 'home-admin', user_type: 'internal' }, db: {}, rows: {} as Record<string, any[]> }));
 vi.mock('@alga-psa/auth', () => ({ withAuth: (handler: any) => (...args: any[]) => handler(mocks.user, { tenant: mocks.user.tenant }, ...args) }));
 vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: mocks.permission }));
@@ -13,11 +13,11 @@ vi.mock('@alga-psa/db', () => ({ createTenantKnex: async () => ({ knex: mocks.db
     return query;
   },
 }) }));
-vi.mock('@alga-psa/co-managed', () => ({ prepareCoManagedProvisioningForActor: mocks.prepare, withCoManagedManagementOperation: mocks.admission, retryCoManagedInitialAdministratorInvitation: mocks.invitation, CoManagedProvisioningError: class extends Error {} }));
+vi.mock('@alga-psa/co-managed', () => ({ prepareCoManagedProvisioningForActor: mocks.prepare, withCoManagedManagementOperation: mocks.admission, requestCoManagedProvisioningCleanup: mocks.cancel, retryCoManagedInitialAdministratorInvitation: mocks.invitation, CoManagedProvisioningError: class extends Error {} }));
 vi.mock('server/src/lib/co-managed/browserActor', () => ({ coManagedBrowserActor: mocks.browser }));
-vi.mock('../../lib/co-managed/workflowClient', () => ({ startCoManagedProvisioningWorkflow: mocks.schedule }));
+vi.mock('../../lib/co-managed/workflowClient', () => ({ startCoManagedProvisioningWorkflow: mocks.schedule, startCoManagedProvisioningCleanupWorkflow: mocks.cleanup }));
 beforeEach(() => { vi.resetAllMocks(); mocks.user.user_type = 'internal'; mocks.permission.mockResolvedValue(true);
-  mocks.prepare.mockResolvedValue({ operation_id: 'operation', state: 'queued' }); mocks.schedule.mockResolvedValue({ enqueued: true });
+  mocks.prepare.mockResolvedValue({ operation_id: 'operation', state: 'queued' }); mocks.schedule.mockResolvedValue({ enqueued: true }); mocks.cleanup.mockResolvedValue({ enqueued: true });
   mocks.browser.mockResolvedValue({ kind: 'session', tenant: 'home-sponsor', userId: 'home-admin', sessionId: 'tracked-session' });
   mocks.rows = { 'home-sponsor:tenants': [{ product_code: 'psa' }] };
   mocks.admission.mockImplementation(async (_db, actor, id, callback) => {
@@ -89,7 +89,7 @@ describe('retry ownership and acknowledged domain failures', () => {
     expect(await retryCoManagedProvisioningAction(operationId)).toEqual({ enqueued: true });
     expect(mocks.schedule).toHaveBeenCalledWith({ sponsorTenant: 'home-sponsor', operationId });
   });
-  it.each(['cleanup_requested', 'cancelled'])('does not restart %s operations', async state => {
+  it.each(['cancelled'])('does not restart %s operations', async state => {
     mocks.rows['home-sponsor:co_managed_provisioning_operations'] = [{ operation_id: operationId, state }];
     await expect(retryCoManagedProvisioningAction(operationId)).rejects.toThrow('cannot be retried');
     expect(mocks.schedule).not.toHaveBeenCalled();
@@ -98,5 +98,38 @@ describe('retry ownership and acknowledged domain failures', () => {
     mocks.prepare.mockRejectedValue(Object.assign(new CoManagedProvisioningError('INVALID_REQUEST'), { code: 'INVALID_REQUEST' }));
     expect(await provisionCoManagedWorkspaceAction({ operationId } as any)).toEqual({ operationId, rejected: true, errorCode: 'INVALID_REQUEST' });
     expect(mocks.schedule).not.toHaveBeenCalled();
+  });
+});
+
+describe('provisioning cleanup authentication and scheduling', () => {
+  const operationId = 'a0000000-0000-4000-8000-000000000001';
+  it('persists cancellation under policy admission before scheduling the canonical cleanup identity', async () => {
+    mocks.rows['home-sponsor:co_managed_provisioning_operations'] = [{ operation_id: operationId, state: 'failed' }];
+    expect(await cancelCoManagedProvisioningAction(operationId)).toEqual({ enqueued: true });
+    expect(mocks.cancel).toHaveBeenCalledWith(mocks.db, 'home-sponsor', operationId);
+    expect(mocks.cleanup).toHaveBeenCalledWith({ sponsorTenant: 'home-sponsor', operationId });
+    expect(mocks.cancel.mock.invocationCallOrder[0]).toBeLessThan(mocks.cleanup.mock.invocationCallOrder[0]);
+    expect(mocks.schedule).not.toHaveBeenCalled(); expect(mocks.invitation).not.toHaveBeenCalled();
+  });
+  it('resumes cleanup through the existing retry action without restarting bootstrap or renewing invitations', async () => {
+    mocks.rows['home-sponsor:co_managed_provisioning_operations'] = [{ operation_id: operationId, state: 'cleanup_requested' }];
+    mocks.cleanup.mockResolvedValueOnce({ enqueued: false });
+    expect(await retryCoManagedProvisioningAction(operationId)).toEqual({ enqueued: false });
+    expect(mocks.cleanup).toHaveBeenCalledWith({ sponsorTenant: 'home-sponsor', operationId });
+    expect(mocks.schedule).not.toHaveBeenCalled(); expect(mocks.invitation).not.toHaveBeenCalled();
+  });
+  it('does not schedule cancellation for foreign, untracked or already-claimed authority', async () => {
+    await expect(cancelCoManagedProvisioningAction(operationId)).rejects.toThrow();
+    mocks.rows['home-sponsor:co_managed_provisioning_operations'] = [{ operation_id: operationId, state: 'pending_acceptance' }];
+    mocks.browser.mockRejectedValueOnce(new Error('Session changed'));
+    await expect(cancelCoManagedProvisioningAction(operationId)).rejects.toThrow('Session changed');
+    mocks.cancel.mockRejectedValueOnce(new Error('Administrator claimed'));
+    await expect(cancelCoManagedProvisioningAction(operationId)).rejects.toThrow('Administrator claimed');
+    expect(mocks.cleanup).not.toHaveBeenCalled();
+  });
+  it('returns an acknowledged cancelled operation without creating another cleanup workflow', async () => {
+    mocks.rows['home-sponsor:co_managed_provisioning_operations'] = [{ operation_id: operationId, state: 'cancelled' }];
+    expect(await cancelCoManagedProvisioningAction(operationId)).toEqual({ enqueued: true });
+    expect(mocks.cleanup).not.toHaveBeenCalled();
   });
 });

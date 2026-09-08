@@ -146,12 +146,12 @@ export function registerCoManagedManagementPolicyTests(getDb: () => Knex, prepar
       await f.home.table('co_managed_provisioning_operations').update({ invitation_sent_at: new Date() });
       const invitation = await customer.table('user_invitations').first();
       const status = await getCoManagedManagementStatus(f.db, f.actor);
-      expect(status.items[0]).toMatchObject({ invitationExpired: true, invitationSent: true, canRetry: true });
+      expect(status.items[0]).toMatchObject({ invitationExpired: true, invitationSent: true, canRetry: true, canCancel: true });
       expect(JSON.stringify(status)).not.toContain(invitation.token);
       const id = randomUUID();
       await customer.table('users').insert({ tenant: f.operation.customer_tenant, user_id: id, username: id,
         email: invitation.email.toUpperCase(), first_name: 'Existing', last_name: 'Administrator', hashed_password: 'do-not-reset', user_type: 'internal', is_inactive: false });
-      expect((await getCoManagedManagementStatus(f.db, f.actor)).items[0]).toMatchObject({ invitationExpired: false, canRetry: false });
+      expect((await getCoManagedManagementStatus(f.db, f.actor)).items[0]).toMatchObject({ invitationExpired: false, canRetry: false, canCancel: false });
     });
   });
 }

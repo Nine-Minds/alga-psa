@@ -53,7 +53,7 @@ export {
  *
  * Synced from cli/cleanup-tenant.nu
  */
-const TENANT_TABLES_DELETION_ORDER: string[] = [
+export const TENANT_TABLES_DELETION_ORDER: string[] = [
   // === LEVEL 0: Sessions (CRITICAL - must be deleted before users/tenants) ===
   'sessions',
 
@@ -380,7 +380,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'service_request_definition_versions', 'service_request_definitions',
 
   // === LEVEL 3: Mid-level entities ===
-  'co_management_project_scopes', 'co_management_staff_assignments',
+  'co_management_board_scopes', 'co_management_project_scopes', 'co_management_staff_assignments',
   'co_management_delegated_receipts', 'co_management_delegated_grants',
   'co_management_ticket_routing_recipients', 'co_management_ticket_routing_events',
   'co_managed_sla_priority_mappings',

@@ -360,6 +360,15 @@
   },
   "coManaged": {
     "provisioning": {
+      "cancelSetup": "Einrichtung abbrechen",
+      "cancelTitle": "Workspace-Einrichtung abbrechen?",
+      "cancelDescription": "Der noch nicht beanspruchte Kunden-Workspace wird gelöscht. Plätze bleiben bis zum Abschluss der Bereinigung reserviert.",
+      "confirmCancel": "Workspace löschen und abbrechen",
+      "keepSetup": "Einrichtung beibehalten",
+      "cancelError": "Die Einrichtung konnte nicht abgebrochen werden. Aktualisieren Sie die Ansicht, um zu prüfen, ob der Kunde den Workspace bereits beansprucht hat.",
+      "cleanupPending": "Bereinigung ausstehend. Plätze bleiben bis zum Abschluss reserviert.",
+      "cleanupFailed": "Die Bereinigung wurde nicht abgeschlossen. Plätze bleiben reserviert; Sie können es erneut versuchen.",
+      "retryCleanup": "Bereinigung wiederholen",
       "invitationExpired": "Die Administratoreinladung ist abgelaufen. Senden Sie derselben Person einen neuen Link.",
       "resendInvitation": "Administratoreinladung erneut senden"
     },

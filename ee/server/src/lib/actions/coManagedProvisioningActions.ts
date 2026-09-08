@@ -3,10 +3,10 @@
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex } from '@alga-psa/db';
-import { prepareCoManagedProvisioningForActor, withCoManagedManagementOperation, retryCoManagedInitialAdministratorInvitation, CoManagedProvisioningError, type CoManagedProvisioningRequest } from '@alga-psa/co-managed';
+import { prepareCoManagedProvisioningForActor, withCoManagedManagementOperation, requestCoManagedProvisioningCleanup, retryCoManagedInitialAdministratorInvitation, CoManagedProvisioningError, type CoManagedProvisioningRequest } from '@alga-psa/co-managed';
 import { coManagedBrowserActor } from 'server/src/lib/co-managed/browserActor';
 import { CoManagedReservationError } from '@alga-psa/licensing';
-import { startCoManagedProvisioningWorkflow } from '../co-managed/workflowClient';
+import { startCoManagedProvisioningWorkflow, startCoManagedProvisioningCleanupWorkflow } from '../co-managed/workflowClient';
 
 export const provisionCoManagedWorkspaceAction = withAuth(async (user, { tenant },
   input: Omit<CoManagedProvisioningRequest, 'sponsorTenant' | 'requestedBy'>,
@@ -37,16 +37,28 @@ export const retryCoManagedProvisioningAction = withAuth(async (user, { tenant }
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(operationId)) throw new Error('Provisioning operation not found.');
   const actor = await coManagedBrowserActor(user, tenant);
   const { knex } = await createTenantKnex(tenant);
-  const canonicalOperationId = await withCoManagedManagementOperation(knex, actor, operationId, async (trx, operation) => {
-    if (!['queued', 'provisioning', 'failed', 'pending_acceptance'].includes(operation.state)) {
+  const admitted = await withCoManagedManagementOperation(knex, actor, operationId, async (trx, operation) => {
+    if (!['queued', 'provisioning', 'failed', 'pending_acceptance', 'cleanup_requested'].includes(operation.state)) {
       throw new Error('This provisioning operation cannot be retried.');
     }
     if (operation.state === 'pending_acceptance') {
       await retryCoManagedInitialAdministratorInvitation(trx, actor, operation.operation_id);
     }
-    return operation.operation_id;
+    return { operationId: operation.operation_id, cleanup: operation.state === 'cleanup_requested' };
   });
   // Bootstrap rechecks current capacity under the reservation lock. Invitation
   // delivery can still retry a prepared workspace without granting new access.
-  return startCoManagedProvisioningWorkflow({ sponsorTenant: tenant, operationId: canonicalOperationId });
+  return (admitted.cleanup ? startCoManagedProvisioningCleanupWorkflow : startCoManagedProvisioningWorkflow)({ sponsorTenant: tenant, operationId: admitted.operationId });
+});
+
+export const cancelCoManagedProvisioningAction = withAuth(async (user, { tenant }, operationId: string) => {
+  if (user.user_type !== 'internal' || !await hasPermission(user, 'co_management', 'manage')) throw new Error('Permission denied');
+  const actor = await coManagedBrowserActor(user, tenant);
+  const { knex } = await createTenantKnex(tenant);
+  const operation = await withCoManagedManagementOperation(knex, actor, operationId, async (trx, retained) => {
+    await requestCoManagedProvisioningCleanup(trx, tenant, retained.operation_id);
+    return { operationId: retained.operation_id, cancelled: retained.state === 'cancelled' };
+  });
+  if (operation.cancelled) return { enqueued: true };
+  return startCoManagedProvisioningCleanupWorkflow({ sponsorTenant: tenant, operationId: operation.operationId });
 });

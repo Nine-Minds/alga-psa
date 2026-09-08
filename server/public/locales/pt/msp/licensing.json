@@ -362,6 +362,15 @@
   },
   "coManaged": {
     "provisioning": {
+      "cancelSetup": "Cancelar configuração",
+      "cancelTitle": "Cancelar a configuração do espaço?",
+      "cancelDescription": "Esta ação elimina o espaço do cliente ainda não reivindicado. As licenças permanecem reservadas até a limpeza terminar.",
+      "confirmCancel": "Eliminar espaço e cancelar",
+      "keepSetup": "Manter configuração",
+      "cancelError": "Não foi possível cancelar a configuração. Atualize para verificar se o cliente reivindicou o espaço.",
+      "cleanupPending": "Limpeza pendente. As licenças permanecem reservadas até terminar.",
+      "cleanupFailed": "A limpeza não terminou. As licenças permanecem reservadas; pode tentar novamente com segurança.",
+      "retryCleanup": "Repetir limpeza",
       "invitationExpired": "O convite do administrador expirou. Envie um novo link ao mesmo administrador.",
       "resendInvitation": "Reenviar convite do administrador"
     },
