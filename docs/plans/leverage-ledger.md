@@ -746,3 +746,10 @@ Session licensing checkpoint (2026-09-08): inspection narrowed the suspected edi
 - **Where:** portableBlobStaging, portableArchive, portableRemoteMeetingExport, credential portable envelope and workspace coordinators.
 - **Gate:** Repeated streaming boundaries share stable byte/deadline admission; missing a check risks retaining sensitive staging or exhausting disk. ACT / bounded-now.
 - **Status:** extracted into portableTransfer; provider upload cancellation and durable crash cleanup remain distinct lifecycle work.
+
+
+## independent-psa-backfills — pattern
+- **What:** Hosted upgrades, tenant-license upgrades and restored-workspace activation must apply the same additive PSA setup atomically.
+- **Where:** co-managed-hosted-upgrade, co-managed-upgrade-operations, portableWorkspaceActivation.
+- **Gate:** Three real callers with an identical established four-step sequence and a shared transaction boundary; omission would produce inconsistent capabilities. ACT / bounded-now.
+- **Status:** extracted as initializeIndependentPsa; the two prior source markers were removed. Activation's explicit workflow pause remains its own lifecycle policy.

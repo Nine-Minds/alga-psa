@@ -5,7 +5,7 @@ import { retainHostedPsaUpgradeCandidate } from '@alga-psa/licensing';
 import { prepareCoManagedIndependentUpgrade, upgradeCoManagedRelationship, snapshotCoManagedSessionActor,
   CoManagedIndependentUpgradeError, type CoManagedSessionActor, type CoManagedPolicyTarget,
   type CoManagedIndependentUpgradeRequest } from '@alga-psa/co-managed';
-import { backfillPsaSeeds, applyRbacDelta, backfillClientTaxDefaults, ensureSlaParity } from './product-upgrade-operations.js';
+import { initializeIndependentPsa } from './product-upgrade-operations.js';
 import type { SeedRunLog } from './onboarding-seeds-operations.js';
 
 export interface HostedUpgradeStripeReader {
@@ -45,11 +45,7 @@ export async function upgradeCoManagedWorkspaceWithHostedSubscription(db: Knex, 
   return upgradeCoManagedRelationship(db, actor, target, request, async (trx, tenant) => {
     const current = await retainHostedPsaUpgradeCandidate(trx, tenant, ids);
     if (current.fingerprint !== candidate.fingerprint) throw new CoManagedIndependentUpgradeError('UPGRADE_CHANGED');
-    // LEVERAGE: pattern independent-psa-backfills — both paid adapters retain the same PSA setup sequence.
-    await backfillPsaSeeds(tenant, log, trx);
-    await applyRbacDelta(tenant, log, trx);
-    await backfillClientTaxDefaults(tenant, log, trx);
-    await ensureSlaParity(tenant, log, trx);
+    await initializeIndependentPsa(tenant, log, trx);
     return paid;
   });
 }

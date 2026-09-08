@@ -93,6 +93,7 @@ const TENANT_TABLE_METADATA = {
   contact_email_type_definitions: { scope: 'tenant' },
   contact_phone_numbers: { scope: 'tenant' },
   contact_phone_type_definitions: { scope: 'tenant' },
+  portable_workspace_activations: { scope: 'tenant' },
   portable_workspace_restores: { scope: 'tenant' },
   contacts: { scope: 'tenant' },
   comment_threads: { scope: 'tenant' },

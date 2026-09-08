@@ -6,7 +6,8 @@ import type { Knex } from 'knex';
  * rows/provider and its schema-clone connection. File bytes are streamed through
  * the actual staging/archive code into an isolated temporary directory. */
 export function registerCoManagedPortableWorkspaceExportTests(getDb: () => Knex,
-  withVaultFixture: (work: (fixture: any) => Promise<void>) => Promise<void>, storage: { getReadStream: any }) {
+  withVaultFixture: (work: (fixture: any) => Promise<void>) => Promise<void>, storage: { getReadStream: any },
+  withLicenseFixture: (work: (sign: (claims?: Record<string, unknown>) => string) => Promise<void>) => Promise<void>) {
   async function workspace(work: (fixture: any) => Promise<void>) {
     await withVaultFixture(async f => {
       const fs = await import('node:fs/promises'), os = await import('node:os'), path = await import('node:path');
@@ -269,6 +270,34 @@ export function registerCoManagedPortableWorkspaceExportTests(getDb: () => Knex,
     expect(createProvider).toHaveBeenCalledTimes(1);
     // The real tsx child retains its own IPC/cache directory, not restore data.
     expect((await f.fs.readdir(f.root)).sort()).toEqual(['different.alga', 'operator.alga', `tsx-${process.getuid!()}`]);
+    await withLicenseFixture(async sign => {
+      const { activatePortableWorkspaceWithTenantLicense: activate } = await import('../../../../../ee/server/src/lib/co-managed/portableWorkspaceActivation');
+      const { verifyPassword } = await import('@alga-psa/core/encryption');
+      const own = tenantDb(db, receipt.tenant), installation = await db('license_state').first(), log = { info: vi.fn(), error: vi.fn() };
+      const activation = { tenant: receipt.tenant, operationId: randomUUID(), licenseToken: sign({ aud: receipt.tenant, seats: 2 }), administratorPassword: 'Restored!Desk47Secure' };
+      await expect(activate(db, { ...activation, licenseToken: sign({ aud: f.actor.tenant }) }, log)).rejects.toThrow('bound to this tenant');
+      expect(await own.table('tenant_license_state').first()).toBeUndefined();
+      const beforeRoles = await own.table('roles').count('* as count').first();
+      await db.raw(db.raw(`ALTER TABLE portable_workspace_activations ADD CONSTRAINT portable_activation_failure CHECK (tenant <> ?::uuid)`, [receipt.tenant]).toQuery());
+      try { await expect(activate(db, activation, log)).rejects.toThrow('portable_activation_failure'); }
+      finally { await db.raw('ALTER TABLE portable_workspace_activations DROP CONSTRAINT portable_activation_failure'); }
+      expect(await own.table('tenant_license_state').first()).toBeUndefined();
+      expect(await own.table('roles').count('* as count').first()).toEqual(beforeRoles);
+      expect((await own.table('users').where('user_id', receipt.administrator_user_id).first()).hashed_password).toBe('!portable-restore-disabled');
+      const activated = await activate(db, activation, log);
+      expect(activated).toMatchObject({ tenant: receipt.tenant, operation_id: activation.operationId, administrator_user_id: receipt.administrator_user_id,
+        entitlement_source: 'tenant_license', seats: 2 });
+      const administrator = await own.table('users').where('user_id', receipt.administrator_user_id).first();
+      expect(administrator.is_inactive).toBe(false); expect(await verifyPassword(activation.administratorPassword, administrator.hashed_password)).toBe(true);
+      expect(await own.table('users').where('is_inactive', false).select('user_id')).toEqual([{ user_id: receipt.administrator_user_id }]);
+      expect((await own.table('tenants').first()).suspended_at).toBeNull(); expect(await db('license_state').first()).toEqual(installation);
+      expect(await own.table('roles').where({ role_name: 'Finance', msp: true }).first()).toBeDefined();
+      await own.table('tenants').update({ suspended_at: db.fn.now(), suspended_reason: 'tenant_cancelled' });
+      expect(await activate(db, { ...activation, licenseToken: 'no longer needed', administratorPassword: 'DoesNotReset!89' }, log)).toEqual(activated);
+      expect((await own.table('users').where('user_id', receipt.administrator_user_id).first()).hashed_password).toBe(administrator.hashed_password);
+      expect((await own.table('tenants').first()).suspended_reason).toBe('tenant_cancelled');
+      await expect(activate(db, { ...activation, operationId: randomUUID() }, log)).rejects.toThrow('another activation');
+    });
   }));
 
   it('portable workspace preparation enforces cumulative disk limits and cancels provider work without retained staging', async () => workspace(async f => {

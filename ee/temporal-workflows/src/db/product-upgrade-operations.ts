@@ -18,6 +18,16 @@ import { listProductSeedFiles } from './product-bootstrap-resolver.js';
 // Seed 03 rebuilds role_permissions and would remove every grant from the AlgaDesk Agent role.
 export const PSA_BACKFILL_SEED_EXCLUDES = ['03_role_permissions.cjs'] as const;
 
+/** Atomic, additive setup shared by independently licensed upgrades and
+ * restored workspaces. The caller retains entitlement and tenant admission. */
+export async function initializeIndependentPsa(tenant: string, log: SeedRunLog, trx: Knex.Transaction): Promise<void> {
+  if (!trx.isTransaction) throw new Error('Independent PSA setup requires a retained transaction');
+  await backfillPsaSeeds(tenant, log, trx);
+  await applyRbacDelta(tenant, log, trx);
+  await backfillClientTaxDefaults(tenant, log, trx);
+  await ensureSlaParity(tenant, log, trx);
+}
+
 const PSA_ROLE_REQUIREMENTS = [
   { roleName: 'Finance', scope: 'msp', msp: true, client: false },
   { roleName: 'Technician', scope: 'msp', msp: true, client: false },
