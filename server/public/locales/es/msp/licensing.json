@@ -737,6 +737,20 @@
         "phase": "Fase",
         "due_date": "Fecha de vencimiento"
       }
+    },
+    "tenantLicense": {
+      "title": "Licencia del espacio de trabajo",
+      "description": "Administre la licencia PSA independiente de su espacio de trabajo. Use este ID de inquilino al comprar o renovar una licencia.",
+      "valid": "Licencia PSA válida",
+      "expired": "Su licencia PSA ha caducado",
+      "required": "Se requiere una licencia PSA vinculada al inquilino",
+      "expires": "Caduca el {{date}}",
+      "activationEffect": "Activar una clave prepara una actualización independiente o renueva un espacio de trabajo que ya se ha actualizado.",
+      "tenantId": "ID de inquilino",
+      "key": "Clave de licencia",
+      "activating": "Activando…",
+      "activate": "Activar clave de licencia",
+      "activated": "Clave de licencia del espacio de trabajo activada."
     }
   }
 }

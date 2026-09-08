@@ -824,6 +824,20 @@
         "phase": "Phase",
         "due_date": "Due date"
       }
+    },
+    "tenantLicense": {
+      "title": "Workspace license",
+      "description": "Manage the independent PSA license for your workspace. Use this tenant ID when purchasing or renewing a license.",
+      "valid": "Valid PSA license",
+      "expired": "Your PSA license has expired",
+      "required": "A tenant-bound PSA license is required",
+      "expires": "Expires {{date}}",
+      "activationEffect": "Activating a key prepares an independent upgrade or renews a workspace that has already upgraded.",
+      "tenantId": "Tenant ID",
+      "key": "License key",
+      "activating": "Activating…",
+      "activate": "Activate license key",
+      "activated": "Workspace license key activated."
     }
   }
 }

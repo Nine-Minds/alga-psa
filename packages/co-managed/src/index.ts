@@ -123,3 +123,4 @@ export { listCoManagedArchiveWork, getCoManagedArchiveHistory, listCoManagedArch
 export type { CoManagedArchiveWork, CoManagedArchiveEntry, CoManagedArchiveFile, CoManagedArchiveHistory } from './archiveReads';
 
 export * from './independentUpgrade';
+export { getCoManagedTenantLicenseStatus, submitCoManagedTenantLicense } from './tenantLicenseManagement';

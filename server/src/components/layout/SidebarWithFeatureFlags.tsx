@@ -136,6 +136,7 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
     typeof marketingFlag === 'boolean' ? marketingFlag : marketingFlag?.enabled ?? false;
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
   const [selfHostMode, setSelfHostMode] = useState(false);
+  const [tenantLicenseScope, setTenantLicenseScope] = useState(false);
   const { hasFeature, isPro } = useTier();
   // Mirrors the menuConfig tier gate so the vault nav item tracks the tenant tier.
   const credentialsVaultEnabled = hasFeature(TIER_FEATURES.CREDENTIALS);
@@ -148,6 +149,7 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
       .then((result) => {
         if (isMounted && !isActionPermissionError(result)) {
           setSelfHostMode(result.selfHostMode);
+          setTenantLicenseScope(result.scope === 'tenant');
         }
       })
       .catch(() => {});
@@ -228,9 +230,9 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
 
     return filterNavigationSectionsBySelfHost(
       productSections,
-      selfHostMode,
+      selfHostMode && (!tenantLicenseScope || coManagedEnabled),
     );
-  }, [edition, productCode, selfHostMode]);
+  }, [edition, productCode, selfHostMode, tenantLicenseScope, coManagedEnabled]);
 
   const billingSections = useMemo(
     () => filterNavigationSectionsByPermission(

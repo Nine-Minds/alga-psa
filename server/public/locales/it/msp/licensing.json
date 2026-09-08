@@ -737,6 +737,20 @@
         "phase": "Fase",
         "due_date": "Scadenza"
       }
+    },
+    "tenantLicense": {
+      "title": "Licenza dello spazio di lavoro",
+      "description": "Gestisci la licenza PSA indipendente del tuo spazio di lavoro. Usa questo ID tenant per acquistare o rinnovare una licenza.",
+      "valid": "Licenza PSA valida",
+      "expired": "La tua licenza PSA è scaduta",
+      "required": "È richiesta una licenza PSA associata al tenant",
+      "expires": "Scade il {{date}}",
+      "activationEffect": "L’attivazione di una chiave prepara un aggiornamento indipendente o rinnova uno spazio di lavoro già aggiornato.",
+      "tenantId": "ID tenant",
+      "key": "Chiave di licenza",
+      "activating": "Attivazione…",
+      "activate": "Attiva chiave di licenza",
+      "activated": "Chiave di licenza dello spazio di lavoro attivata."
     }
   }
 }

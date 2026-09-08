@@ -21,13 +21,17 @@ export async function activateTenantPsaLicense(trx: Knex.Transaction, tenant: st
   // This admin singleton selects the installation mode; its token is untouched.
   if (!await trx('license_state').first('id')) throw new Error('Tenant license activation requires self-hosted licensing');
   const owner = tenantDb(trx, tenant);
-  if (!await owner.table('tenants').forUpdate().first('tenant')) throw new Error('License tenant does not exist');
+  const workspace = await owner.table('tenants').forUpdate().first('tenant', 'product_code');
+  if (!workspace) throw new Error('License tenant does not exist');
   const now = new Date((await trx.select({ at: trx.raw('clock_timestamp()') }).first()).at);
   if (verified.claims.exp * 1000 <= now.getTime()) throw new Error('The tenant license has expired');
   if (verified.claims.seats !== undefined && verified.claims.seats > 2147483647) throw new Error('Tenant license seat count is too large');
   const row: TenantLicenseStateRow = { tenant, license_token: token, license_id: verified.claims.sub, seats: verified.claims.seats ?? null,
     valid_until: new Date(verified.claims.exp * 1000), verified_at: now, updated_at: now };
   await owner.table('tenant_license_state').insert(row).onConflict('tenant').merge(row);
+  // A staged co-managed key does not alter sponsorship capacity. Once the
+  // workspace is PSA, renewal updates its own admission limit immediately.
+  if (workspace.product_code === 'psa') await owner.table('tenants').update({ licensed_user_count: row.seats });
   clearLicenseVerifyCache();
 }
 
@@ -43,10 +47,26 @@ export async function getTenantSelfHostLicenseState(tenant: string, connection?:
     const query = tenantDb(db, tenant).table<TenantLicenseStateRow>('tenant_license_state');
     if (db.isTransaction) query.forShare();
     const own = await query.first();
-    if (own) return { edition_choice: 'ee', trial_started_at: null, license_token: own.license_token };
+    if (own) return { edition_choice: 'ee', trial_started_at: null, license_token: own.license_token, license_scope: 'tenant' };
   }
+  if (await db.schema.hasTable('co_managed_independent_upgrades') &&
+      await tenantDb(db, tenant).table('co_managed_independent_upgrades').where('entitlement_source', 'tenant_license').first('operation_id'))
+    return { edition_choice: 'ee', trial_started_at: null, license_token: null, license_scope: 'tenant' };
   // Retain legacy installation licensing for tenants without an independent row.
   return await db<LicenseStateRow>('license_state').orderBy('id').first() ?? null;
+}
+
+/** Management scope survives removal of a staged/expired license. Product and
+ * immutable upgrade history determine whether appliance controls are available. */
+export async function getTenantLicenseManagementScope(db: Knex, tenant: string): Promise<'tenant' | 'installation'> {
+  if (!uuid.test(tenant)) throw new Error('A tenant identity is required for license management');
+  const owner = tenantDb(db, tenant);
+  const workspace = await owner.table('tenants').first('product_code');
+  if (!workspace) throw new Error('License tenant does not exist');
+  if (workspace.product_code === 'co_managed') return 'tenant';
+  if (await db.schema.hasTable('tenant_license_state') && await owner.table('tenant_license_state').first('tenant')) return 'tenant';
+  if (await db.schema.hasTable('co_managed_independent_upgrades') && await owner.table('co_managed_independent_upgrades').first('operation_id')) return 'tenant';
+  return 'installation';
 }
 
 /** Paid upgrade admission reads only an independently staged tenant license.

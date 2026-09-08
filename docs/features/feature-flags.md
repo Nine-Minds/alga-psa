@@ -11,6 +11,7 @@ AlgaPSA uses PostHog for feature flag management, allowing tenant-based feature 
 Controls co-managed UI on hosted and self-hosted installations. The shared
 `CoManagedFeatureBoundary` requires an enabled, resolved flag without an error.
 Disabled, loading, unknown, and error states render no interactive feature content.
+Independent workspace license key activation and its License navigation entry use this boundary; licensing actions and resolution remain available independently of the flag.
 Both customer workspace shells apply it, including direct browser navigation.
 The provisioning page (`/msp/co-managed`) and access editor (`/msp/co-management`)
 use this boundary. Customer access navigation and the MSP workspace access link

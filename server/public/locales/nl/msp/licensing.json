@@ -735,6 +735,20 @@
         "phase": "Fase",
         "due_date": "Vervaldatum"
       }
+    },
+    "tenantLicense": {
+      "title": "Werkruimtelicentie",
+      "description": "Beheer de onafhankelijke PSA-licentie voor uw werkruimte. Gebruik deze tenant-ID bij het kopen of verlengen van een licentie.",
+      "valid": "Geldige PSA-licentie",
+      "expired": "Uw PSA-licentie is verlopen",
+      "required": "Een tenantgebonden PSA-licentie is vereist",
+      "expires": "Verloopt op {{date}}",
+      "activationEffect": "Het activeren van een sleutel bereidt een onafhankelijke upgrade voor of verlengt een werkruimte die al is geüpgraded.",
+      "tenantId": "Tenant-ID",
+      "key": "Licentiesleutel",
+      "activating": "Activeren…",
+      "activate": "Licentiesleutel activeren",
+      "activated": "Licentiesleutel voor de werkruimte geactiveerd."
     }
   }
 }

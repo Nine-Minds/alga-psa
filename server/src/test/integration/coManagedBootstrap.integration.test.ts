@@ -19068,3 +19068,79 @@ it('independent PSA upgrade rejects MSP actors and missing or insufficient custo
     expect((await upgrade(db, f.customerPrincipal, f.target, request, log)).productCode).toBe('psa');
   });
 });
+
+async function withTenantLicenseBrowser(f: Awaited<ReturnType<typeof ticketHandoffFixture>>, work: (browser: any) => Promise<void>) {
+  const auth = await import('@alga-psa/auth'), dbModule = await import('@alga-psa/db');
+  const user = await f.customer.table('users').where('user_id', f.customerPrincipal.userId).first();
+  const current = vi.spyOn(auth, 'getCurrentUser').mockResolvedValue(user);
+  const connection = vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: db, tenant: f.resource.tenant });
+  try { await withTrackedTaskBrowser(f.customerPrincipal, f.customer, browser => runWithTenant(f.resource.tenant, () => work(browser))); }
+  finally { current.mockRestore(); connection.mockRestore(); }
+}
+
+it('tenant license controls bind browser activation to the customer and never expose or mutate installation licensing', async () => {
+  const f = await ticketHandoffFixture();
+  await withTenantLicenseFixture(async sign => withTenantLicenseBrowser(f, async browser => {
+    const actions = await import('../../lib/actions/licenseManagementActions');
+    const installation = await db('license_state').first(), workspace = await f.customer.table('tenants').first();
+    const fetch = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('No license provider call is permitted'));
+    try {
+      expect(await actions.getLicenseStatus()).toMatchObject({ scope: 'tenant', selfHostMode: true, state: 'license_required',
+        customer: null, connected: false, trialUsed: false, lastCheckinAt: null, tenantId: f.resource.tenant });
+      expect(await actions.startTrial()).toMatchObject({ success: false });
+      expect(await actions.connectAppliance('NO-CLAIM')).toMatchObject({ success: false });
+      expect(await actions.refreshLicenseNow()).toMatchObject({ success: false });
+      expect(fetch).not.toHaveBeenCalled();
+      await expect(actions.submitLicense(sign())).rejects.toThrow('bound to this tenant');
+      await expect(actions.submitLicense(sign({ aud: f.principal.tenant }))).rejects.toThrow('bound to this tenant');
+      const token = sign({ aud: f.resource.tenant, cust: 'Customer owns this license', seats: 12 });
+      expect(await actions.submitLicense(token)).toMatchObject({ success: true, status: { scope: 'tenant', state: 'licensed',
+        customer: 'Customer owns this license', connected: false, trialUsed: false } });
+      expect((await f.customer.table('tenant_license_state').first()).license_token).toBe(token);
+      expect(await f.customer.table('tenants').first()).toEqual(workspace);
+      expect(await db('license_state').first()).toEqual(installation);
+      browser.override.mockReturnValue({ tenant: f.resource.tenant, user_id: f.customerPrincipal.userId });
+      await expect(actions.submitLicense(token)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+      await expect(actions.getLicenseStatus()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+      browser.override.mockReturnValue(undefined);
+      await f.customer.table('sessions').where('session_id', f.customerPrincipal.sessionId).update({ revoked_at: new Date() });
+      await expect(actions.submitLicense(token)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+      expect(await db('license_state').first()).toEqual(installation);
+    } finally { fetch.mockRestore(); }
+  }));
+});
+
+it('tenant license controls renew independent PSA seats and retain tenant scope when its key disappears with final-session rollback', async () => {
+  const f = await ticketHandoffFixture();
+  await withTenantLicenseFixture(async sign => withTenantLicenseBrowser(f, async () => {
+    const actions = await import('../../lib/actions/licenseManagementActions');
+    const { upgradeCoManagedWorkspaceWithTenantLicense: upgrade } = await import('../../../../ee/temporal-workflows/src/db/co-managed-upgrade-operations');
+    const { resolveTenantTier } = await import('@alga-psa/licensing');
+    await actions.submitLicense(sign({ aud: f.resource.tenant, seats: 10 }));
+    const relationship = await f.customer.table('co_management_relationships').first();
+    await upgrade(db, f.customerPrincipal, f.target, { operationId: randomUUID(), expectedRevision: relationship.revision }, log);
+    const installation = await db('license_state').first();
+    await actions.submitLicense(sign({ aud: f.resource.tenant, seats: 20 }));
+    expect((await f.customer.table('tenants').first()).licensed_user_count).toBe(20);
+    await f.customer.table('tenant_license_state').update({ license_token: 'invalid-stored-key' });
+    expect(await actions.getLicenseStatus()).toMatchObject({ scope: 'tenant', state: 'license_required', tier: 'essentials', customer: null });
+    await f.customer.table('tenant_license_state').del();
+    expect(await actions.getLicenseStatus()).toMatchObject({ scope: 'tenant', state: 'license_required', tier: 'essentials', trialUsed: false });
+    expect(await resolveTenantTier(f.resource.tenant)).toBe('essentials');
+    expect(await actions.startTrial()).toMatchObject({ success: false });
+    expect(await actions.refreshLicenseNow()).toMatchObject({ success: false });
+    await actions.submitLicense(sign({ aud: f.resource.tenant, seats: 4 }));
+    const own = await f.customer.table('tenant_license_state').first();
+    expect((await f.customer.table('tenants').first()).licensed_user_count).toBe(4);
+    const trigger = `expire_license_${randomUUID().replaceAll('-', '')}`;
+    await db.raw(db.raw(`CREATE FUNCTION ??() RETURNS trigger AS $$ BEGIN IF NEW.tenant = ?::uuid THEN
+      UPDATE sessions SET expires_at = to_timestamp(0) WHERE tenant = ?::uuid AND session_id = ?::uuid;
+      END IF; RETURN NEW; END; $$ LANGUAGE plpgsql`, [trigger, f.resource.tenant, f.resource.tenant, f.customerPrincipal.sessionId]).toQuery());
+    await db.raw('CREATE TRIGGER ?? AFTER INSERT OR UPDATE ON tenant_license_state FOR EACH ROW EXECUTE FUNCTION ??()', [trigger, trigger]);
+    try { await expect(actions.submitLicense(sign({ aud: f.resource.tenant, seats: 30 }))).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' }); }
+    finally { await db.raw('DROP TRIGGER ?? ON tenant_license_state', [trigger]); await db.raw('DROP FUNCTION ??()', [trigger]); }
+    expect(await f.customer.table('tenant_license_state').first()).toEqual(own);
+    expect((await f.customer.table('tenants').first()).licensed_user_count).toBe(4);
+    expect(await db('license_state').first()).toEqual(installation);
+  }));
+});

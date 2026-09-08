@@ -739,6 +739,20 @@
         "phase": "Etap",
         "due_date": "Termin"
       }
+    },
+    "tenantLicense": {
+      "title": "Licencja obszaru roboczego",
+      "description": "Zarządzaj niezależną licencją PSA swojego obszaru roboczego. Użyj tego identyfikatora dzierżawy przy zakupie lub odnowieniu licencji.",
+      "valid": "Ważna licencja PSA",
+      "expired": "Twoja licencja PSA wygasła",
+      "required": "Wymagana jest licencja PSA przypisana do dzierżawy",
+      "expires": "Wygasa {{date}}",
+      "activationEffect": "Aktywacja klucza przygotowuje niezależną aktualizację lub odnawia obszar roboczy, który został już zaktualizowany.",
+      "tenantId": "Identyfikator dzierżawy",
+      "key": "Klucz licencyjny",
+      "activating": "Aktywowanie…",
+      "activate": "Aktywuj klucz licencyjny",
+      "activated": "Aktywowano klucz licencyjny obszaru roboczego."
     }
   }
 }

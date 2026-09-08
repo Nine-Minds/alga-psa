@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
-import { cleanup, render, screen } from '@testing-library/react';
+import { act, cleanup, render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -113,4 +113,10 @@ describe('LicenseBanner', () => {
     expect(await screen.findByText(expectedMessage)).toBeInTheDocument();
     expect(screen.queryByText(/(?:Enterprise|Premium)/i)).not.toBeInTheDocument();
   });
+});
+
+it('keeps appliance trial messaging out of independent tenant licensing', async () => {
+  mockGetLicenseStatus.mockResolvedValue({ ...baseStatus, scope: 'tenant', state: 'license_expired' });
+  await act(async () => { render(<LicenseBanner />); });
+  expect(screen.queryByRole('banner')).not.toBeInTheDocument();
 });

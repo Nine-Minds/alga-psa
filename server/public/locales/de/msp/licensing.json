@@ -735,6 +735,20 @@
         "phase": "Phase",
         "due_date": "Fälligkeitsdatum"
       }
+    },
+    "tenantLicense": {
+      "title": "Arbeitsbereichslizenz",
+      "description": "Verwalten Sie die unabhängige PSA-Lizenz Ihres Arbeitsbereichs. Verwenden Sie diese Mandanten-ID beim Kauf oder bei der Verlängerung einer Lizenz.",
+      "valid": "Gültige PSA-Lizenz",
+      "expired": "Ihre PSA-Lizenz ist abgelaufen",
+      "required": "Eine mandantengebundene PSA-Lizenz ist erforderlich",
+      "expires": "Läuft am {{date}} ab",
+      "activationEffect": "Die Aktivierung eines Schlüssels bereitet ein unabhängiges Upgrade vor oder verlängert einen bereits aktualisierten Arbeitsbereich.",
+      "tenantId": "Mandanten-ID",
+      "key": "Lizenzschlüssel",
+      "activating": "Wird aktiviert…",
+      "activate": "Lizenzschlüssel aktivieren",
+      "activated": "Lizenzschlüssel des Arbeitsbereichs aktiviert."
     }
   }
 }
