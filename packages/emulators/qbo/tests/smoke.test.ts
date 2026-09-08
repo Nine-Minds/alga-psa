@@ -30,6 +30,28 @@ afterAll(async () => {
   await host.stop();
 });
 
+// Independent Intuit OAuth error contract:
+// https://developers.intuit.com/app/developer/qbo/docs/develop/sdks-and-samples-collections/ruby/oauth-ruby-client
+it.each([
+  ['missing-auth', 'refresh_token', 401, 'invalid_client'],
+  ['wrong-secret', 'refresh_token', 401, 'invalid_client'],
+  ['valid', 'refresh_token', 400, 'invalid_grant'],
+  ['valid', 'password', 400, 'unsupported_grant_type'],
+])('returns OAuth errors separately from accounting faults (%s, %s)', async (credentials, grant, status, error) => {
+  await controlPost('/control/qbo/seed/client', { clientId: 'contract-client', clientSecret: 'contract-secret' });
+  const response = await fetch(`${base}/oauth2/v1/tokens/bearer`, {
+    method: 'POST', headers: {
+      'content-type': 'application/x-www-form-urlencoded',
+      ...(credentials === 'missing-auth' ? {} : { authorization: `Basic ${Buffer.from(`contract-client:${credentials === 'valid' ? 'contract-secret' : 'wrong'}`).toString('base64')}` }),
+    },
+    body: new URLSearchParams({ grant_type: String(grant), refresh_token: 'invalid-token' }),
+  });
+  expect(response.status).toBe(status);
+  const body = await response.json();
+  expect(body.error).toBe(error);
+  expect(body.Fault).toBeUndefined();
+});
+
 // Tests narrate one protocol session (OAuth flow mints the token the later
 // entity tests reuse); opt out of the server suite's intra-file shuffle.
 describe('qbo emulator', { shuffle: false }, () => {

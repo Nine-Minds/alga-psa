@@ -622,3 +622,18 @@ from the fresh signature time when an event is redelivered.
 Reference: [Stripe webhook signature verification](https://docs.stripe.com/webhooks/signature),
 reviewed 2026-09-08. This is callback authentication parity, not live sandbox
 verification or validation of every Stripe event payload/API field.
+
+### QBO token error contracts
+
+The token endpoint `/oauth2/v1/tokens/bearer` returns OAuth `error` and
+`error_description` fields for invalid client credentials, invalid grants,
+and unsupported grant types. Accounting endpoints retain the distinct
+`Fault.Error` envelope. Native HTTP cases verify both contracts so a local
+export test cannot accidentally exercise accounting-error parsing for token
+refresh failures.
+
+Independent reference: [Intuit OAuth Ruby client documentation](https://developers.intuit.com/app/developer/qbo/docs/develop/sdks-and-samples-collections/ruby/oauth-ruby-client),
+which demonstrates HTTP 400 with an `invalid_grant` OAuth error, and the
+[Intuit OAuth JavaScript client](https://github.com/intuit/oauth-jsclient/blob/master/README.md),
+reviewed 2026-09-08. Authorization-page behavior and live Intuit sandbox drift
+remain outside these token-error checks.

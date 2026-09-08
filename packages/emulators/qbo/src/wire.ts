@@ -3,7 +3,7 @@ import type { NextFunction, Request, Response, Router } from 'express';
 import { QboSimError } from '@alga-psa/billing/testing/qboSimulator';
 import { route } from '@alga-psa/emulator-host';
 import type { HostEnv } from '@alga-psa/emulator-host';
-import { QboWireError } from './core';
+import { QboOAuthError, QboWireError } from './core';
 import type { QboEmulatorCore } from './core';
 
 const ENTITY_PATHS: Record<string, string> = {
@@ -25,7 +25,7 @@ function entityTypeFromPath(pathSegment: string): string {
 function parseBasicAuth(req: Request): { clientId: string; clientSecret: string } {
   const header = String(req.headers.authorization ?? '');
   if (!header.startsWith('Basic ')) {
-    throw new QboWireError(401, '3200', 'invalid_client: Basic authorization required');
+    throw new QboOAuthError(401, 'invalid_client', 'Basic authorization required');
   }
   const decoded = Buffer.from(header.slice('Basic '.length), 'base64').toString('utf8');
   const separator = decoded.indexOf(':');
@@ -154,6 +154,10 @@ export function wire(router: Router, core: QboEmulatorCore, _env: HostEnv): void
   }));
 
   router.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
+    if (err instanceof QboOAuthError) {
+      res.status(err.status).json({ error: err.error, error_description: err.message });
+      return;
+    }
     if (err instanceof QboWireError) {
       res.status(err.status).json(err.toFault());
       return;

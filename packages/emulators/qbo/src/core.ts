@@ -2,6 +2,15 @@ import { QboSimulator } from '@alga-psa/billing/testing/qboSimulator';
 import type { EmulatorCore, HostEnv } from '@alga-psa/emulator-host';
 
 /** Intuit fault envelope the wire shell serializes. */
+export class QboOAuthError extends Error {
+  constructor(public readonly status: number,
+    public readonly error: 'invalid_client' | 'invalid_grant' | 'unsupported_grant_type',
+    description: string = error) {
+    super(description);
+    this.name = 'QboOAuthError';
+  }
+}
+
 export class QboWireError extends Error {
   constructor(
     public readonly status: number,
@@ -153,12 +162,12 @@ export class QboEmulatorCore implements EmulatorCore {
     token_type: 'bearer';
   } {
     if (this.clients.get(basicClientId) !== basicClientSecret) {
-      throw new QboWireError(401, '3200', 'invalid_client');
+      throw new QboOAuthError(401, 'invalid_client');
     }
     if (params.grant_type === 'authorization_code') {
       const code = this.authCodes.get(String(params.code));
       if (!code || code.clientId !== basicClientId || code.redirectUri !== params.redirect_uri) {
-        throw new QboWireError(400, '3200', 'invalid_grant');
+        throw new QboOAuthError(400, 'invalid_grant');
       }
       this.authCodes.delete(String(params.code));
       return this.issueTokens(basicClientId);
@@ -166,12 +175,12 @@ export class QboEmulatorCore implements EmulatorCore {
     if (params.grant_type === 'refresh_token') {
       const refresh = this.refreshTokens.get(String(params.refresh_token));
       if (!refresh || refresh.revoked || refresh.clientId !== basicClientId) {
-        throw new QboWireError(400, '3200', 'invalid_grant');
+        throw new QboOAuthError(400, 'invalid_grant');
       }
       this.refreshTokens.delete(String(params.refresh_token));
       return this.issueTokens(basicClientId);
     }
-    throw new QboWireError(400, '3200', 'unsupported_grant_type');
+    throw new QboOAuthError(400, 'unsupported_grant_type');
   }
 
   /** Mint a token set directly, skipping the browser flow — for test wiring. */
