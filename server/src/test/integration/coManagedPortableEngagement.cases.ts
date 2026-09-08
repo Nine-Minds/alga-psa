@@ -4,7 +4,7 @@ import { expect, it, vi } from 'vitest';
 import * as meetingAdmission from '../../../../packages/co-managed/src/nativeMeetingRead';
 import { exportCoManagedPortableEngagement, validateCoManagedPortableEngagementRecords } from '../../../../packages/co-managed/src/portableEngagementExport';
 
-export function registerCoManagedPortableEngagementCases(getDb: () => Knex, createFixture: () => Promise<any>) {
+export function registerCoManagedPortableEngagementCases(getDb: () => Knex, createFixture: () => Promise<any>, withProjectTaskFixture: (work: (fixture: any) => Promise<void>) => Promise<void>) {
   const setup = async () => {
     const f = await createFixture(), db = getDb(), tenant = f.actor.tenant, user = f.actor.userId;
     const typeId = randomUUID(), interactionId = randomUUID(), requestId = randomUUID(), scheduleId = randomUUID(), meetingId = randomUUID();
@@ -94,4 +94,24 @@ export function registerCoManagedPortableEngagementCases(getDb: () => Knex, crea
       expect(result.value).toBeUndefined(); expect(result.error).toMatchObject({ code: '40001' });
     } finally { resume(); spy.mockRestore(); await outcome; }
   });
+
+  it('portable engagement export reconstructs task-only services and their standard type under actual project admission', async () => withProjectTaskFixture(async f => {
+    const db = getDb(), tenant = f.actor.tenant, serviceId = randomUUID(), typeId = randomUUID(), standardId = randomUUID();
+    await db('standard_service_types').insert({ id: standardId, name: `Portable task standard ${standardId}`, display_order: 50 });
+    await f.customer.table('service_types').insert({ tenant, id: typeId, name: 'Customer task service type', standard_service_type_id: standardId });
+    await f.customer.table('service_catalog').insert({ tenant, service_id: serviceId, service_name: 'Task-only operational service', billing_method: 'hourly', custom_service_type_id: typeId, default_rate: 987654 });
+    await f.customer.table('project_tasks').where('task_id', f.resource.id).update({ service_id: serviceId });
+    const result = await exportCoManagedPortableEngagement(db, f.customerPrincipal, randomUUID());
+    expect(result.records.appointment_requests).toHaveLength(0);
+    expect(result.records.service_catalog).toEqual([expect.objectContaining({ service_id: serviceId, custom_service_type_id: typeId, service_name: 'Task-only operational service' })]);
+    expect(result.records.service_types).toEqual([expect.objectContaining({ id: typeId, standard_service_type_id: standardId })]);
+    expect(result.records.standard_service_types).toEqual([expect.objectContaining({ id: standardId, name: `Portable task standard ${standardId}` })]);
+    expect(JSON.stringify(result)).not.toContain('987654');
+    const broken = structuredClone(result.records); broken.standard_service_types = [];
+    expect(() => validateCoManagedPortableEngagementRecords(broken)).toThrow();
+    const permission = await f.customer.table('permissions').where({ resource: 'project', action: 'read', msp: true }).first();
+    await f.customer.table('role_permissions').where('permission_id', permission.permission_id).delete();
+    await expect(exportCoManagedPortableEngagement(db, f.customerPrincipal, randomUUID())).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  }));
+
 }

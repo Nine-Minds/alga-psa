@@ -29,6 +29,7 @@ export const CO_MANAGED_PORTABLE_ENGAGEMENT_REFERENCES = [
   ['online_meetings', 'created_by', 'users', 'user_id'], ['online_meeting_artifacts', 'meeting_id', 'online_meetings', 'meeting_id'],
   ['online_meeting_artifacts', 'document_id', 'documents', 'document_id'],
   ['service_catalog', 'category_id', 'service_categories', 'category_id'], ['service_catalog', 'custom_service_type_id', 'service_types', 'id'],
+  ['service_types', 'standard_service_type_id', 'standard_service_types', 'id'],
   ['service_categories', 'created_by', 'users', 'user_id'], ['service_categories', 'updated_by', 'users', 'user_id'],
 ] as const;
 
@@ -86,7 +87,7 @@ export function validateCoManagedPortableEngagementRecords(input: unknown): asse
   }
 }
 
-/** Internal metadata section. Only referenced appointment service descriptors
+/** Internal metadata section. Only referenced operational service descriptors
  * are included; no commercial catalog or provider transport is exported. */
 export async function exportCoManagedPortableEngagement(db: Knex, inputActor: CoManagedSessionActor, packageId: string, snapshot?: CoManagedPortableSnapshot) {
   if (db.isTransaction) throw new Error('Portable export requires a root database connection');
@@ -97,7 +98,7 @@ export async function exportCoManagedPortableEngagement(db: Knex, inputActor: Co
       if (!await hasCoManagedLocalPermission(current, verified, resource, 'read', true)) throw new CoManagedSharedWorkError();
     }
     const own = tenantDb(current, verified.tenant), records = {} as CoManagedPortableEngagementRecords;
-    const descriptors = ['service_catalog', 'service_types', 'service_categories'];
+    const descriptors = ['service_catalog', 'service_types', 'service_categories', 'standard_service_types'];
     for (const table of Object.keys(CO_MANAGED_PORTABLE_ENGAGEMENT_COLUMNS) as CoManagedPortableEngagementTable[]) {
       const columns = CO_MANAGED_PORTABLE_ENGAGEMENT_COLUMNS[table];
       if (descriptors.includes(table)) { records[table] = []; continue; }
@@ -138,16 +139,32 @@ export async function exportCoManagedPortableEngagement(db: Knex, inputActor: Co
       if (!admission.handled) throw new CoManagedSharedWorkError();
       await retain('online_meeting_artifacts', row);
     }
-    // Native appointment and availability surfaces admit these related service
+    // Task-only service links are part of the work section's graph. Derive
+    // them from actual customer records, retaining project then task in native
+    // order; callers cannot supply service IDs that bypass source authority.
+    const taskServiceHints = await own.table('project_tasks').whereNotNull('service_id').orderBy('task_id').limit(100_001)
+      .select('task_id', 'phase_id', 'service_id');
+    if (taskServiceHints.length > 100_000) throw new Error('Invalid portable task service count');
+    for (const hint of taskServiceHints) {
+      const source = await retainScheduleSource(current, verified, subject, { work_item_type: 'project_task', work_item_id: hint.task_id });
+      requireVisible(source.fields);
+      const retained = await own.table('project_tasks').where('task_id', hint.task_id).forShare().first('task_id', 'phase_id', 'service_id');
+      if (!retained || ['task_id', 'phase_id', 'service_id'].some(key => retained[key] !== hint[key])) throw new CoManagedSharedWorkError();
+    }
+    // Native appointment, task and availability surfaces admit related service
     // labels under the parent's permission. A co-managed SKU has no commercial
     // service-catalog permission; only these referenced operational descriptors
     // are included, with explicit missing-parent validation below.
-    const serviceIds = [...new Set([...records.appointment_requests, ...records.availability_settings].map(row => row.service_id as string | null).filter((id): id is string => Boolean(id)))];
+    const serviceIds = [...new Set([...records.appointment_requests, ...records.availability_settings, ...taskServiceHints].map(row => row.service_id as string | null).filter((id): id is string => Boolean(id)))];
     for (let offset = 0; offset < serviceIds.length; offset += 1000) records.service_catalog.push(...await own.table('service_catalog').whereIn('service_id', serviceIds.slice(offset, offset + 1000)).forShare().select(...CO_MANAGED_PORTABLE_ENGAGEMENT_COLUMNS.service_catalog));
+    if (serviceIds.some(id => !records.service_catalog.some(row => row.service_id === id))) throw new Error('Portable task service is missing');
     for (const [table, sourceColumn, pk] of [['service_types', 'custom_service_type_id', 'id'], ['service_categories', 'category_id', 'category_id']] as const) {
       const ids = [...new Set(records.service_catalog.map(row => row[sourceColumn] as string | null).filter((id): id is string => Boolean(id)))];
       for (let offset = 0; offset < ids.length; offset += 1000) records[table].push(...await own.table(table).whereIn(pk, ids.slice(offset, offset + 1000)).forShare().select(...CO_MANAGED_PORTABLE_ENGAGEMENT_COLUMNS[table]));
     }
+    const standardIds = [...new Set(records.service_types.map(row => row.standard_service_type_id as string | null).filter((id): id is string => Boolean(id)))];
+    for (let offset = 0; offset < standardIds.length; offset += 1000) records.standard_service_types.push(...await current('standard_service_types')
+      .whereIn('id', standardIds.slice(offset, offset + 1000)).forShare().select(...CO_MANAGED_PORTABLE_ENGAGEMENT_COLUMNS.standard_service_types));
     for (const table of descriptors as CoManagedPortableEngagementTable[]) records[table].sort((a, b) => String(a[CO_MANAGED_PORTABLE_ENGAGEMENT_COLUMNS[table][0]]).localeCompare(String(b[CO_MANAGED_PORTABLE_ENGAGEMENT_COLUMNS[table][0]])));
     records.availability_settings = records.availability_settings.map(row => ({ ...row, config_json: portableAvailabilityConfig(row.config_json) }));
     validateCoManagedPortableEngagementRecords(records);

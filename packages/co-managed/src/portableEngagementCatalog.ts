@@ -10,7 +10,8 @@ export const CO_MANAGED_PORTABLE_ENGAGEMENT_COLUMNS = {
   online_meetings: ['meeting_id', 'provider', 'subject', 'start_time', 'end_time', 'status', 'appointment_request_id', 'interaction_id', 'schedule_entry_id', 'created_by', 'created_at', 'updated_at'],
   online_meeting_artifacts: ['artifact_id', 'meeting_id', 'artifact_type', 'document_id', 'file_id', 'created_date_time', 'created_at', 'updated_at'],
   service_catalog: ['service_id', 'service_name', 'description', 'unit_of_measure', 'category_id', 'custom_service_type_id', 'is_active'],
-  service_types: ['id', 'name', 'is_active', 'description', 'created_at', 'updated_at', 'order_number'],
+  service_types: ['id', 'name', 'standard_service_type_id', 'is_active', 'description', 'created_at', 'updated_at', 'order_number'],
+  standard_service_types: ['id', 'name', 'created_at', 'updated_at', 'display_order'],
   service_categories: ['category_id', 'category_name', 'description', 'is_active', 'created_at', 'updated_at', 'created_by', 'updated_by', 'display_order'],
 } as const;
 export type CoManagedPortableEngagementTable = keyof typeof CO_MANAGED_PORTABLE_ENGAGEMENT_COLUMNS;
