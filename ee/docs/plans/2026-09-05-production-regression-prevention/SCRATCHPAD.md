@@ -2897,3 +2897,15 @@ Built3smallnativeemulatorbundles; accountinghostsession81018 QBO56105/Xero56106/
 - Added explicit UPGRADE_DB_BACKEND=postgres|citus. Citus mode creates the extension in the runner-owned fresh DB, configures four shards before migration connections, and verifies core tables are tenant hash-distributed both at v1.5.0 and after candidate migration. Records backend and distribution snapshots. No existing database is adopted or reset.
 - Ten native metadata-validation and retention tests pass, including missing/reference/wrong-key/duplicate distribution rejection. These are verifier tests, not live database evidence. F022 remains false pending real Citus schema upgrade, business behavior and native CI integration.
 - Previous full tooling evidence at67040b remains scoped to that revision, before these runner changes.
+
+### First live supported Citus baseline result
+
+- Native runner session37634 is terminal exit1, database upgrade_citus_82cc_20260908, source2003be3d13dfe97023d5362f545671707b4904a0 clean. Baseline migration execution completed, then the new distribution verifier failed: Missing or duplicate Citus metadata for usage_tracking. No fixture seeding or candidate upgrade occurred.
+- Raw report /var/folders/8g/3xyjqdpd4hx2h39h4qb2lyvm0000gn/T/alga-supported-upgrade-VHNboH/evidence.json; log /tmp/alga-citus-upgrade-2003be.log. Retain failed DB for read-only diagnosis. Observed pg_dist_node has one active node.
+- Next determine whether usage_tracking is intentionally local in the pinned baseline or is an actual migration distribution defect; do not remove the assertion merely to obtain a pass. Existing Citus aggregate only covers fresh-runtime and tenant-database bundles; supported-upgrade artifact wiring still required.
+
+### Corrected distribution expectation from live baseline
+
+- Read-only inspection confirms all1028baseline migrations applied; tenants/users/clients/tickets/contracts hash-distributed by tenant, usage_tracking/time_entries local. Previous all-seven distributed assertion was incorrect for pinned baseline. Historical company-to-client cleanup contains cascade undistribution; no claim of new product distribution defect established.
+- Require five confirmed distributed core tables, observe all seven table layouts via pg_class LEFT JOIN pg_dist_partition. Missing billing tables still fail; local rows are explicit nulls in evidence. Eleven verifier/retention tests pass; actual captureUpgradeDistribution query passes against preserved baseline and records both local tables. No evidence claim that local billing operations run on shards.
+- Next complete fresh full runner with corrected verifier; original failed DB remains preserved.
