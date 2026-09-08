@@ -8,7 +8,7 @@ import { authorizeCoManagedLocalRecord, CoManagedSharedWorkError, isCoManagedUui
 import { isNativeTimeFieldHidden } from './nativeTimeEntryAccess';
 import { hasCoManagedLocalPermission } from './localPermission';
 
-async function customerCalendar(trx: Knex.Transaction, tenant: string) {
+export async function retainCoManagedTimeCalendar(trx: Knex.Transaction, tenant: string) {
   await getCoManagedOperationalState(trx, tenant);
   const owner = tenantDb(trx, tenant), workspace = await owner.table('tenants').forShare().first('product_code', 'suspended_at');
   if (workspace?.product_code !== 'co_managed' && !await owner.table('time_entries').where('billing_mode', 'operational').first('entry_id') && !await hasCoManagedConversationOwnership(trx, tenant)) return false;
@@ -33,7 +33,7 @@ export async function readCoManagedNativeTimePeriods(db: Knex, tenant: string, i
 ): Promise<{ handled: false } | { handled: true; periods: any[] }> {
   if (!isCoManagedUuid(tenant) || (options.id && !isCoManagedUuid(options.id))) throw new CoManagedSharedWorkError();
   return withTransaction(db, async trx => {
-    if (!await customerCalendar(trx, tenant)) return { handled: false };
+    if (!await retainCoManagedTimeCalendar(trx, tenant)) return { handled: false };
     const actor = snapshotCoManagedAuthenticatedActor(await identify());
     if (actor.tenant !== tenant) throw new CoManagedSharedWorkError();
     const credential = await lockCoManagedLocalAuthentication(trx, actor);
@@ -63,7 +63,7 @@ export async function commandCoManagedNativeTimePeriods(db: Knex, tenant: string
 ): Promise<{ handled: false } | { handled: true; periods: any[] }> {
   if (!isCoManagedUuid(tenant) || !['create', 'update', 'delete'].includes(input.action) || (input.action !== 'create' && !isCoManagedUuid(input.id))) throw new CoManagedSharedWorkError();
   return withTransaction(db, async trx => {
-    if (!await customerCalendar(trx, tenant)) return { handled: false };
+    if (!await retainCoManagedTimeCalendar(trx, tenant)) return { handled: false };
     await assertCoManagedOperationalWrite(trx, tenant);
     await lockTimePeriodCalendar(trx, tenant);
     const actor = snapshotCoManagedAuthenticatedActor(await identify());

@@ -144,15 +144,19 @@ export const timePeriodResponseSchema = z.object({
 });
 
 // Time period settings schemas
+// Native count/unit input is canonical. Legacy label/count pairs remain
+// accepted at the domain edge for existing API clients.
 export const createTimePeriodSettingsSchema = z.object({
-  frequency: timePeriodFrequencySchema,
-  frequency_unit: z.number().min(1).optional().default(1),
-  start_day: z.number().min(1).max(7).optional(), // 1=Monday, 7=Sunday
-  end_day: z.number().min(1).max(7).optional(),
-  start_month: z.number().min(1).max(12).optional(),
-  end_month: z.number().min(1).max(12).optional(),
-  effective_from: dateSchema,
-  effective_to: dateSchema.optional(),
+  frequency: z.union([timePeriodFrequencySchema, z.number().int().positive()]),
+  frequency_unit: z.union([z.enum(['day', 'week', 'month', 'year']), z.number().int().positive()]).optional(),
+  start_day: z.number().int().min(1).max(31).optional(),
+  end_day: z.number().int().min(0).max(31).optional(),
+  start_month: z.number().int().min(1).max(12).optional(),
+  end_month: z.number().int().min(1).max(12).optional(),
+  start_day_of_month: z.number().int().min(1).max(31).optional(),
+  end_day_of_month: z.number().int().min(0).max(31).optional(),
+  effective_from: timeSheetCalendarDateSchema,
+  effective_to: timeSheetCalendarDateSchema.nullable().optional(),
   is_active: z.boolean().optional().default(true)
 });
 
@@ -160,17 +164,20 @@ export const updateTimePeriodSettingsSchema = createUpdateSchema(createTimePerio
 
 export const timePeriodSettingsResponseSchema = z.object({
   settings_id: uuidSchema,
-  frequency: timePeriodFrequencySchema,
-  frequency_unit: z.number(),
-  start_day: z.number().nullable(),
-  end_day: z.number().nullable(),
-  start_month: z.number().nullable(),
-  end_month: z.number().nullable(),
-  effective_from: dateSchema,
-  effective_to: dateSchema.nullable(),
+  time_period_settings_id: uuidSchema.optional(),
+  frequency: z.number().int().positive(),
+  frequency_unit: z.enum(['day', 'week', 'month', 'year']),
+  start_day: z.number().nullish(),
+  end_day: z.number().nullish(),
+  start_month: z.number().nullish(),
+  end_month: z.number().nullish(),
+  start_day_of_month: z.number().nullish(),
+  end_day_of_month: z.number().nullish(),
+  effective_from: timeSheetCalendarDateSchema,
+  effective_to: timeSheetCalendarDateSchema.nullish(),
   is_active: z.boolean(),
-  created_at: z.string().datetime(),
-  updated_at: z.string().datetime(),
+  created_at: z.string().datetime().optional(),
+  updated_at: z.string().datetime().optional(),
   tenant: uuidSchema
 });
 

@@ -74,3 +74,4 @@ export * from './nativeTimeSheetList';
 export * from './nativeTimeSheetLifecycle';
 
 export * from './nativeTimePeriod';
+export * from './nativeTimePeriodSettings';

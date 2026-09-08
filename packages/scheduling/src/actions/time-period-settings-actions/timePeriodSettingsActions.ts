@@ -8,6 +8,8 @@ import { timePeriodSettingsSchema } from '../../schemas/timeSheet.schemas';
 import { formatUtcDateNoTime } from '@alga-psa/core';
 import { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
+import { readCoManagedNativeTimePeriodSettings, commandCoManagedNativeTimePeriodSettings, NativeTimePeriodSettingsError } from '@alga-psa/co-managed';
+import { resolveNativeTimeBrowserActor } from '../../lib/nativeTimeReader';
 import {
   actionError,
   isActionMessageError,
@@ -43,6 +45,8 @@ function timePeriodSettingsActionErrorFrom(error: unknown, fallback: string): Ti
   if (isActionMessageError(error) || isActionPermissionError(error)) {
     return error as TimePeriodSettingsActionError;
   }
+
+  if (error instanceof NativeTimePeriodSettingsError) return actionError(error.message);
 
   const message = error instanceof Error ? error.message : typeof error === 'string' ? error : '';
   if (
@@ -84,11 +88,13 @@ function timePeriodSettingsActionErrorFrom(error: unknown, fallback: string): Ti
 }
 
 export const getActiveTimePeriodSettings = withAuth(async (
-  _user,
+  user,
   { tenant }
 ): Promise<TimePeriodSettingsActionResult<ITimePeriodSettings[]>> => {
   try {
     const { knex: db } = await createTenantKnex();
+    const current = await readCoManagedNativeTimePeriodSettings(db, tenant, () => resolveNativeTimeBrowserActor(user, tenant), { activeOnly: true });
+    if (current.handled) return current.settings;
 
     const activeSettings = await withTransaction(db, async (trx: Knex.Transaction) => {
       return await tenantScopedTable<ITimePeriodSettings>(trx, 'time_period_settings', tenant)
@@ -115,12 +121,14 @@ export const getActiveTimePeriodSettings = withAuth(async (
 });
 
 export const updateTimePeriodSettings = withAuth(async (
-  _user,
+  user,
   { tenant },
   settings: ITimePeriodSettings
 ): Promise<TimePeriodSettingsActionResult<void>> => {
   try {
     const { knex: db } = await createTenantKnex();
+    const current = await commandCoManagedNativeTimePeriodSettings(db, tenant, { action: 'update', id: settings.time_period_settings_id, settings }, () => resolveNativeTimeBrowserActor(user, tenant));
+    if (current.handled) return;
 
     // Validate input settings
     const validatedSettings = validateData(timePeriodSettingsSchema, {
@@ -163,12 +171,14 @@ export const updateTimePeriodSettings = withAuth(async (
 });
 
 export const createTimePeriodSettings = withAuth(async (
-  _user,
+  user,
   { tenant },
   settings: Partial<ITimePeriodSettings>
 ): Promise<TimePeriodSettingsActionResult<ITimePeriodSettings>> => {
   try {
     const { knex: db } = await createTenantKnex();
+    const current = await commandCoManagedNativeTimePeriodSettings(db, tenant, { action: 'create', settings }, () => resolveNativeTimeBrowserActor(user, tenant));
+    if (current.handled) return current.settings;
 
     const now = formatISO(new Date());
     const newSettings = {
@@ -227,12 +237,14 @@ export const createTimePeriodSettings = withAuth(async (
 });
 
 export const deleteTimePeriodSettings = withAuth(async (
-  _user,
+  user,
   { tenant },
   settingId: string
 ): Promise<TimePeriodSettingsActionResult<void>> => {
   try {
     const { knex: db } = await createTenantKnex();
+    const current = await commandCoManagedNativeTimePeriodSettings(db, tenant, { action: 'delete', id: settingId }, () => resolveNativeTimeBrowserActor(user, tenant));
+    if (current.handled) return;
 
     await withTransaction(db, async (trx: Knex.Transaction) => {
       const deleted = await tenantScopedTable(trx, 'time_period_settings', tenant)

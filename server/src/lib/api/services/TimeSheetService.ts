@@ -30,7 +30,7 @@ import { publishEvent } from 'server/src/lib/eventBus/publishers';
 import { TimePeriod } from '@alga-psa/scheduling/models/timePeriod';
 import { hasPermission } from '../../auth/rbac';
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '../middleware/apiMiddleware';
-import { readCoManagedNativeTimePeriods, commandCoManagedNativeTimePeriods, generateTimePeriodCalendar, NativeTimeSheetError, createCoManagedNativeTimeSheet, editCoManagedNativeTimeSheet, CoManagedSharedWorkError, NativeTimeReviewError, readCoManagedNativeTimeSheet, listCoManagedNativeTimeSheets, commandCoManagedNativeTimeSheets, deleteCoManagedNativeTimeSheet, addCoManagedNativeTimeSheetComment } from '@alga-psa/co-managed';
+import { NativeTimePeriodSettingsError, readCoManagedNativeTimePeriodSettings, commandCoManagedNativeTimePeriodSettings, readCoManagedNativeTimePeriods, commandCoManagedNativeTimePeriods, generateTimePeriodCalendar, NativeTimeSheetError, createCoManagedNativeTimeSheet, editCoManagedNativeTimeSheet, CoManagedSharedWorkError, NativeTimeReviewError, readCoManagedNativeTimeSheet, listCoManagedNativeTimeSheets, commandCoManagedNativeTimeSheets, deleteCoManagedNativeTimeSheet, addCoManagedNativeTimeSheetComment } from '@alga-psa/co-managed';
 import { CoManagedLifecycleError } from '@alga-psa/licensing';
 import { exportTimeSheetProjections, timeSheetStatistics, timeSheetDto, timeSheetCommentDto, filterTimeSheets, sortTimeSheets } from './timeSheetCollection';
 
@@ -80,6 +80,11 @@ export class TimeSheetService extends BaseService<any> {
     try { return await work(); } catch (error) {
       if (error instanceof CoManagedSharedWorkError) throw new ForbiddenError('Permission denied: Cannot access this time sheet');
       if (error instanceof CoManagedLifecycleError) throw Object.assign(new ForbiddenError(error.message), { code: error.code });
+      if (error instanceof NativeTimePeriodSettingsError) {
+        if (error.code === 'SETTINGS_INVALID') throw new BadRequestError(error.message);
+        if (error.code === 'SETTINGS_NOT_FOUND') throw new NotFoundError(error.message);
+        throw new ConflictError(error.message);
+      }
       if (error instanceof TimePeriodCalendarError) {
         if (error.code === 'PERIOD_INVALID_DATES') throw new BadRequestError(error.message);
         if (error.code === 'PERIOD_NOT_FOUND') throw new NotFoundError(error.message);
@@ -977,6 +982,8 @@ export class TimeSheetService extends BaseService<any> {
   // Time period settings
   async getTimePeriodSettings(context: ServiceContext): Promise<any[]> {
       const { knex } = await this.getKnex();
+      const current = await this.withSheetErrors(() => readCoManagedNativeTimePeriodSettings(knex, context.tenant, async () => this.sheetActor(context)));
+      if (current.handled) return current.settings.map(row => ({ ...row, settings_id: row.time_period_settings_id }));
       
       return tenantDb(knex, context.tenant).table('time_period_settings')
         .orderBy('effective_from', 'desc');
@@ -985,6 +992,8 @@ export class TimeSheetService extends BaseService<any> {
 
   async createTimePeriodSettings(data: CreateTimePeriodSettingsData, context: ServiceContext): Promise<any> {
       const { knex } = await this.getKnex();
+      const current = await this.withSheetErrors(() => commandCoManagedNativeTimePeriodSettings(knex, context.tenant, { action: 'create', settings: data }, async () => this.sheetActor(context)));
+      if (current.handled) return { ...current.settings, settings_id: current.settings.time_period_settings_id };
 
       try {
         return await withTransaction(knex, async (trx) => {
@@ -1016,6 +1025,8 @@ export class TimeSheetService extends BaseService<any> {
 
   async updateTimePeriodSettings(id: string, data: UpdateTimePeriodSettingsData, context: ServiceContext): Promise<any> {
       const { knex } = await this.getKnex();
+      const current = await this.withSheetErrors(() => commandCoManagedNativeTimePeriodSettings(knex, context.tenant, { action: 'update', id, settings: data }, async () => this.sheetActor(context)));
+      if (current.handled) return { ...current.settings, settings_id: current.settings.time_period_settings_id };
 
       try {
         return await withTransaction(knex, async (trx) => {

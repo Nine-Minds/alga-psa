@@ -4,7 +4,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { TimePeriod } from '../models/timePeriod'
-import { readCoManagedNativeTimePeriods, commandCoManagedNativeTimePeriods, listCoManagedNativeTimeSheets, CoManagedSharedWorkError } from '@alga-psa/co-managed';
+import { readCoManagedNativeTimePeriodSettings, readCoManagedNativeTimePeriods, commandCoManagedNativeTimePeriods, listCoManagedNativeTimeSheets, CoManagedSharedWorkError } from '@alga-psa/co-managed';
 import { TimePeriodCalendarError } from '@alga-psa/db';
 import { resolveNativeTimeBrowserActor } from '../lib/nativeTimeReader';
 import { TimePeriodSettings } from '../models/timePeriodSettings';
@@ -147,6 +147,9 @@ export const getLatestTimePeriod = withAuth(async (user, { tenant }): Promise<Ti
 export const getTimePeriodSettings = withAuth(async (user, { tenant }): Promise<TimePeriodActionResult<ITimePeriodSettings[]>> => {
   try {
     const { knex } = await createTenantKnex();
+    const current = await readCoManagedNativeTimePeriodSettings(knex, tenant, () => resolveNativeTimeBrowserActor(user, tenant), { activeOnly: true });
+    if (current.handled) return current.settings;
+
     const settings = await TimePeriodSettings.getActiveSettings(knex, tenant);
     return validateArray(timePeriodSettingsSchema, settings);
   } catch (error) {
@@ -708,9 +711,9 @@ export const generateAndSaveTimePeriods = withAuth(async (user, { tenant }, star
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
       const current = await commandCoManagedNativeTimePeriods(trx, tenant, { action: 'create', periods: async calendar => {
-        await tenantDb(calendar, tenant).table('time_period_settings').where('is_active', true).forShare().select('time_period_settings_id');
-        const settings = validateArray(timePeriodSettingsSchema, await TimePeriodSettings.getActiveSettings(calendar, tenant));
-        return generateTimePeriods(settings, startDate, endDate);
+        const admitted = await readCoManagedNativeTimePeriodSettings(calendar, tenant, () => resolveNativeTimeBrowserActor(user, tenant), { activeOnly: true, complete: true });
+        if (!admitted.handled) throw new CoManagedSharedWorkError();
+        return generateTimePeriods(admitted.settings, startDate, endDate);
       } }, () => resolveNativeTimeBrowserActor(user, tenant));
       if (current.handled) { safeRevalidate('/msp/time-entry'); return current.periods; }
 

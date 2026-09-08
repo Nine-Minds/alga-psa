@@ -13959,3 +13959,74 @@ it('customer time periods admit native settings generation before reading its co
     { start_date: '2026-10-05', end_date: '2026-10-12' }, { start_date: '2026-10-12', end_date: '2026-10-19' },
   ]);
 }));
+
+it('customer period settings normalize legacy and native API contracts and retain compatible active schedules', async () => withTimeSheetApiFixture(async ({ sheetService, context }: any) => {
+  const schemas = await import('../../lib/api/schemas/timeSheet');
+  const native = await import('../../../../packages/scheduling/src/actions/time-period-settings-actions/timePeriodSettingsActions');
+  const weekly = await sheetService.createTimePeriodSettings(schemas.createTimePeriodSettingsSchema.parse({ frequency: 'weekly', frequency_unit: 1, effective_from: '2026-09-01', effective_to: '2026-10-01' }), context);
+  expect(weekly).toMatchObject({ frequency: 1, frequency_unit: 'week', start_day: 1, end_day: 0, is_active: true });
+  schemas.timePeriodSettingsResponseSchema.parse(weekly);
+  const firstHalf = await native.createTimePeriodSettings({ frequency: 1, frequency_unit: 'month', start_day: 1, end_day: 16, effective_from: '2026-10-01' });
+  expect(firstHalf).toMatchObject({ frequency_unit: 'month', start_day: 1, end_day: 16, is_active: true });
+  const secondHalf = await sheetService.createTimePeriodSettings(schemas.createTimePeriodSettingsSchema.parse({ frequency: 1, frequency_unit: 'month', start_day: 16, end_day: 0, effective_from: '2026-10-01' }), context);
+  expect(await native.getActiveTimePeriodSettings()).toHaveLength(3);
+  expect(await sheetService.updateTimePeriodSettings(weekly.settings_id, { frequency_unit: 2 }, context)).toMatchObject({ frequency: 2, frequency_unit: 'week' });
+  expect(await sheetService.updateTimePeriodSettings(weekly.settings_id, { frequency_unit: 'day' }, context)).toMatchObject({ frequency: 2, frequency_unit: 'day' });
+  await native.updateTimePeriodSettings({ ...firstHalf, is_active: false });
+  expect(await native.getActiveTimePeriodSettings()).toHaveLength(2);
+  expect(await sheetService.getTimePeriodSettings(context)).toHaveLength(3);
+  await native.deleteTimePeriodSettings(secondHalf.settings_id);
+  expect(await sheetService.getTimePeriodSettings(context)).toHaveLength(2);
+}));
+
+it('customer period settings serialize conflicting creates without deactivating existing schedules', async () => withTimeSheetApiFixture(async ({ sheetService, context, customer }: any) => {
+  const data = { frequency: 'weekly', frequency_unit: 1, effective_from: '2026-10-01' };
+  const results = await Promise.allSettled([sheetService.createTimePeriodSettings(data, context), sheetService.createTimePeriodSettings(data, context)]);
+  expect(results.filter(result => result.status === 'fulfilled')).toHaveLength(1);
+  expect(results.find(result => result.status === 'rejected')).toMatchObject({ reason: { statusCode: 409 } });
+  const [active] = await customer.table('time_period_settings'); expect(active.is_active).toBe(true);
+  const inactive = await sheetService.createTimePeriodSettings({ ...data, is_active: false }, context);
+  await expect(sheetService.updateTimePeriodSettings(inactive.settings_id, { is_active: true }, context)).rejects.toMatchObject({ statusCode: 409 });
+  expect(await customer.table('time_period_settings').where('is_active', true)).toHaveLength(1);
+  await expect(sheetService.createTimePeriodSettings({ frequency: 'weekly', start_day: 8, effective_from: '2027-01-01' }, context)).rejects.toMatchObject({ statusCode: 400 });
+  await expect(sheetService.createTimePeriodSettings({ frequency: 1, frequency_unit: 'month', start_day: 20, end_day: 10, effective_from: '2027-01-01' }, context)).rejects.toMatchObject({ statusCode: 400 });
+}));
+
+it('customer period settings require current manage permission and remain readable after write expiry', async () => withTimeSheetApiFixture(async ({ sheetService, context, customer, principal }: any) => {
+  const created = await sheetService.createTimePeriodSettings({ frequency: 'yearly', effective_from: '2026-10-01' }, context);
+  expect(created).toMatchObject({ frequency: 1, frequency_unit: 'year', start_month: 1, end_month: 12, start_day_of_month: 1, end_day_of_month: 0 });
+  const permissions = await customer.table('role_permissions').whereIn('permission_id', customer.table('permissions').where({ resource: 'time_period', action: 'manage' }).select('permission_id'));
+  await customer.table('role_permissions').whereIn('permission_id', permissions.map((row: any) => row.permission_id)).del();
+  await expect(sheetService.updateTimePeriodSettings(created.settings_id, { is_active: false }, context)).rejects.toMatchObject({ statusCode: 403 });
+  const native = await import('../../../../packages/scheduling/src/actions/time-period-settings-actions/timePeriodSettingsActions');
+  const result = await native.deleteTimePeriodSettings(created.settings_id); expect(result).toBeDefined();
+  expect(await sheetService.getTimePeriodSettings(context)).toHaveLength(1);
+  await customer.table('role_permissions').insert(permissions);
+  await expireCoManagedEntitlement(principal.tenant);
+  expect(await sheetService.getTimePeriodSettings(context)).toHaveLength(1);
+  await expect(sheetService.updateTimePeriodSettings(created.settings_id, { is_active: false }, context)).rejects.toMatchObject({ statusCode: 403 });
+  await expect(sheetService.getTimePeriodSettings({ ...context, apiKeyId: undefined })).rejects.toMatchObject({ statusCode: 403 });
+}));
+
+it('customer period settings apply actual key bundle scope independently of the browser session', async () => withTimeSheetApiFixture(async ({ sheetService, context, resource, user }: any) => {
+  await sheetService.createTimePeriodSettings({ frequency: 'weekly', effective_from: '2026-10-01' }, context);
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: resource.tenant, name: 'Settings scope', actorUserId: user.user_id });
+  await bundles.upsertBundleRule(db, { tenant: resource.tenant, bundleId, revisionId, resourceType: 'time_period', action: 'read', templateKey: 'own', config: {} });
+  await bundles.publishBundleRevision(db, { tenant: resource.tenant, bundleId, revisionId, actorUserId: user.user_id });
+  await bundles.createBundleAssignment(db, { tenant: resource.tenant, bundleId, targetType: 'api_key', targetId: context.apiKeyId });
+  expect(await sheetService.getTimePeriodSettings(context)).toEqual([]);
+  const native = await import('../../../../packages/scheduling/src/actions/time-period-settings-actions/timePeriodSettingsActions');
+  expect(await native.getActiveTimePeriodSettings()).toHaveLength(1);
+  await expect(sheetService.createTimePeriodSettings({ frequency: 'weekly', effective_from: '2027-01-01' }, context)).rejects.toMatchObject({ statusCode: 403 });
+}));
+
+it('customer period settings roll changes back when the retained key expires after mutation', async () => withTimeSheetApiFixture(async ({ sheetService, context, customer }: any) => {
+  const created = await sheetService.createTimePeriodSettings({ frequency: 'weekly', effective_from: '2026-10-01' }, context);
+  await db.raw(`CREATE FUNCTION expire_period_settings_key() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN UPDATE api_keys SET expires_at = clock_timestamp() - interval '1 second' WHERE tenant = NEW.tenant AND api_key_id = '${context.apiKeyId}'::uuid; RETURN NEW; END $$`);
+  await db.raw('CREATE TRIGGER expire_period_settings_key AFTER UPDATE ON time_period_settings FOR EACH ROW EXECUTE FUNCTION expire_period_settings_key()');
+  try {
+    await expect(sheetService.updateTimePeriodSettings(created.settings_id, { is_active: false }, context)).rejects.toMatchObject({ statusCode: 403 });
+    expect(await customer.table('time_period_settings').where('time_period_settings_id', created.settings_id).first()).toMatchObject({ is_active: true, frequency: 1 });
+  } finally { await db.raw('DROP TRIGGER expire_period_settings_key ON time_period_settings'); await db.raw('DROP FUNCTION expire_period_settings_key()'); }
+}));
