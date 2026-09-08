@@ -3,5 +3,5 @@
   "release": "v1.5.0",
   "commit": "f3579f3a317cf51df5f4489e5dcd8f649bb71289",
   "selection": "Explicitly approved by the user for the supported-upgrade test",
-  "fixtureStatus": "pending"
+  "fixtureStatus": "implemented"
 }
