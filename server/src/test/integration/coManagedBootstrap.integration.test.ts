@@ -1,3 +1,5 @@
+import { registerCoManagedPortableEngagementCases } from './coManagedPortableEngagement.cases';
+import { registerCoManagedPortableWorkflowTests } from './helpers/coManagedPortableWorkflowCases';
 import { registerCoManagedPortableAssetTests } from './helpers/coManagedPortableAssetCases';
 import { registerCoManagedPortableOperationalCases } from './coManagedPortableOperational.cases';
 import { retainCoManagedInboundCommentEvent } from '../../../../packages/co-managed/src/inboundConversationEvents';
@@ -19941,3 +19943,73 @@ it('public departure browser actions derive customer authority and reject API ov
     });
   });
 });
+
+it('portable coordinated snapshot gives independently authorized record collectors one cutoff and rejects expired or forged capabilities', async () => {
+  const f = await ticketHandoffFixture();
+  const { withCoManagedPortableSnapshot: capture, portableSnapshotTransaction: read } = await import('../../../../packages/co-managed/src/portableSnapshot');
+  const { exportCoManagedPortableCore: core } = await import('../../../../packages/co-managed/src/portableCoreExport');
+  const { exportCoManagedPortableWork: work } = await import('../../../../packages/co-managed/src/portableWorkExport');
+  const packageId = randomUUID(), laterTicketId = randomUUID();
+  let expired: any;
+  await capture(db, async snapshot => {
+    expired = snapshot;
+    const first = await core(db, f.customerPrincipal, packageId, snapshot);
+    const ticket = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+    delete ticket.title_index;
+    await f.customer.table('tickets').insert({ ...ticket, ticket_id: laterTicketId, ticket_number: `later-${randomUUID()}` });
+    const second = await work(db, f.customerPrincipal, packageId, snapshot);
+    expect(first.capturedAt).toBe(snapshot.capturedAt);
+    expect(second.capturedAt).toBe(snapshot.capturedAt);
+    expect(second.records.tickets.some((row: any) => row.ticket_id === laterTicketId)).toBe(false);
+    expect((await work(db, f.customerPrincipal, packageId)).records.tickets.some((row: any) => row.ticket_id === laterTicketId)).toBe(true);
+    await expect(core(db, f.principal, packageId, snapshot)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    expect(() => read(db, { ...snapshot }, async () => null)).toThrow('unavailable');
+    await f.customer.table('sessions').where('session_id', f.customerPrincipal.sessionId).update({ revoked_at: db.fn.now() });
+    // A snapshot is data consistency, not permission to use a revoked actor.
+    await expect(work(db, f.customerPrincipal, packageId, snapshot)).rejects.toMatchObject({ code: '40001' });
+  });
+  expect(() => read(db, expired, async () => null)).toThrow('unavailable');
+});
+
+it('portable coordinated snapshot still performs document delivery checks against current source and current authority', async () => withPortableDocumentFixture(async f => {
+  const { withCoManagedPortableSnapshot: capture } = await import('../../../../packages/co-managed/src/portableSnapshot');
+  const { exportCoManagedPortableDocuments: documents } = await import('../../../../packages/co-managed/src/portableDocumentExport');
+  await capture(db, async snapshot => {
+    const result = await documents(db, f.customerPrincipal, randomUUID(), snapshot);
+    try { expect(result.component.records.documents.length).toBeGreaterThan(0); }
+    finally { await result.dispose(); }
+    const stream = artifactStorage.getReadStream.getMockImplementation()!;
+    artifactStorage.getReadStream.mockImplementationOnce(async (...args: any[]) => {
+      await f.customer.table('sessions').where('session_id', f.customerPrincipal.sessionId).update({ revoked_at: db.fn.now() });
+      return stream(...args);
+    });
+    await expect(documents(db, f.customerPrincipal, randomUUID(), snapshot)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  });
+}));
+
+it('self-host AI gateway ownership never lends appliance credits to active departed or independently upgraded customers', async () => {
+  const f = await ticketHandoffFixture();
+  await withTenantLicenseFixture(async sign => {
+    const { getSelfHostAiGatewayCredential: credential } = await import('../../../../packages/licensing/src/lib/ai-gateway-auth');
+    const licensing = await import('@alga-psa/licensing');
+    const { upgradeCoManagedWorkspaceWithTenantLicense: upgrade } = await import('../../../../ee/temporal-workflows/src/db/co-managed-upgrade-operations');
+    const { departCoManagedRelationship: depart } = await import('../../../../packages/co-managed/src/departure');
+    await db('license_state').update({ appliance_credential: 'owned-only-by-appliance-msp' });
+    expect(await credential(f.principal.tenant, db)).toBe('owned-only-by-appliance-msp');
+    await expect(credential(f.customerPrincipal.tenant, db)).rejects.toThrow('own AI gateway connection');
+    const relationship = await f.customer.table('co_management_relationships').first();
+    await depart(db, f.customerPrincipal, { relationshipId: relationship.relationship_id, expectedRevision: relationship.revision, operationId: randomUUID() });
+    await expect(credential(f.customerPrincipal.tenant, db)).rejects.toThrow('own AI gateway connection');
+    await db.transaction(trx => licensing.activateTenantPsaLicense(trx, f.customerPrincipal.tenant, sign({ aud: f.customerPrincipal.tenant, seats: 10 })));
+    const closed = await f.customer.table('co_management_relationships').first();
+    await upgrade(db, f.customerPrincipal, f.target, { operationId: randomUUID(), expectedRevision: closed.revision }, log);
+    await expect(credential(f.customerPrincipal.tenant, db)).rejects.toThrow('own AI gateway connection');
+    await f.customer.table('tenant_license_state').delete();
+    await expect(credential(f.customerPrincipal.tenant, db)).rejects.toThrow('own AI gateway connection');
+    expect(await credential(f.principal.tenant, db)).toBe('owned-only-by-appliance-msp');
+  });
+});
+
+registerCoManagedPortableWorkflowTests(() => db, ticketHandoffFixture);
+
+registerCoManagedPortableEngagementCases(() => db, ticketHandoffFixture, withSharedProjectTaskFixture);

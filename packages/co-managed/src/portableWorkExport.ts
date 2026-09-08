@@ -36,6 +36,7 @@ export const CO_MANAGED_PORTABLE_WORK_REFERENCES = [
   ['project_tasks', 'phase_id', 'project_phases', 'phase_id'],
   ['project_tasks', 'project_status_mapping_id', 'project_status_mappings', 'project_status_mapping_id'],
   ['project_tasks', 'priority_id', 'priorities', 'priority_id'],
+  ['project_tasks', 'service_id', 'service_catalog', 'service_id'],
   ['task_resources', 'task_id', 'project_tasks', 'task_id'], ['task_checklist_items', 'task_id', 'project_tasks', 'task_id'],
   ['project_task_dependencies', 'predecessor_task_id', 'project_tasks', 'task_id'],
   ['project_task_dependencies', 'successor_task_id', 'project_tasks', 'task_id'],
