@@ -39,7 +39,7 @@ export function verifyNodeWorkflow({ root, revision, input, jobs }) {
           collections: [{ runner: job, status: verified.status, files: verified.executedFiles }] });
         problems.push(...discovery.failures);
       } else {
-        const runners = ['server-legacy', 'enterprise-legacy', 'enterprise-deploy', 'production-community', 'production-enterprise'];
+        const runners = ['teams-development', 'server-legacy', 'enterprise-legacy', 'enterprise-deploy', 'production-community', 'production-enterprise'];
         verified = discoverBrowserTests(root, runners.map(runner => ({ runner, exitCode: 0,
           report: read(path.join(directory, `${runner}.json`)) })), evidence.sourceRoot);
       }

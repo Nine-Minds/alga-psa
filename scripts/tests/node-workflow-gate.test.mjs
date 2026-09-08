@@ -51,7 +51,7 @@ test('aggregate rechecks real Node events and Playwright collections instead of 
   const report = JSON.parse(readFileSync(reportFile, 'utf8'));
   const browser = `test-results/input/browser-discovery-${revision}`;
   write(`${browser}/evidence.json`, common);
-  const runners = ['server-legacy', 'enterprise-legacy', 'enterprise-deploy', 'production-community', 'production-enterprise'];
+  const runners = ['teams-development', 'server-legacy', 'enterprise-legacy', 'enterprise-deploy', 'production-community', 'production-enterprise'];
   for (const runner of runners) write(`${browser}/${runner}.json`, report);
   const check = () => verifyNodeWorkflow({ root, revision, input, jobs });
   assert.equal(check().status, 'passed', check().failures.join('\n'));
