@@ -225,6 +225,24 @@ export function SearchableSelect({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [open, disabled]);
 
+  // Escape closes only the dropdown. Radix dialogs/drawers listen for Escape on
+  // document in the capture phase, so a React onKeyDown cannot stop them from
+  // closing too; window capture runs before document capture, so claim it there.
+  useEffect(() => {
+    if (!open || disabled) return;
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      event.stopPropagation();
+      event.preventDefault();
+      setOpen(false);
+      triggerRef.current?.focus();
+    };
+
+    window.addEventListener('keydown', handleEscape, true);
+    return () => window.removeEventListener('keydown', handleEscape, true);
+  }, [open, disabled]);
+
   // Clear search when closing
   useEffect(() => {
     if (!open) setSearch('');

@@ -80,6 +80,24 @@ describe('CurrencyPicker', () => {
     expect(screen.queryByPlaceholderText('Search...')).toBeNull();
   });
 
+  it('closes only the dropdown on Escape, leaving the surrounding dialog open', () => {
+    // Radix dialogs/drawers listen for Escape on document in the capture phase.
+    const dialogEscape = vi.fn();
+    document.addEventListener('keydown', dialogEscape, true);
+
+    try {
+      render(<CurrencyPicker id="currency" value="USD" onValueChange={vi.fn()} />);
+
+      const search = openDropdown();
+      fireEvent.keyDown(search, { key: 'Escape' });
+
+      expect(screen.queryByPlaceholderText('Search...')).toBeNull();
+      expect(dialogEscape).not.toHaveBeenCalled();
+    } finally {
+      document.removeEventListener('keydown', dialogEscape, true);
+    }
+  });
+
   it('respects an options override', () => {
     render(
       <CurrencyPicker
