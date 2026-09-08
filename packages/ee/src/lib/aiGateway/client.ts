@@ -5,10 +5,7 @@
 import { randomUUID } from 'node:crypto';
 import jwt from 'jsonwebtoken';
 
-import {
-  getLicenseStateRow,
-  isSelfHostLicensing,
-} from '@alga-psa/licensing';
+import { getSelfHostAiGatewayCredential } from '@alga-psa/licensing';
 
 const GATEWAY_TOKEN_TTL_SECONDS = 5 * 60;
 
@@ -34,16 +31,6 @@ export function mintGatewayToken(tenantId: string): string {
 }
 
 export async function resolveGatewayAuthToken(tenantId: string): Promise<string> {
-  if (!(await isSelfHostLicensing())) {
-    return mintGatewayToken(tenantId);
-  }
-
-  const licenseState = await getLicenseStateRow();
-  const applianceCredential = licenseState?.appliance_credential?.trim();
-  if (!applianceCredential) {
-    throw new Error(
-      'AI gateway authentication requires an appliance credential on self-hosted installs',
-    );
-  }
-  return applianceCredential;
+  const credential = await getSelfHostAiGatewayCredential(tenantId);
+  return credential ?? mintGatewayToken(tenantId);
 }
