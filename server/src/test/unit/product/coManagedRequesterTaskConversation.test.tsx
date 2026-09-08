@@ -9,7 +9,7 @@ vi.mock('@alga-psa/ui/hooks', () => ({ useFeatureFlag: mocks.flag }));
 vi.mock('../../../lib/actions/coManagedAcceptanceActions', () => ({}));
 vi.mock('../../../lib/actions/coManagedRequesterTaskActions', () => ({ getRequesterTaskConversationAction: mocks.load, createRequesterTaskCommentAction: mocks.save }));
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({ useTranslation: () => ({ t: (key: string) => key }), useFormatters: () => ({ formatDate: () => 'date' }), useOptionalI18n: () => null }));
-vi.mock('@alga-psa/ui/components/Dialog', () => ({ Dialog: ({ isOpen, children }: any) => isOpen ? <div role="dialog">{children}</div> : null }));
+vi.mock('@alga-psa/ui/components/Dialog', () => ({ Dialog: ({ isOpen, children, onClose }: any) => isOpen ? <div role="dialog"><button onClick={onClose}>Close</button>{children}</div> : null }));
 import { CoManagedRequesterTaskProvider } from '../../../components/co-managed/CoManagedRequesterTaskConversation';
 import { RequesterTaskConversation } from '../../../../../packages/client-portal/src/components/projects/RequesterTaskConversation';
 const target = { projectId: 'project', taskId: 'task' };
@@ -18,7 +18,7 @@ const data = () => ({ target, actor: { tenant: 'customer', userId: 'requester' }
   attachments: [{ attachmentId: 'file', fileName: '<report>.txt' }] }] });
 const view = () => <CoManagedRequesterTaskProvider><RequesterTaskConversation {...target} /></CoManagedRequesterTaskProvider>;
 const open = () => fireEvent.click(screen.getByRole('button', { name: 'coManaged.conversation.title' }));
-beforeEach(() => { vi.resetAllMocks(); mocks.flag.mockReturnValue({ enabled: true }); mocks.session = { session_id: 'session', user: { tenant: 'customer', id: 'requester', user_type: 'client' } }; mocks.load.mockResolvedValue(data()); mocks.save.mockResolvedValue({}); });
+beforeEach(() => { window.history.replaceState({}, '', '/'); vi.resetAllMocks(); mocks.flag.mockReturnValue({ enabled: true }); mocks.session = { session_id: 'session', user: { tenant: 'customer', id: 'requester', user_type: 'client' } }; mocks.load.mockResolvedValue(data()); mocks.save.mockResolvedValue({}); });
 afterEach(cleanup);
 it.each([{ enabled: false }, { enabled: true, loading: true }, { enabled: true, error: true }])('gates requester task UI before action calls: %j', flag => {
   mocks.flag.mockReturnValue(flag); render(view()); expect(screen.queryByRole('button')).toBeNull(); expect(mocks.load).not.toHaveBeenCalled();
@@ -54,4 +54,18 @@ it('ignores late responses when the tracked requester session changes', async ()
   mocks.session = { ...mocks.session, session_id: 'new-session' }; mocks.load.mockResolvedValue({ ...data(), items: [] });
   rendered.rerender(view()); await screen.findByText('coManaged.conversation.empty'); await act(async () => finish(data()));
   expect(screen.queryByText('Visible request')).toBeNull();
+});
+it('opens only the email-linked task and respects closing its dialog', async () => {
+  window.history.replaceState({}, '', '/client-portal/projects/project?taskId=task');
+  const content = () => <CoManagedRequesterTaskProvider><RequesterTaskConversation {...target} /><RequesterTaskConversation projectId="project" taskId="other" /></CoManagedRequesterTaskProvider>;
+  const rendered = render(content()); await screen.findByText('Visible request');
+  expect(screen.getAllByRole('dialog')).toHaveLength(1);
+  expect(mocks.load).toHaveBeenCalledExactlyOnceWith(target, undefined);
+  fireEvent.click(screen.getByRole('button', { name: 'Close' })); rendered.rerender(content());
+  expect(screen.queryByRole('dialog')).toBeNull(); expect(mocks.load).toHaveBeenCalledOnce();
+});
+it('does not open an email-linked conversation while the feature is hidden', () => {
+  window.history.replaceState({}, '', '/client-portal/projects/project?taskId=task');
+  mocks.flag.mockReturnValue({ enabled: false }); render(view());
+  expect(screen.queryByRole('dialog')).toBeNull(); expect(mocks.load).not.toHaveBeenCalled();
 });

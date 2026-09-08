@@ -140,3 +140,5 @@ export * from './ticketRoutingEmailDeliveries';
 export * from './requesterTaskConversation';
 
 export * from './delegatedAdministration';
+
+export * from './requesterTaskEmail';

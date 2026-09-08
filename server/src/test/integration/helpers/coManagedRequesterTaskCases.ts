@@ -5,8 +5,7 @@ import { createRequesterTaskComment, getRequesterTaskConversation, downloadReque
 import { mutateCoManagedProjectTaskComment } from '../../../../../packages/co-managed/src/projectTaskConversation';
 import { uploadCoManagedConversationAttachment } from '../../../../../packages/co-managed/src/conversationAttachments';
 
-export function registerCoManagedRequesterTaskCases(getDb: () => Knex, withTask: (work: (f: any) => Promise<void>) => Promise<void>) {
-  async function fixture(work: (f: any) => Promise<void>) {
+export async function withCoManagedRequesterTaskFixture(getDb: () => Knex, withTask: (work: (f: any) => Promise<void>) => Promise<void>, work: (f: any) => Promise<void>) {
     await withTask(async f => {
       const db = getDb(), tenant = f.actor.tenant, userId = randomUUID(), sessionId = randomUUID();
       const contact = await f.customer.table('contacts').where('client_id', f.operation.customer_client_id).first();
@@ -22,7 +21,10 @@ export function registerCoManagedRequesterTaskCases(getDb: () => Knex, withTask:
         mutateCoManagedProjectTaskComment(db, principal, f.resource, { operationId: randomUUID(), kind: 'create', text: `${audience} body`, audience });
       await work({ ...f, db, portal: actor, target, create, message, contact });
     });
-  }
+}
+
+export function registerCoManagedRequesterTaskCases(getDb: () => Knex, withTask: (work: (f: any) => Promise<void>) => Promise<void>) {
+  const fixture = (work: (f: any) => Promise<void>) => withCoManagedRequesterTaskFixture(getDb, withTask, work);
   it('requester task conversation shows only explicit requester threads and persists idempotent portal replies with durable events', async () => fixture(async f => {
     const visible = await f.message('requester', f.principal);
     const shared = await f.message('shared_it'), local = await f.message('organization_private');

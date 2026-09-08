@@ -11,7 +11,7 @@ const delivery = (): CoManagedEmailDelivery => ({ tenant: randomUUID(), recipien
   message: { resource: { tenant: randomUUID(), relationshipId: randomUUID(), kind: 'ticket', id: randomUUID() }, commentId: randomUUID(), threadId: randomUUID(), audience: 'shared_it',
     ticketNumber: 'T-1', ticketTitle: '<img src=x onerror=alert(1)>', note: JSON.stringify([{ type: 'paragraph', content: [{ type: 'text', text: '<script>private()</script> & current text', styles: {} }], children: [] }]),
     author: { tenant: randomUUID(), id: randomUUID(), kind: 'user', referenceId: null, displayName: 'A < B', organizationName: 'Customer' } } });
-beforeEach(() => { runtime.send.mockReset().mockResolvedValue({ success: true }); runtime.locale.mockReset().mockResolvedValue('en'); runtime.tenant.mockClear(); runtime.mailbox.mockReset().mockResolvedValue({ from: { email: 'support@example.test' }, replyTo: { email: 'intake@example.test' } }); });
+beforeEach(() => { runtime.send.mockReset().mockResolvedValue({ success: true }); runtime.locale.mockReset().mockResolvedValue('en'); runtime.tenant.mockClear(); runtime.routing.mockReset(); runtime.mailbox.mockReset().mockResolvedValue({ from: { email: 'support@example.test' }, replyTo: { email: 'intake@example.test' } }); });
 it('renders only supplied authorized fields, escapes content, links the qualified source and retains caller-owned retry and stable identity', async () => {
   const item = delivery(); expect(await sendCoManagedCommentEmail(item)).toEqual({ status: 'delivered' });
   expect(runtime.tenant).toHaveBeenCalledWith(item.tenant);
@@ -117,4 +117,23 @@ it('uses the admitted owner task path after separation and does not restore mask
   await sendCoManagedCommentEmail(item);
   const content = await runtime.send.mock.calls[0][0].templateProcessor.process();
   expect(content.text).toContain(path); expect(content.text).not.toContain('/co-management/'); expect(content.text).not.toContain('Customer project'); expect(content.text).not.toContain('A < B');
+});
+
+it.each(['en', 'fr', 'pt'])('renders requester task email in %s with portal identity and no ticket token or reply mailbox', async locale => {
+  const { sendCoManagedRequesterCommentEmail } = await import('@alga-psa/jobs/handlers/coManagedCommentEmailTransport');
+  runtime.locale.mockResolvedValue(locale);
+  const source = delivery(), clientId = randomUUID(), userId = randomUUID(), projectId = randomUUID();
+  const item = { tenant: source.tenant, email: source.email, messageId: source.messageId, subtypeId: source.subtypeId,
+    recipient: { kind: 'requester_task_user' as const, tenant: source.tenant, clientId, userId, contactId: randomUUID() },
+    message: { resource: { tenant: source.tenant, kind: 'project_task' as const, id: source.message.resource.id }, projectId,
+      commentId: source.message.commentId, threadId: source.message.threadId, audience: 'requester' as const, note: source.message.note,
+      author: source.message.author, taskName: 'Customer task', projectName: '<Project>' } };
+  expect(await sendCoManagedRequesterCommentEmail(item)).toEqual({ status: 'delivered' });
+  const params = runtime.send.mock.calls[0][0], content = await params.templateProcessor.process();
+  expect(runtime.locale).toHaveBeenCalledWith(item.tenant, { email: item.email, userId, clientId, userType: 'client' });
+  expect(params).toMatchObject({ tenantId: item.tenant, userId, retryPolicy: 'caller', headers: { 'Message-ID': item.messageId } });
+  expect(content.text).toContain(`/client-portal/projects/${projectId}?taskId=${item.message.resource.id}`);
+  expect(content.html).toContain('&lt;Project&gt;'); expect(content.html).not.toContain('<script>');
+  expect(content.text).not.toContain('ALGA-REPLY-TOKEN'); expect(content.html).not.toContain('data-alga-reply-token');
+  expect(runtime.mailbox).not.toHaveBeenCalled(); expect(runtime.routing).not.toHaveBeenCalled();
 });

@@ -21,6 +21,14 @@ function Conversation(props: RequesterTaskConversationProps) {
   const { data: session } = useSession();
   const { t } = useTranslation('msp/licensing');
   const [open, setOpen] = useState(false);
+  const taskLinkHandled = useRef<string | null>(null);
+  useEffect(() => {
+    if (session?.user?.user_type !== 'client' || !session.session_id || !session.user.tenant || !session.user.id) return;
+    const target = `${props.projectId}:${props.taskId}`;
+    if (taskLinkHandled.current === target) return;
+    taskLinkHandled.current = target;
+    if (new URLSearchParams(window.location.search).get('taskId') === props.taskId) setOpen(true);
+  }, [props.projectId, props.taskId, session]);
   if (session?.user?.user_type !== 'client' || !session.session_id || !session.user.tenant || !session.user.id) return null;
   const identity = `${session.session_id}:${session.user.tenant}:${session.user.id}:${props.projectId}:${props.taskId}`;
   return <>

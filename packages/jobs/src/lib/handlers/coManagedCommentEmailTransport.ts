@@ -1,5 +1,5 @@
 import { resolveCoManagedRequesterEmailRouting, resolveCoManagedTicketEmailMailbox } from './coManagedRequesterEmailRouting';
-import type { CoManagedEmailDelivery, CoManagedCustomerEmailDelivery, CoManagedRequesterEmailDelivery, CoManagedEmailDeliveryResult, CoManagedTaskCommentNotification, CoManagedTicketCommentNotification } from '@alga-psa/co-managed';
+import type { CoManagedEmailDelivery, CoManagedCustomerEmailDelivery, CoManagedRequesterEmailDelivery, CoManagedRequesterTaskEmailDelivery, CoManagedEmailDeliveryResult, CoManagedTaskCommentNotification, CoManagedTicketCommentNotification } from '@alga-psa/co-managed';
 import { TenantEmailService, StaticTemplateProcessor } from '@alga-psa/email';
 import { resolveEmailLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 import { extractTicketRichTextPlainText } from '@alga-psa/tickets/lib/ticketRichText';
@@ -45,18 +45,23 @@ export async function sendCoManagedCustomerCommentEmail(delivery: CoManagedCusto
   const routing = await resolveCoManagedTicketEmailMailbox(delivery.tenant, delivery.message.resource.id);
   return sendAuthorizedCommentEmail(delivery, `/msp/tickets/${delivery.message.resource.id}`, 'customerSubject', routing);
 }
-export async function sendCoManagedRequesterCommentEmail(delivery: CoManagedRequesterEmailDelivery): Promise<CoManagedEmailDeliveryResult> {
+export async function sendCoManagedRequesterCommentEmail(delivery: CoManagedRequesterEmailDelivery | CoManagedRequesterTaskEmailDelivery): Promise<CoManagedEmailDeliveryResult> {
+  if (!('replyToken' in delivery)) {
+    if (delivery.recipient.kind !== 'requester_task_user' || delivery.message.resource.kind !== 'project_task') throw new Error('Invalid requester task delivery');
+    return sendAuthorizedCommentEmail(delivery, `/client-portal/projects/${delivery.message.projectId}?taskId=${delivery.message.resource.id}`, 'customerSubject');
+  }
   if (!/^cm1:[A-Za-z0-9_-]{43}$/.test(delivery.replyToken)) throw new Error('Invalid requester reply token');
   const routing = await resolveCoManagedRequesterEmailRouting(delivery);
   return sendAuthorizedCommentEmail(delivery, routing.url, 'customerSubject', routing);
 }
 /** Delivery adapters supply only current, admitted content and their own
  * navigation target. Rendering and caller-owned transport completion are shared. */
-async function sendAuthorizedCommentEmail(delivery: CoManagedEmailDelivery | CoManagedCustomerEmailDelivery | CoManagedRequesterEmailDelivery, path: string,
+async function sendAuthorizedCommentEmail(delivery: CoManagedEmailDelivery | CoManagedCustomerEmailDelivery | CoManagedRequesterEmailDelivery | CoManagedRequesterTaskEmailDelivery, path: string,
   subjectKey: 'subject' | 'customerSubject', routing?: { from?: { email: string; name?: string }; replyTo?: { email: string; name?: string } }): Promise<CoManagedEmailDeliveryResult> {
   const requester = 'recipient' in delivery;
   const locale = await resolveEmailLocale(delivery.tenant, requester
-    ? { email: delivery.email, clientId: delivery.recipient.clientId, userType: 'client' }
+    ? { email: delivery.email, clientId: delivery.recipient.clientId, userType: 'client',
+      ...(delivery.recipient.kind === 'requester_task_user' ? { userId: delivery.recipient.userId } : {}) }
     : { email: delivery.email, userId: delivery.recipientUserId, userType: 'internal' });
   const task = delivery.message.resource.kind === 'project_task';
   const taskCopy = TASK_COPY[locale] ?? TASK_COPY[locale.split('-')[0]] ?? TASK_COPY.en;
@@ -77,7 +82,7 @@ async function sendAuthorizedCommentEmail(delivery: CoManagedEmailDelivery | CoM
     text = `--- Please reply above this line ---\n\n${text}\n\n[ALGA-REPLY-TOKEN ${delivery.replyToken}]`;
   }
   const result = await TenantEmailService.getInstance(delivery.tenant).sendEmail({ tenantId: delivery.tenant, to: delivery.email,
-    userId: requester ? undefined : delivery.recipientUserId, from: routing?.from, replyTo: routing?.replyTo, notificationSubtypeId: delivery.subtypeId, locale, retryPolicy: 'caller',
+    userId: requester ? (delivery.recipient.kind === 'requester_task_user' ? delivery.recipient.userId : undefined) : delivery.recipientUserId, from: routing?.from, replyTo: routing?.replyTo, notificationSubtypeId: delivery.subtypeId, locale, retryPolicy: 'caller',
     templateProcessor: new StaticTemplateProcessor(subject, html, text),
     headers: { ...AUTO_GENERATED_MAIL_HEADERS, 'Message-ID': delivery.messageId },
   });

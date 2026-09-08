@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { IProject, IClientPortalConfig, DEFAULT_CLIENT_PORTAL_CONFIG } from '@alga-psa/types';
 import { ClientPortalProjectMetrics } from '@alga-psa/client-portal-composition';
 import { formatDistanceToNow, format } from 'date-fns';
@@ -91,6 +91,7 @@ export default function ProjectDetailView({ project }: ProjectDetailViewProps) {
   const [taskDependencies, setTaskDependencies] = useState<{ [taskId: string]: { predecessors: TaskDependency[]; successors: TaskDependency[] } }>({});
   const [selectedPhaseId, setSelectedPhaseId] = useState<string | null>(null);
   const [dataLoading, setDataLoading] = useState(true);
+  const taskLinkHandledFor = useRef<string | null>(null);
 
   // Persist viewMode to localStorage when it changes
   const handleViewModeChange = (newMode: ViewMode) => {
@@ -125,8 +126,8 @@ export default function ProjectDetailView({ project }: ProjectDetailViewProps) {
         if (phasesResult?.phases) {
           setPhases(phasesResult.phases);
           // Auto-select first phase for kanban view
-          if (phasesResult.phases.length > 0 && !selectedPhaseId) {
-            setSelectedPhaseId(phasesResult.phases[0].phase_id);
+          if (phasesResult.phases.length > 0) {
+            setSelectedPhaseId(current => current ?? phasesResult.phases[0].phase_id);
           }
         }
       } catch (error) {
@@ -177,6 +178,14 @@ export default function ProjectDetailView({ project }: ProjectDetailViewProps) {
 
         if (result?.tasks) {
           setTasks(result.tasks);
+          // Email links may target a task outside the default phase. Apply the
+          // initial selection once so later view changes keep the user's choice.
+          if (taskLinkHandledFor.current !== project.project_id) {
+            taskLinkHandledFor.current = project.project_id;
+            const linkedTaskId = new URLSearchParams(window.location.search).get('taskId');
+            const linkedTask = result.tasks.find(task => task.task_id === linkedTaskId);
+            if (linkedTask) setSelectedPhaseId(linkedTask.phase_id);
+          }
         }
         if (result?.taskDependencies) {
           setTaskDependencies(result.taskDependencies);
