@@ -412,6 +412,14 @@
       "dependsOn": [],
       "owner": "qbo_protocol and coordinator",
       "notes": "Pre-fix real HTTP returned200 for wrong company. Grant binding persists through refresh; tests verify read/write403 and unchanged foreign entities, and independent company OAuth fixtures. Final default runs29/29 normally and with application dist hidden; typecheck passes. Two prior intermittent HTTP failures remain unexplained; currentCI required. SIM_REALM_MISMATCH is an explicit emulator guard, not verified Intuit denial parity."
+    },
+    {
+      "id": "R049",
+      "title": "Roll back emulator listeners after failed startup",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "calendar_review and coordinator",
+      "notes": "Real occupied control-port regression reproduced masked EADDRINUSE and live vendor socket after failure. Handle Express listen callback error and roll back prior listeners, preserving startup/cleanup failures. Regression verifies socket refusal, successful retry/HTTP and shutdown; full host28/28 and typecheck pass. Not established as cause of QBO transients."
     }
   ]
 }

@@ -57,7 +57,7 @@ function defaultLog(message: string, extra?: Record<string, unknown>): void {
 
 function listen(app: express.Express, port: number): Promise<Server> {
   return new Promise((resolve, reject) => {
-    const server = app.listen(port, () => resolve(server));
+    const server = app.listen(port, (error?: Error) => error ? reject(error) : resolve(server));
     server.on('error', reject);
   });
 }
@@ -212,32 +212,43 @@ export class EmulatorHost {
     if (this.servers.length > 0) {
       throw new Error('EmulatorHost is already started');
     }
-    const ports: Record<string, number> = {};
-    for (const instance of this.instances.values()) {
-      const requestedPort = this.options.ports?.[instance.pkg.id] ?? instance.pkg.defaultPort;
-      if (instance.pkg.wire) {
-        const app = express();
-        app.use(instance.requests.middleware(this.clock));
-        app.use(transportFaultMiddleware(instance.transport, this.env.rng));
-        const router = express.Router();
-        instance.pkg.wire(router, instance.core, this.env);
-        app.use(router);
-        const server = await listen(app, requestedPort);
-        this.servers.push(server);
-        instance.port = boundPort(server);
-      } else {
-        const server = await instance.pkg.serve!(instance.core, requestedPort, this.env);
-        this.customServers.push(server);
-        instance.port = server.port;
+    try {
+      const ports: Record<string, number> = {};
+      for (const instance of this.instances.values()) {
+        const requestedPort = this.options.ports?.[instance.pkg.id] ?? instance.pkg.defaultPort;
+        if (instance.pkg.wire) {
+          const app = express();
+          app.use(instance.requests.middleware(this.clock));
+          app.use(transportFaultMiddleware(instance.transport, this.env.rng));
+          const router = express.Router();
+          instance.pkg.wire(router, instance.core, this.env);
+          app.use(router);
+          const server = await listen(app, requestedPort);
+          this.servers.push(server);
+          instance.port = boundPort(server);
+        } else {
+          const server = await instance.pkg.serve!(instance.core, requestedPort, this.env);
+          this.customServers.push(server);
+          instance.port = server.port;
+        }
+        ports[instance.pkg.id] = instance.port;
+        this.env.log(`${instance.pkg.id} vendor surface listening`, { port: instance.port });
       }
-      ports[instance.pkg.id] = instance.port;
-      this.env.log(`${instance.pkg.id} vendor surface listening`, { port: instance.port });
+      const controlServer = await listen(buildControlApp(this), this.options.controlPort ?? 9500);
+      this.servers.push(controlServer);
+      this.controlPort = boundPort(controlServer);
+      this.env.log('control API listening', { port: this.controlPort });
+      return { controlPort: this.controlPort, ports };
+    } catch (startupError) {
+      try {
+        await this.stop();
+      } catch (cleanupError) {
+        throw new AggregateError([startupError, cleanupError], 'Emulator startup failed and partial-start cleanup failed');
+      }
+      this.controlPort = 0;
+      for (const instance of this.instances.values()) instance.port = 0;
+      throw startupError;
     }
-    const controlServer = await listen(buildControlApp(this), this.options.controlPort ?? 9500);
-    this.servers.push(controlServer);
-    this.controlPort = boundPort(controlServer);
-    this.env.log('control API listening', { port: this.controlPort });
-    return { controlPort: this.controlPort, ports };
   }
 
   async stop(): Promise<void> {
