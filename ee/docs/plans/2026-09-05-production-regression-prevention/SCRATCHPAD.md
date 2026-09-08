@@ -2663,3 +2663,10 @@ Focused runtime/component/manifest/binding tests pass; see evidence/host-kuberne
 Audit found collector timestamp/target were written in a sidecar while promotion consumed only the bare image array, so old or different-target readback could pass. Collector now emits one versioned runtime envelope, timestamped before API reads. Promotion requires consumer-owned expectedTarget and positive maxObservationAgeSeconds, validates context/namespace/workload set, and rejects missing/invalid/future/stale timestamps plus legacy arrays. Millisecond threshold is inclusive at limit and fails one millisecond beyond.
 
 Focused runtime/component/manifest suites and collector-envelope-to-promotion serialization pass; CLI fixture upgraded to explicit target/age policy. Evidence: evidence/host-runtime-evidence-freshness.json. Runbook updated. No live cluster queried or Docker builds. Target-specific policy, actual smoke provenance and release pipeline remain open; no broad completion flags changed. Publication approval remains pending.
+
+
+### Combined host validation and future browser-floor registration
+
+Full host tooling ataf67a7a04e passed586tests/59files in148.0s, zero failures/skips/todos/cancellations. Current draft PR remains7b170294a755dfebba34cb8bbfc1069b6d8ba8bc with59success/10failure/1skipped; local host success does not change native status.
+
+Follow-up browser guard rejects newly executed specs unless added to permanent criticalBrowserFiles registry. Regression supplies a new file in both green CE/EE raw reports and candidate inventory: old verifier passes; updated verifier fails with explicit unregistered-file message. This ensures new journeys acquire deletion protection as they land. Independent fixture list and README authoring instructions maintained. Focused fresh-install/readiness suites pass21tests in0.47s after this change. Evidence: evidence/host-release-combined-and-browser-registration.json. No Docker build. Publication approval and native validation remain pending; broad goal still incomplete.

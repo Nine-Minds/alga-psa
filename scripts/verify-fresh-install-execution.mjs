@@ -48,6 +48,11 @@ function browserDirectory(directory) {
 
 export function verifyFreshInstallExecution({ root, revision, input, sourceRoot = root, candidates, jobResults, shouldRun }) {
   const failures = [], requirements = [], bundles = [];
+  // A passing new journey must become part of the permanent floor; otherwise
+  // its later deletion could remove both candidate and collection evidence.
+  for (const file of candidates.filter(file => file.startsWith('e2e-tests/tests/'))) {
+    if (!criticalBrowserFiles.includes(file)) failures.push(`Unregistered mandatory browser journey: ${file}`);
+  }
   for (const job of ['changes', 'production-browser']) {
     if (jobResults?.[job]?.result !== 'success') failures.push(`Required job ${job}: ${jobResults?.[job]?.result ?? 'missing'}`);
   }

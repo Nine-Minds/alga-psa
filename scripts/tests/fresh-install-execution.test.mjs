@@ -81,3 +81,22 @@ test('documentation selection is explicit and still requires successful selectio
   input.shouldRun = undefined;
   assert.equal(verifyFreshInstallExecution(input).status, 'failed');
 });
+
+test('newly executed browser journeys must join the permanent floor before they can pass', t => {
+  const input = fixture(t);
+  const file = 'e2e-tests/tests/new-required-journey.spec.ts';
+  input.candidates.push(file);
+  for (const edition of ['community', 'enterprise']) {
+    const directory = path.join(input.input, `fresh-install-playwright-${edition}`, 'nested', 'execution-evidence');
+    for (const artifact of ['collected.json', 'results.json']) {
+      const target = path.join(directory, artifact);
+      const report = JSON.parse(readFileSync(target, 'utf8'));
+      report.suites[0].specs.push({ ...structuredClone(report.suites[0].specs[0]), file });
+      report.stats.expected++;
+      writeFileSync(target, JSON.stringify(report));
+    }
+  }
+  const result = verifyFreshInstallExecution(input);
+  assert.equal(result.status, 'failed');
+  assert.ok(result.failures.some(message => message.includes(`Unregistered mandatory browser journey: ${file}`)));
+});

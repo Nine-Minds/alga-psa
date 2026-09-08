@@ -83,6 +83,15 @@ The designer journey verifies that the enabled controls are actually available.
 
 ## Add a journey
 
+Register every new spec in `criticalBrowserFiles` in
+`scripts/verify-fresh-install-execution.mjs` and the independent `landedJourneys`
+fixture in `scripts/tests/fresh-install-execution.test.mjs`. A successful browser
+run alone is insufficient: the gate rejects unregistered specs so they cannot
+later disappear silently from both the checkout inventory and runner reports.
+Run the fresh-install execution gate tests after adding or intentionally moving
+a journey. This registry protects whole journey files; meaningful assertions
+within each file still require review.
+
 The raw email journey additionally requires `E2E_EMAIL_TRANSPORT_ISOLATED=true`,
 GreenMail 2.1.8, the built email-service image, and the SMTP sink from the
 candidate emulator build. `docker-compose.e2e-emulators.yaml` shares tenant
