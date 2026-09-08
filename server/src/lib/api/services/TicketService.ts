@@ -1,3 +1,4 @@
+import { recordCoManagedTicketResolution, recordCoManagedTicketReopened, syncCoManagedTicketAwaitingClientSla } from '@alga-psa/co-managed';
 import { retainNativeConversationEvent } from '@alga-psa/tickets/lib/nativeConversationEvents';
 import { assertCommentThreadAudience } from '@alga-psa/shared/lib/commentAudience';
 /**
@@ -1565,7 +1566,7 @@ export class TicketService extends BaseService<ITicket> {
       // Get current ticket for event comparison
       const currentTicket = await tenantScopedTable(trx, 'tickets', context.tenant)
         .where({ ticket_id: id })
-        .first();
+        .forUpdate().first();
 
       if (!currentTicket) {
         throw new NotFoundError('Ticket not found');
@@ -1626,11 +1627,14 @@ export class TicketService extends BaseService<ITicket> {
       if (cleanedData.status_id && cleanedData.status_id !== currentTicket.status_id) {
         const nextStatus = await tenantScopedTable(trx, 'statuses', context.tenant)
           .where({ status_id: cleanedData.status_id })
-          .first();
+          .forShare().first();
         const previousStatus = await tenantScopedTable(trx, 'statuses', context.tenant)
           .where({ status_id: currentTicket.status_id })
-          .first();
+          .forShare().first();
         if (nextStatus?.is_closed && !previousStatus?.is_closed) {
+          // Closing clears the canonical response state, including a conflicting
+          // value supplied in the same API update.
+          cleanedData.response_state = null;
           const merged = { ...currentTicket, ...cleanedData };
           try {
             await enforceTicketCloseRules(trx, context.tenant, {
@@ -1707,29 +1711,35 @@ export class TicketService extends BaseService<ITicket> {
       }
 
       // Publish appropriate events
-      if (data.status_id && data.status_id !== currentTicket.status_id) {
+      if (cleanedData.status_id && cleanedData.status_id !== currentTicket.status_id) {
         // Check if ticket is being closed or reopened
         const newStatus = await tenantScopedTable(trx, 'statuses', context.tenant)
-          .where({ status_id: data.status_id })
-          .first();
+          .where({ status_id: cleanedData.status_id })
+          .forShare().first();
         const oldStatus = await tenantScopedTable(trx, 'statuses', context.tenant)
           .where({ status_id: currentTicket.status_id })
-          .first();
+          .forShare().first();
 
         // Keep the ticket row's denormalized close flag aligned with the selected status.
         await tenantScopedTable(trx, 'tickets', context.tenant)
           .where({ ticket_id: id })
           .update({ is_closed: !!newStatus?.is_closed });
+        ticket.is_closed = !!newStatus?.is_closed;
 
         // Record closed_at / closed_by when transitioning to/from closed status
         if (newStatus?.is_closed && !oldStatus?.is_closed) {
+          const closure = { closed_at: new Date(), closed_by: context.userId };
           await tenantScopedTable(trx, 'tickets', context.tenant)
             .where({ ticket_id: id })
-            .update({ closed_at: new Date(), closed_by: context.userId });
+            .update(closure);
+          Object.assign(ticket, closure);
+          await recordCoManagedTicketResolution(trx, context.tenant, id);
         } else if (!newStatus?.is_closed && oldStatus?.is_closed) {
           await tenantScopedTable(trx, 'tickets', context.tenant)
             .where({ ticket_id: id })
             .update({ closed_at: null, closed_by: null });
+          Object.assign(ticket, { closed_at: null, closed_by: null });
+          await recordCoManagedTicketReopened(trx, context.tenant, id);
         }
 
         if (newStatus?.is_closed) {
@@ -1739,6 +1749,18 @@ export class TicketService extends BaseService<ITicket> {
             closedAt: new Date().toISOString(),
             suppressContactNotifications,
             suppressInternalNotifications,
+          });
+        }
+      }
+
+      if ('response_state' in cleanedData) {
+        await syncCoManagedTicketAwaitingClientSla(trx, context.tenant, id);
+        if (ticket.response_state !== currentTicket.response_state) {
+          await this.safePublishEvent('TICKET_RESPONSE_STATE_CHANGED', context, {
+            ticketId: id, userId: context.userId,
+            previousResponseState: currentTicket.response_state ?? null, newResponseState: ticket.response_state ?? null,
+            previousState: currentTicket.response_state ?? null, newState: ticket.response_state ?? null,
+            trigger: ticket.is_closed ? 'close' : 'manual',
           });
         }
       }
@@ -1754,6 +1776,7 @@ export class TicketService extends BaseService<ITicket> {
         'category_id',
         'subcategory_id',
         'due_date',
+        'response_state',
       ];
       for (const field of trackedChangeFields) {
         const nextValue = (cleanedData as Record<string, unknown>)[field as string];
@@ -1814,6 +1837,7 @@ export class TicketService extends BaseService<ITicket> {
         });
       }
 
+      await assertCoManagedOperationalWrite(trx, context.tenant);
       return this.withDescriptionHtml(ticket as ITicket);
     });
   }

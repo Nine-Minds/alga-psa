@@ -16836,3 +16836,67 @@ it.each(['reply', 'status'] as const)('MSP SLA reply adapters block read-only po
   expect(await f.customer.table('comments')).toEqual(comments);
   expect(await f.sponsor.table('sla_organization_obligations').first()).toEqual(obligation);
 }));
+
+it('MSP SLA ticket API preserves validated response-state updates and closes/reopens the independent obligation', async () => withSharedTicketMutationFixture(async f => {
+  const { service, publish } = await ticketServiceForTest();
+  const { updateTicketSchema } = await import('../../lib/api/schemas/ticket');
+  const context = { tenant: f.resource.tenant, userId: f.customerPrincipal.userId };
+  const original = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  const patch = updateTicketSchema.parse({ response_state: 'awaiting_client' });
+  expect(patch).toEqual({ response_state: 'awaiting_client' });
+  expect(updateTicketSchema.safeParse({ response_state: 'arbitrary' }).success).toBe(false);
+  expect(await service.update(f.resource.id, patch, context)).toMatchObject({ response_state: 'awaiting_client' });
+  const paused = await f.sponsor.table('sla_organization_obligations').first();
+  expect(paused.clock.pauseReasons).toEqual(['awaiting_client']);
+  expect(publish.mock.calls.some(([type, , payload]: any[]) => type === 'TICKET_RESPONSE_STATE_CHANGED' && payload.newResponseState === 'awaiting_client')).toBe(true);
+  await service.update(f.resource.id, updateTicketSchema.parse({ response_state: 'awaiting_internal' }), context);
+  const resumed = await f.sponsor.table('sla_organization_obligations').first();
+  expect(resumed.clock).toMatchObject({ pauseReasons: [], elapsedMilliseconds: paused.clock.elapsedMilliseconds });
+  const closedTicket = await service.update(f.resource.id, updateTicketSchema.parse({ status_id: f.closedStatusId, response_state: 'awaiting_client' }), context);
+  expect(closedTicket).toMatchObject({ response_state: null, is_closed: true, closed_by: context.userId });
+  expect(closedTicket.closed_at).not.toBeNull();
+  const closed = await f.sponsor.table('sla_organization_obligations').first();
+  expect(closed.clock.resolution.completedAt).not.toBeNull(); expect(closed.clock.response.completedAt).toBeNull();
+  const reopened = await service.update(f.resource.id, updateTicketSchema.parse({ status_id: original.status_id, response_state: 'awaiting_client' }), context);
+  expect(reopened).toMatchObject({ is_closed: false, closed_at: null, closed_by: null });
+  const rows = await f.sponsor.table('sla_organization_obligations').orderBy('generation');
+  expect(rows).toHaveLength(2); expect(rows[0]).toEqual(closed);
+  expect(rows[1]).toMatchObject({ generation: 2, clock: { elapsedMilliseconds: 0, pauseReasons: ['awaiting_client'], resolution: { completedAt: null } } });
+  const customer = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  for (const key of Object.keys(original).filter(key => key.startsWith('sla_'))) expect(customer[key]).toEqual(original[key]);
+}));
+
+it('MSP SLA ticket API missing reopen setup rolls back the canonical row and retained clock', async () => withSharedTicketMutationFixture(async f => {
+  const { service } = await ticketServiceForTest();
+  const context = { tenant: f.resource.tenant, userId: f.customerPrincipal.userId };
+  const original = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  await service.update(f.resource.id, { status_id: f.closedStatusId }, context);
+  const ticket = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  const clock = await f.sponsor.table('sla_organization_obligations').first();
+  await f.sponsor.table('co_managed_sla_priority_mappings').del();
+  await expect(service.update(f.resource.id, { status_id: original.status_id }, context)).rejects.toMatchObject({ code: 'CO_MANAGED_SLA_SETUP_REQUIRED' });
+  expect(await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).toEqual(ticket);
+  expect(await f.sponsor.table('sla_organization_obligations')).toEqual([clock]);
+}));
+
+it('MSP SLA ticket API keeps revoked private response and closure changes outside retained MSP history', async () => withSharedTicketMutationFixture(async f => {
+  const { service } = await ticketServiceForTest();
+  const { revokeCoManagedTicketGrant } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  await revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource, { operationId: randomUUID(), expectedRevision: 1, note: 'Private customer investigation' });
+  const before = await f.sponsor.table('sla_organization_obligations').first();
+  await service.update(f.resource.id, { response_state: 'awaiting_client' }, { tenant: f.resource.tenant, userId: f.customerPrincipal.userId });
+  await service.update(f.resource.id, { status_id: f.closedStatusId }, { tenant: f.resource.tenant, userId: f.customerPrincipal.userId });
+  expect(await f.sponsor.table('sla_organization_obligations').first()).toEqual(before);
+}));
+
+it('MSP SLA ticket API source failures roll back both the response state and its pause event', async () => withSharedTicketMutationFixture(async f => {
+  const { service } = await ticketServiceForTest();
+  const ticket = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  const clock = await f.sponsor.table('sla_organization_obligations').first();
+  const failure = vi.spyOn(service as any, 'withDescriptionHtml').mockImplementation(() => { throw new Error('late API failure'); });
+  try {
+    await expect(service.update(f.resource.id, { response_state: 'awaiting_client' }, { tenant: f.resource.tenant, userId: f.customerPrincipal.userId })).rejects.toThrow('late API failure');
+    expect(await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).toEqual(ticket);
+    expect(await f.sponsor.table('sla_organization_obligations').first()).toEqual(clock);
+  } finally { failure.mockRestore(); }
+}));
