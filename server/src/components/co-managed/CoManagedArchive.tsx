@@ -75,6 +75,16 @@ function ArchiveDetail({ resource }: { resource: CoManagedSharedResource }) {
         {entry.author && <p className="mt-1 text-sm">{entry.author.name || t('coManaged.archive.unknownAuthor')}{entry.author.organization ? ` · ${entry.author.organization}` : ''}</p>}
         {entry.deleted ? <p className="mt-2 italic text-muted-foreground">{t('coManaged.archive.deleted')}</p> :
           <p className="mt-2 whitespace-pre-wrap break-words">{conversationText(entry.note, entry.markdown)}</p>}
+        {entry.summary && <div className="mt-2 space-y-2">
+          {typeof (entry.summary.title ?? entry.summary.task_name) === 'string' && <p className="break-words">{String(entry.summary.title ?? entry.summary.task_name)}</p>}
+          <dl className="grid gap-x-4 gap-y-1 text-sm sm:grid-cols-[auto_1fr]">
+            {(['status', 'priority', 'project', 'phase', 'due_date'] as const).map(field => {
+              const value = entry.summary?.[field];
+              const display = value && typeof value === 'object' ? value.name : typeof value === 'string' ? value : null;
+              return display ? <div key={field} className="contents"><dt className="text-muted-foreground">{t(`coManaged.archive.fields.${field}`)}</dt><dd className="break-words">{display}</dd></div> : null;
+            })}
+          </dl>
+        </div>}
         {entry.changes && Object.keys(entry.changes).length > 0 && <ul className="mt-2 list-disc pl-5 text-sm">{Object.entries(entry.changes).map(([field, value]) =>
           <li key={field}>{t(`coManaged.archive.changes.${field}`)}{field === 'task_name' || field === 'due_date' ? `: ${value ?? t('coManaged.archive.cleared')}` : ''}</li>)}</ul>}
       </article>)}

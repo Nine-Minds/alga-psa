@@ -1,5 +1,10 @@
 const EVIDENCE = 'co_managed_participation_evidence', FILES = 'co_managed_archive_files';
 async function evidenceSources(knex, privateHistory) {
+  if (privateHistory) {
+    const current = await knex('pg_constraint').whereRaw('conrelid = ?::regclass', [EVIDENCE]).where('conname', 'co_participation_evidence_source_type_check')
+      .first(knex.raw('pg_get_constraintdef(oid) AS definition'));
+    if (current?.definition.includes("'private_conversation'")) return; // Preserve later source expansions on replay.
+  }
   await knex.raw('ALTER TABLE ?? DROP CONSTRAINT co_participation_evidence_source_type_check', [EVIDENCE]);
   await knex.raw(`ALTER TABLE ?? ADD CONSTRAINT co_participation_evidence_source_type_check CHECK (source_type IN ('ticket_handoff', 'work_audit', 'time_entry', 'conversation'${privateHistory ? ", 'private_conversation'" : ''}))`, [EVIDENCE]);
 }

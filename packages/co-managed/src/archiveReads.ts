@@ -9,14 +9,16 @@ import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
 import { coManagedConversationBodySources, coManagedConversationAuthorSources, coManagedConversationAttachmentSources } from './conversationPolicy';
 import type { CoManagedSharedResource } from './sharedWork';
 import { participationEvidenceTable } from './participationEvidenceStore';
+import type { CoManagedSummaryValue, CoManagedSummaryCandidate } from './sharedWorkRead';
 import { coManagedArchiveFilePath } from './archiveFiles';
 
 export interface CoManagedArchiveWork { resource: CoManagedSharedResource; clientId: string; clientName: string | null; title: string | null; ticketNumber: string | null }
 export interface CoManagedArchiveEntry {
-  id: string; kind: 'conversation' | 'ticket_handoff' | 'work_audit' | 'time_entry' | 'private_conversation'; event: string; occurredAt: string;
+  id: string; kind: 'conversation' | 'ticket_handoff' | 'work_audit' | 'time_entry' | 'private_conversation' | 'work_snapshot'; event: string; occurredAt: string;
   author?: { tenant: string; kind: string; id: string | null; name: string; organization: string };
   audience: string; note: string | null; markdown: string | null; deleted: boolean;
   changes?: Record<string, string | null>;
+  summary?: Record<string, CoManagedSummaryValue>;
 }
 export interface CoManagedArchiveFile { archiveFileId: string; commentId: string; fileName: string; mimeType: string; size: number; audience: 'requester' | 'shared_it' | 'organization_private' }
 export interface CoManagedArchiveHistory { work: CoManagedArchiveWork; entries: CoManagedArchiveEntry[]; nextPage: number | null }
@@ -62,8 +64,8 @@ async function admit(trx: Knex.Transaction, credential: Awaited<ReturnType<typeo
     .whereRaw("COALESCE(payload->>'resourceTitle', CASE WHEN source_type = 'time_entry' THEN payload->>'title' END) IS NOT NULL")
     .orderBy('captured_at', 'desc').orderBy('evidence_id').first({ title: trx.raw("COALESCE(payload->>'resourceTitle', payload->>'title')"), ticket_number: trx.raw("payload->>'ticketNumber'") });
   const work: CoManagedArchiveWork = { resource, clientId, clientName: hidden(fields, ['client_name', 'clientName', 'clients.client_name']) ? null : client?.client_name ?? null,
-    title: evidenceHidden(fields, ['title', 'resourceTitle', 'task_name', 'name', 'co_managed_time_work_references.title']) ? null : snapshot?.title ?? reference?.title ?? null,
-    ticketNumber: evidenceHidden(fields, ['ticket_number', 'ticketNumber', 'co_managed_time_work_references.ticket_number']) ? null : snapshot?.ticket_number ?? reference?.ticket_number ?? null };
+    title: evidenceHidden(fields, ['title', 'resourceTitle', 'task_name', 'name', 'summary.title', 'summary.task_name', 'co_managed_time_work_references.title']) ? null : snapshot?.title ?? reference?.title ?? null,
+    ticketNumber: evidenceHidden(fields, ['ticket_number', 'ticketNumber', 'summary.ticket_number', 'co_managed_time_work_references.ticket_number']) ? null : snapshot?.ticket_number ?? reference?.ticket_number ?? null };
   await credential.assertCurrent();
   return { work, fields, record };
 }
@@ -90,11 +92,12 @@ export async function getCoManagedArchiveHistory(db: Knex, inputActor: CoManaged
   return withTransaction(db, async trx => {
     const credential = await lockCoManagedLocalAuthentication(trx, actor), { work, fields, record } = await admit(trx, credential, resource);
     const entries: CoManagedArchiveEntry[] = [];
-    if (evidenceHidden(fields, ['history', 'audit_logs', participationEvidenceTable, ...coManagedConversationBodySources])) return { work, entries, nextPage: null };
+    if (evidenceHidden(fields, ['history', 'audit_logs', participationEvidenceTable])) return { work, entries, nextPage: null };
     const rows = await tenantDb(trx, actor.tenant).table(participationEvidenceTable).where(sourceKey(resource))
       .orderBy('occurred_at', 'desc').orderBy('evidence_id').offset(page * 50).limit(51);
     for (const row of rows.slice(0, 50)) {
       let rowFields = fields;
+      if (row.source_type !== 'work_snapshot' && evidenceHidden(fields, coManagedConversationBodySources)) continue;
       if (row.source_type === 'conversation' && hidden(fields, ['comments', 'comment_threads', 'project_task_comments', ...coManagedConversationBodySources.flatMap(name => [`comments.${name}`, `project_task_comments.${name}`])])) continue;
       if (row.source_type === 'ticket_handoff' && hidden(fields, coManagedConversationBodySources.map(name => `co_management_ticket_handoffs.${name}`))) continue;
       if (row.source_type === 'private_conversation' && hidden(fields, ['co_management_private_comments', 'co_management_private_threads', ...coManagedConversationBodySources.flatMap(name => [`co_management_private_comments.${name}`, `co_management_private_threads.${name}`])])) continue;
@@ -111,13 +114,19 @@ export async function getCoManagedArchiveHistory(db: Knex, inputActor: CoManaged
         audience: payload.audience, deleted, note: !deleted && typeof payload.note === 'string' ? payload.note : null,
         markdown: !deleted && typeof payload.markdown === 'string' ? payload.markdown : null };
       const authorTables = row.source_type === 'private_conversation' ? ['co_management_private_comments'] : row.source_type === 'ticket_handoff' ? ['co_management_ticket_handoffs'] : ['comments', 'project_task_comments'];
-      if (!evidenceHidden(rowFields, [...authorSources, ...authorSources.flatMap(name => authorTables.map(table => `${table}.${name}`))])) entry.author = { tenant: row.actor_tenant, kind: row.actor_kind,
+      if (row.source_type !== 'work_snapshot' && !evidenceHidden(rowFields, [...authorSources, ...authorSources.flatMap(name => authorTables.map(table => `${table}.${name}`))])) entry.author = { tenant: row.actor_tenant, kind: row.actor_kind,
         id: row.actor_user_id ?? row.actor_contact_id, name: row.actor_name, organization: row.actor_organization };
       if (row.source_type === 'work_audit' && payload.changes) {
         entry.changes = {};
         for (const field of ['task_name', 'due_date', 'project_status_mapping_id', 'msp_assignment']) {
           const value = payload.changes[field];
           if ((typeof value === 'string' || value === null) && !evidenceHidden(fields, ['changed_data', `changes.${field}`, `audit_logs.changed_data.${field}`, field, ...(field === 'msp_assignment' ? ['assigned_to', 'assigned_team_id', 'assignment'] : [])])) entry.changes[field] = value;
+        }
+      }
+      if (row.source_type === 'work_snapshot' && payload.summary) {
+        entry.summary = {};
+        for (const [field, candidate] of Object.entries(payload.summary as Record<string, CoManagedSummaryCandidate>)) {
+          if (!evidenceHidden(fields, [field, ...candidate.sources, `summary.${field}`, ...(field === 'title' || field === 'task_name' ? ['resourceTitle', 'name'] : field === 'ticket_number' ? ['ticketNumber'] : [])])) entry.summary[field] = candidate.value;
         }
       }
       entries.push(entry);

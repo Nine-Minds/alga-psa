@@ -1,3 +1,4 @@
+import { retainCoManagedWorkSnapshot } from './workSnapshotEvidence';
 import { randomUUID } from 'node:crypto';
 import type { CoManagedSharedResource } from './sharedWork';
 import { stageCoManagedConversationFiles } from './archiveFiles';
@@ -47,6 +48,7 @@ export async function retainCoManagedSharedConversationBeforeReduction(trx: Knex
     await captureSharedConversation(trx, resource, comment.id, comment.thread_id, { sourceId: randomUUID(), operationId,
       eventType: task ? 'PROJECT_TASK_COMMENT_ARCHIVED' : 'TICKET_COMMENT_ARCHIVED', occurredAt });
   }
+  if (!scope.threadId) await retainCoManagedWorkSnapshot(trx, resource, operationId, new Date(occurredAt));
 }
 
 async function captureSharedConversation(trx: Knex.Transaction,

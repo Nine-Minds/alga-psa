@@ -720,7 +720,8 @@
         "access_revoked": "Partilha terminada",
         "work_audit": "Trabalho atualizado",
         "time_entry": "Tempo registado",
-        "private_conversation": "Nota privada do MSP"
+        "private_conversation": "Nota privada do MSP",
+        "work_snapshot": "Detalhes do trabalho guardados"
       },
       "changes": {
         "task_name": "Nome da tarefa",
@@ -728,7 +729,14 @@
         "project_status_mapping_id": "Estado alterado",
         "msp_assignment": "Atribuição do MSP alterada"
       },
-      "privateFile": "Ficheiro privado do MSP"
+      "privateFile": "Ficheiro privado do MSP",
+      "fields": {
+        "status": "Estado",
+        "priority": "Prioridade",
+        "project": "Projeto",
+        "phase": "Fase",
+        "due_date": "Data de vencimento"
+      }
     }
   }
 }

@@ -722,7 +722,8 @@
         "access_revoked": "Zakończono udostępnianie",
         "work_audit": "Zaktualizowano pracę",
         "time_entry": "Zarejestrowano czas",
-        "private_conversation": "Prywatna notatka MSP"
+        "private_conversation": "Prywatna notatka MSP",
+        "work_snapshot": "Zachowane szczegóły pracy"
       },
       "changes": {
         "task_name": "Nazwa zadania",
@@ -730,7 +731,14 @@
         "project_status_mapping_id": "Zmieniono status",
         "msp_assignment": "Zmieniono przypisanie MSP"
       },
-      "privateFile": "Prywatny plik MSP"
+      "privateFile": "Prywatny plik MSP",
+      "fields": {
+        "status": "Status",
+        "priority": "Priorytet",
+        "project": "Projekt",
+        "phase": "Etap",
+        "due_date": "Termin"
+      }
     }
   }
 }

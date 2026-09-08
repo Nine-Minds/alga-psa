@@ -18,13 +18,13 @@ export interface CoManagedSharedWorkSummary {
   /** Allowlisted metadata only. Missing fields may have been redacted. */
   fields: Record<string, CoManagedSummaryValue>;
 }
-type Candidate = { value: CoManagedSummaryValue; sources: string[] };
+export type CoManagedSummaryCandidate = { value: CoManagedSummaryValue; sources: string[] };
 
 /** Redact derived values together with their source fields. A hidden status ID,
  * for example, must not remain visible through its qualified display reference.
  * A nested redaction omits the containing display value instead of returning a
  * partially identifying reference. Resource identity is the caller's input. */
-function visibleFields(candidates: Record<string, Candidate>, redactions: readonly string[]) {
+function visibleFields(candidates: Record<string, CoManagedSummaryCandidate>, redactions: readonly string[]) {
   if (redactions.some(field => typeof field !== 'string')) throw new CoManagedSharedWorkError();
   const fields: Record<string, CoManagedSummaryValue> = {};
   for (const [key, candidate] of Object.entries(candidates)) {
@@ -43,10 +43,11 @@ function reference(tenant: string, kind: CoManagedDisplayReference['kind'], id: 
   return id == null ? null : { tenant, kind, id: String(id), name: text(name) };
 }
 
-async function readSummary(context: CoManagedSharedWorkContext): Promise<CoManagedSharedWorkSummary> {
-  const { trx, resource, revision, redactedFields } = context;
+/** Internal metadata projection. Callers retain their live read authority or
+ * archival participation/grant admission; this function grants neither. */
+export async function readCoManagedSummaryCandidates(trx: Knex.Transaction, resource: CoManagedSharedResource): Promise<Record<string, CoManagedSummaryCandidate>> {
   const owner = tenantDb(trx, resource.tenant);
-  let candidates: Record<string, Candidate>;
+  let candidates: Record<string, CoManagedSummaryCandidate>;
   if (resource.kind === 'ticket') {
     const query = owner.table('tickets').where('tickets.ticket_id', resource.id);
     owner.tenantJoin(query, 'boards', 'tickets.board_id', 'boards.board_id', { type: 'left' });
@@ -120,7 +121,12 @@ async function readSummary(context: CoManagedSharedWorkContext): Promise<CoManag
       updated_at: { value: date(row.updated_at), sources: ['project_tasks.updated_at'] },
     };
   }
-  return { resource, revision, fields: visibleFields(candidates, redactedFields) };
+  return candidates;
+}
+
+async function readSummary(context: CoManagedSharedWorkContext): Promise<CoManagedSharedWorkSummary> {
+  const { trx, resource, revision, redactedFields } = context;
+  return { resource, revision, fields: visibleFields(await readCoManagedSummaryCandidates(trx, resource), redactedFields) };
 }
 
 /** No row spreading, linked resources, rich text, people, commercial fields,

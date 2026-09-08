@@ -718,7 +718,8 @@
         "access_revoked": "Delen beëindigd",
         "work_audit": "Werk bijgewerkt",
         "time_entry": "Tijd geregistreerd",
-        "private_conversation": "Privénotitie van MSP"
+        "private_conversation": "Privénotitie van MSP",
+        "work_snapshot": "Opgeslagen werkdetails"
       },
       "changes": {
         "task_name": "Taaknaam",
@@ -726,7 +727,14 @@
         "project_status_mapping_id": "Status gewijzigd",
         "msp_assignment": "MSP-toewijzing gewijzigd"
       },
-      "privateFile": "Privébestand van MSP"
+      "privateFile": "Privébestand van MSP",
+      "fields": {
+        "status": "Status",
+        "priority": "Prioriteit",
+        "project": "Project",
+        "phase": "Fase",
+        "due_date": "Vervaldatum"
+      }
     }
   }
 }

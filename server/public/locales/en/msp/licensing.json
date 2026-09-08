@@ -807,7 +807,8 @@
         "access_revoked": "Sharing ended",
         "work_audit": "Work updated",
         "time_entry": "Time recorded",
-        "private_conversation": "MSP-private note"
+        "private_conversation": "MSP-private note",
+        "work_snapshot": "Saved work details"
       },
       "changes": {
         "task_name": "Task name",
@@ -815,7 +816,14 @@
         "project_status_mapping_id": "Status changed",
         "msp_assignment": "MSP assignment changed"
       },
-      "privateFile": "MSP-private file"
+      "privateFile": "MSP-private file",
+      "fields": {
+        "status": "Status",
+        "priority": "Priority",
+        "project": "Project",
+        "phase": "Phase",
+        "due_date": "Due date"
+      }
     }
   }
 }

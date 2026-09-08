@@ -718,7 +718,8 @@
         "access_revoked": "11111",
         "work_audit": "11111",
         "time_entry": "11111",
-        "private_conversation": "11111"
+        "private_conversation": "11111",
+        "work_snapshot": "11111"
       },
       "changes": {
         "task_name": "11111",
@@ -726,7 +727,14 @@
         "project_status_mapping_id": "11111",
         "msp_assignment": "11111"
       },
-      "privateFile": "11111"
+      "privateFile": "11111",
+      "fields": {
+        "status": "11111",
+        "priority": "11111",
+        "project": "11111",
+        "phase": "11111",
+        "due_date": "11111"
+      }
     }
   }
 }

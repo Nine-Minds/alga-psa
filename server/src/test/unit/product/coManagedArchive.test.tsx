@@ -54,3 +54,14 @@ it('labels retained MSP-private notes and files explicitly', async () => {
   expect(screen.getByText('coManaged.archive.privateFile')).toBeInTheDocument();
   expect(screen.getByRole('link', { name: 'Private.txt' })).toHaveAttribute('href', expect.stringContaining('/archive-files/private-file?'));
 });
+
+it('shows saved work context using display names without linking qualified source IDs', async () => {
+  mocks.history.mockResolvedValue({ ...history, entries: [{ id: 'snapshot', kind: 'work_snapshot', event: 'work_archived', occurredAt: '2026-09-08T10:00:00Z',
+    audience: 'shared_it', deleted: false, note: null, markdown: null, summary: { title: 'Historical title', status: { tenant: 'customer-a', kind: 'status', id: 'hidden-status-id', name: 'Resolved' },
+      phase: { tenant: 'customer-a', kind: 'project_phase', id: 'hidden-phase-id', name: 'Rollout' }, due_date: '2026-09-10' } }] });
+  render(<CoManagedArchive />); fireEvent.click(await screen.findByRole('button', { name: /Retained issue/ }));
+  await screen.findByText('Historical title'); expect(screen.getByText('Resolved')).toBeInTheDocument(); expect(screen.getByText('Rollout')).toBeInTheDocument();
+  expect(screen.getByText('coManaged.archive.events.work_snapshot')).toBeInTheDocument();
+  expect(document.body.textContent).not.toMatch(/hidden-status-id|hidden-phase-id|unknownAuthor/);
+  expect(screen.queryByRole('link', { name: 'Resolved' })).toBeNull();
+});

@@ -90,7 +90,7 @@ beforeAll(async () => {
     '20260906080000_create_co_management_relationship_events.cjs',
     '20260906100000_add_external_file_metadata.cjs',
     '20260906110000_add_kb_import_batch_identity.cjs',
-    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs', '20260908011054_add_co_managed_meeting_sync_intents.cjs', '20260908021208_create_co_managed_meeting_creation_operations.cjs', '20260908043851_allow_co_managed_assignment_before_escalation.cjs', '20260908050419_create_organization_sla_obligations.cjs', '20260908051552_create_co_managed_sla_priority_mappings.cjs', '20260908062358_create_organization_sla_notification_events.cjs', '20260908063356_create_organization_sla_notification_recipients.cjs', '20260908065525_add_organization_sla_email_retry_state.cjs', '20260908081909_create_co_managed_workflow_ticket_emails.cjs', '20260908084034_create_co_managed_time_work_references.cjs', '20260908091756_allow_co_managed_time_tracking.cjs', '20260908102610_create_co_managed_relationship_closures.cjs', '20260908103849_create_co_managed_participation_evidence.cjs', '20260908105022_allow_co_managed_time_participation.cjs', '20260908110522_retain_co_managed_conversation_participation.cjs', '20260908111943_create_co_managed_archive_files.cjs', '20260908115957_retain_co_managed_private_history.cjs', '20260908123721_create_co_managed_archive_manifests.cjs']) {
+    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs', '20260908011054_add_co_managed_meeting_sync_intents.cjs', '20260908021208_create_co_managed_meeting_creation_operations.cjs', '20260908043851_allow_co_managed_assignment_before_escalation.cjs', '20260908050419_create_organization_sla_obligations.cjs', '20260908051552_create_co_managed_sla_priority_mappings.cjs', '20260908062358_create_organization_sla_notification_events.cjs', '20260908063356_create_organization_sla_notification_recipients.cjs', '20260908065525_add_organization_sla_email_retry_state.cjs', '20260908081909_create_co_managed_workflow_ticket_emails.cjs', '20260908084034_create_co_managed_time_work_references.cjs', '20260908091756_allow_co_managed_time_tracking.cjs', '20260908102610_create_co_managed_relationship_closures.cjs', '20260908103849_create_co_managed_participation_evidence.cjs', '20260908105022_allow_co_managed_time_participation.cjs', '20260908110522_retain_co_managed_conversation_participation.cjs', '20260908111943_create_co_managed_archive_files.cjs', '20260908115957_retain_co_managed_private_history.cjs', '20260908123721_create_co_managed_archive_manifests.cjs', '20260908124921_retain_co_managed_work_snapshots.cjs']) {
     await require('../../../migrations/' + file).up(db);
   }
   for (const table of ['standard_statuses', 'standard_priorities', 'countries', 'notification_categories',
@@ -18393,7 +18393,7 @@ it('MSP-private archive retains actual task revisions and tombstones without pub
   await f.sponsor.table('co_management_private_comments').where('thread_id', root.threadId).del();
   expect(await archive.getCoManagedArchiveHistory(db, f.principal, f.resource)).toEqual(history);
   await expect(archive.getCoManagedArchiveHistory(db, f.customerPrincipal, f.resource)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
-  for (const file of ['20260908105022_allow_co_managed_time_participation.cjs', '20260908110522_retain_co_managed_conversation_participation.cjs', '20260908115957_retain_co_managed_private_history.cjs', '20260908123721_create_co_managed_archive_manifests.cjs']) await require('../../../migrations/' + file).up(db);
+  for (const file of ['20260908105022_allow_co_managed_time_participation.cjs', '20260908110522_retain_co_managed_conversation_participation.cjs', '20260908115957_retain_co_managed_private_history.cjs', '20260908123721_create_co_managed_archive_manifests.cjs', '20260908124921_retain_co_managed_work_snapshots.cjs']) await require('../../../migrations/' + file).up(db);
   await expect(require('../../../migrations/20260908115957_retain_co_managed_private_history.cjs').down(db)).rejects.toThrow('retained MSP-private history');
 }));
 
@@ -18709,4 +18709,57 @@ it('closure private history keeps historical authors and empty tombstones for un
   expect(saved.find((row: any) => row.payload.commentId === root.commentId)?.payload).toMatchObject({ deleted: true, resourceTitle: null });
   expect(saved.some((row: any) => row.payload.markdown === 'Surviving private reply')).toBe(true);
   expect(JSON.stringify(saved)).not.toMatch(/Deleted private root body|Newly private task label|Later renamed/);
+}));
+
+it('work snapshot retains only shared metadata after participation and applies current source-field restrictions after deletion', async () => withTaskConversationFixture(async f => {
+  const { retainCoManagedWorkSnapshot: capture } = await import('../../../../packages/co-managed/src/workSnapshotEvidence');
+  const { getCoManagedSharedWorkSummary } = await import('../../../../packages/co-managed/src/sharedWorkRead');
+  const archive = await import('../../../../packages/co-managed/src/archiveReads'), bundles = await import('@alga-psa/authorization');
+  await db.transaction(trx => capture(trx, f.resource, randomUUID(), new Date()));
+  expect(await f.sponsor.table('co_managed_participation_evidence').where('source_type', 'work_snapshot')).toHaveLength(0);
+  await f.add(f.principal, 'shared_it', 'Actual contribution');
+  const expected = await getCoManagedSharedWorkSummary(db, f.principal, f.resource);
+  await db.transaction(trx => capture(trx, f.resource, randomUUID(), new Date()));
+  const history = await archive.getCoManagedArchiveHistory(db, f.principal, f.resource);
+  const snapshot = history.entries.find(entry => entry.kind === 'work_snapshot');
+  expect(snapshot?.summary).toEqual(expected.fields); expect(snapshot).not.toHaveProperty('author');
+  expect(JSON.stringify(snapshot)).not.toMatch(/Private detailed work|actual_hours|assigned_to|service_id/);
+  await f.customer.table('project_tasks').where('task_id', f.resource.id).del();
+  expect(await archive.getCoManagedArchiveHistory(db, f.principal, f.resource)).toEqual(history);
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: f.principal.tenant, name: 'Archive work fields', actorUserId: f.principal.userId });
+  await bundles.upsertBundleRule(db, { tenant: f.principal.tenant, bundleId, revisionId, resourceType: 'project', action: 'read', templateKey: 'selected_clients',
+    config: { selectedClientIds: [f.operation.request.clientId], redactedFields: ['project_status_mapping_id', 'phase_id', 'payload.resourceTitle'] } });
+  await bundles.publishBundleRevision(db, { tenant: f.principal.tenant, bundleId, revisionId, actorUserId: f.principal.userId });
+  await bundles.createBundleAssignment(db, { tenant: f.principal.tenant, bundleId, targetType: 'user', targetId: f.principal.userId });
+  const masked = await archive.getCoManagedArchiveHistory(db, f.principal, f.resource);
+  expect(masked.work.title).toBeNull();
+  const fields = masked.entries.find(entry => entry.kind === 'work_snapshot')?.summary;
+  for (const field of ['status', 'is_closed', 'phase', 'task_name']) expect(fields).not.toHaveProperty(field);
+  expect(fields).toHaveProperty('project');
+  await f.sponsor.table('authorization_bundle_rules').where({ bundle_id: bundleId, resource_type: 'project', action: 'read' })
+    .update({ config: { selectedClientIds: [f.operation.request.clientId], redactedFields: ['payload.summary'] } });
+  const allMasked = await archive.getCoManagedArchiveHistory(db, f.principal, f.resource);
+  expect(allMasked.work.title).toBeNull(); expect(allMasked.entries.find(entry => entry.kind === 'work_snapshot')?.summary).toEqual({});
+  await f.sponsor.table('authorization_bundle_rules').where({ bundle_id: bundleId, resource_type: 'project', action: 'read' })
+    .update({ config: { selectedClientIds: [f.operation.request.clientId], redactedFields: ['note'] } });
+  const notesMasked = await archive.getCoManagedArchiveHistory(db, f.principal, f.resource);
+  expect(notesMasked.entries.map(entry => entry.kind)).toEqual(['work_snapshot']);
+  expect(notesMasked.entries[0].summary).toEqual(expected.fields);
+  const old = require('../../../migrations/20260908115957_retain_co_managed_private_history.cjs'); await old.up(db);
+  const migration = require('../../../migrations/20260908124921_retain_co_managed_work_snapshots.cjs'); await migration.up(db);
+  await expect(migration.down(db)).rejects.toThrow('retained shared work snapshots');
+}));
+
+it('work snapshot captures ticket context before grant removal and does not refresh newly private metadata', async () => withConversationFixture(async f => {
+  const { revokeCoManagedTicketGrant } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  const { retainCoManagedWorkSnapshot } = await import('../../../../packages/co-managed/src/workSnapshotEvidence');
+  const work = await f.customer.table('co_management_ticket_work').where('ticket_id', f.resource.id).first();
+  const request = { operationId: randomUUID(), expectedRevision: work.revision, note: 'Take back access' };
+  await revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource, request);
+  const evidence = () => f.sponsor.table('co_managed_participation_evidence').where({ source_type: 'work_snapshot', resource_id: f.resource.id });
+  const saved = await evidence(); expect(saved).toHaveLength(1); expect(saved[0].payload.summary.title.value).toBe('Conversation fixture');
+  await f.customer.table('tickets').where('ticket_id', f.resource.id).update({ title: 'Newly private ticket name' });
+  await db.transaction(trx => retainCoManagedWorkSnapshot(trx, f.resource, randomUUID(), new Date()));
+  await revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource, request);
+  expect(await evidence()).toEqual(saved);
 }));
