@@ -668,3 +668,5 @@ Native saves held contract resolution and allocation sequencing inline while the
 ## shared-work-effective-grant — pattern (watching)
 
 MSP source admission and customer-side aggregate reads both resolve explicit ticket or board visibility. Customer ownership permits local effort after unsharing, so it cannot use foreign-user admission directly. Two sites now carry the marker; keep this small predicate duplication while the aggregate/retention contract settles rather than introducing a generic cross-tenant grant engine. Project effort composes existing work authorization for each actual child and reads owner-local time instead of copying timesheets or mutating native cached hours.
+
+Native task effort checkpoint (2026-09-08): reused the project's existing composition-slot pattern for an optional TaskEffort component. The server workspace layer owns product/session knowledge and co-managed actions; the native project form receives only its local task ID. The provider sits above the common drawer outlet so task dialogs and pages have the same behavior without importing server product code into projects. No new calculation or timesheet engine.

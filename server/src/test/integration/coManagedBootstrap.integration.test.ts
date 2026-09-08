@@ -17885,3 +17885,41 @@ it('shared effort totals roll up actual project tasks without using cached hours
   expect(await totals(db, f.principal, project)).toMatchObject({ customerMinutes: 0, mspMinutes: 45, combinedMinutes: 45 });
   expect((await f.customer.table('project_tasks').where('task_id', f.resource.id).first()).actual_hours).toBe('123');
 }));
+
+it('native task effort action binds customer work to the current browser and denies forged identity and API overrides', async () => withSharedProjectTaskFixture(async f => {
+  const auth = await import('@alga-psa/auth'), dbModule = await import('@alga-psa/db');
+  const actions = await import('../../lib/actions/coManagedTimeActions');
+  const user = await f.customer.table('users').where('user_id', f.customerPrincipal.userId).first();
+  const connection = vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: db, tenant: f.resource.tenant });
+  const current = vi.spyOn(auth, 'getCurrentUser').mockResolvedValue(user);
+  try { await withTrackedTaskBrowser(f.customerPrincipal, f.customer, browser => auth.runWithApiKeyUser(user, () => runWithTenant(f.resource.tenant, async () => {
+    const request = { kind: 'local_task', taskId: f.resource.id, tenant: f.principal.tenant, relationshipId: randomUUID() } as any;
+    expect(await actions.getSharedEffortTotalsAction(request)).toEqual({ resource: f.resource, customerMinutes: 0, mspMinutes: 0, combinedMinutes: 0 });
+    await expect(actions.getSharedEffortTotalsAction({ kind: 'local_task', taskId: randomUUID() })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    browser.override.mockReturnValue(user);
+    await expect(actions.getSharedEffortTotalsAction(request)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    browser.override.mockReturnValue(undefined);
+    browser.session.mockResolvedValue({ session_id: f.customerPrincipal.sessionId, user: { id: randomUUID(), tenant: f.resource.tenant, user_type: 'internal' } });
+    await expect(actions.getSharedEffortTotalsAction(request)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  })));
+  } finally { current.mockRestore(); connection.mockRestore(); }
+}));
+
+it('shared effort totals follow task moves between actual projects and retain customer totals when the project grant ends', async () => withSharedProjectTaskFixture(async f => {
+  const { getCoManagedEffortTotals: totals } = await import('../../../../packages/co-managed/src/effortTotals');
+  const { ProjectModel: model } = await import('@alga-psa/projects/models');
+  const next = await model.create(db, f.resource.tenant, { project_name: 'Private project', project_number: 'PRIVATE-2', client_id: f.operation.customer_client_id,
+    status: f.project.status, wbs_code: '2' } as any);
+  const phase = await model.addPhase(db, f.resource.tenant, { project_id: next.project_id, phase_name: 'Private work', wbs_code: '2.1', status: 'planning', order_number: 1 } as any);
+  await f.customer.table('time_entries').insert({ tenant: f.resource.tenant, entry_id: randomUUID(), user_id: f.customerPrincipal.userId,
+    work_item_type: 'project_task', work_item_id: f.resource.id, start_time: '2026-09-08T09:00:00Z', end_time: '2026-09-08T09:30:00Z',
+    work_date: '2026-09-08', work_timezone: 'UTC', billable_duration: 0, approval_status: 'DRAFT' });
+  const oldProject = { ...f.resource, kind: 'project' as const, id: f.project.project_id }, newProject = { ...oldProject, id: next.project_id };
+  expect(await totals(db, f.principal, oldProject)).toMatchObject({ customerMinutes: 30 });
+  await model.addStatusToProject(db, f.resource.tenant, next.project_id, { name: 'Private ready', status_type: 'project_task', item_type: 'project_task', order_number: 300, is_closed: false, is_default: false } as any);
+  const status = await f.customer.table('project_status_mappings').where('project_id', next.project_id).first();
+  await f.customer.table('project_tasks').where('task_id', f.resource.id).update({ phase_id: phase.phase_id, project_status_mapping_id: status.project_status_mapping_id });
+  expect(await totals(db, f.principal, oldProject)).toMatchObject({ customerMinutes: 0, mspMinutes: 0, combinedMinutes: 0 });
+  await expect(totals(db, f.principal, f.resource)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(await totals(db, f.customerPrincipal, newProject)).toMatchObject({ customerMinutes: 30, mspMinutes: null, combinedMinutes: null });
+}));

@@ -4,7 +4,8 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import CoManagedEffort from '../../../components/co-managed/CoManagedEffort';
 
-const mocks = vi.hoisted(() => ({ flag: vi.fn(), load: vi.fn() }));
+const mocks = vi.hoisted(() => ({ flag: vi.fn(), load: vi.fn(), session: vi.fn() }));
+vi.mock('next-auth/react', () => ({ useSession: mocks.session }));
 vi.mock('@alga-psa/ui/hooks', () => ({ useFeatureFlag: mocks.flag }));
 vi.mock('../../../lib/actions/coManagedAcceptanceActions', () => ({}));
 vi.mock('../../../lib/actions/coManagedTimeActions', () => ({ getSharedEffortTotalsAction: mocks.load }));
@@ -14,7 +15,7 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({ useTranslation: () => ({ t: (ke
 const resource = { tenant: 'customer-a', relationshipId: 'relationship-a', kind: 'ticket' as const, id: 'ticket-a' };
 const target = { kind: 'shared' as const, resource };
 const totals = { resource, customerMinutes: 30, mspMinutes: 60, combinedMinutes: 90 };
-beforeEach(() => { vi.resetAllMocks(); mocks.flag.mockReturnValue({ enabled: true }); mocks.load.mockResolvedValue(totals); });
+beforeEach(() => { vi.resetAllMocks(); mocks.session.mockReturnValue({ status: 'authenticated', data: { user: { id: 'user-a', tenant: 'home-a' } } }); mocks.flag.mockReturnValue({ enabled: true }); mocks.load.mockResolvedValue(totals); });
 afterEach(cleanup);
 
 it.each([{ enabled: false }, { enabled: true, loading: true }, { enabled: true, error: new Error('flag') }])('does not fetch effort while the UI flag is unavailable: %j', flag => {
@@ -47,4 +48,26 @@ it('discards a previous customer response after navigation and unmounts when the
   await act(async () => resolve(totals)); expect(screen.queryByText('1.5 hours')).toBeNull();
   mocks.flag.mockReturnValue({ enabled: false }); view.rerender(<CoManagedEffort target={next} />);
   expect(screen.queryByRole('region')).toBeNull();
+});
+it('keeps project and task refresh controls distinct without submitting an enclosing task form', async () => {
+  const submit = vi.fn((event: React.FormEvent) => event.preventDefault());
+  render(<form onSubmit={submit}>
+    <CoManagedEffort target={{ kind: 'local_project', projectId: 'project-a' }} />
+    <CoManagedEffort target={{ kind: 'local_task', taskId: 'task-a' }} />
+  </form>);
+  await screen.findAllByText('1.5 hours');
+  const buttons = screen.getAllByRole('button'); expect(new Set(buttons.map(button => button.id)).size).toBe(2);
+  fireEvent.click(buttons[1]); expect(submit).not.toHaveBeenCalled();
+  await waitFor(() => expect(mocks.load).toHaveBeenCalledTimes(3));
+});
+
+it('clears previous local effort on a home-session change even when task IDs collide', async () => {
+  const local = { kind: 'local_task' as const, taskId: 'same-task-id' };
+  const view = render(<CoManagedEffort target={local} />); await screen.findByText('1.5 hours');
+  mocks.session.mockReturnValue({ status: 'authenticated', data: { user: { id: 'user-b', tenant: 'home-b' } } });
+  mocks.load.mockResolvedValue({ ...totals, customerMinutes: 0, mspMinutes: 0, combinedMinutes: 0 });
+  view.rerender(<CoManagedEffort target={local} />);
+  expect(screen.queryByText('1.5 hours')).toBeNull(); await screen.findAllByText('0 hours');
+  mocks.session.mockReturnValue({ status: 'loading', data: null });
+  view.rerender(<CoManagedEffort target={local} />); expect(screen.queryByRole('region')).toBeNull();
 });

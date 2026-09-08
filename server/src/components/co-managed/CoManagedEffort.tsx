@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useSession } from 'next-auth/react';
 import type { CoManagedEffortTotals } from '@alga-psa/co-managed';
 import { Button } from '@alga-psa/ui/components/Button';
 import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
@@ -10,7 +11,10 @@ import { CoManagedFeatureBoundary } from './CoManagedFeatureBoundary';
 type Props = { target: CoManagedEffortTarget; refreshKey?: number };
 
 export default function CoManagedEffort(props: Props) {
-  return <CoManagedFeatureBoundary><Effort key={JSON.stringify(props.target)} {...props} /></CoManagedFeatureBoundary>;
+  const { data: session, status } = useSession();
+  const user = session?.user;
+  if (status !== 'authenticated' || !user?.id || !user.tenant) return null;
+  return <CoManagedFeatureBoundary><Effort key={JSON.stringify([user.tenant, user.id, props.target])} {...props} /></CoManagedFeatureBoundary>;
 }
 
 function Effort({ target, refreshKey }: Props) {
@@ -27,10 +31,12 @@ function Effort({ target, refreshKey }: Props) {
     return () => { active = false; };
   }, [refreshKey, refresh]);
   const fields = ['customerMinutes', 'mspMinutes', 'combinedMinutes'] as const;
+  const identity = target.kind === 'shared' ? `${target.resource.tenant}-${target.resource.kind}-${target.resource.id}`
+    : target.kind === 'local_project' ? `project-${target.projectId}` : `task-${target.taskId}`;
   return <section className="space-y-3 rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-4" aria-label={t('coManaged.effort.title')}>
     <div className="flex items-center justify-between gap-3">
       <h2 className="font-semibold">{t('coManaged.effort.title')}</h2>
-      <Button id="co-shared-effort-refresh" variant="ghost" disabled={!totals && !error}
+      <Button id={`co-shared-effort-refresh-${identity}`} type="button" variant="ghost" disabled={!totals && !error}
         onClick={() => { setTotals(null); setError(false); setRefresh(value => value + 1); }}>{t('coManaged.policy.reload')}</Button>
     </div>
     <p className="text-sm text-muted-foreground">{t('coManaged.effort.description')}</p>
