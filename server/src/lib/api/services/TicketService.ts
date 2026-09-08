@@ -2254,6 +2254,10 @@ export class TicketService extends BaseService<ITicket> {
         throw new NotFoundError('Comment not found');
       }
 
+      if (comment.publish_state === 'scheduled' && await tenantScopedTable(trx, 'ticket_conversation_publications', context.tenant)
+        .where('comment_id', commentId).whereRaw("jsonb_exists(publication_options, 'schedule')").first())
+        throw new ValidationError('Cancel the scheduled email before changing its message');
+
       if (comment.is_system_generated) {
         throw new ValidationError('System-generated comments cannot be edited');
       }

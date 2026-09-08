@@ -22,6 +22,7 @@ export async function applyNamedTicketConversationPost(context: NamedConversatio
     canUpdateResponseState: context.canUpdateResponseState, publicationOptions: context.publicationOptions,
     publication: context.shared ? 'qualified' : 'native',
     externalDelivery: context.conversation.transport === 'email' ? 'reviewed_email' : 'notifications' }, comment);
+  if (context.publicationOptions?.schedule) return;
   if (!context.shared && context.conversation.defaultSlot === 'requester') {
     await applyTicketBundleCommentEffects(context.trx, context.ticket.tenant, comment.comment_id, context.actor.userId,
       (ticketId, effect) => assertNamedTicketConversationBundleTarget(context.trx, context.actor,

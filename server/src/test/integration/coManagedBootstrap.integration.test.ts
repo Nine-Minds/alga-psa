@@ -95,7 +95,7 @@ beforeAll(async () => {
     '20260906080000_create_co_management_relationship_events.cjs',
     '20260906100000_add_external_file_metadata.cjs',
     '20260906110000_add_kb_import_batch_identity.cjs',
-    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs', '20260908013607_create_named_ticket_conversations.cjs', '20260908015652_create_ticket_conversation_editor_drafts.cjs', '20260908022249_scope_ticket_conversation_defaults_to_relationship.cjs', '20260908024119_create_ticket_conversation_publications.cjs', '20260908030840_retain_ticket_conversation_draft_reply_target.cjs', '20260908033011_create_ticket_conversation_sender_grants.cjs', '20260908034701_create_ticket_conversation_email_operations.cjs', '20260908042702_create_ticket_conversation_inbound_receipts.cjs', '20260908045632_track_named_conversation_correspondents.cjs', '20260908051006_retain_named_reply_review_resolutions.cjs', '20260908052731_extend_conversation_files_to_native_vendor_replies.cjs', '20260908054601_retain_named_editor_file_bindings.cjs', '20260908060651_retain_named_file_publication_operations.cjs', '20260908091259_retain_named_requester_publication_options.cjs', '20260908094308_retain_named_requester_close_intent.cjs', '20260908101532_retain_named_email_recovery_due.cjs']) {
+    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs', '20260908013607_create_named_ticket_conversations.cjs', '20260908015652_create_ticket_conversation_editor_drafts.cjs', '20260908022249_scope_ticket_conversation_defaults_to_relationship.cjs', '20260908024119_create_ticket_conversation_publications.cjs', '20260908030840_retain_ticket_conversation_draft_reply_target.cjs', '20260908033011_create_ticket_conversation_sender_grants.cjs', '20260908034701_create_ticket_conversation_email_operations.cjs', '20260908042702_create_ticket_conversation_inbound_receipts.cjs', '20260908045632_track_named_conversation_correspondents.cjs', '20260908051006_retain_named_reply_review_resolutions.cjs', '20260908052731_extend_conversation_files_to_native_vendor_replies.cjs', '20260908054601_retain_named_editor_file_bindings.cjs', '20260908060651_retain_named_file_publication_operations.cjs', '20260908091259_retain_named_requester_publication_options.cjs', '20260908094308_retain_named_requester_close_intent.cjs', '20260908101532_retain_named_email_recovery_due.cjs', '20260908102605_retain_named_requester_schedule_intent.cjs']) {
     await require('../../../migrations/' + file).up(db);
   }
   for (const table of ['standard_statuses', 'standard_priorities', 'countries', 'notification_categories',
@@ -15708,7 +15708,7 @@ it.each(['publish', 'changed_draft', 'shared_guard', 'private_guard'] as const)(
     content: { text: 'The issue has been resolved.' }, publicationOptions: options,
     ...(scenario !== 'private_guard' ? { email: { subject: 'Resolution', to: ['requester@example.test'], cc: [] } } : {}) };
   if (scenario.endsWith('_guard')) {
-    expect(await api.getNamedTicketConversationPublicationCapabilities(db, f.customerPrincipal, ticket, ref)).toEqual({ resolution: false });
+    expect(await api.getNamedTicketConversationPublicationCapabilities(db, f.customerPrincipal, ticket, ref)).toEqual({ resolution: false, scheduling: false });
     await expect(api.saveNamedConversationEditorDraft(db, f.customerPrincipal, ticket, ref, request)).rejects.toMatchObject({ code: 'CONVERSATION_FORBIDDEN' });
     expect(await api.getNamedConversationEditorDraft(db, f.customerPrincipal, ticket, ref)).toEqual(prior); return;
   }
@@ -15979,4 +15979,155 @@ it.each(['recovery', 'inactive', 'roles', 'masked', 'mailbox', 'deleted', 'uncon
       expect(f.transport.send).toHaveBeenCalledOnce();
     }
   }
+}));
+
+it.each(['schedule', 'resolution', 'past', 'close', 'shared', 'revoked', 'mailbox', 'reschedule', 'cancel', 'tamper', 'event_retry', 'queue_failure', 'response_same', 'response_change'] as const)(
+  'reviewed requester schedule acceptance %s withholds publication and canonical effects', async scenario => withNamedRequesterInboundFixture(async f => {
+  const api = await import('../../../../packages/co-managed/src/namedTicketConversations');
+  const email = await import('../../../../packages/co-managed/src/conversationEmailOperations');
+  const { recoverNativeNamedConversationEmails } = await import('../../../../packages/co-managed/src/nativeConversationEmailDelivery');
+  const { applyNamedTicketConversationPost } = await import('../../../../packages/tickets/src/lib/postNamedTicketConversation');
+  const events = await import('@alga-psa/event-bus/publishers');
+  if (scenario !== 'shared') await f.customer.table('tenants').update({ product_code: 'psa' });
+  const ticket = scenario === 'shared' ? f.ticket : { tenant: f.ticket.tenant, ticketId: f.ticket.ticketId };
+  const previous = await api.getNamedConversationEditorDraft(db, f.customerPrincipal, ticket, f.ref);
+  const source = await f.customer.table('comments').where('comment_id', f.route.operation_id).first();
+  const publicationOptions = { schedule: { at: new Date(Date.now() + (scenario === 'past' ? -60000 : 60000)).toISOString(), timeZone: 'America/New_York' },
+    ...(scenario === 'resolution' || scenario === 'close' ? { isResolution: true as const } : {}),
+    ...(scenario === 'close' ? { close: { statusId: randomUUID() } } : {}) };
+  const save = () => api.saveNamedConversationEditorDraft(db, f.customerPrincipal, ticket, f.ref, { operationId: randomUUID(),
+    expectedRevision: previous?.revision ?? 0, expectedConversationRevision: 2, publicationOptions,
+    parent: { threadId: source.thread_id, commentId: source.comment_id }, content: { text: 'A reply for later.' },
+    email: { subject: 'Later reply', to: ['later@example.test'], cc: [] } });
+  if (['past', 'close', 'shared'].includes(scenario)) { await expect(async () => save()).rejects.toThrow(); return; }
+  const draft = await save();
+  const request = { operationId: randomUUID(), expectedDraftRevision: draft.revision, expectedConversationRevision: 2 };
+  if (scenario === 'response_change') await f.customer.table('tickets').where('ticket_id', ticket.ticketId).update({ response_state: null });
+  const beforeTicket = await f.customer.table('tickets').where('ticket_id', ticket.ticketId).first();
+  const beforeConversation = await api.getNamedTicketConversation(db, f.customerPrincipal, ticket, f.ref);
+  const beforeThread = await f.customer.table('comment_threads').where('thread_id', source.thread_id).first();
+  const beforeHistory = await api.getNamedTicketConversationMessages(db, f.customerPrincipal, ticket, f.ref);
+  vi.mocked(events.publishEvent).mockClear(); vi.mocked(events.publishWorkflowEvent).mockClear(); f.transport.send.mockClear();
+  const review = await email.prepareNamedConversationEmail(db, f.customerPrincipal, ticket, f.ref, request, f.transport);
+  expect(review.publicationOptions).toEqual(publicationOptions);
+  const confirm = () => email.confirmNamedConversationEmail(db, f.customerPrincipal, ticket, f.ref, request.operationId,
+    review.review.messageHash, f.transport, applyNamedTicketConversationPost);
+  if (scenario === 'queue_failure') {
+    const adapter = await import('../../../../packages/tickets/src/lib/namedConversationEmail');
+    const original = { ...adapter.namedConversationEmailTransport }, core = await import('@alga-psa/core');
+    const queue = vi.spyOn(core, 'scheduleJobAt').mockRejectedValue(new Error('Queue unavailable'));
+    Object.assign(adapter.namedConversationEmailTransport, f.transport);
+    try {
+      expect(await adapter.sendNamedTicketEmail(db, f.customerPrincipal, ticket, f.ref, request.operationId, review.review.messageHash)).toMatchObject({ status: 'scheduled' });
+      expect(queue).toHaveBeenCalledOnce();
+    } finally { queue.mockRestore(); Object.assign(adapter.namedConversationEmailTransport, original); }
+  } else expect(await confirm()).toMatchObject({ status: 'scheduled' });
+  expect(await confirm()).toMatchObject({ status: 'scheduled' });
+  expect(await f.customer.table('comments').where('comment_id', request.operationId).first()).toMatchObject({
+    publish_state: 'scheduled', parent_comment_id: source.comment_id, thread_id: source.thread_id,
+    scheduled_publish_at: new Date(publicationOptions.schedule.at), scheduled_publish_tz: publicationOptions.schedule.timeZone, is_resolution: scenario === 'resolution' });
+  expect(await f.customer.table('tickets').where('ticket_id', ticket.ticketId).first()).toEqual(beforeTicket);
+  expect(await api.getNamedTicketConversation(db, f.customerPrincipal, ticket, f.ref)).toEqual(beforeConversation);
+  expect(await f.customer.table('comment_threads').where('thread_id', source.thread_id).first()).toEqual(beforeThread);
+  expect(await api.getNamedTicketConversationMessages(db, f.customerPrincipal, ticket, f.ref)).toEqual(beforeHistory);
+  expect((await api.getNamedConversationEditorDraft(db, f.customerPrincipal, ticket, f.ref))?.content).toBeNull();
+  expect(await recoverNativeNamedConversationEmails(db, ticket.tenant, f.transport)).toEqual({ processed: 0, deferred: 0 });
+  expect(f.transport.send).not.toHaveBeenCalled(); expect(events.publishEvent).not.toHaveBeenCalled(); expect(events.publishWorkflowEvent).not.toHaveBeenCalled();
+  const outgoing = await import('../../../../packages/tickets/src/lib/namedConversationEmail');
+  const original = { ...outgoing.namedConversationEmailTransport };
+  Object.assign(outgoing.namedConversationEmailTransport, f.transport);
+  const nativeEvents = await import('../../../../packages/co-managed/src/nativeConversationEvents');
+  // Isolate the ordinary-PSA event path from this fixture's inherited ownership.
+  // Ticket, author, audience and mailbox authorization still use real queries.
+  const ordinary = scenario === 'event_retry' || scenario === 'queue_failure' ? vi.spyOn(nativeEvents, 'hasCoManagedConversationOwnership').mockResolvedValue(false) : null;
+
+  try {
+    const { publishScheduledComment } = await import('@alga-psa/jobs/handlers/publishScheduledComment');
+    const run = () => publishScheduledComment(db, { tenantId: ticket.tenant, ticketId: ticket.ticketId, commentId: request.operationId });
+    await run(); expect(f.transport.send).not.toHaveBeenCalled();
+    if (scenario === 'reschedule' || scenario === 'cancel') {
+      const auth = await import('@alga-psa/auth'), database = await import('@alga-psa/db'), core = await import('@alga-psa/core');
+      const actions = await import('../../../../packages/tickets/src/actions/comment-actions/commentActions');
+      const user = await f.customer.table('users').where('user_id', f.customerPrincipal.userId).first();
+      const connection = vi.spyOn(database, 'createTenantKnex').mockResolvedValue({ knex: db, tenant: ticket.tenant });
+      const override = vi.spyOn(auth, 'getApiKeyUserOverride').mockReturnValue(undefined);
+      const session = vi.spyOn(auth, 'getSession').mockResolvedValue({ session_id: f.customerPrincipal.sessionId,
+        user: { id: user.user_id, tenant: ticket.tenant, user_type: 'internal' } } as any);
+      const queue = vi.spyOn(core, 'scheduleJobAt').mockImplementation(async () => {
+        expect(await f.customer.table('comments').where('comment_id', request.operationId).first()).toMatchObject({ publish_state: 'scheduled' });
+        return { jobId: randomUUID() };
+      });
+      const cancel = vi.spyOn(core, 'cancelScheduledJob').mockResolvedValue(true);
+      try {
+        const at = new Date(Date.now() + 120000).toISOString();
+        await auth.runWithApiKeyUser(user, () => runWithTenant(ticket.tenant, () => scenario === 'cancel'
+          ? actions.cancelScheduledComment(request.operationId) : actions.rescheduleScheduledComment(request.operationId, at, 'UTC')));
+        expect(await f.customer.table('ticket_conversation_email_operations').where('operation_id', request.operationId).first())
+          .toMatchObject({ status: scenario === 'cancel' ? 'canceled' : 'scheduled' });
+        if (scenario === 'reschedule') {
+          expect(queue).toHaveBeenCalledOnce();
+          expect(await f.customer.table('comments').where('comment_id', request.operationId).first()).toMatchObject({ scheduled_publish_at: new Date(at), scheduled_publish_tz: 'UTC' });
+        } else {
+          expect(queue).not.toHaveBeenCalled(); await run(); expect(f.transport.send).not.toHaveBeenCalled();
+          return;
+        }
+      } finally { queue.mockRestore(); cancel.mockRestore(); session.mockRestore(); override.mockRestore(); connection.mockRestore(); }
+    }
+    const Comment = (await import('../../../../packages/tickets/src/models/comment')).default;
+    await expect(Comment.update(db, ticket.tenant, request.operationId, { note: 'Unreviewed edit' })).rejects.toThrow('Cancel the scheduled email');
+    if (scenario === 'response_same' || scenario === 'response_change') {
+      const bundles = await import('@alga-psa/authorization');
+      const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: ticket.tenant, name: 'Scheduled response-state scope', actorUserId: f.customerPrincipal.userId });
+      for (const action of ['read', 'update'] as const) await bundles.upsertBundleRule(db, { tenant: ticket.tenant, bundleId, revisionId,
+        resourceType: 'ticket', action, templateKey: 'selected_clients', config: { selectedClientIds: [f.operation.customer_client_id], redactedFields: ['response_state'] } });
+      await bundles.publishBundleRevision(db, { tenant: ticket.tenant, bundleId, revisionId, actorUserId: f.customerPrincipal.userId });
+      await bundles.createBundleAssignment(db, { tenant: ticket.tenant, bundleId, targetType: 'user', targetId: f.customerPrincipal.userId });
+    }
+    if (scenario === 'tamper') await f.customer.table('comments').where('comment_id', request.operationId).update({ note: 'Changed outside the reviewed writer' });
+
+    await f.customer.table('comments').where('comment_id', request.operationId).update({ scheduled_publish_at: new Date(0) });
+    await f.customer.table('sessions').where('session_id', f.customerPrincipal.sessionId).update({ revoked_at: new Date() });
+    if (scenario === 'revoked') await f.customer.table('user_roles').where('user_id', f.customerPrincipal.userId).del();
+    if (scenario === 'mailbox') await f.customer.table('email_providers').where('id', f.inbox.provider_id).update({ is_active: false });
+    if (scenario === 'revoked' || scenario === 'mailbox' || scenario === 'tamper' || scenario === 'response_change') {
+      await expect(run()).rejects.toThrow();
+      expect(await f.customer.table('comments').where('comment_id', request.operationId).first()).toMatchObject({ publish_state: 'scheduled' });
+      expect(await f.customer.table('ticket_conversation_email_operations').where('operation_id', request.operationId).first()).toMatchObject({ status: 'scheduled' });
+      expect(await f.customer.table('tickets').where('ticket_id', ticket.ticketId).first()).toEqual(beforeTicket);
+      expect(f.transport.send).not.toHaveBeenCalled();
+    } else {
+      if (scenario === 'event_retry') vi.mocked(events.publishEvent).mockRejectedValueOnce(new Error('Event transport unavailable'));
+      if (scenario === 'queue_failure') {
+        const { recoverCoManagedScheduledComments } = await import('@alga-psa/jobs/handlers/publishScheduledComment');
+        expect(await recoverCoManagedScheduledComments(db, ticket.tenant)).toEqual({ processed: 1, failed: 0 });
+      } else await run();
+      await run();
+      if (scenario === 'event_retry') {
+        const pending = f.customer.table('co_management_event_outbox').where({ comment_id: request.operationId, event_type: 'TICKET_COMMENT_ADDED', status: 'pending' });
+        expect(await pending.clone()).toHaveLength(1);
+        await pending.update({ next_attempt_at: new Date(0) });
+        const { dispatchCoManagedConversationEvents } = await import('@alga-psa/co-managed');
+        const { publishCoManagedConversationEvent } = await import('@alga-psa/jobs/handlers/coManagedConversationEventPublication');
+        expect(await dispatchCoManagedConversationEvents(db, ticket.tenant, publishCoManagedConversationEvent)).toMatchObject({ published: 1, failed: 0 });
+      }
+      expect(f.transport.send).toHaveBeenCalledOnce();
+      expect(f.transport.send.mock.calls[0][0]).toMatchObject({ to: [{ email: 'later@example.test' }], subject: 'Later reply' });
+      expect(await f.customer.table('comments').where('comment_id', request.operationId).first()).toMatchObject({ publish_state: 'published', scheduled_publish_event_id: null });
+      expect(await f.customer.table('ticket_conversation_email_operations').where('operation_id', request.operationId).first()).toMatchObject({ status: 'delivered' });
+      expect(await f.customer.table('comment_threads').where('thread_id', source.thread_id).first()).toMatchObject({ reply_count: beforeThread.reply_count + 1 });
+      if (scenario === 'schedule') {
+        // The generic legacy worker does not increment reply_count at due time;
+        // preserve its existing model behavior outside reviewed named schedules.
+        const beforeLegacy = await f.customer.table('comment_threads').where('thread_id', source.thread_id).first();
+        await Comment.insert(db, ticket.tenant, { ticket_id: ticket.ticketId, parent_comment_id: source.comment_id,
+          user_id: f.customerPrincipal.userId, author_type: 'internal', note: 'Legacy scheduled reply', is_internal: false, is_resolution: false,
+          publish_state: 'scheduled', scheduled_publish_at: new Date(Date.now() + 60000).toISOString(), scheduled_publish_tz: 'UTC' });
+        expect(await f.customer.table('comment_threads').where('thread_id', source.thread_id).first()).toMatchObject({ reply_count: beforeLegacy.reply_count + 1 });
+      }
+      const notifications = vi.mocked(events.publishEvent).mock.calls.filter(([event]) => event.eventType === 'TICKET_COMMENT_ADDED');
+      expect(notifications).toHaveLength(scenario === 'event_retry' ? 2 : 1); expect(notifications[0][0].payload).toMatchObject({ suppressContactNotifications: true });
+    }
+  } finally { ordinary?.mockRestore(); Object.assign(outgoing.namedConversationEmailTransport, original); }
+  const migration = require('../../../migrations/20260908102605_retain_named_requester_schedule_intent.cjs');
+  await migration.up(db); await expect(migration.down(db)).rejects.toThrow('Cannot discard retained requester schedule intent');
 }));

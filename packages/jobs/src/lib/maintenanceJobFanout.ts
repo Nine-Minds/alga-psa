@@ -91,7 +91,7 @@ const tenantsWithPendingCoManagedNotifications: TenantSelector = async db => {
     .where('status', 'pending').where('next_attempt_at', '<=', new Date()).distinct('tenant');
   const schedules = await db.unscoped<{ tenant: string }>('comments', 'maintenance fanout selects co-managed schedules and legacy publication handoffs awaiting recovery')
     .whereRaw("(scheduled_publish_retry_at IS NULL OR scheduled_publish_retry_at <= clock_timestamp()) AND ((publish_state = 'scheduled' AND scheduled_publish_at <= clock_timestamp()) OR (publish_state = 'published' AND scheduled_publish_event_id IS NOT NULL AND (scheduled_publish_dispatched_at IS NULL OR (scheduled_response_event_id IS NOT NULL AND scheduled_response_dispatched_at IS NULL))))")
-    .whereRaw("(EXISTS (SELECT 1 FROM tenants WHERE tenants.tenant = comments.tenant AND tenants.product_code = 'co_managed') OR EXISTS (SELECT 1 FROM co_management_relationships WHERE co_management_relationships.tenant = comments.tenant))").distinct('tenant');
+    .whereRaw("(EXISTS (SELECT 1 FROM tenants WHERE tenants.tenant = comments.tenant AND tenants.product_code = 'co_managed') OR EXISTS (SELECT 1 FROM co_management_relationships WHERE co_management_relationships.tenant = comments.tenant) OR EXISTS (SELECT 1 FROM ticket_conversation_publications p WHERE p.tenant = comments.tenant AND p.ticket_tenant = comments.tenant AND p.ticket_id = comments.ticket_id AND p.comment_id = comments.comment_id AND p.mode = 'send' AND jsonb_exists(p.publication_options, 'schedule')))").distinct('tenant');
   return [...new Set([...namedEmails, ...notifications, ...events, ...consumers, ...emails, ...customerEmails, ...requesterEmails, ...schedules].map(row => row.tenant))].map(tenant => ({ tenant }));
 };
 

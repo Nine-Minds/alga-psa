@@ -6,6 +6,8 @@ import type { PublishedConversationEmail, ReviewedEmailAddress } from '@alga-psa
 export const emailDeliveryLabels = {
   received: 'Email received.',
   delivered: 'Email sent.',
+  scheduled: 'Email scheduled. It has not been published or sent.',
+  canceled: 'Scheduled email canceled.',
   pending: 'Send accepted. Delivery has not started.',
   sending: 'Delivery is in progress. Check this send for its result.',
   unknown: 'Delivery could not be confirmed. Check the mailbox before sending this message again.',

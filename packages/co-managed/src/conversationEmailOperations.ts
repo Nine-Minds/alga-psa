@@ -1,3 +1,4 @@
+import { scheduledConversationContentHash } from '@alga-psa/shared/lib/tickets/scheduledConversationContent';
 import { admitNamedRequesterPublicationOptions } from './namedTicketConversations';
 import { snapshotRequesterPublicationOptions } from '@alga-psa/shared/lib/tickets/requesterPublicationOptions';
 import { assertNamedConversationDeliveryFiles, selectedNamedConversationEditorFiles, assertNamedConversationPublicationFiles, prepareNamedConversationPublicationFiles, type NamedConversationEmailFile, type NamedConversationFileStorage } from './namedConversationPublicationFiles';
@@ -62,7 +63,7 @@ async function latestEmail(context: Context) {
 
 function state(row: any) {
   const expiredAttempt = row.status === 'sending' && row.attempted_at && Date.now() - new Date(row.attempted_at).getTime() > 300000;
-  return { operationId: row.operation_id, status: expiredAttempt ? 'unknown' as const : row.status as 'reviewed' | 'pending' | 'sending' | 'delivered' | 'unknown' | 'blocked',
+  return { operationId: row.operation_id, status: expiredAttempt ? 'unknown' as const : row.status as 'reviewed' | 'scheduled' | 'canceled' | 'pending' | 'sending' | 'delivered' | 'unknown' | 'blocked',
     errorCode: row.error_code as string | null };
 }
 function unchanged(review: ReviewedEmailPreview, current: ReviewedEmailPreview) {
@@ -164,7 +165,8 @@ export async function confirmNamedConversationEmail(db: Knex, actor: CoManagedSe
         conversation_store_tenant: ref.storeTenant, conversation_id: ref.conversationId };
       await tenantDb(current.trx, mailbox.tenant).table('ticket_conversation_email_routes').insert(route);
       await rememberNamedConversationCorrespondents(current.trx, route, [...envelope.to, ...envelope.cc]);
-      const [saved] = await operation(current, id).update({ status: 'pending', payload: JSON.stringify(payload) }).returning('*');
+      const scheduledHash = publicationOptions?.schedule ? scheduledConversationContentHash(await tenantDb(current.trx, current.ticket.tenant).table('comments').where('comment_id', id).first()) : null;
+      const [saved] = await operation(current, id).update({ status: publicationOptions?.schedule ? 'scheduled' : 'pending', scheduled_comment_hash: scheduledHash, payload: JSON.stringify(payload) }).returning('*');
       return state(saved);
     });
   });
@@ -202,7 +204,7 @@ export async function attachPublishedConversationEmails(context: Pick<Context, '
       ticket_tenant: context.ticket.tenant, ticket_id: context.ticket.ticketId, conversation_store_tenant: context.conversation.storeTenant,
       conversation_id: context.conversation.conversationId }).select('status', 'attempted_at').first();
     const delivery = receipt ? state(receipt).status : 'unknown';
-    if (delivery === 'reviewed') continue;
+    if (delivery === 'reviewed' || delivery === 'scheduled' || delivery === 'canceled') continue;
     const envelope = row.email_envelope;
     const projected: PublishedConversationEmail = { from: envelope.from, replyTo: envelope.replyTo, to: envelope.to, cc: envelope.cc, subject: envelope.subject, delivery };
     const item = visible.find(value => value.commentId === row.comment_id && value.storeTenant === context.conversation.storeTenant);

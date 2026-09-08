@@ -22,7 +22,11 @@ async function constrain(knex, expression) {
     await knex.schema.alterTable(table, t => t.check(expression, [], name));
   }
 }
-exports.up = knex => constrain(knex, expanded);
+exports.up = async knex => {
+  // A replay must not narrow the later schedule-capable options constraint.
+  if (await knex.schema.hasColumn('ticket_conversation_email_operations', 'scheduled_comment_hash')) return;
+  await constrain(knex, expanded);
+};
 exports.down = async function(knex) {
   for (const table of TABLES) if (await knex(table).whereRaw("jsonb_exists(publication_options, 'close')").first())
     throw new Error('Cannot discard retained requester close intent');

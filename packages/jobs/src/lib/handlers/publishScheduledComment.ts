@@ -1,3 +1,4 @@
+import { publishScheduledConversationEmail } from '@alga-psa/tickets/lib/publishScheduledConversationEmail';
 import { v5 as uuidv5 } from 'uuid';
 import { assertCoManagedOperationalWrite } from '@alga-psa/licensing/lifecycle';
 import type { Knex } from 'knex';
@@ -64,11 +65,14 @@ export interface PublishScheduledCommentJobData {
  * the worker that changes scheduled -> published emits the existing event.
  */
 export async function publishScheduledComment(knex: Knex, data: PublishScheduledCommentJobData): Promise<void> {
-  const coManaged = await withTransaction(knex, trx => hasCoManagedConversationOwnership(trx, data.tenantId));
+  const named = await tenantDb(knex, data.tenantId).table('ticket_conversation_publications').where({ comment_id: data.commentId, ticket_tenant: data.tenantId, ticket_id: data.ticketId, mode: 'send' })
+    .whereRaw("jsonb_exists(publication_options, 'schedule')").first('operation_id');
+  const coManaged = Boolean(named) || await withTransaction(knex, trx => hasCoManagedConversationOwnership(trx, data.tenantId));
   const snapshot = await tenantDb(knex, data.tenantId).table('comments').where({ comment_id: data.commentId, ticket_id: data.ticketId })
     .modify(query => { if (coManaged) query.where(retry => retry.whereNull('scheduled_publish_retry_at').orWhere('scheduled_publish_retry_at', '<=', knex.raw('clock_timestamp()'))); }).first();
   if (!snapshot) return;
   try {
+    if (named && await publishScheduledConversationEmail(knex, data)) return;
     const db = tenantDb(knex, data.tenantId);
     const updated = await withTransaction(knex, async (trx: any) => {
       const trxDb = tenantDb(trx, data.tenantId);
@@ -180,8 +184,9 @@ async function retainScheduledConversationEvents(db: Knex | Knex.Transaction, te
  * Per-comment failures defer just that source; the rest of the batch progresses. */
 export async function recoverCoManagedScheduledComments(db: Knex, tenant: string, limit = 30) {
   if (!Number.isInteger(limit) || limit < 1 || limit > 500) throw new Error('Invalid scheduled recovery limit');
-  if (!await withTransaction(db, trx => hasCoManagedConversationOwnership(trx, tenant))) return { processed: 0, failed: 0 };
+  const coManaged = await withTransaction(db, trx => hasCoManagedConversationOwnership(trx, tenant));
   const rows = await tenantDb(db, tenant).table('comments')
+    .modify(query => { if (!coManaged) query.whereRaw("EXISTS (SELECT 1 FROM ticket_conversation_publications p WHERE p.tenant = comments.tenant AND p.ticket_tenant = comments.tenant AND p.ticket_id = comments.ticket_id AND p.comment_id = comments.comment_id AND p.mode = 'send' AND jsonb_exists(p.publication_options, 'schedule'))"); })
     .where(query => query.whereNull('scheduled_publish_retry_at').orWhere('scheduled_publish_retry_at', '<=', db.raw('clock_timestamp()')))
     .where(query => query.where(pending => pending.where('publish_state', 'scheduled').where('scheduled_publish_at', '<=', db.raw('clock_timestamp()')))
       .orWhere(published => published.where('publish_state', 'published').whereNotNull('scheduled_publish_event_id').where(markers => markers.whereNull('scheduled_publish_dispatched_at')

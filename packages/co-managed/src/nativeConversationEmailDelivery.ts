@@ -5,6 +5,7 @@ import { conversationUuid, TicketConversationError } from '@alga-psa/shared/lib/
 import { lockCoManagedActiveHomeIdentity } from './sharedWorkIdentity';
 import { authorizeNativeTicketConversation } from './nativeConversationAuthority';
 import { authorizedConversation } from './namedTicketConversations';
+import type { ConversationMailboxPolicyContext } from './conversationMailboxes';
 import { executeNamedConversationEmailDelivery, type NamedConversationEmailTransport } from './conversationEmailOperations';
 
 /** Only committed human Send intent admits a deferred native author. Queue
@@ -12,11 +13,22 @@ import { executeNamedConversationEmailDelivery, type NamedConversationEmailTrans
  * Shared tickets require their own relationship-aware deferred admission. */
 export async function deliverNativeNamedConversationEmail(db: Knex, input: { tenant: string; operationId: string },
   transport: NamedConversationEmailTransport) {
+  if (!input || ![input.tenant, input.operationId].every(conversationUuid) || Object.keys(input).some(key => !['tenant', 'operationId'].includes(key)))
+    throw new TicketConversationError('CONVERSATION_INVALID');
+  const retained = { tenant: input.tenant.toLowerCase(), operationId: input.operationId.toLowerCase() };
+  return executeNamedConversationEmailDelivery(retained.operationId, transport,
+    work => withNativeAcceptedConversationEmail(db, retained, 'delivery', work));
+}
+
+/** The same retained author proof owns scheduled publication and subsequent
+ * delivery. The publication phase may examine withheld/canceled operations. */
+export async function withNativeAcceptedConversationEmail<T>(db: Knex, input: { tenant: string; operationId: string },
+  phase: 'publication' | 'delivery', work: (context: ConversationMailboxPolicyContext, row: any, publication: any) => Promise<T>): Promise<T> {
   if (db.isTransaction || !input || ![input.tenant, input.operationId].every(conversationUuid) ||
     Object.keys(input).some(key => !['tenant', 'operationId'].includes(key))) throw new TicketConversationError('CONVERSATION_INVALID');
   const tenant = input.tenant.toLowerCase(), operationId = input.operationId.toLowerCase();
   const deny = (): never => { throw new TicketConversationError('CONVERSATION_FORBIDDEN'); };
-  return executeNamedConversationEmailDelivery(operationId, transport, work => withTransaction(db, async trx => {
+  return withTransaction(db, async trx => {
     const home = tenantDb(trx, tenant);
     const locator = await home.table('ticket_conversation_email_operations').where('operation_id', operationId)
       .first('actor_user_id', 'ticket_id', 'ticket_tenant', 'conversation_id');
@@ -31,7 +43,7 @@ export async function deliverNativeNamedConversationEmail(db: Knex, input: { ten
     // Match browser lock order (identity, ticket, conversation, operation), then
     // prove the locator still describes this retained intent under the row lock.
     const row = await home.table('ticket_conversation_email_operations').where('operation_id', operationId).forUpdate().first();
-    if (!row || !['pending', 'sending', 'delivered', 'unknown', 'blocked'].includes(row.status) || row.relationship_id ||
+    if (!row || ![...(phase === 'publication' ? ['scheduled', 'canceled'] : []), 'pending', 'sending', 'delivered', 'unknown', 'blocked'].includes(row.status) || row.relationship_id ||
       row.actor_user_id !== actor.userId || row.ticket_id !== ticket.ticketId || row.conversation_id !== ref.conversationId ||
       row.ticket_tenant !== tenant || row.conversation_store_tenant !== tenant || row.mailbox_tenant !== tenant) return deny();
     // A pending flag alone is not proof of confirmation. Publication and route
@@ -44,10 +56,10 @@ export async function deliverNativeNamedConversationEmail(db: Knex, input: { ten
       conversation_id: ref.conversationId, mailbox_id: row.mailbox_id, operation_tenant: tenant,
       token_hash: row.reply_token_hash, rfc_message_id: row.rfc_message_id }).forShare().first();
     if (!publication || !route) return deny();
-    const result = await work({ ...authority, conversation }, row);
+    const result = await work({ ...authority, conversation }, row, publication);
     await assertCoManagedOperationalWrite(trx, tenant);
     return result;
-  }));
+  });
 }
 
 /** Bounded recovery rotates failures behind other due work. The lease only

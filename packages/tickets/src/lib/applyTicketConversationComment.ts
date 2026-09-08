@@ -28,12 +28,25 @@ export interface TicketConversationCommentContext {
   externalDelivery: 'notifications' | 'reviewed_email';
 }
 export async function applyTicketConversationComment(context: TicketConversationCommentContext, comment: CoManagedCommentInsert): Promise<void> {
-  const { trx } = context, owner = tenantDb(trx, context.resource.tenant);
+  const { trx } = context;
   if (context.publicationOptions && (context.publication !== 'native' || context.audience !== 'requester' || context.actor.tenant !== context.resource.tenant || context.actorReferenceId)) throw new CoManagedSharedWorkError();
-  await Comment.insert(trx, context.resource.tenant, { ...comment, is_resolution: Boolean(context.publicationOptions?.isResolution) }, { ticketId: context.resource.id, actorTenant: context.actor.tenant, actorUserId: context.actor.userId,
+  await Comment.insert(trx, context.resource.tenant, { ...comment, is_resolution: Boolean(context.publicationOptions?.isResolution), ...(context.publicationOptions?.schedule ? { publish_state: 'scheduled' as const, scheduled_publish_at: context.publicationOptions.schedule.at, scheduled_publish_tz: context.publicationOptions.schedule.timeZone } : {}) }, { ticketId: context.resource.id, actorTenant: context.actor.tenant, actorUserId: context.actor.userId,
     requesterPublicationOptions: context.publicationOptions, actorReferenceId: context.actorReferenceId, audience: context.audience, conversationId: context.conversationId, assertWriteAuthority: context.assertWriteAuthority });
+  if (context.publicationOptions?.schedule) { await context.assertWriteAuthority(trx); return; }
+  await publishTicketConversationCommentEffects(context, comment);
+}
+
+/** Publish effects for a canonical row already made visible in this transaction.
+ * Immediate Send and the scheduled publisher use identical reviewed-email
+ * suppression, response-state and communication event classification. */
+export async function publishTicketConversationCommentEffects(context: TicketConversationCommentContext, comment: CoManagedCommentInsert): Promise<void> {
+  const { trx } = context, owner = tenantDb(trx, context.resource.tenant);
   const saved = await owner.table('comments').where('comment_id', comment.comment_id).first();
-  const occurredAt = saved.created_at instanceof Date ? saved.created_at.toISOString() : String(saved.created_at);
+  if (!saved || saved.publish_state !== 'published' || saved.deleted_at || saved.ticket_id !== context.resource.id) throw new CoManagedSharedWorkError();
+  const scheduled = saved.scheduled_publish_at != null;
+  const retained = context.publication === 'qualified' || scheduled;
+  const publishedAt = saved.published_at ?? saved.created_at;
+  const occurredAt = publishedAt instanceof Date ? publishedAt.toISOString() : String(publishedAt);
   const reference = context.actorReferenceId ? collaborationActorReferenceSchema.parse({ ownerTenantId: context.resource.tenant, referenceId: context.actorReferenceId,
     tenantId: context.actor.tenant, userId: context.actor.userId, displayName: saved.actor_display_name, organizationName: saved.actor_organization_name }) : undefined;
   const localUser = reference ? undefined : await owner.table('users').where('user_id', context.actor.userId).first('first_name', 'last_name', 'email');
@@ -46,13 +59,13 @@ export async function applyTicketConversationComment(context: TicketConversation
     const complete = buildWorkflowPayload(payload, workflowContext);
     const eventId = uuidv5(`${context.resource.tenant}:${eventType}`, comment.comment_id);
     EventSchemas[eventType].parse({ id: eventId, timestamp: occurredAt, eventType, payload: complete });
-    if (context.publication === 'qualified') await publishQualifiedNamedConversationEvent(trx, source,
+    if (retained) await publishQualifiedNamedConversationEvent(trx, source,
       { kind: 'event', eventType, payload: complete }, eventId);
     else await publishNativeCommentEvent(trx, source, { eventType, payload: complete });
   };
   if (context.audience === 'requester' && await isResponseStateTrackingEnabled(context.resource.tenant, trx)) {
-    if (!context.canUpdateResponseState) throw new CoManagedSharedWorkError();
     const ticket = await owner.table('tickets').where('ticket_id', context.resource.id).first('response_state');
+    if (!context.canUpdateResponseState && (!scheduled || ticket.response_state !== 'awaiting_client')) throw new CoManagedSharedWorkError();
     if (ticket.response_state !== 'awaiting_client') {
       await context.assertWriteAuthority(trx);
       await owner.table('tickets').where('ticket_id', context.resource.id).update({ response_state: 'awaiting_client' });
@@ -64,9 +77,9 @@ export async function applyTicketConversationComment(context: TicketConversation
   // Named side activity must not become a customer-visible ticket timestamp
   // or activity record. Requester keeps its canonical lifecycle record.
   if (!context.conversationId || context.audience === 'requester') await writeTicketActivity(trx, { tenant: context.resource.tenant, ticketId: context.resource.id,
-    eventType: context.audience === 'requester' ? 'TICKET_MESSAGE_ADDED' : 'TICKET_INTERNAL_NOTE_ADDED', entityType: 'comment', entityId: comment.comment_id,
-    actor: { actorType: 'user', ...(reference ? { actorReferenceId: reference.referenceId } : { userId: context.actor.userId, displayName }) },
-    source: 'ui', occurredAt, details: { is_internal: comment.is_internal, ...(saved.is_resolution ? { is_resolution: true } : {}), collaboration_audience: context.audience, thread_id: comment.thread_id, parent_comment_id: comment.parent_comment_id } });
+    eventType: scheduled ? 'TICKET_COMMENT_PUBLISHED' : context.audience === 'requester' ? 'TICKET_MESSAGE_ADDED' : 'TICKET_INTERNAL_NOTE_ADDED', entityType: 'comment', entityId: comment.comment_id,
+    actor: scheduled ? { actorType: 'system' } : { actorType: 'user', ...(reference ? { actorReferenceId: reference.referenceId } : { userId: context.actor.userId, displayName }) },
+    source: scheduled ? 'system' : 'ui', occurredAt, details: { ...(scheduled ? { scheduled_publish: true, published_at: occurredAt } : {}), is_internal: comment.is_internal, ...(saved.is_resolution ? { is_resolution: true } : {}), collaboration_audience: context.audience, thread_id: comment.thread_id, parent_comment_id: comment.parent_comment_id } });
   await publish('TICKET_COMMENT_ADDED', {
     // Reviewed Send owns its exact external envelope. Reuse the existing
     // suppression contract so generic contact/watch-list email cannot resend it.
@@ -80,7 +93,7 @@ export async function applyTicketConversationComment(context: TicketConversation
     author: reference ? { authorType: 'collaborator', authorReference: reference } : { authorType: 'user', authorId: context.actor.userId }, channel: 'ui', createdAt: occurredAt })) {
     const eventId = uuidv5(`${context.resource.tenant}:${event.eventType}`, comment.comment_id);
     EventSchemas[event.eventType].parse({ id: eventId, timestamp: occurredAt, eventType: event.eventType, payload: buildWorkflowPayload(event.payload, workflowContext) });
-    if (context.publication === 'qualified') await publishQualifiedNamedConversationEvent(trx, source,
+    if (retained) await publishQualifiedNamedConversationEvent(trx, source,
       { kind: 'workflow', eventType: event.eventType, payload: event.payload, workflowContext,
         idempotencyKey: `${context.conversationId ? 'named-comment' : 'co-managed-comment'}:${context.resource.tenant}:${comment.comment_id}:${event.eventType}` }, eventId);
     else await publishNativeCommentWorkflowEvent(trx, source, { eventType: event.eventType, payload: event.payload, ctx: workflowContext });

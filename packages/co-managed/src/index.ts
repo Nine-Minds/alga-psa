@@ -88,4 +88,11 @@ export { uploadNamedConversationEditorFile, downloadNamedConversationEditorFile 
 
 export { prepareNamedConversationPublicationFiles, readNamedConversationFileBytes, type NamedConversationFileStorage, type NamedConversationEmailFile } from './namedConversationPublicationFiles';
 
-export { deliverNativeNamedConversationEmail, recoverNativeNamedConversationEmails } from './nativeConversationEmailDelivery';
+export { deliverNativeNamedConversationEmail, recoverNativeNamedConversationEmails, withNativeAcceptedConversationEmail } from './nativeConversationEmailDelivery';
+
+export { authorizeNamedConversationMailbox } from './conversationMailboxes';
+export { assertNamedConversationDeliveryFiles } from './namedConversationPublicationFiles';
+
+export { admitNamedScheduledCommentCommand, retainNamedScheduledCommentCancellation } from './namedScheduledCommentCommands';
+
+export { isCoManagedReadFieldHidden } from './sharedWorkRedaction';

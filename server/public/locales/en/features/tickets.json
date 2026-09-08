@@ -1879,7 +1879,9 @@
       "unknown": "Delivery could not be confirmed. Check the mailbox before sending this message again.",
       "blocked": "Email was not sent. The sender or delivery settings need attention.",
       "reviewed": "",
-      "received": "Email received."
+      "received": "Email received.",
+      "scheduled": "Email scheduled. It has not been published or sent.",
+      "canceled": "Scheduled email canceled."
     },
     "files": "Attachments",
     "fileOptionsFailed": "Could not load file upload options. Reload this conversation to try again.",

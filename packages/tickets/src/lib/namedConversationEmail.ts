@@ -1,6 +1,9 @@
 import { namedConversationFileStorage } from './conversationFileStorage';
 import { readNamedConversationFileBytes, type NamedConversationEmailFile } from '@alga-psa/co-managed';
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
+import { enqueueScheduledComment } from './scheduledCommentQueue';
+import logger from '@alga-psa/core/logger';
 import { TenantEmailService } from '@alga-psa/email';
 import { convertBlockNoteToHTML } from '@alga-psa/formatting/blocknoteUtils';
 import { encodeConversationContent } from '@alga-psa/co-managed/conversationContent';
@@ -53,6 +56,11 @@ export async function sendNamedTicketEmail(db: Knex, actor: CoManagedSessionActo
     const capabilities = await getNamedTicketConversationPublicationCapabilities(db, actor, ticket, ref);
     if (!capabilities.closeStatuses?.length) throw error;
     return { status: 'close_blocked' as const, failedRules: error.failures.map(failure => failure.rule) };
+  }
+  if (confirmed.status === 'scheduled') {
+    const comment = await tenantDb(db, ticket.tenant).table('comments').where({ comment_id: operationId, ticket_id: ticket.ticketId, publish_state: 'scheduled' }).first();
+    if (comment) try { await enqueueScheduledComment(db, ticket.tenant, { commentId: operationId, ticketId: ticket.ticketId, at: new Date(comment.scheduled_publish_at), timeZone: comment.scheduled_publish_tz }); }
+    catch { logger.warn('Scheduled conversation reply retained for maintenance recovery after queue failure'); }
   }
   return confirmed.status === 'pending' ? deliverNamedConversationEmail(db, actor, ticket, ref, operationId, namedConversationEmailTransport) : confirmed;
 }

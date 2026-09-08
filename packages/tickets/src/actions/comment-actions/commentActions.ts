@@ -2,6 +2,7 @@
 // TODO: Comment model method signature changes
 'use server'
 
+import { retainNamedScheduledCommentCancellation } from '@alga-psa/co-managed';
 import { admitScheduledCommentCommand } from '../../lib/scheduledCommentCommands';
 import Comment from '../../models/comment';
 import { IComment } from '@alga-psa/types';
@@ -24,25 +25,8 @@ import {
   writeTicketActivity,
 } from '@alga-psa/shared/lib/ticketActivity';
 import { ticketActionErrorFrom, type TicketActionError } from '../ticketActionErrors';
-import { scheduleJobAt as scheduleBackgroundJobAt, cancelScheduledJob } from '@alga-psa/core';
-
-const SCHEDULED_COMMENT_JOB = 'publish-scheduled-comment';
-
-/** Database state owns publication. Queue operations may fail after commit;
- * maintenance recovers due co-managed rows without relying on a job ID. */
-function scheduleCommentAfterCommit(trx: Knex.Transaction, db: Knex, tenant: string,
-  source: { commentId: string; ticketId: string; at: Date; timeZone: string; previousJobId?: string | null }) {
-  if (source.previousJobId) registerAfterCommit(trx, () => cancelScheduledJob(source.previousJobId!, tenant), `cancel previous comment schedule ${source.commentId}`);
-  registerAfterCommit(trx, async () => {
-    const current = () => tenantDb(db, tenant).table('comments').where({ comment_id: source.commentId, ticket_id: source.ticketId,
-      publish_state: 'scheduled', scheduled_publish_at: source.at.toISOString() }).whereNull('deleted_at');
-    if (!await current().first('comment_id')) return;
-    const scheduled = await scheduleBackgroundJobAt(SCHEDULED_COMMENT_JOB,
-      { tenantId: tenant, ticketId: source.ticketId, commentId: source.commentId }, source.at,
-      { singletonKey: `publish-comment:${source.commentId}:${source.at.toISOString()}`, metadata: { scheduledPublishTz: source.timeZone } });
-    if (!await current().update({ schedule_job_id: scheduled.jobId })) await cancelScheduledJob(scheduled.jobId, tenant);
-  }, `schedule comment publication ${source.commentId}`);
-}
+import { cancelScheduledJob } from '@alga-psa/core';
+import { scheduleCommentAfterCommit } from '../../lib/scheduledCommentQueue';
 
 function normalizeScheduledPublication(comment: Omit<IComment, 'tenant'>): void {
   if (!comment.scheduled_publish_at) return;
@@ -838,6 +822,7 @@ export const cancelScheduledComment = withAuth(async (user, { tenant }, id: stri
     await tenantScopedTable(trx, 'comments', tenant).where({ comment_id: id, publish_state: 'scheduled' }).update({
       publish_state: 'canceled', scheduled_publish_retry_at: null, deleted_at: trx.fn.now(), schedule_job_id: null, updated_at: trx.fn.now(),
     });
+    await retainNamedScheduledCommentCancellation(trx, tenant, id);
     if (existing.schedule_job_id) registerAfterCommit(trx, () => cancelScheduledJob(existing.schedule_job_id, tenant), `cancel scheduled comment ${id}`);
     await writeTicketActivity(trx, {
       tenant, ticketId: existing.ticket_id!, eventType: 'TICKET_COMMENT_SCHEDULE_CANCELED', entityType: TICKET_ACTIVITY_ENTITY.COMMENT,

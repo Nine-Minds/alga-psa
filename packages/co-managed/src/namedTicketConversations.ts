@@ -207,6 +207,11 @@ function canMarkRequesterResolution(context: ConversationAuthority, conversation
   return !context.shared && context.actor.tenant === context.ticket.tenant && conversation.audience === 'requester' && conversation.transport === 'email' &&
     !isCoManagedReadFieldHidden(context.hidden, ['is_resolution', 'resolution', 'comments.is_resolution', 'comments.resolution']);
 }
+function canScheduleRequester(context: NamedConversationPolicyContext, conversation: NamedTicketConversation) {
+  return !context.shared && context.actor.tenant === context.ticket.tenant && conversation.audience === 'requester' && conversation.transport === 'email' &&
+    !isCoManagedReadFieldHidden(context.hidden, ['publish_state', 'scheduled_publish_at', 'scheduled_publish_tz',
+      'comments.publish_state', 'comments.scheduled_publish_at', 'comments.scheduled_publish_tz']);
+}
 function canCloseRequesterResolution(context: ConversationAuthority, conversation: NamedTicketConversation) {
   return canMarkRequesterResolution(context, conversation) && !isCoManagedReadFieldHidden(context.hidden,
     ['status_id', 'status_name', 'statuses', 'board_id', 'is_closed', 'closed_at', 'closed_by', 'updated_by',
@@ -214,7 +219,12 @@ function canCloseRequesterResolution(context: ConversationAuthority, conversatio
 }
 export async function admitNamedRequesterPublicationOptions(context: ConversationAuthority, conversation: NamedTicketConversation, input: unknown) {
   const options = snapshotRequesterPublicationOptions(input);
-  if (options && !canMarkRequesterResolution(context, conversation)) return forbidden();
+  if (options?.isResolution && !canMarkRequesterResolution(context, conversation)) return forbidden();
+  if (options?.schedule) {
+    if (!canScheduleRequester(context, conversation)) return forbidden();
+    const due = await context.trx.raw('SELECT ?::timestamptz > clock_timestamp() AS future', [options.schedule.at]);
+    if (!due.rows[0]?.future) throw new TicketConversationError('CONVERSATION_INVALID');
+  }
   if (options?.close) {
     if (!canCloseRequesterResolution(context, conversation)) return forbidden();
     const store = tenantDb(context.trx, context.ticket.tenant);
@@ -229,14 +239,14 @@ export function getNamedTicketConversationPublicationCapabilities(db: Knex, acto
   const reference = snapshotConversationReference(input);
   return withTicketAuthority(db, actor, ticket, 'update', async context => {
     const { conversation } = await authorizedConversation(context, reference);
-    const resolution = canMarkRequesterResolution(context, conversation);
-    if (!canCloseRequesterResolution(context, conversation)) return { resolution };
+    const resolution = canMarkRequesterResolution(context, conversation), scheduling = canScheduleRequester(context, conversation);
+    if (!canCloseRequesterResolution(context, conversation)) return { resolution, scheduling };
     const store = tenantDb(context.trx, context.ticket.tenant);
     const row = await store.table('tickets').where('ticket_id', context.ticket.ticketId).first('board_id', 'master_ticket_id');
-    if (!row || row.master_ticket_id) return { resolution };
+    if (!row || row.master_ticket_id) return { resolution, scheduling };
     const statuses = await store.table('statuses').where({ board_id: row.board_id, is_closed: true, item_type: 'ticket' })
       .orderBy('order_number').select('status_id', 'name');
-    return { resolution, closeStatuses: statuses.map(status => ({ value: status.status_id as string, label: status.name as string })),
+    return { resolution, scheduling, closeStatuses: statuses.map(status => ({ value: status.status_id as string, label: status.name as string })),
       canOverrideClose: await hasCoManagedLocalPermission(context.trx, context.actor, 'ticket', 'close_override') };
   });
 }
@@ -260,7 +270,8 @@ export function getNamedConversationEditorDraft(db: Knex, actor: CoManagedSessio
     const { conversation } = await authorizedConversation(context, reference);
     const draft = await readConversationEditorDraft<CoManagedConversationContent>(draftStore(context, reference, conversation.revision));
     if (!draft) return draft;
-    return { ...draft, ...(draft.publicationOptions && (!canMarkRequesterResolution(context, conversation) ||
+    return { ...draft, ...(draft.publicationOptions && ((draft.publicationOptions.isResolution && !canMarkRequesterResolution(context, conversation)) ||
+      (draft.publicationOptions.schedule && !canScheduleRequester(context, conversation)) ||
       (draft.publicationOptions.close && !canCloseRequesterResolution(context, conversation))) ? { publicationOptions: null } : {}),
       ...(isCoManagedReadFieldHidden(context.hidden, coManagedConversationAttachmentSources) ? { attachments: [] } : {}) };
   });
@@ -383,7 +394,7 @@ function publishNamedTicketConversationDraft(db: Knex, actor: CoManagedSessionAc
         is_resolution: false, author_type: 'internal', user_id: actorReferenceId ? null : context.actor.userId, publish_state: 'published',
       });
     }
-    await store.table('ticket_conversations').where('conversation_id', reference.conversationId)
+    if (!publicationOptions?.schedule) await store.table('ticket_conversations').where('conversation_id', reference.conversationId)
       .increment('message_version', 1).update({ updated_at: trx.fn.now() });
     await saveConversationEditorDraft(draftScope, { operationId: request.operationId, expectedRevision: draft.revision,
       expectedConversationRevision: conversation.revision, content: null });
