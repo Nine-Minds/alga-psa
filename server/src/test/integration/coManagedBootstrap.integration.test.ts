@@ -15003,3 +15003,126 @@ it('customer meeting creation recovery serializes duplicate cleanup workers agai
   expect(results.map((result: any) => result.status).sort()).toEqual(['cleaned', 'obsolete']);
   expect(provider.remove).toHaveBeenCalledOnce(); expect(provider.recover).not.toHaveBeenCalled();
 }));
+
+async function withMeetingGenerationFixture(work: (fixture: any) => Promise<void>) {
+  return withMeetingCreationFixture(async (fixture: any) => {
+    const { domain, context, requestId, actor, customer, events, provider } = fixture;
+    expect(await fixture.approve({ internal_notes: 'Keep this approval note local' })).toMatchObject({ success: true });
+    const approved = await customer.table('appointment_requests').where('appointment_request_id', requestId).first();
+    events.mockClear();
+    const generate = () => domain.generateCoManagedAppointmentMeeting(db, context.tenant, requestId, actor, events, provider);
+    const prepareGeneration = () => domain.prepareCoManagedApprovedAppointmentMeeting(db, context.tenant, requestId, fixture.target, actor);
+    await work({ ...fixture, approved, generate, prepareGeneration });
+  });
+}
+
+it('customer approved meeting generation uses actual calendar times and all assignees through the native action', async () => withMeetingGenerationFixture(async ({ appointment, customer, context, requestId, ownId, approved, provider, meeting, operation, events }: any) => {
+  const secondId = randomUUID(), baseUser = await customer.table('users').where('user_id', context.userId).first();
+  await customer.table('users').insert({ ...baseUser, user_id: secondId, email: 'second-technician@example.invalid', username: `meeting-tech-${secondId}` });
+  await customer.table('schedule_entry_assignees').insert({ tenant: context.tenant, entry_id: ownId, user_id: secondId });
+  await customer.table('schedule_entries').where('entry_id', ownId).update({ scheduled_start: '2026-09-18T13:00:00Z', scheduled_end: '2026-09-18T14:00:00Z' });
+  const before = await customer.table('schedule_entries').where('entry_id', ownId).first();
+  const registry = await import('../../../../packages/scheduling/src/lib/teamsMeetingService');
+  const createMeeting = vi.fn(async () => ({ status: 'created', meeting }));
+  const resolve = vi.spyOn(registry, 'resolveTeamsMeetingService').mockResolvedValue({ getTeamsMeetingCreationTarget: provider.target, createTeamsMeetingWithResult: createMeeting } as any);
+  try {
+    expect(await appointment.generateTeamsMeetingForApprovedRequest(requestId)).toMatchObject({ success: true, data: { status: 'approved', schedule_entry_id: ownId, online_meeting_id: meeting.meetingId } });
+    const payload = createMeeting.mock.lastCall[0];
+    expect(payload).toMatchObject({ startDateTime: '2026-09-18T13:00:00.000Z', endDateTime: '2026-09-18T14:00:00.000Z' });
+    expect(payload.attendees.map((row: any) => row.emailAddress.address).sort()).toEqual([baseUser.email, 'second-technician@example.invalid', 'requester@example.invalid'].sort());
+    expect(JSON.stringify(payload)).not.toContain('Keep this approval note local');
+    expect(await operation()).toMatchObject({ purpose: 'generate', approval_input: { id: requestId }, status: 'attached' });
+    expect(await customer.table('schedule_entries').where('entry_id', ownId).first()).toEqual(before);
+    expect(await customer.table('appointment_requests').where('appointment_request_id', requestId).first()).toMatchObject({ approved_at: approved.approved_at, approved_by_user_id: approved.approved_by_user_id, requested_date: approved.requested_date, requested_time: approved.requested_time });
+    expect(events).toHaveBeenCalledOnce();
+  } finally { resolve.mockRestore(); }
+}));
+
+it('customer approved meeting generation reuses only an undisclosed failed placeholder and repairs its exact legacy allocation', async () => withMeetingGenerationFixture(async ({ generate, customer, context, requestId, ownId, approved, meeting, operation }: any) => {
+  const ticket = await customer.table('tickets').first(), failedId = randomUUID();
+  await customer.table('appointment_requests').where('appointment_request_id', requestId).update({ ticket_id: ticket.ticket_id });
+  await customer.table('schedule_entries').where('entry_id', ownId).update({ work_item_type: 'ticket', work_item_id: ticket.ticket_id });
+  await customer.table('online_meetings').insert({ tenant: context.tenant, meeting_id: failedId, provider: 'teams', provider_meeting_id: null, join_url: null, subject: 'Failed attempt',
+    status: 'failed', error_code: 'provider_failure', start_time: '2026-09-07T09:00:00Z', end_time: '2026-09-07T10:30:00Z', appointment_request_id: requestId, schedule_entry_id: ownId, created_by: context.userId });
+  expect(await generate()).toMatchObject({ handled: true, request: { status: 'approved', online_meeting_id: meeting.meetingId } });
+  const rows = await customer.table('online_meetings').where('appointment_request_id', requestId); expect(rows).toHaveLength(1);
+  expect(rows[0]).toMatchObject({ meeting_id: failedId, status: 'scheduled', provider_event_id: meeting.eventId, error_code: null });
+  expect(await operation()).toMatchObject({ meeting_id: failedId });
+  expect(await customer.table('schedule_entries').where('entry_id', ownId).first()).toMatchObject({ work_item_type: 'appointment_request', work_item_id: requestId });
+  expect(await customer.table('appointment_requests').where('appointment_request_id', requestId).first()).toMatchObject({ approved_at: approved.approved_at, approved_by_user_id: approved.approved_by_user_id });
+}));
+
+it('customer approved meeting generation rejects existing provider evidence and unrelated schedule bindings before creation', async () => withMeetingGenerationFixture(async ({ generate, customer, context, requestId, ownId, provider }: any) => {
+  const failedId = randomUUID();
+  await customer.table('online_meetings').insert({ tenant: context.tenant, meeting_id: failedId, provider: 'teams', provider_meeting_id: null, provider_event_id: 'partial-event', join_url: null, subject: 'Partial creation',
+    status: 'failed', start_time: '2026-09-07T09:00:00Z', end_time: '2026-09-07T10:30:00Z', appointment_request_id: requestId, schedule_entry_id: ownId });
+  await expect(generate()).rejects.toMatchObject({ code: 'MEETING_CREATION_OPERATION_CONFLICT' });
+  await customer.table('online_meetings').where('meeting_id', failedId).update({ provider_event_id: null, appointment_request_id: null });
+  await expect(generate()).rejects.toMatchObject({ code: 'MEETING_CREATION_OPERATION_CONFLICT' });
+  expect(provider.create).not.toHaveBeenCalled(); expect(await customer.table('co_managed_meeting_creation_operations')).toHaveLength(0);
+}));
+
+it('customer approved meeting generation honors current approvers and API-key field masks before disclosing participants', async () => withMeetingGenerationFixture(async ({ generate, customer, context, requestId, user, provider }: any) => {
+  await customer.table('role_permissions').whereIn('permission_id', customer.table('permissions').where({ resource: 'user_schedule', action: 'update' }).select('permission_id')).del();
+  await expect(generate()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await customer.table('availability_settings').insert({ tenant: context.tenant, setting_type: 'general_settings', config_json: { approver_user_ids: [context.userId] } });
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: context.tenant, name: 'Generation content scope', actorUserId: user.user_id });
+  for (const action of ['read', 'update']) await bundles.upsertBundleRule(db, { tenant: context.tenant, bundleId, revisionId, resourceType: 'user_schedule', action, templateKey: 'assigned', config: { redactedFields: ['online_meeting_url'] } });
+  await bundles.publishBundleRevision(db, { tenant: context.tenant, bundleId, revisionId, actorUserId: user.user_id });
+  await bundles.createBundleAssignment(db, { tenant: context.tenant, bundleId, targetType: 'api_key', targetId: context.apiKeyId });
+  await expect(generate()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(provider.create).not.toHaveBeenCalled();
+  expect(await customer.table('appointment_requests').where('appointment_request_id', requestId).first()).toMatchObject({ status: 'approved', online_meeting_id: null });
+}));
+
+it('customer approved meeting generation keeps approval intact on provider failure and permits a fresh attempt after cleanup', async () => withMeetingGenerationFixture(async ({ generate, recover, provider, approved, customer, requestId, meeting, operation }: any) => {
+  provider.create.mockRejectedValueOnce(new Error('Lost provider response'));
+  expect(await generate()).toMatchObject({ handled: true, meetingCreationFailed: true });
+  expect(await operation()).toMatchObject({ purpose: 'generate', status: 'cleanup_pending' });
+  expect(await customer.table('appointment_requests').where('appointment_request_id', requestId).first()).toMatchObject({ status: 'approved', online_meeting_id: null, approved_at: approved.approved_at });
+  expect(await recover()).toEqual({ status: 'cleaned' });
+  expect(await generate()).toMatchObject({ handled: true, request: { status: 'approved', online_meeting_id: meeting.meetingId } });
+  expect(provider.create).toHaveBeenCalledTimes(2);
+  expect((await customer.table('co_managed_meeting_creation_operations').where('appointment_request_id', requestId)).map((row: any) => row.status).sort()).toEqual(['attached', 'cleaned']);
+}));
+
+it('customer approved meeting generation recovery attaches current intent without changing approval metadata', async () => withMeetingGenerationFixture(async ({ prepareGeneration, recover, provider, approved, customer, requestId }: any) => {
+  const prepared = await prepareGeneration();
+  await customer.table('co_managed_meeting_creation_operations').where('operation_id', prepared.operationId).update({ status: 'uncertain', external_attempted_at: db.fn.now() });
+  expect(await recover()).toEqual({ status: 'attached' });
+  expect(provider.create).not.toHaveBeenCalled();
+  expect(await customer.table('appointment_requests').where('appointment_request_id', requestId).first()).toMatchObject({ status: 'approved', approved_at: approved.approved_at, approved_by_user_id: approved.approved_by_user_id });
+}));
+
+it('customer approved meeting generation recovery cleans an event when its retained allocation changes', async () => withMeetingGenerationFixture(async ({ prepareGeneration, recover, provider, customer, ownId, operation, requestId }: any) => {
+  const prepared = await prepareGeneration();
+  await customer.table('co_managed_meeting_creation_operations').where('operation_id', prepared.operationId).update({ status: 'uncertain', external_attempted_at: db.fn.now() });
+  await customer.table('schedule_entries').where('entry_id', ownId).update({ scheduled_start: '2026-09-18T13:00:00Z', scheduled_end: '2026-09-18T14:00:00Z' });
+  expect(await recover()).toEqual({ status: 'retry' }); expect(await operation()).toMatchObject({ status: 'cleanup_pending' });
+  expect(await recover()).toEqual({ status: 'cleaned' });
+  expect(provider.create).not.toHaveBeenCalled(); expect(provider.remove).toHaveBeenCalledOnce();
+  expect(await customer.table('appointment_requests').where('appointment_request_id', requestId).first()).toMatchObject({ status: 'approved', online_meeting_id: null });
+}));
+
+it('customer approved meeting generation rolls attachment back on final credential expiry while retaining compensation evidence', async () => withMeetingGenerationFixture(async ({ generate, recover, operation, context, customer, requestId, approved, events }: any) => {
+  await db.raw(`CREATE FUNCTION expire_generated_meeting_attachment() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.online_meeting_id IS NOT NULL THEN UPDATE api_keys SET expires_at = clock_timestamp() - interval '1 second' WHERE tenant = NEW.tenant AND api_key_id = '${context.apiKeyId}'::uuid; END IF; RETURN NEW; END $$`);
+  await db.raw('CREATE TRIGGER expire_generated_meeting_attachment AFTER UPDATE ON appointment_requests FOR EACH ROW EXECUTE FUNCTION expire_generated_meeting_attachment()');
+  try {
+    await expect(generate()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    expect(await operation()).toMatchObject({ status: 'cleanup_pending' });
+    expect(await customer.table('online_meetings').where('appointment_request_id', requestId)).toHaveLength(0);
+    expect(await customer.table('appointment_requests').where('appointment_request_id', requestId).first()).toMatchObject({ status: 'approved', online_meeting_id: null, approved_at: approved.approved_at });
+    expect(events).not.toHaveBeenCalled(); expect(await recover()).toEqual({ status: 'cleaned' });
+  } finally { await db.raw('DROP TRIGGER expire_generated_meeting_attachment ON appointment_requests'); await db.raw('DROP FUNCTION expire_generated_meeting_attachment()'); }
+}));
+
+it('customer approved meeting generation leaves the appointment unchanged when Teams is unavailable and still requires current admission', async () => withMeetingGenerationFixture(async ({ generate, approved, provider, customer, context, requestId }: any) => {
+  provider.target.mockResolvedValue({ status: 'skipped', reason: 'not_configured' });
+  expect(await generate()).toEqual({ handled: true, meetingCreationFailed: true, unavailable: true });
+  expect(await customer.table('appointment_requests').where('appointment_request_id', requestId).first()).toEqual(approved);
+  expect(await customer.table('co_managed_meeting_creation_operations')).toHaveLength(0);
+  await customer.table('api_keys').where('api_key_id', context.apiKeyId).update({ active: false });
+  await expect(generate()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(provider.target).toHaveBeenCalledOnce(); expect(provider.create).not.toHaveBeenCalled();
+}));

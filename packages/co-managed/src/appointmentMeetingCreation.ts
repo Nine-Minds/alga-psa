@@ -1,11 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
-import { tenantDb, withTransaction } from '@alga-psa/db';
+import { tenantDb, withTransaction, registerAfterCommit } from '@alga-psa/db';
 import { assertCoManagedOperationalWrite } from '@alga-psa/licensing';
 import { retainCoManagedTimeCalendar } from './nativeTimePeriod';
-import { approveCoManagedNativeAppointment, type NativeAppointmentApprovalInput } from './nativeAppointmentApproval';
-import { prepareCoManagedAppointmentMeeting, MeetingCreationOperationConflict, type MeetingCreationTarget } from './meetingCreationOperation';
-import { lockCoManagedLocalAuthentication, type CoManagedAuthenticatedActor } from './localAuthentication';
+import { approveCoManagedNativeAppointment, retainAppointmentMeetingGenerationPlan, type NativeAppointmentApprovalInput } from './nativeAppointmentApproval';
+import { prepareCoManagedAppointmentMeeting, prepareCoManagedApprovedAppointmentMeeting, retainAppointmentMeetingSlot, MeetingCreationOperationConflict, type MeetingCreationTarget } from './meetingCreationOperation';
+import { lockCoManagedLocalAuthentication, snapshotCoManagedAuthenticatedActor, type CoManagedAuthenticatedActor } from './localAuthentication';
 import { retainNativeAppointmentRequest, nativeAppointmentRequestView } from './nativeAppointmentRequest';
 import { CoManagedSharedWorkError, isCoManagedUuid } from './sharedWorkIdentity';
 
@@ -18,7 +18,8 @@ export interface AppointmentMeetingReceipt {
 export interface AppointmentMeetingDisclosure {
   subject: string; serviceName: string; description: string | null; appointmentRequestId: string;
   startDateTime: string; endDateTime: string;
-  contact: { email: string; name: string | null }; technician: { email: string; name: string | null };
+  contact: { email: string; name: string | null }; technician: { email: string; name: string | null } | null;
+  technicians?: Array<{ email: string; name: string | null }>;
 }
 export type AppointmentMeetingIdentity = { operationId: string; target: MeetingCreationTarget };
 export interface AppointmentMeetingProvider {
@@ -48,8 +49,9 @@ const actorFor = (tenant: string, row: any): CoManagedAuthenticatedActor => row.
  * order. A hint is never authorization, nor is the captured credential alone. */
 async function retainCreation(trx: Knex.Transaction, tenant: string, operationId: string, identify: Identify) {
   const owner = tenantDb(trx, tenant), hint = await owner.table(TABLE).where('operation_id', operationId).first();
-  if (!hint || hint.completed_at || hint.purpose !== 'approve') throw new MeetingCreationOperationConflict();
-  const admission = await prepareCoManagedAppointmentMeeting(trx, tenant, hint.approval_input, hint.creation_target, identify);
+  if (!hint || hint.completed_at || !['approve', 'generate'].includes(hint.purpose)) throw new MeetingCreationOperationConflict();
+  const admission = hint.purpose === 'approve' ? await prepareCoManagedAppointmentMeeting(trx, tenant, hint.approval_input, hint.creation_target, identify)
+    : await prepareCoManagedApprovedAppointmentMeeting(trx, tenant, hint.appointment_request_id, hint.creation_target, identify);
   if (!admission.handled || admission.operationId !== operationId) throw new CoManagedSharedWorkError();
   return owner.table(TABLE).where('operation_id', operationId).forUpdate().first();
 }
@@ -109,15 +111,27 @@ async function attachCreation(db: Knex, tenant: string, operationId: string, ide
     const event = receiptFor(row.creation_target, row.event_receipt);
     if (row.status !== 'created' || !event?.joinWebUrl || !row.provider_meeting_id) throw new MeetingCreationOperationConflict();
     const actor = await identify(), credential = await lockCoManagedLocalAuthentication(trx, actor);
-    const approval = await approveCoManagedNativeAppointment(trx, tenant, row.approval_input, identify, publish);
-    if (!approval.handled) throw new CoManagedSharedWorkError();
+    if (row.purpose === 'approve') {
+      const approval = await approveCoManagedNativeAppointment(trx, tenant, row.approval_input, identify, publish);
+      if (!approval.handled) throw new CoManagedSharedWorkError();
+    }
     const request = await owner.table('appointment_requests').where('appointment_request_id', row.appointment_request_id).first();
-    if (request.online_meeting_id || await owner.table('online_meetings').where('appointment_request_id', row.appointment_request_id).forUpdate().first('meeting_id')) throw new MeetingCreationOperationConflict();
-    const meetingId = randomUUID();
-    await owner.table('online_meetings').insert({ tenant, meeting_id: meetingId, provider: 'teams', provider_meeting_id: row.provider_meeting_id,
+    const failedMeeting = await retainAppointmentMeetingSlot(trx, tenant, request, row.purpose);
+    const meetingId = failedMeeting?.meeting_id ?? randomUUID();
+    const values = { provider: 'teams', provider_meeting_id: row.provider_meeting_id,
       provider_event_id: event.eventId, organizer_user_id: event.organizerUserId, organizer_upn: event.organizerUpn,
       subject: row.provider_request.subject, join_url: event.joinWebUrl, start_time: row.provider_request.startDateTime, end_time: row.provider_request.endDateTime,
-      status: 'scheduled', appointment_request_id: row.appointment_request_id, schedule_entry_id: request.schedule_entry_id, created_by: actor.userId });
+      status: 'scheduled', error_code: null, recording_fetch_attempts: 0, last_fetch_at: null,
+      appointment_request_id: row.appointment_request_id, schedule_entry_id: request.schedule_entry_id, updated_at: trx.fn.now() };
+    if (failedMeeting) await owner.table('online_meetings').where('meeting_id', meetingId).update(values);
+    else await owner.table('online_meetings').insert({ ...values, tenant, meeting_id: meetingId, created_by: actor.userId });
+    if (row.purpose === 'generate') {
+      // Repair only the legacy ticket allocation which the retained generation
+      // plan proved belongs to this exact request. Keep its times and assignees.
+      await owner.table('schedule_entries').where('entry_id', request.schedule_entry_id).where('work_item_type', 'ticket')
+        .update({ work_item_type: 'appointment_request', work_item_id: request.appointment_request_id, updated_at: trx.fn.now() });
+      registerAfterCommit(trx, async () => { await publish({ eventType: 'SCHEDULE_ENTRY_UPDATED', payload: { tenantId: tenant, userId: actor.userId, entryId: request.schedule_entry_id } }); }, 'native-appointment-meeting-generated');
+    }
     await owner.table('appointment_requests').where('appointment_request_id', row.appointment_request_id).update({ online_meeting_id: row.provider_meeting_id,
       online_meeting_provider: 'teams', online_meeting_url: event.joinWebUrl, updated_at: trx.fn.now() });
     await owner.table(TABLE).where('operation_id', operationId).update({ status: 'attached', meeting_id: meetingId, completed_at: trx.fn.now(), updated_at: trx.fn.now() });
@@ -126,6 +140,24 @@ async function attachCreation(db: Knex, tenant: string, operationId: string, ide
     await credential.assertCurrent(); await assertCoManagedOperationalWrite(trx, tenant);
     return { handled: true as const, request: view };
   });
+}
+
+/** Both entry points use the same attempt/attachment boundary. The returned
+ * failure flag is explicit; recovery must not silently change that decision. */
+async function completePreparedCreation(db: Knex, tenant: string, operationId: string, identify: Identify, publish: Publisher, provider: AppointmentMeetingProvider) {
+  try {
+    if (await beginCreation(db, tenant, operationId, identify)) await executeCreation(db, tenant, operationId, identify, provider);
+    const row = await tenantDb(db, tenant).table(TABLE).where('operation_id', operationId).first('status');
+    if (row?.status === 'created') return await attachCreation(db, tenant, operationId, identify, publish);
+    // Concurrent or interrupted calls must settle before a fresh attempt. Do
+    // not convert an in-flight successful invocation into cleanup here.
+    if (row?.status === 'uncertain' || row?.status === 'attached') throw new MeetingCreationOperationConflict();
+    return { handled: true as const, meetingCreationFailed: true as const, unavailable: row?.status === 'cleaned' };
+  } catch (error) {
+    // Conflict may simply mean another invocation still owns the attempt.
+    if (!(error instanceof MeetingCreationOperationConflict)) await requestCreationCleanup(db, tenant, operationId);
+    throw error;
+  }
 }
 
 /** Actual Teams-enabled approval. No provider payload, credentials or journal
@@ -140,24 +172,36 @@ export async function approveCoManagedAppointmentWithMeeting(db: Knex, tenant: s
   }
   const prepared = await prepareCoManagedAppointmentMeeting(db, tenant, input, target.target, identify);
   if (!prepared.handled) throw new CoManagedSharedWorkError();
-  const operationId = prepared.operationId;
-  try {
-    if (await beginCreation(db, tenant, operationId, identify)) await executeCreation(db, tenant, operationId, identify, provider);
-    const row = await tenantDb(db, tenant).table(TABLE).where('operation_id', operationId).first('status');
-    if (row?.status === 'created') return await attachCreation(db, tenant, operationId, identify, publish);
-    // Concurrent or interrupted calls must settle before a fresh attempt. Do
-    // not convert an in-flight successful invocation into cleanup here.
-    if (row?.status === 'uncertain' || row?.status === 'attached') throw new MeetingCreationOperationConflict();
-    if (approveWithoutMeeting || row?.status === 'cleaned') {
-      const result = await approveCoManagedNativeAppointment(db, tenant, input, identify, publish);
-      return { ...result, warning: 'Appointment approved without a Teams meeting. Any incomplete meeting will be cleaned up.' };
-    }
-    return { handled: true as const, meetingCreationFailed: true as const };
-  } catch (error) {
-    // Conflict may simply mean another invocation still owns the attempt.
-    if (!(error instanceof MeetingCreationOperationConflict)) await requestCreationCleanup(db, tenant, operationId);
-    throw error;
+  const outcome = await completePreparedCreation(db, tenant, prepared.operationId, identify, publish, provider);
+  if ('request' in outcome) return outcome;
+  if (approveWithoutMeeting || outcome.unavailable) {
+    const result = await approveCoManagedNativeAppointment(db, tenant, input, identify, publish);
+    return { ...result, warning: 'Appointment approved without a Teams meeting. Any incomplete meeting will be cleaned up.' };
   }
+  return { handled: true as const, meetingCreationFailed: true as const };
+}
+
+/** Generate for an already-approved appointment without a new approval or a
+ * reconstructed calendar slot. Provider unavailability still requires current
+ * actor/source admission, and it never changes the approved request. */
+export async function generateCoManagedAppointmentMeeting(db: Knex, tenant: string, requestId: string,
+  identify: Identify, publish: Publisher, provider: AppointmentMeetingProvider) {
+  const handled = await withTransaction(db, async trx => {
+    if (!await retainCoManagedTimeCalendar(trx, tenant)) return false;
+    await assertCoManagedOperationalWrite(trx, tenant);
+    const actor = snapshotCoManagedAuthenticatedActor(await identify());
+    if (actor.tenant !== tenant) throw new CoManagedSharedWorkError();
+    const credential = await lockCoManagedLocalAuthentication(trx, actor);
+    await retainAppointmentMeetingGenerationPlan(trx, actor, credential.subject, requestId);
+    await credential.assertCurrent(); await assertCoManagedOperationalWrite(trx, tenant);
+    return true;
+  });
+  if (!handled) return { handled: false as const };
+  const target = await provider.target();
+  if (target.status !== 'ready') return { handled: true as const, meetingCreationFailed: true as const, unavailable: true };
+  const prepared = await prepareCoManagedApprovedAppointmentMeeting(db, tenant, requestId, target.target, identify);
+  if (!prepared.handled) throw new CoManagedSharedWorkError();
+  return completePreparedCreation(db, tenant, prepared.operationId, identify, publish, provider);
 }
 
 /** GET-only recovery of an interrupted creation; deletion is bound to the

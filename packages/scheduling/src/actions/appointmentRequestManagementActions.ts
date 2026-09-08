@@ -1,7 +1,7 @@
 'use server';
 
 import { appointmentMeetingProvider } from '../lib/appointmentMeetingCreation';
-import { approveCoManagedAppointmentWithMeeting, approveCoManagedNativeAppointment, associateCoManagedNativeAppointmentTicket, readCoManagedNativeAppointmentRequests, declineCoManagedNativeAppointment, rescheduleCoManagedNativeAppointment } from '@alga-psa/co-managed';
+import { generateCoManagedAppointmentMeeting, approveCoManagedAppointmentWithMeeting, approveCoManagedNativeAppointment, associateCoManagedNativeAppointmentTicket, readCoManagedNativeAppointmentRequests, declineCoManagedNativeAppointment, rescheduleCoManagedNativeAppointment } from '@alga-psa/co-managed';
 import { resolveNativeTimeBrowserActor } from '../lib/nativeTimeReader';
 
 import { createTenantKnex, tenantDb, User } from '@alga-psa/db';
@@ -1913,6 +1913,13 @@ export const generateTeamsMeetingForApprovedRequest = withAuth(async (
 ): Promise<AppointmentRequestResult<IAppointmentRequest>> => {
   try {
     const { knex: db } = await createTenantKnex();
+    const admitted = await generateCoManagedAppointmentMeeting(db, tenant, appointmentRequestId, () => resolveNativeTimeBrowserActor(user, tenant), publishEvent, await appointmentMeetingProvider(tenant));
+    if (admitted.handled) {
+      if ('meetingCreationFailed' in admitted) return { success: false, meetingCreationFailed: true, error: admitted.unavailable
+        ? 'Teams is unavailable for this workspace. The appointment remains approved without a meeting.'
+        : 'The Teams meeting could not be created. Incomplete meeting cleanup is pending; the appointment remains approved.' };
+      return { success: true, data: admitted.request };
+    }
     const canUpdate = await hasPermission(user, 'user_schedule', 'update', db);
 
     const context = await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -2141,7 +2148,7 @@ export const generateTeamsMeetingForApprovedRequest = withAuth(async (
     return { success: true, data: updatedRequest as IAppointmentRequest };
   } catch (error) {
     console.error('Error generating Teams meeting for approved request:', error);
-    const message = error instanceof Error ? error.message : 'Failed to generate Teams meeting';
+    const message = appointmentRequestActionErrorMessage(error, 'Failed to generate Teams meeting');
     return { success: false, error: message };
   }
 });

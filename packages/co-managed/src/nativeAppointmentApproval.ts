@@ -37,7 +37,7 @@ async function retainAppointmentTicketChange(trx: Knex.Transaction, actor: CoMan
 // LEVERAGE: pattern native-appointment-schedule-admission — decline/reschedule retain this same canonical request, allocation and assignee boundary.
 async function retainAppointmentSchedule(trx: Knex.Transaction, actor: CoManagedAuthenticatedActor, retained: Awaited<ReturnType<typeof retainNativeAppointmentRequest>>) {
   const owner = tenantDb(trx, actor.tenant), request = retained.request;
-  if (!request.schedule_entry_id) return { schedule: null, assignments: [] as string[] };
+  if (!request.schedule_entry_id) return { schedule: null, assignments: [] as string[], fields: [] as string[] };
   const schedule = await owner.table('schedule_entries').where('entry_id', request.schedule_entry_id).forUpdate().first();
   const canonical = schedule?.work_item_type === 'appointment_request' && schedule.work_item_id === request.appointment_request_id;
   const legacyTicket = request.ticket_id && schedule?.work_item_type === 'ticket' && schedule.work_item_id === request.ticket_id;
@@ -45,7 +45,7 @@ async function retainAppointmentSchedule(trx: Knex.Transaction, actor: CoManaged
   const assignments: string[] = (await owner.table('schedule_entry_assignees').where('entry_id', schedule.entry_id).orderBy('user_id').forUpdate().select('user_id')).map(row => row.user_id);
   const fields = await retained.authorizeSchedule(schedule, assignments);
   if (isScheduleFieldHidden(fields, ['tenant', 'entry_id', 'scheduled_start', 'scheduled_end', 'assigned_user_ids', 'is_private', 'work_item_id', 'work_item_type']) || schedule.is_private && !(assignments.length === 1 && assignments[0] === actor.userId)) throw new CoManagedSharedWorkError();
-  return { schedule, assignments };
+  return { schedule, assignments, fields };
 }
 
 export async function associateCoManagedNativeAppointmentTicket(db: Knex, tenant: string, input: { id: string; ticketId: string },
@@ -93,6 +93,24 @@ export async function retainAppointmentApprovalPlan(trx: Knex.Transaction, actor
   const values = { title: `Appointment: ${service.service_name}`, notes: [request.description, input.internalNotes].filter(Boolean).join('\n\n'), scheduled_start: start, scheduled_end: end,
     work_item_type: 'appointment_request' as const, work_item_id: input.id, status: 'scheduled', is_recurring: false, is_private: schedule?.is_private ?? false };
   return { change, retained, request, schedule, assignments, entryId, proposedAssignments, values };
+}
+
+/** Generation retains the approved request's actual allocation and assignees;
+ * it never reconstructs them from the original requested wall-clock or changes
+ * approval metadata. The same source/calendar admission serves both paths. */
+export async function retainAppointmentMeetingGenerationPlan(trx: Knex.Transaction, actor: CoManagedAuthenticatedActor, subject: AuthorizationSubject, requestId: string) {
+  if (!trx.isTransaction || !isCoManagedUuid(requestId)) throw new CoManagedSharedWorkError();
+  const { retained } = await retainAppointmentTicketChange(trx, actor, subject, requestId);
+  const request = retained.request;
+  if (request.status !== 'approved') throw new NativeScheduleRelationError();
+  if (isAppointmentFieldHidden(retained.fields, ['schedule_entry_id', 'description', 'service_id', 'service_name', 'online_meeting_id', 'online_meeting_provider', 'online_meeting_url'])) throw new CoManagedSharedWorkError();
+  const { schedule, assignments, fields } = await retainAppointmentSchedule(trx, actor, retained);
+  if (!schedule || schedule.status === 'cancelled') throw new NativeScheduleRelationError();
+  if (isScheduleFieldHidden(fields, ['status'])) throw new CoManagedSharedWorkError();
+  const start = new Date(schedule.scheduled_start), end = new Date(schedule.scheduled_end);
+  if (!(start < end)) throw new NativeScheduleRelationError();
+  return { retained, request, schedule, assignments, proposedAssignments: assignments,
+    values: { scheduled_start: start, scheduled_end: end } };
 }
 
 /** Local approval transaction. This entry point does not create an external
