@@ -57,7 +57,7 @@ export async function stageCoManagedPrivateConversationFiles(trx: Knex.Transacti
   owner.tenantJoin(query, 'co_management_private_threads as t', 'c.thread_id', 't.thread_id');
   owner.tenantJoin(query, 'co_management_private_comments as root', 't.root_comment_id', 'root.comment_id', { on: join => join.andOn('root.thread_id', '=', 't.thread_id') });
   const comment = await query.where({ 't.customer_tenant': resource.tenant, 't.relationship_id': resource.relationshipId, 't.resource_type': 'ticket', 't.resource_id': resource.id })
-    .whereNull('t.disclosure_operation_id').forShare('c', 't', 'root').first('c.thread_id');
+    .forShare('c', 't', 'root').first('c.thread_id');
   if (!comment) return;
   const evidence = await owner.table(participationEvidenceTable).where({ customer_tenant: resource.tenant, relationship_id: resource.relationshipId,
     resource_type: 'ticket', resource_id: resource.id }).distinct('client_id').limit(2);

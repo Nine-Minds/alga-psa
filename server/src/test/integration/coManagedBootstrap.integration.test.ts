@@ -18655,3 +18655,58 @@ it('archive manifest failure rolls back final history capture and relationship c
   expect(await f.sponsor.table('co_managed_relationship_closures')).toHaveLength(0);
   expect((await f.sponsor.table('co_managed_allocations').where('customer_tenant', f.resource.tenant).first()).state).toBe('active');
 }));
+
+it('closure private history captures legacy MSP notes and files after unsharing without reopening customer content', async () => withAttachmentFixture(async f => {
+  const { retainCoManagedPrivateHistoryAtClosure } = await import('../../../../packages/co-managed/src/privateParticipationEvidence');
+  const { closeCoManagedRelationship: close } = await import('../../../../packages/co-managed/src/relationshipClosure');
+  const { mutateCoManagedPrivateTicketComment } = await import('../../../../packages/co-managed/src/privateTicketConversation');
+  const root = await mutateCoManagedPrivateTicketComment(db, f.principal, f.resource, { operationId: randomUUID(), kind: 'create', text: 'MSP retained diagnosis' });
+  const input = { attachmentId: randomUUID(), comment: attachmentComment(root), fileName: 'Private proof.txt', mimeType: 'text/plain', content: Buffer.from('MSP-owned private bytes') };
+  await f.attachments.uploadCoManagedConversationAttachment(db, f.principal, f.resource, input, f.upload);
+  await f.sponsor.table('co_managed_participation_evidence').where({ source_type: 'private_conversation', resource_id: f.resource.id }).del();
+  await f.sponsor.table('co_managed_archive_files').where('attachment_id', input.attachmentId).del();
+  await f.customer.table('co_management_ticket_work').where('ticket_id', f.resource.id).update({ grant_revoked_at: new Date(), can_collaborate: false });
+  await f.customer.table('tickets').where('ticket_id', f.resource.id).update({ title: 'Newly private customer title' });
+  const relationship = await f.customer.table('co_management_relationships').first();
+  const target = { customerTenant: f.resource.tenant, relationshipId: f.resource.relationshipId };
+  const request = { operationId: randomUUID(), expectedRevision: relationship.revision, reason: 'departure' as const };
+  const callback = vi.fn(retainCoManagedPrivateHistoryAtClosure);
+  const receipt = await close(db, f.customerPrincipal, target, request, callback);
+  expect(await close(db, f.customerPrincipal, target, request, callback)).toEqual(receipt); expect(callback).toHaveBeenCalledOnce();
+  const saved = await f.sponsor.table('co_managed_participation_evidence').where({ source_type: 'private_conversation', operation_id: request.operationId });
+  expect(saved).toHaveLength(1); expect(saved[0]).toMatchObject({ actor_tenant: f.principal.tenant, actor_user_id: f.principal.userId,
+    event_type: 'private_comment_archived', occurred_at: new Date(receipt.cutoffAt), payload: { markdown: 'MSP retained diagnosis', audience: 'organization_private' } });
+  expect(JSON.stringify(saved)).not.toContain('Newly private customer title');
+  const file = await f.sponsor.table('co_managed_archive_files').where('attachment_id', input.attachmentId).first();
+  expect(file).toMatchObject({ source_tenant: f.principal.tenant, audience: 'organization_private', staged_bytes: input.content });
+  const manifest = await f.sponsor.table('co_managed_archive_manifests').first();
+  expect(manifest.manifest.evidence).toContainEqual([saved[0].evidence_id, saved[0].payload_hash]);
+  expect(manifest.manifest.files).toContainEqual([file.archive_file_id, file.content_hash, file.file_size]);
+  expect(await f.customer.table('co_managed_participation_evidence')).toHaveLength(0);
+}));
+
+it('closure private history keeps historical authors and empty tombstones for unshared tasks and rolls back with closure', async () => withTaskConversationFixture(async f => {
+  const { retainCoManagedPrivateHistoryAtClosure } = await import('../../../../packages/co-managed/src/privateParticipationEvidence');
+  const { closeCoManagedRelationship: close } = await import('../../../../packages/co-managed/src/relationshipClosure');
+  const root = await f.add(f.principal, 'organization_private', 'Deleted private root body');
+  await f.write(f.principal, { kind: 'create', operationId: randomUUID(), parent: f.ref(root), text: 'Surviving private reply' });
+  await f.write(f.principal, { kind: 'delete', operationId: randomUUID(), comment: f.ref(root), expectedRevision: 1 });
+  const original = await f.sponsor.table('co_management_private_comments').where('comment_id', root.commentId).first();
+  await f.sponsor.table('co_managed_participation_evidence').where('resource_id', f.resource.id).del();
+  await f.sponsor.table('users').where('user_id', f.principal.userId).update({ first_name: 'Later renamed', last_name: 'Technician' });
+  await f.customer.table('co_management_project_scopes').where('project_id', f.project.project_id).del();
+  await f.customer.table('project_tasks').where('task_id', f.resource.id).update({ task_name: 'Newly private task label' });
+  const relationship = await f.customer.table('co_management_relationships').first();
+  const target = { customerTenant: f.resource.tenant, relationshipId: f.resource.relationshipId };
+  const request = { operationId: randomUUID(), expectedRevision: relationship.revision, reason: 'departure' as const };
+  await expect(close(db, f.customerPrincipal, target, request, async context => {
+    await retainCoManagedPrivateHistoryAtClosure(context); throw new Error('Later finalizer failure');
+  })).rejects.toThrow('Later finalizer failure');
+  expect(await f.sponsor.table('co_managed_participation_evidence').where('operation_id', request.operationId)).toHaveLength(0);
+  await close(db, f.customerPrincipal, target, request, retainCoManagedPrivateHistoryAtClosure);
+  const saved = await f.sponsor.table('co_managed_participation_evidence').where('operation_id', request.operationId); expect(saved).toHaveLength(2);
+  expect(saved.every((row: any) => row.actor_name === original.actor_display_name)).toBe(true);
+  expect(saved.find((row: any) => row.payload.commentId === root.commentId)?.payload).toMatchObject({ deleted: true, resourceTitle: null });
+  expect(saved.some((row: any) => row.payload.markdown === 'Surviving private reply')).toBe(true);
+  expect(JSON.stringify(saved)).not.toMatch(/Deleted private root body|Newly private task label|Later renamed/);
+}));
