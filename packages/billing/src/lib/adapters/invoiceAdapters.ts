@@ -296,6 +296,7 @@ export function buildInvoiceTimeCollections(
       itemId: source.itemId ?? null,
       workItemType: source.workItemType ?? null,
       workItemId: source.workItemId ?? null,
+      ...(source.sourceTenant ? { sourceTenant: source.sourceTenant, relationshipId: source.relationshipId, workReferenceId: source.workReferenceId } : {}),
       ticketNumber: source.ticketNumber ?? null,
       title: source.title ?? null,
       description: source.description ?? null,
@@ -315,11 +316,12 @@ export function buildInvoiceTimeCollections(
     });
 
   const groupKeyFor = (entry: WasmInvoiceTimeEntry): string => {
+    const identity = entry.sourceTenant ? `shared:${entry.sourceTenant}:${entry.relationshipId ?? ''}:${entry.workItemId}` : entry.workItemId;
     if (entry.workItemType === 'ticket' && entry.workItemId) {
-      return `ticket:${entry.workItemId}`;
+      return `ticket:${identity}`;
     }
     if (entry.workItemType === 'project_task' && entry.workItemId) {
-      return `task:${entry.workItemId}`;
+      return `task:${identity}`;
     }
     return 'ad_hoc';
   };
@@ -357,6 +359,7 @@ export function buildInvoiceTimeCollections(
         key,
         workItemType: isTicket ? 'ticket' : isTask ? 'project_task' : 'ad_hoc',
         workItemId: isTicket || isTask ? first.workItemId : null,
+        ...(first.sourceTenant ? { sourceTenant: first.sourceTenant, relationshipId: first.relationshipId, workReferenceId: first.workReferenceId } : {}),
         ticketNumber: isTicket ? first.ticketNumber : null,
         title: isTicket || isTask ? first.title : null,
         description: isTicket ? first.description : null,

@@ -124,6 +124,10 @@ export interface InvoiceTimeEntrySnapshot {
   workItemType: 'ticket' | 'project_task' | 'ad_hoc' | null;
   /** Ticket id or project-task id, preserved for traceability. */
   workItemId: string | null;
+  /** Present for MSP-owned time on customer-owned work; never a local ticket FK. */
+  sourceTenant?: string;
+  relationshipId?: string;
+  workReferenceId?: string | null;
   ticketNumber: string | null;
   /** Ticket title or project-task name. */
   title: string | null;

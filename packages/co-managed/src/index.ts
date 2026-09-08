@@ -110,3 +110,5 @@ export { withCoManagedStoredSlaNotification, type CoManagedStoredSlaNotification
 export { processCoManagedSlaEmailDeliveries, type CoManagedSlaEmailDelivery } from './slaEmailDeliveries';
 
 export { processCoManagedWorkflowTicketEmails, type CoManagedWorkflowTicketEmail } from './workflowTicketEmails';
+
+export { registerCoManagedTimeWorkReference } from './timeWorkReference';

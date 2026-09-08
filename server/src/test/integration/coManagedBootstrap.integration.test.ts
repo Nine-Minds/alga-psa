@@ -90,7 +90,7 @@ beforeAll(async () => {
     '20260906080000_create_co_management_relationship_events.cjs',
     '20260906100000_add_external_file_metadata.cjs',
     '20260906110000_add_kb_import_batch_identity.cjs',
-    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs', '20260908011054_add_co_managed_meeting_sync_intents.cjs', '20260908021208_create_co_managed_meeting_creation_operations.cjs', '20260908043851_allow_co_managed_assignment_before_escalation.cjs', '20260908050419_create_organization_sla_obligations.cjs', '20260908051552_create_co_managed_sla_priority_mappings.cjs', '20260908062358_create_organization_sla_notification_events.cjs', '20260908063356_create_organization_sla_notification_recipients.cjs', '20260908065525_add_organization_sla_email_retry_state.cjs', '20260908081909_create_co_managed_workflow_ticket_emails.cjs']) {
+    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs', '20260908011054_add_co_managed_meeting_sync_intents.cjs', '20260908021208_create_co_managed_meeting_creation_operations.cjs', '20260908043851_allow_co_managed_assignment_before_escalation.cjs', '20260908050419_create_organization_sla_obligations.cjs', '20260908051552_create_co_managed_sla_priority_mappings.cjs', '20260908062358_create_organization_sla_notification_events.cjs', '20260908063356_create_organization_sla_notification_recipients.cjs', '20260908065525_add_organization_sla_email_retry_state.cjs', '20260908081909_create_co_managed_workflow_ticket_emails.cjs', '20260908084034_create_co_managed_time_work_references.cjs']) {
     await require('../../../migrations/' + file).up(db);
   }
   for (const table of ['standard_statuses', 'standard_priorities', 'countries', 'notification_categories',
@@ -17346,4 +17346,135 @@ it('co-managed workflow close without notification needs no requester and queues
   await f.close({ notify_requester: false });
   expect(await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).toMatchObject({ is_closed: true, response_state: null });
   expect(await f.emails()).toHaveLength(0);
+}));
+
+async function withMspTimeWorkFixture(work: (fixture: any) => Promise<void>) {
+  return withSharedTicketMutationFixture(async f => {
+    for (const action of ['read', 'create']) {
+      const permission = await f.customer.table('permissions').where({ resource: 'time_entry', action, msp: true, client: false }).first();
+      await f.sponsor.table('permissions').insert({ ...permission, tenant: f.principal.tenant });
+      await f.sponsor.table('role_permissions').insert({ tenant: f.principal.tenant, role_id: f.roleId, permission_id: permission.permission_id });
+    }
+    const { registerCoManagedTimeWorkReference } = await import('../../../../packages/co-managed/src/timeWorkReference');
+    const { joinTimeEntryBillingWorkContext, timeEntryBillingWorkColumns } = await import('../../../../packages/billing/src/lib/billing/timeEntryWorkContext');
+    const register = (resource = f.resource) => registerCoManagedTimeWorkReference(db, f.principal, resource);
+    const load = (tenant = f.principal.tenant) => {
+      const query = tenantDb(db, tenant).table('time_entries');
+      joinTimeEntryBillingWorkContext(db, tenant, query);
+      return query.select('time_entries.*', 'billing_work.client_id as billing_client_id', ...timeEntryBillingWorkColumns);
+    };
+    const insertTime = async (workItemId: string, type = 'co_managed', tenant = f.principal.tenant, userId = f.principal.userId) => {
+      const entryId = randomUUID();
+      await tenantDb(db, tenant).table('time_entries').insert({ tenant, entry_id: entryId, user_id: userId, work_item_id: workItemId,
+        work_item_type: type, co_managed_work_reference_id: type === 'co_managed' ? workItemId : null, start_time: new Date('2026-09-08T09:00:00Z'), end_time: new Date('2026-09-08T10:00:00Z'),
+        work_date: '2026-09-08', work_timezone: 'UTC', billable_duration: tenant === f.principal.tenant ? 60 : 0, approval_status: 'APPROVED', invoiced: false });
+      return entryId;
+    };
+    await work({ ...f, register, load, insertTime });
+  });
+}
+
+it('MSP time billing work registers one qualified source and keeps customer work outside the MSP invoice loader', async () => withMspTimeWorkFixture(async f => {
+  const [a, b] = await Promise.all([f.register(), f.register()]);
+  expect(a.referenceId).toBe(b.referenceId);
+  expect(await f.sponsor.table('co_managed_time_work_references')).toHaveLength(1);
+  await f.insertTime(a.referenceId);
+  await f.insertTime(f.resource.id, 'ticket', f.resource.tenant, f.customerPrincipal.userId);
+  // A guessed customer UUID is not a local work reference or local ticket.
+  await expect(f.insertTime(f.resource.id, 'co_managed')).rejects.toMatchObject({ code: '23503' });
+  const [row] = await f.load();
+  expect(await f.load()).toHaveLength(1);
+  expect(row).toMatchObject({ tenant: f.principal.tenant, work_source_tenant: f.resource.tenant,
+    work_source_kind: 'ticket', work_source_id: f.resource.id, work_relationship_id: f.resource.relationshipId,
+    work_item_id: a.referenceId, work_item_type: 'co_managed', ticket_title: 'Customer issue' });
+  expect(row.billing_client_id).not.toBe(f.operation.customer_client_id);
+  expect((await f.load(f.resource.tenant))[0]).toMatchObject({ work_item_type: 'ticket', work_source_id: f.resource.id, work_source_tenant: f.resource.tenant });
+}));
+
+it('MSP time billing work retains admitted evidence after revocation without allowing another live registration', async () => withMspTimeWorkFixture(async f => {
+  const reference = await f.register(); await f.insertTime(reference.referenceId);
+  const before = await f.load();
+  await (await import('../../../../packages/co-managed/src/ticketHandoffs')).revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource,
+    { operationId: randomUUID(), expectedRevision: 1, note: 'End live sharing' });
+  await f.customer.table('tickets').where('ticket_id', f.resource.id).update({ title: 'Newly private title', attributes: { description: 'Private replacement' } });
+  await expect(f.register()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(await f.load()).toEqual(before);
+  expect(JSON.stringify(await f.load())).not.toContain('Newly private');
+}));
+
+it('MSP time billing work rejects missing local time permission and wrong relationship before capture', async () => withMspTimeWorkFixture(async f => {
+  await expect(f.register({ ...f.resource, relationshipId: randomUUID() })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await f.sponsor.table('role_permissions').whereIn('permission_id', f.sponsor.table('permissions').where({ resource: 'time_entry', action: 'create' }).select('permission_id')).del();
+  await expect(f.register()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(await f.sponsor.table('co_managed_time_work_references')).toHaveLength(0);
+}));
+
+it('MSP time billing work applies current field scope to captured descriptions', async () => withMspTimeWorkFixture(async f => {
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: f.principal.tenant, name: 'Shared billing evidence', actorUserId: f.principal.userId });
+  const relation = await f.customer.table('co_management_relationships').first();
+  await bundles.upsertBundleRule(db, { tenant: f.principal.tenant, bundleId, revisionId, resourceType: 'ticket', action: 'read', templateKey: 'selected_clients',
+    config: { selectedClientIds: [relation.sponsor_client_id], redactedFields: ['title', 'attributes.description', 'ticket_number'] } });
+  await bundles.publishBundleRevision(db, { tenant: f.principal.tenant, bundleId, revisionId, actorUserId: f.principal.userId });
+  await bundles.createBundleAssignment(db, { tenant: f.principal.tenant, bundleId, targetType: 'user', targetId: f.principal.userId });
+  const registered = await f.register();
+  expect(registered.title).toBeNull();
+  expect(await f.sponsor.table('co_managed_time_work_references').first()).toMatchObject({ title: null, description: null, ticket_number: null });
+}));
+
+it('MSP time billing work reaches the existing catalog charge engine with retained customer provenance', async () => withMspTimeWorkFixture(async f => {
+  const reference = await f.register(), entryId = await f.insertTime(reference.referenceId), serviceId = randomUUID(), typeId = randomUUID();
+  await f.sponsor.table('service_types').insert({ tenant: f.principal.tenant, id: typeId, name: 'Shared MSP labor' });
+  await f.sponsor.table('service_catalog').insert({ tenant: f.principal.tenant, service_id: serviceId, service_name: 'MSP hourly service',
+    custom_service_type_id: typeId, billing_method: 'hourly', default_rate: 12000 });
+  await f.sponsor.table('time_entries').where('entry_id', entryId).update({ service_id: serviceId });
+  const relation = await f.customer.table('co_management_relationships').first();
+  const { BillingEngine } = await import('../../../../packages/billing/src/lib/billing/billingEngine');
+  await withTransaction(db, async trx => {
+    const engine = BillingEngine.forTransaction(trx, f.principal.tenant) as any;
+    // Keep this test about actual loader/charge integration; tax and contract
+    // selection have their own domain suites and no external effects are run.
+    vi.spyOn(engine, 'getEligibleContractLinesForServiceAtDate').mockResolvedValue([]);
+    vi.spyOn(engine, 'getClientDefaultTaxRegionCode').mockResolvedValue(null);
+    vi.spyOn(engine, 'getClientDefaultBillingProfileId').mockResolvedValue(randomUUID());
+    vi.spyOn(engine, 'getTaxInfoFromService').mockResolvedValue({ isTaxable: false, taxRegion: null });
+    const charges = await engine.calculateUnresolvedNonContractCharges(relation.sponsor_client_id, { startDate: '2026-09-08', endDate: '2026-09-09' });
+    expect(charges).toHaveLength(1);
+    expect(charges[0]).toMatchObject({ type: 'time', total: 12000, duration: 1, serviceId,
+      workItemSnapshot: { workItemType: 'ticket', workItemId: f.resource.id, sourceTenant: f.resource.tenant, workReferenceId: reference.referenceId,
+        relationshipId: f.resource.relationshipId, title: 'Customer issue', billedMinutes: 60, netAmount: 12000 } });
+    await tenantDb(trx, f.principal.tenant).table('time_entries').where('entry_id', entryId).update({ invoiced: true });
+    expect(await engine.calculateUnresolvedNonContractCharges(relation.sponsor_client_id, { startDate: '2026-09-08', endDate: '2026-09-09' })).toHaveLength(0);
+  });
+}));
+
+it('MSP time billing work supports shared tasks without assigning an MSP project billing identity', async () => withSharedProjectTaskFixture(async f => {
+  for (const action of ['read', 'create']) {
+    const permission = await f.customer.table('permissions').where({ resource: 'time_entry', action, msp: true, client: false }).first();
+    await f.sponsor.table('permissions').insert({ ...permission, tenant: f.principal.tenant });
+    await f.sponsor.table('role_permissions').insert({ tenant: f.principal.tenant, role_id: f.roleId, permission_id: permission.permission_id });
+  }
+  const { registerCoManagedTimeWorkReference } = await import('../../../../packages/co-managed/src/timeWorkReference');
+  const reference = await registerCoManagedTimeWorkReference(db, f.principal, f.resource), entryId = randomUUID();
+  await f.sponsor.table('time_entries').insert({ tenant: f.principal.tenant, entry_id: entryId, user_id: f.principal.userId,
+    work_item_type: 'co_managed', work_item_id: reference.referenceId, co_managed_work_reference_id: reference.referenceId,
+    start_time: new Date('2026-09-08T09:00:00Z'), end_time: new Date('2026-09-08T10:00:00Z'), work_date: '2026-09-08', work_timezone: 'UTC', billable_duration: 60 });
+  const { joinTimeEntryBillingWorkContext, timeEntryBillingWorkColumns } = await import('../../../../packages/billing/src/lib/billing/timeEntryWorkContext');
+  const query = f.sponsor.table('time_entries'); joinTimeEntryBillingWorkContext(db, f.principal.tenant, query);
+  expect(await query.select(...timeEntryBillingWorkColumns)).toEqual([expect.objectContaining({ work_source_tenant: f.resource.tenant,
+    work_source_id: f.resource.id, work_source_kind: 'project_task', project_task_name: 'Verify rollout', project_id: null, project_phase_id: null })]);
+}));
+
+it('MSP time billing work keeps native ticket and task UUID collisions distinct in normalized billing joins', async () => withSharedProjectTaskFixture(async f => {
+  const ticket = await f.customer.table('tickets').first();
+  await f.customer.table('tickets').where('ticket_id', ticket.ticket_id).update({ ticket_id: f.resource.id, title: 'Same UUID native ticket' });
+  for (const type of ['ticket', 'project_task']) await f.customer.table('time_entries').insert({ tenant: f.resource.tenant,
+    entry_id: randomUUID(), user_id: f.customerPrincipal.userId, work_item_id: f.resource.id, work_item_type: type,
+    start_time: new Date('2026-09-08T09:00:00Z'), end_time: new Date('2026-09-08T10:00:00Z'), work_date: '2026-09-08', work_timezone: 'UTC', billable_duration: 0 });
+  const { joinTimeEntryBillingWorkContext, timeEntryBillingWorkColumns } = await import('../../../../packages/billing/src/lib/billing/timeEntryWorkContext');
+  const query = f.customer.table('time_entries'); joinTimeEntryBillingWorkContext(db, f.resource.tenant, query);
+  const rows = await query.select('time_entries.work_item_type', ...timeEntryBillingWorkColumns);
+  expect(rows).toHaveLength(2);
+  expect(rows.find(row => row.work_item_type === 'ticket')).toMatchObject({ ticket_title: 'Same UUID native ticket', project_task_name: null, project_id: null });
+  expect(rows.find(row => row.work_item_type === 'project_task')).toMatchObject({ ticket_title: null, project_task_name: 'Verify rollout', project_id: f.project.project_id });
 }));
