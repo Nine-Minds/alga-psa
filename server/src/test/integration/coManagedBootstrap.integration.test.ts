@@ -90,7 +90,7 @@ beforeAll(async () => {
     '20260906080000_create_co_management_relationship_events.cjs',
     '20260906100000_add_external_file_metadata.cjs',
     '20260906110000_add_kb_import_batch_identity.cjs',
-    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs', '20260908011054_add_co_managed_meeting_sync_intents.cjs', '20260908021208_create_co_managed_meeting_creation_operations.cjs', '20260908043851_allow_co_managed_assignment_before_escalation.cjs', '20260908050419_create_organization_sla_obligations.cjs', '20260908051552_create_co_managed_sla_priority_mappings.cjs', '20260908062358_create_organization_sla_notification_events.cjs', '20260908063356_create_organization_sla_notification_recipients.cjs', '20260908065525_add_organization_sla_email_retry_state.cjs', '20260908081909_create_co_managed_workflow_ticket_emails.cjs', '20260908084034_create_co_managed_time_work_references.cjs', '20260908091756_allow_co_managed_time_tracking.cjs', '20260908102610_create_co_managed_relationship_closures.cjs', '20260908103849_create_co_managed_participation_evidence.cjs', '20260908105022_allow_co_managed_time_participation.cjs', '20260908110522_retain_co_managed_conversation_participation.cjs']) {
+    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs', '20260908011054_add_co_managed_meeting_sync_intents.cjs', '20260908021208_create_co_managed_meeting_creation_operations.cjs', '20260908043851_allow_co_managed_assignment_before_escalation.cjs', '20260908050419_create_organization_sla_obligations.cjs', '20260908051552_create_co_managed_sla_priority_mappings.cjs', '20260908062358_create_organization_sla_notification_events.cjs', '20260908063356_create_organization_sla_notification_recipients.cjs', '20260908065525_add_organization_sla_email_retry_state.cjs', '20260908081909_create_co_managed_workflow_ticket_emails.cjs', '20260908084034_create_co_managed_time_work_references.cjs', '20260908091756_allow_co_managed_time_tracking.cjs', '20260908102610_create_co_managed_relationship_closures.cjs', '20260908103849_create_co_managed_participation_evidence.cjs', '20260908105022_allow_co_managed_time_participation.cjs', '20260908110522_retain_co_managed_conversation_participation.cjs', '20260908111943_create_co_managed_archive_files.cjs']) {
     await require('../../../migrations/' + file).up(db);
   }
   for (const table of ['standard_statuses', 'standard_priorities', 'countries', 'notification_categories',
@@ -6348,7 +6348,10 @@ async function withAttachmentFixture(work: (fixture: Parameters<Parameters<typeo
     const objects = new Map<string, Uint8Array>();
     const upload = vi.fn(async (path: string, content: Uint8Array, _mime: string) => { objects.set(path, Uint8Array.from(content)); });
     const download = vi.fn(async (path: string) => { const data = objects.get(path); if (!data) throw new Error('Missing test object'); return data; });
-    await work({ ...fixture, attachments, objects, upload, download });
+    const previousDownload = artifactStorage.download.getMockImplementation();
+    artifactStorage.download.mockImplementation(download);
+    try { await work({ ...fixture, attachments, objects, upload, download }); }
+    finally { artifactStorage.download.mockReset(); if (previousDownload) artifactStorage.download.mockImplementation(previousDownload); }
   });
 }
 const attachmentComment = (comment: { storeTenant: string; threadId: string; commentId: string }) => ({ storeTenant: comment.storeTenant, threadId: comment.threadId, commentId: comment.commentId });
@@ -7298,6 +7301,10 @@ it('transfers a confirmed MSP-private thread and files atomically with historica
   const comments = await customer.table('comments').where('thread_id', receipt.threadId); expect(comments).toHaveLength(3);
   expect(await customer.table('comments').where('comment_id', receipt.threadId).whereRaw('created_at = ?::timestamptz', ['2026-09-07T00:00:00.123456Z']).first()).toBeDefined();
   expect(comments.find(row => row.deleted_at)).toMatchObject({ note: '', markdown_content: '' });
+  const archivedHistory = await sponsor.table('co_managed_participation_evidence').where({ resource_id: resource.id, source_type: 'conversation' });
+  expect(archivedHistory).toHaveLength(3); expect(JSON.stringify(archivedHistory)).not.toContain('Deleted private secret');
+  expect(archivedHistory.find(row => row.payload.deleted).payload).not.toHaveProperty('note');
+  expect(await sponsor.table('co_managed_archive_files').where('ticket_id', resource.id)).toHaveLength(1);
   const former = comments.find(row => row.actor_display_name === 'Former colleague');
   expect(await customer.table('collaboration_actor_references').where('actor_reference_id', former.actor_reference_id).first()).toMatchObject({ actor_tenant: principal.tenant, actor_user_id: formerUser });
   expect(await customer.table('users').whereIn('user_id', [principal.userId, formerUser])).toEqual([]);
@@ -18200,4 +18207,71 @@ it('conversation participation uses actual ticket authors and excludes private r
   expect(rows[0]).toMatchObject({ actor_tenant: f.principal.tenant, actor_user_id: f.principal.userId, actor_name: 'Morgan Provider' });
   expect(rows[1]).toMatchObject({ actor_kind: 'contact', actor_contact_id: contactId, actor_user_id: null, actor_name: 'Actual requester', payload: { note: 'Actual requester text' } });
   expect(JSON.stringify(rows)).not.toMatch(/Untrusted publication content|Invented author|Customer restricted thread/);
+}));
+
+it('archive files retain authorized bytes before customer deletion and drain without reopening customer storage', async () => withAttachmentFixture(async f => {
+  const root = await f.create(f.principal, { operationId: randomUUID(), audience: 'shared_it', text: 'Shared evidence' });
+  const input = { attachmentId: randomUUID(), comment: attachmentComment(root), fileName: 'Proof.txt', mimeType: 'text/plain', content: Buffer.from('Retained shared bytes') };
+  await f.attachments.uploadCoManagedConversationAttachment(db, f.principal, f.resource, input, f.upload);
+  await f.attachments.uploadCoManagedConversationAttachment(db, f.principal, f.resource, input, f.upload);
+  const files = () => f.sponsor.table('co_managed_archive_files');
+  const [staged] = await files(); expect(await files()).toHaveLength(1);
+  expect(staged).toMatchObject({ status: 'pending', attachment_id: input.attachmentId, audience: 'shared_it', staged_bytes: input.content });
+  await f.customer.table('co_management_relationships').where('relationship_id', f.resource.relationshipId).update({ state: 'terminated', ended_at: new Date() });
+  await f.customer.table('co_management_conversation_attachments').del();
+  await f.customer.table('comments').where('ticket_id', f.resource.id).del();
+  await f.customer.table('comment_threads').where('ticket_id', f.resource.id).del();
+  await f.customer.table('ticket_audit_logs').where('ticket_id', f.resource.id).del();
+  await f.customer.table('tickets').where('ticket_id', f.resource.id).del(); f.objects.clear();
+  artifactStorage.download.mockRejectedValue(new Error('Customer storage must not be reopened'));
+  const { storeCoManagedArchiveFiles, coManagedArchiveFilePath } = await import('../../../../packages/co-managed/src/archiveFiles');
+  const storedObjects = new Map<string, Buffer>();
+  artifactStorage.upload.mockReset().mockImplementation(async (bytes: Buffer, path: string) => { storedObjects.set(path, Buffer.from(bytes)); return { path, size: bytes.length }; });
+  const outcomes = await Promise.all([storeCoManagedArchiveFiles(db, f.principal.tenant), storeCoManagedArchiveFiles(db, f.principal.tenant)]);
+  expect(outcomes.reduce((total, result) => total + result.stored, 0)).toBe(1);
+  const saved = (await files())[0]; expect(saved).toMatchObject({ status: 'ready', staged_bytes: null });
+  expect(storedObjects.get(coManagedArchiveFilePath(f.principal.tenant, saved.archive_file_id))).toEqual(input.content);
+  expect(await storeCoManagedArchiveFiles(db, f.principal.tenant)).toEqual({ stored: 0, failed: 0 });
+  expect(artifactStorage.upload).toHaveBeenCalledOnce();
+  await expect(files().where('archive_file_id', saved.archive_file_id).update({ file_name: 'Rewritten.txt' })).rejects.toMatchObject({ code: '23514' });
+  const migration = require('../../../migrations/20260908111943_create_co_managed_archive_files.cjs');
+  await migration.up(db); await expect(migration.down(db)).rejects.toThrow('retained archive files');
+}));
+
+it('archive files exclude private, unpublished and newly unshared uploads and capture drafts only at publication', async () => withConversationDraftFixture(async f => {
+  const privateRoot = await f.create(f.customerPrincipal, { operationId: randomUUID(), audience: 'organization_private', text: 'Customer private' });
+  const upload = (comment: any, actor: any, text: string) => f.attachments.uploadCoManagedConversationAttachment(db, actor, f.resource,
+    { attachmentId: randomUUID(), comment: attachmentComment(comment), fileName: 'Evidence.txt', mimeType: 'text/plain', content: Buffer.from(text) }, f.upload);
+  await upload(privateRoot, f.customerPrincipal, 'Private customer bytes');
+  const file = f.file('Draft archive bytes');
+  const draft = await f.drafts.beginCoManagedConversationDraft(db, f.principal, f.resource, { operationId: randomUUID(), audience: 'shared_it', content: { text: 'Shared draft' }, files: [file.descriptor] });
+  await f.drafts.uploadCoManagedDraftAttachment(db, f.principal, f.resource, draftRef(draft), file.descriptor.attachmentId, file.content, f.upload);
+  expect(await f.sponsor.table('co_managed_archive_files')).toHaveLength(0);
+  const published = await f.drafts.publishCoManagedConversationDraft(db, f.principal, f.resource, draftRef(draft), f.publishCustomer);
+  const rows = await f.sponsor.table('co_managed_archive_files'); expect(rows).toHaveLength(1); expect(rows[0].staged_bytes).toEqual(file.content);
+  await f.drafts.publishCoManagedConversationDraft(db, f.principal, f.resource, draftRef(draft), f.publishCustomer);
+  const customerRoot = await f.create(f.customerPrincipal, { operationId: randomUUID(), audience: 'requester', text: 'Customer later update' });
+  await f.customer.table('co_management_ticket_work').where('ticket_id', f.resource.id).update({ grant_revoked_at: new Date() });
+  await upload(customerRoot, f.customerPrincipal, 'Newly unshared bytes');
+  expect(await f.sponsor.table('co_managed_archive_files')).toEqual(rows);
+  expect(published.commentId).toBe(draft.operationId);
+}));
+
+it('archive files roll back publication on corrupt source bytes and retain staging across storage failure', async () => withConversationDraftFixture(async f => {
+  const file = f.file('Recoverable bytes'), draft = await f.drafts.beginCoManagedConversationDraft(db, f.principal, f.resource,
+    { operationId: randomUUID(), audience: 'shared_it', content: { text: 'Must commit with file' }, files: [file.descriptor] });
+  await f.drafts.uploadCoManagedDraftAttachment(db, f.principal, f.resource, draftRef(draft), file.descriptor.attachmentId, file.content, f.upload);
+  artifactStorage.download.mockResolvedValueOnce(Buffer.from('wrong bytes'));
+  await expect(f.drafts.publishCoManagedConversationDraft(db, f.principal, f.resource, draftRef(draft), f.publishCustomer)).rejects.toThrow('integrity verification');
+  expect(await f.customer.table('comments').where('comment_id', draft.operationId)).toHaveLength(0);
+  expect(await f.sponsor.table('co_managed_archive_files')).toHaveLength(0);
+  expect(await f.customer.table('co_management_conversation_drafts').where('operation_id', draft.operationId).first()).toMatchObject({ status: 'draft' });
+  await f.drafts.publishCoManagedConversationDraft(db, f.principal, f.resource, draftRef(draft), f.publishCustomer);
+  const { storeCoManagedArchiveFiles } = await import('../../../../packages/co-managed/src/archiveFiles');
+  artifactStorage.upload.mockReset().mockRejectedValueOnce(new Error('Lost acknowledgement')).mockImplementation(async (bytes: Buffer, path: string) => ({ path, size: bytes.length }));
+  expect(await storeCoManagedArchiveFiles(db, f.principal.tenant)).toEqual({ stored: 0, failed: 1 });
+  const saved = await f.sponsor.table('co_managed_archive_files').first(); expect(saved).toMatchObject({ status: 'pending', attempts: 1, staged_bytes: file.content });
+  await f.sponsor.table('co_managed_archive_files').where('archive_file_id', saved.archive_file_id).update({ next_attempt_at: new Date(0) });
+  expect(await storeCoManagedArchiveFiles(db, f.principal.tenant)).toEqual({ stored: 1, failed: 0 });
+  expect(artifactStorage.upload.mock.calls[0][1]).toBe(artifactStorage.upload.mock.calls[1][1]);
 }));

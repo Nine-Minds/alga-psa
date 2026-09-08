@@ -249,3 +249,12 @@ it('discovers pending SLA email after clock and notification fanout completion',
   expect((await runMaintenanceJob('co-managed-sla-observation')).total).toBe(1);
   expect(tenantHandlerMock).toHaveBeenCalledWith('co-managed-sla-observation', { tenantId: 'msp-email' });
 });
+
+it('discovers MSP archive storage work without an active relationship or customer upload', async () => {
+  tenantHandlerMock.mockClear(); suspendedFilter.mockClear();
+  listTenantsMock.mockReturnValue([{ tenant: 'archive-owner' }, { tenant: 'unrelated' }]);
+  selectTenantsMock.mockImplementation(table => table === 'co_managed_archive_files' ? [{ tenant: 'archive-owner' }] : []);
+  expect(await runMaintenanceJob('co-managed-upload-cleanup')).toMatchObject({ total: 1, succeeded: 1 });
+  expect(tenantHandlerMock).toHaveBeenCalledExactlyOnceWith('co-managed-upload-cleanup', { tenantId: 'archive-owner' });
+  expect(suspendedFilter).not.toHaveBeenCalled();
+});

@@ -115,3 +115,5 @@ export { processCoManagedWorkflowTicketEmails, type CoManagedWorkflowTicketEmail
 
 export { registerCoManagedTimeWorkReference } from './timeWorkReference';
 export { retainCoManagedTimeParticipation } from './timeParticipationEvidence';
+
+export { storeCoManagedArchiveFiles } from './archiveFiles';

@@ -1,3 +1,4 @@
+import { stageCoManagedConversationFiles } from './archiveFiles';
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { commentAudienceSql } from '@alga-psa/shared/lib/commentAudience';
@@ -46,8 +47,11 @@ export async function retainCoManagedConversationParticipation(trx: Knex.Transac
     parent_comment_id: task ? 'parent.task_comment_id' : trx.raw("CASE WHEN parent.publish_state = 'published' AND ? IN ('requester', 'shared_it') THEN parent.comment_id ELSE NULL END", [commentAudienceSql(trx, 't', 'root', 'parent')]),
     audience: task ? projectTaskAudienceSql(trx, 't') : commentAudienceSql(trx, 't', 'root', 'c') }).first();
   if (!comment || !['requester', 'shared_it'].includes(comment.audience)) return;
-  const deleted = event.event_type.endsWith('_DELETED');
-  if (Boolean(comment.deleted_at) !== deleted) throw new CoManagedSharedWorkError();
+  const deleted = Boolean(comment.deleted_at);
+  if (event.event_type.endsWith('_DELETED') && !deleted) throw new CoManagedSharedWorkError();
+  // Disclosure invalidates existing tombstones as updates; retain their empty
+  // identity without treating them as newly created content.
+  if (deleted && (event.event_type.endsWith('_ADDED') || event.event_type.endsWith('_CREATED'))) return;
   // A deleted root cannot authorize a fresh body capture from a surviving reply.
   if (!deleted && comment.root_deleted_at) return;
   const attribution = comment.actor_reference_id ? await owner.table('collaboration_actor_references')
@@ -81,4 +85,5 @@ export async function retainCoManagedConversationParticipation(trx: Knex.Transac
       ...(deleted ? {} : { note: comment.note, markdown: comment.markdown_content }) },
   };
   await appendParticipationEvidence(trx, { tenant: relationship.sponsor_tenant, ...workKey, source_type: 'conversation', source_id: eventId }, content);
+  if (!task && !deleted) await stageCoManagedConversationFiles(trx, tenant, resource.id, event.comment_id);
 }

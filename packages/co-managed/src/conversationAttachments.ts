@@ -1,3 +1,4 @@
+import { stageCoManagedConversationFiles } from './archiveFiles';
 import { assertCoManagedAttachmentPath } from './attachmentStoragePath';
 import { createHash } from 'node:crypto';
 import type { Knex } from 'knex';
@@ -191,6 +192,8 @@ export async function transferAuthorizedCoManagedAttachment(db: Knex, inputActor
       await context.assertWriteAuthority();
       await attachmentQuery(context).where('attachment_id', attachmentId).update({ status: 'ready', ready_at: context.trx.raw('clock_timestamp()'), last_activity_at: context.trx.raw('clock_timestamp()') });
     } else await context.assertWriteAuthority();
+    if (comment.storeTenant === resource.tenant) await stageCoManagedConversationFiles(context.trx, resource.tenant, resource.id, comment.commentId, { attachmentId, content });
+    await context.assertWriteAuthority();
     const attachment = summary(row, context.audience);
     await complete?.(context, attachment, contentHash);
     return attachment;

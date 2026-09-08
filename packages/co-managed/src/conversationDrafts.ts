@@ -1,3 +1,4 @@
+import { stageCoManagedConversationFiles } from './archiveFiles';
 import { createHash } from 'node:crypto';
 import type { Knex } from 'knex';
 import { tenantDb, withTransaction } from '@alga-psa/db';
@@ -203,6 +204,9 @@ export async function publishCoManagedConversationDraft(db: Knex, inputActor: Co
       : await publishCustomer(context.trx, actor, resource, { ...common, ...(request.parent ? { parent: request.parent, ...(request.expectedAudience !== undefined ? { expectedAudience: request.expectedAudience } : {}) } : { audience: request.audience! }) });
     checkedReceipt(receipt, context);
     await owner.table(TABLE).where('operation_id', row.operation_id).update({ status: 'published', receipt: JSON.stringify(receipt), published_at: context.trx.raw('clock_timestamp()') });
+    if (reference.storeTenant === resource.tenant) await stageCoManagedConversationFiles(context.trx, resource.tenant, resource.id, row.operation_id);
+    await assertCoManagedSessionUnexpired(context.trx, actor);
+    await assertCoManagedOperationalWrite(context.trx, resource.tenant);
     return receipt;
   });
 }
