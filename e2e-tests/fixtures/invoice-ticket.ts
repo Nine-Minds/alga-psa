@@ -62,3 +62,24 @@ export async function addBrowserInvoiceTaskSources(db: Knex, ids: Awaited<Return
   });
   return { projectId, taskIds, secondServiceId };
 }
+
+/** Grant a synthetic prepaid block; the browser saves time to trigger real FIFO allocation. */
+export async function createBrowserHourBlockSources(db: Knex, ids: Awaited<ReturnType<typeof createBrowserInvoiceTicketSourceFixture>>) {
+  const { tenant, userId, clientId, serviceId } = ids;
+  const blockServiceId = randomUUID(), blockId = randomUUID(), periodId = randomUUID(), sheetId = randomUUID();
+  const serviceName = `Prepaid support ${clientId.slice(0, 8)}`;
+  await db.transaction(async tx => {
+    const service = await tx('service_catalog').where({ tenant, service_id: serviceId }).first();
+    await tx('service_catalog').insert({ ...service, service_id: blockServiceId, service_name: serviceName });
+    await tx('service_prices').insert({ tenant, price_id: randomUUID(), service_id: blockServiceId, currency_code: 'USD', rate: 15000 });
+    await tx('hour_blocks').insert({ tenant, block_id: blockId, client_id: clientId, service_id: blockServiceId,
+      total_minutes: 180, remaining_minutes: 180, hourly_rate: 15000, purchase_amount: 45000,
+      currency_code: 'USD', status: 'active', purchased_at: '2026-09-01', created_by: userId });
+    await tx('time_periods').insert({ tenant, period_id: periodId,
+      start_date: '2026-09-15', end_date: '2026-09-22', is_closed: false });
+    await tx('time_sheets').insert({ tenant, id: sheetId, period_id: periodId,
+      user_id: userId, approval_status: 'DRAFT' });
+  });
+  const tickets = await db('tickets').where({ tenant, client_id: clientId }).orderBy('ticket_number');
+  return { blockId, blockServiceId, serviceName, sheetId, tickets };
+}

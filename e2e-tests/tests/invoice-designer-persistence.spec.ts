@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { test, expect, signIn } from '../fixtures/auth';
 import { createTimeBillingFixture } from '../fixtures/time-billing';
-import { addBrowserInvoiceTaskSources, createBrowserInvoiceTicketSourceFixture } from '../fixtures/invoice-ticket';
+import { createBrowserHourBlockSources, addBrowserInvoiceTaskSources, createBrowserInvoiceTicketSourceFixture } from '../fixtures/invoice-ticket';
 import { createBrowserApiKey } from '../fixtures/api-key';
 import { addLongInvoiceSources } from '../../server/test-utils/invoiceTicketProductionFixtures';
 import { readInvoiceDocument, readInvoiceDownload } from '../fixtures/invoice-document';
@@ -320,6 +320,77 @@ test('an administrator authors a billed-time date sort and reopens its persisted
             .update({ task_name: task.task_name, description: task.description });
         }
       }
+    });
+    await test.step('prepaid time stays visible while only overage is charged', async () => {
+      const blockIds = await createBrowserInvoiceTicketSourceFixture(database, { tenant: tenant.tenantId, userId: tenant.admin.userId });
+      const block = await createBrowserHourBlockSources(database, blockIds);
+      await database('clients').where({ tenant: tenant.tenantId, client_id: blockIds.clientId })
+        .update({ invoice_template_id: saved.template_id });
+      await page.goto(`/msp/time-entry/timesheet/${block.sheetId}`);
+      for (const [index, hours] of [1, 3].entries()) {
+        await page.locator('#add-work-item-button').click();
+        const picker = page.getByRole('dialog', { name: 'Add Work Item', exact: true });
+        await picker.getByPlaceholder('Search work items...').fill(block.tickets[index].ticket_number);
+        await picker.getByRole('listitem').filter({ hasText: block.tickets[index].ticket_number }).click();
+        const editor = page.getByRole('dialog', { name: /Time Entry/ });
+        await editor.getByRole('combobox').filter({ hasText: 'Select a service' }).click();
+        await page.getByRole('option', { name: block.serviceName, exact: true }).click();
+        await page.locator('#time-entry-dialog-duration-hours-0').fill(String(hours));
+        await page.locator('#time-entry-dialog-duration-minutes-0').fill('0');
+        await page.locator('#time-entry-dialog-notes-0').fill('PRIVATE_PREPAID_TIME');
+        await page.locator('#time-entry-dialog-save-dialog-btn').click();
+        await expect(editor).toBeHidden();
+        await expect.poll(async () => Number((await database('hour_blocks')
+          .where({ tenant: tenant.tenantId, block_id: block.blockId }).first()).remaining_minutes)).toBe(index === 0 ? 120 : 0);
+      }
+      const entryScope = { tenant: tenant.tenantId, time_sheet_id: block.sheetId };
+      const entries = await database('time_entries').where(entryScope);
+      expect(entries).toHaveLength(2);
+      expect(entries.map(entry => Number(entry.billable_duration)).sort((a, b) => a - b)).toEqual([60, 180]);
+      const allocations = await database('hour_block_time_allocations').where({ tenant: tenant.tenantId, block_id: block.blockId });
+      expect(allocations).toHaveLength(2);
+      // Approval is fixture setup here; the separate time-approval journey
+      // exercises manager approval through UI. Allocation above is real UI save.
+      await database('time_entries').where(entryScope).update({ approval_status: 'APPROVED' });
+      await database('time_sheets').where({ tenant: tenant.tenantId, id: block.sheetId }).update({ approval_status: 'APPROVED' });
+      // Select the complete client/window through the real UI so the
+      // recurring lines and the non-contract overage are invoiced together.
+      const client = await database('clients').where({ tenant: tenant.tenantId, client_id: blockIds.clientId }).first();
+      await page.goto('/msp/billing?tab=invoicing&subtab=generate');
+      await page.locator('#automatic-invoices-filters-button').click();
+      const throughDate = page.locator('#billing-period-date-range-to');
+      await throughDate.fill('10/02/2026');
+      await throughDate.press('Tab');
+      await page.locator('#apply-billing-period-date-filter').click();
+      await page.keyboard.press('Escape');
+      await page.locator('#filter-clients-input').fill(client.client_name);
+      const dueRow = page.locator('[data-automation-id="automatic-invoices-table"]').getByRole('row')
+        .filter({ hasText: client.client_name })
+        .filter({ has: page.locator('input[type="checkbox"][id^="select-"]:not([id^="select-child-"])') });
+      await expect(dueRow).toHaveCount(1);
+      await dueRow.getByRole('checkbox').check();
+      await page.locator('#preview-selected-button').click();
+      const preview = page.getByRole('dialog', { name: 'Invoice Preview', exact: true });
+      await expect(preview).toContainText('$1,127.50');
+      await page.locator('#generate-invoice-from-preview-button').click();
+      await expect(preview).toBeHidden();
+      await expect.poll(async () => (await database('invoices').where({ tenant: tenant.tenantId, client_id: blockIds.clientId })).length).toBe(1);
+      const blockInvoice = await database('invoices').where({ tenant: tenant.tenantId, client_id: blockIds.clientId }).first();
+      const charges = await database('invoice_charges').where({ tenant: tenant.tenantId, invoice_id: blockInvoice.invoice_id });
+      const information = charges.filter(charge => charge.billing_charge_type === 'hour_block');
+      expect(information).toHaveLength(1);
+      expect(Number(information[0].net_amount)).toBe(0);
+      expect(information[0].description).toContain('3.0 hrs consumed, 0.0 hrs remaining');
+      expect((await database('time_entries').where(entryScope)).every(entry => entry.invoiced)).toBe(true);
+      expect(Number(blockInvoice.subtotal)).toBe(102_500);
+      expect(Number(blockInvoice.tax)).toBe(10_250);
+      expect(Number(blockInvoice.total_amount)).toBe(112_750);
+      await page.goto(`/msp/billing?tab=invoicing&subtab=drafts&invoiceId=${blockInvoice.invoice_id}`);
+      const text = await readInvoiceDownload(page, testInfo, blockInvoice.invoice_number, `${blockInvoice.invoice_number}-prepaid`);
+      const compact = text.replace(/\s/g, '');
+      expect(compact).toContain('3.0hrsconsumed,0.0hrsremaining');
+      expect(compact).toContain('1,127.50');
+      expect(compact).not.toContain('PRIVATE');
     });
   } finally {
     await database('api_keys').where({ tenant: tenant.tenantId, api_key_id: key.api_key_id }).delete();
