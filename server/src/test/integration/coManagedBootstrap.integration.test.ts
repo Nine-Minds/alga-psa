@@ -19557,3 +19557,91 @@ it('independent billing portal binds paid seat confirmation to its own subscript
     await expect(open(db, f.customerPrincipal, { kind: 'payment_method' }, dependencies)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
   });
 });
+
+async function withPortableVaultExportFixture(work: (fixture: any) => Promise<void>) {
+  const f = await ticketHandoffFixture();
+  const portable = await import('../../../../ee/server/src/lib/co-managed/portableVaultExport');
+  const encryption = await import('../../../../ee/server/src/lib/credentials/encryption');
+  const context = { packageId: randomUUID(), sourceTenant: f.actor.tenant };
+  const permission = await f.customer.table('permissions').where({ resource: 'co_management', action: 'manage' }).first();
+  let read = await f.customer.table('permissions').where({ resource: 'credential', action: 'read' }).first();
+  if (!read) {
+    read = { ...permission, permission_id: randomUUID(), resource: 'credential', action: 'read' };
+    await f.customer.table('permissions').insert(read);
+  }
+  const role = await f.customer.table('user_roles').where('user_id', f.actor.userId).first();
+  await f.customer.table('role_permissions').insert({ tenant: f.actor.tenant, role_id: role.role_id, permission_id: read.permission_id }).onConflict().ignore();
+  const ticket = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  const credentialId = randomUUID();
+  await f.customer.table('credentials').insert({ tenant: f.actor.tenant, credential_id: credentialId, client_id: ticket.client_id,
+    name: 'Customer-owned recovery secret', username: 'customer-admin', password_ciphertext: 'vault:v1:customer-password',
+    otp_secret_ciphertext: 'vault:v1:customer-otp', encryption_scheme: 'vault-transit:v1', is_restricted: true, created_by: f.actor.userId });
+  await f.customer.table('credential_associations').insert({ tenant: f.actor.tenant, credential_id: credentialId, entity_type: 'ticket', entity_id: f.resource.id });
+  const mspCredentialId = randomUUID();
+  await f.sponsor.table('credentials').insert({ tenant: f.principal.tenant, credential_id: mspCredentialId, client_id: f.operation.request.clientId,
+    name: 'MSP private integration secret', password_ciphertext: 'vault:v1:msp-private', encryption_scheme: 'vault-transit:v1', created_by: f.principal.userId });
+  const env = { ...process.env };
+  process.env.ALGA_VAULT_ADDR = 'https://portable-vault.example.test'; process.env.ALGA_VAULT_TOKEN = 'test-only-token';
+  const values = new Map([['vault:v1:customer-password', 'customer recovery password'], ['vault:v1:customer-otp', 'JBSWY3DPEHPK3PXP']]);
+  const provider = vi.spyOn(globalThis, 'fetch').mockImplementation(async (url, options) => {
+    const body = JSON.parse(String(options?.body));
+    if (String(url).includes('/decrypt/')) {
+      const value = values.get(body.ciphertext); if (!value) throw new Error('Unexpected foreign credential read');
+      return { ok: true, json: async () => ({ data: { plaintext: Buffer.from(value).toString('base64') } }) } as Response;
+    }
+    const ciphertext = `vault:v1:restored-${randomUUID()}`;
+    values.set(ciphertext, Buffer.from(body.plaintext, 'base64').toString('utf8'));
+    return { ok: true, json: async () => ({ data: { ciphertext } }) } as Response;
+  });
+  const exportVault = () => portable.exportCoManagedPortableVault(db, f.customerPrincipal, context.packageId, 'customer-held portable recovery phrase');
+  try { await work({ ...f, context, credentialId, mspCredentialId, provider, values, exportVault, encryption, readPermissionId: read.permission_id }); }
+  finally { provider.mockRestore(); process.env = env; encryption.resetCredentialAesKeyCache(); }
+}
+
+it('portable vault export retains customer metadata and audited usable secrets after departure without MSP private data', async () => withPortableVaultExportFixture(async f => {
+  await f.customer.table('co_management_relationships').update({ state: 'terminated', ended_at: new Date() });
+  const result = await f.exportVault();
+  expect(result.credentials).toHaveLength(1);
+  expect(result.credentials[0]).toMatchObject({ credential_id: f.credentialId, name: 'Customer-owned recovery secret', is_restricted: true, created_by: f.actor.userId });
+  expect(result.associations).toMatchObject([{ credential_id: f.credentialId, entity_type: 'ticket', entity_id: f.resource.id }]);
+  const serialized = JSON.stringify(result);
+  for (const excluded of ['password_ciphertext', 'otp_secret_ciphertext', 'encryption_scheme', 'customer recovery password', 'JBSWY3DPEHPK3PXP', f.mspCredentialId, 'MSP private integration secret']) expect(serialized).not.toContain(excluded);
+  const audit = await f.customer.table('audit_logs').where('record_id', f.credentialId).orderBy('operation');
+  expect(audit.map((row: any) => row.operation)).toEqual(['credential_otp_seed_reveal', 'credential_reveal']);
+  expect(audit.every((row: any) => row.details.export_package_id === f.context.packageId)).toBe(true);
+  expect(JSON.stringify(audit)).not.toContain('customer recovery password');
+  const { restorePortableCredentialVault } = await import('../../../../ee/server/src/lib/credentials/portable');
+  const restored = await restorePortableCredentialVault(result.vault, f.context, [f.credentialId], 'customer-held portable recovery phrase');
+  expect(await f.encryption.decryptCredentialValue(restored[0].passwordCiphertext, restored[0].scheme)).toBe('customer recovery password');
+  expect(await f.encryption.decryptCredentialValue(restored[0].otpSecretCiphertext, restored[0].scheme)).toBe('JBSWY3DPEHPK3PXP');
+}));
+
+it('portable vault export fails closed on restricted ACL, audit failure and authority changes during provider work', async () => withPortableVaultExportFixture(async f => {
+  const otherUser = await f.customer.table('users').whereNot('user_id', f.actor.userId).first();
+  // Create an unrelated local author if the fixture has only one customer technician.
+  const author = otherUser?.user_id ?? randomUUID();
+  if (!otherUser) {
+    const current = await f.customer.table('users').where('user_id', f.actor.userId).first();
+    await f.customer.table('users').insert({ ...current, user_id: author, email: `${author}@example.test`, username: `user-${author}` });
+  }
+  await f.customer.table('credentials').where('credential_id', f.credentialId).update({ created_by: author });
+  await expect(f.exportVault()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(f.provider).not.toHaveBeenCalled();
+  await f.customer.table('credential_access_grants').insert({ tenant: f.actor.tenant, credential_id: f.credentialId, subject_type: 'user', subject_id: f.actor.userId, created_by: author });
+  await db.raw("ALTER TABLE audit_logs ADD CONSTRAINT portable_vault_audit_failure CHECK (operation <> 'credential_reveal') NOT VALID");
+  try { await expect(f.exportVault()).rejects.toThrow('Failed to write audit log'); }
+  finally { await db.raw('ALTER TABLE audit_logs DROP CONSTRAINT portable_vault_audit_failure'); }
+  expect(f.provider).not.toHaveBeenCalled();
+  const realProvider = f.provider.getMockImplementation();
+  f.provider.mockImplementation(async (...args: any[]) => {
+    await f.customer.table('sessions').where('session_id', f.customerPrincipal.sessionId).update({ revoked_at: db.fn.now() });
+    return realProvider(...args);
+  });
+  await expect(f.exportVault()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await f.customer.table('sessions').where('session_id', f.customerPrincipal.sessionId).update({ revoked_at: null });
+  f.provider.mockImplementation(async (...args: any[]) => {
+    await f.customer.table('credentials').where('credential_id', f.credentialId).update({ name: 'Changed while encrypting' });
+    return realProvider(...args);
+  });
+  await expect(f.exportVault()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+}));

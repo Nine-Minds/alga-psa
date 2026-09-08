@@ -4,6 +4,10 @@ The portable vault primitive in `ee/server/src/lib/credentials/portable.ts` tran
 
 This primitive does not authorize an export or restore. It is not yet a customer-facing export endpoint. The enclosing workspace export must select authorized customer-owned records, write credential reveal audits, retain metadata and associations, and recheck customer authority before releasing an archive. The restore coordinator must validate the manifest, map identities and permissions, and insert records atomically into an isolated destination. Never pass a passphrase or decrypted values through workflow history, persistent job arguments, logs, or analytics.
 
+The internal collector `ee/server/src/lib/co-managed/portableVaultExport.ts` supplies the native vault component. It accepts a tracked customer session, package ID and passphrase; the tenant is derived from that session. It requires current customer administration and credential-read permissions, retains credential ACL and bundle checks, and refuses the entire component if any native entry is inaccessible. It preserves credential metadata, local grants and native associations. External Hudu references are not native vault values and require external reauthorization through the enclosing workspace restore.
+
+Collection records value-free password/OTP reveal audits before source decryption. Provider calls run outside database transactions. Before returning the encrypted component, the collector rechecks current session and permissions, entry access, and the exact source rows/grants/associations; a change aborts delivery. Customer export remains available after explicit departure or licensing lapse. No MSP credential table, installation key, or MSP integration configuration is read. Full record/blob packaging and the public export/restore flow remain separate work.
+
 ## Version 1 envelope
 
 The JSON envelope contains exactly these generated fields:
