@@ -8,6 +8,17 @@ import WorkflowActionInvocationModelV2 from '@alga-psa/workflows/persistence/wor
 import { getActionRegistryV2, initializeWorkflowRuntimeV2 } from '@alga-psa/workflows/runtime/core';
 
 const state = vi.hoisted(() => ({ trx: null as Knex.Transaction | null, tenant: '', canRead: true }));
+vi.mock('@alga-psa/core/secrets', async importOriginal => {
+  const actual = await importOriginal<typeof import('@alga-psa/core/secrets')>();
+  return { ...actual, getSecret: async (name: string, envVar: string, defaultValue = '') => {
+    // Own the replay key input. Ambient filesystem/provider secrets otherwise
+    // override the fallback env vars used by missing-key and rotation cases.
+    // Keep the real key parser, cipher, activity and persistence below.
+    if (name === 'nextauth_secret') return process.env.NEXTAUTH_SECRET ?? '';
+    if (name === 'workflow_replay_keys') return process.env.WORKFLOW_REPLAY_KEYS ?? '';
+    return actual.getSecret(name, envVar, defaultValue);
+  } };
+});
 vi.mock('@alga-psa/db/admin', () => ({
   getAdminConnection: async () => state.trx,
   retryOnAdminReadOnly: async (fn: () => Promise<unknown>) => fn(),
