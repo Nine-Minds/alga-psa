@@ -9,6 +9,7 @@ import { prepareTimeEntryForWorkItem, TimeEntryDialog } from '@alga-psa/scheduli
 import { saveTimeEntry } from '@alga-psa/scheduling/actions/timeEntryActions';
 import { registerSharedTimeWorkAction } from '@/lib/actions/coManagedTimeActions';
 import { CoManagedFeatureBoundary } from './CoManagedFeatureBoundary';
+import CoManagedTimeBillingProfile from './CoManagedTimeBillingProfile';
 
 type Props = { resource: CoManagedSharedResource; canWrite: boolean; onSaved?: () => void };
 type Prepared = NonNullable<Awaited<ReturnType<typeof prepareTimeEntryForWorkItem>>>;
@@ -23,6 +24,7 @@ function TimeEntry({ resource, onSaved }: Pick<Props, 'resource' | 'onSaved'>) {
   const target = useRef({ ...resource });
   const mounted = useRef(false), inFlight = useRef(false);
   const [busy, setBusy] = useState(false), [error, setError] = useState(false), [prepared, setPrepared] = useState<Prepared | null>(null);
+  const [profileBusy, setProfileBusy] = useState(false);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   async function open() {
     if (inFlight.current) return;
@@ -37,7 +39,8 @@ function TimeEntry({ resource, onSaved }: Pick<Props, 'resource' | 'onSaved'>) {
     finally { if (mounted.current) { inFlight.current = false; setBusy(false); } }
   }
   return <div className="space-y-2">
-    <Button id="co-shared-log-time" variant="outline" disabled={busy || !!prepared} onClick={() => void open()}>{t(busy ? 'coManaged.loading' : 'coManaged.time.log')}</Button>
+    <CoManagedTimeBillingProfile resource={target.current} disabled={busy || !!prepared} onBusyChange={setProfileBusy} />
+    <Button id="co-shared-log-time" variant="outline" disabled={busy || profileBusy || !!prepared} onClick={() => void open()}>{t(busy ? 'coManaged.loading' : 'coManaged.time.log')}</Button>
     {error && <p role="alert">{t('coManaged.time.unavailable')}</p>}
     {prepared && <TimeEntryDialog {...prepared} id="co-shared-time-entry" isOpen isEditable onClose={() => setPrepared(null)}
       onSave={async entry => {

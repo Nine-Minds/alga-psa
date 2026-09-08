@@ -3,6 +3,7 @@ import React from 'react';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import CoManagedTimeEntry from '../../../components/co-managed/CoManagedTimeEntry';
+vi.mock('../../../components/co-managed/CoManagedTimeBillingProfile', () => ({ default: () => null }));
 const mocks = vi.hoisted(() => ({ flag: vi.fn(), register: vi.fn(), prepare: vi.fn(), save: vi.fn(), dialog: vi.fn() }));
 vi.mock('@alga-psa/ui/hooks', () => ({ useFeatureFlag: mocks.flag }));
 vi.mock('../../../lib/actions/coManagedAcceptanceActions', () => ({}));

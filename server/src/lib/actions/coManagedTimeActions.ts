@@ -2,13 +2,28 @@
 
 import { withAuth } from '@alga-psa/auth';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
-import { getCoManagedEffortTotals, CoManagedSharedWorkError, registerCoManagedTimeWorkReference, type CoManagedSharedResource } from '@alga-psa/co-managed';
+import { getCoManagedEffortTotals, CoManagedSharedWorkError, registerCoManagedTimeWorkReference, getCoManagedTimeBillingProfile,
+  setCoManagedTimeBillingProfile, type CoManagedTimeBillingProfileChange, type CoManagedSharedResource } from '@alga-psa/co-managed';
 import { coManagedBrowserActor } from '../co-managed/browserActor';
 
 export const registerSharedTimeWorkAction = withAuth(async (user, { tenant }, resource: CoManagedSharedResource) => {
   const actor = await coManagedBrowserActor(user, tenant);
   const { knex } = await createTenantKnex(tenant);
   return registerCoManagedTimeWorkReference(knex, actor, resource);
+});
+
+export const getSharedTimeBillingProfileAction = withAuth(async (user, { tenant }, resource: CoManagedSharedResource) => {
+  const actor = await coManagedBrowserActor(user, tenant);
+  if (resource?.tenant === actor.tenant) return null;
+  const { knex } = await createTenantKnex(tenant);
+  try { return await getCoManagedTimeBillingProfile(knex, actor, resource); }
+  catch (error) { if (error instanceof CoManagedSharedWorkError) return null; throw error; }
+});
+
+export const setSharedTimeBillingProfileAction = withAuth(async (user, { tenant }, resource: CoManagedSharedResource, request: CoManagedTimeBillingProfileChange) => {
+  const actor = await coManagedBrowserActor(user, tenant);
+  const { knex } = await createTenantKnex(tenant);
+  return setCoManagedTimeBillingProfile(knex, actor, resource, request);
 });
 
 export type CoManagedEffortTarget = { kind: 'shared'; resource: CoManagedSharedResource }

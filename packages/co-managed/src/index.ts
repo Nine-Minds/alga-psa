@@ -117,6 +117,7 @@ export { processCoManagedSlaEmailDeliveries, type CoManagedSlaEmailDelivery } fr
 export { processCoManagedWorkflowTicketEmails, type CoManagedWorkflowTicketEmail } from './workflowTicketEmails';
 
 export { registerCoManagedTimeWorkReference } from './timeWorkReference';
+export { getCoManagedTimeBillingProfile, setCoManagedTimeBillingProfile, CoManagedTimeBillingProfileError, type CoManagedTimeBillingProfileChange } from './timeBillingProfile';
 export { retainCoManagedTimeParticipation } from './timeParticipationEvidence';
 
 export { storeCoManagedArchiveFiles } from './archiveFiles';
