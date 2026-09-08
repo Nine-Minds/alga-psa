@@ -120,6 +120,29 @@ function storage() {
   return { objects, provider };
 }
 
+it('uses native local storage wildcard capabilities and still rejects disallowed MIME types before writing', async () => {
+  await diskFixture(async (f, root) => {
+    const { LocalStorageProvider } = await import('../../../../../packages/storage/src/providers/LocalStorageProvider');
+    const config = { type: 'local' as const, basePath: join(root, 'destination'), maxFileSize: 1024 ** 3, allowedMimeTypes: ['*/*'], retentionDays: 30 };
+    const prepared = f.prepare();
+    for (const allowedMimeTypes of [['*/*'], ['application/*'], ['application/octet-stream']]) {
+      const provider = new LocalStorageProvider({ ...config, allowedMimeTypes });
+      const lease = await stageCoManagedPortableWorkspaceFiles(prepared, provider);
+      for (const row of lease.externalFiles) {
+        const transfer = prepared.transfers.find(file => file.fileId === row.file_id)!;
+        expect((await provider.download(String(row.storage_path))).equals(f.bytes.get(transfer.id)!)).toBe(true);
+      }
+      await lease.dispose();
+      for (const row of lease.externalFiles) expect(await provider.exists(String(row.storage_path))).toBe(false);
+    }
+    for (const allowedMimeTypes of [[], ['image/*'], ['application/pdf']]) {
+      const provider = new LocalStorageProvider({ ...config, allowedMimeTypes }), upload = vi.spyOn(provider, 'upload');
+      await expect(stageCoManagedPortableWorkspaceFiles(prepared, provider)).rejects.toThrow('storage capabilities');
+      expect(upload).not.toHaveBeenCalled();
+    }
+  });
+});
+
 it('opens an authenticated archive, streams verified bytes to unique destination keys and releases ownership after caller commit', async () => {
   await diskFixture(async (f, root) => {
     const archiveContext = { packageId: context.packageId, sourceTenant: context.sourceTenant };

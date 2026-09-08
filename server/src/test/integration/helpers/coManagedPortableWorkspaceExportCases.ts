@@ -271,6 +271,21 @@ export function registerCoManagedPortableWorkspaceExportTests(getDb: () => Knex,
     expect(createProvider).toHaveBeenCalledTimes(1);
     // The real tsx child retains its own IPC/cache directory, not restore data.
     expect((await f.fs.readdir(f.root)).sort()).toEqual(['different.alga', 'operator.alga', `tsx-${process.getuid!()}`]);
+    const uncertainTenant = randomUUID(), transaction = db.transaction.bind(db);
+    const acknowledgement = vi.spyOn(db, 'transaction').mockImplementation(async (...args: any[]) => {
+      const result = await (transaction as any)(...args);
+      if (result?.inserted === true) throw new Error('Lost restore commit acknowledgement');
+      return result;
+    });
+    try {
+      await expect(restorePortableWorkspaceForInstallation(db, { ...input, destinationTenant: uncertainTenant }, {}, createProvider)).rejects.toThrow('Lost restore commit acknowledgement');
+    } finally { acknowledgement.mockRestore(); }
+    const committedFiles = await tenantDb(db, uncertainTenant).table('external_files').select('storage_path');
+    expect(committedFiles.length).toBeGreaterThan(0);
+    for (const file of committedFiles) expect(objects.has(file.storage_path)).toBe(true);
+    const beforeRetry = provider.upload.mock.calls.length;
+    expect(await restorePortableWorkspaceForInstallation(db, { ...input, destinationTenant: uncertainTenant }, {}, createProvider)).toMatchObject({ tenant: uncertainTenant });
+    expect(provider.upload).toHaveBeenCalledTimes(beforeRetry);
     await withLicenseFixture(async sign => {
       const { activatePortableWorkspaceWithTenantLicense: activate } = await import('../../../../../ee/server/src/lib/co-managed/portableWorkspaceActivation');
       const { verifyPassword } = await import('@alga-psa/core/encryption');

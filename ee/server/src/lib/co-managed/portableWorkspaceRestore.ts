@@ -127,6 +127,29 @@ export async function restorePortableWorkspaceForInstallation(db: Knex, input: {
           });
           if (result.inserted) lease.release();
           return result.receipt;
+        } catch (error) {
+          // COMMIT can succeed even when its acknowledgement is lost. Resolve
+          // the destination transaction before deleting attempt-owned objects.
+          // If the database is unavailable, retain the objects for recovery;
+          // guessing rollback could destroy files referenced by a live tenant.
+          try {
+            const retained = await db.transaction(async trx => {
+              await assertPortableRestoreInstallationAuthority(trx);
+              await trx.raw('SELECT pg_advisory_xact_lock(hashtextextended(?, 0))', [`portable-restore:${tenant}`]);
+              const own = tenantDb(trx, tenant);
+              for (let offset = 0; offset < lease.externalFiles.length; offset += 500) {
+                const files = lease.externalFiles.slice(offset, offset + 500);
+                const rows = await own.table('external_files').whereIn('file_id', files.map(file => String(file.file_id))).select('file_id', 'storage_path');
+                // Preserve the entire attempt if any object acquired a native
+                // reference. The normal insertion transaction is all-or-none.
+                const paths = new Set(files.map(file => String(file.storage_path)));
+                if (rows.some(row => paths.has(row.storage_path))) return true;
+              }
+              return false;
+            });
+            if (retained) lease.release();
+          } catch { lease.release(); }
+          throw error;
         } finally { await lease.dispose(); }
       });
     });

@@ -138,8 +138,10 @@ export async function stageCoManagedPortableWorkspaceFiles(preparedInput: Prepar
   const prepared = structuredClone(preparedInput);
   if (!isCoManagedUuid(prepared.destinationTenant) || !isCoManagedUuid(prepared.packageId)) fail();
   const capabilities = provider.getCapabilities();
-  if (!capabilities.supportsStreaming || prepared.transfers.some(file => file.size > capabilities.maxFileSize ||
-      capabilities.allowedMimeTypes?.length && !capabilities.allowedMimeTypes.includes(file.mimeType))) throw new Error('Portable restore files exceed storage capabilities');
+  const permitsMime = (mime: string) => capabilities.allowedMimeTypes === undefined || capabilities.allowedMimeTypes.some(allowed =>
+    allowed === '*/*' || (allowed.endsWith('/*') ? mime.startsWith(allowed.slice(0, -1)) : allowed === mime));
+  if (!capabilities.supportsStreaming || prepared.transfers.some(file =>
+      (capabilities.maxFileSize !== undefined && file.size > capabilities.maxFileSize) || !permitsMime(file.mimeType))) throw new Error('Portable restore files exceed storage capabilities');
   // Recheck all opened-archive local sources before making any provider write.
   for (const transfer of prepared.transfers) await verifySource(transfer);
   const attempt = randomUUID(), paths = new Set<string>(), externalFiles: NativeRow[] = [];
