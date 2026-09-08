@@ -15,6 +15,19 @@ async function controlPost(path: string, body?: unknown): Promise<any> {
   return response.json();
 }
 
+async function authorizeRealm(realmId: string, clientId = 'alga-app', clientSecret = 'alga-secret') {
+  const redirectUri = 'http://localhost/qbo/callback';
+  const response = await fetch(`${base}/connect/oauth2?${new URLSearchParams({ client_id: clientId, redirect_uri: redirectUri, realmId })}`, { redirect: 'manual' });
+  expect(response.status).toBe(302);
+  const callback = new URL(response.headers.get('location')!);
+  expect(callback.searchParams.get('realmId')).toBe(realmId);
+  const exchange = await fetch(`${base}/oauth2/v1/tokens/bearer`, { method: 'POST',
+    headers: { authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}`, 'content-type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ grant_type: 'authorization_code', code: callback.searchParams.get('code')!, redirect_uri: redirectUri }) });
+  expect(exchange.status).toBe(200);
+  return exchange.json();
+}
+
 function api(path: string): string {
   return `${base}/v3/company/realm-sim${path}`;
 }
@@ -178,14 +191,14 @@ describe('qbo emulator', { shuffle: false }, () => {
 
   it('records a company-local invoice edit and rejects stale re-export until the live token is read', async () => {
     await controlPost('/control/qbo/seed/client', { clientId: 'drift-app', clientSecret: 'drift-secret' });
-    const tokens = (await controlPost('/control/qbo/actions/mint-tokens', { clientId: 'drift-app' })).result;
-    const headers = { authorization: `Bearer ${tokens.access_token}`, 'content-type': 'application/json' };
     const realms = ['drift-selected', 'drift-unselected'];
     for (const realmId of realms) {
       await controlPost('/control/qbo/seed/realm', { realmId });
       const customer = (await controlPost('/control/qbo/seed/customer', { realmId, name: 'Drift customer' })).result;
       await controlPost('/control/qbo/seed/invoice', { realmId, customerId: customer.Id, amountCents: 27500, docNumber: 'ORIGINAL' });
     }
+    const tokens = await authorizeRealm(realms[0], 'drift-app', 'drift-secret');
+    const headers = { authorization: `Bearer ${tokens.access_token}`, 'content-type': 'application/json' };
     const entities = async (realmId: string) => (await controlPost('/control/qbo/actions/entities', { realmId, entityType: 'Invoice' })).result;
     const [original] = await entities(realms[0]);
     const other = await entities(realms[1]);
@@ -459,15 +472,18 @@ describe('qbo emulator', { shuffle: false }, () => {
       realmId: 'catalog-two', name: 'Different service', type: 'Service', unitPrice: 99,
     })).result;
     expect(first.Id).toBe(second.Id);
+    const catalogHeaders: Record<string, { authorization: string }> = {};
     for (const [realm, item] of [['catalog-one', first], ['catalog-two', second]] as const) {
-      const response = await fetch(`${base}/v3/company/${realm}/item/${item.Id}`, { headers: authed });
+      const tokens = await authorizeRealm(realm);
+      catalogHeaders[realm] = { authorization: `Bearer ${tokens.access_token}` };
+      const response = await fetch(`${base}/v3/company/${realm}/item/${item.Id}`, { headers: catalogHeaders[realm] });
       expect(response.status).toBe(200);
       expect(await response.json()).toEqual({ Item: item });
     }
-    const missing = await fetch(`${base}/v3/company/catalog-one/item/missing`, { headers: authed });
+    const missing = await fetch(`${base}/v3/company/catalog-one/item/missing`, { headers: catalogHeaders['catalog-one'] });
     expect(missing.status).toBe(400);
     expect((await missing.json()).Fault.Error[0].code).toBe('610');
-    const unsupported = await fetch(`${base}/v3/company/catalog-one/unmodeled/1`, { headers: authed });
+    const unsupported = await fetch(`${base}/v3/company/catalog-one/unmodeled/1`, { headers: catalogHeaders['catalog-one'] });
     expect(unsupported.status).toBe(400);
     expect((await unsupported.json()).Fault.Error[0].code).toBe('SIM_UNSUPPORTED');
   });
@@ -495,8 +511,7 @@ describe('qbo emulator', { shuffle: false }, () => {
   });
 
   it('hosts multiple company files whose colliding ids stay isolated per realm', async () => {
-    const minted = (await controlPost('/control/qbo/actions/mint-tokens', { clientId: 'alga-app' })).result;
-    const twoRealmAuthed = { authorization: `Bearer ${minted.access_token}`, 'content-type': 'application/json' };
+    const realmHeaders: Record<string, { authorization: string }> = {};
     const realmApi = (realm: string, path: string) => `${base}/v3/company/${realm}${path}`;
 
     // Two fresh company files seeded in the same order → colliding entity ids.
@@ -504,7 +519,27 @@ describe('qbo emulator', { shuffle: false }, () => {
     await controlPost('/control/qbo/seed/realm', { realmId: 'realm-two' });
 
     for (const realm of ['realm-one', 'realm-two']) {
-      const response = await fetch(realmApi(realm, `/companyinfo/${realm}`), { headers: twoRealmAuthed });
+      let tokens = await authorizeRealm(realm);
+      const wrongRealm = realm === 'realm-one' ? 'realm-two' : 'realm-one';
+      const deniedBeforeRefresh = await fetch(realmApi(wrongRealm, `/companyinfo/${wrongRealm}`), { headers: { authorization: `Bearer ${tokens.access_token}` } });
+      expect(deniedBeforeRefresh.status).toBe(403);
+      // Refresh must preserve the selected company boundary.
+      const refreshed = await fetch(`${base}/oauth2/v1/tokens/bearer`, { method: 'POST',
+        headers: { authorization: `Basic ${Buffer.from('alga-app:alga-secret').toString('base64')}`, 'content-type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ grant_type: 'refresh_token', refresh_token: tokens.refresh_token }) });
+      expect(refreshed.status).toBe(200);
+      tokens = await refreshed.json();
+      realmHeaders[realm] = { authorization: `Bearer ${tokens.access_token}` };
+      const denied = await fetch(realmApi(wrongRealm, `/companyinfo/${wrongRealm}`), { headers: realmHeaders[realm] });
+      expect(denied.status).toBe(403);
+      expect((await denied.json()).Fault.Error[0].code).toBe('SIM_REALM_MISMATCH');
+      const before = (await controlPost('/control/qbo/actions/entities', { realmId: wrongRealm, entityType: 'Customer' })).result;
+      const deniedWrite = await fetch(realmApi(wrongRealm, '/customer'), { method: 'POST',
+        headers: { ...realmHeaders[realm], 'content-type': 'application/json' }, body: JSON.stringify({ DisplayName: 'Wrong company write' }) });
+      expect(deniedWrite.status).toBe(403);
+      expect((await deniedWrite.json()).Fault.Error[0].code).toBe('SIM_REALM_MISMATCH');
+      expect((await controlPost('/control/qbo/actions/entities', { realmId: wrongRealm, entityType: 'Customer' })).result).toEqual(before);
+      const response = await fetch(realmApi(realm, `/companyinfo/${realm}`), { headers: realmHeaders[realm] });
       expect(response.status).toBe(200);
       expect((await response.json()).CompanyInfo.Id).toBe(realm);
     }
@@ -530,8 +565,8 @@ describe('qbo emulator', { shuffle: false }, () => {
       amountCents: 25_000,
       realmId: 'realm-two',
     });
-    const readA = (await (await fetch(realmApi('realm-one', `/invoice/${invoiceA.Id}`), { headers: twoRealmAuthed })).json()) as any;
-    const readB = (await (await fetch(realmApi('realm-two', `/invoice/${invoiceB.Id}`), { headers: twoRealmAuthed })).json()) as any;
+    const readA = (await (await fetch(realmApi('realm-one', `/invoice/${invoiceA.Id}`), { headers: realmHeaders['realm-one'] })).json()) as any;
+    const readB = (await (await fetch(realmApi('realm-two', `/invoice/${invoiceB.Id}`), { headers: realmHeaders['realm-two'] })).json()) as any;
     expect(readA.Invoice.Balance).toBe(100);
     expect(readB.Invoice.Balance).toBe(0);
 
@@ -542,7 +577,7 @@ describe('qbo emulator', { shuffle: false }, () => {
     expect(paymentsB).toHaveLength(1);
 
     // A realm with no company file still fails like Intuit does.
-    const unknown = await fetch(realmApi('realm-nope', `/invoice/${invoiceA.Id}`), { headers: twoRealmAuthed });
+    const unknown = await fetch(realmApi('realm-nope', `/invoice/${invoiceA.Id}`), { headers: realmHeaders['realm-one'] });
     expect(unknown.status).toBe(403);
     expect(((await unknown.json()) as any).Fault.Error[0].code).toBe('3202');
   });

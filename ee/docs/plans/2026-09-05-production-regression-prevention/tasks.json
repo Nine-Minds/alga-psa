@@ -396,6 +396,22 @@
       "dependsOn": [],
       "owner": "stripe_protocol and coordinator",
       "notes": "Shared workspace now declares existing locked @types/jsdom 21.1.7, and lock workspace entry matches. Isolated actual sanitizer compile reproduces TS7016 before and passes after real declarations. Full Temporal noEmit and manifest selection checks pass; clean image CI pending."
+    },
+    {
+      "id": "R047",
+      "title": "Classify browser metrics by triggering run while preserving existing columns",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "stripe_protocol and coordinator",
+      "notes": "Appends run_kind/event_name after original18 columns, shares standard classifier, and retains category on incomplete rows. Before-fix runtime regression reproduced;35 related native tests pass. External workbook view/readback and artifact identity remain pending."
+    },
+    {
+      "id": "R048",
+      "title": "Bind QBO grants to selected company and reject foreign operations",
+      "status": "in_progress",
+      "dependsOn": [],
+      "owner": "qbo_protocol and coordinator",
+      "notes": "Pre-fix real HTTP returned200 for wrong company. Grant binding persists through refresh; tests verify read/write403 and unchanged foreign entities, and independent company OAuth fixtures. Final default runs29/29 normally and with application dist hidden; typecheck passes. Two prior intermittent HTTP failures remain unexplained; currentCI required. SIM_REALM_MISMATCH is an explicit emulator guard, not verified Intuit denial parity."
     }
   ]
 }

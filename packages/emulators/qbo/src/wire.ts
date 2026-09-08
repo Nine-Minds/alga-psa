@@ -49,13 +49,12 @@ export function wire(router: Router, core: QboEmulatorCore, _env: HostEnv): void
     if (!clientId || !redirectUri) {
       throw new QboWireError(400, '3200', 'client_id and redirect_uri are required');
     }
-    const code = core.authorize(clientId, redirectUri);
     // Intuit's company picker equivalent: ?realmId=... on the request, else the
     // control-selected company, else the default realm. Must be a known realm.
     const chosenRealm = req.query.realmId
       ? String(req.query.realmId)
       : core.authorizeRealmId ?? core.realmId;
-    core.simFor(chosenRealm);
+    const code = core.authorize(clientId, redirectUri, chosenRealm);
     const callback = new URL(redirectUri);
     callback.searchParams.set('code', code);
     callback.searchParams.set('realmId', chosenRealm);
@@ -82,8 +81,13 @@ export function wire(router: Router, core: QboEmulatorCore, _env: HostEnv): void
   company.use((req, res, next) => {
     const bearer = String(req.headers.authorization ?? '').replace(/^Bearer\s+/i, '');
     res.locals.access = core.authenticate(bearer);
-    // Throws the Intuit-shaped 403 when the realm has no company file.
+    // Throws the existing 403 when the realm has no company file.
     res.locals.sim = core.simFor(String(req.params.realmId));
+    // Explicit emulator mismatch guard: the exact Intuit denial envelope is
+    // not independently verified. A grant cannot authorize a different company.
+    if (res.locals.access.realmId !== String(req.params.realmId)) {
+      throw new QboWireError(403, 'SIM_REALM_MISMATCH', 'Token does not authorize the requested company');
+    }
     next();
   });
 

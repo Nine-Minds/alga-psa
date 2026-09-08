@@ -45,7 +45,7 @@ export const DETAIL_HEADER = [
   'schema_version', 'run_kind', 'event_name', 'coverage_methodology',
 ];
 
-function runKind(env) {
+export function runKind(env) {
   switch (env.GITHUB_EVENT_NAME) {
     case undefined: case '': return 'local';
     case 'pull_request': case 'pull_request_target': return 'pr';

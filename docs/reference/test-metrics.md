@@ -54,7 +54,11 @@ creation and readback must be verified on the next candidate.
 The tab uses schema version 2. `row_kind=run` carries collected/executed totals
 once; `row_kind=journey` carries file/project/title identity, required/observed
 flags, outcome, first attempt and retry count. Both carry edition, full tested
-SHA, lane status and run URL. Missing, stale or wrong-edition evidence produces
+SHA, lane status and run URL. The appended `run_kind` and `event_name` columns
+(S:T) distinguish PR, main, nightly, branch, manual and local runs using the same
+classification as standard metrics. The original A:R columns retain their order;
+historical rows without a category remain unclassified. Incomplete runs retain
+their triggering event so they remain visible in the corresponding trend. Missing, stale or wrong-edition evidence produces
 an incomplete run row with unknown counts blank. Filter by `row_kind` before
 aggregating. A PR's tested SHA may be GitHub's merge commit, rather than its
 branch head; mismatches are rejected. Artifact identity remains blank until

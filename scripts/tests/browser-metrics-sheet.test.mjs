@@ -42,3 +42,35 @@ test('absent or stale browser evidence yields a visible incomplete run with unkn
     assert.equal(rows[0].tested_sha, revision);
   }
 });
+
+test('browser run and journey rows separate PR, main and nightly without moving legacy columns', () => {
+  assert.deepEqual(BROWSER_HEADER.slice(0, 18), ['timestamp_utc', 'schema_version', 'row_kind', 'tested_sha', 'edition',
+    'lane_status', 'run_url', 'collected', 'executed', 'project', 'file', 'journey', 'required',
+    'observed', 'outcome', 'first_attempt', 'retry_count', 'artifact_manifest']);
+  const metrics = { schemaVersion: 2, suite: 'production-browser', revision, status: 'passed',
+    configuration: { edition: 'enterprise' }, collected: 1, executed: 1, journeys: [{
+      identity: ['e2e-tests/tests/invoice.spec.ts', 'ee', 'enterprise', ['invoice']],
+      required: true, observed: true, outcome: 'expected', firstAttempt: 'passed', retryCount: 0,
+    }] };
+  for (const [event, branch, kind] of [
+    ['pull_request', '42/merge', 'pr'], ['push', 'main', 'main'], ['schedule', 'main', 'nightly'],
+    ['workflow_dispatch', 'main', 'manual'], ['push', 'feature', 'branch'], ['', '', 'local'],
+  ]) {
+    const rows = objects(browserRows(metrics, { ...context, env: { GITHUB_EVENT_NAME: event, GITHUB_REF_NAME: branch } }));
+    assert.equal(rows.length, 2);
+    for (const row of rows) {
+      assert.equal(row.run_kind, kind);
+      assert.equal(row.event_name, event);
+      assert.equal(row.lane_status, 'passed');
+    }
+  }
+});
+
+test('missing browser evidence remains incomplete in its original CI trend', () => {
+  const [row] = objects(browserRows(null, { ...context,
+    env: { GITHUB_EVENT_NAME: 'schedule', GITHUB_REF_NAME: 'main' } }));
+  assert.equal(row.lane_status, 'incomplete');
+  assert.equal(row.collected, '');
+  assert.equal(row.run_kind, 'nightly');
+  assert.equal(row.event_name, 'schedule');
+});

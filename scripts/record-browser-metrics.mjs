@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 import { readFileSync, appendFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
-import { appendRows, getAccessToken, parseServiceAccountKey } from './record-test-metrics.mjs';
+import { appendRows, getAccessToken, parseServiceAccountKey, runKind } from './record-test-metrics.mjs';
 
 export const BROWSER_HEADER = ['timestamp_utc', 'schema_version', 'row_kind', 'tested_sha', 'edition',
   'lane_status', 'run_url', 'collected', 'executed', 'project', 'file', 'journey', 'required',
-  'observed', 'outcome', 'first_attempt', 'retry_count', 'artifact_manifest'];
+  'observed', 'outcome', 'first_attempt', 'retry_count', 'artifact_manifest', 'run_kind', 'event_name'];
 
-export function browserRows(metrics, { revision = '', edition = '', runUrl = '', timestamp = new Date().toISOString() } = {}) {
+export function browserRows(metrics, { revision = '', edition = '', runUrl = '', timestamp = new Date().toISOString(), env = process.env } = {}) {
   const validJourney = journey => Array.isArray(journey?.identity) && journey.identity.length === 4
     && journey.identity.slice(0, 3).every(value => typeof value === 'string')
     && Array.isArray(journey.identity[3]) && journey.identity[3].every(value => typeof value === 'string')
@@ -21,17 +21,18 @@ export function browserRows(metrics, { revision = '', edition = '', runUrl = '',
       && metrics.journeys.length === metrics.collected && metrics.journeys.every(journey =>
         journey.required && journey.observed && journey.firstAttempt === 'passed' && journey.retryCount === 0 && journey.outcome === 'expected')));
   const status = valid ? metrics.status : 'incomplete';
+  const classification = [runKind(env), env.GITHUB_EVENT_NAME || ''];
   const base = [timestamp, 2, 'run', revision, edition, status, runUrl];
   const count = value => Number.isSafeInteger(value) && value >= 0 ? value : '';
   const artifact = valid && metrics.artifactManifest ? JSON.stringify(metrics.artifactManifest) : '';
   const rows = [[...base, valid ? count(metrics.collected) : '', valid ? count(metrics.executed) : '',
-    '', '', '', '', '', '', '', '', artifact]];
+    '', '', '', '', '', '', '', '', artifact, ...classification]];
   if (!valid) return rows;
   for (const journey of metrics.journeys) {
     const identity = journey.identity;
     rows.push([timestamp, 2, 'journey', revision, edition, status, runUrl, '', '', identity[2], identity[0],
       JSON.stringify(identity[3]), journey.required === true, journey.observed === true,
-      journey.outcome, journey.firstAttempt, count(journey.retryCount), '']);
+      journey.outcome, journey.firstAttempt, count(journey.retryCount), '', ...classification]);
   }
   return rows;
 }

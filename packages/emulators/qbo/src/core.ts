@@ -60,9 +60,9 @@ export class QboEmulatorCore implements EmulatorCore {
   accessTokenTtlSeconds = 3600;
   private readonly sims = new Map<string, QboSimulator>();
   private readonly clients = new Map<string, string>();
-  private readonly authCodes = new Map<string, { clientId: string; redirectUri: string }>();
-  private readonly accessTokens = new Map<string, { clientId: string; grantId: string; expiresAt: number }>();
-  private readonly refreshTokens = new Map<string, { clientId: string; grantId: string; revoked: boolean; expiresAt: number }>();
+  private readonly authCodes = new Map<string, { clientId: string; redirectUri: string; realmId: string }>();
+  private readonly accessTokens = new Map<string, { clientId: string; realmId: string; grantId: string; expiresAt: number }>();
+  private readonly refreshTokens = new Map<string, { clientId: string; realmId: string; grantId: string; revoked: boolean; expiresAt: number }>();
   private idCounter = 0;
 
   constructor(readonly env: HostEnv) {
@@ -148,12 +148,13 @@ export class QboEmulatorCore implements EmulatorCore {
     this.clients.set(clientId, clientSecret);
   }
 
-  authorize(clientId: string, redirectUri: string): string {
+  authorize(clientId: string, redirectUri: string, realmId = this.realmId): string {
+    this.simFor(realmId);
     if (!this.clients.has(clientId)) {
       throw new QboWireError(400, '3200', 'invalid_client');
     }
     const code = this.newId('code');
-    this.authCodes.set(code, { clientId, redirectUri });
+    this.authCodes.set(code, { clientId, redirectUri, realmId });
     return code;
   }
 
@@ -174,7 +175,7 @@ export class QboEmulatorCore implements EmulatorCore {
         throw new QboOAuthError(400, 'invalid_grant');
       }
       this.authCodes.delete(String(params.code));
-      return this.issueTokens(basicClientId);
+      return this.issueTokens(basicClientId, code.realmId);
     }
     if (params.grant_type === 'refresh_token') {
       const refresh = this.refreshTokens.get(String(params.refresh_token));
@@ -182,7 +183,7 @@ export class QboEmulatorCore implements EmulatorCore {
         throw new QboOAuthError(400, 'invalid_grant');
       }
       this.refreshTokens.delete(String(params.refresh_token));
-      return this.issueTokens(basicClientId, refresh.grantId);
+      return this.issueTokens(basicClientId, refresh.realmId, refresh.grantId);
     }
     throw new QboOAuthError(400, 'unsupported_grant_type');
   }
@@ -195,12 +196,12 @@ export class QboEmulatorCore implements EmulatorCore {
     return { ...this.issueTokens(clientId), realmId: this.realmId };
   }
 
-  private issueTokens(clientId: string, grantId = this.newId('grant')) {
+  private issueTokens(clientId: string, realmId = this.realmId, grantId = this.newId('grant')) {
     const accessToken = this.newId('access');
     const refreshToken = this.newId('refresh');
-    this.accessTokens.set(accessToken, { clientId, grantId, expiresAt: this.nowMs() + this.accessTokenTtlSeconds * 1000 });
+    this.accessTokens.set(accessToken, { clientId, realmId, grantId, expiresAt: this.nowMs() + this.accessTokenTtlSeconds * 1000 });
     this.refreshTokens.set(refreshToken, {
-      clientId, grantId, revoked: false, expiresAt: this.nowMs() + REFRESH_TOKEN_TTL_SECONDS * 1000,
+      clientId, realmId, grantId, revoked: false, expiresAt: this.nowMs() + REFRESH_TOKEN_TTL_SECONDS * 1000,
     });
     return {
       access_token: accessToken,
@@ -211,7 +212,7 @@ export class QboEmulatorCore implements EmulatorCore {
     };
   }
 
-  authenticate(bearerToken: string): { clientId: string } {
+  authenticate(bearerToken: string): { clientId: string; realmId: string } {
     const record = this.accessTokens.get(bearerToken);
     if (!record || record.expiresAt <= this.nowMs()) {
       throw new QboWireError(401, '3200', 'message=AuthenticationFailed; errorCode=003200');
