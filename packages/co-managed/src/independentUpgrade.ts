@@ -27,16 +27,20 @@ const receipt = (row: any): CoManagedIndependentUpgradeReceipt => ({ operationId
   relationshipId: row.relationship_id, closureOperationId: row.closure_operation_id, productCode: 'psa', seats: row.seats,
   upgradedAt: new Date(row.upgraded_at).toISOString() });
 
-/** Internal upgrade coordinator. The concrete adapter must retain the customer's
- * own paid entitlement and seed PSA capabilities in this transaction; it must
- * never perform a provider purchase or alter the MSP subscription here. */
-export async function upgradeCoManagedRelationship(db: Knex, inputActor: CoManagedSessionActor,
+interface UpgradeAdmission {
+  trx: Knex.Transaction; actor: CoManagedSessionActor; target: CoManagedPolicyTarget;
+  request: CoManagedIndependentUpgradeRequest; fingerprint: string;
+  customer: ReturnType<typeof tenantDb>; sponsor: ReturnType<typeof tenantDb>;
+  relationship: any; found: { sponsor_tenant: string }; previous: CoManagedIndependentUpgradeReceipt | null;
+}
+
+async function withUpgradeAdmission<T>(db: Knex, inputActor: CoManagedSessionActor,
   inputTarget: CoManagedPolicyTarget, input: CoManagedIndependentUpgradeRequest,
-  preparePsa: (trx: Knex.Transaction, tenant: string) => Promise<CoManagedIndependentEntitlement>): Promise<CoManagedIndependentUpgradeReceipt> {
+  work: (context: UpgradeAdmission) => Promise<T>): Promise<T> {
   const actor = snapshotCoManagedSessionActor(inputActor);
   if (!inputTarget || !input || ![inputTarget.customerTenant, inputTarget.relationshipId, input.operationId].every(isCoManagedUuid) ||
       !Number.isSafeInteger(input.expectedRevision) || input.expectedRevision < 1 || input.expectedRevision >= 2147483647 ||
-      typeof preparePsa !== 'function') throw new CoManagedIndependentUpgradeError('INVALID_UPGRADE');
+      typeof work !== 'function') throw new CoManagedIndependentUpgradeError('INVALID_UPGRADE');
   const target = { customerTenant: inputTarget.customerTenant, relationshipId: inputTarget.relationshipId };
   const request = { operationId: input.operationId, expectedRevision: input.expectedRevision };
   if (actor.tenant !== target.customerTenant) throw new CoManagedSharedWorkError();
@@ -58,12 +62,37 @@ export async function upgradeCoManagedRelationship(db: Knex, inputActor: CoManag
     const previous = await customer.table('co_managed_independent_upgrades').where('operation_id', request.operationId).first();
     if (previous) {
       if (previous.request_fingerprint !== fingerprint || owner.product_code !== 'psa') throw new CoManagedIndependentUpgradeError('UPGRADE_CHANGED');
-      await assertCoManagedSessionUnexpired(trx, actor);
-      return receipt(previous);
-    }
-    if (owner.product_code !== 'co_managed' || relationship.revision !== request.expectedRevision ||
+    } else if (owner.product_code !== 'co_managed' || relationship.revision !== request.expectedRevision ||
         !['active', 'terminated'].includes(relationship.state)) throw new CoManagedIndependentUpgradeError('UPGRADE_CHANGED');
+    const result = await work({ trx, actor, target, request, fingerprint, customer, sponsor, relationship, found,
+      previous: previous ? receipt(previous) : null });
+    await assertCoManagedSessionUnexpired(trx, actor);
+    return result;
+  });
+}
 
+/** Authenticated preparation for provider reads outside the transaction. This
+ * inspection cannot replace the final command's retained re-admission. */
+export function prepareCoManagedIndependentUpgrade<T>(db: Knex, actor: CoManagedSessionActor,
+  target: CoManagedPolicyTarget, request: CoManagedIndependentUpgradeRequest,
+  inspect: (trx: Knex.Transaction, tenant: string) => Promise<T>): Promise<
+    { kind: 'completed'; receipt: CoManagedIndependentUpgradeReceipt } | { kind: 'prepared'; value: T }> {
+  return withUpgradeAdmission(db, actor, target, request, async context => {
+    if (context.previous) return { kind: 'completed', receipt: context.previous };
+    return { kind: 'prepared', value: await inspect(context.trx, context.target.customerTenant) };
+  });
+}
+
+/** Internal upgrade coordinator. The concrete adapter must retain the customer's
+ * own paid entitlement and seed PSA capabilities in this transaction; it must
+ * never perform a provider purchase or alter the MSP subscription here. */
+export async function upgradeCoManagedRelationship(db: Knex, inputActor: CoManagedSessionActor,
+  inputTarget: CoManagedPolicyTarget, input: CoManagedIndependentUpgradeRequest,
+  preparePsa: (trx: Knex.Transaction, tenant: string) => Promise<CoManagedIndependentEntitlement>): Promise<CoManagedIndependentUpgradeReceipt> {
+  if (typeof preparePsa !== 'function') throw new CoManagedIndependentUpgradeError('INVALID_UPGRADE');
+  return withUpgradeAdmission(db, inputActor, inputTarget, input, async context => {
+    const { trx, actor, target, request, fingerprint, customer, sponsor, relationship, found, previous } = context;
+    if (previous) return previous;
     // Paid entitlement is verified by the runtime adapter under these retained
     // locks, including for license-paused and already-departed customers.
     const entitlement = await preparePsa(trx, target.customerTenant);

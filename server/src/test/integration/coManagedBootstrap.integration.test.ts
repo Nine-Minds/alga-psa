@@ -90,7 +90,7 @@ beforeAll(async () => {
     '20260906080000_create_co_management_relationship_events.cjs',
     '20260906100000_add_external_file_metadata.cjs',
     '20260906110000_add_kb_import_batch_identity.cjs',
-    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs', '20260908011054_add_co_managed_meeting_sync_intents.cjs', '20260908021208_create_co_managed_meeting_creation_operations.cjs', '20260908043851_allow_co_managed_assignment_before_escalation.cjs', '20260908050419_create_organization_sla_obligations.cjs', '20260908051552_create_co_managed_sla_priority_mappings.cjs', '20260908062358_create_organization_sla_notification_events.cjs', '20260908063356_create_organization_sla_notification_recipients.cjs', '20260908065525_add_organization_sla_email_retry_state.cjs', '20260908081909_create_co_managed_workflow_ticket_emails.cjs', '20260908084034_create_co_managed_time_work_references.cjs', '20260908091756_allow_co_managed_time_tracking.cjs', '20260908102610_create_co_managed_relationship_closures.cjs', '20260908103849_create_co_managed_participation_evidence.cjs', '20260908105022_allow_co_managed_time_participation.cjs', '20260908110522_retain_co_managed_conversation_participation.cjs', '20260908111943_create_co_managed_archive_files.cjs', '20260908115957_retain_co_managed_private_history.cjs', '20260908123721_create_co_managed_archive_manifests.cjs', '20260908124921_retain_co_managed_work_snapshots.cjs', '20260908131037_create_tenant_license_state.cjs', '20260908134800_create_co_managed_independent_upgrades.cjs']) {
+    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs', '20260908011054_add_co_managed_meeting_sync_intents.cjs', '20260908021208_create_co_managed_meeting_creation_operations.cjs', '20260908043851_allow_co_managed_assignment_before_escalation.cjs', '20260908050419_create_organization_sla_obligations.cjs', '20260908051552_create_co_managed_sla_priority_mappings.cjs', '20260908062358_create_organization_sla_notification_events.cjs', '20260908063356_create_organization_sla_notification_recipients.cjs', '20260908065525_add_organization_sla_email_retry_state.cjs', '20260908081909_create_co_managed_workflow_ticket_emails.cjs', '20260908084034_create_co_managed_time_work_references.cjs', '20260908091756_allow_co_managed_time_tracking.cjs', '20260908102610_create_co_managed_relationship_closures.cjs', '20260908103849_create_co_managed_participation_evidence.cjs', '20260908105022_allow_co_managed_time_participation.cjs', '20260908110522_retain_co_managed_conversation_participation.cjs', '20260908111943_create_co_managed_archive_files.cjs', '20260908115957_retain_co_managed_private_history.cjs', '20260908123721_create_co_managed_archive_manifests.cjs', '20260908124921_retain_co_managed_work_snapshots.cjs', '20260908131037_create_tenant_license_state.cjs', '20260908134800_create_co_managed_independent_upgrades.cjs', '20260908143941_retain_stripe_subscription_item_identity.cjs']) {
     await require('../../../migrations/' + file).up(db);
   }
   for (const table of ['standard_statuses', 'standard_priorities', 'countries', 'notification_categories',
@@ -19174,5 +19174,132 @@ it.each(['async', 'sync'])('session tier resolution uses the customer entitlemen
       expect(session.user).toMatchObject({ tenant: f.resource.tenant, effectiveTier: 'essentials' });
       expect(await resolveTenantTier(f.resource.tenant)).toBe('essentials');
     } finally { connection.mockRestore(); }
+  });
+});
+
+async function withHostedPsaUpgradeFixture(work: (f: any) => Promise<void>) {
+  const f = await ticketHandoffFixture();
+  const installation = await db('license_state');
+  await db('license_state').delete();
+  try {
+    const tenant = f.resource.tenant, catalogTenant = f.principal.tenant;
+    const productId = randomUUID(), priceId = randomUUID(), customerId = randomUUID(), subscriptionId = randomUUID();
+    const externalPrice = `price_${priceId}`, externalCustomer = `cus_${customerId}`, externalSubscription = `sub_${subscriptionId}`;
+    const itemId = `si_${randomUUID()}`, periodEnd = Math.floor(Date.now() / 1000) + 86400 * 30;
+    await f.sponsor.table('stripe_products').insert({ tenant: catalogTenant, stripe_product_id: productId,
+      stripe_product_external_id: `prod_${productId}`, name: 'PSA seats', product_type: 'license' });
+    await f.sponsor.table('stripe_prices').insert({ tenant: catalogTenant, stripe_price_id: priceId,
+      stripe_price_external_id: externalPrice, stripe_product_id: productId, unit_amount: 6500 });
+    await f.customer.table('stripe_customers').insert({ tenant, stripe_customer_id: customerId,
+      stripe_customer_external_id: externalCustomer, billing_tenant: catalogTenant, email: `${tenant}@example.test` });
+    await f.customer.table('stripe_subscriptions').insert({ tenant, stripe_subscription_id: subscriptionId,
+      stripe_subscription_external_id: externalSubscription, stripe_customer_id: customerId, stripe_price_id: priceId,
+      stripe_subscription_item_id: itemId, quantity: 4, status: 'active', current_period_end: new Date(periodEnd * 1000), metadata: { tenant_id: tenant } });
+    const providerCustomer = { id: externalCustomer, object: 'customer', metadata: { tenant_id: tenant } };
+    const providerSubscription = { id: externalSubscription, customer: externalCustomer, status: 'active',
+      metadata: { tenant_id: tenant }, ended_at: null, cancel_at: null, current_period_end: periodEnd,
+      items: { data: [{ id: itemId, quantity: 4, current_period_end: periodEnd,
+        price: { id: externalPrice, currency: 'usd', recurring: { interval: 'month', interval_count: 1, usage_type: 'licensed' } } }] },
+      latest_invoice: { id: `in_${randomUUID()}`, object: 'invoice', customer: externalCustomer,
+        subscription: externalSubscription, status: 'paid', amount_remaining: 0, currency: 'usd' } };
+    const stripe = { customers: { retrieve: vi.fn(async () => structuredClone(providerCustomer)) },
+      subscriptions: { retrieve: vi.fn(async () => structuredClone(providerSubscription)) } };
+    const { upgradeCoManagedWorkspaceWithHostedSubscription: upgrade, paidPsaUpgradeFromStripe: paid } =
+      await import('../../../../ee/temporal-workflows/src/db/co-managed-hosted-upgrade');
+    const relationship = await f.customer.table('co_management_relationships').first();
+    const request = { operationId: randomUUID(), expectedRevision: relationship.revision };
+    const prices = { month: externalPrice };
+    await work({ ...f, relationship, request, stripe, prices, providerCustomer, providerSubscription, subscriptionId, paid,
+      upgrade: () => upgrade(db, f.customerPrincipal, f.target, request, log, { stripe: stripe as any, prices }) });
+  } finally {
+    await db('license_state').delete();
+    if (installation.length) await db('license_state').insert(installation);
+  }
+}
+
+it('hosted PSA upgrade verifies its own paid subscription outside locks and preserves MSP billing and another allocation', async () => {
+  await withHostedPsaUpgradeFixture(async f => {
+    await f.sponsor.table('co_managed_entitlements').update({ capacity: 4 });
+    const clientId = randomUUID();
+    await f.sponsor.table('clients').insert({ tenant: f.principal.tenant, client_id: clientId, client_name: 'Another customer' });
+    const other = await prepareCoManagedProvisioning(db, { sponsorTenant: f.principal.tenant, clientId,
+      requestedBy: f.operation.requested_by, escalationBoardId: f.operation.escalation_board_id,
+      operationId: randomUUID(), seats: 2, visibilityMode: 'board_scope', workspaceName: 'Other customer',
+      administrator: { firstName: 'Another', lastName: 'Admin', email: `other-${randomUUID()}@example.test` } });
+    const otherAllocation = await f.sponsor.table('co_managed_allocations').where('customer_tenant', other.customer_tenant).first();
+    const ownSubscription = await f.customer.table('stripe_subscriptions').first();
+    await require('../../../migrations/20260908143941_retain_stripe_subscription_item_identity.cjs').up(db);
+    const sponsorSubscriptions = await f.sponsor.table('stripe_subscriptions');
+    const sponsorTenant = await f.sponsor.table('tenants').first(), entitlement = await f.sponsor.table('co_managed_entitlements').first();
+    const ticket = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+    f.stripe.customers.retrieve.mockImplementation(async () => {
+      // A different connection can acquire the owner lock while Stripe is pending.
+      await db.transaction(async trx => {
+        await trx.raw("SET LOCAL lock_timeout = '100ms'");
+        await tenantDb(trx, f.resource.tenant).table('tenants').forUpdate().first();
+      });
+      return structuredClone(f.providerCustomer);
+    });
+    const result = await f.upgrade();
+    expect(result).toMatchObject({ productCode: 'psa', seats: 4, operationId: f.request.operationId });
+    expect(await f.customer.table('tenants').first()).toMatchObject({ product_code: 'psa', plan: 'pro', billing_source: 'stripe', licensed_user_count: 4 });
+    expect(await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).toEqual(ticket);
+    expect(await f.customer.table('stripe_subscriptions').first()).toEqual(ownSubscription);
+    expect(await f.sponsor.table('stripe_subscriptions')).toEqual(sponsorSubscriptions);
+    expect(await f.sponsor.table('tenants').first()).toEqual(sponsorTenant);
+    expect(await f.sponsor.table('co_managed_entitlements').first()).toEqual(entitlement);
+    expect(await f.sponsor.table('co_managed_allocations').where('customer_tenant', other.customer_tenant).first()).toEqual(otherAllocation);
+    expect((await f.sponsor.table('co_managed_allocations').where('customer_tenant', f.resource.tenant).first()).state).toBe('released');
+    expect(await f.upgrade()).toEqual(result);
+    expect(f.stripe.customers.retrieve).toHaveBeenCalledTimes(1);
+    expect(f.stripe.subscriptions.retrieve).toHaveBeenCalledWith(ownSubscription.stripe_subscription_external_id, { expand: ['latest_invoice'] });
+    expect(f.stripe.subscriptions.retrieve).toHaveBeenCalledTimes(1);
+    expect(await f.sponsor.table('co_managed_relationship_closures').where('customer_tenant', f.resource.tenant)).toHaveLength(1);
+  });
+});
+
+it('hosted PSA upgrade rejects unpaid or foreign provider state and rechecks local billing and session after provider reads', async () => {
+  await withHostedPsaUpgradeFixture(async f => {
+    const { retainHostedPsaUpgradeCandidate } = await import('@alga-psa/licensing');
+    const candidate = await db.transaction(trx => retainHostedPsaUpgradeCandidate(trx, f.resource.tenant, Object.values(f.prices)));
+    const invalid: Array<(customer: any, subscription: any) => void> = [
+      c => { c.metadata.tenant_id = randomUUID(); },
+      c => { c.deleted = true; },
+      (_, s) => { s.status = 'trialing'; },
+      (_, s) => { s.customer = 'cus_foreign'; },
+      (_, s) => { s.metadata.tenant_id = randomUUID(); },
+      (_, s) => { s.metadata.subscription_kind = 'co_managed'; },
+      (_, s) => { s.latest_invoice.status = 'open'; },
+      (_, s) => { s.latest_invoice.subscription = 'sub_foreign'; },
+      (_, s) => { s.items.data[0].price.id = 'price_foreign'; },
+      (_, s) => { s.items.data[0].quantity = 99; },
+      (_, s) => { s.current_period_end = Math.floor(Date.now() / 1000) - 1; },
+    ];
+    for (const change of invalid) {
+      const customer = structuredClone(f.providerCustomer), subscription = structuredClone(f.providerSubscription);
+      change(customer, subscription);
+      expect(() => f.paid(candidate, customer, subscription, f.prices)).toThrow('PAID_ENTITLEMENT_REQUIRED');
+    }
+    const roles = await f.customer.table('roles');
+    const allocation = await f.sponsor.table('co_managed_allocations').where('customer_tenant', f.resource.tenant).first();
+    f.stripe.subscriptions.retrieve.mockImplementationOnce(async () => {
+      await f.customer.table('stripe_subscriptions').where('stripe_subscription_id', f.subscriptionId).update({ quantity: 5 });
+      return structuredClone(f.providerSubscription);
+    });
+    await expect(f.upgrade()).rejects.toMatchObject({ code: 'UPGRADE_CHANGED' });
+    await f.customer.table('stripe_subscriptions').where('stripe_subscription_id', f.subscriptionId).update({ quantity: 4 });
+    f.stripe.subscriptions.retrieve.mockImplementationOnce(async () => {
+      await f.customer.table('sessions').where('session_id', f.customerPrincipal.sessionId).update({ revoked_at: new Date() });
+      return structuredClone(f.providerSubscription);
+    });
+    await expect(f.upgrade()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    expect((await f.customer.table('tenants').first()).product_code).toBe('co_managed');
+    expect(await f.customer.table('roles')).toEqual(roles);
+    expect(await f.customer.table('co_management_relationships').first()).toEqual(f.relationship);
+    expect(await f.sponsor.table('co_managed_allocations').where('allocation_id', allocation.allocation_id).first()).toEqual(allocation);
+    expect(await f.customer.table('co_managed_independent_upgrades')).toHaveLength(0);
+    expect(await f.sponsor.table('co_managed_relationship_closures').where('customer_tenant', f.resource.tenant)).toHaveLength(0);
+    await f.customer.table('sessions').where('session_id', f.customerPrincipal.sessionId).update({ revoked_at: null });
+    expect((await f.upgrade()).productCode).toBe('psa');
   });
 });

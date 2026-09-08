@@ -21,3 +21,4 @@ export * from './lib/license-state';
 export * from './lib/tenant-tier';
 export * from './lib/tenant-license-state';
 export { LICENSE_PUBLIC_KEYS } from './lib/license-keys';
+export * from './lib/hosted-psa-upgrade';

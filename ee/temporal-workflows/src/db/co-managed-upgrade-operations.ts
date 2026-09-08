@@ -11,6 +11,7 @@ export function upgradeCoManagedWorkspaceWithTenantLicense(db: Knex, actor: CoMa
   target: CoManagedPolicyTarget, request: CoManagedIndependentUpgradeRequest, log: SeedRunLog) {
   return upgradeCoManagedRelationship(db, actor, target, request, async (trx, tenant) => {
     const entitlement = await retainTenantPsaLicense(trx, tenant);
+    // LEVERAGE: pattern independent-psa-backfills — both paid adapters retain the same PSA setup sequence.
     await backfillPsaSeeds(tenant, log, trx);
     await applyRbacDelta(tenant, log, trx);
     await backfillClientTaxDefaults(tenant, log, trx);
