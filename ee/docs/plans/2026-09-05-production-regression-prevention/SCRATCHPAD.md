@@ -2873,3 +2873,10 @@ Built3smallnativeemulatorbundles; accountinghostsession81018 QBO56105/Xero56106/
 - Current app53015 session23880 from /tmp/start-alga-upgrade-current-host.sh, same revision. Strict e2e-tests/run-upgrade.mjs session83127 exited0:3passed26.4s,0failed/flaky/skipped/interrupted/missing,clean sourcebefore/after. Raw schema/collection/execution/runner/verdict under test-results/supported-upgrade.
 - Evidence host-upgrade-current-source.json. F021/T016 now implemented: real populated baseline upgrade, exact business retention, ticket writes/read-write isolation, Add Usage and invoice behavior proven on matching current hostbuild. Global nativeCI/PRgreen and Citus remain incomplete; goal stays active.
 - Investigate build warning: ee/packages/workflows/src/runtime/bootstrap.ts imports inferWorkflowStructuredOutput from packages/ee service; source visibly exports function at208, so determine webpack alias selection before assuming missing implementation.
+
+### Workflow inference edition resolution defect repaired
+
+- Build warning traced to EE workflowInferenceService re-exporting packages/ee/src implementation while enterprise next.config aliases that absolute prefix back to ee/server/src, creating a self-resolution loop. Direct unit import of CE service missed this boundary.
+- Moved common inference algorithm to shared/workflow/services/workflowInferenceService.ts as factory with provider and credit-error dependencies; both edition wrappers explicitly supply their own dependencies. Shared runtime has no edition service imports (types only), so alias cannot redirect it into the wrapper.
+- Added behavioral EE provider selection test alongside existing schema-validation/retry tests. Old EE re-export gives Wrong edition provider (1failed4passed); fixed wrappers5passed. Test exercises actual EE service with provider response, not source strings.
+- Production bundle warning disappearance still needs verification. Existing current-source upgrade evidence predates this product change, so do not extend its revision claim.
