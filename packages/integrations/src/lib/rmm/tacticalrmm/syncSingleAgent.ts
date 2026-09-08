@@ -1,3 +1,4 @@
+import { assertTenantProductCapability } from '@shared/services/productAccessGuard';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { TacticalRmmClient, normalizeTacticalBaseUrl } from './tacticalApiClient';
@@ -72,6 +73,7 @@ export async function syncTacticalSingleAgentForTenant(args: {
   const agentId = String(args.agentId || '').trim();
   if (!agentId) return { updated: false, assetId: null };
 
+  await assertTenantProductCapability(tenant, 'rmm');
   const { knex } = await createTenantKnex();
   const scopedDb = tenantDb(knex, tenant);
   const secretProvider = await getSecretProviderInstance();

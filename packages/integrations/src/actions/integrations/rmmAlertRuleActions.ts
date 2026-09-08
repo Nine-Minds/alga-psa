@@ -1,5 +1,6 @@
 'use server';
 
+import { assertTenantProductCapability } from '@shared/services/productAccessGuard';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
@@ -99,6 +100,7 @@ export const listRmmAlertRules = withAuth(
     if (!(await hasPermission(user as any, 'system_settings', 'read'))) {
       return permissionFailure('Permission denied', 'msp/integrations:errors.rmm.permissions.read');
     }
+    await assertTenantProductCapability(tenant, 'rmm');
     const { knex } = await createTenantKnex();
     const rules = await tenantDb(knex, tenant).table('rmm_alert_rules')
       .where({ integration_id: input.integrationId })
@@ -112,6 +114,7 @@ export const createRmmAlertRule = withAuth(
     if (!(await hasPermission(user as any, 'system_settings', 'update'))) {
       return permissionFailure('Permission denied', 'msp/integrations:errors.rmm.permissions.update');
     }
+    await assertTenantProductCapability(tenant, 'rmm');
     const parsed = ruleInputSchema.safeParse(input);
     if (!parsed.success) {
       return validationFailure(parsed.error);
@@ -156,6 +159,7 @@ export const updateRmmAlertRule = withAuth(
     if (!(await hasPermission(user as any, 'system_settings', 'update'))) {
       return permissionFailure('Permission denied', 'msp/integrations:errors.rmm.permissions.update');
     }
+    await assertTenantProductCapability(tenant, 'rmm');
     const parsed = ruleInputSchema.omit({ integrationId: true }).partial().safeParse(input);
     if (!parsed.success) {
       return validationFailure(parsed.error);
@@ -188,6 +192,7 @@ export const deleteRmmAlertRule = withAuth(
     if (!(await hasPermission(user as any, 'system_settings', 'update'))) {
       return permissionFailure('Permission denied', 'msp/integrations:errors.rmm.permissions.update');
     }
+    await assertTenantProductCapability(tenant, 'rmm');
     const { knex } = await createTenantKnex();
     const deleted = await tenantDb(knex, tenant).table('rmm_alert_rules')
       .where({ rule_id: input.ruleId })
@@ -208,6 +213,7 @@ export const reorderRmmAlertRules = withAuth(
     if (!(await hasPermission(user as any, 'system_settings', 'update'))) {
       return permissionFailure('Permission denied', 'msp/integrations:errors.rmm.permissions.update');
     }
+    await assertTenantProductCapability(tenant, 'rmm');
     const { knex } = await createTenantKnex();
     await knex.transaction(async (trx) => {
       const ruleTable = tenantDb(trx, tenant).table('rmm_alert_rules');
@@ -235,6 +241,7 @@ export const listRmmMaintenanceWindows = withAuth(
     if (!(await hasPermission(user as any, 'system_settings', 'read'))) {
       return permissionFailure('Permission denied', 'msp/integrations:errors.rmm.permissions.read');
     }
+    await assertTenantProductCapability(tenant, 'rmm');
     const { knex } = await createTenantKnex();
     let query = tenantDb(knex, tenant).table('rmm_maintenance_windows').orderBy('created_at', 'desc');
     if (input?.integrationId) {
@@ -258,6 +265,7 @@ export const createRmmMaintenanceWindow = withAuth(
     if (!(await hasPermission(user as any, 'system_settings', 'update'))) {
       return permissionFailure('Permission denied', 'msp/integrations:errors.rmm.permissions.update');
     }
+    await assertTenantProductCapability(tenant, 'rmm');
     const parsed = windowInputSchema.safeParse(input);
     if (!parsed.success) {
       return validationFailure(parsed.error);
@@ -289,6 +297,7 @@ export const updateRmmMaintenanceWindow = withAuth(
     if (!(await hasPermission(user as any, 'system_settings', 'update'))) {
       return permissionFailure('Permission denied', 'msp/integrations:errors.rmm.permissions.update');
     }
+    await assertTenantProductCapability(tenant, 'rmm');
     const parsed = windowInputSchema.safeParse(input);
     if (!parsed.success) {
       return validationFailure(parsed.error);
@@ -331,6 +340,7 @@ export const getRmmAlertRuleFormOptions = withAuth(
     if (!(await hasPermission(user as any, 'system_settings', 'read'))) {
       return permissionFailure('Permission denied', 'msp/integrations:errors.rmm.permissions.read');
     }
+    await assertTenantProductCapability(tenant, 'rmm');
     const { knex } = await createTenantKnex();
     const db = tenantDb(knex, tenant);
     const [boards, priorities, closedStatuses, users, organizations] = await Promise.all([
@@ -365,6 +375,7 @@ export const getRmmAlertPollingSettings = withAuth(
     if (!(await hasPermission(user as any, 'system_settings', 'read'))) {
       return permissionFailure('Permission denied', 'msp/integrations:errors.rmm.permissions.read');
     }
+    await assertTenantProductCapability(tenant, 'rmm');
     const { knex } = await createTenantKnex();
     const integration = await tenantDb(knex, tenant).table('rmm_integrations')
       .where({ integration_id: input.integrationId })
@@ -395,6 +406,7 @@ export const updateRmmAlertPollingSettings = withAuth(
     if (!(await hasPermission(user as any, 'system_settings', 'update'))) {
       return permissionFailure('Permission denied', 'msp/integrations:errors.rmm.permissions.update');
     }
+    await assertTenantProductCapability(tenant, 'rmm');
     const intervalMinutes = Math.round(Number(input.intervalMinutes));
     if (!Number.isFinite(intervalMinutes) || intervalMinutes < 5 || intervalMinutes > 60) {
       return actionFailure(
@@ -439,6 +451,7 @@ export const deleteRmmMaintenanceWindow = withAuth(
     if (!(await hasPermission(user as any, 'system_settings', 'update'))) {
       return permissionFailure('Permission denied', 'msp/integrations:errors.rmm.permissions.update');
     }
+    await assertTenantProductCapability(tenant, 'rmm');
     const { knex } = await createTenantKnex();
     const deleted = await tenantDb(knex, tenant).table('rmm_maintenance_windows')
       .where({ window_id: input.windowId })
@@ -460,6 +473,7 @@ export const getRmmIntegrationIdByProvider = withAuth(
     if (!(await hasPermission(user as any, 'system_settings', 'read'))) {
       return permissionFailure('Permission denied', 'msp/integrations:errors.rmm.permissions.read');
     }
+    await assertTenantProductCapability(tenant, 'rmm');
     const { knex } = await createTenantKnex();
     const row = await tenantDb(knex, tenant).table('rmm_integrations')
       .where({ provider: input.provider })

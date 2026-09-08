@@ -2967,6 +2967,35 @@ async function withPolicyActionFixture(work: (fixture: Awaited<ReturnType<typeof
   } finally { spy.mockRestore(); }
 }
 
+it('co-managed admins cannot invoke excluded RMM actions or background engines despite settings permission', async () => withPolicyActionFixture(async f => {
+  const adminDb = await import('@alga-psa/db/admin'), secrets = await import('@alga-psa/core/secrets');
+  const adminConnection = vi.spyOn(adminDb, 'getAdminConnection').mockResolvedValue(db);
+  const secretRead = vi.fn(async () => 'fixture-webhook-secret');
+  const secretProvider = vi.spyOn(secrets, 'getSecretProviderInstance').mockResolvedValue({ getTenantSecret: secretRead } as any);
+  try {
+    const tactical = await import('../../../../packages/integrations/src/actions/integrations/tacticalRmmActions');
+    const status = await import('../../../../packages/integrations/src/actions/integrations/rmmIntegrationStatusActions');
+    const automation = await import('../../../../packages/integrations/src/actions/integrations/rmmAlertRuleActions');
+    const actions = Object.entries({ ...tactical, ...status, ...automation }).filter(([, action]) => typeof action === 'function');
+    expect(actions).toHaveLength(28);
+    for (const [name, action] of actions) await expect(f.asActor(f.actor, () => (action as any)({})), name)
+      .rejects.toMatchObject({ code: 'PRODUCT_ACCESS_DENIED', capability: 'rmm', productCode: 'co_managed' });
+    const { runTacticalRmmDeviceSync } = await import('../../../../packages/integrations/src/lib/rmm/tacticalrmm/deviceSync');
+    const { syncTacticalSingleAgentForTenant } = await import('../../../../packages/integrations/src/lib/rmm/tacticalrmm/syncSingleAgent');
+    await expect(runTacticalRmmDeviceSync({ tenant: f.actor.tenant })).rejects.toMatchObject({ code: 'PRODUCT_ACCESS_DENIED' });
+    await expect(syncTacticalSingleAgentForTenant({ tenant: f.actor.tenant, agentId: 'fixture-agent' })).rejects.toMatchObject({ code: 'PRODUCT_ACCESS_DENIED' });
+    expect(secretProvider).not.toHaveBeenCalled();
+    const { POST } = await import('../../app/api/webhooks/tacticalrmm/route');
+    const response = await POST(new Request(`http://fixture/api/webhooks/tacticalrmm?tenant=${f.actor.tenant}`, {
+      method: 'POST', headers: { 'X-Alga-Webhook-Secret': 'fixture-webhook-secret', 'content-type': 'application/json' }, body: JSON.stringify({ agent_id: 'fixture-agent' }),
+    }));
+    expect(response.status).toBe(403); expect(await response.json()).toMatchObject({ code: 'PRODUCT_ACCESS_DENIED' });
+    expect(secretRead).toHaveBeenCalledTimes(1);
+    expect(await tenantDb(db, f.actor.tenant).table('rmm_integrations')).toEqual([]);
+    expect(await runTacticalRmmDeviceSync({ tenant: f.operation.tenant })).toMatchObject({ success: false, error: expect.stringContaining('not configured') });
+  } finally { secretProvider.mockRestore(); adminConnection.mockRestore(); }
+}));
+
 describe('authenticated co-managed policy actions', () => {
   it('derives targets and principals from home context and exposes only authorized resource options', async () => withPolicyActionFixture(async ({
     actions, asActor, actor, sponsorActor, operation, customer, sponsor, roleId, permissionId,

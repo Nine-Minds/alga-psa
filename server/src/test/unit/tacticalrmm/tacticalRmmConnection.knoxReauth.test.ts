@@ -1,3 +1,5 @@
+vi.mock('@shared/services/productAccessGuard', () => ({ assertTenantProductCapability: vi.fn(async () => undefined), ProductAccessError: class extends Error {} }));
+
 import axios from 'axios';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
