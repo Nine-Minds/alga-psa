@@ -45,6 +45,10 @@ export default defineConfig({
       // to resolve @alga-psa/core/server.
       { find: /^@alga-psa\/core\/server$/, replacement: path.resolve(__dirname, '../core/src/server.ts') },
       { find: /^@alga-psa\/core\/(.*)$/, replacement: path.resolve(__dirname, '../core/src/lib/$1') },
+      // The generic db rule below maps subpaths straight into src, but the
+      // "./tenant" export lives at src/lib/tenant.ts (mirrors the package's
+      // exports map), so it needs resolving before the catch-all.
+      { find: /^@alga-psa\/db\/tenant$/, replacement: path.resolve(__dirname, '../db/src/lib/tenant.ts') },
       { find: /^@alga-psa\/db(.*)$/, replacement: path.resolve(__dirname, '../db/src$1') },
       { find: /^@alga-psa\/types(.*)$/, replacement: path.resolve(__dirname, '../types/src$1') },
       { find: /^@alga-psa\/ui(.*)$/, replacement: path.resolve(__dirname, '../ui/src$1') },

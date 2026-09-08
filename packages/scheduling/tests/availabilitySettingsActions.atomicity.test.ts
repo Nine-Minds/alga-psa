@@ -7,7 +7,7 @@ const hasPermissionMock = vi.hoisted(() => vi.fn());
 // Keep the REAL withTransaction so commit/rollback semantics are exercised
 // end-to-end instead of being replaced by a pass-through.
 vi.mock('@alga-psa/db', async () => {
-  const tenant = await vi.importActual<{ withTransaction: unknown }>('@alga-psa/db/lib/tenant');
+  const tenant = await vi.importActual<{ withTransaction: unknown }>('@alga-psa/db/tenant');
   return {
     createTenantKnex: createTenantKnexMock,
     tenantDb: tenantDbMock,
