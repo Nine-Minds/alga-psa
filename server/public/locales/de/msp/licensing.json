@@ -802,6 +802,19 @@
       "end": "Beziehung beenden",
       "loadError": "Diese Beziehung konnte nicht geladen werden. Aktualisieren Sie, um Ihren aktuellen Zugriff zu prüfen.",
       "endError": "Der Austritt konnte nicht bestätigt werden. Wiederholen Sie dieselbe Anfrage oder aktualisieren Sie, um den Abschluss zu prüfen."
+    },
+    "portableExport": {
+      "title": "Arbeitsbereich exportieren",
+      "description": "Laden Sie eine verschlüsselte Sicherung Ihres Kundenarbeitsbereichs herunter.",
+      "recovery": "Bewahren Sie die Wiederherstellungspassphrase sicher auf. Ohne sie lässt sich die Sicherung nicht öffnen.",
+      "connections": "Nach der Wiederherstellung müssen externe Konten neu verbunden und importierte Benutzer aktiviert werden.",
+      "passphrase": "Wiederherstellungspassphrase",
+      "confirmPassphrase": "Passphrase bestätigen",
+      "download": "Sicherung vorbereiten und herunterladen",
+      "requested": "Die Anfrage öffnet sich in einem neuen Tab. Die Vorbereitung kann einige Minuten dauern. Ihr Browser lädt die Datei herunter, sobald sie bereit ist.",
+      "loadError": "Ihre aktuellen Berechtigungen erlauben keinen Export dieses Arbeitsbereichs.",
+      "lengthError": "Verwenden Sie eine Passphrase mit 16 bis 1024 UTF-8-Bytes.",
+      "matchError": "Die Passphrasen müssen übereinstimmen."
     }
   }
 }

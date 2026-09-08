@@ -76,6 +76,9 @@ function DepartureContent({ operationId }: { operationId?: string }) {
           {screen.side === 'customer' && <Button id="co-departure-upgrade" variant="outline" asChild>
             <Link href="/msp/co-management/upgrade">{t('coManaged.upgrade.title')}</Link>
           </Button>}
+          {screen.side === 'customer' && <Button id="co-departure-export" variant="outline" asChild>
+            <Link href="/msp/co-management/export">{t('coManaged.portableExport.title')}</Link>
+          </Button>}
           {!screen.departed && <Button id="co-departure-review" variant="destructive" disabled={busy}
             onClick={() => setConfirm(true)}>{t('coManaged.departure.review')}</Button>}
         </>}

@@ -891,6 +891,19 @@
       "end": "End relationship",
       "loadError": "Unable to load this relationship. Refresh to check your current access.",
       "endError": "Unable to confirm departure. Retry the same request, or refresh to check whether it completed."
+    },
+    "portableExport": {
+      "title": "Export workspace",
+      "description": "Download an encrypted backup of your customer workspace.",
+      "recovery": "Keep the recovery passphrase somewhere safe. Without it, the backup cannot be opened.",
+      "connections": "Restoring requires reconnecting external accounts and activating imported users.",
+      "passphrase": "Recovery passphrase",
+      "confirmPassphrase": "Confirm recovery passphrase",
+      "download": "Prepare and download backup",
+      "requested": "Your request opens in a new tab. Preparation may take a few minutes; your browser will download the file when it is ready.",
+      "loadError": "You cannot export this workspace with your current access.",
+      "lengthError": "Use a passphrase between 16 and 1024 UTF-8 bytes.",
+      "matchError": "The recovery passphrases must match."
     }
   }
 }

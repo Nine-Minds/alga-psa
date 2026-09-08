@@ -802,6 +802,19 @@
       "end": "Relatie beëindigen",
       "loadError": "Deze relatie kon niet worden geladen. Vernieuw om uw huidige toegang te controleren.",
       "endError": "Het vertrek kon niet worden bevestigd. Probeer hetzelfde verzoek opnieuw of vernieuw om te controleren of het is voltooid."
+    },
+    "portableExport": {
+      "title": "Werkruimte exporteren",
+      "description": "Download een versleutelde back-up van uw klantwerkruimte.",
+      "recovery": "Bewaar de herstelwachtzin op een veilige plek. Zonder deze wachtzin kan de back-up niet worden geopend.",
+      "connections": "Na herstel moet u externe accounts opnieuw koppelen en geïmporteerde gebruikers activeren.",
+      "passphrase": "Herstelwachtzin",
+      "confirmPassphrase": "Herstelwachtzin bevestigen",
+      "download": "Back-up voorbereiden en downloaden",
+      "requested": "Uw aanvraag wordt in een nieuw tabblad geopend. De voorbereiding kan enkele minuten duren; uw browser downloadt het bestand zodra het klaar is.",
+      "loadError": "Met uw huidige rechten kunt u deze werkruimte niet exporteren.",
+      "lengthError": "Gebruik een wachtzin van 16 tot 1024 UTF-8-bytes.",
+      "matchError": "De herstelwachtzinnen moeten overeenkomen."
     }
   }
 }

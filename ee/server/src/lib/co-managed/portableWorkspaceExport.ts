@@ -18,6 +18,7 @@ import { buildCoManagedPortableWorkspaceManifest } from '../../../../../packages
 import type { PortableStagedBlob } from '../../../../../packages/co-managed/src/portableBlobStaging';
 import { exportCoManagedPortableVault } from './portableVaultExport';
 import { exportCoManagedPortableRemoteMeetingFiles } from './portableRemoteMeetingExport';
+import { acquirePortableDownload } from '../../../../../packages/co-managed/src/portableDownload';
 
 interface SourceLease { files: PortableStagedBlob[]; dispose(): Promise<void>; assertCurrent(trx: Knex.Transaction): Promise<void> }
 const recordCollectors = {
@@ -55,9 +56,10 @@ export interface CoManagedPortableWorkspaceArtifact {
  * consume() re-enters ONE fresh transaction and retains all current source and
  * native authorization locks before exposing the encrypted local file. Its
  * trusted callback must finish local-file consumption before resolving; it must
- * not perform provider I/O or return a lazy path-based stream. A future public
- * streaming route needs an explicit ownership/linearization contract to avoid
- * retaining database locks throughout a long download. Always dispose unused
+ * not perform provider I/O or return a lazy path-based stream. acquireDownload
+ * is the dedicated descriptor-transfer boundary: it opens the encrypted file
+ * under admission, then streams only after transaction commit without retaining
+ * database locks. The descriptor closes on EOF/cancel/error. Always dispose unused
  * handles. No passphrase is retained by the returned handle or sent to a job. */
 export async function prepareCoManagedPortableWorkspaceExport(db: Knex, inputActor: CoManagedSessionActor, passphrase: string) {
   if (db.isTransaction) throw new Error('Portable export requires a root database connection');
@@ -115,7 +117,8 @@ export async function prepareCoManagedPortableWorkspaceExport(db: Knex, inputAct
       pending = operation;
       return operation;
     };
-    return { packageId, capturedAt: capture.context.capturedAt, size: sealed.size, sha256: sealed.sha256, consume, dispose };
+    return { packageId, capturedAt: capture.context.capturedAt, size: sealed.size, sha256: sealed.sha256, consume,
+      acquireDownload: (signal?: AbortSignal) => acquirePortableDownload(consume, signal), dispose };
   } catch (error) { await disposeAll([...leases, ...(archive ? [archive] : [])]); throw error; }
   finally { passphrase = ''; }
 }

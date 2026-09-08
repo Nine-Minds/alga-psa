@@ -3,6 +3,10 @@ import { describe, expect, it } from 'vitest';
 import { shouldSkipApiKeyAuth } from 'server/src/middleware';
 
 describe('shouldSkipApiKeyAuth', () => {
+  it('lets only the co-managed browser export and file routes perform their tracked session admission', () => {
+    for (const path of ['/api/co-management/export', '/api/co-management/attachments/file-id', '/api/co-management/archive-files/file-id']) expect(shouldSkipApiKeyAuth(path)).toBe(true);
+    for (const path of ['/api/co-management/export-admin', '/api/co-management/export/extra', '/api/co-management/attachments/file-id/extra', '/api/co-management/unknown']) expect(shouldSkipApiKeyAuth(path)).toBe(false);
+  });
   it('allows SCIM routes to perform Bearer authentication in the route handler', () => {
     expect(shouldSkipApiKeyAuth('/api/scim/v2/connection-id/Users')).toBe(true);
     expect(shouldSkipApiKeyAuth('/api/scim-malicious/v2/connection-id/Users')).toBe(false);

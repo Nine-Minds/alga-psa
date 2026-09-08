@@ -804,6 +804,19 @@
       "end": "Terminar relação",
       "loadError": "Não foi possível carregar esta relação. Atualize para verificar o seu acesso atual.",
       "endError": "Não foi possível confirmar a saída. Repita o mesmo pedido ou atualize para verificar se foi concluído."
+    },
+    "portableExport": {
+      "title": "Exportar espaço de trabalho",
+      "description": "Transfira uma cópia de segurança encriptada do seu espaço de cliente.",
+      "recovery": "Guarde a frase de recuperação num local seguro. Sem ela, não é possível abrir a cópia.",
+      "connections": "O restauro exige voltar a ligar as contas externas e ativar os utilizadores importados.",
+      "passphrase": "Frase de recuperação",
+      "confirmPassphrase": "Confirmar frase de recuperação",
+      "download": "Preparar e transferir cópia",
+      "requested": "O pedido abre num novo separador. A preparação pode demorar alguns minutos; o navegador transfere o ficheiro quando estiver pronto.",
+      "loadError": "As suas permissões atuais não permitem exportar este espaço.",
+      "lengthError": "Use uma frase entre 16 e 1024 bytes UTF-8.",
+      "matchError": "As frases de recuperação têm de ser iguais."
     }
   }
 }

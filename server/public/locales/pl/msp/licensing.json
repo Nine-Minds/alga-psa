@@ -806,6 +806,19 @@
       "end": "Zakończ relację",
       "loadError": "Nie można załadować tej relacji. Odśwież, aby sprawdzić bieżący dostęp.",
       "endError": "Nie można potwierdzić zakończenia. Ponów to samo żądanie lub odśwież, aby sprawdzić, czy zostało ukończone."
+    },
+    "portableExport": {
+      "title": "Eksportuj przestrzeń roboczą",
+      "description": "Pobierz zaszyfrowaną kopię zapasową przestrzeni klienta.",
+      "recovery": "Przechowuj hasło odzyskiwania w bezpiecznym miejscu. Bez niego nie można otworzyć kopii.",
+      "connections": "Przywracanie wymaga ponownego połączenia kont zewnętrznych i aktywacji zaimportowanych użytkowników.",
+      "passphrase": "Hasło odzyskiwania",
+      "confirmPassphrase": "Potwierdź hasło odzyskiwania",
+      "download": "Przygotuj i pobierz kopię",
+      "requested": "Żądanie otworzy się w nowej karcie. Przygotowanie może potrwać kilka minut; przeglądarka pobierze plik, gdy będzie gotowy.",
+      "loadError": "Obecne uprawnienia nie pozwalają wyeksportować tej przestrzeni.",
+      "lengthError": "Użyj hasła o długości od 16 do 1024 bajtów UTF-8.",
+      "matchError": "Hasła odzyskiwania muszą być identyczne."
     }
   }
 }

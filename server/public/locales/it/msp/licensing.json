@@ -804,6 +804,19 @@
       "end": "Termina relazione",
       "loadError": "Impossibile caricare questa relazione. Aggiorna per verificare il tuo accesso attuale.",
       "endError": "Impossibile confermare l’uscita. Riprova la stessa richiesta o aggiorna per verificare se è stata completata."
+    },
+    "portableExport": {
+      "title": "Esporta area di lavoro",
+      "description": "Scarica un backup crittografato della tua area cliente.",
+      "recovery": "Conserva la passphrase di recupero in un luogo sicuro. Senza di essa non è possibile aprire il backup.",
+      "connections": "Il ripristino richiede di ricollegare gli account esterni e attivare gli utenti importati.",
+      "passphrase": "Passphrase di recupero",
+      "confirmPassphrase": "Conferma passphrase di recupero",
+      "download": "Prepara e scarica backup",
+      "requested": "La richiesta si apre in una nuova scheda. La preparazione può richiedere alcuni minuti; il browser scaricherà il file quando sarà pronto.",
+      "loadError": "I tuoi permessi attuali non consentono di esportare questa area.",
+      "lengthError": "Usa una passphrase tra 16 e 1024 byte UTF-8.",
+      "matchError": "Le passphrase di recupero devono coincidere."
     }
   }
 }

@@ -189,6 +189,9 @@ const apiKeySkipPaths = [
 
 export function shouldSkipApiKeyAuth(pathname: string): boolean {
   return apiKeySkipPaths.some((path) => pathname.startsWith(path)) ||
+    // These co-managed browser routes bind and revalidate the tracked home session in-handler.
+    pathname === '/api/co-management/export' ||
+    /^\/api\/co-management\/(attachments|archive-files)\/[^/]+$/.test(pathname) ||
     (pathname.startsWith('/api/tickets/') && pathname.endsWith('/live-token')) ||
     (pathname.startsWith('/api/documents/') &&
       (pathname.endsWith('/thumbnail') || pathname.endsWith('/preview') ||

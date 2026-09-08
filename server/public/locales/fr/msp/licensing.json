@@ -804,6 +804,19 @@
       "end": "Mettre fin à la relation",
       "loadError": "Impossible de charger cette relation. Actualisez pour vérifier votre accès actuel.",
       "endError": "Impossible de confirmer le départ. Réessayez la même demande ou actualisez pour vérifier si elle a abouti."
+    },
+    "portableExport": {
+      "title": "Exporter l’espace de travail",
+      "description": "Téléchargez une sauvegarde chiffrée de votre espace client.",
+      "recovery": "Conservez la phrase secrète de récupération en lieu sûr. Sans elle, la sauvegarde ne peut pas être ouverte.",
+      "connections": "La restauration nécessite de reconnecter les comptes externes et d’activer les utilisateurs importés.",
+      "passphrase": "Phrase secrète de récupération",
+      "confirmPassphrase": "Confirmer la phrase secrète",
+      "download": "Préparer et télécharger la sauvegarde",
+      "requested": "Votre demande s’ouvre dans un nouvel onglet. La préparation peut prendre quelques minutes ; votre navigateur téléchargera le fichier lorsqu’il sera prêt.",
+      "loadError": "Vos droits actuels ne permettent pas d’exporter cet espace.",
+      "lengthError": "Utilisez une phrase secrète de 16 à 1024 octets UTF-8.",
+      "matchError": "Les phrases secrètes doivent être identiques."
     }
   }
 }

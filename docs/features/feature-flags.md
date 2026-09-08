@@ -338,3 +338,6 @@ const isEnabled = typeof featureFlag === 'boolean' ? featureFlag : featureFlag?.
 - Service Types and Service Catalog remain accessible regardless of billing feature flag
 
 The co-managed independent upgrade entry and `/msp/co-management/upgrade` screen use the existing `release-v1-6-feature` client boundary. Upgrade actions, readiness reads, workflow scheduling and worker execution do not evaluate this release flag.
+
+
+The co-managed portable export page at `/msp/co-management/export` and its entry links use the existing client `CoManagedFeatureBoundary`. Its screen action and `/api/co-management/export` handler enforce normal customer authorization independently of `release-v1-6-feature`; disabling the flag does not disable authorized backend export.
