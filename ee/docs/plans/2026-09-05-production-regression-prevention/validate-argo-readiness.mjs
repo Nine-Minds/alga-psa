@@ -1,5 +1,7 @@
-import { readFileSync } from 'node:fs';
-import { execFileSync } from 'node:child_process';
+import { readFileSync, writeFileSync, mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, dirname } from 'node:path';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { SourceTextModule, SyntheticModule, createContext } from 'node:vm';
 import assert from 'node:assert/strict';
 import test from 'node:test';
@@ -38,4 +40,20 @@ test('resolves once and emits only the exact successful source SHA', async () =>
 });
 for (const mode of ['failed', 'missing', 'repo', 'sha', 'http']) test(`does not emit deployable SHA on ${mode}`, async () => {
   const x = await execute(mode); assert.ok(x.error); assert.equal(x.writes.has('/tmp/verified-commit-sha'), false);
+});
+
+// Argo appends an extensionless script filename to this command. Exercise the
+// actual invocation as well as VM fixtures so invalid Node flags cannot pass.
+test('Argo file invocation reaches repository validation', () => {
+  const command = JSON.parse(execFileSync('yq', ['-o=json', '.spec.templates[] | select(.name == "verify-source-readiness") | .script.command', process.argv[2]], { encoding: 'utf8' }));
+  const directory = mkdtempSync(join(tmpdir(), 'argo-readiness-command-'));
+  try {
+    const path = join(directory, 'script');
+    writeFileSync(path, source);
+    const result = spawnSync(command[0], [...command.slice(1), path], {
+      env: { ...process.env, PATH: `${dirname(process.execPath)}:${process.env.PATH}`, SOURCE_REPO_URL: 'https://example.invalid/untrusted.git', GITHUB_TOKEN: '' }, encoding: 'utf8', timeout: 5000,
+    });
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /Source repository must match the readiness repository/);
+  } finally { rmSync(directory, { recursive: true, force: true }); }
 });

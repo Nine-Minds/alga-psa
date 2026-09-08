@@ -89,7 +89,7 @@
 +        path: /tmp/source-readiness.json
 +    script:
 +      image: node:22-alpine
-+      command: [node, --input-type=module]
++      command: [sh, -c, 'exec node --input-type=module < "$0"']
 +      env:
 +      - name: SOURCE_REF
 +        value: "{{inputs.parameters.source-ref}}"

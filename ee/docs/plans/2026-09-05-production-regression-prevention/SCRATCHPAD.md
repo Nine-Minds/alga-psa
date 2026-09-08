@@ -2698,3 +2698,8 @@ Next external edit must require this check on the resolved full commit before BO
 ### Wire readiness into the actual local Argo publisher
 
 Applied argo-source-readiness.patch to the local nm-kube-config app builder after offline lint. First task resolves source once and verifies published native readiness using consumer-pinned verifier885f4e7882; only success emits SHA. Both cache lookup and checkout depend on it and consume that SHA, including fast-path pipeline output. Removed echo-only run-tests task. Composite/manual approval unchanged. External unrelated changes preserved; no cluster application or publication. Six host behavioral cases execute actual YAML script with real verifier against controlled API responses, all pass. Durable validator and rollout prerequisite documented in argo-source-readiness.md. Native runs, immutable component/promotion binding and real preview smoke remain open; F020 remains false. No Docker builds.
+
+
+### Argo process invocation regression
+
+Actual filename invocation exposed ERR_INPUT_TYPE_NOT_ALLOWED, missed by VM-only tests. Replaced direct Node filename command with sh stdin redirection, retaining explicit ES module parsing without version-specific default-module flags. Added real subprocess case using command extracted from YAML and extensionless script file: red before, green after. All7 behavioral cases and offline Argo lint pass on host Node25. No Docker, publication or cluster application. The container remains Node22; native execution remains unproven.
