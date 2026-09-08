@@ -231,8 +231,13 @@ change type and expiry determine delivery; mail and calendar notifications are
 separate. Failed callbacks remain visible in control results and redirects are
 not followed. The emulator does not automatically retry failed deliveries.
 
-This delta model handles single-instance UTC events. It rejects recurrence
-expansion, non-UTC timezone conversion and unsupported query options explicitly.
+This delta model handles single-instance UTC and IANA-zone events. Explicit
+ISO offsets identify instants; offset-free event dates use the supplied zone,
+including its winter/summer offset. Delta responses normalize dates to UTC
+without mutating vendor state. Windows timezone names, ambiguous/nonexistent
+local times, recurrence expansion and unsupported query options remain explicit
+model limitations; refusal does not claim Graph rejects those cases. The separate
+legacy event-list filter still models UTC values only.
 It reports deletions for previously tracked events; it does not reproduce Graph's
 optional tombstones for unrelated changes outside the window. Tokens are bound
 to the OAuth client, but the single-mailbox model does not establish Entra user
@@ -241,7 +246,7 @@ subscription code still requires HTTPS: provide a trusted test callback endpoint
 instead of disabling that check. Browser configuration, callback persistence and
 worker synchronization require their own full application journey.
 
-Protocol reference: [Microsoft calendar-view delta](https://learn.microsoft.com/en-us/graph/api/event-delta?view=graph-rest-1.0).
+Protocol references: [Graph dateTimeTimeZone](https://learn.microsoft.com/en-us/graph/api/resources/datetimetimezone?view=graph-rest-1.0) and [Microsoft calendar-view delta](https://learn.microsoft.com/en-us/graph/api/event-delta?view=graph-rest-1.0).
 
 ### Teams meetings and recordings
 

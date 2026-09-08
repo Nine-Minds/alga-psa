@@ -1,3 +1,4 @@
+import { Temporal } from '@js-temporal/polyfill';
 import type { EmulatorCore, HostEnv } from '@alga-psa/emulator-host';
 
 /** Vendor-shaped error the wire shell turns into an HTTP response. */
@@ -1071,15 +1072,23 @@ export class MsGraphCore implements EmulatorCore {
     if (!Number.isFinite(start) || !Number.isFinite(end) || start >= end || !Number.isInteger(pageSize) || pageSize < 1 || pageSize > 1000) {
       throw new GraphApiError(400, { error: { code: 'InvalidArgument', message: 'Provide an ordered date window and page size from 1 to 1000' } });
     }
-    const utcTime = (value: unknown) => {
+    const eventTime = (value: unknown) => {
       const date = value as { dateTime?: string; timeZone?: string } | null;
-      if (date?.timeZone && date.timeZone !== 'UTC') {
-        throw new GraphApiError(400, { error: { code: 'Request_UnsupportedQuery', message: 'Non-UTC calendar delta is not modeled' } });
+      let zone: Temporal.TimeZone;
+      try { zone = Temporal.TimeZone.from(date?.timeZone || 'UTC') as Temporal.TimeZone; }
+      catch {
+        throw new GraphApiError(400, { error: { code: 'Request_UnsupportedQuery', message: 'Calendar delta requires a supported IANA timezone or UTC' } });
       }
-      const dateTime = date?.dateTime ?? '';
-      const time = Date.parse(/(?:Z|[+-]\d{2}:\d{2})$/i.test(dateTime) ? dateTime : `${dateTime}Z`);
-      if (!Number.isFinite(time)) throw new GraphApiError(400, { error: { code: 'InvalidArgument', message: 'Invalid event date' } });
-      return time;
+      try {
+        const text = date?.dateTime ?? '';
+        // Explicit offsets identify an instant. Offset-free dateTime values are
+        // wall clocks in the supplied zone, never in the host machine timezone.
+        return /(?:Z|[+-]\d{2}:\d{2})$/i.test(text)
+          ? Temporal.Instant.from(text).epochMilliseconds
+          : Temporal.PlainDateTime.from(text).toZonedDateTime(zone, { disambiguation: 'reject' }).epochMilliseconds;
+      } catch {
+        throw new GraphApiError(400, { error: { code: 'InvalidArgument', message: 'Invalid or ambiguous calendar event date' } });
+      }
     };
     const fingerprints = new Map<string, string>();
     const items: CalendarDeltaItem[] = [];
@@ -1088,10 +1097,18 @@ export class MsGraphCore implements EmulatorCore {
       if (event.recurrence) throw new GraphApiError(400, { error: { code: 'Request_UnsupportedQuery', message: 'Recurring calendar delta is not modeled' } });
       // calendarView includes events overlapping its window, not only those
       // entirely contained in it.
-      if (utcTime(event.start) >= end || utcTime(event.end) <= start) continue;
+      const eventStart = eventTime(event.start);
+      const eventEnd = eventTime(event.end);
+      if (eventStart >= end || eventEnd <= start) continue;
       const fingerprint = JSON.stringify(event);
       fingerprints.set(event.id, fingerprint);
-      if (previous?.fingerprints.get(event.id) !== fingerprint) items.push(structuredClone(event));
+      if (previous?.fingerprints.get(event.id) !== fingerprint) items.push({
+        ...structuredClone(event),
+        // Graph calendarView/delta defaults response dates to UTC. Keep stored
+        // vendor state intact so token comparisons track actual source edits.
+        start: { dateTime: new Date(eventStart).toISOString(), timeZone: 'UTC' },
+        end: { dateTime: new Date(eventEnd).toISOString(), timeZone: 'UTC' },
+      });
     }
     for (const id of previous?.fingerprints.keys() ?? []) {
       if (!fingerprints.has(id)) items.push({ id, '@removed': { reason: 'deleted' } });

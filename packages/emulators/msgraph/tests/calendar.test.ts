@@ -276,3 +276,45 @@ it('reports mailbox callback connection failures without losing the message', as
   expect(replay.deliveries).toEqual([expect.objectContaining({ delivered: false, status: null, error: expect.any(String) })]);
   expect((await (await graph(`/me/messages/${message.id}`)).json()).id).toBe(message.id);
 });
+
+
+it.each([
+  ['2026-09-20T06:00:00', '2026-09-20T07:00:00', 'America/New_York'],
+  ['2026-09-20T10:00:00.000Z', '2026-09-20T11:00:00.000Z', 'America/New_York'],
+  ['2026-09-20T06:00:00-04:00', '2026-09-20T07:00:00-04:00', 'America/New_York'],
+])('tracks timezone event corrections and deletion through delta (%s)', async (start, end, zone) => {
+  const createdResponse = await graph('/me/calendar/events', 'POST', {
+    ...event, start: { dateTime: start, timeZone: zone }, end: { dateTime: end, timeZone: zone },
+  });
+  expect(createdResponse.status).toBe(201);
+  const created = await createdResponse.json();
+  const initial = await delta();
+  expect(initial.value).toEqual([expect.objectContaining({ id: created.id,
+    start: { dateTime: '2026-09-20T10:00:00.000Z', timeZone: 'UTC' },
+    end: { dateTime: '2026-09-20T11:00:00.000Z', timeZone: 'UTC' },
+  })]);
+  expect((await graph(`/me/calendar/events/${created.id}`, 'PATCH', { subject: 'Vendor correction' })).status).toBe(200);
+  const changed = await delta(initial['@odata.deltaLink']);
+  expect(changed.value).toEqual([expect.objectContaining({ id: created.id, subject: 'Vendor correction' })]);
+  expect((await graph(`/me/calendar/events/${created.id}`, 'DELETE')).status).toBe(204);
+  expect((await delta(changed['@odata.deltaLink'])).value).toEqual([{ id: created.id, '@removed': { reason: 'deleted' } }]);
+});
+
+it('uses the winter IANA offset when selecting the delta window', async () => {
+  const created = await (await graph('/me/calendar/events', 'POST', {
+    ...event, start: { dateTime: '2026-01-20T10:00:00', timeZone: 'America/New_York' },
+    end: { dateTime: '2026-01-20T11:00:00', timeZone: 'America/New_York' },
+  })).json();
+  const result = await delta(`${base}/v1.0/me/calendarView/delta?startDateTime=2026-01-20T15:00:00Z&endDateTime=2026-01-20T16:00:00Z`);
+  expect(result.value).toEqual([expect.objectContaining({ id: created.id,
+    start: { dateTime: '2026-01-20T15:00:00.000Z', timeZone: 'UTC' },
+  })]);
+});
+it.each(['2026-03-08T02:30:00', '2026-11-01T01:30:00'])('refuses to guess an ambiguous or nonexistent local instant (%s)', async dateTime => {
+  await graph('/me/calendar/events', 'POST', {
+    ...event, start: { dateTime, timeZone: 'America/New_York' },
+  });
+  const response = await graph(deltaWindow);
+  expect(response.status).toBe(400);
+  expect((await response.json()).error.code).toBe('InvalidArgument');
+});
