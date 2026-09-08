@@ -105,8 +105,19 @@ it('generates immutable ticket presentation from approved source records', async
     // transformed detail rendering, even when legacy link FKs permit the IDs.
     const foreignLinkId = randomUUID(), foreignTenant = randomUUID();
     try {
-      await db('invoice_time_entries').insert({ ...links[0], invoice_time_entry_id: foreignLinkId, tenant: foreignTenant,
-        work_item_snapshot: { ...links[0].work_item_snapshot, title: 'FOREIGN_PRIVATE_SENTINEL' } });
+      const foreignLink = { ...links[0], invoice_time_entry_id: foreignLinkId, tenant: foreignTenant,
+        work_item_snapshot: { ...links[0].work_item_snapshot, title: 'FOREIGN_PRIVATE_SENTINEL' } };
+      if (process.env.TEST_DB_BACKEND === 'citus') {
+        // Citus currency migrations replace the legacy invoice-only FK with
+        // (tenant, invoice_id). Prove storage rejects foreign ownership rather
+        // than disabling that protection to manufacture an impossible row.
+        await expect(db('invoice_time_entries').insert(foreignLink)).rejects.toMatchObject({
+          code: '23503', constraint: 'invoice_time_entries_invoice_id_foreign',
+        });
+        expect(await db('invoice_time_entries').where({ invoice_time_entry_id: foreignLinkId })).toHaveLength(0);
+      } else {
+        await db('invoice_time_entries').insert(foreignLink);
+      }
       expect(mapDbInvoiceToWasmViewModel(await Invoice.getFullInvoiceById(db, tenant, result.invoice_id))).toEqual(vm);
       expect((await pdfBefore.renderInvoicePreview({ invoiceId: result.invoice_id, templateId: template.template_id })).html).toBe(beforeHtml.html);
       const { getStandardTemplateAstByCode } = await import('@alga-psa/billing/lib/invoice-template-ast/standardTemplates');
