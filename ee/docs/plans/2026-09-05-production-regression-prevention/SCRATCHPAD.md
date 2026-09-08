@@ -3100,3 +3100,8 @@ Built3smallnativeemulatorbundles; accountinghostsession81018 QBO56105/Xero56106/
 
 - Full native tooling gate at clean 3cb3ff4b76 failed on the production-readiness CLI fixture: it fabricated a Teams report with an upgrade-test title and `ee` project, now correctly rejected by the mandatory journey verifier. Raw failure saved at `/tmp/alga-tooling-3cb3-failure`; original runner log `/tmp/alga-tooling-3cb3.log`.
 - Updated the complete-run fixture to the actual Teams title and enterprise-chromium project. Added a parent CLI mutation proving matching collected/executed green reports with an unrelated same-file case still fail readiness. Focused readiness suite passes (`/tmp/alga-readiness-teams-fixture-fixed.log`). No production gate weakened.
+
+### Full native tooling gate green with webhook and Teams contract requirements
+
+- Full native tooling rerun at clean 9b7431ed9db6126f82b8a30d9b736381c01c13f0: 647 tests /67 files passed, 0 failures/skips/TODOs/cancellations. Source clean before and after. Evidence: evidence/host-tooling-webhook-contract-gates.json; raw test-results/node-tooling; runner `/tmp/alga-tooling-9b743.log`. Prior failed run retained.
+- Read-only PR refresh: #3343 remains OPEN draft at 7b170294a755dfebba34cb8bbfc1069b6d8ba8bc. Existing Citus, Temporal, integration and server-unit checks have failures; they do not evaluate current local commits. Publication approval is still pending and no push was attempted. Full plan remains incomplete.
