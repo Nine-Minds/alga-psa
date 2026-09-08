@@ -5,6 +5,8 @@ import { withAuth } from '@alga-psa/auth/withAuth';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { getTeamsAvailability } from '../../lib/teamsAvailability';
+import { DEFAULT_MICROSOFT_GRAPH_BASE_URL, DEFAULT_MICROSOFT_LOGIN_BASE_URL,
+  getMicrosoftGraphBaseUrl, getMicrosoftTokenUrl } from '@alga-psa/shared/services/email/microsoftGraphEndpoints';
 import { getMicrosoftProfileReadiness } from './providerReadiness';
 import {
   TEAMS_ALLOWED_ACTIONS,
@@ -183,12 +185,21 @@ function normalizeNullableString(value: unknown): string | null {
   return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
 
+// Match the EE Teams gate without adding a dependency from this package to EE.
+// Email endpoint overrides alone must not redirect Teams profile credentials.
+function useTeamsEmulatorEndpoints(): boolean {
+  return process.env.NODE_ENV !== 'production'
+    && ['true', '1'].includes(process.env.TEAMS_EMULATOR_MODE?.trim().toLowerCase() ?? '');
+}
+
 async function fetchMicrosoftGraphAppToken(params: {
   tenantAuthority: string;
   clientId: string;
   clientSecret: string;
 }): Promise<string> {
-  const response = await fetch(`https://login.microsoftonline.com/${encodeURIComponent(params.tenantAuthority)}/oauth2/v2.0/token`, {
+  const tokenUrl = useTeamsEmulatorEndpoints() ? getMicrosoftTokenUrl(params.tenantAuthority)
+    : `${DEFAULT_MICROSOFT_LOGIN_BASE_URL}/${encodeURIComponent(params.tenantAuthority)}/oauth2/v2.0/token`;
+  const response = await fetch(tokenUrl, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
@@ -311,7 +322,8 @@ async function resolveOrganizerObjectId(
     clientSecret,
   });
 
-  const response = await fetch(`https://graph.microsoft.com/v1.0/users/${encodeURIComponent(organizerUpn)}`, {
+  const graphBaseUrl = useTeamsEmulatorEndpoints() ? getMicrosoftGraphBaseUrl() : DEFAULT_MICROSOFT_GRAPH_BASE_URL;
+  const response = await fetch(`${graphBaseUrl}/users/${encodeURIComponent(organizerUpn)}`, {
     headers: {
       Authorization: `Bearer ${accessToken}`,
     },

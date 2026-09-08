@@ -108,6 +108,30 @@
       "dependsOn": [],
       "owner": "qbo_protocol",
       "notes": "Requiredcomplete renderedresources bind policy/manifest/runtime target. All53release-relatedtests pass includingactualcollector envelope caller. Docs updated forrequired6argument CLI. Realpipelinewiring remainsF020open."
+    },
+    {
+      "id": "R014",
+      "title": "Exercise actual seeded board ticket lifecycle and permanent CI selection",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "stripe_protocol",
+      "notes": "Reviewed actual seed replay: 2 historical failures; 2 current fresh-migrated database passes; zero owned databases left. Permanent Tier-1 floor collects95files including regression. Current CI pending."
+    },
+    {
+      "id": "R015",
+      "title": "Route Teams organizer validation through real Graph emulator HTTP",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "calendar_review",
+      "notes": "Reviewed37focused tests plus8enterprise gate tests; both realHTTP organizer paths pass. Review corrected workspace gate and relocated HTTP tests to emulator package to avoid build cycle. Full server tsc passes. Current browser validation pending."
+    },
+    {
+      "id": "R016",
+      "title": "Record actual CI Docker archive build identity",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "qbo_protocol",
+      "notes": "Reviewed9native helper tests and actionlint pass. Workflow writes separate per-service archive records from action outputs. Registry publication and actual CI metadata remain unverified."
     }
   ]
 }

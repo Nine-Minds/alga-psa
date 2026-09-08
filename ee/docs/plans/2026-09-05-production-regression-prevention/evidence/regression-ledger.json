@@ -816,6 +816,32 @@
         "Full incident remains open: browser rendering/editor save, deployed timezone behavior, and current-source CI are not yet proven.",
         "Owner role is provisional; named operational owner still required."
       ]
+    },
+    {
+      "id": "3338-seeded-board-ticket-lifecycle",
+      "classification": "production-incident-regression",
+      "incident": "https://github.com/Nine-Minds/alga-psa/issues/3338",
+      "journey": "Open and close tickets on fresh demo and ITIL boards",
+      "missingBoundary": "Real seed catalogs to persisted ticket lifecycle",
+      "ownerRole": "Ticketing maintainers (role only; named ownership pending)",
+      "testFiles": [
+        "server/src/test/integration/seededBoardTicketLifecycle.integration.test.ts"
+      ],
+      "ci": {
+        "workflow": ".github/workflows/integration-tests.yml",
+        "selection": "Permanent Tier-1 manifest"
+      },
+      "evidence": "seed-teams-build-record-followup.json",
+      "reproduction": {
+        "historicalSeedRevision": "a58838822228ae17a5c02a7b477d6eb92bddaae5",
+        "defect": "Replay actual 07_statuses.cjs and 85_itil_priorities.cjs seed blobs from the historical parent in a disposable checkout; demo closed status and ITIL default open status assertions fail."
+      },
+      "status": "local-before-and-after-verified",
+      "limits": [
+        "Only issue 3338 defect 3 is covered",
+        "Current-source CI has not run this new regression",
+        "Isolated tenant selection; browser and authentication are outside scope"
+      ]
     }
   ]
 }

@@ -306,6 +306,15 @@ describe('msgraph emulator', { shuffle: false }, () => {
     expect(directoryUser.ok).toBe(true);
 
     const headers = { authorization: `Bearer ${accessToken}` };
+    // Graph accepts both the immutable id and userPrincipalName as the user key.
+    // https://learn.microsoft.com/en-us/graph/api/user-get?view=graph-rest-1.0
+    for (const key of ['user-ada', 'ada@contoso.example']) {
+      const response = await fetch(`${base}/v1.0/users/${encodeURIComponent(key)}`, { headers });
+      expect(response.status).toBe(200);
+      expect(await response.json()).toMatchObject({ id: 'user-ada', userPrincipalName: 'ada@contoso.example' });
+    }
+    const unknown = await fetch(`${base}/v1.0/users/missing%40contoso.example`, { headers });
+    expect(unknown.status).toBe(404);
     const organizations = await (await fetch(`${base}/v1.0/organization`, { headers })).json();
     expect(organizations.value).toEqual([
       expect.objectContaining({

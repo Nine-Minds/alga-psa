@@ -167,6 +167,7 @@ jobs:
           free -h
 
       - name: Build and export ${{ matrix.service }}
+        id: export_image
         uses: docker/build-push-action@v6
         with:
           context: ${{ matrix.context || '.' }}
@@ -191,7 +192,27 @@ jobs:
           IMAGE_ARCHIVE: ${{ runner.temp }}/${{ matrix.service }}.tar
         run: |
           gzip -1 "$IMAGE_ARCHIVE"
-          gzip -t "$IMAGE_ARCHIVE.gz"
+
+      - name: Record actual image archive build identity
+        env:
+          IMAGE_ARCHIVE: ${{ runner.temp }}/${{ matrix.service }}.tar.gz
+          BUILD_RECORD: ${{ runner.temp }}/${{ matrix.service }}-build.json
+          BUILD_SERVICE: ${{ matrix.service }}
+          BUILD_IMAGE: ${{ matrix.image }}
+          BUILD_DOCKERFILE: ${{ matrix.dockerfile }}
+          BUILD_PLATFORM: linux/amd64
+          BUILD_CONFIG_IMAGE_ID: ${{ steps.export_image.outputs.imageid }}
+          BUILD_REPORTED_DIGEST: ${{ steps.export_image.outputs.digest }}
+          BUILD_METADATA: ${{ steps.export_image.outputs.metadata }}
+        run: node scripts/record-docker-archive-build.mjs "$IMAGE_ARCHIVE" "$BUILD_RECORD"
+
+      - name: Upload image build record
+        uses: actions/upload-artifact@v4
+        with:
+          name: fresh-install-build-record-${{ matrix.service }}
+          path: ${{ runner.temp }}/${{ matrix.service }}-build.json
+          retention-days: 7
+          if-no-files-found: error
 
       - uses: actions/upload-artifact@v4
         with:

@@ -194,8 +194,10 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
 
   graph.get('/users/:userId', (req, res) => {
     const userId = String(req.params.userId);
-    if (core.directoryUsers.has(userId)) {
-      res.json(core.getDirectoryUser(userId));
+    const directoryUser = core.directoryUsers.get(userId) ?? [...core.directoryUsers.values()]
+      .find(user => user.userPrincipalName?.toLowerCase() === userId.toLowerCase());
+    if (directoryUser) {
+      res.json(core.getDirectoryUser(directoryUser.id));
       return;
     }
     // Real Graph 404s unknown ids. Only the emulated mailbox identity keeps
