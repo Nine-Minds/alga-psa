@@ -6,6 +6,7 @@ import { withCoManagedSharedWork, type CoManagedSharedResource, type CoManagedSh
 import { lockCoManagedCustomerPolicy } from './policy';
 import { withCoManagedCustomerTicket } from './customerWork';
 import { applyCoManagedTicketSlaTransition } from './ticketSla';
+import { retainCoManagedParticipationEvidence } from './participationEvidence';
 import { CoManagedSharedWorkError, isCoManagedUuid, assertCoManagedSessionUnexpired, snapshotCoManagedSessionActor, lockCoManagedSessionIdentity, type CoManagedSessionActor } from './sharedWorkIdentity';
 
 export interface CoManagedTicketHandoffRequest {
@@ -107,6 +108,7 @@ async function transitionTicket(context: CoManagedSharedWorkContext, request: Co
     actor_name: [author.first_name, author.last_name].filter(Boolean).join(' ').trim() || author.username,
     actor_organization: organization.client_name, note: request.note, audience: 'shared_it', occurred_at: occurredAt };
   await customer.table('co_management_ticket_handoffs').insert(event);
+  await retainCoManagedParticipationEvidence(context, 'ticket_handoff', request.operationId);
   await assertCoManagedSessionUnexpired(trx, { ...actor, kind: 'session', sessionId: context.sessionId });
   if (transition !== 'access_revoked') await assertCoManagedOperationalWrite(trx, resource.tenant);
   return receipt(event);

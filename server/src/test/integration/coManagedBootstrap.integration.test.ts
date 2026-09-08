@@ -90,7 +90,7 @@ beforeAll(async () => {
     '20260906080000_create_co_management_relationship_events.cjs',
     '20260906100000_add_external_file_metadata.cjs',
     '20260906110000_add_kb_import_batch_identity.cjs',
-    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs', '20260908011054_add_co_managed_meeting_sync_intents.cjs', '20260908021208_create_co_managed_meeting_creation_operations.cjs', '20260908043851_allow_co_managed_assignment_before_escalation.cjs', '20260908050419_create_organization_sla_obligations.cjs', '20260908051552_create_co_managed_sla_priority_mappings.cjs', '20260908062358_create_organization_sla_notification_events.cjs', '20260908063356_create_organization_sla_notification_recipients.cjs', '20260908065525_add_organization_sla_email_retry_state.cjs', '20260908081909_create_co_managed_workflow_ticket_emails.cjs', '20260908084034_create_co_managed_time_work_references.cjs', '20260908091756_allow_co_managed_time_tracking.cjs', '20260908102610_create_co_managed_relationship_closures.cjs']) {
+    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs', '20260908011054_add_co_managed_meeting_sync_intents.cjs', '20260908021208_create_co_managed_meeting_creation_operations.cjs', '20260908043851_allow_co_managed_assignment_before_escalation.cjs', '20260908050419_create_organization_sla_obligations.cjs', '20260908051552_create_co_managed_sla_priority_mappings.cjs', '20260908062358_create_organization_sla_notification_events.cjs', '20260908063356_create_organization_sla_notification_recipients.cjs', '20260908065525_add_organization_sla_email_retry_state.cjs', '20260908081909_create_co_managed_workflow_ticket_emails.cjs', '20260908084034_create_co_managed_time_work_references.cjs', '20260908091756_allow_co_managed_time_tracking.cjs', '20260908102610_create_co_managed_relationship_closures.cjs', '20260908103849_create_co_managed_participation_evidence.cjs']) {
     await require('../../../migrations/' + file).up(db);
   }
   for (const table of ['standard_statuses', 'standard_priorities', 'countries', 'notification_categories',
@@ -18003,3 +18003,62 @@ it('relationship closure pauses the existing MSP SLA at the archive cutoff and b
   expect(await f.read()).toEqual(after);
   expect(await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).toEqual(beforeTicket);
 });
+
+it('participation evidence retains explicit handoff history through revocation and source deletion without private ticket fields', async () => withSharedTicketMutationFixture(async f => {
+  const evidence = () => f.sponsor.table('co_managed_participation_evidence').where({ customer_tenant: f.resource.tenant, resource_id: f.resource.id }).orderBy('occurred_at');
+  const original = await evidence(); expect(original).toHaveLength(1);
+  expect(original[0]).toMatchObject({ resource_type: 'ticket', source_type: 'ticket_handoff', event_type: 'escalated', payload: { audience: 'shared_it', revision: 1 } });
+  await f.customer.table('tickets').where('ticket_id', f.resource.id).update({ attributes: JSON.stringify({ secret: 'Customer-only password', description: 'Private operational description' }) });
+  const handoff = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  const request = { operationId: randomUUID(), expectedRevision: 1, note: 'Retain this explicit shared history' };
+  await handoff.handBackCoManagedTicket(db, f.principal, f.resource, request);
+  await handoff.handBackCoManagedTicket(db, f.principal, f.resource, request);
+  await handoff.revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource, { operationId: randomUUID(), expectedRevision: 2, note: 'End sharing' });
+  const captured = await evidence(); expect(captured).toHaveLength(3);
+  expect(captured[1]).toMatchObject({ operation_id: request.operationId, actor_tenant: f.principal.tenant, payload: { note: request.note } });
+  expect(JSON.stringify(captured)).not.toMatch(/Customer-only password|Private operational description/);
+  await f.customer.table('tickets').where('ticket_id', f.resource.id).del();
+  expect(await evidence()).toEqual(captured);
+  const migration = require('../../../migrations/20260908103849_create_co_managed_participation_evidence.cjs');
+  await migration.up(db); await expect(migration.down(db)).rejects.toThrow('retained participation');
+  await expect(f.sponsor.table('co_managed_participation_evidence').where('evidence_id', captured[0].evidence_id).update({ payload: '{}' })).rejects.toMatchObject({ code: '23514' });
+}));
+
+it('participation evidence excludes oversight and customer-only work until the MSP actually contributes', async () => withSharedProjectTaskFixture(async f => {
+  const evidence = () => f.sponsor.table('co_managed_participation_evidence').where('resource_id', f.resource.id).orderBy('occurred_at');
+  await f.domain.getCoManagedProjectTaskEditor(db, f.principal, f.resource); expect(await evidence()).toHaveLength(0);
+  await f.edit(db, f.customerPrincipal, f.resource, { operationId: randomUUID(), expected: { task_name: 'Verify rollout' }, patch: { task_name: 'Customer preparation' } });
+  expect(await evidence()).toHaveLength(0);
+  const operationId = randomUUID(), request = { operationId, expected: { task_name: 'Customer preparation' }, patch: { task_name: 'MSP contribution' } };
+  await f.edit(db, f.principal, f.resource, request); await f.edit(db, f.principal, f.resource, request);
+  expect(await evidence()).toHaveLength(1);
+  await f.edit(db, f.customerPrincipal, f.resource, { operationId: randomUUID(), expected: { task_name: 'MSP contribution' }, patch: { task_name: 'Joint completion' } });
+  const retained = await evidence(); expect(retained).toHaveLength(2);
+  expect(retained[0]).toMatchObject({ operation_id: operationId, actor_tenant: f.principal.tenant, event_type: 'co_managed_project_task_update', payload: { changes: { task_name: 'MSP contribution' } } });
+  expect(JSON.stringify(retained)).not.toContain('Private detailed work');
+  await f.customer.table('project_tasks').where('task_id', f.resource.id).del(); expect(await evidence()).toEqual(retained);
+}));
+
+it('participation evidence records an MSP task assignment and its withdrawal without copying private descriptions', async () => withTaskAssignmentFixture(async f => {
+  const request = { operationId: randomUUID(), expectedRevision: 0, assignee: f.selected };
+  await f.assignments.assignCoManagedProjectTask(db, f.customerPrincipal, f.resource, request);
+  await f.assignments.assignCoManagedProjectTask(db, f.customerPrincipal, f.resource, request);
+  await f.assignments.assignCoManagedProjectTask(db, f.principal, f.resource, { operationId: randomUUID(), expectedRevision: 1, assignee: null });
+  const rows = await f.sponsor.table('co_managed_participation_evidence').where('resource_id', f.resource.id).orderBy('occurred_at');
+  expect(rows).toHaveLength(2); expect(rows[0].payload.changes.msp_assignment).toEqual(expect.any(String));
+  expect(rows[1].payload.changes).toEqual({ msp_assignment: null });
+  expect(JSON.stringify(rows)).not.toContain('Private detailed work');
+}));
+
+it('participation evidence rolls back with the canonical task when the writer expires after capture', async () => withSharedProjectTaskFixture(async f => {
+  const evidence = await import('../../../../packages/co-managed/src/participationEvidence'), original = evidence.retainCoManagedParticipationEvidence;
+  const capture = vi.spyOn(evidence, 'retainCoManagedParticipationEvidence').mockImplementation(async (...args) => {
+    await original(...args);
+    await tenantDb(args[0].trx, f.principal.tenant).table('sessions').where('session_id', f.principal.sessionId).update({ expires_at: new Date(0) });
+  });
+  try {
+    await expect(f.edit(db, f.principal, f.resource, { operationId: randomUUID(), expected: { task_name: 'Verify rollout' }, patch: { task_name: 'Uncommitted contribution' } })).rejects.toThrow();
+    expect(await f.sponsor.table('co_managed_participation_evidence')).toHaveLength(0);
+    expect((await f.customer.table('project_tasks').where('task_id', f.resource.id).first()).task_name).toBe('Verify rollout');
+  } finally { capture.mockRestore(); }
+}));

@@ -674,3 +674,7 @@ Native task effort checkpoint (2026-09-08): reused the project's existing compos
 ## co-managed-relationship-closure — domain transaction boundary
 
 Explicit departure and independent upgrade need the same retained trust/capacity order, archive cutoff, final credential check and idempotent release. `closeCoManagedRelationship` supplies that boundary without granting independent product entitlement. The caller must provide a transactional evidence finalizer; there is no default or public action until the production archive adapter exists. This keeps future upgrade orchestration from reimplementing seat release or closing access before authorized evidence is retained. Current validation proves transaction semantics with stand-ins, not archival completeness.
+
+## co-managed-participation-evidence — retained event boundary
+
+Handoff and shared-work audit writers now call one append-only evidence recorder after their actual source event exists in the transaction. It resolves the sponsoring owner and qualification from persisted records, selects explicit fields and compares immutable replay hashes. Archive participation comes from actual work, not a viewed row or registered time reference. No generic audit-log copier or retrospective source scanner was introduced; later conversation/file adapters must enforce their own audience rules before entering the archive.
