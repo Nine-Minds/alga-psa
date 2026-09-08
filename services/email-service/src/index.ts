@@ -1,3 +1,4 @@
+import { processNamedConversationReplyArtifact } from '@alga-psa/co-managed/inboundNamedConversationAttachments';
 import { admitNamedConversationEmailReply } from '@alga-psa/co-managed/inboundNamedConversationEmail';
 import { retainCoManagedInboundCommentEvent } from '@alga-psa/co-managed/inboundConversationEvents';
 import { processCoManagedReplyArtifact } from '@alga-psa/co-managed/inboundEmailAttachments';
@@ -69,7 +70,7 @@ async function start() {
       pollDelayMs: 250,
       renewPostgresLease: renewPostgresLeaseForV2Job,
       handleJob: async (job, ctx) => {
-        return processUnifiedInboundEmailDurableJob(job, ctx, { qualifiedReplyAdmission: admitCoManagedEmailReply, namedConversationReplyAdmission: admitNamedConversationEmailReply, qualifiedReplyArtifacts: processCoManagedReplyArtifact, retainConversationEvent: retainCoManagedInboundCommentEvent });
+        return processUnifiedInboundEmailDurableJob(job, ctx, { qualifiedReplyAdmission: admitCoManagedEmailReply, namedConversationReplyAdmission: admitNamedConversationEmailReply, qualifiedReplyArtifacts: processCoManagedReplyArtifact, namedReplyArtifacts: processNamedConversationReplyArtifact, retainConversationEvent: retainCoManagedInboundCommentEvent });
       },
     });
     durableConsumerTask = durableConsumer.start().catch((error) => {

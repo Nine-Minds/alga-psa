@@ -94,7 +94,7 @@ beforeAll(async () => {
     '20260906080000_create_co_management_relationship_events.cjs',
     '20260906100000_add_external_file_metadata.cjs',
     '20260906110000_add_kb_import_batch_identity.cjs',
-    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs', '20260908013607_create_named_ticket_conversations.cjs', '20260908015652_create_ticket_conversation_editor_drafts.cjs', '20260908022249_scope_ticket_conversation_defaults_to_relationship.cjs', '20260908024119_create_ticket_conversation_publications.cjs', '20260908030840_retain_ticket_conversation_draft_reply_target.cjs', '20260908033011_create_ticket_conversation_sender_grants.cjs', '20260908034701_create_ticket_conversation_email_operations.cjs', '20260908042702_create_ticket_conversation_inbound_receipts.cjs', '20260908045632_track_named_conversation_correspondents.cjs', '20260908051006_retain_named_reply_review_resolutions.cjs']) {
+    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs', '20260908013607_create_named_ticket_conversations.cjs', '20260908015652_create_ticket_conversation_editor_drafts.cjs', '20260908022249_scope_ticket_conversation_defaults_to_relationship.cjs', '20260908024119_create_ticket_conversation_publications.cjs', '20260908030840_retain_ticket_conversation_draft_reply_target.cjs', '20260908033011_create_ticket_conversation_sender_grants.cjs', '20260908034701_create_ticket_conversation_email_operations.cjs', '20260908042702_create_ticket_conversation_inbound_receipts.cjs', '20260908045632_track_named_conversation_correspondents.cjs', '20260908051006_retain_named_reply_review_resolutions.cjs', '20260908052731_extend_conversation_files_to_native_vendor_replies.cjs']) {
     await require('../../../migrations/' + file).up(db);
   }
   for (const table of ['standard_statuses', 'standard_priorities', 'countries', 'notification_categories',
@@ -14511,8 +14511,21 @@ describe('named ticket conversation mailbox authority against migrated PostgreSQ
   });
 });
 
-async function namedEmailFixture(audience: 'shared_it' | 'organization_private' = 'shared_it') {
+async function namedEmailFixture(audience: 'shared_it' | 'organization_private' = 'shared_it', native = false) {
   const fixture = await namedConversationFixture();
+  if (native) {
+    const source = await fixture.customer.table('tickets').where('ticket_id', fixture.ticket.ticketId).first();
+    const status = await fixture.customer.table('statuses').where('status_id', source.status_id).first();
+    const priority = await fixture.customer.table('priorities').where('priority_id', source.priority_id).first();
+    await fixture.sponsor.table('statuses').insert({ ...status, tenant: fixture.principal.tenant, board_id: fixture.operation.escalation_board_id });
+    await fixture.sponsor.table('priorities').insert({ ...priority, tenant: fixture.principal.tenant });
+    await fixture.sponsor.table('tickets').insert({ tenant: fixture.principal.tenant, ticket_id: fixture.ticket.ticketId, ticket_number: 'NATIVE-FILES',
+      title: 'Native vendor exchange', client_id: fixture.operation.request.clientId, board_id: fixture.operation.escalation_board_id,
+      status_id: status.status_id, priority_id: priority.priority_id, entered_by: fixture.principal.userId });
+    await fixture.sponsor.table('co_managed_entitlements').del();
+    fixture.ticket.tenant = fixture.principal.tenant;
+    Reflect.deleteProperty(fixture.ticket, 'relationshipId');
+  }
   const mail = await import('../../../../packages/co-managed/src/conversationMailboxes');
   const email = await import('../../../../packages/co-managed/src/conversationEmailOperations');
   const { previewReviewedEmail } = await import('../../../../packages/email/src/reviewedEmail');
@@ -14615,8 +14628,8 @@ describe('named ticket conversation reviewed email operations against migrated P
   });
 });
 
-async function namedInboundFixture(audience: 'shared_it' | 'organization_private' = 'shared_it') {
-  const fixture = await namedEmailFixture(audience);
+async function namedInboundFixture(audience: 'shared_it' | 'organization_private' = 'shared_it', native = false) {
+  const fixture = await namedEmailFixture(audience, native);
   const prepared = await fixture.email.prepareNamedConversationEmail(db, fixture.principal, fixture.ticket, fixture.ref, fixture.request, fixture.transport);
   await fixture.email.confirmNamedConversationEmail(db, fixture.principal, fixture.ticket, fixture.ref, fixture.request.operationId, prepared.review.messageHash, fixture.transport, fixture.publish);
   const route = await fixture.sponsor.table('ticket_conversation_email_routes').first();
@@ -14868,6 +14881,88 @@ describe('named ticket conversation protected reply review against migrated Post
         .toMatchObject({ status: 'skipped', outcome_reason: 'quarantined:conversation_reply_requires_admission' });
       for (const table of ['ticket_conversation_reply_resolutions', 'ticket_conversation_inbound_receipts', 'inbound_email_effects'])
         expect(await f.sponsor.table(table).where('inbox_id', f.input.inboxId)).toHaveLength(0);
+    } finally { f.restore(); }
+  });
+});
+
+async function namedFilesFixture(kind: 'shared_it' | 'organization_private' | 'native') {
+  const f = await namedInboundFixture(kind === 'shared_it' ? 'shared_it' : 'organization_private', kind === 'native');
+  const input = await f.makeInput({ attachments: [{ id: 'carrier-report', name: 'carrier-report.txt', contentType: 'text/plain', size: 8, content: Buffer.from('restored').toString('base64') }] });
+  const actual = await vi.importActual<typeof import('../../../../shared/services/email/processInboundEmailInApp')>('../../../../shared/services/email/processInboundEmailInApp');
+  intake.process.mockImplementation(actual.processInboundEmailInApp); intake.read.mockResolvedValue(Buffer.from('Vendor report MIME'));
+  intake.parse.mockResolvedValue({ emailData: input.email });
+  await f.sponsor.table('inbound_email_inbox').where('inbox_id', input.inboxId).update({ status: 'received', lease_owner: null, lease_token: null, lease_expires_at: null });
+  const { processInboundInbox } = await import('../../../../shared/services/email/inboundEmailCoreProcessor');
+  expect(await processInboundInbox({ tenantId: input.tenant, inboxId: input.inboxId, owner: randomUUID(), leaseTtlMs: 30000,
+    mode: 'enforce', namedConversationReplyAdmission: f.admission.admitNamedConversationEmailReply })).toMatchObject({ disposition: 'ack', outcome: 'replied' });
+  const { processNamedConversationReplyArtifact } = await import('../../../../packages/co-managed/src/inboundNamedConversationAttachments');
+  const { processInboundArtifactJob } = await import('../../../../shared/services/email/inboundEmailArtifactWorker');
+  const files = await import('../../../../packages/co-managed/src/namedConversationAttachments');
+  artifactStorage.upload.mockReset().mockImplementation(async (bytes, path) => ({ path, size: bytes.length }));
+  const process = (key: string) => processInboundArtifactJob({ version: 2, jobId: randomUUID(), tenantId: input.tenant, inboxId: input.inboxId, recordId: key,
+    workType: 'process_artifact', providerId: f.mailboxId, providerType: 'imap', enqueuedAt: new Date().toISOString() } as any,
+    { signal: new AbortController().signal, renew: async () => true, registerPostgresLease() {} }, undefined, processNamedConversationReplyArtifact);
+  return { ...f, input, process, files, artifacts: await f.sponsor.table('inbound_email_artifacts').where('inbox_id', input.inboxId),
+    owner: kind === 'shared_it' ? f.customer : f.sponsor, restore: () => { intake.process.mockReset(); intake.read.mockReset(); intake.parse.mockReset(); } };
+}
+describe('named ticket conversation received files against migrated PostgreSQL', () => {
+  it.each(['shared_it', 'organization_private', 'native'] as const)('publishes %s vendor files once, downloads through current audience and keeps original MIME private', async kind => {
+    const f = await namedFilesFixture(kind);
+    try {
+      const generic = await f.owner.table('external_files');
+      const before = await f.conversations.getNamedTicketConversation(db, f.principal, f.ticket, f.ref);
+      expect(f.artifacts).toHaveLength(2);
+      for (const artifact of f.artifacts) {
+        expect(await f.process(artifact.artifact_key)).toMatchObject({ disposition: 'ack' });
+        expect(await f.process(artifact.artifact_key)).toMatchObject({ disposition: 'ack' });
+      }
+      expect(artifactStorage.upload).toHaveBeenCalledOnce();
+      const row = await f.owner.table('co_management_conversation_attachments').first();
+      expect(row).toMatchObject({ status: 'ready', actor_tenant: f.principal.tenant, actor_user_id: null, external_author_email: f.input.email.from.email,
+        customer_tenant: f.ticket.tenant, relationship_id: kind === 'native' ? null : f.ticket.relationshipId });
+      expect(await f.owner.table('external_files')).toEqual(generic);
+      const completed = await f.sponsor.table('inbound_email_artifacts').where('inbox_id', f.input.inboxId);
+      expect(completed.find(file => file.artifact_type === 'original_email')).toMatchObject({ status: 'succeeded', conversation_attachment_id: null,
+        file_id: null, document_id: null, storage_key: `test/vendor/${f.input.inboxId}` });
+      expect(await f.conversations.getNamedTicketConversation(db, f.principal, f.ticket, f.ref)).toMatchObject({ messageVersion: String(Number(before.messageVersion) + 1) });
+      const page = await f.conversations.getNamedTicketConversationMessages(db, f.principal, f.ticket, f.ref);
+      expect(page.items[0].attachments).toMatchObject([{ fileName: 'carrier-report.txt', attachmentId: row.attachment_id, size: 8 }]);
+      expect(JSON.stringify(page)).not.toContain(row.storage_path);
+      const reference = { attachmentId: row.attachment_id, threadId: row.thread_id, commentId: row.comment_id };
+      const read = vi.fn(async () => Buffer.from('restored'));
+      expect((await f.files.downloadNamedConversationAttachment(db, f.principal, f.ticket, f.ref, reference, read)).content.toString()).toBe('restored');
+      if (kind === 'shared_it') expect((await f.files.downloadNamedConversationAttachment(db, f.customerPrincipal, f.ticket, f.ref, reference, read)).attachment.fileName).toBe('carrier-report.txt');
+      else await expect(f.files.downloadNamedConversationAttachment(db, f.customerPrincipal, f.ticket, f.ref, reference, read)).rejects.toThrow();
+      await expect(f.files.downloadNamedConversationAttachment(db, f.principal, f.ticket, f.ref, reference, async () => Buffer.from('tampered')))
+        .rejects.toMatchObject({ code: 'ATTACHMENT_CONTENT_MISMATCH' });
+      await f.owner.table(kind === 'organization_private' ? 'co_management_private_comments' : 'comments').where('comment_id', row.comment_id).update({ deleted_at: new Date() });
+      read.mockClear();
+      await expect(f.files.downloadNamedConversationAttachment(db, f.principal, f.ticket, f.ref, reference, read)).rejects.toThrow();
+      expect(read).not.toHaveBeenCalled();
+      const migration = require('../../../migrations/20260908052731_extend_conversation_files_to_native_vendor_replies.cjs');
+      await migration.up(db); await expect(migration.down(db)).rejects.toThrow('Cannot discard retained');
+    } finally { f.restore(); }
+  });
+  it('keeps unknown uploads unreadable and defers revoked mailbox authority without generic file fallback', async () => {
+    const f = await namedFilesFixture('organization_private');
+    try {
+      const artifact = f.artifacts.find(file => file.artifact_type === 'attachment');
+      artifactStorage.upload.mockRejectedValueOnce(new Error('Upload acknowledgement lost'));
+      expect(await f.process(artifact.artifact_key)).toMatchObject({ disposition: 'retry' });
+      expect(await f.owner.table('co_management_conversation_attachments').first()).toMatchObject({ status: 'pending', ready_at: null });
+      expect((await f.conversations.getNamedTicketConversationMessages(db, f.principal, f.ticket, f.ref)).items[0].attachments).toEqual([]);
+      await f.sponsor.table('email_providers').where('id', f.mailboxId).update({ is_active: false });
+      await f.sponsor.table('inbound_email_artifacts').where({ inbox_id: f.input.inboxId, artifact_key: artifact.artifact_key }).update({ next_attempt_at: new Date(0) });
+      artifactStorage.upload.mockClear();
+      expect(await f.process(artifact.artifact_key)).toMatchObject({ disposition: 'defer', reason: 'named_conversation_artifact_authority_unavailable' });
+      expect(artifactStorage.upload).not.toHaveBeenCalled();
+      expect(await f.owner.table('co_management_conversation_attachments').first()).toMatchObject({ status: 'pending' });
+      await f.sponsor.table('email_providers').where('id', f.mailboxId).update({ is_active: true });
+      await f.sponsor.table('inbound_email_artifacts').where({ inbox_id: f.input.inboxId, artifact_key: artifact.artifact_key }).update({ next_attempt_at: new Date(0) });
+      expect(await f.process(artifact.artifact_key)).toMatchObject({ disposition: 'ack' });
+      expect(artifactStorage.upload).toHaveBeenCalledOnce();
+      expect(await f.owner.table('co_management_conversation_attachments')).toMatchObject([{ status: 'ready' }]);
+      expect((await f.conversations.getNamedTicketConversationMessages(db, f.principal, f.ticket, f.ref)).items[0].attachments).toHaveLength(1);
     } finally { f.restore(); }
   });
 });

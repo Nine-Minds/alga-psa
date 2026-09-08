@@ -49,7 +49,7 @@ export async function renewPostgresLeaseForV2Job(
 export async function processUnifiedInboundEmailDurableJob(
   job: UnifiedInboundEmailQueueJobV2,
   ctx: InboundV2JobContext,
-  options: { namedConversationReplyAdmission?: NamedConversationReplyAdmission; qualifiedReplyAdmission?: EmailReplyAdmission; qualifiedReplyArtifacts?: QualifiedReplyArtifactProcessor; retainConversationEvent?: InboundConversationEventRetainer } = {}
+  options: { namedConversationReplyAdmission?: NamedConversationReplyAdmission; qualifiedReplyAdmission?: EmailReplyAdmission; qualifiedReplyArtifacts?: QualifiedReplyArtifactProcessor; namedReplyArtifacts?: QualifiedReplyArtifactProcessor; retainConversationEvent?: InboundConversationEventRetainer } = {}
 ): Promise<InboundEmailQueueDisposition> {
   const mode = await getInboundDurableModeForTenant(job.tenantId);
   if (mode === 'off') {
@@ -64,7 +64,7 @@ export async function processUnifiedInboundEmailDurableJob(
     case 'stage_ingress':
       return handleStageIngress(job, ctx);
     case 'process_artifact':
-      return handleProcessArtifact(job, ctx, options.qualifiedReplyArtifacts);
+      return handleProcessArtifact(job, ctx, options.qualifiedReplyArtifacts, options.namedReplyArtifacts);
     case 'publish_outbox':
       return handlePublishOutbox(job, ctx);
     case 'republish_outbox_event':
@@ -98,9 +98,9 @@ async function handleStageIngress(job: UnifiedInboundEmailQueueJobV2, ctx: Inbou
   return processIngressStageJob(job, ctx);
 }
 
-async function handleProcessArtifact(job: UnifiedInboundEmailQueueJobV2, ctx: InboundV2JobContext, qualifiedReplyArtifacts?: QualifiedReplyArtifactProcessor): Promise<InboundEmailQueueDisposition> {
+async function handleProcessArtifact(job: UnifiedInboundEmailQueueJobV2, ctx: InboundV2JobContext, qualifiedReplyArtifacts?: QualifiedReplyArtifactProcessor, namedReplyArtifacts?: QualifiedReplyArtifactProcessor): Promise<InboundEmailQueueDisposition> {
   const { processInboundArtifactJob } = await import('./inboundEmailArtifactWorker');
-  return processInboundArtifactJob(job, ctx, qualifiedReplyArtifacts);
+  return processInboundArtifactJob(job, ctx, qualifiedReplyArtifacts, namedReplyArtifacts);
 }
 
 async function handlePublishOutbox(job: UnifiedInboundEmailQueueJobV2, ctx: InboundV2JobContext): Promise<InboundEmailQueueDisposition> {

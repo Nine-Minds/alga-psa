@@ -60,6 +60,10 @@
     "./inboundNamedConversationEmail": {
       "types": "./src/inboundNamedConversationEmail.ts",
       "import": "./dist/inboundNamedConversationEmail.js"
+    },
+    "./inboundNamedConversationAttachments": {
+      "types": "./src/inboundNamedConversationAttachments.ts",
+      "import": "./dist/inboundNamedConversationAttachments.js"
     }
   },
   "scripts": {

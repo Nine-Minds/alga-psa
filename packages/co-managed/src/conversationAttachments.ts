@@ -141,19 +141,27 @@ export async function transferCoManagedAttachment(db: Knex, inputActor: CoManage
  * session. Interactive callers retain their session checks; durable workers
  * retain their receipt, current actor/source policy and live fenced claim. */
 export interface CoManagedAttachmentTransferContext {
-  trx: Knex.Transaction; actor: { tenant: string; userId: string }; resource: CoManagedSharedResource;
+  trx: Knex.Transaction; actor: ConversationAttachmentTransferActor; resource: ConversationAttachmentTransferResource;
   comment: CoManagedCommentReference; audience: CommentAudience; action: 'update'; draftOperationId?: string;
   assertWriteAuthority: () => Promise<void>;
 }
-export async function transferAuthorizedCoManagedAttachment(db: Knex, inputActor: { tenant: string; userId: string },
-  inputResource: CoManagedSharedResource, input: CoManagedAttachmentUpload,
+export type ConversationAttachmentTransferActor = { tenant: string; userId: string; externalEmail?: never } | { tenant: string; userId: null; externalEmail: string };
+export type ConversationAttachmentTransferResource = Omit<CoManagedSharedResource, 'relationshipId'> & { relationshipId?: string };
+export async function transferAuthorizedCoManagedAttachment(db: Knex, inputActor: ConversationAttachmentTransferActor,
+  inputResource: ConversationAttachmentTransferResource, input: CoManagedAttachmentUpload,
   withAuthority: <T>(work: (context: CoManagedAttachmentTransferContext) => Promise<T>) => Promise<T>,
   upload: (path: string, content: Uint8Array, mimeType: string) => Promise<void>,
   complete?: (context: CoManagedAttachmentTransferContext, attachment: CoManagedConversationAttachment, digest: string) => Promise<void>,
 ): Promise<CoManagedConversationAttachment> {
-  if (!inputActor || ![inputActor.tenant, inputActor.userId].every(isCoManagedUuid)) deny();
-  const actor = { tenant: inputActor.tenant, userId: inputActor.userId };
-  const resource = resourceSnapshot(inputResource), comment = reference(input?.comment);
+  if (!inputActor || !isCoManagedUuid(inputActor.tenant) || (inputActor.userId === null
+    ? typeof inputActor.externalEmail !== 'string' || inputActor.externalEmail.length > 500 || !/^[^\s<>@,;]+@[^\s<>@,;]+\.[^\s<>@,;]+$/.test(inputActor.externalEmail)
+    : !isCoManagedUuid(inputActor.userId) || inputActor.externalEmail !== undefined)) deny();
+  const actor = { tenant: inputActor.tenant, userId: inputActor.userId, ...(inputActor.externalEmail ? { externalEmail: inputActor.externalEmail } : {}) };
+  if (!inputResource || inputResource.kind !== 'ticket' || ![inputResource.tenant, inputResource.id].every(isCoManagedUuid)) deny();
+  const resource: ConversationAttachmentTransferResource = inputResource.relationshipId !== undefined ? resourceSnapshot(inputResource as CoManagedSharedResource)
+    : { kind: 'ticket' as const, tenant: inputResource.tenant.toLowerCase(), id: inputResource.id.toLowerCase() };
+  const comment = reference(input?.comment);
+  if (!('relationshipId' in resource) && (actor.tenant !== resource.tenant || comment.storeTenant !== resource.tenant)) deny();
   const invalid = (): never => { throw new CoManagedAttachmentError('INVALID_ATTACHMENT'); };
   // LEVERAGE: pattern co-managed-attachment-metadata — manifests and byte transfers must accept the same metadata limits.
   if ((db as Knex.Transaction).isTransaction || !input || Object.keys(input).some(key => !['attachmentId', 'comment', 'fileName', 'mimeType', 'content'].includes(key)) || !isCoManagedUuid(input.attachmentId) ||
@@ -162,10 +170,10 @@ export async function transferAuthorizedCoManagedAttachment(db: Knex, inputActor
       !(input.content instanceof Uint8Array) || input.content.length > 26214400) invalid();
   const content = Buffer.from(input.content), contentHash = createHash('sha256').update(content).digest('hex');
   const attachmentId = input.attachmentId.toLowerCase(), fileName = input.fileName, mimeType = input.mimeType.toLowerCase();
-  const hash = createHash('sha256').update(JSON.stringify({ resource, comment, actor: { tenant: actor.tenant, userId: actor.userId }, attachmentId,
+  const hash = createHash('sha256').update(JSON.stringify({ resource, comment, actor, attachmentId,
     fileName, mimeType, contentHash, size: content.length })).digest('hex');
   const assertContext = (context: CoManagedAttachmentTransferContext) => {
-    if (!context.trx.isTransaction || typeof context.assertWriteAuthority !== 'function' || context.action !== 'update' || context.actor.tenant !== actor.tenant || context.actor.userId !== actor.userId ||
+    if (!context.trx.isTransaction || typeof context.assertWriteAuthority !== 'function' || context.action !== 'update' || context.actor.tenant !== actor.tenant || context.actor.userId !== actor.userId || context.actor.externalEmail !== actor.externalEmail ||
         context.resource.tenant !== resource.tenant || context.resource.relationshipId !== resource.relationshipId || context.resource.id !== resource.id || context.resource.kind !== 'ticket' ||
         context.comment.storeTenant !== comment.storeTenant || context.comment.threadId !== comment.threadId || context.comment.commentId !== comment.commentId) deny();
   };
@@ -176,6 +184,7 @@ export async function transferAuthorizedCoManagedAttachment(db: Knex, inputActor
     if (previous) { if (previous.discarded_at) throw new CoManagedAttachmentError('ATTACHMENT_OPERATION_CONFLICT'); if (previous.request_hash !== hash || previous.draft_operation_id !== (context.draftOperationId ?? null)) throw new CoManagedAttachmentError('ATTACHMENT_OPERATION_CONFLICT'); await owner.table(TABLE).where('attachment_id', attachmentId).update({ last_activity_at: context.trx.raw('clock_timestamp()') }); return; }
     await owner.table(TABLE).insert({ tenant: comment.storeTenant, attachment_id: attachmentId, customer_tenant: resource.tenant, relationship_id: resource.relationshipId,
       ticket_id: resource.id, thread_id: comment.threadId, comment_id: comment.commentId, actor_tenant: actor.tenant, actor_user_id: actor.userId,
+      external_author_email: actor.externalEmail ?? null,
       file_name: fileName, mime_type: mimeType, file_size: content.length, content_hash: contentHash, request_hash: hash,
       storage_path: `co-management/${comment.storeTenant}/${attachmentId}`, draft_operation_id: context.draftOperationId ?? null, status: 'pending' }).onConflict(['tenant', 'attachment_id']).ignore();
     const reserved = await owner.table(TABLE).where('attachment_id', attachmentId).forUpdate().first('request_hash', 'draft_operation_id');

@@ -34,6 +34,7 @@ export interface CoManagedConversationItem {
   markdown: string | null;
   author?: CoManagedConversationAuthor;
   email?: PublishedConversationEmail;
+  attachments?: import('./conversationAttachments').CoManagedConversationAttachment[];
 }
 export interface CoManagedTicketConversation {
   resource: CoManagedSharedResource;

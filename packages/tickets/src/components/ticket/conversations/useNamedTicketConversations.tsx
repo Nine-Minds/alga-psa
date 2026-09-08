@@ -189,6 +189,15 @@ function NamedConversationPanel({ id, ticket, conversation, canWrite, flush, onD
           <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground"><span className="font-medium text-[rgb(var(--color-text-700))]">{item.author?.displayName ?? t('namedConversations.author', 'Ticket participant')}</span>
             <time dateTime={item.createdAt}>{formatDate(item.createdAt, { dateStyle: 'medium', timeStyle: 'short' })}</time></div>
           {!item.deleted && item.email && <ConversationEmailEnvelope email={item.email} />}
+          {!item.deleted && Boolean(item.attachments?.length) && <ul className="my-2 flex flex-wrap gap-2">
+            {item.attachments!.map(file => {
+              const query = new URLSearchParams({ ticketTenant: ticket.tenant, ticketId: ticket.ticketId, conversationId: conversation.conversationId,
+                storeTenant: file.storeTenant, threadId: file.threadId, commentId: file.commentId, ...(ticket.relationshipId ? { relationshipId: ticket.relationshipId } : {}) });
+              return <li key={file.attachmentId}><a id={`${id}-file-${file.attachmentId}`} download
+                href={`/api/tickets/conversation-attachments/${encodeURIComponent(file.attachmentId)}?${query}`}
+                className="inline-flex rounded border border-[rgb(var(--color-border-200))] px-2 py-1 text-sm text-primary-600 underline break-all">{file.fileName}</a></li>;
+            })}
+          </ul>}
           {item.deleted ? <p className="text-sm italic text-muted-foreground">{t('namedConversations.deleted', 'Message deleted')}</p>
             : document ? <Document id={`${id}-message-${index}`} document={document} /> : <p className="whitespace-pre-wrap break-words text-sm">{conversationText(item.note, item.markdown)}</p>}
           {item.parentCommentId && <p className="mt-2 text-xs text-muted-foreground">{t('namedConversations.reply', 'Reply')}</p>}

@@ -247,3 +247,15 @@ it('uses accepted recipient defaults without replacing an edited envelope on ref
   expect(screen.getByLabelText('Subject')).toHaveValue('Latest accepted subject');
   expect(mocks.emailDefaults).toHaveBeenCalledTimes(1);
 });
+
+it('links received files to the qualified conversation download without exposing storage paths', async () => {
+  mocks.page.mockResolvedValue({ conversation: side, nextBefore: null, items: [{ storeTenant: 'home', commentId: 'message', threadId: 'root',
+    audience: 'organization_private', createdAt: '2026-09-08T00:00:00Z', deleted: false, note: 'Vendor report',
+    attachments: [{ attachmentId: 'file', storeTenant: 'home', commentId: 'message', threadId: 'root', fileName: 'carrier-report.txt', mimeType: 'text/plain', size: 8 }] }] });
+  render(<Harness />);
+  const link = await screen.findByRole('link', { name: 'carrier-report.txt' });
+  const url = new URL(link.getAttribute('href')!, 'https://app.example.test');
+  expect(url.pathname).toBe('/api/tickets/conversation-attachments/file');
+  expect(Object.fromEntries(url.searchParams)).toEqual({ ticketTenant: 'owner', ticketId: 'ticket', conversationId: 'private', storeTenant: 'home', threadId: 'root', commentId: 'message' });
+  expect(link.hasAttribute('download')).toBe(true);
+});

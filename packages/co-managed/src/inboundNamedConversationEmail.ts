@@ -66,6 +66,13 @@ async function routeFor(trx: Knex.Transaction, tenant: string, providerId: strin
 /** Intake is an organization capability issued by an accepted Send, not a
  * borrowed staff session. Current mailbox, relationship and collaboration scope
  * must still permit receiving into this exact audience/store. */
+export async function readNamedConversationEmailDestination(trx: Knex.Transaction, route: any, replyParent?: any) {
+  try { return await destination(trx, route, replyParent); }
+  catch (error) {
+    if (error instanceof ReplyRejected) throw new TicketConversationError('CONVERSATION_FORBIDDEN');
+    throw error;
+  }
+}
 async function destination(trx: Knex.Transaction, route: any, replyParent?: any) {
   const owner = tenantDb(trx, route.ticket_tenant);
   for (const tenant of new Set<string>([route.tenant, route.ticket_tenant, route.conversation_store_tenant])) await assertCoManagedOperationalWrite(trx, tenant);
@@ -136,7 +143,7 @@ async function admitReply(outer: Knex.Transaction, input: Parameters<NamedConver
       if (!inbox?.source_object_key || !inbox.source_sha256 || inbox.source_sha256 !== email.sourceSha256 || email.tenant !== input.tenant || email.providerId !== input.providerId) return reject();
       const { route, matchedBy, replyParent } = resolved;
       if (route.tenant !== input.tenant || route.mailbox_id !== input.providerId) return reject();
-      const { conversation, source, privateStore, store } = await destination(trx, route, replyParent);
+      const { conversation, source, privateStore, store } = await readNamedConversationEmailDestination(trx, route, replyParent);
       const previous = await home.table(RECEIPTS).where({ provider_id: input.providerId, normalized_message_id: inbox.normalized_message_id }).forShare().first();
       if (previous) {
         if (previous.source_sha256 !== inbox.source_sha256 || previous.conversation_store_tenant !== conversation.storeTenant || previous.conversation_id !== conversation.conversationId) return reject();

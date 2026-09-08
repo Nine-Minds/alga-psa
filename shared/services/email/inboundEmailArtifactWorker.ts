@@ -41,7 +41,8 @@ const TERMINAL_ARTIFACT_STATUSES = new Set(['succeeded', 'skipped', 'terminal_fa
 export async function processInboundArtifactJob(
   job: UnifiedInboundEmailQueueJobV2,
   ctx: InboundV2JobContext,
-  qualifiedReplyArtifacts?: QualifiedReplyArtifactProcessor
+  qualifiedReplyArtifacts?: QualifiedReplyArtifactProcessor,
+  namedReplyArtifacts?: QualifiedReplyArtifactProcessor
 ): Promise<InboundEmailQueueDisposition> {
   const db = await (await import('@alga-psa/db/admin')).getAdminConnection();
   const owner = `artifact-worker-${job.jobId}`;
@@ -171,14 +172,15 @@ export async function processInboundArtifactJob(
     .table('ticket_conversation_inbound_receipts').where({ inbox_id: inbox.inbox_id, provider_id: inbox.provider_id }).first('inbox_id'));
   if (namedReply || /^cm2:/i.test(qualifiedReplyTokenFromBody(parsed.emailData.body) ?? '')) {
     let reason = namedReply ? 'named_conversation_artifact_admission_pending' : 'co_managed_artifact_admission_pending';
-    if (qualifiedReplyArtifacts && !namedReply) {
+    const processor = namedReply ? namedReplyArtifacts : qualifiedReplyArtifacts;
+    if (processor) {
       try {
-        await qualifiedReplyArtifacts(db, { tenant: job.tenantId, inboxId, artifactKey, sourceSha256: inbox.source_sha256!,
-          claim: { owner, token, version }, payload: qualifiedArtifactPayload(artifact, parsed.emailData) }, async (path, content, mimeType) => {
+        await processor(db, { tenant: job.tenantId, inboxId, artifactKey, sourceSha256: inbox.source_sha256!,
+          claim: { owner, token, version }, payload: qualifiedArtifactPayload(artifact, parsed.emailData) }, async (path, content, mimeType, storeTenant = inbox.tenant) => {
           // LEVERAGE: pattern conversation-object-upload — worker and interactive composition share storage validation/confirmation, without generic file rows.
           const { StorageService } = await import('@alga-psa/storage/StorageService');
           const { StorageProviderFactory } = await import('@alga-psa/storage/StorageProviderFactory');
-          await StorageService.validateFileUpload(inbox.tenant, mimeType, content.length);
+          await StorageService.validateFileUpload(storeTenant, mimeType, content.length);
           const provider = await StorageProviderFactory.createProvider();
           const result = await provider.upload(Buffer.from(content), path, { mime_type: mimeType });
           if (result.path !== path || result.size !== content.length) throw new Error('Attachment storage did not confirm the complete object');
@@ -186,7 +188,7 @@ export async function processInboundArtifactJob(
         return { disposition: 'ack' };
       } catch (error: any) {
         if (isCoManagedLifecycleError(error)) reason = `co_managed_${error.lifecycle.state}`;
-        else if (error?.code === 'CO_MANAGED_SHARED_WORK_FORBIDDEN') reason = 'co_managed_artifact_authority_unavailable';
+        else if (['CO_MANAGED_SHARED_WORK_FORBIDDEN', 'CONVERSATION_FORBIDDEN'].includes(error?.code)) reason = namedReply ? 'named_conversation_artifact_authority_unavailable' : 'co_managed_artifact_authority_unavailable';
         else {
           const message = error?.message || String(error);
           const failure = await markArtifactRetryable(db, artifact, { owner, token, version }, message);

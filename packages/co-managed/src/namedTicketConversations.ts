@@ -150,6 +150,8 @@ export function getNamedTicketConversationMessages(db: Knex, actor: CoManagedSes
       const { attachPublishedConversationEmails } = await import('./conversationEmailOperations');
       await attachPublishedConversationEmails({ ...context, conversation }, page.items);
     }
+    const { attachNamedConversationFiles } = await import('./namedConversationAttachments');
+    await attachNamedConversationFiles({ ...context, conversation }, page.items);
     return { conversation, ...page };
   });
 }

@@ -2,7 +2,7 @@
 
 - Slug: `ticket-conversations`
 - Date: 2026-09-07
-- Status: Scope planned from the agreed design; container, draft, internal Post, navigator and reviewed vendor Send and initial qualified inbound reply/protected review implementation is recorded in the checklists and scratchpad. The full feature remains incomplete.
+- Status: Implementation in progress; completed features and verification evidence are recorded in the checklists and scratchpad.
 - Selected UI: **Option C — persistent conversation navigator**.
 - Dependency: [Co-Managed IT](../2026-09-06-co-managed-it-plan.md), branch `feature/co-managed-it`.
 - Checklists: [features.json](features.json), [tests.json](tests.json). Working evidence: [SCRATCHPAD.md](SCRATCHPAD.md).
