@@ -4,9 +4,9 @@ import { signIn } from '../fixtures/auth';
 import { createMicrosoftProfile } from '../fixtures/microsoft-profile';
 import { createProductionBrowserActors } from '../../server/test-utils/productionBrowserFixtures';
 
-test.use({ emulatorProviders: ['msgraph'] });
+test.use({ emulatorProviders: ['msgraph'], timezoneId: 'Europe/Berlin' });
 const profileURL = '/msp/profile?tab=calendar';
-type GraphEvent = { id: string; subject: string };
+type GraphEvent = { id: string; subject: string; isAllDay?: boolean; start?: { dateTime: string }; end?: { dateTime: string } };
 type CalendarChange = { event: GraphEvent; deliveries: Array<{ delivered: boolean; status: number | null }> };
 
 if (process.env.E2E_EDITION !== 'enterprise') {
@@ -22,9 +22,11 @@ if (process.env.E2E_EDITION !== 'enterprise') {
     { name: 'provider outage', status: 503, code: 'ServiceUnavailable' },
     { name: 'permission denial', status: 403, code: 'ErrorAccessDenied' },
     { name: 'throttling', status: 429, code: 'TooManyRequests' },
+    { name: 'all-day throttling', status: 429, code: 'TooManyRequests' },
   ]) {
     test(`Microsoft calendar OAuth imports vendor events, exports UI edits and recovers from ${fault.name} without losing remote linkage`, async ({ page, credentials, database, emulators }, testInfo) => {
       test.setTimeout(300000);
+      const allDay = fault.name === 'all-day throttling';
       const actors = await createProductionBrowserActors(database, { sourceEmail: credentials.email });
       const tenant = actors.primary;
       const scope = { tenant: tenant.tenantId };
@@ -108,10 +110,11 @@ if (process.env.E2E_EDITION !== 'enterprise') {
         expect(outboundHistory.requests).toContainEqual(expect.objectContaining({ method: 'DELETE', status: 204,
           path: `/v1.0/me/calendar/events/${outboundMapping.external_event_id}` }));
 
-        const start = new Date(); start.setUTCHours(12, 0, 0, 0);
-        const end = new Date(start.getTime() + 3600000);
+        const start = new Date(); start.setUTCHours(allDay ? 0 : 12, 0, 0, 0);
+        const end = new Date(start.getTime() + (allDay ? 86400000 : 3600000));
         const created = await emulators.action<CalendarChange>('msgraph', 'calendar-change', { changeType: 'created', event: {
           subject: title, body: { contentType: 'text', content: 'Customer calendar visit' },
+          isAllDay: allDay,
           start: { dateTime: start.toISOString(), timeZone: 'UTC' }, end: { dateTime: end.toISOString(), timeZone: 'UTC' },
         } });
         expect(created.deliveries).toEqual([expect.objectContaining({ delivered: true, status: 200 })]);
@@ -120,6 +123,12 @@ if (process.env.E2E_EDITION !== 'enterprise') {
         const mapping = await database('calendar_event_mappings').where(mappingQuery).first();
         const entryScope = { ...scope, entry_id: mapping.schedule_entry_id };
         expect(await database('schedule_entries').where(entryScope).first()).toMatchObject({ title });
+        const assertStoredDates = async () => {
+          const entry = await database('schedule_entries').where(entryScope).first();
+          expect(new Date(entry.scheduled_start).toISOString()).toBe(start.toISOString());
+          expect(new Date(entry.scheduled_end).toISOString()).toBe(end.toISOString());
+        };
+        if (allDay) await assertStoredDates();
         await page.goto('/msp/schedule');
         const calendarEvent = (text: string) => page.locator('.rbc-event').filter({ hasText: text }).first();
         await expect(calendarEvent(title)).toBeVisible();
@@ -131,10 +140,18 @@ if (process.env.E2E_EDITION !== 'enterprise') {
         const editedTitle = `@alga Rescheduled visit ${actors.runId}`;
         await calendarEvent(title).getByText(title, { exact: true }).click();
         const editDialog = page.getByRole('dialog', { name: 'Edit Entry', exact: true });
+        if (allDay) {
+          for (const field of ['scheduled_start', 'scheduled_end']) {
+            const time = editDialog.locator(`#${field}`).locator('xpath=ancestor::div[contains(@class,"dtf-fields")][1]')
+              .getByRole('combobox', { name: 'Select time', exact: true });
+            await expect(time).toHaveValue(/^(12:00\s*AM|00:00)$/i);
+          }
+        }
         await editDialog.locator('#title').fill(editedTitle);
         await editDialog.locator('#save-entry-btn').click();
         await expect(editDialog).toBeHidden();
         await expect.poll(async () => (await database('schedule_entries').where(entryScope).first())?.title).toBe(editedTitle);
+        if (allDay) await assertStoredDates();
         await expect.poll(async () => (await database('calendar_providers').where({ ...scope, id: provider.id }).first())?.status,
           { timeout: 60000 }).toBe('error');
         expect(await emulators.state<GraphEvent[]>('msgraph', 'calendar-events')).toEqual([expect.objectContaining({ id: created.event.id, subject: title })]);
@@ -153,6 +170,13 @@ if (process.env.E2E_EDITION !== 'enterprise') {
         expect(await database('calendar_event_mappings').where(mappingQuery).select('id', 'schedule_entry_id'))
           .toEqual([{ id: mapping.id, schedule_entry_id: mapping.schedule_entry_id }]);
         expect(await emulators.state<GraphEvent[]>('msgraph', 'calendar-events')).toEqual([expect.objectContaining({ id: created.event.id })]);
+        if (allDay) {
+          const [remote] = await emulators.state<GraphEvent[]>('msgraph', 'calendar-events');
+          expect(remote.isAllDay).toBe(true);
+          expect(remote.start?.dateTime.slice(0, 19)).toBe(start.toISOString().slice(0, 19));
+          expect(remote.end?.dateTime.slice(0, 19)).toBe(end.toISOString().slice(0, 19));
+          await assertStoredDates();
+        }
 
         expect((await database('microsoft_calendar_provider_config').where(providerScope).first()).webhook_subscription_id)
           .toBe(config.webhook_subscription_id);
