@@ -607,3 +607,18 @@ Seeded organisations are invisible to the vendor API until granted; the control
 revokes access immediately, including for existing tokens. Invalid changes leave
 existing consent intact. Reset clears consent. Live-provider drift checks remain
 outside this emulator's current coverage.
+
+### Stripe callback signature parity
+
+The Stripe smoke suite verifies actual HTTP callback payloads and headers with
+`stripe.webhooks.constructEvent`, using the same declared SDK range as the
+application (`^19.1.0`, currently locked to 19.3.1). The SDK is an explicit
+emulator test dependency. It replaces the test's local HMAC verifier and
+checks delivery-time tolerance as well as signature bytes. The suite also
+rejects payload whitespace changes, a wrong endpoint secret, and a correctly
+signed but hour-old delivery. Historical event creation time remains distinct
+from the fresh signature time when an event is redelivered.
+
+Reference: [Stripe webhook signature verification](https://docs.stripe.com/webhooks/signature),
+reviewed 2026-09-08. This is callback authentication parity, not live sandbox
+verification or validation of every Stripe event payload/API field.
