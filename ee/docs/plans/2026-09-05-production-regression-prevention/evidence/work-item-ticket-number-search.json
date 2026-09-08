@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "classification": "behavioral-defect-replay",
+  "baseRevision": "e9a189ae3f",
+  "ciFailure": {
+    "run": 34226006210,
+    "job": 102070296645,
+    "journey": "invoice-designer-persistence",
+    "symptom": "Entering a displayed ticket number removes the option after search completes; picker shows No work items found."
+  },
+  "defect": "searchPickerWorkItems filtered only t.title, so searching by displayed ticket_number returned no rows.",
+  "fix": "Group case-insensitive title and ticket_number predicates within existing tenant and exclusion filters.",
+  "red": {
+    "tests": 3,
+    "passed": 2,
+    "failed": 1,
+    "failure": "Ticket number lookup returned zero items while title lookup passed."
+  },
+  "green": {
+    "success": true,
+    "numTotalTests": 4,
+    "numPassedTests": 4,
+    "numFailedTests": 0,
+    "numPendingTests": 0
+  },
+  "logs": {
+    "alga-picker-number-red.log": "468e5fc2e3016c14537f3e030136f7bbc2679dff12c5c510cd8e395fb680bdbd",
+    "alga-picker-number-green.json": "2b4263197771439a757778a9cce84b8b2b4e306626c505206b885520d7c77782"
+  },
+  "limitations": [
+    "Auth and connection boundary use fixture identity; query and PostgreSQL are real.",
+    "Current-source browser and GitHub CI verification remain pending.",
+    "No production incident identifier supplied."
+  ]
+}

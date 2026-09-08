@@ -703,6 +703,32 @@
         "No production incident identifier supplied."
       ],
       "relocationEvidence": "survey-server-test-relocation.json"
+    },
+    {
+      "id": "work-item-picker-ticket-number-search",
+      "classification": "behavioral-defect-replay",
+      "incident": null,
+      "journey": "Select a ticket by its displayed number while adding billable time",
+      "missingBoundary": "Picker search text to database ticket-number matching",
+      "ownerRole": "Scheduling maintainers",
+      "testFiles": [
+        "server/src/test/integration/workItemPickerSearch.integration.test.ts"
+      ],
+      "ci": {
+        "workflow": ".github/workflows/integration-tests.yml",
+        "job": "Integration shards"
+      },
+      "evidence": "work-item-ticket-number-search.json",
+      "reproduction": {
+        "command": "cd server && npx vitest run src/test/integration/workItemPickerSearch.integration.test.ts",
+        "defect": "Restore the title-only predicate in searchPickerWorkItems; ticket-number lookup fails."
+      },
+      "status": "local-before-and-after-verified",
+      "limits": [
+        "Auth and connection boundary use fixture identity; query and PostgreSQL are real.",
+        "Current-source browser and GitHub CI verification remain pending.",
+        "No production incident identifier supplied."
+      ]
     }
   ]
 }
