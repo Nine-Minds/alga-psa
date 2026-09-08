@@ -267,7 +267,7 @@ export const updateInteraction = withAuth(async (
     const touchesScheduleEntry = (['start_time', 'end_time', 'duration', 'title'] as const)
       .some((field) => updateData[field] !== undefined);
     const updatedInteraction = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const interaction = await InteractionModel.updateInteraction(interactionId, updateData, tenant);
+      const interaction = await InteractionModel.updateInteraction(interactionId, updateData, tenant, trx);
       // Keep the calendar block in step with the interaction it represents.
       if (touchesScheduleEntry) {
         await syncInteractionScheduleEntries(trx, tenant, interaction);
