@@ -1,0 +1,20 @@
+{
+  "scope": "Host Kubernetes runtime image readback adapter and read-only collector validation",
+  "coverage": [
+    "UID ownership chains including Deployment/ReplicaSet and direct Pods",
+    "All replicas ready and matching runtime pullable digest; ordinary/sidedcar init lifecycle; completed Jobs",
+    "Missing replica/UID, stale controller, namespace mismatch, unready/terminating pod, missing/bare imageID, mixed rollout, failed init, unexpected sidecar, duplicate status and unsupported operator rejected",
+    "Consistent runtime substitution rejected by manifest comparator despite matching desired fields",
+    "Collector requires explicit context/namespace/workloads and pins read-only kubectl arguments; malformed/mis-scoped response rejected"
+  ],
+  "log": {
+    "path": "/tmp/alga-kubernetes-release-verified.log",
+    "sha256": "1cb9e5708a6f636f1a6ff3580896e2343531c833045816b46af5145f62abd4e5"
+  },
+  "limitations": [
+    "No live cluster queried; target runtime imageID compatibility unverified",
+    "Only supported workload kinds/pullable runtime image identities accepted",
+    "No atomic multi-resource snapshot or freshness policy enforcement yet",
+    "No Docker builds; focused host validation only"
+  ]
+}
