@@ -1064,6 +1064,8 @@ jobs:
           const server = { entrypoint: ['node', '/app/start-teams-development-ci.mjs'], command: [], volumes,
             environment: { NODE_ENV: 'development', TEAMS_EMULATOR_MODE: 'true', NEXT_PUBLIC_FORCE_FEATURE_FLAGS: 'release-v1-6-feature:true', NEXT_DIST_DIR: '.next/teams-development',
               DB_HOST: 'postgres', DB_PORT: '5432', DB_NAME_SERVER: 'server', REDIS_PREFIX: 'teams-development:',
+              TEAMS_BOT_APP_ID: 'e2e-teams-bot', TEAMS_BOT_APP_TENANT_ID: 'e2e-bot-tenant', TEAMS_BOT_APP_PASSWORD: 'synthetic-e2e-teams-bot-secret',
+              TEAMS_BOT_OPENID_CONFIG_URL: 'http://algasim:4010/v1/.well-known/openidconfiguration', TEAMS_BOT_SERVICE_URL_ALLOWLIST: 'http://algasim:4010',
               NEXT_PUBLIC_APP_URL: 'http://localhost:3000', NODE_OPTIONS: '--max-old-space-size=12288' } };
           writeFileSync(`${process.env.RUNNER_TEMP}/teams-development-compose.json`, JSON.stringify({ services: { server } }));
           JS

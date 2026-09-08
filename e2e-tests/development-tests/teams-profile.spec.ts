@@ -99,6 +99,52 @@ test('Teams profile recovery and calendar meeting creation preserve saved identi
     expect(await database('online_meetings').where(meetingScope)).toHaveLength(1);
     expect((await database('schedule_entries').where({ ...scope, entry_id: entryId }).first()).notes).toContain(meeting.join_url);
 
+    // Prelinked MSP identity is a fixture; sign-in/account-linking is a separate journey.
+    const microsoftTenantId = randomUUID(), microsoftUserId = randomUUID();
+    const foreignMicrosoftUserId = randomUUID(), conversationId = `bot-${actors.runId}`;
+    await database('microsoft_profiles').where({ ...scope, profile_id: profile.profile_id }).update({ tenant_id: microsoftTenantId });
+    await database('teams_integrations').where(scope).update({ enabled_capabilities: JSON.stringify(['personal_bot']) });
+    await database('user_auth_accounts').insert([
+      { ...scope, user_id: tenant.admin.userId, provider: 'microsoft', provider_account_id: microsoftUserId },
+      { tenant: actors.secondary.tenantId, user_id: actors.secondary.admin.userId, provider: 'microsoft', provider_account_id: foreignMicrosoftUserId },
+    ]);
+    const query = `Bot isolation ${actors.runId}`;
+    const ownTitle = `${query} OWN`, foreignTitle = `${query} FOREIGN`;
+    for (const [actor, ticketTitle] of [[tenant, ownTitle], [actors.secondary, foreignTitle]] as const) {
+      await database('tickets').insert({ tenant: actor.tenantId, ticket_id: randomUUID(), title: ticketTitle,
+        ticket_number: `BOT-${actors.runId.slice(0, 8)}`, client_id: actor.clients.primary.id,
+        board_id: actor.ticketing.boardId, status_id: actor.ticketing.openStatusId,
+        priority_id: actor.ticketing.priorityId, entered_by: actor.admin.userId,
+        assigned_to: actor.admin.userId, entered_at: database.fn.now(), is_closed: false });
+    }
+    await emulators.seed('msgraph', 'client', { clientId: 'e2e-teams-bot', clientSecret: 'synthetic-e2e-teams-bot-secret' });
+    const botInput = { targetUrl: process.env.E2E_TEAMS_BOT_TARGET_URL || 'http://server:3000/api/teams/bot/messages',
+      serviceUrl: process.env.E2E_TEAMS_BOT_SERVICE_URL || 'http://algasim:4010', appId: 'e2e-teams-bot',
+      tenantId: microsoftTenantId, fromAadObjectId: microsoftUserId, conversationId,
+      conversationType: 'personal', text: `ticket ${query}` };
+    // Compile this development route before the emulator's bounded delivery call.
+    expect((await page.request.get('/api/teams/bot/messages')).status()).toBe(405);
+    const sent = await emulators.seed('msgraph', 'bot-activity', botInput);
+    expect(sent).toMatchObject({ delivered: true, status: 200 });
+    const replies = await emulators.state<Array<{ conversationId: string }>>('msgraph', 'bot-activities');
+    const ownReplies = replies.filter(reply => reply.conversationId === conversationId);
+    expect(ownReplies).toHaveLength(1);
+    expect(JSON.stringify(ownReplies)).toContain(ownTitle);
+    expect(JSON.stringify(ownReplies)).not.toContain(foreignTitle);
+    expect(await database('teams_conversation_references').where({ ...scope, conversation_id: conversationId }).first())
+      .toMatchObject({ microsoft_user_id: microsoftUserId, tenant_id_aad: microsoftTenantId });
+    const deniedConversation = `foreign-${conversationId}`;
+    const denied = await emulators.seed('msgraph', 'bot-activity', { ...botInput,
+      fromAadObjectId: foreignMicrosoftUserId, conversationId: deniedConversation });
+    expect(denied).toMatchObject({ delivered: true, status: 200 });
+    const deniedReplies = (await emulators.state<Array<{ conversationId: string }>>('msgraph', 'bot-activities'))
+      .filter(reply => reply.conversationId === deniedConversation);
+    expect(deniedReplies).toHaveLength(1);
+    expect(JSON.stringify(deniedReplies)).toContain('Sign in to AlgaPSA');
+    expect(JSON.stringify(deniedReplies)).not.toContain(ownTitle);
+    expect(JSON.stringify(deniedReplies)).not.toContain(foreignTitle);
+
+
   } finally {
     await emulators.disarm('msgraph', 'operation-fault');
   }

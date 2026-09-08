@@ -3036,3 +3036,10 @@ Built3smallnativeemulatorbundles; accountinghostsession81018 QBO56105/Xero56106/
 - Positive case verifies sender/tenant identity, escaped conversation IDs, reply delivery, expired outbound token refresh without duplicate replies, and card update. Five rejection cases cover wrong audience, expired inbound token, untrusted reply destination, altered sender and altered tenant; every rejection emits no activity.
 - Full native Graph suite12756 terminal0:68passed/7files in1.22sec. Evidence/host-teams-bot-adapters.json. Existing msgraph workspace CI command discovers the new file. No Docker build.
 - F034 remains incomplete: product bot commands/account linkage and user SSO still lack demonstrated full application journeys; current-source GitHub CI remains required.
+
+### Product bot command and tenant isolation
+
+- Extended development journey through actual /api/teams/bot/messages with emulator-signed JWT, real handler, linked-user lookup, RBAC ticket search, connector reply and conversation-reference persistence. Primary and foreign tickets share the search phrase; reply contains only primary title. A separately linked foreign-tenant sender receives the sign-in card and neither ticket title.
+- Active integration, distinct Microsoft tenant id and two OAuth links are fixture preconditions, explicitly not SSO coverage. Synthetic bot credentials/trust origins are configured only in Teams CI development environment and local host launcher. GET route warmup must return405 before the emulator bounded POST delivery; product POSTs both returned200.
+- Browser6999 terminal0:1passed~1.9min; actual app45744 remains on53016 with12GiB/no Node source maps, no logged memory restart. Evidence/host-teams-product-bot.json records dirty source. No Docker build.
+- F034 description permits explicitly excluded unsupported SSO paths; T028 explicitly forbids counting prelinked fixtures as SSO tests. Keep the capability boundary accurate, and require current-source CI before broad completion claims.
