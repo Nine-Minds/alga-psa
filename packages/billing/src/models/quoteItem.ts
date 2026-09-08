@@ -207,7 +207,9 @@ const QuoteItem = {
       };
     }
 
-    if (resolvedItem.is_discount && item.is_recurring === undefined) {
+    // Callers default a discount's cadence to one-time; only an explicitly
+    // recurring discount opts out of inheriting its target's cadence.
+    if (resolvedItem.is_discount && resolvedItem.is_recurring !== true) {
       const cadence = await resolveDiscountTargetCadence(
         knexOrTrx,
         tenant,
@@ -279,10 +281,10 @@ const QuoteItem = {
     const totalPrice = Number(quantity) * Number(unitPrice);
 
     const isDiscount = (updateData.is_discount ?? existingItem.is_discount) === true;
-    const retargeted = updateData.applies_to_item_id !== undefined || updateData.applies_to_service_id !== undefined;
+    const willBeRecurring = updateData.is_recurring ?? existingItem.is_recurring;
     let inheritedCadence: Partial<IQuoteItem> = {};
 
-    if (isDiscount && retargeted && updateData.is_recurring === undefined) {
+    if (isDiscount && willBeRecurring !== true) {
       const cadence = await resolveDiscountTargetCadence(
         knexOrTrx,
         tenant,
