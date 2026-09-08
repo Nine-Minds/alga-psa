@@ -1,3 +1,5 @@
+import { coManagedAttachmentParent } from './attachmentParent';
+import { projectTaskAudience } from './projectTaskAudience';
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { assertCoManagedOperationalWrite } from '@alga-psa/licensing';
@@ -13,25 +15,27 @@ export { CoManagedThreadDisclosureError, type CoManagedThreadReference, type CoM
 async function lockedThread(context: CoManagedSharedWorkContext, reference: CoManagedThreadReference) {
   const { trx, actor, resource } = context;
   if (reference.storeTenant !== resource.tenant) deny();
-  const owner = tenantDb(trx, resource.tenant);
-  const thread = await owner.table('comment_threads').where({ thread_id: reference.threadId, ticket_id: resource.id }).forUpdate().first();
+  const owner = tenantDb(trx, resource.tenant), task = resource.kind === 'project_task';
+  const commentTable = task ? 'project_task_comments' : 'comments', commentKey = task ? 'task_comment_id' : 'comment_id', workKey = task ? 'task_id' : 'ticket_id';
+  const thread = await owner.table('comment_threads').where({ thread_id: reference.threadId, ...coManagedAttachmentParent(resource) }).forUpdate().first();
   if (!thread) deny();
-  const audience = resolveCommentAudience(thread);
+  const audience = task ? projectTaskAudience(thread) : resolveCommentAudience(thread);
   if (actor.tenant !== resource.tenant && audience === 'organization_private') deny();
-  const comments = await owner.table('comments').where({ thread_id: reference.threadId, ticket_id: resource.id }).orderBy('comment_id').forUpdate();
+  const comments = await owner.table(commentTable).where({ thread_id: reference.threadId, [workKey]: resource.id }).orderBy(commentKey).select('*', { comment_id: commentKey }).forUpdate();
   const root = comments.find(row => row.comment_id === thread.root_comment_id);
-  if (!root || root.deleted_at || root.publish_state !== 'published' || root.author_type !== 'internal' || root.contact_id != null) deny();
+  if (!root || root.deleted_at || (!task && root.publish_state !== 'published') || root.author_type !== 'internal' || root.contact_id != null) deny();
   // The root author controls this thread's audience, under current ticket scope.
   if (actor.tenant === resource.tenant) { if (root.actor_reference_id || root.user_id !== actor.userId) deny(); }
   else if (root.user_id != null || !root.actor_reference_id || !await owner.table('collaboration_actor_references').where({ actor_reference_id: root.actor_reference_id,
     actor_tenant: actor.tenant, actor_user_id: actor.userId }).forShare().first()) deny();
   // Do not use a thread-level command to publish drafts or widen a stricter
   // legacy branch that was not part of the displayed audience.
-  if (comments.some(row => row.publish_state !== 'published' || row.is_internal !== (audience !== 'requester'))) conflict();
-  const drafts = await owner.table('co_management_conversation_drafts').where({ customer_tenant: resource.tenant, relationship_id: resource.relationshipId,
+  if (!task && comments.some(row => row.publish_state !== 'published' || row.is_internal !== (audience !== 'requester'))) conflict();
+  if (task && comments.some(row => !Number.isInteger(row.collaboration_revision) || row.collaboration_revision >= 2147483647)) conflict();
+  const drafts = task ? [] : await owner.table('co_management_conversation_drafts').where({ customer_tenant: resource.tenant, relationship_id: resource.relationshipId,
     ticket_id: resource.id, thread_id: reference.threadId }).orderBy('operation_id').forShare();
   const files = await owner.table('co_management_conversation_attachments').where({ customer_tenant: resource.tenant, relationship_id: resource.relationshipId,
-    ticket_id: resource.id, thread_id: reference.threadId }).whereNull('discarded_at').orderBy('attachment_id').forUpdate();
+    ...coManagedAttachmentParent(resource), thread_id: reference.threadId }).whereNull('discarded_at').orderBy('attachment_id').forUpdate();
   const publishedIds = new Set(drafts.filter(row => row.status === 'published').map(row => row.operation_id));
   const visibleFiles = files.filter(row => comments.some(comment => comment.comment_id === row.comment_id && !comment.deleted_at) &&
     (!row.draft_operation_id || publishedIds.has(row.draft_operation_id)));
@@ -53,7 +57,7 @@ export interface CoManagedThreadDisclosureContext extends CoManagedSharedWorkCon
 /** The confirmed snapshot includes every reply, tombstone, file and draft. A
  * concurrent change forces review; text-edit commands cannot widen visibility.
  * The adapter records metadata-only activity and after-commit invalidation. */
-export async function discloseCoManagedTicketThread(db: Knex, inputActor: CoManagedSessionActor, inputResource: CoManagedSharedResource,
+export async function discloseCoManagedThread(db: Knex, inputActor: CoManagedSessionActor, inputResource: CoManagedSharedResource,
   input: CoManagedThreadDisclosureRequest, afterChange: (context: CoManagedThreadDisclosureContext) => Promise<void>): Promise<CoManagedThreadDisclosureReceipt> {
   if (!input || Object.keys(input).some(key => !['storeTenant', 'threadId', 'operationId', 'expectedSnapshot', 'audience', 'confirmed'].includes(key)) ||
     !isCoManagedUuid(input.operationId) || typeof input.expectedSnapshot !== 'string' || !/^[0-9a-f]{64}$/.test(input.expectedSnapshot) ||
@@ -61,7 +65,7 @@ export async function discloseCoManagedTicketThread(db: Knex, inputActor: CoMana
   const actor = snapshotCoManagedSessionActor(inputActor), resource = resourceSnapshot(inputResource);
   const request = { ...target(input), operationId: input.operationId.toLowerCase(), expectedSnapshot: input.expectedSnapshot, audience: input.audience, confirmed: true };
   if (request.storeTenant !== resource.tenant || (actor.tenant !== resource.tenant && request.audience === 'organization_private')) deny();
-  const requestHash = hash({ resource, actor: { tenant: actor.tenant, userId: actor.userId }, command: 'ticket_thread_audience', request });
+  const requestHash = hash({ resource, actor: { tenant: actor.tenant, userId: actor.userId }, command: resource.kind === 'ticket' ? 'ticket_thread_audience' : 'task_thread_audience', request });
   try {
     return await withAuthority(db, actor, resource, async context => {
       const { trx } = context, owner = tenantDb(trx, resource.tenant);
@@ -81,13 +85,14 @@ export async function discloseCoManagedTicketThread(db: Knex, inputActor: CoMana
       if (request.audience === 'organization_private') await retainCoManagedSharedConversationBeforeReduction(trx, resource, request.operationId, { threadId: request.threadId });
       await owner.table('comment_threads').where('thread_id', request.threadId).update({ collaboration_audience: request.audience,
         is_internal: request.audience !== 'requester', last_activity_at: appliedAt });
-      await owner.table('comments').where({ thread_id: request.threadId, ticket_id: resource.id }).update({ is_internal: request.audience !== 'requester',
+      await owner.table(resource.kind === 'project_task' ? 'project_task_comments' : 'comments').where({ thread_id: request.threadId, [resource.kind === 'project_task' ? 'task_id' : 'ticket_id']: resource.id }).update({
+        ...(resource.kind === 'project_task' ? { collaboration_revision: trx.raw('collaboration_revision + 1') } : { is_internal: request.audience !== 'requester' }),
         updated_at: trx.raw("GREATEST(clock_timestamp(), COALESCE(updated_at, '-infinity'::timestamptz) + interval '1 microsecond')") });
       await afterChange({ ...context, operationId: request.operationId, threadId: request.threadId, rootCommentId: root.comment_id, commentIds: comments.map(row => row.comment_id),
         previousAudience: preview.audience, audience: request.audience, appliedAt: appliedAt.toISOString(), actorReferenceId: root.actor_reference_id ?? undefined });
       await owner.table('co_management_command_receipts').insert({ tenant: resource.tenant, operation_id: request.operationId, relationship_id: resource.relationshipId,
-        resource_type: 'ticket', resource_id: resource.id, actor_tenant: actor.tenant, actor_user_id: actor.userId,
-        command_type: 'ticket_thread_audience', request_hash: requestHash, applied_at: appliedAt });
+        resource_type: resource.kind, resource_id: resource.id, actor_tenant: actor.tenant, actor_user_id: actor.userId,
+        command_type: resource.kind === 'ticket' ? 'ticket_thread_audience' : 'task_thread_audience', request_hash: requestHash, applied_at: appliedAt });
       return result(appliedAt);
     });
   } catch (error) {
@@ -97,4 +102,10 @@ export async function discloseCoManagedTicketThread(db: Knex, inputActor: CoMana
     throw error;
   }
 
+}
+
+/** Preserve the existing ticket-only public entry point. */
+export async function discloseCoManagedTicketThread(...args: Parameters<typeof discloseCoManagedThread>) {
+  if (args[2]?.kind !== 'ticket') deny();
+  return discloseCoManagedThread(...args);
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import CoManagedCommentAttachments from './CoManagedCommentAttachments';
+import CoManagedThreadDisclosure from './CoManagedThreadDisclosure';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSession } from 'next-auth/react';
@@ -76,17 +77,19 @@ function Conversation({ resource, actor, onUnavailable }: { resource: CoManagedS
   const { t } = useTranslation('msp/licensing'), { formatDate } = useFormatters();
   const [state, setState] = useState<Screen | null>(null), [draft, setDraft] = useState<Draft | null>(null), [draftId, setDraftId] = useState(0);
   const [busy, setBusy] = useState(false), [error, setError] = useState(false);
+  const [disclosure,setDisclosure] = useState<CoManagedTaskConversationItem | null>(null);
   const cursors = useRef<Array<CoManagedConversationCursor | undefined>>([undefined]);
   const generation = useRef(0), mounted = useRef(false), loading = useRef(false);
-  function unavailable() { setState(null); setDraft(null); setError(true); onUnavailable(); }
+  function unavailable() { setState(null); setDraft(null); setDisclosure(null); setError(true); onUnavailable(); }
   async function refresh(clear = false) {
     const current = ++generation.current; loading.current = true; setBusy(true);
-    if (clear) { setState(null); setDraft(null); }
+    if (clear) { setState(null); setDraft(null); setDisclosure(null); }
     try {
       const page = await getSharedProjectTaskConversationAction(resource, cursors.current.at(-1));
       if (!mounted.current || current !== generation.current) return;
       if (page.actor.tenant !== actor.tenant || page.actor.userId !== actor.userId) throw new Error('Task conversation session changed');
       setState(page); setError(false);
+      setDisclosure(previous => previous && page.items.some(item => item.storeTenant === previous.storeTenant && item.commentId === previous.commentId && !item.deleted && item.audience === previous.audience && page.writeAudiences.includes(item.audience)) ? previous : null);
       setDraft(previous => {
         if (!previous) return null;
         if (previous.kind === 'new') return page.writeAudiences.length ? previous : null;
@@ -105,12 +108,15 @@ function Conversation({ resource, actor, onUnavailable }: { resource: CoManagedS
   const open = (value: Draft) => { setDraft(value); setDraftId(id => id + 1); };
   return <section className="space-y-4" aria-labelledby="co-task-conversation-title">
     <div className="flex flex-wrap items-center justify-between gap-2"><h2 id="co-task-conversation-title" className="font-semibold">{t('coManaged.conversation.title')}</h2>
-      <Button id="co-task-conversation-refresh" variant="outline" disabled={busy || Boolean(draft)} onClick={() => void refresh(true)}>{t('coManaged.ticket.reload')}</Button></div>
+      <Button id="co-task-conversation-refresh" variant="outline" disabled={busy || Boolean(draft || disclosure)} onClick={() => void refresh(true)}>{t('coManaged.ticket.reload')}</Button></div>
     {error && <p role="alert" className="text-destructive">{t('coManaged.conversation.loadError')}</p>}
     {!state && busy && <p role="status">{t('coManaged.ticket.loading')}</p>}
     {state && <>
       {!state.writeAudiences.length && <p role="status">{t('coManaged.ticket.readOnly')}</p>}
-      {state.writeAudiences.length > 0 && !draft && <Button id="co-task-conversation-new" onClick={() => open({ kind: 'new' })}>{t('coManaged.conversation.new')}</Button>}
+      {state.writeAudiences.length > 0 && !draft && !disclosure && <Button id="co-task-conversation-new" onClick={() => open({ kind: 'new' })}>{t('coManaged.conversation.new')}</Button>}
+      {disclosure && <CoManagedThreadDisclosure resource={resource} thread={{ storeTenant:disclosure.storeTenant,threadId:disclosure.threadId }} actor={state.actor}
+        audiences={state.writeAudiences.filter(value => actor.tenant === resource.tenant || value !== 'organization_private')}
+        onClosed={() => { setDisclosure(null); void refresh(true); }} onSaved={() => { setDisclosure(null); cursors.current=[undefined]; void refresh(true); }} />}
       {draft && <Composer key={draftId} resource={resource} audiences={state.writeAudiences} draft={draft} onUnavailable={unavailable}
         onSaved={() => { setDraft(null); cursors.current = [undefined]; void refresh(true); }} onCancel={() => { setDraft(null); void refresh(true); }} />}
       {!state.items.length && <p className="text-sm text-muted-foreground">{t('coManaged.conversation.empty')}</p>}
@@ -126,16 +132,17 @@ function Conversation({ resource, actor, onUnavailable }: { resource: CoManagedS
             {item.parentCommentId && <span> · {t('coManaged.conversation.reply')}</span>}</p>
           {document ? <Document key={`${id}:${item.revision}`} id={`${id}-body`} document={document} /> : <p className="whitespace-pre-wrap break-words text-sm">{item.deleted ? t('coManaged.conversation.deleted') : conversationText(item.note, item.markdown)}</p>}
           {!item.deleted && <CoManagedCommentAttachments resource={resource} comment={reference(item)} />}
-          {writable && !draft && <div className="flex gap-2">
+          {writable && !draft && !disclosure && <div className="flex gap-2">
             {item.canReply && <Button id={`${id}-reply`} variant="ghost" size="sm" onClick={() => open({ kind: 'reply', item })}>{t('coManaged.conversation.reply')}</Button>}
             {own && document !== null && <Button id={`${id}-edit`} variant="ghost" size="sm" onClick={() => open({ kind: 'edit', item })}>{t('coManaged.conversation.edit')}</Button>}
+            {own && !item.parentCommentId && <Button id={`${id}-audience`} variant="ghost" size="sm" onClick={() => setDisclosure(item)}>{t('coManaged.disclosure.title')}</Button>}
             {own && <Button id={`${id}-delete`} variant="ghost" size="sm" onClick={() => open({ kind: 'delete', item })}>{t('coManaged.conversation.delete')}</Button>}
           </div>}
         </li>;
       })}</ol>
       <div className="flex gap-2">
-        {cursors.current.length > 1 && <Button id="co-task-conversation-newer" variant="outline" disabled={busy || Boolean(draft)} onClick={() => { cursors.current.pop(); void refresh(true); }}>{t('coManaged.conversation.newer')}</Button>}
-        {state.nextBefore && <Button id="co-task-conversation-older" variant="outline" disabled={busy || Boolean(draft)} onClick={() => { cursors.current.push(state.nextBefore!); void refresh(true); }}>{t('coManaged.conversation.older')}</Button>}
+        {cursors.current.length > 1 && <Button id="co-task-conversation-newer" variant="outline" disabled={busy || Boolean(draft || disclosure)} onClick={() => { cursors.current.pop(); void refresh(true); }}>{t('coManaged.conversation.newer')}</Button>}
+        {state.nextBefore && <Button id="co-task-conversation-older" variant="outline" disabled={busy || Boolean(draft || disclosure)} onClick={() => { cursors.current.push(state.nextBefore!); void refresh(true); }}>{t('coManaged.conversation.older')}</Button>}
       </div>
     </>}
   </section>;

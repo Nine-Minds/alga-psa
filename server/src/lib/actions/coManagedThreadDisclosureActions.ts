@@ -5,7 +5,7 @@ import { CoManagedLifecycleError } from '@alga-psa/licensing';
 import { previewCoManagedThreadDisclosure, previewCoManagedPrivateThreadDisclosure, CoManagedThreadDisclosureError, CoManagedSharedWorkError, type CoManagedSharedResource,
   type CoManagedThreadReference, type CoManagedThreadDisclosureRequest } from '@alga-psa/co-managed';
 import { coManagedBrowserActor } from '../co-managed/browserActor';
-import { discloseSharedTicketThread } from '../co-managed/discloseTicketThread';
+import { discloseSharedThread } from '../co-managed/discloseTicketThread';
 export const previewCoManagedThreadDisclosureAction = withAuth(async (user, { tenant }, resource: CoManagedSharedResource, reference: CoManagedThreadReference) => {
   const actor = await coManagedBrowserActor(user, tenant), { knex } = await createTenantKnex(tenant);
   const preview = reference.storeTenant.toLowerCase() === resource.tenant.toLowerCase() ? previewCoManagedThreadDisclosure : previewCoManagedPrivateThreadDisclosure;
@@ -14,7 +14,7 @@ export const previewCoManagedThreadDisclosureAction = withAuth(async (user, { te
 export const discloseCoManagedThreadAction = withAuth(async (user, { tenant }, resource: CoManagedSharedResource, request: CoManagedThreadDisclosureRequest) => {
   try {
     const actor = await coManagedBrowserActor(user, tenant), { knex } = await createTenantKnex(tenant);
-    return { ok: true as const, receipt: await discloseSharedTicketThread(knex, actor, resource, request) };
+    return { ok: true as const, receipt: await discloseSharedThread(knex, actor, resource, request) };
   } catch (error) {
     if (error instanceof CoManagedSharedWorkError) return { ok: false as const, code: 'forbidden' as const };
     if (error instanceof CoManagedLifecycleError) return { ok: false as const, code: 'readOnly' as const };

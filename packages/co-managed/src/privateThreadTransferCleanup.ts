@@ -23,7 +23,7 @@ export async function cleanupCoManagedThreadTransfers(db: Knex, tenant: string, 
           .where('cleanup_next_attempt_at', '<=', trx.raw('clock_timestamp()')).forUpdate().skipLocked().first();
         if (!row) return false;
         for (const file of row.manifest) {
-          if (file.path !== disclosedAttachmentPath(row.customer_tenant, tenant, row.operation_id, file.targetId)) throw new Error('Invalid transfer cleanup path');
+          if (file.path !== disclosedAttachmentPath(row.customer_tenant, tenant, row.operation_id, file.targetId, row.project_task_id ? 'project_task' : 'ticket')) throw new Error('Invalid transfer cleanup path');
           await remove(file.path);
         }
         await owner.table(TABLE).where('operation_id', row.operation_id).update({ cleaned_at: trx.raw('clock_timestamp()'), comment_map: {}, manifest: '[]', cleanup_error_code: null });
