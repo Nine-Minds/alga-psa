@@ -781,3 +781,10 @@ Session licensing checkpoint (2026-09-08): inspection narrowed the suspected edi
 - **Where:** Portable restore staging, native uploadStream, StorageProvider options and S3 PUT/HEAD transport.
 - **Gate:** Actual loopback execution failed in the installed SDK with an undefined decoded-content-length header; a consumed-body retry could overwrite previously uploaded bytes. ACT / bounded-now.
 - **Status:** Added optional exact content_length, forwarded both known-length streaming callers, and split S3 replay policy by body type and receipt operation. Existing buffer callers remain compatible; live provider/multipart validation remains separate.
+
+
+## portable-authored-reference-boundary — friction
+- **What:** Native file and document IDs were remapped, but editor URLs still addressed source IDs; generic string replacement would also alter prose, code and external links.
+- **Where:** Portable file preparation and declared document/comment/task/KB content columns.
+- **Gate:** A concrete native restore showed usable copied bytes behind broken embedded references. Source document routes and editor formats are established. ACT / bounded-now.
+- **Status:** Added explicit route mapping and editor-field traversal, plus parser-position replacement for Markdown/HTML. The file adapter supplies verified file/document mappings after allocation. Literal content and unknown external references remain outside rewriting authority.

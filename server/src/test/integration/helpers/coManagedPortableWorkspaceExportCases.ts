@@ -144,8 +144,16 @@ export function registerCoManagedPortableWorkspaceExportTests(getDb: () => Knex,
     await f.customer.table('contact_phone_numbers').insert({ tenant: f.actor.tenant, contact_phone_number_id: randomUUID(), contact_name_id: contactId,
       phone_number: '+1 (206) 555-0142', canonical_type: 'work' });
     await f.customer.table('comment_threads').insert({ tenant: f.actor.tenant, thread_id: threadId, ticket_id: f.resource.id, root_comment_id: commentId, is_internal: false, created_by: f.actor.userId });
+    const sourceImageUrl = `/api/documents/view/${f.fileId}?download=false#image`;
+    const sourceNote = JSON.stringify([{ type: 'image', props: { url: sourceImageUrl, caption: f.fileId } },
+      { type: 'paragraph', content: [{ type: 'text', text: sourceImageUrl }] }]);
     await f.customer.table('comments').insert({ tenant: f.actor.tenant, comment_id: commentId, thread_id: threadId, ticket_id: f.resource.id,
-      user_id: f.actor.userId, note: 'Restored canonical root', is_internal: false, is_resolution: false, publish_state: 'published' });
+      user_id: f.actor.userId, note: sourceNote, markdown_content: `![Caption](${sourceImageUrl})\n\n\`${sourceImageUrl}\``,
+      is_internal: false, is_resolution: false, publish_state: 'published' });
+    await f.customer.table('documents').where('document_id', f.documentId).update({ content: `<p>Legacy <img src='${sourceImageUrl}' alt='${f.fileId}'></p>` });
+    await f.customer.table('document_block_content').insert({ tenant: f.actor.tenant, content_id: randomUUID(), document_id: f.documentId,
+      block_data: JSON.stringify({ type: 'doc', content: [{ type: 'image', attrs: { src: sourceImageUrl } },
+        { type: 'text', text: 'Download', marks: [{ type: 'link', attrs: { href: `/api/documents/download/${f.documentId}?format=pdf` } }] }] }) });
     const handle = await f.prepare(), archivePath = `${f.root}/restore-source.alga`;
     await handle.consume(async (artifact: any) => f.fs.copyFile(artifact.path, archivePath));
     const { openPortableArchive } = await import('../../../../../packages/co-managed/src/portableArchive');
@@ -210,6 +218,17 @@ export function registerCoManagedPortableWorkspaceExportTests(getDb: () => Knex,
       const credential = await own.table('credentials').first();
       expect(await f.encryption.decryptCredentialValue(credential.password_ciphertext, credential.encryption_scheme)).toBe('customer recovery password');
       const file = await own.table('external_files').first(); expect(objects.get(file.storage_path)?.equals(f.bytes)).toBe(true);
+      const document = await own.table('documents').where('file_id', file.file_id).first();
+      const restoredNote = JSON.parse(restoredComment.note);
+      expect(restoredNote[0].props).toEqual({ url: `/api/documents/view/${file.file_id}?download=false#image`, caption: f.fileId });
+      expect(restoredNote[1].content[0].text).toBe(sourceImageUrl);
+      expect(restoredComment.markdown_content).toBe(`![Caption](/api/documents/view/${file.file_id}?download=false#image)\n\n\`${sourceImageUrl}\``);
+      expect(document.content).toBe(`<p>Legacy <img src='/api/documents/view/${file.file_id}?download=false#image' alt='${f.fileId}'></p>`);
+      const block = await own.table('document_block_content').where('document_id', document.document_id).first();
+      const rich = typeof block.block_data === 'string' ? JSON.parse(block.block_data) : block.block_data;
+      expect(rich.content[0].attrs.src).toBe(`/api/documents/view/${file.file_id}?download=false#image`);
+      expect(rich.content[1].marks[0].attrs.href).toBe(`/api/documents/download/${document.document_id}?format=pdf`);
+      expect((await f.customer.table('comments').where('comment_id', commentId).first()).note).toBe(sourceNote);
       await expect(getDb().transaction(trx => insertCoManagedPortableWorkspaceDatabase(trx, input))).rejects.toThrow('already exists');
     } finally { await lease?.dispose(); await opened.dispose(); }
   }));

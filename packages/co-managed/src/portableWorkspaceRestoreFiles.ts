@@ -9,6 +9,7 @@ import type { PortableStagedBlob } from './portableBlobStaging';
 import type { prepareCoManagedPortableWorkspaceRecords } from './portableWorkspaceRestoreRecords';
 import { CO_MANAGED_PORTABLE_DOCUMENT_COLUMNS } from './portableDocumentCatalog';
 import { assertPortableTransferActive, awaitPortableTransfer, portableTransferSignal } from './portableTransfer';
+import { rewritePortableRecordRichText } from './portableRichTextReferences';
 
 type PreparedRecords = ReturnType<typeof prepareCoManagedPortableWorkspaceRecords>;
 type NativeRow = Record<string, unknown>;
@@ -20,7 +21,8 @@ const fail = (): never => { throw new Error('Invalid portable restore file prepa
 const same = (a: unknown, b: unknown) => typeof a === 'string' && typeof b === 'string' && a.toLowerCase() === b.toLowerCase();
 
 /** Pure binding adapter for an authenticated archive and a trusted record
- * transformation. No provider, database, source trust or authored JSON rewrite.
+ * transformation. Verified native file/document mappings also repair explicit
+ * editor media/link fields. No provider, database or source trust is recreated.
  * The historical uploader must be selected by admission from the inactive
  * imported users, never from a foreign installer principal. Native file transport happens separately before DB insertion. */
 export function prepareCoManagedPortableWorkspaceFiles(input: {
@@ -105,6 +107,9 @@ export function prepareCoManagedPortableWorkspaceFiles(input: {
       actor_reference_id: attachment.actorReferenceId === null ? null : mapped('collaboration_actor_references', 'actor_reference_id', attachment.actorReferenceId),
       actor_display_name: attachment.actorDisplayName, actor_organization_name: attachment.actorOrganizationName } };
   }
+  const nativeFileIds = new Map<string, string>();
+  for (const [blobId, destinationId] of fileIds) if (blobId.startsWith('file:')) nativeFileIds.set(blobId.slice(5), destinationId);
+  rewritePortableRecordRichText(records, nativeFileIds, domains.get(JSON.stringify(['documents', 'document_id'])) ?? new Map());
   // Reconnect sections explicitly: structuredClone preserves aliases today,
   // but callers need not have retained the original records/sections aliases.
   for (const section of Object.values(prepared.sections)) for (const table of Object.keys(section)) section[table] = records[table];
