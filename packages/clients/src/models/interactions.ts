@@ -383,14 +383,18 @@ class InteractionModel {
     }
   }
 
-  static async updateInteraction(interactionId: string, updateData: Partial<IInteraction>, tenantId: string): Promise<IInteraction> {
-    const { knex: db, tenant } = await createTenantKnex(tenantId);
-    const scopedTenant = tenant ?? tenantId;
+  static async updateInteraction(
+    interactionId: string,
+    updateData: Partial<IInteraction>,
+    tenantId: string,
+    trx?: DbOrTransaction,
+  ): Promise<IInteraction> {
+    const { db, tenant } = await resolveDb(tenantId, trx);
 
     try {
       const { tenant: _ignoreTenant, interaction_id: _ignoreId, ...safeUpdateData } = updateData as any;
 
-      const [updatedInteraction] = await tenantScopedTable(db, scopedTenant, 'interactions')
+      const [updatedInteraction] = await tenantScopedTable(db, tenant, 'interactions')
         .where({
           interaction_id: interactionId,
         })
@@ -401,7 +405,7 @@ class InteractionModel {
         throw new Error('Interaction not found');
       }
 
-      const fullInteraction = await this.getById(updatedInteraction.interaction_id, tenantId);
+      const fullInteraction = await this.getById(updatedInteraction.interaction_id, tenantId, db);
       if (!fullInteraction) {
         throw new Error('Updated interaction could not be reloaded after update.');
       }
