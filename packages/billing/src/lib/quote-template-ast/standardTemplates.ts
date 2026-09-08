@@ -10,7 +10,9 @@ const cloneAst = (ast: TemplateAst): TemplateAst =>
  * Description cell: the catalog item name stacked over the line's description
  * (which is seeded from the catalog description). Lines without a name — custom
  * items and discounts — render the description alone, because the renderer drops
- * the blank line the missing name leaves behind.
+ * the blank line the missing name leaves behind; lines whose description is the
+ * name itself (saved before this column existed, or drawn from a catalog service
+ * with no description) collapse back to a single line for the same reason.
  */
 const buildItemDescriptionValue = () =>
   ({

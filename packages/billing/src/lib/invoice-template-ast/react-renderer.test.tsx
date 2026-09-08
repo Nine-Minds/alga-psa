@@ -1089,6 +1089,11 @@ describe('renderEvaluatedTemplateAst', () => {
           description: 'Firewall administration and rule reviews.',
         },
         { id: 'custom', service_name: null, description: 'Custom onboarding block' },
+        // Lines saved before the catalog description reached them — and lines drawn
+        // from a catalog service that has no description — carry the name as their
+        // description. The stack must not print those words twice.
+        { id: 'legacy', service_name: 'Managed Support', description: 'Managed Support' },
+        { id: 'named-only', service_name: 'Onsite Visit', description: null },
       ],
     });
     const rendered = await renderEvaluatedTemplateAst(ast, evaluation);
@@ -1097,5 +1102,9 @@ describe('renderEvaluatedTemplateAst', () => {
     expect(rendered.html).toContain('white-space:pre-line');
     // The nameless row keeps its description without a leading blank line.
     expect(rendered.html).toContain('>Custom onboarding block</td>');
+    // The repeated name collapses to one line, and so does a name with no description.
+    expect(rendered.html).toContain('>Managed Support</td>');
+    expect(rendered.html).not.toContain('Managed Support\nManaged Support');
+    expect(rendered.html).toContain('>Onsite Visit</td>');
   });
 });

@@ -92,4 +92,30 @@ describe('grouped quote template render', () => {
     // Description cells stack the catalog item name over its description.
     expect(rendered.html).toContain('Managed Workstation\nMonitoring, patching and helpdesk per workstation.');
   });
+
+  // Lines saved before the Description column stacked the name — and lines drawn
+  // from a catalog service with no description — carry the name as the
+  // description. Re-rendering those must not print the name twice.
+  it('prints a line whose description is its own name only once', async () => {
+    const legacyQuote: IQuote = {
+      ...quote,
+      quote_items: [
+        {
+          tenant: 'tenant-1', quote_id: 'quote-1', quote_item_id: 'legacy-1', service_id: 'svc-4',
+          service_name: 'Managed Support', description: 'Managed Support',
+          quantity: 1, unit_price: 5000, total_price: 5000, tax_amount: 0, net_amount: 5000,
+          display_order: 1, is_optional: false, is_selected: true, is_recurring: true,
+          billing_frequency: 'monthly', service_item_kind: 'service',
+        },
+      ],
+    };
+
+    const viewModel = await mapLoadedQuoteToViewModel(fakeKnex, 'tenant-1', legacyQuote);
+    const ast = getStandardQuoteTemplateAstByCode('standard-quote-grouped')!;
+    const evaluation = evaluateTemplateAst(ast, viewModel as unknown as Record<string, unknown>);
+    const rendered = await renderEvaluatedTemplateAst(ast, evaluation);
+
+    expect(rendered.html).not.toContain('Managed Support\nManaged Support');
+    expect(rendered.html).toContain('>Managed Support</td>');
+  });
 });

@@ -260,15 +260,28 @@ const formatValue = (value: unknown, format: TemplateValueFormat | undefined, ct
 
 /**
  * Table cells may stack lines (e.g. an item name over its description). Drop the
- * blank lines a missing part leaves behind and keep the remaining line breaks —
- * same multiline convention field nodes already use.
+ * blank lines a missing part leaves behind, collapse a line that only repeats the
+ * one above it — a quote line whose description was seeded from the item name
+ * stacks the same words twice — and keep the remaining line breaks, the same
+ * multiline convention field nodes already use.
  */
 const resolveTableCellText = (text: string): { text: string; multiline: boolean } => {
   if (!text.includes('\n')) {
     return { text, multiline: false };
   }
 
-  const trimmed = text.replace(/^[^\S\n]*\n+/, '').replace(/\n+[^\S\n]*$/, '');
+  const lines = text.split('\n').reduce<string[]>((kept, line) => {
+    if (kept.length > 0 && kept[kept.length - 1].trim() === line.trim()) {
+      return kept;
+    }
+    kept.push(line);
+    return kept;
+  }, []);
+
+  while (lines.length > 0 && lines[0].trim() === '') lines.shift();
+  while (lines.length > 0 && lines[lines.length - 1].trim() === '') lines.pop();
+
+  const trimmed = lines.join('\n');
   return { text: trimmed, multiline: trimmed.includes('\n') };
 };
 
