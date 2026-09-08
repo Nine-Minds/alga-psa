@@ -12,7 +12,9 @@ for (const [key, filename] of [['NEXTAUTH_SECRET', 'nextauth_secret'], ['DB_PASS
   if (!env[key]) throw new Error(`Missing ${key} for isolated development app`);
 }
 env.DATABASE_URL = `postgresql://${encodeURIComponent(env.DB_USER_SERVER || 'app_user')}:${encodeURIComponent(env.DB_PASSWORD_SERVER)}@${env.DB_HOST}:${env.DB_PORT}/${env.DB_NAME_SERVER}`;
-const child = spawn(process.execPath, ['/app/node_modules/next/dist/bin/next', 'dev', '--webpack', '-p', '3000'], {
+// Avoid retaining Node source maps for this large development module graph.
+// Browser traces remain available; server stack traces use generated locations.
+const child = spawn(process.execPath, ['/app/node_modules/next/dist/bin/next', 'dev', '--webpack', '--disable-source-maps', '-p', '3000'], {
   cwd: '/app/server', env, stdio: 'inherit',
 });
 for (const signal of ['SIGTERM', 'SIGINT']) process.on(signal, () => child.kill(signal));

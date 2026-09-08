@@ -1064,10 +1064,13 @@ jobs:
           const server = { entrypoint: ['node', '/app/start-teams-development-ci.mjs'], command: [], volumes,
             environment: { NODE_ENV: 'development', TEAMS_EMULATOR_MODE: 'true', NEXT_PUBLIC_FORCE_FEATURE_FLAGS: 'release-v1-6-feature:true', NEXT_DIST_DIR: '.next/teams-development',
               DB_HOST: 'postgres', DB_PORT: '5432', DB_NAME_SERVER: 'server', REDIS_PREFIX: 'teams-development:',
-              NEXT_PUBLIC_APP_URL: 'http://localhost:3000', NODE_OPTIONS: '--max-old-space-size=8192' } };
+              NEXT_PUBLIC_APP_URL: 'http://localhost:3000', NODE_OPTIONS: '--max-old-space-size=12288' } };
           writeFileSync(`${process.env.RUNNER_TEMP}/teams-development-compose.json`, JSON.stringify({ services: { server } }));
           JS
           export COMPOSE_FILE="$COMPOSE_FILE:$RUNNER_TEMP/teams-development-compose.json"
+          # Earlier production/provider phases have completed. Retain their logs,
+          # but release worker memory before compiling the development app.
+          docker-compose -p alga-e2e-test stop email-service hocuspocus
           docker-compose -p alga-e2e-test up --no-build --no-deps --force-recreate -d server
           ready=false
           for _attempt in $(seq 1 90); do

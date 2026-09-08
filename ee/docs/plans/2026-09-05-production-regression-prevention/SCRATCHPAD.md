@@ -3021,3 +3021,11 @@ Built3smallnativeemulatorbundles; accountinghostsession81018 QBO56105/Xero56106/
 - First run31671 exit1 at navigation to calendar: connection refused; app log explicitly recorded Next automatic restart at 80% of 12 GiB heap. Failed artifacts preserved /tmp/alga-teams-calendar-memory-failure.
 - Verified Mac physical RAM48GiB. Restarted owned app with20GiB heap (session44003, port53016); unchanged browser run62198 exit0,1passed~2.2min, no retries/skips. Evidence/host-teams-calendar-meeting.json records dirty source and memory limitation. No Docker build.
 - CI remains8GiB and unverified; do not infer CI success from the larger native heap. Background artifact jobs log Temporal unavailable, so do not claim artifact-job coverage. Meeting UI gap is partially closed; bot/SSO and remaining full plan gates remain incomplete.
+
+### Teams development memory budget validation
+
+- Verified installed Next CLI supports --disable-source-maps; it disables Node enable-source-maps, not browser trace capture. Next webpackMemoryOptimizations is applied in build/webpack-build, not the dev path, so it was not adopted as a dev fix.
+- Clean3aa447b2828a72f53c8f45ca67f8948eafc02688 gate98712 at8GiB/no Node source maps failed on automatic memory restart. Native Nx build-deps then succeeded57prerequisite tasks; gate63135 at8GiB with USE_PREBUILT also restarted. Neither is presented as a working configuration.
+- Restored source mode, raised heap12GiB with Node source maps disabled. Host app54309 (port53016), gate17667 terminal0:1passed~1.7min, no retries/skips, cleanbeforeafter, no memory-threshold restart in log. Sampled RSS6503456KiB near completion, not peak. Evidence/host-teams-memory-budget.json. No Docker build.
+- Read-only GitHub confirms PUBLIC repository and workflow ubuntu-latest. GitHub runner docs list16GB for this public runner: https://docs.github.com/en/actions/reference/runners/github-hosted-runners . Native Mac evidence does not establish Linux resource usage.
+- CI Teams entrypoint now uses supported --disable-source-maps and12GiB heap; final development phase stops email-service/hocuspocus after their production/provider tests to release memory while retaining logs.10entrypoint/evidence tests pass; actionlint passes. Full native GitHub CI remains required.
