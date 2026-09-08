@@ -83,3 +83,5 @@ export { admitNamedConversationEmailReply } from './inboundNamedConversationEmai
 export { downloadNamedConversationAttachment } from './namedConversationAttachments';
 export { listNamedReplyReviews, getNamedReplyReview, resolveNamedReplyReview,
   type NamedReplyReviewDestination, type ResolveNamedReplyReviewRequest } from './inboundNamedConversationReview';
+
+export { uploadNamedConversationEditorFile, downloadNamedConversationEditorFile } from './namedConversationEditorFiles';

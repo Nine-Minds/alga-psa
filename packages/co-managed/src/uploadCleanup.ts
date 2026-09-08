@@ -31,6 +31,24 @@ export async function cleanupCoManagedUploads(db: Knex, tenant: string, remove: 
     const files = await owner.table(FILES).where({ status: 'pending' }).whereNull('draft_operation_id').whereNull('discarded_at').modify(expired)
       .orderBy('last_activity_at').orderBy('attachment_id').limit(limit).forUpdate().skipLocked();
     for (const row of files) { await owner.table(FILES).where('attachment_id', row.attachment_id).update({ discarded_at: trx.raw('clock_timestamp()') }); result.discardedFiles++; }
+    // Ready editor uploads survive indefinitely while selected by their author's
+    // draft. Unselected uploads use the existing abandoned-upload retention.
+    // Lock the file before checking selection, matching draft-save file locks.
+    const selectedEditor = owner.table('ticket_conversation_editor_drafts as editor').whereRaw('editor.actor_user_id = f.actor_user_id')
+      .whereRaw('editor.conversation_store_tenant = f.named_editor_store_tenant AND editor.conversation_id = f.named_editor_conversation_id')
+      .whereRaw('editor.ticket_tenant = f.customer_tenant AND editor.ticket_id = f.ticket_id')
+      .whereRaw("editor.attachment_manifest @> jsonb_build_array(jsonb_build_object('attachmentId', f.attachment_id::text))");
+    const editorFiles = await owner.table(FILES + ' as f').where('status', 'ready').whereNotNull('named_editor_conversation_id').whereNotExists(selectedEditor)
+      .whereNull('discarded_at').modify(expired).orderBy('last_activity_at').orderBy('attachment_id').limit(limit).forUpdate().skipLocked();
+    for (const row of editorFiles) {
+      const selected = await owner.table('ticket_conversation_editor_drafts').where({ actor_user_id: row.actor_user_id,
+        conversation_store_tenant: row.named_editor_store_tenant, conversation_id: row.named_editor_conversation_id,
+        ticket_tenant: row.customer_tenant, ticket_id: row.ticket_id })
+        .whereRaw('attachment_manifest @> ?::jsonb', [JSON.stringify([{ attachmentId: row.attachment_id }])]).first();
+      if (selected) continue;
+      await owner.table(FILES).where('attachment_id', row.attachment_id).update({ discarded_at: trx.raw('clock_timestamp()') });
+      result.discardedFiles++;
+    }
   });
   const candidates = await tenantDb(db, tenant).table(FILES).whereNotNull('discarded_at').whereNull('purged_at').where('cleanup_next_attempt_at', '<=', db.raw('clock_timestamp()'))
     .orderBy('cleanup_next_attempt_at').orderBy('attachment_id').limit(limit).select('attachment_id');
@@ -47,6 +65,8 @@ export async function cleanupCoManagedUploads(db: Knex, tenant: string, remove: 
           if (!draft || draft.customer_tenant !== row.customer_tenant || draft.relationship_id !== row.relationship_id || draft.ticket_id !== row.ticket_id ||
             draft.thread_id !== row.thread_id || draft.operation_id !== row.comment_id ||
             (explicitRemoval ? draft.status !== 'published' || draft.abandoned_at : draft.status !== 'draft' || !draft.abandoned_at)) throw new Error('Invalid cleanup draft');
+        } else if (row.named_editor_conversation_id) {
+          if (row.comment_id || row.thread_id || row.tenant !== row.actor_tenant || !row.actor_user_id) throw new Error('Invalid editor cleanup binding');
         } else if (row.status !== 'pending' && !explicitRemoval) throw new Error('Published attachments require explicit deletion');
         await remove(row.storage_path);
         await owner.table(FILES).where('attachment_id', row.attachment_id).update({ purged_at: trx.raw('clock_timestamp()'), file_name: 'Removed attachment',

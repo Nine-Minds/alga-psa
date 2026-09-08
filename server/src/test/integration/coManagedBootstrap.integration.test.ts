@@ -94,7 +94,7 @@ beforeAll(async () => {
     '20260906080000_create_co_management_relationship_events.cjs',
     '20260906100000_add_external_file_metadata.cjs',
     '20260906110000_add_kb_import_batch_identity.cjs',
-    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs', '20260908013607_create_named_ticket_conversations.cjs', '20260908015652_create_ticket_conversation_editor_drafts.cjs', '20260908022249_scope_ticket_conversation_defaults_to_relationship.cjs', '20260908024119_create_ticket_conversation_publications.cjs', '20260908030840_retain_ticket_conversation_draft_reply_target.cjs', '20260908033011_create_ticket_conversation_sender_grants.cjs', '20260908034701_create_ticket_conversation_email_operations.cjs', '20260908042702_create_ticket_conversation_inbound_receipts.cjs', '20260908045632_track_named_conversation_correspondents.cjs', '20260908051006_retain_named_reply_review_resolutions.cjs', '20260908052731_extend_conversation_files_to_native_vendor_replies.cjs']) {
+    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs', '20260908013607_create_named_ticket_conversations.cjs', '20260908015652_create_ticket_conversation_editor_drafts.cjs', '20260908022249_scope_ticket_conversation_defaults_to_relationship.cjs', '20260908024119_create_ticket_conversation_publications.cjs', '20260908030840_retain_ticket_conversation_draft_reply_target.cjs', '20260908033011_create_ticket_conversation_sender_grants.cjs', '20260908034701_create_ticket_conversation_email_operations.cjs', '20260908042702_create_ticket_conversation_inbound_receipts.cjs', '20260908045632_track_named_conversation_correspondents.cjs', '20260908051006_retain_named_reply_review_resolutions.cjs', '20260908052731_extend_conversation_files_to_native_vendor_replies.cjs', '20260908054601_retain_named_editor_file_bindings.cjs']) {
     await require('../../../migrations/' + file).up(db);
   }
   for (const table of ['standard_statuses', 'standard_priorities', 'countries', 'notification_categories',
@@ -14964,5 +14964,93 @@ describe('named ticket conversation received files against migrated PostgreSQL',
       expect(await f.owner.table('co_management_conversation_attachments')).toMatchObject([{ status: 'ready' }]);
       expect((await f.conversations.getNamedTicketConversationMessages(db, f.principal, f.ticket, f.ref)).items[0].attachments).toHaveLength(1);
     } finally { f.restore(); }
+  });
+});
+
+
+describe('named ticket conversation private editor files against migrated PostgreSQL', () => {
+  it.each(['shared_it', 'organization_private', 'native'] as const)('stages %s bytes privately, selects them with draft CAS and retains only selected files', async kind => {
+    const f = await namedEmailFixture(kind === 'shared_it' ? 'shared_it' : 'organization_private', kind === 'native');
+    const files = await import('../../../../packages/co-managed/src/namedConversationEditorFiles');
+    const { cleanupCoManagedUploads } = await import('../../../../packages/co-managed/src/uploadCleanup');
+    const bytes = Buffer.from('private diagnostic report');
+    const input = { attachmentId: randomUUID(), fileName: 'diagnosis.txt', mimeType: 'text/plain', content: bytes };
+    const upload = vi.fn(async (_path: string, content: Uint8Array) => { expect(Buffer.from(content)).toEqual(bytes); });
+    const file = await files.uploadNamedConversationEditorFile(db, f.principal, f.ticket, f.ref, input, upload);
+    expect(await files.uploadNamedConversationEditorFile(db, f.principal, f.ticket, f.ref, input, upload)).toEqual(file);
+    expect(upload).toHaveBeenCalledTimes(1);
+    const row = await f.sponsor.table('co_management_conversation_attachments').where('attachment_id', input.attachmentId).first();
+    expect(row).toMatchObject({ tenant: f.principal.tenant, actor_user_id: f.principal.userId, status: 'ready',
+      named_editor_store_tenant: f.ref.storeTenant, named_editor_conversation_id: f.ref.conversationId,
+      comment_id: null, thread_id: null, draft_operation_id: null, relationship_id: f.ticket.relationshipId ?? null });
+    expect(await f.customer.table('co_management_conversation_attachments').where('attachment_id', input.attachmentId)).toHaveLength(0);
+    expect((await f.conversations.getNamedTicketConversationMessages(db, f.principal, f.ticket, f.ref)).items).toHaveLength(0);
+    expect((await f.conversations.getNamedConversationEditorDraft(db, f.principal, f.ticket, f.ref))?.attachments).toEqual([]);
+    const selected = { ...f.draft, operationId: randomUUID(), expectedRevision: 1, attachments: [{ attachmentId: file.attachmentId }] };
+    const saved = await f.conversations.saveNamedConversationEditorDraft(db, f.principal, f.ticket, f.ref, selected);
+    expect(saved.attachments).toEqual([file]);
+    expect(await f.conversations.saveNamedConversationEditorDraft(db, f.principal, f.ticket, f.ref, selected)).toEqual(saved);
+    const edited = await f.conversations.saveNamedConversationEditorDraft(db, f.principal, f.ticket, f.ref,
+      { ...f.draft, operationId: randomUUID(), expectedRevision: 2, content: { text: 'Edited without changing selection' } });
+    expect(edited.attachments).toEqual([file]);
+    const downloaded = await files.downloadNamedConversationEditorFile(db, f.principal, f.ticket, f.ref, file.attachmentId, async () => bytes);
+    expect(Buffer.from(downloaded.content)).toEqual(bytes);
+    expect(downloaded.attachment).not.toHaveProperty('storagePath');
+    await expect(files.downloadNamedConversationEditorFile(db, f.principal, f.ticket, f.ref, file.attachmentId, async () => Buffer.from('corrupt')))
+      .rejects.toMatchObject({ code: 'ATTACHMENT_CONTENT_MISMATCH' });
+    const remove = vi.fn(async () => {});
+    await f.sponsor.table('co_management_conversation_attachments').where('attachment_id', file.attachmentId).update({ last_activity_at: db.raw("clock_timestamp() - interval '8 days'") });
+    await cleanupCoManagedUploads(db, f.principal.tenant, remove);
+    expect(remove).not.toHaveBeenCalled();
+    const orphan = { ...input, attachmentId: randomUUID(), fileName: 'Unselected.txt' };
+    await files.uploadNamedConversationEditorFile(db, f.principal, f.ticket, f.ref, orphan, async () => {});
+    await f.sponsor.table('co_management_conversation_attachments').where('attachment_id', orphan.attachmentId)
+      .update({ last_activity_at: db.raw("clock_timestamp() - interval '7 days 1 hour'") });
+    expect(await cleanupCoManagedUploads(db, f.principal.tenant, remove, 1)).toMatchObject({ discardedFiles: 1, purgedFiles: 1 });
+    expect(remove).toHaveBeenCalledWith(`co-management/${f.principal.tenant}/${orphan.attachmentId}`);
+    remove.mockClear();
+    const discarded = await f.conversations.saveNamedConversationEditorDraft(db, f.principal, f.ticket, f.ref,
+      { operationId: randomUUID(), expectedRevision: 3, expectedConversationRevision: 2, content: null });
+    expect(discarded.attachments).toEqual([]);
+    await expect(f.conversations.saveNamedConversationEditorDraft(db, f.principal, f.ticket, f.ref, selected)).rejects.toMatchObject({ code: 'CONVERSATION_CONFLICT' });
+    const cleaned = await cleanupCoManagedUploads(db, f.principal.tenant, remove);
+    expect(cleaned).toMatchObject({ discardedFiles: 1, purgedFiles: 1, failedFiles: 0 });
+    expect(remove).toHaveBeenCalledWith(row.storage_path);
+    await expect(files.uploadNamedConversationEditorFile(db, f.principal, f.ticket, f.ref, input, upload)).rejects.toMatchObject({ code: 'ATTACHMENT_OPERATION_CONFLICT' });
+    const migration = require('../../../migrations/20260908054601_retain_named_editor_file_bindings.cjs');
+    await migration.up(db);
+    await expect(migration.down(db)).rejects.toThrow('Cannot discard retained editor files');
+  });
+
+  it('keeps unknown uploads unselected and rejects foreign authors, destinations, changed bytes and revoked access', async () => {
+    const f = await namedEmailFixture();
+    const files = await import('../../../../packages/co-managed/src/namedConversationEditorFiles');
+    const input = { attachmentId: randomUUID(), fileName: 'private.txt', mimeType: 'text/plain', content: Buffer.from('private bytes') };
+    const upload = vi.fn(async () => { throw new Error('upload acknowledgment lost'); });
+    await expect(files.uploadNamedConversationEditorFile(db, f.principal, f.ticket, f.ref, input, upload)).rejects.toThrow('upload acknowledgment lost');
+    expect(await f.sponsor.table('co_management_conversation_attachments').where('attachment_id', input.attachmentId).first()).toMatchObject({ status: 'pending' });
+    const save = { ...f.draft, operationId: randomUUID(), expectedRevision: 1, attachments: [{ attachmentId: input.attachmentId }] };
+    await expect(f.conversations.saveNamedConversationEditorDraft(db, f.principal, f.ticket, f.ref, save)).rejects.toMatchObject({ code: 'CONVERSATION_FORBIDDEN' });
+    const download = vi.fn(async () => input.content);
+    await expect(files.downloadNamedConversationEditorFile(db, f.principal, f.ticket, f.ref, input.attachmentId, download)).rejects.toThrow();
+    expect(download).not.toHaveBeenCalled();
+    const ready = await files.uploadNamedConversationEditorFile(db, f.principal, f.ticket, f.ref, input, async () => {});
+    await expect(files.uploadNamedConversationEditorFile(db, f.principal, f.ticket, f.ref, { ...input, content: Buffer.from('changed') }, async () => {}))
+      .rejects.toMatchObject({ code: 'ATTACHMENT_OPERATION_CONFLICT' });
+    await expect(files.downloadNamedConversationEditorFile(db, f.customerPrincipal, f.ticket, f.ref, ready.attachmentId, download)).rejects.toThrow();
+    await expect(f.conversations.saveNamedConversationEditorDraft(db, f.customerPrincipal, f.ticket, f.ref, { ...save, expectedRevision: 0 }))
+      .rejects.toMatchObject({ code: 'CONVERSATION_FORBIDDEN' });
+    const other = await f.conversations.createNamedTicketConversation(db, f.principal, f.ticket,
+      { operationId: randomUUID(), name: 'Different destination', audience: 'shared_it', transport: 'internal' });
+    const otherRef = { storeTenant: other.storeTenant, conversationId: other.conversationId };
+    await expect(files.downloadNamedConversationEditorFile(db, f.principal, f.ticket, otherRef, ready.attachmentId, download)).rejects.toThrow();
+    await expect(f.conversations.saveNamedConversationEditorDraft(db, f.principal, f.ticket, otherRef,
+      { operationId: randomUUID(), expectedRevision: 0, expectedConversationRevision: 1, content: { text: 'Do not borrow files' }, attachments: save.attachments }))
+      .rejects.toMatchObject({ code: 'CONVERSATION_FORBIDDEN' });
+    await f.conversations.saveNamedConversationEditorDraft(db, f.principal, f.ticket, f.ref, save);
+    await f.customer.table('co_management_board_scopes').del();
+    await expect(files.downloadNamedConversationEditorFile(db, f.principal, f.ticket, f.ref, ready.attachmentId, download)).rejects.toThrow();
+    await expect(files.uploadNamedConversationEditorFile(db, f.principal, f.ticket, f.ref, input, async () => {})).rejects.toThrow();
+    expect(download).not.toHaveBeenCalled();
   });
 });

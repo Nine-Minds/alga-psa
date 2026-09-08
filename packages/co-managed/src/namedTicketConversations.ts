@@ -1,3 +1,4 @@
+import { snapshotConversationEditorFiles } from '@alga-psa/shared/lib/tickets/conversationEditorFiles';
 import { snapshotConversationEmailDraft } from '@alga-psa/shared/lib/tickets/conversationEmailEnvelope';
 import { createHash } from 'node:crypto';
 import type { Knex } from 'knex';
@@ -16,7 +17,7 @@ import { withCoManagedCustomerTicket } from './customerWork';
 import { snapshotCoManagedSessionActor, lockCoManagedSessionIdentity, assertCoManagedSessionUnexpired,
   authorizeCoManagedWorkRecord, CoManagedSharedWorkError, type CoManagedSessionActor } from './sharedWorkIdentity';
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
-import { coManagedConversationBodySources } from './conversationPolicy';
+import { coManagedConversationAttachmentSources, coManagedConversationBodySources } from './conversationPolicy';
 import { readConversationEditorDraft, saveConversationEditorDraft, snapshotConversationDraftParent, type ConversationDraftParent, type EditorDraftSaveRequest } from '@alga-psa/shared/lib/tickets/conversationEditorDrafts';
 import { readAuthorizedTicketConversationPage, snapshotConversationCursor, type CoManagedConversationCursor } from './ticketConversation';
 import { ensureCoManagedActorReference } from './actorReferences';
@@ -176,18 +177,20 @@ export function getNamedConversationEditorDraft(db: Knex, actor: CoManagedSessio
   const reference = snapshotConversationReference(input);
   return withTicketAuthority(db, actor, ticket, 'read', async context => {
     const { conversation } = await authorizedConversation(context, reference);
-    return readConversationEditorDraft<CoManagedConversationContent>(draftStore(context, reference, conversation.revision));
+    const draft = await readConversationEditorDraft<CoManagedConversationContent>(draftStore(context, reference, conversation.revision));
+    return draft && isCoManagedReadFieldHidden(context.hidden, coManagedConversationAttachmentSources) ? { ...draft, attachments: [] } : draft;
   });
 }
 export function saveNamedConversationEditorDraft(db: Knex, actor: CoManagedSessionActor, ticket: ConversationTicketReference,
   input: TicketConversationReference, inputRequest: EditorDraftSaveRequest<CoManagedConversationContent>) {
   const reference = snapshotConversationReference(input);
-  if (!inputRequest || Object.keys(inputRequest).some(k => !['operationId', 'expectedRevision', 'expectedConversationRevision', 'content', 'parent', 'email'].includes(k))) {
+  if (!inputRequest || Object.keys(inputRequest).some(k => !['operationId', 'expectedRevision', 'expectedConversationRevision', 'content', 'parent', 'email', 'attachments'].includes(k))) {
     throw new TicketConversationError('CONVERSATION_INVALID');
   }
+  const attachments = inputRequest.attachments === undefined ? undefined : snapshotConversationEditorFiles(inputRequest.attachments);
   const parent = snapshotConversationDraftParent(inputRequest.parent);
   const email = snapshotConversationEmailDraft(inputRequest.email);
-  if (inputRequest.content === null && (parent || email)) throw new TicketConversationError('CONVERSATION_INVALID');
+  if (inputRequest.content === null && (parent || email || attachments?.length)) throw new TicketConversationError('CONVERSATION_INVALID');
   let content: CoManagedConversationContent | null = null;
   if (inputRequest.content !== null) {
     const body = inputRequest.content;
@@ -200,12 +203,16 @@ export function saveNamedConversationEditorDraft(db: Knex, actor: CoManagedSessi
   }
   const request = { operationId: inputRequest.operationId, expectedRevision: inputRequest.expectedRevision,
     expectedConversationRevision: inputRequest.expectedConversationRevision, content,
+    ...(attachments !== undefined ? { attachments } : {}),
     ...(inputRequest.parent !== undefined ? { parent } : {}), ...(inputRequest.email !== undefined ? { email } : {}) };
   return withTicketAuthority(db, actor, ticket, 'update', async context => {
     const { conversation } = await authorizedConversation(context, reference);
     if (email && conversation.transport !== 'email') throw new TicketConversationError('CONVERSATION_INVALID');
     if (parent) await assertConversationReplyParent(context, conversation, parent);
-    return saveConversationEditorDraft(draftStore(context, reference, conversation.revision), request);
+    const scope = draftStore(context, reference, conversation.revision);
+    if (isCoManagedReadFieldHidden(context.hidden, coManagedConversationAttachmentSources) &&
+      (attachments?.length || (await readConversationEditorDraft(scope))?.attachments.length)) return forbidden();
+    return saveConversationEditorDraft(scope, request);
   });
 }
 

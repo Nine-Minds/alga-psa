@@ -1,3 +1,4 @@
+import { snapshotConversationEditorFiles, selectConversationEditorFiles, type ConversationEditorFile, type ConversationEditorFileReference } from './conversationEditorFiles';
 import { snapshotConversationEmailDraft, type ConversationEmailDraft } from './conversationEmailEnvelope';
 import { createHash } from 'node:crypto';
 import { tenantDb } from '@alga-psa/db';
@@ -7,6 +8,7 @@ import { TicketConversationError, conversationUuid, snapshotConversationReferenc
 
 export interface ConversationEditorDraft<Content = unknown> {
   content: Content | null;
+  attachments: ConversationEditorFile[];
   email: ConversationEmailDraft | null;
   parent: ConversationDraftParent | null;
   revision: number;
@@ -27,6 +29,7 @@ export interface EditorDraftSaveRequest<Content = unknown> {
   expectedRevision: number;
   expectedConversationRevision: number;
   content: Content | null;
+  attachments?: ConversationEditorFileReference[];
   parent?: ConversationDraftParent | null;
   email?: ConversationEmailDraft | null;
 }
@@ -45,7 +48,7 @@ function scoped(scope: EditorDraftStoreScope) {
       ticket_tenant: ticket.tenant, ticket_id: ticket.ticketId });
 }
 function view<Content>(row: any): ConversationEditorDraft<Content> {
-  return { content: row.content, email: row.email_envelope ?? null, parent: row.reply_comment_id ? { threadId: row.reply_thread_id, commentId: row.reply_comment_id } : null,
+  return { content: row.content, attachments: row.attachment_manifest ?? [], email: row.email_envelope ?? null, parent: row.reply_comment_id ? { threadId: row.reply_thread_id, commentId: row.reply_comment_id } : null,
     revision: row.revision, conversationRevision: row.conversation_revision, updatedAt: new Date(row.updated_at).toISOString() };
 }
 /** Called after current destination read authorization. The author is always
@@ -61,19 +64,22 @@ export async function saveConversationEditorDraft<Content>(scope: EditorDraftSto
   input: EditorDraftSaveRequest<Content>): Promise<ConversationEditorDraft<Content>> {
   if (!input || !conversationUuid(input.operationId) || !Number.isSafeInteger(input.expectedRevision) || input.expectedRevision < 0 ||
       !Number.isSafeInteger(input.expectedConversationRevision) || input.expectedConversationRevision < 1 ||
-      Object.keys(input).some(k => !['operationId', 'expectedRevision', 'expectedConversationRevision', 'content', 'parent', 'email'].includes(k))) throw new TicketConversationError('CONVERSATION_INVALID');
+      Object.keys(input).some(k => !['operationId', 'expectedRevision', 'expectedConversationRevision', 'content', 'parent', 'email', 'attachments'].includes(k))) throw new TicketConversationError('CONVERSATION_INVALID');
+  const files = input.attachments === undefined ? undefined : snapshotConversationEditorFiles(input.attachments);
   const parent = snapshotConversationDraftParent(input.parent);
   const email = snapshotConversationEmailDraft(input.email);
-  if (input.content === null && (parent || email)) throw new TicketConversationError('CONVERSATION_INVALID');
+  if (input.content === null && (parent || email || files?.length)) throw new TicketConversationError('CONVERSATION_INVALID');
   if (input.expectedConversationRevision !== scope.conversationRevision) throw new TicketConversationError('CONVERSATION_CONFLICT');
   const serialized = JSON.stringify(input);
   const request = JSON.parse(serialized) as EditorDraftSaveRequest<Content>;
   const hash = createHash('sha256').update(serialized).digest('hex');
   const query = () => scoped(scope);
   if (request.expectedRevision === 0) {
+    const manifest = await selectConversationEditorFiles(scope, files ?? []);
     await tenantDb(scope.trx, scope.actor.tenant).table('ticket_conversation_editor_drafts').insert({
       tenant: scope.actor.tenant, actor_user_id: scope.actor.userId, conversation_store_tenant: scope.conversation.storeTenant,
       conversation_id: scope.conversation.conversationId, ticket_tenant: scope.ticket.tenant, ticket_id: scope.ticket.ticketId,
+      attachment_manifest: JSON.stringify(manifest),
       content: request.content === null ? null : JSON.stringify(request.content), revision: 1, conversation_revision: scope.conversationRevision,
       reply_thread_id: parent?.threadId ?? null, reply_comment_id: parent?.commentId ?? null,
       email_envelope: email ? JSON.stringify(email) : null,
@@ -87,7 +93,8 @@ export async function saveConversationEditorDraft<Content>(scope: EditorDraftSto
     return view<Content>(current);
   }
   if (current.revision !== request.expectedRevision) throw new TicketConversationError('CONVERSATION_CONFLICT');
-  const [row] = await query().update({ content: request.content === null ? null : JSON.stringify(request.content),
+  const manifest = request.content === null ? [] : await selectConversationEditorFiles(scope, files ?? (current.attachment_manifest ?? []).map((f: ConversationEditorFile) => ({ attachmentId: f.attachmentId })));
+  const [row] = await query().update({ attachment_manifest: JSON.stringify(manifest), content: request.content === null ? null : JSON.stringify(request.content),
     reply_thread_id: parent?.threadId ?? null, reply_comment_id: parent?.commentId ?? null,
       email_envelope: email ? JSON.stringify(email) : null,
     revision: current.revision + 1, conversation_revision: scope.conversationRevision,

@@ -501,3 +501,10 @@ Inline markers are the per-site ledger; `grep -rn "LEVERAGE:"` is the count.
 - **Where:** `nativeTimePeriodSettings`, `TimeSheetService`, both native settings action modules and settings-driven generation.
 - **Gate:** Stable settings invariants and existing calendar lock support shared domain normalization/read/manage admission without another storage engine. ACT / bounded-now.
 - **Status:** Current credentials, bundle scope, field masks and lifecycle guard shared settings operations; calendar locking serializes active-profile conflict checks with generation. Legacy inputs normalize once, canonical responses preserve IDs, compatible profiles coexist and inactive history remains readable. Five new focused scenarios and the affected generator pass in 9.46 seconds. Background authorization and broader generator parity remain pending.
+
+
+## named-editor-file-binding — friction
+- **What:** The protected upload engine required a comment/thread before an editable draft had a publication identity or final reply parent.
+- **Where:** `conversationAttachments.ts`, `protectedConversationFileTransfer.ts`, `namedConversationEditorFiles.ts`, and editable draft manifests.
+- **Gate:** Existing received/published transfers and real author-private draft uploads share stable byte reservation, digest, and retry behavior. Their authority/bindings differ. ACT / bounded-now within the approved ticket-conversation attachment scope.
+- **Status:** revised. The byte-transfer engine accepts immutable domain bindings; published and editor adapters retain separate authority checks. Editor files have actual home-author/destination keys and nullable comment/thread keys, with an exclusive database binding constraint. No fabricated publication or user identities. Existing request fingerprints and storage-path denial semantics are retained. Outbound publication/copy integration remains required by the plan.
