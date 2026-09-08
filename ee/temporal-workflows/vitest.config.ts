@@ -1,7 +1,27 @@
 import { configDefaults, defineConfig } from 'vitest/config';
 import path from 'path';
+import { createMatchPath, loadConfig } from 'tsconfig-paths';
+
+const workerPaths = loadConfig(path.join(__dirname, 'tsconfig.json'));
+if (workerPaths.resultType !== 'success') throw new Error(`Cannot load worker source paths: ${workerPaths.message}`);
+const matchWorkspacePath = createMatchPath(workerPaths.absoluteBaseUrl, workerPaths.paths, ['main'], false);
 
 export default defineConfig({
+  // Keep the worker's workspace source mappings in sync with its build. Explicit
+  // aliases below retain runtime-specific overrides and take precedence.
+  plugins: [{
+    name: 'temporal-workspace-source-paths',
+    enforce: 'pre',
+    async resolveId(id, importer) {
+      if (!id.startsWith('@alga-psa/')) return null;
+      const source = matchWorkspacePath(id, undefined, undefined, ['.ts', '.tsx', '.js', '.mjs', '.cjs', '.json']);
+      const resolved = await this.resolve(source ?? id, importer, { skipSelf: true });
+      if (resolved && /\/(packages|shared)\/.*\/dist\//.test(resolved.id)) {
+        throw new Error(`Workspace test import requires a source mapping: ${id}`);
+      }
+      return resolved;
+    },
+  }],
   test: {
     globals: true,
     // These suites use the server integration runner and its migrated DB.
@@ -59,6 +79,8 @@ export default defineConfig({
       { find: /^@alga-psa\/jobs\/handler-utils\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/jobs/src/lib/handler-utils')}/$1` },
       { find: /^@alga-psa\/jobs\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/jobs/src')}/$1` },
       { find: /^@alga-psa\/email\/providerConfig$/, replacement: path.resolve(__dirname, '../../packages/email/src/providerConfig.ts') },
+      { find: /^@alga-psa\/email$/, replacement: path.resolve(__dirname, '../../packages/email/src/index.ts') },
+      { find: /^@alga-psa\/email\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/email/src')}/$1` },
       { find: /^@alga-psa\/workflows$/, replacement: path.resolve(__dirname, '../packages/workflows/src/index.ts') },
       { find: /^@alga-psa\/workflows\/runtime$/, replacement: path.resolve(__dirname, '../packages/workflows/src/runtime/index.ts') },
       { find: /^@alga-psa\/workflows\/persistence$/, replacement: path.resolve(__dirname, '../packages/workflows/src/persistence/index.ts') },
@@ -74,6 +96,8 @@ export default defineConfig({
       { find: /^@alga-psa\/event-bus\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/event-bus/src')}/$1` },
       { find: /^@alga-psa\/event-schemas$/, replacement: path.resolve(__dirname, '../../packages/event-schemas/src/index.ts') },
       { find: /^@alga-psa\/event-schemas\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/event-schemas/src')}/$1` },
+      { find: /^@alga-psa\/storage$/, replacement: path.resolve(__dirname, '../../packages/storage/src/index.ts') },
+      { find: /^@alga-psa\/storage\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/storage/src')}/$1` },
       { find: /^@alga-psa\/core$/, replacement: path.resolve(__dirname, '../../packages/core/src/index.ts') },
       { find: /^@alga-psa\/core\/secrets$/, replacement: path.resolve(__dirname, '../../packages/core/src/lib/secrets/index.ts') },
       { find: /^@alga-psa\/core\/logger$/, replacement: path.resolve(__dirname, '../../packages/core/src/lib/logger.ts') },
