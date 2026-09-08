@@ -286,6 +286,7 @@ export default function ProjectDetailView({ project }: ProjectDetailViewProps) {
           <div className="p-4">
             {effectiveViewMode === 'kanban' ? (
               <ClientKanbanBoard
+                projectId={project.project_id}
                 phases={phases}
                 statuses={statuses}
                 tasks={tasks}
@@ -297,6 +298,7 @@ export default function ProjectDetailView({ project }: ProjectDetailViewProps) {
               />
             ) : (
               <ClientTaskListView
+                projectId={project.project_id}
                 phases={phases}
                 tasks={tasks}
                 config={config}

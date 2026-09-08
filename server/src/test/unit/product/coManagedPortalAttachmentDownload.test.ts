@@ -1,12 +1,12 @@
 import { beforeEach, expect, it, vi } from 'vitest';
-const mocks = vi.hoisted(() => ({ download: vi.fn(), provider: vi.fn(), bytes: vi.fn(), session: vi.fn(), override: vi.fn(), db: vi.fn(), Forbidden: class extends Error {} }));
+const mocks = vi.hoisted(() => ({ download: vi.fn(), taskDownload: vi.fn(), provider: vi.fn(), bytes: vi.fn(), session: vi.fn(), override: vi.fn(), db: vi.fn(), Forbidden: class extends Error {} }));
 vi.mock('@alga-psa/auth', () => ({ getSession: mocks.session, getApiKeyUserOverride: mocks.override }));
 vi.mock('@alga-psa/db', () => ({ getConnection: mocks.db }));
-vi.mock('@alga-psa/co-managed', () => ({ CoManagedSharedWorkError: mocks.Forbidden }));
+vi.mock('@alga-psa/co-managed', () => ({ CoManagedSharedWorkError: mocks.Forbidden, downloadRequesterTaskAttachment: mocks.taskDownload }));
 vi.mock('@alga-psa/storage/StorageProviderFactory', () => ({ StorageProviderFactory: { createProvider: mocks.provider } }));
 vi.mock('../../../lib/co-managed/portalAttachments', () => ({ downloadPortalConversationAttachment: mocks.download }));
 import { GET } from '../../../app/api/client-portal/conversation-attachments/[attachmentId]/route';
-const request = () => ({ nextUrl: new URL('https://alga.test/api/client-portal/conversation-attachments/file?ticketId=ticket&threadId=thread&commentId=comment&storeTenant=foreign') }) as any;
+const request = () => ({ nextUrl: new URL('https://alga.test/api/client-portal/conversation-attachments/file?ticketId=ticket&threadId=thread&commentId=comment') }) as any;
 const params = { params: Promise.resolve({ attachmentId: 'file' }) };
 beforeEach(() => { vi.resetAllMocks(); mocks.db.mockResolvedValue('db'); mocks.provider.mockResolvedValue({ download: mocks.bytes });
   mocks.session.mockResolvedValue({ session_id: 'session', user: { id: 'requester', tenant: 'customer', user_type: 'client' } }); });
@@ -31,4 +31,16 @@ it('returns opaque denials and storage failures without disclosing paths', async
   mocks.download.mockRejectedValue(new mocks.Forbidden()); expect((await GET(request(), params)).status).toBe(404);
   mocks.download.mockRejectedValue(new Error('private/storage')); const response = await GET(request(), params);
   expect(response.status).toBe(503); expect(await response.text()).not.toContain('private/storage'); expect(mocks.provider).not.toHaveBeenCalled();
+});
+
+it('uses task/project admission for requester task files without accepting mixed or repeated parent identities', async () => {
+  mocks.taskDownload.mockResolvedValue({ attachment: { fileName: 'task.txt' }, content: Buffer.from('task') });
+  const req = (query: string) => ({ nextUrl: new URL('https://alga.test/api/client-portal/conversation-attachments/file?' + query) }) as any;
+  const query = 'taskId=task&projectId=project&threadId=thread&commentId=comment';
+  expect((await GET(req(query), params)).status).toBe(200);
+  expect(mocks.taskDownload).toHaveBeenCalledWith('db', { kind: 'session', tenant: 'customer', userId: 'requester', sessionId: 'session' },
+    { taskId: 'task', projectId: 'project' }, { threadId: 'thread', commentId: 'comment' }, 'file', expect.any(Function));
+  for (const invalid of [query + '&ticketId=ticket', query + '&taskId=other', query + '&storeTenant=foreign'])
+    expect((await GET(req(invalid), params)).status).toBe(404);
+  expect(mocks.taskDownload).toHaveBeenCalledTimes(1); expect(mocks.download).not.toHaveBeenCalled();
 });

@@ -136,3 +136,5 @@ export * from './managementPolicy';
 
 export * from './ticketRoutingNotifications';
 export * from './ticketRoutingEmailDeliveries';
+
+export * from './requesterTaskConversation';

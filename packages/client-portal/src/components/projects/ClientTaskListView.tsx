@@ -19,6 +19,7 @@ import {
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import TaskDocumentUpload from './TaskDocumentUpload';
+import { RequesterTaskConversation } from './RequesterTaskConversation';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
@@ -79,6 +80,7 @@ interface TaskDependency {
 }
 
 interface ClientTaskListViewProps {
+  projectId: string;
   phases: Phase[];
   tasks: Task[];
   config: IClientPortalConfig;
@@ -99,6 +101,7 @@ function ProgressBar({ percentage }: { percentage: number }) {
 }
 
 export default function ClientTaskListView({
+  projectId,
   phases,
   tasks,
   config,
@@ -495,6 +498,7 @@ export default function ClientTaskListView({
                                       <div className="pl-6 truncate">
                                         <div className="flex items-center gap-2">
                                           <span className="font-medium text-gray-900">{task.task_name}</span>
+                                          <RequesterTaskConversation projectId={projectId} taskId={task.task_id} />
                                           {visibleFields.includes('priority') && task.priority_name && (
                                             <Tooltip content={`${t('tasks.priorityLevel', 'Priority level')}: ${task.priority_name}`}>
                                               <div
