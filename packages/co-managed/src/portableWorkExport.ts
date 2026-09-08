@@ -1,3 +1,4 @@
+import { portableSnapshotTransaction, type CoManagedPortableSnapshot } from './portableSnapshot';
 import { validatePortableRecordSection } from './portableRecordValidation';
 import { createHash } from 'node:crypto';
 import type { Knex } from 'knex';
@@ -80,11 +81,11 @@ export function validateCoManagedPortableWorkRecords(input: unknown): asserts in
 /** Customer-owned tickets, projects and conversation history. Home-private MSP
  * stores and live trust/dispatch records are deliberately absent. Handoffs are
  * inert historical events for restore conversion, not relationship-table rows. */
-export async function exportCoManagedPortableWork(db: Knex, inputActor: CoManagedSessionActor, packageId: string) {
+export async function exportCoManagedPortableWork(db: Knex, inputActor: CoManagedSessionActor, packageId: string, snapshot?: CoManagedPortableSnapshot) {
   if (db.isTransaction) throw new Error('Portable export requires a root database connection');
   const actor = snapshotCoManagedSessionActor(inputActor);
   if (!isCoManagedUuid(packageId)) throw new CoManagedSharedWorkError();
-  return db.transaction(trx => withCoManagedExportAdmin(trx, actor, async (current, verified, subject) => {
+  return portableSnapshotTransaction(db, snapshot, trx => withCoManagedExportAdmin(trx, actor, async (current, verified, subject) => {
     for (const resource of ['ticket', 'project', 'ticket_settings']) {
       if (!await hasCoManagedLocalPermission(current, verified, resource, 'read', true)) throw new CoManagedSharedWorkError();
     }
@@ -114,8 +115,8 @@ export async function exportCoManagedPortableWork(db: Knex, inputActor: CoManage
     validateCoManagedPortableWorkRecords(records);
     const [{ captured_at }] = (await current.raw('SELECT transaction_timestamp() AS captured_at')).rows;
     const payload = JSON.parse(JSON.stringify({ kind: 'alga-workspace-work', version: 1, packageId, sourceTenant: verified.tenant,
-      capturedAt: captured_at, records, references: CO_MANAGED_PORTABLE_WORK_REFERENCES,
+      capturedAt: snapshot?.capturedAt ?? captured_at, records, references: CO_MANAGED_PORTABLE_WORK_REFERENCES,
       restorePolicy: { sponsorship: 'none', scheduledPublication: 'paused', handoffHistory: 'historical_activity' } }));
     return { ...payload, sha256: createHash('sha256').update(JSON.stringify(payload)).digest('hex') };
-  }), { isolationLevel: 'repeatable read' });
+  }));
 }

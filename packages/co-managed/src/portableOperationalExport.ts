@@ -1,3 +1,4 @@
+import { portableSnapshotTransaction, type CoManagedPortableSnapshot } from './portableSnapshot';
 import { createHash } from 'node:crypto';
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
@@ -77,11 +78,11 @@ export function validateCoManagedPortableOperationalRecords(input: unknown): ass
 
 /** Internal records component, not a complete backup. Refuses a partial export
  * when native source/employee/privacy policy hides any included content. */
-export async function exportCoManagedPortableOperational(db: Knex, inputActor: CoManagedSessionActor, packageId: string) {
+export async function exportCoManagedPortableOperational(db: Knex, inputActor: CoManagedSessionActor, packageId: string, snapshot?: CoManagedPortableSnapshot) {
   if (db.isTransaction) throw new Error('Portable export requires a root database connection');
   const actor = snapshotCoManagedSessionActor(inputActor);
   if (!isCoManagedUuid(packageId)) throw new CoManagedSharedWorkError();
-  return db.transaction(trx => withCoManagedExportAdmin(trx, actor, async (current, verified, subject) => {
+  return portableSnapshotTransaction(db, snapshot, trx => withCoManagedExportAdmin(trx, actor, async (current, verified, subject) => {
     for (const resource of ['time_entry', 'time_sheet', 'time_period', 'user_schedule', 'sla_policy']) {
       if (!await hasCoManagedLocalPermission(current, verified, resource, 'read', true)) throw new CoManagedSharedWorkError();
     }
@@ -156,9 +157,9 @@ export async function exportCoManagedPortableOperational(db: Knex, inputActor: C
     }
     const [{ captured_at }] = (await current.raw('SELECT transaction_timestamp() AS captured_at')).rows;
     const payload = JSON.parse(JSON.stringify({ kind: 'alga-workspace-operational', version: 1, packageId, sourceTenant: verified.tenant,
-      capturedAt: captured_at, records, references: CO_MANAGED_PORTABLE_OPERATIONAL_REFERENCES,
+      capturedAt: snapshot?.capturedAt ?? captured_at, records, references: CO_MANAGED_PORTABLE_OPERATIONAL_REFERENCES,
       polymorphicReferences: CO_MANAGED_PORTABLE_OPERATIONAL_WORK_REFERENCES,
       restorePolicy: { sponsorship: 'none', timeBilling: 'operational', runningTimers: 'none', notificationDispatch: 'paused' } }));
     return { ...payload, sha256: createHash('sha256').update(JSON.stringify(payload)).digest('hex') };
-  }), { isolationLevel: 'repeatable read' });
+  }));
 }

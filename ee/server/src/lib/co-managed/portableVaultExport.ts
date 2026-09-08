@@ -1,3 +1,4 @@
+import { portableSnapshotTransaction, type CoManagedPortableSnapshot } from '../../../../../packages/co-managed/src/portableSnapshot';
 import { createHash } from 'node:crypto';
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
@@ -54,12 +55,12 @@ function fingerprint(snapshot: Awaited<ReturnType<typeof collect>>) {
  * must be readable, including restricted-entry ACL and bundle checks. A changed
  * source or revoked authority during provider work aborts delivery entirely. */
 export async function exportCoManagedPortableVault(db: Knex, inputActor: CoManagedSessionActor,
-  packageId: string, passphrase: string) {
+  packageId: string, passphrase: string, databaseSnapshot?: CoManagedPortableSnapshot) {
   if (db.isTransaction) throw new Error('Portable export requires a root database connection');
   const actor = snapshotCoManagedSessionActor(inputActor);
   if (!isCoManagedUuid(packageId)) throw new CoManagedSharedWorkError();
   const context = { packageId, sourceTenant: actor.tenant };
-  const snapshot = await withCoManagedExportAdmin(db, actor, async (trx, current, subject) => {
+  const snapshot = await portableSnapshotTransaction(db, databaseSnapshot, retained => withCoManagedExportAdmin(retained, actor, async (trx, current, subject) => {
     const result = await collect(trx, current, subject);
     for (const row of result.rows) {
       const params = { userId: current.userId, credentialId: row.credential_id, clientId: row.client_id };
@@ -68,7 +69,7 @@ export async function exportCoManagedPortableVault(db: Knex, inputActor: CoManag
       if (row.otp_secret_ciphertext) await writeCredentialAudit(trx, current.tenant, 'credential_otp_seed_reveal', params, details);
     }
     return result;
-  });
+  }));
   const original = fingerprint(snapshot);
   const vault = await sealPortableCredentialVault(context, snapshot.rows.map(row => ({
     credentialId: row.credential_id, passwordCiphertext: row.password_ciphertext,

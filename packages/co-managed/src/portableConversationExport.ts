@@ -1,3 +1,4 @@
+import { portableSnapshotTransaction, type CoManagedPortableSnapshot } from './portableSnapshot';
 import { createHash } from 'node:crypto';
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
@@ -9,8 +10,8 @@ import { authorizeCoManagedLocalRecord, CoManagedSharedWorkError, isCoManagedUui
 import { listPublishedCoManagedAttachmentSources } from './conversationAttachments';
 import { stageCoManagedPortableBlobs } from './portableBlobStaging';
 
-async function collect(db: Knex, actor: CoManagedSessionActor) {
-  return db.transaction(trx => withCoManagedExportAdmin(trx, actor, async (current, verified, subject) => {
+async function collect(db: Knex, actor: CoManagedSessionActor, databaseSnapshot?: CoManagedPortableSnapshot) {
+  return portableSnapshotTransaction(db, databaseSnapshot, trx => withCoManagedExportAdmin(trx, actor, async (current, verified, subject) => {
     if (!await hasCoManagedLocalPermission(current, verified, 'ticket', 'read', true)) throw new CoManagedSharedWorkError();
     const own = tenantDb(current, actor.tenant);
     const filesExist = own.table('co_management_conversation_attachments as f')
@@ -42,7 +43,7 @@ async function collect(db: Knex, actor: CoManagedSessionActor) {
       if (sources.length > 100_000) throw new Error('Portable conversation attachment limit exceeded');
     }
     return sources;
-  }), { isolationLevel: 'repeatable read' });
+  }));
 }
 
 const checksum = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
@@ -51,11 +52,11 @@ const checksum = (value: unknown) => createHash('sha256').update(JSON.stringify(
  * opens an MSP-private store, pending composer upload, discarded file or live
  * foreign grant. The assembler converts these bindings to native ticket files
  * at restore, without recreating the source trust or source download routes. */
-export async function exportCoManagedPortableConversationFiles(db: Knex, inputActor: CoManagedSessionActor, packageId: string) {
+export async function exportCoManagedPortableConversationFiles(db: Knex, inputActor: CoManagedSessionActor, packageId: string, databaseSnapshot?: CoManagedPortableSnapshot) {
   if (db.isTransaction) throw new Error('Portable export requires a root database connection');
   const actor = snapshotCoManagedSessionActor(inputActor);
   if (!isCoManagedUuid(packageId)) throw new CoManagedSharedWorkError();
-  const snapshot = await collect(db, actor), original = checksum(snapshot);
+  const snapshot = await collect(db, actor, databaseSnapshot), original = checksum(snapshot);
   const staged = await stageCoManagedPortableBlobs(snapshot.map(({ attachment }) => ({ id: `attachment:${attachment.attachment_id}`,
     path: attachment.storage_path, size: Number(attachment.file_size), sha256: attachment.content_hash })));
   try {

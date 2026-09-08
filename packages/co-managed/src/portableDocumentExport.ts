@@ -1,3 +1,4 @@
+import { portableSnapshotTransaction, type CoManagedPortableSnapshot } from './portableSnapshot';
 import { validatePortableRecordSection } from './portableRecordValidation';
 import { createHash } from 'node:crypto';
 import type { Knex } from 'knex';
@@ -38,8 +39,8 @@ function sourcePath(tenant: string, input: unknown): string {
 interface SourceBlob { id: string; path: string; size: number; name: string; mimeType: string }
 interface FileBinding { documentId: string; field: 'file_id' | 'thumbnail_file_id' | 'preview_file_id'; blobId: string }
 
-async function collect(db: Knex, actor: CoManagedSessionActor) {
-  return db.transaction(trx => withCoManagedExportAdmin(trx, actor, async (current, verified, subject) => {
+async function collect(db: Knex, actor: CoManagedSessionActor, databaseSnapshot?: CoManagedPortableSnapshot) {
+  return portableSnapshotTransaction(db, databaseSnapshot, trx => withCoManagedExportAdmin(trx, actor, async (current, verified, subject) => {
     for (const resource of ['document', 'system_settings']) {
       if (!await hasCoManagedLocalPermission(current, verified, resource, 'read', true)) throw new CoManagedSharedWorkError();
     }
@@ -95,7 +96,7 @@ async function collect(db: Knex, actor: CoManagedSessionActor) {
     }
     if (meetings.handled && 'assertCurrent' in meetings) await meetings.assertCurrent?.();
     return { records, blobs, bindings, fileMetadata: [...files.values()], legacyPaths };
-  }), { isolationLevel: 'repeatable read' });
+  }));
 }
 
 const checksum = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
@@ -103,11 +104,11 @@ const checksum = (value: unknown) => createHash('sha256').update(JSON.stringify(
 /** Stages actual bytes privately before rechecking source/authority. The trusted
  * package assembler owns the returned lease and must call dispose in finally;
  * neither temporary paths nor storage paths belong in a browser payload. */
-export async function exportCoManagedPortableDocuments(db: Knex, inputActor: CoManagedSessionActor, packageId: string) {
+export async function exportCoManagedPortableDocuments(db: Knex, inputActor: CoManagedSessionActor, packageId: string, databaseSnapshot?: CoManagedPortableSnapshot) {
   if (db.isTransaction) throw new Error('Portable export requires a root database connection');
   const actor = snapshotCoManagedSessionActor(inputActor);
   if (!isCoManagedUuid(packageId)) throw new CoManagedSharedWorkError();
-  const snapshot = await collect(db, actor), original = checksum(snapshot);
+  const snapshot = await collect(db, actor, databaseSnapshot), original = checksum(snapshot);
   const staged = await stageCoManagedPortableBlobs(snapshot.blobs);
   try {
     const { files } = staged;
