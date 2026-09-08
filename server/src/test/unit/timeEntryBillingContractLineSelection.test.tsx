@@ -158,7 +158,8 @@ describe('TimeEntryEditForm with Contract Line Selection', () => {
     await waitFor(() => {
       expect(planDisambiguation.getClientIdForWorkItem).toHaveBeenCalledWith(
         'test-work-item-id',
-        'project_task'
+        'project_task',
+        'test-entry-id'
       );
     });
 

@@ -28,6 +28,7 @@ const baseTimeEntrySchema = z.object({
   notes: z.string().optional(),
   service_id: uuidSchema.optional(),
   tax_region: z.string().optional(),
+  contract_line_id: uuidSchema.nullable().optional(),
   is_billable: z.boolean().optional().default(true)
 });
 

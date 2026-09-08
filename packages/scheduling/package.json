@@ -68,6 +68,14 @@
     "./lib/timePeriodAutomation": {
       "types": "./src/lib/timePeriodAutomation.ts",
       "import": "./src/lib/timePeriodAutomation.ts"
+    },
+    "./lib/timeEntryContract": {
+      "types": "./src/lib/timeEntryContract.ts",
+      "import": "./src/lib/timeEntryContract.ts"
+    },
+    "./lib/timeEntryBillingAllocations": {
+      "types": "./src/lib/timeEntryBillingAllocations.ts",
+      "import": "./src/lib/timeEntryBillingAllocations.ts"
     }
   },
   "scripts": {

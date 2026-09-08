@@ -73,6 +73,7 @@ export default defineConfig({
     // the Next-built consumers are. Without an entry it is "Cannot find
     // package" at test time.
     'billingClients/hourBlockService': 'billingClients/hourBlockService.ts',
+    'billingClients/timeEntryWorkBillingContext': 'billingClients/timeEntryWorkBillingContext.ts',
     'billingClients/bucketUsageService': 'billingClients/bucketUsageService.ts',
     'billingClients/bucketUsageErrors': 'billingClients/bucketUsageErrors.ts',
     'billingClients/weightedBurn': 'billingClients/weightedBurn.ts',

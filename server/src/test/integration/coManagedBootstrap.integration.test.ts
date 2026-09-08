@@ -17719,3 +17719,99 @@ it('shared time UI actions reject API overrides and redact current local client 
     expect(await getClientIdForWorkItem(f.referenceId, 'co_managed', entry.entry_id)).toBeNull();
   } finally { current.mockRestore(); }
 }));
+
+async function seedMspTimeContract(f: any, options: { bucket?: boolean; clientId?: string; serviceId?: string } = {}) {
+  const tenant = f.principal.tenant, contractId = randomUUID(), lineId = randomUUID(), bucketId = randomUUID();
+  const relation = await f.customer.table('co_management_relationships').first();
+  const clientId = options.clientId ?? relation.sponsor_client_id, serviceId = options.serviceId ?? f.serviceId;
+  await f.sponsor.table('contracts').insert({ tenant, contract_id: contractId, contract_name: 'Shared MSP support', is_active: true });
+  await f.sponsor.table('contract_lines').insert({ tenant, contract_line_id: lineId, contract_id: contractId,
+    contract_line_name: 'MSP support line', contract_line_type: options.bucket ? 'Bucket' : 'Hourly', billing_frequency: 'monthly', is_active: true, is_template: false, cadence_owner: 'client' });
+  await f.sponsor.table('client_contracts').insert({ tenant, client_contract_id: randomUUID(), client_id: clientId, contract_id: contractId,
+    start_date: '2026-01-01', end_date: null, is_active: true });
+  if (options.bucket) {
+    await f.sponsor.table('contract_line_buckets').insert({ tenant, bucket_id: bucketId, contract_line_id: lineId, total_minutes: 600,
+      overage_rate: 15000, allow_rollover: false, covers_all_services: false });
+    await f.sponsor.table('contract_line_bucket_services').insert({ tenant, bucket_id: bucketId, contract_line_id: lineId, service_id: serviceId, burn_multiplier: 2 });
+  } else await f.sponsor.table('contract_line_services').insert({ tenant, contract_line_id: lineId, service_id: serviceId, quantity: 1 });
+  return { clientId, lineId, contractId, bucketId };
+}
+
+it('shared time billing uses the same current contract selection for manual API and timer saves', async () => withMspSharedTimerFixture(async f => {
+  const contract = await seedMspTimeContract(f);
+  const manual = await f.save();
+  expect(manual).toMatchObject({ contract_line_id: contract.lineId, contract_line_source: 'auto_unique_service' });
+  const api = await f.service.create({ work_item_type: 'co_managed', work_item_id: f.referenceId, service_id: f.serviceId,
+    start_time: '2026-09-08T11:00:00Z', end_time: '2026-09-08T12:00:00Z' }, f.context);
+  expect(api).toMatchObject({ contract_line_id: contract.lineId, contract_line_source: 'auto_unique_service' });
+  const changed = await f.service.update(api.entry_id, { end_time: '2026-09-08T12:30:00Z' }, f.context);
+  expect(changed).toMatchObject({ contract_line_id: contract.lineId, contract_line_source: 'auto_unique_service', billable_duration: 90 });
+  // Remove completed fixture entries to avoid the API's overlap gate if the
+  // test clock happens to run in either fixed interval.
+  await f.sponsor.table('time_entries').del();
+  const timer = await f.start();
+  expect(await f.stop(timer)).toMatchObject({ contract_line_id: contract.lineId, contract_line_source: 'auto_unique_service' });
+}));
+
+it('shared time billing rejects foreign or inapplicable explicit contracts and services before writing effort', async () => withMspSharedTimerFixture(async f => {
+  const contract = await seedMspTimeContract(f);
+  await expect(f.save({ contract_line_id: randomUUID() })).rejects.toMatchObject({ code: 'TIME_CONTRACT_UNAVAILABLE' });
+  await expect(f.save({ service_id: randomUUID() })).rejects.toMatchObject({ code: 'TIME_SERVICE_UNAVAILABLE' });
+  await expect(f.service.create({ work_item_type: 'co_managed', work_item_id: f.referenceId, service_id: f.serviceId,
+    contract_line_id: randomUUID(), start_time: '2026-09-08T11:00:00Z', end_time: '2026-09-08T12:00:00Z' }, f.context)).rejects.toMatchObject({ statusCode: 400 });
+  expect(await f.sponsor.table('time_entries')).toHaveLength(0);
+  expect(await f.save({ contract_line_id: contract.lineId })).toMatchObject({ contract_line_id: contract.lineId, contract_line_source: 'explicit' });
+}));
+
+it('shared time billing applies weighted bucket draws and reverses API edits and deletion', async () => withMspSharedTimerFixture(async f => {
+  const contract = await seedMspTimeContract(f, { bucket: true });
+  const entry = await f.service.create({ work_item_type: 'co_managed', work_item_id: f.referenceId, service_id: f.serviceId,
+    start_time: '2026-09-08T11:00:00Z', end_time: '2026-09-08T12:00:00Z' }, f.context);
+  expect(entry.contract_line_id).toBe(contract.lineId);
+  const used = async () => Number((await f.sponsor.table('bucket_usage').where('bucket_id', contract.bucketId).first())?.minutes_used ?? 0);
+  expect(await used()).toBe(120);
+  await f.service.update(entry.entry_id, { end_time: '2026-09-08T12:30:00Z' }, f.context);
+  expect(await used()).toBe(180);
+  await f.service.update(entry.entry_id, { is_billable: false }, f.context);
+  expect(await used()).toBe(0);
+  await f.service.update(entry.entry_id, { is_billable: true }, f.context);
+  expect(await used()).toBe(180);
+  await f.service.delete(entry.entry_id, f.context); expect(await used()).toBe(0);
+}));
+
+it('shared time billing allocates and reverses prepaid hours through native API updates and deletion', async () => withMspSharedTimerFixture(async f => {
+  const relation = await f.customer.table('co_management_relationships').first(), blockId = randomUUID();
+  await f.sponsor.table('hour_blocks').insert({ tenant: f.principal.tenant, block_id: blockId, client_id: relation.sponsor_client_id,
+    service_id: f.serviceId, total_minutes: 180, remaining_minutes: 180, hourly_rate: 12000, status: 'active' });
+  const entry = await f.service.create({ work_item_type: 'co_managed', work_item_id: f.referenceId, service_id: f.serviceId,
+    start_time: '2026-09-08T11:00:00Z', end_time: '2026-09-08T12:00:00Z' }, f.context);
+  const remaining = async () => Number((await f.sponsor.table('hour_blocks').where('block_id', blockId).first()).remaining_minutes);
+  expect(await remaining()).toBe(120);
+  await f.service.update(entry.entry_id, { end_time: '2026-09-08T12:30:00Z' }, f.context); expect(await remaining()).toBe(90);
+  await f.service.update(entry.entry_id, { is_billable: false }, f.context); expect(await remaining()).toBe(180);
+  await f.service.update(entry.entry_id, { is_billable: true }, f.context); expect(await remaining()).toBe(90);
+  const blocks = await import('../../../../shared/billingClients/hourBlockService');
+  await withTransaction(db, trx => blocks.reverseTimeEntryAllocations(trx, f.principal.tenant, entry.entry_id));
+  expect(await remaining()).toBe(180);
+  expect(await withTransaction(db, trx => blocks.reconcileClientAllocations(trx, f.principal.tenant, relation.sponsor_client_id))).toBe(1);
+  expect(await remaining()).toBe(90);
+  await f.service.delete(entry.entry_id, f.context); expect(await remaining()).toBe(180);
+}));
+
+
+it('shared time billing uses the MSP profile to resolve parallel contracts and excludes inactive lines', async () => withMspSharedTimerFixture(async f => {
+  const first = await seedMspTimeContract(f), second = await seedMspTimeContract(f);
+  const profiles = [randomUUID(), randomUUID()];
+  for (const [index, billing_profile_id] of profiles.entries()) await f.sponsor.table('client_billing_profiles').insert({
+    tenant: f.principal.tenant, client_id: first.clientId, billing_profile_id, name: `MSP profile ${index}`, is_default: index === 0,
+    is_system_managed_default: false, is_active: true });
+  await f.sponsor.table('contract_lines').where('contract_line_id', first.lineId).update({ billing_profile_id: profiles[0] });
+  await f.sponsor.table('contract_lines').where('contract_line_id', second.lineId).update({ billing_profile_id: profiles[1] });
+  await f.sponsor.table('co_managed_time_work_references').where('reference_id', f.referenceId).update({ billing_profile_id: profiles[1] });
+  const api = await f.service.create({ work_item_type: 'co_managed', work_item_id: f.referenceId, service_id: f.serviceId,
+    start_time: '2026-09-08T11:00:00Z', end_time: '2026-09-08T12:00:00Z' }, f.context);
+  expect(api).toMatchObject({ contract_line_id: second.lineId, contract_line_source: 'auto_billing_profile' });
+  await f.sponsor.table('contract_lines').where('contract_line_id', second.lineId).update({ is_active: false });
+  await expect(f.save({ contract_line_id: second.lineId })).rejects.toMatchObject({ code: 'TIME_CONTRACT_UNAVAILABLE' });
+  expect(await f.save()).toMatchObject({ contract_line_id: first.lineId, contract_line_source: 'auto_unique_service' });
+}));

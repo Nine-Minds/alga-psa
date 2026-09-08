@@ -34,6 +34,8 @@ import { hasCoManagedConversationOwnership } from '@alga-psa/co-managed/nativeCo
 
 import { filterVisibleTimeEntries, sortVisibleTimeEntries, visibleTimeEntryStatistics, visibleTimeEntriesCsv } from './timeEntryCollection';
 import { reverseDeletedTimeEntryBilling } from '@alga-psa/scheduling/lib/timeEntryDeletionBilling';
+import { resolveTimeEntryContract, TimeEntryContractError } from '@alga-psa/scheduling/lib/timeEntryContract';
+import { reconcileTimeEntryBillingAllocations } from '@alga-psa/scheduling/lib/timeEntryBillingAllocations';
 
 interface TimeApiAdmission {
   entryId?: string; operational: boolean; access: CoManagedNativeTimeAccess | null; existing: any; source: any;
@@ -108,6 +110,7 @@ export class TimeEntryService extends BaseService<any> {
 
   private async withTimeErrors<T>(work: () => Promise<T>): Promise<T> {
     try { return await work(); } catch (error) {
+      if (error instanceof TimeEntryContractError) throw new ValidationError(error.message);
       if (error instanceof NativeTimeReviewError) {
         if (error.code === 'TIME_REVIEW_NOT_FOUND') throw new NotFoundError(error.message);
         throw new ConflictError(error.message);
@@ -481,9 +484,8 @@ export class TimeEntryService extends BaseService<any> {
     if (admission.fields) Object.assign(timeEntryData, admission.fields);
     if (admission.entryId) Object.assign(timeEntryData, { entry_id: admission.entryId });
 
-    // Get billing information if billable
-    if (!admission.operational && data.is_billable !== false) {
-      const billingInfo = await this.calculateBillingInfo(timeEntryData, context);
+    if (!admission.operational) {
+      const billingInfo = await resolveTimeEntryContract(knex as Knex.Transaction, context.tenant, timeEntryData, { explicitLineId: data.contract_line_id });
       Object.assign(timeEntryData, billingInfo);
     }
 
@@ -492,6 +494,7 @@ export class TimeEntryService extends BaseService<any> {
         .insert(timeEntryData)
         .returning('*');
       await recalculateProjectTaskActualHoursForEntryChange(trx, context.tenant, null, created);
+      await reconcileTimeEntryBillingAllocations(trx, context.tenant, null, created);
       return created;
     });
 
@@ -595,14 +598,18 @@ export class TimeEntryService extends BaseService<any> {
       updateData.billable_duration = is_billable ? totalDuration : 0;
     }
 
-    // Recalculate billing if relevant fields changed
-    if (!admission.operational && (data.service_id !== undefined || updateData.billable_duration !== undefined)) {
-      const billingInfo = await this.calculateBillingInfo({ ...existing, ...updateData }, context);
-      Object.assign(updateData, billingInfo);
-    }
-
     if (admission.source) Object.assign(updateData, this.admittedPersistFields(admission));
     if (admission.fields) Object.assign(updateData, admission.fields);
+    if (!admission.operational && ['service_id', 'contract_line_id', 'work_item_id', 'work_item_type', 'start_time', 'end_time', 'is_billable'].some(field => Object.prototype.hasOwnProperty.call(data, field))) {
+      const proposed = { ...existing, ...updateData };
+      const day = (value: unknown) => value instanceof Date ? value.toISOString().slice(0, 10) : String(value ?? '').slice(0, 10);
+      const sameWork = ['work_item_id', 'work_item_type', 'service_id'].every(field => proposed[field] === existing[field]) && day(proposed.work_date) === day(existing.work_date);
+      Object.assign(updateData, await resolveTimeEntryContract(knex as Knex.Transaction, context.tenant, proposed, {
+        explicitLineId: data.contract_line_id,
+        preferredLineId: sameWork && !Object.prototype.hasOwnProperty.call(data, 'contract_line_id') ? existing.contract_line_id : null,
+        preferredSource: existing.contract_line_source,
+      }));
+    }
     const saved = await withTransaction(knex, async (trx) => {
       const [updated] = await tenantDb(trx, context.tenant).table('time_entries')
         .where({ [this.primaryKey]: id })
@@ -610,6 +617,7 @@ export class TimeEntryService extends BaseService<any> {
         .returning('*');
       if (!updated) throw new NotFoundError('Time entry not found');
       await recalculateProjectTaskActualHoursForEntryChange(trx, context.tenant, existing, updated);
+      await reconcileTimeEntryBillingAllocations(trx, context.tenant, existing, updated);
       return updated;
     });
 
@@ -1205,16 +1213,6 @@ export class TimeEntryService extends BaseService<any> {
       .where('start_date', '<=', workDate)
       .where('end_date', '>', workDate)
       .first();
-  }
-
-  private async calculateBillingInfo(timeEntry: any, context: ServiceContext): Promise<any> {
-    // This would integrate with billing system
-    // For now, return basic structure
-    return {
-      contract_line_id: null,
-      tax_rate_id: null,
-      tax_region: timeEntry.tax_region || null
-    };
   }
 
   private async canManageTimeEntries(context: ServiceContext): Promise<boolean> {

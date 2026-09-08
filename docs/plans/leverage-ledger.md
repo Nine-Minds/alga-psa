@@ -659,3 +659,8 @@ Shared timer checkpoint (2026-09-08): the third financial writer now uses `asser
 ## time-entry-preparation — friction (bounded extraction)
 
 The native launcher coupled user/period/sheet preparation to a global drawer. Shared customer screens need their form lifetime to follow the qualified resource and release boundary. `prepareTimeEntryForWorkItem` now returns the existing form inputs, and the native drawer launcher and shared-work dialog both consume them. No alternate timesheet writer or form was introduced. The native launcher now propagates save failures to the existing dialog handler, eliminating a swallowed-error path that could report success. Shared client lookup retains the actual source/entry authority and then uses ordinary contract selection; it does not add a separate billing engine.
+
+
+## native-time-billing-command — pattern (bounded extraction)
+
+Native saves held contract resolution and allocation sequencing inline while the REST writer returned stub contract fields. Both now use transaction-bound contract selection and the existing reverse-old/apply-new allocation routine. Candidate loading is separate from browser authentication, preserving the retained write connection. Charge calculation and invoicing remain in the existing billing engine; this extraction does not introduce another invoice engine. The same task/client lookup also existed in prepaid-hour allocation, so work client/profile resolution moved into shared billing runtime and scheduling retains a compatibility facade. Reconciliation’s collection query now admits the shared reference kind. Current lower-level lock-order and eligibility concurrency audits remain part of the broader billing validation work.
