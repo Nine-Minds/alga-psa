@@ -27,6 +27,30 @@ x-provider-environment: &provider-environment
   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: pk_test_algasim
 
 services:
+  worker-test-state:
+    image: alga-e2e-test-algasim:latest
+    user: '0:0'
+    entrypoint: ['node', '/init-worker-test-state.mjs']
+    command: []
+    volumes:
+      - ./e2e-tests/harness/init-worker-test-state.mjs:/init-worker-test-state.mjs:ro
+      - email_test_tenant_secrets:/data/secrets
+      - files_data:/data/files
+    secrets:
+      - postgres_password
+      - db_password_server
+      - db_password_hocuspocus
+      - redis_password
+      - alga_auth_key
+      - crypto_key
+      - token_secret_key
+      - nextauth_secret
+      - credential_encryption_key
+      - email_password
+      - google_oauth_client_id
+      - google_oauth_client_secret
+    networks:
+      - app-network
   algasim:
     image: alga-e2e-test-algasim:latest
     init: true
@@ -78,27 +102,33 @@ services:
           - calendar-callback
       test-ingress-network: {}
   server:
+    user: '1000:1000'
     ports: !reset []
     environment:
       <<: *provider-environment
       TEMPORAL_ADDRESS: temporal-dev:7233
       TEMPORAL_NAMESPACE: default
       IMAP_WEBHOOK_SECRET: regression-imap-only
-      SECRET_FS_BASE_PATH: /run/secrets
+      SECRET_FS_BASE_PATH: /data/secrets
+      HOME: /tmp
+      npm_config_cache: /tmp/npm-cache
       STORAGE_LOCAL_BASE_PATH: /data/files
     volumes:
-      - email_test_tenant_secrets:/run/secrets/tenants
+      - email_test_tenant_secrets:/data/secrets
   email-service:
+    user: '1000:1000'
     environment:
       <<: *provider-environment
       IMAP_WEBHOOK_SECRET: regression-imap-only
       IMAP_WEBHOOK_URL: http://server:3000/api/email/webhooks/imap
       IMAP_PROVIDER_REFRESH_MS: '1000'
       IMAP_POLL_INTERVAL_MS: '1000'
-      SECRET_FS_BASE_PATH: /run/secrets
+      SECRET_FS_BASE_PATH: /data/secrets
+      HOME: /tmp
+      npm_config_cache: /tmp/npm-cache
       STORAGE_LOCAL_BASE_PATH: /data/files
     volumes:
-      - email_test_tenant_secrets:/run/secrets/tenants
+      - email_test_tenant_secrets:/data/secrets
       - files_data:/data/files
   imap-test-server:
     image: greenmail/standalone:2.1.8
@@ -143,6 +173,7 @@ services:
       postgres:
         condition: service_healthy
   workflow-worker:
+    user: '1000:1000'
     image: alga-e2e-test-workflow-worker:latest
     init: true
     ports: !reset []
@@ -152,12 +183,14 @@ services:
       DEV_MODE: 'false'
       TEMPORAL_ADDRESS: temporal-dev:7233
       TEMPORAL_NAMESPACE: default
-      SECRET_FS_BASE_PATH: /run/secrets
+      SECRET_FS_BASE_PATH: /data/secrets
+      HOME: /tmp
+      npm_config_cache: /tmp/npm-cache
       STORAGE_LOCAL_BASE_PATH: /data/files
       PORT: '4000'
     # Exercise the candidate image's entrypoint, not a checkout bind mount.
     volumes: !override
-      - email_test_tenant_secrets:/run/secrets/tenants
+      - email_test_tenant_secrets:/data/secrets
       - files_data:/data/files
     depends_on:
       temporal-dev:
@@ -165,6 +198,7 @@ services:
   # Explicitly started only in the EE job. Authored workflows belong to the
   # workflow-worker; this worker also adds its existing SLA queue internally.
   temporal-worker:
+    user: '1000:1000'
     profiles: ['enterprise']
     image: alga-e2e-test-temporal-worker:latest
     init: true
@@ -174,7 +208,9 @@ services:
       EDITION: enterprise
       SECRET_READ_CHAIN: env,filesystem
       SECRET_WRITE_PROVIDER: filesystem
-      SECRET_FS_BASE_PATH: /run/secrets
+      SECRET_FS_BASE_PATH: /data/secrets
+      HOME: /tmp
+      npm_config_cache: /tmp/npm-cache
       STORAGE_LOCAL_BASE_PATH: /data/files
       DB_HOST: pgbouncer
       DB_PORT: '6432'
@@ -199,7 +235,7 @@ services:
       - crypto_key
       - credential_encryption_key
     volumes:
-      - email_test_tenant_secrets:/run/secrets/tenants
+      - email_test_tenant_secrets:/data/secrets
       - files_data:/data/files
     networks:
       - app-network

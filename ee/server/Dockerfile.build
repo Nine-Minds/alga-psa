@@ -117,7 +117,9 @@ RUN sed -i 's/NEXT_PUBLIC_EDITION=community/NEXT_PUBLIC_EDITION=enterprise/' /ap
 
 # Copy built application and node_modules from earlier stages -- minimalist approach
 COPY --from=builder /app/shared ./shared
-COPY --from=builder /app/server/.next ./server/.next
+# Next writes runtime caches below .next, including server/app and pages.
+# Preserve compiled bytes while allowing the standard nonroot Node UID.
+COPY --from=builder --chown=1000:1000 /app/server/.next ./server/.next
 COPY --from=builder /app/server/public ./server/public
 COPY --from=builder /app/server/next.config.mjs ./server/
 COPY --from=builder /app/server/tsconfig.json ./server/
@@ -145,6 +147,11 @@ COPY --from=builder /app/ee/server/migrations/ ./server/migrations/
 
 # Copy core package.json for version info
 COPY packages/core/package.json /app/packages/core/package.json
+# Package the same compiled core used by the build for worker-state diagnostics.
+COPY --from=builder /app/packages/core/dist /app/packages/core/dist
+# Development validation creates next-env.d.ts and may update tsconfig; this
+# preserves the production entrypoint while supporting a nonroot runtime.
+RUN chown 1000:1000 /app/server /app/server/tsconfig.json
 
 COPY server/entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh

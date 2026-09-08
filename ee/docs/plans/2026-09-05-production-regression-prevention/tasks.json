@@ -278,7 +278,8 @@
       "dependsOn": [
         "R031",
         "R032",
-        "R033"
+        "R033",
+        "R035"
       ],
       "owner": "coordinator",
       "notes": "Image records cover new worker candidates, namespace andprocess readiness gates, allprocessprovider probes. Native CE/EE compose rendering and actionlint pass. Peer review found/fixed serverTemporaldestination and crossdatabaseconsumer conflict. Current-source CI pending."
@@ -286,12 +287,12 @@
     {
       "id": "R035",
       "title": "Align isolated CI tenant-secret writer identities and validate cross-process grants",
-      "status": "todo",
+      "status": "in_progress",
       "dependsOn": [
-        "R034"
+        "R031"
       ],
       "owner": "coordinator",
-      "notes": "Current root server/workflow-worker and nonroot Temporal worker cannot share hardened filesystem writes: owned secret root,0700dirs and0600files require common writer UID. Do not weaken production permission checks. Design owned shared secret root and common nonroot UID, then test actual crossprocess read/write and provider activity."
+      "notes": "Implemented common UID1000 and fullowned shared secret root in CI, failclosed emptyvolume initializer, actualprovider crossprocessprobe in candidatecontainers. Native initializer8/8; sourceprovider37passed/6existingplatformskips; stagedcompiledpackage3process roundtrip passes. Image build/startup/currentCI still pending."
     }
   ]
 }

@@ -433,10 +433,11 @@ jobs:
           # Resolve explicit and Compose-generated tags so a configuration change cannot
           # accidentally run an old/pulled image instead of this run's build.
           docker-compose -p alga-e2e-test --profile enterprise config --format json > "$RUNNER_TEMP/fresh-install-compose.json"
-          for service in server setup email-service hocuspocus redis pgbouncer algasim $worker_images; do
+          for service in server setup email-service hocuspocus redis pgbouncer algasim worker-test-state $worker_images; do
             image=$(jq -r --arg service "$service" '.services[$service].image // (.name + "-" + $service)' "$RUNNER_TEMP/fresh-install-compose.json")
             record_service="$service"
             if [ "$service" = server ]; then record_service="$SERVER_ARCHIVE"; fi
+            if [ "$service" = worker-test-state ]; then record_service=algasim; fi
             inspection="$RUNNER_TEMP/loaded-$service.json"
             docker image inspect "$image" > "$inspection"
             node scripts/verify-docker-archive-build.mjs loaded "$inspection" "$BUILD_RECORD_DIRECTORY/$record_service-build.json" "$record_service"
@@ -451,6 +452,13 @@ jobs:
           curl --fail --silent http://127.0.0.1:9500/control/catalog > "$RUNNER_TEMP/algasim-catalog.json"
           jq -e '[.result.emulators[].id] | sort == ["msgraph", "qbo", "smtp-sink", "stripe", "webhook-sink", "xero"]' "$RUNNER_TEMP/algasim-catalog.json"
           docker image inspect alga-e2e-test-algasim:latest --format '{{.Id}}' > "$RUNNER_TEMP/algasim-image-id.txt"
+
+      - name: Initialize isolated shared worker state
+        if: steps.install_docker_compose.outcome == 'success'
+        run: |
+          # Only this fresh job's empty named volumes are initialized. All
+          # application secret writers use UID1000; production checks stay on.
+          docker-compose -p alga-e2e-test run --rm --no-deps worker-test-state
 
       - name: Start foundational services (postgres and redis)
         if: steps.install_docker_compose.outcome == 'success'
@@ -642,6 +650,24 @@ jobs:
           # network. All three authored-runtime loops must report ready.
           docker-compose -p alga-e2e-test cp e2e-tests/harness/check-background-workers.mjs algasim:/tmp/check-background-workers.mjs
           docker-compose -p alga-e2e-test exec -T algasim node /tmp/check-background-workers.mjs
+
+      - name: Verify actual cross-process tenant-secret access
+        if: steps.wait_for_setup.outputs.status == 'success' && steps.install_docker_compose.outcome == 'success'
+        timeout-minutes: 2
+        env:
+          EDITION: ${{ matrix.edition }}
+        run: |
+          probe() {
+            docker-compose -p alga-e2e-test exec -T -e SHARED_WORKER_SECRET_PHASE="$2" "$1" node --input-type=module < e2e-tests/harness/check-shared-worker-secrets.mjs
+          }
+          workers="workflow-worker"
+          if [ "$EDITION" = enterprise ]; then workers="$workers temporal-worker"; fi
+          for worker in $workers; do
+            probe server write
+            probe "$worker" rotate
+            probe email-service read
+            probe server delete
+          done
 
       - name: Collect initial container logs
         if: steps.wait_for_setup.outputs.status == 'success' && steps.install_docker_compose.outcome == 'success'
