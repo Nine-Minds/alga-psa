@@ -87,7 +87,8 @@ export const QUOTE_PREVIEW_SAMPLE_SCENARIOS: QuotePreviewSampleScenario[] = [
       line_items: [
         {
           quote_item_id: 'qi-1',
-          description: 'Managed Endpoint Monitoring',
+          service_name: 'Managed Endpoint Monitoring',
+          description: '24/7 monitoring and alerting for every managed workstation and server.',
           quantity: 15,
           unit_price: 4200,
           total_price: 63000,
@@ -101,7 +102,8 @@ export const QUOTE_PREVIEW_SAMPLE_SCENARIOS: QuotePreviewSampleScenario[] = [
         },
         {
           quote_item_id: 'qi-2',
-          description: 'Patch Management',
+          service_name: 'Patch Management',
+          description: 'Monthly operating system and third-party patch deployment with verification.',
           quantity: 15,
           unit_price: 1600,
           total_price: 24000,
@@ -139,7 +141,8 @@ export const QUOTE_PREVIEW_SAMPLE_SCENARIOS: QuotePreviewSampleScenario[] = [
       line_items: [
         {
           quote_item_id: 'qi-p1-1',
-          description: 'Network Assessment & Planning',
+          service_name: 'Network Assessment & Planning',
+          description: 'Onsite discovery, topology mapping, and a prioritised remediation roadmap.',
           quantity: 1,
           unit_price: 350000,
           total_price: 350000,
@@ -153,7 +156,8 @@ export const QUOTE_PREVIEW_SAMPLE_SCENARIOS: QuotePreviewSampleScenario[] = [
         },
         {
           quote_item_id: 'qi-p2-1',
-          description: 'Server Migration (5 servers)',
+          service_name: 'Server Migration',
+          description: 'Lift-and-shift migration of five production servers, including cutover testing.',
           quantity: 5,
           unit_price: 120000,
           total_price: 600000,
@@ -167,7 +171,8 @@ export const QUOTE_PREVIEW_SAMPLE_SCENARIOS: QuotePreviewSampleScenario[] = [
         },
         {
           quote_item_id: 'qi-p2-2',
-          description: 'Cloud Backup Configuration',
+          service_name: 'Cloud Backup Configuration',
+          description: 'Backup policy design, agent rollout, and first successful restore test.',
           quantity: 1,
           unit_price: 85000,
           total_price: 85000,
@@ -181,7 +186,8 @@ export const QUOTE_PREVIEW_SAMPLE_SCENARIOS: QuotePreviewSampleScenario[] = [
         },
         {
           quote_item_id: 'qi-p3-1',
-          description: 'Managed Firewall Service',
+          service_name: 'Managed Firewall Service',
+          description: 'Firewall administration, rule reviews, and firmware maintenance.',
           quantity: 1,
           unit_price: 25000,
           total_price: 25000,
@@ -196,7 +202,8 @@ export const QUOTE_PREVIEW_SAMPLE_SCENARIOS: QuotePreviewSampleScenario[] = [
         },
         {
           quote_item_id: 'qi-p3-2',
-          description: 'Security Awareness Training',
+          service_name: 'Security Awareness Training',
+          description: 'Quarterly phishing simulations and short training modules per user.',
           quantity: 25,
           unit_price: 600,
           total_price: 15000,
@@ -264,13 +271,13 @@ export const QUOTE_PREVIEW_SAMPLE_SCENARIOS: QuotePreviewSampleScenario[] = [
       },
       po_number: 'PO-ENT-2026-441',
       line_items: [
-        { quote_item_id: 'ql-1', description: 'Managed User Seat - HQ', quantity: 45, unit_price: 9500, total_price: 427500, tax_amount: 34200, net_amount: 461700, is_optional: false, is_selected: true, is_recurring: true, billing_frequency: 'monthly', billing_method: 'usage' },
-        { quote_item_id: 'ql-2', description: 'Managed User Seat - Branch Offices', quantity: 80, unit_price: 8500, total_price: 680000, tax_amount: 54400, net_amount: 734400, is_optional: false, is_selected: true, is_recurring: true, billing_frequency: 'monthly', billing_method: 'usage' },
-        { quote_item_id: 'ql-3', description: 'Security Awareness Training', quantity: 125, unit_price: 600, total_price: 75000, tax_amount: 6000, net_amount: 81000, is_optional: false, is_selected: true, is_recurring: true, billing_frequency: 'quarterly', billing_method: 'usage' },
-        { quote_item_id: 'ql-4', description: 'Endpoint Backup Add-on', quantity: 125, unit_price: 1200, total_price: 150000, tax_amount: 12000, net_amount: 162000, is_optional: true, is_selected: true, is_recurring: true, billing_frequency: 'monthly', billing_method: 'usage' },
-        { quote_item_id: 'ql-5', description: 'SOC Alert Triage', quantity: 1, unit_price: 250000, total_price: 250000, tax_amount: 20000, net_amount: 270000, is_optional: false, is_selected: true, is_recurring: true, billing_frequency: 'monthly', billing_method: 'fixed' },
-        { quote_item_id: 'ql-6', description: 'After Hours On-Call Support', quantity: 1, unit_price: 180000, total_price: 180000, tax_amount: 14400, net_amount: 194400, is_optional: true, is_selected: false, is_recurring: true, billing_frequency: 'monthly', billing_method: 'fixed' },
-        { quote_item_id: 'ql-7', description: 'Network Infrastructure Audit', quantity: 1, unit_price: 450000, total_price: 450000, tax_amount: 36000, net_amount: 486000, is_optional: false, is_selected: true, is_recurring: false, billing_method: 'fixed' },
+        { quote_item_id: 'ql-1', service_name: 'Managed User Seat - HQ', description: 'Full-service support and device management for head-office staff.', quantity: 45, unit_price: 9500, total_price: 427500, tax_amount: 34200, net_amount: 461700, is_optional: false, is_selected: true, is_recurring: true, billing_frequency: 'monthly', billing_method: 'usage' },
+        { quote_item_id: 'ql-2', service_name: 'Managed User Seat - Branch Offices', description: 'Full-service support and device management for branch staff.', quantity: 80, unit_price: 8500, total_price: 680000, tax_amount: 54400, net_amount: 734400, is_optional: false, is_selected: true, is_recurring: true, billing_frequency: 'monthly', billing_method: 'usage' },
+        { quote_item_id: 'ql-3', service_name: 'Security Awareness Training', description: 'Quarterly phishing simulations and short training modules per user.', quantity: 125, unit_price: 600, total_price: 75000, tax_amount: 6000, net_amount: 81000, is_optional: false, is_selected: true, is_recurring: true, billing_frequency: 'quarterly', billing_method: 'usage' },
+        { quote_item_id: 'ql-4', service_name: 'Endpoint Backup Add-on', description: 'Continuous endpoint backup with 30-day retention.', quantity: 125, unit_price: 1200, total_price: 150000, tax_amount: 12000, net_amount: 162000, is_optional: true, is_selected: true, is_recurring: true, billing_frequency: 'monthly', billing_method: 'usage' },
+        { quote_item_id: 'ql-5', service_name: 'SOC Alert Triage', description: 'Analyst triage of security alerts with escalation inside 15 minutes.', quantity: 1, unit_price: 250000, total_price: 250000, tax_amount: 20000, net_amount: 270000, is_optional: false, is_selected: true, is_recurring: true, billing_frequency: 'monthly', billing_method: 'fixed' },
+        { quote_item_id: 'ql-6', service_name: 'After Hours On-Call Support', description: 'Out-of-hours on-call coverage for priority-one incidents.', quantity: 1, unit_price: 180000, total_price: 180000, tax_amount: 14400, net_amount: 194400, is_optional: true, is_selected: false, is_recurring: true, billing_frequency: 'monthly', billing_method: 'fixed' },
+        { quote_item_id: 'ql-7', service_name: 'Network Infrastructure Audit', description: 'Switch, router, and wireless audit with a written findings report.', quantity: 1, unit_price: 450000, total_price: 450000, tax_amount: 36000, net_amount: 486000, is_optional: false, is_selected: true, is_recurring: false, billing_method: 'fixed' },
       ],
       subtotal: 2212500,
       tax: 177000,

@@ -258,6 +258,20 @@ const formatValue = (value: unknown, format: TemplateValueFormat | undefined, ct
   return String(value);
 };
 
+/**
+ * Table cells may stack lines (e.g. an item name over its description). Drop the
+ * blank lines a missing part leaves behind and keep the remaining line breaks —
+ * same multiline convention field nodes already use.
+ */
+const resolveTableCellText = (text: string): { text: string; multiline: boolean } => {
+  if (!text.includes('\n')) {
+    return { text, multiline: false };
+  }
+
+  const trimmed = text.replace(/^[^\S\n]*\n+/, '').replace(/\n+[^\S\n]*$/, '');
+  return { text: trimmed, multiline: trimmed.includes('\n') };
+};
+
 const buildAstCss = (ast: TemplateAst): string => {
   const baseCss = `
 .invoice-template-root {
@@ -575,13 +589,18 @@ const renderNode = (
                     const value = resolveExpressionValue(column.value, evaluation, { ...scope, row, items: { ...scope.items, [node.rowBinding]: row } }, ctx);
                     const { className: colClassName, style: colStyle } = resolveStyleRef(column.style);
                     const alignRight = column.format === 'currency' || column.format === 'number';
+                    const cell = resolveTableCellText(formatValue(value ?? '', column.format, ctx));
                     return (
                       <td
                         key={column.id}
                         className={colClassName || undefined}
-                        style={{ ...(colStyle ?? {}), ...(alignRight ? { textAlign: 'right' } : {}) }}
+                        style={{
+                          ...(colStyle ?? {}),
+                          ...(alignRight ? { textAlign: 'right' } : {}),
+                          ...(cell.multiline ? { whiteSpace: 'pre-line' } : {}),
+                        }}
                       >
-                        {formatValue(value ?? '', column.format, ctx)}
+                        {cell.text}
                       </td>
                     );
                   })}
@@ -626,13 +645,18 @@ const renderNode = (
                     const value = resolveExpressionValue(column.value, evaluation, { ...scope, row, items: { ...scope.items, [node.repeat.itemBinding]: row } }, ctx);
                     const { className: colClassName, style: colStyle } = resolveStyleRef(column.style);
                     const alignRight = column.format === 'currency' || column.format === 'number';
+                    const cell = resolveTableCellText(formatValue(value ?? '', column.format, ctx));
                     return (
                       <td
                         key={column.id}
                         className={colClassName || undefined}
-                        style={{ ...(colStyle ?? {}), ...(alignRight ? { textAlign: 'right' } : {}) }}
+                        style={{
+                          ...(colStyle ?? {}),
+                          ...(alignRight ? { textAlign: 'right' } : {}),
+                          ...(cell.multiline ? { whiteSpace: 'pre-line' } : {}),
+                        }}
                       >
-                        {formatValue(value ?? '', column.format, ctx)}
+                        {cell.text}
                       </td>
                     );
                   })}

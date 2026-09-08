@@ -1,6 +1,7 @@
 import type { TemplateNode, TemplateTableColumn } from '@alga-psa/types';
 import { describe, expect, it } from 'vitest';
 import { STANDARD_INVOICE_TEMPLATE_ASTS, getStandardTemplateAstByCode } from '../../../lib/invoice-template-ast/standardTemplates';
+import { STANDARD_QUOTE_TEMPLATE_ASTS, getStandardQuoteTemplateAstByCode } from '../../../lib/quote-template-ast/standardTemplates';
 import { exportImportExportAst, roundTripAst } from './workspaceAst.roundtrip.helpers';
 
 const hasOwn = (value: object, key: string): boolean => Object.prototype.hasOwnProperty.call(value, key);
@@ -153,5 +154,39 @@ describe('workspaceAst standard template roundtrip coverage', () => {
     const astOnce = roundTripAst(source);
     const astTwice = exportImportExportAst(source);
     expect(astTwice).toEqual(astOnce);
+  });
+});
+
+describe('workspaceAst standard quote template column roundtrip coverage', () => {
+  const quoteTemplateCodes = Object.keys(STANDARD_QUOTE_TEMPLATE_ASTS).sort();
+
+  const collectColumns = (node: TemplateNode, out: TemplateTableColumn[] = []): TemplateTableColumn[] => {
+    if (node.type === 'dynamic-table' || node.type === 'table') {
+      out.push(...node.columns);
+    }
+    if ('children' in node && Array.isArray(node.children)) {
+      node.children.forEach((child) => collectColumns(child, out));
+    }
+    return out;
+  };
+
+  // alga-2026-0002354 — the stacked name/description cell is a template value
+  // expression; the designer must round-trip it instead of flattening it to a path.
+  it.each(quoteTemplateCodes)('preserves the stacked description cell for %s', (templateCode) => {
+    const source = getStandardQuoteTemplateAstByCode(templateCode);
+    expect(source).toBeTruthy();
+    if (!source) return;
+
+    const sourceColumns = collectColumns(source.layout).filter((column) => column.id === 'description');
+    expect(sourceColumns.length).toBeGreaterThan(0);
+
+    const roundTripped = roundTripAst(source);
+    const roundTrippedColumns = collectColumns(roundTripped.layout).filter((column) => column.id === 'description');
+
+    expect(roundTrippedColumns.length).toBe(sourceColumns.length);
+    roundTrippedColumns.forEach((column, index) => {
+      expect(column.value).toEqual(sourceColumns[index]!.value);
+      expect(column.value.type).toBe('template');
+    });
   });
 });

@@ -37,6 +37,7 @@ type QuoteItemServiceLookupRow = {
   tenant?: string;
   service_id?: string;
   service_name: string;
+  description?: string | null;
   sku?: string | null;
   default_rate?: number | string | null;
   unit_of_measure?: string | null;
@@ -156,6 +157,7 @@ const QuoteItem = {
         .where({ service_id: item.service_id })
         .select(
           'service_name',
+          'description',
           'sku',
           'default_rate',
           'unit_of_measure',
@@ -197,7 +199,8 @@ const QuoteItem = {
         unit_of_measure: resolvedItem.unit_of_measure ?? service.unit_of_measure ?? null,
         billing_method: resolvedItem.billing_method ?? service.billing_method ?? null,
         service_item_kind: resolvedItemKind,
-        description: resolvedItem.description || service.service_name,
+        // Prefer the catalog description; the name is kept on `service_name`.
+        description: resolvedItem.description || service.description || service.service_name,
         // Snapshot cost for product items so markup can be calculated on the quote
         cost: resolvedItemKind === 'product' && service.cost != null ? Number(service.cost) : (resolvedItem as any).cost ?? null,
         cost_currency: resolvedItemKind === 'product' && service.cost_currency ? service.cost_currency : (resolvedItem as any).cost_currency ?? null,

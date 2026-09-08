@@ -192,7 +192,7 @@ export interface CatalogPickerSearchOptions {
 
 export type CatalogPickerItem = Pick<
   IService,
-  'service_id' | 'service_name' | 'billing_method' | 'unit_of_measure' | 'item_kind' | 'sku'
+  'service_id' | 'service_name' | 'billing_method' | 'unit_of_measure' | 'item_kind' | 'sku' | 'description'
 > & {
   default_rate: number;
   /** Rate from service_prices for the requested currency (null when no currency-specific price exists). */
@@ -254,6 +254,7 @@ export const searchServiceCatalogForPicker = withAuth(async (
       .select<CatalogPickerItem[]>(
         'sc.service_id as service_id',
         'sc.service_name as service_name',
+        'sc.description as description',
         'sc.billing_method as billing_method',
         'sc.unit_of_measure as unit_of_measure',
         'sc.item_kind as item_kind',

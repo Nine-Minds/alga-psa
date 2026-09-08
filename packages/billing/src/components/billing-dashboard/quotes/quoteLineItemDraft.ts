@@ -96,7 +96,9 @@ export function createDraftQuoteItemFromService(item: CatalogPickerItem, quoteCu
     service_name: item.service_name,
     service_sku: item.sku ?? null,
     billing_method: item.billing_method,
-    description: item.service_name,
+    // The catalog description is what the quote should say about the item; the
+    // name stays available separately as `service_name`.
+    description: item.description || item.service_name,
     quantity: 1,
     unit_price: needsPrice ? 0 : Number(item.currency_rate ?? item.default_rate ?? 0),
     cost: item.item_kind === 'product' ? (item.cost ?? null) : null,

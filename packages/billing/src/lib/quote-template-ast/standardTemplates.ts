@@ -7,6 +7,22 @@ const cloneAst = (ast: TemplateAst): TemplateAst =>
   JSON.parse(JSON.stringify(ast)) as TemplateAst;
 
 /**
+ * Description cell: the catalog item name stacked over the line's description
+ * (which is seeded from the catalog description). Lines without a name — custom
+ * items and discounts — render the description alone, because the renderer drops
+ * the blank line the missing name leaves behind.
+ */
+const buildItemDescriptionValue = () =>
+  ({
+    type: 'template',
+    template: '{{name}}\n{{description}}',
+    args: {
+      name: { type: 'path', path: 'service_name' },
+      description: { type: 'path', path: 'description' },
+    },
+  }) as const;
+
+/**
  * Standard Quote Default — clean, professional layout with logo, party blocks,
  * line items table, totals, terms, and signature block.
  */
@@ -124,7 +140,7 @@ const buildStandardQuoteDefaultAst = (): TemplateAst => ({
         repeat: { sourceBinding: { bindingId: 'lineItems' }, itemBinding: 'item' },
         emptyStateText: { i18nKey: 'labels.emptyState.noLineItems', defaultValue: 'No line items' },
         columns: [
-          { id: 'description', header: { i18nKey: 'labels.description', defaultValue: 'Description' }, value: { type: 'path', path: 'description' }, style: { inline: { width: '50%' } } },
+          { id: 'description', header: { i18nKey: 'labels.description', defaultValue: 'Description' }, value: buildItemDescriptionValue(), style: { inline: { width: '50%' } } },
           { id: 'quantity', header: { i18nKey: 'labels.qty', defaultValue: 'Qty' }, value: { type: 'path', path: 'quantity' }, format: 'number', style: { inline: { textAlign: 'right', width: '14%' } } },
           { id: 'unit-price', header: { i18nKey: 'labels.rate', defaultValue: 'Rate' }, value: { type: 'path', path: 'unit_price' }, format: 'currency', style: { inline: { textAlign: 'right', width: '18%' } } },
           { id: 'amount', header: { i18nKey: 'labels.amount', defaultValue: 'Amount' }, value: { type: 'path', path: 'total_price' }, format: 'currency', style: { inline: { textAlign: 'right', width: '18%' } } },
@@ -328,7 +344,7 @@ const buildStandardQuoteDetailedAst = (): TemplateAst => ({
         repeat: { sourceBinding: { bindingId: 'lineItems' }, itemBinding: 'item' },
         emptyStateText: { i18nKey: 'labels.emptyState.noLineItems', defaultValue: 'No line items' },
         columns: [
-          { id: 'description', header: { i18nKey: 'labels.description', defaultValue: 'Description' }, value: { type: 'path', path: 'description' }, style: { inline: { width: '36%' } } },
+          { id: 'description', header: { i18nKey: 'labels.description', defaultValue: 'Description' }, value: buildItemDescriptionValue(), style: { inline: { width: '36%' } } },
           { id: 'phase', header: { i18nKey: 'labels.phase', defaultValue: 'Phase' }, value: { type: 'path', path: 'phase' }, style: { inline: { width: '14%' } } },
           { id: 'optional', header: { i18nKey: 'labels.optional', defaultValue: 'Optional' }, value: { type: 'path', path: 'is_optional' }, style: { inline: { width: '8%', textAlign: 'center' } } },
           { id: 'recurring', header: { i18nKey: 'labels.recurring', defaultValue: 'Recurring' }, value: { type: 'path', path: 'is_recurring' }, style: { inline: { width: '8%', textAlign: 'center' } } },
@@ -521,7 +537,7 @@ const buildStandardQuoteGroupedAst = (): TemplateAst => ({
         repeat: { sourceBinding: { bindingId: 'recurringItems' }, itemBinding: 'item' },
         emptyStateText: { i18nKey: 'labels.emptyState.noMonthlyItems', defaultValue: 'No monthly items' },
         columns: [
-          { id: 'description', header: { i18nKey: 'labels.description', defaultValue: 'Description' }, value: { type: 'path', path: 'description' }, style: { inline: { width: '50%' } } },
+          { id: 'description', header: { i18nKey: 'labels.description', defaultValue: 'Description' }, value: buildItemDescriptionValue(), style: { inline: { width: '50%' } } },
           { id: 'unit-price', header: { i18nKey: 'labels.price', defaultValue: 'Price' }, value: { type: 'path', path: 'unit_price' }, format: 'currency', style: { inline: { textAlign: 'right', width: '18%' } } },
           { id: 'quantity', header: { i18nKey: 'labels.qty', defaultValue: 'Qty' }, value: { type: 'path', path: 'quantity' }, format: 'number', style: { inline: { textAlign: 'right', width: '14%' } } },
           { id: 'amount', header: { i18nKey: 'labels.amount', defaultValue: 'Amount' }, value: { type: 'path', path: 'total_price' }, format: 'currency', style: { inline: { textAlign: 'right', width: '18%' } } },
@@ -542,7 +558,7 @@ const buildStandardQuoteGroupedAst = (): TemplateAst => ({
         repeat: { sourceBinding: { bindingId: 'onetimeItems' }, itemBinding: 'item' },
         emptyStateText: { i18nKey: 'labels.emptyState.noOneTimeItems', defaultValue: 'No one-time items' },
         columns: [
-          { id: 'description', header: { i18nKey: 'labels.description', defaultValue: 'Description' }, value: { type: 'path', path: 'description' }, style: { inline: { width: '50%' } } },
+          { id: 'description', header: { i18nKey: 'labels.description', defaultValue: 'Description' }, value: buildItemDescriptionValue(), style: { inline: { width: '50%' } } },
           { id: 'unit-price', header: { i18nKey: 'labels.price', defaultValue: 'Price' }, value: { type: 'path', path: 'unit_price' }, format: 'currency', style: { inline: { textAlign: 'right', width: '18%' } } },
           { id: 'quantity', header: { i18nKey: 'labels.qty', defaultValue: 'Qty' }, value: { type: 'path', path: 'quantity' }, format: 'number', style: { inline: { textAlign: 'right', width: '14%' } } },
           { id: 'amount', header: { i18nKey: 'labels.amount', defaultValue: 'Amount' }, value: { type: 'path', path: 'total_price' }, format: 'currency', style: { inline: { textAlign: 'right', width: '18%' } } },
@@ -767,7 +783,7 @@ const buildStandardQuoteByLocationAst = (): TemplateAst => ({
             repeat: { sourceBinding: { bindingId: 'group.items' }, itemBinding: 'item' },
             emptyStateText: { i18nKey: 'labels.emptyState.noLineItems', defaultValue: 'No line items' },
             columns: [
-              { id: 'description', header: { i18nKey: 'labels.description', defaultValue: 'Description' }, value: { type: 'path', path: 'description' }, style: { inline: { width: '52%' } } },
+              { id: 'description', header: { i18nKey: 'labels.description', defaultValue: 'Description' }, value: buildItemDescriptionValue(), style: { inline: { width: '52%' } } },
               { id: 'quantity', header: { i18nKey: 'labels.qty', defaultValue: 'Qty' }, value: { type: 'path', path: 'quantity' }, format: 'number', style: { inline: { textAlign: 'right', width: '12%' } } },
               { id: 'unit-price', header: { i18nKey: 'labels.rate', defaultValue: 'Rate' }, value: { type: 'path', path: 'unit_price' }, format: 'currency', style: { inline: { textAlign: 'right', width: '18%' } } },
               { id: 'amount', header: { i18nKey: 'labels.amount', defaultValue: 'Amount' }, value: { type: 'path', path: 'total_price' }, format: 'currency', style: { inline: { textAlign: 'right', width: '18%' } } },

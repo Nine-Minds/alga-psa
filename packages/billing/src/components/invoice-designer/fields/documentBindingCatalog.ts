@@ -83,7 +83,12 @@ const ITEM_FIELDS: Record<DesignerDocumentKind, DocumentItemField[]> = {
     { name: 'billingTiming', valueType: 'string', description: 'Line item billing timing when available.' },
   ],
   quote: [
-    { name: 'description', valueType: 'string', description: 'Quote line item description.' },
+    { name: 'service_name', valueType: 'string', description: 'Catalog item / service name.' },
+    {
+      name: 'description',
+      valueType: 'string',
+      description: 'Quote line item description (seeded from the catalog description).',
+    },
     { name: 'quantity', valueType: 'number', description: 'Quote line item quantity.' },
     { name: 'unit_price', valueType: 'number', description: 'Quote line item unit price.' },
     { name: 'total_price', valueType: 'number', description: 'Quote line item total.' },

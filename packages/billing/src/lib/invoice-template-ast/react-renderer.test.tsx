@@ -1039,4 +1039,63 @@ describe('renderEvaluatedTemplateAst', () => {
     const emptyRendered = await renderEvaluatedTemplateAst(ast, emptyEvaluation);
     expect(emptyRendered.html).not.toContain('<img');
   });
+  // alga-2026-0002354 — quote line item cells stack the catalog item name over the
+  // line description; rows without a name render the description alone.
+  it('stacks multiline table cells and drops the blank line a missing part leaves', async () => {
+    const ast: TemplateAst = {
+      kind: 'invoice-template-ast',
+      version: TEMPLATE_AST_VERSION,
+      bindings: {
+        values: {},
+        collections: {
+          lineItems: { id: 'lineItems', kind: 'collection', path: 'items' },
+        },
+      },
+      layout: {
+        id: 'root',
+        type: 'document',
+        children: [
+          {
+            id: 'line-items',
+            type: 'dynamic-table',
+            repeat: {
+              sourceBinding: { bindingId: 'lineItems' },
+              itemBinding: 'item',
+            },
+            columns: [
+              {
+                id: 'description',
+                header: 'Description',
+                value: {
+                  type: 'template',
+                  template: '{{name}}\n{{description}}',
+                  args: {
+                    name: { type: 'path', path: 'service_name' },
+                    description: { type: 'path', path: 'description' },
+                  },
+                },
+              },
+            ],
+          },
+        ],
+      },
+    };
+
+    const evaluation = evaluateTemplateAst(ast, {
+      items: [
+        {
+          id: 'catalog',
+          service_name: 'Managed Firewall Service',
+          description: 'Firewall administration and rule reviews.',
+        },
+        { id: 'custom', service_name: null, description: 'Custom onboarding block' },
+      ],
+    });
+    const rendered = await renderEvaluatedTemplateAst(ast, evaluation);
+
+    expect(rendered.html).toContain('Managed Firewall Service\nFirewall administration and rule reviews.');
+    expect(rendered.html).toContain('white-space:pre-line');
+    // The nameless row keeps its description without a leading blank line.
+    expect(rendered.html).toContain('>Custom onboarding block</td>');
+  });
 });

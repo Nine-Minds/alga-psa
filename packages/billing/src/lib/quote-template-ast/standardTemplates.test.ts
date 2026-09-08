@@ -68,6 +68,26 @@ describe('standard quote template AST definitions', () => {
     expect(serializedLayout).not.toContain('"id":"location-summary"');
   });
 
+  // alga-2026-0002354 — the Description column stacks the catalog item name over
+  // the line description instead of repeating the name as the description.
+  it('stacks the item name over the description in every line item table', () => {
+    const descriptionColumns = Object.values(STANDARD_QUOTE_TEMPLATE_ASTS).flatMap((ast) =>
+      collectNodesById(ast, 'description'),
+    );
+
+    expect(descriptionColumns.length).toBe(5);
+    for (const column of descriptionColumns) {
+      expect(column.value).toEqual({
+        type: 'template',
+        template: '{{name}}\n{{description}}',
+        args: {
+          name: { type: 'path', path: 'service_name' },
+          description: { type: 'path', path: 'description' },
+        },
+      });
+    }
+  });
+
   it('returns cloned AST payloads to avoid mutation leaks', () => {
     const first = getStandardQuoteTemplateAstByCode(STANDARD_QUOTE_DEFAULT_CODE);
     const second = getStandardQuoteTemplateAstByCode(STANDARD_QUOTE_DEFAULT_CODE);
