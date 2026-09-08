@@ -175,7 +175,8 @@ export async function stageCoManagedPortableWorkspaceFiles(preparedInput: Prepar
       })());
       paths.add(path);
       try {
-        const uploaded = await awaitPortableTransfer(() => provider.upload(stream, path, { mime_type: transfer.mimeType, metadata: { sha256: transfer.sha256 } }),
+        const uploaded = await awaitPortableTransfer(() => provider.upload(stream, path, { mime_type: transfer.mimeType,
+          content_length: transfer.size, metadata: { sha256: transfer.sha256 } }),
           async () => { await provider.delete(path); });
         assertPortableTransferActive();
         if (!complete || uploaded.path !== path || uploaded.size !== transfer.size || uploaded.mime_type !== transfer.mimeType) fail();

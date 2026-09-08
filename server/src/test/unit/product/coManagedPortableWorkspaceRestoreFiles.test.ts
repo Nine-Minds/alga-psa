@@ -115,7 +115,9 @@ async function diskFixture(work: (f: ReturnType<typeof fixture>, root: string) =
 function storage() {
   const objects = new Map<string, Buffer>();
   const provider = { getCapabilities: () => ({ supportsStreaming: true, supportsBuckets: false, supportsMetadata: true, supportsTags: false, supportsVersioning: false, maxFileSize: 1024 ** 3 }),
-    upload: vi.fn(async (stream: any, path: string, options: any) => { const chunks = []; for await (const chunk of stream) chunks.push(chunk); const bytes = Buffer.concat(chunks); objects.set(path, bytes); return { path, size: bytes.length, mime_type: options.mime_type }; }),
+    upload: vi.fn(async (stream: any, path: string, options: any) => { const chunks = []; for await (const chunk of stream) chunks.push(chunk); const bytes = Buffer.concat(chunks);
+      expect(options.content_length).toBe(bytes.length);
+      objects.set(path, bytes); return { path, size: bytes.length, mime_type: options.mime_type }; }),
     delete: vi.fn(async (path: string) => { objects.delete(path); }) };
   return { objects, provider };
 }
@@ -162,6 +164,54 @@ it('binds recovery identity to the actual native storage location and tolerates 
     expect(new S3StorageProvider({ ...s3, accessKey: 'rotated-access', secretKey: 'rotated-secret' }).getLocationIdentity()).toBe(original);
     expect(new S3StorageProvider({ ...s3, bucket: 'different-bucket' }).getLocationIdentity()).not.toBe(original);
     expect(new S3StorageProvider({ ...s3, endpoint: 'https://another.example.test' }).getLocationIdentity()).not.toBe(original);
+  });
+});
+
+it('restores verified archive files through the actual S3 SDK HTTP stream and disposes only its uploaded keys', async () => {
+  await diskFixture(async f => {
+    const { createServer } = await import('node:http');
+    const { S3StorageProvider } = await import('../../../../../packages/storage/src/providers/S3StorageProvider');
+    const objects = new Map<string, { bytes: Buffer; mime: string }>(), errors: unknown[] = [];
+    const server = createServer(async (request, response) => {
+      try {
+        const key = new URL(request.url!, 'http://fixture').pathname;
+        if (request.method === 'PUT') {
+          const chunks: Buffer[] = []; for await (const chunk of request) chunks.push(Buffer.from(chunk));
+          const body = Buffer.concat(chunks), decoded: Buffer[] = [];
+          if (request.headers['content-encoding'] === 'aws-chunked') {
+            let offset = 0;
+            while (true) {
+              const end = body.indexOf('\r\n', offset); if (end < 0) throw new Error('Missing chunk length');
+              const size = Number.parseInt(body.subarray(offset, end).toString(), 16);
+              if (!Number.isSafeInteger(size) || size < 0 || end + 2 + size > body.length) throw new Error('Invalid chunk length');
+              if (!size) break;
+              decoded.push(body.subarray(end + 2, end + 2 + size)); offset = end + 2 + size + 2;
+            }
+          } else decoded.push(body);
+          const bytes = Buffer.concat(decoded);
+          expect(bytes.length).toBe(Number(request.headers['x-amz-decoded-content-length'] ?? request.headers['content-length']));
+          objects.set(key, { bytes, mime: String(request.headers['content-type']) });
+        } else if (request.method === 'HEAD') {
+          const object = objects.get(key)!; response.setHeader('Content-Length', object.bytes.length); response.setHeader('Content-Type', object.mime);
+        } else if (request.method === 'DELETE') objects.delete(key);
+        else throw new Error('Unexpected request');
+        response.setHeader('ETag', '"fixture"'); response.end();
+      } catch (error) { errors.push(error); response.statusCode = 400; response.end(); }
+    });
+    await new Promise<void>((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); });
+    try {
+      const address = server.address() as import('node:net').AddressInfo;
+      const provider = new S3StorageProvider({ type: 's3', region: 'us-east-1', bucket: 'fixture', accessKey: 'fixture', secretKey: 'fixture',
+        endpoint: `http://127.0.0.1:${address.port}`, maxFileSize: 1024, allowedMimeTypes: ['application/*'], retentionDays: 30 });
+      const prepared = f.prepare(), lease = await stageCoManagedPortableWorkspaceFiles(prepared, provider);
+      expect(errors).toEqual([]); expect(objects.size).toBe(prepared.transfers.length);
+      for (const row of lease.externalFiles) {
+        const transfer = prepared.transfers.find(file => file.fileId === row.file_id)!;
+        expect(objects.get(`/fixture/${row.storage_path}`)?.bytes).toEqual(f.bytes.get(transfer.id));
+      }
+      objects.set('/fixture/untouched', { bytes: Buffer.from('keep'), mime: 'text/plain' });
+      await lease.dispose(); expect([...objects.keys()]).toEqual(['/fixture/untouched']);
+    } finally { server.closeAllConnections(); await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve())); }
   });
 });
 

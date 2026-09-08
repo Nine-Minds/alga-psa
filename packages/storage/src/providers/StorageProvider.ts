@@ -15,12 +15,19 @@ export interface RangeOptions {
     end: number;
 }
 
+export interface StorageUploadOptions {
+    mime_type?: string;
+    metadata?: Record<string, string>;
+    /** Exact source byte count for providers that require a streaming length. */
+    content_length?: number;
+}
+
 export interface StorageProviderInterface {
     getCapabilities(): StorageCapabilities;
     /** Stable object-store location, without credentials. Durable maintenance
      * must not apply a previous location's object keys to a new provider. */
     getLocationIdentity?(): string;
-    upload(file: Buffer | Readable, path: string, options?: { mime_type?: string; metadata?: Record<string, string> }): Promise<UploadResult>;
+    upload(file: Buffer | Readable, path: string, options?: StorageUploadOptions): Promise<UploadResult>;
     download(path: string): Promise<Buffer>;
     getReadStream(path: string, range?: RangeOptions): Promise<Readable>;
     delete(path: string): Promise<void>;
@@ -62,7 +69,7 @@ export abstract class BaseStorageProvider implements StorageProviderInterface {
     getLocationIdentity(): string { return this.locationIdentity; }
 
     abstract getCapabilities(): StorageCapabilities;
-    abstract upload(file: Buffer | Readable, path: string, options?: { mime_type?: string; metadata?: Record<string, string> }): Promise<UploadResult>;
+    abstract upload(file: Buffer | Readable, path: string, options?: StorageUploadOptions): Promise<UploadResult>;
     abstract download(path: string): Promise<Buffer>;
     
     async getReadStream(path: string, range?: RangeOptions): Promise<Readable> {

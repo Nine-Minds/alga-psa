@@ -774,3 +774,10 @@ Session licensing checkpoint (2026-09-08): inspection narrowed the suspected edi
 - **Where:** Archive sealing/extraction, native blob staging, remote meeting staging and installation archive capture.
 - **Gate:** Four established identical filesystem lifecycles; sensitive crash remnants cannot be recovered by the remote provider-maintenance worker. ACT / bounded-now.
 - **Status:** Extracted a private directory lease and bounded, resumable local sweeper. All four producers use it; application startup runs one process-local recovery timer. Prepared download admission checks the same lease expiry.
+
+
+## storage-stream-length-and-replay — friction
+- **What:** The upload interface discarded a source length already known by both streaming callers, while S3 retried non-replayable bodies together with receipt reads.
+- **Where:** Portable restore staging, native uploadStream, StorageProvider options and S3 PUT/HEAD transport.
+- **Gate:** Actual loopback execution failed in the installed SDK with an undefined decoded-content-length header; a consumed-body retry could overwrite previously uploaded bytes. ACT / bounded-now.
+- **Status:** Added optional exact content_length, forwarded both known-length streaming callers, and split S3 replay policy by body type and receipt operation. Existing buffer callers remain compatible; live provider/multipart validation remains separate.
