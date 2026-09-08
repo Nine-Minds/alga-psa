@@ -90,3 +90,5 @@ export * from './nativeAppointmentApproval';
 export * from './meetingCreationOperation';
 
 export * from './appointmentMeetingCreation';
+
+export * from './nativeMeetingRead';

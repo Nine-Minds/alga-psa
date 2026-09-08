@@ -97,6 +97,7 @@ export interface AppointmentRequestResult<T> {
 }
 
 export interface OnlineMeetingAppointmentArtifact {
+  download_url?: string;
   artifact_id: string;
   artifact_type: 'recording' | 'transcript';
   document_id: string | null;

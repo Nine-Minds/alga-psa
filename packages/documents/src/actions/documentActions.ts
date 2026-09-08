@@ -1,5 +1,6 @@
 'use server'
 
+import { admitMeetingDocumentsForBrowser } from '../lib/meetingDocumentAdmission';
 import { StorageService } from '@alga-psa/storage/StorageService';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth, hasPermission } from '@alga-psa/auth';
@@ -616,6 +617,10 @@ export async function authorizeAndRedactDocuments<T extends IDocument>(
     return [];
   }
 
+  const admittedMeetings = await admitMeetingDocumentsForBrowser(trx, tenant, user, documents.map(document => document.document_id));
+  if (admittedMeetings.handled) documents = documents.filter(document => !admittedMeetings.deniedDocumentIds.includes(document.document_id));
+  if (!documents.length) return [];
+
   const authorizationSubject = await resolveAuthorizationSubjectForUser(trx, tenant, user as UserWithOptionalRoles);
   const relationshipRules = getDocumentBuiltinRelationshipRules(user);
   const selectedClientIds = user.clientId ? [user.clientId] : undefined;
@@ -690,6 +695,7 @@ export async function authorizeAndRedactDocuments<T extends IDocument>(
     authorizedDocuments.push(applyDocumentRedactions(document, decision.redactedFields));
   }
 
+  if (admittedMeetings.handled && 'assertCurrent' in admittedMeetings && typeof admittedMeetings.assertCurrent === 'function') await admittedMeetings.assertCurrent();
   return authorizedDocuments;
 }
 

@@ -42,3 +42,5 @@ export * from './teams/resolveTeamsTabDestination';
 export * from './teams/resolveTeamsTenantContext';
 export * from './teams/teamsAvailabilityResponses';
 export * from './teams/teamsDeepLinks';
+
+export { getMicrosoftGraphBaseUrl } from './teams/microsoftEndpoints';

@@ -110,6 +110,10 @@ export async function nativeAppointmentRequestView(trx: Knex.Transaction, actor:
     if (!hidden('ticket_title')) view.ticket_title = ticket?.title;
     if (!hidden('ticket_number')) view.ticket_number = ticket?.ticket_number;
   }
+  if (!hidden('online_meeting_artifacts')) {
+    const { nativeAppointmentMeetingArtifacts } = await import('./nativeMeetingRead');
+    view.online_meeting_artifacts = await nativeAppointmentMeetingArtifacts(trx, actor, subject, row.appointment_request_id);
+  }
   return view;
 }
 

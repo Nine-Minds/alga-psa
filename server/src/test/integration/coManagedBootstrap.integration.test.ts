@@ -15126,3 +15126,99 @@ it('customer approved meeting generation leaves the appointment unchanged when T
   await expect(generate()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
   expect(provider.target).toHaveBeenCalledOnce(); expect(provider.create).not.toHaveBeenCalled();
 }));
+
+async function withMeetingArtifactFixture(work: (fixture: any) => Promise<void>) {
+  return withAppointmentAuthorityFixture(async (fixture: any) => {
+    const { customer, context, meetingId, domain, actor } = fixture;
+    const transcriptId = randomUUID(), recordingId = randomUUID(), documentId = randomUUID();
+    await customer.table('documents').insert({ tenant: context.tenant, document_id: documentId, document_name: 'Private meeting transcript', user_id: context.userId, created_by: context.userId, order_number: 0, is_client_visible: false });
+    await customer.table('document_block_content').insert({ tenant: context.tenant, document_id: documentId, content_id: randomUUID(), block_data: JSON.stringify([{ type: 'paragraph', content: [{ type: 'text', text: 'WEBVTT\n\nPrivate transcript content', styles: {} }] }]) });
+    await customer.table('online_meeting_artifacts').insert([
+      { tenant: context.tenant, artifact_id: transcriptId, meeting_id: meetingId, artifact_type: 'transcript', provider_artifact_id: 'provider-transcript', document_id: documentId, content_url: 'https://untrusted.example.invalid/transcript' },
+      { tenant: context.tenant, artifact_id: recordingId, meeting_id: meetingId, artifact_type: 'recording', provider_artifact_id: 'provider-recording', content_url: 'https://untrusted.example.invalid/recording' },
+    ]);
+    const consume = (id: string, callback: any = async (content: any) => ({ value: content })) => domain.consumeCoManagedMeetingArtifact(db, context.tenant, id, actor, callback);
+    await work({ ...fixture, transcriptId, recordingId, documentId, consume });
+  });
+}
+
+it('customer meeting artifact reads project only admitted metadata and download through retained document content', async () => withMeetingArtifactFixture(async ({ read, requestId, transcriptId, recordingId, consume, documentId, customer }: any) => {
+  const response = await read({ id: requestId }), artifacts = response.requests[0].online_meeting_artifacts;
+  expect(artifacts.map((artifact: any) => artifact.artifact_id).sort()).toEqual([transcriptId, recordingId].sort());
+  expect(artifacts[0]).toMatchObject({ document_id: null, download_url: `/api/online-meetings/artifacts/${artifacts[0].artifact_id}` });
+  expect(JSON.stringify(response)).not.toContain('untrusted.example.invalid'); expect(JSON.stringify(response)).not.toContain(documentId);
+  const content = await consume(transcriptId); expect(content).toMatchObject({ handled: true, value: { artifactId: transcriptId, type: 'transcript', provider: null, fileId: null } });
+  expect(JSON.stringify(content.value.blocks)).toContain('Private transcript content');
+  await customer.table('role_permissions').whereIn('permission_id', customer.table('permissions').where({ resource: 'document', action: 'read' }).select('permission_id')).del();
+  expect((await read({ id: requestId })).requests[0].online_meeting_artifacts.map((artifact: any) => artifact.artifact_id)).toEqual([recordingId]);
+  await expect(consume(transcriptId)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+}));
+
+it('customer meeting artifact reads enforce the actual appointment calendar binding and private assignees', async () => withMeetingArtifactFixture(async ({ read, requestId, recordingId, consume, customer, ownId, context }: any) => {
+  await customer.table('schedule_entries').where('entry_id', ownId).update({ is_private: true });
+  expect((await read({ id: requestId })).requests[0].online_meeting_artifacts).toHaveLength(2);
+  await customer.table('schedule_entry_assignees').where('entry_id', ownId).del();
+  expect((await read({ id: requestId })).requests[0].online_meeting_artifacts).toEqual([]);
+  await expect(consume(recordingId)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await customer.table('schedule_entry_assignees').insert({ tenant: context.tenant, entry_id: ownId, user_id: context.userId });
+  await customer.table('schedule_entries').where('entry_id', ownId).update({ work_item_type: 'ad_hoc', work_item_id: null });
+  await expect(consume(recordingId)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+}));
+
+it('customer meeting artifact reads reject masked appointment content and generic transcript document escapes', async () => withMeetingArtifactFixture(async ({ customer, context, user, requestId, transcriptId, documentId, read, consume, domain, actor }: any) => {
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: context.tenant, name: 'Artifact source scope', actorUserId: user.user_id });
+  await bundles.upsertBundleRule(db, { tenant: context.tenant, bundleId, revisionId, resourceType: 'user_schedule', action: 'read', templateKey: 'assigned', config: { redactedFields: ['description'] } });
+  await bundles.publishBundleRevision(db, { tenant: context.tenant, bundleId, revisionId, actorUserId: user.user_id });
+  await bundles.createBundleAssignment(db, { tenant: context.tenant, bundleId, targetType: 'api_key', targetId: context.apiKeyId });
+  expect((await read({ id: requestId })).requests[0].online_meeting_artifacts).toEqual([]);
+  await expect(consume(transcriptId)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(await domain.admitCoManagedMeetingDocuments(db, context.tenant, [documentId], actor)).toMatchObject({ handled: true, deniedDocumentIds: [documentId] });
+}));
+
+it('customer meeting artifact delivery cancels prepared content on final credential expiry and cannot use revoked credentials', async () => withMeetingArtifactFixture(async ({ customer, context, transcriptId, consume }: any) => {
+  const discard = vi.fn(async () => undefined);
+  // Expiry is a clock event rather than a concurrent row update, which the
+  // retained key lock correctly excludes during the delivery callback.
+  await customer.table('api_keys').where('api_key_id', context.apiKeyId).update({ expires_at: new Date(Date.now() + 1200) });
+  await expect(consume(transcriptId, async () => {
+    await db.raw('SELECT pg_sleep(1.3)');
+    return { value: 'Prepared private bytes', discard };
+  })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(discard).toHaveBeenCalledOnce();
+  const deliver = vi.fn(async () => ({ value: 'Must not be delivered' }));
+  await expect(consume(transcriptId, deliver)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' }); expect(deliver).not.toHaveBeenCalled();
+}));
+
+it('customer meeting artifact HTTP transcript download uses its owner and bypasses neither scope nor content-type controls', async () => withMeetingArtifactFixture(async ({ user, transcriptId, customer, ownId }: any) => {
+  const auth = await import('@alga-psa/auth'), current = vi.spyOn(auth, 'getCurrentUser').mockResolvedValue(user);
+  try {
+    const route = await import('../../app/api/online-meetings/artifacts/[artifactId]/route');
+    const result = await route.GET(new Request('http://localhost/api/online-meetings/artifacts/test') as any, { params: Promise.resolve({ artifactId: transcriptId }) });
+    expect(result.status).toBe(200); expect(result.headers.get('cache-control')).toBe('private, no-store');
+    expect(result.headers.get('content-type')).toBe('text/plain; charset=utf-8'); expect(await result.text()).toContain('Private transcript content');
+    await customer.table('schedule_entries').where('entry_id', ownId).update({ work_item_type: 'ad_hoc', work_item_id: null });
+    const denied = await route.GET(new Request('http://localhost/api/online-meetings/artifacts/test') as any, { params: Promise.resolve({ artifactId: transcriptId }) });
+    expect(denied.status).toBe(403); expect(await denied.text()).not.toContain('Private transcript');
+  } finally { current.mockRestore(); }
+}));
+
+it('customer meeting artifact document actions retain owner scope instead of relying on broad document permission', async () => withMeetingArtifactFixture(async ({ customer, documentId }: any) => {
+  const blocks = await import('../../../../packages/documents/src/actions/documentBlockContentActions');
+  expect(JSON.stringify(await blocks.getBlockContent(documentId))).toContain('Private transcript content');
+  await customer.table('role_permissions').whereIn('permission_id', customer.table('permissions').where('resource', 'user_schedule').select('permission_id')).del();
+  const result = await blocks.getBlockContent(documentId);
+  expect(JSON.stringify(result)).not.toContain('Private transcript content'); expect(result).toHaveProperty('permissionError');
+}));
+
+it('customer meeting artifact document admission rejects masked transcript bytes and preserves read access during product lapse', async () => withMeetingArtifactFixture(async ({ domain, actor, context, user, customer, documentId, transcriptId, consume, principal }: any) => {
+  await expireCoManagedEntitlement(principal.tenant);
+  expect(await consume(transcriptId)).toMatchObject({ handled: true });
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: context.tenant, name: 'Transcript document content scope', actorUserId: user.user_id });
+  await bundles.upsertBundleRule(db, { tenant: context.tenant, bundleId, revisionId, resourceType: 'document', action: 'read', templateKey: 'own', config: { redactedFields: ['block_data'] } });
+  await bundles.publishBundleRevision(db, { tenant: context.tenant, bundleId, revisionId, actorUserId: user.user_id });
+  await bundles.createBundleAssignment(db, { tenant: context.tenant, bundleId, targetType: 'api_key', targetId: context.apiKeyId });
+  expect(await domain.admitCoManagedMeetingDocuments(db, context.tenant, [documentId], actor)).toMatchObject({ handled: true, deniedDocumentIds: [documentId] });
+  await expect(consume(transcriptId)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+}));

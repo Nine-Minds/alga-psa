@@ -1,3 +1,6 @@
+import { GET as downloadCoManagedArtifact } from '../../artifacts/[artifactId]/route';
+import { withTransaction } from '@alga-psa/db';
+import { retainCoManagedTimeCalendar, CoManagedSharedWorkError } from '@alga-psa/co-managed';
 import { NextRequest, NextResponse } from 'next/server';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { isEnterprise } from '@alga-psa/core/features';
@@ -96,6 +99,11 @@ export async function GET(
   }
 
   const { knex } = await createTenantKnex(tenant);
+  try {
+    if (await withTransaction(knex, trx => retainCoManagedTimeCalendar(trx, tenant))) return downloadCoManagedArtifact(request, { params: Promise.resolve({ artifactId }) });
+  } catch (error) {
+    return new NextResponse(error instanceof CoManagedSharedWorkError ? 'Forbidden' : 'Recording is unavailable', { status: error instanceof CoManagedSharedWorkError ? 403 : 503 });
+  }
   const isClientUser = (user as any).user_type === 'client';
 
   // Authorization. Enforcement keys off the server-known user type, never a
