@@ -1,0 +1,169 @@
+import { createHash } from 'node:crypto';
+import { mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { expect, it, vi } from 'vitest';
+import { CO_MANAGED_PORTABLE_RESTORE_SECTIONS, prepareCoManagedPortableWorkspaceRecords } from '../../../../../packages/co-managed/src/portableWorkspaceRestoreRecords';
+import { buildCoManagedPortableWorkspaceManifest } from '../../../../../packages/co-managed/src/portableWorkspaceManifest';
+import { prepareCoManagedPortableWorkspaceFiles, stageCoManagedPortableWorkspaceFiles } from '../../../../../packages/co-managed/src/portableWorkspaceRestoreFiles';
+import { openPortableArchive, sealPortableArchive } from '../../../../../packages/co-managed/src/portableArchive';
+
+const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
+const context = { packageId: id(1), sourceTenant: id(2), capturedAt: '2026-09-08T12:00:00.000Z' };
+const destinationTenant = id(3), importedByUserId = id(1000);
+const hash = (value: Buffer | string) => createHash('sha256').update(value).digest('hex');
+const sign = (value: Record<string, unknown>) => ({ ...value, sha256: hash(JSON.stringify(value)) });
+function fixture() {
+  const sectionRecords: Record<string, Record<string, any[]>> = Object.fromEntries(Object.entries(CO_MANAGED_PORTABLE_RESTORE_SECTIONS)
+    .map(([section, tables]) => [section, Object.fromEntries(Object.keys(tables).map(table => [table, []]))]));
+  const add = (table: string, values: Record<string, unknown>) => {
+    const section = Object.keys(CO_MANAGED_PORTABLE_RESTORE_SECTIONS).find(section => Object.hasOwn(CO_MANAGED_PORTABLE_RESTORE_SECTIONS[section as keyof typeof CO_MANAGED_PORTABLE_RESTORE_SECTIONS], table))!;
+    const columns = (CO_MANAGED_PORTABLE_RESTORE_SECTIONS[section as keyof typeof CO_MANAGED_PORTABLE_RESTORE_SECTIONS] as Record<string, readonly string[]>)[table];
+    const row = Object.assign(Object.fromEntries(columns.map(column => [column, null])), values);
+    sectionRecords[section][table].push(row); return row;
+  };
+  add('tenants', { client_name: 'Customer' }); add('users', { user_id: id(11) }); add('tickets', { ticket_id: id(10) });
+  add('collaboration_actor_references', { actor_reference_id: id(90), actor_tenant: id(80), actor_user_id: id(81) });
+  add('documents', { document_id: id(20), document_name: 'Native', user_id: id(11), created_by: id(11), file_id: id(30), preview_file_id: id(31), order_number: 5 });
+  add('documents', { document_id: id(21), document_name: 'Legacy', user_id: id(11), created_by: id(11), order_number: 6 });
+  add('appointment_requests', { appointment_request_id: id(39) }); add('online_meetings', { meeting_id: id(38), appointment_request_id: id(39) });
+  add('online_meeting_artifacts', { artifact_id: id(40), meeting_id: id(38), document_id: id(20), file_id: id(30), artifact_type: 'recording' });
+  add('online_meeting_artifacts', { artifact_id: id(41), meeting_id: id(38), artifact_type: 'recording' });
+  add('online_meeting_artifacts', { artifact_id: id(42), meeting_id: id(38), file_id: id(32), artifact_type: 'transcript' });
+  const blobs = new Map<string, { id: string; size: number; sha256: string; name: string; mimeType: string }>();
+  const bytes = new Map<string, Buffer>();
+  const blob = (blobId: string, name = 'customer.bin') => {
+    const content = Buffer.from(`Authenticated customer bytes: ${blobId}`); bytes.set(blobId, content);
+    const descriptor = { id: blobId, size: content.length, sha256: hash(content), name, mimeType: 'application/octet-stream' };
+    blobs.set(blobId, descriptor); return descriptor;
+  };
+  const documents = { fileBindings: [{ documentId: id(20), field: 'file_id', blobId: `file:${id(30)}` },
+    { documentId: id(20), field: 'preview_file_id', blobId: `file:${id(31)}` }, { documentId: id(21), field: 'file_id', blobId: `document:${id(21)}` }],
+    blobs: [blob(`file:${id(30)}`), blob(`file:${id(31)}`), blob(`document:${id(21)}`)] };
+  const supplemental = { fileBindings: [40, 42].map(n => ({ table: 'online_meeting_artifacts', recordId: id(n), field: 'file_id', blobId: `file:${id(n === 40 ? 30 : 32)}` })), blobs: [blob(`file:${id(32)}`)] };
+  const remote = { fileBindings: [{ table: 'online_meeting_artifacts', recordId: id(41), field: 'content', blobId: `meeting_artifact:${id(41)}` }], blobs: [blob(`meeting_artifact:${id(41)}`)] };
+  const attachments = ['requester', 'shared_it', 'organization_private'].map((audience, n) => {
+    add('comment_threads', { thread_id: id(50 + n), ticket_id: id(10), root_comment_id: id(60 + n), is_internal: n !== 0, collaboration_audience: audience });
+    add('comments', { comment_id: id(60 + n), thread_id: id(50 + n), ticket_id: id(10), is_internal: n !== 0, publish_state: 'published',
+      actor_reference_id: n === 1 ? id(90) : null, actor_display_name: 'Saved author', actor_organization_name: 'Saved organization', note: `Authored source link /attachments/${id(70 + n)}` });
+    const descriptor = blob(`attachment:${id(70 + n)}`, n === 1 ? '../../do-not-use-as-storage-key.bin' : 'Customer file.bin');
+    return { attachmentId: id(70 + n), blobId: descriptor.id, ticketId: id(10), threadId: id(50 + n), commentId: id(60 + n), audience,
+      fileName: descriptor.name, mimeType: descriptor.mimeType, size: descriptor.size, sha256: descriptor.sha256, createdAt: context.capturedAt,
+      actorTenant: n === 1 ? id(80) : context.sourceTenant, actorUserId: n === 0 ? id(11) : n === 1 ? id(81) : id(12),
+      actorReferenceId: n === 1 ? id(90) : null, actorDisplayName: 'Saved author', actorOrganizationName: 'Saved organization' };
+  });
+  const component = (kind: string, values: Record<string, unknown>) => sign({ kind: `alga-workspace-${kind}`, version: 1, packageId: context.packageId, sourceTenant: context.sourceTenant, ...values });
+  const sections = Object.fromEntries(Object.entries(sectionRecords).map(([section, records]) => [section, component(section, {
+    records, references: [], ...(section === 'documents' ? documents : { capturedAt: context.capturedAt, restorePolicy: {} }),
+    ...(section === 'assets' ? { polymorphicReferences: [], typeReferences: [] } : section === 'operational' ? { polymorphicReferences: [] } :
+      section === 'workflows' ? { referenceValueTypes: {}, conditionalReferences: [], dependencies: [], systemForms: [] } :
+      section === 'engagement' ? { additionalReferences: [] } : {}),
+  })]));
+  const files = [...blobs.values()].map(({ id, size, sha256 }, n) => ({ id, size, sha256, path: `/tmp/restore-fixture-${n}` }));
+  const manifest = buildCoManagedPortableWorkspaceManifest({ context, sections: sections as any, files,
+    conversationFiles: component('conversation-files', { attachments, restorePolicy: {} }),
+    supplementalFiles: component('supplemental-files', { ...supplemental, restorePolicy: {} }), remoteMeetingFiles: component('remote-meeting-files', { ...remote, restorePolicy: {} }),
+    credentialVault: { vault: { format: 'alga-credential-vault:scrypt-aes-256-gcm:v1', packageId: context.packageId, sourceTenant: context.sourceTenant,
+      salt: Buffer.alloc(16).toString('base64'), iv: Buffer.alloc(12).toString('base64'), tag: Buffer.alloc(16).toString('base64'), ciphertext: Buffer.from('opaque encrypted vault').toString('base64') }, credentials: [], grants: [], associations: [] } });
+  let nextRecord = 1000;
+  const preparedRecords = prepareCoManagedPortableWorkspaceRecords({ sourceTenant: context.sourceTenant, destinationTenant, sections: sectionRecords,
+    destinationCatalogMappings: { standard_statuses: {}, shared_document_types: {}, system_interaction_types: {}, standard_service_types: {} } }, { allocateUuid: () => id(nextRecord++) });
+  const prepare = (options = {}) => { let nextFile = 2000; return prepareCoManagedPortableWorkspaceFiles({ manifest, files, preparedRecords, importedByUserId }, { allocateUuid: () => id(nextFile++), ...options }); };
+  return { manifest, preparedRecords, files, bytes, prepare };
+}
+
+it('binds native, preview, legacy and local/remote meeting files with one destination file per source blob', () => {
+  const f = fixture(), original = structuredClone(f.preparedRecords), restored = f.prepare();
+  expect(f.preparedRecords).toEqual(original); expect(restored.externalFiles).toHaveLength(8);
+  const byBlob = new Map(restored.transfers.map(file => [file.id, file.fileId]));
+  expect(restored.records.documents[0]).toMatchObject({ file_id: byBlob.get(`file:${id(30)}`), preview_file_id: byBlob.get(`file:${id(31)}`) });
+  expect(restored.records.documents[1].file_id).toBe(byBlob.get(`document:${id(21)}`));
+  expect(restored.records.online_meeting_artifacts.map(row => row.file_id)).toEqual([byBlob.get(`file:${id(30)}`), byBlob.get(`meeting_artifact:${id(41)}`), byBlob.get(`file:${id(32)}`)]);
+  expect(restored.sections.documents.documents).toEqual(restored.records.documents);
+  expect(restored.externalFiles.every(file => file.tenant === destinationTenant && !Object.hasOwn(file, 'storage_path'))).toBe(true);
+  expect(new Set(restored.allocatedIds).size).toBe(14);
+});
+
+it('restores ticket attachment documents with precise historical audiences and qualified saved authors without editing authored text', () => {
+  const f = fixture(), restored = f.prepare(), docs = restored.records.documents.slice(2);
+  expect(docs.map(row => row.is_client_visible)).toEqual([true, false, false]);
+  expect(docs.map(row => row.order_number)).toEqual([7, 8, 9]);
+  expect(restored.records.document_associations.map(row => row.entity_id)).toEqual(Array(3).fill(restored.records.tickets[0].ticket_id));
+  const metadata = restored.externalFiles.slice(-3).map(file => (file.metadata as any).conversation);
+  expect(metadata.map(row => row.audience)).toEqual(['requester', 'shared_it', 'organization_private']);
+  expect(metadata[0]).toMatchObject({ actor_tenant: destinationTenant, actor_user_id: restored.records.users[0].user_id, comment_id: restored.records.comments[0].comment_id });
+  expect(metadata[1]).toMatchObject({ actor_tenant: id(80), actor_user_id: id(81), actor_reference_id: restored.records.collaboration_actor_references[0].actor_reference_id, actor_display_name: 'Saved author' });
+  expect(metadata[2]).toMatchObject({ actor_tenant: context.sourceTenant, actor_user_id: id(12) });
+  expect(docs[1].created_by).toBe(importedByUserId); expect(docs[0].created_by).toBe(restored.records.users[0].user_id);
+  expect(restored.records.comments.map(row => row.note)).toEqual(f.preparedRecords.records.comments.map(row => row.note));
+});
+
+it('rejects missing blobs, wrong source bindings and allocated identity collisions before transport', () => {
+  const f = fixture(); f.files.pop(); expect(() => f.prepare()).toThrow();
+  const g = fixture(); g.preparedRecords.sourceTenant = id(999); expect(() => g.prepare()).toThrow();
+  const h = fixture(); expect(() => h.prepare({ allocateUuid: () => id(30) })).toThrow();
+  expect(() => h.prepare({ allocateUuid: () => String(h.preparedRecords.records.users[0].user_id) })).toThrow();
+  expect(() => h.prepare({ reservedUuids: [id(2000)] })).toThrow();
+  expect(() => h.prepare({ allocateUuid: () => id(9999) })).toThrow();
+});
+
+async function diskFixture(work: (f: ReturnType<typeof fixture>, root: string) => Promise<void>) {
+  const f = fixture(), root = await mkdtemp(join(tmpdir(), 'portable-restore-files-test-'));
+  try { for (const [n, file] of f.files.entries()) { file.path = join(root, `${n}.bin`); await writeFile(file.path, f.bytes.get(file.id)!); } await work(f, root); }
+  finally { await rm(root, { recursive: true, force: true }); }
+}
+function storage() {
+  const objects = new Map<string, Buffer>();
+  const provider = { getCapabilities: () => ({ supportsStreaming: true, supportsBuckets: false, supportsMetadata: true, supportsTags: false, supportsVersioning: false, maxFileSize: 1024 ** 3 }),
+    upload: vi.fn(async (stream: any, path: string, options: any) => { const chunks = []; for await (const chunk of stream) chunks.push(chunk); const bytes = Buffer.concat(chunks); objects.set(path, bytes); return { path, size: bytes.length, mime_type: options.mime_type }; }),
+    delete: vi.fn(async (path: string) => { objects.delete(path); }) };
+  return { objects, provider };
+}
+
+it('opens an authenticated archive, streams verified bytes to unique destination keys and releases ownership after caller commit', async () => {
+  await diskFixture(async (f, root) => {
+    const archiveContext = { packageId: context.packageId, sourceTenant: context.sourceTenant };
+    const archive = await sealPortableArchive({ context: archiveContext, manifest: f.manifest, files: f.files }, 'customer portable test passphrase');
+    const opened = await openPortableArchive(archive.path, 'customer portable test passphrase', archiveContext);
+    try {
+      const prepared = prepareCoManagedPortableWorkspaceFiles({ manifest: opened.manifest, files: opened.files, preparedRecords: f.preparedRecords, importedByUserId });
+      const { provider, objects } = storage(), lease = await stageCoManagedPortableWorkspaceFiles(prepared, provider);
+      for (const row of lease.externalFiles) {
+        const transfer = prepared.transfers.find(file => file.fileId === row.file_id)!;
+        expect(objects.get(String(row.storage_path))!.equals(f.bytes.get(transfer.id)!)).toBe(true);
+        expect(String(row.storage_path)).toMatch(new RegExp(`^${destinationTenant}/portable-restores/[a-f0-9-]+/[a-f0-9-]+$`));
+        expect((row.metadata as any).portable_restore.sha256).toBe(transfer.sha256);
+      }
+      expect(JSON.stringify(lease.externalFiles)).not.toContain(root);
+      lease.release(); await lease.dispose(); expect(objects.size).toBe(8); expect(provider.delete).not.toHaveBeenCalled();
+    } finally { await opened.dispose(); await archive.dispose(); }
+  });
+});
+
+it('cleans only attempt-owned provider objects on rollback or partial upload failure', async () => {
+  await diskFixture(async f => {
+    const { provider, objects } = storage(); objects.set('existing/customer/file', Buffer.from('existing'));
+    const prepared = f.prepare(), lease = await stageCoManagedPortableWorkspaceFiles(prepared, provider);
+    await lease.dispose(); await lease.dispose(); expect([...objects.keys()]).toEqual(['existing/customer/file']);
+    const original = provider.upload.getMockImplementation()!; let calls = 0;
+    provider.upload.mockImplementation(async (...args) => { const result = await original(...args); if (++calls === 2) throw new Error('Provider upload failed after storing bytes'); return result; });
+    await expect(stageCoManagedPortableWorkspaceFiles(prepared, provider)).rejects.toThrow('Provider upload failed');
+    expect([...objects.keys()]).toEqual(['existing/customer/file']);
+  });
+});
+
+it('rejects corrupted or symlink local staging before provider writes and rejects dishonest upload receipts', async () => {
+  await diskFixture(async (f, root) => {
+    const { provider, objects } = storage(), prepared = f.prepare();
+    const original = await readFile(prepared.transfers[1].path);
+    await writeFile(prepared.transfers[1].path, Buffer.alloc(original.length, 1));
+    await expect(stageCoManagedPortableWorkspaceFiles(prepared, provider)).rejects.toThrow(); expect(provider.upload).not.toHaveBeenCalled();
+    await writeFile(prepared.transfers[1].path, original);
+    const link = join(root, 'link'); await symlink(prepared.transfers[1].path, link); prepared.transfers[1].path = link;
+    await expect(stageCoManagedPortableWorkspaceFiles(prepared, provider)).rejects.toThrow(); expect(provider.upload).not.toHaveBeenCalled();
+    prepared.transfers[1].path = f.files[1].path;
+    const originalUpload = provider.upload.getMockImplementation()!;
+    provider.upload.mockImplementation(async (...args) => ({ ...await originalUpload(...args), size: 999 }));
+    await expect(stageCoManagedPortableWorkspaceFiles(prepared, provider)).rejects.toThrow(); expect(objects.size).toBe(0);
+  });
+});
