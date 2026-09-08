@@ -11,10 +11,25 @@ import { testRevision } from './lib/test-revision.mjs';
 // These product journeys remain required even if a test file disappears from
 // the candidate checkout. Newly landed journeys are added by tracked discovery.
 const criticalBrowserFiles = [
-  'e2e-tests/tests/login.spec.ts',
-  'e2e-tests/tests/usage-invoice-preview.spec.ts',
-  'e2e-tests/tests/portal-ticket-roundtrip.spec.ts',
+  'e2e-tests/tests/inbound-email.spec.ts',
+  'e2e-tests/tests/invoice-designer-persistence.spec.ts',
   'e2e-tests/tests/invoice-generation.spec.ts',
+  'e2e-tests/tests/invoice-ticket-ownership.spec.ts',
+  'e2e-tests/tests/login.spec.ts',
+  'e2e-tests/tests/microsoft-calendar.spec.ts',
+  'e2e-tests/tests/microsoft-mailbox.spec.ts',
+  'e2e-tests/tests/microsoft-oauth-rejection.spec.ts',
+  'e2e-tests/tests/msp-access-redirects.spec.ts',
+  'e2e-tests/tests/portal-discovery.spec.ts',
+  'e2e-tests/tests/portal-identity.spec.ts',
+  'e2e-tests/tests/portal-ticket-roundtrip.spec.ts',
+  'e2e-tests/tests/qbo-export.spec.ts',
+  'e2e-tests/tests/server-rendered-locale.spec.ts',
+  'e2e-tests/tests/stripe-payment.spec.ts',
+  'e2e-tests/tests/tenant-identity.spec.ts',
+  'e2e-tests/tests/time-approval-invoice.spec.ts',
+  'e2e-tests/tests/usage-invoice-preview.spec.ts',
+  'e2e-tests/tests/xero-export.spec.ts',
 ];
 
 function browserDirectory(directory) {

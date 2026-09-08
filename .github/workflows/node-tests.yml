@@ -111,13 +111,24 @@ jobs:
         with:
           node-version: '22'
       - uses: ./.github/actions/install-ripgrep
-      - name: Download raw reports from this candidate run
-        id: download
+      - name: Download node-tooling reports from this candidate run
         continue-on-error: true
         uses: actions/download-artifact@v4
         with:
-          pattern: '*-${{ github.sha }}'
-          path: test-results/node-workflow-input
+          name: node-tooling-${{ github.sha }}
+          path: test-results/node-workflow-input/node-tooling-${{ github.sha }}
+      - name: Download appliance-node reports from this candidate run
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: appliance-node-${{ github.sha }}
+          path: test-results/node-workflow-input/appliance-node-${{ github.sha }}
+      - name: Download browser-discovery reports from this candidate run
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: browser-discovery-${{ github.sha }}
+          path: test-results/node-workflow-input/browser-discovery-${{ github.sha }}
       - name: Independently verify mandatory Node execution and browser collection
         if: always()
         run: node scripts/verify-node-workflow.mjs

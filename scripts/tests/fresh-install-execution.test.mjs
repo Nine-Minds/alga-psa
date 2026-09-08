@@ -5,12 +5,14 @@ import path from 'node:path';
 import { tmpdir } from 'node:os';
 import { verifyFreshInstallExecution } from '../verify-fresh-install-execution.mjs';
 
+const landedJourneys = ['inbound-email', 'invoice-designer-persistence', 'invoice-generation', 'invoice-ticket-ownership', 'login', 'microsoft-calendar', 'microsoft-mailbox', 'microsoft-oauth-rejection', 'msp-access-redirects', 'portal-discovery', 'portal-identity', 'portal-ticket-roundtrip', 'qbo-export', 'server-rendered-locale', 'stripe-payment', 'tenant-identity', 'time-approval-invoice', 'usage-invoice-preview', 'xero-export'];
+
 function fixture(t) {
   const input = mkdtempSync(path.join(tmpdir(), 'fresh-install-gate-'));
   t.after(() => rmSync(input, { recursive: true, force: true }));
   const root = '/repo', revision = 'a'.repeat(40);
   const api = 'server/src/test/e2e/api/clients.e2e.test.ts';
-  const browsers = ['login', 'usage-invoice-preview', 'portal-ticket-roundtrip', 'invoice-generation']
+  const browsers = landedJourneys
     .map(name => `e2e-tests/tests/${name}.spec.ts`);
   const evidence = { schemaVersion: 1, status: 'passed', source: {
     before: { revision, dirty: false, changes: [] }, after: { revision, dirty: false, changes: [] },
@@ -46,11 +48,11 @@ test('fresh-install aggregate requires both editions and detects missing artifac
 });
 
 test('critical browser journeys cannot disappear from both checkout inventory and green reports', t => {
-  for (const edition of ['community', 'enterprise']) {
-    for (const name of ['login', 'usage-invoice-preview', 'portal-ticket-roundtrip', 'invoice-generation']) {
-      const input = fixture(t);
-      const file = `e2e-tests/tests/${name}.spec.ts`;
-      input.candidates = input.candidates.filter(candidate => candidate !== file);
+  for (const name of landedJourneys) {
+    const input = fixture(t);
+    const file = `e2e-tests/tests/${name}.spec.ts`;
+    input.candidates = input.candidates.filter(candidate => candidate !== file);
+    for (const edition of ['community', 'enterprise']) {
       const directory = path.join(input.input, `fresh-install-playwright-${edition}`, 'nested', 'execution-evidence');
       for (const artifact of ['collected.json', 'results.json']) {
         const target = path.join(directory, artifact);
@@ -59,8 +61,10 @@ test('critical browser journeys cannot disappear from both checkout inventory an
         report.stats.expected--;
         writeFileSync(target, JSON.stringify(report));
       }
-      const result = verifyFreshInstallExecution(input);
-      assert.equal(result.status, 'failed');
+    }
+    const result = verifyFreshInstallExecution(input);
+    assert.equal(result.status, 'failed', `deleted journey ${name}`);
+    for (const edition of ['community', 'enterprise']) {
       assert.ok(result.failures.some(message => message.includes(`playwright-${edition}: Uncollected candidate: ${file}`)));
     }
   }
