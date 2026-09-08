@@ -1,5 +1,7 @@
 'use client';
 
+import { useConversationReplyLink } from '../conversations/useConversationReplyLink';
+
 import { ticketActivityAttribution } from '../../../lib/ticketActivityAttribution';
 import React, { use, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
@@ -383,6 +385,12 @@ export function BentoTimelineTile({
   // half-typed draft follows the reader down a long timeline either way.
   const [showComposer, setShowComposer] = useState(false);
   const [composerPlacement, setComposerPlacement] = useState<'top' | 'bottom'>('top');
+  const replyLinkError = useConversationReplyLink(!showComposer && !hasDraft && !isEditing && !isSubmitting && !replyingToCommentId, target => {
+    const source = conversations.find(item => item.comment_id === target.commentId && item.thread_id === target.threadId &&
+      !item.deleted_at && !item.is_internal && (!item.publish_state || item.publish_state === 'published'));
+    if (!source) return false;
+    setReplyingToCommentId(target.commentId); return true;
+  });
   // Proxy for "the tile header is still on screen" — the header itself lives
   // inside BentoTile, so the filter row directly beneath it is the sentinel.
   const headerAnchorRef = useRef<HTMLDivElement>(null);
@@ -905,6 +913,7 @@ export function BentoTimelineTile({
         </button>
       }
     >
+      {replyLinkError && <p role="alert">{t('namedConversations.replyUnavailable', 'This reply target is unavailable. Your saved draft is unchanged.')}</p>}
       <div ref={headerAnchorRef} id={`${id}-filters`} className="flex flex-wrap items-center gap-1.5 mb-3">
         {laneFilters.map((laneFilter) => {
           const count =

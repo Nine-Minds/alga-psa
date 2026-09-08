@@ -3,7 +3,7 @@
 import { withAuth } from '@alga-psa/auth';
 import { createTenantKnex } from '@alga-psa/db';
 import { listNamedTicketConversations, getNamedTicketConversation, createNamedTicketConversation, setNamedTicketConversationStatus,
-  getNamedConversationEditorDraft, saveNamedConversationEditorDraft, getNamedTicketConversationWriteAudiences, getNamedTicketConversationMessages, type CoManagedConversationCursor } from '@alga-psa/co-managed';
+  getNamedConversationEditorDraft, saveNamedConversationEditorDraft, getNamedTicketConversationWriteAudiences, getNamedTicketConversationMessages, getNamedTicketConversationActivity, type CoManagedConversationCursor } from '@alga-psa/co-managed';
 import type { CoManagedConversationContent } from '@alga-psa/co-managed/conversationContent';
 import type { ConversationTicketReference, TicketConversationReference, CreateTicketConversation } from '@alga-psa/shared/lib/tickets/namedConversations';
 import type { EditorDraftSaveRequest } from '@alga-psa/shared/lib/tickets/conversationEditorDrafts';
@@ -135,4 +135,16 @@ export const uploadNamedConversationEditorFileAction = withAuth(async (user, { t
     if (error instanceof TicketConversationError || error instanceof CoManagedSharedWorkError) return { ok: false as const, code: 'forbidden' as const };
     return { ok: false as const, code: 'unknownOutcome' as const };
   }
+});
+
+export const getNamedTicketConversationActivityAction = withAuth(async (user, { tenant }, ticket: ConversationTicketReference, before?: CoManagedConversationCursor) => {
+  const actor = await coManagedBrowserActor(user, tenant), { knex } = await createTenantKnex(tenant);
+  return getNamedTicketConversationActivity(knex, actor, ticket, before);
+});
+
+export const getNamedTicketConversationReplyTargetAction = withAuth(async (user, { tenant }, ticket: ConversationTicketReference,
+  conversation: TicketConversationReference, parent: import('@alga-psa/shared/lib/tickets/conversationEditorDrafts').ConversationDraftParent) => {
+  const actor = await coManagedBrowserActor(user, tenant), { knex } = await createTenantKnex(tenant);
+  const { getNamedTicketConversationReplyTarget } = await import('@alga-psa/co-managed');
+  return getNamedTicketConversationReplyTarget(knex, actor, ticket, conversation, parent);
 });

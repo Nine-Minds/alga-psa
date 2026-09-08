@@ -120,41 +120,76 @@ async function assertConversationReplyParent(context: ConversationAuthority, con
   if (!privateStore && resolveCommentAudience(root) !== conversation.audience) return forbidden();
 }
 
+async function listAuthorizedConversations(context: ConversationAuthority): Promise<NamedTicketConversation[]> {
+  const entries = stores(context), rows: NamedTicketConversation[] = [];
+  for (const entry of entries) {
+    // Read-authorized initialization creates only a system default container;
+    // it does not publish content, notify, or grant permission to create sides.
+    if (entry.scope.storeTenant === context.ticket.tenant && entry.audiences.includes('requester')) await ensureDefaultTicketConversation(entry.scope, 'requester');
+    rows.push(...await listStoredTicketConversations(entry.scope, entry.audiences));
+  }
+  return rows.sort((a, b) => Number(b.defaultSlot === 'requester') - Number(a.defaultSlot === 'requester') || a.createdAt.localeCompare(b.createdAt) || a.conversationId.localeCompare(b.conversationId));
+}
 export function listNamedTicketConversations(db: Knex, actor: CoManagedSessionActor, ticket: ConversationTicketReference): Promise<NamedTicketConversation[]> {
-  return withTicketAuthority(db, actor, ticket, 'read', async context => {
-    const entries = stores(context), rows: NamedTicketConversation[] = [];
-    for (const entry of entries) {
-      // Read-authorized initialization creates only a system default container;
-      // it does not publish content, notify, or grant permission to create sides.
-      if (entry.scope.storeTenant === context.ticket.tenant && entry.audiences.includes('requester')) await ensureDefaultTicketConversation(entry.scope, 'requester');
-      rows.push(...await listStoredTicketConversations(entry.scope, entry.audiences));
-    }
-    return rows.sort((a, b) => Number(b.defaultSlot === 'requester') - Number(a.defaultSlot === 'requester') || a.createdAt.localeCompare(b.createdAt) || a.conversationId.localeCompare(b.conversationId));
-  });
+  return withTicketAuthority(db, actor, ticket, 'read', listAuthorizedConversations);
 }
 export function getNamedTicketConversation(db: Knex, actor: CoManagedSessionActor, ticket: ConversationTicketReference, input: TicketConversationReference) {
   const reference = snapshotConversationReference(input);
   return withTicketAuthority(db, actor, ticket, 'read', async context => (await authorizedConversation(context, reference)).conversation);
+}
+export function getNamedTicketConversationReplyTarget(db: Knex, actor: CoManagedSessionActor, ticket: ConversationTicketReference,
+  input: TicketConversationReference, parent: ConversationDraftParent) {
+  const reference = snapshotConversationReference(input), selected = snapshotConversationDraftParent(parent);
+  if (!selected) return Promise.reject(new TicketConversationError('CONVERSATION_INVALID'));
+  return withTicketAuthority(db, actor, ticket, 'read', async context => {
+    const { conversation } = await authorizedConversation(context, reference);
+    await assertConversationReplyParent(context, conversation, selected);
+    return selected;
+  });
 }
 /** Selection is authorized before reading; the query constrains roots before its
  * page limit so busy sibling conversations cannot hide or leak selected messages. */
 export function getNamedTicketConversationMessages(db: Knex, actor: CoManagedSessionActor, ticket: ConversationTicketReference,
   input: TicketConversationReference, before?: CoManagedConversationCursor) {
   const reference = snapshotConversationReference(input), cursor = snapshotConversationCursor(before);
+  return withTicketAuthority(db, actor, ticket, 'read', context => readAuthorizedConversationMessages(context, reference, cursor));
+}
+async function readAuthorizedConversationMessages(context: ConversationAuthority, reference: TicketConversationReference, cursor?: CoManagedConversationCursor) {
+  const { conversation } = await authorizedConversation(context, reference);
+  const page = await readAuthorizedTicketConversationPage({ trx: context.trx, actor: context.actor,
+    sessionId: context.actor.sessionId, resource: { tenant: context.ticket.tenant, id: context.ticket.ticketId,
+      relationshipId: context.ticket.relationshipId }, redactedFields: context.hidden }, cursor, conversation);
+  if (conversation.transport === 'email') {
+    const { attachPublishedConversationEmails } = await import('./conversationEmailOperations');
+    await attachPublishedConversationEmails({ ...context, conversation }, page.items);
+  }
+  const { attachNamedConversationFiles } = await import('./namedConversationAttachments');
+  await attachNamedConversationFiles({ ...context, conversation }, page.items);
+  return { conversation, ...page };
+}
+/** Merge bounded pages within one current ticket admission. Each source retains
+ * its own audience lock, file admission and email redactions. The global cursor
+ * has the same exact timestamp/store/comment order as the underlying reader. */
+export function getNamedTicketConversationActivity(db: Knex, actor: CoManagedSessionActor, ticket: ConversationTicketReference, before?: CoManagedConversationCursor) {
+  const cursor = snapshotConversationCursor(before);
   return withTicketAuthority(db, actor, ticket, 'read', async context => {
-    const { conversation } = await authorizedConversation(context, reference);
-    const page = await readAuthorizedTicketConversationPage({ trx: context.trx, actor: context.actor,
-      sessionId: context.actor.sessionId, resource: { tenant: context.ticket.tenant, id: context.ticket.ticketId,
-        relationshipId: context.ticket.relationshipId }, redactedFields: context.hidden }, cursor, conversation);
-    if (conversation.transport === 'email') {
-      const { attachPublishedConversationEmails } = await import('./conversationEmailOperations');
-      await attachPublishedConversationEmails({ ...context, conversation }, page.items);
+    const conversations = await listAuthorizedConversations(context);
+    const items: Array<import('./ticketConversation').CoManagedConversationItem & { conversation: NamedTicketConversation }> = [];
+    let more = false;
+    for (const conversation of conversations) {
+      const page = await readAuthorizedConversationMessages(context, conversation, cursor);
+      items.push(...page.items.map(item => ({ ...item, conversation: page.conversation })));
+      more ||= page.nextBefore !== null;
     }
-    const { attachNamedConversationFiles } = await import('./namedConversationAttachments');
-    await attachNamedConversationFiles({ ...context, conversation }, page.items);
-    return { conversation, ...page };
+    // All timestamps are the reader's fixed UTC representation with microseconds.
+    const compare = (a: string, b: string) => a === b ? 0 : a > b ? -1 : 1;
+    items.sort((a, b) => compare(a.createdAt, b.createdAt) || compare(a.storeTenant, b.storeTenant) || compare(a.commentId, b.commentId));
+    more ||= items.length > 25;
+    const selected = items.slice(0, 25), last = selected.at(-1);
+    return { items: selected, nextBefore: more && last ? { createdAt: last.createdAt, storeTenant: last.storeTenant, commentId: last.commentId } : null };
   });
 }
+
 export function createNamedTicketConversation(db: Knex, actor: CoManagedSessionActor, ticket: ConversationTicketReference, input: CreateTicketConversation) {
   const request = snapshotCreateConversation(input);
   return withTicketAuthority(db, actor, ticket, 'update', context => createStoredTicketConversation(destinationScope(context, request.audience), context.actor, request));

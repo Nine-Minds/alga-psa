@@ -4,9 +4,10 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import CoManagedNamedTicketConversation from '../../../components/co-managed/CoManagedNamedTicketConversation';
 import { useNamedTicketConversations } from '../../../../../packages/tickets/src/components/ticket/conversations/useNamedTicketConversations';
-const mocks = vi.hoisted(() => ({ flag: true, requesterProps: vi.fn(), uploadOptions: vi.fn(), uploadFile: vi.fn(), load: vi.fn(), page: vi.fn(), readDraft: vi.fn(), saveDraft: vi.fn(), post: vi.fn(), create: vi.fn(), status: vi.fn(), push: vi.fn(), mailboxes: vi.fn(), selectMailbox: vi.fn(), latestSend: vi.fn(), prepareEmail: vi.fn(), sendEmail: vi.fn(), emailStatus: vi.fn(), emailDefaults: vi.fn(),
+const mocks = vi.hoisted(() => ({ flag: true, requesterProps: vi.fn(), uploadOptions: vi.fn(), uploadFile: vi.fn(), load: vi.fn(), page: vi.fn(), activity: vi.fn(), replyTarget: vi.fn(), replace: vi.fn(), readDraft: vi.fn(), saveDraft: vi.fn(), post: vi.fn(), create: vi.fn(), status: vi.fn(), push: vi.fn(), mailboxes: vi.fn(), selectMailbox: vi.fn(), latestSend: vi.fn(), prepareEmail: vi.fn(), sendEmail: vi.fn(), emailStatus: vi.fn(), emailDefaults: vi.fn(),
   query: '', session: { session_id: 'session', user: { tenant: 'home', id: 'author' } } }));
 vi.mock('../../../../../packages/tickets/src/actions/namedTicketConversationActions', () => ({
+  getNamedTicketConversationActivityAction: mocks.activity, getNamedTicketConversationReplyTargetAction: mocks.replyTarget,
   getNamedConversationUploadOptionsAction: mocks.uploadOptions, uploadNamedConversationEditorFileAction: mocks.uploadFile,
   listNamedConversationMailboxesAction: mocks.mailboxes, selectNamedConversationMailboxAction: mocks.selectMailbox, getLatestNamedTicketEmailSendAction: mocks.latestSend,
   prepareNamedTicketEmailAction: mocks.prepareEmail, sendNamedTicketEmailAction: mocks.sendEmail, getNamedTicketEmailOperationAction: mocks.emailStatus,
@@ -21,7 +22,7 @@ vi.mock('../../../components/co-managed/CoManagedTicketConversation', () => ({ d
   return <div>Canonical Requester<button onClick={() => props.onDraftState?.(true)}>Start requester edit</button><button onClick={() => props.onDraftState?.(false)}>Finish requester edit</button></div>;
 } }));
 vi.mock('next-auth/react', () => ({ useSession: () => ({ data: mocks.session }) }));
-vi.mock('next/navigation', () => ({ useRouter: () => ({ push: mocks.push }), useSearchParams: () => new URLSearchParams(mocks.query) }));
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: mocks.push, replace: mocks.replace }), useSearchParams: () => new URLSearchParams(mocks.query) }));
 vi.mock('next/dynamic', () => ({ default: () => ({ id, document, editable, onChange }: any) => editable !== undefined
   ? <textarea aria-label="Message" id={id} disabled={!editable} value={document.map((block: any) => block.content?.map((part: any) => part.text ?? '').join('') ?? '').join('\n')}
       onChange={event => onChange([{ type: 'paragraph', content: [{ type: 'text', text: event.target.value, styles: {} }] }])} />
@@ -44,6 +45,8 @@ beforeEach(() => {
   mocks.session = { session_id: 'session', user: { tenant: 'home', id: 'author' } };
   mocks.load.mockResolvedValue({ conversations: [requester, side], writeAudiences: ['requester', 'organization_private'], actor: { tenant: 'home', userId: 'author' } });
   mocks.page.mockResolvedValue({ conversation: side, items: [], nextBefore: null });
+  mocks.activity.mockResolvedValue({ items: [], nextBefore: null });
+  mocks.replyTarget.mockImplementation(async (_ticket, _conversation, parent) => parent);
   mocks.readDraft.mockResolvedValue(null);
   mocks.uploadOptions.mockResolvedValue({ maxBytes: 1048576 });
   mocks.saveDraft.mockImplementation(async (_ticket, _ref, request) => ({ content: request.content, revision: request.expectedRevision + 1, conversationRevision: 1 }));
@@ -429,4 +432,50 @@ it('ignores a prior session’s late conversation creation response', async () =
   await act(async () => pending.resolve({ ...requester, conversationId: 'prior-session', name: 'Prior session exchange', defaultSlot: null }));
   expect(mocks.push).not.toHaveBeenCalled(); expect(screen.queryByText('Prior session exchange')).toBeNull();
   expect(screen.queryByRole('dialog')).toBeNull();
+});
+
+it('shows labelled All activity with resolution markers and routes replies to their source instead of broadcasting', async () => {
+  mocks.query = 'conversationView=all';
+  mocks.activity.mockResolvedValue({ items: [{ conversation: side, storeTenant: 'home', commentId: 'message', threadId: 'thread',
+    createdAt: '2026-09-08T10:00:00.000001Z', note: 'Diagnostic outcome', deleted: false, isResolution: true, audience: 'organization_private' }], nextBefore: null });
+  render(<Harness />);
+  await screen.findByText('Diagnostic outcome'); expect(screen.getByText('Resolution')).toBeInTheDocument();
+  expect(screen.getByText('Diagnostics · Your organization only')).toBeInTheDocument();
+  expect(screen.queryByLabelText('Message')).toBeNull(); expect(mocks.readDraft).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: 'Reply' }));
+  await waitFor(() => expect(mocks.push).toHaveBeenCalled());
+  const query = new URL(mocks.push.mock.calls[0][0], 'https://alga.test').searchParams;
+  expect(Object.fromEntries(query)).toEqual({ conversation: 'private', conversationStore: 'home', replyTo: 'message', replyThread: 'thread' });
+  expect(mocks.post).not.toHaveBeenCalled(); expect(mocks.sendEmail).not.toHaveBeenCalled();
+});
+it('admits a linked reply before changing its private draft and consumes the link only after saving', async () => {
+  mocks.query += '&replyTo=parent&replyThread=thread';
+  mocks.readDraft.mockResolvedValue({ revision: 1, conversationRevision: 1, content: { text: 'Existing private draft' } });
+  render(<Harness />); await waitFor(() => expect(mocks.replace).toHaveBeenCalled());
+  expect(mocks.replyTarget).toHaveBeenCalledWith(ticket, { storeTenant: 'home', conversationId: 'private' }, { commentId: 'parent', threadId: 'thread' });
+  expect(mocks.saveDraft.mock.calls.at(-1)[2]).toMatchObject({ content: { text: 'Existing private draft' }, parent: { commentId: 'parent', threadId: 'thread' } });
+  expect(mocks.replace.mock.calls[0][0]).not.toContain('replyTo'); expect(mocks.post).not.toHaveBeenCalled();
+});
+it('keeps the saved draft intact when a linked reply target is no longer authorized', async () => {
+  mocks.query += '&replyTo=parent&replyThread=thread'; mocks.replyTarget.mockRejectedValue(new Error('Access revoked'));
+  mocks.readDraft.mockResolvedValue({ revision: 1, conversationRevision: 1, content: { text: 'Existing private draft' } });
+  render(<Harness />); await screen.findByText('This reply target is unavailable. Your saved draft is unchanged.');
+  expect(mocks.saveDraft).not.toHaveBeenCalled(); expect(screen.getByLabelText('Message')).toHaveValue('Existing private draft');
+  expect(mocks.replace).not.toHaveBeenCalled();
+});
+
+it('keeps loaded All activity pages on refresh and clears their bodies after a denied refresh', async () => {
+  mocks.query = 'conversationView=all';
+  const cursor = { createdAt: '2026-09-08T10:00:00.000001Z', storeTenant: 'home', commentId: 'new' };
+  const item = (commentId: string) => ({ conversation: side, storeTenant: 'home', commentId, threadId: 'thread',
+    createdAt: '2026-09-08T10:00:00.000001Z', note: `${commentId} message`, deleted: false, audience: 'organization_private' });
+  mocks.activity.mockImplementation(async (_ticket, before) => ({ items: [item(before ? 'older' : 'new')], nextBefore: before ? null : cursor }));
+  render(<Harness />); await screen.findByText('new message');
+  fireEvent.click(screen.getByRole('button', { name: 'Load earlier messages' })); await screen.findByText('older message');
+  fireEvent.focus(window); await waitFor(() => expect(mocks.activity).toHaveBeenCalledTimes(4));
+  expect(screen.getByText('older message')).toBeInTheDocument();
+  mocks.activity.mockRejectedValue(new Error('Access revoked'));
+  fireEvent.focus(window); await screen.findByRole('alert');
+  expect(screen.queryByText('older message')).toBeNull(); expect(screen.queryByText('new message')).toBeNull();
+  expect(screen.getByRole('button', { name: 'Retry' })).toBeEnabled();
 });

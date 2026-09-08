@@ -14255,7 +14255,7 @@ describe('named ticket conversation message pages against migrated PostgreSQL', 
       return ids;
     }
     const ids = await addRoot(selected.conversationId, 28, '2026-09-01T10:00:00.123456Z');
-    await addRoot(sibling.conversationId, 30, '2026-09-02T10:00:00.123456Z');
+    const siblingIds = await addRoot(sibling.conversationId, 30, '2026-09-02T10:00:00.123456Z');
     await customer.table('comments').where('comment_id', ids[1]).update({ deleted_at: new Date() });
     await customer.table('comments').where('comment_id', ids[2]).update({ publish_state: 'scheduled', scheduled_publish_at: new Date('2099-01-01') });
     const page = await api.getNamedTicketConversationMessages(db, principal, ticket, reference);
@@ -14267,6 +14267,22 @@ describe('named ticket conversation message pages against migrated PostgreSQL', 
     expect(items.find(item => item.commentId === ids[1])).toMatchObject({ deleted: true, note: null, markdown: null });
     expect(items.filter(item => item.commentId !== ids[0]).every(item => item.parentCommentId === ids[0])).toBe(true);
     expect(items.every(item => item.author?.tenant === ticket.tenant && item.author.id === customerPrincipal.userId)).toBe(true);
+    await customer.table('comments').where('comment_id', ids[0]).update({ is_resolution: true });
+    const activity = []; let activityCursor: import('../../../../packages/co-managed/src/ticketConversation').CoManagedConversationCursor | undefined;
+    do {
+      const page = await api.getNamedTicketConversationActivity(db, principal, ticket, activityCursor);
+      activity.push(...page.items); activityCursor = page.nextBefore ?? undefined;
+      expect(activity.length).toBeLessThanOrEqual(57);
+    } while (activityCursor);
+    expect(activity).toHaveLength(57);
+    expect(new Set(activity.map(item => item.commentId))).toEqual(new Set([...ids.filter(id => id !== ids[2]), ...siblingIds]));
+    expect(activity.slice(0, 30).every(item => item.conversation.conversationId === sibling.conversationId)).toBe(true);
+    expect(activity.find(item => item.commentId === ids[0])?.isResolution).toBe(true);
+    expect(activity.every(item => item.createdAt.endsWith('.123456Z'))).toBe(true);
+    const parent = { threadId: activity.find(item => item.commentId === ids[0])!.threadId, commentId: ids[0] };
+    expect(await api.getNamedTicketConversationReplyTarget(db, principal, ticket, reference, parent)).toEqual(parent);
+    await expect(api.getNamedTicketConversationReplyTarget(db, principal, ticket, { storeTenant: sibling.storeTenant, conversationId: sibling.conversationId }, parent)).rejects.toThrow();
+    await expect(api.getNamedTicketConversationActivity(db, principal, { ...ticket, ticketId: randomUUID() })).rejects.toThrow();
     expect((await legacy.getCoManagedTicketConversation(db, principal, resource)).items).toEqual([]);
     const defaultId = await model.insert(db, ticket.tenant, { ticket_id: ticket.ticketId, user_id: customerPrincipal.userId,
       author_type: 'internal', is_internal: false, note: 'Legacy requester reply' });
@@ -14303,6 +14319,9 @@ describe('named ticket conversation message pages against migrated PostgreSQL', 
     expect(page.items).toHaveLength(1);
     expect(page.items[0]).toMatchObject({ commentId: message.commentId, storeTenant: principal.tenant, audience: 'organization_private',
       markdown: 'Private troubleshooting', revision: 1, author: { tenant: principal.tenant, id: principal.userId } });
+    const all = await api.getNamedTicketConversationActivity(db, principal, ticket);
+    expect(all.items).toHaveLength(1); expect(all.items[0].conversation.name).toBe('Private diagnostic exchange');
+    expect(JSON.stringify(await api.getNamedTicketConversationActivity(db, customerPrincipal, ticket))).not.toContain('Private diagnostic');
     expect((await legacy.getCoManagedTicketConversation(db, principal, resource)).items).toEqual([]);
     await expect(api.getNamedTicketConversationMessages(db, customerPrincipal, ticket, reference)).rejects.toMatchObject({ code: 'CONVERSATION_FORBIDDEN' });
     await expect(api.getNamedTicketConversationMessages(db, principal, { ...ticket, ticketId: randomUUID() }, reference)).rejects.toThrow();

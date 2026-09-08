@@ -8,6 +8,10 @@ import TicketConversation from './TicketConversation';
 
 type TicketConversationProps = React.ComponentProps<typeof TicketConversation>;
 
+const replyNavigation = vi.hoisted(() => ({ query: '', replace: vi.fn() }));
+vi.mock('next/navigation', () => ({ useSearchParams: () => new URLSearchParams(replyNavigation.query), useRouter: () => ({ replace: replyNavigation.replace }) }));
+beforeEach(() => { replyNavigation.query = ''; replyNavigation.replace.mockClear(); });
+
 vi.mock('next/dynamic', () => ({
   default: () => () => null,
 }));
@@ -652,4 +656,13 @@ describe('TicketConversation threaded reply e2e contract', () => {
     expect(addReplyCommentMock).not.toHaveBeenCalled();
     expect(screen.getByTestId('existing-reply').closest('.thread-children')).toHaveClass('depth-1');
   });
+});
+
+it('opens the existing requester reply composer from an admitted All activity link without publishing', async () => {
+  replyNavigation.query = 'replyTo=comment-1&replyThread=thread-1';
+  const onReply = vi.fn();
+  render(<TicketConversation {...defaultProps} onAddReplyComment={onReply} />);
+  await waitFor(() => expect(replyNavigation.replace).toHaveBeenCalled());
+  expect(screen.getByTestId('inline-reply-editor')).toBeInTheDocument();
+  expect(onReply).not.toHaveBeenCalled();
 });

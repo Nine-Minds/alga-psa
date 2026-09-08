@@ -1,5 +1,7 @@
 'use client';
 
+import { useConversationReplyLink } from './conversations/useConversationReplyLink';
+
 import React, { useState, useMemo, useEffect, useCallback, useRef, Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -183,6 +185,12 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   const [reactionUserNames, setReactionUserNames] = useState<Record<string, string>>({});
   const [openPanelCommentId, setOpenPanelCommentId] = useState<string | null>(null);
   const [replyingToCommentId, setReplyingToCommentId] = useState<string | null>(null);
+  const replyLinkError = useConversationReplyLink(!showEditor && !isEditing && !isSubmitting && !replyingToCommentId, target => {
+    const source = conversations.find(item => item.comment_id === target.commentId && item.thread_id === target.threadId &&
+      !item.deleted_at && !item.is_internal && (!item.publish_state || item.publish_state === 'published'));
+    if (!source) return false;
+    setReplyingToCommentId(target.commentId); return true;
+  });
   const drawerReturnFocusRef = useRef<HTMLElement | null>(null);
 
   const openCommentThreadPanel = useCallback((commentId: string) => {
@@ -834,6 +842,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   return (
     <div {...withDataAutomationId({ id })} className={`${styles['card']}`}>
       <div className="p-6">
+        {replyLinkError && <p role="alert">{t('namedConversations.replyUnavailable', 'This reply target is unavailable. Your saved draft is unchanged.')}</p>}
         <div ref={headerAnchorRef} className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold">{t('conversation.comments', 'Comments')}</h2>
           {!showEditor && (

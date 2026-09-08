@@ -2,11 +2,15 @@
 /// <reference types="@testing-library/jest-dom/vitest" />
 
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { BentoTimelineTile } from './BentoTimelineTile';
 
 type BentoTimelineTileProps = React.ComponentProps<typeof BentoTimelineTile>;
+
+const replyNavigation = vi.hoisted(() => ({ query: '', replace: vi.fn() }));
+vi.mock('next/navigation', () => ({ useSearchParams: () => new URLSearchParams(replyNavigation.query), useRouter: () => ({ replace: replyNavigation.replace }) }));
+beforeEach(() => { replyNavigation.query = ''; replyNavigation.replace.mockClear(); });
 
 vi.mock('next/dynamic', () => ({
   default: () => ({ onContentChange }: { onContentChange: (content: unknown[]) => void }) => (
@@ -295,4 +299,15 @@ describe('BentoTimelineTile composer heading', () => {
     expect(screen.getByRole('switch', { name: 'Schedule' })).toHaveAttribute('aria-checked', 'false');
     expect(screen.queryByLabelText('Publish at (America/New_York)')).not.toBeInTheDocument();
   });
+});
+
+it('opens the existing bento requester reply dock from All activity without sending a message', async () => {
+  replyNavigation.query = 'replyTo=comment-1&replyThread=thread-1';
+  const onReply = vi.fn();
+  render(<BentoTimelineTile {...defaultProps} onAddReplyComment={onReply} conversations={[{
+    tenant: 'tenant', comment_id: 'comment-1', thread_id: 'thread-1', ticket_id: 'ticket-1', author_type: 'internal',
+    is_internal: false, note: 'Requester exchange', created_at: '2026-09-08T09:00:00Z',
+  }]} />);
+  await waitFor(() => expect(replyNavigation.replace).toHaveBeenCalled());
+  expect(document.getElementById('ticket-timeline-reply-dock')).toBeInTheDocument(); expect(onReply).not.toHaveBeenCalled();
 });
