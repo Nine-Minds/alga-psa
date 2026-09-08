@@ -1,6 +1,10 @@
 import { QboSimulator } from '@alga-psa/billing/testing/qboSimulator';
 import type { EmulatorCore, HostEnv } from '@alga-psa/emulator-host';
 
+// Preserve the emulator's advertised Intuit SDK sample lifetime. Token validity
+// must follow the response field; this does not model rotation grace periods.
+const REFRESH_TOKEN_TTL_SECONDS = 8_726_400;
+
 /** Intuit fault envelope the wire shell serializes. */
 export class QboOAuthError extends Error {
   constructor(public readonly status: number,
@@ -58,7 +62,7 @@ export class QboEmulatorCore implements EmulatorCore {
   private readonly clients = new Map<string, string>();
   private readonly authCodes = new Map<string, { clientId: string; redirectUri: string }>();
   private readonly accessTokens = new Map<string, { clientId: string; expiresAt: number }>();
-  private readonly refreshTokens = new Map<string, { clientId: string; revoked: boolean }>();
+  private readonly refreshTokens = new Map<string, { clientId: string; revoked: boolean; expiresAt: number }>();
   private idCounter = 0;
 
   constructor(readonly env: HostEnv) {
@@ -174,7 +178,7 @@ export class QboEmulatorCore implements EmulatorCore {
     }
     if (params.grant_type === 'refresh_token') {
       const refresh = this.refreshTokens.get(String(params.refresh_token));
-      if (!refresh || refresh.revoked || refresh.clientId !== basicClientId) {
+      if (!refresh || refresh.revoked || refresh.expiresAt <= this.nowMs() || refresh.clientId !== basicClientId) {
         throw new QboOAuthError(400, 'invalid_grant');
       }
       this.refreshTokens.delete(String(params.refresh_token));
@@ -195,12 +199,14 @@ export class QboEmulatorCore implements EmulatorCore {
     const accessToken = this.newId('access');
     const refreshToken = this.newId('refresh');
     this.accessTokens.set(accessToken, { clientId, expiresAt: this.nowMs() + this.accessTokenTtlSeconds * 1000 });
-    this.refreshTokens.set(refreshToken, { clientId, revoked: false });
+    this.refreshTokens.set(refreshToken, {
+      clientId, revoked: false, expiresAt: this.nowMs() + REFRESH_TOKEN_TTL_SECONDS * 1000,
+    });
     return {
       access_token: accessToken,
       refresh_token: refreshToken,
       expires_in: this.accessTokenTtlSeconds,
-      x_refresh_token_expires_in: 8_726_400,
+      x_refresh_token_expires_in: REFRESH_TOKEN_TTL_SECONDS,
       token_type: 'bearer' as const,
     };
   }
