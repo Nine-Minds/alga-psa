@@ -1,6 +1,7 @@
 import { useFeatureFlag } from '@alga-psa/ui/hooks/useFeatureFlag';
 import { Text } from '@radix-ui/themes';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import CurrencyPicker from '@alga-psa/ui/components/CurrencyPicker';
 import { Input } from '@alga-psa/ui/components/Input';
 import { getInvoiceTemplatesAsync, getDefaultTemplateAsync, getActiveTaxRegionsAsync } from '../../lib/billingHelpers';
 import { IInvoiceTemplate } from '@alga-psa/types';
@@ -9,7 +10,6 @@ import { ITaxRegion } from '@alga-psa/types'; // Added
 import { FileText, Settings } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
-import { CURRENCY_OPTIONS } from '@alga-psa/core';
 import QuickAddContact from '../contacts/QuickAddContact';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
@@ -219,11 +219,10 @@ const BillingConfigForm: React.FC<BillingConfigFormProps> = ({
             </div>
 
             <div className="space-y-2">
-                <CustomSelect
+                <CurrencyPicker
                     label={t('billingConfigForm.defaultCurrency', { defaultValue: 'Default currency' })}
                     value={billingConfig.default_currency_code || 'USD'}
                     onValueChange={handleSelectChange('default_currency_code')}
-                    options={CURRENCY_OPTIONS}
                 />
             </div>
 
