@@ -2737,3 +2737,8 @@ Added Temporal0.4.4 explicitworkspace dependency (already locked root) for delta
 Built actualemail-service tsc+tsc-alias successfully, noDocker. InstallednativeRedisviaHomebrew (no serviceenable); ownedloopback53079 passwordprotected/persistenceoff configprivate/tmp/alga-email-redis-82cc. FixedkeysmeanREDIS_PREFIXalone insufficientforqueues; bothapps restartedwithprivateRedisenv session19656(port53010),94569(port53011). Actualemailworker session46349/PID45619health53080 sharesPG,secrets,Graph,Redis,storage/webhooksecret. Redis session27545; emulator16479 unchanged.
 
 Mailbox callback assertion accepts hostHTTPSbase withComposefallback. Browser session23293 exit0:1casepassed11.4s noflaky/skip,realOAuth,inboundGraphmessage→emailworker→ticket,UIreplyaftertokenexpiry,capturedMIME,duplicatecallbacksdrainwithnoextra ticket/comment/reply. Evidencehost-microsoft-mailbox-real-worker.json. Hostappc5938cdad5, worker56e6a7e01c; no nativecurrentCI/Temporal/SSOclaim. Goalstillopen, publicationapprovalpending.
+
+
+### QBO/Xero/Stripe host browser journeys verified
+
+Built3smallnativeemulatorbundles; accountinghostsession81018 QBO56105/Xero56106/Stripe56107/control56108,env/tmp/alga-accounting-host-82cc.env. Apps readallproviderendpoints frombothenvfiles; Graphhost16479/emailworker46349/nativeRedis27545 retained. Initialbrowser90489 terminal1:QBO13.5s,Xero6.8s,Stripecreation-retrypass;2StripereturncasesfailedbecausePaymentService defaultsNEXT_PUBLIC_APP_URLmissing→localhost3000. ExplicitAPP_URL53010fixedconfig withoutbuild; currentapps61264(53010)/89662(53011). Stripe rerun81160 terminal0 all3passed12.6s,0flaky/skip. Evidencehost-accounting-provider-journeys.json preservesbothruns/failures. NoDocker/currentnativeCI/Temporal/pubclaim. Fullgoalstillopen.

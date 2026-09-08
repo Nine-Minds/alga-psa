@@ -41,3 +41,23 @@ assertion accepts the same E2E_CALENDAR_CALLBACK_BASE_URL as the shared HTTPS
 proxy, retaining the Compose default. Full real-worker pass is recorded in
 `evidence/host-microsoft-mailbox-real-worker.json`. App build and worker source
 revisions are explicitly distinct in that host result.
+
+
+## Accounting and payment lanes
+
+QBO, Xero and Stripe can run as another EmulatorHost process using their built
+packages and ephemeral ports. The current instance records endpoint assignments
+in `/tmp/alga-accounting-host-82cc.env`. Source it on each consuming application
+process and the browser runner. Its ALGASIM_CONTROL_URL selects this accounting
+instance; use the original Graph control URL when running Microsoft journeys.
+
+Set all OAuth/API URLs shown in docker-compose.e2e-emulators.yaml to the host
+emulator ports. QBO module-load constants require a process restart. For Stripe,
+set `NEXT_PUBLIC_APP_URL` explicitly to the canonical application origin as well
+as NEXTAUTH_URL/NEXT_PUBLIC_BASE_URL: PaymentService uses it for Checkout success
+and cancel URLs, otherwise falling back to localhost3000. Preserve synthetic
+Stripe keys/webhook secrets and a callback base reachable from the emulator.
+
+`evidence/host-accounting-provider-journeys.json` records QuickBooks and Xero
+passes plus all three Stripe cases after fixing the return-origin configuration.
+These use the same existing application build without Docker image builds.
