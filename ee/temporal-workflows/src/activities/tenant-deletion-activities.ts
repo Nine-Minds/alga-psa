@@ -404,6 +404,8 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'tenant_license_state',
   'co_managed_independent_upgrades',
   'portable_workspace_activations',
+  // Portable upload recovery tombstones outlive tenant deletion: an abandoned
+  // provider request can finish late and still needs its destination cleanup.
   'portable_workspace_restores',
   'co_managed_upgrade_purchases',
   'co_management_notification_deliveries',

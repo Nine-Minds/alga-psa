@@ -8,6 +8,7 @@ import { validateCoManagedPortableWorkspaceManifest } from './portableWorkspaceM
 import type { PortableStagedBlob } from './portableBlobStaging';
 import type { prepareCoManagedPortableWorkspaceRecords } from './portableWorkspaceRestoreRecords';
 import { CO_MANAGED_PORTABLE_DOCUMENT_COLUMNS } from './portableDocumentCatalog';
+import { assertPortableTransferActive, awaitPortableTransfer, portableTransferSignal } from './portableTransfer';
 
 type PreparedRecords = ReturnType<typeof prepareCoManagedPortableWorkspaceRecords>;
 type NativeRow = Record<string, unknown>;
@@ -122,6 +123,7 @@ async function verifySource(file: Transfer) {
   try {
     const hash = createHash('sha256'); let size = 0;
     for await (const chunk of handle.createReadStream({ autoClose: false })) {
+      assertPortableTransferActive();
       size += chunk.length; if (size > file.size) fail(); hash.update(chunk);
     }
     if (size !== file.size || hash.digest('hex') !== file.sha256) fail();
@@ -134,8 +136,10 @@ async function verifySource(file: Transfer) {
  * dispose on rollback and release only after a successful DB commit. The lease
  * owns only fresh attempt-specific keys, never existing destination objects. */
 export async function stageCoManagedPortableWorkspaceFiles(preparedInput: PreparedCoManagedPortableWorkspaceFiles,
-  provider: Pick<StorageProviderInterface, 'upload' | 'delete' | 'getCapabilities'>) {
+  provider: Pick<StorageProviderInterface, 'upload' | 'delete' | 'getCapabilities'>, options: { attemptId?: string } = {}) {
   const prepared = structuredClone(preparedInput);
+  const attempt = options.attemptId ?? randomUUID();
+  if (!isCoManagedUuid(attempt) || attempt !== attempt.toLowerCase()) fail();
   if (!isCoManagedUuid(prepared.destinationTenant) || !isCoManagedUuid(prepared.packageId)) fail();
   const capabilities = provider.getCapabilities();
   const permitsMime = (mime: string) => capabilities.allowedMimeTypes === undefined || capabilities.allowedMimeTypes.some(allowed =>
@@ -144,7 +148,7 @@ export async function stageCoManagedPortableWorkspaceFiles(preparedInput: Prepar
       (capabilities.maxFileSize !== undefined && file.size > capabilities.maxFileSize) || !permitsMime(file.mimeType))) throw new Error('Portable restore files exceed storage capabilities');
   // Recheck all opened-archive local sources before making any provider write.
   for (const transfer of prepared.transfers) await verifySource(transfer);
-  const attempt = randomUUID(), paths = new Set<string>(), externalFiles: NativeRow[] = [];
+  const paths = new Set<string>(), externalFiles: NativeRow[] = [];
   const metadataByFile = new Map(prepared.externalFiles.map(file => [file.file_id, file]));
   let released = false;
   const dispose = async () => {
@@ -154,19 +158,26 @@ export async function stageCoManagedPortableWorkspaceFiles(preparedInput: Prepar
   };
   try {
     for (const transfer of prepared.transfers) {
+      assertPortableTransferActive();
       const path = `${prepared.destinationTenant}/portable-restores/${attempt}/${transfer.fileId}`;
       const handle = await regularSource(transfer.path, transfer.size);
       const hash = createHash('sha256'); let size = 0, complete = false;
-      const source = handle.createReadStream({ autoClose: false });
+      const source = handle.createReadStream({ autoClose: false, signal: portableTransferSignal() });
+      // A provider may await its own setup before consuming the wrapper. Keep
+      // an early source abort handled until its async iterator takes ownership.
+      source.on('error', () => {});
       const stream = Readable.from((async function* () {
         for await (const chunk of source) {
+          assertPortableTransferActive();
           size += chunk.length; if (size > transfer.size) fail(); hash.update(chunk); yield chunk;
         }
         if (size !== transfer.size || hash.digest('hex') !== transfer.sha256) fail(); complete = true;
       })());
       paths.add(path);
       try {
-        const uploaded = await provider.upload(stream, path, { mime_type: transfer.mimeType, metadata: { sha256: transfer.sha256 } });
+        const uploaded = await awaitPortableTransfer(() => provider.upload(stream, path, { mime_type: transfer.mimeType, metadata: { sha256: transfer.sha256 } }),
+          async () => { await provider.delete(path); });
+        assertPortableTransferActive();
         if (!complete || uploaded.path !== path || uploaded.size !== transfer.size || uploaded.mime_type !== transfer.mimeType) fail();
       } finally { stream.destroy(); source.destroy(); await handle.close(); }
       const row = metadataByFile.get(transfer.fileId) ?? fail();

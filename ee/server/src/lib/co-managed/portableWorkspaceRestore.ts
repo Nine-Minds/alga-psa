@@ -20,20 +20,15 @@ import { insertCoManagedPortableWorkspaceDatabase, resolveCoManagedPortableDesti
 
 const fail = (reason: string): never => { throw new Error(`Portable installation restore rejected: ${reason}`); };
 const same = (a: unknown, b: unknown) => typeof a === 'string' && typeof b === 'string' && a.toLowerCase() === b.toLowerCase();
-type Provider = Parameters<typeof stageCoManagedPortableWorkspaceFiles>[1];
+type Provider = Parameters<typeof stageCoManagedPortableWorkspaceFiles>[1] & { getLocationIdentity?(): string };
+import { beginPortableRestoreUpload, commitPortableRestoreUpload, settlePortableRestoreUpload } from './portableWorkspaceRestoreUploads';
 export interface PortableRestoreReceipt {
   tenant: string; source_tenant: string; package_id: string; archive_sha256: string;
   source_administrator_user_id: string; administrator_user_id: string; restored_at: Date | string;
 }
 
-/** This is an installation operation, never a tenant-user admission helper.
- * The actual PostgreSQL role must own the database (or be a superuser).
- * Session/API booleans and ordinary workspace permissions cannot grant it. */
-export async function assertPortableRestoreInstallationAuthority(db: Knex | Knex.Transaction) {
-  const { rows } = await db.raw(`SELECT r.rolsuper OR pg_has_role(current_user, d.datdba, 'MEMBER') AS allowed
-    FROM pg_roles r CROSS JOIN pg_database d WHERE r.rolname=current_user AND d.datname=current_database()`);
-  if (rows.length !== 1 || rows[0].allowed !== true) fail('database owner authority required');
-}
+import { assertPortableRestoreInstallationAuthority } from './portableRestoreInstallationAuthority';
+export { assertPortableRestoreInstallationAuthority } from './portableRestoreInstallationAuthority';
 
 function administrators(manifest: CoManagedPortableWorkspaceManifest) {
   const core = manifest.sections.core.records;
@@ -115,42 +110,31 @@ export async function restorePortableWorkspaceForInstallation(db: Knex, input: {
         const vault = await prepareCoManagedPortableWorkspaceVault({ manifest, restoreRecords: files, passphrase: request.passphrase }, { reservedUuids: files.allocatedIds });
         const provider = await awaitPortableTransfer(createProvider);
         assertPortableTransferActive();
-        const lease = await stageCoManagedPortableWorkspaceFiles(files, provider);
+        const attempt = await beginPortableRestoreUpload(db, { tenant, packageId: manifest.context.packageId, archiveSha256: sha256,
+          fileIds: files.transfers.map(file => file.fileId) }, provider);
+        let lease: Awaited<ReturnType<typeof stageCoManagedPortableWorkspaceFiles>> | undefined;
         try {
+          lease = await stageCoManagedPortableWorkspaceFiles(files, provider, { attemptId: attempt.attemptId });
           const result = await db.transaction(async trx => {
             assertPortableTransferActive();
             const prior = await existing(trx); if (prior) return { receipt: prior, inserted: false };
-            await insertCoManagedPortableWorkspaceDatabase(trx, { preparedRecords: files, externalFiles: lease.externalFiles, vault,
+            await insertCoManagedPortableWorkspaceDatabase(trx, { preparedRecords: files, externalFiles: lease!.externalFiles, vault,
               archive: { packageId: manifest.context.packageId, sha256, sourceAdministratorUserId: request.sourceAdministratorUserId, administratorUserId } });
+            await commitPortableRestoreUpload(trx, attempt, lease!.externalFiles);
             assertPortableTransferActive();
             return { receipt: await tenantDb(trx, tenant).table('portable_workspace_restores').first() as PortableRestoreReceipt, inserted: true };
           });
           if (result.inserted) lease.release();
           return result.receipt;
-        } catch (error) {
-          // COMMIT can succeed even when its acknowledgement is lost. Resolve
-          // the destination transaction before deleting attempt-owned objects.
-          // If the database is unavailable, retain the objects for recovery;
-          // guessing rollback could destroy files referenced by a live tenant.
-          try {
-            const retained = await db.transaction(async trx => {
-              await assertPortableRestoreInstallationAuthority(trx);
-              await trx.raw('SELECT pg_advisory_xact_lock(hashtextextended(?, 0))', [`portable-restore:${tenant}`]);
-              const own = tenantDb(trx, tenant);
-              for (let offset = 0; offset < lease.externalFiles.length; offset += 500) {
-                const files = lease.externalFiles.slice(offset, offset + 500);
-                const rows = await own.table('external_files').whereIn('file_id', files.map(file => String(file.file_id))).select('file_id', 'storage_path');
-                // Preserve the entire attempt if any object acquired a native
-                // reference. The normal insertion transaction is all-or-none.
-                const paths = new Set(files.map(file => String(file.storage_path)));
-                if (rows.some(row => paths.has(row.storage_path))) return true;
-              }
-              return false;
-            });
-            if (retained) lease.release();
-          } catch { lease.release(); }
-          throw error;
-        } finally { await lease.dispose(); }
+        } finally {
+          // The journal resolves committed vs abandoned state under the same
+          // destination lock. Database uncertainty always preserves objects;
+          // the durable attempt remains available for later maintenance.
+          let retain = true;
+          try { retain = await settlePortableRestoreUpload(db, attempt); } catch {}
+          if (retain) lease?.release();
+          await lease?.dispose();
+        }
       });
     });
   } finally { request.passphrase = ''; }

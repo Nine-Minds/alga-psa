@@ -1,5 +1,7 @@
 import { Readable } from 'stream';
 import { StorageCapabilities, LocalProviderConfig, S3ProviderConfig } from '../types/storage';
+import { createHash } from 'node:crypto';
+import { resolve } from 'node:path';
 
 export interface UploadResult {
     path: string;
@@ -15,6 +17,9 @@ export interface RangeOptions {
 
 export interface StorageProviderInterface {
     getCapabilities(): StorageCapabilities;
+    /** Stable object-store location, without credentials. Durable maintenance
+     * must not apply a previous location's object keys to a new provider. */
+    getLocationIdentity?(): string;
     upload(file: Buffer | Readable, path: string, options?: { mime_type?: string; metadata?: Record<string, string> }): Promise<UploadResult>;
     download(path: string): Promise<Buffer>;
     getReadStream(path: string, range?: RangeOptions): Promise<Readable>;
@@ -40,6 +45,7 @@ export class StorageError extends Error {
 }
 
 export abstract class BaseStorageProvider implements StorageProviderInterface {
+    private readonly locationIdentity: string;
     protected constructor(
         protected readonly providerType: 'local' | 's3',
         protected readonly config: LocalProviderConfig | S3ProviderConfig
@@ -48,7 +54,12 @@ export abstract class BaseStorageProvider implements StorageProviderInterface {
         if (config.type !== providerType) {
             throw new Error(`Provider type mismatch: expected ${providerType}, got ${config.type}`);
         }
+        const location = config.type === 'local' ? [config.type, resolve(config.basePath)]
+            : [config.type, config.region ?? null, config.bucket ?? null, config.endpoint ?? null];
+        this.locationIdentity = createHash('sha256').update(JSON.stringify(location)).digest('hex');
     }
+
+    getLocationIdentity(): string { return this.locationIdentity; }
 
     abstract getCapabilities(): StorageCapabilities;
     abstract upload(file: Buffer | Readable, path: string, options?: { mime_type?: string; metadata?: Record<string, string> }): Promise<UploadResult>;

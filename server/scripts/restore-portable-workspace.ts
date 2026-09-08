@@ -17,6 +17,8 @@ Run from server with:
   --restore --archive /absolute/backup.alga --destination-tenant <new UUID> --administrator-user-id <source UUID>
   --activate --destination-tenant <restored UUID> --operation-id <retained UUID> --license-file /absolute/own-pro-license.jwt
   --activate-hosted --destination-tenant <restored UUID> --operation-id <retained UUID>
+  --cleanup-uploads --destination-tenant <UUID>
+  --cleanup-uploads --all-destinations
   --passphrase-stdin    Read exact UTF-8 passphrase bytes from a protected pipe (no trailing newline).
   --password-stdin      Read the new administrator password from a protected pipe for activation.
   --help               Show this help without connecting to the database.
@@ -30,7 +32,7 @@ Activation enables its selected administrator; other users and restored dispatch
 
 function args(argv: string[]) {
   const values: Record<string, string | true> = {};
-  const flags = new Set(['--inspect', '--restore', '--activate', '--activate-hosted', '--passphrase-stdin', '--password-stdin', '--help']);
+  const flags = new Set(['--inspect', '--restore', '--activate', '--activate-hosted', '--cleanup-uploads', '--all-destinations', '--passphrase-stdin', '--password-stdin', '--help']);
   const fields = new Set(['--archive', '--destination-tenant', '--administrator-user-id', '--operation-id', '--license-file']);
   for (let i = 0; i < argv.length; i++) {
     const key = argv[i];
@@ -40,7 +42,13 @@ function args(argv: string[]) {
     else throw new Error('Unknown option or missing value');
   }
   if (values['--help']) return values;
-  if (['--inspect', '--restore', '--activate', '--activate-hosted'].filter(key => values[key]).length !== 1) throw new Error('Choose inspect, restore or activate');
+  if (['--inspect', '--restore', '--activate', '--activate-hosted', '--cleanup-uploads'].filter(key => values[key]).length !== 1) throw new Error('Choose inspect, restore or activate');
+  if (values['--cleanup-uploads']) {
+    if (!!values['--all-destinations'] === (typeof values['--destination-tenant'] === 'string') ||
+        ['--archive', '--administrator-user-id', '--operation-id', '--license-file', '--password-stdin', '--passphrase-stdin'].some(key => values[key])) throw new Error('Choose one cleanup destination scope');
+    return values;
+  }
+  if (values['--all-destinations']) throw new Error('All destinations is only valid for cleanup');
   if (values['--activate'] || values['--activate-hosted']) {
     if (['--destination-tenant', '--operation-id'].some(key => typeof values[key] !== 'string') ||
         (values['--activate'] && typeof values['--license-file'] !== 'string') || (values['--activate-hosted'] && values['--license-file']) ||
@@ -97,6 +105,24 @@ async function main() {
   const activating = Boolean(options['--activate'] || options['--activate-hosted']);
   phase = 'environment';
   config({ path: fileURLToPath(new URL('../../.env', import.meta.url)), quiet: true });
+  if (options['--cleanup-uploads']) {
+    const require = createRequire(import.meta.url);
+    phase = 'upload recovery module loading';
+    const { cleanupPortableRestoreUploads, cleanupPortableRestoreUploadsForInstallation } = require('../../ee/server/src/lib/co-managed/portableWorkspaceRestoreUploads') as typeof import('../../ee/server/src/lib/co-managed/portableWorkspaceRestoreUploads');
+    const { assertPortableRestoreInstallationAuthority } = require('../../ee/server/src/lib/co-managed/portableRestoreInstallationAuthority') as typeof import('../../ee/server/src/lib/co-managed/portableRestoreInstallationAuthority');
+    const { getAdminConnection } = require('@alga-psa/db/admin') as typeof import('@alga-psa/db/admin');
+    const { StorageProviderFactory } = require('@alga-psa/storage/StorageProviderFactory') as typeof import('@alga-psa/storage/StorageProviderFactory');
+    phase = 'database connection'; const db = await getAdminConnection();
+    try {
+      await assertPortableRestoreInstallationAuthority(db);
+      phase = 'upload recovery'; const provider = await StorageProviderFactory.createProvider();
+      const result = options['--all-destinations'] ? await cleanupPortableRestoreUploadsForInstallation(db, provider)
+        : await cleanupPortableRestoreUploads(db, String(options['--destination-tenant']), provider);
+      process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+      if (result.failed > 0) process.exitCode = 1;
+    } finally { await db.destroy(); }
+    return;
+  }
   phase = 'passphrase input';
   let phrase = await passphrase(!!options[activating ? '--password-stdin' : '--passphrase-stdin'],
     activating ? 'New administrator password' : 'Archive passphrase');

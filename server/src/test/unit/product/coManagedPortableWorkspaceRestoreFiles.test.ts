@@ -143,6 +143,46 @@ it('uses native local storage wildcard capabilities and still rejects disallowed
   });
 });
 
+it('binds recovery identity to the actual native storage location and tolerates credential rotation', async () => {
+  await diskFixture(async (_f, root) => {
+    const { LocalStorageProvider } = await import('../../../../../packages/storage/src/providers/LocalStorageProvider');
+    const { S3StorageProvider } = await import('../../../../../packages/storage/src/providers/S3StorageProvider');
+    const local = { type: 'local' as const, basePath: join(root, 'destination'), maxFileSize: 1024, allowedMimeTypes: ['*/*'], retentionDays: 30 };
+    const provider = new LocalStorageProvider(local), identity = provider.getLocationIdentity();
+    expect(identity).toMatch(/^[a-f0-9]{64}$/);
+    expect(new LocalStorageProvider({ ...local, maxFileSize: 2048 }).getLocationIdentity()).toBe(identity);
+    expect(new LocalStorageProvider({ ...local, basePath: join(root, 'other') }).getLocationIdentity()).not.toBe(identity);
+    local.basePath = join(root, 'changed-after-construction');
+    await provider.upload(Buffer.from('Bound location'), 'example.bin');
+    expect((await readFile(join(root, 'destination', 'example.bin'))).toString()).toBe('Bound location');
+    expect(provider.getLocationIdentity()).toBe(identity);
+    const s3 = { type: 's3' as const, bucket: 'portable-test', region: 'us-east-1', endpoint: 'https://storage.example.test',
+      accessKey: 'test-access', secretKey: 'test-secret', maxFileSize: 1024, allowedMimeTypes: ['*/*'], retentionDays: 30 };
+    const original = new S3StorageProvider(s3).getLocationIdentity();
+    expect(new S3StorageProvider({ ...s3, accessKey: 'rotated-access', secretKey: 'rotated-secret' }).getLocationIdentity()).toBe(original);
+    expect(new S3StorageProvider({ ...s3, bucket: 'different-bucket' }).getLocationIdentity()).not.toBe(original);
+    expect(new S3StorageProvider({ ...s3, endpoint: 'https://another.example.test' }).getLocationIdentity()).not.toBe(original);
+  });
+});
+
+it('cancels a provider wait and removes a successful upload that returns after cancellation', async () => {
+  await diskFixture(async f => {
+    const { withPortableTransfer } = await import('../../../../../packages/co-managed/src/portableTransfer');
+    const abort = new AbortController(), { provider, objects } = storage(), original = provider.upload.getMockImplementation()!;
+    let finish!: () => void, late!: Promise<void>;
+    const pending = new Promise<void>(resolve => { finish = resolve; });
+    provider.upload.mockImplementation(async (...args) => {
+      const result = await original(...args), bytes = objects.get(result.path)!;
+      abort.abort();
+      late = pending.then(() => { objects.set(result.path, bytes); });
+      await late; return result;
+    });
+    await expect(withPortableTransfer({ signal: abort.signal }, () => stageCoManagedPortableWorkspaceFiles(f.prepare(), provider))).rejects.toThrow();
+    expect(objects.size).toBe(0); finish(); await late;
+    await vi.waitFor(() => { expect(provider.delete.mock.calls.length).toBeGreaterThanOrEqual(2); expect(objects.size).toBe(0); });
+  });
+});
+
 it('opens an authenticated archive, streams verified bytes to unique destination keys and releases ownership after caller commit', async () => {
   await diskFixture(async (f, root) => {
     const archiveContext = { packageId: context.packageId, sourceTenant: context.sourceTenant };

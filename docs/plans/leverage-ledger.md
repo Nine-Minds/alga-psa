@@ -753,3 +753,10 @@ Session licensing checkpoint (2026-09-08): inspection narrowed the suspected edi
 - **Where:** co-managed-hosted-upgrade, co-managed-upgrade-operations, portableWorkspaceActivation.
 - **Gate:** Three real callers with an identical established four-step sequence and a shared transaction boundary; omission would produce inconsistent capabilities. ACT / bounded-now.
 - **Status:** extracted as initializeIndependentPsa; the two prior source markers were removed. Activation's explicit workflow pause remains its own lifecycle policy.
+
+
+## portable-upload-location-and-fence — friction
+- **What:** Restore cleanup needs the provider's stable object-store location and a durable commit/abandon fence; transient upload leases hide both.
+- **Where:** native provider base, portable file staging, restore coordinator and installation recovery command.
+- **Gate:** Lost COMMIT acknowledgement and process-exit recovery are distinct verified lifecycle gaps; cleanup cannot safely reconstruct provider location from current environment alone. ACT / bounded-now.
+- **Status:** revised native provider base to expose a credential-free location identity, fixed local base-path capture, and connected a durable restore-upload journal. Native reference publication retains the journal fence through a database trigger. Scheduled maintenance and local crash-staging cleanup remain separate work.

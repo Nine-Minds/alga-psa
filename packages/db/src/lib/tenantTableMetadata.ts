@@ -47,6 +47,7 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   tenant_license_state: { scope: 'tenant' },
   co_managed_independent_upgrades: { scope: 'tenant' },
   portable_workspace_activations: { scope: 'tenant' },
+  portable_workspace_restore_uploads: { scope: 'tenant' },
   portable_workspace_restores: { scope: 'tenant' },
   co_managed_upgrade_purchases: { scope: 'tenant' },
   co_management_notification_deliveries: { scope: 'tenant' },

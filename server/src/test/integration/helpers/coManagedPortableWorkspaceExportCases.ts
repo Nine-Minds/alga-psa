@@ -235,7 +235,7 @@ export function registerCoManagedPortableWorkspaceExportTests(getDb: () => Knex,
     });
     expect(JSON.parse(inspected)).toEqual(info);
     const objects = new Map<string, Buffer>();
-    const provider = { getCapabilities: () => ({ supportsStreaming: true, maxFileSize: 1024 ** 3 }),
+    const provider = { getLocationIdentity: () => 'a'.repeat(64), getCapabilities: () => ({ supportsStreaming: true, maxFileSize: 1024 ** 3 }),
       upload: vi.fn(async (stream: AsyncIterable<Buffer>, path: string, options: any) => {
         const chunks: Buffer[] = []; for await (const chunk of stream) chunks.push(Buffer.from(chunk));
         const bytes = Buffer.concat(chunks); objects.set(path, bytes);
@@ -256,11 +256,67 @@ export function registerCoManagedPortableWorkspaceExportTests(getDb: () => Knex,
     provider.upload.mockImplementationOnce(async (...args: Parameters<typeof upload>) => { await upload(...args); throw new Error('Provider failed after storing bytes'); });
     await expect(restorePortableWorkspaceForInstallation(db, { ...input, destinationTenant: failedTenant }, {}, createProvider)).rejects.toThrow('Provider failed');
     expect(objects.size).toBe(0); expect(await tenantDb(db, failedTenant).table('tenants').first()).toBeUndefined();
+    const { cleanupPortableRestoreUploads: cleanup, commitPortableRestoreUpload,
+      cleanupPortableRestoreUploadsForInstallation } = await import('../../../../../ee/server/src/lib/co-managed/portableWorkspaceRestoreUploads');
+    const recovery = tenantDb(db, failedTenant), failedAttempt = await recovery.table('portable_workspace_restore_uploads').first();
+    expect(failedAttempt.status).toBe('abandoned');
+    const objectPath = (attempt: any) => `${failedTenant}/portable-restores/${attempt.attempt_id}/${attempt.file_ids[0]}`;
+    objects.set(objectPath(failedAttempt), Buffer.from('Provider finished after process cleanup'));
+    expect(await cleanup(db, failedTenant, { ...provider, getLocationIdentity: () => 'b'.repeat(64) })).toEqual({ cleaned: 0, failed: 0, skipped: 0 });
+    expect(objects.has(objectPath(failedAttempt))).toBe(true);
+    expect(await cleanup(db, failedTenant, provider)).toMatchObject({ cleaned: 1, failed: 0 });
+    expect(objects.size).toBe(0);
+    // A second late provider result must remain recoverable after a clean sweep.
+    objects.set(objectPath(failedAttempt), Buffer.from('Late provider bytes'));
+    await recovery.table('portable_workspace_restore_uploads').where('attempt_id', failedAttempt.attempt_id).update({ next_cleanup_at: db.fn.now() });
+    expect(await cleanup(db, failedTenant, provider)).toMatchObject({ cleaned: 1 }); expect(objects.size).toBe(0);
+    const activeAttempt = { ...failedAttempt, attempt_id: randomUUID(), status: 'uploading', created_at: db.fn.now(),
+      expires_at: db.raw("clock_timestamp() + interval '35 minutes'"), next_cleanup_at: db.fn.now(), file_ids: JSON.stringify(failedAttempt.file_ids) };
+    await recovery.table('portable_workspace_restore_uploads').insert(activeAttempt);
+    const activePath = `${failedTenant}/portable-restores/${activeAttempt.attempt_id}/${failedAttempt.file_ids[0]}`;
+    objects.set(activePath, Buffer.from('Active attempt'));
+    expect(await cleanup(db, failedTenant, provider)).toMatchObject({ cleaned: 0, skipped: 1 }); expect(objects.has(activePath)).toBe(true);
+    const expired = { ...activeAttempt, attempt_id: randomUUID(), created_at: db.raw("clock_timestamp() - interval '1 hour'"),
+      expires_at: db.raw("clock_timestamp() - interval '1 minute'") };
+    await recovery.table('portable_workspace_restore_uploads').insert(expired);
+    const expiredPath = `${failedTenant}/portable-restores/${expired.attempt_id}/${failedAttempt.file_ids[0]}`;
+    objects.set(expiredPath, Buffer.from('Crashed attempt'));
+    provider.delete.mockRejectedValueOnce(new Error('Storage unavailable'));
+    expect(await cleanup(db, failedTenant, provider)).toMatchObject({ cleaned: 0, failed: 1 });
+    expect((await recovery.table('portable_workspace_restore_uploads').where('attempt_id', expired.attempt_id).first()).status).toBe('abandoned');
+    await expect(db.transaction(trx => commitPortableRestoreUpload(trx, { tenant: failedTenant, attemptId: expired.attempt_id, providerIdentity: provider.getLocationIdentity() }, []))).rejects.toThrow('upload recovery rejected');
+    await recovery.table('portable_workspace_restore_uploads').where('attempt_id', expired.attempt_id).update({ next_cleanup_at: db.fn.now() });
+    expect(await cleanup(db, failedTenant, provider)).toMatchObject({ cleaned: 1, failed: 0 }); expect(objects.has(expiredPath)).toBe(false);
+    objects.delete(activePath);
     createProvider.mockClear();
     const receipt = await restorePortableWorkspaceForInstallation(db, input, {}, createProvider);
     expect(receipt).toMatchObject({ tenant: input.destinationTenant, source_tenant: f.actor.tenant, package_id: info.packageId,
       archive_sha256: info.sha256, source_administrator_user_id: f.actor.userId });
     expect((await tenantDb(db, input.destinationTenant).table('tenants').first()).suspended_reason).toBe('portable_restore_pending_activation');
+    expect((await tenantDb(db, input.destinationTenant).table('portable_workspace_restore_uploads').first()).status).toBe('committed');
+    expect(await cleanup(db, input.destinationTenant, provider)).toEqual({ cleaned: 0, failed: 0, skipped: 0 });
+    const referencedId = randomUUID(), referencedAttempt = { tenant: receipt.tenant, attemptId: randomUUID() };
+    await tenantDb(db, receipt.tenant).table('portable_workspace_restore_uploads').insert({ ...expired, tenant: receipt.tenant,
+      attempt_id: referencedAttempt.attemptId, file_ids: JSON.stringify([referencedId]) });
+    const referencedPath = `${receipt.tenant}/portable-restores/${referencedAttempt.attemptId}/${referencedId}`;
+    const native = await tenantDb(db, receipt.tenant).table('external_files').first(), copyId = randomUUID();
+    await tenantDb(db, receipt.tenant).table('external_files').insert({ ...native, file_id: copyId, file_name: copyId, storage_path: referencedPath });
+    objects.set(referencedPath, Buffer.from('Native copy with a different file identity'));
+    expect(await cleanup(db, receipt.tenant, provider)).toMatchObject({ cleaned: 0, skipped: 1 });
+    expect(objects.has(referencedPath)).toBe(true);
+    const globalAttempt = { ...expired, attempt_id: randomUUID() };
+    await recovery.table('portable_workspace_restore_uploads').insert(globalAttempt);
+    const globalPath = `${failedTenant}/portable-restores/${globalAttempt.attempt_id}/${failedAttempt.file_ids[0]}`;
+    objects.set(globalPath, Buffer.from('No tenant was ever created for this destination'));
+    expect((await cleanupPortableRestoreUploadsForInstallation(db, provider)).cleaned).toBeGreaterThanOrEqual(1);
+    expect(objects.has(globalPath)).toBe(false);
+    expect(objects.has(referencedPath)).toBe(true);
+    await tenantDb(db, receipt.tenant).table('external_files').where('file_id', copyId).del();
+    await tenantDb(db, receipt.tenant).table('portable_workspace_restore_uploads').where('attempt_id', referencedAttempt.attemptId).update({ next_cleanup_at: db.fn.now() });
+    expect(await cleanup(db, receipt.tenant, provider)).toMatchObject({ cleaned: 1 });
+    expect((await tenantDb(db, receipt.tenant).table('portable_workspace_restore_uploads').where('attempt_id', referencedAttempt.attemptId).first()).status).toBe('abandoned');
+    await expect(tenantDb(db, receipt.tenant).table('external_files').insert({ ...native, file_id: copyId, file_name: copyId, storage_path: referencedPath }))
+      .rejects.toThrow('cannot acquire a native reference');
     const uploads = provider.upload.mock.calls.length, reads = f.provider.mock.calls.length;
     expect([...objects.values()].some(bytes => bytes.equals(f.bytes))).toBe(true);
     expect(await restorePortableWorkspaceForInstallation(db, input, {}, createProvider)).toEqual(receipt);
