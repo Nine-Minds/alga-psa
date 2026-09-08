@@ -38,7 +38,7 @@ const audienceLabels = { requester: 'Requester', shared_it: 'Shared IT', organiz
 /** Hosts may retain their established requester history while attaching the
  * shared private-draft composer. Every sender remains conversation-scoped. */
 export function useNamedTicketConversations(input: ConversationTicketReference | null, enabled: boolean, id: string,
-  options: { requesterPanel?: (props: { conversation: NamedTicketConversation; flush: Flush; onDirty: (dirty: boolean) => void; canWrite: boolean; onRefresh: () => void }) => ReactNode } = {}) {
+  options: { onPublished?: () => void | Promise<void>; requesterPanel?: (props: { conversation: NamedTicketConversation; flush: Flush; onDirty: (dirty: boolean) => void; canWrite: boolean; onRefresh: () => void }) => ReactNode } = {}) {
   const { t } = useTranslation('features/tickets');
   const { data: session } = useSession(), router = useRouter(), params = useSearchParams();
   const ticket = useMemo(() => input ? { ...input } : null, [input?.tenant, input?.ticketId, input?.relationshipId]);
@@ -122,7 +122,7 @@ export function useNamedTicketConversations(input: ConversationTicketReference |
   </section>;
   return { navigator, panel: !screen ? (error ? unavailable : loading) : allActivity ? <NamedConversationActivity key={`${identity}:all`} id={id} ticket={ticket} refreshVersion={reload} audiences={screen.writeAudiences} onReply={select} /> : !selected ? unavailable : selected.defaultSlot === 'requester' ? options.requesterPanel?.({ conversation: selected, flush, onDirty: setDirty, canWrite: screen.writeAudiences.includes(selected.audience), onRefresh: refresh })
     : <NamedConversationPanel key={`${identity}:${keyOf(selected)}`} id={id} ticket={ticket} conversation={selected}
-      canWrite={screen.writeAudiences.includes(selected.audience)} flush={flush} onDirty={setDirty} onRefresh={refresh} /> };
+      canWrite={screen.writeAudiences.includes(selected.audience)} flush={flush} onDirty={setDirty} onRefresh={refresh} onPublished={options.onPublished} /> };
 }
 
 function CreateConversation({ id, ticket, open, audiences, onClose, onCreated }: { id: string; ticket: ConversationTicketReference; open: boolean;
@@ -239,8 +239,8 @@ function NamedConversationActivity({ id, ticket, refreshVersion, audiences, onRe
   </section>;
 }
 
-function NamedConversationPanel({ id, ticket, conversation, canWrite, flush, onDirty, onRefresh }: { id: string; ticket: ConversationTicketReference;
-  conversation: NamedTicketConversation; canWrite: boolean; flush: Flush; onDirty: (dirty: boolean) => void; onRefresh: () => void }) {
+function NamedConversationPanel({ id, ticket, conversation, canWrite, flush, onDirty, onRefresh, onPublished }: { id: string; ticket: ConversationTicketReference;
+  conversation: NamedTicketConversation; canWrite: boolean; flush: Flush; onDirty: (dirty: boolean) => void; onRefresh: () => void; onPublished?: () => void | Promise<void> }) {
   const { t } = useTranslation('features/tickets');
   const [page, setPage] = useState<Page | null>(null), [error, setError] = useState(false), [busy, setBusy] = useState(false), [version, setVersion] = useState(0);
   const current = useRef(true), pageGeneration = useRef(0);
@@ -284,12 +284,12 @@ function NamedConversationPanel({ id, ticket, conversation, canWrite, flush, onD
         id={id} index={index} item={item} ticket={ticket} conversation={conversation} replyReady={replyReady}
         onReply={canWrite ? parent => reply.current?.(parent) : undefined} />)}
     </div>{canWrite && <NamedConversationComposer id={id} ticket={ticket} conversation={conversation} flush={flush} onDirty={onDirty} reply={reply} onReplyReady={setReplyReady} replyItems={page.items}
-      onRefresh={onRefresh} onPosted={() => { setVersion(n => n + 1); onRefresh(); }} />}</>}
+      onRefresh={onRefresh} onPosted={async () => { setVersion(n => n + 1); onRefresh(); await onPublished?.(); }} />}</>}
   </section>;
 }
 
 export function NamedConversationComposer({ id, ticket, conversation, flush, onDirty, onPosted, onRefresh, reply, onReplyReady, replyItems = [], disabled = false }: { id: string; ticket: ConversationTicketReference;
-  conversation: NamedTicketConversation; flush: Flush; onDirty: (dirty: boolean) => void; onPosted: () => void; onRefresh?: () => void; reply?: MutableRefObject<((parent: ConversationDraftParent) => Promise<boolean>) | null>; onReplyReady?: (ready: boolean) => void; replyItems?: Page['items']; disabled?: boolean }) {
+  conversation: NamedTicketConversation; flush: Flush; onDirty: (dirty: boolean) => void; onPosted: () => void | Promise<void>; onRefresh?: () => void; reply?: MutableRefObject<((parent: ConversationDraftParent) => Promise<boolean>) | null>; onReplyReady?: (ready: boolean) => void; replyItems?: Page['items']; disabled?: boolean }) {
   const { t } = useTranslation('features/tickets');
   const [document, setDocument] = useState<CoManagedRichTextDocument>([]), [loaded, setLoaded] = useState(false), [epoch, setEpoch] = useState(0);
   const isEmail = conversation.transport === 'email';
@@ -297,6 +297,8 @@ export function NamedConversationComposer({ id, ticket, conversation, flush, onD
   const [emailLocked, setEmailLocked] = useState(false);
   const [publicationOptions, setPublicationOptions] = useState<RequesterPublicationOptions | null>(null);
   const [canMarkResolution, setCanMarkResolution] = useState(false);
+  const [closeStatuses, setCloseStatuses] = useState<{ value: string; label: string }[]>([]);
+  const [canOverrideClose, setCanOverrideClose] = useState(false);
   const [files, setFiles] = useState<ConversationEditorFile[]>([]), [fileLocked, setFileLocked] = useState(false);
   const fileLock = useRef(false);
   const lockFiles = (locked: boolean) => { fileLock.current = locked; setFileLocked(locked); };
@@ -320,6 +322,7 @@ export function NamedConversationComposer({ id, ticket, conversation, flush, onD
     if (!state.current.alive || generation !== readGeneration.current) return;
     const content = draft?.content ?? null;
     setCanMarkResolution(capabilities.resolution);
+    setCloseStatuses(capabilities.closeStatuses ?? []); setCanOverrideClose(Boolean(capabilities.canOverrideClose));
     state.current.publicationOptions = draft?.publicationOptions ?? null; setPublicationOptions(state.current.publicationOptions);
     state.current.revision = draft?.revision ?? 0; state.current.content = content;
     state.current.attachments = draft?.attachments ?? []; setFiles(state.current.attachments);
@@ -410,6 +413,13 @@ export function NamedConversationComposer({ id, ticket, conversation, flush, onD
     state.current.content = content; state.current.dirty = true; state.current.generation++;
     onDirty(Boolean(state.current.publicationOptions || state.current.attachments.length || state.current.email || state.current.parent || content.document || content.text)); void save();
   };
+  const changePublicationOptions = (next: RequesterPublicationOptions | null) => {
+    if (disabled || !loaded || posting || emailLock.current || fileLock.current) return;
+    state.current.publicationOptions = next; setPublicationOptions(next); state.current.content ??= { text: '' };
+    state.current.dirty = true; state.current.generation++;
+    onDirty(Boolean(next || state.current.attachments.length || state.current.email || state.current.parent || state.current.content.text || state.current.content.document));
+    void save();
+  };
   const changeEmail = (next: ConversationEmailDraft) => {
     if (disabled || !loaded || emailLock.current || fileLock.current) return;
     setEmail(next);
@@ -432,7 +442,7 @@ export function NamedConversationComposer({ id, ticket, conversation, flush, onD
       if (!state.current.alive) return;
       await read();
       if (!state.current.alive) return;
-      postRequest.current = null; onPosted();
+      postRequest.current = null; await onPosted();
     } catch { if (state.current.alive) setError('postFailed'); }
     finally { if (state.current.alive) setPosting(false); }
   };
@@ -445,15 +455,23 @@ export function NamedConversationComposer({ id, ticket, conversation, flush, onD
       <span role="status" className="text-xs text-muted-foreground">{saving ? t('namedConversations.saving', 'Saving draft…') : loaded ? t('namedConversations.privateDraft', 'Draft visible only to you') : t('namedConversations.loading', 'Loading conversations…')}</span></div>
     {canMarkResolution && <div className="flex items-center gap-2">
       <Switch id={`${id}-resolution`} checked={Boolean(publicationOptions?.isResolution)} disabled={disabled || !loaded || posting || emailLocked || fileLocked}
-        onCheckedChange={checked => {
-          if (disabled || !loaded || posting || emailLock.current || fileLock.current) return;
-          const next: RequesterPublicationOptions | null = checked ? { isResolution: true } : null;
-          state.current.publicationOptions = next; setPublicationOptions(next); state.current.content ??= { text: '' };
-          state.current.dirty = true; state.current.generation++;
-          onDirty(Boolean(next || state.current.attachments.length || state.current.email || state.current.parent || state.current.content.text || state.current.content.document));
-          void save();
-        }} />
+        onCheckedChange={checked => changePublicationOptions(checked ? { isResolution: true } : null)} />
       <Label htmlFor={`${id}-resolution`}>{t('namedConversations.markResolution', 'Mark as resolution')}</Label>
+    </div>}
+    {publicationOptions?.isResolution && closeStatuses.length > 0 && <CustomSelect id={`${id}-close-status`}
+      label={t('namedConversations.closeStatus', 'After sending')} value={publicationOptions.close?.statusId ?? '__no_close__'}
+      disabled={disabled || !loaded || posting || emailLocked || fileLocked}
+      options={[{ value: '__no_close__', label: t('namedConversations.keepStatus', 'Keep the current ticket status') }, ...closeStatuses]}
+      onValueChange={value => changePublicationOptions({ isResolution: true, ...(value !== '__no_close__' ? { close: { statusId: value } } : {}) })} />}
+    {publicationOptions?.close && canOverrideClose && <div className="space-y-2">
+      <div className="flex items-center gap-2"><Switch id={`${id}-override-close`} checked={publicationOptions.close.overrideReason !== undefined}
+        disabled={disabled || posting || emailLocked || fileLocked} onCheckedChange={checked => changePublicationOptions({ isResolution: true,
+          close: { statusId: publicationOptions.close!.statusId, ...(checked ? { overrideReason: '' } : {}) } })} />
+        <Label htmlFor={`${id}-override-close`}>{t('namedConversations.overrideClose', 'Override unmet close rules')}</Label></div>
+      {publicationOptions.close.overrideReason !== undefined && <Input id={`${id}-close-reason`} maxLength={4000}
+        label={t('namedConversations.closeReason', 'Override reason')} value={publicationOptions.close.overrideReason}
+        disabled={disabled || posting || emailLocked || fileLocked} onChange={event => changePublicationOptions({ isResolution: true,
+          close: { statusId: publicationOptions.close!.statusId, overrideReason: event.target.value } })} />}
     </div>}
     {isEmail && <div className="space-y-3">
       <Input id={`${id}-email-to`} label={t('namedConversations.to', 'To')} value={email.to.join(';')} disabled={disabled || !loaded || emailLocked || fileLocked} maxLength={50000} onChange={event => changeEmail({ ...email, to: event.target.value.split(';') })} />
@@ -476,8 +494,8 @@ export function NamedConversationComposer({ id, ticket, conversation, flush, onD
         return save();
       }} />}
     {error && <p role="alert" className="text-sm text-destructive">{t(`namedConversations.${error}`, error === 'saveFailed' ? 'Could not save. Retry before switching conversations.' : error === 'postFailed' ? 'Could not confirm the post. Retry to check the same message.' : error === 'invalid' ? 'This draft contains unsupported content. Edit it before saving.' : 'This conversation is unavailable.')}</p>}
-    {isEmail && loaded && <ConversationEmailControls id={id} ticket={ticket} conversation={conversation} ready={!disabled && !fileLocked && nonempty && Boolean(email.subject.trim()) && email.to.some(value => value.trim())}
-      saveDraft={reviewDraft} onLock={lockEmail} onMailbox={value => { state.current.conversationRevision = value.revision; if (state.current.content) { state.current.dirty = true; state.current.generation++; } onRefresh?.(); }} onSent={async () => { await read(); onPosted(); }} />}
+    {isEmail && loaded && <ConversationEmailControls id={id} ticket={ticket} conversation={conversation} closeStatuses={closeStatuses} ready={!disabled && !fileLocked && nonempty && Boolean(email.subject.trim()) && email.to.some(value => value.trim())}
+      saveDraft={reviewDraft} onLock={lockEmail} onMailbox={value => { state.current.conversationRevision = value.revision; if (state.current.content) { state.current.dirty = true; state.current.generation++; } onRefresh?.(); }} onSent={async () => { await read(); await onPosted(); }} />}
     <div className="flex items-center gap-2">{!isEmail && <Button id={`${id}-post`} disabled={disabled || !loaded || !nonempty || posting || fileLocked} onClick={() => void submit()}>{postRequest.current ? t('namedConversations.retryPost', 'Retry post') : t('namedConversations.post', 'Post')}</Button>}
       {error === 'saveFailed' && <Button id={`${id}-save-retry`} variant="outline" disabled={saving} onClick={() => void save()}>{t('namedConversations.retry', 'Retry')}</Button>}
       <span className="text-xs text-muted-foreground">{t(`namedConversations.audiences.${conversation.audience}`, audienceLabels[conversation.audience])}</span></div>

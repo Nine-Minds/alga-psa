@@ -80,7 +80,7 @@ export function prepareNamedConversationEmail(db: Knex, inputActor: CoManagedSes
     const previous = await operation(context, request.operationId).forUpdate().first();
     if (previous) {
       if (previous.request_hash !== requestHash) return conflict();
-      const publicationOptions = admitNamedRequesterPublicationOptions(context, context.conversation, previous.publication_options);
+      const publicationOptions = await admitNamedRequesterPublicationOptions(context, context.conversation, previous.publication_options);
       return { ...state(previous), review: previous.review as ReviewedEmailPreview, ...(publicationOptions ? { publicationOptions } : {}) };
     }
     const draft = await getNamedConversationEditorDraft(context.trx, context.actor, context.ticket, ref);
@@ -88,7 +88,7 @@ export function prepareNamedConversationEmail(db: Knex, inputActor: CoManagedSes
     const raw = await tenantDb(context.trx, context.actor.tenant).table('ticket_conversation_editor_drafts')
       .where({ actor_user_id: context.actor.userId, conversation_store_tenant: ref.storeTenant, conversation_id: ref.conversationId }).forShare().first('attachment_manifest', 'publication_options');
     if (!raw) return invalid();
-    const publicationOptions = admitNamedRequesterPublicationOptions(context, context.conversation, raw.publication_options);
+    const publicationOptions = await admitNamedRequesterPublicationOptions(context, context.conversation, raw.publication_options);
     const files = await selectedNamedConversationEditorFiles(context, raw);
     const content = snapshotConversationContent(draft.content);
     const ownRoutes = await tenantDb(context.trx, mailbox.tenant).table('email_providers').select('mailbox');
@@ -146,7 +146,7 @@ export async function confirmNamedConversationEmail(db: Knex, actor: CoManagedSe
       const draft = await tenantDb(current.trx, current.actor.tenant).table('ticket_conversation_editor_drafts').where({ actor_user_id: current.actor.userId,
         conversation_store_tenant: ref.storeTenant, conversation_id: ref.conversationId, ticket_tenant: current.ticket.tenant, ticket_id: current.ticket.ticketId }).forUpdate().first();
       if (!draft || draft.revision !== row.draft_revision || draft.conversation_revision !== row.conversation_revision) return conflict();
-      const publicationOptions = admitNamedRequesterPublicationOptions(current, current.conversation, row.publication_options);
+      const publicationOptions = await admitNamedRequesterPublicationOptions(current, current.conversation, row.publication_options);
       if (hash(publicationOptions) !== hash(snapshotRequesterPublicationOptions(draft.publication_options))) return conflict();
       const publishedFiles = await assertNamedConversationPublicationFiles(current, draft,
         { operationId: id, expectedConversationRevision: row.conversation_revision, expectedDraftRevision: row.draft_revision }, 'send');

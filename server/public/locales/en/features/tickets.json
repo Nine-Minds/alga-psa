@@ -1894,6 +1894,19 @@
     "cancelFile": "Cancel attachment",
     "finishRequesterEdit": "Finish or cancel your current edit before switching conversations.",
     "portalSelector": "Conversation",
-    "reopenAfterAccountChange": "Reopen this ticket after switching accounts."
+    "reopenAfterAccountChange": "Reopen this ticket after switching accounts.",
+    "closeStatus": "After sending",
+    "keepStatus": "Keep the current ticket status",
+    "overrideClose": "Override unmet close rules",
+    "closeReason": "Override reason",
+    "closeReview": "The ticket will close when this send is accepted.",
+    "closeBlocked": "Nothing was sent. Complete the close requirements, or return to your draft to change the close option.",
+    "closeRules": {
+      "resolution_comment": "Add a resolution comment.",
+      "time_entry": "Log a time entry.",
+      "checklist_incomplete": "Complete required checklist items.",
+      "open_children": "Close the open bundled tickets.",
+      "required_fields": "Fill in the required ticket fields."
+    }
   }
 }

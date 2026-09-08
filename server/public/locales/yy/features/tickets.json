@@ -1894,6 +1894,19 @@
     "cancelFile": "222222 2222222222",
     "finishRequesterEdit": "222222 22 222222 2222 2222222 2222 222222 222222222 2222222222222.",
     "portalSelector": "2Conversation",
-    "reopenAfterAccountChange": "2Reopen this ticket after switching accounts."
+    "reopenAfterAccountChange": "2Reopen this ticket after switching accounts.",
+    "closeStatus": "22222",
+    "keepStatus": "22222",
+    "overrideClose": "22222",
+    "closeReason": "22222",
+    "closeReview": "22222",
+    "closeBlocked": "22222",
+    "closeRules": {
+      "resolution_comment": "22222",
+      "time_entry": "22222",
+      "checklist_incomplete": "22222",
+      "open_children": "22222",
+      "required_fields": "22222"
+    }
   }
 }

@@ -9,6 +9,8 @@ import { prepareNamedConversationEmail, confirmNamedConversationEmail, deliverNa
 import type { ConversationTicketReference, TicketConversationReference } from '@alga-psa/shared/lib/tickets/namedConversations';
 import { extractTicketRichTextPlainText } from './ticketRichText';
 import { applyNamedTicketConversationPost } from './postNamedTicketConversation';
+import { TicketCloseValidationError } from './closeRuleConstants';
+import { getNamedTicketConversationPublicationCapabilities } from '@alga-psa/co-managed';
 
 async function emailFiles(files: NamedConversationEmailFile[] = []) {
   return Promise.all(files.map(async file => ({ filename: file.fileName, contentType: file.mimeType,
@@ -40,7 +42,17 @@ export function prepareNamedTicketEmail(db: Knex, actor: CoManagedSessionActor, 
 }
 export async function sendNamedTicketEmail(db: Knex, actor: CoManagedSessionActor, ticket: ConversationTicketReference,
   ref: TicketConversationReference, operationId: string, reviewHash: string) {
-  const confirmed = await confirmNamedConversationEmail(db, actor, ticket, ref, operationId, reviewHash,
-    namedConversationEmailTransport, applyNamedTicketConversationPost, namedConversationFileStorage);
+  let confirmed;
+  try {
+    confirmed = await confirmNamedConversationEmail(db, actor, ticket, ref, operationId, reviewHash,
+      namedConversationEmailTransport, applyNamedTicketConversationPost, namedConversationFileStorage);
+  } catch (error) {
+    if (!(error instanceof TicketCloseValidationError)) throw error;
+    // The failed transaction has released its locks. Re-admit the caller before
+    // returning narrow rule identifiers, without hidden field values or counts.
+    const capabilities = await getNamedTicketConversationPublicationCapabilities(db, actor, ticket, ref);
+    if (!capabilities.closeStatuses?.length) throw error;
+    return { status: 'close_blocked' as const, failedRules: error.failures.map(failure => failure.rule) };
+  }
   return confirmed.status === 'pending' ? deliverNamedConversationEmail(db, actor, ticket, ref, operationId, namedConversationEmailTransport) : confirmed;
 }

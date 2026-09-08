@@ -15,16 +15,18 @@ type Request = Parameters<typeof actions.prepareNamedTicketEmailAction>[2];
 
 /** This control owns only the review/Send interaction. Draft persistence remains
  * in the same serial writer used by internal Post and conversation navigation. */
-export function ConversationEmailControls({ id, ticket, conversation, ready, saveDraft, onLock, onMailbox, onSent }: {
+export function ConversationEmailControls({ id, ticket, conversation, ready, saveDraft, onLock, onMailbox, onSent, closeStatuses = [] }: {
   id: string; ticket: ConversationTicketReference; conversation: NamedTicketConversation; ready: boolean;
   saveDraft: () => Promise<Request | null>; onLock: (locked: boolean) => void;
   onMailbox: (conversation: NamedTicketConversation) => void; onSent: () => Promise<void>;
+  closeStatuses?: { value: string; label: string }[];
 }) {
   const { t } = useTranslation('features/tickets');
   const ref = { storeTenant: conversation.storeTenant, conversationId: conversation.conversationId };
   const [mailboxes, setMailboxes] = useState<Awaited<ReturnType<typeof actions.listNamedConversationMailboxesAction>>>([]);
   const [loaded, setLoaded] = useState(false), [reload, setReload] = useState(0), [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null), [review, setReview] = useState<Review | null>(null), [send, setSend] = useState<Send | null>(null);
+  const [closeBlocked, setCloseBlocked] = useState<string[]>([]);
   const live = useRef(true), working = useRef(false), request = useRef<Request | null>(null), confirmed = useRef(false);
   useEffect(() => { live.current = true; return () => { live.current = false; }; }, []);
   useEffect(() => {
@@ -53,13 +55,13 @@ export function ConversationEmailControls({ id, ticket, conversation, ready, sav
       if (!request.current) return;
       const value = await actions.prepareNamedTicketEmailAction(ticket, ref, request.current);
       if (!live.current) return;
-      setReview(value); confirmed.current = false; retain = true;
+      setReview(value); setCloseBlocked([]); confirmed.current = false; retain = true;
     } catch { if (live.current) setError('reviewFailed'); request.current = null; }
     finally { finish(retain); }
   };
   const cancel = () => {
     if (working.current || confirmed.current) return;
-    request.current = null; setReview(null); setError(null); onLock(false);
+    request.current = null; setReview(null); setCloseBlocked([]); setError(null); onLock(false);
   };
   const confirm = async () => {
     if (!review || !begin()) return;
@@ -68,6 +70,8 @@ export function ConversationEmailControls({ id, ticket, conversation, ready, sav
     try {
       const value = await actions.sendNamedTicketEmailAction(ticket, ref, review.operationId, review.review.messageHash);
       if (!live.current) return;
+      if (value.status === 'close_blocked') { setCloseBlocked(value.failedRules); confirmed.current = false; return; }
+      setCloseBlocked([]);
       setSend({ ...value, reviewHash: review.review.messageHash });
       await onSent();
       if (!live.current) return;
@@ -99,7 +103,7 @@ export function ConversationEmailControls({ id, ticket, conversation, ready, sav
     if (!send || send.status !== 'pending' || !begin()) return;
     try {
       const value = await actions.sendNamedTicketEmailAction(ticket, ref, send.operationId, send.reviewHash);
-      if (live.current) setSend({ ...value, reviewHash: send.reviewHash });
+      if (live.current && value.status !== 'close_blocked') setSend({ ...value, reviewHash: send.reviewHash });
     } catch { if (live.current) setError('statusFailed'); }
     finally { finish(false); }
   };
@@ -110,6 +114,8 @@ export function ConversationEmailControls({ id, ticket, conversation, ready, sav
     sendFailed: 'Could not confirm the result. Check this send before editing or sending again.',
     statusFailed: 'Could not check delivery. The original send is retained; try checking again.',
   };
+  const closeRuleLabels: Record<string, string> = { resolution_comment: 'Add a resolution comment.', time_entry: 'Log a time entry.',
+    checklist_incomplete: 'Complete required checklist items.', open_children: 'Close the open bundled tickets.', required_fields: 'Fill in the required ticket fields.' };
   return <div className="space-y-3">
     <CustomSelect id={`${id}-mailbox`} label={t('namedConversations.mailbox', 'Sending mailbox')} value={conversation.mailbox?.id ?? ''}
       placeholder={t('namedConversations.chooseMailbox', 'Choose a mailbox')} disabled={!loaded || busy || Boolean(review)}
@@ -130,6 +136,10 @@ export function ConversationEmailControls({ id, ticket, conversation, ready, sav
           : <Button id={`${id}-confirm-send`} disabled={busy} onClick={() => void confirm()}>{t('namedConversations.send', 'Send email')}</Button>}</>}>
       <DialogContent>{review && <div className="space-y-3">
         {review.publicationOptions?.isResolution && <p className="text-sm font-medium">{t('namedConversations.resolutionReview', 'This message will be marked as a resolution.')}</p>}
+        {review.publicationOptions?.close && <div className="text-sm"><p>{t('namedConversations.closeReview', 'The ticket will close when this send is accepted.')} {closeStatuses.find(status => status.value === review.publicationOptions?.close?.statusId)?.label}</p>
+          {review.publicationOptions.close.overrideReason !== undefined && <p>{t('namedConversations.overrideClose', 'Override unmet close rules')}: {review.publicationOptions.close.overrideReason}</p>}</div>}
+        {closeBlocked.length > 0 && <div role="alert" className="text-sm text-destructive"><p>{t('namedConversations.closeBlocked', 'Nothing was sent. Complete the close requirements, or return to your draft to change the close option.')}</p>
+          <ul className="list-disc pl-5">{closeBlocked.map(rule => <li key={rule}>{t(`namedConversations.closeRules.${rule}`, closeRuleLabels[rule] ?? rule)}</li>)}</ul></div>}
         <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 break-words text-sm">
           <dt>{t('namedConversations.from', 'From')}</dt><dd>{address(review.review.from)}</dd>
           <dt>{t('namedConversations.replyTo', 'Replies to')}</dt><dd>{review.review.replyTo ? address(review.review.replyTo) : address(review.review.from)}</dd>

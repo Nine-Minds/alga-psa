@@ -4,7 +4,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import CoManagedNamedTicketConversation from '../../../components/co-managed/CoManagedNamedTicketConversation';
 import { useNamedTicketConversations } from '../../../../../packages/tickets/src/components/ticket/conversations/useNamedTicketConversations';
-const mocks = vi.hoisted(() => ({ flag: true, requesterProps: vi.fn(), uploadOptions: vi.fn(), uploadFile: vi.fn(), load: vi.fn(), page: vi.fn(), activity: vi.fn(), capabilities: vi.fn(), replyTarget: vi.fn(), replace: vi.fn(), readDraft: vi.fn(), saveDraft: vi.fn(), post: vi.fn(), create: vi.fn(), status: vi.fn(), push: vi.fn(), mailboxes: vi.fn(), selectMailbox: vi.fn(), latestSend: vi.fn(), prepareEmail: vi.fn(), sendEmail: vi.fn(), emailStatus: vi.fn(), emailDefaults: vi.fn(),
+const mocks = vi.hoisted(() => ({ flag: true, onPublished: vi.fn(), requesterProps: vi.fn(), uploadOptions: vi.fn(), uploadFile: vi.fn(), load: vi.fn(), page: vi.fn(), activity: vi.fn(), capabilities: vi.fn(), replyTarget: vi.fn(), replace: vi.fn(), readDraft: vi.fn(), saveDraft: vi.fn(), post: vi.fn(), create: vi.fn(), status: vi.fn(), push: vi.fn(), mailboxes: vi.fn(), selectMailbox: vi.fn(), latestSend: vi.fn(), prepareEmail: vi.fn(), sendEmail: vi.fn(), emailStatus: vi.fn(), emailDefaults: vi.fn(),
   query: '', session: { session_id: 'session', user: { tenant: 'home', id: 'author' } } }));
 vi.mock('../../../../../packages/tickets/src/actions/namedTicketConversationActions', () => ({
   getNamedTicketConversationPublicationCapabilitiesAction: mocks.capabilities,
@@ -39,7 +39,7 @@ const ticket = { tenant: 'owner', ticketId: 'ticket' };
 const requester = { storeTenant: 'owner', conversationId: 'requester', ticket, name: 'Requester', audience: 'requester', transport: 'email', defaultSlot: 'requester', status: 'open', revision: 1, messageVersion: '0', mailbox: null, createdAt: '2026-01-01T00:00:00Z' };
 const side = { ...requester, storeTenant: 'home', conversationId: 'private', name: 'Diagnostics', audience: 'organization_private', transport: 'internal', defaultSlot: null };
 function Harness({ enabled = true }: { enabled?: boolean }) {
-  const view = useNamedTicketConversations(ticket, enabled, 'named');
+  const view = useNamedTicketConversations(ticket, enabled, 'named', { onPublished: mocks.onPublished });
   return <>{view.navigator}{view.panel ?? <p>Default requester panel</p>}</>;
 }
 const deferred = () => { let resolve!: (value: any) => void; const promise = new Promise<any>(done => { resolve = done; }); return { promise, resolve }; };
@@ -503,4 +503,41 @@ it('privately retains a native requester resolution marker and shows it in the l
   expect(screen.getByLabelText('Mark as resolution')).toBeDisabled(); expect(mocks.sendEmail).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole('button', { name: 'Send email' }));
   await waitFor(() => expect(screen.getByLabelText('Mark as resolution')).not.toBeChecked());
+});
+
+it('keeps close intent and the draft after a blocked Send and reviews an explicit permitted override', async () => {
+  const f = emailFixture();
+  const selected = { ...f.emailSide, storeTenant: 'owner', audience: 'requester', mailbox: { id: 'mailbox', tenant: 'owner' } };
+  mocks.session.user.tenant = 'owner'; mocks.query = 'conversation=private&conversationStore=owner';
+  mocks.load.mockResolvedValue({ conversations: [requester, selected], writeAudiences: ['requester'], actor: { tenant: 'owner', userId: 'author' } });
+  mocks.page.mockResolvedValue({ conversation: selected, items: [], nextBefore: null });
+  mocks.capabilities.mockResolvedValue({ resolution: true, closeStatuses: [{ value: 'closed', label: 'Resolved' }], canOverrideClose: true });
+  mocks.prepareEmail.mockImplementation(async (_ticket, _ref, request) => ({ operationId: request.operationId, status: 'reviewed', review: f.preview, publicationOptions: f.draft().publicationOptions }));
+  mocks.sendEmail.mockResolvedValueOnce({ status: 'close_blocked', failedRules: ['time_entry'] });
+  const first = render(<Harness />); await writeEmail();
+  fireEvent.click(screen.getByLabelText('Mark as resolution'));
+  fireEvent.change(screen.getByLabelText('After sending'), { target: { value: 'closed' } });
+  await waitFor(() => expect(f.draft().publicationOptions).toEqual({ isResolution: true, close: { statusId: 'closed' } }));
+  first.unmount(); render(<Harness />);
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Review email' })).toBeEnabled());
+  expect(screen.getByLabelText('After sending')).toHaveValue('closed');
+  fireEvent.click(screen.getByRole('button', { name: 'Review email' }));
+  await screen.findByText(/The ticket will close when this send is accepted/);
+  expect(screen.getByRole('dialog')).toHaveTextContent('Resolved');
+  fireEvent.click(screen.getByRole('button', { name: 'Send email' }));
+  await screen.findByText('Log a time entry.');
+  expect(screen.getByRole('alert')).toHaveTextContent('Nothing was sent.');
+  expect(mocks.onPublished).not.toHaveBeenCalled();
+  expect(f.draft().content).not.toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: 'Back to draft' }));
+  fireEvent.click(screen.getByLabelText('Override unmet close rules'));
+  fireEvent.change(screen.getByLabelText('Override reason'), { target: { value: 'Recorded with the incident.' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Review email' }));
+  await screen.findByText(/Override unmet close rules: Recorded with the incident/);
+  expect(mocks.prepareEmail.mock.calls[1][2].expectedDraftRevision).toBeGreaterThan(mocks.prepareEmail.mock.calls[0][2].expectedDraftRevision);
+  expect(mocks.sendEmail).toHaveBeenCalledTimes(1);
+  fireEvent.click(screen.getByRole('button', { name: 'Send email' }));
+  await waitFor(() => expect(screen.getByLabelText('Mark as resolution')).not.toBeChecked());
+  expect(screen.queryByLabelText('After sending')).toBeNull();
+  await waitFor(() => expect(mocks.onPublished).toHaveBeenCalledOnce());
 });

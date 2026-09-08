@@ -8,12 +8,14 @@ import TicketDetails from '../TicketDetails';
 import { entryLayoutBootstrap } from './entryLayoutBootstrap';
 
 const {
+  namedConversationMock,
   routerPushMock,
   findBoardByIdMock,
   getTicketByIdMock,
   toastSuccessMock,
   toastErrorMock,
 } = vi.hoisted(() => ({
+  namedConversationMock: vi.fn((..._args: any[]) => ({ navigator: undefined, panel: undefined })),
   routerPushMock: vi.fn(),
   findBoardByIdMock: vi.fn(),
   getTicketByIdMock: vi.fn(),
@@ -36,6 +38,8 @@ let liveTicketContext = {
   },
   reconnectVersion: 0,
 };
+
+vi.mock('../conversations/useNamedTicketConversations', () => ({ useNamedTicketConversations: namedConversationMock }));
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: routerPushMock, refresh: vi.fn() }),
@@ -458,6 +462,16 @@ describe('TicketDetails remote live updates', () => {
     vi.useRealTimers();
   });
 
+  it('refreshes the ticket status after an accepted named publication even when live updates are disabled', async () => {
+    liveTicketContext.enabled = false;
+    getTicketByIdMock.mockResolvedValue({ ...baseTicket, status_id: 'status-2', is_closed: true, response_state: null });
+    renderTicketDetails();
+    expect(screen.getByTestId('ticket-info-status')).toHaveAttribute('data-status', 'status-1');
+    await act(async () => { await namedConversationMock.mock.calls.at(-1)![3].onPublished(); });
+    expect(getTicketByIdMock).toHaveBeenCalledWith('ticket-1');
+    expect(screen.getByTestId('ticket-info-status')).toHaveAttribute('data-status', 'status-2');
+  });
+
   it('T034: no-overlap remote updates refetch silently and highlight the changed field', async () => {
     getTicketByIdMock.mockResolvedValue({
       ...baseTicket,
@@ -619,6 +633,9 @@ describe('TicketDetails remote live updates', () => {
     });
 
     const view = renderTicketDetails();
+    // Let the initial editor report its dirty state before introducing the
+    // competing remote event; bootstrap also resolves asynchronous reads.
+    await act(async () => { await Promise.resolve(); });
 
     liveTicketContext = {
       ...liveTicketContext,

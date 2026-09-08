@@ -6,6 +6,7 @@ import type { ConversationTicketReference, TicketConversationReference } from '@
 import { applyTicketConversationComment } from './applyTicketConversationComment';
 import { assertNamedTicketConversationBundleTarget } from '@alga-psa/co-managed';
 import { applyTicketBundleCommentEffects } from './ticketBundleCommentEffects';
+import { closeNamedRequesterTicket } from './closeNamedRequesterTicket';
 
 export async function postNamedTicketConversation(db: Knex, actor: CoManagedSessionActor, ticket: ConversationTicketReference,
   reference: TicketConversationReference, request: NamedConversationPostRequest) {
@@ -27,4 +28,5 @@ export async function applyNamedTicketConversationPost(context: NamedConversatio
         { tenant: context.ticket.tenant, ticketId }, effect));
     await context.assertWriteAuthority(context.trx);
   }
+  await closeNamedRequesterTicket(context);
 }
