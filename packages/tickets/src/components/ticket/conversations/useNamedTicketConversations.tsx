@@ -92,7 +92,7 @@ export function useNamedTicketConversations(input: ConversationTicketReference |
   const navigator = <section aria-label={t('namedConversations.title', 'Conversations')} className="overflow-hidden rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))]">
     <div className="flex items-center justify-between border-b border-[rgb(var(--color-border-200))] px-3 py-2">
       <h2 className="text-sm font-semibold">{t('namedConversations.title', 'Conversations')}</h2>
-      {screen?.writeAudiences.some(a => a !== 'requester') && <Button id={`${id}-create`} size="sm" variant="ghost" aria-label={t('namedConversations.new', 'New conversation')}
+      {Boolean(screen?.writeAudiences.length) && <Button id={`${id}-create`} size="sm" variant="ghost" aria-label={t('namedConversations.new', 'New conversation')}
         onClick={async () => { if (await flush.current()) setCreating(true); }}><Plus className="h-4 w-4" /></Button>}
     </div>
     {!screen ? error ? unavailable : loading : <nav className="space-y-1 p-2">{screen.conversations.map((conversation, index) => {
@@ -105,7 +105,7 @@ export function useNamedTicketConversations(input: ConversationTicketReference |
         {conversation.status === 'done' ? <Check className="mt-0.5 h-3.5 w-3.5" aria-label={t('namedConversations.done', 'Done')} /> : active ? <ChevronRight className="mt-0.5 h-3.5 w-3.5" /> : null}
       </button>;
     })}</nav>}
-    {screen && <CreateConversation id={id} ticket={ticket} open={creating} audiences={screen.writeAudiences.filter(a => a !== 'requester')}
+    {screen && <CreateConversation key={identity} id={id} ticket={ticket} open={creating} audiences={screen.writeAudiences}
       onClose={() => setCreating(false)} onCreated={async value => { setCreating(false); refresh(); await select(value); }} />}
   </section>;
   return { navigator, panel: !screen ? (error ? unavailable : loading) : !selected ? unavailable : selected.defaultSlot === 'requester' ? options.requesterPanel?.({ conversation: selected, flush, onDirty: setDirty, canWrite: screen.writeAudiences.includes(selected.audience), onRefresh: refresh })
@@ -116,30 +116,36 @@ export function useNamedTicketConversations(input: ConversationTicketReference |
 function CreateConversation({ id, ticket, open, audiences, onClose, onCreated }: { id: string; ticket: ConversationTicketReference; open: boolean;
   audiences: Screen['writeAudiences']; onClose: () => void; onCreated: (value: NamedTicketConversation) => Promise<void> }) {
   const { t } = useTranslation('features/tickets');
-  const [name, setName] = useState(''), [audience, setAudience] = useState<'shared_it' | 'organization_private'>('organization_private');
+  const [name, setName] = useState(''), [audience, setAudience] = useState<Screen['writeAudiences'][number]>('organization_private');
   const [busy, setBusy] = useState(false), [error, setError] = useState(false);
   const [transport, setTransport] = useState<'internal' | 'email'>('internal');
+  const mounted = useRef(false);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   const operation = useRef<{ operationId: string; name: string; audience: typeof audience; transport: 'internal' | 'email' } | null>(null);
-  useEffect(() => { if (open) { setName(''); setTransport('internal'); setAudience(audiences.includes('organization_private') ? 'organization_private' : 'shared_it'); setError(false); operation.current = null; } }, [open]);
+  useEffect(() => { if (open) {
+    const initial = audiences.includes('organization_private') ? 'organization_private' : audiences.includes('shared_it') ? 'shared_it' : 'requester';
+    setName(''); setTransport(initial === 'requester' ? 'email' : 'internal'); setAudience(initial); setError(false); operation.current = null;
+  } }, [open]);
   const submit = async () => {
     if (busy || !name.trim() || !audiences.includes(audience)) return;
     setBusy(true); setError(false);
     try {
       operation.current ??= { operationId: crypto.randomUUID(), name: name.trim(), audience, transport };
-      await onCreated(await actions.createNamedTicketConversationAction(ticket, operation.current));
-    } catch { setError(true); }
-    finally { setBusy(false); }
+      const created = await actions.createNamedTicketConversationAction(ticket, operation.current);
+      if (mounted.current) await onCreated(created);
+    } catch { if (mounted.current) setError(true); }
+    finally { if (mounted.current) setBusy(false); }
   };
   return <Dialog isOpen={open} onClose={() => { if (!busy) onClose(); }} title={t('namedConversations.new', 'New conversation')}
     footer={<><Button id={`${id}-create-cancel`} variant="outline" disabled={busy} onClick={onClose}>{t('namedConversations.cancel', 'Cancel')}</Button>
-      <Button id={`${id}-create-confirm`} disabled={busy || !name.trim()} onClick={() => void submit()}>{t('namedConversations.create', 'Create conversation')}</Button></>}>
+      <Button id={`${id}-create-confirm`} disabled={busy || !name.trim() || !audiences.includes(audience)} onClick={() => void submit()}>{t('namedConversations.create', 'Create conversation')}</Button></>}>
     <DialogContent><div className="space-y-4">
-      <CustomSelect id={`${id}-transport`} label={t('namedConversations.kind', 'Conversation type')} value={transport} disabled={busy || Boolean(error)}
-        options={[{ value: 'internal', label: t('namedConversations.internalMessage', 'Internal message') }, { value: 'email', label: t('namedConversations.vendorEmail', 'Vendor email') }]} onValueChange={value => setTransport(value as typeof transport)} />
+      <CustomSelect id={`${id}-transport`} label={t('namedConversations.kind', 'Conversation type')} value={transport} disabled={busy || Boolean(error) || audience === 'requester'}
+        options={[{ value: 'internal', label: t('namedConversations.internalMessage', 'Internal message') }, { value: 'email', label: t('namedConversations.externalEmail', 'External email') }]} onValueChange={value => setTransport(value as typeof transport)} />
       <Input id={`${id}-name`} label={t('namedConversations.name', 'Name')} value={name} maxLength={160} disabled={busy || Boolean(error)} onChange={e => setName(e.target.value)} />
       <CustomSelect id={`${id}-audience`} label={t('namedConversations.audience', 'Visible to')} value={audience} disabled={busy || Boolean(error)}
         options={audiences.map(value => ({ value, label: t(`namedConversations.audiences.${value}`, audienceLabels[value]) }))}
-        onValueChange={value => setAudience(value as typeof audience)} />
+        onValueChange={value => { setAudience(value as typeof audience); if (value === 'requester') setTransport('email'); }} />
       <p className="text-sm text-muted-foreground">{transport === 'email' ? t('namedConversations.vendorHelp', 'Choose a sending mailbox and recipients in the conversation. Every email is reviewed before sending.') : t('namedConversations.internalHelp', 'Internal messages stay with the selected IT audience. They are not emailed to the requester.')}</p>
       {error && <p role="alert" className="text-sm text-destructive">{t('namedConversations.createFailed', 'Could not confirm creation. Retry to check the same request.')}</p>}
     </div></DialogContent>

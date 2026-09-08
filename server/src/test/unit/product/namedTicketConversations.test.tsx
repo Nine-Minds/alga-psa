@@ -390,3 +390,43 @@ it('co-managed Requester replies through private drafts and reviewed Send while 
   expect(screen.getByLabelText('Message')).toHaveValue('');
   expect(mocks.sendEmail).toHaveBeenCalledOnce(); expect(mocks.post).not.toHaveBeenCalled();
 });
+
+it.each([{ writeAudiences: ['requester', 'organization_private'] }, { writeAudiences: ['requester'] }])('creates an additional requester email conversation without publishing ($writeAudiences)', async ({ writeAudiences }) => {
+  mocks.query = '';
+  mocks.load.mockResolvedValue({ conversations: [requester], writeAudiences, actor: { tenant: 'home', userId: 'author' } });
+  const additional = { ...requester, conversationId: 'additional', name: 'Migration updates', defaultSlot: null };
+  mocks.create.mockRejectedValueOnce(new Error('Lost creation acknowledgement')).mockResolvedValue(additional);
+  render(<Harness />);
+  fireEvent.click(await screen.findByRole('button', { name: 'New conversation' }));
+  const audience = await screen.findByLabelText('Visible to');
+  if (writeAudiences.includes('organization_private')) expect(audience).toHaveValue('organization_private');
+  fireEvent.change(audience, { target: { value: 'requester' } });
+  expect(screen.getByLabelText('Conversation type')).toHaveValue('email');
+  expect(screen.getByLabelText('Conversation type')).toBeDisabled();
+  fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Migration updates' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Create conversation' }));
+  await screen.findByText('Could not confirm creation. Retry to check the same request.');
+  fireEvent.click(screen.getByRole('button', { name: 'Create conversation' }));
+  await waitFor(() => expect(mocks.create).toHaveBeenCalledTimes(2));
+  expect(mocks.create.mock.calls[1]).toEqual(mocks.create.mock.calls[0]);
+  expect(mocks.create.mock.calls[0]).toEqual([ticket, { operationId: expect.any(String), name: 'Migration updates', audience: 'requester', transport: 'email' }]);
+  await waitFor(() => expect(mocks.push).toHaveBeenCalledWith(expect.stringContaining('conversation=additional'), { scroll: false }));
+  expect(mocks.sendEmail).not.toHaveBeenCalled(); expect(mocks.post).not.toHaveBeenCalled(); expect(mocks.saveDraft).not.toHaveBeenCalled();
+});
+
+it('ignores a prior session’s late conversation creation response', async () => {
+  const pending = deferred(); mocks.query = '';
+  mocks.load.mockResolvedValue({ conversations: [requester], writeAudiences: ['requester'], actor: { tenant: 'home', userId: 'author' } });
+  mocks.create.mockReturnValue(pending.promise);
+  const view = render(<Harness />);
+  fireEvent.click(await screen.findByRole('button', { name: 'New conversation' }));
+  fireEvent.change(await screen.findByLabelText('Name'), { target: { value: 'Prior session exchange' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Create conversation' }));
+  await waitFor(() => expect(mocks.create).toHaveBeenCalledOnce());
+  mocks.session = { session_id: 'new-session', user: { tenant: 'home', id: 'another-author' } };
+  mocks.load.mockResolvedValue({ conversations: [requester], writeAudiences: ['requester'], actor: { tenant: 'home', userId: 'another-author' } });
+  view.rerender(<Harness />);
+  await act(async () => pending.resolve({ ...requester, conversationId: 'prior-session', name: 'Prior session exchange', defaultSlot: null }));
+  expect(mocks.push).not.toHaveBeenCalled(); expect(screen.queryByText('Prior session exchange')).toBeNull();
+  expect(screen.queryByRole('dialog')).toBeNull();
+});
