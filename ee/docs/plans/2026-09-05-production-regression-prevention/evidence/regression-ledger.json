@@ -755,6 +755,32 @@
         "Does not establish the cause or resolution of the separate save-navigation failure.",
         "Current-source GitHub CI verification remains required."
       ]
+    },
+    {
+      "id": "invoice-designer-preview-save-navigation",
+      "classification": "behavioral-defect-replay",
+      "incident": null,
+      "journey": "Save and reopen an authored invoice template while previews are active",
+      "missingBoundary": "Background preview server actions to editor save/navigation lifecycle",
+      "ownerRole": "Billing maintainers",
+      "testFiles": [
+        "e2e-tests/tests/invoice-designer-persistence.spec.ts",
+        "packages/billing/src/components/billing-dashboard/InvoiceTemplateEditor.authoritativeFlow.test.tsx"
+      ],
+      "ci": {
+        "workflow": ".github/workflows/e2e-fresh-install-tests.yaml",
+        "job": "Production browser journeys"
+      },
+      "evidence": "invoice-designer-save-navigation.json",
+      "reproduction": {
+        "command": "cd e2e-tests && npx playwright test --config=playwright.local.config.ts tests/invoice-designer-persistence.spec.ts",
+        "defect": "Remove previewPaused and resume isLoading immediately after a successful save; the editor can remain at templateId=new despite the saved record."
+      },
+      "status": "local-before-and-after-verified",
+      "limits": [
+        "Host development execution is diagnostic evidence, not a production image or current-source GitHub CI attestation.",
+        "The separate CI invoice-generation connection acquisition timeout did not reproduce in two host runs; its resource-exhaustion cause remains unconfirmed."
+      ]
     }
   ]
 }

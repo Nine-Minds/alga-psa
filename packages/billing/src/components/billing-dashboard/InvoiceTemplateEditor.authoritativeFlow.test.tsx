@@ -240,6 +240,31 @@ describe('InvoiceTemplateEditor authoritative preview flow', () => {
       version: 1,
     });
     expect(JSON.stringify(payload.templateAst)).toContain('field-flow');
+    await waitFor(() => expect(pushMock).toHaveBeenCalled());
+    expect((document.getElementById('save-template-button') as HTMLButtonElement).disabled).toBe(true);
+    const callsAfterSave = runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.length;
+    await act(async () => {
+      useInvoiceDesignerStore.getState().loadWorkspace(createWorkspaceWithField('field-after-save'));
+      await new Promise(resolve => setTimeout(resolve, 200));
+    });
+    expect(runAuthoritativeInvoiceTemplatePreviewMock).toHaveBeenCalledTimes(callsAfterSave);
+  });
+
+  it('resumes editing and preview when saving fails', async () => {
+    let finishSave!: (result: unknown) => void;
+    saveInvoiceTemplateMock.mockImplementationOnce(() => new Promise(resolve => { finishSave = resolve; }));
+    render(<InvoiceTemplateEditor templateId="tpl-flow" />);
+    await waitFor(() => expect(runAuthoritativeInvoiceTemplatePreviewMock).toHaveBeenCalled());
+    const save = screen.getByRole('button', { name: 'Save Template' }) as HTMLButtonElement;
+    fireEvent.click(save);
+    await waitFor(() => expect(saveInvoiceTemplateMock).toHaveBeenCalledTimes(1));
+    expect(save.disabled).toBe(true);
+    const previewCalls = runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.length;
+    await act(async () => { finishSave({ success: false, error: 'Please try saving again.' }); });
+    await waitFor(() => expect(save.disabled).toBe(false));
+    await waitFor(() => expect(runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.length).toBeGreaterThan(previewCalls));
+    expect(screen.getByText('Please try saving again.')).toBeTruthy();
+    expect(pushMock).not.toHaveBeenCalled();
   });
 
   it('updates authoritative preview when switching to existing invoice data', async () => {

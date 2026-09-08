@@ -198,10 +198,12 @@ describe('TaxService', () => {
       expect(result2.taxRate).toBeCloseTo(6.67);
 
       // Test case 3: Above highest threshold (per-threshold Math.ceil rounding)
-      // 0% of 1000 + ceil(10% of 3999) + ceil(15% of 1001) = 0 + 400 + 151 = 551
+      // Each configured minimum is respected, including the untaxed gaps:
+      // 0% of 1000 + ceil(10% of (5000-1001)) + ceil(15% of (6000-5001))
+      // = 0 + 400 + 150 = 550. Do not carry a prior band's remainder over a gap.
       const result3 = await taxService.calculateTax(clientId, 6000, date);
-      expect(result3.taxAmount).toBe(551);
-      expect(result3.taxRate).toBeCloseTo(9.18);
+      expect(result3.taxAmount).toBe(550);
+      expect(result3.taxRate).toBeCloseTo(9.17);
     });
   });
 });
