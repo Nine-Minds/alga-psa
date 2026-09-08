@@ -1,23 +1,13 @@
 name: E2E Fresh Install Tests
 
 on:
+  workflow_call:
   workflow_dispatch:
     inputs:
       no_cache:
         description: Build all images without layer caches
         type: boolean
         default: false
-  pull_request:
-    branches:
-      - '**'
-    # paths filter removed to always trigger
-
-  push:
-    branches:
-      - main
-    # paths filter removed to always trigger
-
-# Stop superseded PR runs from consuming build runners. Keep every main run.
 concurrency:
   group: fresh-install-${{ github.event.pull_request.number || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}

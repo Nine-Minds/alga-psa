@@ -1,0 +1,155 @@
+name: Production regression tests
+
+on:
+  pull_request:
+  push:
+    branches: [main, master, develop]
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: Integration suite
+        type: choice
+        options: [tier1, full]
+        default: full
+      no_cache:
+        description: Build images without layer caches
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-regression-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  selection:
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.select.outputs.should_run }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - id: select
+        run: node scripts/select-integration-tests.mjs
+        env:
+          TIER1_BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          TIER1_HEAD_SHA: ${{ github.sha }}
+  unit:
+    uses: ./.github/workflows/unit-tests.yml
+    secrets: inherit
+
+  node:
+    uses: ./.github/workflows/node-tests.yml
+    secrets: inherit
+
+  workspace:
+    uses: ./.github/workflows/workspace-tests.yml
+    secrets: inherit
+
+  integration:
+    uses: ./.github/workflows/integration-tests.yml
+    secrets: inherit
+
+  browser:
+    uses: ./.github/workflows/e2e-fresh-install-tests.yaml
+    secrets: inherit
+
+  temporal:
+    needs: selection
+    if: needs.selection.outputs.should_run == 'true'
+    uses: ./.github/workflows/temporal-readiness.yml
+    secrets: inherit
+
+  citus:
+    needs: selection
+    if: needs.selection.outputs.should_run == 'true'
+    uses: ./.github/workflows/citus-migration-smoke.yml
+    secrets: inherit
+
+  readiness:
+    name: Production regression readiness
+    if: always()
+    needs: [selection, unit, node, workspace, integration, browser, temporal, citus]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Download server-unit-aggregate
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: server-unit-aggregate
+          path: test-results/readiness-input/server-unit-aggregate
+      - name: Download node-workflow-gate-${{ github.sha }}
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: node-workflow-gate-${{ github.sha }}
+          path: test-results/readiness-input/node-workflow-gate-${{ github.sha }}
+      - name: Download workspace-execution-gate
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: workspace-execution-gate
+          path: test-results/readiness-input/workspace-execution-gate
+      - name: Download integration-execution-gate
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: integration-execution-gate
+          path: test-results/readiness-input/integration-execution-gate
+      - name: Download infrastructure-execution-evidence
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: infrastructure-execution-evidence
+          path: test-results/readiness-input/infrastructure-execution-evidence
+      - name: Download workspace-db-aggregate
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: workspace-db-aggregate
+          path: test-results/readiness-input/workspace-db-aggregate
+      - name: Download fresh-install-execution-gate
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: fresh-install-execution-gate
+          path: test-results/readiness-input/fresh-install-execution-gate
+      - name: Download temporal-execution-gate
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: temporal-execution-gate
+          path: test-results/readiness-input/temporal-execution-gate
+      - name: Download citus-aggregate
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: citus-aggregate
+          path: test-results/readiness-input/citus-aggregate
+      - name: Require every mandatory workflow and execution verdict
+        if: always()
+        run: node scripts/verify-production-readiness.mjs
+        env:
+          READINESS_JOBS: ${{ toJSON(needs) }}
+          TIER1_BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+      - name: Preserve readiness decision
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-regression-readiness-${{ github.sha }}
+          path: test-results/production-readiness/
+          if-no-files-found: error
+          retention-days: 30

@@ -1,6 +1,7 @@
 name: Integration Tests
 
 on:
+  workflow_call:
   workflow_dispatch:
     inputs:
       suite:
@@ -11,10 +12,6 @@ on:
         options:
           - tier1
           - full
-  pull_request:
-  push:
-    branches:
-      - main
   schedule:
     # Nightly full run at 04:30 UTC.
     - cron: '30 4 * * *'

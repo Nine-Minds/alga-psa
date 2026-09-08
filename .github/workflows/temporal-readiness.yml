@@ -1,40 +1,7 @@
 name: Temporal Readiness
 
 on:
-  pull_request:
-    paths:
-      - 'ee/temporal-workflows/**'
-      - 'ee/packages/**'
-      - 'ee/server/seeds/**'
-      - 'shared/**'
-      - 'scripts/run-additional-workspace-tests.mjs'
-      - 'scripts/verify-temporal-execution.mjs'
-      - 'scripts/lib/**'
-      - 'packages/**'
-      - 'scripts/check-temporal-worker-packaging-contract.mjs'
-      - 'scripts/temporal-worker-dist-import-smoke.mjs'
-      - 'scripts/temporal-worker-docker-parity.mjs'
-      - 'package.json'
-      - 'package-lock.json'
-      - '.github/workflows/temporal-readiness.yml'
-  push:
-    branches:
-      - main
-    paths:
-      - 'ee/temporal-workflows/**'
-      - 'ee/packages/**'
-      - 'ee/server/seeds/**'
-      - 'shared/**'
-      - 'scripts/run-additional-workspace-tests.mjs'
-      - 'scripts/verify-temporal-execution.mjs'
-      - 'scripts/lib/**'
-      - 'packages/**'
-      - 'scripts/check-temporal-worker-packaging-contract.mjs'
-      - 'scripts/temporal-worker-dist-import-smoke.mjs'
-      - 'scripts/temporal-worker-docker-parity.mjs'
-      - 'package.json'
-      - 'package-lock.json'
-      - '.github/workflows/temporal-readiness.yml'
+  workflow_call:
   workflow_dispatch:
   schedule:
     - cron: '0 6 * * *'

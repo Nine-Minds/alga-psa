@@ -1,9 +1,7 @@
 name: Additional workspace tests
 
 on:
-  pull_request:
-  push:
-    branches: [main, master, develop]
+  workflow_call:
   workflow_dispatch:
 
 permissions:

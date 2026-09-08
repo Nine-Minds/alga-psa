@@ -1,13 +1,7 @@
 name: Unit Tests
 
 on:
-  pull_request:
-  push:
-    branches:
-      - main
-      - master
-      - develop
-
+  workflow_call:
 env:
   # Ownership repair tests operate only on mkdtemp fixtures and restore the
   # runner UID on exit. Fail if the capability is unavailable instead of skipping.
