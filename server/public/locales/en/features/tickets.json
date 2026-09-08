@@ -1802,5 +1802,43 @@
       "collapseActivity": "Collapse older activity",
       "replyingToComment": "Replying to {{name}}"
     }
+  },
+  "namedConversations": {
+    "reply": "Reply",
+    "replying": "Replying to a message in this conversation",
+    "clearReply": "New message instead",
+    "unavailable": "This conversation is unavailable.",
+    "retry": "Retry",
+    "loading": "Loading conversations…",
+    "title": "Conversations",
+    "new": "New conversation",
+    "requester": "Requester",
+    "draft": "Draft",
+    "done": "Done",
+    "cancel": "Cancel",
+    "create": "Create conversation",
+    "name": "Name",
+    "audience": "Visible to",
+    "internalHelp": "Internal messages stay with the selected IT audience. They are not emailed to the requester.",
+    "createFailed": "Could not confirm creation. Retry to check the same request.",
+    "reopen": "Reopen",
+    "markDone": "Mark done",
+    "older": "Load earlier messages",
+    "empty": "Start the conversation. Keep this exchange focused on its audience.",
+    "author": "Ticket participant",
+    "deleted": "Message deleted",
+    "internalMessage": "Internal message",
+    "saving": "Saving draft…",
+    "privateDraft": "Draft visible only to you",
+    "retryPost": "Retry post",
+    "post": "Post",
+    "audiences": {
+      "requester": "Requester",
+      "shared_it": "Shared IT",
+      "organization_private": "Your organization only"
+    },
+    "saveFailed": "Could not save. Retry before switching conversations.",
+    "postFailed": "Could not confirm the post. Retry to check the same message.",
+    "invalid": "This draft contains unsupported content. Edit it before saving."
   }
 }

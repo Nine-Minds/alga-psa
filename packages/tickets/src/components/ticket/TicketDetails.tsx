@@ -91,6 +91,8 @@ import BackNav from '@alga-psa/ui/components/BackNav';
 import { ResponseStateBadge } from '@alga-psa/ui/components';
 import TicketNavigation from './TicketNavigation';
 import LayoutToggle from './bento/LayoutToggle';
+import { useFeatureFlag } from '@alga-psa/ui/hooks/useFeatureFlag';
+import { useNamedTicketConversations } from './conversations/useNamedTicketConversations';
 import TicketBentoLayout from './bento/TicketBentoLayout';
 import {
     getTicketLayoutPreference,
@@ -363,6 +365,9 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const tenant = initialTicket.tenant;
 
     const [ticket, setTicket] = useState(initialTicket);
+    const { enabled: namedConversationsEnabled } = useFeatureFlag('release-v1-6-feature');
+    const namedConversations = useNamedTicketConversations(ticket?.ticket_id && ticket.tenant
+      ? { tenant: ticket.tenant, ticketId: ticket.ticket_id } : null, namedConversationsEnabled, `${id}-named-conversations`);
     const [bundle, setBundle] = useState<any>(initialBundle);
     const [cardTitleVisible, setCardTitleVisible] = useState(true);
     const cardTitleRef = useRef<HTMLHeadingElement>(null);
@@ -3664,6 +3669,8 @@ const handleClose = () => {
                 <TicketBentoLayout
                     id={`${id}-bento`}
                     titleRef={cardTitleRef}
+                    conversationNavigator={namedConversations.navigator}
+                    conversationPanel={namedConversations.panel}
                     ticket={ticket as any}
                     statusOptions={statusOptions}
                     priorityOptions={priorityOptions}
@@ -3846,7 +3853,8 @@ const handleClose = () => {
                         </Suspense>
                         <Suspense fallback={<div id="ticket-conversation-skeleton" className="animate-pulse skeleton-fill h-96 rounded-lg mb-6"></div>}>
                             <div className="mb-6">
-                                <TicketConversation
+                                {namedConversations.navigator && <div className="mb-4">{namedConversations.navigator}</div>}
+                                {namedConversations.panel ?? <TicketConversation
                                     id={`${id}-conversation`}
                                     ticket={ticket}
                                     conversations={conversations}
@@ -3883,7 +3891,7 @@ const handleClose = () => {
                                     defaultNewestFirst
                                     canViewCommentMetadataDebug={canViewCommentMetadataDebug}
                                     reactionRefreshVersion={reactionRefreshVersion}
-                                />
+                                />}
                             </div>
                         </Suspense>
                         

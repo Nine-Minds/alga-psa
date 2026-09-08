@@ -94,7 +94,7 @@ beforeAll(async () => {
     '20260906080000_create_co_management_relationship_events.cjs',
     '20260906100000_add_external_file_metadata.cjs',
     '20260906110000_add_kb_import_batch_identity.cjs',
-    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs', '20260908013607_create_named_ticket_conversations.cjs', '20260908015652_create_ticket_conversation_editor_drafts.cjs', '20260908022249_scope_ticket_conversation_defaults_to_relationship.cjs']) {
+    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs', '20260908013607_create_named_ticket_conversations.cjs', '20260908015652_create_ticket_conversation_editor_drafts.cjs', '20260908022249_scope_ticket_conversation_defaults_to_relationship.cjs', '20260908024119_create_ticket_conversation_publications.cjs', '20260908030840_retain_ticket_conversation_draft_reply_target.cjs']) {
     await require('../../../migrations/' + file).up(db);
   }
   for (const table of ['standard_statuses', 'standard_priorities', 'countries', 'notification_categories',
@@ -14108,6 +14108,18 @@ describe('named ticket conversations against migrated PostgreSQL', () => {
     await db.transaction(trx => storage.attachNativeRootToConversation({ trx, ticket: native, storeTenant: native.tenant }, root.thread_id));
     expect((await api.getNamedTicketConversationMessages(db, principal, native,
       { storeTenant: requester.storeTenant, conversationId: requester.conversationId })).items.map(item => item.commentId)).toEqual([commentId]);
+    const internal = await api.createNamedTicketConversation(db, principal, native,
+      { operationId: randomUUID(), name: 'Native diagnostics', audience: 'organization_private', transport: 'internal' });
+    const internalRef = { storeTenant: internal.storeTenant, conversationId: internal.conversationId };
+    await api.saveNamedConversationEditorDraft(db, principal, native, internalRef,
+      { operationId: randomUUID(), expectedRevision: 0, expectedConversationRevision: 1, content: { text: 'Native private work' } });
+    const { postNamedTicketConversation: post } = await import('../../../../packages/tickets/src/lib/postNamedTicketConversation');
+    const receipt = await post(db, principal, native, internalRef,
+      { operationId: randomUUID(), expectedDraftRevision: 1, expectedConversationRevision: 1 });
+    expect((await api.getNamedTicketConversationMessages(db, principal, native, internalRef)).items).toMatchObject([
+      { commentId: receipt.commentId, audience: 'organization_private', author: { tenant: principal.tenant, id: principal.userId } },
+    ]);
+    expect((await model.getAllbyTicketId(db, native.tenant, native.ticketId)).map(row => row.comment_id)).toEqual([commentId]);
     await expect(api.createNamedTicketConversation(db, principal, native,
       { operationId: randomUUID(), name: 'Invalid sharing', audience: 'shared_it', transport: 'internal' })).rejects.toMatchObject({ code: 'CONVERSATION_FORBIDDEN' });
     await expect(api.getNamedTicketConversation(db, principal, { ...native, ticketId: randomUUID() },
@@ -14323,5 +14335,107 @@ describe('named ticket conversation relationship defaults against migrated Postg
     expect((await ensure(ticket)).conversationId).toBe(old.conversationId);
     expect((await ensure(replacement)).conversationId).toBe(current.conversationId);
     await expect(migration.down(db)).rejects.toThrow('Cannot collapse retained relationship-specific conversation defaults');
+  });
+});
+
+describe('named ticket conversation internal publication against migrated PostgreSQL', () => {
+  it('posts a reviewed Shared IT draft once with qualified authorship and leaves requester state unchanged', async () => {
+    const { conversations: api, principal, ticket, customer } = await namedConversationFixture();
+    const { postNamedTicketConversation: post } = await import('../../../../packages/tickets/src/lib/postNamedTicketConversation');
+    const side = await api.createNamedTicketConversation(db, principal, ticket,
+      { operationId: randomUUID(), name: 'Joint diagnosis', audience: 'shared_it', transport: 'internal' });
+    const ref = { storeTenant: side.storeTenant, conversationId: side.conversationId };
+    const before = await customer.table('tickets').where('ticket_id', ticket.ticketId).first();
+    await api.saveNamedConversationEditorDraft(db, principal, ticket, ref,
+      { operationId: randomUUID(), expectedRevision: 0, expectedConversationRevision: 1, content: { text: 'Joint troubleshooting' } });
+    const request = { operationId: randomUUID(), expectedConversationRevision: 1, expectedDraftRevision: 1 };
+    const constraint = `test_named_retention_${randomUUID().replaceAll('-', '')}`;
+    await db.raw(db.raw('ALTER TABLE co_management_event_outbox ADD CONSTRAINT ?? CHECK (tenant <> ?::uuid)', [constraint, ticket.tenant]).toQuery());
+    try { await expect(post(db, principal, ticket, ref, request)).rejects.toThrow(); }
+    finally { await db.raw('ALTER TABLE co_management_event_outbox DROP CONSTRAINT ??', [constraint]); }
+    expect(await customer.table('comments').where('ticket_id', ticket.ticketId)).toHaveLength(0);
+    expect(await customer.table('ticket_conversation_publications').where('conversation_id', ref.conversationId)).toHaveLength(0);
+    expect(await api.getNamedConversationEditorDraft(db, principal, ticket, ref)).toMatchObject({ content: { text: 'Joint troubleshooting' }, revision: 1 });
+    const [first, duplicate] = await Promise.all([post(db, principal, ticket, ref, request), post(db, principal, ticket, ref, request)]);
+    expect(duplicate).toEqual(first);
+    const page = await api.getNamedTicketConversationMessages(db, principal, ticket, ref);
+    expect(page.items).toHaveLength(1);
+    expect(page.items[0]).toMatchObject({ commentId: first.commentId, audience: 'shared_it', author: { tenant: principal.tenant, id: principal.userId } });
+    expect(page.conversation.messageVersion).toBe('1');
+    expect(await api.getNamedConversationEditorDraft(db, principal, ticket, ref)).toMatchObject({ content: null, revision: 2 });
+    expect(await customer.table('ticket_conversation_publications').where('conversation_id', ref.conversationId)).toHaveLength(1);
+    expect(await customer.table('tickets').where('ticket_id', ticket.ticketId).first()).toEqual(before);
+    const events = await customer.table('co_management_event_outbox').where('comment_id', first.commentId);
+    expect(events.map(row => row.event_type)).toContain('TICKET_COMMENT_ADDED');
+    expect(events.some(row => row.event_type === 'TICKET_CUSTOMER_REPLIED' || row.event_type === 'TICKET_RESPONSE_STATE_CHANGED')).toBe(false);
+    await api.saveNamedConversationEditorDraft(db, principal, ticket, ref,
+      { operationId: randomUUID(), expectedRevision: 2, expectedConversationRevision: 1, content: { text: 'Follow-up work' }, parent: { threadId: first.threadId, commentId: first.commentId } });
+    expect(await post(db, principal, ticket, ref, request)).toEqual(first);
+    expect(await api.getNamedConversationEditorDraft(db, principal, ticket, ref)).toMatchObject({ content: { text: 'Follow-up work' }, revision: 3, parent: { threadId: first.threadId, commentId: first.commentId } });
+    const reply = await post(db, principal, ticket, ref,
+      { operationId: randomUUID(), expectedConversationRevision: 1, expectedDraftRevision: 3 });
+    expect(reply.threadId).toBe(first.threadId);
+    expect((await api.getNamedTicketConversationMessages(db, principal, ticket, ref)).items[0]).toMatchObject({ commentId: reply.commentId, parentCommentId: first.commentId });
+    expect(await api.getNamedConversationEditorDraft(db, principal, ticket, ref)).toMatchObject({ content: null, parent: null });
+    await api.saveNamedConversationEditorDraft(db, principal, ticket, ref,
+      { operationId: randomUUID(), expectedRevision: 4, expectedConversationRevision: 1, content: { text: 'Retain when target disappears' },
+        parent: { threadId: reply.threadId, commentId: reply.commentId } });
+    await customer.table('comments').where('comment_id', reply.commentId).update({ deleted_at: db.fn.now() });
+    await expect(post(db, principal, ticket, ref,
+      { operationId: randomUUID(), expectedDraftRevision: 5, expectedConversationRevision: 1 })).rejects.toThrow();
+    expect(await api.getNamedConversationEditorDraft(db, principal, ticket, ref)).toMatchObject({ content: { text: 'Retain when target disappears' }, revision: 5 });
+
+  });
+
+  it('keeps a private post, its receipt and draft cleanup in the author home store', async () => {
+    const { conversations: api, principal, customerPrincipal, ticket, customer, sponsor } = await namedConversationFixture();
+    const { postNamedTicketConversation: post } = await import('../../../../packages/tickets/src/lib/postNamedTicketConversation');
+    const side = await api.createNamedTicketConversation(db, principal, ticket,
+      { operationId: randomUUID(), name: 'Private diagnosis', audience: 'organization_private', transport: 'internal' });
+    const ref = { storeTenant: side.storeTenant, conversationId: side.conversationId };
+    await api.saveNamedConversationEditorDraft(db, principal, ticket, ref,
+      { operationId: randomUUID(), expectedRevision: 0, expectedConversationRevision: 1, content: { text: 'Home organization only' } });
+    const request = { operationId: randomUUID(), expectedConversationRevision: 1, expectedDraftRevision: 1 };
+    const receipt = await post(db, principal, ticket, ref, request);
+    expect(await post(db, principal, ticket, ref, request)).toEqual(receipt);
+    expect((await api.getNamedTicketConversationMessages(db, principal, ticket, ref)).items).toHaveLength(1);
+    expect(await sponsor.table('ticket_conversations').where('ticket_id', ticket.ticketId)).toHaveLength(1);
+    expect(await sponsor.table('ticket_conversation_publications')).toHaveLength(1);
+    expect(await customer.table('ticket_conversation_publications')).toHaveLength(0);
+    expect(await customer.table('comments').where('ticket_id', ticket.ticketId)).toHaveLength(0);
+    await expect(post(db, customerPrincipal, ticket, ref, request)).rejects.toThrow();
+    await api.saveNamedConversationEditorDraft(db, principal, ticket, ref,
+      { operationId: randomUUID(), expectedRevision: 2, expectedConversationRevision: 1, content: { text: 'Private follow-up' },
+        parent: { threadId: receipt.threadId, commentId: receipt.commentId } });
+    expect(await api.getNamedConversationEditorDraft(db, principal, ticket, ref)).toMatchObject({ parent: { threadId: receipt.threadId, commentId: receipt.commentId } });
+    const reply = await post(db, principal, ticket, ref, { ...request, operationId: randomUUID(), expectedDraftRevision: 3 });
+    expect(reply.threadId).toBe(receipt.threadId);
+    expect((await sponsor.table('co_management_private_comments').where('comment_id', reply.commentId).first()).parent_comment_id).toBe(receipt.commentId);
+  });
+
+  it('preserves drafts on stale state, wrong-root replies, external transport and revoked authority', async () => {
+    const { conversations: api, principal, ticket, customer } = await namedConversationFixture();
+    const { postNamedTicketConversation: post } = await import('../../../../packages/tickets/src/lib/postNamedTicketConversation');
+    const [requester] = await api.listNamedTicketConversations(db, principal, ticket);
+    const external = { storeTenant: requester.storeTenant, conversationId: requester.conversationId };
+    const side = await api.createNamedTicketConversation(db, principal, ticket,
+      { operationId: randomUUID(), name: 'Joint diagnosis', audience: 'shared_it', transport: 'internal' });
+    const ref = { storeTenant: side.storeTenant, conversationId: side.conversationId };
+    for (const target of [external, ref]) await api.saveNamedConversationEditorDraft(db, principal, ticket, target,
+      { operationId: randomUUID(), expectedRevision: 0, expectedConversationRevision: 1, content: { text: 'Keep this draft' } });
+    const request = { operationId: randomUUID(), expectedConversationRevision: 1, expectedDraftRevision: 1 };
+    await expect(post(db, principal, ticket, external, request)).rejects.toMatchObject({ code: 'CONVERSATION_INVALID' });
+    await expect(post(db, principal, ticket, ref, { ...request, expectedDraftRevision: 2 })).rejects.toMatchObject({ code: 'CONVERSATION_CONFLICT' });
+    await expect(post(db, principal, ticket, ref, { ...request, parent: { threadId: randomUUID(), commentId: randomUUID() } })).rejects.toThrow();
+    await expect(api.saveNamedConversationEditorDraft(db, principal, ticket, ref,
+      { operationId: randomUUID(), expectedRevision: 1, expectedConversationRevision: 1, content: { text: 'Wrong root' },
+        parent: { threadId: randomUUID(), commentId: randomUUID() } })).rejects.toThrow();
+    expect(await api.getNamedConversationEditorDraft(db, principal, ticket, ref)).toMatchObject({ content: { text: 'Keep this draft' }, parent: null, revision: 1 });
+    await api.setNamedTicketConversationStatus(db, principal, ticket, ref, 1, 'done');
+    await expect(post(db, principal, ticket, ref, request)).rejects.toMatchObject({ code: 'CONVERSATION_CONFLICT' });
+    expect(await api.getNamedConversationEditorDraft(db, principal, ticket, ref)).toMatchObject({ revision: 1, content: { text: 'Keep this draft' } });
+    await customer.table('co_management_board_scopes').del();
+    await expect(post(db, principal, ticket, ref, request)).rejects.toThrow();
+    expect(await customer.table('comments').where('ticket_id', ticket.ticketId)).toHaveLength(0);
   });
 });

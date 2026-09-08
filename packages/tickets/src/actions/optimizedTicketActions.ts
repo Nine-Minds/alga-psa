@@ -1,5 +1,7 @@
 'use server'
 
+import { attachNativeRootToConversation, legacyTicketConversationSql } from '@alga-psa/shared/lib/tickets/namedConversations';
+
 import { publishNativeCommentEvent, publishNativeCommentWorkflowEvent } from '../lib/nativeConversationEvents';
 
 import { hasCommentCollaborationAttribution } from '../lib/commentAuthorResolution';
@@ -506,6 +508,7 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
     ] = await Promise.all([
       // Comments
       tenantScopedTable(trx, 'comments', tenant)
+        .whereRaw(legacyTicketConversationSql(trx, tenant))
         .where({
           ticket_id: ticketId
         })
@@ -3345,6 +3348,8 @@ export const addTicketCommentWithCache = withAuth(async (
       ...(effectiveClosesTicket ? { metadata: { closes_ticket: true } } : {}),
     }).returning('*');
 
+    await attachNativeRootToConversation({ trx, ticket: { tenant, ticketId }, storeTenant: tenant }, threadId);
+
     // Update ticket response state based on comment visibility and author (F005-F008)
     if (!isScheduled) {
       await updateTicketResponseStateFromComment(
@@ -3426,6 +3431,8 @@ export const addTicketCommentWithCache = withAuth(async (
             markdown_content: markdownContent,
             created_at: now,
           });
+
+          await attachNativeRootToConversation({ trx, ticket: { tenant, ticketId: child.ticket_id }, storeTenant: tenant }, childGenerated.thread_id);
 
           await tenantDb(trx, tenant).table('ticket_bundle_mirrors')
             .insert({

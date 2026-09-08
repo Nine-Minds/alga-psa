@@ -4,6 +4,7 @@
  * server actions and used by both server actions and workflow actions.
  */
 
+import { attachNativeRootToConversation } from '../lib/tickets/namedConversations';
 import { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { assertCommentThreadAudience } from '../lib/commentAudience';
@@ -1341,6 +1342,7 @@ export class TicketModel {
     const currentAudience = await assertCommentThreadAudience(trx, tenant, threadId, { ticketId: validatedData.ticket_id, isInternal: commentIsInternal, parentCommentId });
     if (validatedData.collaboration_audience && currentAudience !== validatedData.collaboration_audience) throw new Error('Reply audience changed');
     await db.table('comments').insert(baseCommentData);
+    await attachNativeRootToConversation({ trx, ticket: { tenant, ticketId: validatedData.ticket_id }, storeTenant: tenant }, threadId);
 
     if (parentCommentId) {
       await db.table('comment_threads')

@@ -57,15 +57,17 @@ function receipt(row: any): CoManagedPrivateCommentReceipt {
  * separate read boundary after live trust ends. No ticket event or customer-side
  * updated timestamp is emitted for organization-private activity. */
 async function mutateCoManagedPrivateResourceComment(db: Knex, inputActor: CoManagedSessionActor,
-  inputResource: CoManagedSharedResource, input: CoManagedPrivateCommentCommand): Promise<CoManagedPrivateCommentReceipt> {
+  inputResource: CoManagedSharedResource, input: CoManagedPrivateCommentCommand, destination?: { conversationId: string }): Promise<CoManagedPrivateCommentReceipt> {
   const actor = snapshotCoManagedSessionActor(inputActor), request = snapshotCommand(input);
+  const conversationId = destination?.conversationId;
+  if (destination && (!isCoManagedUuid(conversationId) || Object.keys(destination).some(key => key !== 'conversationId'))) throw new CoManagedSharedWorkError();
   if (!inputResource || !['ticket', 'project_task'].includes(inputResource.kind) || ![inputResource.tenant, inputResource.relationshipId, inputResource.id].every(isCoManagedUuid)) throw new CoManagedSharedWorkError();
   const resource: CoManagedSharedResource = { kind: inputResource.kind, tenant: inputResource.tenant.toLowerCase(), relationshipId: inputResource.relationshipId.toLowerCase(), id: inputResource.id.toLowerCase() };
   const target = request.kind === 'create' ? request.parent : request.comment;
   if (resource.tenant === actor.tenant || (target && target.storeTenant !== actor.tenant)) throw new CoManagedSharedWorkError();
   // LEVERAGE: pattern co-managed-command-receipt — ticket edits and private notes
   // share retry semantics, but private receipts must never use customer storage.
-  const hash = createHash('sha256').update(JSON.stringify({ actor: { tenant: actor.tenant, userId: actor.userId }, resource, request })).digest('hex');
+  const hash = createHash('sha256').update(JSON.stringify({ actor: { tenant: actor.tenant, userId: actor.userId }, resource, request, ...(conversationId ? { conversationId } : {}) })).digest('hex');
   try {
     return await withCoManagedSharedWork(db, actor, resource, 'update', context =>
       withCoManagedSharedWork(context.trx, actor, resource, 'read', async readContext => {
@@ -112,7 +114,7 @@ async function mutateCoManagedPrivateResourceComment(db: Knex, inputActor: CoMan
             ...(request.kind === 'edit' ? encodeConversationContent(request) : { deleted_at: trx.raw('clock_timestamp()') }) });
         }
         if (resource.kind === 'ticket') await attachPrivateRootToConversation({ trx, storeTenant: actor.tenant,
-          ticket: { tenant: resource.tenant, ticketId: resource.id, relationshipId: resource.relationshipId } }, threadId);
+          ticket: { tenant: resource.tenant, ticketId: resource.id, relationshipId: resource.relationshipId } }, threadId, conversationId);
         await home.table('co_management_private_threads').where('thread_id', threadId).update({ last_activity_at: trx.raw('clock_timestamp()') });
         await assertWrite();
         const [saved] = await home.table('co_management_private_command_receipts').insert({ tenant: actor.tenant, operation_id: request.operationId,
@@ -130,9 +132,9 @@ async function mutateCoManagedPrivateResourceComment(db: Knex, inputActor: CoMan
 
 /** Resource-specific entry points prevent existing ticket adapters from
  * accepting tasks merely because their underlying private store is shared. */
-export async function mutateCoManagedPrivateTicketComment(db: Knex, actor: CoManagedSessionActor, resource: CoManagedSharedResource, input: CoManagedPrivateCommentCommand) {
+export async function mutateCoManagedPrivateTicketComment(db: Knex, actor: CoManagedSessionActor, resource: CoManagedSharedResource, input: CoManagedPrivateCommentCommand, destination?: { conversationId: string }) {
   if (resource?.kind !== 'ticket') throw new CoManagedSharedWorkError();
-  return mutateCoManagedPrivateResourceComment(db, actor, resource, input);
+  return mutateCoManagedPrivateResourceComment(db, actor, resource, input, destination);
 }
 export async function mutateCoManagedPrivateTaskComment(db: Knex, actor: CoManagedSessionActor, resource: CoManagedSharedResource, input: CoManagedPrivateCommentCommand) {
   if (resource?.kind !== 'project_task') throw new CoManagedSharedWorkError();

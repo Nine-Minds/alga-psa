@@ -4,7 +4,7 @@ import { tenantDb } from '@alga-psa/db';
 import { assertCoManagedOperationalWrite, withCoManagedOperationalTransaction } from '@alga-psa/licensing';
 import { assertCommentThreadAudience, type CommentAudience } from '@alga-psa/shared/lib/commentAudience';
 import logger from '@alga-psa/core/logger';
-import { attachNativeRootToConversation } from '@alga-psa/shared/lib/tickets/namedConversations';
+import { attachNativeRootToConversation, legacyTicketConversationSql } from '@alga-psa/shared/lib/tickets/namedConversations';
 
 function tenantScopedTable<Row extends object = Record<string, unknown>>(
   conn: Knex | Knex.Transaction,
@@ -54,6 +54,7 @@ const Comment = {
       const comments = await tenantScopedTable<IComment>(knexOrTrx, 'comments', tenant)
         .select('comments.*')
         .where('comments.ticket_id', ticket_id)
+        .whereRaw(legacyTicketConversationSql(knexOrTrx, tenant))
         .orderBy('comments.created_at', 'asc');
       return comments;
     } catch (error) {

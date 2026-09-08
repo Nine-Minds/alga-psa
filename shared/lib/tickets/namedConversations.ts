@@ -169,3 +169,21 @@ export async function attachPrivateRootToConversation(scope: ConversationStoreSc
   if (!thread.conversation_id) await home.table('co_management_private_threads').where('thread_id', threadId).update({ conversation_id: destination.conversationId });
   return destination;
 }
+
+/** Legacy screens keep their audience defaults; additional named conversations
+ * must be read through their explicit authorized selection. This is independent
+ * of the release flag so hiding the navigator cannot flatten side histories. */
+export function legacyTicketConversationSql(db: Knex | Knex.Transaction, tenant: string, commentAlias = 'comments'): Knex.Raw {
+  return db.raw(`NOT EXISTS (
+    SELECT 1 FROM comment_threads legacy_named_thread
+    JOIN ticket_conversations legacy_named_conversation
+      ON legacy_named_conversation.tenant = legacy_named_thread.tenant
+      AND legacy_named_conversation.conversation_id = legacy_named_thread.conversation_id
+      AND legacy_named_conversation.ticket_tenant = legacy_named_thread.tenant
+      AND legacy_named_conversation.ticket_id = legacy_named_thread.ticket_id
+    WHERE legacy_named_thread.tenant = ?::uuid
+      AND legacy_named_thread.thread_id = ??.thread_id
+      AND legacy_named_thread.ticket_id = ??.ticket_id
+      AND legacy_named_conversation.default_slot IS NULL
+  )`, [tenant, commentAlias, commentAlias]);
+}

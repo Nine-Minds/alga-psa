@@ -1,0 +1,146 @@
+/** @vitest-environment jsdom */
+import React from 'react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { useNamedTicketConversations } from '../../../../../packages/tickets/src/components/ticket/conversations/useNamedTicketConversations';
+const mocks = vi.hoisted(() => ({ load: vi.fn(), page: vi.fn(), readDraft: vi.fn(), saveDraft: vi.fn(), post: vi.fn(), create: vi.fn(), status: vi.fn(), push: vi.fn(),
+  query: '', session: { session_id: 'session', user: { tenant: 'home', id: 'author' } } }));
+vi.mock('../../../../../packages/tickets/src/actions/namedTicketConversationActions', () => ({
+  getNamedTicketConversationScreenAction: mocks.load, getNamedTicketConversationMessagesAction: mocks.page,
+  getNamedConversationEditorDraftAction: mocks.readDraft, saveNamedConversationEditorDraftAction: mocks.saveDraft,
+  postNamedTicketConversationAction: mocks.post, createNamedTicketConversationAction: mocks.create, setNamedTicketConversationStatusAction: mocks.status,
+}));
+vi.mock('next-auth/react', () => ({ useSession: () => ({ data: mocks.session }) }));
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: mocks.push }), useSearchParams: () => new URLSearchParams(mocks.query) }));
+vi.mock('next/dynamic', () => ({ default: () => ({ id, document, editable, onChange }: any) => editable !== undefined
+  ? <textarea aria-label="Message" id={id} disabled={!editable} value={document.map((block: any) => block.content?.map((part: any) => part.text ?? '').join('') ?? '').join('\n')}
+      onChange={event => onChange([{ type: 'paragraph', content: [{ type: 'text', text: event.target.value, styles: {} }] }])} />
+  : <div id={id}>{document.map((block: any) => block.content?.map((part: any) => part.text ?? '').join('') ?? '').join('\n')}</div> }));
+vi.mock('@alga-psa/ui/components/Button', () => ({ Button: ({ children, variant, size, ...props }: any) => <button {...props}>{children}</button> }));
+vi.mock('@alga-psa/ui/components/Input', () => ({ Input: ({ label, ...props }: any) => <label>{label}<input {...props} /></label> }));
+vi.mock('@alga-psa/ui/components/Dialog', () => ({ Dialog: ({ isOpen, children, footer }: any) => isOpen ? <div role="dialog">{children}{footer}</div> : null, DialogContent: ({ children }: any) => <div>{children}</div> }));
+vi.mock('@alga-psa/ui/components/CustomSelect', () => ({ default: ({ options, value, onValueChange, label, ...props }: any) => <label>{label}<select {...props} value={value} onChange={event => onValueChange(event.target.value)}>{options.map((o: any) => <option key={o.value} value={o.value}>{o.label}</option>)}</select></label> }));
+vi.mock('@alga-psa/ui/lib/i18n/client', () => ({ useTranslation: () => ({ t: (_key: string, fallback: string) => fallback }), useFormatters: () => ({ formatDate: (value: string) => value }) }));
+const ticket = { tenant: 'owner', ticketId: 'ticket' };
+const requester = { storeTenant: 'owner', conversationId: 'requester', ticket, name: 'Requester', audience: 'requester', transport: 'email', defaultSlot: 'requester', status: 'open', revision: 1, messageVersion: '0', mailbox: null, createdAt: '2026-01-01T00:00:00Z' };
+const side = { ...requester, storeTenant: 'home', conversationId: 'private', name: 'Diagnostics', audience: 'organization_private', transport: 'internal', defaultSlot: null };
+function Harness({ enabled = true }: { enabled?: boolean }) {
+  const view = useNamedTicketConversations(ticket, enabled, 'named');
+  return <>{view.navigator}{view.panel ?? <p>Default requester panel</p>}</>;
+}
+const deferred = () => { let resolve!: (value: any) => void; const promise = new Promise<any>(done => { resolve = done; }); return { promise, resolve }; };
+beforeEach(() => {
+  vi.resetAllMocks(); mocks.query = 'conversation=private&conversationStore=home';
+  mocks.session = { session_id: 'session', user: { tenant: 'home', id: 'author' } };
+  mocks.load.mockResolvedValue({ conversations: [requester, side], writeAudiences: ['requester', 'organization_private'], actor: { tenant: 'home', userId: 'author' } });
+  mocks.page.mockResolvedValue({ conversation: side, items: [], nextBefore: null });
+  mocks.readDraft.mockResolvedValue(null);
+  mocks.saveDraft.mockImplementation(async (_ticket, _ref, request) => ({ content: request.content, revision: request.expectedRevision + 1, conversationRevision: 1 }));
+  mocks.post.mockResolvedValue({ commentId: 'posted' });
+});
+afterEach(cleanup);
+
+it('does not load named data when the UI flag is off and keeps Requester pinned when enabled', async () => {
+  const view = render(<Harness enabled={false} />); expect(mocks.load).not.toHaveBeenCalled();
+  view.rerender(<Harness />); await screen.findByLabelText('Message');
+  const nav = screen.getByRole('navigation'); expect(nav.querySelector('button')?.textContent).toContain('Requester');
+  expect(screen.getByRole('button', { name: /Diagnostics/ }).getAttribute('aria-current')).toBe('page');
+});
+
+it('coalesces pending edits and flushes the latest draft before navigation', async () => {
+  const first = deferred(); mocks.saveDraft.mockReturnValueOnce(first.promise);
+  render(<Harness />); const editor = await screen.findByLabelText('Message');
+  fireEvent.change(editor, { target: { value: 'First' } });
+  await waitFor(() => expect(mocks.saveDraft).toHaveBeenCalledTimes(1));
+  fireEvent.change(editor, { target: { value: 'First and latest' } });
+  fireEvent.click(screen.getByRole('button', { name: /Requester/ })); expect(mocks.push).not.toHaveBeenCalled();
+  await act(async () => first.resolve({ revision: 1, conversationRevision: 1 }));
+  await waitFor(() => expect(mocks.push).toHaveBeenCalledTimes(1));
+  expect(mocks.saveDraft).toHaveBeenCalledTimes(2);
+  expect(mocks.saveDraft.mock.calls[1][2]).toMatchObject({ expectedRevision: 1, content: { document: [{ content: [{ text: 'First and latest' }] }] } });
+});
+
+it('retries an uncertain save and post with their original operation identities', async () => {
+  mocks.saveDraft.mockRejectedValueOnce(new Error('Lost save acknowledgement'));
+  mocks.post.mockRejectedValueOnce(new Error('Lost post acknowledgement'));
+  render(<Harness />); const editor = await screen.findByLabelText('Message');
+  fireEvent.change(editor, { target: { value: 'One internal message' } });
+  await screen.findByText('Could not save. Retry before switching conversations.');
+  fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+  await waitFor(() => expect(mocks.saveDraft).toHaveBeenCalledTimes(2));
+  expect(mocks.saveDraft.mock.calls[1]).toEqual(mocks.saveDraft.mock.calls[0]);
+  fireEvent.click(screen.getByRole('button', { name: 'Post' }));
+  await screen.findByText('Could not confirm the post. Retry to check the same message.');
+  expect(screen.getByLabelText('Message')).toBeDisabled();
+  fireEvent.click(screen.getByRole('button', { name: 'Retry post' }));
+  await waitFor(() => expect(mocks.post).toHaveBeenCalledTimes(2));
+  expect(mocks.post.mock.calls[1]).toEqual(mocks.post.mock.calls[0]);
+});
+
+it('drops a prior author’s late draft and clears history after access refresh fails', async () => {
+  const pending = deferred(); mocks.readDraft.mockReturnValueOnce(pending.promise);
+  const view = render(<Harness />);
+  await waitFor(() => expect(mocks.readDraft).toHaveBeenCalledTimes(1));
+  mocks.session = { session_id: 'another-session', user: { tenant: 'home', id: 'another-author' } };
+  view.rerender(<Harness />); await screen.findByLabelText('Message');
+  await act(async () => pending.resolve({ content: { text: 'Prior author secret' }, revision: 1 }));
+  expect(screen.getByLabelText('Message')).toHaveValue('');
+  mocks.load.mockRejectedValue(new Error('Permission revoked'));
+  fireEvent.focus(window);
+  await screen.findAllByText('This conversation is unavailable.');
+  expect(screen.queryByLabelText('Message')).toBeNull(); expect(screen.queryByText('Diagnostics')).toBeNull();
+});
+
+it('saves the reply target with the draft, restores it after remount, and can detach it without losing text', async () => {
+  const parent = { threadId: 'root-thread', commentId: 'root-message' };
+  mocks.page.mockResolvedValue({ conversation: side, items: [{ ...parent, storeTenant: 'home', note: 'Original question', markdown: null,
+    createdAt: '2026-01-01T00:00:00Z', deleted: false, author: { displayName: 'Technician' } }], nextBefore: null });
+  let retained: any = null;
+  mocks.readDraft.mockImplementation(async () => retained);
+  mocks.saveDraft.mockImplementation(async (_ticket, _ref, request) => retained = { ...request, revision: request.expectedRevision + 1 });
+  const first = render(<Harness />);
+  const editor = await screen.findByLabelText('Message');
+  fireEvent.change(editor, { target: { value: 'My existing draft' } });
+  await waitFor(() => expect(retained?.content).toBeTruthy());
+  fireEvent.click(screen.getByRole('button', { name: 'Reply' }));
+  await waitFor(() => expect(retained?.parent).toEqual(parent));
+  first.unmount(); render(<Harness />);
+  expect(await screen.findByLabelText('Message')).toHaveValue('My existing draft');
+  expect(screen.getByText('Replying to a message in this conversation')).toBeTruthy();
+  fireEvent.click(screen.getByRole('button', { name: 'New message instead' }));
+  await waitFor(() => expect(retained.parent).toBeNull());
+  expect(screen.getByLabelText('Message')).toHaveValue('My existing draft');
+  fireEvent.click(screen.getByRole('button', { name: 'Reply' }));
+  await waitFor(() => expect(retained.parent).toEqual(parent));
+  fireEvent.click(screen.getByRole('button', { name: 'Post' }));
+  await waitFor(() => expect(mocks.post).toHaveBeenCalledTimes(1));
+  expect(mocks.post.mock.calls[0][2].expectedDraftRevision).toBe(retained.revision);
+});
+
+it('refreshes newly published messages without overwriting the current draft', async () => {
+  render(<Harness />);
+  const editor = await screen.findByLabelText('Message');
+  fireEvent.change(editor, { target: { value: 'Work in progress' } });
+  await waitFor(() => expect(mocks.saveDraft).toHaveBeenCalledTimes(1));
+  mocks.load.mockResolvedValue({ conversations: [requester, { ...side, messageVersion: '1' }], writeAudiences: ['organization_private'], actor: { tenant: 'home', userId: 'author' } });
+  mocks.page.mockResolvedValue({ conversation: { ...side, messageVersion: '1' }, items: [{ commentId: 'new', storeTenant: 'home', note: 'New colleague reply', markdown: null,
+    createdAt: '2026-01-01T00:00:00Z', deleted: false, author: { displayName: 'Technician' } }], nextBefore: null });
+  fireEvent.focus(window);
+  await screen.findByText('New colleague reply');
+  expect(screen.getByLabelText('Message')).toHaveValue('Work in progress');
+  expect(mocks.readDraft).toHaveBeenCalledTimes(1);
+});
+
+it('retains the publication identity if the post succeeded but refreshing the draft failed', async () => {
+  mocks.readDraft.mockResolvedValueOnce(null).mockRejectedValueOnce(new Error('Draft refresh unavailable')).mockResolvedValue(null);
+  render(<Harness />);
+  fireEvent.change(await screen.findByLabelText('Message'), { target: { value: 'Publish exactly once' } });
+  await waitFor(() => expect(mocks.saveDraft).toHaveBeenCalledTimes(1));
+  fireEvent.click(screen.getByRole('button', { name: 'Post' }));
+  await screen.findByText('Could not confirm the post. Retry to check the same message.');
+  expect(screen.getByLabelText('Message')).toBeDisabled();
+  fireEvent.click(screen.getByRole('button', { name: 'Retry post' }));
+  await waitFor(() => expect(mocks.post).toHaveBeenCalledTimes(2));
+  expect(mocks.post.mock.calls[1]).toEqual(mocks.post.mock.calls[0]);
+  await waitFor(() => expect(screen.getByLabelText('Message')).toHaveValue(''));
+});

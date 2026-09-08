@@ -130,7 +130,7 @@
   {
     "id": "F017",
     "description": "Render the persistent conversation navigator above contact details in the existing ticket grid left column.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "5. UX \u2014 option C"
     ]
@@ -138,7 +138,7 @@
   {
     "id": "F018",
     "description": "Pin Requester first and display supporting conversation names with audience subtitles.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "5. UX \u2014 option C"
     ]
@@ -154,7 +154,7 @@
   {
     "id": "F020",
     "description": "Keep a requester-only ticket compact without precreating empty vendor or AI conversations.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "5. UX \u2014 option C"
     ]

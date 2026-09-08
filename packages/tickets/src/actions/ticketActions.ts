@@ -1,5 +1,6 @@
 'use server'
 
+import { attachNativeRootToConversation } from '@alga-psa/shared/lib/tickets/namedConversations';
 import { publishNativeCommentEvent, publishNativeCommentWorkflowEvent } from '../lib/nativeConversationEvents';
 
 import { assertCoManagedOperationalWrite, withCoManagedOperationalTransaction } from '@alga-psa/licensing';
@@ -1556,6 +1557,8 @@ export const addTicketComment = withAuth(async (user, { tenant }, ticketId: stri
         is_resolution: false,
         created_at: nowIso,
       }).returning('*');
+
+      await attachNativeRootToConversation({ trx, ticket: { tenant, ticketId }, storeTenant: tenant }, generatedIds.thread_id);
 
       // Publish comment added event
       await publishNativeCommentEvent(trx, { tenant, ticketId, commentId: newComment.comment_id }, {
