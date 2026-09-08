@@ -6,32 +6,6 @@ import { createProductionBrowserActors } from '../../server/test-utils/productio
 
 test.use({ emulatorProviders: ['msgraph'] });
 
-for (const route of [
-  '/api/calendar/webhooks/microsoft',
-  '/api/email/webhooks/microsoft',
-  '/api/teams/webhooks/recordings',
-  '/api/telephony/webhooks/teams-calls',
-]) {
-  test(`Microsoft subscription validation echoes the opaque token: ${route}`, async ({ request }) => {
-    // Exercise the running app's routing, middleware and response serialization.
-    // URL encoding must be undone once, without interpreting '+' or '%' again.
-    const token = `contract ${randomUUID()} + %2F / café`;
-    const response = await request.post(`${route}?${new URLSearchParams({ validationToken: token })}`, {
-      headers: { 'content-type': 'text/plain; charset=utf-8' },
-      timeout: 120_000, // Development route compilation is separate from callback latency.
-    });
-    expect(response.status()).toBe(200);
-    expect(response.headers()['content-type']?.split(';', 1)[0]).toBe('text/plain');
-    expect(await response.text()).toBe(token);
-    // Once compiled, the callback must meet Graph's ten-second handshake budget.
-    const warmResponse = await request.post(`${route}?${new URLSearchParams({ validationToken: token })}`, {
-      headers: { 'content-type': 'text/plain; charset=utf-8' }, timeout: 10_000,
-    });
-    expect(warmResponse.status()).toBe(200);
-    expect(await warmResponse.text()).toBe(token);
-  });
-}
-
 test('Teams profile recovery and calendar meeting creation preserve saved identities', async ({ page, credentials, database, emulators }, testInfo) => {
   if (process.env.E2E_EDITION !== 'enterprise' || process.env.E2E_TEAMS_DEVELOPMENT !== 'true'
     || testInfo.config.metadata.releaseValidation !== false) {

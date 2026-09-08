@@ -2,10 +2,7 @@ import { playwrightTests, reconcilePlaywrightExecution } from './playwright-exec
 export const teamsDevelopmentFiles = ['e2e-tests/development-tests/teams-profile.spec.ts'];
 export const teamsDevelopmentJourneys = [
   'Teams profile recovery and calendar meeting creation preserve saved identities',
-  ...[
-    '/api/calendar/webhooks/microsoft', '/api/email/webhooks/microsoft',
-    '/api/teams/webhooks/recordings', '/api/telephony/webhooks/teams-calls',
-  ].map(route => `Microsoft subscription validation echoes the opaque token: ${route}`),
+
 ];
 
 export function verifyTeamsDevelopment({ collected, report, root, revision, exitCode }) {

@@ -19,6 +19,7 @@ const criticalBrowserFiles = [
   'e2e-tests/tests/microsoft-calendar.spec.ts',
   'e2e-tests/tests/microsoft-mailbox.spec.ts',
   'e2e-tests/tests/microsoft-oauth-rejection.spec.ts',
+  'e2e-tests/tests/microsoft-webhook-validation.spec.ts',
   'e2e-tests/tests/msp-access-redirects.spec.ts',
   'e2e-tests/tests/portal-discovery.spec.ts',
   'e2e-tests/tests/portal-identity.spec.ts',

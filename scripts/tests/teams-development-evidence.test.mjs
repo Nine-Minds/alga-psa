@@ -21,11 +21,8 @@ for (const [name, mutate] of Object.entries({
   'wrong source': x => { x.report.config.metadata.sourceRevision = 'b'.repeat(40); },
   'missing journey': x => { x.collected.suites = []; x.report.suites = []; },
   'missing execution': x => { x.report.suites = []; },
-  'callback-only run in the correct file': x => {
-    for (const report of [x.collected, x.report]) { report.suites[0].specs.shift(); report.stats.expected--; }
-  },
-  'missing callback in otherwise matching reports': x => {
-    for (const report of [x.collected, x.report]) { report.suites[0].specs.pop(); report.stats.expected--; }
+  'unrelated passing case in the correct file': x => {
+    for (const report of [x.collected, x.report]) report.suites[0].specs[0].title = 'unrelated callback';
   },
   'retry-only pass': x => { x.report.suites[0].specs[0].tests[0].results[0].retry = 1; },
   'failed runner': x => { x.exitCode = 1; },

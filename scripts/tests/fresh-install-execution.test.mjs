@@ -5,7 +5,7 @@ import path from 'node:path';
 import { tmpdir } from 'node:os';
 import { verifyFreshInstallExecution } from '../verify-fresh-install-execution.mjs';
 
-const landedJourneys = ['inbound-email', 'invoice-designer-persistence', 'invoice-generation', 'invoice-ticket-ownership', 'login', 'microsoft-calendar', 'microsoft-mailbox', 'microsoft-oauth-rejection', 'msp-access-redirects', 'portal-discovery', 'portal-identity', 'portal-ticket-roundtrip', 'qbo-export', 'server-rendered-locale', 'stripe-payment', 'tenant-identity', 'time-approval-invoice', 'usage-invoice-preview', 'xero-export'];
+const landedJourneys = ['inbound-email', 'invoice-designer-persistence', 'invoice-generation', 'invoice-ticket-ownership', 'login', 'microsoft-calendar', 'microsoft-mailbox', 'microsoft-oauth-rejection', 'microsoft-webhook-validation', 'msp-access-redirects', 'portal-discovery', 'portal-identity', 'portal-ticket-roundtrip', 'qbo-export', 'server-rendered-locale', 'stripe-payment', 'tenant-identity', 'time-approval-invoice', 'usage-invoice-preview', 'xero-export'];
 
 function fixture(t) {
   const input = mkdtempSync(path.join(tmpdir(), 'fresh-install-gate-'));
