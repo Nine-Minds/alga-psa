@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { test, expect, signIn } from '../fixtures/auth';
 import { createTimeBillingFixture } from '../fixtures/time-billing';
-import { createBrowserInvoiceTicketSourceFixture } from '../fixtures/invoice-ticket';
+import { addBrowserInvoiceTaskSources, createBrowserInvoiceTicketSourceFixture } from '../fixtures/invoice-ticket';
 import { createBrowserApiKey } from '../fixtures/api-key';
 import { addLongInvoiceSources } from '../../server/test-utils/invoiceTicketProductionFixtures';
 import { readInvoiceDocument, readInvoiceDownload } from '../fixtures/invoice-document';
@@ -268,6 +268,57 @@ test('an administrator authors a billed-time date sort and reopens its persisted
         expect(compact).not.toContain('PRIVATE');
         expect(await database('invoice_time_entries').where({ tenant: tenant.tenantId, invoice_id: longInvoice.invoice_id }).orderBy('invoice_time_entry_id')).toEqual(longLinks);
         expect(await database('invoice_charges').where({ tenant: tenant.tenantId, invoice_id: longInvoice.invoice_id }).orderBy('item_id')).toEqual(longCharges);
+      }
+    });
+    await test.step('separate same-name project tasks and localize unnamed task fallback', async () => {
+      const taskIds = await createBrowserInvoiceTicketSourceFixture(database, { tenant: tenant.tenantId, userId: tenant.admin.userId });
+      const tasks = await addBrowserInvoiceTaskSources(database, taskIds);
+      await database('clients').where({ tenant: tenant.tenantId, client_id: taskIds.clientId })
+        .update({ invoice_template_id: saved.template_id });
+      const taskInvoice = await generate(taskIds);
+      const readTaskLinks = () => database('invoice_time_entries')
+        .where({ tenant: tenant.tenantId, invoice_id: taskInvoice.invoice_id }).orderBy('invoice_time_entry_id');
+      const links = await readTaskLinks();
+      const readTaskCharges = () => database('invoice_charges')
+        .where({ tenant: tenant.tenantId, invoice_id: taskInvoice.invoice_id }).orderBy('item_id');
+      const chargesBefore = await readTaskCharges();
+      expect(links).toHaveLength(8);
+      const taskSnapshots = links.map(link => link.work_item_snapshot).filter(snapshot => snapshot.workItemType === 'project_task');
+      expect(taskSnapshots).toHaveLength(4);
+      expect(new Set(taskSnapshots.map(snapshot => snapshot.workItemId))).toEqual(new Set(tasks.taskIds));
+      expect(taskSnapshots.filter(snapshot => snapshot.workItemId === tasks.taskIds[0])).toHaveLength(2);
+      expect(Number(taskInvoice.subtotal)).toBe(145_500);
+      expect(Number(taskInvoice.tax)).toBe(14_550);
+      expect(Number(taskInvoice.total_amount)).toBe(160_050);
+      await page.goto(`/msp/billing?tab=invoicing&subtab=drafts&invoiceId=${taskInvoice.invoice_id}`);
+      const sourceTasks = await database('project_tasks').where({ tenant: tenant.tenantId }).whereIn('task_id', tasks.taskIds);
+      try {
+        // Deliberate owned fixture edits test historical rendering; this does
+        // not claim editing invoiced work is a supported application workflow.
+        await database('project_tasks').where({ tenant: tenant.tenantId }).whereIn('task_id', tasks.taskIds)
+          .update({ task_name: 'EDITED AFTER BILLING', description: 'PRIVATE_EDITED_TASK' });
+        for (const locale of ['en', 'fr', 'zz-unavailable']) {
+          await database('clients').where({ tenant: tenant.tenantId, client_id: taskIds.clientId })
+            .update({ properties: { defaultLocale: locale } });
+          await page.reload();
+          const text = await readInvoiceDownload(page, testInfo, taskInvoice.invoice_number, `${taskInvoice.invoice_number}-tasks-${locale}`);
+          const compact = text.replace(/\s/g, '');
+          // Three named entries appear in flat Description, nested Ticket and
+          // nested Description, plus two separate group headings: 3*3 + 2.
+          expect(compact.match(/Samepublictaskname/g) ?? []).toHaveLength(11);
+          expect(compact).toContain(locale === 'fr' ? 'Tâchedeprojet' : 'Projecttask');
+          expect(compact).toContain(locale === 'fr' ? '180,00' : '$180.00');
+          expect(compact).toContain(locale === 'fr' ? '1600,50' : '1,600.50');
+          expect(text.match(locale === 'fr' ? /\d+\/08\/2026/g : /8\/\d+\/2026/g) ?? []).toHaveLength(16);
+          expect(compact).not.toMatch(/PRIVATE|EDITED/);
+          expect(await readTaskLinks()).toEqual(links);
+          expect(await readTaskCharges()).toEqual(chargesBefore);
+        }
+      } finally {
+        for (const task of sourceTasks) {
+          await database('project_tasks').where({ tenant: tenant.tenantId, task_id: task.task_id })
+            .update({ task_name: task.task_name, description: task.description });
+        }
       }
     });
   } finally {
