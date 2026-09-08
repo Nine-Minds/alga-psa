@@ -18915,3 +18915,55 @@ it('tenant license state does not revive an expired independent PSA license from
     } finally { clock.mockRestore(); }
   });
 });
+
+it('PSA capability backfills join the co-managed upgrade transaction and preserve customer work and existing grants', async () => {
+  const f = await ticketHandoffFixture();
+  const upgrade = await import('../../../../ee/temporal-workflows/src/db/product-upgrade-operations');
+  const customerTenant = f.resource.tenant;
+  await f.customer.table('boards').where('board_id', f.operation.customer_board_id).update({ priority_type: 'itil', sla_policy_id: null });
+  const tables = ['roles', 'permissions', 'role_permissions', 'tax_rates', 'tax_components', 'client_tax_settings', 'client_tax_rates',
+    'sla_policies', 'sla_notification_thresholds', 'sla_policy_targets', 'boards'];
+  const snapshot = async (connection: Knex) => {
+    const result: Record<string, unknown[]> = {};
+    for (const table of tables) result[table] = await tenantDb(connection, customerTenant).table(table);
+    return result;
+  };
+  const before = await snapshot(db), ticket = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  const sponsorPermissions = await f.sponsor.table('permissions');
+  const seedAndBackfill = async (trx: Knex.Transaction) => {
+    const applied = await upgrade.backfillPsaSeeds(customerTenant, log, trx);
+    expect(applied).not.toContain('03_role_permissions.cjs');
+    await upgrade.applyRbacDelta(customerTenant, log, trx);
+    await upgrade.backfillClientTaxDefaults(customerTenant, log, trx);
+    await upgrade.ensureSlaParity(customerTenant, log, trx);
+    const own = tenantDb(trx, customerTenant);
+    expect((await own.table('boards').where('board_id', f.operation.customer_board_id).first()).sla_policy_id).toBeTruthy();
+    expect((await own.table('sla_notification_thresholds')).length).toBeGreaterThan(0);
+    expect(await own.table('roles').where({ role_name: 'Finance', msp: true })).toHaveLength(1);
+    expect((await own.table('permissions').where('resource', 'billing')).length).toBeGreaterThan(0);
+    expect((await own.table('client_tax_settings')).length).toBeGreaterThan(0);
+    expect(await own.table('role_permissions')).toEqual(expect.arrayContaining(before.role_permissions));
+    expect(await own.table('tickets').where('ticket_id', f.resource.id).first()).toEqual(ticket);
+    // Backfills alone do not change product, licensing, trust or capacity.
+    expect((await own.table('tenants').first()).product_code).toBe('co_managed');
+  };
+  await expect(db.transaction(async trx => {
+    await seedAndBackfill(trx);
+    throw new Error('Cancel independent upgrade');
+  })).rejects.toThrow('Cancel independent upgrade');
+  const rolledBack = await snapshot(db);
+  for (const table of tables) {
+    expect(rolledBack[table], table).toHaveLength(before[table].length);
+    expect(rolledBack[table], table).toEqual(expect.arrayContaining(before[table]));
+  }
+  await db.transaction(seedAndBackfill);
+  const first = await snapshot(db);
+  await db.transaction(seedAndBackfill);
+  const second = await snapshot(db);
+  for (const table of tables) {
+    expect(second[table], table).toHaveLength(first[table].length);
+    expect(second[table], table).toEqual(expect.arrayContaining(first[table]));
+  }
+  expect(await f.sponsor.table('permissions')).toEqual(sponsorPermissions);
+  expect((await f.customer.table('co_management_relationships').first()).state).toBe('active');
+});

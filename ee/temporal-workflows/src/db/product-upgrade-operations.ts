@@ -1,4 +1,6 @@
 import { tenantDb } from '@alga-psa/db';
+import type { Knex } from 'knex';
+import { runTenantBootstrapTransaction } from './tenant-bootstrap-context.js';
 import {
   getAdminConnection,
   withAdminTransactionRetryReadOnly,
@@ -318,9 +320,13 @@ export async function preflightProductUpgrade(
   return tenantInfo;
 }
 
+/** Internal upgrade backfills accept the caller's retained transaction so paid
+ * entitlement, archive finalization and the product change can commit together.
+ * Existing AlgaDesk workflow activities retain their separate retry boundaries. */
 export async function backfillPsaSeeds(
   tenantId: string,
   log: SeedRunLog,
+  transaction?: Knex.Transaction,
 ): Promise<string[]> {
   log.info('Starting PSA seed backfill', {
     tenantId,
@@ -331,6 +337,7 @@ export async function backfillPsaSeeds(
       fileName as (typeof PSA_BACKFILL_SEED_EXCLUDES)[number],
     ),
     log,
+    transaction,
   });
   return result.seedsApplied;
 }
@@ -338,10 +345,11 @@ export async function backfillPsaSeeds(
 export async function applyRbacDelta(
   tenantId: string,
   log: SeedRunLog,
+  transaction?: Knex.Transaction,
 ): Promise<void> {
   const grants = await loadPsaRoleGrants();
 
-  await withAdminTransactionRetryReadOnly(async trx => {
+  await runTenantBootstrapTransaction(transaction, async trx => {
     const db = tenantDb(trx, tenantId);
     const [roles, permissions] = await Promise.all([
       db.table<RoleRow>('roles')
@@ -447,8 +455,9 @@ export async function applyRbacDelta(
 export async function backfillClientTaxDefaults(
   tenantId: string,
   log: SeedRunLog,
+  transaction?: Knex.Transaction,
 ): Promise<ClientTaxBackfillResult> {
-  const result = await withAdminTransactionRetryReadOnly(async trx => {
+  const result = await runTenantBootstrapTransaction(transaction, async trx => {
     const db = tenantDb(trx, tenantId);
     const rate = await db.table('tax_rates')
       .where({ tenant: tenantId, is_active: true })
@@ -538,8 +547,9 @@ export async function backfillClientTaxDefaults(
 export async function ensureSlaParity(
   tenantId: string,
   log: SeedRunLog,
+  transaction?: Knex.Transaction,
 ): Promise<SlaParityResult> {
-  const result = await withAdminTransactionRetryReadOnly(async trx => {
+  const result = await runTenantBootstrapTransaction(transaction, async trx => {
     const db = tenantDb(trx, tenantId);
     const boards = await db.table('boards')
       .where({ tenant: tenantId, priority_type: 'itil' })

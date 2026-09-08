@@ -29,11 +29,12 @@ const { assertCatalogIsValid } = require('./catalogValidation.cjs');
 const PERMISSION_COLUMNS = ['permission_id', 'resource', 'action', 'msp', 'client', 'description'];
 const ROLE_COLUMNS = ['role_id', 'role_name', 'msp', 'client'];
 
-// AlgaDesk -> AlgaPSA is the only supported product transition. The upgrade
-// backfills the PSA seeds (and therefore this catalog) before it flips
+// AlgaDesk and independently licensed co-managed workspaces can upgrade to PSA.
+// The upgrade backfills the PSA seeds (and therefore this catalog) before it flips
 // product_code, so the target catalog must be applicable to a tenant that is
 // still recorded as the source product. Every other mismatch is a caller bug.
-const SUPPORTED_PRODUCT_TRANSITIONS = { algadesk: ['psa'] };
+// This internal catalog operation does not establish paid entitlement or end trust.
+const SUPPORTED_PRODUCT_TRANSITIONS = { algadesk: ['psa'], co_managed: ['psa'] };
 
 /**
  * A tenant whose own shape stops it from being reconciled: no tenants row, a
