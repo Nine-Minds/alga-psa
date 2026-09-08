@@ -2,6 +2,7 @@ import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { assertCoManagedOperationalWrite } from '@alga-psa/licensing';
 import { resolveCommentAudience, type CommentAudience } from '@alga-psa/shared/lib/commentAudience';
+import { retainCoManagedSharedConversationBeforeReduction } from './conversationParticipationEvidence';
 import { type CoManagedSharedResource, type CoManagedSharedWorkContext } from './sharedWork';
 import { snapshotCoManagedSessionActor, assertCoManagedSessionUnexpired, isCoManagedUuid, type CoManagedSessionActor } from './sharedWorkIdentity';
 
@@ -77,6 +78,7 @@ export async function discloseCoManagedTicketThread(db: Knex, inputActor: CoMana
       if (preview.audience === request.audience) invalid();
       await assertCoManagedSessionUnexpired(trx, actor); await assertCoManagedOperationalWrite(trx, resource.tenant);
       const clock = await trx.raw('SELECT clock_timestamp() AS value'), appliedAt: Date = clock.rows[0].value;
+      if (request.audience === 'organization_private') await retainCoManagedSharedConversationBeforeReduction(trx, resource, request.operationId, { threadId: request.threadId });
       await owner.table('comment_threads').where('thread_id', request.threadId).update({ collaboration_audience: request.audience,
         is_internal: request.audience !== 'requester', last_activity_at: appliedAt });
       await owner.table('comments').where({ thread_id: request.threadId, ticket_id: resource.id }).update({ is_internal: request.audience !== 'requester',

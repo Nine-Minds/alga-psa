@@ -18511,3 +18511,45 @@ it('sharing reduction archives board-only visibility using the persisted policy 
   expect(saved[0].operation_id).toBe(operation.event_id);
   await expect(f.read(db, f.principal, f.resource)).rejects.toThrow();
 }));
+
+it('audience reduction retains only the changed shared thread and its legacy files before hiding it', async () => withAttachmentFixture(async f => {
+  const domain = await import('../../../../packages/co-managed/src/threadDisclosure');
+  const { discloseSharedTicketThread } = await import('../../lib/co-managed/discloseTicketThread');
+  const root = await f.create(f.customerPrincipal, { operationId: randomUUID(), audience: 'shared_it', text: 'Legacy customer shared thread' });
+  const reply = await f.create(f.customerPrincipal, { operationId: randomUUID(), parent: attachmentComment(root), text: 'Legacy reply with evidence' });
+  await f.create(f.customerPrincipal, { operationId: randomUUID(), audience: 'shared_it', text: 'Unchanged thread must not be swept' });
+  await f.create(f.customerPrincipal, { operationId: randomUUID(), audience: 'organization_private', text: 'Never shared customer thread' });
+  const file = await f.attachments.uploadCoManagedConversationAttachment(db, f.customerPrincipal, f.resource, {
+    attachmentId: randomUUID(), comment: attachmentComment(reply), fileName: 'legacy.txt', mimeType: 'text/plain', content: Buffer.from('Legacy bytes') }, f.upload);
+  // Simulate a file published before archival capture existed.
+  await f.sponsor.table('co_managed_archive_files').where('attachment_id', file.attachmentId).del();
+  const target = { storeTenant: f.resource.tenant, threadId: root.threadId };
+  const preview = await domain.previewCoManagedThreadDisclosure(db, f.customerPrincipal, f.resource, target);
+  const request = { ...target, operationId: randomUUID(), expectedSnapshot: preview.snapshot, audience: 'organization_private' as const, confirmed: true as const };
+  await discloseSharedTicketThread(db, f.customerPrincipal, f.resource, request);
+  const evidence = () => f.sponsor.table('co_managed_participation_evidence').where('operation_id', request.operationId).orderBy('source_id');
+  const saved = await evidence(); expect(saved).toHaveLength(2);
+  expect(saved.map((row: any) => row.payload.markdown).sort()).toEqual(['Legacy customer shared thread', 'Legacy reply with evidence']);
+  expect(saved.every((row: any) => row.payload.threadId === root.threadId && row.payload.audience === 'shared_it')).toBe(true);
+  const retained = await f.sponsor.table('co_managed_archive_files').where('attachment_id', file.attachmentId).first();
+  expect(retained).toMatchObject({ audience: 'shared_it', staged_bytes: Buffer.from('Legacy bytes') });
+  await expect(f.attachments.downloadCoManagedConversationAttachment(db, f.principal, f.resource, attachmentReference(file), f.download)).rejects.toThrow();
+  await f.customer.table('comments').where('comment_id', root.commentId).update({ note: 'New private body', markdown_content: 'New private body' });
+  await discloseSharedTicketThread(db, f.customerPrincipal, f.resource, request);
+  expect(await evidence()).toEqual(saved);
+}));
+
+it('audience reduction rolls back captured history when the confirmed disclosure fails', async () => withCommentCreationFixture(async f => {
+  const domain = await import('../../../../packages/co-managed/src/threadDisclosure');
+  const root = await f.create(f.customerPrincipal, { operationId: randomUUID(), audience: 'shared_it', text: 'Remain shared on failure' });
+  const target = { storeTenant: f.resource.tenant, threadId: root.threadId };
+  const preview = await domain.previewCoManagedThreadDisclosure(db, f.customerPrincipal, f.resource, target);
+  const request = { ...target, operationId: randomUUID(), expectedSnapshot: preview.snapshot, audience: 'organization_private' as const, confirmed: true as const };
+  await expect(domain.discloseCoManagedTicketThread(db, f.customerPrincipal, f.resource, request, async context => {
+    expect(await tenantDb(context.trx, f.principal.tenant).table('co_managed_participation_evidence').where('operation_id', request.operationId)).toHaveLength(1);
+    throw new Error('Disclosure failed after capture');
+  })).rejects.toThrow('Disclosure failed after capture');
+  expect(await f.sponsor.table('co_managed_participation_evidence').where('operation_id', request.operationId)).toHaveLength(0);
+  expect(await f.customer.table('co_management_command_receipts').where('operation_id', request.operationId)).toHaveLength(0);
+  expect(await f.customer.table('comment_threads').where('thread_id', root.threadId).first()).toMatchObject({ collaboration_audience: 'shared_it' });
+}));

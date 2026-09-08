@@ -33,12 +33,12 @@ export async function retainCoManagedConversationParticipation(trx: Knex.Transac
  * lock. This snapshots current permitted source rows, without publishing fake
  * comment events or inventing an MSP user. Replay belongs to that command's
  * receipt; a failed reduction rolls its snapshots back with the grant change. */
-export async function retainCoManagedSharedConversationBeforeReduction(trx: Knex.Transaction, resource: CoManagedSharedResource, operationId: string): Promise<void> {
+export async function retainCoManagedSharedConversationBeforeReduction(trx: Knex.Transaction, resource: CoManagedSharedResource, operationId: string, scope: { threadId?: string } = {}): Promise<void> {
   if (!trx.isTransaction || ![resource.tenant, resource.relationshipId, resource.id, operationId].every(isCoManagedUuid) ||
-      !['ticket', 'project_task'].includes(resource.kind)) throw new CoManagedSharedWorkError();
+      !['ticket', 'project_task'].includes(resource.kind) || (scope.threadId !== undefined && !isCoManagedUuid(scope.threadId))) throw new CoManagedSharedWorkError();
   const owner = tenantDb(trx, resource.tenant), task = resource.kind === 'project_task';
   const comments = await owner.table(task ? 'project_task_comments' : 'comments')
-    .where(task ? 'task_id' : 'ticket_id', resource.id).orderBy(task ? 'task_comment_id' : 'comment_id')
+    .where(task ? 'task_id' : 'ticket_id', resource.id).modify(q => { if (scope.threadId) q.where('thread_id', scope.threadId); }).orderBy(task ? 'task_comment_id' : 'comment_id')
     .select({ id: task ? 'task_comment_id' : 'comment_id' }, 'thread_id');
   const occurredAt = (await trx.select({ at: trx.raw('clock_timestamp()') }).first()).at;
   for (const comment of comments) {
