@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "status": "passed",
+  "testCount": 1,
+  "durationSeconds": 6.1,
+  "database": "upgrade_units_82cc_20260908",
+  "fixtureSource": "/var/folders/8g/3xyjqdpd4hx2h39h4qb2lyvm0000gn/T/alga-supported-upgrade-yRLZBD/fixture.json",
+  "appRevision": "c5938cdad5",
+  "migrationRevision": "8bc3d1a6142d691401abae0245b6367a83d3a23f",
+  "checks": [
+    "Real sign-in and Add Usage dialog",
+    "Exactly one saved quantity-2 record on retained usage contract line",
+    "Saved record remains uninvoiced",
+    "Pre-upgrade usage record unchanged",
+    "Other tenant usage records unchanged",
+    "New record visible after reload"
+  ],
+  "logSha256": "fa21220debfa4a955c5118272a4c4ad10aa781996f9577f7f20eabadb3953ae3",
+  "limitations": [
+    "Not current-source CI proof",
+    "Invoice generation remains pending"
+  ]
+}

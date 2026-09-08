@@ -151,7 +151,7 @@
   },
   {
     "id": "T016",
-    "description": "Seed the previous supported schema with synthetic existing tenant/ticket/contract/usage data, run the real upgrade and verify retained records plus working ticket, Add Usage and invoice paths; preserve post-upgrade tenant isolation.",
+    "description": "Seed the supported v1.5.0 schema (f3579f3a317cf51df5f4489e5dcd8f649bb71289) with synthetic existing tenant/ticket/contract/usage data, run the real upgrade and verify retained records plus working ticket, Add Usage and invoice paths; preserve post-upgrade tenant isolation.",
     "implemented": false,
     "kind": "upgrade-db-browser",
     "featureIds": [

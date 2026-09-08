@@ -2742,3 +2742,95 @@ Mailbox callback assertion accepts hostHTTPSbase withComposefallback. Browser se
 ### QBO/Xero/Stripe host browser journeys verified
 
 Built3smallnativeemulatorbundles; accountinghostsession81018 QBO56105/Xero56106/Stripe56107/control56108,env/tmp/alga-accounting-host-82cc.env. Apps readallproviderendpoints frombothenvfiles; Graphhost16479/emailworker46349/nativeRedis27545 retained. Initialbrowser90489 terminal1:QBO13.5s,Xero6.8s,Stripecreation-retrypass;2StripereturncasesfailedbecausePaymentService defaultsNEXT_PUBLIC_APP_URLmissing→localhost3000. ExplicitAPP_URL53010fixedconfig withoutbuild; currentapps61264(53010)/89662(53011). Stripe rerun81160 terminal0 all3passed12.6s,0flaky/skip. Evidencehost-accounting-provider-journeys.json preservesbothruns/failures. NoDocker/currentnativeCI/Temporal/pubclaim. Fullgoalstillopen.
+
+### Supported upgrade baseline confirmed
+
+- User explicitly selected v1.5.0. Pin f3579f3a317cf51df5f4489e5dcd8f649bb71289 in upgrade-baseline.json; baseline selection is no longer an open question. F021/T016 remain incomplete until an actual populated-schema upgrade and post-upgrade behavioral checks pass.
+- Use isolated host PostgreSQL for iteration, without rebuilding Docker images. Preserve the existing browser database. Extract baseline migration helpers as well as migrations from the pinned revision; current helpers would contaminate the starting schema.
+- Current source changes historical migrations, including 20260813120000_upsert_i18n_standard_document_template_asts.cjs. Preserve the baseline migration ledger through upgrade: clean-install execution does not establish that existing tenants receive those changes.
+- scripts/bootstrap-playwright-db.ts uses a selective EE migration allowlist and suppresses seed failures, so it is not sufficient as-is for supported-release upgrade evidence. Match the actual CE/EE migration overlay and fail on fixture setup errors.
+
+### Pinned upgrade schema extraction
+
+- Added scripts/lib/upgrade-schema-source.mjs: full-SHA-only Git archive, exclusive destination, baseline-owned helpers, CE then EE overlay, source manifest and failure cleanup. No database reset or Docker invocation.
+- Behavioral test scripts/tests/upgrade-schema-source.test.mjs creates a real temporary Git repository, edits candidate helpers after the baseline commit, and executes extracted CE/EE migrations to prove old behavior and overlay precedence. Passed 1 test, no skips.
+- Materialized the actual approved commit at /tmp/alga-upgrade-v150-EFh5ME/baseline/combined-migrations: 1,028 combined migrations. This is source extraction only, not migration execution or upgrade evidence. Next: resolve baseline dependency/template paths, migrate a new isolated database, seed old-schema business records, preserve the ledger, then apply candidate migrations and execute business checks. F021/T016 stay open.
+
+### v1.5.0 baseline schema executed on host PostgreSQL
+
+- Fixed extraction layout to server/combined-migrations and archive the full pinned repository: migrations reference sibling template files and workflow generation sources. Behavioral test now executes a migration reading an archived sibling template; passes.
+- Actual source: /tmp/alga-upgrade-v150-full-mmkZAy/baseline, current node_modules symlinked for runtime dependencies. No baseline migration source edits.
+- Created isolated upgrade_v150_82cc_20260907 through existing localhost:55432 tunnel. Initial temporary runner lost the password when spreading a Knex-mutated connection object; verified no migration ledger/active migration before retry. Explicit password corrected this harness error.
+- Session 76741 exited 0: all 1,028 combined v1.5.0 migrations applied in batch 1. Evidence: evidence/host-upgrade-v150-schema.json. Runner /tmp/alga-run-upgrade-baseline.mjs; successful log /tmp/alga-upgrade-baseline-retry.log. Existing host browser database unchanged.
+- Next seed synthetic tenant/ticket/contract/usage data under this baseline, then apply candidate migrations preserving knex_migrations, and verify business behavior. This phase is not yet an upgrade pass.
+
+### Populated v1.5.0 upgrade migration execution
+
+- Added scripts/fixtures/upgrade-v150.ts. Transactionally seeds two synthetic tenants, each with a user, client, ticket defaults, retained ticket, hourly and usage contracts, usage and approved time sources. Reuses invoiceTicketProductionFixtures with service-period materialization disabled; these inserts actually ran against the old schema before upgrade.
+- Initial seed attempted a nonexistent service_types.billing_method; transaction rolled back. Corrected fixture passed. Identity file /tmp/alga-upgrade-fixture.json contains synthetic IDs only; source test password hash is not recorded.
+- Materialized candidate 8bc3d1a6142d691401abae0245b6367a83d3a23f (1,059 combined migrations) from Git, preserving source-relative assets and helpers. Applied to upgrade_v150_82cc_20260907 without dropping database or deleting migration history. Runner exited 0; /tmp/alga-upgrade-candidate.log records batch/count.
+- Next verify preexisting records and ledger, then run real ticket/Add Usage/invoice behavior and cross-tenant checks against upgraded DB. No claim that migration success alone satisfies F021/T016. No Docker builds or publication.
+
+### Role-aware baseline upgrade and retention verified
+
+- Fresh isolated database upgrade_v150_roles_82cc_20260907: baseline 1,028 migrations passed, corrected fixture passed, 31 candidate migrations passed. Previous exploratory database remains separate.
+- Fixture verifies archived source manifest commit and requires no existing tenants; creates all nine v1.5.0 default roles and onboarding settings, uses archived 47_permissions.cjs catalog, and assigns synthetic admins MSP grants. Never imports the candidate permission catalog before upgrade.
+- Candidate reconciliation now reports 2 reconciled, 0 skipped, 0 failed. Unknown old permissions and extra grants are preserved by product behavior.
+- Actual retention assertions passed: two tenants, six tickets, two contracts, two usage records (quantity 1, uninvoiced, assigned old line), eight approved uninvoiced time entries (300 minutes per tenant), nine roles per tenant; ledger batches exactly 1:1028 and 2:31. Evidence: evidence/host-upgrade-v150-retention.json.
+- /tmp/alga-upgrade-fixture.json now identifies the corrected database tenants. /tmp/alga-verify-upgrade-retention.mjs performs assertions. Next convert orchestration/retention into a repeatable lane and run real post-upgrade application/browser behavior, including unauthorized cross-tenant attempts. F021/T016 remain open.
+
+### Reusable supported-upgrade runner passed
+
+- scripts/run-supported-upgrade.ts now orchestrates exclusive isolated database creation, full pinned sources, baseline migrations, role-aware synthetic seed, exact business snapshot, candidate migrations and baseline-ledger preservation. It emits failure evidence and retains the DB for browser checks. It never drops/adopts an existing database.
+- scripts/lib/upgrade-retention.mjs compares record IDs/values and original ledger entries. Six focused behavioral tests pass, including deliberate title/quantity/deletion/ledger corruption.
+- Full native host execution passed on upgrade_runner_82cc_20260908: 1,028 baseline and 31 candidate migrations; exact before/after business values and migration history preserved. Candidate migration source remains 8bc3d1a614; runner changes are uncommitted and evidence discloses dirty checkout. Source/evidence output: /var/folders/8g/3xyjqdpd4hx2h39h4qb2lyvm0000gn/T/alga-supported-upgrade-z7Cr08.
+- Runbook: supported-upgrade-testing.md. Evidence: evidence/host-supported-upgrade-runner.json. Browser actions, tenant isolation, Citus and native CI remain pending; do not count this as full F021 completion.
+
+### First upgraded-database browser journey passed
+
+- Added separate playwright.upgrade.config.ts and upgrade-tests/retained-ticket.spec.ts so upgraded fixtures are never replaced by fresh-install actor setup. Requires explicit upgrade DB and retained fixture path.
+- Host app on localhost:53012, session 16520, log /tmp/alga-upgrade-app.log; script /tmp/start-alga-upgrade-host-82cc.sh. Existing c5938cdad5 build, upgraded DB upgrade_runner_82cc_20260908, Redis prefix alga-upgrade-82cc. This is exploratory build evidence, not current-candidate validation.
+- Initial title locator selected hidden sticky header while screenshot confirmed visible title; corrected selector. Rerun session 73834 exited 0, one test passed6.1s covering both real logins/session identities, retained ticket title, own client read, other-tenant client 404. Evidence: evidence/host-upgrade-browser-identity.json.
+- Ticket cross-tenant URL/write attempts and usage/invoice behavior remain pending. Live update endpoint logs missing HOCUSPOCUS_JWT_SECRET; no live-update pass claimed.
+
+### Upgraded ticket writes and direct ticket isolation passed
+
+- Extended retained-ticket.spec.ts to edit each tenant ticket via real Grid title control and Save Changes, poll persisted value, reload and assert display, then restore through the same UI.
+- Direct other-tenant ticket URL must show ticket-error-message containing not found and no other ticket title. Existing other-client 404 checks remain.
+- First draft omitted explicit Save Changes; screenshot showed unsaved banner, so corrected flow. Final session59967 exited0; /tmp/alga-upgrade-ticket-save.log. Evidence host-upgrade-ticket-write.json records existing c5938 build vs8bc3 migration revision.
+- Cross-tenant mutation replay, Add Usage and invoices remain outstanding; no broad completion flags changed.
+
+### Cross-tenant ticket mutation passed; usage found incomplete fixture
+
+- Retained-ticket browser test captures a real successful save action, changes only target ticket ID/title, replays with the other tenant session identity, asserts not-found rejection and entire target row unchanged. Both directions passed in session28151, one test12.6s, /tmp/alga-upgrade-cross-write.log. Existing successful edit/reload/restore and read isolation retained.
+- Added retained-usage.spec.ts against pre-upgrade usage contract. First run session8372 failed before Add Usage: billing Server Component ZodError unit_of_measure expected string received null (digest3575633043). Base fixture service omitted this field, inherited by its clones. Updated future fixture seed to supply hour; existing database still has null values and has not been silently patched.
+- Next determine baseline service validity expectations, rerun fresh corrected fixture or explicitly record diagnostic repair, then complete Add Usage/invoice paths. Do not claim current failed usage test as passing.
+
+### Fresh corrected baseline Add Usage passed
+
+- Confirmed v1.5.0 service catalog seed provides unit_of_measure. Fresh runner on upgrade_units_82cc_20260908 passed 1,028 baseline +31 candidate migrations and exact retention with corrected fixture (session64687). Output /var/folders/8g/3xyjqdpd4hx2h39h4qb2lyvm0000gn/T/alga-supported-upgrade-yRLZBD. No post-upgrade data patch.
+- Host app localhost:53013, session72777, script /tmp/start-alga-upgrade-units-host.sh, log /tmp/alga-upgrade-units-app.log; existing c5938 build. Previous app53012 remains on earlier DB for audit.
+- Add Usage test session9938 exited0, one passed6.1s: quantity2 saved once, correct retained contract line, uninvoiced, old usage identical, other tenant usage identical, visible after reload. Evidence host-upgrade-add-usage.json. New usage remains in upgraded DB as an invoice source.
+- Next invoice generation requires representative pre-upgrade recurring service periods; current fixture explicitly disables materialization. Seed those under baseline before rerunning upgrade so invoice proof does not use post-upgrade-only setup. Existing standalone createBrowserInvoiceTicketSourceFixture illustrates source period shape.
+
+### Invoice upgrade journey added; billing defaults prerequisite found
+
+- Seed now creates hourly/usage recurring service periods under v1.5.0 and retention captures period identities/bounds/state. Full baseline+upgrade passed on upgrade_invoice_82cc_20260908, output /var/folders/8g/3xyjqdpd4hx2h39h4qb2lyvm0000gn/T/alga-supported-upgrade-lo4voy. Six focused extractor/retention tests pass.
+- Added retained-invoice.spec.ts using secondary tenant, expected subtotal87500/total96250 from retained time/overtime/usage and10%tax, checks draft creation, usage consumed,4time links, other tenant unchanged and draft visible.
+- Host app53014 session36614, /tmp/start-alga-upgrade-invoice-host.sh, log /tmp/alga-upgrade-invoice-app.log; existing c5938build. Browser session64186 exited1: expected invoice action error No billing settings found. No successful invoice claimed.
+- Added archived baseline72_default_billing_settings.cjs seed to fixture, matching v1.5.0 defaults. Next run fresh upgrade (new DB name) with this seed, then retry invoice. Current invoice database deliberately remains unpatched.
+
+### First combined upgraded browser run: invoice and usage pass, ticket reload fails
+
+- Corrected baseline billing defaults freshly seeded on upgrade_billing_82cc_20260908. Runner96531 passed; output /var/folders/8g/3xyjqdpd4hx2h39h4qb2lyvm0000gn/T/alga-supported-upgrade-pauFZq. App53015 session93326, script /tmp/start-alga-upgrade-billing-host.sh.
+- Browser87122 exited1:2passed1failed49.4s. Invoice passed11.5s: retained inputs produce subtotal87500,total96250,draft,4time links,usage consumed,other tenant untouched,draft download control visible. Add Usage passed2.9s.
+- Ticket test persisted edited title, then reload screenshot showed dashboard. This is not the previous hidden-header locator issue. Need inspect trace and await save response completion/navigation; do not weaken assertion or claim green. Primary ticket remains edited and secondary invoice exists, so do not blindly rerun fixture-dependent assertions against consumed state.
+- Evidence host-upgrade-combined-first.json. Native current-source run and full plan remain outstanding.
+
+### Combined upgrade browser journey passes after resource cleanup
+
+- Trace confirmed reload307 to signin, signin307 to dashboard while session cookie present. Server log identifies Session revocation check failed closed: remaining connection slots reserved / too many clients. This was accumulated obsolete Next processes, not a selector issue or reason to bypass auth.
+- Stopped owned obsolete apps PIDs58664,62145,63713 (53012–53014), then64813(53015). Fresh upgrade on upgrade_final_82cc_20260908 passed runner99333; single new upgrade app53015 session59774. Provider apps53010/53011 untouched.
+- Complete browser session51253 exited0: all3 tests passed, no retries/skip. Invoice96250, ticket writes/reload/read+write isolation, Add Usage preservation. No test assertion/product auth changes for this rerun. Evidence host-upgrade-combined-passed.json; old failed evidence retained.
+- Fixture output /var/folders/8g/3xyjqdpd4hx2h39h4qb2lyvm0000gn/T/alga-supported-upgrade-3laV01. DB now has consumed secondary invoice, primary added usage. Full rerun needs fresh fixture.
+- Next native CI integration/current-source build plus Citus and remaining plan items. Existing buildc5938 vs migration8bc3 evidence remains explicitly limited; F021/T016 not marked fully complete.

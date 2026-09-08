@@ -271,7 +271,7 @@
   },
   {
     "id": "F021",
-    "description": "Upgrade a synthetic existing tenant from the previous supported release schema and validate ticket, usage and invoice behavior afterward.",
+    "description": "Upgrade a synthetic existing tenant from the supported v1.5.0 schema (f3579f3a317cf51df5f4489e5dcd8f649bb71289) and validate ticket, usage and invoice behavior afterward.",
     "implemented": false,
     "workPackage": "WP4",
     "priority": "P1",
