@@ -59,6 +59,7 @@ export function runNodeSuite({ suite, isCandidate, exclusionFile, prepare = [] }
   } catch (error) {
     evidence = { schemaVersion: 1, suite, revision: before?.revision, status: 'failed', failures: [error.message] };
   }
+  evidence.sourceRoot = root;
   evidence.selection = { mode: 'full' };
   try {
     const after = testRevision(root);

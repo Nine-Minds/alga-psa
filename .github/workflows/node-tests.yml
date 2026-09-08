@@ -100,3 +100,36 @@ jobs:
           path: test-results/appliance/
           if-no-files-found: error
           retention-days: 30
+
+  node-workflow-complete:
+    name: Node workflow execution gate
+    if: always()
+    needs: [browser-discovery, node-tooling, appliance]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: ./.github/actions/install-ripgrep
+      - name: Download raw reports from this candidate run
+        id: download
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          pattern: '*-${{ github.sha }}'
+          path: test-results/node-workflow-input
+      - name: Independently verify mandatory Node execution and browser collection
+        if: always()
+        run: node scripts/verify-node-workflow.mjs
+        env:
+          NODE_WORKFLOW_JOBS: ${{ toJSON(needs) }}
+      - name: Preserve aggregate verdict
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: node-workflow-gate-${{ github.sha }}
+          path: test-results/node-workflow-gate/
+          if-no-files-found: error
+          retention-days: 30

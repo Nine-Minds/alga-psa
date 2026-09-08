@@ -36,6 +36,7 @@ try {
   });
   result = discoverBrowserTests(root, reports);
   const after = testRevision(root);
+  result.sourceRoot = root;
   result.sourceBefore = before;
   result.sourceAfter = after;
   if (before.dirty || after.dirty || before.revision !== after.revision) {
