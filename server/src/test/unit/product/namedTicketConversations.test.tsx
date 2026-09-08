@@ -5,9 +5,10 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import CoManagedNamedTicketConversation from '../../../components/co-managed/CoManagedNamedTicketConversation';
 import { NativeRequesterConversation } from '../../../../../packages/tickets/src/components/ticket/conversations/NativeRequesterConversation';
 import { useNamedTicketConversations } from '../../../../../packages/tickets/src/components/ticket/conversations/useNamedTicketConversations';
-const mocks = vi.hoisted(() => ({ details: vi.fn(), schedules: vi.fn(), reschedule: vi.fn(), cancelSchedule: vi.fn(), flag: true, onPublished: vi.fn(), requesterProps: vi.fn(), uploadOptions: vi.fn(), uploadFile: vi.fn(), load: vi.fn(), page: vi.fn(), activity: vi.fn(), capabilities: vi.fn(), replyTarget: vi.fn(), replace: vi.fn(), readDraft: vi.fn(), saveDraft: vi.fn(), post: vi.fn(), create: vi.fn(), status: vi.fn(), push: vi.fn(), mailboxes: vi.fn(), selectMailbox: vi.fn(), latestSend: vi.fn(), prepareEmail: vi.fn(), sendEmail: vi.fn(), emailStatus: vi.fn(), emailDefaults: vi.fn(),
+const mocks = vi.hoisted(() => ({ preference: vi.fn(), details: vi.fn(), schedules: vi.fn(), reschedule: vi.fn(), cancelSchedule: vi.fn(), flag: true, onPublished: vi.fn(), requesterProps: vi.fn(), uploadOptions: vi.fn(), uploadFile: vi.fn(), load: vi.fn(), page: vi.fn(), activity: vi.fn(), capabilities: vi.fn(), replyTarget: vi.fn(), replace: vi.fn(), readDraft: vi.fn(), saveDraft: vi.fn(), post: vi.fn(), create: vi.fn(), status: vi.fn(), push: vi.fn(), mailboxes: vi.fn(), selectMailbox: vi.fn(), latestSend: vi.fn(), prepareEmail: vi.fn(), sendEmail: vi.fn(), emailStatus: vi.fn(), emailDefaults: vi.fn(),
   query: '', session: { session_id: 'session', user: { tenant: 'home', id: 'author' } } }));
 vi.mock('../../../../../packages/tickets/src/actions/namedTicketConversationActions', () => ({
+  updateNamedConversationPreferenceAction: mocks.preference,
   getNamedConversationMessageDetailsAction: mocks.details,
   listNamedScheduledCommentsAction: mocks.schedules,
   getNamedTicketConversationPublicationCapabilitiesAction: mocks.capabilities,
@@ -67,6 +68,7 @@ beforeEach(() => {
   mocks.load.mockResolvedValue({ conversations: [requester, side], writeAudiences: ['requester', 'organization_private'], actor: { tenant: 'home', userId: 'author' } });
   mocks.page.mockResolvedValue({ conversation: side, items: [], nextBefore: null });
   mocks.capabilities.mockResolvedValue({ resolution: false });
+  mocks.preference.mockResolvedValue(undefined);
   mocks.schedules.mockResolvedValue({ items: [], next: null });
   mocks.details.mockResolvedValue([]);
   mocks.activity.mockResolvedValue({ items: [], nextBefore: null });
@@ -690,4 +692,66 @@ it('discards late default Requester details after a session change and displays 
   expect(screen.queryByRole('link', { name: 'Late attachment.txt' })).toBeNull();
   mocks.details.mockResolvedValue([]); fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
   await waitFor(() => expect(screen.queryByText('Email and attachment details are unavailable.')).toBeNull());
+});
+
+it('shows qualified unread counts and changes following without reloading an edited private draft', async () => {
+  const attention = { following: false, attentionVersion: '4', lastReadVersion: '1', unreadCount: 3 };
+  const load = (following: boolean) => ({ conversations: [{ ...requester, attention: { ...attention, unreadCount: 1 } }, { ...side, attention: { ...attention, following } }], writeAudiences: ['organization_private'] });
+  mocks.load.mockResolvedValue(load(false));
+  render(<Harness />);
+  const editor = await screen.findByLabelText('Message');
+  expect(within(screen.getByRole('button', { name: /Diagnostics/ })).getByLabelText('3 unread')).toBeTruthy();
+  fireEvent.change(editor, { target: { value: 'Keep my current draft.' } });
+  await waitFor(() => expect(mocks.saveDraft).toHaveBeenCalled());
+  const reads = mocks.readDraft.mock.calls.length;
+  mocks.load.mockResolvedValue(load(true));
+  fireEvent.click(screen.getByRole('button', { name: 'Follow', exact: true }));
+  await screen.findByRole('button', { name: 'Following', pressed: true });
+  expect(mocks.preference).toHaveBeenCalledWith(ticket, { storeTenant: 'home', conversationId: 'private' }, { following: true });
+  expect((screen.getByLabelText('Message') as HTMLTextAreaElement).value).toBe('Keep my current draft.');
+  expect(mocks.readDraft).toHaveBeenCalledTimes(reads);
+  expect(mocks.post).not.toHaveBeenCalled(); expect(mocks.sendEmail).not.toHaveBeenCalled();
+  mocks.load.mockResolvedValue(load(false));
+  fireEvent.click(screen.getByRole('button', { name: 'Following' }));
+  await screen.findByRole('button', { name: 'Follow', exact: true });
+  expect(mocks.preference).toHaveBeenLastCalledWith(ticket, { storeTenant: 'home', conversationId: 'private' }, { following: false });
+});
+
+it('marks only the displayed conversation snapshot read and preserves a later reply and sibling unread count', async () => {
+  const pending = deferred(); mocks.preference.mockReturnValueOnce(pending.promise);
+  const attention = { following: false, attentionVersion: '4', lastReadVersion: '1', unreadCount: 3 };
+  mocks.load.mockResolvedValue({ conversations: [{ ...requester, attention }, { ...side, attention }], writeAudiences: ['organization_private'] });
+  render(<Harness />); await screen.findByLabelText('Message');
+  expect(mocks.preference).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: 'Mark as read' }));
+  expect(mocks.preference).toHaveBeenCalledWith(ticket, { storeTenant: 'home', conversationId: 'private' }, { readThrough: '4' });
+  mocks.load.mockResolvedValue({ conversations: [{ ...requester, attention }, { ...side, attention: { ...attention, attentionVersion: '5', lastReadVersion: '4', unreadCount: 1 } }], writeAudiences: ['organization_private'] });
+  await act(async () => pending.resolve(undefined));
+  await waitFor(() => expect(within(screen.getByRole('button', { name: /Diagnostics/ })).getByLabelText('1 unread')).toBeTruthy());
+  expect(within(screen.getByRole('button', { name: /Requester/ })).getByLabelText('3 unread')).toBeTruthy();
+  expect(mocks.preference).toHaveBeenCalledTimes(1);
+});
+
+it('retries the original read cursor after failure and drops controls and counts when access is lost', async () => {
+  const attention = { following: false, attentionVersion: '4', lastReadVersion: '1', unreadCount: 3 };
+  mocks.load.mockResolvedValue({ conversations: [requester, { ...side, attention }], writeAudiences: ['organization_private'] });
+  mocks.preference.mockRejectedValueOnce(new Error('Lost acknowledgment'));
+  const view = render(<Harness />); await screen.findByLabelText('Message');
+  fireEvent.click(screen.getByRole('button', { name: 'Mark as read' }));
+  await screen.findByText('Could not update your conversation preference.');
+  mocks.load.mockResolvedValue({ conversations: [requester, { ...side, attention: { ...attention, attentionVersion: '5' } }], writeAudiences: ['organization_private'] });
+  fireEvent.focus(window);
+  await waitFor(() => expect(mocks.load).toHaveBeenCalledTimes(2));
+  const pending = deferred(); mocks.preference.mockReturnValueOnce(pending.promise);
+  fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+  expect(mocks.preference).toHaveBeenLastCalledWith(ticket, { storeTenant: 'home', conversationId: 'private' }, { readThrough: '4' });
+  mocks.load.mockResolvedValue({ conversations: [requester], writeAudiences: [] });
+  mocks.session = { session_id: 'replacement-session', user: { tenant: 'home', id: 'other-author' } };
+  view.rerender(<Harness />);
+  await waitFor(() => expect(screen.queryByRole('button', { name: /Diagnostics/ })).toBeNull());
+  const reads = mocks.load.mock.calls.length;
+  await act(async () => pending.resolve(undefined));
+  expect(mocks.load).toHaveBeenCalledTimes(reads);
+  expect(screen.queryByLabelText('3 unread')).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Following' })).toBeNull();
 });

@@ -98,3 +98,5 @@ export { listNamedScheduledComments, type NamedScheduleCursor, admitNamedSchedul
 export { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
 
 export { getNamedConversationMessageDetails } from './namedConversationMessageDetails';
+
+export { recordNamedConversationAttention, getNamedConversationAttention, updateNamedConversationPreference } from './namedConversationAttention';

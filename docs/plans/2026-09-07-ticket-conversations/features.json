@@ -418,7 +418,7 @@
   {
     "id": "F053",
     "description": "Provide follow/unfollow as an internal notification preference independent of access and email recipients.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "6. Email, recipients and notification behavior"
     ]

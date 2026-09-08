@@ -129,6 +129,20 @@ async function listAuthorizedConversations(context: ConversationAuthority): Prom
 export function listNamedTicketConversations(db: Knex, actor: CoManagedSessionActor, ticket: ConversationTicketReference): Promise<NamedTicketConversation[]> {
   return withTicketAuthority(db, actor, ticket, 'read', listAuthorizedConversations);
 }
+/** Navigator metadata shares the current qualified ticket admission. Private
+ * source proofs are applied before any per-viewer count leaves its store. */
+export function listNamedTicketConversationOverview(db: Knex, actor: CoManagedSessionActor, ticket: ConversationTicketReference) {
+  return withTicketAuthority(db, actor, ticket, 'read', async context => {
+    const conversations = await listAuthorizedConversations(context);
+    const { readNamedConversationAttention } = await import('./namedConversationAttention');
+    const rows: Array<NamedTicketConversation & { attention: Awaited<ReturnType<typeof readNamedConversationAttention>> }> = [];
+    for (const candidate of conversations) {
+      const { conversation } = await authorizedConversation(context, candidate);
+      rows.push({ ...conversation, attention: await readNamedConversationAttention({ ...context, conversation }) });
+    }
+    return rows;
+  });
+}
 export function getNamedTicketConversation(db: Knex, actor: CoManagedSessionActor, ticket: ConversationTicketReference, input: TicketConversationReference) {
   const reference = snapshotConversationReference(input);
   return withTicketAuthority(db, actor, ticket, 'read', async context => (await authorizedConversation(context, reference)).conversation);
@@ -394,8 +408,12 @@ function publishNamedTicketConversationDraft(db: Knex, actor: CoManagedSessionAc
         is_resolution: false, author_type: 'internal', user_id: actorReferenceId ? null : context.actor.userId, publish_state: 'published',
       });
     }
-    if (!publicationOptions?.schedule) await store.table('ticket_conversations').where('conversation_id', reference.conversationId)
-      .increment('message_version', 1).update({ updated_at: trx.fn.now() });
+    if (!publicationOptions?.schedule) {
+      const { recordNamedConversationAttention } = await import('./namedConversationAttention');
+      await recordNamedConversationAttention({ ...context, conversation }, { commentId: request.operationId, threadId });
+      await store.table('ticket_conversations').where('conversation_id', reference.conversationId)
+        .increment('message_version', 1).update({ updated_at: trx.fn.now() });
+    }
     await saveConversationEditorDraft(draftScope, { operationId: request.operationId, expectedRevision: draft.revision,
       expectedConversationRevision: conversation.revision, content: null });
     const [saved] = await store.table('ticket_conversation_publications').insert({ tenant: reference.storeTenant,

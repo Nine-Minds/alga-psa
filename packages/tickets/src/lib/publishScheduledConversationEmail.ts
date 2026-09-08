@@ -2,7 +2,7 @@ import { scheduledConversationContentHash } from '@alga-psa/shared/lib/tickets/s
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { assertCoManagedOperationalWrite } from '@alga-psa/licensing';
-import { withNativeAcceptedConversationEmail, deliverNativeNamedConversationEmail } from '@alga-psa/co-managed';
+import { recordNamedConversationAttention, withNativeAcceptedConversationEmail, deliverNativeNamedConversationEmail } from '@alga-psa/co-managed';
 import { authorizeNamedConversationMailbox, assertNamedConversationDeliveryFiles } from '@alga-psa/co-managed';
 import { assertCoManagedScheduledCommentPublication } from '@alga-psa/co-managed/scheduledCommentPublication';
 import { snapshotRequesterPublicationOptions } from '@alga-psa/shared/lib/tickets/requesterPublicationOptions';
@@ -41,6 +41,7 @@ export async function publishScheduledConversationEmail(db: Knex, input: { tenan
     await assertNamedConversationDeliveryFiles(context, operation.operation_id, operation.payload.files);
     if (due.parent_comment_id) await store.table('comment_threads').where('thread_id', due.thread_id)
       .increment('reply_count', 1).update({ last_activity_at: context.trx.fn.now() });
+    await recordNamedConversationAttention(context, { commentId: due.comment_id, threadId: due.thread_id });
     await store.table('ticket_conversations').where('conversation_id', context.conversation.conversationId)
       .increment('message_version', 1).update({ updated_at: context.trx.fn.now() });
     await publishTicketConversationCommentEffects({ trx: context.trx, actor: context.actor, resource: { tenant: input.tenantId, id: input.ticketId },

@@ -298,8 +298,10 @@ async function admitReply(outer: Knex.Transaction, input: Parameters<NamedConver
         conversation_store_tenant: conversation.storeTenant, conversation_id: conversation.conversationId, thread_id: source.thread_id, comment_id: commentId,
         route_operation_tenant: route.operation_tenant, route_operation_id: route.operation_id, sender_auth: JSON.stringify(sourceAuth), envelope: JSON.stringify(envelope) });
       await rememberNamedConversationCorrespondents(trx, route, [from]);
-      await store.table('ticket_conversations').where('conversation_id', conversation.conversationId).update({ status: 'open',
-        revision: conversation.revision + (conversation.status === 'done' ? 1 : 0), message_version: trx.raw('message_version + 1'), updated_at: trx.fn.now() });
+      const { recordNamedConversationAttention } = await import('./namedConversationAttention');
+      const attention = await recordNamedConversationAttention({ trx, ticket: conversation.ticket, conversation, hidden: [] }, { commentId, threadId: source.thread_id });
+      await store.table('ticket_conversations').where('conversation_id', conversation.conversationId).update({ status: attention === null ? conversation.status : 'open',
+        revision: conversation.revision + (attention !== null && conversation.status === 'done' ? 1 : 0), message_version: trx.raw('message_version + 1'), updated_at: trx.fn.now() });
       // Time-based lifecycle admission can expire during policy evaluation or
       // the canonical writer even though the identity rows remain locked.
       if (requesterResult) await assertCoManagedOperationalWrite(trx, conversation.ticket.tenant);

@@ -1,5 +1,6 @@
 'use client';
 
+import { ConversationAttentionControls } from './ConversationAttentionControls';
 import { ConversationSchedulePicker } from './ConversationSchedulePicker';
 import { NamedScheduledReplies } from './NamedScheduledReplies';
 import { getUserTimeZone } from '@alga-psa/core';
@@ -108,12 +109,14 @@ export function useNamedTicketConversations(input: ConversationTicketReference |
     {!screen ? error ? unavailable : loading : <nav className="space-y-1 p-2">{screen.conversations.map((conversation, index) => {
       const active = !allActivity && selected && keyOf(selected) === keyOf(conversation);
       const Icon = conversation.transport === 'email' ? Mail : conversation.audience === 'organization_private' ? LockKeyhole : MessageSquare;
-      return <button id={`${id}-select-${index}`} key={keyOf(conversation)} type="button" aria-current={active ? 'page' : undefined}
+      return <div key={`${identity}:${keyOf(conversation)}`}><button id={`${id}-select-${index}`} type="button" aria-current={active ? 'page' : undefined}
         onClick={() => void select(conversation)} className={`flex w-full items-start gap-2 rounded-md px-2 py-2.5 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-500 ${active ? 'bg-primary-50 text-primary-700 dark:bg-primary-500/15 dark:text-primary-300' : 'text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-background))]'}`}>
         <Icon className="mt-0.5 h-4 w-4 shrink-0" /><span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium">{conversation.defaultSlot === 'requester' ? t('namedConversations.requester', 'Requester') : conversation.name}</span>
           <span className="block text-xs opacity-75">{t(`namedConversations.audiences.${conversation.audience}`, audienceLabels[conversation.audience])}{active && dirty ? ` · ${t('namedConversations.draft', 'Draft')}` : ''}</span></span>
+        {conversation.attention && conversation.attention.unreadCount > 0 && <span className="rounded-full bg-primary-100 px-1.5 text-xs font-semibold text-primary-800 dark:bg-primary-500/20 dark:text-primary-200" aria-label={`${conversation.attention.unreadCount} ${t('namedConversations.unread', 'unread')}`}>{conversation.attention.unreadCount}</span>}
         {conversation.status === 'done' ? <Check className="mt-0.5 h-3.5 w-3.5" aria-label={t('namedConversations.done', 'Done')} /> : active ? <ChevronRight className="mt-0.5 h-3.5 w-3.5" /> : null}
-      </button>;
+      </button>{active && conversation.attention && <ConversationAttentionControls id={`${id}-${index}`} ticket={ticket}
+        conversation={reference(conversation)} attention={conversation.attention} onChanged={refresh} />}</div>;
     })}<button id={`${id}-all-activity`} type="button" aria-current={allActivity ? 'page' : undefined}
       className={`w-full rounded-md px-2 py-2.5 text-left text-sm ${allActivity ? 'bg-primary-50 text-primary-700 dark:bg-primary-500/15 dark:text-primary-300' : 'text-[rgb(var(--color-text-700))]'}`}
       onClick={async () => { if (!await flush.current()) return; const query = new URLSearchParams(params?.toString());

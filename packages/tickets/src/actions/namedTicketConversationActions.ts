@@ -2,7 +2,7 @@
 
 import { withAuth } from '@alga-psa/auth';
 import { createTenantKnex } from '@alga-psa/db';
-import { listNamedTicketConversations, getNamedTicketConversation, createNamedTicketConversation, setNamedTicketConversationStatus,
+import { listNamedTicketConversationOverview, listNamedTicketConversations, getNamedTicketConversation, createNamedTicketConversation, setNamedTicketConversationStatus,
   getNamedConversationEditorDraft, saveNamedConversationEditorDraft, getNamedTicketConversationWriteAudiences, getNamedTicketConversationMessages, getNamedTicketConversationActivity, type CoManagedConversationCursor } from '@alga-psa/co-managed';
 import type { CoManagedConversationContent } from '@alga-psa/co-managed/conversationContent';
 import type { ConversationTicketReference, TicketConversationReference, CreateTicketConversation } from '@alga-psa/shared/lib/tickets/namedConversations';
@@ -56,7 +56,7 @@ export const postNamedTicketConversationAction = withAuth(async (user, { tenant 
 export const getNamedTicketConversationScreenAction = withAuth(async (user, { tenant }, ticket: ConversationTicketReference) => {
   const actor = await coManagedBrowserActor(user, tenant), { knex } = await createTenantKnex(tenant);
   const [conversations, writeAudiences] = await Promise.all([
-    listNamedTicketConversations(knex, actor, ticket), getNamedTicketConversationWriteAudiences(knex, actor, ticket),
+    listNamedTicketConversationOverview(knex, actor, ticket), getNamedTicketConversationWriteAudiences(knex, actor, ticket),
   ]);
   return { conversations, writeAudiences, actor: { tenant: actor.tenant, userId: actor.userId } };
 });
@@ -167,4 +167,16 @@ export const getNamedConversationMessageDetailsAction = withAuth(async (user, { 
   const actor = await coManagedBrowserActor(user, tenant), { knex } = await createTenantKnex(tenant);
   const { getNamedConversationMessageDetails } = await import('@alga-psa/co-managed');
   return getNamedConversationMessageDetails(knex, actor, ticket, conversation, comments);
+});
+
+export const getNamedConversationAttentionAction = withAuth(async (user, { tenant }, ticket: ConversationTicketReference, conversation: TicketConversationReference) => {
+  const actor = await coManagedBrowserActor(user, tenant), { knex } = await createTenantKnex(tenant);
+  const { getNamedConversationAttention } = await import('@alga-psa/co-managed');
+  return getNamedConversationAttention(knex, actor, ticket, conversation);
+});
+export const updateNamedConversationPreferenceAction = withAuth(async (user, { tenant }, ticket: ConversationTicketReference,
+  conversation: TicketConversationReference, preference: { following?: boolean; readThrough?: string }) => {
+  const actor = await coManagedBrowserActor(user, tenant), { knex } = await createTenantKnex(tenant);
+  const { updateNamedConversationPreference } = await import('@alga-psa/co-managed');
+  return updateNamedConversationPreference(knex, actor, ticket, conversation, preference);
 });

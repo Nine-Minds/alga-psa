@@ -1926,6 +1926,11 @@
     "scheduleReview": "Publish and email at:",
     "scheduleKeepsStatus": "Scheduled replies keep the current ticket status.",
     "scheduleInvalid": "Choose a future publication time before reviewing this email.",
-    "detailsUnavailable": "Email and attachment details are unavailable."
+    "detailsUnavailable": "Email and attachment details are unavailable.",
+    "follow": "Follow",
+    "following": "Following",
+    "markRead": "Mark as read",
+    "unread": "unread",
+    "attentionUpdateFailed": "Could not update your conversation preference."
   }
 }
