@@ -19144,3 +19144,35 @@ it('tenant license controls renew independent PSA seats and retain tenant scope 
     expect(await db('license_state').first()).toEqual(installation);
   }));
 });
+
+it.each(['async', 'sync'])('session tier resolution uses the customer entitlement through sign-in and upgrade in the %s auth configuration', async kind => {
+  const f = await ticketHandoffFixture();
+  await withTenantLicenseFixture(async sign => {
+    const tenantConnection = await import('../../../../packages/db/src/lib/tenant');
+    const connection = vi.spyOn(tenantConnection, 'getConnection').mockResolvedValue(db);
+    try {
+      const auth = await import('../../../../packages/auth/src/lib/nextAuthOptions');
+      const config = kind === 'async' ? await auth.getAuthOptions() : auth.options;
+      const { activateTenantPsaLicense, resolveTenantTier } = await import('@alga-psa/licensing');
+      const { upgradeCoManagedWorkspaceWithTenantLicense: upgrade } = await import('../../../../ee/temporal-workflows/src/db/co-managed-upgrade-operations');
+      const install = await db('license_state').first();
+      const user = { id: f.customerPrincipal.userId, tenant: f.resource.tenant, user_type: 'internal', email: 'session-tier@example.test' };
+      const token = await config.callbacks.jwt({ token: { session_id: f.customerPrincipal.sessionId, last_session_extend: Date.now() }, user, trigger: 'signIn' });
+      expect(token).toMatchObject({ tenant: f.resource.tenant, product_code: 'co_managed', effectiveTier: 'pro' });
+      await db.transaction(trx => activateTenantPsaLicense(trx, f.resource.tenant, sign({ aud: f.resource.tenant, seats: 10 })));
+      const relationship = await f.customer.table('co_management_relationships').first();
+      await upgrade(db, f.customerPrincipal, f.target, { operationId: randomUUID(), expectedRevision: relationship.revision }, log);
+      await db('license_state').update({ license_token: sign({ exp: Math.floor(Date.now() / 1000) - 120 }) });
+      const upgraded = await config.callbacks.jwt({ token, trigger: 'update' });
+      expect(upgraded).toMatchObject({ product_code: 'psa', effectiveTier: 'pro' });
+      expect(await resolveTenantTier(f.resource.tenant)).toBe(upgraded.effectiveTier);
+      await db('license_state').update({ license_token: install.license_token });
+      await f.customer.table('tenant_license_state').update({ license_token: sign({ aud: f.resource.tenant, exp: Math.floor(Date.now() / 1000) - 120 }) });
+      const expired = await config.callbacks.jwt({ token: upgraded, trigger: 'update' });
+      expect(expired).toMatchObject({ product_code: 'psa', plan: 'pro', effectiveTier: 'essentials' });
+      const session = await config.callbacks.session({ session: { user: {} }, token: expired });
+      expect(session.user).toMatchObject({ tenant: f.resource.tenant, effectiveTier: 'essentials' });
+      expect(await resolveTenantTier(f.resource.tenant)).toBe('essentials');
+    } finally { connection.mockRestore(); }
+  });
+});

@@ -21,7 +21,7 @@ import {
 import { issuePortalDomainOtt } from "./PortalDomainSessionToken";
 import { buildTenantPortalSlug, isValidTenantSlug } from "@alga-psa/validation";
 import { isEnterprise } from "@alga-psa/core/features";
-import { getLicenseStateRow, resolveSelfHostTier } from "@alga-psa/licensing";
+import { getTenantSelfHostLicenseState, resolveTenantTier } from "@alga-psa/licensing";
 import { getSSORegistry, registerSSOProvider } from "./sso/registry";
 import { loadEnterpriseSsoProviderRegistryImpl } from "./sso/enterpriseRegistryEntry";
 import type { OAuthProfileMappingInput, OAuthProfileMappingResult, OAuthLinkProvider } from "./sso/types";
@@ -55,19 +55,19 @@ import { getPortalDomain, getPortalDomainByHostname } from "./PortalDomainModel"
 import { resolveMicrosoftConsumerProfileConfig } from "./microsoftConsumerProfileResolution";
 
 /**
- * Effective tier override for self-host installs. Returns the tier resolved from
- * the offline `license_state` row (essentials/pro) when present, or
- * undefined in SaaS mode so the session falls back to the Stripe plan. Non-fatal
- * on any error (e.g. an un-migrated `license_state`) — returns undefined.
+ * Resolve the actual session tenant through the same licensing engine as backend
+ * authorization. Hosted sessions keep their existing plan/trial presentation.
+ * License read failures cannot revive a customer's cached paid tier; an older
+ * schema without licensing tables still uses the legacy plan resolution.
  */
-async function resolveSelfHostEffectiveTier(): Promise<string | undefined> {
+async function resolveSelfHostEffectiveTier(tenant: string): Promise<string | undefined> {
     try {
-        const selfHost = resolveSelfHostTier(await getLicenseStateRow());
-        if (selfHost !== null) return selfHost.tier;
-    } catch {
-        // Non-fatal — fall through to plan-based resolution.
+        if (await getTenantSelfHostLicenseState(tenant) === null) return undefined;
+        return await resolveTenantTier(tenant);
+    } catch (error) {
+        if ((error as { code?: string }).code === '42P01') return undefined;
+        return 'essentials';
     }
-    return undefined;
 }
 
 function applyPortToVanityUrl(url: URL, portCandidate: string | undefined, protocol: string): void {
@@ -1950,6 +1950,7 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                 // Fetch tenant plan + subscription info on initial sign-in
                 if (extendedUser.tenant) {
                     try {
+                        token.effectiveTier = await resolveSelfHostEffectiveTier(extendedUser.tenant);
                         const subInfo = await fetchTenantSubscriptionInfo(extendedUser.tenant);
                         token.plan = subInfo.plan;
                         token.product_code = subInfo.product_code;
@@ -1957,7 +1958,6 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                         token.trial_end = subInfo.trial_end;
                         token.subscription_status = subInfo.subscription_status;
                         token.solo_pro_trial_end = subInfo.solo_pro_trial_end;
-                        token.effectiveTier = await resolveSelfHostEffectiveTier();
                         token.last_plan_check = Date.now();
                     } catch (error) {
                         console.error('[auth] Failed to fetch tenant subscription info:', error);
@@ -2074,6 +2074,7 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
 
                 if (shouldRefreshPlan) {
                     try {
+                        token.effectiveTier = await resolveSelfHostEffectiveTier(token.tenant as string);
                         const subInfo = await fetchTenantSubscriptionInfo(token.tenant as string);
                         token.plan = subInfo.plan;
                         token.product_code = subInfo.product_code;
@@ -2081,7 +2082,6 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                         token.trial_end = subInfo.trial_end;
                         token.subscription_status = subInfo.subscription_status;
                         token.solo_pro_trial_end = subInfo.solo_pro_trial_end;
-                        token.effectiveTier = await resolveSelfHostEffectiveTier();
                         token.last_plan_check = now;
                     } catch (error) {
                         console.error('[auth] Failed to refresh tenant subscription info:', error);
@@ -2776,6 +2776,7 @@ export const options: NextAuthConfig = {
                 // Fetch tenant plan + subscription info on initial sign-in
                 if (extendedUser.tenant) {
                     try {
+                        token.effectiveTier = await resolveSelfHostEffectiveTier(extendedUser.tenant);
                         const subInfo = await fetchTenantSubscriptionInfo(extendedUser.tenant);
                         token.plan = subInfo.plan;
                         token.product_code = subInfo.product_code;
@@ -2783,7 +2784,6 @@ export const options: NextAuthConfig = {
                         token.trial_end = subInfo.trial_end;
                         token.subscription_status = subInfo.subscription_status;
                         token.solo_pro_trial_end = subInfo.solo_pro_trial_end;
-                        token.effectiveTier = await resolveSelfHostEffectiveTier();
                         token.last_plan_check = Date.now();
                     } catch (error) {
                         console.error('[auth] Failed to fetch tenant subscription info:', error);
@@ -2900,6 +2900,7 @@ export const options: NextAuthConfig = {
 
                 if (shouldRefreshPlan) {
                     try {
+                        token.effectiveTier = await resolveSelfHostEffectiveTier(token.tenant as string);
                         const subInfo = await fetchTenantSubscriptionInfo(token.tenant as string);
                         token.plan = subInfo.plan;
                         token.product_code = subInfo.product_code;
@@ -2907,7 +2908,6 @@ export const options: NextAuthConfig = {
                         token.trial_end = subInfo.trial_end;
                         token.subscription_status = subInfo.subscription_status;
                         token.solo_pro_trial_end = subInfo.solo_pro_trial_end;
-                        token.effectiveTier = await resolveSelfHostEffectiveTier();
                         token.last_plan_check = now;
                     } catch (error) {
                         console.error('[auth] Failed to refresh tenant subscription info:', error);
