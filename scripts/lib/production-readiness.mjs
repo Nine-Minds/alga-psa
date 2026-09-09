@@ -77,7 +77,12 @@ export function evaluateProductionReadiness({ revision, changed, jobs, artifacts
     // A valid quarantine keeps the outcome visible but stops it vetoing readiness.
     const exemption = quarantined.entries.get(requirement.artifact);
     if (exemption) {
-      results.push({ id: requirement.artifact, status: problems.length ? 'quarantined-failing' : 'quarantined-passing',
+      // A legitimately not-applicable run says nothing about the quarantined
+      // suite, so it must not read as passing: that is the evidence someone
+      // would use to remove the entry.
+      const quarantinedStatus = problems.length ? 'quarantined-failing'
+        : notApplicable ? 'quarantined-not-applicable' : 'quarantined-passing';
+      results.push({ id: requirement.artifact, status: quarantinedStatus,
         reason: notApplicable ? verdict.reason : undefined, quarantine: exemption, failures: problems });
       continue;
     }

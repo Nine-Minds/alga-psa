@@ -341,3 +341,16 @@ test('the committed quarantine registry is valid and every entry is still in dat
     now: new Date().toISOString().slice(0, 10) });
   assert.deepEqual(resolved.failures, [], 'committed quarantine entries must be owned, justified and unexpired');
 });
+
+test('a quarantined requirement that was not applicable does not read as passing', () => {
+  const input = fixture();
+  // Documentation-only selection: the suite legitimately did not run.
+  input.changed = ['docs/readme.md'];
+  input.artifacts[QUARANTINABLE] = { schemaVersion: 1, revision: input.revision, suite: 'teams-development-browser',
+    status: 'not-applicable', reason: 'Only documentation changed (or identical revisions)', failures: [] };
+  const result = withQuarantine(input, entry());
+  const reported = resultFor(result, QUARANTINABLE);
+  assert.equal(reported.status, 'quarantined-not-applicable');
+  assert.notEqual(reported.status, 'quarantined-passing', 'a skipped run is not evidence the entry can be removed');
+  assert.match(reported.reason, /documentation/i);
+});
