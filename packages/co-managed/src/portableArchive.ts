@@ -25,7 +25,7 @@ const MESSAGE = 'Portable archive is invalid or cannot be unlocked.';
 export interface PortableArchiveContext { packageId: string; sourceTenant: string }
 interface BlobDescriptor { id: string; size: number; sha256: string }
 interface ArchiveMetadata { format: typeof FORMAT; version: 1; context: PortableArchiveContext; manifest: Record<string, unknown>; blobs: BlobDescriptor[] }
-const invalid = (): never => { throw new Error(MESSAGE); };
+const invalid: () => never = () => { throw new Error(MESSAGE); };
 const object = (value: unknown): value is Record<string, unknown> => Boolean(value) && typeof value === 'object' && !Array.isArray(value) && [Object.prototype, null].includes(Object.getPrototypeOf(value));
 const exactKeys = (value: Record<string, unknown>, keys: string[]) => Object.keys(value).sort().join(',') === keys.sort().join(',');
 function contextCopy(value: PortableArchiveContext): PortableArchiveContext {

@@ -96,6 +96,14 @@ export default defineConfig({
     'lib/sla/organizationSlaNotifications': 'lib/sla/organizationSlaNotifications.ts',
     'lib/sla/organizationSlaLock': 'lib/sla/organizationSlaLock.ts',
     'lib/sla/slaPolicyResolver': 'lib/sla/slaPolicyResolver.ts',
+    // Exported in package.json as dist targets, so plain-Node consumers (the
+    // workflow/temporal workers and packages/co-managed's dist build, which
+    // imports lib/ticketCloseRules) resolve them through dist rather than
+    // being transpiled from source. Without entries the dist files are never
+    // generated and the import fails at worker startup.
+    'core/index': 'core/index.ts',
+    'lib/ticketChecklists/index': 'lib/ticketChecklists/index.ts',
+    'lib/ticketCloseRules/index': 'lib/ticketCloseRules/index.ts',
   },
   format: ['esm'],
   dts: false,

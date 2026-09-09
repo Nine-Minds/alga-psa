@@ -12,7 +12,7 @@ export interface CoManagedPortableWorkspaceManifest extends Record<string, unkno
   conversationFiles: ObjectValue; supplementalFiles: ObjectValue; remoteMeetingFiles: ObjectValue;
   credentialVault: ObjectValue; blobs: CoManagedPortableBlobDescriptor[];
 }
-const fail = (): never => { throw new Error('Invalid portable workspace manifest'); };
+const fail: () => never = () => { throw new Error('Invalid portable workspace manifest'); };
 const object = (value: unknown): ObjectValue => {
   if (!value || typeof value !== 'object' || Array.isArray(value) || Object.getPrototypeOf(value) !== Object.prototype) fail();
   return value as ObjectValue;

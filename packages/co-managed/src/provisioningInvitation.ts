@@ -7,7 +7,7 @@ import { hasCoManagedLocalPermission } from './localPermission';
 import { authorizeCoManagedLocalRecord, snapshotCoManagedSessionActor, isCoManagedUuid,
   CoManagedSharedWorkError, type CoManagedSessionActor } from './sharedWorkIdentity';
 
-const unavailable = (): never => { throw new CoManagedSharedWorkError(); };
+const unavailable: () => never = () => { throw new CoManagedSharedWorkError(); };
 
 /** Provisioning, acceptance, cancellation and invitation recovery retain the
  * same allocation/operation/relationship lock order. No new seat is allocated. */

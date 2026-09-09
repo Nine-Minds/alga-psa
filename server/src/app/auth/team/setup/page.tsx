@@ -1,6 +1,7 @@
 'use client';
 
 import { CoManagedWorkspaceBoundary } from '@/components/co-managed/CoManagedFeatureBoundary';
+import { AppSessionProvider } from '@alga-psa/auth/client';
 import React, { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -350,9 +351,15 @@ function TeamSetupContent() {
 }
 
 export default function TeamSetupPage() {
+  // This page renders pre-login, outside the authenticated layouts that mount
+  // a SessionProvider. CoManagedWorkspaceBoundary -> useFeatureFlag calls
+  // useSession, which throws without a provider — so mount one here (the
+  // session is simply null for an anonymous invitee).
   return (
-    <I18nWrapper portal="msp">
-      <TeamSetupContent />
-    </I18nWrapper>
+    <AppSessionProvider>
+      <I18nWrapper portal="msp">
+        <TeamSetupContent />
+      </I18nWrapper>
+    </AppSessionProvider>
   );
 }

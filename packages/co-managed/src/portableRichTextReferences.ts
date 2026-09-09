@@ -38,7 +38,8 @@ export function portableDocumentReferenceRewriter(files: ReadonlyMap<string, str
 export function rewritePortableRichText(value: unknown, rewriteUrl: (url: string) => string): unknown {
   let content = value;
   if (typeof content === 'string') {
-    try { content = JSON.parse(content); } catch { return rewritePortableMarkup(content, rewriteUrl); }
+    const text = content;
+    try { content = JSON.parse(text); } catch { return rewritePortableMarkup(text, rewriteUrl); }
   }
   if (!Array.isArray(content) && (!object(content) || content.type !== 'doc')) return value;
   const copy = structuredClone(content); let changed = false, visited = 0;

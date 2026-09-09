@@ -6,6 +6,7 @@ import { buildNotificationSentPayload } from '@alga-psa/workflow-streams';
 import type { InternalNotification } from '../../types/internalNotification';
 import { broadcastNotification } from '../../realtime/internalNotificationBroadcaster';
 import { runPostCreationHooks } from './notificationHooks';
+import { deliverCurrentNotification } from '../../lib/notificationDelivery';
 
 /** Storage and its receipt/ledger commit together. External effects attach to
  * that owning transaction and never run on rollback or a completed replay.
@@ -37,6 +38,6 @@ export function registerNotificationCreatedEffects(trx: Knex.Transaction, notifi
     void broadcastNotification(notification).catch(error => logger.warn('[NotificationCreatedEffects] Notification broadcast failed', {
       notificationId: notification.internal_notification_id, error: error instanceof Error ? error.message : String(error),
     }));
-    if (runHooks) void runPostCreationHooks(notification);
+    if (runHooks) void runPostCreationHooks(notification, deliverCurrentNotification);
   }, `notification=${notification.internal_notification_id} broadcast`);
 }

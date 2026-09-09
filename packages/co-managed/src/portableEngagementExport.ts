@@ -117,7 +117,9 @@ export async function retainCoManagedPortableEngagement(trx: Knex.Transaction, i
     const requireVisible = (fields: readonly string[]) => { if (fields.length) throw new CoManagedSharedWorkError(); };
     const retain = async (table: CoManagedPortableEngagementTable, row: Record<string, unknown>) => {
       const columns = CO_MANAGED_PORTABLE_ENGAGEMENT_COLUMNS[table], query = table === 'system_interaction_types' ? current(table) : own.table(table);
-      const captured = await query.where(columns[0], row[columns[0]]).forShare().first(...columns);
+      const identity = row[columns[0]];
+      if (typeof identity !== 'string') throw new CoManagedSharedWorkError();
+      const captured = await query.where(columns[0], identity).forShare().first(...columns);
       if (!captured || JSON.stringify(captured) !== JSON.stringify(row)) throw new CoManagedSharedWorkError();
     };
     // Each concrete native owner is admitted before its canonical metadata is

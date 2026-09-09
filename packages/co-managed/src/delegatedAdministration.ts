@@ -17,7 +17,7 @@ const spec = {
   user_profile: { table: 'users', id: 'user_id', resource: 'user', action: 'update', fields: ['first_name','last_name','timezone'] },
   invitation_resend: { table: 'user_invitations', id: 'invitation_id', resource: 'user', action: 'invite', fields: [] },
 } as const;
-const deny = (): never => { throw new CoManagedSharedWorkError(); };
+const deny: () => never = () => { throw new CoManagedSharedWorkError(); };
 const hash = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const validOperation = (value: unknown): value is CoManagedDelegatedOperation => operations.includes(value as CoManagedDelegatedOperation);
 function exact(value: unknown, fields: readonly string[]) {
@@ -275,7 +275,7 @@ export async function listCoManagedDelegatedWorkspaces(db: Knex, inputActor: CoM
       .where(query => query.where({ principal_type: 'user', principal_id: actor.userId })
         .orWhere(nested => nested.where('principal_type','team').whereIn('principal_id',credential.subject.teamIds ?? [])))
       .select('relationship_id','customer_tenant');
-    const result = [];
+    const result: { operationId: string; customerTenant: string; relationshipId: string }[] = [];
     for (const assignment of assignments) {
       const operation = await home.table('co_managed_provisioning_operations').where({ relationship_id: assignment.relationship_id, customer_tenant: assignment.customer_tenant })
         .first('operation_id');

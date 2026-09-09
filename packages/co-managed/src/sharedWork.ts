@@ -14,14 +14,14 @@ export interface CoManagedSharedResource {
   kind: 'ticket' | 'project' | 'project_task';
   id: string;
 }
-export interface CoManagedSharedWorkContext {
+export interface CoManagedSharedWorkContext<Action extends 'read' | 'update' = 'read' | 'update'> {
   trx: Knex.Transaction;
   actor: CoManagedHomeActor;
   /** Internal verified session identity for commands that wait before writing. */
   sessionId: string;
   resource: CoManagedSharedResource;
   revision: number;
-  action: 'read' | 'update';
+  action: Action;
   /** The command must omit these home-policy fields from its response. */
   redactedFields: readonly string[];
 }
@@ -30,9 +30,10 @@ function deny(): never { throw new CoManagedSharedWorkError(); }
 /** Only trusted delivery adapters construct this server-side recipient identity.
  * It grants no interactive access and cannot be used by mutation commands. */
 export interface CoManagedNotificationRecipient extends CoManagedHomeActor { kind: 'notification_recipient' }
-export type CoManagedNotificationRecipientContext = Omit<CoManagedSharedWorkContext, 'sessionId' | 'action'> & { action: 'read' };
+export type CoManagedNotificationRecipientContext = Omit<CoManagedSharedWorkContext<'read'>, 'sessionId'>;
 type SharedPrincipal = CoManagedAuthenticatedActor | CoManagedNotificationRecipient;
-type SharedPrincipalContext = Omit<CoManagedSharedWorkContext, 'sessionId'> & { assertCurrent(): Promise<void> };
+type SharedPrincipalContext<Action extends 'read' | 'update' = 'read' | 'update'> =
+  Omit<CoManagedSharedWorkContext<Action>, 'sessionId'> & { assertCurrent(): Promise<void> };
 
 /** Verified API keys and sessions share live source admission without creating a
  * synthetic session or granting notification identities mutation authority. */
@@ -42,8 +43,8 @@ export async function withCoManagedAuthenticatedSharedWork<T>(db: Knex, input: C
 }
 
 /** Session commands retain their existing admission and post-wait session checks. */
-export async function withCoManagedSharedWork<T>(db: Knex, inputActor: CoManagedSessionActor, inputResource: CoManagedSharedResource,
-  action: 'read' | 'update', command: (context: CoManagedSharedWorkContext) => Promise<T>): Promise<T> {
+export async function withCoManagedSharedWork<T, Action extends 'read' | 'update' = 'read' | 'update'>(db: Knex, inputActor: CoManagedSessionActor, inputResource: CoManagedSharedResource,
+  action: Action, command: (context: CoManagedSharedWorkContext<Action>) => Promise<T>): Promise<T> {
   const actor = snapshotCoManagedSessionActor(inputActor);
   return withCoManagedSharedPrincipal(db, actor, inputResource, action,
     context => command({ ...context, sessionId: actor.sessionId }));
@@ -63,8 +64,8 @@ export async function withCoManagedNotificationRecipient<T>(db: Knex, input: CoM
 /** Shared authority engine: qualified home policy projections, retained trust and
  * resource locks, and explicit principal-specific admission. It never changes
  * AsyncLocalStorage/session tenant or grants linked-resource authority. */
-async function withCoManagedSharedPrincipal<T>(db: Knex, inputActor: SharedPrincipal, inputResource: CoManagedSharedResource,
-  action: 'read' | 'update', command: (context: SharedPrincipalContext) => Promise<T>): Promise<T> {
+async function withCoManagedSharedPrincipal<T, Action extends 'read' | 'update' = 'read' | 'update'>(db: Knex, inputActor: SharedPrincipal, inputResource: CoManagedSharedResource,
+  action: Action, command: (context: SharedPrincipalContext<Action>) => Promise<T>): Promise<T> {
   if (!inputActor || !inputResource) deny();
   // Snapshot qualified identities before the first await; a bulk caller must
   // not be able to change this command by reusing its input object.

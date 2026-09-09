@@ -110,12 +110,16 @@ export async function retainCoManagedPortableOperational(trx: Knex.Transaction, 
       const columns = CO_MANAGED_PORTABLE_OPERATIONAL_COLUMNS[table];
       const identity = keys ?? columns.slice(0, 1);
       const query = own.table(table);
-      for (const key of identity) query.where(key, row[key]);
+      for (const key of identity) {
+        const value = row[key];
+        if (typeof value !== 'string' && typeof value !== 'number') throw new CoManagedSharedWorkError();
+        query.where(key, value);
+      }
       const retained = await query.forShare().first(...columns);
       if (!retained || JSON.stringify(retained) !== JSON.stringify(row)) throw new CoManagedSharedWorkError();
     };
     // Match native collection lock order: owners and sheets before work roots.
-    await own.table('users').whereIn('user_id', [...new Set([...records.time_entries, ...records.time_sheets].map(row => row.user_id))]).orderBy('user_id').forShare().select('user_id');
+    await own.table('users').whereIn('user_id', [...new Set([...records.time_entries, ...records.time_sheets].map(row => String(row.user_id)))]).orderBy('user_id').forShare().select('user_id');
     await own.table('time_sheets').orderBy('id').forShare().select('id');
     for (const row of records.time_sheets) {
       await admitCoManagedNativeTimeOwner(current, verified, subject, String(row.user_id), true);
