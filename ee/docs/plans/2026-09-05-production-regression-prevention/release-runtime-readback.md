@@ -50,3 +50,17 @@ Map every application runtime service: `server` for community or `server-ee` for
 `registryManifests` maps each release component name to base64 encoding of its exact registry image-manifest bytes. Preserve the bytes; reserializing parsed JSON changes their digest. The verifier hashes those bytes and compares the result to the component's immutable registry image digest, then compares the manifest's config digest to the tested archive's config image ID. Component source revision and complete build identity must also match the tested record. Archive hashes and config IDs never substitute for registry manifest digests.
 
 Only single-platform OCI image manifests and Docker distribution schema-v2 image manifests are accepted. Image indexes/manifest lists fail until platform-leaf verification is supported. These checks validate the supplied digest chain and browser evidence; they do not authenticate a publisher, publish images, select a deployment target, or implement the remaining release workflow rollout.
+
+## Assemble browser provider inputs
+
+The offline assembler reads explicit policy, manifest, existing check verdicts, the downloaded browser artifact directory, the absolute tested source root, and a registry-file mapping:
+
+```sh
+node scripts/assemble-release-provider-evidence.mjs policy.json manifest.json check-evidence.json browser-artifact-directory /absolute/tested/source/root registry-files.json browser-provider-bundle.json
+```
+
+`registry-files.json` maps each required release component name to the file containing its exact registry manifest bytes. Relative paths resolve against this mapping file. The assembler preserves those bytes and verifies the assembled evidence with the existing release test verifier; it never generates passing check verdicts. Browser inputs must have unique `e2e-tests/execution-evidence/{collected,results,evidence}.json` files in the same directory and one `_temp/browser-artifact-manifest.json`. Diagnostic files do not substitute for these primary artifacts.
+
+Require exit status zero from this invocation before consuming output. The output is only the `browserProviderExecution` object, written with permissions `0600`; attach it to the existing check evidence under that property before running the full promotion verifier above. Missing, failed, ambiguous or identity-mismatched evidence fails assembly. Once input aliases have been resolved safely, validation failure removes stale output. Argument errors, malformed registry mappings and unresolved input aliases can preserve an existing file to avoid deleting an input; file existence is therefore never evidence of successful assembly.
+
+This command assembles and validates supplied local artifacts. It does not fetch trusted check verdicts, publish images, collect deployed state or replace full promotion verification. Wiring it into the actual publisher remains part of the open rollout.

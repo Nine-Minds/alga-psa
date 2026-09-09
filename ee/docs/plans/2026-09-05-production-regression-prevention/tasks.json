@@ -899,7 +899,7 @@
       "status": "done",
       "dependsOn": [],
       "owner": "calendar_review and coordinator",
-      "notes": "Current f3a appliance job102398085497 did not run tests: root npm ci failed downloading ffmpeg-static Linux license from GitHub HTTP500. Reuse existing bounded installer with appliance-only opt-in: one retry after2s for recognized terminal ffmpeg download5xx, preserving lifecycle scripts, finalfailure andsignals. Two redcases reproduced;18/18nativecasespass including401/404/unrelated/conflictingerrors, opt-out and subprocess signals. Workflow scopedtoappliance, actionlintpasses. ActualCI recoverypending; no test retries or skipchanges. Mutation job102398083391 independently failed at the same GitHub license downloadHTTP500 beforeStryker. Apply the same opt-in bounded recovery there, named FFMPEG_STATIC_DOWNLOAD_RETRY; no system-binary assumptions, additional script skips or mutation-test changes. Combined clean-source validation on9861966e9a:1044/1044 nativeNode cases across91files,162.70s,zero failures/skips/TODOs/cancellations; sourceunchanged."
+      "notes": "Current f3a appliance job102398085497 did not run tests: root npm ci failed downloading ffmpeg-static Linux license from GitHub HTTP500. Reuse existing bounded installer with appliance-only opt-in: one retry after2s for recognized terminal ffmpeg download5xx, preserving lifecycle scripts, finalfailure andsignals. Two redcases reproduced;18/18nativecasespass including401/404/unrelated/conflictingerrors, opt-out and subprocess signals. Workflow scopedtoappliance, actionlintpasses. ActualCI recoverypending; no test retries or skipchanges. Mutation job102398083391 independently failed at the same GitHub license downloadHTTP500 beforeStryker. Apply the same opt-in bounded recovery there, named FFMPEG_STATIC_DOWNLOAD_RETRY; no system-binary assumptions, additional script skips or mutation-test changes. Combined clean-source validation on9861966e9a:1044/1044 nativeNode cases across91files,162.70s,zero failures/skips/TODOs/cancellations; sourceunchanged. Current a9ef CI artifact10099117448 verifies239/239 appliance cases,47 discovered files,clean tested16264b7 source. Root install succeeded first attempt with retry opt-in, so actual compatibility is proven but retry execution is not. Full CI still live."
     },
     {
       "id": "R110",
@@ -908,6 +908,25 @@
       "dependsOn": [],
       "owner": "calendar_review",
       "notes": "Terminal fresh-install gate rejects both current browser archives because recursive evidence.json lookup returns five matches. Preserve required parent-job success and provider checks; select canonical execution layout and reject missing or ambiguous canonical bundles. Add behavioral collision regression cases and replay actual artifacts. Implemented canonical execution and manifest suffix selection. Root reran 16/16 behavioral cases, including diagnostic collisions and missing/ambiguous canonical execution and manifest files. Actual four CI archives pass consumer replay with both provider gates; replay supplies successful job prerequisites, so it does not change the failed CI outcome. Current-source CI remains required."
+    },
+    {
+      "id": "R111",
+      "title": "Assemble validated release provider evidence from actual artifact inputs",
+      "status": "done",
+      "dependsOn": [
+        "R108",
+        "R110"
+      ],
+      "owner": "qbo_protocol",
+      "notes": "Only test fixtures currently assemble browserProviderExecution. Add an offline CLI consuming explicit trusted policy, release manifest, existing check evidence, canonical browser archive and exact raw OCI files. Reuse release verifier before output; never synthesize passing checks. Actual publisher and deployed rollout remain open. Implemented explicit-input CLI emitting only a validated browserProviderExecution object. Sixteen real CLI cases pass, including individual canonical file uniqueness/common parent, identity mismatches, failed check verdicts, private output permissions and symlink-parent containment. Independent review reproduced the symlink-parent bypass before repair; nearest-existing-ancestor canonicalization now rejects it. Unresolved aliases/malformed mappings preserve paths and exit nonzero; callers must require this invocation exit zero, never output existence. Existing release/Kubernetes suites also passed (80 cases). Actual publisher wiring remains open."
+    },
+    {
+      "id": "R112",
+      "title": "Map usage-context and inbound-email exemplars to observed test evidence",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "calendar_review",
+      "notes": "T023 names these exemplars but ledger lacks entries. Link real test identities and known CI proof; retain missing incident identifiers, owners and pre-fix replay as unknown rather than fabricating attribution or completion. Added exact permanent test mappings and source-bound prior CI proof. Root independently checked raw log/archive hashes and passing file counts. Null incident/owner and unknown pre-fix proof preserved; T023 and operational review remain open. JSON and linked-file checks passed; no artificial source-string tests added."
     }
   ]
 }

@@ -959,6 +959,157 @@
         "status": "mapped-assertions-passed",
         "scope": "Only mapped assertions and boundaries in linked evidence; not all listed tests, full incident closure, deployment proof or latest local source readiness."
       }
+    },
+    {
+      "classification": "named-exemplar-coverage-mapping",
+      "incident": null,
+      "ownerRole": null,
+      "before": {
+        "status": "unknown",
+        "reason": "No incident-specific pre-fix failure replay is established by this mapping."
+      },
+      "status": "ci-after-verified-incident-and-follow-up-ownership-unknown",
+      "id": "usage-context-exemplar",
+      "journey": "Add usage within the selected service period and preserve the selected contract line",
+      "missingBoundary": "Selected service-period and contract-line context through rendered form state to action arguments",
+      "testFiles": [
+        "packages/billing/tests/UsageTracking.periodContextAndRequestId.test.tsx",
+        "packages/billing/tests/UsageTracking.contractLinePersistence.test.tsx"
+      ],
+      "testIdentities": [
+        [
+          "UsageTracking service-period deep-link context",
+          "loads records scoped to [periodStart, periodEnd) and renders a clearable note"
+        ],
+        [
+          "UsageTracking service-period deep-link context",
+          "defaults the new record date to the period start when today is outside the period"
+        ],
+        [
+          "UsageTracking service-period deep-link context",
+          "keeps today as the default date when it falls inside the period"
+        ],
+        [
+          "UsageTracking add-usage: contract-line persistence and default date",
+          "persists the operator-selected same-named contract line and a canonical default date"
+        ]
+      ],
+      "ci": {
+        "workflow": ".github/workflows/unit-tests.yml",
+        "job": "Nx affected unit tests"
+      },
+      "ciAfter": {
+        "runId": "34330619264",
+        "jobId": "102398085553",
+        "testedRevision": "a9305d0b43dc0242156b92f3ab189e680ccecb26",
+        "status": "mapped-files-passed",
+        "logUrl": "https://api.github.com/repos/Nine-Minds/alga-psa/actions/jobs/102398085553/logs",
+        "rawLogSha256": "6db57b5abc778a2f5a780ab3342495782da218be9d15aecd874b641aeba09b67",
+        "fileResults": [
+          {
+            "file": "packages/billing/tests/UsageTracking.periodContextAndRequestId.test.tsx",
+            "passed": 9,
+            "logLine": 25352
+          },
+          {
+            "file": "packages/billing/tests/UsageTracking.contractLinePersistence.test.tsx",
+            "passed": 1,
+            "logLine": 28260
+          }
+        ]
+      },
+      "limits": [
+        "CI reports passing file counts, not individual passing titles; listed identities come from permanent test definitions.",
+        "Component tests mock server actions; this is not independently attributed incident or production deployment proof.",
+        "The Nx job failed two unrelated translation validation cases; mapped file passes do not imply a green job.",
+        "Incident identifier, incident-specific before replay and named follow-up owner remain unknown; T023 is not closed."
+      ]
+    },
+    {
+      "classification": "named-exemplar-coverage-mapping",
+      "incident": null,
+      "ownerRole": null,
+      "before": {
+        "status": "unknown",
+        "reason": "No incident-specific pre-fix failure replay is established by this mapping."
+      },
+      "status": "ci-after-verified-incident-and-follow-up-ownership-unknown",
+      "id": "inbound-email-exemplar",
+      "journey": "Receive MIME email, preserve quotation and attachments, thread replies and deduplicate redelivery",
+      "missingBoundary": "SMTP/IMAP through built email service and application persistence to authenticated browser rendering and outbound reply",
+      "testFiles": [
+        "e2e-tests/tests/inbound-email.spec.ts"
+      ],
+      "evidence": "inbound-email-built-journey.json",
+      "ci": {
+        "workflow": ".github/workflows/e2e-fresh-install-tests.yaml",
+        "job": "Production browser (community/enterprise)"
+      },
+      "ciAfter": {
+        "runId": "34330619264",
+        "runAttempt": 1,
+        "testedRevision": "a9305d0b43dc0242156b92f3ab189e680ccecb26",
+        "status": "mapped-assertion-passed-first-attempt",
+        "editions": [
+          {
+            "edition": "community",
+            "evidence": "ci-f3a-community-provider-observations.json",
+            "artifactId": 10097133130,
+            "artifactSha256": "c501ba6e018b67b04d51c58e5459eaea80615196599ea19c03e500820ff496de",
+            "identity": [
+              "e2e-tests/tests/inbound-email.spec.ts",
+              "community-chromium",
+              "community-chromium",
+              [
+                "built email service ingests MIME, preserves inline quotations, threads replies and deduplicates delivery"
+              ]
+            ],
+            "retry": 0,
+            "providerObservations": [
+              {
+                "provider": "smtp-sink",
+                "mode": "emulator",
+                "supported": true,
+                "complete": true,
+                "requestCount": 5,
+                "dropped": 0,
+                "inFlight": 0
+              }
+            ]
+          },
+          {
+            "edition": "enterprise",
+            "evidence": "ci-f3a-enterprise-provider-observations.json",
+            "artifactId": 10097275264,
+            "artifactSha256": "ced633c92aadb3cf49c4b4bea8dc311d9098b601e2afca6e71ce3c3751c06b80",
+            "identity": [
+              "e2e-tests/tests/inbound-email.spec.ts",
+              "enterprise-chromium",
+              "enterprise-chromium",
+              [
+                "built email service ingests MIME, preserves inline quotations, threads replies and deduplicates delivery"
+              ]
+            ],
+            "retry": 0,
+            "providerObservations": [
+              {
+                "provider": "smtp-sink",
+                "mode": "emulator",
+                "supported": true,
+                "complete": true,
+                "requestCount": 5,
+                "dropped": 0,
+                "inFlight": 0
+              }
+            ]
+          }
+        ]
+      },
+      "limits": [
+        "Emulated SMTP/IMAP and disposable candidate-built services; no live email-provider or deployed-production guarantee.",
+        "Historical local built-service evidence is supplemental; current CI proof is separately source-bound.",
+        "Incident identifier, incident-specific before replay and named follow-up owner remain unknown; T023 is not closed."
+      ]
     }
   ]
 }

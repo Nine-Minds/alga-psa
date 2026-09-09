@@ -12,14 +12,14 @@ This endpoint changes only required status checks. `strict: true` preserves the 
 
 The four check identities cover repaired unit completeness, Tier-1 integration completeness, repository discovery, and the aggregate browser/workflow readiness verdict. They are literal check-run names, not workflow display names or inferred job IDs. Browser discovery and individual browser lanes remain independently reconciled inputs to the overall readiness verdict.
 
-Latest completed candidate inspected: run `34308610232`, attempt 1, head `a0d0771b8dbc61eb56b618f8c6a734f150329466`, tested merge `3db700f653e28ddd322dfdb652f1689a54f6b65d`. It is **not eligible for activation**:
+Latest completed candidate inspected: run `34330619264`, attempt 1, head `f3a77aebac4debf9882a8311db33c4e3b6d44cd7`, tested merge `a9305d0b43dc0242156b92f3ab189e680ccecb26`. It is **not eligible for activation**:
 
 | Required context | Observed conclusion | Evidence |
 | --- | --- | --- |
-| unit / Server unit execution complete | failure | [job](https://github.com/Nine-Minds/alga-psa/actions/runs/34308610232/job/102344151391) |
-| integration / Integration execution complete | success | [job](https://github.com/Nine-Minds/alga-psa/actions/runs/34308610232/job/102334968372) |
-| Repository test inventory | success | [job](https://github.com/Nine-Minds/alga-psa/actions/runs/34308610232/job/102344222203) |
-| Production regression readiness | failure | [job](https://github.com/Nine-Minds/alga-psa/actions/runs/34308610232/job/102344313846) |
+| unit / Server unit execution complete | failure | [job](https://github.com/Nine-Minds/alga-psa/actions/runs/34330619264/job/102420040946) |
+| integration / Integration execution complete | success | [job](https://github.com/Nine-Minds/alga-psa/actions/runs/34330619264/job/102405372947) |
+| Repository test inventory | failure | [job](https://github.com/Nine-Minds/alga-psa/actions/runs/34330619264/job/102420148331) |
+| Production regression readiness | failure | [job](https://github.com/Nine-Minds/alga-psa/actions/runs/34330619264/job/102420308570) |
 
 ## Preserved settings and bypass limits
 
