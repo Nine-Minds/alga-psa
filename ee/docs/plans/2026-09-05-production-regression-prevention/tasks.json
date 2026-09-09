@@ -539,7 +539,7 @@
       "status": "in_progress",
       "dependsOn": [],
       "owner": "coordinator",
-      "notes": "Wired archive verification receipts and loaded-image manifest into actual browser runner metrics and diagnostics.67 combined native metrics/archive/schema tests pass, plus actionlint and plan/task validators. Independent review accepted runtime integration; coordinator fixed CLI input-alias deletion identified during review and updated docs. CI candidate publication awaits current run completion; actual new artifact/Sheets readback still pending. No local Docker."
+      "notes": "Wired archive verification receipts and loaded-image manifest into actual browser runner metrics and diagnostics.67 combined native metrics/archive/schema tests pass, plus actionlint and plan/task validators. Independent review accepted runtime integration; coordinator fixed CLI input-alias deletion identified during review and updated docs. CI candidate publication awaits current run completion; actual new artifact/Sheets readback still pending. No local Docker. Approved-copy validation at new tab validation_browser_identity A1:Y8 passes exact native readback: legacy20 header/history preserved, six exporter rows distinguish same-name projects and execution attempts1/2, runtime config and two full12883-character synthetic verified archive manifests retained. Evidence isolated-browser-identity.json. Synthetic only; actual current CI manifest remains pending."
     },
     {
       "id": "R065",
@@ -588,6 +588,22 @@
       "dependsOn": [],
       "owner": "qbo_protocol and coordinator",
       "notes": "Final enterprise PostgreSQL logs confirm 237 connection-limit errors overlapping all failing PG upgrade journeys. Generate an isolated upgrade_ci mapping using the same candidate pooler image and unchanged auth/pool policy, verify image and real app-user SQL readiness, keep admin access direct, and stop the isolated pooler after diagnostics. Four native configuration/CLI tests and independent review pass. Current CI predates this harness repair; no local Docker."
+    },
+    {
+      "id": "R071",
+      "title": "Avoid concurrent auto time-skipping in Temporal email engine tests",
+      "status": "in_progress",
+      "dependsOn": [],
+      "owner": "calendar_review and coordinator",
+      "notes": "Current cb884 CI Temporal engine job102319307339 fails concurrent email workflow while60cases pass. SDK shared auto time-skipping does not support concurrent workflows. Agent implements ordinary Client with explicit deadline time advancement and activity-overlap barrier; native focused6pass, full61case engine verification pending. Full canonical native engine suite passes61/61 across12files in23.19s; focused6/6 includes explicit deadline and three-activity overlap. Local baseline passed intermittently; actual CI supplies pre-fix failure, not deterministic local red. Coordinator reviewed; current-source CI proof pending."
+    },
+    {
+      "id": "R072",
+      "title": "Preserve original failures in stateful supported-upgrade journeys",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "stripe_protocol and coordinator",
+      "notes": "Invoice journey commits retained billing state before final PDF assertion; retries reuse mutated fixture and obscure original failure. Disable retries only in supported-upgrade config; resolved Playwright configuration validation pending. Actual CI=true enterprise Playwright collection verifies upgrade3tests/retries0 and general47tests/retries1, no collection errors. Coordinator reviewed; no browser/DB execution claimed."
     }
   ]
 }

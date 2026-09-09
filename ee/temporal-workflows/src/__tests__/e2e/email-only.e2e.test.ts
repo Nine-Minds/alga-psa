@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
-import type { Client } from '@temporalio/client';
+import { Client } from '@temporalio/client';
 import { TestWorkflowEnvironment } from '@temporalio/testing';
 import { randomUUID } from 'node:crypto';
 
@@ -15,6 +15,9 @@ describe('Email workflow with the explicit mock email provider', () => {
   let client: Client;
   let worker: Worker;
   let workerRun: Promise<void> | undefined;
+  const concurrentActivityTenants = new Set<string>();
+  let releaseConcurrentActivities!: () => void;
+  const concurrentActivityRelease = new Promise<void>(resolve => { releaseConcurrentActivities = resolve; });
   let delayedActivityStarted = false;
   let releaseDelayedActivity!: () => void;
   let finishDelayedActivity!: () => void;
@@ -24,7 +27,10 @@ describe('Email workflow with the explicit mock email provider', () => {
 
   beforeAll(async () => {
     environment = await TestWorkflowEnvironment.createTimeSkipping();
-    client = environment.client;
+    // TimeSkippingWorkflowClient.result() unlocks a shared clock independently
+    // for each handle; the SDK does not support concurrent workflows that way.
+    // Keep this suite on real time, advancing only the explicit deadline test.
+    client = new Client({ connection: environment.connection });
     worker = await Worker.create({
       connection: environment.nativeConnection,
       taskQueue,
@@ -33,6 +39,10 @@ describe('Email workflow with the explicit mock email provider', () => {
       activities: {
         generateTemporaryPassword,
         sendWelcomeEmail: async (input: SendWelcomeEmailActivityInput) => {
+          if (input.tenantName.startsWith('Concurrent Test Tenant ')) {
+            concurrentActivityTenants.add(input.tenantId);
+            await concurrentActivityRelease;
+          }
           if (input.tenantName === 'Timeout Test Tenant') {
             delayedActivityStarted = true;
             // Keep the activity pending until the test observes the deadline.
@@ -55,6 +65,7 @@ describe('Email workflow with the explicit mock email provider', () => {
   });
 
   afterAll(async () => {
+    releaseConcurrentActivities();
     try {
       if (worker) { worker.shutdown(); await workerRun; }
     } finally {
@@ -172,31 +183,38 @@ describe('Email workflow with the explicit mock email provider', () => {
       const timestamp = Date.now();
       const workflows = [];
 
-      // Start 3 concurrent workflows
-      for (let i = 0; i < 3; i++) {
-        const input: SendWelcomeEmailActivityInput = {
-          tenantId: `tenant-${timestamp}-${i}`,
-          tenantName: `Concurrent Test Tenant ${i}`,
-          adminUser: {
-            userId: `user-${timestamp}-${i}`,
-            email: `concurrent-${timestamp}-${i}@example.com`,
-            firstName: `User${i}`,
-            lastName: 'Test',
-          },
-          temporaryPassword: '',
-          clientName: `Concurrent Client ${i}`,
-        };
+      const serverTimeBefore = await environment.currentTimeMs();
+      // Start all three and hold their email activities until overlap is proven.
+      try {
+        for (let i = 0; i < 3; i++) {
+          const input: SendWelcomeEmailActivityInput = {
+            tenantId: `tenant-${timestamp}-${i}`,
+            tenantName: `Concurrent Test Tenant ${i}`,
+            adminUser: {
+              userId: `user-${timestamp}-${i}`,
+              email: `concurrent-${timestamp}-${i}@example.com`,
+              firstName: `User${i}`,
+              lastName: 'Test',
+            },
+            temporaryPassword: '',
+            clientName: `Concurrent Client ${i}`,
+          };
 
-        const handle = await client.workflow.start(testEmailWorkflow, {
-          args: [input],
-          taskQueue,
-          workflowId: `email-concurrent-${timestamp}-${i}`,
-        });
+          const handle = await client.workflow.start(testEmailWorkflow, {
+            args: [input],
+            taskQueue,
+            workflowId: `email-concurrent-${timestamp}-${i}`,
+          });
 
-        workflows.push(handle);
+          workflows.push(handle);
+        }
+
+        await expect.poll(() => concurrentActivityTenants.size).toBe(3);
+      } finally {
+        releaseConcurrentActivities();
       }
 
-      // Wait for all workflows to complete
+      // Wait for all workflows to complete without unlocking the shared clock.
       const results = await Promise.all(workflows.map(h => h.result()));
 
       // Verify all workflows completed successfully
@@ -206,6 +224,10 @@ describe('Email workflow with the explicit mock email provider', () => {
         expect(result.emailResult.emailSent).toBe(true);
         expect(result.emailResult.messageId).toBeDefined();
       });
+
+      // A concurrent result wait must not skip years ahead to an unrelated
+      // workflow lifetime deadline. This is server time, not a wall-clock sleep.
+      expect(await environment.currentTimeMs() - serverTimeBefore).toBeLessThan(60_000);
 
       // Verify all passwords are unique
       const passwords = results.map(r => r.temporaryPassword);
