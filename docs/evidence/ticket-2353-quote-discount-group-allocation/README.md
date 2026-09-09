@@ -64,10 +64,11 @@ eligibility tests (T210) for the exact numbers.
     duplicated/custom template requirement; binds `recurringItems`,
     `onetimeItems`, `recurringSubtotal`, `onetimeTotal` directly).
   - `pdfs/QUO-0003-standard-grouped-isolated-catalog.pdf` – the normal
-    standard-template selection path exercised against an isolated catalog
-    matching this branch (see `preview/2353-standard-catalog-blocker.txt` for
-    the swap-and-restore method; ticket 2354's shared catalog AST was not
-    overwritten).
+    standard-template selection path exercised via a temporary swap of the one
+    shared catalog row to this branch's canonical AST, restored afterwards
+    (see `preview/2353-standard-catalog-blocker.txt` for the exact
+    backup/replace/generate/restore procedure; ticket 2354's shared catalog
+    AST was restored byte-for-byte).
   - `pdfs/QUO-0003-standard-grouped-code-ast.pdf` – same render with
     `getStandardQuoteTemplateAstByCode('standard-quote-grouped')` supplied
     explicitly.

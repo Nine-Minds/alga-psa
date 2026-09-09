@@ -35,6 +35,7 @@ import {
   convertQuoteToDraftInvoice,
   convertQuoteToDraftSalesOrder,
 } from '../../../../../../packages/billing/src/services/quoteConversionService';
+import { recalculatePercentageDiscountInvoiceCharges } from '../../../../../../packages/billing/src/services/invoiceService';
 
 const {
   beforeAll: setupContext,
@@ -447,8 +448,11 @@ describe('Quote conversion infrastructure', () => {
     expect(Number(baseCharge.tax_amount)).toBe(825);
     expect(Number(baseCharge.tax_rate)).toBe(8);
     expect(baseCharge.tax_region).toBe('US-NY');
-    expect(discountCharge.discount_type).toBe('percentage');
-    expect(Number(discountCharge.discount_percentage)).toBe(10);
+    // A converted quote percentage discount is written as a fixed allocated
+    // amount (no discount_type/percentage) so ordinary invoice recalculation
+    // never re-derives the amount from a percentage against the invoice target.
+    expect(discountCharge.discount_type).toBeNull();
+    expect(discountCharge.discount_percentage).toBeNull();
     expect(discountCharge.applies_to_item_id).toBe(baseCharge.item_id);
     expect(Number(discountCharge.net_amount)).toBe(-1000);
   });
@@ -955,5 +959,259 @@ describe('Quote conversion infrastructure', () => {
     expect(Number(discountCharge?.net_amount)).toBe(-100);
     const invoice = await context.db('invoices').where({ invoice_id: result.invoice.invoice_id }).first();
     expect(Number(invoice.subtotal)).toBe(900);
+  });
+
+  it('T212: product allocations survive sales-order conversion and invoice exclusion conserves the full discount', async () => {
+    const label = randomUUID().slice(0, 8);
+    const { quote, items } = await createAcceptedQuote([
+      {
+        description: `T212 service ${label}`,
+        quantity: 1,
+        unit_price: 1000,
+        is_recurring: false,
+        billing_method: 'fixed',
+        is_taxable: false,
+      },
+      {
+        description: `T212 product ${label}`,
+        quantity: 1,
+        unit_price: 1000,
+        is_recurring: false,
+        billing_method: 'per_unit',
+        service_item_kind: 'product',
+        cost: 600,
+        is_taxable: false,
+      },
+      {
+        description: `T212 whole discount ${label}`,
+        quantity: 1,
+        unit_price: 400,
+        is_discount: true,
+        discount_type: 'fixed',
+        is_recurring: false,
+        billing_frequency: null,
+        is_taxable: false,
+      },
+    ], {
+      title: `T212 SO conservation ${label}`,
+    });
+
+    const productItem = items.find((item) => item.description === `T212 product ${label}`);
+
+    const soResult = await context.db.transaction((trx) =>
+      convertQuoteToDraftSalesOrder(trx, context.tenantId, quote.quote_id, context.userId)
+    );
+    const soLines = await context.db('sales_order_lines')
+      .where({ tenant: context.tenantId, so_id: soResult.salesOrder.so_id });
+    expect(soLines).toHaveLength(1);
+    expect(soLines[0].service_id).toBe(productItem?.service_id);
+    // $10 product less its $2 product-attributed share of the $4 whole-quote
+    // discount: the sales order now represents the allocation.
+    expect(Number(soLines[0].unit_price)).toBe(800);
+
+    const acceptedQuote = await Quote.getById(context.db, context.tenantId, quote.quote_id);
+    const preview = await buildQuoteConversionPreview(acceptedQuote!, context.db, context.tenantId);
+    const soPreviewRow = preview.sales_order_items.find((item) => item.quote_item_id === productItem?.quote_item_id);
+    expect(soPreviewRow?.total_price).toBe(800);
+    const invoiceDiscountPreview = preview.invoice_items.find((item) => item.is_discount);
+    expect(invoiceDiscountPreview?.total_price).toBe(-200);
+
+    const invoiceResult = await context.db.transaction((trx) =>
+      convertQuoteToDraftInvoice(trx, context.tenantId, quote.quote_id, context.userId)
+    );
+    const invoiceCharges = await context.db('invoice_charges')
+      .where({ tenant: context.tenantId, invoice_id: invoiceResult.invoice.invoice_id });
+    expect(invoiceCharges.some((charge) => charge.service_id === productItem?.service_id)).toBe(false);
+    const serviceCharge = invoiceCharges.find((charge) => charge.is_discount !== true);
+    const discountCharge = invoiceCharges.find((charge) => charge.is_discount === true);
+    expect(Number(serviceCharge?.net_amount)).toBe(1000);
+    expect(Number(discountCharge?.net_amount)).toBe(-200);
+    const invoice = await context.db('invoices').where({ invoice_id: invoiceResult.invoice.invoice_id }).first();
+    // Service ($10) less its $2 share = $8 invoice; product $8 lives on the SO:
+    // $16 total across both destinations conserves the $4 discount.
+    expect(Number(invoice.subtotal)).toBe(800);
+  });
+
+  it('T213: allocated percentage discount survives ordinary invoice recalculation (stacked/capped/mixed cadence)', async () => {
+    const label = randomUUID().slice(0, 8);
+    const { quote } = await createAcceptedQuote([
+      {
+        description: `T213 recurring ${label}`,
+        quantity: 1,
+        unit_price: 2500,
+        is_recurring: true,
+        billing_frequency: 'monthly',
+        billing_method: 'fixed',
+        is_taxable: false,
+      },
+      {
+        description: `T213 one-time ${label}`,
+        quantity: 1,
+        unit_price: 3500,
+        is_recurring: false,
+        billing_method: 'fixed',
+        is_taxable: false,
+      },
+    ], { title: `T213 stacked percent ${label}` });
+
+    const recurringItem = quote.quote_items?.find((item) => item.description === `T213 recurring ${label}`);
+    // Stack + cap: an item-targeted fixed discount consumes the recurring row,
+    // then a whole-quote 10% resolves to the remaining $35 one-time capacity as
+    // a $6.00 allocation (10% of the $60 quote base = $6.00).
+    await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      description: `T213 fixed on recurring ${label}`,
+      quantity: 1,
+      unit_price: 2500,
+      is_discount: true,
+      discount_type: 'fixed',
+      applies_to_item_id: recurringItem?.quote_item_id ?? null,
+      is_recurring: false,
+      billing_frequency: null,
+      is_taxable: false,
+      created_by: context.userId,
+    } as any);
+    await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      description: `T213 whole 10% ${label}`,
+      quantity: 1,
+      unit_price: 0,
+      is_discount: true,
+      discount_type: 'percentage',
+      discount_percentage: 10,
+      is_recurring: false,
+      billing_frequency: null,
+      is_taxable: false,
+      created_by: context.userId,
+    } as any);
+
+    await context.db('quotes').where({ quote_id: quote.quote_id }).update({
+      status: 'accepted',
+      accepted_at: ACCEPTED_AT,
+      accepted_by: context.userId,
+      updated_by: context.userId,
+    });
+
+    const result = await context.db.transaction((trx) =>
+      convertQuoteToDraftInvoice(trx, context.tenantId, quote.quote_id, context.userId)
+    );
+    let invoiceCharges = await context.db('invoice_charges')
+      .where({ tenant: context.tenantId, invoice_id: result.invoice.invoice_id });
+    const percentageCharge = invoiceCharges.find((charge) => charge.description === `T213 whole 10% ${label}`);
+    expect(Number(percentageCharge?.net_amount)).toBe(-600);
+    expect(percentageCharge?.discount_type).toBeNull();
+    expect(percentageCharge?.discount_percentage).toBeNull();
+
+    // Actual invoice recalculation (the code path that rewrote -$6.00 to -$3.50
+    // when the percentage was retained) must leave the allocated amount alone.
+    await context.db.transaction(async (trx) => {
+      const recalculated = await recalculatePercentageDiscountInvoiceCharges(trx, result.invoice.invoice_id, context.tenantId);
+      expect(Number(recalculated.find((item: any) => item.item_id === percentageCharge?.item_id)?.net_amount)).toBe(-600);
+    });
+
+    invoiceCharges = await context.db('invoice_charges')
+      .where({ tenant: context.tenantId, invoice_id: result.invoice.invoice_id });
+    const totals = invoiceCharges.reduce((sum, row) => sum + Number(row.net_amount), 0);
+    expect(totals).toBe(2900); // $35 one-time - $6 allocated share
+    const invoice = await context.db('invoices').where({ invoice_id: result.invoice.invoice_id }).first();
+    expect(Number(invoice.subtotal)).toBe(2900);
+  });
+
+  it('T214: service-targeted percentage allocation is stable under invoice recalculation', async () => {
+    const svc = await createTestService(context, {
+      service_name: 'Percent service',
+      billing_method: 'fixed',
+      default_rate: 3500,
+    });
+    const quote = await Quote.create(context.db, context.tenantId, {
+      client_id: context.clientId,
+      title: 'T214 service percent quote',
+      quote_date: QUOTE_DATE,
+      valid_until: VALID_UNTIL,
+      subtotal: 0,
+      discount_total: 0,
+      tax: 0,
+      total_amount: 0,
+      currency_code: 'USD',
+      is_template: false,
+      created_by: context.userId,
+    } as any);
+    const recurringRow = await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      service_id: svc,
+      description: 'Percent recurring row',
+      quantity: 1,
+      unit_price: 2500,
+      is_recurring: true,
+      billing_frequency: 'monthly',
+      billing_method: 'fixed',
+      is_taxable: false,
+      created_by: context.userId,
+    } as any);
+    await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      service_id: svc,
+      description: 'Percent one-time row',
+      quantity: 1,
+      unit_price: 3500,
+      is_recurring: false,
+      is_taxable: false,
+      created_by: context.userId,
+    } as any);
+    await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      description: 'Fixed on recurring row',
+      quantity: 1,
+      unit_price: 2500,
+      is_discount: true,
+      discount_type: 'fixed',
+      applies_to_item_id: recurringRow.quote_item_id,
+      is_recurring: false,
+      billing_frequency: null,
+      is_taxable: false,
+      created_by: context.userId,
+    } as any);
+    await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      description: 'Service 10% discount',
+      quantity: 1,
+      unit_price: 0,
+      is_discount: true,
+      discount_type: 'percentage',
+      discount_percentage: 10,
+      applies_to_service_id: svc,
+      is_recurring: false,
+      billing_frequency: null,
+      is_taxable: false,
+      created_by: context.userId,
+    } as any);
+
+    await context.db('quotes').where({ quote_id: quote.quote_id }).update({
+      status: 'accepted',
+      accepted_at: ACCEPTED_AT,
+      accepted_by: context.userId,
+      updated_by: context.userId,
+    });
+
+    const result = await context.db.transaction((trx) =>
+      convertQuoteToDraftInvoice(trx, context.tenantId, quote.quote_id, context.userId)
+    );
+    let invoiceCharges = await context.db('invoice_charges')
+      .where({ tenant: context.tenantId, invoice_id: result.invoice.invoice_id });
+    const percentageCharge = invoiceCharges.find((charge) => charge.description === 'Service 10% discount');
+    // 10% of the $60 service base is $6; the recurring row is fully consumed by
+    // the earlier fixed discount, so the whole $6 lands on the one-time row.
+    expect(Number(percentageCharge?.net_amount)).toBe(-600);
+    expect(percentageCharge?.discount_type).toBeNull();
+
+    await context.db.transaction(async (trx) => {
+      const recalculated = await recalculatePercentageDiscountInvoiceCharges(trx, result.invoice.invoice_id, context.tenantId);
+      expect(Number(recalculated.find((item: any) => item.item_id === percentageCharge?.item_id)?.net_amount)).toBe(-600);
+    });
+
+    invoiceCharges = await context.db('invoice_charges')
+      .where({ tenant: context.tenantId, invoice_id: result.invoice.invoice_id });
+    const totals = invoiceCharges.reduce((sum, row) => sum + Number(row.net_amount), 0);
+    expect(totals).toBe(2900);
   });
 });

@@ -2440,4 +2440,118 @@ describe('Quote infrastructure', () => {
     const viewModel = await mapDbQuoteToViewModel(context.db, context.tenantId, targetQuote.quote_id);
     expect(viewModel?.recurring_subtotal).toBe(2000);
   });
+
+  it('T205: createRevision preserves an unmatched item-targeted discount scope (stays zero, never whole-quote)', async () => {
+    const sourceQuote = await createFinancialQuote();
+    await context.db('quotes').where({ quote_id: sourceQuote.quote_id }).update({ status: 'sent' });
+
+    const baseItem = await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: sourceQuote.quote_id,
+      description: 'Revision base',
+      quantity: 1,
+      unit_price: 2500,
+      is_recurring: true,
+      billing_frequency: 'monthly',
+      is_taxable: false,
+      created_by: context.userId,
+    });
+    expect(baseItem.quote_item_id).toBeTruthy();
+
+    // Orphan: targets a removed item that no longer exists on the quote.
+    const orphanTargetId = '99999999-0000-4000-8000-00000000dead';
+    await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: sourceQuote.quote_id,
+      description: 'Orphan item discount',
+      quantity: 1,
+      unit_price: 500,
+      is_discount: true,
+      discount_type: 'fixed',
+      applies_to_item_id: orphanTargetId,
+      is_recurring: false,
+      billing_frequency: null,
+      is_taxable: false,
+      created_by: context.userId,
+    });
+
+    const reloaded = await Quote.getById(context.db, context.tenantId, sourceQuote.quote_id);
+    expect(Number(reloaded?.discount_total)).toBe(0);
+
+    const revision = await Quote.createRevision(context.db, context.tenantId, sourceQuote.quote_id, context.userId);
+    const orphanDiscount = revision.quote_items?.find((item) => item.description === 'Orphan item discount');
+    expect(orphanDiscount?.applies_to_item_id).toBe(orphanTargetId);
+    expect(Number(revision.discount_total)).toBe(0);
+    expect(Number(revision.total_amount)).toBe(2500);
+
+    const viewModel = await mapDbQuoteToViewModel(context.db, context.tenantId, revision.quote_id);
+    expect(viewModel?.recurring_subtotal).toBe(2500);
+    expect(viewModel?.discount_total).toBe(0);
+    expect(viewModel?.recurring_items?.some((item) => item.is_discount)).toBe(false);
+  });
+
+  it('T206: copy helper keeps item/service precedence for removed targets (duplication/template flows)', async () => {
+    const { copyQuoteItemsToQuote } = await import('../../../../../../packages/billing/src/actions/quoteActions');
+    const { recalculateQuoteFinancials } = await import('../../../../../../packages/billing/src/services/quoteCalculationService');
+
+    const svcA = await createTestService(context, {
+      service_name: 'Copy precedence service',
+      billing_method: 'fixed',
+      default_rate: 2500,
+    });
+    const quote = await createFinancialQuote();
+    const baseItem = await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      service_id: svcA,
+      description: 'Precedence base',
+      quantity: 1,
+      unit_price: 2500,
+      is_recurring: false,
+      is_taxable: false,
+      created_by: context.userId,
+    });
+    const removedItemId = '99999999-0000-4000-8000-00000000beef';
+
+    // Both an item target (removed) and a service target (present): the item
+    // target wins in the source, so the discount resolves to zero.
+    await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      description: 'Precedence discount',
+      quantity: 1,
+      unit_price: 500,
+      is_discount: true,
+      discount_type: 'fixed',
+      applies_to_item_id: removedItemId,
+      applies_to_service_id: svcA,
+      is_recurring: false,
+      billing_frequency: null,
+      is_taxable: false,
+      created_by: context.userId,
+    });
+
+    const reloaded = await Quote.getById(context.db, context.tenantId, quote.quote_id);
+    expect(Number(reloaded?.discount_total)).toBe(0);
+
+    const targetQuote = await createFinancialQuote({ title: 'Precedence copy' });
+    await copyQuoteItemsToQuote(
+      context.db,
+      context.tenantId,
+      targetQuote.quote_id,
+      reloaded?.quote_items ?? [],
+      { createdBy: context.userId },
+    );
+    await recalculateQuoteFinancials(context.db, context.tenantId, targetQuote.quote_id);
+
+    const copied = await Quote.getById(context.db, context.tenantId, targetQuote.quote_id);
+    const copiedDiscount = copied?.quote_items?.find((item) => item.description === 'Precedence discount');
+    // Scope preserved: still item-targeted at the (absent) id, so it still
+    // resolves to zero instead of broadening into the matching service.
+    expect(copiedDiscount?.applies_to_item_id).toBe(removedItemId);
+    expect(copiedDiscount?.applies_to_service_id).toBe(svcA);
+    expect(Number(copied?.discount_total)).toBe(0);
+    expect(Number(copied?.total_amount)).toBe(2500);
+
+    const viewModel = await mapDbQuoteToViewModel(context.db, context.tenantId, targetQuote.quote_id);
+    expect(viewModel?.onetime_subtotal).toBe(2500);
+    expect(viewModel?.discount_total).toBe(0);
+    expect(baseItem.quote_item_id).toBeTruthy();
+  });
 });

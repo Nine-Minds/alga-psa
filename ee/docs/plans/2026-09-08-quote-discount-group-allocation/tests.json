@@ -152,5 +152,37 @@
     ],
     "implemented": true,
     "evidence": "quoteAdapters.test.ts T211/T212"
+  },
+  {
+    "id": "T016",
+    "description": "Copy paths preserve unmatched item-targeted discount scope (never broaden to whole-quote), incl. item/service target precedence.",
+    "featureIds": [
+      "F011",
+      "F012",
+      "F002",
+      "F008"
+    ],
+    "implemented": true,
+    "evidence": "quoteInfrastructure.test.ts T205/T206; quoteActions.test.ts T140-T142"
+  },
+  {
+    "id": "T017",
+    "description": "Sales-order conversion represents product-attributed discount allocations as reduced product unit prices and refuses non-representable splits; invoice exclusion conserves the full reduction.",
+    "featureIds": [
+      "F014",
+      "F015"
+    ],
+    "implemented": true,
+    "evidence": "quoteConversion.test.ts T212 (SO then invoice, persisted amounts)"
+  },
+  {
+    "id": "T018",
+    "description": "Converted quote discounts are stored as fixed allocated amounts so ordinary invoice recalculation cannot rewrite percentage allocations; stacked, capped, mixed-cadence, and service-targeted cases covered.",
+    "featureIds": [
+      "F012",
+      "F014"
+    ],
+    "implemented": true,
+    "evidence": "quoteConversion.test.ts T213/T214 after recalculatePercentageDiscountInvoiceCharges"
   }
 ]

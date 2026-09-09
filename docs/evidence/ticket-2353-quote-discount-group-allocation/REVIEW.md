@@ -50,9 +50,11 @@ checkout, not pushed). Plan:
 
 6. **Evidence packet** (`docs/evidence/ticket-2353-quote-discount-group-allocation/`):
    editor screenshots are included in the commit (`.gitignore` negation);
-   standard-grouped preview/PDF verified via an isolated catalog swap that
-   restores ticket 2354's shared catalog byte-for-byte
-   (`pdfs/QUO-0003-standard-grouped-isolated-catalog.pdf`);
+   standard-grouped preview/PDF verified via a temporary shared-catalog swap
+   (backup -> replace -> generate -> restore; the shared row and the quote's
+   template id were restored afterwards - see
+   `preview/2353-standard-catalog-blocker.txt` for the exact procedure;
+   `pdfs/QUO-0003-standard-grouped-isolated-catalog.pdf`);
    custom-template coverage retained; a pre-fix render of the faithful fixture
    documents the old positive-discount-in-one-time grouping and explicitly
    leaves the customer's reported subtraction unresolved
@@ -68,15 +70,18 @@ the same module/derived outputs.
 
 ## Validation commands (reproducible)
 
-From the repo root against the local test DB (shared dev Postgres on
-`127.0.0.1:5472`, secrets under `./secrets`; use a worktree-unique
-`TEST_DB_NAME`):
+All Vitest commands run from `server/` (the repo's vitest config root; package
+paths below are relative to it), against the local test DB (shared dev Postgres
+on `127.0.0.1:5472`, secrets under `<repo>/secrets`; use a worktree-unique
+`TEST_DB_NAME`). The typecheck runs from the repo root.
 
 ```bash
+cd server
+
 export TEST_DB_NAME=test_database_2353dbq DB_HOST=127.0.0.1 DB_PORT=5472 \
   DB_USER_ADMIN=postgres DB_USER_SERVER=app_user
 
-# pure/unit + colocated adapter/draft suites (server-root vitest config):
+# pure/unit + colocated adapter/draft suites:
 npx vitest run \
   ../packages/billing/src/services/quoteDiscountAllocation.test.ts \
   ../packages/billing/src/components/billing-dashboard/quotes/quoteLineItemDraft.test.ts \
@@ -89,13 +94,45 @@ npx vitest run \
 npx vitest run src/test/infrastructure/billing/quotes/quoteInfrastructure.test.ts
 npx vitest run src/test/infrastructure/billing/quotes/quoteConversion.test.ts
 
-# Typecheck:
-npm -w @alga-psa/billing run typecheck
+# Typecheck (from the repo root):
+cd .. && npm -w @alga-psa/billing run typecheck
 ```
 
-Recorded results: adapter 15, draft 9, allocation 13, calculation-service 17,
-conversion preview unit 3, quoteActions 42 all pass; quoteInfrastructure 88/88;
-quoteConversion 18/18; billing typecheck clean.
+Recorded results: see the current commit's test run summary (all listed suites
+green; billing typecheck clean).
+
+## What changed since rev 2 (review round 3)
+
+7. **Copy paths preserve unmatched targets** (`quoteActions.ts`
+   `copyQuoteItemsToQuote`, `models/quote.ts` createRevision): when a
+   discount's item target is absent from the copied rows, the original target
+   id is preserved (never nulled), so the copied discount stays item-scoped and
+   resolves to zero instead of broadening into a whole-quote discount.
+   Persisted tests T205 (revision, orphan target) and T206 (helper, removed
+   item target plus a *present* service target — item precedence keeps it $0)
+   cover duplication/template/revision.
+
+8. **Sales-order conversion conserves product allocations**
+   (`convertQuoteToDraftSalesOrder`): product-attributed discount shares are
+   written as reduced per-unit product prices; if the reduction cannot be
+   expressed as an integer per-unit price the conversion is refused with an
+   explicit error rather than silently dropping the discount. Preview's
+   sales-order bucket shows the same net product rows and invoice execution
+   excludes product shares. Persisted test T212: $10 product + $10 service
+   with a $4 whole-quote discount → SO line $8, invoice service −$2 → $8, full
+   $4 conserved.
+
+9. **Converted discounts are fixed allocated amounts**
+   (`quoteConversionService.ts` invoiceChargeRowFor): discount rows written
+   from a quote no longer carry `discount_type='percentage'` /
+   `discount_percentage`, so ordinary invoice recalculation
+   (`recalculatePercentageDiscountInvoiceCharges`) cannot rewrite an allocated
+   share (−$6.00) into a percentage of the invoice target (−$3.50). Editing
+   semantics documented in code: a converted percentage discount is a
+   fixed-amount invoice line adjusted directly. Persisted tests T213
+   (stacked/capped/mixed-cadence whole-quote 10%) and T214 (service-targeted
+   10%) convert then run the actual recalculation and assert the allocated
+   amounts and invoice totals survive.
 
 ## Reviewer: inspect first
 
@@ -103,6 +140,6 @@ quoteConversion 18/18; billing typecheck clean.
    derived financials).
 2. `quoteActions.ts` `copyQuoteItemsToQuote` + `models/quote.ts` createRevision.
 3. `quoteConversionService.ts` shares + invoice/preview wiring.
-4. New regressions: adapter T210–T212, infra T202–T204, conversion T210/T211,
+4. New regressions: adapter T210–T212, infra T202–T206, conversion T210–T214,
    action unit T140–T142, draft monthly-net tests.
 5. Evidence README/REVIEW and `preview/2353-standard-catalog-blocker.txt`.

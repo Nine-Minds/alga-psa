@@ -436,8 +436,12 @@ const Quote = {
       oldToNew.set(item.quote_item_id, created.quote_item_id);
     }
     for (const item of sourceItems.filter((i) => i.is_discount)) {
+      // Preserve unmatched scope for removed targets: keep the original target
+      // id when it was not among the copied base rows, so the copied discount
+      // stays item-scoped and resolves to zero instead of broadening into a
+      // whole-quote discount.
       const remapped = item.applies_to_item_id
-        ? (oldToNew.get(item.applies_to_item_id) ?? null)
+        ? (oldToNew.get(item.applies_to_item_id) ?? item.applies_to_item_id)
         : null;
       await insertCopiedItem(item, remapped);
     }

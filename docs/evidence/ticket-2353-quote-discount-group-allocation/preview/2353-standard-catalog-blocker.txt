@@ -20,13 +20,24 @@ that shared row.
 
 Verification performed instead:
 - pdfs/QUO-0003-standard-grouped-isolated-catalog.pdf was produced by
-  temporarily replacing ONLY that shared catalog row with this branch's
+  temporarily replacing ONLY that shared catalog row (a brief shared-catalog mutation) with this branch's
   canonical buildStandardQuoteGroupedAst(), pointing QUO-0003 at the standard
   grouped template id, generating through the app's normal PDF service path,
   and then restoring the ticket-2354 catalog AST and the quote's original
-  custom template id. The swap was performed inside a single scripted session
-  (see REVIEW.md "Validation commands"); the shared catalog now holds its
-  previous (2354) AST unchanged.
+  custom template id. Reproduction/restoration procedure (performed once; do not repeat without
+  coordination with ticket 2354, and never leave the shared row modified):
+    1. pg_dump the row: select "templateAst" from standard_quote_document_templates
+       where template_id = (select template_id ... code='standard-quote-grouped')  -> backup.json
+    2. update that row's "templateAst" to this branch's canonical grouped AST
+       (dumped from getStandardQuoteTemplateAstByCode('standard-quote-grouped'))
+    3. update quotes.template_id to the standard grouped template id for QUO-0003
+    4. run the app's normal PDF path (createPDFGenerationService.generatePDF)
+    5. ALWAYS restore step 1's backup and the quote's original custom template id
+       (2353c000-0000-4000-8000-00000000b001) afterwards.
+  This run restored the shared catalog byte-for-byte and returned QUO-0003 to
+  its custom template. The word "isolated" in earlier notes overstated what
+  happened: it was a temporary shared-row swap with restore, not a separate
+  catalog.
 - pdfs/QUO-0003-standard-grouped-code-ast.pdf renders the same quote with
   getStandardQuoteTemplateAstByCode('standard-quote-grouped') passed
   explicitly, without touching the catalog.

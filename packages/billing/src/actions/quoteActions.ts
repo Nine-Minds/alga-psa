@@ -1054,8 +1054,13 @@ export async function copyQuoteItemsToQuote(
   }
 
   for (const item of discountItems) {
+    // Preserve unmatched scope: when the discount's item target is not among
+    // the copied base rows (it was already dangling/removed in the source),
+    // keep the original target id so the copied discount stays item-scoped and
+    // resolves to zero. Replacing it with null would turn the discount into a
+    // whole-quote discount and broaden what it reduces.
     const remappedTarget = item.applies_to_item_id
-      ? (oldToNew.get(item.applies_to_item_id) ?? null)
+      ? (oldToNew.get(item.applies_to_item_id) ?? item.applies_to_item_id)
       : null;
     await createItem(item, remappedTarget);
   }
