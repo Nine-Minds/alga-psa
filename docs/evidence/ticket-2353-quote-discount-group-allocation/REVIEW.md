@@ -2,6 +2,13 @@
 
 Latest completion and review entry point: [TAKEOVER.md](TAKEOVER.md).
 
+Round-2 repair (standard-template catalog compatibility) entry point:
+[round2/README-round2.md](round2/README-round2.md). It fixes the round-1 smoke
+blocker: the shared `standard-quote-grouped` catalog row (ticket-2354 `lines`
+Description columns) now evaluates and renders through the real quote
+preview/PDF path. Runtime regression: infra test T220 in
+`server/src/test/infrastructure/billing/quotes/quoteInfrastructure.test.ts`.
+
 Branch: `feature/correct-recurring-quote-discount-allocation-and` (isolated
 checkout, not pushed). Plan:
 `ee/docs/plans/2026-09-08-quote-discount-group-allocation/`.

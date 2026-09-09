@@ -1,5 +1,19 @@
 # Ticket 2353 rendered-evidence notes
 
+## Round-2 repair status (standard Grouped Quote template)
+
+The round-1 smoke blocker — the shared standard "Grouped Quote Template
+(Standard)" catalog row (`08a528dd-…`, `standard-quote-grouped`) returning HTTP
+500 because its Description columns carry `lines` keys — is fixed on this
+branch. The runtime schema/renderer now accept and render stacked cell lines,
+with an all-empty-lines fallback to the flat `value` so discount/custom rows
+stay readable. See `round2/README-round2.md` for the fresh evidence produced
+from the actual shared catalog row through the real PDF path
+(`QUO-0003-standard-grouped-real-catalog.pdf`), the runtime regression (infra
+test T220), and the expected-versus-actual table. The historical
+`preview/2353-standard-catalog-blocker.txt` and the earlier isolated-catalog
+PDFs remain as prior evidence of the round-1 state.
+
 Local verification host: `localhost:3172` (this worktree's dev server).
 Tenant `dd8cb218-d46d-47f3-be27-8aa50aad5fce` (dev "Emerald City" universe),
 client **Emerald City**, quote **QUO-0003** (`9f4886a0-a332-430e-9056-973aa35e43a1`),

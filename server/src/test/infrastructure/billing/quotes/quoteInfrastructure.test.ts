@@ -2554,4 +2554,176 @@ describe('Quote infrastructure', () => {
     expect(viewModel?.discount_total).toBe(0);
     expect(baseItem.quote_item_id).toBeTruthy();
   });
+
+  it('T220 (plan T005 render): the actual standard-grouped catalog row renders stacked description lines and generates a grouped PDF', async () => {
+    // Shared dev catalog AST (ticket 2354 authoring): the Description column of
+    // the monthly/one-time tables carries stacked `lines` (name over catalog
+    // description) in addition to the flat `value` binding. This branch's
+    // runtime must render that row through the real quote preview/PDF path.
+    const sharedDescriptionLines = [
+      {
+        id: 'item-name',
+        style: { inline: { fontWeight: 600, lineHeight: 1.3 } },
+        value: { type: 'path', path: 'service_name' },
+      },
+      {
+        id: 'catalog-description',
+        style: { inline: { color: '#4b5563', fontSize: '12px', lineHeight: 1.4 } },
+        value: { type: 'path', path: 'catalog_description' },
+      },
+    ];
+
+    const addSharedLinesToAst = (node: Record<string, any>): void => {
+      if (Array.isArray(node)) {
+        node.forEach(addSharedLinesToAst);
+        return;
+      }
+      if (!node || typeof node !== 'object') {
+        return;
+      }
+      if (Array.isArray(node.columns)) {
+        for (const column of node.columns) {
+          if (column?.id === 'description') {
+            column.lines = JSON.parse(JSON.stringify(sharedDescriptionLines));
+          }
+        }
+      }
+      if (Array.isArray(node.children)) {
+        node.children.forEach(addSharedLinesToAst);
+      }
+    };
+
+    // Load the actual shared standard catalog row (not the branch canonical AST).
+    const catalogRow = await context.db('standard_quote_document_templates')
+      .where({ standard_quote_document_template_code: 'standard-quote-grouped' })
+      .first<{ template_id: string; templateAst: any }>();
+    expect(catalogRow).toBeTruthy();
+
+    const rowAst = JSON.parse(JSON.stringify(catalogRow.templateAst));
+    addSharedLinesToAst(rowAst.layout);
+    await context.db('standard_quote_document_templates')
+      .where({ template_id: catalogRow.template_id })
+      .update({ templateAst: JSON.stringify(rowAst) });
+
+    const svcA = await createTestService(context, {
+      service_name: 'Managed Support A',
+      billing_method: 'fixed',
+      default_rate: 2500,
+    });
+    const svcB = await createTestService(context, {
+      service_name: 'Managed Support B',
+      billing_method: 'fixed',
+      default_rate: 3500,
+    });
+
+    const quote = await createFinancialQuote({ template_id: catalogRow.template_id, title: 'Grouped render' });
+
+    await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      service_id: svcA,
+      description: 'Managed Support A — full-service support',
+      quantity: 1,
+      unit_price: 2500,
+      is_recurring: true,
+      billing_frequency: 'monthly',
+      is_taxable: false,
+      created_by: context.userId,
+    });
+    await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      service_id: svcB,
+      description: 'Managed Support B — full-service support',
+      quantity: 1,
+      unit_price: 3500,
+      is_recurring: true,
+      billing_frequency: 'monthly',
+      is_taxable: false,
+      created_by: context.userId,
+    });
+    // Legacy-style fixed service-targeted discounts persisted with false/null
+    // cadence. The description cell has no `service_name`, so rendering falls
+    // back to the flat `value` (the discount's own description).
+    await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      description: 'Discount A',
+      quantity: 1,
+      unit_price: 500,
+      is_discount: true,
+      discount_type: 'fixed',
+      applies_to_service_id: svcA,
+      is_recurring: false,
+      billing_frequency: null,
+      is_taxable: false,
+      created_by: context.userId,
+    });
+    await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      description: 'Discount B',
+      quantity: 1,
+      unit_price: 500,
+      is_discount: true,
+      discount_type: 'fixed',
+      applies_to_service_id: svcB,
+      is_recurring: false,
+      billing_frequency: null,
+      is_taxable: false,
+      created_by: context.userId,
+    });
+    for (const [index, cents] of [37353, 210863, 5581, 45000].entries()) {
+      await QuoteItem.create(context.db, context.tenantId, {
+        quote_id: quote.quote_id,
+        description: `One-time charge ${index}`,
+        quantity: 1,
+        unit_price: cents,
+        is_recurring: false,
+        is_taxable: false,
+        created_by: context.userId,
+      });
+    }
+
+    // Real quote preview path resolves the quote's template_id to the shared
+    // catalog row and renders through the same evaluator/renderer as the PDF.
+    const service = createPDFGenerationService(context.tenantId);
+    const preview = await service.renderQuotePreview({ quoteId: quote.quote_id });
+
+    expect(preview.html).toContain('Monthly Items');
+    expect(preview.html).toContain('<div style="font-weight:600;line-height:1.3">Managed Support A</div>');
+    expect(preview.html).toContain('<div style="font-weight:600;line-height:1.3">Managed Support B</div>');
+    // Empty-name discount rows fall back to their description, never drop out.
+    expect(preview.html).toContain('Discount A');
+    expect(preview.html).toContain('Discount B');
+    expect(preview.html).toContain('$25.00');
+    expect(preview.html).toContain('$35.00');
+    expect(preview.html).toContain('-$5.00');
+    expect(preview.html).toContain('$2,987.97');
+    expect(preview.html).toContain('$50.00');
+
+    // PDF generation: same AST + view model through the real getQuoteHtml path,
+    // with only the browser print mocked.
+    const capturedHtml: { value: string } = { value: '' };
+    const pageMock = {
+      setContent: vi.fn(async (_html: string) => {
+        capturedHtml.value = _html;
+      }),
+      pdf: vi.fn().mockResolvedValue(Buffer.from('%PDF-quote-lines')),
+      close: vi.fn().mockResolvedValue(undefined),
+    };
+    const browserMock = { newPage: vi.fn().mockResolvedValue(pageMock) };
+    const getBrowserSpy = vi.spyOn(browserPoolService, 'getBrowser').mockResolvedValue(browserMock as never);
+    const releaseSpy = vi.spyOn(browserPoolService, 'releaseBrowser').mockResolvedValue(undefined);
+
+    try {
+      const pdf = await service.generatePDF({ quoteId: quote.quote_id, userId: context.userId });
+      expect(Buffer.isBuffer(pdf)).toBe(true);
+      expect(pdf.toString('utf8')).toContain('%PDF-quote-lines');
+      expect(capturedHtml.value).toContain('<!doctype html>');
+      expect(capturedHtml.value).toContain('Monthly Items');
+      expect(capturedHtml.value).toContain('<div style="font-weight:600;line-height:1.3">Managed Support A</div>');
+      expect(capturedHtml.value).toContain('-$5.00');
+      expect(capturedHtml.value).toContain('$50.00');
+    } finally {
+      getBrowserSpy.mockRestore();
+      releaseSpy.mockRestore();
+    }
+  });
 });

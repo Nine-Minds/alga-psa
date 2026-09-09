@@ -1040,3 +1040,131 @@ describe('renderEvaluatedTemplateAst', () => {
     expect(emptyRendered.html).not.toContain('<img');
   });
 });
+
+describe('renderEvaluatedTemplateAst stacked table-cell lines', () => {
+  const renderAst = async (columns: Array<Record<string, unknown>>, rows: Array<Record<string, unknown>>) => {
+    const ast: TemplateAst = {
+      kind: 'invoice-template-ast',
+      version: TEMPLATE_AST_VERSION,
+      bindings: {
+        values: {},
+        collections: {
+          lineItems: { id: 'lineItems', kind: 'collection', path: 'items' },
+          recurringItems: { id: 'recurringItems', kind: 'collection', path: 'recurring_items' },
+          onetimeItems: { id: 'onetimeItems', kind: 'collection', path: 'onetime_items' },
+        },
+      },
+      layout: {
+        id: 'root',
+        type: 'document',
+        children: [
+          {
+            id: 'line-items',
+            type: 'dynamic-table',
+            repeat: { sourceBinding: { bindingId: 'lineItems' }, itemBinding: 'item' },
+            columns: columns as never,
+          },
+        ],
+      },
+    };
+    const evaluation = evaluateTemplateAst(ast, { items: rows });
+    return renderEvaluatedTemplateAst(ast, evaluation);
+  };
+
+  it('stacks resolved lines in a cell and drops empty lines', async () => {
+    const rendered = await renderAst(
+      [
+        {
+          id: 'description',
+          header: 'Description',
+          value: { type: 'path', path: 'description' },
+          lines: [
+            {
+              id: 'item-name',
+              value: { type: 'path', path: 'service_name' },
+              style: { inline: { fontWeight: 600, lineHeight: 1.3 } },
+            },
+            {
+              id: 'catalog-description',
+              value: { type: 'path', path: 'catalog_description' },
+              style: { inline: { color: '#4b5563', fontSize: '12px' } },
+            },
+          ],
+        },
+        {
+          id: 'amount',
+          header: 'Amount',
+          value: { type: 'path', path: 'total_price' },
+          format: 'currency',
+          style: { inline: { textAlign: 'right' } },
+        },
+      ],
+      [
+        {
+          quote_item_id: 'a1',
+          service_name: 'Managed Support',
+          catalog_description: 'Full-service support',
+          description: 'ignored when lines resolve',
+          total_price: 2500,
+        },
+        {
+          quote_item_id: 'a2',
+          service_name: null,
+          catalog_description: null,
+          description: 'Discount',
+          total_price: -500,
+        },
+      ]
+    );
+
+    expect(rendered.html).toContain('<div style="font-weight:600;line-height:1.3">Managed Support</div>');
+    expect(rendered.html).toContain('<div style="color:#4b5563;font-size:12px">Full-service support</div>');
+    // All-empty lines fall back to the column value so discounts/custom rows stay readable.
+    expect(rendered.html).toContain('>Discount<');
+    expect(rendered.html).not.toContain('ignored when lines resolve');
+    expect(rendered.html).toContain('$25.00');
+    expect(rendered.html).toContain('-$5.00');
+  });
+
+  it('renders the plain value exactly as before when a column has no lines', async () => {
+    const rendered = await renderAst(
+      [
+        {
+          id: 'description',
+          header: 'Description',
+          value: { type: 'path', path: 'description' },
+        },
+      ],
+      [{ description: 'Plain line', service_name: 'Ignored name' }]
+    );
+
+    expect(rendered.html).toContain('<td>Plain line</td>');
+    expect(rendered.html).not.toContain('Ignored name');
+  });
+
+  it('renders a newline value with the pre-line blank-line convention', async () => {
+    const rendered = await renderAst(
+      [
+        {
+          id: 'description',
+          header: 'Description',
+          value: {
+            type: 'template',
+            template: '{{name}}\n{{description}}',
+            args: {
+              name: { type: 'path', path: 'service_name' },
+              description: { type: 'path', path: 'description' },
+            },
+          },
+        },
+      ],
+      [
+        { service_name: 'Managed Support', description: 'Full-service support' },
+        { service_name: null, description: 'Discount' },
+      ]
+    );
+
+    expect(rendered.html).toContain('<span style="white-space:pre-line">Managed Support\nFull-service support</span>');
+    expect(rendered.html).toContain('>Discount</td>');
+  });
+});

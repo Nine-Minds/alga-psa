@@ -365,6 +365,16 @@ type NodeInput =
       }>;
     };
 
+// A single stacked line within a table cell: its own value expression and
+// optional per-line style/format. Lines are additive — columns authored before
+// this key existed carry none and validate unchanged.
+const tableColumnLineSchema = z.object({
+  id: z.string().min(1),
+  value: valueExpressionSchema,
+  format: valueFormatSchema.optional(),
+  style: nodeStyleRefSchema.optional(),
+}).strict();
+
 const nodeSchema: z.ZodTypeAny = z.lazy(() =>
   z.discriminatedUnion('type', [
     z.object({
@@ -436,6 +446,7 @@ const nodeSchema: z.ZodTypeAny = z.lazy(() =>
         value: valueExpressionSchema,
         format: valueFormatSchema.optional(),
         style: nodeStyleRefSchema.optional(),
+        lines: z.array(tableColumnLineSchema).optional(),
       }).strict()).min(1),
       emptyStateText: i18nTextSchema.optional(),
     }).strict(),
@@ -455,6 +466,7 @@ const nodeSchema: z.ZodTypeAny = z.lazy(() =>
         value: valueExpressionSchema,
         format: valueFormatSchema.optional(),
         style: nodeStyleRefSchema.optional(),
+        lines: z.array(tableColumnLineSchema).optional(),
       }).strict()).min(1),
       emptyStateText: i18nTextSchema.optional(),
     }).strict(),

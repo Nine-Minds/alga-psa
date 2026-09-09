@@ -39,3 +39,20 @@
 - New coverage: preview cases and DB-backed T215/T216. Uses isolated test database test_database_2353_takeover on port 5472.
 - Billing package build/typecheck pass. Full test and evidence details are in docs/evidence/ticket-2353-quote-discount-group-allocation/TAKEOVER.md.
 - The browser CLI timed out twice; the Browser runtime listed no connected browsers. Existing editor/PDF evidence remains valid for unchanged quote rendering; no new live screenshot of the conversion warning is claimed.
+
+## Round-2 repair (standard-template catalog compatibility)
+
+- Round-1 smoke failed: the shared `standard-quote-grouped` catalog row
+  (08a528dd-6cc5-4c4d-b6c9-cf8bea390a2a) has ticket-2354 `lines` Description
+  columns; the branch runtime rejected them (`Unrecognized key(s): 'lines'`),
+  so preview/PDF returned HTTP 500.
+- Repair: invoice-template-ast types/schema now allow an optional `lines`
+  array on table/dynamic-table columns; react-renderer stacks resolved lines
+  (per-line styles, empty lines dropped) and falls back to the flat `value`
+  when all lines resolve empty. `\n` cell values use the ticket-2354
+  blank-line/pre-line convention. Catalog untouched; existing ASTs unchanged.
+- Regression coverage: schema + renderer unit tests; infra test T220 loads the
+  actual standard catalog row and drives renderQuotePreview + generatePDF.
+- Evidence: docs/evidence/ticket-2353-quote-discount-group-allocation/round2/
+  contains a real shared-catalog PDF (QUO-0003), transcript, preview HTML, and
+  rasterized pages. Template assignment restored; catalog row unmodified.
