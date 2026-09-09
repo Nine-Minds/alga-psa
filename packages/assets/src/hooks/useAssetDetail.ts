@@ -1,15 +1,16 @@
 import useSWR from 'swr';
 import { useState, useCallback } from 'react';
 import { getAsset, getAssetSummaryMetrics, getAvailableAssetFacts } from '@alga-psa/assets/actions/assetActions';
-import { getAssetRmmData, refreshAssetRmmData, triggerRmmReboot } from '@alga-psa/assets/actions/rmmActions';
 import { toast } from 'react-hot-toast';
 import { unwrapAssetActionResult } from '@alga-psa/assets/actions/assetActionErrors';
+import { useAssetCrossFeature } from '../context/AssetCrossFeatureContext';
 
 async function unwrapAssetFetcher<T>(resultPromise: Promise<T>): Promise<T> {
   return unwrapAssetActionResult(await resultPromise);
 }
 
 export function useAssetDetail(assetId: string) {
+  const { rmm } = useAssetCrossFeature();
   const {
     data: asset,
     error: assetError,
@@ -28,7 +29,7 @@ export function useAssetDetail(assetId: string) {
     error: rmmError,
     isLoading: rmmLoading,
     mutate: mutateRmmData,
-  } = useSWR(assetId ? ['asset', assetId, 'rmm'] : null, ([_, id]) => getAssetRmmData(id));
+  } = useSWR(assetId ? ['asset', assetId, 'rmm'] : null, ([_, id]) => rmm.getAssetRmmData(id));
   const {
     data: assetFacts,
     error: assetFactsError,
@@ -44,7 +45,7 @@ export function useAssetDetail(assetId: string) {
       try {
         setIsRefreshing(true);
         const [updatedData, updatedAsset] = await Promise.all([
-          refreshAssetRmmData(assetId),
+          rmm.refreshAssetRmmData(assetId),
           unwrapAssetFetcher(getAsset(assetId)),
         ]);
 
@@ -59,7 +60,7 @@ export function useAssetDetail(assetId: string) {
         setIsRefreshing(false);
       }
     },
-    [assetId, mutateAsset, mutateRmmData]
+    [assetId, mutateAsset, mutateRmmData, rmm]
   );
 
   const [isRebooting, setIsRebooting] = useState(false);
@@ -70,7 +71,7 @@ export function useAssetDetail(assetId: string) {
 
       try {
         setIsRebooting(true);
-        const result = await triggerRmmReboot(assetId);
+        const result = await rmm.triggerRmmReboot(assetId);
         if (result.success) {
           toast.success(result.message);
         } else {
@@ -83,7 +84,7 @@ export function useAssetDetail(assetId: string) {
         setIsRebooting(false);
       }
     },
-    [assetId]
+    [assetId, rmm]
   );
 
   return {

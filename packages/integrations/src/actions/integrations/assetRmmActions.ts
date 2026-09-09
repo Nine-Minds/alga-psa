@@ -2,9 +2,11 @@
 
 /**
  * Asset-page RMM actions: cached vitals plus single-device refresh, reboot,
- * script and remote-control commands. Provider-agnostic — the per-provider
- * work is resolved through @alga-psa/integrations, which owns the Tactical
- * adapter (Community Edition) and the NinjaOne seam (Enterprise).
+ * script and remote-control commands. Lives here rather than in the assets
+ * package because feature packages may not import each other; the asset page
+ * receives these through AssetCrossFeatureContext from the composition layer.
+ * Per-provider work is resolved via assetDeviceActions (Tactical in CE, the
+ * NinjaOne seam in EE).
  */
 
 import { withAuth, hasPermission } from '@alga-psa/auth';
@@ -14,10 +16,13 @@ import {
   type RmmAssetDeviceActions,
   type RmmAssetDeviceRef,
   type RmmRemoteConnectionType,
-} from '@alga-psa/integrations/lib/rmm/assetDeviceActions';
+} from '../../lib/rmm/assetDeviceActions';
+import { getRmmProviderMetadata } from '../../lib/rmm/providerRegistry';
 import type { RmmAgentStatus, RmmCachedData, RmmProvider, RmmStorageInfo } from '@alga-psa/types';
 
-import { getRmmProviderDisplayName } from '../lib/rmmProviderDisplay';
+function providerLabel(provider: string | null | undefined): string {
+  return getRmmProviderMetadata(provider as RmmProvider)?.title ?? (provider || 'RMM');
+}
 
 export interface RmmCommandResult {
   success: boolean;
@@ -58,7 +63,7 @@ async function resolveDevice(
 
   const actions = await resolveRmmAssetDeviceActions(asset.rmm_provider);
   if (!actions) {
-    throw new Error(`Device actions are not available for ${getRmmProviderDisplayName(asset.rmm_provider)} assets`);
+    throw new Error(`Device actions are not available for ${providerLabel(asset.rmm_provider)} assets`);
   }
 
   return {
@@ -160,7 +165,7 @@ export const triggerRmmScript = withAuth(async (user, { tenant }, assetId: strin
   await requireAssetPermission(user, 'update');
   const { asset, ref, actions } = await resolveDevice(tenant, assetId);
   if (!actions.runScript) {
-    return { success: false, message: `Scripts are not supported for ${getRmmProviderDisplayName(asset.rmm_provider ?? undefined)} assets` };
+    return { success: false, message: `Scripts are not supported for ${providerLabel(asset.rmm_provider)} assets` };
   }
   try {
     const result = await actions.runScript(ref, scriptId);

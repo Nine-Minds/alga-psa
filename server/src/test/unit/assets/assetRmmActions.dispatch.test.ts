@@ -78,7 +78,7 @@ describe('asset RMM actions (provider dispatch)', () => {
   });
 
   it('getAssetRmmData reads cached vitals from the extension table for any provider', async () => {
-    const { getAssetRmmData } = await import('@alga-psa/assets/actions/rmmActions');
+    const { getAssetRmmData } = await import('@alga-psa/integrations/actions/integrations/assetRmmActions');
     const data = await getAssetRmmData('asset_1');
     expect(data).toMatchObject({
       provider: 'tacticalrmm',
@@ -94,7 +94,7 @@ describe('asset RMM actions (provider dispatch)', () => {
   });
 
   it('triggerRmmReboot dispatches to the provider adapter and reports its outcome', async () => {
-    const { triggerRmmReboot } = await import('@alga-psa/assets/actions/rmmActions');
+    const { triggerRmmReboot } = await import('@alga-psa/integrations/actions/integrations/assetRmmActions');
     expect(await triggerRmmReboot('asset_1')).toEqual({ success: true, message: 'Reboot command sent to pc-1' });
     expect(adapterCalls).toEqual([{ op: 'reboot', ref: { tenant: 'tenant_1', assetId: 'asset_1', deviceId: 'AGENT-1', assetName: 'pc-1' } }]);
 
@@ -102,14 +102,14 @@ describe('asset RMM actions (provider dispatch)', () => {
   });
 
   it('refreshAssetRmmData refreshes through the adapter then re-reads cached data', async () => {
-    const { refreshAssetRmmData } = await import('@alga-psa/assets/actions/rmmActions');
+    const { refreshAssetRmmData } = await import('@alga-psa/integrations/actions/integrations/assetRmmActions');
     const data = await refreshAssetRmmData('asset_1');
     expect(adapterCalls).toEqual([{ op: 'refresh', ref: expect.objectContaining({ deviceId: 'AGENT-1' }) }]);
     expect(data?.current_user).toBe('robin');
   });
 
   it('explains providers without device actions, unmanaged assets, and missing permission', async () => {
-    const { refreshAssetRmmData, triggerRmmReboot } = await import('@alga-psa/assets/actions/rmmActions');
+    const { refreshAssetRmmData, triggerRmmReboot } = await import('@alga-psa/integrations/actions/integrations/assetRmmActions');
     await expect(refreshAssetRmmData('asset_lvl')).rejects.toThrow('Device actions are not available for Level assets');
     await expect(triggerRmmReboot('asset_manual')).rejects.toThrow('Asset is not managed by an RMM');
     await expect(triggerRmmReboot('missing')).rejects.toThrow('Asset not found');

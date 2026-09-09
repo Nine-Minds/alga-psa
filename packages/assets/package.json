@@ -53,7 +53,6 @@
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
     "@alga-psa/formatting": "*",
-    "@alga-psa/integrations": "*",
     "@alga-psa/shared": "*",
     "@alga-psa/types": "*",
     "@alga-psa/ui": "*",

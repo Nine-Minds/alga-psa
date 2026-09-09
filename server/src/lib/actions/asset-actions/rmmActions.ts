@@ -1,1 +1,1 @@
-export * from '@alga-psa/assets/actions/rmmActions';
+export * from '@alga-psa/integrations/actions/integrations/assetRmmActions';
