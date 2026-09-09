@@ -10,7 +10,7 @@ function harness(t, edition = 'enterprise') {
   const outputDirectory = mkdtempSync(path.join(tmpdir(), 'provider-topology-'));
   t.after(() => rmSync(outputDirectory, { recursive: true, force: true }));
   const services = ['server', 'email-service', 'workflow-worker', ...(edition === 'enterprise' ? ['temporal-worker'] : [])];
-  const config = { services: Object.fromEntries(services.map(service => [service, { image: `candidate-${service}`, deploy: { replicas: service === 'workflow-worker' ? 2 : 1 } }])) };
+  const config = { name: 'alga-e2e-test', services: Object.fromEntries(services.map(service => [service, { image: `candidate-${service}`, deploy: { replicas: service === 'workflow-worker' ? 2 : 1 } }])) };
   const imageId = 'sha256:' + 'b'.repeat(64);
   const images = Object.fromEntries(services.map(service => [`candidate-${service}`, { Id: imageId, Config: { Labels: { 'org.opencontainers.image.revision': revision } } }]));
   let index = 0;
@@ -23,9 +23,12 @@ function harness(t, edition = 'enterprise') {
     calls.push({ program, args, input });
     if (program === 'docker-compose') {
       assert.deepEqual(args.slice(0, 2), ['-p', 'alga-e2e-test']);
-      if (args[2] === 'config') return JSON.stringify(config);
-      assert.deepEqual(args.slice(2, 5), ['ps', '-a', '-q']);
-      return ids[args[5]].join('\n');
+      if (edition === 'enterprise') assert.deepEqual(args.slice(2, 4), ['--profile', 'enterprise']);
+      else assert.ok(!args.includes('--profile'));
+      const operation = args.slice(edition === 'enterprise' ? 4 : 2);
+      if (operation[0] === 'config') return JSON.stringify(config);
+      assert.deepEqual(operation.slice(0, 3), ['ps', '-a', '-q']);
+      return ids[operation[3]].join('\n');
     }
     assert.equal(program, 'docker');
     if (args[0] === 'image') {
@@ -100,4 +103,35 @@ test('replacement container removes old evidence and records its candidate image
   assert.ok(!readdirSync(h.outputDirectory).includes(`workflow-worker-${previous}.json`));
   assert.ok(readdirSync(h.outputDirectory).includes(`workflow-worker-${replacement}.json`));
   assert.deepEqual(result.containers.find(item => item.id === replacement), { service: 'workflow-worker', id: replacement, imageId: h.imageId });
+});
+
+test('build-only email service resolves the validated Compose-generated image', t => {
+  const h = harness(t);
+  delete h.config.services['email-service'].image;
+  h.config.services['email-service'].build = { context: '/owned/checkout', dockerfile: 'services/email-service/Dockerfile' };
+  h.images['alga-e2e-test-email-service'] = h.images['candidate-email-service'];
+  assert.equal(h.check().status, 'passed');
+  assert.ok(h.calls.some(call => call.program === 'docker' && call.args.join(' ') === 'image inspect alga-e2e-test-email-service'));
+});
+
+test('missing both explicit image and build cannot select a fallback image', t => {
+  const h = harness(t);
+  delete h.config.services['email-service'].image;
+  assert.throws(h.check);
+});
+
+test('resolved Compose project must match the owned project', t => {
+  const h = harness(t);
+  h.config.name = 'foreign-project';
+  assert.throws(h.check);
+});
+
+test('probe failures expose only controlled phase and service, never command secrets', t => {
+  const h = harness(t);
+  h.results[h.ids['email-service'][0]] = new Error('TOKEN=private-command-output');
+  assert.throws(h.check, error => {
+    assert.equal(error.message, 'Provider topology verification failed (probe: email-service)');
+    assert.ok(!String(error).includes('private-command-output'));
+    return true;
+  });
 });

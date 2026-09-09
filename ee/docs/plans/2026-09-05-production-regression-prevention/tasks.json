@@ -540,6 +540,14 @@
       "dependsOn": [],
       "owner": "coordinator",
       "notes": "Wired archive verification receipts and loaded-image manifest into actual browser runner metrics and diagnostics.67 combined native metrics/archive/schema tests pass, plus actionlint and plan/task validators. Independent review accepted runtime integration; coordinator fixed CLI input-alias deletion identified during review and updated docs. CI candidate publication awaits current run completion; actual new artifact/Sheets readback still pending. No local Docker."
+    },
+    {
+      "id": "R065",
+      "title": "Resolve build-only Compose images in provider topology verification",
+      "status": "in_progress",
+      "dependsOn": [],
+      "owner": "calendar_review",
+      "notes": "Native behavioral fixture reproduces build-only email-service rejection before fix;24 reviewed tests pass after validated Compose-generated tag fallback. Missing image+build still rejects and image/revision binding preserved. EE explicitly enables enterprise profile; independent native config-only rendering and pinned Compose2.36 source confirm profiled temporal-worker otherwise omitted and ps -q prints full IDs. Safe fixed phase/service diagnostics exclude raw command data. Current CI predates fix; actual replica proof remains R039/R065. No daemon/container execution."
     }
   ]
 }
