@@ -325,12 +325,12 @@
     {
       "id": "R039",
       "title": "Retain candidate-bound provider readiness evidence for each application process",
-      "status": "in_progress",
+      "status": "done",
       "dependsOn": [
         "R034"
       ],
       "owner": "coordinator",
-      "notes": "Prior completed CI had7passed service-class records, but one default workflow-worker replica was probed. Added complete configured topology enumeration/count/state/project/service validation and per-container64hex identity. Every replica is exec-probed sequentially and gets separately reconciled JSON; failed retry removes stale success. Native routing/topology suites pass36/36 together; workflow validation passes. Full actual Docker topology and current-source CI remain pending. Cross-review also requires running container image ID to match configured candidate image and revision, and clears only owned per-container records before topology validation. Native cases cover stale image, wrong revision, failed/replaced topology retry."
+      "notes": "Prior completed CI had7passed service-class records, but one default workflow-worker replica was probed. Added complete configured topology enumeration/count/state/project/service validation and per-container64hex identity. Every replica is exec-probed sequentially and gets separately reconciled JSON; failed retry removes stale success. Native routing/topology suites pass36/36 together; workflow validation passes. Full actual Docker topology and current-source CI remain pending. Cross-review also requires running container image ID to match configured candidate image and revision, and clears only owned per-container records before topology validation. Native cases cover stale image, wrong revision, failed/replaced topology retry. Currentcb884 finalcontainerartifacts prove all4CE/5EE configuredreplicas, matching perCID probes and actualmanifest imageIDs, including EETemporalprofile and2workflowreplicas. Evidence ci-provider-replicas-cb884.json. Processrouting scopeonly."
     },
     {
       "id": "R040",
@@ -544,10 +544,10 @@
     {
       "id": "R065",
       "title": "Resolve build-only Compose images in provider topology verification",
-      "status": "in_progress",
+      "status": "done",
       "dependsOn": [],
       "owner": "calendar_review",
-      "notes": "Native behavioral fixture reproduces build-only email-service rejection before fix;24 reviewed tests pass after validated Compose-generated tag fallback. Missing image+build still rejects and image/revision binding preserved. EE explicitly enables enterprise profile; independent native config-only rendering and pinned Compose2.36 source confirm profiled temporal-worker otherwise omitted and ps -q prints full IDs. Safe fixed phase/service diagnostics exclude raw command data. Current CI predates fix; actual replica proof remains R039/R065. No daemon/container execution."
+      "notes": "Native behavioral fixture reproduces build-only email-service rejection before fix;24 reviewed tests pass after validated Compose-generated tag fallback. Missing image+build still rejects and image/revision binding preserved. EE explicitly enables enterprise profile; independent native config-only rendering and pinned Compose2.36 source confirm profiled temporal-worker otherwise omitted and ps -q prints full IDs. Safe fixed phase/service diagnostics exclude raw command data. Current CI predates fix; actual replica proof remains R039/R065. No daemon/container execution. Currentcb884 finalcontainerartifacts prove all4CE/5EE configuredreplicas, matching perCID probes and actualmanifest imageIDs, including EETemporalprofile and2workflowreplicas. Evidence ci-provider-replicas-cb884.json. Processrouting scopeonly."
     },
     {
       "id": "R066",
@@ -620,6 +620,14 @@
       "dependsOn": [],
       "owner": "coordinator and stripe_protocol",
       "notes": "Read-only GitHub/Sheets collector and manual workflow integrated;32 collector cases plus51 core cases pass together (83). Validates current-attempt pagination, PRmergeparent relationship, repo casing, jobidentity, bounded Sheets chunks, legacy/missing tabs and recorderstate. Full collect-to-reconcile CE/EE behavior tested. Operator-supplied SHA is not independent checkoutproof. Manual CI execution, automatic reporting and scorecard publication remain pending; no originalwrites. Real read-only remote snapshots exposed mutable PR head/base in historical run metadata. Fixed association to immutable run head in supplied merge parents; never claim historicalbase/checkout verification.33 collector plus53core tests pass; actual snapshot replay reports both failed editions and their legacyunverified rows. Evidence real-browser-metrics-reconciliation.json. Standalone credentials/workflow execution remain unverified."
+    },
+    {
+      "id": "R075",
+      "title": "Recover a transient API dependency download reset without retrying test failures",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "calendar_review and coordinator",
+      "notes": "Current EE job102324221161 failed npmci withECONNRESET before API/upgrade/Teams. Add at mostone retry for this classified install failure, preserving lockedci and10minuteCIlimit. No application/test assertions change; native wrapper proof pending. Nine nativebehavioral tests pass for exactECONNRESET-only retry, mixedterminalcodes no retry, max2attempts, exit/signal/cancellation handling. Rootworkflow10mincap preserved; currentCIprecedeswrapper, realCIvalidation pending."
     }
   ]
 }

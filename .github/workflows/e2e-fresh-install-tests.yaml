@@ -980,7 +980,7 @@ jobs:
         id: api_dependencies
         if: ${{ !cancelled() && steps.wait_for_setup.outputs.status == 'success' }}
         timeout-minutes: 10
-        run: npm ci
+        run: node scripts/install-api-test-dependencies.mjs
 
       - name: Attest ownership of the fresh-install API database
         id: api_database
