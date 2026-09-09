@@ -895,11 +895,11 @@
     },
     {
       "id": "R109",
-      "title": "Recover narrowly from transient appliance dependency download failures",
+      "title": "Recover narrowly from transient dependency download failures",
       "status": "done",
       "dependsOn": [],
       "owner": "calendar_review and coordinator",
-      "notes": "Current f3a appliance job102398085497 did not run tests: root npm ci failed downloading ffmpeg-static Linux license from GitHub HTTP500. Reuse existing bounded installer with appliance-only opt-in: one retry after2s for recognized terminal ffmpeg download5xx, preserving lifecycle scripts, finalfailure andsignals. Two redcases reproduced;18/18nativecasespass including401/404/unrelated/conflictingerrors, opt-out and subprocess signals. Workflow scopedtoappliance, actionlintpasses. ActualCI recoverypending; no test retries or skipchanges."
+      "notes": "Current f3a appliance job102398085497 did not run tests: root npm ci failed downloading ffmpeg-static Linux license from GitHub HTTP500. Reuse existing bounded installer with appliance-only opt-in: one retry after2s for recognized terminal ffmpeg download5xx, preserving lifecycle scripts, finalfailure andsignals. Two redcases reproduced;18/18nativecasespass including401/404/unrelated/conflictingerrors, opt-out and subprocess signals. Workflow scopedtoappliance, actionlintpasses. ActualCI recoverypending; no test retries or skipchanges. Mutation job102398083391 independently failed at the same GitHub license downloadHTTP500 beforeStryker. Apply the same opt-in bounded recovery there, named FFMPEG_STATIC_DOWNLOAD_RETRY; no system-binary assumptions, additional script skips or mutation-test changes."
     }
   ]
 }

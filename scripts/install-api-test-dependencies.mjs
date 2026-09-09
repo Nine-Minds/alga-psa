@@ -2,15 +2,15 @@ import { spawn } from 'node:child_process';
 import { setTimeout as delay } from 'node:timers/promises';
 import { pathToFileURL } from 'node:url';
 
-export async function installApiTestDependencies({ run = runNpm, wait = delay, signal, applianceFfmpegDownloadRetry = false } = {}) {
+export async function installApiTestDependencies({ run = runNpm, wait = delay, signal, ffmpegDownloadRetry = false } = {}) {
   for (let attempt = 1; attempt <= 2; attempt++) {
     signal?.throwIfAborted();
     const result = await run(['ci', '--prefer-offline'], { signal });
     const npmCodes = [...result.stderr.matchAll(/^npm (?:error|ERR!) code (\S+)\s*$/gm)].map(match => match[1]);
     const reset = npmCodes.length > 0 && npmCodes.every(code => code === 'ECONNRESET');
-    // This opt-in recognizes the appliance lane's observed external download
+    // This opt-in recognizes the observed external download
     // failure. Keep other lifecycle errors terminal and preserve all scripts.
-    const ffmpegDownload = applianceFfmpegDownloadRetry && result.code === 1
+    const ffmpegDownload = ffmpegDownloadRetry && result.code === 1
       && npmCodes.length === 1 && npmCodes[0] === '1'
       && /^npm (?:error|ERR!) path [^\r\n]*\/node_modules\/ffmpeg-static\s*$/m.test(result.stderr)
       && /^npm (?:error|ERR!) command sh -c node install\.js\s*$/m.test(result.stderr)
@@ -52,7 +52,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   const onTerm = () => terminate('SIGTERM'), onInt = () => terminate('SIGINT');
   process.on('SIGTERM', onTerm); process.on('SIGINT', onInt);
   let result;
-  try { result = await installApiTestDependencies({ signal: controller.signal, applianceFfmpegDownloadRetry: process.env.APPLIANCE_FFMPEG_DOWNLOAD_RETRY === 'true' }); }
+  try { result = await installApiTestDependencies({ signal: controller.signal, ffmpegDownloadRetry: process.env.FFMPEG_STATIC_DOWNLOAD_RETRY === 'true' }); }
   catch { result = { code: 1, signal: controller.signal.aborted ? controller.signal.reason : null }; }
   process.removeListener('SIGTERM', onTerm); process.removeListener('SIGINT', onInt);
   if (controller.signal.aborted) process.kill(process.pid, controller.signal.reason);

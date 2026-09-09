@@ -29,7 +29,10 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm install -g npm@11
-      - run: npm ci
+      - name: Install mutation dependencies with bounded download recovery
+        env:
+          FFMPEG_STATIC_DOWNLOAD_RETRY: 'true'
+        run: node scripts/install-api-test-dependencies.mjs
       - name: Run selected billing and authorization mutations
         run: npm run test:mutation:pilot
       - name: Retain the full report and scoped evidence
