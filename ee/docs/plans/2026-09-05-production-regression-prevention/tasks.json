@@ -859,7 +859,7 @@
       "status": "done",
       "dependsOn": [],
       "owner": "calendar_review",
-      "notes": "CurrentCIshard1 surveybeforeAll60stimeout skips3cases; secondaryundefineddb.destroy. Casesseedowncompletegraphs. Preservefullmigrations+60sdeadline, omitdevseeds, awaitinitializationcleanup, useownedrandomDB andalign/restoreDB_NAME_SERVER for migrationgranttarget. Native3/3pass11.75s vsbaseline12.89s; timeoutnotreproducedlocally. FinalownedDB+rolecleaned; earliernativeisolationlimitationsretained. CurrentCIpending."
+      "notes": "CurrentCIshard1 surveybeforeAll60stimeout skips3cases; secondaryundefineddb.destroy. Casesseedowncompletegraphs. Preservefullmigrations+60sdeadline, omitdevseeds, awaitinitializationcleanup, useownedrandomDB andalign/restoreDB_NAME_SERVER for migrationgranttarget. Native3/3pass11.75s vsbaseline12.89s; timeoutnotreproducedlocally. FinalownedDB+rolecleaned; earliernativeisolationlimitationsretained. CurrentCIpending. Current f3a CI artifact10096360589 on testeda9305d0b43dc0242156b92f3ab189e680ccecb26 confirms all3surveycasespassed; shard579/579,zero skips/failures/TODOs/pending. Overallrun34330619264 remainslive/non-green."
     },
     {
       "id": "R105",
