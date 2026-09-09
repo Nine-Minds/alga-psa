@@ -145,16 +145,23 @@ file counts beside the percentage. Do not connect a trend line across method
 versions or silently omit missing-run observations. A run cancelled before its
 metrics step still requires external reconciliation to appear at all.
 
-The `Reconcile browser metrics exports` workflow provides a read-only,
-manually invoked reconciliation for one observed production-regression run.
-Supply its run ID and full tested revision (the tested merge commit for a PR).
+The `Reconcile browser metrics exports` workflow defines read-only reconciliation
+after a `Production regression tests` run completes. Both entrypoints check out
+maintained default-branch code. The automatic path reads current-attempt CE/EE
+browser artifact manifests to identify the tested revision. ZIP reads are bounded
+to one manifest member, without extracting or executing artifact code. Missing,
+expired, stale, invalid or conflicting evidence leaves the revision unknown and
+the report non-green; Sheets rows cannot supply the missing source identity.
+
+For manual invocation, supply the run ID and full tested revision (the tested
+merge commit for a PR).
 It verifies GitHub run/attempt identities and reads the existing
 `browser_readiness` rows using the configured metrics credentials. It retains
 a JSON artifact and step summary, including missing exports, pending work,
 cancellations, stale attempts and conflicting identities. It does not write
 to the workbook. A recorder step succeeding without configured credentials
 can still leave a missing export; the report does not assume a network error.
-The tested revision is supplied by the operator. For PRs, the collector checks
+In manual mode the revision is supplied by the operator. For PRs, the collector checks
 that it is a two-parent merge containing the run's recorded head commit.
 Historical run responses can contain the PR's current head/base metadata, so
 those mutable fields cannot validate an older run's merge base. The parent
@@ -168,10 +175,11 @@ incomplete journey identities cannot satisfy export completeness.
 
 For an already collected JSON snapshot, run
 `node scripts/reconcile-browser-metric-executions.mjs input.json report.json`.
-Non-green results retain their report and exit unsuccessfully. Automatic
-reconciliation, scorecard publication of these records, and detection of
-workflows that were never created remain rollout work; this manual report
-does not by itself close those requirements.
+Non-green results retain their report and exit unsuccessfully. The automatic
+trigger requires this workflow and its scripts on the default branch; its live
+credentialed execution has not yet been verified. Scorecard publication and
+detection of workflows that were never created remain rollout work. This
+observed-run report does not by itself close those requirements.
 
 Validate these formulas and old readers with synthetic success, failure,
 cancelled, missing, and retry-only cases in an approved isolated copy before

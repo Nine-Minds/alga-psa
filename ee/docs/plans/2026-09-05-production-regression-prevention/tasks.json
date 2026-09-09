@@ -592,10 +592,10 @@
     {
       "id": "R071",
       "title": "Avoid concurrent auto time-skipping in Temporal email engine tests",
-      "status": "in_progress",
+      "status": "done",
       "dependsOn": [],
       "owner": "calendar_review and coordinator",
-      "notes": "Current cb884 CI Temporal engine job102319307339 fails concurrent email workflow while60cases pass. SDK shared auto time-skipping does not support concurrent workflows. Agent implements ordinary Client with explicit deadline time advancement and activity-overlap barrier; native focused6pass, full61case engine verification pending. Full canonical native engine suite passes61/61 across12files in23.19s; focused6/6 includes explicit deadline and three-activity overlap. Local baseline passed intermittently; actual CI supplies pre-fix failure, not deterministic local red. Coordinator reviewed; current-source CI proof pending."
+      "notes": "Current cb884 CI Temporal engine job102319307339 fails concurrent email workflow while60cases pass. SDK shared auto time-skipping does not support concurrent workflows. Agent implements ordinary Client with explicit deadline time advancement and activity-overlap barrier; native focused6pass, full61case engine verification pending. Full canonical native engine suite passes61/61 across12files in23.19s; focused6/6 includes explicit deadline and three-activity overlap. Local baseline passed intermittently; actual CI supplies pre-fix failure, not deterministic local red. Coordinator reviewed; current-source CI proof pending. Currenta0d077 CI34308610232 engine+gatepass atclean3db700f653e28ddd322dfdb652f1689a54f6b65d:12files/61cases, nofail/skip/TODO/pending, fullselection. Evidence ci-temporal-engine-a0d077.json."
     },
     {
       "id": "R072",
@@ -628,6 +628,30 @@
       "dependsOn": [],
       "owner": "calendar_review and coordinator",
       "notes": "Current EE job102324221161 failed npmci withECONNRESET before API/upgrade/Teams. Add at mostone retry for this classified install failure, preserving lockedci and10minuteCIlimit. No application/test assertions change; native wrapper proof pending. Nine nativebehavioral tests pass for exactECONNRESET-only retry, mixedterminalcodes no retry, max2attempts, exit/signal/cancellation handling. Rootworkflow10mincap preserved; currentCIprecedeswrapper, realCIvalidation pending."
+    },
+    {
+      "id": "R076",
+      "title": "Prove concurrent isolated provider scenarios do not share reset or callback state",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "stripe_protocol",
+      "notes": "T025 audit found no assertion for two simultaneously active independently seeded emulator scenarios. Implement real HTTP isolation/reset/callback proof with ephemeral native hosts; preserve one-worker guard for a shared host. Fullbrowseracceptance remains separately audited. Real2hostStripeHTTP/signature/resetbarrier testpasses;27packagecases+typecheck andcanonicalserver-unit1file/1test pass. F031foundationaccepted; T025fullcurrentCI proof retains newtestpublication requirement. Evidence native-concurrent-provider-isolation.json."
+    },
+    {
+      "id": "R077",
+      "title": "Discover current browser artifact revisions for automatic read-only reconciliation",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "calendar_review",
+      "notes": "Implementation complete. Coordinator combined 116 native tests and actionlint passed. Real current-run artifact resolution evidence: evidence/automatic-browser-reconciliation.json. Unknown tested revisions remain visible and non-green; trusted default-branch reporting reads artifacts and Sheets without writes. F025 remains open for default-branch deployment, a credentialed workflow run, and scorecard rollout."
+    },
+    {
+      "id": "R078",
+      "title": "Keep unknown tested revisions visible and wire completion-triggered reporting",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "qbo_protocol and coordinator",
+      "notes": "Implementation complete. Coordinator combined 116 native tests and actionlint passed. Real current-run artifact resolution evidence: evidence/automatic-browser-reconciliation.json. Unknown tested revisions remain visible and non-green; trusted default-branch reporting reads artifacts and Sheets without writes. F025 remains open for default-branch deployment, a credentialed workflow run, and scorecard rollout."
     }
   ]
 }

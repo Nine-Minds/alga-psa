@@ -1,6 +1,9 @@
 name: Reconcile browser metrics exports
 
 on:
+  workflow_run:
+    workflows: [Production regression tests]
+    types: [completed]
   workflow_dispatch:
     inputs:
       run_id:
@@ -22,6 +25,10 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          # A completed PR can contain untrusted code. Reconcile using the
+          # repository's maintained code, never the triggering head or artifact.
+          ref: ${{ github.event.repository.default_branch }}
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -29,7 +36,8 @@ jobs:
         run: node scripts/collect-browser-metric-executions.mjs "$RUNNER_TEMP/browser-metric-executions.json"
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          RECONCILE_RUN_ID: ${{ inputs.run_id }}
+          RECONCILE_RUN_ID: ${{ inputs.run_id || github.event.workflow_run.id }}
+          RECONCILE_REVISION_MODE: ${{ github.event_name == 'workflow_run' && 'artifact' || 'operator' }}
           RECONCILE_TESTED_REVISION: ${{ inputs.tested_revision }}
           GOOGLE_SA_KEY: ${{ secrets.TEST_METRICS_GOOGLE_SA_KEY }}
           TEST_METRICS_SHEET_ID: ${{ vars.TEST_METRICS_SHEET_ID }}

@@ -122,3 +122,27 @@ test('unverified historical run row does not invalidate a complete current expor
  const input=fixture(),legacy=[...input.exportedRows.rows[0]];legacy[BROWSER_HEADER.indexOf('run_attempt')]='unknown';input.exportedRows.rows.push(legacy);
  const result=reconcile(input);assert.equal(result.records[0].legacyRunExportCount,1);assert.equal(result.records[0].exportStatus,'observed-pass');
 });
+for(const [runStatus,conclusion,status] of [['completed','cancelled','cancelled'],['completed','success','incomplete'],['completed','failure','failed'],['pending',null,'pending']])
+ test(`unknown revision preserves ${runStatus}/${conclusion} without trusting Sheets`,()=>{
+  const input=fixture();Object.assign(input.expectedExecutions[0],{revision:null,revisionEvidence:'unavailable',revisionDiagnostics:['artifact-missing'],runStatus,conclusion});
+  const result=reconcile(input),record=result.records[0];assert.equal(record.revision,null);assert.equal(record.status,status);
+  assert.equal(record.exportStatus,'tested-revision-unknown');assert.equal(record.runExportCount,0);
+  assert.equal(record.unverifiedCurrentAttemptRunExportCount,1);assert.ok(record.issues.includes('tested-revision-unknown'));
+  assert.match(record.key,/:unknown:/);assert.equal(result.status,'incomplete');
+ });
+test('conflicting artifact revisions never select a tempting exported SHA',()=>{
+ const input=fixture();Object.assign(input.expectedExecutions[0],{revision:null,revisionEvidence:'conflicting',revisionDiagnostics:['revision-conflicting']});
+ const record=reconcile(input).records[0];assert.equal(record.exportStatus,'tested-revision-unknown');assert.deepEqual(record.revisionDiagnostics,['revision-conflicting']);
+});
+test('known artifact source retains validated metadata and can match exact exports',()=>{
+ const input=fixture();Object.assign(input.expectedExecutions[0],{revisionEvidence:'candidate-artifact',revisionDiagnostics:[]});
+ assert.equal(reconcile(input).records[0].status,'observed-pass');
+});
+for(const fields of [{revision:null},{revision:null,revisionEvidence:'operator',revisionDiagnostics:['artifact-missing']},
+ {revision:null,revisionEvidence:'unavailable',revisionDiagnostics:['<script>untrusted</script>']},
+ {revision:null,revisionEvidence:'unavailable',revisionDiagnostics:[]},{revisionEvidence:'unavailable'}])
+ test('rejects unsupported revision provenance and arbitrary diagnostics',()=>{const input=fixture();Object.assign(input.expectedExecutions[0],fields);assert.throws(()=>reconcile(input))});
+test('cancelled before source artifacts and export remains a visible unknown cancellation',()=>{
+ const input=fixture();Object.assign(input.expectedExecutions[0],{revision:null,revisionEvidence:'unavailable',revisionDiagnostics:['artifact-missing'],conclusion:'cancelled'});
+ input.exportedRows.rows=[];const record=reconcile(input).records[0];assert.equal(record.status,'cancelled');assert.equal(record.exportStatus,'tested-revision-unknown');assert.equal(record.unverifiedCurrentAttemptRunExportCount,0);
+});

@@ -1,14 +1,17 @@
+import { resolveBrowserArtifactRevisions } from './browser-artifact-revision.mjs';
 import { BROWSER_HEADER } from '../record-browser-metrics.mjs';
 // Read-only remote evidence collection. Test identities come from GitHub, never
 // from the scorecard that is being reconciled against those identities.
 export async function collectBrowserMetricExecutions({ repository, runId, revision, sheetId,
-  githubToken, sheetsToken, request = fetch, timeoutMs = 60_000, maxJobPages = 10, maxSheetRows = 10_000,
+  githubToken, sheetsToken, revisionMode = 'operator', request = fetch, timeoutMs = 60_000, maxJobPages = 10, maxSheetRows = 10_000,
 } = {}) {
   let phase = 'configuration';
   const require = condition => { if (!condition) throw new Error('Invalid collection evidence'); };
   try {
     require(typeof repository === 'string' && /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository));
-    require(/^[1-9][0-9]*$/.test(String(runId ?? '')) && /^[a-f0-9]{40}$/.test(revision ?? ''));
+    require(['operator', 'artifact'].includes(revisionMode));
+    require(/^[1-9][0-9]*$/.test(String(runId ?? ''))
+      && (revisionMode === 'artifact' || /^[a-f0-9]{40}$/.test(revision ?? '')));
     require(/^[A-Za-z0-9_-]+$/.test(sheetId ?? '') && githubToken && sheetsToken);
     require(Number.isSafeInteger(timeoutMs) && timeoutMs > 0 && timeoutMs <= 120_000);
     require(Number.isSafeInteger(maxJobPages) && maxJobPages > 0 && maxJobPages <= 20);
@@ -38,7 +41,10 @@ export async function collectBrowserMetricExecutions({ repository, runId, revisi
     const run = await get(runUrl, githubToken);
     validateRun(run);
     phase = 'revision';
-    if (run.event === 'pull_request') {
+    let artifactRevisions;
+    if (revisionMode === 'artifact') {
+      artifactRevisions = await resolveBrowserArtifactRevisions({ repository, run, githubToken, request, deadline });
+    } else if (run.event === 'pull_request') {
       // Historical run PR metadata follows the current PR head/base. Only the
       // run head is immutable here; the other merge parent is not independently
       // bound to the historical base snapshot.
@@ -84,7 +90,7 @@ export async function collectBrowserMetricExecutions({ repository, runId, revisi
         && (recorder.status === 'completed'
           ? ['success', 'failure', 'cancelled', 'timed_out', 'skipped', 'neutral'].includes(recorder.conclusion)
           : recorder.conclusion === null));
-      return { repository, revision, runId: String(runId), runAttempt: run.run_attempt, edition,
+      return { repository, ...(artifactRevisions ? artifactRevisions[edition] : { revision }), runId: String(runId), runAttempt: run.run_attempt, edition,
         eventName: run.event, runStatus: job?.status ?? (run.status === 'completed' ? 'completed' : 'pending'),
         conclusion: job ? job.conclusion : (run.conclusion === 'cancelled' ? 'cancelled' : null),
         recorderStatus: recorder?.status ?? null, recorderConclusion: recorder?.conclusion ?? null };
@@ -124,8 +130,9 @@ export async function collectBrowserMetricExecutions({ repository, runId, revisi
     validateRun(after);
     for (const key of ['id', 'run_attempt', 'status', 'conclusion', 'head_sha', 'event', 'path']) require(after[key] === run[key]);
     return { schemaVersion: 1, expectedExecutions, exportedRows: { header, rows },
-      collectionMetadata: { testedRevisionSource: 'operator-supplied',
-        revisionValidation: run.event === 'pull_request' ? 'merge-run-head-parent-verified' : 'run-head-verified',
+      collectionMetadata: { testedRevisionSource: revisionMode === 'artifact' ? 'candidate-artifact-or-unavailable' : 'operator-supplied',
+        revisionValidation: revisionMode === 'artifact' ? 'per-edition-artifact-evidence'
+          : run.event === 'pull_request' ? 'merge-run-head-parent-verified' : 'run-head-verified',
         checkoutIndependentlyVerified: false,
         sheetObservation: missingTab ? 'missing-tab' : header.length < 25 ? 'legacy-header' : 'current-header' } };
   } catch {

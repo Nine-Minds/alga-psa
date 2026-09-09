@@ -1,10 +1,12 @@
 import assert from 'node:assert/strict';
 import { BROWSER_HEADER } from '../record-browser-metrics.mjs';
 
+const revisionDiagnosticCodes = new Set(['artifact-missing', 'artifact-expired', 'artifact-stale-attempt', 'artifact-invalid',
+  'artifact-inventory-unavailable', 'artifact-duplicate', 'revision-conflicting', 'revision-unverified']);
 const decimal = value => typeof value === 'string' && /^[1-9][0-9]*$/.test(value);
 const number = value => (typeof value === 'number' || typeof value === 'string' && /^\d+$/.test(value))
   && Number.isSafeInteger(Number(value)) && Number(value) >= 0 ? Number(value) : null;
-const key = entry => [entry.repository.toLowerCase(), entry.revision, entry.runId, entry.runAttempt, entry.edition].join(':');
+const key = entry => [entry.repository.toLowerCase(), entry.revision ?? 'unknown', entry.runId, entry.runAttempt, entry.edition].join(':');
 const text = value => typeof value === 'string' && value.trim().length > 0 && !/[\x00-\x1f\x7f]/.test(value);
 function journeyIdentity(row) {
   if (![row.project_id, row.project, row.file].every(text)) return false;
@@ -26,8 +28,14 @@ export function reconcileBrowserMetricExecutions(input) {
   assert.ok(Array.isArray(input.exportedRows.rows), 'Exported rows are required');
   const seen = new Set();
   const expected = input.expectedExecutions.map(entry => {
+    const unknownRevision = entry?.revision === null;
+    assert.ok(unknownRevision ? ['unavailable', 'conflicting'].includes(entry.revisionEvidence)
+      : entry.revisionEvidence === undefined || ['candidate-artifact', 'operator'].includes(entry.revisionEvidence), 'Invalid revision evidence');
+    if (unknownRevision || entry.revisionDiagnostics !== undefined) assert.ok(Array.isArray(entry.revisionDiagnostics)
+      && (!unknownRevision || entry.revisionDiagnostics.length > 0)
+      && entry.revisionDiagnostics.every(code => revisionDiagnosticCodes.has(code)), 'Invalid revision diagnostics');
     assert.ok(/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(entry?.repository ?? '')
-      && /^[a-f0-9]{40}$/.test(entry.revision ?? '') && decimal(entry.runId)
+      && (unknownRevision || /^[a-f0-9]{40}$/.test(entry.revision ?? '')) && decimal(entry.runId)
       && Number.isSafeInteger(entry.runAttempt) && entry.runAttempt > 0
       && ['community', 'enterprise'].includes(entry.edition)
       && ['push', 'pull_request', 'pull_request_target', 'schedule', 'workflow_dispatch'].includes(entry.eventName)
@@ -40,6 +48,8 @@ export function reconcileBrowserMetricExecutions(input) {
         : entry.recorderConclusion === null), 'Invalid recorder state');
     const selected = { repository: entry.repository.toLowerCase(), revision: entry.revision, runId: entry.runId,
       runAttempt: entry.runAttempt, edition: entry.edition, eventName: entry.eventName, runStatus: entry.runStatus, conclusion: entry.conclusion,
+      ...(entry.revisionEvidence !== undefined ? { revisionEvidence: entry.revisionEvidence } : {}),
+      ...(entry.revisionDiagnostics !== undefined ? { revisionDiagnostics: [...new Set(entry.revisionDiagnostics)].sort() } : {}),
       ...(hasRecorder ? { recorderStatus: entry.recorderStatus, recorderConclusion: entry.recorderConclusion } : {}) };
     assert.ok(!seen.has(key(selected)), 'Duplicate expected execution'); seen.add(key(selected)); return selected;
   }).sort((a,b) => key(a).localeCompare(key(b)));
@@ -60,8 +70,10 @@ export function reconcileBrowserMetricExecutions(input) {
     const runs = current.filter(row => row.row_kind === 'run');
     const journeys = current.filter(row => row.row_kind === 'journey');
     const issues = [];
+    if (entry.revision === null) issues.push('tested-revision-unknown');
+    issues.push(...(entry.revisionDiagnostics ?? []));
     if (legacyRunExportCount) issues.push('legacy-export-unverified');
-    if (sameAttempt.length !== current.length) issues.push('conflicting-export-identity');
+    if (entry.revision !== null && sameAttempt.length !== current.length) issues.push('conflicting-export-identity');
     if (runs.length > 1) issues.push('duplicate-run-export');
     if (current.some(row => !['run', 'journey'].includes(row.row_kind))) issues.push('invalid-row-kind');
     const staleAttempts = [...new Set(related.map(row => number(row.run_attempt)).filter(attempt => attempt !== null && attempt !== entry.runAttempt))].sort((a,b)=>a-b);
@@ -74,7 +86,8 @@ export function reconcileBrowserMetricExecutions(input) {
       && journeys.every(row => journeyIdentity(row) && bool(row.required) && bool(row.observed) && row.outcome === 'expected'
         && row.first_attempt === 'passed' && number(row.retry_count) === 0);
     let exportStatus;
-    if (issues.some(issue => issue !== 'legacy-export-unverified')) exportStatus = 'conflicting-export';
+    if (entry.revision === null) exportStatus = 'tested-revision-unknown';
+    else if (issues.some(issue => issue !== 'legacy-export-unverified')) exportStatus = 'conflicting-export';
     else if (!run) exportStatus = 'missing-export';
     else if (run.lane_status === 'failed') exportStatus = 'failed';
     else if (run.lane_status !== 'passed' || collected === null || collected < 1 || executed !== collected || !completeJourneys) exportStatus = 'incomplete';
@@ -84,7 +97,7 @@ export function reconcileBrowserMetricExecutions(input) {
     if (Object.hasOwn(entry, 'recorderStatus')) {
       if (entry.recorderStatus === null) issues.push('recorder-step-absent');
       else if (entry.recorderConclusion === 'skipped') issues.push('export-not-attempted');
-      else if (!run && entry.recorderStatus === 'completed') issues.push('export-attempted-but-missing');
+      else if (entry.revision !== null && !run && entry.recorderStatus === 'completed') issues.push('export-attempted-but-missing');
       else if (entry.recorderStatus !== 'completed') issues.push('recorder-not-completed');
       else if (entry.recorderConclusion !== 'success') issues.push('recorder-unsuccessful');
     }
@@ -93,9 +106,10 @@ export function reconcileBrowserMetricExecutions(input) {
     else if (entry.conclusion === 'cancelled') status = 'cancelled';
     else if (entry.conclusion === null) status = 'incomplete';
     else if (entry.conclusion !== 'success') status = 'failed';
-    else if (recorderUnsuccessful) status = 'incomplete';
+    else if (recorderUnsuccessful || entry.revision === null) status = 'incomplete';
     else status = exportStatus;
-    return { key: key(entry), ...entry, status, exportStatus, legacyRunExportCount, runExportCount: runs.length, journeyExportCount: journeys.length,
+    return { key: key(entry), ...entry, status, exportStatus,
+      unverifiedCurrentAttemptRunExportCount: entry.revision === null ? sameAttempt.filter(row => row.row_kind === 'run').length : 0, legacyRunExportCount, runExportCount: runs.length, journeyExportCount: journeys.length,
       staleAttempts, issues };
   });
   return { schemaVersion: 1, scope: 'observed-browser-execution-export-reconciliation',

@@ -26,6 +26,7 @@ try {
   await rm(output, { force: true });
   const env = process.env;
   const result = await collectBrowserMetricExecutions({ repository: env.GITHUB_REPOSITORY,
+    revisionMode: env.RECONCILE_REVISION_MODE || 'operator',
     runId: env.RECONCILE_RUN_ID, revision: env.RECONCILE_TESTED_REVISION, sheetId: env.TEST_METRICS_SHEET_ID,
     githubToken: env.GITHUB_TOKEN, sheetsToken: await readOnlySheetsToken(env.GOOGLE_SA_KEY) });
   await writeFile(output, `${JSON.stringify(result, null, 2)}\n`, { flag: 'wx', mode: 0o600 });

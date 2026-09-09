@@ -418,7 +418,7 @@
   {
     "id": "F031",
     "description": "Provide isolated Playwright/algasim wire-level fixtures with reachable provider endpoints on all Alga processes, control-API seed/reset, real callbacks and diagnostic evidence.",
-    "implemented": false,
+    "implemented": true,
     "workPackage": "WP4E",
     "priority": "P1",
     "prdRefs": [
@@ -432,7 +432,10 @@
       "evidence/native-workflow-worker-readiness.json",
       "evidence/shared-worker-secret-ownership.json",
       "evidence/native-authored-workflow-execution.json",
-      "evidence/native-authored-workflow-ci-scenario.json"
+      "evidence/native-authored-workflow-ci-scenario.json",
+      "evidence/ci-provider-replicas-cb884.json",
+      "evidence/ci-browser-metrics-cb884.json",
+      "evidence/native-concurrent-provider-isolation.json"
     ]
   },
   {
