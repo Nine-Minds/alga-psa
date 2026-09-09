@@ -1652,6 +1652,9 @@
               "label": "Umowa.pdf"
             }
           }
+        },
+        "totals-rows": {
+          "title": "Wiersze sum"
         }
       }
     },
@@ -2054,6 +2057,15 @@
       "visibleInPortal": "Widoczny w portalu klienta",
       "dialogTitle": "Wybierz obraz",
       "dialogDescription": "Wybierz obraz ze swoich dokumentów, którego chcesz użyć w tym szablonie."
+    },
+    "totalsRowsEditor": {
+      "rowBackground": "Tło wiersza",
+      "rowTextColor": "Kolor tekstu",
+      "resetColors": "Resetuj kolory",
+      "clearRowBackground": "Wyczyść kolor tła wiersza",
+      "clearRowTextColor": "Wyczyść kolor tekstu wiersza",
+      "labelColorOverrideNote": "Ta etykieta zachowuje swój zapisany kolor i nie dziedziczy koloru tekstu wiersza ustawionego powyżej. Kwota nadal używa koloru tekstu wiersza.",
+      "noRows": "Ten blok sum nie ma jeszcze zapisanych wierszy. Zapisz szablon i otwórz go ponownie, aby edytować kolory wierszy."
     }
   },
   "draftInvoiceDetails": {
