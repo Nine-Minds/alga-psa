@@ -53,10 +53,13 @@ function buildModule(overrides: Partial<AccountingMappingModule> = {}): Accounti
 
 const context = { realmId: 'xero-tenant-1', connectionId: 'conn-1' };
 // Both pickers are SearchableSelect now. Open by the trigger's visible text and
-// click the option directly, matching AccountingMappingDialog.search.test.tsx:
-// the id lands on the trigger through the automation-id registry rather than as
-// a plain attribute, so getElementById is not a handle here. Every call below
-// opens an unselected picker, so the visible text is its placeholder.
+// click the option directly, matching AccountingMappingDialog.search.test.tsx.
+// Observed, not explained: under this jsdom setup the trigger carries no id
+// attribute, and neither does a plain <Button id="...">, so getElementById is
+// not a handle here whatever the cause. Playwright locates these same controls
+// by id against a real browser, so this is an environment difference rather
+// than a defect in the component. Every call below opens an unselected picker,
+// so the visible text is its placeholder.
 async function choose(triggerText: string, name: string) {
   const trigger = screen.getByText(triggerText).closest('button');
   if (!trigger) throw new Error(`No picker trigger for "${triggerText}"`);
