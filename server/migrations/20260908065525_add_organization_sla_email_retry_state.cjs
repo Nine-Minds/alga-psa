@@ -23,10 +23,25 @@ exports.up = async function(knex) {
 exports.down = async function(knex) {
   if (await knex(TABLE).where('channel', 'email').first()) throw new Error('Cannot remove retained SLA email retry state');
   await knex.raw('DROP INDEX IF EXISTS sla_org_email_due_idx');
-  for (const name of ['sla_org_email_retry_state', 'sla_org_recipient_channels_status']) await knex.raw('ALTER TABLE ?? DROP CONSTRAINT IF EXISTS ??', [TABLE, name]);
-  await knex.schema.alterTable(TABLE, table => {
-    table.dropColumns('attempt_count', 'next_attempt_at', 'error_code');
-    table.check("channel IN ('in_app', 'email') AND status IN ('pending', 'created', 'disabled', 'delivered', 'skipped')");
-  });
+  await knex.raw('ALTER TABLE ?? DROP CONSTRAINT IF EXISTS ??', [TABLE, 'sla_org_email_retry_state']);
+  await knex.raw('ALTER TABLE ?? DROP CONSTRAINT IF EXISTS ??', [TABLE, 'sla_org_recipient_channels_status']);
+  // Restore the pre-retry check before dropping its columns, and name it
+  // explicitly: knex's generated name for an unnamed alterTable check on this
+  // 40-character table emits `"<table>"_1`, whose suffix falls outside the
+  // quoted identifier and is a syntax error. This migration runs outside a
+  // transaction, so every step is ordered and guarded to stay retryable: a
+  // failure must never leave the table without both the columns and the check.
+  // `up` rediscovers this constraint by definition, so only stability matters.
+  await knex.raw(
+    'ALTER TABLE ?? ADD CONSTRAINT ?? CHECK (' +
+      "channel IN ('in_app', 'email') AND status IN ('pending', 'created', 'disabled', 'delivered', 'skipped')" +
+    ')',
+    [TABLE, 'sla_org_recipient_channels_status'],
+  );
+  const dropColumns = [];
+  for (const column of ['attempt_count', 'next_attempt_at', 'error_code']) {
+    if (await knex.schema.hasColumn(TABLE, column)) dropColumns.push(column);
+  }
+  if (dropColumns.length) await knex.schema.alterTable(TABLE, table => { table.dropColumns(...dropColumns); });
 };
 exports.config = { transaction: false };
