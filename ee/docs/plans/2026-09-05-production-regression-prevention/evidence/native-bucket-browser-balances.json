@@ -73,7 +73,8 @@
     "Reused installed dependencies and Next development cache, not clean candidate image execution.",
     "Full primary and upgrade suites did not pass on these first runs; failures retained above.",
     "Pre-browser upgrade harness attempt used generated credential log extraction incorrectly; corrected temporary harness to use explicit seeded credentials.",
-    "24GiB heap allowance validates this native Mac run only; CI memory stability and repeatability remain separate."
+    "24GiB heap allowance validates this native Mac run only; CI memory stability and repeatability remain separate.",
+    "Even after bounded read-only route precompile, the full native development upgrade suite remains2passed/1ticketdeadlinefailure. Bucket and invoice cases pass; no broad full-suite readiness claim."
   ],
   "nativeRuntimeReview": {
     "previousNodeOptions": "--max-old-space-size=12288",
@@ -125,5 +126,45 @@
       "retained-usage including new balances"
     ],
     "failure": "retained-ticket120000ms deadline at foreign client navigation; preceding own-client route cold compiled28.5s. Both-tenant loop not completed. No timeout/retry changes."
+  },
+  "upgradePrecompiledRun": {
+    "report": "/tmp/alga-native-teams-qRWC1v/lifecycle.log",
+    "stats": {
+      "startTime": "2026-09-09T06:35:30.442Z",
+      "duration": 196180.06,
+      "expected": 2,
+      "skipped": 0,
+      "unexpected": 1,
+      "flaky": 0
+    },
+    "retries": 0,
+    "ownedResourcesCleaned": true,
+    "nextMemoryRestartObserved": false,
+    "precompile": {
+      "deadlineMs": 240000,
+      "authenticated": true,
+      "methods": [
+        "GET own-ticket",
+        "GET own-client"
+      ],
+      "assertions": "Exact origin/path200 and visible own ticket/client; real NextAuth csrf/credentials/session identity; contexts disposed before suite",
+      "mutations": "Synthetic login only; no ticket/client edits"
+    },
+    "passed": [
+      "retained-invoice including962.50",
+      "retained-usage including new balances"
+    ],
+    "failure": "retained-ticket120000ms deadline late in second tenant loop at foreign-ticket page navigation. No test assertions, timeout or retries changed.",
+    "sourceStartRevision": "717b616bf96cbb13083f0e3353baff40c08e9040",
+    "sourceStartDirty": true,
+    "sourceEndRevision": "d82ff5aff60afc5b1f8e03f68ecccb70ec205bca",
+    "sourceNote": "Coordinator committed reviewed source mid-run without content changes; not a clean candidate attestation.",
+    "testedFilesSha256": {
+      "e2e-tests/upgrade-tests/retained-ticket.spec.ts": "34e952ceb558eb86f5bf2a54d1585404a7a2e98fcf61b7a405eca859f4cf86ec",
+      "e2e-tests/upgrade-tests/retained-invoice.spec.ts": "fe1c47c4cf333fb6ba92a656658eb2a87187f6208183d7c51e692780fa9dce40",
+      "e2e-tests/upgrade-tests/retained-usage.spec.ts": "ceddbaad54ccdeebbbefe8c69aa31a5acd4608242e4c348f1aaad2c06a42451a",
+      "scripts/fixtures/upgrade-v150.ts": "be82fd6aa8e9ee9621f3df28656dc0de76f2d352e435bdc0dbc28f9d5dc7fc8f",
+      "packages/billing/src/components/billing-dashboard/AutomaticInvoices.tsx": "247fcbdfb0caa212df26f9b12a7f6d10fece4690a50bbb7977dcfbfb55b3339a"
+    }
   }
 }

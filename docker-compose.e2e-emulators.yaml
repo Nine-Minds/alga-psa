@@ -213,6 +213,7 @@ services:
     environment:
       <<: *provider-environment
       NODE_ENV: production
+      NEXT_PUBLIC_BASE_URL: ${NEXT_PUBLIC_BASE_URL:?Set NEXT_PUBLIC_BASE_URL to the public application URL}
       EDITION: enterprise
       SECRET_READ_CHAIN: env,filesystem
       SECRET_WRITE_PROVIDER: filesystem

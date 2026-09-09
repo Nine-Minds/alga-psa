@@ -747,7 +747,7 @@
       "status": "in_progress",
       "dependsOn": [],
       "owner": "stripe_protocol",
-      "notes": "Existing Add Usage journeys could pass with absent/failed bucket panel. Assert independent fixture balances (primary unused40hours); add a minimal v1.5-compatible bucket seed for upgrade/Citus browser coverage and preserve retained data invariants. QBO agent independently reviews legacy schema compatibility. Native first, no Docker."
+      "notes": "Existing Add Usage journeys could pass with absent/failed bucket panel. Assert independent fixture balances (primary unused40hours); add a minimal v1.5-compatible bucket seed for upgrade/Citus browser coverage and preserve retained data invariants. QBO agent independently reviews legacy schema compatibility. Native first, no Docker. Primary native journey passes1/1 with all new balances and existing invoice/isolation assertions. Exact v1.5 migration+retention passes. Upgrade invoice+usage pass across three runs, but ticket fulljourney remains over native dev deadline even after bounded read-only precompile; latest2pass/1fail196.18s. Keep fullsuite validation open for production CI; no retries/deadlines relaxed. See additive native-bucket-browser-balances.json."
     },
     {
       "id": "R091",
@@ -780,6 +780,14 @@
       "dependsOn": [],
       "owner": "qbo_protocol",
       "notes": "Completed run34313560297 has1 failed unit case: resumes editing and preview when saving fails. Investigate exact behavior and fix without hiding failure via retries. Controlled deferred template loading reproduced exact missing Save Template failure. Test waits on actual enabled Save after load, preserving failed-save assertions.3/3 targeted pass; no product, retry or timeout changes. native-invoice-template-save-readiness.json; current CI pending."
+    },
+    {
+      "id": "R095",
+      "title": "Pass existing public application URL to CI marketing worker",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "calendar_review",
+      "notes": "Current CI scheduled marketing fanout failed before Teams because temporal-worker lacked NEXT_PUBLIC_BASE_URL. Pass existing configured CI value through disposable overlay and preserve rejection of internal URLs. Independent background wiring gap, not established Teams failure cause. Actual EE Compose renders existing public URL identical for server/worker.9/9 native marketing activity tests preserve internal-only refusal and mock mail delivery. native-marketing-worker-public-url.json; actual CI pending."
     }
   ]
 }
