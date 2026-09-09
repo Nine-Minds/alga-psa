@@ -100,6 +100,23 @@ fi
 
 RUNNING_UID="$(id -u)"
 
+# GNU coreutils stat and BSD/macOS stat spell the same two queries differently
+# (`-c '%a'`/`-c '%u'` vs `-f '%Lp'`/`-f '%u'`), and BSD stat rejects -c
+# outright ("stat: illegal option -- c"). Probe once and bind the two fields
+# the walk needs, so this script runs on a developer's macOS checkout as well
+# as on the Linux images that ship the product. Both spellings print the
+# permission bits as bare octal digits (700, 600, 644), which is what the mode
+# comparisons below expect. The platforms differ in whether stat follows a
+# symlink by default, but walk_store filters symlinks out before either helper
+# is called, so that difference never applies here.
+if stat -c '%a' . >/dev/null 2>&1; then
+  stat_mode() { stat -c '%a' "$1"; }
+  stat_uid() { stat -c '%u' "$1"; }
+else
+  stat_mode() { stat -f '%Lp' "$1"; }
+  stat_uid() { stat -f '%u' "$1"; }
+fi
+
 if [ -n "$TARGET_UID" ]; then
   if [ "$APPLY" -eq 1 ] && [ "$RUNNING_UID" != "0" ]; then
     echo "❌ --uid requires running as root (current uid: $RUNNING_UID)." >&2
@@ -110,7 +127,7 @@ else
   # Without --uid, the root's current owner is the reference owner: the
   # provider requires uniform ownership, so anything owned differently is a
   # problem even if the script cannot know the intended service uid.
-  TARGET_OWNER="$(stat -c '%u' "$ROOT")"
+  TARGET_OWNER="$(stat_uid "$ROOT")"
 fi
 
 PASS_ISSUES=0
@@ -131,8 +148,8 @@ check_entry() {
     wanted=600
   fi
 
-  mode="$(stat -c '%a' "$path")"
-  uid="$(stat -c '%u' "$path")"
+  mode="$(stat_mode "$path")"
+  uid="$(stat_uid "$path")"
 
   if [ "$mode" != "$wanted" ]; then
     if [ "$APPLY" -eq 1 ] && { [ "$uid" = "$RUNNING_UID" ] || [ "$RUNNING_UID" = "0" ]; }; then
