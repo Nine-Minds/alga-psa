@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 1,
+  "scope": "ci-synthetic-microsoft-nextauth-callback",
+  "repository": "Nine-Minds/alga-psa",
+  "runId": "34330619264",
+  "jobId": "102405175451",
+  "artifactId": 10098014408,
+  "testedRevision": "a9305d0b43dc0242156b92f3ab189e680ccecb26",
+  "checkoutProof": {
+    "log": "enterprise job log",
+    "workflowReferenceLine": 34,
+    "checkoutRevisionLine": 332
+  },
+  "status": "passed",
+  "independentValidation": {
+    "validator": "scripts/lib/microsoft-callback-evidence.mjs",
+    "status": "passed",
+    "failures": [],
+    "counts": {
+      "tests": 2,
+      "passed": 2,
+      "failed": 0
+    }
+  },
+  "runner": {
+    "exitCode": 0,
+    "source": {
+      "before": {
+        "revision": "a9305d0b43dc0242156b92f3ab189e680ccecb26",
+        "dirty": false,
+        "changes": []
+      },
+      "after": {
+        "revision": "a9305d0b43dc0242156b92f3ab189e680ccecb26",
+        "dirty": false,
+        "changes": []
+      }
+    },
+    "runtimeBinding": {
+      "imageRevision": "a9305d0b43dc0242156b92f3ab189e680ccecb26",
+      "imageId": "sha256:e34eef62afbe3d540c9393c69ec60f4dfe0333bff66473c50941a51d7373f763",
+      "containerImageId": "sha256:e34eef62afbe3d540c9393c69ec60f4dfe0333bff66473c50941a51d7373f763",
+      "mountedSourceRevision": "a9305d0b43dc0242156b92f3ab189e680ccecb26",
+      "mountsReadOnly": true
+    }
+  },
+  "configuration": {
+    "edition": "enterprise",
+    "serverLifecycle": "next-development",
+    "provider": "microsoft",
+    "authority": "synthetic-loopback",
+    "applicationAuthentication": "nextauth"
+  },
+  "execution": {
+    "status": "passed",
+    "rejected": {
+      "stateAccepted": false,
+      "nonceRequested": false
+    },
+    "accepted": {
+      "stateAccepted": true,
+      "nonceRequested": false
+    },
+    "tokenRequests": 1,
+    "jwksRequests": 0,
+    "limitations": [
+      "Synthetic authority replaces transport only; no live Microsoft consent proof.",
+      "Only configured checks are exercised; reported nonce/JWKS use must not be inferred."
+    ]
+  },
+  "stage": "completed",
+  "fixtureCleanup": "removed",
+  "processCleanup": "stopped",
+  "sourceRevisionOrigin": "environment",
+  "sourceRevisionAfter": null,
+  "sha256": {
+    "microsoft-callback-evidence.json": "7d54cb063c4f7bc1f29a3d9a53c91963d549753c4b7d8152c1617136f2a07ad5",
+    "microsoft-callback-report.json": "413543251323bf37ce68f529f26bbb92f409fbb17a3e32aea1718929aae20b00",
+    "microsoft-callback-runner.json": "bbcfad85ae8c0c2bcfb4f769cd766526c38da8ec7436410aa65b437eadf17647"
+  },
+  "limitations": [
+    "Synthetic transport authority in enterprise Next development only; no live Microsoft consent or production auth coverage.",
+    "Observed JWKS requests were zero and nonceRequested was false; no independent signature or nonce verification claim.",
+    "Callback operations passed despite the failed parent enterprise browser job. Teams profile/browser coverage remains unresolved and is not closed by this evidence."
+  ]
+}

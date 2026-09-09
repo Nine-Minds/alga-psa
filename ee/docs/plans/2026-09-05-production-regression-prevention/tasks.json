@@ -832,10 +832,10 @@
     {
       "id": "R101",
       "title": "Exercise actual Microsoft NextAuth callback with a controlled signed authority",
-      "status": "in_progress",
+      "status": "done",
       "dependsOn": [],
       "owner": "stripe_protocol",
-      "notes": "Reusable CLI actual native pass on dirty521c9c94d6: realNextAuth routes/options, correcttenant/user/email session, oneMicrosoft OID accountlink, wrongstate rejected beforeexchange with unchangedidentity. Authority PKCE/RS256 fixture behavior separatelytested; observedJWKS0/noncefalse, no appsignature/nonce/liveconsent claim. Native evidence retains failedattempts/testedhashes and scopedcleanup. Subsequent signalcleanup subprocess tests pass. CI registration reusesbuiltEEimage and explicitloopbackauthority; host verifies actualimage/mounts/cleansource, readiness independently revalidatesrawcallback/runner. Current-source CI pending; keepF034/T028 open."
+      "notes": "Reusable CLI actual native pass on dirty521c9c94d6: realNextAuth routes/options, correcttenant/user/email session, oneMicrosoft OID accountlink, wrongstate rejected beforeexchange with unchangedidentity. Authority PKCE/RS256 fixture behavior separatelytested; observedJWKS0/noncefalse, no appsignature/nonce/liveconsent claim. Native evidence retains failedattempts/testedhashes and scopedcleanup. Subsequent signalcleanup subprocess tests pass. CI registration reusesbuiltEEimage and explicitloopbackauthority; host verifies actualimage/mounts/cleansource, readiness independently revalidatesrawcallback/runner. Current-source CI pending; keepF034/T028 open. Current f3a CI artifact10098014408 independently revalidates passed: realvalidcallbackaccepted andinvalidstate rejected, runnerexit0, clean testedmergea9305d0b43dc0242156b92f3ab189e680ccecb26, exactimage/containerID andreadonlysourcebinding, ownedfixture/processcleanup. JWKS0/noncefalse andsyntheticdevelopmentlimitsretained. Teamsstillfails;F034/T028remainopen."
     },
     {
       "id": "R102",
