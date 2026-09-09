@@ -7,6 +7,16 @@ import { addLongInvoiceSources } from '../../server/test-utils/invoiceTicketProd
 import { readInvoiceDocument, readInvoiceDownload } from '../fixtures/invoice-document';
 
 test('an administrator authors a billed-time date sort and reopens its persisted invoice layout', async ({ page, credentials, database }, testInfo) => {
+  // The longest journey in the suite: it authors a layout, generates and reads
+  // back an invoice document, then reopens the persisted layout. It takes about
+  // 116s of real work, so the 120s default left it a few seconds of headroom and
+  // it tipped over on a loaded runner -- a first-attempt timeout that a retry
+  // then passed. Nothing here is failing an assertion; it was simply the one
+  // heavy spec that never got the explicit budget its peers all carry
+  // (invoice-generation, qbo-export, xero-export, time-approval-invoice and the
+  // rest use 300s). Retry-only passes are reported as flaky and do not satisfy
+  // the gate, so give it the same budget rather than lean on the retry.
+  test.setTimeout(300000);
   const { tenant } = await createTimeBillingFixture(database, credentials.email);
   const name = `Billed time sort ${randomUUID()}`;
   const outputBinding = 'billedTimeByDate';
