@@ -1204,12 +1204,16 @@ jobs:
         timeout-minutes: 10
         run: |
           set -euo pipefail
+          # The image's node_modules is root-owned. Give only the development
+          # compiler cache a writable, disk-backed directory for UID 1000.
+          sudo install -d -o 1000 -g 1000 -m 0700 "$RUNNER_TEMP/teams-webpack-cache"
           node --input-type=module <<'JS'
           import { writeFileSync } from 'node:fs';
           const workspace = process.env.GITHUB_WORKSPACE;
           const volumes = ['packages', 'ee'].map(part => ({ type: 'bind', source: `${workspace}/${part}`, target: `/app/${part}`, read_only: true }));
           volumes.push({ type: 'bind', source: `${workspace}/e2e-tests/harness/start-teams-development-ci.mjs`, target: '/app/start-teams-development-ci.mjs', read_only: true });
           volumes.push({ type: 'bind', source: `${workspace}/e2e-tests/harness/check-teams-development-auth.mjs`, target: '/app/check-teams-development-auth.mjs', read_only: true });
+          volumes.push({ type: 'bind', source: `${process.env.RUNNER_TEMP}/teams-webpack-cache`, target: '/app/server/node_modules/.cache/webpack' });
           const server = { entrypoint: ['node', '/app/start-teams-development-ci.mjs'], command: [], volumes,
             environment: { NODE_ENV: 'development', TEAMS_EMULATOR_MODE: 'true', NEXT_PUBLIC_FORCE_FEATURE_FLAGS: 'release-v1-6-feature:true', NEXT_DIST_DIR: '.next/teams-development',
               DB_HOST: 'postgres', DB_PORT: '5432', DB_NAME_SERVER: 'server', REDIS_PREFIX: 'teams-development:',
@@ -1223,6 +1227,7 @@ jobs:
           # but release worker memory before compiling the development app.
           docker-compose -p alga-e2e-test stop email-service hocuspocus workflow-worker temporal-worker temporal-dev
           docker-compose -p alga-e2e-test up --no-build --no-deps --force-recreate -d server
+          docker-compose -p alga-e2e-test exec -T server node -e 'const fs = require("node:fs"); const probe = "/app/server/node_modules/.cache/webpack/.write-probe"; fs.writeFileSync(probe, "cache-writable", { flag: "wx" }); fs.unlinkSync(probe);'
           ready=false
           for _attempt in $(seq 1 90); do
             if curl --max-time 15 --fail --silent http://localhost:3000/auth/msp/signin >/dev/null; then ready=true; break; fi

@@ -408,10 +408,10 @@
     {
       "id": "R048",
       "title": "Bind QBO grants to selected company and reject foreign operations",
-      "status": "in_progress",
+      "status": "done",
       "dependsOn": [],
       "owner": "qbo_protocol and coordinator",
-      "notes": "Pre-fix real HTTP returned200 for wrong company. Grant binding persists through refresh; tests verify read/write403 and unchanged foreign entities, and independent company OAuth fixtures. Final default runs29/29 normally and with application dist hidden; typecheck passes. Two prior intermittent HTTP failures remain unexplained; currentCI required. SIM_REALM_MISMATCH is an explicit emulator guard, not verified Intuit denial parity."
+      "notes": "Pre-fix real HTTP returned200 for wrong company. Grant binding persists through refresh; tests verify read/write403 and unchanged foreign entities, and independent company OAuth fixtures. Final default runs29/29 normally and with application dist hidden; typecheck passes. Two prior intermittent HTTP failures remain unexplained; currentCI required. SIM_REALM_MISMATCH is an explicit emulator guard, not verified Intuit denial parity. Clean Linux npm-ci image job102266789015 in run34287571495 passed QBO29/29 across5files and Xero22/22 across3files. Exact PR merge3c046458a0fca6cc43c63f9ac791154410a8a1e3 includes realm isolation/refresh/foreign-write unchanged-data assertions. Earlier native transients did not recur in this job."
     },
     {
       "id": "R049",
@@ -468,6 +468,14 @@
       "dependsOn": [],
       "owner": "stripe_protocol and coordinator",
       "notes": "Recreated development server resets fixture password. Capture latest paired announcement safely and use it in preflight and Teams browser. Three native behavioral helper tests pass; actual CI pending."
+    },
+    {
+      "id": "R056",
+      "title": "Give Teams development compilation a writable disk cache",
+      "status": "in_progress",
+      "dependsOn": [],
+      "owner": "stripe_protocol and coordinator",
+      "notes": "Enterprise CI reports EACCES under root-owned node_modules/.cache/webpack. Teams-only workflow now binds a private runner-temporary disk directory owned by application UID1000 at that path, preserving cache across recompiles without RAM-backed storage or dependency-tree changes. Actual container write verification remains CI pending."
     }
   ]
 }
