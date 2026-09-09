@@ -2401,7 +2401,8 @@
       "workflow.event",
       "| null",
       "Sage",
-      "×"
+      "×",
+      "{{value}} bytes"
     ],
     "caseInsensitive": [
       "api",

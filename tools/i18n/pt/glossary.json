@@ -2701,7 +2701,8 @@
       "Meta",
       "Alt",
       "Shift",
-      "×"
+      "×",
+      "{{value}} bytes"
     ],
     "caseInsensitive": [
       "api",
