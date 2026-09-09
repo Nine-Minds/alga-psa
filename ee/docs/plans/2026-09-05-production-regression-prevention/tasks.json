@@ -927,6 +927,14 @@
       "dependsOn": [],
       "owner": "calendar_review",
       "notes": "T023 names these exemplars but ledger lacks entries. Link real test identities and known CI proof; retain missing incident identifiers, owners and pre-fix replay as unknown rather than fabricating attribution or completion. Added exact permanent test mappings and source-bound prior CI proof. Root independently checked raw log/archive hashes and passing file counts. Null incident/owner and unknown pre-fix proof preserved; T023 and operational review remain open. JSON and linked-file checks passed; no artificial source-string tests added."
+    },
+    {
+      "id": "R113",
+      "title": "Review observed mutation survivors for meaningful behavioral gaps",
+      "status": "in_progress",
+      "dependsOn": [],
+      "owner": "calendar_review and stripe_protocol",
+      "notes": "Actual current mutation run34339167186 executed83 mutants:79 killed,3 survived and1 uncovered. Inspect month-end normalization and authorization scope fallback; add only observable behavioral tests with red/green mutant proof where warranted. Equivalent mutants remain explicitly recorded; do not change score threshold or invent financial policy. Billing survivors29/31/37 preserve public outcomes and are documented as equivalent; no implementation-detail tests added. Added two authorization nullish-runtime cases preserving an existing restriction. Current auth11/11 and combined pilot33/33 pass; exact mutant20 temporary-copy replay fails both new cases while nine existing cases pass. No production or threshold changes. Full mutation pilot verification next."
     }
   ]
 }
