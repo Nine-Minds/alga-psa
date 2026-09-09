@@ -187,8 +187,26 @@ const apiKeySkipPaths = [
   '/api/internal/ext-services/', // Runner service read host API uses x-runner-auth token
 ];
 
+/**
+ * Routes exempted from the x-api-key check with exact, path-boundary matching
+ * only (never as a prefix). Joined alongside the apiKeySkipPaths entries above
+ * because they are exempt by the same rule — in-route authentication — but the
+ * prefix entries also exempt every deeper '/'-child, and Level.io has no deeper
+ * routes to exempt. Exempting exactly this single POST route keeps prefixed
+ * siblings like `/api/webhooks/levelioevil` and any future deeper route behind
+ * the API-key gate.
+ */
+const exactApiKeySkipPaths = [
+  // Level.io alert webhooks: single POST route that authenticates the tenant +
+  // X-Alga-Webhook-Secret in the route handler (no x-api-key). Same intent as
+  // the ninjaone/tacticalrmm entries, but Level has no sub-routes.
+  '/api/webhooks/levelio',
+  '/api/webhooks/levelio/',
+];
+
 export function shouldSkipApiKeyAuth(pathname: string): boolean {
   return pathname === '/api/ticket-comment-attachments/download' ||
+    exactApiKeySkipPaths.includes(pathname) ||
     apiKeySkipPaths.some((path) => pathname.startsWith(path)) ||
     (pathname.startsWith('/api/tickets/') && pathname.endsWith('/live-token')) ||
     (pathname.startsWith('/api/documents/') &&

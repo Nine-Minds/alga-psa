@@ -1602,6 +1602,9 @@
               "label": "Vertrag.pdf"
             }
           }
+        },
+        "totals-rows": {
+          "title": "Summenzeilen"
         }
       }
     },
@@ -1999,6 +2002,15 @@
       "visibleInPortal": "Im Kundenportal sichtbar",
       "dialogTitle": "Bild auswählen",
       "dialogDescription": "Wählen Sie ein Bild aus Ihren Dokumenten aus, das in dieser Vorlage verwendet werden soll."
+    },
+    "totalsRowsEditor": {
+      "rowBackground": "Zeilenhintergrund",
+      "rowTextColor": "Textfarbe",
+      "resetColors": "Farben zurücksetzen",
+      "clearRowBackground": "Zeilenhintergrundfarbe löschen",
+      "clearRowTextColor": "Textfarbe der Zeile löschen",
+      "labelColorOverrideNote": "Diese Beschriftung behält ihre eigene gespeicherte Farbe und übernimmt nicht die oben festgelegte Textfarbe der Zeile. Der Betrag folgt weiterhin der Textfarbe der Zeile.",
+      "noRows": "Dieser Summenblock hat noch keine gespeicherten Zeilen. Speichern Sie die Vorlage und öffnen Sie sie erneut, um Zeilenfarben zu bearbeiten."
     }
   },
   "draftInvoiceDetails": {

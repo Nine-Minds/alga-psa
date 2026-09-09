@@ -715,8 +715,13 @@ export function parseEmailReply(input: ReplyParserInput, config: Partial<ReplyPa
   }
 
   trimmedText = compactWhitespace(trimmedText);
-  if (!trimmedText) {
-    // Fallback to original content if heuristics ate everything
+  const emptyAlgaReply = Boolean(
+    tokens?.conversationToken && (textBoundary || tokenStrip.matched),
+  );
+  if (!trimmedText && !emptyAlgaReply) {
+    // Preserve the fallback for ambiguous email, but never resurrect an Alga
+    // notification after its reply boundary/token removal left no reply text.
+    // The inbound processor uses this empty string to suppress comment creation.
     trimmedText = originalText.trim();
     if (!trimmedText) {
       warnings.push('Inbound email body was empty after parsing.');

@@ -1602,6 +1602,9 @@
               "label": "Contratto.pdf"
             }
           }
+        },
+        "totals-rows": {
+          "title": "Righe totali"
         }
       }
     },
@@ -1999,6 +2002,15 @@
       "visibleInPortal": "Visibile nel portale clienti",
       "dialogTitle": "Seleziona immagine",
       "dialogDescription": "Scegli un'immagine dai tuoi documenti da usare in questo modello."
+    },
+    "totalsRowsEditor": {
+      "rowBackground": "Sfondo riga",
+      "rowTextColor": "Colore del testo",
+      "resetColors": "Ripristina colori",
+      "clearRowBackground": "Cancella colore di sfondo riga",
+      "clearRowTextColor": "Cancella colore del testo riga",
+      "labelColorOverrideNote": "Questa etichetta mantiene il proprio colore salvato e non eredita il colore del testo della riga impostato sopra. L’importo segue comunque il colore del testo della riga.",
+      "noRows": "Questo blocco totali non ha ancora righe salvate. Salva il modello e riaprilo per modificare i colori delle righe."
     }
   },
   "draftInvoiceDetails": {
