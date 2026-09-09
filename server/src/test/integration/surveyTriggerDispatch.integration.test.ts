@@ -1,5 +1,6 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Knex } from 'knex';
+import knex, { type Knex } from 'knex';
+import { getSecret } from '../../lib/utils/getSecret';
 import { v4 as uuidv4 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
 
@@ -78,6 +79,9 @@ vi.mock('../../services/surveyService', () => ({
 
 describe('Survey trigger dispatch integration', () => {
   let db: Knex;
+  const databaseName = `survey_dispatch_test_${uuidv4().replaceAll('-', '')}`;
+  let initialization: Promise<Knex> | undefined;
+  const previousDatabaseName = process.env.DB_NAME_SERVER;
   let tenantId: string;
   let clientId: string;
   let contactId: string;
@@ -97,13 +101,35 @@ describe('Survey trigger dispatch integration', () => {
   }
 
   beforeAll(async () => {
-    db = await createTestDbConnection();
+    // Initial-schema grants use this environment value, even with an explicit databaseName.
+    process.env.DB_NAME_SERVER = databaseName;
+    // Each case seeds its full tenant graph; development tenants are unrelated.
+    initialization = createTestDbConnection({ databaseName, runSeeds: false });
+    db = await initialization;
     getState().integrationDb = db;
   }, 60000); // 60 second timeout for migrations
 
   afterAll(async () => {
-    await db.destroy();
-    getState().integrationDb = null;
+    try {
+      // Vitest timing out a hook does not cancel its initialization promise.
+      // Wait for that owned bootstrap before dropping its database.
+      try {
+        const initialized = await initialization;
+        if (initialized) await initialized.destroy();
+      } finally {
+        getState().integrationDb = null;
+        const admin = knex({ client: 'pg', connection: {
+          host: process.env.DB_HOST || '127.0.0.1', port: Number(process.env.DB_PORT || 5432),
+          user: process.env.DB_USER_ADMIN || 'postgres',
+          password: await getSecret('postgres_password', 'DB_PASSWORD_ADMIN', 'postpass123'), database: 'postgres',
+        }, pool: { min: 0, max: 1 } });
+        try { await admin.raw('DROP DATABASE IF EXISTS ??', [databaseName]); }
+        finally { await admin.destroy(); }
+      }
+    } finally {
+      if (previousDatabaseName === undefined) delete process.env.DB_NAME_SERVER;
+      else process.env.DB_NAME_SERVER = previousDatabaseName;
+    }
   });
 
   beforeEach(() => {
