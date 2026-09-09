@@ -57,7 +57,8 @@ vi.mock('@ee/lib/integrations/hudu/huduIntegrationRepository', () => ({
   upsertHuduIntegration: upsertHuduIntegrationMock,
 }));
 
-vi.mock('@ee/lib/integrations/hudu/huduClient', () => ({
+vi.mock('@ee/lib/integrations/hudu/huduClient', async (importOriginal) => ({
+  ...(await importOriginal() as typeof import('@ee/lib/integrations/hudu/huduClient')),
   createHuduClient: createHuduClientMock,
 }));
 
@@ -375,12 +376,13 @@ describe('F205: getHuduAssetLayoutMap', () => {
   });
 
   it('returns a failure envelope when the Hudu fetch fails', async () => {
-    listAssetLayoutsMock.mockRejectedValue(new Error('Hudu rate limit exceeded (429).'));
+    const { HuduRequestError } = await import('@ee/lib/integrations/hudu/huduClient');
+    listAssetLayoutsMock.mockRejectedValue(new HuduRequestError({ kind: 'rate_limited', status: 429, message: 'Rate limited' }));
     const { getHuduAssetLayoutMap } = await importActions();
 
     const result = await getHuduAssetLayoutMap();
 
-    expect(result).toEqual({ success: false, error: 'Hudu rate limit exceeded (429).' });
+    expect(result).toEqual({ success: false, error: 'Hudu rate limit exceeded. Please try again later.' });
   });
 });
 
@@ -599,14 +601,15 @@ describe('T319: createAssetTypeFromHuduLayout', () => {
   });
 
   it('a failed Hudu layout fetch returns a failure envelope without creating anything', async () => {
-    getAssetLayoutMock.mockRejectedValue(new Error('Hudu resource not found (404). Verify the base URL or id.'));
+    const { HuduRequestError } = await import('@ee/lib/integrations/hudu/huduClient');
+    getAssetLayoutMock.mockRejectedValue(new HuduRequestError({ kind: 'not_found', status: 404, message: 'Not found' }));
     const { createAssetTypeFromHuduLayout } = await importActions();
 
     const result = await createAssetTypeFromHuduLayout({ layoutId: 999 });
 
     expect(result).toEqual({
       success: false,
-      error: 'Hudu resource not found (404). Verify the base URL or id.',
+      error: 'Hudu resource not found. Verify the base URL and mapping.',
     });
     expect(createAssetTypeMock).not.toHaveBeenCalled();
     expect(upsertHuduIntegrationMock).not.toHaveBeenCalled();

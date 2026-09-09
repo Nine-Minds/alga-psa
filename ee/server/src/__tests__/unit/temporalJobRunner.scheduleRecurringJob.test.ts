@@ -60,7 +60,7 @@ describe('TemporalJobRunner.scheduleRecurringJob', () => {
     expect(arg.action?.workflowType).toBe('genericJobWorkflow');
   });
 
-  it('does not create schedule when it already exists', async () => {
+  it('repairs an existing schedule with no tracker without creating another schedule', async () => {
     const { TemporalJobRunner } = await import('@alga-psa/jobs/runners/TemporalJobRunner');
     TemporalJobRunner.reset();
 
@@ -78,7 +78,11 @@ describe('TemporalJobRunner.scheduleRecurringJob', () => {
     (runner as any).updateJobExternalIds = vi.fn(async () => undefined);
     (runner as any).updateJobStatus = vi.fn(async () => undefined);
 
-    const handle = { describe: vi.fn(async () => ({ id: 'exists' })) };
+    const description = { action: { type: 'startWorkflow', args: [] } };
+    const handle = {
+      describe: vi.fn(async () => description),
+      update: vi.fn(async (update) => update(description)),
+    };
     client.schedule.getHandle.mockReturnValue(handle);
 
     const out = await runner.scheduleRecurringJob(
@@ -90,6 +94,11 @@ describe('TemporalJobRunner.scheduleRecurringJob', () => {
 
     expect(out.externalId).toBe('extsched:install-1:sched-2');
     expect(client.schedule.create).not.toHaveBeenCalled();
+    expect(out.jobId).toBe('job-2');
+    expect(handle.update).toHaveBeenCalledOnce();
+    expect(await handle.update.mock.results[0].value).toMatchObject({
+      action: { args: [{ jobId: 'job-2', tenantId: 'tenant-1', jobName: 'extension-scheduled-invocation' }] },
+    });
   });
 
   it('registers renewal scheduled processing as a Temporal recurring workflow payload', async () => {

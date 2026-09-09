@@ -1,0 +1,58 @@
+{
+  "publishedHead": "7b170294a755dfebba34cb8bbfc1069b6d8ba8bc",
+  "localBase": "c5938cdad5",
+  "pr": 3343,
+  "checks": {
+    "FAILURE": 10,
+    "SUCCESS": 59,
+    "SKIPPED": 1
+  },
+  "nativeUnitLogSha256": "d8bbec3af279154a9a3bf5b7f16d3d8c8b8ba9677da865b7bac433bccdbbafc8",
+  "nativeReportingFailure": "Sheets header GET returned HTTP 503",
+  "fix": "Bounded retries only for read requests; append writes are never automatically retried",
+  "focusedTests": {
+    "passed": 33,
+    "failed": 0,
+    "skipped": 0,
+    "log": "/tmp/alga-sheets-retry-final.log"
+  },
+  "limitations": [
+    "No live workbook mutation or successful native rerun claimed.",
+    "Three tax TODOs need product policy; question pending.",
+    "Other PR failures and the complete plan remain unresolved."
+  ],
+  "initialCompleteTooling": {
+    "revision": "96d869f6bc03598fb75601e49f11bf5102b9039b",
+    "status": "passed",
+    "counts": {
+      "tests": 508,
+      "passed": 508,
+      "failed": 0,
+      "skipped": 0,
+      "todo": 0,
+      "cancelled": 0
+    },
+    "failures": [],
+    "requiredFiles": 53,
+    "durationSeconds": 145.587,
+    "log": "test-results/node-tooling/runner.log"
+  },
+  "additionalFix": "Malformed successful header JSON must never be treated as an empty tab; bounded read retry then fail without any writes. Before-fix mocked probe produced GET, PUT, POST.",
+  "completeTooling": {
+    "revision": "cc29f6738e58146bb83b10cc24fb15b757677c26",
+    "status": "passed",
+    "counts": {
+      "tests": 509,
+      "passed": 509,
+      "failed": 0,
+      "skipped": 0,
+      "todo": 0,
+      "cancelled": 0
+    },
+    "failures": [],
+    "requiredFiles": 53,
+    "durationSeconds": 146.009566875,
+    "log": "test-results/node-tooling/runner.log",
+    "reportSha256": "36cb7069455685b63b888bfd00bef84ce92f3ed043166fd2fbfd4d46c3abd6ed"
+  }
+}

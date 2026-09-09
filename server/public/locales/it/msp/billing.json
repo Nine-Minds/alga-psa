@@ -141,6 +141,8 @@
   },
   "usage": {
     "bucketHoursOverview": "Panoramica dei pacchetti ore",
+    "bucketLoadError": "Impossibile caricare i saldi dei pacchetti ore. Riprova per visualizzare i saldi attuali.",
+    "retryBucketBalances": "Ricarica i saldi dei pacchetti ore",
     "usageRecords": "Registrazioni di utilizzo",
     "actions": {
       "addUsage": "Aggiungi utilizzo",

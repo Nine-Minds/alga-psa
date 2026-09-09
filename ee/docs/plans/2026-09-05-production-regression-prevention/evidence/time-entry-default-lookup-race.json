@@ -1,0 +1,19 @@
+{
+  "status": "component_race_verified_native_pending",
+  "native_job": 101624201410,
+  "native_symptom": "Time approval retry persisted 60 minutes instead of 120",
+  "reproduction": "Deferred contract-line lookup resolves after duration/notes edits; original effect writes its stale entry closure",
+  "fix": "Merge default into latest entry; cancel obsolete effects on identity, service, date, selected-line changes and unmount",
+  "before": {
+    "failed": 1,
+    "log": "/tmp/alga-time-defaults-before.log"
+  },
+  "after": {
+    "passed": 4,
+    "failed": 0,
+    "skipped": 0,
+    "log": "/tmp/alga-time-defaults-final.log"
+  },
+  "scope": "Real TimeEntryEditForm effects with deferred lookup; child UI widgets and server calls mocked",
+  "remaining": "Native browser persistence and full time approval/invoice journey rerun"
+}

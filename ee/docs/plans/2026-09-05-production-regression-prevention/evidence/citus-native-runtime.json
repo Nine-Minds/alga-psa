@@ -1,0 +1,162 @@
+{
+  "schemaVersion": 1,
+  "suite": "citus-runtime",
+  "revision": "df2c988ca0742d4d19d7048353dc4416703c4063",
+  "status": "passed",
+  "expectedFiles": [
+    "ee/temporal-workflows/src/__tests__/integration/workflowInvocationPersistence.integration.test.ts",
+    "server/src/test/integration/invoiceTicketImmutable.integration.test.ts"
+  ],
+  "executedFiles": [
+    "server/src/test/integration/invoiceTicketImmutable.integration.test.ts",
+    "ee/temporal-workflows/src/__tests__/integration/workflowInvocationPersistence.integration.test.ts"
+  ],
+  "expectedTests": [
+    {
+      "identity": [
+        "server/src/test/integration/invoiceTicketImmutable.integration.test.ts",
+        "generates immutable ticket presentation from approved source records"
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "ee/temporal-workflows/src/__tests__/integration/workflowInvocationPersistence.integration.test.ts",
+        "stores redacted bounded step snapshots with idempotent writes and retention"
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "ee/temporal-workflows/src/__tests__/integration/workflowInvocationPersistence.integration.test.ts",
+        "persists one concurrent invocation per tenant key and isolates lookup and updates"
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "ee/temporal-workflows/src/__tests__/integration/workflowInvocationPersistence.integration.test.ts",
+        "retries a failed activity on its persisted row and replays success without another action"
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "ee/temporal-workflows/src/__tests__/integration/workflowInvocationPersistence.integration.test.ts",
+        "persists one real email comment and ticket response state across activity replay"
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "ee/temporal-workflows/src/__tests__/integration/workflowInvocationPersistence.integration.test.ts",
+        "creates one real ticket and initial comment across activity replay"
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "ee/temporal-workflows/src/__tests__/integration/workflowInvocationPersistence.integration.test.ts",
+        "redacts secret references in persisted action inputs without changing handler arguments"
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "ee/temporal-workflows/src/__tests__/integration/workflowInvocationPersistence.integration.test.ts",
+        "rejects missing or mismatched step completion without modifying either run"
+      ],
+      "count": 1
+    }
+  ],
+  "executedTests": [
+    {
+      "identity": [
+        "server/src/test/integration/invoiceTicketImmutable.integration.test.ts",
+        "generates immutable ticket presentation from approved source records"
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "ee/temporal-workflows/src/__tests__/integration/workflowInvocationPersistence.integration.test.ts",
+        "stores redacted bounded step snapshots with idempotent writes and retention"
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "ee/temporal-workflows/src/__tests__/integration/workflowInvocationPersistence.integration.test.ts",
+        "persists one concurrent invocation per tenant key and isolates lookup and updates"
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "ee/temporal-workflows/src/__tests__/integration/workflowInvocationPersistence.integration.test.ts",
+        "retries a failed activity on its persisted row and replays success without another action"
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "ee/temporal-workflows/src/__tests__/integration/workflowInvocationPersistence.integration.test.ts",
+        "persists one real email comment and ticket response state across activity replay"
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "ee/temporal-workflows/src/__tests__/integration/workflowInvocationPersistence.integration.test.ts",
+        "creates one real ticket and initial comment across activity replay"
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "ee/temporal-workflows/src/__tests__/integration/workflowInvocationPersistence.integration.test.ts",
+        "redacts secret references in persisted action inputs without changing handler arguments"
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "ee/temporal-workflows/src/__tests__/integration/workflowInvocationPersistence.integration.test.ts",
+        "rejects missing or mismatched step completion without modifying either run"
+      ],
+      "count": 1
+    }
+  ],
+  "counts": {
+    "passed": 8,
+    "failed": 0,
+    "skipped": 0,
+    "todo": 0,
+    "pending": 0
+  },
+  "failures": [],
+  "source": {
+    "before": {
+      "revision": "df2c988ca0742d4d19d7048353dc4416703c4063",
+      "dirty": false,
+      "changes": []
+    },
+    "after": {
+      "revision": "df2c988ca0742d4d19d7048353dc4416703c4063",
+      "dirty": false,
+      "changes": []
+    }
+  },
+  "nativeRun": {
+    "url": "https://github.com/Nine-Minds/alga-psa/actions/runs/34102126219",
+    "jobId": 101678729376,
+    "artifactId": 10011134709,
+    "headSha": "e55139a7375a699404fa4d1819ea2a867722e75d",
+    "event": "pull_request",
+    "conclusion": "success",
+    "revisionMeaning": "GitHub pull-request merge checkout"
+  },
+  "limits": [
+    "Fresh mixed-schema single-node Citus only; previous-release upgrade and production topology parity remain unverified."
+  ]
+}

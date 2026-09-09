@@ -5,14 +5,14 @@ exports.seed = async function (knex) {
     if (!context) return;
 
     const { tenantId, db } = context;
-    const emeraldCityClientId = db.table('clients')
+    const emeraldCityClientId = (await db.table('clients')
         .where({ client_name: 'Emerald City' })
         .select('client_id')
-        .first();
-    const detailedTemplateId = db.table('invoice_templates')
+        .first())?.client_id ?? null;
+    const detailedTemplateId = (await db.table('invoice_templates')
         .where({ name: 'Detailed Template' })
         .select('template_id')
-        .first();
+        .first())?.template_id ?? null;
 
     return db.table('invoices').insert([
         {

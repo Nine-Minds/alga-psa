@@ -383,6 +383,26 @@ describe('Manual Invoice Generation', () => {
       expect(result.total_amount).toBe(1089);
     });
 
+    it('preserves a manual invoice number and rejects its retry without another invoice or ledger entry', async () => {
+      const serviceId = await createTestService();
+      await setupTaxConfiguration();
+      const invoiceNumber = `MAN-${uuidv4()}`;
+      const request = { clientId: context.clientId, invoiceNumber,
+        items: [{ service_id: serviceId, quantity: 1, description: 'Manual identity regression', rate: 1000 }] };
+      const result = await generateManualInvoiceOrThrow(request);
+      expect(result.invoice_number).toBe(invoiceNumber);
+      const beforeInvoices = await tenantTable(context, 'invoices').orderBy('invoice_id');
+      const beforeCharges = await tenantTable(context, 'invoice_charges').orderBy('item_id');
+      const beforeTransactions = await tenantTable(context, 'transactions').orderBy('transaction_id');
+      expect(beforeInvoices).toHaveLength(1);
+      expect(beforeCharges).toHaveLength(1);
+      expect(beforeTransactions.length).toBeGreaterThan(0);
+      expect(await generateManualInvoice(request)).toMatchObject({ success: false, code: 'INVOICE_NUMBER_CONFLICT' });
+      expect(await tenantTable(context, 'invoices').orderBy('invoice_id')).toEqual(beforeInvoices);
+      expect(await tenantTable(context, 'invoice_charges').orderBy('item_id')).toEqual(beforeCharges);
+      expect(await tenantTable(context, 'transactions').orderBy('transaction_id')).toEqual(beforeTransactions);
+    });
+
     it('creates a manual invoice with multiple line items', async () => {
       const service1Id = await createTestService();
       const service2Id = await createTestService({ service_name: 'Second Service' });

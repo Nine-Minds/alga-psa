@@ -141,6 +141,8 @@
   },
   "usage": {
     "bucketHoursOverview": "Visão geral das horas de intervalo",
+    "bucketLoadError": "Não foi possível carregar os saldos dos pacotes de horas. Tente novamente para ver os saldos atuais.",
+    "retryBucketBalances": "Recarregar saldos dos pacotes de horas",
     "usageRecords": "Registros de uso",
     "actions": {
       "addUsage": "Adicionar uso",

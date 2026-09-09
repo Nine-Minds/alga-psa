@@ -2,8 +2,8 @@ const { randomUUID } = require('node:crypto');
 const {
   deleteTenantRows,
   pickTenantOne
-} = require('./_lib/tenant-sql.cjs');
-const { ensureTenantEmailSettings } = require('./_lib/email-settings-fixture.cjs');
+} = require('../_lib/tenant-sql.cjs');
+const { ensureTenantEmailSettings } = require('../_lib/email-settings-fixture.cjs');
 
 function getApiKey() {
   return process.env.WORKFLOW_HARNESS_API_KEY || process.env.ALGA_API_KEY || '';

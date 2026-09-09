@@ -1484,6 +1484,7 @@ export async function deleteWorkflowTimeEntry(params: {
       'contract_line_id',
       'billable_duration',
       'start_time',
+      'end_time',
       'invoiced'
     )
     .first();

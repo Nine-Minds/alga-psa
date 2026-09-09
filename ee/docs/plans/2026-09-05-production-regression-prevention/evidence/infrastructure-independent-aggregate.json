@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "baseRevision": "3cac26ed9b",
+  "scope": "Independent infrastructure aggregate requirements and clean candidate source",
+  "before": {
+    "status": "regression-reproduced",
+    "log": "/tmp/alga-infrastructure-independent-before.log",
+    "observation": "Actual Tier-1 reports relabelled full were accepted even though an additional repository test was absent."
+  },
+  "after": {
+    "status": "passed",
+    "test": "scripts/tests/infrastructure-runner.vitest.test.mjs",
+    "log": "/tmp/alga-infrastructure-independent-final.log",
+    "scenarios": [
+      "Six full fixture files execute across three partitions and reconcile.",
+      "Five genuine Tier-1 fixture files execute and reconcile.",
+      "Consistent reduced coverage relabelled full is rejected and marked incomplete.",
+      "Dirty/missing source metadata, changed checkout, stale/missing candidate SHA, invalid mode and failed jobs reject.",
+      "Existing stale, missing and substituted shard reports still reject."
+    ]
+  },
+  "hashes": {
+    "alga-infrastructure-independent-before.log": "aaad65c2611d369acb66b3ba21ed62ebb7ac1ade40cb53b459501262d6a7bbda",
+    "alga-infrastructure-independent-final.log": "6a204ac63dc5531aa7e9f3a9e0261af23f0b2d893aab75a5e51e64c66210fe87"
+  },
+  "limitations": [
+    "Behavioral verification uses real Vitest execution in temporary repositories; it does not run the entire product infrastructure suite.",
+    "The infrastructure aggregate workflow can still be skipped with its selector; global always-emitted gating and effective required protections remain open.",
+    "No current native CI readiness or publication claim."
+  ]
+}

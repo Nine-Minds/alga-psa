@@ -8,40 +8,26 @@ import {
   recordSlaAuditLog,
 } from '../sla-activities';
 
-const sendSlaNotificationService = vi.fn();
-const checkEscalationNeeded = vi.fn();
-const escalateTicket = vi.fn();
-
-vi.mock('@alga-psa/sla/services/slaNotificationService', () => ({
-  sendSlaNotification: sendSlaNotificationService,
+const { publishToStream, checkEscalationNeeded, escalateTicket, withTransaction } = vi.hoisted(() => ({
+  publishToStream: vi.fn(), checkEscalationNeeded: vi.fn(), escalateTicket: vi.fn(), withTransaction: vi.fn(),
 }));
-
-vi.mock('@alga-psa/sla/services/escalationService', () => ({
-  checkEscalationNeeded,
-  escalateTicket,
-}));
-
-let lastTrx: any;
-const withTransaction = vi.fn(async (_knex: unknown, fn: (trx: Knex.Transaction) => Promise<void>) => {
-  lastTrx = createMockTrx();
-  await fn(lastTrx as unknown as Knex.Transaction);
-});
-
-const createTenantKnex = vi.fn(async () => ({ knex: {} }));
-
+vi.mock('@temporalio/activity', () => ({ Context: { current: () => ({ log: { info: vi.fn() } }) } }));
+vi.mock('@alga-psa/workflow-streams', () => ({ getRedisStreamClient: () => ({ publishToStream }) }));
+vi.mock('@alga-psa/sla/services/escalationService', () => ({ checkEscalationNeeded, escalateTicket }));
 vi.mock('@alga-psa/db', () => ({
-  createTenantKnex,
-  withTransaction,
+  withTenantTransactionRetryReadOnly: withTransaction,
+  tenantDb: (trx: any) => ({ table: (table: string) => trx(table) }),
 }));
+let lastTrx: any;
 
 function createMockTrx() {
   const chains: Record<string, any> = {};
   const makeChain = (table: string) => {
     if (chains[table]) return chains[table];
     const chain: any = {
-      leftJoin: vi.fn().mockReturnValue(chain),
-      where: vi.fn().mockReturnValue(chain),
-      select: vi.fn().mockReturnValue(chain),
+      leftJoin: vi.fn().mockReturnThis(),
+      where: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
       first: vi.fn().mockResolvedValue({
         ticket_id: 'ticket-1',
         ticket_number: 'T-100',
@@ -82,7 +68,12 @@ const scheduleWeekdays = {
 
 describe('sla activities', () => {
   beforeEach(() => {
-    sendSlaNotificationService.mockClear();
+    publishToStream.mockReset();
+    withTransaction.mockReset();
+    withTransaction.mockImplementation(async (_tenant, fn) => {
+      lastTrx = createMockTrx();
+      return fn(lastTrx);
+    });
     checkEscalationNeeded.mockClear();
     escalateTicket.mockClear();
   });
@@ -183,14 +174,21 @@ describe('sla activities', () => {
     expect(result).toBe('2024-03-11T14:00:00.000Z');
   });
 
-  it('sendSlaNotification activity calls slaNotificationService.sendSlaNotification()', async () => {
+  it('sendSlaNotification publishes the tenant ticket threshold event', async () => {
     await sendSlaNotification({
       tenantId: 'tenant-1',
       ticketId: 'ticket-1',
       phase: 'response',
       thresholdPercent: 50,
     });
-    expect(sendSlaNotificationService).toHaveBeenCalledTimes(1);
+    expect(publishToStream).toHaveBeenCalledTimes(1);
+    const [stream, message] = publishToStream.mock.calls[0];
+    expect(stream).toBe(`${process.env.REDIS_PREFIX || 'alga-psa:'}${process.env.REDIS_EVENT_STREAM_PREFIX || 'event-stream:'}global:TICKET_SLA_THRESHOLD_REACHED`);
+    expect(message.channel).toBe('global');
+    expect(JSON.parse(message.event)).toMatchObject({
+      eventType: 'TICKET_SLA_THRESHOLD_REACHED',
+      payload: { tenantId: 'tenant-1', ticketId: 'ticket-1', phase: 'response', thresholdPercent: 50 },
+    });
   });
 
   it('checkAndEscalate activity calls escalationService.checkEscalationNeeded()', async () => {
@@ -246,6 +244,9 @@ describe('sla activities', () => {
       eventType: 'sla_test_event',
       eventData: { foo: 'bar' },
     });
-    expect(withTransaction).toHaveBeenCalled();
+    expect(withTransaction).toHaveBeenCalledWith('tenant-1', expect.any(Function));
+    expect(lastTrx('sla_audit_log').insert).toHaveBeenCalledWith(expect.objectContaining({
+      tenant: 'tenant-1', ticket_id: 'ticket-1', event_type: 'sla_test_event', event_data: JSON.stringify({ foo: 'bar' }),
+    }));
   });
 });

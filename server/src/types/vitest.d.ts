@@ -1,8 +1,3 @@
-declare module 'vitest' {
-  export const describe: any;
-  export const it: any;
-  export const expect: any;
-  export const beforeEach: any;
-  export const afterEach: any;
-  export const vi: any;
-}
+// Use the installed runner's declarations. A local ambient replacement hid
+// lifecycle hooks and erased typed mock APIs from colocated regression tests.
+import 'vitest';

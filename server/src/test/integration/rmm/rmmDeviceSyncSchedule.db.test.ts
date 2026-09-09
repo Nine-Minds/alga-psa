@@ -11,14 +11,17 @@
  * in the integration workflow, which provides Postgres and sets REQUIRE_DB=1 so
  * an unreachable database fails loudly instead of skipping.
  *
- * Temporal has no service in CI, so that block probes for a broker and skips
- * when there isn't one. Start it locally with `temporal server start-dev`.
+ * The Temporal block owns an ephemeral development server through the installed
+ * testing SDK. Its CLI version is pinned; startup failure fails the suite.
  */
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 
-import { createTestDbConnection, wireLocalTestDbEnv } from '../../../../test-utils/dbConfig';
-import { describeWithDb, isDbReachable } from '../../../../test-utils/requireDb';
+import { createTestDbConnection } from '../../../../test-utils/dbConfig';
+import { randomUUID } from 'node:crypto';
+import { TestWorkflowEnvironment } from '@temporalio/testing';
+import { ScheduleNotFoundError, type Client } from '@temporalio/client';
+import type { TemporalJobRunner } from '@alga-psa/jobs/runners/TemporalJobRunner';
 
 import { getAdminConnection } from '@alga-psa/db/admin';
 import {
@@ -28,18 +31,9 @@ import {
   rmmDeviceSyncHandler,
 } from '@alga-psa/jobs/handlers/rmmAlertPollingHandlers';
 
-const TENANT = '11111111-2222-4333-8444-555555555555';
+const TENANT = randomUUID();
 const PROVIDER = 'ninjaone';
 const LAST_FULL_SYNC = '2026-08-01T00:00:00.000Z';
-
-const TEMPORAL_HOST = process.env.TEMPORAL_HOST ?? '127.0.0.1';
-const TEMPORAL_PORT = Number(process.env.TEMPORAL_PORT ?? 7233);
-
-// Must precede the reachability probe below, which reads DB_HOST/DB_PORT.
-// No-op under CI, where the workflow supplies correct DB_* step env.
-wireLocalTestDbEnv();
-
-const describeDb = await describeWithDb();
 
 let db: Knex;
 let admin: Knex;
@@ -134,7 +128,7 @@ function spyRunner() {
 }
 const asRunner = (r: unknown) => r as never;
 
-describeDb('RMM device sync — reconciler against a real database', () => {
+describe('RMM device sync — reconciler against a real database', () => {
   it('finds the enabled integration and schedules a device sync', async () => {
     const runner = spyRunner();
     await reconcileRmmPollingSchedules(asRunner(runner));
@@ -214,7 +208,7 @@ describeDb('RMM device sync — reconciler against a real database', () => {
   });
 });
 
-describeDb('RMM device sync — handler against a real database', () => {
+describe('RMM device sync — handler against a real database', () => {
   const data = () => ({ tenantId: TENANT, integrationId, provider: PROVIDER });
 
   it('advances the cursor and clears the error on success', async () => {
@@ -268,7 +262,7 @@ describeDb('RMM device sync — handler against a real database', () => {
   });
 });
 
-describeDb('RMM device sync — pg-boss (CE) accepts and delivers the job', () => {
+describe('RMM device sync — pg-boss (CE) accepts and delivers the job', () => {
   let runner: { scheduleJob: Function; stop: Function };
   const delivered: Array<{ jobId: string }> = [];
 
@@ -353,7 +347,7 @@ describeDb('RMM device sync — pg-boss (CE) accepts and delivers the job', () =
   }, 120_000);
 });
 
-describeDb('RMM device sync — forwarded dispatch (EE path)', () => {
+describe('RMM device sync — forwarded dispatch (EE path)', () => {
   it('resolves rmm-device-sync in the server-local registry and runs it', async () => {
     const { registerAllJobHandlers } = await import('server/src/lib/jobs/registerAllHandlers');
     const { executeJobHandler } = await import('server/src/lib/jobs/jobHandlerRegistry');
@@ -386,26 +380,13 @@ describeDb('RMM device sync — forwarded dispatch (EE path)', () => {
   }, 180_000);
 });
 
-// Temporal has no CI service; probe for a broker and skip when absent.
-// skipIf rather than a static skip marker, which scripts/check-skip-budget.mjs
-// counts against the repo budget — this block is conditional on infrastructure,
-// not a disabled test.
-const temporalReachable = await isDbReachable(TEMPORAL_HOST, TEMPORAL_PORT);
-const describeTemporal =
-  describeDb === describe ? describe.skipIf(!temporalReachable) : describeDb;
-
-describeTemporal('RMM device sync — Temporal (EE) schedule lifecycle', () => {
+describe('RMM device sync — Temporal (EE) schedule lifecycle', () => {
   const scheduleId = () => `${RMM_DEVICE_SYNC_JOB}:${TENANT}:${integrationId}`;
-  let runner: unknown;
+  let environment: TestWorkflowEnvironment;
+  let runner: TemporalJobRunner;
 
-  async function withClient<T>(fn: (client: { schedule: any }) => Promise<T>): Promise<T> {
-    const { Client, Connection } = await import('@temporalio/client');
-    const connection = await Connection.connect({ address: `${TEMPORAL_HOST}:${TEMPORAL_PORT}` });
-    try {
-      return await fn(new Client({ connection, namespace: process.env.TEMPORAL_NAMESPACE ?? 'default' }) as never);
-    } finally {
-      await connection.close();
-    }
+  async function withClient<T>(fn: (client: Client) => Promise<T>): Promise<T> {
+    return fn(environment.client);
   }
 
   async function listMySchedules(): Promise<string[]> {
@@ -422,19 +403,28 @@ describeTemporal('RMM device sync — Temporal (EE) schedule lifecycle', () => {
     await withClient(async (client) => {
       try {
         await client.schedule.getHandle(scheduleId()).delete();
-      } catch {
-        /* not there */
+      } catch (error) {
+        if (!(error instanceof ScheduleNotFoundError)) throw error;
       }
     });
   }
 
   beforeAll(async () => {
-    process.env.TEMPORAL_ADDRESS = `${TEMPORAL_HOST}:${TEMPORAL_PORT}`;
+    environment = await TestWorkflowEnvironment.createLocal({
+      server: {
+        namespace: 'alga-rmm-regression',
+        executable: { type: 'cached-download', version: 'v1.5.1' },
+      },
+    });
     const { TemporalJobRunner } = await import('@alga-psa/jobs/runners/TemporalJobRunner');
-    runner = await TemporalJobRunner.create();
+    runner = await TemporalJobRunner.create({
+      address: environment.address, namespace: environment.namespace,
+      taskQueue: `rmm-regression-${integrationId}`,
+    });
+    await runner.start();
 
     // The Temporal runner refuses to schedule a job name it doesn't know.
-    (runner as { registerHandler: Function }).registerHandler({
+    runner.registerHandler({
       name: RMM_DEVICE_SYNC_JOB,
       handler: async (jobId: string, jobData: unknown) => rmmDeviceSyncHandler(jobId, jobData as never),
       retry: { maxAttempts: 3 },
@@ -447,7 +437,17 @@ describeTemporal('RMM device sync — Temporal (EE) schedule lifecycle', () => {
   });
 
   afterAll(async () => {
-    await deleteScheduleIfPresent();
+    try {
+      if (environment) await deleteScheduleIfPresent();
+    } finally {
+      try {
+        await runner?.stop();
+      } finally {
+        const { TemporalJobRunner } = await import('@alga-psa/jobs/runners/TemporalJobRunner');
+        TemporalJobRunner.reset();
+        await environment?.teardown();
+      }
+    }
   });
 
   it('creates a real Temporal Schedule carrying the worker payload', async () => {

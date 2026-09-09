@@ -36,6 +36,7 @@ vi.mock('@alga-psa/ui/hooks/useFeatureFlag', () => ({
 }));
 
 vi.mock('@alga-psa/scheduling/actions', () => ({
+  getScheduleEntryTeamsMeeting: vi.fn().mockResolvedValue({ success: true, data: null }),
   approveAppointmentRequest,
   declineAppointmentRequest,
   getTeamsMeetingCapability,
@@ -94,7 +95,8 @@ vi.mock('@alga-psa/ui/components/Input', () => ({
 }));
 
 vi.mock('@alga-psa/ui/components/DatePicker', () => ({
-  DatePicker: (props: any) => <input type="date" {...props} />,
+  DatePicker: ({ id, value, onChange }: any) => <input data-testid={id} value={value?.toISOString() ?? ''}
+    onChange={event => onChange(new Date(event.target.value))} />,
 }));
 
 vi.mock('@alga-psa/ui/components/TextArea', () => ({
@@ -134,8 +136,8 @@ vi.mock('@alga-psa/scheduling/components/time-management/time-entry/time-sheet/A
 }));
 
 vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
-  default: ({ id, options = [], value, onValueChange }: any) => (
-    <select id={id} value={value} onChange={(event) => onValueChange(event.target.value)}>
+  default: ({ id, label, options = [], value, onValueChange }: any) => (
+    <select id={id} aria-label={label} value={value} onChange={(event) => onValueChange(event.target.value)}>
       {options.map((option: any) => (
         <option key={option.value} value={option.value}>
           {option.label}
@@ -226,6 +228,61 @@ describe('EntryPopup start/end synchronisation', () => {
 
   afterEach(() => {
     vi.clearAllMocks();
+  });
+
+  it('shows imported all-day boundaries at local midnight and preserves their UTC dates on save', () => {
+    const onSave = vi.fn();
+    const { container } = render(<EntryPopup
+      event={{ entry_id: 'all-day', title: 'Imported all-day', is_all_day: true, scheduled_start: new Date('2026-10-25T00:00:00Z'),
+        scheduled_end: new Date('2026-10-26T00:00:00Z'), assigned_user_ids: ['tech-1'], work_item_type: 'ad_hoc',
+        status: 'scheduled', tenant: 'test' } as any}
+      slot={null} onClose={vi.fn()} onSave={onSave} canAssignMultipleAgents={false}
+      users={[] as any} currentUserId="tech-1" canModifySchedule={true} focusedTechnicianId={null} canAssignOthers={true}
+    />);
+    expect((screen.getByTestId('scheduled_start') as HTMLInputElement).value).toBe(new Date(2026, 9, 25).toISOString());
+    expect((screen.getByTestId('scheduled_end') as HTMLInputElement).value).toBe(new Date(2026, 9, 26).toISOString());
+    fireEvent.change(container.querySelector('#title')!, { target: { value: 'Renamed all-day' } });
+    fireEvent.submit(container.querySelector('form')!);
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(onSave.mock.calls[0][0].title).toBe('Renamed all-day');
+    expect(new Date(onSave.mock.calls[0][0].scheduled_start).toISOString()).toBe('2026-10-25T00:00:00.000Z');
+    expect(new Date(onSave.mock.calls[0][0].scheduled_end).toISOString()).toBe('2026-10-26T00:00:00.000Z');
+    // Moving a 25-hour DST day must retain one calendar day, not 25 hours.
+    setPicker('scheduled_start', new Date(2026, 9, 26).toISOString());
+    expect((screen.getByTestId('scheduled_end') as HTMLInputElement).value).toBe(new Date(2026, 9, 27).toISOString());
+    fireEvent.submit(container.querySelector('form')!);
+    expect(new Date(onSave.mock.calls[1][0].scheduled_start).toISOString()).toBe('2026-10-26T00:00:00.000Z');
+    expect(new Date(onSave.mock.calls[1][0].scheduled_end).toISOString()).toBe('2026-10-27T00:00:00.000Z');
+  });
+
+  it.each([[false, true], [true, true], [false, false], [true, false]])(
+    'preserves recurrence date semantics (existing %s, all-day %s)', (existing, allDay) => {
+    const onSave = vi.fn();
+    const { container } = render(<EntryPopup
+      event={{ entry_id: 'all-day-series', title: 'All-day series', is_all_day: allDay,
+        scheduled_start: new Date('2026-10-26T00:00:00Z'), scheduled_end: new Date('2026-10-27T00:00:00Z'),
+        assigned_user_ids: ['tech-1'], work_item_type: 'ad_hoc', status: 'scheduled', tenant: 'test',
+        recurrence_pattern: existing ? { frequency: 'weekly', interval: 1, startDate: new Date('2026-10-26T00:00:00Z'),
+          endDate: new Date('2026-10-30T00:00:00Z') } : null,
+      } as any}
+      slot={null} onClose={vi.fn()} onSave={onSave} canAssignMultipleAgents={false}
+      users={[] as any} currentUserId="tech-1" canModifySchedule={true} focusedTechnicianId={null} canAssignOthers={true}
+    />);
+    if (existing) {
+      expect((screen.getByTestId('endDate') as HTMLInputElement).value).toBe(
+        allDay ? new Date(2026, 9, 30).toISOString() : '2026-10-30T00:00:00.000Z');
+    } else {
+      fireEvent.change(screen.getByRole('combobox', { name: 'Recurrence', exact: true }), { target: { value: 'weekly' } });
+      fireEvent.change(screen.getByRole('combobox', { name: 'End', exact: true }), { target: { value: 'date' } });
+    }
+    fireEvent.change(screen.getByTestId('endDate'), { target: { value: new Date(2026, 9, 31).toISOString() } });
+    fireEvent.submit(container.querySelector('form')!);
+    expect(onSave).toHaveBeenCalledTimes(1);
+    const saved = onSave.mock.calls[0][0];
+    expect(saved.is_all_day).toBe(allDay);
+    expect(saved.recurrence_pattern.startDate.toISOString()).toBe('2026-10-26T00:00:00.000Z');
+    expect(saved.recurrence_pattern.endDate.toISOString()).toBe(
+      allDay ? '2026-10-31T00:00:00.000Z' : new Date(2026, 9, 31).toISOString());
   });
 
   it('shifts the end forward, keeping the duration, when the start passes it', () => {

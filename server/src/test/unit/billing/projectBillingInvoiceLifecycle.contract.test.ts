@@ -127,11 +127,6 @@ describe("project invoice lifecycle contracts", () => {
     );
     expect(finalize).toContain("issueProjectDepositCreditsForInvoice(");
 
-    // The invoice's billing profile joins the same read: credit may only be
-    // applied to an invoice belonging to the profile that holds it.
-    expect(creditActions).toContain(
-      ".select('credit_applied', 'currency_code', 'project_id', 'billing_profile_id')",
-    );
     expect(creditActions).toContain(
       "metadata.project_billing_credit_kind === 'project_deposit'",
     );

@@ -15,7 +15,7 @@ import { Alert, AlertDescription } from "@alga-psa/ui/components/Alert";
 import { Badge } from "@alga-psa/ui/components/Badge";
 import clsx from "clsx";
 import { Loader2, ShieldCheck, KeyRound, LogIn } from "lucide-react";
-import { SiGoogle } from "react-icons/si";
+import { GoogleIcon } from '@alga-psa/ui/components/GoogleIcon';
 import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
 
 type ProviderBranding = {
@@ -38,7 +38,7 @@ const MicrosoftMulticolorLogo = () => (
 
 const providerBranding: Record<string, ProviderBranding> = {
   google: {
-    icon: <SiGoogle className="h-16 w-16" style={{ color: "#34A853" }} aria-hidden />,
+    icon: <GoogleIcon className="h-16 w-16" style={{ color: "#34A853" }} aria-hidden />,
     iconBg: "bg-[#E8F0FE]",
     buttonLabelKey: "connectSso.providers.branding.google",
     buttonClass: "bg-[#34A853] hover:bg-[#2d8659] text-white",

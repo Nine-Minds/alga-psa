@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "scope": "host-node-tooling",
+  "revision": "527b1ac4f2539558213c36038bebcc7ba6d7314c",
+  "runtime": "v25.5.0",
+  "status": "passed",
+  "requiredFiles": 60,
+  "tests": 602,
+  "passed": 602,
+  "failed": 0,
+  "skipped": 0,
+  "cancelled": 0,
+  "todo": 0,
+  "durationMs": 153462.880208,
+  "artifacts": {
+    "evidence.json": "412ff6308b62dff54ccca3511a23b92478e5532bad68b3e63c138d6a95899451",
+    "events.jsonl": "ea4bdd22bddbee2b7c733f5a3c2c25cc662b305303895ac87b35d4aa8361564f",
+    "runner.log": "e69c628a2ec7127dfe732fb5666a58581b5112295c8d404bf7d217aef3202458",
+    "discovery.json": "e9260d9047a82cf0c0df11c674ea830c6e2181749d7dc8e6e90dca223fffbcb4"
+  },
+  "command": "PATH=/opt/homebrew/opt/node@25/bin:$PATH node scripts/run-node-tooling-tests.mjs",
+  "pr": {
+    "number": 3343,
+    "head": "7b170294a755dfebba34cb8bbfc1069b6d8ba8bc",
+    "state": "OPEN",
+    "failedChecks": 10
+  },
+  "limits": [
+    "Host tooling only, not application/browser/Temporal/Citus execution at this revision.",
+    "PR remains on older published source; publication approval is pending.",
+    "Argo offline validator is separately executed, not included in these 602 tests.",
+    "No Docker build or deployment."
+  ]
+}

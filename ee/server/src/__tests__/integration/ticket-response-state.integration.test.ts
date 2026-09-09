@@ -17,14 +17,15 @@ type CreateCommentInput = Omit<IComment, 'tenant'> & { author_type?: IComment['a
 let db: Knex;
 let tenantData: TenantTestData;
 let tenantId: string;
+let currentUser: Record<string, any>;
 
 function tenantTable(activeTenantId: string, table: string) {
   return tenantDb(db, activeTenantId).table(table);
 }
 
 // Mock createTenantKnex to return our test database, but keep other exports
-vi.mock('../../../../../server/src/lib/db', async (importOriginal) => {
-  const actual = await importOriginal() as typeof import('../../../../../server/src/lib/db');
+vi.mock('@alga-psa/db', async (importOriginal) => {
+  const actual = await importOriginal() as typeof import('@alga-psa/db');
   return {
     ...actual,
     createTenantKnex: vi.fn(async () => ({ knex: db, tenant: tenantId })),
@@ -37,19 +38,21 @@ vi.mock('@alga-psa/users/actions', async (importOriginal) => {
   const actual = await importOriginal() as typeof import('@alga-psa/users/actions');
   return {
     ...actual,
-    getCurrentUser: vi.fn(async () => ({
-      user_id: 'test-user-id',
-      user_type: 'internal',
-      first_name: 'Test',
-      last_name: 'User',
-      email: 'test@example.com',
-    })),
+    getCurrentUser: vi.fn(async () => currentUser),
   };
 });
 
+// Inject the authenticated actor at the current action boundary. The actual
+// comment action still reads that user's type and persists through real SQL.
+vi.mock('@alga-psa/auth', async (importOriginal) => ({
+  ...(await importOriginal() as typeof import('@alga-psa/auth')),
+  withAuth: (action: any) => async (...args: any[]) => action(currentUser, { tenant: tenantId }, ...args),
+  hasPermission: vi.fn(async () => true),
+}));
+
 // Mock RBAC permissions
-vi.mock('../../../../../server/src/lib/auth/rbac', async (importOriginal) => {
-  const actual = await importOriginal() as typeof import('../../../../../server/src/lib/auth/rbac');
+vi.mock('@alga-psa/auth/rbac', async (importOriginal) => {
+  const actual = await importOriginal() as typeof import('@alga-psa/auth/rbac');
   return {
     ...actual,
     hasPermission: vi.fn(async () => true),
@@ -58,8 +61,8 @@ vi.mock('../../../../../server/src/lib/auth/rbac', async (importOriginal) => {
 
 // Mock event publishing to capture events
 const publishedEvents: Array<{ eventType: string; payload: any }> = [];
-vi.mock('../../../../../server/src/lib/eventBus/publishers', async (importOriginal) => {
-  const actual = await importOriginal() as typeof import('../../../../../server/src/lib/eventBus/publishers');
+vi.mock('@alga-psa/event-bus/publishers', async (importOriginal) => {
+  const actual = await importOriginal() as typeof import('@alga-psa/event-bus/publishers');
   return {
     ...actual,
     publishEvent: vi.fn(async (event: { eventType: string; payload: any }) => {
@@ -68,8 +71,8 @@ vi.mock('../../../../../server/src/lib/eventBus/publishers', async (importOrigin
   };
 });
 
-vi.mock('../../../../../server/src/lib/eventBus', async (importOriginal) => {
-  const actual = await importOriginal() as typeof import('../../../../../server/src/lib/eventBus');
+vi.mock('@alga-psa/event-bus', async (importOriginal) => {
+  const actual = await importOriginal() as typeof import('@alga-psa/event-bus');
   return {
     ...actual,
     getEventBus: vi.fn(() => ({
@@ -109,6 +112,7 @@ describe('Ticket Response State Integration Tests', () => {
   beforeEach(async () => {
     // Clear published events
     publishedEvents.length = 0;
+    currentUser = { user_id: tenantData.adminUser.userId, user_type: 'internal' };
   });
 
   // Helper to create a test ticket
@@ -197,9 +201,21 @@ describe('Ticket Response State Integration Tests', () => {
   // Helper to create a test user
   async function createTestUser(userType: 'internal' | 'client'): Promise<string> {
     const userId = uuidv4();
+    const contactId = userType === 'client' ? uuidv4() : null;
+    if (contactId) {
+      await tenantTable(tenantId, 'contacts').insert({
+        tenant: tenantId,
+        contact_name_id: contactId,
+        client_id: tenantData.client.clientId,
+        full_name: 'Response state client',
+        email: `${userId}@example.invalid`,
+        is_inactive: false,
+      });
+    }
     await tenantTable(tenantId, 'users').insert({
       user_id: userId,
       tenant: tenantId,
+      contact_id: contactId,
       username: `test-${userType}-${userId.slice(0, 6)}`,
       email: `${userId.slice(0, 6)}@test.com`,
       first_name: 'Test',
@@ -232,7 +248,10 @@ describe('Ticket Response State Integration Tests', () => {
       author_type: 'unknown', // Will be overwritten by createComment
     };
 
-    await createComment(commentData as Omit<IComment, 'tenant'>);
+    currentUser = await tenantTable(tenantId, 'users').where({ user_id: options.userId }).first();
+    expect(currentUser).toBeDefined();
+    const result = await createComment(commentData as Omit<IComment, 'tenant'>);
+    expect(typeof result).toBe('string');
   }
 
   // ==========================================================================

@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "suite": "node-tooling",
+  "revision": "4832fc3152505800f683c9f13026558eae5c7c58",
+  "status": "passed",
+  "counts": {
+    "tests": 499,
+    "passed": 499,
+    "failed": 0,
+    "skipped": 0,
+    "todo": 0,
+    "cancelled": 0
+  },
+  "source": {
+    "before": {
+      "revision": "4832fc3152505800f683c9f13026558eae5c7c58",
+      "dirty": false,
+      "changes": []
+    },
+    "after": {
+      "revision": "4832fc3152505800f683c9f13026558eae5c7c58",
+      "dirty": false,
+      "changes": []
+    }
+  },
+  "workingTreeDirty": false,
+  "failures": [],
+  "scope": "Complete local tooling lane after database aggregate and selection contract changes",
+  "requiredFiles": 50,
+  "discoveryStatus": "passed",
+  "durationMs": 153353.905625,
+  "limitations": [
+    "Local Node 25 validation; native CI and effective protections remain unverified."
+  ],
+  "artifacts": [
+    {
+      "path": "test-results/node-tooling/evidence.json",
+      "sha256": "797d7841df1364e4ba61328184554d05c9ee6ebd3981897d8e76d909e196b806"
+    },
+    {
+      "path": "test-results/node-tooling/discovery.json",
+      "sha256": "28f48caaa4ac8213620b4b1846a06a62419751a87770224add824ebee411577e"
+    },
+    {
+      "path": "test-results/node-tooling/events.jsonl",
+      "sha256": "521c74fe0495ac388750a4c121d6ee99d719176e7f8b0fea4fede1cb318aa92a"
+    },
+    {
+      "path": "test-results/node-tooling/runner.log",
+      "sha256": "e428766ec18cb2031fa625fcebf74ddbfa634fe88983c2e9034c3fcfd650b58a"
+    }
+  ]
+}

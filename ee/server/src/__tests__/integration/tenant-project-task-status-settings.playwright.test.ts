@@ -1,5 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
-import { tenantDb } from '@alga-psa/db';
+import { tenantDb } from '@alga-psa/db/tenantDb';
 import { v4 as uuidv4 } from 'uuid';
 import { knex as createKnex } from 'knex';
 import { PLAYWRIGHT_DB_CONFIG } from './utils/playwrightDatabaseConfig';

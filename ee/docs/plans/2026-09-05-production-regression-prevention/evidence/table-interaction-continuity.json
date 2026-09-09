@@ -1,0 +1,42 @@
+{
+  "status": "Shared table menu reset reproduced and repaired locally; rebuilt native browser acceptance pending",
+  "nativeEvidence": {
+    "run": 34078331062,
+    "job": 101612274786,
+    "case": "a technician cannot elevate its own role through an administrator action",
+    "firstAttempt": "The click on the user-actions trigger completed, but the Edit menu item never appeared. Retry passed; strict browser gate rejected flaky result.",
+    "traceLocal": "/tmp/alga-ee-browser-df9b-artifacts/alga-psa/alga-psa/e2e-tests/test-results/tenant-identity-a-technici-d2273-ugh-an-administrator-action-enterprise-chromium/trace.zip"
+  },
+  "cause": {
+    "reproduced": "DataTable generated a fresh function component for each TanStack cell when columns or sizing changed. flexRender mounted it as a new component type, resetting state in nested dropdowns.",
+    "nativeLink": "UserList builds column callbacks each render and updates avatar state asynchronously. This supplies a concrete reset path consistent with the trace; native after validation is still required."
+  },
+  "change": "Invoke the public ColumnDefinition render callback as a node factory under the stable keyed table cell. Remove the unnecessary generated TanStack cell component. Existing child component identity survives updated props.",
+  "regression": "Open a real Radix dropdown, rerender the table with fresh column callbacks and copied row data, then select Edit without reopening. The new callback must execute once and the old callback must not execute.",
+  "validation": {
+    "before": {
+      "failed": 1,
+      "location": "Menu item missing after rerender",
+      "log": "/tmp/alga-table-menu-before.log"
+    },
+    "focusedAfter": {
+      "files": 2,
+      "passed": 6,
+      "log": "/tmp/alga-table-menu-after.log"
+    },
+    "fullUiPackage": {
+      "files": 79,
+      "passed": 416,
+      "failed": 0,
+      "skipped": 0,
+      "durationSeconds": 5.69,
+      "log": "/tmp/alga-ui-table-continuity-full.log"
+    },
+    "types": "Focused strictNullChecks tsc passed for DataTable and regression test; /tmp/alga-table-continuity-types.log"
+  },
+  "remaining": [
+    "Native browser rerun against rebuilt application",
+    "Full integration job 101608767833 remains live at last observation; no push while live",
+    "Other plan requirements remain incomplete"
+  ]
+}

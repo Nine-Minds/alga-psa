@@ -1,0 +1,26 @@
+{
+  "name": "alga-production-e2e-tests",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Customer journeys against an already running production Alga build",
+  "scripts": {
+    "test:local": "playwright test --config playwright.local.config.ts",
+    "test": "node run.mjs",
+    "test:list": "playwright test --list",
+    "test:harness": "node harness/check-retry-policy.mjs && node harness/check-actor-session-diagnostics.mjs"
+  },
+  "engines": {
+    "node": ">=22.13 <27"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.57.0",
+    "@types/mailparser": "3.4.6",
+    "@types/nodemailer": "6.4.23",
+    "knex": "3.1.0",
+    "mailparser": "3.9.14",
+    "nodemailer": "9.0.3",
+    "pdfjs-dist": "6.3.289",
+    "pg": "8.16.3",
+    "redis": "4.7.1"
+  }
+}

@@ -8,6 +8,8 @@ node_modules/
 # testing
 /coverage
 test-results/
+e2e-tests/harness-results/
+e2e-tests/execution-evidence/
 test-results-*.json
 server/test-results.json
 playwright-test-results/
@@ -255,3 +257,11 @@ tools/i18n/*/baseline.json
 
 # T013 gate writes this on a diff for inspection; never committed.
 server/src/test/integration/billing/goldenOutput/baseline.actual.json
+
+# Scoped mutation pilot's generated sandboxes and reports.
+.stryker-tmp/
+reports/mutation/
+
+# Per-process diagnostic journals; final execution evidence is uploaded by CI.
+/server/test-progress*.jsonl
+/test-progress*.jsonl

@@ -1,0 +1,29 @@
+{
+  "status": "local_behavior_verified_native_pending",
+  "problems": [
+    "Restricted invocation projection retained free-form error_message alongside redacted error_json",
+    "Run export did not use the strict tenant-owner guard used by run details"
+  ],
+  "fixes": [
+    "Omit free-form invocation error_message for restricted viewers",
+    "Use requireRunTenantAccess for export to reject foreign and null tenant owners"
+  ],
+  "before": {
+    "passed": 12,
+    "failed": 3,
+    "log": "/tmp/alga-run-access-before.log"
+  },
+  "after": {
+    "passed": 15,
+    "targeted_typescript": "passed",
+    "logs": [
+      "/tmp/alga-run-access-after.log",
+      "/tmp/alga-run-access-types.log"
+    ]
+  },
+  "limits": [
+    "Action tests mock authentication permissions and model reads; these are not end-to-end identity tests",
+    "Native CI has not executed these pending commits",
+    "Existing skipped workflow integration requirements remain incomplete"
+  ]
+}

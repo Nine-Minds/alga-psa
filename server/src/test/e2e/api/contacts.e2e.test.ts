@@ -79,7 +79,7 @@ describe('Contact API E2E Tests', () => {
         expect(response.data.data).toMatchObject({
           full_name: newContact.full_name,
           email: newContact.email,
-          default_phone_number: newContact.phone_numbers[0].phone_number,
+          default_phone_number: '+15551234567',
           client_id: env.clientId,
           role: newContact.role,
           notes: newContact.notes,
@@ -88,7 +88,7 @@ describe('Contact API E2E Tests', () => {
         });
         expect(response.data.data.phone_numbers).toEqual([
           expect.objectContaining({
-            phone_number: newContact.phone_numbers[0].phone_number,
+            phone_number: '+15551234567',
             canonical_type: 'work',
             is_default: true,
             display_order: 0,

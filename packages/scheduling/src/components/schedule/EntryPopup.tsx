@@ -1,6 +1,7 @@
 'use client';
 
 import { useFeatureFlag } from '@alga-psa/ui/hooks/useFeatureFlag';
+import { calendarDisplayDates, calendarStoredDates, moveCalendarStart } from '../../lib/calendarDateDisplay';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -103,6 +104,18 @@ interface EntryPopupProps {
   initialWorkItem?: Omit<IWorkItem, 'tenant'> | null;
 }
 
+// All-day recurrence dates share the entry's UTC calendar-date representation.
+// Date pickers work in local calendar dates, so convert only at the UI boundary.
+function recurrenceDateForDisplay(value: Date, allDay: boolean): Date {
+  const date = new Date(value);
+  return allDay ? new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()) : date;
+}
+
+function recurrenceDateForStorage(value: Date): Date {
+  const date = new Date(value);
+  return new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+}
+
 const EntryPopup: React.FC<EntryPopupProps> = ({
   event,
   slot,
@@ -127,8 +140,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
     if (event) {
       return {
         ...event,
-        scheduled_start: new Date(event.scheduled_start),
-        scheduled_end: new Date(event.scheduled_end),
+        ...calendarDisplayDates(event),
         assigned_user_ids: event.assigned_user_ids,
         is_private: event.is_private || false,
       };
@@ -366,19 +378,20 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
       if (event) {
         setEntryData({
           ...event,
-          scheduled_start: new Date(event.scheduled_start),
-          scheduled_end: new Date(event.scheduled_end),
+          ...calendarDisplayDates(event),
           assigned_user_ids: event.assigned_user_ids,
           work_item_id: event.work_item_id,
         });
-        intendedDurationRef.current = durationBetween(event.scheduled_start, event.scheduled_end);
+        const displayDates = calendarDisplayDates(event);
+        intendedDurationRef.current = durationBetween(displayDates.scheduled_start, displayDates.scheduled_end);
 
         // Load recurrence pattern if it exists
         if (event.recurrence_pattern) {
           setRecurrencePattern({
             ...event.recurrence_pattern,
-            startDate: new Date(event.recurrence_pattern.startDate),
-            endDate: event.recurrence_pattern.endDate ? new Date(event.recurrence_pattern.endDate) : undefined,
+            startDate: recurrenceDateForDisplay(event.recurrence_pattern.startDate, displayDates.is_all_day === true),
+            endDate: event.recurrence_pattern.endDate
+              ? recurrenceDateForDisplay(event.recurrence_pattern.endDate, displayDates.is_all_day === true) : undefined,
           });
         }
 
@@ -890,9 +903,16 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
     }
 
     // Prepare entry data
+    const storedDates = calendarStoredDates(entryData, event);
+    const storedPattern = recurrencePattern && storedDates.is_all_day ? {
+      ...recurrencePattern,
+      startDate: recurrenceDateForStorage(recurrencePattern.startDate),
+      endDate: recurrencePattern.endDate ? recurrenceDateForStorage(recurrencePattern.endDate) : undefined,
+    } : recurrencePattern;
     const savedEntryData = {
       ...entryData,
-      recurrence_pattern: recurrencePattern || null,
+      ...storedDates,
+      recurrence_pattern: storedPattern || null,
       work_item_id: entryData.work_item_type === 'ad_hoc' ? null : entryData.work_item_id,
       status: entryData.status || 'scheduled',
       assigned_user_ids: Array.isArray(entryData.assigned_user_ids) ? entryData.assigned_user_ids : [],
@@ -1402,7 +1422,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
                   setEntryData(prev => ({
                     ...prev,
                     scheduled_start: date,
-                    scheduled_end: new Date(date.getTime() + intendedDurationRef.current)
+                    scheduled_end: moveCalendarStart(date, prev, event, intendedDurationRef.current)
                   }));
                 }}
                 className="mt-1"

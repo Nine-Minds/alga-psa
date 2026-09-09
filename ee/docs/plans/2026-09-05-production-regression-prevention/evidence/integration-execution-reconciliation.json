@@ -1,0 +1,32 @@
+{
+  "status": "Integration execution reconciliation implemented and locally verified; native execution and skipped-case remediation pending",
+  "behavior": [
+    "Collect selected files and test identities independently before execution",
+    "Reconcile selected repository files against actual runner collection",
+    "Preserve the existing JSON report destination used by metrics",
+    "Reject skipped/pending/todo assertions, missing tests, missing reports and nonzero runner exits",
+    "Record revision, selection and dirty-state evidence and reject revision changes during execution",
+    "Clear stale reports/evidence before validating the manifest, including early failures"
+  ],
+  "tests": {
+    "passed": 4,
+    "failed": 0,
+    "skipped": 0,
+    "durationSeconds": 34.69,
+    "logLocal": "/tmp/alga-integration-execution-contract-final-v2.log",
+    "scope": "Real Vitest in temporary Git repository: manifest floor, affected/full selection, unavailable graphs/diffs, moved/empty manifests, passing+skipped required file, successful exit without report, stale evidence clearing"
+  },
+  "historicalClassification": {
+    "runId": 34074426143,
+    "originalSuccess": true,
+    "newGateStatus": "failed",
+    "passed": 2048,
+    "skipped": 49,
+    "limitation": "Report-only replay; historical collection evidence was not saved. This cannot prove historical completeness."
+  },
+  "remaining": [
+    "Resolve or explicitly own valid temporary exclusions for the 49 existing skipped assertions; strict gate intentionally will not count them as green",
+    "Complete global inventory and execution assignment outside the integration directory",
+    "Obtain native acceptance of this gate and the full original plan"
+  ]
+}

@@ -1,6 +1,8 @@
 import { defineConfig } from 'vitest/config';
+import path from 'node:path';
 
 export default defineConfig({
+  resolve: { alias: [{ find: /^@alga-psa\/ui\/(.*)$/, replacement: path.resolve(__dirname, '../ui/src/$1') }] },
   test: {
     globals: true,
     environment: 'node',

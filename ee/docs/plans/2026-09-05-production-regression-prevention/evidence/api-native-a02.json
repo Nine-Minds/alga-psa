@@ -1,0 +1,40 @@
+{
+  "runId": 34113539423,
+  "prHead": "a02bfb41364da85c0c17f77d91438b38962053e9",
+  "editions": {
+    "community": {
+      "revision": "a3183ff88b0dae6ad4601e025c19a363f60e99e6",
+      "status": "failed",
+      "counts": {
+        "passed": 334,
+        "failed": 1,
+        "skipped": 0,
+        "todo": 0,
+        "pending": 0
+      },
+      "failures": [
+        "Runner exited with 1",
+        "Runner did not report success",
+        "File failed: server/src/test/e2e/api/clients.e2e.test.ts",
+        "failed: server/src/test/e2e/api/clients.e2e.test.ts > Clients API E2E Tests Inactive Client Behavior should allow reactivating only the client, leaving contacts inactive"
+      ],
+      "evidenceSha256": "4ccb3e41e7e6f568aeab9773cd8f7ff51426b03fa8a8948beb603996aa60453f"
+    },
+    "enterprise": {
+      "revision": "a3183ff88b0dae6ad4601e025c19a363f60e99e6",
+      "status": "passed",
+      "counts": {
+        "passed": 335,
+        "failed": 0,
+        "skipped": 0,
+        "todo": 0,
+        "pending": 0
+      },
+      "failures": [],
+      "evidenceSha256": "429063e738ff39af1f0e5a40f1bbc9a8bb41311033a26964748aa1193ab86488"
+    }
+  },
+  "limits": [
+    "Event-bus latency fix is queued locally; causality for community timeout remains to be verified by the next native run"
+  ]
+}

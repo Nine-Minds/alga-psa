@@ -1881,7 +1881,7 @@ export async function cancelTenantStripeSubscription(
     log.info('Found active subscription, canceling', { subscriptionExternalId });
 
     // Dynamically import Stripe to avoid issues in environments where it's not available
-    const { default: Stripe } = await import('stripe');
+    const { createWorkerStripeClient } = await import('../config/stripeClient.js');
     const { getSecretProviderInstance } = await import('@alga-psa/core/secrets');
 
     const secretProvider = await getSecretProviderInstance();
@@ -1895,10 +1895,7 @@ export async function cancelTenantStripeSubscription(
       return { canceled: false, error: 'Stripe secret key not configured' };
     }
 
-    const stripe = new Stripe(secretKey, {
-      apiVersion: '2024-12-18.acacia' as any,
-      typescript: true,
-    });
+    const stripe = createWorkerStripeClient(secretKey);
 
     // Cancel the subscription immediately
     const canceledSubscription = await stripe.subscriptions.cancel(subscriptionExternalId);

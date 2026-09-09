@@ -19,7 +19,7 @@ const temporalSource = readFileSync(resolve(__dirname, '../../../../ee/temporal-
 describe('prepaid auto-replenishment wiring contract', () => {
   it('composes with the existing alert scan and owns the action in the server subscriber', () => {
     expect(subscriberSource).toContain('replenishOpenPrepaidBalanceAlerts');
-    expect(subscriberSource).toContain('Feature flag disabled before replenishment');
+    // release-v1-5-feature was retired in dba55c91ab; replenishment is now generally available.
     expect(handlerSource).toContain('PREPAID_BALANCE_ALERT_SCAN_REQUESTED');
     expect(handlerSource).not.toContain('server/src');
   });

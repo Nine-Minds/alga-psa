@@ -27,8 +27,8 @@ describe('Priority API E2E Tests', () => {
     await db('priorities').insert({
       priority_id: ticketPriorityId,
       priority_name: 'Test Ticket Priority',
-      description: 'A test priority for tickets',
       tenant: env.tenant,
+      created_by: env.userId,
       order_number: 100,
       item_type: 'ticket',
       color: '#FF5733'
@@ -40,8 +40,8 @@ describe('Priority API E2E Tests', () => {
     await db('priorities').insert({
       priority_id: taskPriorityId,
       priority_name: 'Test Task Priority',
-      description: 'A test priority for tasks',
       tenant: env.tenant,
+      created_by: env.userId,
       order_number: 100,
       item_type: 'project_task',
       color: '#33FF57'
@@ -164,6 +164,7 @@ describe('Priority API E2E Tests', () => {
         priority_name: 'Test Ticket Priority',
         item_type: 'ticket',
         tenant: env.tenant,
+      created_by: env.userId,
         color: '#FF5733'
       });
     });

@@ -161,10 +161,11 @@ export const surveySentEventPayloadSchema = BaseDomainEventPayloadSchema.extend(
   surveyType: surveyTypeSchema,
   recipientId: z.string().min(1),
   ticketId: ticketIdSchema.optional(),
+  projectId: uuidSchema('Project ID').optional(),
   sentAt: z.string().datetime().optional(),
   channel: notificationChannelSchema,
   templateId: z.string().optional(),
-}).describe('Payload for SURVEY_SENT');
+}).refine(value => !(value.ticketId && value.projectId), { message: 'Provide only one survey subject' }).describe('Payload for SURVEY_SENT');
 
 export type SurveySentEventPayload = z.infer<typeof surveySentEventPayloadSchema>;
 
@@ -173,10 +174,11 @@ export const surveyResponseReceivedEventPayloadSchema = BaseDomainEventPayloadSc
   responseId: z.string().uuid(),
   recipientId: z.string().min(1),
   ticketId: ticketIdSchema.optional(),
+  projectId: uuidSchema('Project ID').optional(),
   respondedAt: z.string().datetime().optional(),
   score: z.number(),
   comment: z.string().optional(),
-}).describe('Payload for SURVEY_RESPONSE_RECEIVED');
+}).refine(value => !(value.ticketId && value.projectId), { message: 'Provide only one survey subject' }).describe('Payload for SURVEY_RESPONSE_RECEIVED');
 
 export type SurveyResponseReceivedEventPayload = z.infer<typeof surveyResponseReceivedEventPayloadSchema>;
 
@@ -184,10 +186,11 @@ export const surveyReminderSentEventPayloadSchema = BaseDomainEventPayloadSchema
   surveyId: z.string().uuid(),
   recipientId: z.string().min(1),
   ticketId: ticketIdSchema.optional(),
+  projectId: uuidSchema('Project ID').optional(),
   sentAt: z.string().datetime().optional(),
   channel: notificationChannelSchema,
   reminderNumber: z.number().int().positive(),
-}).describe('Payload for SURVEY_REMINDER_SENT');
+}).refine(value => !(value.ticketId && value.projectId), { message: 'Provide only one survey subject' }).describe('Payload for SURVEY_REMINDER_SENT');
 
 export type SurveyReminderSentEventPayload = z.infer<typeof surveyReminderSentEventPayloadSchema>;
 
@@ -195,8 +198,9 @@ export const surveyExpiredEventPayloadSchema = BaseDomainEventPayloadSchema.exte
   surveyId: z.string().uuid(),
   recipientId: z.string().min(1),
   ticketId: ticketIdSchema.optional(),
+  projectId: uuidSchema('Project ID').optional(),
   expiredAt: z.string().datetime().optional(),
-}).describe('Payload for SURVEY_EXPIRED');
+}).refine(value => !(value.ticketId && value.projectId), { message: 'Provide only one survey subject' }).describe('Payload for SURVEY_EXPIRED');
 
 export type SurveyExpiredEventPayload = z.infer<typeof surveyExpiredEventPayloadSchema>;
 

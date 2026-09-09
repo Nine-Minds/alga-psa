@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "kind": "calendar-callback-tls-foundation",
+  "baseRevision": "c4010d04e0",
+  "status": "local-passed-native-pending",
+  "architecture": "Fresh two-day test certificate; fixed HTTPS proxy on internal calendar-callback:3443 forwards only POST /api/calendar/webhooks/microsoft to server:3000. Algasim trusts the public certificate through NODE_EXTRA_CA_CERTS; private key mounts only in proxy.",
+  "validation": {
+    "behavioralTestsPassed": 5,
+    "behavioralTestsSkipped": 0,
+    "testLogSha256": "24fcb4b55feea3db8917dfe396a7c8d15301b71c8c835e2556d5229298cac106",
+    "checks": [
+      "Untrusted certificate rejected",
+      "Wrong hostname rejected",
+      "Validation token and application response preserved",
+      "Notification JSON/headers preserved to fixed destination",
+      "Unrelated routes and methods rejected",
+      "Unavailable application returns502"
+    ],
+    "composeEditions": [
+      "community",
+      "enterprise"
+    ],
+    "composeAssertions": [
+      "Application callback endpoint is HTTPS",
+      "Emulator trusts certificate only, not private key",
+      "Proxy has expected network alias and TLS healthcheck",
+      "Application network remains internal"
+    ],
+    "workflowActionlint": "passed"
+  },
+  "ci": "Fresh-install job generates certificates before Compose interpolation, waits on TLS healthcheck and verifies trusted callback access from the emulator. Candidate-image validation executes the proxy tests.",
+  "limits": [
+    "Node HTTPS behavioral tests use an isolated application receiver. Actual calendar browser/DB/worker journey remains pending.",
+    "Production HTTPS requirement and Teams emulator security guard remain unchanged.",
+    "Local Compose startup now requires generating files and setting E2E_CALLBACK_TLS_DIR; documented in e2e-tests/README.md."
+  ]
+}

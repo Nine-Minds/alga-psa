@@ -1,7 +1,6 @@
 import { beforeAll, afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import crypto from 'node:crypto';
-import path from 'node:path';
 import { v4 as uuidv4 } from 'uuid';
 
 import { createTestDbConnection } from '@main-test-utils/dbConfig';
@@ -45,8 +44,6 @@ function s256(verifier: string): string {
 describe('MCP OAuth grant lifecycle – DB integration', () => {
   beforeAll(async () => {
     db = await createTestDbConnection();
-    await runServerMigrations(db);
-    await applyMcpOAuthMigration(db);
     tenant = await ensureTenant(db);
   }, HOOK_TIMEOUT);
 
@@ -130,41 +127,6 @@ describe('MCP OAuth grant lifecycle – DB integration', () => {
 });
 
 // --- harness helpers (mirrors other ee integration tests) -------------------
-
-async function runServerMigrations(connection: Knex): Promise<void> {
-  process.env.APP_ENV = process.env.APP_ENV || 'test';
-  process.env.DB_USER_ADMIN = process.env.DB_USER_ADMIN || 'postgres';
-  const dbUserServer = process.env.DB_USER_SERVER || 'app_user';
-  const dbPasswordServer = process.env.DB_PASSWORD_SERVER || 'test_password';
-  process.env.DB_USER_SERVER = dbUserServer;
-  process.env.DB_PASSWORD_SERVER = dbPasswordServer;
-
-  await connection.raw(`DO $$
-    BEGIN
-      IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '${dbUserServer}') THEN
-        CREATE ROLE ${dbUserServer} LOGIN PASSWORD '${dbPasswordServer}';
-      ELSE
-        ALTER ROLE ${dbUserServer} WITH LOGIN PASSWORD '${dbPasswordServer}';
-      END IF;
-    END
-  $$;`);
-  await connection.raw('DROP SCHEMA IF EXISTS public CASCADE');
-  await connection.raw('CREATE SCHEMA public');
-  await connection.raw('GRANT ALL ON SCHEMA public TO public');
-  await connection.raw(`GRANT ALL ON SCHEMA public TO ${process.env.DB_USER_ADMIN}`);
-  await connection.raw(`GRANT ALL ON SCHEMA public TO ${dbUserServer}`);
-  await connection.raw('CREATE EXTENSION IF NOT EXISTS "pgcrypto"');
-  await connection.raw('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"');
-
-  const migrationsDir = path.resolve(process.cwd(), '..', '..', 'server', 'migrations');
-  await connection.migrate.latest({ directory: migrationsDir, loadExtensions: ['.cjs', '.js'] });
-}
-
-async function applyMcpOAuthMigration(connection: Knex): Promise<void> {
-  const repoRoot = path.resolve(process.cwd(), '..', '..');
-  const mod = require(path.resolve(repoRoot, 'ee', 'server', 'migrations', '20260627170000_create_mcp_oauth.cjs'));
-  await mod.up(connection);
-}
 
 async function ensureTenant(connection: Knex): Promise<string> {
   const row = await connection('tenants').first<{ tenant: string }>('tenant');

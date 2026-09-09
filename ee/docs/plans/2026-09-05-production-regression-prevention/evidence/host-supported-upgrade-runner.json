@@ -1,0 +1,171 @@
+{
+  "schemaVersion": 1,
+  "phase": "schema-and-retention",
+  "status": "passed",
+  "database": "upgrade_runner_82cc_20260908",
+  "source": {
+    "revision": "8bc3d1a6142d691401abae0245b6367a83d3a23f",
+    "dirty": true,
+    "changes": [
+      {
+        "status": " M",
+        "file": "ee/docs/plans/2026-09-05-production-regression-prevention/PRD.md"
+      },
+      {
+        "status": " M",
+        "file": "ee/docs/plans/2026-09-05-production-regression-prevention/SCRATCHPAD.md"
+      },
+      {
+        "status": " M",
+        "file": "ee/docs/plans/2026-09-05-production-regression-prevention/features.json"
+      },
+      {
+        "status": " M",
+        "file": "ee/docs/plans/2026-09-05-production-regression-prevention/tests.json"
+      },
+      {
+        "status": "??",
+        "file": "ee/docs/plans/2026-09-05-production-regression-prevention/evidence/host-upgrade-v150-retention.json"
+      },
+      {
+        "status": "??",
+        "file": "ee/docs/plans/2026-09-05-production-regression-prevention/evidence/host-upgrade-v150-schema.json"
+      },
+      {
+        "status": "??",
+        "file": "ee/docs/plans/2026-09-05-production-regression-prevention/upgrade-baseline.json"
+      },
+      {
+        "status": "??",
+        "file": "scripts/fixtures/"
+      },
+      {
+        "status": "??",
+        "file": "scripts/lib/upgrade-retention.mjs"
+      },
+      {
+        "status": "??",
+        "file": "scripts/lib/upgrade-schema-source.mjs"
+      },
+      {
+        "status": "??",
+        "file": "scripts/run-supported-upgrade.ts"
+      },
+      {
+        "status": "??",
+        "file": "scripts/tests/upgrade-retention.test.mjs"
+      },
+      {
+        "status": "??",
+        "file": "scripts/tests/upgrade-schema-source.test.mjs"
+      }
+    ]
+  },
+  "baseline": {
+    "schemaVersion": 1,
+    "release": "v1.5.0",
+    "commit": "f3579f3a317cf51df5f4489e5dcd8f649bb71289",
+    "selection": "Explicitly approved by the user for the supported-upgrade test",
+    "fixtureStatus": "pending"
+  },
+  "output": "/var/folders/8g/3xyjqdpd4hx2h39h4qb2lyvm0000gn/T/alga-supported-upgrade-z7Cr08",
+  "limitations": [
+    "Browser behavior and application tenant isolation require separate execution.",
+    "Migration dependencies use the installed candidate dependency tree."
+  ],
+  "migrations": {
+    "baseline": 1028,
+    "upgrade": [
+      "20260827090000_create_tenant_secrets.cjs",
+      "20260827091000_reconcile_tenant_permissions.cjs",
+      "20260827110000_rename_time_permission_resources.cjs",
+      "20260827120000_reconcile_permission_catalog.cjs",
+      "20260828120000_add_credential_audit_permission.cjs",
+      "20260830120000_add_accounting_capability_permissions.cjs",
+      "20260830120000_external_mapping_tombstone_and_realm_normalization.cjs",
+      "20260830120000_prune_accounting_export_error_metadata.cjs",
+      "20260830120000_tighten_accounting_mapping_realm.cjs",
+      "20260830130000_create_provider_disconnect_records.cjs",
+      "20260831000000_add_accounting_catalog_read_permission.cjs",
+      "20260831000000_add_prefix_date_format_to_next_number.cjs",
+      "20260831090000_unique_pending_accounting_sync_operations.cjs",
+      "20260902090000_add_service_request_submission_client_key.cjs",
+      "20260902090000_add_work_item_snapshot_to_invoice_time_entries.cjs",
+      "20260902090100_add_by_ticket_standard_invoice_template.cjs",
+      "20260903160000_unique_active_online_meeting_per_schedule_entry.cjs",
+      "20260904100000_contract_quantity_usage_semantics.cjs",
+      "20260904110000_usage_tracking_request_id.cjs",
+      "20260904120000_allow_chargeless_invoice_claims_on_recurring_service_periods.cjs",
+      "20260904120000_usage_period_total_request_history.cjs",
+      "20260904130000_billing_semantics_lock.cjs",
+      "20260904140000_usage_measurement_revisions.cjs",
+      "20260904210725_ticket_comment_attachments.cjs",
+      "20260904221253_ticket_comment_attachment_recovery.cjs",
+      "20260905025507_invoice_ticket_charge_provenance.cjs",
+      "20260905031510_invoice_ticket_primary_template.cjs",
+      "20260906123000_add_usage_comments.cjs",
+      "20260907190000_add_project_survey_subjects.cjs",
+      "20260907200000_add_project_survey_email_template.cjs",
+      "20260907210000_add_workflow_action_replay_output.cjs"
+    ],
+    "batch": 2
+  },
+  "sourceAfter": {
+    "revision": "8bc3d1a6142d691401abae0245b6367a83d3a23f",
+    "dirty": true,
+    "changes": [
+      {
+        "status": " M",
+        "file": "ee/docs/plans/2026-09-05-production-regression-prevention/PRD.md"
+      },
+      {
+        "status": " M",
+        "file": "ee/docs/plans/2026-09-05-production-regression-prevention/SCRATCHPAD.md"
+      },
+      {
+        "status": " M",
+        "file": "ee/docs/plans/2026-09-05-production-regression-prevention/features.json"
+      },
+      {
+        "status": " M",
+        "file": "ee/docs/plans/2026-09-05-production-regression-prevention/tests.json"
+      },
+      {
+        "status": "??",
+        "file": "ee/docs/plans/2026-09-05-production-regression-prevention/evidence/host-upgrade-v150-retention.json"
+      },
+      {
+        "status": "??",
+        "file": "ee/docs/plans/2026-09-05-production-regression-prevention/evidence/host-upgrade-v150-schema.json"
+      },
+      {
+        "status": "??",
+        "file": "ee/docs/plans/2026-09-05-production-regression-prevention/upgrade-baseline.json"
+      },
+      {
+        "status": "??",
+        "file": "scripts/fixtures/"
+      },
+      {
+        "status": "??",
+        "file": "scripts/lib/upgrade-retention.mjs"
+      },
+      {
+        "status": "??",
+        "file": "scripts/lib/upgrade-schema-source.mjs"
+      },
+      {
+        "status": "??",
+        "file": "scripts/run-supported-upgrade.ts"
+      },
+      {
+        "status": "??",
+        "file": "scripts/tests/upgrade-retention.test.mjs"
+      },
+      {
+        "status": "??",
+        "file": "scripts/tests/upgrade-schema-source.test.mjs"
+      }
+    ]
+  }
+}

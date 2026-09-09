@@ -1,0 +1,28 @@
+{
+  "status": "bootstrap_implemented_citus_execution_pending",
+  "changes": [
+    "TEST_DB_BACKEND=citus creates the real Citus extension instead of the PostgreSQL probe stand-in.",
+    "Scratch database shard count is four, matching the existing CI migration recipe.",
+    "Workflow suite requires all four runtime persistence tables to be hash-distributed in Citus mode.",
+    "Citus bootstrap gets a 30-minute migration-only hook budget; default PostgreSQL setup and runtime assertion timeouts remain unchanged."
+  ],
+  "validation": {
+    "postgres": "7/7 workflow persistence cases passed after bootstrap changes",
+    "typescript": "targeted check passed",
+    "citus": "Initial complete-layout run timed out at 180 seconds during migration setup, before assertions. Process ended and active-query count was zero before restarting.",
+    "postgresLog": "/tmp/alga-workflow-postgres-backend-check.log",
+    "citusActiveLog": "/tmp/alga-workflow-citus-runtime-full.log"
+  },
+  "localState": {
+    "container": "alga-regression-citus",
+    "database": "workflow_citus_82cc",
+    "adminRole": "workflow_citus_82cc_admin",
+    "migrations": "server/combined-migrations",
+    "session": 52670
+  },
+  "limits": [
+    "Citus runtime behavior is not verified and is not marked implemented in the plan.",
+    "New backend mode is not yet wired into the native Citus job.",
+    "Local scratch database and test-only role remain for ongoing verification."
+  ]
+}

@@ -1,8 +1,13 @@
-import { v4 as uuidv4 } from 'uuid';
-import { tenantDb } from '@alga-psa/db';
+import { randomUUID as uuidv4 } from 'node:crypto';
+// The query facade is independent of connection/auth/secret initialization.
+// Import it directly so standalone browser fixture setup needs only Knex.
+import { tenantDb } from '../../packages/db/src/lib/tenantDb';
 import type { CadenceOwner } from '@alga-psa/types';
 import type { Knex } from 'knex';
 import type { TestContext } from './testContext';
+
+// Browser fixtures can reuse billing setup without constructing a Vitest lifecycle.
+export type BillingFixtureContext = Pick<TestContext, 'db' | 'tenantId' | 'clientId' | 'createEntity'>;
 
 interface SetupTaxOptions {
   regionCode?: string;
@@ -25,14 +30,14 @@ const debugFlags = {
 };
 
 function tenantTable<Row extends object = Record<string, unknown>>(
-  context: TestContext,
+  context: BillingFixtureContext,
   tableExpression: string
 ): Knex.QueryBuilder<Row, Row[]> {
   return tenantDb(context.db, context.tenantId).table<Row>(tableExpression);
 }
 
 function dynamicTenantTable<Row extends object = Record<string, unknown>>(
-  context: TestContext,
+  context: BillingFixtureContext,
   tableExpression: string,
   tenantColumn: string,
   reason: string
@@ -59,7 +64,7 @@ interface BillingSettingsOptions {
 }
 
 export async function setupClientTaxConfiguration(
-  context: TestContext,
+  context: BillingFixtureContext,
   options: SetupTaxOptions = {}
 ): Promise<string> {
   const {
@@ -128,7 +133,7 @@ export async function setupClientTaxConfiguration(
 }
 
 export async function assignServiceTaxRate(
-  context: TestContext,
+  context: BillingFixtureContext,
   serviceId: string | '*',
   region: string,
   options: AssignServiceTaxRateOptions = {}
@@ -156,7 +161,7 @@ export async function assignServiceTaxRate(
 }
 
 async function upsertClientTaxSettings(
-  context: TestContext,
+  context: BillingFixtureContext,
   taxRateId: string,
   clientId: string
 ): Promise<void> {
@@ -212,7 +217,7 @@ async function upsertClientTaxSettings(
 }
 
 async function upsertClientDefaultTaxRate(
-  context: TestContext,
+  context: BillingFixtureContext,
   taxRateId: string,
   clientId: string
 ): Promise<void> {
@@ -386,7 +391,7 @@ interface DirectConcurrentAssignmentSeedOptions {
 }
 
 async function ensureServiceType(
-  context: TestContext,
+  context: BillingFixtureContext,
   billingMethod: 'fixed' | 'hourly' | 'usage' = 'fixed'
 ): Promise<string> {
   const cacheKey = `${context.tenantId}:${billingMethod}`;
@@ -456,7 +461,7 @@ async function ensureServiceType(
 }
 
 async function getStandardServiceTypeId(
-  context: TestContext,
+  context: BillingFixtureContext,
   billingMethod: 'fixed' | 'hourly' | 'usage'
 ): Promise<string | null> {
   const hasTable = await context.db.schema.hasTable('standard_service_types');
@@ -499,7 +504,7 @@ async function getStandardServiceTypeId(
 }
 
 export async function createTestService(
-  context: TestContext,
+  context: BillingFixtureContext,
   overrides: CreateServiceOptions = {}
 ): Promise<string> {
   const serviceId = overrides.service_id ?? uuidv4();
@@ -597,7 +602,7 @@ export async function createTestService(
 }
 
 export async function createFixedPlanAssignment(
-  context: TestContext,
+  context: BillingFixtureContext,
   serviceId: string,
   options: CreateFixedPlanOptions = {}
 ): Promise<{ planId: string; clientBillingPlanId: string; contractLineId: string; clientContractLineId: string; contractId: string; clientContractId: string }> {
@@ -1029,7 +1034,7 @@ export async function createFixedPlanAssignment(
 // billing-or-default client_locations email). Clients created straight through
 // createEntity satisfy none of those, so this seeds the location email.
 export async function ensureClientBillingEmail(
-  context: TestContext,
+  context: BillingFixtureContext,
   clientId?: string
 ): Promise<void> {
   const targetClientId = clientId ?? context.clientId;
@@ -1069,7 +1074,7 @@ export async function ensureClientBillingEmail(
 // Fixtures that only write contracts/contract_lines leave that table empty, and
 // the action then returns "Recurring service periods were not materialized...".
 export async function materializeRecurringServicePeriods(
-  context: TestContext,
+  context: BillingFixtureContext,
   contractLineId: string
 ): Promise<void> {
   const { syncRecurringServicePeriodsForContractLine } = await import(
@@ -1115,7 +1120,7 @@ export function unwrapManualInvoice<T = any>(result: unknown): T {
 // row behind it. Recurring charges carrying service-period fields also need a
 // config_id for the invoice_charge_details linkage.
 export async function seedBillingChargeSources(
-  context: TestContext,
+  context: BillingFixtureContext,
   charges: Array<Record<string, unknown>>,
   options: { clientId?: string; usageDate?: string } = {}
 ): Promise<void> {
@@ -1150,7 +1155,7 @@ export async function seedBillingChargeSources(
 // (20251207140000); the live chain is contracts -> client_contracts, with
 // contract_lines.contract_id pointing at the header.
 export async function assignContractLineToClient(
-  context: TestContext,
+  context: BillingFixtureContext,
   contractLineId: string,
   options: AssignContractLineOptions = {}
 ): Promise<{ contractId: string; clientContractId: string; clientContractLineId: string }> {
@@ -1246,7 +1251,7 @@ export async function assignContractLineToClient(
 }
 
 export async function createConcurrentFixedPlanAssignments(
-  context: TestContext,
+  context: BillingFixtureContext,
   serviceId: string,
   assignments: CreateFixedPlanOptions[]
 ): Promise<Array<{
@@ -1283,7 +1288,7 @@ export async function createConcurrentFixedPlanAssignments(
 }
 
 export async function seedConcurrentClientContractAssignmentsDirect(
-  context: TestContext,
+  context: BillingFixtureContext,
   assignments: DirectConcurrentAssignmentSeedOptions[]
 ): Promise<Array<{ contractId: string; clientContractId: string }>> {
   if (assignments.length < 2) {
@@ -1346,7 +1351,7 @@ export async function seedConcurrentClientContractAssignmentsDirect(
   return seeded;
 }
 
-export async function ensureClientPlanBundlesTable(context: TestContext): Promise<void> {
+export async function ensureClientPlanBundlesTable(context: BillingFixtureContext): Promise<void> {
   await context.db.raw(`
     CREATE TABLE IF NOT EXISTS client_plan_bundles (
       bundle_id UUID PRIMARY KEY,
@@ -1364,7 +1369,7 @@ export async function ensureClientPlanBundlesTable(context: TestContext): Promis
 }
 
 export async function ensureDefaultBillingSettings(
-  context: TestContext,
+  context: BillingFixtureContext,
   options: BillingSettingsOptions = {}
 ): Promise<void> {
   const {
@@ -1428,7 +1433,7 @@ export async function ensureDefaultBillingSettings(
 }
 
 export async function addServiceToFixedPlan(
-  context: TestContext,
+  context: BillingFixtureContext,
   planId: string,
   serviceId: string,
   options: AddServiceToPlanOptions = {}
@@ -1511,7 +1516,7 @@ let contractLineBucketConfigColumnsCache: Record<string, unknown> | null | undef
 let bucketUsageColumnsCache: Record<string, unknown> | null | undefined;
 let clientContractBucketConfigColumnsCache: Record<string, unknown> | null | undefined;
 
-async function ensurePlanBucketConfigColumns(context: TestContext): Promise<Record<string, unknown> | null> {
+async function ensurePlanBucketConfigColumns(context: BillingFixtureContext): Promise<Record<string, unknown> | null> {
   if (planBucketConfigColumnsCache === undefined) {
     const tableExists = await context.db.schema.hasTable('plan_service_bucket_config');
 
@@ -1529,7 +1534,7 @@ async function ensurePlanBucketConfigColumns(context: TestContext): Promise<Reco
   return planBucketConfigColumnsCache ?? null;
 }
 
-async function ensureContractLineBucketConfigColumns(context: TestContext): Promise<Record<string, unknown> | null> {
+async function ensureContractLineBucketConfigColumns(context: BillingFixtureContext): Promise<Record<string, unknown> | null> {
   if (contractLineBucketConfigColumnsCache === undefined) {
     try {
       contractLineBucketConfigColumnsCache = await context.db('contract_line_service_bucket_config').columnInfo();
@@ -1541,7 +1546,7 @@ async function ensureContractLineBucketConfigColumns(context: TestContext): Prom
   return contractLineBucketConfigColumnsCache ?? null;
 }
 
-async function ensureBucketUsageColumns(context: TestContext): Promise<Record<string, unknown> | null> {
+async function ensureBucketUsageColumns(context: BillingFixtureContext): Promise<Record<string, unknown> | null> {
   if (bucketUsageColumnsCache === undefined) {
     try {
       bucketUsageColumnsCache = await context.db('bucket_usage').columnInfo();
@@ -1553,7 +1558,7 @@ async function ensureBucketUsageColumns(context: TestContext): Promise<Record<st
   return bucketUsageColumnsCache ?? null;
 }
 
-async function ensureClientContractBucketConfigColumns(context: TestContext): Promise<Record<string, unknown> | null> {
+async function ensureClientContractBucketConfigColumns(context: BillingFixtureContext): Promise<Record<string, unknown> | null> {
   if (clientContractBucketConfigColumnsCache === undefined) {
     try {
       clientContractBucketConfigColumnsCache = await context.db('client_contract_service_bucket_config').columnInfo();
@@ -1566,7 +1571,7 @@ async function ensureClientContractBucketConfigColumns(context: TestContext): Pr
 }
 
 export async function createBucketOverlayForPlan(
-  context: TestContext,
+  context: BillingFixtureContext,
   planId: string,
   options: CreateBucketOverlayOptions = {}
 ): Promise<{ configId: string; serviceId: string }> {
@@ -1966,7 +1971,7 @@ export async function createBucketOverlayForPlan(
 }
 
 export async function createBucketUsageRecord(
-  context: TestContext,
+  context: BillingFixtureContext,
   options: CreateBucketUsageOptions
 ): Promise<string> {
   const usageColumns = await ensureBucketUsageColumns(context);
