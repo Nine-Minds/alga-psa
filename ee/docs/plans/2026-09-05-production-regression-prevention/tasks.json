@@ -611,7 +611,7 @@
       "status": "done",
       "dependsOn": [],
       "owner": "qbo_protocol",
-      "notes": "Implemented pure reconciliation and JSON CLI with51 behavioral cases. Exact current repo/run/attempt/edition/source, complete nonblank journeys/config, explicit recorder state, legacy18/20/25 headers, missing/stale/duplicate/conflict/cancelled outcomes and safe output/summary. Independent and coordinator review integrated. Overall release readiness remains outside this bounded report."
+      "notes": "Implemented pure reconciliation and JSON CLI with51 behavioral cases. Exact current repo/run/attempt/edition/source, complete nonblank journeys/config, explicit recorder state, legacy18/20/25 headers, missing/stale/duplicate/conflict/cancelled outcomes and safe output/summary. Independent and coordinator review integrated. Overall release readiness remains outside this bounded report. Real legacy exports now retain legacyRunExportCount and explicit unverified-identity reason instead of suggesting no rows exist.53 core tests pass."
     },
     {
       "id": "R074",
@@ -619,7 +619,7 @@
       "status": "in_progress",
       "dependsOn": [],
       "owner": "coordinator and stripe_protocol",
-      "notes": "Read-only GitHub/Sheets collector and manual workflow integrated;32 collector cases plus51 core cases pass together (83). Validates current-attempt pagination, PRmergeparent relationship, repo casing, jobidentity, bounded Sheets chunks, legacy/missing tabs and recorderstate. Full collect-to-reconcile CE/EE behavior tested. Operator-supplied SHA is not independent checkoutproof. Manual CI execution, automatic reporting and scorecard publication remain pending; no originalwrites."
+      "notes": "Read-only GitHub/Sheets collector and manual workflow integrated;32 collector cases plus51 core cases pass together (83). Validates current-attempt pagination, PRmergeparent relationship, repo casing, jobidentity, bounded Sheets chunks, legacy/missing tabs and recorderstate. Full collect-to-reconcile CE/EE behavior tested. Operator-supplied SHA is not independent checkoutproof. Manual CI execution, automatic reporting and scorecard publication remain pending; no originalwrites. Real read-only remote snapshots exposed mutable PR head/base in historical run metadata. Fixed association to immutable run head in supplied merge parents; never claim historicalbase/checkout verification.33 collector plus53core tests pass; actual snapshot replay reports both failed editions and their legacyunverified rows. Evidence real-browser-metrics-reconciliation.json. Standalone credentials/workflow execution remain unverified."
     }
   ]
 }

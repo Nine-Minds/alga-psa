@@ -155,9 +155,11 @@ cancellations, stale attempts and conflicting identities. It does not write
 to the workbook. A recorder step succeeding without configured credentials
 can still leave a missing export; the report does not assume a network error.
 The tested revision is supplied by the operator. For PRs, the collector checks
-its merge parents against the run's head/base snapshot; that relationship is
-not independent proof of which tree the runner checked out. Use the original
-attempt-bound execution/build artifacts when establishing tested source.
+that it is a two-parent merge containing the run's recorded head commit.
+Historical run responses can contain the PR's current head/base metadata, so
+those mutable fields cannot validate an older run's merge base. The parent
+relationship is not independent proof of which tree the runner checked out;
+use the original attempt-bound execution/build artifacts for that purpose.
 
 The report distinguishes the browser export outcome from the overall browser
 job outcome, which also includes later upgrade and Teams phases. An observed

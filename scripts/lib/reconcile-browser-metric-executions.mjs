@@ -52,12 +52,15 @@ export function reconcileBrowserMetricExecutions(input) {
       const url = runUrl(row.run_url);
       return url?.repository === entry.repository && url.runId === entry.runId && row.edition === entry.edition;
     });
+    const legacyRunExportCount = related.filter(row => row.row_kind === 'run'
+      && (!decimal(String(row.run_id)) || number(row.run_attempt) === null || number(row.run_attempt) < 1)).length;
     const sameAttempt = related.filter(row => number(row.run_attempt) === entry.runAttempt);
     const current = sameAttempt.filter(row => String(row.run_id) === entry.runId && row.tested_sha === entry.revision
       && row.event_name === entry.eventName && number(row.schema_version) === 2);
     const runs = current.filter(row => row.row_kind === 'run');
     const journeys = current.filter(row => row.row_kind === 'journey');
     const issues = [];
+    if (legacyRunExportCount) issues.push('legacy-export-unverified');
     if (sameAttempt.length !== current.length) issues.push('conflicting-export-identity');
     if (runs.length > 1) issues.push('duplicate-run-export');
     if (current.some(row => !['run', 'journey'].includes(row.row_kind))) issues.push('invalid-row-kind');
@@ -71,7 +74,7 @@ export function reconcileBrowserMetricExecutions(input) {
       && journeys.every(row => journeyIdentity(row) && bool(row.required) && bool(row.observed) && row.outcome === 'expected'
         && row.first_attempt === 'passed' && number(row.retry_count) === 0);
     let exportStatus;
-    if (issues.length) exportStatus = 'conflicting-export';
+    if (issues.some(issue => issue !== 'legacy-export-unverified')) exportStatus = 'conflicting-export';
     else if (!run) exportStatus = 'missing-export';
     else if (run.lane_status === 'failed') exportStatus = 'failed';
     else if (run.lane_status !== 'passed' || collected === null || collected < 1 || executed !== collected || !completeJourneys) exportStatus = 'incomplete';
@@ -92,7 +95,7 @@ export function reconcileBrowserMetricExecutions(input) {
     else if (entry.conclusion !== 'success') status = 'failed';
     else if (recorderUnsuccessful) status = 'incomplete';
     else status = exportStatus;
-    return { key: key(entry), ...entry, status, exportStatus, runExportCount: runs.length, journeyExportCount: journeys.length,
+    return { key: key(entry), ...entry, status, exportStatus, legacyRunExportCount, runExportCount: runs.length, journeyExportCount: journeys.length,
       staleAttempts, issues };
   });
   return { schemaVersion: 1, scope: 'observed-browser-execution-export-reconciliation',

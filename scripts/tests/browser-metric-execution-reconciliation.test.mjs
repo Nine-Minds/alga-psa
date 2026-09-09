@@ -112,3 +112,13 @@ test('reordered legacy header and unrecognized partial extensions are rejected',
  if(width!==24)[input.exportedRows.header[0],input.exportedRows.header[1]]=[input.exportedRows.header[1],input.exportedRows.header[0]];
  assert.throws(()=>reconcile(input));}
 });
+test('legacy run exports are visible without inventing their execution attempt',()=>{
+ const input=fixture();input.exportedRows.header=input.exportedRows.header.slice(0,20);input.exportedRows.rows=input.exportedRows.rows.map(row=>row.slice(0,20));
+ const result=reconcile(input);assert.equal(result.records[0].legacyRunExportCount,1);
+ assert.ok(result.records[0].issues.includes('legacy-export-unverified'));assert.equal(result.records[0].exportStatus,'missing-export');
+ assert.deepEqual(result.records[0].staleAttempts,[]);
+});
+test('unverified historical run row does not invalidate a complete current export',()=>{
+ const input=fixture(),legacy=[...input.exportedRows.rows[0]];legacy[BROWSER_HEADER.indexOf('run_attempt')]='unknown';input.exportedRows.rows.push(legacy);
+ const result=reconcile(input);assert.equal(result.records[0].legacyRunExportCount,1);assert.equal(result.records[0].exportStatus,'observed-pass');
+});

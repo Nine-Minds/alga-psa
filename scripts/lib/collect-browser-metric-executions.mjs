@@ -40,12 +40,14 @@ export async function collectBrowserMetricExecutions({ repository, runId, revisi
     phase = 'revision';
     if (run.event === 'pull_request') {
       require(Array.isArray(run.pull_requests) && run.pull_requests.length === 1);
-      const pr = run.pull_requests[0];
-      require(pr.head?.sha === run.head_sha && /^[a-f0-9]{40}$/.test(pr.base?.sha ?? ''));
+      // Historical run PR metadata follows the current PR head/base. Only the
+      // run head is immutable here; the other merge parent is not independently
+      // bound to the historical base snapshot.
       const commit = await get(`${github}/git/commits/${revision}`, githubToken);
       require(commit.sha === revision && Array.isArray(commit.parents) && commit.parents.length === 2);
       const parents = commit.parents.map(parent => parent.sha);
-      require(new Set(parents).size === 2 && parents.includes(run.head_sha) && parents.includes(pr.base.sha));
+      require(parents.every(parent => /^[a-f0-9]{40}$/.test(parent ?? ''))
+        && new Set(parents).size === 2 && parents.includes(run.head_sha));
     } else {
       require(revision === run.head_sha);
     }
@@ -122,10 +124,9 @@ export async function collectBrowserMetricExecutions({ repository, runId, revisi
     const after = await get(runUrl, githubToken);
     validateRun(after);
     for (const key of ['id', 'run_attempt', 'status', 'conclusion', 'head_sha', 'event', 'path']) require(after[key] === run[key]);
-    require(JSON.stringify(after.pull_requests) === JSON.stringify(run.pull_requests));
     return { schemaVersion: 1, expectedExecutions, exportedRows: { header, rows },
       collectionMetadata: { testedRevisionSource: 'operator-supplied',
-        revisionValidation: run.event === 'pull_request' ? 'merge-parents-verified' : 'run-head-verified',
+        revisionValidation: run.event === 'pull_request' ? 'merge-run-head-parent-verified' : 'run-head-verified',
         checkoutIndependentlyVerified: false,
         sheetObservation: missingTab ? 'missing-tab' : header.length < 25 ? 'legacy-header' : 'current-header' } };
   } catch {

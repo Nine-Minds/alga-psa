@@ -76,7 +76,7 @@ for (const defect of ['wrong-parent', 'wrong-job-head', 'missing-pr', 'wrong-wor
   test(`rejects ${defect} rather than producing misleading evidence`, async () => {
     const { state, collect } = fixture();
     if (defect === 'wrong-job-head') state.jobs[0].head_sha = 'd'.repeat(40);
-    if (defect === 'wrong-parent') state.parents[0].sha = 'd'.repeat(40);
+    if (defect === 'wrong-parent') state.parents[1].sha = 'd'.repeat(40);
     if (defect === 'missing-pr') state.run.pull_requests = [];
     if (defect === 'wrong-workflow') state.run.path = '.github/workflows/unrelated.yml';
     if (defect === 'wrong-repository') state.run.repository.full_name = 'unowned/repo';
@@ -144,7 +144,7 @@ test('repository identity is case insensitive with canonical lowercase output', 
   const result = await collect({ repository: 'nine-minds/ALGA-psa' });
   assert.ok(result.expectedExecutions.every(row => row.repository === 'nine-minds/alga-psa'));
   assert.deepEqual(result.collectionMetadata, { testedRevisionSource: 'operator-supplied',
-    revisionValidation: 'merge-parents-verified', checkoutIndependentlyVerified: false, sheetObservation: 'current-header' });
+    revisionValidation: 'merge-run-head-parent-verified', checkoutIndependentlyVerified: false, sheetObservation: 'current-header' });
 });
 
 for (const conclusion of ['success', 'failure', 'skipped']) test(`retains actual recorder ${conclusion} separately from job result`, async () => {
@@ -203,4 +203,18 @@ for (const width of [18, 20]) test(`legacy ${width}-column sheet is readable wit
   assert.equal(reconcileBrowserMetricExecutions(result).status, 'incomplete');
   assert.ok(decodeURIComponent(state.calls.find(call => call.url.pathname.includes('/values/')).url.pathname)
     .endsWith(`A1:${String.fromCharCode(64 + width)}1000`));
+});
+
+
+test('historical run uses immutable run head while associated PR metadata changes', async () => {
+  const { state, collect } = fixture();
+  // GitHub's historical run response contains current PR head/base metadata.
+  state.run.pull_requests[0].head.sha = 'd'.repeat(40);
+  state.run.pull_requests[0].base.sha = 'e'.repeat(40);
+  state.after = structuredClone(state.run);
+  state.after.pull_requests[0].head.sha = 'f'.repeat(40);
+  const result = await collect();
+  assert.equal(result.expectedExecutions[0].revision, revision);
+  assert.equal(result.collectionMetadata.revisionValidation, 'merge-run-head-parent-verified');
+  assert.equal(result.collectionMetadata.checkoutIndependentlyVerified, false);
 });
