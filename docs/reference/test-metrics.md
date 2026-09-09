@@ -123,8 +123,9 @@ charts are historical percentages, not readiness evidence. For example, the
 live integration summary showed 100% alongside 146 skipped tests.
 
 Use separate `readiness_pr`, `readiness_main`, and `readiness_nightly` views.
-The following is a **proposed formula pending isolated-workbook validation**,
-not a change already applied to the live workbook. On each new view, set B1 to
+The following formula was validated with synthetic rows in the approved
+isolated workbook copy; it has not been applied to the original live workbook.
+On each new view, set B1 to
 the exact run kind (`pr`, `main`, or `nightly`) and put this spill formula in A3:
 
 ```gs
