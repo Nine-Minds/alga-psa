@@ -427,7 +427,7 @@
       "status": "done",
       "dependsOn": [],
       "owner": "calendar_review",
-      "notes": "Clean resolver simulation rejects unrelated event-schemas entry, reproducing both EE failures. Fail-on-use notification builders and publisher mocks preserve real actions/Graph HTTP. Four guarded cases,92 Graph cases and4 canonical server cases pass. Clean imageCI pending."
+      "notes": "Clean resolver simulation rejects unrelated event-schemas entry, reproducing both EE failures. Fail-on-use notification builders and publisher mocks preserve real actions/Graph HTTP. Four guarded cases,92 Graph cases and4 canonical server cases pass. Corresponding clean image build passed in current-source CI34287571495 at9c1f2908e3."
     },
     {
       "id": "R051",
@@ -435,7 +435,7 @@
       "status": "done",
       "dependsOn": [],
       "owner": "qbo_protocol",
-      "notes": "Actual npm Arborist reproduced EOVERRIDE before and passes45 direct dependency edges after override references $dompurify. Security constraint remains^3.4.13; no lock/Dockerfile changes. Clean imageCI pending."
+      "notes": "Actual npm Arborist reproduced EOVERRIDE before and passes45 direct dependency edges after override references $dompurify. Security constraint remains^3.4.13; no lock/Dockerfile changes. Corresponding clean image build passed in current-source CI34287571495 at9c1f2908e3."
     },
     {
       "id": "R052",
@@ -443,7 +443,31 @@
       "status": "done",
       "dependsOn": [],
       "owner": "stripe_protocol and coordinator",
-      "notes": "Actual bundled dunder-proto JSDoc reproduces false ./get import failure. TypeScript AST ignores comments/strings while retaining static/dynamic/template checks; JSON paths still validated without parsing JSON as JS. Six behavioral tests and full native worker build pass. Actual clean imageCI pending."
+      "notes": "Actual bundled dunder-proto JSDoc reproduces false ./get import failure. TypeScript AST ignores comments/strings while retaining static/dynamic/template checks; JSON paths still validated without parsing JSON as JS. Six behavioral tests and full native worker build pass. Corresponding clean image build passed in current-source CI34287571495 at9c1f2908e3."
+    },
+    {
+      "id": "R053",
+      "title": "Prevent concurrent cold database initialization from leaking pools",
+      "status": "in_progress",
+      "dependsOn": [],
+      "owner": "calendar_review",
+      "notes": "CI screenshot shows PostgreSQL connection exhaustion during retained-ticket reload. Concurrent cold calls now share pending pool initialization; reset waits for initialization and teardown, and failures permit retry. Three behavioral failures reproduced before fix; five new lifecycle cases plus seven existing transaction/context cases pass natively (12/12), independently rerun by coordinator. DB TypeScript check passes. Full upgrade browser recovery remains pending in CI; retained-ticket assertions unchanged."
+    },
+    {
+      "id": "R054",
+      "title": "Route isolated Citus upgrade access through test ingress",
+      "status": "in_progress",
+      "dependsOn": [],
+      "owner": "qbo_protocol and coordinator",
+      "notes": "Healthy internal-only Citus had no published host port. Fixed allowlisted55433 ingress forwarding and host-path SELECT1 readiness. Three native behavioral ingress tests pass; actual CI pending."
+    },
+    {
+      "id": "R055",
+      "title": "Refresh Teams credentials after development server recreation",
+      "status": "in_progress",
+      "dependsOn": [],
+      "owner": "stripe_protocol and coordinator",
+      "notes": "Recreated development server resets fixture password. Capture latest paired announcement safely and use it in preflight and Teams browser. Three native behavioral helper tests pass; actual CI pending."
     }
   ]
 }
