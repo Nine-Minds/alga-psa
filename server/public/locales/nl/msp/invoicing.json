@@ -1575,17 +1575,6 @@
         "totals-row": {
           "title": "Totalenrij"
         },
-        "totals-emphasis-style": {
-          "title": "Stijl gemarkeerde rij",
-          "fields": {
-            "totalsEmphasisBackgroundColor": {
-              "label": "Achtergrond"
-            },
-            "totalsEmphasisColor": {
-              "label": "Tekstkleur"
-            }
-          }
-        },
         "action-button": {
           "title": "Knop",
           "fields": {

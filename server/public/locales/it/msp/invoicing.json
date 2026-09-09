@@ -1575,17 +1575,6 @@
         "totals-row": {
           "title": "Riga totali"
         },
-        "totals-emphasis-style": {
-          "title": "Stile riga evidenziata",
-          "fields": {
-            "totalsEmphasisBackgroundColor": {
-              "label": "Sfondo"
-            },
-            "totalsEmphasisColor": {
-              "label": "Colore testo"
-            }
-          }
-        },
         "action-button": {
           "title": "Pulsante",
           "fields": {
