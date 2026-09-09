@@ -892,6 +892,14 @@
       "dependsOn": [],
       "owner": "qbo_protocol",
       "notes": "Fresh-install gate independently validates provider observations, but release promotion currently accepts configuration declarations without raw journey evidence. Require consumer-policy journeys and verified archive identity, with raw OCI manifest digest/config binding to promoted registry image; no archive-to-registry identity substitution. Actual publisher/deployment rollout remains separate."
+    },
+    {
+      "id": "R109",
+      "title": "Recover narrowly from transient appliance dependency download failures",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "calendar_review and coordinator",
+      "notes": "Current f3a appliance job102398085497 did not run tests: root npm ci failed downloading ffmpeg-static Linux license from GitHub HTTP500. Reuse existing bounded installer with appliance-only opt-in: one retry after2s for recognized terminal ffmpeg download5xx, preserving lifecycle scripts, finalfailure andsignals. Two redcases reproduced;18/18nativecasespass including401/404/unrelated/conflictingerrors, opt-out and subprocess signals. Workflow scopedtoappliance, actionlintpasses. ActualCI recoverypending; no test retries or skipchanges."
     }
   ]
 }

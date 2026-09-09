@@ -88,7 +88,10 @@ jobs:
             ee/appliance/status-ui/package-lock.json
             ee/appliance/host-service/package-lock.json
       - run: npm install -g npm@11
-      - run: npm ci
+      - name: Install appliance dependencies with bounded download recovery
+        env:
+          APPLIANCE_FFMPEG_DOWNLOAD_RETRY: 'true'
+        run: node scripts/install-api-test-dependencies.mjs
       - run: npm --prefix ee/appliance/status-ui ci
       - run: npm --prefix ee/appliance/host-service ci
       - uses: ./.github/actions/install-ripgrep

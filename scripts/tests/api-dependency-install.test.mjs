@@ -43,3 +43,36 @@ test('CLI preserves real child exit status and signal', async t => {
     assert.equal(result.status, expectedCode); assert.equal(result.signal, expectedSignal);
   }
 });
+
+const ffmpegDownload = { code: 1, signal: null, stderr: [
+  'npm error code 1',
+  'npm error path /home/runner/work/alga-psa/alga-psa/node_modules/ffmpeg-static',
+  'npm error command failed',
+  'npm error command sh -c node install.js',
+  'npm error Error: Failed to download ffmpeg b6.1.1.',
+  "npm error   url: 'https://github.com/eugeneware/ffmpeg-static/releases/download/b6.1.1/linux-x64.LICENSE',",
+  'npm error   statusCode: 500',
+  'npm error }',
+].join('\n') };
+for (const [name, first, enabled, expectedCalls] of [
+  ['observed GitHub download failure recovers with appliance opt-in', ffmpegDownload, true, 2],
+  ['API default does not retry ffmpeg lifecycle failure', ffmpegDownload, false, 1],
+  ...[401, 404].map(status => [`HTTP ${status} is not retried`, { ...ffmpegDownload, stderr: ffmpegDownload.stderr.replace('statusCode: 500', `statusCode: ${status}`) }, true, 1]),
+  ['unrelated install script is not retried', { ...ffmpegDownload, stderr: ffmpegDownload.stderr.replace('node_modules/ffmpeg-static', 'node_modules/other') }, true, 1],
+  ['other download origin is not retried', { ...ffmpegDownload, stderr: ffmpegDownload.stderr.replace('https://github.com/', 'https://example.com/') }, true, 1],
+  ['conflicting lifecycle code is not retried', { ...ffmpegDownload, stderr: `${ffmpegDownload.stderr}\nnpm error code ELIFECYCLE` }, true, 1],
+  ['signal is preserved without retry', { ...ffmpegDownload, code: null, signal: 'SIGTERM' }, true, 1],
+]) test(name, async () => {
+  let calls = 0, pauses = 0;
+  const result = await installApiTestDependencies({ applianceFfmpegDownloadRetry: enabled,
+    run: async args => { assert.deepEqual(args, ['ci', '--prefer-offline']); return calls++ === 0 ? first : success; },
+    wait: async ms => { assert.equal(ms, 2000); pauses++; } });
+  assert.equal(calls, expectedCalls); assert.equal(pauses, expectedCalls - 1);
+  assert.deepEqual(result, expectedCalls === 2 ? success : first);
+});
+test('repeated ffmpeg download failure preserves terminal result after two attempts', async () => {
+  let calls = 0;
+  const result = await installApiTestDependencies({ applianceFfmpegDownloadRetry: true,
+    run: async () => { calls++; return ffmpegDownload; }, wait: async () => {} });
+  assert.equal(calls, 2); assert.deepEqual(result, ffmpegDownload);
+});
