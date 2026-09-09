@@ -343,7 +343,7 @@
   {
     "id": "F038",
     "description": "'Apply to templates' opens apply-email-branding-dialog with language checkboxes defaulting to the tenant's languages",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "scope-apply-ui",
     "prdRefs": [
       "UX / UI Notes"
@@ -352,7 +352,7 @@
   {
     "id": "F039",
     "description": "dialog groups templates by state: system and branded preselected, customized unchecked with differs hint, no-stock-colors disabled",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "scope-apply-ui",
     "prdRefs": [
       "UX / UI Notes",
@@ -362,7 +362,7 @@
   {
     "id": "F040",
     "description": "select all / none per group and a live count in the confirm button",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "scope-apply-ui",
     "prdRefs": [
       "UX / UI Notes"
@@ -371,7 +371,7 @@
   {
     "id": "F041",
     "description": "confirm calls applyEmailBrandingAction and replaces the table with a written/skipped/failed summary including per-row reasons",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "scope-apply-ui",
     "prdRefs": [
       "FR6"
@@ -380,7 +380,7 @@
   {
     "id": "F042",
     "description": "template list refreshes after apply so branded rows show as customized in the existing table",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "scope-apply-ui",
     "prdRefs": [
       "FR6"

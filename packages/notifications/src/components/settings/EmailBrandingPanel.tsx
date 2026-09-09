@@ -13,10 +13,12 @@ import { getErrorMessage } from "@alga-psa/ui/lib/errorHandling";
 import { applyEmailPalette, STOCK_EMAIL_PALETTE } from "@alga-psa/email/branding";
 import {
   getEmailBrandingStatusAction,
+  removeEmailBrandingAction,
   saveEmailBrandingAction,
 } from "../../actions";
 import type { EmailBrandingStatus } from "../../lib/emailBranding";
 import type { SystemEmailTemplate } from "../../types/notification";
+import { ApplyEmailBrandingDialog } from "./ApplyEmailBrandingDialog";
 import { EmailTemplatePreview } from "./EmailTemplatePreview";
 import {
   OVERRIDABLE_TOKENS,
@@ -78,10 +80,13 @@ export function EmailBrandingPanel({
   systemTemplates,
   selectedLanguages,
   onStatusChange,
+  onApplied,
 }: {
   systemTemplates: (SystemEmailTemplate & { category: string })[];
   selectedLanguages: Set<string>;
   onStatusChange?: (status: EmailBrandingStatus | null) => void;
+  /** Refreshes the templates table once rows have been written or removed. */
+  onApplied?: () => void | Promise<void>;
 }) {
   const { t } = useTranslation('msp/settings');
   const [status, setStatus] = useState<EmailBrandingStatus | null>(null);
@@ -89,6 +94,8 @@ export function EmailBrandingPanel({
   const [savedDraft, setSavedDraft] = useState<EmailBrandingDraft | null>(null);
   const [showAdjust, setShowAdjust] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [removing, setRemoving] = useState(false);
+  const [applyOpen, setApplyOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const loadStatus = useCallback(async () => {
@@ -160,6 +167,20 @@ export function EmailBrandingPanel({
       setError(getErrorMessage(saveError));
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleRemove = async () => {
+    setRemoving(true);
+    setError(null);
+    try {
+      await removeEmailBrandingAction();
+      await onApplied?.();
+      await loadStatus();
+    } catch (removeError) {
+      setError(getErrorMessage(removeError));
+    } finally {
+      setRemoving(false);
     }
   };
 
@@ -310,8 +331,46 @@ export function EmailBrandingPanel({
               ? t('notifications.emailBranding.actions.saving', 'Saving...')
               : t('notifications.emailBranding.actions.save', 'Save palette')}
           </Button>
+
+          <Button
+            id="open-apply-email-branding"
+            variant="outline"
+            disabled={!status.canEdit || !status.palette || isDirty}
+            onClick={() => setApplyOpen(true)}
+          >
+            {t('notifications.emailBranding.actions.apply', 'Apply to templates')}
+          </Button>
+
+          {status.palette?.appliedAt && (
+            <Button
+              id="remove-email-branding"
+              variant="outline"
+              disabled={!status.canEdit || removing}
+              onClick={handleRemove}
+            >
+              {removing
+                ? t('notifications.emailBranding.actions.removing', 'Removing...')
+                : t('notifications.emailBranding.actions.remove', 'Remove branding from all templates')}
+            </Button>
+          )}
+
+          {isDirty && (
+            <span className="text-xs text-gray-500">
+              {t('notifications.emailBranding.unsavedHint', 'Save the palette before applying it.')}
+            </span>
+          )}
         </div>
       </CardContent>
+
+      <ApplyEmailBrandingDialog
+        isOpen={applyOpen}
+        onClose={() => {
+          setApplyOpen(false);
+          loadStatus();
+        }}
+        status={status}
+        onApplied={async () => { await onApplied?.(); }}
+      />
     </Card>
   );
 }

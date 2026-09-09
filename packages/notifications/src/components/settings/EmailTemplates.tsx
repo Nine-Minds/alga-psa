@@ -169,6 +169,12 @@ export function EmailTemplates() {
     init();
   }, [session]);
 
+  const refreshTemplates = useCallback(async () => {
+    const currentTenant = tenant ?? ((session?.user as any)?.tenant as string | undefined);
+    if (!currentTenant) return;
+    setTemplates(await getTemplatesAction(currentTenant));
+  }, [tenant, session]);
+
   const handleToggleExpand = useCallback((category: string) => {
     setExpandedCategories(prev => {
       const next = new Set(prev);
@@ -458,6 +464,7 @@ export function EmailTemplates() {
         systemTemplates={templates.systemTemplates}
         selectedLanguages={selectedLanguages}
         onStatusChange={setBrandingStatus}
+        onApplied={refreshTemplates}
       />
 
       <div className="flex items-start justify-between">

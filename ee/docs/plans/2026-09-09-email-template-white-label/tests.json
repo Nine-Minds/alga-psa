@@ -424,7 +424,7 @@
   {
     "id": "T047",
     "description": "dialog opens with en preselected for a tenant with only en",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "scope-apply-ui",
     "featureIds": [
       "F038"
@@ -433,7 +433,7 @@
   {
     "id": "T048",
     "description": "system and branded rows are checked; customized rows unchecked with hint text 'colors' / 'text' / 'subject'",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "scope-apply-ui",
     "featureIds": [
       "F039"
@@ -442,7 +442,7 @@
   {
     "id": "T049",
     "description": "no-stock-colors row checkbox is disabled with hint 'Nothing to replace'",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "scope-apply-ui",
     "featureIds": [
       "F039"
@@ -451,7 +451,7 @@
   {
     "id": "T050",
     "description": "'Select none' in the system group drops the confirm count accordingly",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "scope-apply-ui",
     "featureIds": [
       "F040"
@@ -460,7 +460,7 @@
   {
     "id": "T051",
     "description": "confirm shows summary 'N branded, M skipped, 0 failed' from the action result",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "scope-apply-ui",
     "featureIds": [
       "F041"
@@ -469,7 +469,7 @@
   {
     "id": "T052",
     "description": "a failed row appears in the summary with its reason",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "scope-apply-ui",
     "featureIds": [
       "F041"
@@ -478,7 +478,7 @@
   {
     "id": "T053",
     "description": "after apply the templates table shows the new tenant rows",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "scope-apply-ui",
     "featureIds": [
       "F042"
