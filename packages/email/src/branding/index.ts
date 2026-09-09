@@ -14,3 +14,8 @@ export {
   extractColorLiterals,
   stripColorLiterals,
 } from './applyEmailPalette';
+export {
+  classifyTenantTemplate,
+  type ClassifiableTemplate,
+  type ClassifyTenantTemplateInput,
+} from './classifyTenantTemplate';

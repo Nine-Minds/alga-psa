@@ -76,7 +76,7 @@
   {
     "id": "F009",
     "description": "classifyTenantTemplate returns 'system' when no tenant row exists",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "classification",
     "prdRefs": [
       "FR4"
@@ -85,7 +85,7 @@
   {
     "id": "F010",
     "description": "classifyTenantTemplate returns 'branded' when tenant HTML equals the system HTML with appliedPalette substituted and subjects match",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "classification",
     "prdRefs": [
       "FR4"
@@ -94,7 +94,7 @@
   {
     "id": "F011",
     "description": "classifyTenantTemplate returns 'customized' with a differs hint listing colors, text and/or subject",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "classification",
     "prdRefs": [
       "FR4"
@@ -103,7 +103,7 @@
   {
     "id": "F012",
     "description": "classifyTenantTemplate returns 'no-stock-colors' when the tenant HTML contains no stock or applied tokens",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "classification",
     "prdRefs": [
       "FR4"

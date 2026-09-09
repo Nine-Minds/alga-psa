@@ -102,7 +102,7 @@
   {
     "id": "T012",
     "description": "missing tenant row classifies as system",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "classification",
     "featureIds": [
       "F009"
@@ -111,7 +111,7 @@
   {
     "id": "T013",
     "description": "a row written by the tool classifies as branded after the palette is saved",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "classification",
     "featureIds": [
       "F010"
@@ -120,7 +120,7 @@
   {
     "id": "T014",
     "description": "a branded row whose subject was edited classifies as customized with differs ['subject']",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "classification",
     "featureIds": [
       "F011"
@@ -129,7 +129,7 @@
   {
     "id": "T015",
     "description": "a system clone with only a color swap classifies as customized with differs ['colors']",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "classification",
     "featureIds": [
       "F011"
@@ -138,7 +138,7 @@
   {
     "id": "T016",
     "description": "a system clone with a copy edit classifies as customized with differs ['text']",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "classification",
     "featureIds": [
       "F011"
@@ -147,7 +147,7 @@
   {
     "id": "T017",
     "description": "a full dark redesign with <style> blocks and no stock tokens classifies as no-stock-colors",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "classification",
     "featureIds": [
       "F012"
