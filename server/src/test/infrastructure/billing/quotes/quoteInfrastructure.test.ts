@@ -2067,4 +2067,188 @@ describe('Quote infrastructure', () => {
     expect(activities[0].activity_type).toBe('created');
     expect(activities[activities.length - 1].activity_type).toBe('viewed');
   });
+
+  it('T200 (plan T005): DB-backed $25 + $35 monthly services with service-targeted $5 discounts persist positive rows, recalculate exact totals, and derive cadence grouping on load', async () => {
+    const svcA = await createTestService(context, {
+      service_name: 'Managed Support A',
+      billing_method: 'fixed',
+      default_rate: 2500,
+    });
+    const svcB = await createTestService(context, {
+      service_name: 'Managed Support B',
+      billing_method: 'fixed',
+      default_rate: 3500,
+    });
+
+    const quote = await createFinancialQuote();
+
+    const monthlyA = await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      service_id: svcA,
+      description: 'Managed Support A',
+      quantity: 1,
+      unit_price: 2500,
+      is_recurring: true,
+      billing_frequency: 'monthly',
+      is_taxable: false,
+      created_by: context.userId,
+    });
+    const monthlyB = await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      service_id: svcB,
+      description: 'Managed Support B',
+      quantity: 1,
+      unit_price: 3500,
+      is_recurring: true,
+      billing_frequency: 'monthly',
+      is_taxable: false,
+      created_by: context.userId,
+    });
+
+    // Legacy-style discounts: persisted with false/null cadence even though the
+    // base services they target are monthly recurring.
+    const discA = await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      description: 'Discount A',
+      quantity: 1,
+      unit_price: 500,
+      is_discount: true,
+      discount_type: 'fixed',
+      applies_to_service_id: svcA,
+      is_recurring: false,
+      billing_frequency: null,
+      is_taxable: false,
+      created_by: context.userId,
+    });
+    const discB = await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      description: 'Discount B',
+      quantity: 1,
+      unit_price: 500,
+      is_discount: true,
+      discount_type: 'fixed',
+      applies_to_service_id: svcB,
+      is_recurring: false,
+      billing_frequency: null,
+      is_taxable: false,
+      created_by: context.userId,
+    });
+
+    for (const [index, cents] of [37353, 210863, 5581, 45000].entries()) {
+      await QuoteItem.create(context.db, context.tenantId, {
+        quote_id: quote.quote_id,
+        description: `One-time charge ${index}`,
+        quantity: 1,
+        unit_price: cents,
+        is_recurring: false,
+        is_taxable: false,
+        created_by: context.userId,
+      });
+    }
+
+    // Reload from the DB after the creates recalculated financials.
+    const reloadedQuote = await Quote.getById(context.db, context.tenantId, quote.quote_id);
+    expect(Number(reloadedQuote?.subtotal)).toBe(304797);
+    expect(Number(reloadedQuote?.discount_total)).toBe(1000);
+    expect(Number(reloadedQuote?.tax)).toBe(0);
+    expect(Number(reloadedQuote?.total_amount)).toBe(303797);
+
+    // Discount rows stay positive in persistence with their original cadence fields.
+    const persistedDiscA = await loadQuoteItemRow(discA.quote_item_id);
+    const persistedDiscB = await loadQuoteItemRow(discB.quote_item_id);
+    expect(Number(persistedDiscA.total_price)).toBe(500);
+    expect(Number(persistedDiscA.net_amount)).toBe(500);
+    expect(Number(persistedDiscB.total_price)).toBe(500);
+    expect(persistedDiscA.is_recurring).toBe(false);
+    expect(persistedDiscA.billing_frequency).toBeNull();
+    expect(monthlyA.quote_item_id).toBeTruthy();
+    expect(monthlyB.quote_item_id).toBeTruthy();
+
+    // Adapter derives cadence membership from the targets: discounts land in the
+    // recurring group as reductions, one-time charges stay untouched.
+    const viewModel = await mapDbQuoteToViewModel(context.db, context.tenantId, quote.quote_id);
+    expect(viewModel?.recurring_subtotal).toBe(5000);
+    expect(viewModel?.recurring_total).toBe(5000);
+    expect(viewModel?.onetime_subtotal).toBe(298797);
+    expect(viewModel?.onetime_total).toBe(298797);
+    const recurringDiscountRows = viewModel?.recurring_items?.filter((item) => item.is_discount) ?? [];
+    expect(recurringDiscountRows.map((item) => item.total_price)).toEqual([-500, -500]);
+    // The general line-item collection keeps discounts positive.
+    const generalDiscountRows = viewModel?.line_items?.filter((item) => item.is_discount) ?? [];
+    expect(generalDiscountRows.map((item) => item.total_price)).toEqual([500, 500]);
+    expect(viewModel?.discount_total).toBe(1000);
+    expect(viewModel?.total_amount).toBe(303797);
+
+    // Save/reload: editing a base price re-runs recalculation and the reloaded
+    // quote + view model stay consistent without touching the discount rows.
+    await QuoteItem.update(context.db, context.tenantId, monthlyB.quote_item_id, { unit_price: 4000 });
+
+    const savedQuote = await Quote.getById(context.db, context.tenantId, quote.quote_id);
+    expect(Number(savedQuote?.subtotal)).toBe(305297);
+    expect(Number(savedQuote?.discount_total)).toBe(1000);
+    expect(Number(savedQuote?.total_amount)).toBe(304297);
+
+    const savedViewModel = await mapDbQuoteToViewModel(context.db, context.tenantId, quote.quote_id);
+    expect(savedViewModel?.recurring_subtotal).toBe(5500);
+    expect(savedViewModel?.onetime_subtotal).toBe(298797);
+    expect(savedViewModel?.total_amount).toBe(304297);
+  });
+
+  it('T201 (plan T006): unmatched item/service discount targets resolve to zero and do not corrupt saved quote or item financials', async () => {
+    const quote = await createFinancialQuote();
+
+    await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      description: 'Base item',
+      quantity: 1,
+      unit_price: 5000,
+      is_taxable: false,
+      created_by: context.userId,
+    });
+
+    const missingItemId = '00000000-0000-4000-8000-0000000000a1';
+    const missingServiceId = '00000000-0000-4000-8000-0000000000a2';
+
+    const orphanItemDiscount = await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      description: 'Discount for removed item',
+      quantity: 1,
+      unit_price: 2000,
+      is_discount: true,
+      discount_type: 'fixed',
+      applies_to_item_id: missingItemId,
+      is_taxable: false,
+      created_by: context.userId,
+    });
+    const orphanServiceDiscount = await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      description: 'Discount for removed service',
+      quantity: 1,
+      unit_price: 3000,
+      is_discount: true,
+      discount_type: 'fixed',
+      applies_to_service_id: missingServiceId,
+      is_taxable: false,
+      created_by: context.userId,
+    });
+
+    const reloadedQuote = await loadQuoteRow(quote.quote_id);
+    expect(Number(reloadedQuote.subtotal)).toBe(5000);
+    expect(Number(reloadedQuote.discount_total)).toBe(0);
+    expect(Number(reloadedQuote.tax)).toBe(0);
+    expect(Number(reloadedQuote.total_amount)).toBe(5000);
+
+    const orphanItemRow = await loadQuoteItemRow(orphanItemDiscount.quote_item_id);
+    const orphanServiceRow = await loadQuoteItemRow(orphanServiceDiscount.quote_item_id);
+    expect(Number(orphanItemRow.total_price)).toBe(0);
+    expect(Number(orphanItemRow.net_amount)).toBe(0);
+    expect(Number(orphanServiceRow.total_price)).toBe(0);
+    expect(Number(orphanServiceRow.net_amount)).toBe(0);
+
+    const viewModel = await mapDbQuoteToViewModel(context.db, context.tenantId, quote.quote_id);
+    expect(viewModel?.recurring_subtotal).toBe(0);
+    expect(viewModel?.onetime_subtotal).toBe(5000);
+    expect(viewModel?.discount_total).toBe(0);
+    expect(viewModel?.total_amount).toBe(5000);
+  });
 });

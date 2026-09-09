@@ -1,0 +1,30 @@
+
+ RUN  v3.2.7 /tmp/opencode/qd2353-prefix/server
+      Running tests with seed "1788916449360"
+
+Environment file path: /tmp/opencode/qd2353-prefix/.env.localtest
+ ❯ ../packages/billing/src/lib/adapters/quoteAdapters.test.ts (12 tests | 6 failed) 13ms 33 MB heap used
+   ✓ quoteAdapters > normalizes Date values and preserves trimmed ISO date strings 0ms
+   ✓ quoteAdapters > normalizes quote calendar dates without retaining a timezone-bearing time 0ms
+   ✓ quoteAdapters > normalizes quote calendar dates separately from acceptance timestamps 0ms
+   ✓ quoteAdapters > builds recurring, one-time, service, and product filtered collections from quote line items 0ms
+   ✓ quoteAdapters > computes recurring, one-time, service, and product subtotal/tax/total groups from filtered items 0ms
+   ✓ quoteAdapters > returns empty filtered collections and zero aggregates when no items match a grouping 1ms
+   × quoteAdapters discount group allocation > T007 reproduces $25 + $35 less $5 + $5 as $50 recurring with one-time unchanged (legacy false/null cadence) 1ms
+     → expected [ 'monthly-a', 'monthly-b' ] to deeply equal [ 'monthly-a', 'monthly-b', …(2) ]
+   × quoteAdapters discount group allocation > T008 derives cadence membership from target relationships regardless of persisted discount cadence 1ms
+     → expected 6500 to be 5000 // Object.is equality
+   × quoteAdapters discount group allocation > T008 splits a whole-quote discount across recurring and one-time bases proportionally 5ms
+     → expected undefined to be -375 // Object.is equality
+   × quoteAdapters discount group allocation > T008 excludes optional unselected base items from bases and group summaries 1ms
+     → expected 10000 to be 5500 // Object.is equality
+   × quoteAdapters discount group allocation > T008 caps a fixed discount at its eligible base so group totals cannot go negative 1ms
+     → expected 2500 to be +0 // Object.is equality
+   × quoteAdapters discount group allocation > T008 resolves a percentage service discount from target bases with existing rounding 1ms
+     → expected 6000 to be 5400 // Object.is equality
+
+ Test Files  1 failed (1)
+      Tests  6 failed | 6 passed (12)
+   Start at  01:14:09
+   Duration  1.36s (transform 434ms, setup 52ms, collect 986ms, tests 13ms, environment 0ms, prepare 30ms)
+

@@ -1,0 +1,35 @@
+{
+  "recurring_subtotal": 5000,
+  "recurring_tax": 0,
+  "recurring_total": 5000,
+  "onetime_subtotal": 298797,
+  "onetime_tax": 0,
+  "onetime_total": 298797,
+  "discount_total": 1000,
+  "total_amount": 303797,
+  "recurring_discount_rows": [
+    {
+      "id": "4ce34e30-0cfd-4214-a530-e8f6c730d2fa",
+      "description": "Discount",
+      "total_price": -500
+    },
+    {
+      "id": "e7be2395-733f-4ea9-a939-0684d631140b",
+      "description": "Discount",
+      "total_price": -500
+    }
+  ],
+  "onetime_discount_rows": [],
+  "recurring_item_ids": [
+    "fe1023c0-bb9d-48e6-b6a3-3e8bed332215",
+    "c8ae8c67-fcf7-4bfd-bf16-8c6e75fc129d",
+    "4ce34e30-0cfd-4214-a530-e8f6c730d2fa",
+    "e7be2395-733f-4ea9-a939-0684d631140b"
+  ],
+  "onetime_item_ids": [
+    "b818c309-18f5-4243-880e-49bc03681286",
+    "1fb89cb0-be16-48a2-8970-e9b745eac91f",
+    "8d9e6739-5062-4485-a48c-377660ce079e",
+    "b1fd966c-cc7c-44ab-b6c8-58042aee0811"
+  ]
+}

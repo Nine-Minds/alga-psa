@@ -1,0 +1,103 @@
+[
+  {
+    "id": "T001",
+    "description": "Pure allocation table test covers item, service, and whole-quote fixed/percentage targets with exact cent conservation.",
+    "featureIds": [
+      "F001",
+      "F002",
+      "F003",
+      "F004",
+      "F006"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "T002",
+    "description": "Mixed-cadence service allocation test proves proportional recurring/one-time split and deterministic rounding.",
+    "featureIds": [
+      "F003",
+      "F005",
+      "F006"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "T003",
+    "description": "Guard test covers optional unselected items, removed targets, zero bases, and oversized discounts.",
+    "featureIds": [
+      "F007",
+      "F008",
+      "F009"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "T004",
+    "description": "Draft editor regression proves target and item edits immediately recompute correct totals.",
+    "featureIds": [
+      "F011"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "T005",
+    "description": "DB-backed calculation integration proves positive discount persistence, exact totals, and save/reload behavior.",
+    "featureIds": [
+      "F010",
+      "F012",
+      "F013"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "T006",
+    "description": "DB-backed guard integration proves unmatched targets do not corrupt saved quote or item financials.",
+    "featureIds": [
+      "F008",
+      "F012"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "T007",
+    "description": "Adapter regression reproduces $25+$35 less $5+$5 as $50 recurring with one-time unchanged and legacy false/null cadence.",
+    "featureIds": [
+      "F013",
+      "F014",
+      "F015"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "T008",
+    "description": "Adapter compatibility test covers multiple discounts and service/product/location/phase collections without double application.",
+    "featureIds": [
+      "F014",
+      "F015"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "T009",
+    "description": "Browser smoke creates Fixed Discount > Specific Service, saves/reopens, and verifies preview rows and totals.",
+    "featureIds": [
+      "F011",
+      "F013",
+      "F014",
+      "F016"
+    ],
+    "implemented": true,
+    "evidence": "docs/evidence/ticket-2353-quote-discount-group-allocation/README.md and editor/ screenshots (QUO-0003 on localhost:3172)"
+  },
+  {
+    "id": "T010",
+    "description": "Generate and inspect standard and duplicated/custom grouped PDFs, comparing recurring, one-time, discount, and overall figures.",
+    "featureIds": [
+      "F016",
+      "F017",
+      "F018"
+    ],
+    "implemented": true,
+    "evidence": "docs/evidence/ticket-2353-quote-discount-group-allocation/pdfs + preview/*.txt; standard-grouped UI path blocked by ticket-2354 catalog AST (see preview/2353-standard-catalog-blocker.txt)"
+  }
+]

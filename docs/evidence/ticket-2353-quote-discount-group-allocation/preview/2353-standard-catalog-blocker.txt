@@ -1,0 +1,34 @@
+Environment blocker: UI "Grouped Quote Template (Standard)" PDF generation returns HTTP 500
+in this shared dev database.
+
+Root cause observed (vitest harness invoking the exact downloadQuotePdf code path):
+  TemplateEvaluationError: Invoice template AST schema validation failed:
+    layout.children.5.columns.0: Unrecognized key(s) in object: 'lines';
+    layout.children.7.columns.0: Unrecognized key(s) in object: 'lines'
+
+The shared infra database's global standard-template catalog
+(standard_quote_document_templates, row 08a528dd-6cc5-4c4d-b6c9-cf8bea390a2a /
+standard-quote-grouped, updated 2026-08-25) holds a Grouped Quote AST whose
+Description column was overwritten with a ticket-2354-style two-line column
+({ "lines": [ item-name, catalog-description ] }), which this branch's
+evaluator schema does not accept. Quotes resolved to that catalog row (or to a
+per-quote assignment of the standard grouped id) fail at PDF/preview
+evaluation.
+
+Evidence artifacts were therefore produced with the branch-canonical Grouped
+AST:
+  - pdfs/QUO-0003-grouped-custom-template.pdf  -- quote assigned to a tenant
+    custom template whose AST is a byte copy of this branch's
+    buildStandardQuoteGroupedAst() (the "duplicated/custom template equivalent
+    to FTS direct bindings" requirement). The UI download action returns 200
+    for this quote.
+  - pdfs/QUO-0003-standard-grouped-code-ast.pdf -- same quote rendered with
+    getStandardQuoteTemplateAstByCode('standard-quote-grouped') passed
+    explicitly, proving the standard grouped template renders the corrected
+    view model once the catalog AST matches the branch code (post-2354-merge
+    or after re-running this branch's standard-template migration).
+
+Coordination: ticket 2354 (Quote item name and catalog description,
+055ac9f7-2fd3-45ad-9d1f-30ad1b49e523) owns the 'lines' column shape. Do not
+reseed/overwrite the shared catalog from this branch without agreeing with
+that work.

@@ -4,6 +4,7 @@ import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 
 import Quote from '../../models/quote';
+import { allocateQuoteDiscounts, type QuoteDiscountAllocationResult } from '../../services/quoteDiscountAllocation';
 import { fetchTenantParty } from './tenantPartyAdapter';
 import { displayAddressField, displayCountry } from '@alga-psa/core';
 
@@ -229,6 +230,117 @@ const buildQuoteItemGroupSummary = (
   };
 };
 
+type QuoteDiscountCadenceSplit = Pick<QuoteDiscountAllocationResult, 'recurringAmount' | 'onetimeAmount'>;
+
+/**
+ * Resolve each persisted discount row's derived reduction across the eligible
+ * base items it targets. Discount cadence fields (`is_recurring`,
+ * `billing_frequency`) are deliberately ignored here: a targeted discount is
+ * classified by the cadence of the base items it actually reduces, so legacy
+ * discounts persisted with `false`/null cadence land on the correct group.
+ */
+function resolveQuoteItemDiscountSplits(
+  rawItems: NonNullable<IQuote['quote_items']>[number][]
+): Map<string, QuoteDiscountCadenceSplit> {
+  const includedBases = rawItems.filter((item) => !item.is_discount && item.is_selected !== false);
+  const bases = includedBases.map((item) => ({
+    id: item.quote_item_id,
+    serviceId: item.service_id ?? null,
+    amount: toFiniteNumber(item.quantity) * toFiniteNumber(item.unit_price),
+    isRecurring: item.is_recurring === true,
+  }));
+
+  const discounts = rawItems
+    .filter((item) => item.is_discount === true && item.is_selected !== false)
+    .map((item) => ({
+      id: item.quote_item_id,
+      discountType: (item.discount_type === 'percentage' ? 'percentage' : 'fixed') as 'percentage' | 'fixed',
+      fixedAmount: Math.abs(toFiniteNumber(item.quantity || 1) * toFiniteNumber(item.unit_price)),
+      discountPercentage: toFiniteNumber(item.discount_percentage),
+      appliesToItemId: item.applies_to_item_id ?? null,
+      appliesToServiceId: item.applies_to_service_id ?? null,
+    }));
+
+  const allocation = allocateQuoteDiscounts(bases, discounts);
+  const splits = new Map<string, QuoteDiscountCadenceSplit>();
+  for (const result of allocation.discounts) {
+    splits.set(result.discountId, {
+      recurringAmount: result.recurringAmount,
+      onetimeAmount: result.onetimeAmount,
+    });
+  }
+
+  return splits;
+}
+
+/**
+ * Build the recurring/one-time collections templates iterate over.
+ *
+ * Base items keep their own cadence membership and row amounts. Discount rows
+ * are placed into the cadence group(s) their derived allocation actually
+ * reduces, each entry carrying the (negative) allocated amount so the amount
+ * column and the group subtotal agree. A discount split across both cadences
+ * therefore appears once per group with its per-cadence share.
+ */
+function buildCadenceCollections(
+  lineItems: QuoteViewModelLineItem[],
+  discountSplits: Map<string, QuoteDiscountCadenceSplit>
+): { recurring: QuoteViewModelLineItem[]; onetime: QuoteViewModelLineItem[] } {
+  const recurring: QuoteViewModelLineItem[] = [];
+  const onetime: QuoteViewModelLineItem[] = [];
+
+  const discountCopy = (source: QuoteViewModelLineItem, amount: number, isRecurring: boolean): QuoteViewModelLineItem => ({
+    ...source,
+    is_recurring: isRecurring,
+    billing_frequency: isRecurring ? source.billing_frequency : null,
+    quantity: 1,
+    unit_price: -amount,
+    total_price: -amount,
+    net_amount: -amount,
+    tax_amount: 0,
+  });
+
+  for (const item of lineItems) {
+    if (item.is_discount) {
+      const split = discountSplits.get(item.quote_item_id);
+      if (!split) continue;
+      if (split.recurringAmount > 0) {
+        recurring.push(discountCopy(item, split.recurringAmount, true));
+      }
+      if (split.onetimeAmount > 0) {
+        onetime.push(discountCopy(item, split.onetimeAmount, false));
+      }
+      continue;
+    }
+
+    if (item.is_recurring === true) {
+      recurring.push(item);
+    } else {
+      onetime.push(item);
+    }
+  }
+
+  return { recurring, onetime };
+}
+
+/**
+ * Summaries count only items that actually contribute to the quote: selected
+ * base rows (persisted totals already exclude optional-unselected rows) plus
+ * the negative discount entries that reduce each group.
+ */
+const buildQuoteGroupSummary = (items: QuoteViewModelLineItem[]): QuoteItemGroupSummary => {
+  const counted = items.filter((item) => item.is_discount || item.is_selected !== false);
+  const subtotal = counted.reduce((sum, item) => sum + toFiniteNumber(item.total_price), 0);
+  const tax = counted.reduce((sum, item) => sum + toFiniteNumber(item.tax_amount), 0);
+
+  return {
+    items,
+    subtotal,
+    tax,
+    total: subtotal + tax,
+  };
+};
+
 async function fetchClientParty(
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string,
@@ -388,8 +500,10 @@ export async function mapLoadedQuoteToViewModel(
   }
 
   const lineItems = rawItems.map((item) => mapQuoteItemToViewModel(item, locationsById));
-  const recurringSummary = buildQuoteItemGroupSummary(lineItems, (item) => item.is_recurring === true);
-  const onetimeSummary = buildQuoteItemGroupSummary(lineItems, (item) => item.is_recurring !== true);
+  const discountSplits = resolveQuoteItemDiscountSplits(rawItems);
+  const cadenceCollections = buildCadenceCollections(lineItems, discountSplits);
+  const recurringSummary = buildQuoteGroupSummary(cadenceCollections.recurring);
+  const onetimeSummary = buildQuoteGroupSummary(cadenceCollections.onetime);
   const serviceSummary = buildQuoteItemGroupSummary(lineItems, (item) => item.service_item_kind === 'service');
   const productSummary = buildQuoteItemGroupSummary(lineItems, (item) => item.service_item_kind === 'product');
 
