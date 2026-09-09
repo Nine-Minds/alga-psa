@@ -72,12 +72,11 @@ for (const terminal of [false, true]) test(`missing jobs remain ${terminal ? 'un
     Array(2).fill([terminal ? 'completed' : 'pending', null]));
 });
 
-for (const defect of ['wrong-parent', 'wrong-job-head', 'missing-pr', 'wrong-workflow', 'wrong-repository', 'stale-job', 'duplicate-job', 'duplicate-edition', 'truncated-page', 'page-cap', 'sheet-cap', 'changing-attempt', 'changing-status', 'error', 'malformed']) {
+for (const defect of ['wrong-parent', 'wrong-job-head', 'wrong-workflow', 'wrong-repository', 'stale-job', 'duplicate-job', 'duplicate-edition', 'truncated-page', 'page-cap', 'sheet-cap', 'changing-attempt', 'changing-status', 'error', 'malformed']) {
   test(`rejects ${defect} rather than producing misleading evidence`, async () => {
     const { state, collect } = fixture();
     if (defect === 'wrong-job-head') state.jobs[0].head_sha = 'd'.repeat(40);
     if (defect === 'wrong-parent') state.parents[1].sha = 'd'.repeat(40);
-    if (defect === 'missing-pr') state.run.pull_requests = [];
     if (defect === 'wrong-workflow') state.run.path = '.github/workflows/unrelated.yml';
     if (defect === 'wrong-repository') state.run.repository.full_name = 'unowned/repo';
     if (defect === 'stale-job') state.jobs[0].run_attempt = 1;
@@ -217,4 +216,9 @@ test('historical run uses immutable run head while associated PR metadata change
   assert.equal(result.expectedExecutions[0].revision, revision);
   assert.equal(result.collectionMetadata.revisionValidation, 'merge-run-head-parent-verified');
   assert.equal(result.collectionMetadata.checkoutIndependentlyVerified, false);
+});
+
+test('historical pull request run permits absent mutable PR association', async () => {
+  const { state, collect } = fixture(); state.run.pull_requests = [];
+  assert.equal((await collect()).collectionMetadata.revisionValidation, 'merge-run-head-parent-verified');
 });

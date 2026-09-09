@@ -317,7 +317,7 @@
   {
     "id": "F024",
     "description": "Add versioned execution/journey/retry/edition/artifact metrics without breaking existing Sheets columns or historical readers.",
-    "implemented": false,
+    "implemented": true,
     "workPackage": "WP5",
     "priority": "P1",
     "prdRefs": [
@@ -326,6 +326,10 @@
     "dependsOn": [
       "F006",
       "F017"
+    ],
+    "evidence": [
+      "evidence/ci-browser-metrics-cb884.json",
+      "evidence/isolated-browser-identity.json"
     ]
   },
   {

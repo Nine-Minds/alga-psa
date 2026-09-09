@@ -536,10 +536,10 @@
     {
       "id": "R064",
       "title": "Review and integrate browser metrics provenance",
-      "status": "in_progress",
+      "status": "done",
       "dependsOn": [],
       "owner": "coordinator",
-      "notes": "Wired archive verification receipts and loaded-image manifest into actual browser runner metrics and diagnostics.67 combined native metrics/archive/schema tests pass, plus actionlint and plan/task validators. Independent review accepted runtime integration; coordinator fixed CLI input-alias deletion identified during review and updated docs. CI candidate publication awaits current run completion; actual new artifact/Sheets readback still pending. No local Docker. Approved-copy validation at new tab validation_browser_identity A1:Y8 passes exact native readback: legacy20 header/history preserved, six exporter rows distinguish same-name projects and execution attempts1/2, runtime config and two full12883-character synthetic verified archive manifests retained. Evidence isolated-browser-identity.json. Synthetic only; actual current CI manifest remains pending."
+      "notes": "Wired archive verification receipts and loaded-image manifest into actual browser runner metrics and diagnostics.67 combined native metrics/archive/schema tests pass, plus actionlint and plan/task validators. Independent review accepted runtime integration; coordinator fixed CLI input-alias deletion identified during review and updated docs. CI candidate publication awaits current run completion; actual new artifact/Sheets readback still pending. No local Docker. Approved-copy validation at new tab validation_browser_identity A1:Y8 passes exact native readback: legacy20 header/history preserved, six exporter rows distinguish same-name projects and execution attempts1/2, runtime config and two full12883-character synthetic verified archive manifests retained. Evidence isolated-browser-identity.json. Synthetic only; actual current CI manifest remains pending. Currentcb884 CI testedmergef71e845 verifies42CE+47EEfirstattempt journeys and valid8/9service manifests. OriginalSheets all91rows matchactual exporter output across25columns;562historicalrows+20originalheadings unchanged. Evidence ci-browser-metrics-cb884.json. F024 accepted; fullworkflow/rollout remainsseparate."
     },
     {
       "id": "R065",

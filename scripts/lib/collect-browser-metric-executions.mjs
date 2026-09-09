@@ -39,7 +39,6 @@ export async function collectBrowserMetricExecutions({ repository, runId, revisi
     validateRun(run);
     phase = 'revision';
     if (run.event === 'pull_request') {
-      require(Array.isArray(run.pull_requests) && run.pull_requests.length === 1);
       // Historical run PR metadata follows the current PR head/base. Only the
       // run head is immutable here; the other merge parent is not independently
       // bound to the historical base snapshot.
