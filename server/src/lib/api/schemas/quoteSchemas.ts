@@ -60,6 +60,9 @@ export const createQuoteItemSchema = z.object({
   service_name: z.string().max(255).optional().nullable(),
   service_sku: z.string().max(100).optional().nullable(),
   service_item_kind: z.string().max(50).optional().nullable(),
+  catalog_description: z.string().optional().nullable().transform((value) =>
+    value == null || value.trim() === '' ? null : value.trim()
+  ),
 });
 
 export const updateQuoteItemSchema = createQuoteItemSchema.partial();

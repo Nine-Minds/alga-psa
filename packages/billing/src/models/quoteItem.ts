@@ -22,6 +22,7 @@ function normalizeQuoteItem(row: Record<string, any>): IQuoteItem {
     tax_rate: row.tax_rate == null ? row.tax_rate : Number(row.tax_rate),
     cost: row.cost == null ? null : Number(row.cost),
     cost_currency: row.cost_currency ?? null,
+    catalog_description: row.catalog_description ?? null,
   } as IQuoteItem;
 }
 
@@ -37,6 +38,7 @@ type QuoteItemServiceLookupRow = {
   tenant?: string;
   service_id?: string;
   service_name: string;
+  description?: string | null;
   sku?: string | null;
   default_rate?: number | string | null;
   unit_of_measure?: string | null;
@@ -70,6 +72,15 @@ async function getNextDisplayOrder(
     .first();
 
   return Number(result?.max ?? -1) + 1;
+}
+
+/** Empty or whitespace-only catalog text snapshots as `null`. */
+function normalizeCatalogDescription(value: unknown): string | null {
+  if (typeof value !== 'string') {
+    return null;
+  }
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
 }
 
 const QuoteItem = {
@@ -109,6 +120,7 @@ const QuoteItem = {
         .where({ service_id: item.service_id })
         .select(
           'service_name',
+          'description',
           'sku',
           'default_rate',
           'unit_of_measure',
@@ -142,6 +154,16 @@ const QuoteItem = {
 
       const resolvedItemKind = resolvedItem.service_item_kind ?? service.item_kind ?? 'service';
 
+      // Catalog-description snapshot policy: a caller that passes an explicit
+      // catalog_description (copy/duplicate/revision/template flows) keeps it
+      // verbatim — including null. A caller that does NOT pass one (a freshly
+      // selected catalog-backed line) gets the authoritative, tenant-scoped
+      // catalog text captured here. Persistence never trusts picker data.
+      const resolvedCatalogDescription =
+        item.catalog_description !== undefined
+          ? normalizeCatalogDescription(item.catalog_description)
+          : normalizeCatalogDescription(service.description);
+
       resolvedItem = {
         ...resolvedItem,
         service_name: resolvedItem.service_name ?? service.service_name,
@@ -151,9 +173,23 @@ const QuoteItem = {
         billing_method: resolvedItem.billing_method ?? service.billing_method ?? null,
         service_item_kind: resolvedItemKind,
         description: resolvedItem.description || service.service_name,
+        catalog_description: resolvedCatalogDescription,
         // Snapshot cost for product items so markup can be calculated on the quote
         cost: resolvedItemKind === 'product' && service.cost != null ? Number(service.cost) : (resolvedItem as any).cost ?? null,
         cost_currency: resolvedItemKind === 'product' && service.cost_currency ? service.cost_currency : (resolvedItem as any).cost_currency ?? null,
+      };
+    } else {
+      // Custom and discount lines have no catalog identity, so there is no
+      // snapshot to capture. When the caller passes an explicit snapshot (a
+      // copy of a line whose catalog entry was deleted and whose FK was
+      // SET NULL), keep it verbatim so duplication/revision/template flows
+      // preserve historical output.
+      resolvedItem = {
+        ...resolvedItem,
+        catalog_description:
+          item.catalog_description !== undefined
+            ? normalizeCatalogDescription(item.catalog_description)
+            : null,
       };
     }
 
@@ -210,10 +246,55 @@ const QuoteItem = {
 
     const totalPrice = Number(quantity) * Number(unitPrice);
 
+    let resolvedUpdate: Partial<IQuoteItem> = { ...updateData };
+
+    // Catalog selection change: recapture name/SKU/kind/catalog description
+    // together. Ordinary edits (quantity, price, line description) never touch
+    // the snapshot because they leave service_id and the snapshot columns out
+    // of the update payload. Callers that pass an explicit catalog_description
+    // keep it verbatim (copy flows); otherwise the authoritative tenant-scoped
+    // catalog text is captured.
+    const serviceSelectionChanged =
+      updateData.service_id !== undefined && updateData.service_id !== existingItem.service_id;
+
+    if (serviceSelectionChanged) {
+      if (updateData.service_id) {
+        const service = await quoteTable<QuoteItemServiceLookupRow>(knexOrTrx, tenant, 'service_catalog')
+          .where({ service_id: updateData.service_id })
+          .select('service_name', 'description', 'sku', 'unit_of_measure', 'billing_method', 'item_kind')
+          .first();
+
+        if (!service) {
+          throw new Error(`Service ${updateData.service_id} not found in tenant ${tenant}`);
+        }
+
+        resolvedUpdate = {
+          ...resolvedUpdate,
+          service_name: service.service_name,
+          service_sku: service.sku ?? null,
+          unit_of_measure: service.unit_of_measure ?? null,
+          billing_method: service.billing_method ?? null,
+          service_item_kind: service.item_kind ?? 'service',
+          catalog_description:
+            updateData.catalog_description !== undefined
+              ? normalizeCatalogDescription(updateData.catalog_description)
+              : normalizeCatalogDescription(service.description),
+        };
+      } else {
+        resolvedUpdate = {
+          ...resolvedUpdate,
+          service_name: null,
+          service_sku: null,
+          service_item_kind: null,
+          catalog_description: null,
+        };
+      }
+    }
+
     const [updatedItem] = await quoteTable<IQuoteItem>(knexOrTrx, tenant, 'quote_items')
       .where({ quote_item_id: quoteItemId })
       .update({
-        ...updateData,
+        ...resolvedUpdate,
         quantity,
         unit_price: unitPrice,
         total_price: totalPrice,

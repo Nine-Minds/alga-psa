@@ -1,5 +1,12 @@
 import type { TFunction } from 'i18next';
 import type { TemplateAst, TemplateTransformPipeline } from '@alga-psa/types';
+
+export type ColumnPresetLine = {
+  id: string;
+  key: string;
+  style?: { inline?: Record<string, string | number> };
+};
+
 type ColumnPreset = {
   id: string;
   label: string;
@@ -8,7 +15,30 @@ type ColumnPreset = {
   type: string;
   width: number;
   description: string;
+  /** Optional ordered stacked cell lines (e.g. item name above catalog
+   *  description). Each line renders when non-empty; the column `key` stays
+   *  the single-value fallback so custom/discount/legacy rows stay readable. */
+  lines?: ColumnPresetLine[];
 };
+
+/**
+ * Stacked lines for a quote item's name + catalog description presentation.
+ * The name renders first (medium weight), the catalog description beneath it
+ * in muted, smaller type. Lines collapse when empty; the column's fallback
+ * binding keeps rows that only carry a line description readable.
+ */
+export const buildQuoteItemNameCatalogDescriptionLines = (): ColumnPresetLine[] => [
+  {
+    id: 'item-name',
+    key: 'item.service_name',
+    style: { inline: { fontWeight: 600, lineHeight: 1.35 } },
+  },
+  {
+    id: 'catalog-description',
+    key: 'item.catalog_description',
+    style: { inline: { color: '#4b5563', fontSize: '12px', lineHeight: 1.4 } },
+  },
+];
 
 /**
  * Quick-add columns for tables bound to the `ticketGroups` collection —
@@ -232,13 +262,34 @@ export const INVOICE_COLLECTION_DESCRIPTORS = [items, ticket, entry, primary];
 const documentItems = (kind: 'quote' | 'sales-order'): CollectionDescriptor => {
   const quantity = kind === 'quote' ? 'quantity' : 'quantity_ordered';
   const amount = kind === 'quote' ? 'total_price' : 'amount';
-  return {
-    documentKind: kind, id: 'lineItems', path: 'line_items',
-    fields: fields(['description', quantity, 'unit_price', amount], [quantity, 'unit_price', amount]),
-    presets: (t) => buildColumnPresets(t).map((preset) => ({
+  const remapped = (t: TFunction): ColumnPreset[] =>
+    buildColumnPresets(t).map((preset) => ({
       ...preset,
       key: preset.key.replace('quantity', quantity).replace('unitPrice', 'unit_price').replace('total', amount),
-    })),
+    }));
+  return {
+    documentKind: kind, id: 'lineItems', path: 'line_items',
+    fields: fields(
+      kind === 'quote'
+        ? ['service_name', 'catalog_description', 'description', quantity, 'unit_price', amount]
+        : ['description', 'service_name', quantity, 'unit_price', amount],
+      [quantity, 'unit_price', amount]
+    ),
+    presets: (t) => kind === 'quote'
+      ? [
+          ...remapped(t),
+          {
+            id: 'item-name-catalog-description',
+            label: t('invoiceDesigner.tableEditor.presets.itemNameCatalogDescription.label', { defaultValue: 'Item name + catalog description' }),
+            header: t('invoiceDesigner.tableEditor.presets.itemNameCatalogDescription.header', { defaultValue: 'Description' }),
+            key: 'item.description',
+            type: 'text',
+            width: 280,
+            description: t('invoiceDesigner.tableEditor.presets.itemNameCatalogDescription.hint', { defaultValue: 'Item name above the catalog description; empty lines collapse' }),
+            lines: buildQuoteItemNameCatalogDescriptionLines(),
+          },
+        ]
+      : remapped(t),
   };
 };
 

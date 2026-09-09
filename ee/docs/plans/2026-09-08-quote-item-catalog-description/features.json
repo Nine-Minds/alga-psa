@@ -1,21 +1,92 @@
 [
-  {"id":"F001","description":"Add nullable quote_items.catalog_description through an additive tenant-safe migration.","implemented":false},
-  {"id":"F002","description":"Expose catalog_description on persisted quote-item, draft-item, and quote view-model contracts.","implemented":false},
-  {"id":"F003","description":"Return catalog description from picker search and fallback item retrieval.","implemented":false},
-  {"id":"F004","description":"Populate immediate draft state with the selected catalog description without replacing editable line description.","implemented":false},
-  {"id":"F005","description":"Capture the authoritative tenant-scoped catalog description when creating a catalog-backed quote item.","implemented":false},
-  {"id":"F006","description":"Normalize missing or empty catalog descriptions to null for catalog, custom, and discount lines.","implemented":false},
-  {"id":"F007","description":"Recapture catalog snapshots only when a line's catalog selection changes, not during unrelated edits.","implemented":false},
-  {"id":"F008","description":"Preserve stored catalog-description snapshots through duplication and quote revision.","implemented":false},
-  {"id":"F009","description":"Preserve stored catalog-description snapshots through save-as-template and create-from-template.","implemented":false},
-  {"id":"F010","description":"Map catalog_description through quote preview and PDF view models and sample scenarios.","implemented":false},
-  {"id":"F011","description":"Expose Item Name, Catalog Description, and Line Description as distinct quote designer fields.","implemented":false},
-  {"id":"F012","description":"Add backward-compatible optional stacked lines with per-line styling to table-column AST contracts and validation.","implemented":false},
-  {"id":"F013","description":"Round-trip and edit stacked table cells in the designer without changing legacy single-value columns.","implemented":false},
-  {"id":"F014","description":"Render stacked table cells consistently in designer canvas, preview, server HTML, and PDF paths.","implemented":false},
-  {"id":"F015","description":"Provide an Item name + catalog description table preset with sensible typography and missing-value collapse.","implemented":false},
-  {"id":"F016","description":"Apply the stacked presentation to standard quote tables across ordinary, recurring, one-time, grouped, and location-grouped layouts.","implemented":false},
-  {"id":"F017","description":"Leave existing quote rows and customer-owned custom layouts unchanged while updating managed standard templates additively.","implemented":false},
-  {"id":"F018","description":"Preserve all quote pricing, discount, tax, conversion, and ordering behavior.","implemented":false}
+  {
+    "id": "F001",
+    "description": "Add nullable quote_items.catalog_description through an additive tenant-safe migration.",
+    "implemented": true
+  },
+  {
+    "id": "F002",
+    "description": "Expose catalog_description on persisted quote-item, draft-item, and quote view-model contracts.",
+    "implemented": true
+  },
+  {
+    "id": "F003",
+    "description": "Return catalog description from picker search and fallback item retrieval.",
+    "implemented": true
+  },
+  {
+    "id": "F004",
+    "description": "Populate immediate draft state with the selected catalog description without replacing editable line description.",
+    "implemented": true
+  },
+  {
+    "id": "F005",
+    "description": "Capture the authoritative tenant-scoped catalog description when creating a catalog-backed quote item.",
+    "implemented": true
+  },
+  {
+    "id": "F006",
+    "description": "Normalize missing or empty catalog descriptions to null for catalog, custom, and discount lines.",
+    "implemented": true
+  },
+  {
+    "id": "F007",
+    "description": "Recapture catalog snapshots only when a line's catalog selection changes, not during unrelated edits.",
+    "implemented": true
+  },
+  {
+    "id": "F008",
+    "description": "Preserve stored catalog-description snapshots through duplication and quote revision.",
+    "implemented": true
+  },
+  {
+    "id": "F009",
+    "description": "Preserve stored catalog-description snapshots through save-as-template and create-from-template.",
+    "implemented": true
+  },
+  {
+    "id": "F010",
+    "description": "Map catalog_description through quote preview and PDF view models and sample scenarios.",
+    "implemented": true
+  },
+  {
+    "id": "F011",
+    "description": "Expose Item Name, Catalog Description, and Line Description as distinct quote designer fields.",
+    "implemented": true
+  },
+  {
+    "id": "F012",
+    "description": "Add backward-compatible optional stacked lines with per-line styling to table-column AST contracts and validation.",
+    "implemented": true
+  },
+  {
+    "id": "F013",
+    "description": "Round-trip and edit stacked table cells in the designer without changing legacy single-value columns.",
+    "implemented": true
+  },
+  {
+    "id": "F014",
+    "description": "Render stacked table cells consistently in designer canvas, preview, server HTML, and PDF paths.",
+    "implemented": true
+  },
+  {
+    "id": "F015",
+    "description": "Provide an Item name + catalog description table preset with sensible typography and missing-value collapse.",
+    "implemented": true
+  },
+  {
+    "id": "F016",
+    "description": "Apply the stacked presentation to standard quote tables across ordinary, recurring, one-time, grouped, and location-grouped layouts.",
+    "implemented": true
+  },
+  {
+    "id": "F017",
+    "description": "Leave existing quote rows and customer-owned custom layouts unchanged while updating managed standard templates additively.",
+    "implemented": true
+  },
+  {
+    "id": "F018",
+    "description": "Preserve all quote pricing, discount, tax, conversion, and ordering behavior.",
+    "implemented": true
+  }
 ]
-

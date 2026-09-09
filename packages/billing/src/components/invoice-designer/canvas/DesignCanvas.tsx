@@ -45,6 +45,9 @@ import {
 
 type DesignerTranslator = (key: string, options?: Record<string, unknown>) => string;
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
 const translatableHint = (t?: DesignerTranslator): string =>
   t?.('designer.canvas.translatableHint', {
     defaultValue: "Translated automatically into the recipient's language. Edit it to use your own fixed text instead.",
@@ -685,7 +688,57 @@ const renderTablePreview = (
               {visibleColumns.map((column, columnIndex) => {
                 const key = asTrimmedString(column.key);
                 const type = normalizeFieldFormat(column.type);
-                const rawValue = resolveTableItemBindingRawValue(previewData, item, key, asTrimmedString(metadata.__astTableItemBinding) || 'item');
+                const rowBinding = asTrimmedString(metadata.__astTableItemBinding) || 'item';
+                const lineRecords = Array.isArray((column as { lines?: unknown }).lines)
+                  ? ((column as { lines: Array<Record<string, unknown>> }).lines)
+                  : [];
+                const styleOf = (styleRef: unknown): React.CSSProperties | undefined =>
+                  isRecord(styleRef) && isRecord((styleRef as { inline?: unknown }).inline)
+                    ? ((styleRef as { inline: React.CSSProperties }).inline)
+                    : undefined;
+
+                if (lineRecords.length > 0) {
+                  const renderedLines = lineRecords
+                    .map((line) => {
+                      const lineKey = asTrimmedString(line.key);
+                      const lineRaw = resolveTableItemBindingRawValue(previewData, item, lineKey, rowBinding);
+                      const lineText = formatBoundValue(lineRaw, 'text', previewData?.currencyCode ?? 'USD', options.locale) ?? '';
+                      return { id: String(line.id ?? lineKey), text: lineText, style: styleOf(line.style) };
+                    })
+                    .filter((line) => line.text !== '');
+                  const fallback = renderedLines.length === 0
+                    ? formatBoundValue(
+                        resolveTableItemBindingRawValue(previewData, item, key, rowBinding),
+                        type,
+                        previewData?.currencyCode ?? 'USD',
+                        options.locale,
+                      ) ?? ''
+                    : null;
+                  return (
+                    <span
+                      key={`${rowKey}-${String(column.id ?? key)}`}
+                      className={clsx(
+                        'flex min-w-0 flex-col px-1 py-0.5',
+                        borderConfig.columnDividers &&
+                          columnIndex < visibleColumns.length - 1 && ['border-r', INVOICE_BORDER_SUBTLE_COLOR_CLASS]
+                      )}
+                    >
+                      {fallback !== null
+                        ? fallback
+                        : renderedLines.map((line, lineIndex) => (
+                            <span
+                              key={`${rowKey}-${String(column.id ?? key)}-line-${line.id}-${lineIndex}`}
+                              className="truncate"
+                              style={line.style}
+                            >
+                              {line.text}
+                            </span>
+                          ))}
+                    </span>
+                  );
+                }
+
+                const rawValue = resolveTableItemBindingRawValue(previewData, item, key, rowBinding);
                 const text = formatBoundValue(rawValue, type, previewData?.currencyCode ?? 'USD', options.locale) ?? '—';
                 return (
                   <span

@@ -77,6 +77,7 @@ const mapQuoteItemToViewModel = (
     service_sku: item.service_sku ?? null,
     billing_method: item.billing_method ?? null,
     description: item.description,
+    catalog_description: item.catalog_description ?? null,
     quantity: toFiniteNumber(item.quantity),
     unit_price: toFiniteNumber(item.unit_price),
     total_price: toFiniteNumber(item.total_price),

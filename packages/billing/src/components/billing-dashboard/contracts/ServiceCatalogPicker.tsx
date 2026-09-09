@@ -178,6 +178,7 @@ export function ServiceCatalogPicker({
           item_kind: item.item_kind,
           sku: item.sku ?? null,
           default_rate: Number(item.default_rate ?? 0),
+          description: item.description ?? null,
         });
         return;
       }
@@ -190,6 +191,7 @@ export function ServiceCatalogPicker({
         item_kind: 'service',
         sku: null,
         default_rate: 0,
+        description: null,
       });
     },
     [onSelect, selectedLabel]

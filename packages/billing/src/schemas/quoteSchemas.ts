@@ -80,6 +80,9 @@ const createQuoteItemBaseSchema = z.object({
   quote_id: z.string().uuid(),
   service_id: z.string().uuid().optional().nullable(),
   description: z.string().trim().min(1),
+  catalog_description: z.string().trim().optional().nullable().transform((value) =>
+    value == null || value === '' ? null : value
+  ),
   quantity: z.number().int().positive(),
   unit_price: z.number().int().min(0).optional(),
   unit_of_measure: z.string().trim().optional().nullable(),
