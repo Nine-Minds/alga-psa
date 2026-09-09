@@ -4,22 +4,23 @@ import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 import { createPortableTemporaryDirectory, createPortableTemporarySweeper, PORTABLE_TEMPORARY_LIFETIME_MS } from '../../../../../packages/co-managed/src/portableTemporaryDirectory';
 
-const originalTmp = process.env.TMPDIR;
 let root: string;
 afterEach(async () => {
   vi.restoreAllMocks();
-  if (originalTmp === undefined) delete process.env.TMPDIR; else process.env.TMPDIR = originalTmp;
   if (root) await rm(root, { recursive: true, force: true });
 });
+// Each fixture stages under its own root and passes it explicitly. Mutating the
+// process-wide TMPDIR would leak into any test file running beside this one.
 async function fixture() {
-  root = await mkdtemp(join(tmpdir(), 'portable-recovery-test-')); process.env.TMPDIR = root;
+  root = await mkdtemp(join(tmpdir(), 'portable-recovery-test-'));
   return createPortableTemporarySweeper(root);
 }
+const stage = (kind: Parameters<typeof createPortableTemporaryDirectory>[0]) => createPortableTemporaryDirectory(kind, root);
 
 it('reclaims expired private leases while preserving live leases and targets of contained symlinks', async () => {
-  const sweeper = await fixture(), old = await createPortableTemporaryDirectory('archive');
+  const sweeper = await fixture(), old = await stage('archive');
   const now = vi.spyOn(Date, 'now').mockReturnValue(old.expiresAt - 1);
-  const live = await createPortableTemporaryDirectory('blobs');
+  const live = await stage('blobs');
   const target = join(root, 'customer-original'); await writeFile(target, 'keep');
   await writeFile(join(old.directory, 'plaintext'), 'sensitive staging');
   await symlink(target, join(old.directory, 'link'));
@@ -38,7 +39,7 @@ it('reclaims expired private leases while preserving live leases and targets of 
 it('preserves unmarked, linked, tampered, oversized and permissive directories', async () => {
   const sweeper = await fixture();
   const leases = await Promise.all((['archive', 'blobs', 'restore', 'remote-meetings', 'archive'] as const).map(kind =>
-    createPortableTemporaryDirectory(kind)));
+    stage(kind)));
   const marker = (index: number) => join(leases[index].directory, '.alga-portable-lease.json');
   await rm(marker(0));
   await rm(marker(1)); await symlink(marker(2), marker(1));
@@ -54,7 +55,7 @@ it('preserves unmarked, linked, tampered, oversized and permissive directories',
 });
 
 it('does not treat a copied marker as authority for a replacement directory', async () => {
-  const sweeper = await fixture(), first = await createPortableTemporaryDirectory('archive'), replacement = await createPortableTemporaryDirectory('archive');
+  const sweeper = await fixture(), first = await stage('archive'), replacement = await stage('archive');
   await copyFile(join(first.directory, '.alga-portable-lease.json'), join(replacement.directory, '.alga-portable-lease.json'));
   vi.spyOn(Date, 'now').mockReturnValue(first.expiresAt + 1);
   expect((await sweeper.sweep()).removed).toBe(1);
@@ -65,7 +66,7 @@ it('does not treat a copied marker as authority for a replacement directory', as
 it('resumes bounded scans past unrelated entries and safely shares overlapping sweeps', async () => {
   const sweeper = await fixture();
   for (let index = 0; index < 12; index++) await writeFile(join(root, `unrelated-${index}`), 'keep');
-  const leases = await Promise.all(Array.from({ length: 5 }, () => createPortableTemporaryDirectory('restore')));
+  const leases = await Promise.all(Array.from({ length: 5 }, () => stage('restore')));
   vi.spyOn(Date, 'now').mockReturnValue(Math.max(...leases.map(lease => lease.expiresAt)));
   let removed = 0;
   for (let index = 0; index < 9; index++) {

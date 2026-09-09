@@ -105,7 +105,10 @@ async function keyFor(passphrase: string, salt: Buffer) {
       { N: 131072, r: 8, p: 1, maxmem: 256 * 1024 * 1024 }, (error, key) => error ? reject(error) : resolve(key)));
   } finally { password.fill(0); }
 }
-const privateDirectory = () => createPortableTemporaryDirectory('archive');
+// Staging root is caller-selectable (default: the OS temp directory) so an
+// operator can place plaintext staging on a chosen volume, and so callers do
+// not have to mutate the process-wide TMPDIR to control it.
+const privateDirectory = (stagingRoot?: string) => createPortableTemporaryDirectory('archive', stagingRoot);
 async function regularFile(path: string, maxBytes: number) {
   if (typeof path !== 'string' || !isAbsolute(path)) invalid();
   const file = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW);
@@ -155,7 +158,7 @@ async function* encryptFrames(source: AsyncIterable<Buffer>, key: Buffer, header
  * collectors. The customer passphrase is never a job/provider argument. The
  * encrypted container authenticates context, manifest, ordered blob membership
  * and every byte together; it is not an export authorization boundary. */
-export async function sealPortableArchive(input: { context: PortableArchiveContext; manifest: Record<string, unknown>; files: readonly PortableStagedBlob[] }, passphrase: string) {
+export async function sealPortableArchive(input: { context: PortableArchiveContext; manifest: Record<string, unknown>; files: readonly PortableStagedBlob[]; stagingRoot?: string }, passphrase: string) {
   let key: Buffer | undefined, metadata: Buffer | undefined, lease: Awaited<ReturnType<typeof privateDirectory>> | undefined;
   try {
     assertPortableTransferActive();
@@ -166,7 +169,7 @@ export async function sealPortableArchive(input: { context: PortableArchiveConte
     metadata = boundedMetadata({ format: FORMAT, version: 1, context, manifest: input.manifest, blobs });
     if (metadata.length > MAX_METADATA || metadata.length + 4 + blobs.reduce((sum, row) => sum + row.size, 0) > MAX_CONTAINER) invalid();
     const salt = randomBytes(16), header = Buffer.concat([MAGIC, salt, randomBytes(8)]);
-    key = await keyFor(passphrase, salt); lease = await privateDirectory();
+    key = await keyFor(passphrase, salt); lease = await privateDirectory(input.stagingRoot);
     const metadataSnapshot = metadata;
     async function* plaintext() {
       const size = Buffer.alloc(4); size.writeUInt32BE(metadataSnapshot.length); yield size; yield metadataSnapshot;
@@ -197,7 +200,7 @@ export async function sealPortableArchive(input: { context: PortableArchiveConte
 /** All frames and the final marker are authenticated in private quarantine
  * before metadata is parsed or any usable lease is returned. The caller must
  * validate its manifest schema/graph before performing destination operations. */
-export async function openPortableArchive(path: string, passphrase: string, expectedContext?: PortableArchiveContext) {
+export async function openPortableArchive(path: string, passphrase: string, expectedContext?: PortableArchiveContext, stagingRoot?: string) {
   let key: Buffer | undefined, source: Awaited<ReturnType<typeof regularFile>> | undefined;
   let quarantine: FileHandle | undefined, lease: Awaited<ReturnType<typeof privateDirectory>> | undefined;
   try {
@@ -208,7 +211,7 @@ export async function openPortableArchive(path: string, passphrase: string, expe
     const header = await readAt(source.file, HEADER_BYTES, 0);
     if (!header.subarray(0, MAGIC.length).equals(MAGIC)) invalid();
     key = await keyFor(passphrase, header.subarray(MAGIC.length, MAGIC.length + 16));
-    lease = await privateDirectory();
+    lease = await privateDirectory(stagingRoot);
     const quarantinePath = join(lease.directory, 'authenticated-container.partial');
     quarantine = await open(quarantinePath, 'wx+', 0o600);
     let position = HEADER_BYTES, total = 0, index = 0, shortFrame = false, finished = false;

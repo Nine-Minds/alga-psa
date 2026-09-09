@@ -13,9 +13,9 @@ type Kind = 'archive' | 'blobs' | 'remote-meetings' | 'restore';
 
 /** The marker is durable before any caller can write customer bytes. No tenant
  * data or secrets belong in it. Unmarked legacy directories are not reclaimed. */
-export async function createPortableTemporaryDirectory(kind: Kind) {
+export async function createPortableTemporaryDirectory(kind: Kind, root = tmpdir()) {
   if (!['archive', 'blobs', 'remote-meetings', 'restore'].includes(kind)) throw new Error('Invalid portable staging kind');
-  const directory = await mkdtemp(join(tmpdir(), `alga-portable-${kind}-${randomUUID()}-`));
+  const directory = await mkdtemp(join(root, `alga-portable-${kind}-${randomUUID()}-`));
   const dispose = () => rm(directory, { recursive: true, force: true });
   try {
     await chmod(directory, 0o700);
