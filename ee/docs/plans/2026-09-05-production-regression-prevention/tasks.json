@@ -888,10 +888,10 @@
     {
       "id": "R108",
       "title": "Bind release provider journeys to tested and promoted image identity",
-      "status": "in_progress",
+      "status": "done",
       "dependsOn": [],
       "owner": "qbo_protocol",
-      "notes": "Fresh-install gate independently validates provider observations, but release promotion currently accepts configuration declarations without raw journey evidence. Require consumer-policy journeys and verified archive identity, with raw OCI manifest digest/config binding to promoted registry image; no archive-to-registry identity substitution. Actual publisher/deployment rollout remains separate."
+      "notes": "Fresh-install gate independently validates provider observations, but release promotion currently accepts configuration declarations without raw journey evidence. Require consumer-policy journeys and verified archive identity, with raw OCI manifest digest/config binding to promoted registry image; no archive-to-registry identity substitution. Actual publisher/deployment rollout remains separate. Implemented mandatory consumer policy and committed per-edition journey requirements, actual provider traffic/configuration, complete application service mapping and exact build identity. Raw single-platform OCI/Docker manifest bytes hash to immutable registry digest; valid config descriptor binds tested config image ID. Independent review reproduced malformed digest-only manifest false green; descriptor validation now rejects it. Three declaration-vs-observation cases failed before repair. Root reran 80/80 release/Kubernetes native cases successfully. Protocol versions remain declared, indexes unsupported, publisher/deployment integration still pending; F036/T030 remain open."
     },
     {
       "id": "R109",

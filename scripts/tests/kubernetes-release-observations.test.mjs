@@ -1,3 +1,4 @@
+import { providerFixture } from './fixtures/release-provider.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { kubernetesReleaseObservations } from '../lib/kubernetes-release-observations.mjs';
@@ -117,10 +118,23 @@ test('collector envelope flows into promotion with target and freshness policy i
     args.includes('pods,replicasets') ? { kind: 'List', items: [...input.pods, ...input.replicaSets] } : input.workloads[0]) });
   const revision = 'a'.repeat(40), edition = 'enterprise';
   const manifest = { schemaVersion: 1, revision, edition, components: kubernetesReleaseObservations(input).map(component => ({ ...component, revision, build: { provider: 'host-fixture', runId: 1 } })) };
-  const policy = { revision, edition, manifest, renderedResources, expectedTarget, maxObservationAgeSeconds: 300,
+  // Independent application runtime fixture supplements the collector's app/init
+  // deployment; the collector target and freshness assertions remain unchanged.
+  const provider = providerFixture();
+  for (const component of provider.components) {
+    const name = component.name.split('/')[2];
+    renderedResources.push({ kind: 'Deployment', metadata: { namespace: 'isolated', name },
+      spec: { template: { spec: { containers: [{ name, image: component.image }] } } } });
+    expectedTarget.workloads.push({ kind: 'Deployment', name });
+  }
+  manifest.components.push(...provider.components);
+  runtimeEvidence.target = structuredClone(expectedTarget);
+  runtimeEvidence.observations.push(...provider.components);
+  const policy = { revision, edition, manifest, renderedResources, expectedTarget,
+    requiredBrowserProviders: { ...provider.policy, checkId: 'smoke' }, maxObservationAgeSeconds: 300,
     requiredComponents: manifest.components.map(component => component.name), requiredChecks: ['smoke'], requiredCheckConfigurations: { smoke: {} } };
   const manifestDigest = releaseManifestDigest(policy);
-  const evidence = { schemaVersion: 1, revision, edition, manifestDigest,
+  const evidence = { schemaVersion: 1, revision, edition, manifestDigest, browserProviderExecution: provider.raw,
     results: [{ id: 'smoke', status: 'passed', failures: [], manifestDigest, configuration: {} }] };
   const serialized = JSON.parse(JSON.stringify(runtimeEvidence));
   assert.equal(verifyReleasePromotion({ ...policy, evidence, runtimeEvidence: serialized }).status, 'passed');

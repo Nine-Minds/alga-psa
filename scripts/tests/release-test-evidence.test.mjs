@@ -1,28 +1,28 @@
+import { providerFixture } from './fixtures/release-provider.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { releaseManifestDigest, verifyReleaseTestEvidence, verifyReleasePromotion } from '../lib/release-test-evidence.mjs';
 
 function fixture() {
   const revision = 'a'.repeat(40), edition = 'enterprise';
-  const requiredComponents = ['server', 'email-service', 'worker'].map(name => `isolated/Deployment/${name}/containers/${name}`);
-  const manifest = { schemaVersion: 1, revision, edition, components: requiredComponents.map((name, index) => ({
-    name, image: `registry.example.test/${name.split('/').at(-1)}@sha256:${String(index + 1).repeat(64)}`,
-    revision: String(index + 1).repeat(40), build: { provider: 'github-actions', runId: 100 + index },
-  })) };
+  const provider = providerFixture();
+  const manifest = {schemaVersion:1,revision,edition,components:provider.components};
+  const requiredComponents = manifest.components.map(c=>c.name);
   const input = { revision, edition, manifest, requiredComponents, requiredChecks: ['browser-ee', 'email-intake', 'worker-runtime'] };
+  input.requiredBrowserProviders = provider.policy;
   input.requiredCheckConfigurations = { 'browser-ee': { providers: { stripe: { mode: 'emulator', protocol: 'fixture-v1' } }, authentication: 'credentials' }, 'email-intake': { transport: 'smtp-test-sink' }, 'worker-runtime': {} };
   const digest = releaseManifestDigest(input);
-  const expectedTarget = { context: 'release-smoke', namespace: 'isolated', workloads: ['server', 'email-service', 'worker'].map(name => ({ kind: 'Deployment', name })) };
+  const expectedTarget = { context: 'release-smoke', namespace: 'isolated', workloads: ['server', 'email-service', 'worker', 'hocuspocus', 'temporal-worker'].map(name => ({ kind: 'Deployment', name })) };
   const renderedResources = manifest.components.map(component => ({ kind: 'Deployment',
     metadata: { namespace: 'isolated', name: component.name.split('/')[2] },
     spec: { template: { spec: { containers: [{ name: component.name.split('/').at(-1), image: component.image }] } } } }));
   return { ...input, renderedResources, expectedTarget, maxObservationAgeSeconds: 300,
     runtimeEvidence: { schemaVersion: 1, scope: 'kubernetes-runtime-image-observations', target: structuredClone(expectedTarget),
       observedAt: new Date().toISOString(), observations: structuredClone(manifest.components) }, evidence: { schemaVersion: 1, revision, edition,
-    manifestDigest: digest, results: input.requiredChecks.map(id => ({ id, status: 'passed', failures: [], manifestDigest: digest, configuration: structuredClone(input.requiredCheckConfigurations[id]) })) } };
+    browserProviderExecution: provider.raw, manifestDigest: digest, results: input.requiredChecks.map(id => ({ id, status: 'passed', failures: [], manifestDigest: digest, configuration: structuredClone(input.requiredCheckConfigurations[id]) })) } };
 }
 
-test('exact tested and deployed component set passes, including explicitly distinct component source revisions', () => {
+test('exact tested and deployed component set passes with independent provider execution', () => {
   assert.equal(verifyReleasePromotion(fixture()).status, 'passed');
 });
 
@@ -96,7 +96,7 @@ test('promotion CLI rejects an email-only replacement even when the runtime matc
   t.after(() => rmSync(root, { recursive: true, force: true }));
   const input = fixture();
   const write = (name, value) => writeFileSync(path.join(root, name), JSON.stringify(value));
-  write('policy.json', { revision: input.revision, edition: input.edition, requiredComponents: input.requiredComponents, requiredChecks: input.requiredChecks, requiredCheckConfigurations: input.requiredCheckConfigurations, expectedTarget: input.expectedTarget, maxObservationAgeSeconds: input.maxObservationAgeSeconds });
+  write('policy.json', { revision: input.revision, edition: input.edition, requiredComponents: input.requiredComponents, requiredChecks: input.requiredChecks, requiredCheckConfigurations: input.requiredCheckConfigurations, requiredBrowserProviders: input.requiredBrowserProviders, expectedTarget: input.expectedTarget, maxObservationAgeSeconds: input.maxObservationAgeSeconds });
   write('rendered.json', input.renderedResources); write('manifest.json', input.manifest); write('evidence.json', input.evidence); write('observations.json', input.runtimeEvidence);
   const cli = fileURLToPath(new URL('../verify-release-promotion.mjs', import.meta.url));
   const run = () => {
@@ -125,7 +125,7 @@ test('promotion CLI rejects an email-only replacement even when the runtime matc
   assert.equal(run().status, 'failed'); // Rendered deployment still selects the old image.
   input.renderedResources[1].spec.template.spec.containers[0].image = input.manifest.components[1].image;
   write('rendered.json', input.renderedResources);
-  assert.equal(run().status, 'passed'); // Simulated replacement test evidence, not an actual new smoke run.
+  assert.equal(run().status, 'failed'); // Rehashing declarations cannot replace digest-bound registry bytes.
   rmSync(path.join(root, 'observations.json'));
   assert.equal(run().status, 'failed');
 });
@@ -239,4 +239,64 @@ for (const side of ['policy', 'result']) test(`sparse arrays cannot disappear fr
   if (side === 'policy') input.requiredCheckConfigurations['worker-runtime'].values = Array(1);
   else input.evidence.results[2].configuration.values = Array(1);
   assert.equal(verifyReleasePromotion(input).status, 'failed');
+});
+
+for (const [name, mutate] of [
+  ['missing policy', x => { delete x.requiredBrowserProviders; }],
+  ['removed provider declaration cannot bypass required proof', x => { delete x.requiredCheckConfigurations['browser-ee'].providers; delete x.evidence.results[0].configuration.providers; delete x.requiredBrowserProviders; }],
+  ['null policy', x => { x.requiredBrowserProviders = null; }],
+  ['missing raw traffic', x => { x.evidence.browserProviderExecution.report.suites[0].specs[0].tests[0].results[0].attachments = []; }],
+  ['corrupt archive', x => { x.evidence.browserProviderExecution.artifactManifest.components[0].record.archive.sha256 = 'sha256:' + 'f'.repeat(64); }],
+  ['wrong run', x => { x.requiredBrowserProviders.runId = '999'; }],
+  ['missing component mapping', x => { delete x.requiredBrowserProviders.componentServices[x.manifest.components[0].name]; }],
+  ['missing registry bytes', x => { delete x.evidence.browserProviderExecution.registryManifests; }],
+  ['corrupt registry bytes', x => { x.evidence.browserProviderExecution.registryManifests[x.manifest.components[0].name] = Buffer.from('{}').toString('base64'); }],
+  ['wrong tested build', x => { x.manifest.components[0].build = {...x.manifest.components[0].build,attempt:3}; const d=releaseManifestDigest(x); x.evidence.manifestDigest=d; x.evidence.results.forEach(r=>r.manifestDigest=d); }],
+  ['cannot replace committed journey policy', x => { x.requiredBrowserProviders.requirements=[]; x.evidence.browserProviderExecution.report.suites=[]; }],
+]) test(`release provider proof rejects ${name}`, () => {
+  const input=fixture(); mutate(input); assert.equal(verifyReleasePromotion(input).status,'failed');
+});
+
+test('digest-valid OCI indexes and wrong config digests cannot substitute for tested image manifests', async () => {
+  const { createHash } = await import('node:crypto');
+  for (const document of [
+    {schemaVersion:2,mediaType:'application/vnd.oci.image.index.v1+json',manifests:[]},
+    {schemaVersion:2,mediaType:'application/vnd.oci.image.manifest.v1+json',config:{digest:'sha256:'+'f'.repeat(64)},layers:[]},
+  ]) {
+    const input=fixture(),component=input.manifest.components[0],bytes=Buffer.from(JSON.stringify(document));
+    component.image=component.image.split('@')[0]+'@sha256:'+createHash('sha256').update(bytes).digest('hex');
+    input.evidence.browserProviderExecution.registryManifests[component.name]=bytes.toString('base64');
+    const d=releaseManifestDigest(input);input.evidence.manifestDigest=d;input.evidence.results.forEach(r=>r.manifestDigest=d);
+    input.renderedResources[0].spec.template.spec.containers[0].image=component.image;
+    input.runtimeEvidence.observations=structuredClone(input.manifest.components);
+    assert.ok(verifyReleasePromotion(input).failures.includes('Registry manifest does not bind tested provider component'));
+  }
+});
+
+for (const field of ['provider-mode', 'authentication', 'serverLifecycle']) test(`matching declarations cannot override observed ${field}`, () => {
+  const input=fixture();
+  const configuration=input.requiredCheckConfigurations['browser-ee'];
+  if(field==='provider-mode') configuration.providers.stripe.mode='sandbox';
+  else configuration[field]='unobserved-value';
+  input.evidence.results[0].configuration=structuredClone(configuration);
+  assert.equal(verifyReleasePromotion(input).status,'failed');
+});
+
+for (const damage of ['minimal-digest-only', 'config-media', 'config-size', 'layers-missing', 'layer-digest', 'layer-size', 'layer-media']) test(`digest-valid registry manifest rejects ${damage}`, async () => {
+  const {createHash}=await import('node:crypto');
+  const input=fixture(),component=input.manifest.components[0];
+  const document=JSON.parse(Buffer.from(input.evidence.browserProviderExecution.registryManifests[component.name],'base64'));
+  document.layers=[{mediaType:'application/vnd.oci.image.layer.v1.tar+gzip',size:10,digest:'sha256:'+'1'.repeat(64)}];
+  if(damage==='minimal-digest-only') { document.config={digest:document.config.digest}; delete document.layers; }
+  if(damage==='config-media') delete document.config.mediaType;
+  if(damage==='config-size') document.config.size=-1;
+  if(damage==='layers-missing') delete document.layers;
+  if(damage==='layer-digest') document.layers[0].digest='sha256:invalid';
+  if(damage==='layer-size') document.layers[0].size=1.5;
+  if(damage==='layer-media') document.layers[0].mediaType='text/plain';
+  const bytes=Buffer.from(JSON.stringify(document));
+  component.image=component.image.split('@')[0]+'@sha256:'+createHash('sha256').update(bytes).digest('hex');
+  input.evidence.browserProviderExecution.registryManifests[component.name]=bytes.toString('base64');
+  const d=releaseManifestDigest(input);input.evidence.manifestDigest=d;input.evidence.results.forEach(r=>r.manifestDigest=d);
+  assert.ok(verifyReleasePromotion(input).failures.includes('Invalid registry image manifest descriptors'));
 });
