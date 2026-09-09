@@ -8,6 +8,7 @@ import { isEnterprise } from '@alga-psa/core/features';
 import { updateTenantSettings } from '@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions';
 import {
   classifyTenantTemplate,
+  decorateBrandedHtml,
   planEmailBrandingApply,
   planEmailBrandingRemoval,
   resolveEmailPalette,
@@ -200,6 +201,28 @@ async function persistAppliedPalette(
 }
 
 /**
+ * The Enterprise pass over every HTML the apply writes: the tenant's logo in
+ * the header and the "Powered by AlgaPSA" line. Community gets no decorator at
+ * all, even if the saved palette still carries the fields from an Enterprise
+ * period, mirroring scopeBrandingToEdition.
+ */
+function buildBrandDecorator(
+  palette: EmailBrandingPalette,
+  branding: Record<string, any> | null | undefined,
+  enterprise: boolean,
+): ((html: string) => string) | undefined {
+  if (!enterprise) return undefined;
+
+  const logoUrl = palette.logo?.variant === 'wide'
+    ? branding?.logoWideUrl || branding?.logoUrl
+    : branding?.logoUrl;
+  const logo = palette.logo && logoUrl ? { url: logoUrl as string, alt: branding?.clientName ?? '' } : undefined;
+  const hideAttribution = palette.hideAttribution === true;
+
+  return (html: string) => decorateBrandedHtml(html, { logo, hideAttribution });
+}
+
+/**
  * Materializes the saved palette into tenant_email_templates for the selected
  * templates and languages.
  *
@@ -230,6 +253,7 @@ export const applyEmailBrandingAction = withAuth(async (
     target,
     appliedPalette: context.palette.appliedPalette ?? null,
     scope,
+    decorate: buildBrandDecorator(context.palette, context.settings.branding, isEnterprise),
   });
 
   const written: EmailBrandingApplyResult['written'] = [];
@@ -304,7 +328,7 @@ export const removeEmailBrandingAction = withAuth(async (
     await requireSettingsUpdate(user, trx);
     const settings = await readTenantSettings(trx, tenant);
     const rows = await loadTemplateRows(trx, tenant);
-    return { palette: readEmailBrandingPalette(settings.emailBranding), ...rows };
+    return { settings, palette: readEmailBrandingPalette(settings.emailBranding), ...rows };
   });
 
   const { deletable, kept } = planEmailBrandingRemoval({

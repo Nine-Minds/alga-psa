@@ -444,7 +444,7 @@
   {
     "id": "F049",
     "description": "Enterprise section renders logo switch, variant picker and attribution switch only when edition is Enterprise",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "ee-logo-attribution",
     "prdRefs": [
       "UX / UI Notes",
@@ -455,7 +455,7 @@
   {
     "id": "F050",
     "description": "variant picker offers only uploaded variants, preferring wide, with a link to Client Portal branding when none exist",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "ee-logo-attribution",
     "prdRefs": [
       "FR10"
@@ -464,7 +464,7 @@
   {
     "id": "F051",
     "description": "apply inserts a data-alga-brand-logo <img> in the header cell of layout templates and before the first heading in auth templates",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "ee-logo-attribution",
     "prdRefs": [
       "FR10"
@@ -473,7 +473,7 @@
   {
     "id": "F052",
     "description": "re-apply replaces an existing data-alga-brand-logo image instead of adding a second",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "ee-logo-attribution",
     "prdRefs": [
       "FR10"
@@ -482,7 +482,7 @@
   {
     "id": "F053",
     "description": "apply with hideAttribution removes 'Powered by AlgaPSA' and its separator in both footer variants",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "ee-logo-attribution",
     "prdRefs": [
       "FR11"
@@ -491,7 +491,7 @@
   {
     "id": "F054",
     "description": "re-enabling attribution restores the system footer for branded rows",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "ee-logo-attribution",
     "prdRefs": [
       "FR11"
@@ -500,7 +500,7 @@
   {
     "id": "F055",
     "description": "server strips logo and hideAttribution on Community even if present in the saved palette",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "ee-logo-attribution",
     "prdRefs": [
       "FR10",

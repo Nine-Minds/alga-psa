@@ -69,7 +69,7 @@ export interface EmailBrandingApplyPlanInput {
   appliedPalette?: EmailPaletteTokens | null;
   scope: EmailBrandingApplyScope;
   /** Enterprise logo/attribution pass, run after the color rewrite. */
-  decorate?: (html: string, row: BrandableSystemRow) => string;
+  decorate?: (html: string) => string;
 }
 
 const rowKey = (name: string, language: string) => `${name}::${language}`;
@@ -96,7 +96,7 @@ export function planEmailBrandingApply(input: EmailBrandingApplyPlanInput): Emai
   const tenantByKey = new Map(tenantRows.map((row) => [rowKey(row.name, row.language_code), row]));
 
   const plan: EmailBrandingApplyPlan = { inserts: [], updates: [], skipped: [] };
-  const decorateHtml = (html: string, row: BrandableSystemRow) => (decorate ? decorate(html, row) : html);
+  const decorateHtml = (html: string) => (decorate ? decorate(html) : html);
 
   for (const systemRow of systemRows) {
     if (!names.has(systemRow.name) || !languages.has(systemRow.language_code)) continue;
@@ -121,7 +121,7 @@ export function planEmailBrandingApply(input: EmailBrandingApplyPlanInput): Emai
         language,
         systemTemplateId: systemRow.id,
         subject: systemRow.subject,
-        html: decorateHtml(applyEmailPalette(systemRow.html_content, STOCK_EMAIL_PALETTE, target), systemRow),
+        html: decorateHtml(applyEmailPalette(systemRow.html_content, STOCK_EMAIL_PALETTE, target)),
         // Plain-text bodies carry no colors, so they are cloned verbatim.
         text: systemRow.text_content,
       });
@@ -130,8 +130,8 @@ export function planEmailBrandingApply(input: EmailBrandingApplyPlanInput): Emai
 
     const sourceMaps = appliedPalette ? [appliedPalette, STOCK_EMAIL_PALETTE] : [STOCK_EMAIL_PALETTE];
     const html = state === 'branded'
-      ? decorateHtml(applyEmailPalette(systemRow.html_content, STOCK_EMAIL_PALETTE, target), systemRow)
-      : decorateHtml(applyEmailPalette(tenantRow!.html_content, sourceMaps, target), systemRow);
+      ? decorateHtml(applyEmailPalette(systemRow.html_content, STOCK_EMAIL_PALETTE, target))
+      : decorateHtml(applyEmailPalette(tenantRow!.html_content, sourceMaps, target));
 
     if (html === tenantRow!.html_content) {
       plan.skipped.push({ name: systemRow.name, language, state, reason: 'unchanged' });

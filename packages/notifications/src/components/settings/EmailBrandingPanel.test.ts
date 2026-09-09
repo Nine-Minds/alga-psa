@@ -100,7 +100,8 @@ describe('email branding panel markup', () => {
   });
 
   it('renders previews client-side from the system HTML with no server call', () => {
-    expect(panelSource).toContain('applyEmailPalette(template.html_content, STOCK_EMAIL_PALETTE, resolved)');
+    expect(panelSource).toContain('applyEmailPalette(html, STOCK_EMAIL_PALETTE, resolved)');
+    expect(panelSource).toContain('htmlContent={previewHtml(template.html_content)}');
     const previewBlock = panelSource.slice(panelSource.indexOf('previewTemplates.map'));
     expect(previewBlock.slice(0, previewBlock.indexOf('</div>'))).not.toContain('Action(');
   });
@@ -146,5 +147,33 @@ describe('new-template banner', () => {
     expect(panelSource).toContain('preselectedNames={applyPreselection}');
     expect(panelSource).toContain('id="dismiss-new-email-templates"');
     expect(panelSource).toContain('window.sessionStorage?.setItem(NEW_TEMPLATE_DISMISS_KEY');
+  });
+});
+
+describe('enterprise logo and attribution', () => {
+  it('renders the section only on Enterprise, checked on both the client and the server', () => {
+    expect(panelSource).toContain("process.env.NEXT_PUBLIC_EDITION === 'enterprise'");
+    expect(panelSource).toContain('{isEnterpriseEdition && status.isEnterprise && (');
+    expect(panelSource).toContain('id="email-branding-enterprise-section"');
+  });
+
+  it('offers a logo switch, the uploaded variants and the attribution switch', () => {
+    expect(panelSource).toContain('id="email-branding-use-logo"');
+    expect(panelSource).toContain('id="email-branding-logo-variant-wide"');
+    expect(panelSource).toContain('id="email-branding-logo-variant-default"');
+    expect(panelSource).toContain('{status.logoOptions.logoWideUrl && (');
+    expect(panelSource).toContain('{status.logoOptions.logoUrl && (');
+    expect(panelSource).toContain('id="email-branding-show-attribution"');
+    expect(panelSource).toContain('checked={!draft.hideAttribution}');
+  });
+
+  it('points at client portal branding when no logo is uploaded', () => {
+    expect(panelSource).toContain('const hasAnyLogo =');
+    expect(panelSource).toContain("notifications.emailBranding.enterprise.noLogo");
+  });
+
+  it('previews the brand assets exactly as an apply would write them', () => {
+    expect(panelSource).toContain('decorateBrandedHtml(recolored, {');
+    expect(panelSource).toContain('hideAttribution: draft.hideAttribution,');
   });
 });

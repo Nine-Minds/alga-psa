@@ -55,3 +55,20 @@ describe('email branding actions contract', () => {
     expect(source).toContain('normalizeEmailBrandingInput(input, isEnterprise)');
   });
 });
+
+describe('enterprise brand assets', () => {
+  it('builds the decorator only on Enterprise', () => {
+    const decorator = source.slice(source.indexOf('function buildBrandDecorator'));
+    const body = decorator.slice(0, decorator.indexOf('\n}\n'));
+
+    expect(body).toContain('if (!enterprise) return undefined;');
+    expect(body).toContain("palette.logo?.variant === 'wide'");
+    expect(body).toContain('branding?.logoWideUrl || branding?.logoUrl');
+    expect(body).toContain('decorateBrandedHtml(html, { logo, hideAttribution })');
+  });
+
+  it('runs the decorator over everything the apply writes', () => {
+    const apply = source.slice(source.indexOf('export const applyEmailBrandingAction'));
+    expect(apply).toContain('decorate: buildBrandDecorator(context.palette, context.settings.branding, isEnterprise)');
+  });
+});

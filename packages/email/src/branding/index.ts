@@ -21,6 +21,16 @@ export {
 } from './classifyTenantTemplate';
 export { suggestEmailPalette, type SuggestEmailPaletteInput } from './suggestEmailPalette';
 export {
+  applyBrandLogo,
+  containsBrandAttribution,
+  decorateBrandedHtml,
+  removeBrandLogo,
+  stripBrandAttribution,
+  BRAND_LOGO_MARKER,
+  type BrandDecorationOptions,
+  type BrandLogo,
+} from './brandAssets';
+export {
   planEmailBrandingApply,
   planEmailBrandingRemoval,
   type BrandableSystemRow,

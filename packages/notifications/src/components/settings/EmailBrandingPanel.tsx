@@ -10,7 +10,7 @@ import { Switch } from "@alga-psa/ui/components/Switch";
 import { useRegisterUnsavedChanges } from "@alga-psa/ui/context";
 import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
 import { getErrorMessage } from "@alga-psa/ui/lib/errorHandling";
-import { applyEmailPalette, STOCK_EMAIL_PALETTE } from "@alga-psa/email/branding";
+import { applyEmailPalette, decorateBrandedHtml, STOCK_EMAIL_PALETTE } from "@alga-psa/email/branding";
 import {
   getEmailBrandingStatusAction,
   removeEmailBrandingAction,
@@ -35,6 +35,9 @@ import {
 } from "./emailBrandingPanelState";
 
 const PREFERRED_PREVIEW_TEMPLATES = ['ticket-created', 'invoice-email'];
+
+/** Client-side edition check; the server enforces it again with isEnterprise. */
+const isEnterpriseEdition = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
 
 const HEX = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
 
@@ -199,6 +202,22 @@ export function EmailBrandingPanel({
     : t(`notifications.emailBranding.source.${status.suggestion.source}`, SOURCE_FALLBACKS[status.suggestion.source]);
 
   const showNewTemplateBanner = shouldShowNewTemplateBanner(status, dismissedNewCount);
+  const hasAnyLogo = !!(status.logoOptions.logoWideUrl || status.logoOptions.logoUrl);
+
+  // Preview exactly what an apply would write, brand assets included.
+  const previewHtml = (html: string) => {
+    const recolored = applyEmailPalette(html, STOCK_EMAIL_PALETTE, resolved);
+    if (!isEnterpriseEdition || !status.isEnterprise) return recolored;
+
+    const logoUrl = draft.logoVariant === 'wide'
+      ? status.logoOptions.logoWideUrl || status.logoOptions.logoUrl
+      : status.logoOptions.logoUrl;
+
+    return decorateBrandedHtml(recolored, {
+      logo: draft.logoVariant && logoUrl ? { url: logoUrl, alt: status.logoOptions.clientName ?? '' } : undefined,
+      hideAttribution: draft.hideAttribution,
+    });
+  };
 
   const dismissNewTemplates = () => {
     setDismissedNewCount(status.newTemplateNames.length);
@@ -313,6 +332,69 @@ export function EmailBrandingPanel({
               </Button>
             )}
 
+            {isEnterpriseEdition && status.isEnterprise && (
+              <div id="email-branding-enterprise-section" className="space-y-3 border-t pt-4">
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="email-branding-use-logo"
+                    checked={!!draft.logoVariant}
+                    disabled={!status.canEdit || !hasAnyLogo}
+                    onCheckedChange={(checked) => update({
+                      logoVariant: checked ? (status.logoOptions.logoWideUrl ? 'wide' : 'default') : null,
+                    })}
+                  />
+                  <Label htmlFor="email-branding-use-logo">
+                    {t('notifications.emailBranding.enterprise.useLogo', 'Use my logo in the email header')}
+                  </Label>
+                </div>
+
+                {hasAnyLogo ? (
+                  draft.logoVariant && (
+                    <div className="flex gap-2">
+                      {status.logoOptions.logoWideUrl && (
+                        <Button
+                          id="email-branding-logo-variant-wide"
+                          size="sm"
+                          variant={draft.logoVariant === 'wide' ? 'default' : 'outline'}
+                          disabled={!status.canEdit}
+                          onClick={() => update({ logoVariant: 'wide' })}
+                        >
+                          {t('notifications.emailBranding.enterprise.logoWide', 'Wide logo')}
+                        </Button>
+                      )}
+                      {status.logoOptions.logoUrl && (
+                        <Button
+                          id="email-branding-logo-variant-default"
+                          size="sm"
+                          variant={draft.logoVariant === 'default' ? 'default' : 'outline'}
+                          disabled={!status.canEdit}
+                          onClick={() => update({ logoVariant: 'default' })}
+                        >
+                          {t('notifications.emailBranding.enterprise.logoDefault', 'Square logo')}
+                        </Button>
+                      )}
+                    </div>
+                  )
+                ) : (
+                  <p className="text-xs text-gray-500">
+                    {t('notifications.emailBranding.enterprise.noLogo', 'Upload a logo in Settings → Client Portal → Branding to use it here.')}
+                  </p>
+                )}
+
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="email-branding-show-attribution"
+                    checked={!draft.hideAttribution}
+                    disabled={!status.canEdit}
+                    onCheckedChange={(checked) => update({ hideAttribution: !checked })}
+                  />
+                  <Label htmlFor="email-branding-show-attribution">
+                    {t('notifications.emailBranding.enterprise.showAttribution', 'Show "Powered by AlgaPSA" in the footer')}
+                  </Label>
+                </div>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Button
                 id="email-branding-adjust-tokens"
@@ -360,7 +442,7 @@ export function EmailBrandingPanel({
               <EmailTemplatePreview
                 key={`${template.name}-${template.language_code}`}
                 id={`email-branding-preview-${template.name}`}
-                htmlContent={applyEmailPalette(template.html_content, STOCK_EMAIL_PALETTE, resolved)}
+                htmlContent={previewHtml(template.html_content)}
                 templateName={template.name}
               />
             ))}

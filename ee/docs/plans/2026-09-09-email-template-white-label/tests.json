@@ -541,7 +541,7 @@
   {
     "id": "T060",
     "description": "Enterprise section absent when NEXT_PUBLIC_EDITION is community",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "ee-logo-attribution",
     "featureIds": [
       "F049"
@@ -550,7 +550,7 @@
   {
     "id": "T061",
     "description": "variant picker lists wide and default when both uploaded, only default when just the square exists",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "ee-logo-attribution",
     "featureIds": [
       "F050"
@@ -559,7 +559,7 @@
   {
     "id": "T062",
     "description": "applied ticket-created HTML contains one data-alga-brand-logo img inside the gradient header cell",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "ee-logo-attribution",
     "featureIds": [
       "F051"
@@ -568,7 +568,7 @@
   {
     "id": "T063",
     "description": "applied password-reset HTML contains the img before its first heading",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "ee-logo-attribution",
     "featureIds": [
       "F051"
@@ -577,7 +577,7 @@
   {
     "id": "T064",
     "description": "applying twice leaves exactly one data-alga-brand-logo img",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "ee-logo-attribution",
     "featureIds": [
       "F052"
@@ -586,7 +586,7 @@
   {
     "id": "T065",
     "description": "hideAttribution removes '&middot; Powered by AlgaPSA' from a layout footer and '<p>Powered by AlgaPSA</p>' from portal-invitation",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "ee-logo-attribution",
     "featureIds": [
       "F053"
@@ -595,7 +595,7 @@
   {
     "id": "T066",
     "description": "turning attribution back on re-clones and re-applies branded rows so the footer returns",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "ee-logo-attribution",
     "featureIds": [
       "F054"
@@ -604,7 +604,7 @@
   {
     "id": "T067",
     "description": "apply on Community with logo set writes no img and keeps the attribution",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "ee-logo-attribution",
     "featureIds": [
       "F055"

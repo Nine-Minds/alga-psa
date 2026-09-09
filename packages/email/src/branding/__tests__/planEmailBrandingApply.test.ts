@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { applyEmailPalette, containsEmailPaletteTokens } from '../applyEmailPalette';
+import { BRAND_LOGO_MARKER, containsBrandAttribution, decorateBrandedHtml } from '../brandAssets';
 import { planEmailBrandingApply, planEmailBrandingRemoval } from '../planEmailBrandingApply';
 import { resolveEmailPalette } from '../resolveEmailPalette';
 import { STOCK_EMAIL_PALETTE } from '../stockPalette';
@@ -283,5 +284,97 @@ describe('planEmailBrandingRemoval', () => {
 
     expect(deletable).toHaveLength(0);
     expect(kept.map((row) => row.id)).toEqual([600]);
+  });
+});
+
+describe('enterprise brand assets in the plan', () => {
+  const logo = { url: 'https://cdn.example.com/logo-wide.png', alt: 'Acme MSP' };
+  const decorate = (html: string) => decorateBrandedHtml(html, { logo, hideAttribution: true });
+
+  function applyOnce() {
+    const plan = planEmailBrandingApply({
+      systemRows: SYSTEM_ROWS,
+      tenantRows: [],
+      target: TERRACOTTA,
+      scope: SCOPE,
+      decorate,
+    });
+
+    return plan.inserts.map((insert, index) => ({
+      id: 700 + index,
+      name: insert.name,
+      language_code: insert.language,
+      subject: insert.subject,
+      html_content: insert.html,
+      text_content: insert.text,
+    }));
+  }
+
+  it('writes the logo and drops the attribution on the rows it creates', () => {
+    for (const row of applyOnce()) {
+      expect(row.html_content).toContain(BRAND_LOGO_MARKER);
+      expect(containsBrandAttribution(row.html_content)).toBe(false);
+    }
+  });
+
+  it('still recognizes those rows as its own on a re-apply', () => {
+    const tenantRows = applyOnce();
+    const plan = planEmailBrandingApply({
+      systemRows: SYSTEM_ROWS,
+      tenantRows,
+      target: TERRACOTTA,
+      appliedPalette: TERRACOTTA,
+      scope: SCOPE,
+      decorate,
+    });
+
+    expect(plan.skipped.every((skip) => skip.reason === 'unchanged')).toBe(true);
+    expect(plan.updates).toHaveLength(0);
+  });
+
+  it('leaves exactly one logo when the palette changes', () => {
+    const plan = planEmailBrandingApply({
+      systemRows: SYSTEM_ROWS,
+      tenantRows: applyOnce(),
+      target: FOREST,
+      appliedPalette: TERRACOTTA,
+      scope: SCOPE,
+      decorate,
+    });
+
+    expect(plan.updates).toHaveLength(6);
+    for (const update of plan.updates) {
+      expect((update.html.match(new RegExp(BRAND_LOGO_MARKER, 'g')) ?? [])).toHaveLength(1);
+    }
+  });
+
+  it('restores the system footer when attribution is turned back on', () => {
+    const plan = planEmailBrandingApply({
+      systemRows: SYSTEM_ROWS,
+      tenantRows: applyOnce(),
+      target: TERRACOTTA,
+      appliedPalette: TERRACOTTA,
+      scope: SCOPE,
+      decorate: (html: string) => decorateBrandedHtml(html, { logo }),
+    });
+
+    expect(plan.updates).toHaveLength(6);
+    for (const update of plan.updates) {
+      expect(containsBrandAttribution(update.html)).toBe(true);
+    }
+  });
+
+  it('writes no logo and keeps the attribution without a decorator (Community)', () => {
+    const plan = planEmailBrandingApply({
+      systemRows: SYSTEM_ROWS,
+      tenantRows: [],
+      target: TERRACOTTA,
+      scope: SCOPE,
+    });
+
+    for (const insert of plan.inserts) {
+      expect(insert.html).not.toContain(BRAND_LOGO_MARKER);
+    }
+    expect(plan.inserts.some((insert) => containsBrandAttribution(insert.html))).toBe(true);
   });
 });

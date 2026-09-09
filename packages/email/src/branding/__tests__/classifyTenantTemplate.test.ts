@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { applyEmailPalette } from '../applyEmailPalette';
+import { decorateBrandedHtml } from '../brandAssets';
 import { classifyTenantTemplate } from '../classifyTenantTemplate';
 import { resolveEmailPalette } from '../resolveEmailPalette';
 import { STOCK_EMAIL_PALETTE } from '../stockPalette';
@@ -90,6 +91,34 @@ describe('classifyTenantTemplate', () => {
         subject: systemRow.subject,
         html_content: brandedRow.html_content.replace('View Ticket', 'Open in our portal'),
       },
+      systemRow,
+      appliedPalette: TERRACOTTA,
+    });
+
+    expect(result.state).toBe('customized');
+    expect(result.differs).toEqual(['text']);
+  });
+});
+
+describe('classifyTenantTemplate with enterprise brand assets', () => {
+  const logo = { url: 'https://cdn.example.com/logo.png', alt: 'Acme' };
+
+  it('recognizes a row it wrote with a logo and no attribution as branded', () => {
+    const decorated = decorateBrandedHtml(brandedRow.html_content, { logo, hideAttribution: true });
+
+    expect(classifyTenantTemplate({
+      tenantRow: { ...brandedRow, html_content: decorated },
+      systemRow,
+      appliedPalette: TERRACOTTA,
+    })).toEqual({ state: 'branded', differs: [] });
+  });
+
+  it('still calls a copy edit on such a row customized', () => {
+    const decorated = decorateBrandedHtml(brandedRow.html_content, { logo, hideAttribution: true })
+      .replace('View Ticket', 'Open in our portal');
+
+    const result = classifyTenantTemplate({
+      tenantRow: { ...brandedRow, html_content: decorated },
       systemRow,
       appliedPalette: TERRACOTTA,
     });
