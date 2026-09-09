@@ -52,8 +52,15 @@ jobs:
         with:
           node-version: '22'
           cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            e2e-tests/package-lock.json
       - run: npm install -g npm@11
       - run: npm ci
+      - run: npm --prefix e2e-tests ci
+      - name: Install Chromium for authenticated dashboard hydration tests
+        working-directory: e2e-tests
+        run: npx --no-install playwright install --with-deps chromium
       - uses: ./.github/actions/install-ripgrep
       - name: Run every required tooling test and reconcile execution
         run: node scripts/run-node-tooling-tests.mjs

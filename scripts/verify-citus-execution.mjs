@@ -11,6 +11,7 @@ import { testRevision } from './lib/test-revision.mjs';
 const runtimeFiles = [
   'ee/temporal-workflows/src/__tests__/integration/workflowInvocationPersistence.integration.test.ts',
   'server/src/test/integration/invoiceTicketImmutable.integration.test.ts',
+  'server/src/test/integration/remainingBucketUnits.integration.test.ts',
 ];
 const tenantFiles = [
   'ee/temporal-workflows/src/__tests__/e2e/tenant-creation-workflow.e2e.test.ts',

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { pathToFileURL } from 'node:url';
 const require = createRequire(new URL('../package.json', import.meta.url));
-const { request } = require('@playwright/test');
+const { request, chromium } = require('@playwright/test');
 
 export async function warmTeamsDashboard({ env = process.env, timeoutMs = 240_000 } = {}) {
   assert.equal(env.E2E_DATABASE_ISOLATED, 'true');
@@ -34,6 +34,7 @@ export async function warmTeamsDashboard({ env = process.env, timeoutMs = 240_00
     diagnostics.code = 'invalid-response';
     return response;
   };
+  let browser;
   try {
     diagnostics.stage = 'csrf';
     const csrf = await (await fetch('/api/auth/csrf')).json();
@@ -60,17 +61,38 @@ export async function warmTeamsDashboard({ env = process.env, timeoutMs = 240_00
     diagnostics.htmlLength = html.length;
     diagnostics.dashboardMarkerPresent = /data-automation-id=["']dashboard-main["']/.test(html);
     diagnostics.errorSentinelPresent = /__next_error__|NEXT_HTTP_ERROR_FALLBACK|NEXT_REDIRECT|\$RX\(|data-nextjs-error|Application error:/.test(html);
-    diagnostics.code = 'dashboard-marker-missing';
-    assert.match(html, /data-automation-id=["']dashboard-main["']/);
+    // The shipped i18n provider emits a loading shell until its client effect
+    // initializes translations. HTTP completion warms compilation, not hydration.
     diagnostics.code = 'dashboard-error-sentinel';
     assert.doesNotMatch(html, /__next_error__|NEXT_HTTP_ERROR_FALLBACK|NEXT_REDIRECT|\$RX\(|data-nextjs-error|Application error:/);
+    diagnostics.stage = 'hydration';
+    diagnostics.code = 'browser-launch-failed';
+    browser = await chromium.launch({ headless: true, timeout: remaining() });
+    const browserContext = await browser.newContext({ storageState: await context.storageState() });
+    const page = await browserContext.newPage();
+    diagnostics.code = 'dashboard-navigation-failed';
+    const navigation = await page.goto(callbackUrl, { waitUntil: 'domcontentloaded', timeout: remaining() });
+    diagnostics.code = 'dashboard-navigation-status';
+    assert.equal(navigation?.status(), 200);
+    diagnostics.code = 'dashboard-navigation-redirect';
+    assert.equal(page.url(), callbackUrl);
+    diagnostics.code = 'dashboard-marker-missing';
+    await page.locator('[data-automation-id="dashboard-main"]').waitFor({ state: 'visible', timeout: remaining() });
+    diagnostics.code = 'dashboard-navigation-redirect';
+    assert.equal(page.url(), callbackUrl);
+    diagnostics.code = 'dashboard-error-ui';
+    assert.equal(await page.locator('#__next_error__, [data-nextjs-error]').count(), 0);
+    assert.doesNotMatch(await page.locator('body').innerText({ timeout: remaining() }), /Application error:/);
+    remaining();
     return { schemaVersion: 1, scope: 'teams-development-dashboard-warmup', status: 'passed', authenticated: true };
   } catch {
     const error = new Error('Authenticated Teams dashboard warmup failed');
     error.diagnostics = { ...diagnostics, elapsedMs: Date.now() - startedAt,
       ...(Date.now() >= deadline ? { code: 'deadline-exceeded' } : {}) };
     throw error;
-  } finally { await context.dispose(); }
+  } finally {
+    try { await browser?.close(); } finally { await context.dispose(); }
+  }
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   try { console.log(JSON.stringify(await warmTeamsDashboard())); }

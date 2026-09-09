@@ -12,6 +12,7 @@ const server = path.join(root, 'server');
 const files = [
   'ee/temporal-workflows/src/__tests__/integration/workflowInvocationPersistence.integration.test.ts',
   'server/src/test/integration/invoiceTicketImmutable.integration.test.ts',
+  'server/src/test/integration/remainingBucketUnits.integration.test.ts',
 ];
 const output = path.join(root, 'test-results/citus-runtime');
 mkdirSync(output, { recursive: true });

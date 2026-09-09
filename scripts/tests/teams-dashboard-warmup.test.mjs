@@ -29,38 +29,50 @@ async function fixture(t, defect) {
     if (!req.headers.cookie?.includes('authjs.session-token.0=part1') || !req.headers.cookie?.includes('authjs.session-token.1=part2')
       || req.headers.cookie?.includes('authjs.csrf-token')) { res.statusCode = 401; return res.end(); }
     if (req.url === '/api/auth/session') return json({ user: { email: defect === 'wrong-session' ? 'other@example.test' : 'fixture@example.test' } });
+    if (req.url === '/redirected') return res.end('Redirected');
     if (defect === 'timeout') return;
     if (defect === 'http-redirect') { res.writeHead(302, { Location: '/auth/msp/signin' }); return res.end(); }
     if (defect === 'server-error') res.statusCode = 500;
     res.setHeader('Content-Type', 'text/html');
     // Simulate cold compilation: response is streamed and only valid at EOF.
     res.write('<html>');
-    setTimeout(() => res.end(defect === 'missing-dashboard' ? '</html>'
-      : `<main data-automation-id="dashboard-main"></main>${defect === 'error-boundary' ? '<script>$RX("B:0")</script>' : ''}</html>`), 30);
+    setTimeout(() => res.end(defect === 'client-redirect' ? '<script>location.replace("/redirected")</script></html>' : defect === 'missing-dashboard' ? '</html>' : defect === 'delayed-marker' ? `<script>setTimeout(() => { document.body.innerHTML = '<main data-automation-id=\"dashboard-main\">Ready</main>'; }, 100)</script></html>` : defect === 'client-error' ? `<script>addEventListener('DOMContentLoaded', () => { document.body.innerHTML = '<main data-automation-id="dashboard-main">Ready</main><div data-' + 'nextjs-error>Failure</div>'; });</script></html>`
+      : `<main data-automation-id="dashboard-main">Ready</main>${defect === 'error-boundary' ? '<script>$RX("B:0")</script>' : ''}</html>`), 30);
   });
   server.on('connection', socket => { sockets.add(socket); socket.on('close', () => sockets.delete(socket)); });
   server.listen(0, '127.0.0.1'); await once(server, 'listening');
   const origin = `http://127.0.0.1:${server.address().port}`;
   t.after(async () => { for (const socket of sockets) socket.destroy(); await new Promise(resolve => server.close(resolve)); });
-  return { calls, run: () => warmTeamsDashboard({ timeoutMs: defect === 'timeout' ? 150 : 2000,
+  return { calls, run: () => warmTeamsDashboard({ timeoutMs: defect === 'timeout' ? 150 : defect === 'missing-dashboard' ? 10000 : 15000,
     env: { E2E_BASE_URL: origin, E2E_DATABASE_ISOLATED: 'true', E2E_TEAMS_DEVELOPMENT: 'true',
       E2E_USER_EMAIL: 'fixture@example.test', E2E_USER_PASSWORD: 'synthetic-password' } }) };
 }
 test('warms a streamed dashboard through real CSRF, credential and chunked session cookies', async t => {
   const f = await fixture(t);
   assert.equal((await f.run()).status, 'passed');
-  assert.deepEqual(f.calls, ['/api/auth/csrf', '/api/auth/callback/credentials', '/api/auth/session', '/msp/dashboard']);
+  assert.deepEqual(f.calls, ['/api/auth/csrf', '/api/auth/callback/credentials', '/api/auth/session', '/msp/dashboard', '/msp/dashboard']);
 });
-for (const defect of ['wrong-origin', 'auth-redirect', 'wrong-session', 'http-redirect', 'server-error', 'missing-dashboard', 'error-boundary', 'timeout']) {
+for (const defect of ['wrong-origin', 'auth-redirect', 'wrong-session', 'http-redirect', 'server-error', 'error-boundary', 'client-error', 'client-redirect', 'timeout']) {
   test(`rejects ${defect} without retrying authentication or following redirects`, async t => {
-    const f = await fixture(t, defect); await assert.rejects(f.run());
+    const f = await fixture(t, defect);
+    await assert.rejects(f.run(), error => {
+      if (defect === 'client-error') {
+        assert.equal(error.diagnostics.stage, 'hydration');
+        assert.equal(error.diagnostics.code, 'dashboard-error-ui');
+      }
+      if (defect === 'client-redirect') {
+        assert.equal(error.diagnostics.stage, 'hydration');
+        assert.equal(error.diagnostics.code, 'dashboard-navigation-redirect');
+      }
+      return true;
+    });
     assert.equal(f.calls.filter(path => path === '/api/auth/callback/credentials').length, 1);
     assert.equal(f.calls.includes('/auth/msp/signin'), false);
   });
 }
 
 for (const [defect, stage, code] of [
-  ['missing-dashboard', 'dashboard', 'dashboard-marker-missing'],
+  ['missing-dashboard', 'hydration', 'deadline-exceeded'],
   ['error-boundary', 'dashboard', 'dashboard-error-sentinel'],
   ['wrong-session', 'session', 'session-identity-mismatch'],
   ['server-error', 'dashboard', 'unexpected-http-status'],
@@ -81,4 +93,10 @@ for (const [defect, stage, code] of [
     }
     return true;
   });
+});
+
+test('hydrates a loading shell into a visible dashboard in real Chromium', async t => {
+  const f = await fixture(t, 'delayed-marker');
+  assert.equal((await f.run()).status, 'passed');
+  assert.equal(f.calls.filter(path => path === '/msp/dashboard').length, 2);
 });

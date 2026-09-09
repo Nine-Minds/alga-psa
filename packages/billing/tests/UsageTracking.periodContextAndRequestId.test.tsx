@@ -14,7 +14,7 @@
  *     Add Usage date into the period when "today" falls outside it.
  */
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { todayUsageDate, usageDateToStored } from '../src/lib/usageDate';
 
@@ -67,7 +67,7 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
 
 vi.mock('@alga-psa/ui/lib/errorHandling', () => ({
   getErrorMessage: () => 'action error',
-  isActionMessageError: () => false,
+  isActionMessageError: (value: any) => typeof value?.actionError === 'string',
   isActionPermissionError: () => false,
 }));
 
@@ -146,7 +146,7 @@ vi.mock('@alga-psa/ui/components/ClientPicker', () => ({
 }));
 
 vi.mock('@alga-psa/ui/components/DataTable', () => ({
-  DataTable: () => <div data-testid="usage-table" />,
+  DataTable: ({ data }: any) => <div data-testid="usage-table">{data.map((row: any) => <span key={row.usage_id}>{row.comments}</span>)}</div>,
 }));
 
 vi.mock('@alga-psa/ui/components/ClientNameCell', () => ({ default: () => null }));
@@ -155,7 +155,7 @@ vi.mock('@alga-psa/ui/components/ConfirmationDialog', () => ({
   ConfirmationDialog: () => null,
 }));
 
-vi.mock('@alga-psa/ui/components/charts/BucketUsageChart', () => ({ default: () => null }));
+vi.mock('@alga-psa/ui/components/charts/BucketUsageChart', () => ({ default: ({ bucketData }: any) => <div>{bucketData.display_label}: {bucketData.remaining_minutes}</div> }));
 
 vi.mock('@alga-psa/ui/components/Skeleton', () => ({ Skeleton: () => null }));
 
@@ -164,7 +164,7 @@ vi.mock('@alga-psa/ui/components/LoadingIndicator', () => ({
 }));
 
 vi.mock('@alga-psa/ui/components/Alert', () => ({
-  Alert: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  Alert: ({ children, ...props }: any) => <div {...props}>{children}</div>,
   AlertDescription: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
@@ -383,4 +383,55 @@ describe('UsageTracking contextual period reporting', () => {
     if (!total) expect(actionMocks.upsertUsagePeriodTotal.mock.calls[0][0]).not.toHaveProperty('expected_revision');
     expect(actionMocks.push).toHaveBeenCalledWith('/msp/billing?tab=invoicing&subtab=generate&resumeUsagePreview=1');
   });
+});
+
+
+describe('UsageTracking bucket failure recovery', () => {
+  it.each(['thrown', 'returned'])('clears a previous balance on %s failure and retries without losing usage or filters', async (failureKind) => {
+    vi.clearAllMocks();
+    actionMocks.getAllClientsForBilling.mockResolvedValue([]);
+    actionMocks.getUsageRecords.mockResolvedValue([{ usage_id: 'retained-usage', comments: 'Retained usage row' }]);
+    actionMocks.getRemainingBucketUnits
+      .mockResolvedValueOnce([{ contract_line_id: 'line-a', service_id: 'svc-1', display_label: 'Old balance', remaining_minutes: 120 }])
+      .mockImplementationOnce(async () => {
+        if (failureKind === 'returned') return { actionError: 'private database failure' };
+        throw new Error('private database failure');
+      })
+      .mockResolvedValueOnce([{ contract_line_id: 'line-b', service_id: 'svc-1', display_label: 'Recovered balance', remaining_minutes: 60 }]);
+    const props = { initialServices, initialServiceId: 'svc-1' };
+    const { rerender } = render(<UsageTracking {...props} initialClientId="client-1" />);
+    expect(await screen.findByText('Old balance: 120')).toBeTruthy();
+    rerender(<UsageTracking {...props} initialClientId="client-2" />);
+    expect(await screen.findByRole('alert')).toHaveTextContent('Bucket balances could not be loaded');
+    expect(screen.queryByText('Old balance: 120')).toBeNull();
+    expect(screen.getByText('Retained usage row')).toBeTruthy();
+    expect(screen.queryByText('private database failure')).toBeNull();
+    const usageLoads = actionMocks.getUsageRecords.mock.calls.length;
+    fireEvent.click(screen.getByRole('button', { name: 'Retry bucket balances' }));
+    expect(await screen.findByText('Recovered balance: 60')).toBeTruthy();
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.getByText('Retained usage row')).toBeTruthy();
+    expect(actionMocks.getUsageRecords).toHaveBeenCalledTimes(usageLoads);
+    expect(actionMocks.getRemainingBucketUnits).toHaveBeenLastCalledWith(expect.objectContaining({ clientId: 'client-2' }));
+    expect(actionMocks.getUsageRecords).toHaveBeenLastCalledWith(expect.objectContaining({ client_id: 'client-2', service_id: 'svc-1' }));
+  });
+});
+
+
+it('ignores a late bucket response from the previously selected client', async () => {
+  vi.clearAllMocks();
+  actionMocks.getAllClientsForBilling.mockResolvedValue([]);
+  actionMocks.getUsageRecords.mockResolvedValue([]);
+  let finishOld!: (value: any) => void;
+  let finishCurrent!: (value: any) => void;
+  actionMocks.getRemainingBucketUnits.mockImplementationOnce(() => new Promise(resolve => { finishOld = resolve; }))
+    .mockImplementationOnce(() => new Promise(resolve => { finishCurrent = resolve; }));
+  const { rerender } = render(<UsageTracking initialServices={initialServices} initialClientId="client-1" />);
+  await waitFor(() => expect(actionMocks.getRemainingBucketUnits).toHaveBeenCalledTimes(1));
+  rerender(<UsageTracking initialServices={initialServices} initialClientId="client-2" />);
+  await waitFor(() => expect(actionMocks.getRemainingBucketUnits).toHaveBeenCalledTimes(2));
+  await act(async () => finishOld([{ contract_line_id: 'old-line', service_id: 'svc-1', display_label: 'Wrong client balance', remaining_minutes: 900 }]));
+  expect(screen.queryByText('Wrong client balance: 900')).toBeNull();
+  await act(async () => finishCurrent([{ contract_line_id: 'current-line', service_id: 'svc-1', display_label: 'Current client balance', remaining_minutes: 60 }]));
+  expect(await screen.findByText('Current client balance: 60')).toBeTruthy();
 });

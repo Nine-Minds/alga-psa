@@ -579,7 +579,7 @@
       "status": "in_progress",
       "dependsOn": [],
       "owner": "stripe_protocol",
-      "notes": "Current Teams trace confirms credentials callback succeeded but dashboard navigation remained pending with a compiling indicator beyond 90 seconds. CI also stopped Temporal before the EE development server tried to connect. Keep the frontend available and add bounded authenticated dashboard warmup before unchanged browser assertions. Nine native HTTP cases and independent integration review pass; actual app CI remains pending."
+      "notes": "Current Teams trace confirms credentials callback succeeded but dashboard navigation remained pending with a compiling indicator beyond 90 seconds. CI also stopped Temporal before the EE development server tried to connect. Keep the frontend available and add bounded authenticated dashboard warmup before unchanged browser assertions. Nine native HTTP cases and independent integration review pass; actual app CI remains pending. Native reproduction now identifies i18n loading shell as legitimate SSR without dashboard marker; helper uses authenticated Chromium hydration and passes on actual isolated native app. Node tooling CI provisions pinned e2e Playwright Chromium. Current561a6 CI predates hydration repair; fresh candidate CI still required."
     },
     {
       "id": "R070",
@@ -676,6 +676,30 @@
       "dependsOn": [],
       "owner": "stripe_protocol and coordinator",
       "notes": "Current run34308610232 terminalfailure: warmup failed94.8s after dashboardHTTP200; no rawHTML retained, exact predicate unknown. Added fixedstage/code/elapsed/status/HTMLlength+boolean diagnostics without HTML/credentials.13 nativeHTTPcases pass; assertions/deadline unchanged. R069 Teams actual recovery remains open. Evidence ci-teams-warmup-a0d077.json."
+    },
+    {
+      "id": "R082",
+      "title": "Reproduce Teams warmup with isolated native runtime",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "stripe_protocol",
+      "notes": "Reproduced HTTP200 missing dashboard marker in an owned native DB/Redis/Temporal runtime: I18nProvider SSR renders Loading translations until client hydration. Same authenticated session rendered dashboard in Chromium. Warmup now preserves HTTP/auth/error checks and waits for visible hydrated dashboard within original240-second deadline. Actual isolated native app passes; owned resources cleaned and source DB untouched. See native-teams-hydration.json. CI candidate proof remains R069."
+    },
+    {
+      "id": "R083",
+      "title": "Cover and repair remaining bucket units on Citus",
+      "status": "in_progress",
+      "dependsOn": [],
+      "owner": "qbo_protocol and coordinator",
+      "notes": "Current upgrade diagnostics show2unsupportedcomplexjoin errors from getRemainingBucketUnits despite3passingbrowsercases. UsageTracking catchesconsole-only and mayretainstaledata. Add realDB actioncoverage for membership/remainingunits/tenant isolation, preserve querysemantics and wireCitusverification. No claimofCitusfix beforeactualCI. Reviewed querysplit preserves tenant/client scope and labels/nullfallbacks;3realPostgreSQLcases+reportingtsc pass. Tier1/Citus producer/consumer wired;2runnerbehavioralchecks pass. Actual Citus CI remains required; keep taskopen. Evidence native-remaining-bucket-units.json. Independent cross-review added colliding contract/line/bucket/service UUIDs across tenants with distinct values; all4 real PostgreSQL tests pass12.24s, owned database cleaned. Actual Citus candidate validation remains pending."
+    },
+    {
+      "id": "R084",
+      "title": "Show bucket usage refresh errors without retaining stale balances",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "calendar_review",
+      "notes": "Citusquery failure exposedconsole-only UsageTracking error handling. Clear stale bucketresults and show actionable refreshfailure; verify successfulload thenfailure thenrecovery with componentbehavioral test. Queryfix separatelyR083. Reviewed10nativecases+scopedtypecheck pass; actualpre-fixalertfailure reproduced. Evidence native-bucket-usage-error-recovery.json; browserverification remains separate."
     }
   ]
 }

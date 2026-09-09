@@ -13,7 +13,7 @@ test('Citus runner records actual Vitest collection and fails before execution w
   const write = (file, content) => { mkdirSync(path.dirname(path.join(root, file)), { recursive: true }); writeFileSync(path.join(root, file), content); };
   cpSync(path.join(source, 'scripts/lib'), path.join(root, 'scripts/lib'), { recursive: true });
   cpSync(path.join(source, 'scripts/run-citus-runtime-tests.mjs'), path.join(root, 'scripts/run-citus-runtime-tests.mjs'));
-  const files = ['ee/temporal-workflows/src/__tests__/integration/workflowInvocationPersistence.integration.test.ts', 'server/src/test/integration/invoiceTicketImmutable.integration.test.ts'];
+  const files = ['ee/temporal-workflows/src/__tests__/integration/workflowInvocationPersistence.integration.test.ts', 'server/src/test/integration/invoiceTicketImmutable.integration.test.ts', 'server/src/test/integration/remainingBucketUnits.integration.test.ts'];
   for (const file of files) write(file, "test('fixture arithmetic', () => expect(2 + 3).toBe(5));\n");
   write('.gitignore', 'node_modules/\ntest-results/\n');
   const configure = include => write('server/vitest.config.mjs', `export default ${JSON.stringify({ test: { globals: true, include, maxWorkers: 1, fileParallelism: false } })};`);
@@ -27,8 +27,8 @@ test('Citus runner records actual Vitest collection and fails before execution w
   const read = name => JSON.parse(readFileSync(path.join(root, `test-results/citus-runtime/${name}.json`), 'utf8'));
   const good = run(); assert.equal(good.status, 0, good.stdout + good.stderr);
   assert.equal(read('discovery').status, 'passed');
-  assert.equal(read('evidence').counts.passed, 2);
-  assert.equal(read('collected').length, 2);
+  assert.equal(read('evidence').counts.passed, 3);
+  assert.equal(read('collected').length, 3);
   configure([path.relative('server', files[0])]);
   const missing = run(); assert.equal(missing.status, 1, missing.stdout + missing.stderr);
   assert.equal(read('collected').length, 1);

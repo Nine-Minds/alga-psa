@@ -18,6 +18,7 @@ test('Citus CLI independently requires both complete suites and replaces stale g
     'citus-runtime': [
       'ee/temporal-workflows/src/__tests__/integration/workflowInvocationPersistence.integration.test.ts',
       'server/src/test/integration/invoiceTicketImmutable.integration.test.ts',
+      'server/src/test/integration/remainingBucketUnits.integration.test.ts',
     ],
     'temporal-database': [
       'ee/temporal-workflows/src/__tests__/e2e/tenant-creation-workflow.e2e.test.ts',

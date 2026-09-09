@@ -3453,3 +3453,11 @@ Currenta0d077 CI regression audit records exact passing assertions: Tier1 seeded
 Currenta0d077 primarybrowser artifacts verified:42CE+47EE firstattemptpass, no retries/failures/missing, fullselection andcleanunchanged merge3db700f653e28ddd322dfdb652f1689a54f6b65d. Evidence ci-primary-browsers-a0d077.json. CE APIstep passed; EE laterphases and serverunit remainlive. No push.
 
 Run34308610232 terminalfailure updated2026-09-09T05:03:42Z.15010unitcases/2749files pass,3taxTODOstillrejectcompletegate. Bothprimarybrowsers89firstattemptpass, bothAPIsteps andPG/Citusupgradegatespass. TeamswarmupfailedafterdashboardHTTP200;13nativecases verify sanitized diagnosticfollowup. PG2transientlogindenials remain evidence for queued primarypoolcleanup. Alljobsfinished; reviewedqueuedbatch may nowpublish.
+
+Current Citusupgrade diagnostics confirm3firstattemptbrowserpasses but2unsupportedbucketquery errors; newR083 coversmissingremainingunits boundary. R082nativeTeams reproduction requirescompatiblePG16+dump client; sharedfixturestartup avoided in favorofownedDB/Redis/Temporal. Newpublished561a6 CI34313560297 islive; nopush.
+
+### Coordinated native review: Teams hydration and bucket failures
+
+The native Teams reproduction traced missing SSR dashboard markup to the i18n loading shell; authenticated Chromium reaches the real dashboard. Preserve the original240-second deadline and HTTP/auth/error checks, then assert hydrated visibility. Node tooling now installs the e2e package lock and matching Chromium explicitly; workflow actionlint passes. Independent reviews found no introduced bucket-query semantics or UI retry/stale-response defect. Follow-up review strengthens browser negative assertions and tenant child-ID collision coverage before final batch validation. Active CI34313560297 tests561a6, which predates these changes; do not push until it is terminal.
+
+Final cross-review: Teams fixtures15/15 pass with exact browser failure predicates and fixture-only cold-launch budgets; billing component10/10 and scoped typecheck pass; real PostgreSQL bucket suite4/4 now includes colliding child IDs across tenants; Citus runner/consumer behavioral checks2/2 pass. No local Docker. Commit reviewed batch before full native tooling execution; current CI remains on preceding561a6 source.
