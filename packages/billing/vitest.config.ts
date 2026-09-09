@@ -37,6 +37,18 @@ export default defineConfig({
       // share one UTC-pinned formatter — listed for the same reason as above.
       'src/lib/invoice-template-ast/fieldFormatting.test.ts',
       'src/lib/invoice-template-ast/react-renderer.test.tsx',
+      // Quote grouping, catalog descriptions, and totals highlight colors:
+      // discount bucketing/signs, the stacked name-over-description column, and
+      // the editable emphasized-row style — listed for the same reason as above.
+      'src/lib/adapters/quoteAdapters.test.ts',
+      'src/lib/adapters/quoteAdapters.groupedRender.test.ts',
+      'src/lib/quote-template-ast/standardTemplates.test.ts',
+      'src/components/billing-dashboard/quotes/quoteLineItemDraft.test.ts',
+      'src/components/invoice-designer/ast/workspaceAst.roundtrip.styles.test.ts',
+      'src/components/invoice-designer/ast/workspaceAst.roundtrip.templates.test.ts',
+      'src/components/invoice-designer/inspector/widgets/TableEditorWidget.quoteItemFields.test.tsx',
+      // PDF export pool: a failed close must not burn a slot.
+      'src/services/browserPoolService.test.ts',
     ],
     testTimeout: 20000,
     // Match testTimeout. The default hookTimeout is 10s, so a beforeAll doing
