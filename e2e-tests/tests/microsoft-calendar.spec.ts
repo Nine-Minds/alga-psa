@@ -101,7 +101,9 @@ if (process.env.E2E_EDITION !== 'enterprise') {
         await expect.poll(async () => (await database('schedule_entries').where({ ...scope, entry_id: outboundEntry.entry_id })).length,
           { timeout: 60000 }).toBe(0);
         await expect.poll(async () => await emulators.state('msgraph', 'calendar-events'), { timeout: 60000 }).toEqual([]);
-        expect(await database('calendar_event_mappings').where(outboundMappingScope)).toEqual([]);
+        // Remote DELETE completes before the subscriber commits mapping cleanup.
+        await expect.poll(async () => await database('calendar_event_mappings').where(outboundMappingScope),
+          { timeout: 60000 }).toEqual([]);
         await page.reload();
         await expect(outboundEvent).toHaveCount(0);
         const outboundHistory = await emulators.requests('msgraph');

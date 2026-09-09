@@ -836,6 +836,14 @@
       "dependsOn": [],
       "owner": "stripe_protocol",
       "notes": "Reusable CLI actual native pass on dirty521c9c94d6: realNextAuth routes/options, correcttenant/user/email session, oneMicrosoft OID accountlink, wrongstate rejected beforeexchange with unchangedidentity. Authority PKCE/RS256 fixture behavior separatelytested; observedJWKS0/noncefalse, no appsignature/nonce/liveconsent claim. Native evidence retains failedattempts/testedhashes and scopedcleanup. Subsequent signalcleanup subprocess tests pass. CI registration reusesbuiltEEimage and explicitloopbackauthority; host verifies actualimage/mounts/cleansource, readiness independently revalidatesrawcallback/runner. Current-source CI pending; keepF034/T028 open."
+    },
+    {
+      "id": "R102",
+      "title": "Wait for calendar deletion transaction before asserting mapping cleanup",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "calendar_review",
+      "notes": "Current c523 EE browser45firstattempt+2flaky: bothcalendarrecoverycases readmapping immediatelyafterremoteDELETEvisible, beforeasyncsubscriberDBtransactioncommit. Sharedassertionnowboundedpollforexactemptyresult usingexisting60sassertionbudget; overallcasetimeout/retriesunchanged.4/4browsercasescollect,5/5nearbydelegator/subscribertestspass (not deferredcommit proof). Actualcurrentbrowserexecutionpending; no persistentproductorphan claim."
     }
   ]
 }
