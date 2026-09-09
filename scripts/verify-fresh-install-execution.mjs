@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { mkdirSync, readdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readCandidateExecutionBundle } from './lib/candidate-execution-artifacts.mjs';
@@ -7,6 +7,9 @@ import { evaluateCandidateExecution } from './lib/candidate-execution-gate.mjs';
 import { repositoryTestFiles, isAdditionalWorkspaceTest } from './lib/test-discovery.mjs';
 import { readChangedFiles, selectIntegration } from './lib/integration-selection.mjs';
 import { testRevision } from './lib/test-revision.mjs';
+import { verifyBrowserProviderReadiness } from './lib/browser-provider-readiness.mjs';
+const providerPolicy = JSON.parse(readFileSync(new URL('./browser-provider-requirements.json', import.meta.url), 'utf8'));
+if (providerPolicy.schemaVersion !== 1) throw new Error('Unsupported browser provider policy');
 
 // These product journeys remain required even if a test file disappears from
 // the candidate checkout. Newly landed journeys are added by tracked discovery.
@@ -33,22 +36,22 @@ const criticalBrowserFiles = [
   'e2e-tests/tests/xero-export.spec.ts',
 ];
 
-function browserDirectory(directory) {
+function browserArtifact(directory, filename) {
   const found = [];
   const visit = current => {
     for (const entry of readdirSync(current, { withFileTypes: true })) {
       const target = path.join(current, entry.name);
       if (entry.isDirectory()) visit(target);
-      else if (entry.name === 'evidence.json' && path.basename(current) === 'execution-evidence') found.push(current);
+      else if (entry.name === filename) found.push(target);
     }
   };
   visit(directory);
-  if (found.length !== 1) throw new Error(`Expected one browser execution artifact, received ${found.length}`);
+  if (found.length !== 1) throw new Error(`Expected one ${filename} browser artifact, received ${found.length}`);
   return found[0];
 }
 
-export function verifyFreshInstallExecution({ root, revision, input, sourceRoot = root, candidates, jobResults, shouldRun }) {
-  const failures = [], requirements = [], bundles = [];
+export function verifyFreshInstallExecution({ root, revision, input, sourceRoot = root, candidates, jobResults, shouldRun, runId, runAttempt }) {
+  const failures = [], requirements = [], bundles = [], providerReadiness = [];
   // A passing new journey must become part of the permanent floor; otherwise
   // its later deletion could remove both candidate and collection evidence.
   for (const file of candidates.filter(file => file.startsWith('e2e-tests/tests/'))) {
@@ -75,11 +78,20 @@ export function verifyFreshInstallExecution({ root, revision, input, sourceRoot 
           : [...new Set([...criticalBrowserFiles, ...candidates.filter(file => file.startsWith('e2e-tests/tests/'))])] });
         try {
           const directory = format === 'vitest' ? path.join(input, `fresh-install-api-${edition}`)
-            : browserDirectory(path.join(input, `fresh-install-playwright-${edition}`));
+            : path.dirname(browserArtifact(path.join(input, `fresh-install-playwright-${edition}`), 'evidence.json'));
           const bundle = readCandidateExecutionBundle({ id, format, directory, sourceRoot,
             outcome: jobResults?.['production-browser']?.result });
           if (format === 'playwright' && bundle.collected?.config?.metadata?.edition !== edition) {
             failures.push(`${id}: browser collection has a missing or different edition`);
+          }
+          if (format === 'playwright') {
+            const verified = verifyBrowserProviderReadiness({ collected: bundle.collected, report: bundle.report,
+              evidence: JSON.parse(readFileSync(path.join(directory, 'evidence.json'), 'utf8')),
+              root: sourceRoot, revision, runId, runAttempt,
+              artifactManifest: JSON.parse(readFileSync(browserArtifact(path.join(input, `fresh-install-playwright-${edition}`), 'browser-artifact-manifest.json'), 'utf8')),
+              requirements: providerPolicy.editions?.[edition]?.requirements });
+            providerReadiness.push({ edition, ...verified });
+            if (verified.status !== 'passed') failures.push(...verified.failures.map(failure => `${id}: provider readiness: ${failure}`));
           }
           bundles.push(bundle);
         } catch (error) { failures.push(`${id}: ${error.message}`); }
@@ -87,6 +99,7 @@ export function verifyFreshInstallExecution({ root, revision, input, sourceRoot 
     }
     result = evaluateCandidateExecution({ root, revision, requirements, bundles });
     result.scope = 'fresh-install-execution';
+    result.providerReadiness = providerReadiness;
   }
   result.failures.push(...failures);
   if (result.failures.length) result.status = 'failed';
@@ -102,7 +115,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     const selection = selectIntegration(readChangedFiles({ cwd: root, base: process.env.TIER1_BASE_SHA, head: source.revision }));
     result = verifyFreshInstallExecution({ root, revision: source.revision,
       input: path.join(root, 'test-results/fresh-install-input'), candidates: repositoryTestFiles(root),
-      shouldRun: selection.shouldRun, jobResults: JSON.parse(process.env.FRESH_INSTALL_JOB_RESULTS || '{}') });
+      shouldRun: selection.shouldRun, runId: process.env.GITHUB_RUN_ID, runAttempt: Number(process.env.GITHUB_RUN_ATTEMPT), jobResults: JSON.parse(process.env.FRESH_INSTALL_JOB_RESULTS || '{}') });
   } catch (error) { result = { schemaVersion: 1, scope: 'fresh-install-execution', status: 'failed', failures: [error.message] }; }
   const output = path.join(root, 'test-results/fresh-install-gate');
   mkdirSync(output, { recursive: true });

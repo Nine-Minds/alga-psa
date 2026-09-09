@@ -161,6 +161,27 @@ test('provider observations bind real-format attachments to verified archives wi
   }
   const aborted = data(); aborted.requests.xero.requests[0].status = null; aborted.requests.xero.requests[0].aborted = true;
   assert.equal(execute([attachment(aborted)]).journeys[0].attempts[0].providerObservations.status, 'observed');
+  const smtp = { providers: ['smtp-sink'], requests: { 'smtp-sink': {
+    supported: true, complete: true, generation: 1, capacity: 1000, dropped: 0, inFlight: 0,
+    requests: [{ protocol: 'smtp', command: 'DATA', sequence: 1, status: 250, aborted: false }],
+  } } };
+  assert.deepEqual(execute([attachment(smtp)]).journeys[0].attempts[0].providerObservations.providers,
+    [{ provider: 'smtp-sink', mode: 'emulator', supported: true, complete: true, requestCount: 1, dropped: 0, inFlight: 0 }]);
+  for (const status of [450, 550, 552, null]) {
+    const value = structuredClone(smtp); value.requests['smtp-sink'].requests[0].status = status;
+    value.requests['smtp-sink'].requests[0].aborted = status === null;
+    assert.equal(execute([attachment(value)]).journeys[0].attempts[0].providerObservations.status, 'observed');
+  }
+  for (const mutate of [
+    r => { r.protocol = 'http'; }, r => { delete r.protocol; }, r => { r.command = 'AUTH'; },
+    r => { r.method = 'POST'; }, r => { r.path = '/fake-http'; }, r => { r.status = 200; },
+    r => { r.status = 354; }, r => { r.status = null; },
+  ]) {
+    const value = structuredClone(smtp); mutate(value.requests['smtp-sink'].requests[0]);
+    assert.equal(execute([attachment(value)]).journeys[0].attempts[0].providerObservations.reason, 'malformed-observations');
+  }
+  const wrongProvider = data(); wrongProvider.requests.xero.requests = smtp.requests['smtp-sink'].requests;
+  assert.equal(execute([attachment(wrongProvider)]).journeys[0].attempts[0].providerObservations.reason, 'malformed-observations');
   const unsupported = data(); unsupported.providers = ['smtp-sink'];
   unsupported.requests = { 'smtp-sink': { supported: false, complete: false, generation: 0, capacity: 1000, dropped: 0, inFlight: 0, requests: [] } };
   assert.deepEqual(execute([attachment(unsupported)]).journeys[0].attempts[0].providerObservations.providers,

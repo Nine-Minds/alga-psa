@@ -63,10 +63,12 @@ export class SmtpSinkCore implements EmulatorCore {
   readonly emails: CapturedEmail[] = [];
   rejectWithCode: number | null = null;
   private nextId = 1;
+  generation = 0;
 
   constructor(readonly env: HostEnv) {}
 
   reset(): void {
+    this.generation++;
     this.emails.length = 0;
     this.rejectWithCode = null;
     this.nextId = 1;
@@ -90,23 +92,42 @@ const smtpSinkEmulator: EmulatorPackage<SmtpSinkCore> = {
 
   createCore: (env) => new SmtpSinkCore(env),
 
-  async serve(core, port, env) {
+  requestHistoryProtocol: 'smtp',
+  async serve(core, port, env, journal) {
+    const pending = new Map<string, () => void>();
     const server = new SMTPServer({
       authOptional: true,
       disabledCommands: ['STARTTLS'],
-      onData(stream, _session, callback) {
-        if (core.rejectWithCode !== null) {
+      onClose(session) { pending.get(session.id)?.(); },
+      onData(stream, session, callback) {
+        const finish = journal.begin();
+        const generation = core.generation;
+        const rejectCode = core.rejectWithCode;
+        let done = false;
+        const abort = () => { if (done) return; done = true; pending.delete(session.id); finish(null, true); };
+        pending.set(session.id, abort);
+        stream.once('error', abort);
+        const respond = (error?: Error & { responseCode?: number }) => {
+          if (done) return;
+          done = true;
+          pending.delete(session.id);
+          callback(error);
+          // smtp-server uses 450 for an error without an explicit responseCode.
+          finish(error ? error.responseCode || 450 : 250, false);
+        };
+        if (rejectCode !== null) {
           stream.on('data', () => undefined);
           stream.on('end', () => {
             const error = new Error('Rejected by smtp-sink fault') as Error & { responseCode: number };
-            error.responseCode = core.rejectWithCode ?? 550;
-            callback(error);
+            error.responseCode = rejectCode;
+            respond(error);
           });
           return;
         }
         simpleParser(stream)
           .then((mail: ParsedMailSlice) => {
-            core.capture({
+            if (done) return;
+            if (generation === core.generation) core.capture({
               from: mail.from?.text ?? '',
               to: (Array.isArray(mail.to) ? mail.to : mail.to ? [mail.to] : []).flatMap((addr) =>
                 addr.value.map((v) => v.address ?? ''),
@@ -126,11 +147,11 @@ const smtpSinkEmulator: EmulatorPackage<SmtpSinkCore> = {
                 size: attachment.size,
               })),
             });
-            callback();
+            respond();
           })
           .catch((error: Error) => {
-            env.log('smtp-sink failed to parse message', { error: error.message });
-            callback(error);
+            env.log('smtp-sink failed to parse message');
+            respond(error);
           });
       },
     });

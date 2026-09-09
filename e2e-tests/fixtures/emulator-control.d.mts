@@ -1,11 +1,31 @@
-export interface RequestHistory {
+export interface RequestRecordBase {
+  sequence: number;
+  startedAt: string;
+  durationMs: number;
+  status: number | null;
+  aborted: boolean;
+}
+
+export interface HttpRequestRecord extends RequestRecordBase {
+  method: string;
+  path: string;
+}
+
+export interface SmtpRequestRecord extends RequestRecordBase {
+  protocol: 'smtp';
+  command: 'DATA';
+}
+
+export type ProviderRequestRecord = HttpRequestRecord | SmtpRequestRecord;
+
+export interface RequestHistory<RecordType extends ProviderRequestRecord = ProviderRequestRecord> {
   supported: boolean;
   complete: boolean;
   generation: number;
   capacity: number;
   dropped: number;
   inFlight: number;
-  requests: Array<{ sequence: number; method: string; path: string; startedAt: string; durationMs: number; status: number | null; aborted: boolean }>;
+  requests: RecordType[];
 }
 
 export class EmulatorControl {
@@ -19,6 +39,8 @@ export class EmulatorControl {
   arm(provider: string, name: string, params?: unknown): Promise<unknown>;
   disarm(provider: string, name: string): Promise<unknown>;
   state<T = unknown>(provider: string, view: string): Promise<T>;
+  requests(provider: 'smtp-sink'): Promise<RequestHistory<SmtpRequestRecord>>;
+  requests(provider: 'msgraph' | 'qbo' | 'xero' | 'stripe'): Promise<RequestHistory<HttpRequestRecord>>;
   requests(provider: string): Promise<RequestHistory>;
   reset(): Promise<void>;
   diagnostics(): Promise<{ controlOrigin: string; providers: string[]; operations: EmulatorControl['operations']; requests: Record<string, RequestHistory> }>;

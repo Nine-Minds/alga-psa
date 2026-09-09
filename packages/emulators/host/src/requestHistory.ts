@@ -11,9 +11,9 @@ export interface VendorRequestRecord {
   aborted: boolean;
 }
 
-/** Bounded, in-memory HTTP evidence. Never stores query strings, headers or bodies. */
+/** Bounded protocol evidence. Never stores query strings, headers, envelopes or bodies. */
 export class VendorRequestHistory {
-  private records: VendorRequestRecord[] = [];
+  private records: (VendorRequestRecord | (Omit<VendorRequestRecord, 'method' | 'path'> & { protocol: 'smtp'; command: 'DATA' }))[] = [];
   private generation = 0;
   private sequence = 0;
   private dropped = 0;
@@ -42,6 +42,28 @@ export class VendorRequestHistory {
       dropped: this.dropped,
       inFlight: this.inFlight,
       requests: this.records.map(record => ({ ...record })),
+    };
+  }
+
+  /** SMTP DATA only: no envelope, message, authentication or socket metadata. */
+  beginSmtp(clock: Clock): (status: number | null, aborted: boolean) => void {
+    const generation = this.generation;
+    const sequence = ++this.sequence;
+    const startedAt = clock.now().toISOString();
+    const start = performance.now();
+    this.inFlight++;
+    let recorded = false;
+    return (status, aborted) => {
+      if (recorded) return;
+      if (aborted ? status !== null : status !== 250 && !(status !== null && Number.isInteger(status) && status >= 400 && status <= 599)) {
+        throw new Error('Invalid SMTP DATA outcome');
+      }
+      recorded = true;
+      if (generation !== this.generation) return;
+      this.inFlight--;
+      if (this.records.length === this.capacity) { this.records.shift(); this.dropped++; }
+      this.records.push({ protocol: 'smtp', command: 'DATA', sequence, startedAt,
+        durationMs: Math.max(0, performance.now() - start), status, aborted });
     };
   }
 

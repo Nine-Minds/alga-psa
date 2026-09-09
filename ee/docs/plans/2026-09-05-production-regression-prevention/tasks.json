@@ -844,6 +844,14 @@
       "dependsOn": [],
       "owner": "calendar_review",
       "notes": "Current c523 EE browser45firstattempt+2flaky: bothcalendarrecoverycases readmapping immediatelyafterremoteDELETEvisible, beforeasyncsubscriberDBtransactioncommit. Sharedassertionnowboundedpollforexactemptyresult usingexisting60sassertionbudget; overallcasetimeout/retriesunchanged.4/4browsercasescollect,5/5nearbydelegator/subscribertestspass (not deferredcommit proof). Actualcurrentbrowserexecutionpending; no persistentproductorphan claim."
+    },
+    {
+      "id": "R103",
+      "title": "Require actual per-journey provider observations and record SMTP DATA transactions",
+      "status": "in_progress",
+      "dependsOn": [],
+      "owner": "coordinator",
+      "notes": "Independentauditfound sanitizedproviderobservations were reporting-only. Bind committedfulljourney/provider/mode policy to actualrawbrowserreports/cleansource/verifiedCIarchives atfreshinstallgate. Rejectmissing/wrong/incomplete/empty/unregisteredtraffic and retries. CurrentCEreplayfails specificallyunsupportedSMTP; EEalsoflaky. Implementrealmetadata-onlySMTPDATAjournal with250/4xx/5xx/abort,inflight/drop/resetisolation; nofakeHTTPor exemption. NativeSMTP7/7,host28/28,tsc; provider/freshgate/metrics19/19 pass. Fullreview/canonicaltoolingpending; production/release rolloutF036/T030 remainsopen."
     }
   ]
 }

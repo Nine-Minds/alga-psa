@@ -68,3 +68,19 @@ SSO/complete consent and scope enforcement, rich/lifecycle notifications, and
 complete vendor payload schemas remain outside that coverage. Graph's explicit
 501 `EmulatorUnsupportedOperation` is an emulator diagnostic, not a vendor
 response contract. A successful route must never stand in for an unsupported one.
+
+
+## Microsoft user callback evidence
+
+The separate [NextAuth callback lane](../../ee/docs/plans/2026-09-05-production-regression-prevention/microsoft-coverage-boundaries.md#real-nextauth-callback-lane)
+uses a test-only canonical-authority transport fixture, not the msgraph emulator's
+OAuth endpoints. One native development run exercised actual application sign-in,
+Microsoft account linking and invalid-state rejection with persisted identity
+checks. CI registration is present; execution remains pending. It observed zero
+JWKS requests and no nonce, so it does not establish application signature
+verification, nonce rejection, or live Microsoft consent. This adds application
+callback evidence without expanding the msgraph emulator's protocol-parity claims.
+
+## SMTP transaction evidence
+
+The SMTP sink records bounded DATA transactions through the host request-history endpoint: acceptance, rejection, processing failure and interrupted transfers, with in-flight, dropped and reset-generation accounting. Records contain protocol, command, sequence, timestamps and outcome only; they contain no envelope, credentials or message content. Native transport tests cover these outcomes and isolation across reset. Greeting, envelope and authentication failures before DATA are not represented. The browser readiness consumer requires complete, nonempty SMTP evidence for the inbound-email journey; this is emulator observation, not live mail-provider parity.

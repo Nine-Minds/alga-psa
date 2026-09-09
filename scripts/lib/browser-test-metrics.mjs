@@ -101,11 +101,16 @@ function providerObservations(result, { revision, cleanSource, manifest }) {
         || journal.complete !== (journal.supported && journal.dropped === 0 && journal.inFlight === 0)) throw new Error();
       const sequences = new Set();
       for (const request of journal.requests) {
-        if (!integer(request?.sequence) || request.sequence < 1 || sequences.has(request.sequence)
-          || !['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'].includes(request.method)
-          || typeof request.path !== 'string' || !request.path.startsWith('/')
-          || typeof request.aborted !== 'boolean' || request.aborted !== (request.status === null)
-          || !(request.status === null || Number.isInteger(request.status) && request.status >= 100 && request.status <= 599)) throw new Error();
+        const smtp = provider === 'smtp-sink' && request?.protocol === 'smtp';
+        const protocolValid = smtp
+          ? request.command === 'DATA' && request.method === undefined && request.path === undefined
+            && (request.status === null || request.status === 250 || Number.isInteger(request.status) && request.status >= 400 && request.status <= 599)
+          : provider !== 'smtp-sink' && request?.protocol === undefined && request?.command === undefined
+            && ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'].includes(request?.method)
+            && typeof request.path === 'string' && request.path.startsWith('/')
+            && (request.status === null || Number.isInteger(request.status) && request.status >= 100 && request.status <= 599);
+        if (!integer(request?.sequence) || request.sequence < 1 || sequences.has(request.sequence) || !protocolValid
+          || typeof request.aborted !== 'boolean' || request.aborted !== (request.status === null)) throw new Error();
         sequences.add(request.sequence);
       }
       return { provider, mode: 'emulator', supported: journal.supported, complete: journal.complete,

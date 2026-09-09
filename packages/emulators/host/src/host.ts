@@ -112,7 +112,7 @@ export class EmulatorHost {
         registerTransportFaults(controls, transport);
       }
       pkg.register(controls, core);
-      const requests = new VendorRequestHistory(Boolean(pkg.wire), options.requestHistoryLimit);
+      const requests = new VendorRequestHistory(Boolean(pkg.wire) || pkg.requestHistoryProtocol === 'smtp', options.requestHistoryLimit);
       this.instances.set(pkg.id, { pkg, core, controls, transport, requests, port: 0 });
     }
     for (const scenario of options.scenarios ?? []) {
@@ -227,7 +227,9 @@ export class EmulatorHost {
           this.servers.push(server);
           instance.port = boundPort(server);
         } else {
-          const server = await instance.pkg.serve!(instance.core, requestedPort, this.env);
+          const server = await instance.pkg.serve!(instance.core, requestedPort, this.env, {
+            begin: () => instance.requests.beginSmtp(this.env.clock),
+          });
           this.customServers.push(server);
           instance.port = server.port;
         }
