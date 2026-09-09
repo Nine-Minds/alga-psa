@@ -63,12 +63,19 @@ export class BrowserPoolService {
   }
 
   async releaseBrowser(browser: Browser | null): Promise<void> {
-    if (browser) {
+    if (!browser) {
+      return;
+    }
+
+    try {
       if (this.browserPool.length < this.maxBrowsers && browser.isConnected()) {
         this.browserPool.push(browser);
       } else {
         await browser.close();
       }
+    } finally {
+      // A rejecting close() used to skip this decrement and burn the slot for
+      // the lifetime of the process; maxBrowsers failures wedged getBrowser.
       this.activeBrowsers--;
     }
   }
