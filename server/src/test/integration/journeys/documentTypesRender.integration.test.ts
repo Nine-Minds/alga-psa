@@ -7,6 +7,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 import { tenantDb } from '@alga-psa/db';
+import { getStandardQuoteTemplateAstByCode } from '@alga-psa/billing/lib/quote-template-ast/standardTemplates';
 import { createTestDbConnection } from '../../../../test-utils/dbConfig';
 import { setupCommonMocks } from '../../../../test-utils/testMocks';
 import { createTestService } from '../../../../test-utils/billingTestHelpers';
@@ -26,6 +27,11 @@ import { createTestService } from '../../../../test-utils/billingTestHelpers';
 // quote template seeded by the migrations (standard_quote_document_templates);
 // sales-order documents resolve through the generic document-type registry
 // (client override → tenant default → in-code standard AST).
+//
+// A second quote runs the same pipeline through the GROUPED standard template,
+// where the reported cadence bugs live: a discount aimed at a monthly service
+// has to print in — and reduce — the Monthly group, and the Description cell
+// has to stack the item name over the catalog description.
 
 let db: Knex;
 let tenantId: string;
@@ -109,11 +115,13 @@ const TEST_TIMEOUT = 120_000;
 // quotes.quote_number and sales_orders.so_number are unique per tenant.
 const runTag = uuidv4().slice(0, 8);
 const QUOTE_NUMBER = `Q-${runTag}`;
+const GROUPED_QUOTE_NUMBER = `QG-${runTag}`;
 const SO_NUMBER = `SO-${runTag}`;
 
 let storageBaseDir: string;
 let clientId: string;
 let quoteId: string;
+let groupedQuoteId: string;
 let salesOrderId: string;
 
 function expectStructurallyValidPdf(pdfBuffer: Buffer): void {
@@ -295,6 +303,146 @@ describe('journey: quote / sales order / packing slip render through the shared 
         created_at: '2026-06-20T00:00:02Z',
       },
     ]);
+
+    // --- grouped quote fixture (alga-2026-0002353 / alga-2026-0002354): the
+    // customer's shape — two MONTHLY services, a $5 discount aimed at each, and
+    // two one-time products. The grouped template prints Monthly and One-time
+    // groups with their own totals, and the report was that Monthly ignored the
+    // discounts. The second discount is stored is_recurring=false on purpose:
+    // that is how rows saved before the cadence fix look, and grouping must
+    // follow what a discount targets, not the flags on the discount row.
+    const basicSupportServiceId = await createTestService(contextLike as any, {
+      service_name: 'Basic Support',
+      billing_method: 'fixed',
+      default_rate: 2500,
+      unit_of_measure: 'month'
+    });
+    const premiumSupportServiceId = await createTestService(contextLike as any, {
+      service_name: 'Premium Support',
+      billing_method: 'fixed',
+      default_rate: 3500,
+      unit_of_measure: 'month'
+    });
+
+    groupedQuoteId = uuidv4();
+    const basicSupportItemId = uuidv4();
+    await tenantTable(db, tenantId, 'quotes').insert({
+      tenant: tenantId,
+      quote_id: groupedQuoteId,
+      quote_number: GROUPED_QUOTE_NUMBER,
+      client_id: clientId,
+      title: 'Support & Hardware',
+      quote_date: '2026-06-01T00:00:00Z',
+      valid_until: '2026-09-15T00:00:00Z',
+      status: 'draft',
+      subtotal: 26900,
+      discount_total: 1000,
+      tax: 0,
+      total_amount: 25900,
+      currency_code: 'USD',
+      created_at: db.fn.now(),
+      updated_at: db.fn.now()
+    });
+    await tenantTable(db, tenantId, 'quote_items').insert([
+      {
+        tenant: tenantId,
+        quote_item_id: basicSupportItemId,
+        quote_id: groupedQuoteId,
+        service_id: basicSupportServiceId,
+        service_name: 'Basic Support',
+        service_item_kind: 'service',
+        description: 'Standard support package',
+        quantity: 1,
+        unit_price: 2500,
+        total_price: 2500,
+        tax_amount: 0,
+        net_amount: 2500,
+        display_order: 1,
+        is_recurring: true,
+        billing_frequency: 'monthly',
+      },
+      {
+        tenant: tenantId,
+        quote_item_id: uuidv4(),
+        quote_id: groupedQuoteId,
+        service_id: premiumSupportServiceId,
+        service_name: 'Premium Support',
+        service_item_kind: 'service',
+        description: 'Priority response package',
+        quantity: 1,
+        unit_price: 3500,
+        total_price: 3500,
+        tax_amount: 0,
+        net_amount: 3500,
+        display_order: 2,
+        is_recurring: true,
+        billing_frequency: 'monthly',
+      },
+      {
+        // Targets the monthly line by item id.
+        tenant: tenantId,
+        quote_item_id: uuidv4(),
+        quote_id: groupedQuoteId,
+        description: 'Discount',
+        quantity: 1,
+        unit_price: 500,
+        total_price: 500,
+        tax_amount: 0,
+        net_amount: 500,
+        display_order: 3,
+        is_discount: true,
+        discount_type: 'fixed',
+        applies_to_item_id: basicSupportItemId,
+        is_recurring: true,
+        billing_frequency: 'monthly',
+      },
+      {
+        // Targets the other monthly line by service id, and carries the
+        // pre-fix one-time cadence.
+        tenant: tenantId,
+        quote_item_id: uuidv4(),
+        quote_id: groupedQuoteId,
+        description: 'Discount',
+        quantity: 1,
+        unit_price: 500,
+        total_price: 500,
+        tax_amount: 0,
+        net_amount: 500,
+        display_order: 4,
+        is_discount: true,
+        discount_type: 'fixed',
+        applies_to_service_id: premiumSupportServiceId,
+        is_recurring: false,
+      },
+      {
+        tenant: tenantId,
+        quote_item_id: uuidv4(),
+        quote_id: groupedQuoteId,
+        service_name: 'PoE Switch 8-port',
+        service_item_kind: 'product',
+        description: 'Gigabit, fanless',
+        quantity: 1,
+        unit_price: 20000,
+        total_price: 20000,
+        tax_amount: 0,
+        net_amount: 20000,
+        display_order: 5,
+      },
+      {
+        tenant: tenantId,
+        quote_item_id: uuidv4(),
+        quote_id: groupedQuoteId,
+        service_name: 'Cat6 Patch Cable 2m',
+        service_item_kind: 'product',
+        description: 'Snagless, blue',
+        quantity: 1,
+        unit_price: 900,
+        total_price: 900,
+        tax_amount: 0,
+        net_amount: 900,
+        display_order: 6,
+      },
+    ]);
   }, HOOK_TIMEOUT);
 
   afterAll(async () => {
@@ -329,6 +477,46 @@ describe('journey: quote / sales order / packing slip render through the shared 
     // The totals card reads the quotes-row header totals, not a recompute.
     expect(preview.html).toContain('$1,250.00'); // subtotal 125000¢
     expect(preview.html).toContain('$110.94'); // tax 11094¢
+  }, TEST_TIMEOUT);
+
+  it('renders the grouped quote with its discounts inside the monthly group', async () => {
+    const pdfService = createPDFGenerationService(tenantId);
+    const groupedAst = getStandardQuoteTemplateAstByCode('standard-quote-grouped');
+    expect(groupedAst).not.toBeNull();
+
+    const pdfBuffer = await pdfService.generatePDF({
+      quoteId: groupedQuoteId,
+      templateAst: groupedAst!,
+      userId: journeyUserId,
+    });
+    expectStructurallyValidPdf(pdfBuffer);
+
+    const preview = await pdfService.renderQuotePreview({
+      quoteId: groupedQuoteId,
+      templateAst: groupedAst!,
+    });
+
+    // The grouped template prints one table per cadence; slice them apart so
+    // membership is asserted, not just the presence of a string somewhere.
+    const monthlyTable = preview.html.slice(
+      preview.html.indexOf('id="monthly-items"'),
+      preview.html.indexOf('id="onetime-section-label"')
+    );
+    const onetimeTable = preview.html.slice(preview.html.indexOf('id="onetime-items"'));
+
+    // alga-2026-0002353: both discounts land in the monthly group — the one
+    // aimed by item id and the one-time-flagged one aimed by service id — and
+    // print as deductions. Nothing takes them off the one-time group.
+    expect(monthlyTable.match(/-\$5\.00/g)).toHaveLength(4); // price + amount, twice
+    expect(onetimeTable).not.toContain('-$5.00');
+    // Monthly Total $50.00 ($25 + $35 − $5 − $5); one-time keeps $200 + $9.
+    expect(preview.html).toContain('<span class="ast-totals-value">$50.00</span>');
+    expect(preview.html).toContain('<span class="ast-totals-value">$209.00</span>');
+
+    // alga-2026-0002354: the Description cell stacks the catalog item name over
+    // its own description instead of repeating the name.
+    expect(monthlyTable).toContain('Basic Support\nStandard support package');
+    expect(onetimeTable).toContain('Cat6 Patch Cable 2m\nSnagless, blue');
   }, TEST_TIMEOUT);
 
   it('renders a sales order confirmation to a real PDF with the SO number and line totals', async () => {
