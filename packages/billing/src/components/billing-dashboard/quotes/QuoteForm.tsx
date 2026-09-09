@@ -9,6 +9,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import CurrencyPicker from '@alga-psa/ui/components/CurrencyPicker';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { useQuickAddClient } from '@alga-psa/ui/context';
@@ -20,7 +21,6 @@ import {
   DropdownMenuTrigger,
 } from '@alga-psa/ui/components/DropdownMenu';
 import { ArrowLeft, ChevronDown, ChevronRight, MoreVertical } from 'lucide-react';
-import { CURRENCY_OPTIONS } from '@alga-psa/core';
 import type { IClient, IContact, IQuote, IQuoteDocumentTemplate, IQuoteListItem, QuoteConversionPreview, QuoteStatus } from '@alga-psa/types';
 import { isActionMessageError, isActionPermissionError, getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
 import { getDefaultBillingSettings } from '@alga-psa/billing/actions/billingSettingsActions';
@@ -1369,12 +1369,11 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
 
                 <div className="flex flex-col gap-1 text-sm font-medium">
                   <label htmlFor="quote-currency">{t('quoteForm.essentials.currency', { defaultValue: 'Currency' })}</label>
-                  <CustomSelect
+                  <CurrencyPicker
                     id="quote-currency"
                     value={form.currency_code}
                     onValueChange={(value) => handleChange('currency_code', value)}
                     placeholder={t('quoteForm.essentials.currencyPlaceholder', { defaultValue: 'Select currency' })}
-                    options={CURRENCY_OPTIONS.map((c) => ({ value: c.value, label: c.label }))}
                     disabled={isReadOnly}
                   />
                 </div>

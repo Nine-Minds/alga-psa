@@ -13,6 +13,7 @@ import { Palette, Sparkles } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import type { EntityLogoVariant } from '@alga-psa/types';
 import {
   getTenantThemeAction,
   updateTenantThemeAction,
@@ -37,6 +38,9 @@ import ThemePairPreview from './ThemePairPreview';
 import CustomThemeEditor from './CustomThemeEditor';
 
 type CustomThemePair = { light: CustomThemeTokens; dark: CustomThemeTokens };
+
+/** ICO is not covered by `image/*` in every browser's file picker. */
+const FAVICON_ACCEPT = 'image/png,image/svg+xml,image/x-icon,image/vnd.microsoft.icon,.ico';
 
 /** Everything the Save button persists — kept together so "dirty" is one compare. */
 interface ThemeDraft {
@@ -76,6 +80,9 @@ const AppearanceSettings = () => {
   const [clientName, setClientName] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
   const [logoDarkUrl, setLogoDarkUrl] = useState('');
+  const [logoWideUrl, setLogoWideUrl] = useState('');
+  const [logoWideDarkUrl, setLogoWideDarkUrl] = useState('');
+  const [faviconUrl, setFaviconUrl] = useState('');
 
   const isDirty = useMemo(() => {
     if (draft.pairId !== saved.pairId) return true;
@@ -125,6 +132,9 @@ const AppearanceSettings = () => {
         setDraft(loaded);
         setLogoUrl(branding?.logoUrl || '');
         setLogoDarkUrl(branding?.logoDarkUrl || '');
+        setLogoWideUrl(branding?.logoWideUrl || '');
+        setLogoWideDarkUrl(branding?.logoWideDarkUrl || '');
+        setFaviconUrl(branding?.faviconUrl || '');
         setClientName(branding?.clientName || '');
         setTenantId(user?.tenant || '');
       } catch (error) {
@@ -231,7 +241,7 @@ const AppearanceSettings = () => {
     toast.success(t('appearance.messages.discarded', { defaultValue: 'Preview discarded' }));
   };
 
-  const handleLogoUpload = (variant: 'default' | 'dark') =>
+  const handleLogoUpload = (variant: EntityLogoVariant) =>
     async (entityId: string, formData: FormData) => {
       const result = await uploadTenantLogo(entityId, formData, variant);
       // The sidebar mark is resolved server-side; refresh so the new logo lands
@@ -241,7 +251,7 @@ const AppearanceSettings = () => {
       }
       return result;
     };
-  const handleLogoDelete = (variant: 'default' | 'dark') =>
+  const handleLogoDelete = (variant: EntityLogoVariant) =>
     async (entityId: string) => {
       const result = await deleteTenantLogo(entityId, variant);
       if (result?.success) {
@@ -249,6 +259,15 @@ const AppearanceSettings = () => {
       }
       return result;
     };
+
+  const squareWarning = t('appearance.whiteLabel.warnings.expectSquare', {
+    defaultValue:
+      'That image is much wider than it is tall. The square mark slot is used in square spaces — the wide logo slot is probably the one you want.',
+  });
+  const wideWarning = t('appearance.whiteLabel.warnings.expectWide', {
+    defaultValue:
+      'That image is nearly square. The wide slot expects a landscape logo — the square mark slot is probably the one you want.',
+  });
 
   const customSwatch = (mode: CustomThemeMode) => ({
     background: draft.customTheme[mode].background,
@@ -454,13 +473,13 @@ const AppearanceSettings = () => {
                 <p className="mb-4 text-sm text-[rgb(var(--color-text-500))]">
                   {t('appearance.whiteLabel.logoHelp', {
                     defaultValue:
-                      'When enabled, the always-dark MSP side menu uses the dark-background logo and falls back to the main logo. Portal uploads alone never change the MSP app.',
+                      'The square mark is used wherever the space is square — the collapsed side menu and circular frames. The optional wide logo replaces the mark and the name in the expanded side menu, so upload one that already contains your company name. The side menu follows its own background: dark-background variants on a dark menu, light ones on a light menu, falling back to whichever variant you uploaded.',
                   })}
                 </p>
                 <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                   <div>
                     <label className="mb-2 block text-sm font-medium">
-                      {t('appearance.whiteLabel.fields.logo', { defaultValue: 'Logo' })}
+                      {t('appearance.whiteLabel.fields.mark', { defaultValue: 'Square mark' })}
                     </label>
                     <EntityImageUpload
                       entityType="tenant"
@@ -470,12 +489,21 @@ const AppearanceSettings = () => {
                       uploadAction={handleLogoUpload('default')}
                       deleteAction={handleLogoDelete('default')}
                       onImageChange={(next) => setLogoUrl(next || '')}
+                      previewShape="square"
+                      aspectHint={{ expects: 'square', warning: squareWarning }}
                       size="lg"
                     />
+                    <p className="mt-2 text-xs text-[rgb(var(--color-text-500))]">
+                      {t('appearance.whiteLabel.hints.mark', {
+                        defaultValue: 'Used in the collapsed side menu and every circular frame. Square works best.',
+                      })}
+                    </p>
                   </div>
                   <div>
                     <label className="mb-2 block text-sm font-medium">
-                      {t('appearance.whiteLabel.fields.logoDark', { defaultValue: 'Logo for dark backgrounds' })}
+                      {t('appearance.whiteLabel.fields.markDark', {
+                        defaultValue: 'Square mark for dark backgrounds',
+                      })}
                     </label>
                     <EntityImageUpload
                       entityType="tenant"
@@ -485,9 +513,88 @@ const AppearanceSettings = () => {
                       uploadAction={handleLogoUpload('dark')}
                       deleteAction={handleLogoDelete('dark')}
                       onImageChange={(next) => setLogoDarkUrl(next || '')}
+                      previewShape="square"
+                      aspectHint={{ expects: 'square', warning: squareWarning }}
                       size="lg"
                     />
+                    <p className="mt-2 text-xs text-[rgb(var(--color-text-500))]">
+                      {t('appearance.whiteLabel.hints.markDark', {
+                        defaultValue: 'Optional. Falls back to the square mark.',
+                      })}
+                    </p>
                   </div>
+                  <div>
+                    <label className="mb-2 block text-sm font-medium">
+                      {t('appearance.whiteLabel.fields.wide', { defaultValue: 'Wide logo (optional)' })}
+                    </label>
+                    <EntityImageUpload
+                      entityType="tenant"
+                      entityId={tenantId}
+                      entityName={clientName || 'AlgaPSA'}
+                      imageUrl={logoWideUrl}
+                      uploadAction={handleLogoUpload('wide')}
+                      deleteAction={handleLogoDelete('wide')}
+                      onImageChange={(next) => setLogoWideUrl(next || '')}
+                      previewShape="rect"
+                      aspectHint={{ expects: 'wide', warning: wideWarning }}
+                      size="lg"
+                    />
+                    <p className="mt-2 text-xs text-[rgb(var(--color-text-500))]">
+                      {t('appearance.whiteLabel.hints.wide', {
+                        defaultValue:
+                          'Shown only in the expanded side menu, at 32px tall. Include your company name in the image.',
+                      })}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="mb-2 block text-sm font-medium">
+                      {t('appearance.whiteLabel.fields.wideDark', {
+                        defaultValue: 'Wide logo for dark backgrounds (optional)',
+                      })}
+                    </label>
+                    <EntityImageUpload
+                      entityType="tenant"
+                      entityId={tenantId}
+                      entityName={clientName || 'AlgaPSA'}
+                      imageUrl={logoWideDarkUrl}
+                      uploadAction={handleLogoUpload('wide-dark')}
+                      deleteAction={handleLogoDelete('wide-dark')}
+                      onImageChange={(next) => setLogoWideDarkUrl(next || '')}
+                      previewShape="rect"
+                      aspectHint={{ expects: 'wide', warning: wideWarning }}
+                      size="lg"
+                    />
+                    <p className="mt-2 text-xs text-[rgb(var(--color-text-500))]">
+                      {t('appearance.whiteLabel.hints.wideDark', {
+                        defaultValue:
+                          'Optional. Used while the side menu background is dark, which is the case in every built-in theme.',
+                      })}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-6 border-t border-[rgb(var(--color-border-200))] pt-4">
+                  <label className="mb-2 block text-sm font-medium">
+                    {t('appearance.whiteLabel.fields.favicon', { defaultValue: 'Browser icon (favicon)' })}
+                  </label>
+                  <EntityImageUpload
+                    entityType="tenant"
+                    entityId={tenantId}
+                    entityName={clientName || 'AlgaPSA'}
+                    imageUrl={faviconUrl}
+                    uploadAction={handleLogoUpload('favicon')}
+                    deleteAction={handleLogoDelete('favicon')}
+                    onImageChange={(next) => setFaviconUrl(next || '')}
+                    previewShape="rect"
+                    accept={FAVICON_ACCEPT}
+                    size="lg"
+                  />
+                  <p className="mt-2 text-xs text-[rgb(var(--color-text-500))]">
+                    {t('appearance.whiteLabel.hints.favicon', {
+                      defaultValue:
+                        'PNG, SVG or ICO. Raster uploads are resized to 32x32. Applies to the MSP app and the client portal for your organization.',
+                    })}
+                  </p>
                 </div>
               </div>
             )}

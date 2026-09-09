@@ -168,6 +168,9 @@ ee/server/playwright-storage/
 ee/server/playwright-report/
 ee/server/playwright-test-results/
 
+# Design-review mockups: local artifacts, not a second source of truth
+ee/plans/**/mockups.html
+
 volumes/
 
 *.code-workspace

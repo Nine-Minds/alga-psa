@@ -25,6 +25,7 @@ import { isExperimentalFeatureEnabled } from '@alga-psa/tenancy/actions/tenant-s
 import { useTier } from 'server/src/context/TierContext';
 import { useCatalogShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 import { StaleActionBanner } from '@alga-psa/ui/components/StaleActionBanner';
+import { armNavigationCommitWatchdog } from './navigationCommitWatchdog';
 
 interface DefaultLayoutProps {
   children: React.ReactNode;
@@ -76,13 +77,27 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
   // set the override to the target mode immediately.
   // For different-path clicks, leave the override alone - the useEffect
   // will handle the mode switch when the URL changes.
+  const cancelNavWatchdogRef = useRef<(() => void) | null>(null);
+
+  // Cancel any pending re-push once a navigation actually commits (and on unmount).
+  useEffect(() => () => {
+    cancelNavWatchdogRef.current?.();
+    cancelNavWatchdogRef.current = null;
+  }, [pathname]);
+
   const handleMenuItemClick = (href?: string) => {
     if (!href) return;
 
     const [targetPath] = href.split('?');
 
-    // Different pathname → real navigation will happen → useEffect handles it
-    if (pathname !== targetPath) return;
+    // Different pathname → the Link's router.push should commit, but pending
+    // navigations can be dropped by concurrent server-action responses; watch
+    // the URL and re-push until it moves (see navigationCommitWatchdog).
+    if (pathname !== targetPath) {
+      cancelNavWatchdogRef.current?.();
+      cancelNavWatchdogRef.current = armNavigationCommitWatchdog(href, (target) => router.push(target));
+      return;
+    }
 
     // Same pathname → URL may not change → set override manually
     const targetMode = modeForPath(targetPath);

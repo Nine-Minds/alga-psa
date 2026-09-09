@@ -30,9 +30,9 @@ exports.seed = async function(knex) {
       { name: 'Closed', item_type: 'ticket', display_order: 5, is_closed: true },
 
       // Interaction statuses
-      { name: 'Planned', item_type: 'interaction', display_order: 1 },
+      { name: 'Planned', item_type: 'interaction', display_order: 1, is_default: true },
       { name: 'In Progress', item_type: 'interaction', display_order: 2 },
-      { name: 'Completed', item_type: 'interaction', display_order: 3, is_closed: true, is_default: true },
+      { name: 'Completed', item_type: 'interaction', display_order: 3, is_closed: true },
       { name: 'Cancelled', item_type: 'interaction', display_order: 4, is_closed: true }
     ])
     .onConflict(['name', 'item_type'])

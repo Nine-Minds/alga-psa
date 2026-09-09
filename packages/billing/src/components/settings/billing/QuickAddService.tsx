@@ -5,6 +5,7 @@ import { Button } from '@alga-psa/ui/components/Button'
 import { Input } from '@alga-psa/ui/components/Input'
 import { Label } from '@alga-psa/ui/components/Label'
 import CustomSelect from '@alga-psa/ui/components/CustomSelect'
+import CurrencyPicker from '@alga-psa/ui/components/CurrencyPicker'
 import { EditableServiceTypeSelect } from '@alga-psa/ui/components/EditableServiceTypeSelect'
 import { Switch } from '@alga-psa/ui/components/Switch'
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert'
@@ -555,7 +556,7 @@ if (createdService?.service_id) {
                 {prices.map((price, index) => (
                   <div key={index} className="flex items-center gap-3">
                     <div className="w-28">
-                      <CustomSelect
+                      <CurrencyPicker
                         id={`price-currency-${index}`}
                         options={CURRENCY_OPTIONS.filter(c =>
                           c.value === price.currency_code ||

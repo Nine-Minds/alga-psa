@@ -1613,6 +1613,9 @@
               "label": "Contract.pdf"
             }
           }
+        },
+        "totals-rows": {
+          "title": "Totaalrijen"
         }
       }
     },
@@ -2010,6 +2013,15 @@
       "visibleInPortal": "Zichtbaar in het klantenportaal",
       "dialogTitle": "Afbeelding selecteren",
       "dialogDescription": "Kies een afbeelding uit uw documenten om in deze sjabloon te gebruiken."
+    },
+    "totalsRowsEditor": {
+      "rowBackground": "Achtergrond van rij",
+      "rowTextColor": "Tekstkleur",
+      "resetColors": "Kleuren resetten",
+      "clearRowBackground": "Rij-achtergrondkleur wissen",
+      "clearRowTextColor": "Rij-tekstkleur wissen",
+      "labelColorOverrideNote": "Dit label behoudt zijn eigen opgeslagen kleur en erft niet de hierboven ingestelde rij-tekstkleur. Het bedrag volgt nog steeds de rij-tekstkleur.",
+      "noRows": "Dit totalenblok heeft nog geen opgeslagen rijen. Sla de sjabloon op en open deze opnieuw om rijkleuren te bewerken."
     }
   },
   "draftInvoiceDetails": {

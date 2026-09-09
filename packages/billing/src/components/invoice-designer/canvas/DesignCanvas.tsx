@@ -42,6 +42,7 @@ import {
   resolveInvoiceBindingRawValue,
   resolveTableItemBindingRawValue,
 } from '../preview/previewBindings';
+import { evaluateTemplateAst, type TemplateEvaluationResult } from '../../../lib/invoice-template-ast/evaluator';
 
 type DesignerTranslator = (key: string, options?: Record<string, unknown>) => string;
 
@@ -484,6 +485,9 @@ const shouldDeemphasizeNode = (
 
 const asTrimmedString = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
 const resolveTextInterpolationValue = (
   previewData: WasmInvoiceViewModel | null,
   bindingPath: string,
@@ -753,6 +757,145 @@ const renderTotalsSummaryPreview = (
   );
 };
 
+const isCanvasTotalsRowRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value) && typeof (value as { id?: unknown }).id === 'string';
+
+const getModelPathValue = (model: unknown, path: string): unknown => {
+  let cursor: unknown = model;
+  for (const segment of path.split('.').filter(Boolean)) {
+    if (cursor === null || typeof cursor !== 'object') {
+      return undefined;
+    }
+    cursor = (cursor as Record<string, unknown>)[segment];
+  }
+  return cursor;
+};
+
+/**
+ * Best-effort raw amount for a saved totals row, mirroring the template
+ * renderer's precedence: totals keyed by row id first, then the authored value
+ * expression. Evaluation is only available when the canvas has real preview
+ * data; rows that still cannot resolve render a neutral placeholder.
+ */
+const resolveCanvasTotalsRowRaw = (
+  row: Record<string, unknown>,
+  evaluation: TemplateEvaluationResult | null,
+  previewData: WasmInvoiceViewModel | null
+): unknown => {
+  const rowId = asTrimmedString(row.id);
+  if (evaluation && rowId.length > 0) {
+    const totalsValue = getModelPathValue(evaluation.totals, rowId);
+    if (totalsValue !== undefined) {
+      return totalsValue;
+    }
+  }
+  const expression = isRecord(row.valueExpression) ? (row.valueExpression as Record<string, unknown>) : null;
+  if (expression?.type === 'literal') {
+    return expression.value;
+  }
+  const valuePath = asTrimmedString(row.valuePath);
+  const expressionBindingId =
+    expression?.type === 'binding' ? asTrimmedString(expression.bindingId) : '';
+  const pathFallback =
+    valuePath ||
+    (expression?.type === 'path' ? asTrimmedString(expression.path) : '');
+
+  if (expression?.type === 'path' && evaluation && pathFallback.length > 0) {
+    const fromInvoice = getModelPathValue(evaluation.bindings?.invoice, pathFallback);
+    if (fromInvoice !== undefined) {
+      return fromInvoice;
+    }
+  }
+  if (evaluation && expressionBindingId.length > 0) {
+    const bound = evaluation.bindings[expressionBindingId];
+    if (bound !== undefined) {
+      return bound;
+    }
+  }
+  for (const candidate of [pathFallback, expressionBindingId]) {
+    if (candidate.length === 0) {
+      continue;
+    }
+    const raw = resolveInvoiceBindingRawValue(previewData, candidate);
+    if (raw !== null && raw !== undefined) {
+      return raw;
+    }
+  }
+  return undefined;
+};
+
+const renderTotalsRowsPreview = (
+  metadata: Record<string, unknown>,
+  previewData: WasmInvoiceViewModel | null,
+  ast: TemplateAst | null | undefined,
+  t?: DesignerTranslator,
+  locale?: string,
+  presentationTranslator?: TemplateLabelTranslator
+): React.ReactNode => {
+  const rows = Array.isArray(metadata.totalsRows) ? metadata.totalsRows.filter(isCanvasTotalsRowRecord) : [];
+  if (rows.length === 0) {
+    return renderTotalsSummaryPreview(previewData, t, locale, metadata);
+  }
+
+  const currencyCode = previewData?.currencyCode ?? 'USD';
+  let evaluation: TemplateEvaluationResult | null = null;
+  if (ast && previewData) {
+    try {
+      evaluation = evaluateTemplateAst(ast, previewData as unknown as Record<string, unknown>);
+    } catch {
+      evaluation = null;
+    }
+  }
+
+  return (
+    <div className="space-y-1" data-automation-id="designer-canvas-totals-rows">
+      {rows.map((row) => {
+        const rowId = asTrimmedString(row.id);
+        const inlineRowStyle = isRecord(row.style) && isRecord(row.style.inline)
+          ? (row.style.inline as Record<string, unknown>)
+          : {};
+        const inlineLabelStyle = isRecord(row.labelStyle) && isRecord(row.labelStyle.inline)
+          ? (row.labelStyle.inline as Record<string, unknown>)
+          : {};
+        const emphasize = row.emphasize === true;
+        const mergedRowStyle: React.CSSProperties = {
+          ...(emphasize ? { fontWeight: 600 } : {}),
+          ...(inlineRowStyle as React.CSSProperties),
+        };
+        const labelStyle = inlineLabelStyle as React.CSSProperties;
+
+        const ref = isRecord(row.__astLabelI18n) ? (row.__astLabelI18n as Record<string, unknown>) : null;
+        const fallbackLabel = asTrimmedString(row.label) || asTrimmedString(ref?.defaultValue) || rowId;
+        const displayLabel =
+          ref && typeof ref.i18nKey === 'string'
+            ? presentationTranslator?.(ref.i18nKey, { defaultValue: fallbackLabel }) ?? fallbackLabel
+            : fallbackLabel;
+
+        const raw = resolveCanvasTotalsRowRaw(row, evaluation, previewData);
+        const rowFormat = normalizeFieldFormat(asTrimmedString(row.format) || asTrimmedString(row.type) || 'currency');
+        const amount = raw !== undefined
+          ? formatBoundValue(raw, rowFormat, currencyCode, locale) ?? '—'
+          : '—';
+
+        return (
+          <div
+            key={rowId}
+            className="flex items-center justify-between gap-2"
+            style={mergedRowStyle}
+            data-automation-id={`designer-canvas-total-row-${rowId.replace(/[^a-zA-Z0-9_-]/g, '-')}`}
+          >
+            <span className="min-w-0 truncate" style={labelStyle}>
+              {displayLabel}
+            </span>
+            <span className="shrink-0 tabular-nums">{amount}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+
 const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel | null, t?: DesignerTranslator, ast?: TemplateAst | null, locale?: string, scope?: Record<string, unknown>, presentationTranslator?: TemplateLabelTranslator): PreviewContentResult => {
   const metadata = getNodeMetadata(node);
   // Translate display-only field/text values; tables retain the neutral input
@@ -941,7 +1084,7 @@ const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel
     case 'attachment-list':
       return { content: metadata.title ? `${t?.('designer.canvas.attachmentsLabel', { defaultValue: 'Attachments' }) ?? 'Attachments'}: ${metadata.title}` : (t?.('designer.canvas.attachmentsLabel', { defaultValue: 'Attachments' }) ?? 'Attachments') };
     case 'totals':
-      return { content: renderTotalsSummaryPreview(previewData, t, locale, metadata) };
+      return { content: renderTotalsRowsPreview(metadata, previewData, ast, t, locale, presentationTranslator) };
     case 'divider':
       return { content: <div className={clsx('w-full border-t my-1', INVOICE_BORDER_COLOR_CLASS)} /> };
 	    case 'spacer':

@@ -36,6 +36,11 @@ export type CreateInteractionInput = {
   ticket_id?: string;
   duration?: number;
   interaction_date?: string;
+  start_time?: string;
+  end_time?: string;
+  create_schedule_entry?: boolean;
+  /** Calendar assignees. Defaults to self; assigning others requires user_schedule:update. */
+  schedule_assigned_user_ids?: string[];
 };
 
 export function listInteractionTypes(
