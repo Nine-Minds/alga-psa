@@ -13,6 +13,7 @@ test('browser command rejects dirty source before or during otherwise passing ex
     mkdirSync(path.join(root, 'e2e-tests/tests'), { recursive: true });
     mkdirSync(path.join(root, 'scripts'), { recursive: true });
     cpSync(path.join(source, 'scripts/lib'), path.join(root, 'scripts/lib'), { recursive: true });
+    cpSync(path.join(source, 'scripts/verify-docker-archive-build.mjs'), path.join(root, 'scripts/verify-docker-archive-build.mjs'));
     cpSync(path.join(source, 'e2e-tests/run.mjs'), path.join(root, 'e2e-tests/run.mjs'));
     writeFileSync(path.join(root, '.gitignore'), 'node_modules/\ne2e-tests/execution-evidence/\n');
     writeFileSync(path.join(root, 'app.txt'), 'original');
