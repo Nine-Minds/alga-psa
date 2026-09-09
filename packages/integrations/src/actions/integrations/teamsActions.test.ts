@@ -362,13 +362,11 @@ describe('Teams integration actions', () => {
   it.each([
     ['production', 'true'], ['development', undefined], ['development', 'false'], ['staging', 'staging'],
   ])('workspace keeps live Microsoft defaults in %s with emulator gate %s', async (nodeEnv, gate) => {
-    const keys = ['MICROSOFT_GRAPH_BASE_URL', 'MICROSOFT_LOGIN_BASE_URL', 'TEAMS_EMULATOR_MODE', 'NODE_ENV'] as const;
-    const previous = Object.fromEntries(keys.map(key => [key, process.env[key]]));
     try {
-      process.env.NODE_ENV = nodeEnv;
-      if (gate === undefined) delete process.env.TEAMS_EMULATOR_MODE; else process.env.TEAMS_EMULATOR_MODE = gate;
-      process.env.MICROSOFT_GRAPH_BASE_URL = 'http://untrusted.invalid/v1.0';
-      process.env.MICROSOFT_LOGIN_BASE_URL = 'http://untrusted.invalid';
+      vi.stubEnv('NODE_ENV', nodeEnv);
+      vi.stubEnv('TEAMS_EMULATOR_MODE', gate);
+      vi.stubEnv('MICROSOFT_GRAPH_BASE_URL', 'http://untrusted.invalid/v1.0');
+      vi.stubEnv('MICROSOFT_LOGIN_BASE_URL', 'http://untrusted.invalid');
       addMicrosoftProfile({ tenant: 'tenant-1', profileId: 'profile-1', clientId: 'organizer-client',
         tenantId: 'organizer-tenant', secretRef: 'organizer-secret-ref' });
       tenantSecrets.set('tenant-1:organizer-secret-ref', 'organizer-secret');
@@ -381,9 +379,7 @@ describe('Teams integration actions', () => {
         'https://graph.microsoft.com/v1.0/users/scheduler%40acme.com',
       ]);
     } finally {
-      for (const key of keys) {
-        if (previous[key] === undefined) delete process.env[key]; else process.env[key] = previous[key];
-      }
+      vi.unstubAllEnvs();
     }
   });
 

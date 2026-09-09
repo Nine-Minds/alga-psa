@@ -187,7 +187,7 @@ function normalizeNullableString(value: unknown): string | null {
 
 // Match the EE Teams gate without adding a dependency from this package to EE.
 // Email endpoint overrides alone must not redirect Teams profile credentials.
-function useTeamsEmulatorEndpoints(): boolean {
+function shouldUseTeamsEmulatorEndpoints(): boolean {
   return process.env.NODE_ENV !== 'production'
     && ['true', '1'].includes(process.env.TEAMS_EMULATOR_MODE?.trim().toLowerCase() ?? '');
 }
@@ -197,7 +197,7 @@ async function fetchMicrosoftGraphAppToken(params: {
   clientId: string;
   clientSecret: string;
 }): Promise<string> {
-  const tokenUrl = useTeamsEmulatorEndpoints() ? getMicrosoftTokenUrl(params.tenantAuthority)
+  const tokenUrl = shouldUseTeamsEmulatorEndpoints() ? getMicrosoftTokenUrl(params.tenantAuthority)
     : `${DEFAULT_MICROSOFT_LOGIN_BASE_URL}/${encodeURIComponent(params.tenantAuthority)}/oauth2/v2.0/token`;
   const response = await fetch(tokenUrl, {
     method: 'POST',
@@ -322,7 +322,7 @@ async function resolveOrganizerObjectId(
     clientSecret,
   });
 
-  const graphBaseUrl = useTeamsEmulatorEndpoints() ? getMicrosoftGraphBaseUrl() : DEFAULT_MICROSOFT_GRAPH_BASE_URL;
+  const graphBaseUrl = shouldUseTeamsEmulatorEndpoints() ? getMicrosoftGraphBaseUrl() : DEFAULT_MICROSOFT_GRAPH_BASE_URL;
   const response = await fetch(`${graphBaseUrl}/users/${encodeURIComponent(organizerUpn)}`, {
     headers: {
       Authorization: `Bearer ${accessToken}`,

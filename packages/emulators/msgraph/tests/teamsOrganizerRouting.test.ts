@@ -71,8 +71,6 @@ describe('Teams organizer provider routing', () => {
     { implementation: 'enterprise', scenario: 'unknown organizer recovery' },
   ] as const)('T072: $implementation $scenario through real Graph HTTP', async ({ implementation, scenario }) => {
     const host = new EmulatorHost({ emulators: [msgraph], controlPort: 0, ports: { msgraph: 0 } });
-    const keys = ['MICROSOFT_GRAPH_BASE_URL', 'MICROSOFT_LOGIN_BASE_URL', 'TEAMS_EMULATOR_MODE', 'NODE_ENV', 'NEXT_PUBLIC_EDITION'] as const;
-    const previous = Object.fromEntries(keys.map(key => [key, process.env[key]]));
     const blocked: string[] = [];
     let startedHost = false;
     try {
@@ -90,11 +88,11 @@ describe('Teams organizer provider routing', () => {
       await seed('client', { clientId: 'organizer-client', clientSecret: 'organizer-secret' });
       await seed('directory-user', { id: 'organizer-object', displayName: 'Scheduler', userPrincipalName: 'scheduler@acme.com',
         mail: 'scheduler@acme.com', accountEnabled: true });
-      process.env.MICROSOFT_GRAPH_BASE_URL = `${base}/v1.0`;
-      process.env.MICROSOFT_LOGIN_BASE_URL = base;
-      process.env.TEAMS_EMULATOR_MODE = 'true';
-      process.env.NODE_ENV = 'test';
-      process.env.NEXT_PUBLIC_EDITION = 'enterprise';
+      vi.stubEnv('MICROSOFT_GRAPH_BASE_URL', `${base}/v1.0`);
+      vi.stubEnv('MICROSOFT_LOGIN_BASE_URL', base);
+      vi.stubEnv('TEAMS_EMULATOR_MODE', 'true');
+      vi.stubEnv('NODE_ENV', 'test');
+      vi.stubEnv('NEXT_PUBLIC_EDITION', 'enterprise');
       // Exercise native HTTP, while forbidding an accidental live-vendor request.
       globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
         const url = new URL(input instanceof Request ? input.url : String(input));
@@ -159,9 +157,7 @@ describe('Teams organizer provider routing', () => {
       ]));
     } finally {
       globalThis.fetch = nativeFetch;
-      for (const key of keys) {
-        if (previous[key] === undefined) delete process.env[key]; else process.env[key] = previous[key];
-      }
+      vi.unstubAllEnvs();
       if (startedHost) await host.stop();
     }
   }, 20000);
