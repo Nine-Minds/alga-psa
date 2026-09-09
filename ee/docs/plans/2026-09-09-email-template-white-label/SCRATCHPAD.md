@@ -66,10 +66,31 @@
 - Public doc to update: nm-store `src/site/content/docs/themes-and-white-label.md` (already behind on wide
   logo/favicon).
 
+## Implementation notes (2026-09-09)
+
+- Built on branch `email_white_label`, one commit per commit group. All drafts in the open questions were
+  taken as-is: the panel sits on the Notifications tab, the single-color toggle stayed, and the Enterprise
+  logo/attribution shipped in the same release as its own commit group.
+- `resolveEmailPalette` short-circuits to the literal stock map when primary/secondary are the stock colors:
+  the hand-picked purple tints in `constants.cjs` are not reproducible from `#8A4DEA` by any one formula, and
+  a tenant that keeps the AlgaPSA colors has to get byte-identical rows.
+- `applyEmailPalette` takes an array of `from` maps, so a re-apply matches the previously applied palette and
+  any leftover stock token in a single pass — no chained rewrites that could double-apply.
+- `classifyTenantTemplate` normalizes our own brand assets away (logo `<img data-alga-brand-logo>` and the
+  attribution line) before comparing. That is what lets a tenant turn the attribution back on and have the
+  system footer restored: branded rows are re-cloned from the system row on every apply.
+- `system_email_templates.created_at` is read defensively for FR9: a missing or unparseable value simply
+  means "not new", so the banner stays quiet rather than misreporting.
+- Apply/remove logic lives in the pure planner `packages/email/src/branding/planEmailBrandingApply.ts`; the
+  server action is a thin DB shim (one transaction per language, batched inserts, id-scoped updates). Tests
+  cover the planner against the real English system templates instead of needing a seeded database.
+- UI coverage is draft-state unit tests plus source-contract tests (ids, structure, no server call in the
+  preview path). `packages/notifications` has no jsdom harness and standing one up was out of scope.
+
 ## Open Questions
 
-- Panel placement: Notifications tab (draft) vs Appearance.
-- Keep the single-color toggle or make secondary an editable derived default.
-- Ship Enterprise logo/attribution in the same release or as a follow-up (separate commit group either way).
-- Does `system_email_templates.created_at` exist everywhere for FR9? Otherwise compare against a name
-  list snapshot stored with `appliedAt`.
+- Are `settings.branding.logoUrl` / `logoWideUrl` fetchable by a mail client without a session? FR10 writes
+  the URL straight into the `<img src>`; if entity-image URLs are session-gated the header image needs a
+  public asset route before Enterprise tenants switch the logo on.
+- F057 (public docs) lives in the nm-store repo: the email section of "Set Interface Themes, Dark Mode, and
+  White-Label Branding" and the apply flow in the email templates doc are still to be written there.
