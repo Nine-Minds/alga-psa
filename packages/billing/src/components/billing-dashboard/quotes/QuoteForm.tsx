@@ -37,7 +37,7 @@ import {
 } from '../locations/locationGrouping';
 import { QuoteSendRecipientsField, type QuoteRecipient } from './QuoteSendRecipientsField';
 import QuoteStatusBadge from './QuoteStatusBadge';
-import { calculateDraftQuoteTotals, createDraftQuoteItemFromQuoteItem, formatDraftQuoteMoney, type DraftQuoteItem } from './quoteLineItemDraft';
+import { calculateDraftMonthlyRecurringNet, calculateDraftQuoteTotals, createDraftQuoteItemFromQuoteItem, formatDraftQuoteMoney, type DraftQuoteItem } from './quoteLineItemDraft';
 
 interface QuoteFormProps {
   quoteId?: string | null;
@@ -350,19 +350,15 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
 
   const draftTotals = useMemo(() => calculateDraftQuoteTotals(lineItems), [lineItems]);
 
-  // Derived: recurring per-month subtotal across draft items (expressed in
-  // the quote's minor currency units). Used for the sidebar "$X recurring /
-  // month" hint. Only monthly-recurring items count; mixed frequencies don't
-  // reduce cleanly to a single per-month number without more math.
-  const recurringMonthlySubtotal = useMemo(() => {
-    return lineItems.reduce((sum, item) => {
-      if (!item.is_recurring || item.is_discount) return sum;
-      if (item.is_optional && item.is_selected === false) return sum;
-      const freq = (item.billing_frequency || '').toLowerCase();
-      if (freq && freq !== 'monthly') return sum;
-      return sum + Math.round(item.quantity * item.unit_price);
-    }, 0);
-  }, [lineItems]);
+  // Derived: recurring per-month figure after the shared discount allocation,
+  // expressed in the quote's minor currency units. Used for the sidebar "$X
+  // recurring / month" hint. Discounts aimed at monthly recurring services
+  // reduce the figure; mixed billing frequencies reduce only their own
+  // monthly rows through the allocation.
+  const recurringMonthlySubtotal = useMemo(
+    () => calculateDraftMonthlyRecurringNet(lineItems),
+    [lineItems],
+  );
 
   const selectedClient = useMemo(
     () => clients.find((c) => c.client_id === form.client_id) ?? null,
@@ -1841,7 +1837,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
                 // default action.
                 variant={conversionPreview.sales_order_items.length > 0 && !conversionPreview.existing_sales_order ? 'outline' : 'default'}
                 onClick={() => void handleConfirmConversion('invoice')}
-                disabled={isWorking}
+                disabled={isWorking || Boolean(conversionPreview.invoice_error)}
               >
                 {t('quoteConversion.actions.invoice', { defaultValue: 'Create Draft Invoice' })}
               </Button>
@@ -1860,6 +1856,11 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
           </DialogHeader>
           {conversionPreview ? (
             <div className="space-y-4">
+              {conversionPreview.invoice_error && (
+                <Alert variant="destructive">
+                  <AlertDescription>{conversionPreview.invoice_error}</AlertDescription>
+                </Alert>
+              )}
               {conversionPreview.sales_order_items.length > 0 ? (
                 <div className="rounded-lg border border-border bg-muted/40 p-3 text-sm text-muted-foreground">
                   {conversionPreview.existing_sales_order

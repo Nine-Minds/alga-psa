@@ -1,0 +1,208 @@
+[
+  {
+    "id": "T001",
+    "description": "Pure allocation table test covers item, service, and whole-quote fixed/percentage targets with exact cent conservation.",
+    "featureIds": [
+      "F001",
+      "F002",
+      "F003",
+      "F004",
+      "F006"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "T002",
+    "description": "Mixed-cadence service allocation test proves proportional recurring/one-time split and deterministic rounding.",
+    "featureIds": [
+      "F003",
+      "F005",
+      "F006"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "T003",
+    "description": "Guard test covers optional unselected items, removed targets, zero bases, and oversized discounts.",
+    "featureIds": [
+      "F007",
+      "F008",
+      "F009"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "T004",
+    "description": "Draft editor regression proves target and item edits immediately recompute correct totals.",
+    "featureIds": [
+      "F011"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "T005",
+    "description": "DB-backed calculation integration proves positive discount persistence, exact totals, and save/reload behavior.",
+    "featureIds": [
+      "F010",
+      "F012",
+      "F013"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "T006",
+    "description": "DB-backed guard integration proves unmatched targets do not corrupt saved quote or item financials.",
+    "featureIds": [
+      "F008",
+      "F012"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "T007",
+    "description": "Adapter regression reproduces $25+$35 less $5+$5 as $50 recurring with one-time unchanged and legacy false/null cadence.",
+    "featureIds": [
+      "F013",
+      "F014",
+      "F015"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "T008",
+    "description": "Adapter compatibility test covers multiple discounts and service/product/location/phase collections without double application.",
+    "featureIds": [
+      "F014",
+      "F015"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "T009",
+    "description": "Browser smoke creates Fixed Discount > Specific Service, saves/reopens, and verifies preview rows and totals.",
+    "featureIds": [
+      "F011",
+      "F013",
+      "F014",
+      "F016"
+    ],
+    "implemented": true,
+    "evidence": "docs/evidence/ticket-2353-quote-discount-group-allocation/README.md and editor/ screenshots incl 2353-editor-reopen-50monthly.png ($50 monthly) (QUO-0003 on localhost:3172)"
+  },
+  {
+    "id": "T010",
+    "description": "Generate and inspect standard and duplicated/custom grouped PDFs, comparing recurring, one-time, discount, and overall figures.",
+    "featureIds": [
+      "F016",
+      "F017",
+      "F018"
+    ],
+    "implemented": true,
+    "evidence": "docs/evidence/ticket-2353-quote-discount-group-allocation/pdfs + preview/*.txt incl standard-grouped-isolated-catalog.pdf (see preview/2353-standard-catalog-blocker.txt)"
+  },
+  {
+    "id": "T011",
+    "description": "Draft monthly recurring sidebar figure derives from per-base allocations incl. mixed frequencies ($50 not $60).",
+    "featureIds": [
+      "F011",
+      "F003",
+      "F005",
+      "F006"
+    ],
+    "implemented": true,
+    "evidence": "quoteLineItemDraft.test.ts (calculateDraftMonthlyRecurringNet) + editor/2353-editor-reopen-50monthly.png"
+  },
+  {
+    "id": "T012",
+    "description": "Duplication, revision, and business-template copy paths remap applies_to_item_id onto copied items and persist correct financials.",
+    "featureIds": [
+      "F011",
+      "F012"
+    ],
+    "implemented": true,
+    "evidence": "quoteActions.test.ts T140-T142; quoteInfrastructure.test.ts T202/T204"
+  },
+  {
+    "id": "T013",
+    "description": "Quote conversion preview and execution use allocated one-time shares so recurring reductions never leak into one-time invoices.",
+    "featureIds": [
+      "F014",
+      "F015"
+    ],
+    "implemented": true,
+    "evidence": "quoteConversion.test.ts T210/T211 (mixed-service + whole-quote) and updated T116"
+  },
+  {
+    "id": "T014",
+    "description": "Unified eligibility across draft, persisted recalculation, and adapter for required rows regardless of selection and optional-to-required transitions across save/reload.",
+    "featureIds": [
+      "F007",
+      "F013"
+    ],
+    "implemented": true,
+    "evidence": "quoteAdapters.test.ts T210; quoteInfrastructure.test.ts T203"
+  },
+  {
+    "id": "T015",
+    "description": "Legacy read-time financial consistency for quotes saved under the old rules (oversized and unmatched discounts).",
+    "featureIds": [
+      "F010",
+      "F013",
+      "F014"
+    ],
+    "implemented": true,
+    "evidence": "quoteAdapters.test.ts T211/T212"
+  },
+  {
+    "id": "T016",
+    "description": "Copy paths preserve unmatched item-targeted discount scope (never broaden to whole-quote), incl. item/service target precedence.",
+    "featureIds": [
+      "F011",
+      "F012",
+      "F002",
+      "F008"
+    ],
+    "implemented": true,
+    "evidence": "quoteInfrastructure.test.ts T205/T206; quoteActions.test.ts T140-T142"
+  },
+  {
+    "id": "T017",
+    "description": "Sales-order conversion preserves product-attributed allocations in net product prices; invoice exclusion conserves the full reduction.",
+    "featureIds": [
+      "F014",
+      "F015"
+    ],
+    "implemented": true,
+    "evidence": "quoteConversion.test.ts T212 (SO then invoice, persisted amounts)"
+  },
+  {
+    "id": "T018",
+    "description": "Converted quote discounts are stored as fixed allocated amounts so ordinary invoice recalculation cannot rewrite percentage allocations; stacked, capped, mixed-cadence, and service-targeted cases covered.",
+    "featureIds": [
+      "F012",
+      "F014"
+    ],
+    "implemented": true,
+    "evidence": "quoteConversion.test.ts T213/T214 after recalculatePercentageDiscountInvoiceCharges"
+  },
+  {
+    "id": "T019",
+    "description": "Indivisible product allocations split quantities across adjacent cent prices; direct invoice conversion remains available, persisted sales-order quantities/costs and retry behavior remain correct.",
+    "featureIds": [
+      "F006",
+      "F015"
+    ],
+    "implemented": true,
+    "evidence": "quoteConversionService.preview.test.ts and quoteConversion.test.ts T215 (invoice and sales_order)"
+  },
+  {
+    "id": "T020",
+    "description": "Existing sales-order preview shows stored prices; mismatched discounted product quantities/amounts block only the remaining invoice, without writes, until explicit reconciliation.",
+    "featureIds": [
+      "F013",
+      "F015"
+    ],
+    "implemented": true,
+    "evidence": "quoteConversionService.preview.test.ts and quoteConversion.test.ts T216"
+  }
+]

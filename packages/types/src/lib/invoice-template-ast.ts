@@ -121,6 +121,21 @@ export interface TemplateDividerNode extends TemplateNodeBase {
   children?: never;
 }
 
+/**
+ * One stacked line inside a table cell. A column that carries `lines` renders
+ * each resolved line on its own styled row inside the cell instead of the flat
+ * `value` expression, so an author can stack an item name over its description.
+ * Empty lines are dropped; a column whose lines all resolve empty falls back to
+ * `value`, keeping legacy cells (and discount/custom rows without a name)
+ * readable.
+ */
+export interface TemplateTableColumnLine {
+  id: string;
+  value: TemplateValueExpression;
+  format?: TemplateValueFormat;
+  style?: TemplateNodeStyleRef;
+}
+
 export interface TemplateTableColumn {
   id: string;
   header?: TemplateI18nText;
@@ -137,12 +152,6 @@ export interface TemplateTableColumn {
    * render `value` exactly as before.
    */
   lines?: TemplateTableColumnLine[];
-}
-
-export interface TemplateTableColumnLine {
-  id: string;
-  value: TemplateValueExpression;
-  style?: TemplateNodeStyleRef;
 }
 
 export interface TemplateTableNode extends TemplateNodeBase {
