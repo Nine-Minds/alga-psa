@@ -65,6 +65,23 @@ export function draftMatchesSuggestion(draft: EmailBrandingDraft, status: EmailB
     && draft.secondary.toLowerCase() === status.suggestion.secondary.toLowerCase();
 }
 
+/** Dismissals live for the session only, keyed by the count that was dismissed. */
+export const NEW_TEMPLATE_DISMISS_KEY = 'email-branding-new-templates-dismissed';
+
+/**
+ * The banner appears once a palette has been applied and system templates have
+ * arrived since without a tenant row, and comes back when that count changes —
+ * dismissing "3 new templates" must not hide the fourth.
+ */
+export function shouldShowNewTemplateBanner(
+  status: EmailBrandingStatus,
+  dismissedCount: number | null,
+): boolean {
+  return !!status.palette?.appliedAt
+    && status.newTemplateNames.length > 0
+    && dismissedCount !== status.newTemplateNames.length;
+}
+
 export function resolveDraft(draft: EmailBrandingDraft): EmailPaletteTokens {
   return resolveEmailPalette({
     primary: draft.primary,

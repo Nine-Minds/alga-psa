@@ -514,7 +514,7 @@
   {
     "id": "T057",
     "description": "banner shows '3 templates added\u2026' for 3 unbranded newer templates and is absent when 0",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "new-template-banner",
     "featureIds": [
       "F046"
@@ -523,7 +523,7 @@
   {
     "id": "T058",
     "description": "banner button opens dialog with exactly those 3 checked",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "new-template-banner",
     "featureIds": [
       "F047"
@@ -532,7 +532,7 @@
   {
     "id": "T059",
     "description": "dismiss hides banner; a status refresh with a higher count shows it again",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "new-template-banner",
     "featureIds": [
       "F048"

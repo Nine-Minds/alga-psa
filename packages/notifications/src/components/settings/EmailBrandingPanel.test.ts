@@ -8,6 +8,7 @@ import {
   draftFromStatus,
   draftMatchesSuggestion,
   resolveDraft,
+  shouldShowNewTemplateBanner,
 } from './emailBrandingPanelState';
 import type { EmailBrandingStatus } from '../../lib/emailBranding';
 
@@ -115,5 +116,35 @@ describe('email branding panel markup', () => {
     for (const id of literalIds) {
       expect(id, `${id} is not kebab-case`).toMatch(/^[a-z0-9]+(-[a-z0-9]+)*$/);
     }
+  });
+});
+
+describe('new-template banner', () => {
+  const applied = (newTemplateNames: string[]) => status({
+    palette: { primary: '#b4552f', secondary: null, appliedAt: '2026-09-01T00:00:00.000Z' },
+    newTemplateNames,
+  });
+
+  it('appears once templates arrived after the last apply', () => {
+    expect(shouldShowNewTemplateBanner(applied(['a', 'b', 'c']), null)).toBe(true);
+    expect(shouldShowNewTemplateBanner(applied([]), null)).toBe(false);
+  });
+
+  it('stays away until a palette has actually been applied', () => {
+    expect(shouldShowNewTemplateBanner(status({ newTemplateNames: ['a'] }), null)).toBe(false);
+  });
+
+  it('is dismissed for the session and returns when the count changes', () => {
+    expect(shouldShowNewTemplateBanner(applied(['a', 'b', 'c']), 3)).toBe(false);
+    expect(shouldShowNewTemplateBanner(applied(['a', 'b', 'c', 'd']), 3)).toBe(true);
+  });
+
+  it('opens the scope dialog with exactly the new templates preselected', () => {
+    expect(panelSource).toContain('id="new-email-templates-banner"');
+    expect(panelSource).toContain('id="apply-branding-to-new-templates"');
+    expect(panelSource).toContain('setApplyPreselection(status.newTemplateNames)');
+    expect(panelSource).toContain('preselectedNames={applyPreselection}');
+    expect(panelSource).toContain('id="dismiss-new-email-templates"');
+    expect(panelSource).toContain('window.sessionStorage?.setItem(NEW_TEMPLATE_DISMISS_KEY');
   });
 });

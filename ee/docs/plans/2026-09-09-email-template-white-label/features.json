@@ -416,7 +416,7 @@
   {
     "id": "F046",
     "description": "banner on the Email templates tab lists the count of system templates added since appliedAt without tenant rows",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "new-template-banner",
     "prdRefs": [
       "FR9",
@@ -426,7 +426,7 @@
   {
     "id": "F047",
     "description": "banner button opens the scope dialog with only those templates preselected",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "new-template-banner",
     "prdRefs": [
       "UX / UI Notes"
@@ -435,7 +435,7 @@
   {
     "id": "F048",
     "description": "banner dismiss hides it for the session and it returns when the count changes",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "new-template-banner",
     "prdRefs": [
       "UX / UI Notes"

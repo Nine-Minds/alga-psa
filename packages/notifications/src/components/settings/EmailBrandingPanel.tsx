@@ -21,6 +21,7 @@ import type { SystemEmailTemplate } from "../../types/notification";
 import { ApplyEmailBrandingDialog } from "./ApplyEmailBrandingDialog";
 import { EmailTemplatePreview } from "./EmailTemplatePreview";
 import {
+  NEW_TEMPLATE_DISMISS_KEY,
   OVERRIDABLE_TOKENS,
   SOURCE_FALLBACKS,
   TOKEN_FALLBACKS,
@@ -28,6 +29,7 @@ import {
   draftFromStatus,
   draftMatchesSuggestion,
   resolveDraft,
+  shouldShowNewTemplateBanner,
   type EmailBrandingDraft,
   type OverridableToken,
 } from "./emailBrandingPanelState";
@@ -96,6 +98,8 @@ export function EmailBrandingPanel({
   const [saving, setSaving] = useState(false);
   const [removing, setRemoving] = useState(false);
   const [applyOpen, setApplyOpen] = useState(false);
+  const [applyPreselection, setApplyPreselection] = useState<string[] | undefined>(undefined);
+  const [dismissedNewCount, setDismissedNewCount] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const loadStatus = useCallback(async () => {
@@ -113,6 +117,10 @@ export function EmailBrandingPanel({
 
   useEffect(() => {
     loadStatus();
+    const dismissed = typeof window !== 'undefined'
+      ? window.sessionStorage?.getItem(NEW_TEMPLATE_DISMISS_KEY)
+      : null;
+    setDismissedNewCount(dismissed === null ? null : Number(dismissed));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -190,7 +198,45 @@ export function EmailBrandingPanel({
     ? t('notifications.emailBranding.source.saved', 'Saved')
     : t(`notifications.emailBranding.source.${status.suggestion.source}`, SOURCE_FALLBACKS[status.suggestion.source]);
 
+  const showNewTemplateBanner = shouldShowNewTemplateBanner(status, dismissedNewCount);
+
+  const dismissNewTemplates = () => {
+    setDismissedNewCount(status.newTemplateNames.length);
+    window.sessionStorage?.setItem(NEW_TEMPLATE_DISMISS_KEY, String(status.newTemplateNames.length));
+  };
+
   return (
+    <>
+    {showNewTemplateBanner && (
+      <div
+        id="new-email-templates-banner"
+        className="flex flex-wrap items-center justify-between gap-3 rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900"
+      >
+        <span>
+          {t('notifications.emailBranding.newTemplates.message', {
+            defaultValue: '{{count}} templates were added since you last applied your palette.',
+            count: status.newTemplateNames.length,
+          })}
+        </span>
+        <span className="flex gap-2">
+          <Button
+            id="apply-branding-to-new-templates"
+            size="sm"
+            disabled={!status.canEdit}
+            onClick={() => {
+              setApplyPreselection(status.newTemplateNames);
+              setApplyOpen(true);
+            }}
+          >
+            {t('notifications.emailBranding.newTemplates.action', 'Apply palette to new templates')}
+          </Button>
+          <Button id="dismiss-new-email-templates" size="sm" variant="ghost" onClick={dismissNewTemplates}>
+            {t('notifications.emailBranding.newTemplates.dismiss', 'Dismiss')}
+          </Button>
+        </span>
+      </div>
+    )}
+
     <Card id="email-branding-card">
       <CardHeader className="flex flex-row items-start justify-between gap-4">
         <div>
@@ -336,7 +382,10 @@ export function EmailBrandingPanel({
             id="open-apply-email-branding"
             variant="outline"
             disabled={!status.canEdit || !status.palette || isDirty}
-            onClick={() => setApplyOpen(true)}
+            onClick={() => {
+              setApplyPreselection(undefined);
+              setApplyOpen(true);
+            }}
           >
             {t('notifications.emailBranding.actions.apply', 'Apply to templates')}
           </Button>
@@ -366,11 +415,14 @@ export function EmailBrandingPanel({
         isOpen={applyOpen}
         onClose={() => {
           setApplyOpen(false);
+          setApplyPreselection(undefined);
           loadStatus();
         }}
         status={status}
+        preselectedNames={applyPreselection}
         onApplied={async () => { await onApplied?.(); }}
       />
     </Card>
+    </>
   );
 }
