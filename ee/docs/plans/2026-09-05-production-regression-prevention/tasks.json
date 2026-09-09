@@ -740,6 +740,14 @@
       "dependsOn": [],
       "owner": "qbo_protocol",
       "notes": "Audit found emulator attachment observations omitted from metrics configuration. Build bounded validated summary tied to full journey identity/attempt/source/artifact context; absent/malformed observations explicit, no OAuth/parity inference from routing probes. Consumer release policy remains independent. Independent review and18/18 native tests pass, including malformed abort/status pairs. Actual historical artifact replay: CE2observed/40unavailable, EE11observed/36unavailable; missing attachments explicit and SMTP unsupported journal incomplete. Summary unchanged after review fix. provider-observation-historical-replay.json; F036 still open for required-provider policy/release rollout."
+    },
+    {
+      "id": "R090",
+      "title": "Assert visible bucket balances in primary and supported-upgrade browsers",
+      "status": "in_progress",
+      "dependsOn": [],
+      "owner": "stripe_protocol",
+      "notes": "Existing Add Usage journeys could pass with absent/failed bucket panel. Assert independent fixture balances (primary unused40hours); add a minimal v1.5-compatible bucket seed for upgrade/Citus browser coverage and preserve retained data invariants. QBO agent independently reviews legacy schema compatibility. Native first, no Docker."
     }
   ]
 }
