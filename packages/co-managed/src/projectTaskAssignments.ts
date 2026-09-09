@@ -133,7 +133,7 @@ export async function assignCoManagedProjectTask(db: Knex, inputActor: CoManaged
       if (existing) await referenceQuery(write, relation.sponsor_tenant).update(values);
       else await tenantDb(write.trx, relation.sponsor_tenant).table('co_managed_project_task_references').insert({ ...values, tenant: relation.sponsor_tenant,
         reference_id: referenceId, customer_tenant: resource.tenant, relationship_id: resource.relationshipId, task_id: resource.id, created_at: write.trx.raw('clock_timestamp()') });
-    } else await referenceQuery(write, relation.sponsor_tenant).update({ active: false, revision, updated_at: write.trx.raw('clock_timestamp()') });
+    } else await referenceQuery(write, relation.sponsor_tenant).update({ active: false, revision, updated_at: write.trx.raw('now()') });
     await recordCoManagedProjectTaskAudit(write, { operation: 'co_managed_project_task_assignment', operationId: request.operationId,
       changes: { msp_assignment: selected ? `${selected.organizationName} · ${selected.name}` : null },
       details: { assignment_reference_id: referenceId, assignment_revision: revision, assignee: request.assignee } });

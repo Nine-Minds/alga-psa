@@ -108,10 +108,10 @@ async function mutateCoManagedPrivateResourceComment(db: Knex, inputActor: CoMan
           if (comment.deleted_at || comment.revision !== request.expectedRevision) throw new CoManagedPrivateCommentError('PRIVATE_COMMENT_CONFLICT');
           await assertWrite();
           commentId = comment.comment_id; revision = comment.revision + 1;
-          await home.table('co_management_private_comments').where('comment_id', commentId).update({ revision, updated_at: trx.raw('clock_timestamp()'),
-            ...(request.kind === 'edit' ? encodeConversationContent(request) : { deleted_at: trx.raw('clock_timestamp()') }) });
+          await home.table('co_management_private_comments').where('comment_id', commentId).update({ revision, updated_at: trx.raw('now()'),
+            ...(request.kind === 'edit' ? encodeConversationContent(request) : { deleted_at: trx.raw('now()') }) });
         }
-        await home.table('co_management_private_threads').where('thread_id', threadId).update({ last_activity_at: trx.raw('clock_timestamp()') });
+        await home.table('co_management_private_threads').where('thread_id', threadId).update({ last_activity_at: trx.raw('now()') });
         await assertWrite();
         const [saved] = await home.table('co_management_private_command_receipts').insert({ tenant: actor.tenant, operation_id: request.operationId,
           customer_tenant: resource.tenant, relationship_id: resource.relationshipId, resource_type: resource.kind, resource_id: resource.id,

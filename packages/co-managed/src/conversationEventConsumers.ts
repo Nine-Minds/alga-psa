@@ -24,7 +24,7 @@ export async function consumeCoManagedConversationEvent(db: Knex, event: { id: s
     if (row.status !== 'pending') return true;
     const publication = source.status === 'cancelled' || !coManagedConsumerAllowedForChannel(source.publication?.channel, consumer) ? null : await prepareCoManagedConversationEvent({ trx, tenant }, source);
     if (publication) await effect(trx, publication);
-    await owner.table(TABLE).where({ event_id: event.id, consumer }).update({ status: publication ? 'completed' : 'cancelled', completed_at: trx.raw('clock_timestamp()'), error_code: null });
+    await owner.table(TABLE).where({ event_id: event.id, consumer }).update({ status: publication ? 'completed' : 'cancelled', completed_at: trx.raw('now()'), error_code: null });
     return true;
   });
 }
@@ -50,7 +50,7 @@ export async function recoverCoManagedEventConsumers(db: Knex, tenant: string,
         if (!row) return null;
         const publication = source.status === 'cancelled' || !coManagedConsumerAllowedForChannel(source.publication?.channel, item.consumer) ? null : await prepareCoManagedConversationEvent({ trx, tenant }, source);
         if (!publication) {
-          await owner.table(TABLE).where(item).update({ status: 'cancelled', completed_at: trx.raw('clock_timestamp()'), error_code: null });
+          await owner.table(TABLE).where(item).update({ status: 'cancelled', completed_at: trx.raw('now()'), error_code: null });
           return 'cancelled';
         }
         await publish(publication, row.event_id, row.consumer);
@@ -67,5 +67,5 @@ export async function recoverCoManagedEventConsumers(db: Knex, tenant: string,
 }
 function defer(query: Knex.QueryBuilder, db: Knex, errorCode: string | null) {
   return query.update({ attempts: db.raw('attempts + 1'), error_code: errorCode,
-    next_attempt_at: db.raw("clock_timestamp() + least(3600, power(2, least(attempts, 10)) * 120) * interval '1 second'") });
+    next_attempt_at: db.raw("now() + least(3600, power(2, least(attempts, 10)) * 120) * interval '1 second'") });
 }

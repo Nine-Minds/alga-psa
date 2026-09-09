@@ -89,14 +89,14 @@ export async function dispatchCoManagedConversationEvents(db: Knex, tenant: stri
         const publication = await prepareCoManagedConversationEvent({ trx, tenant }, row);
         if (publication) await publish(publication, row.event_id);
         const status = publication ? 'published' : 'cancelled';
-        await owner.table(TABLE).where('event_id', row.event_id).update({ status, completed_at: trx.raw('clock_timestamp()'), error_code: null });
+        await owner.table(TABLE).where('event_id', row.event_id).update({ status, completed_at: trx.raw('now()'), error_code: null });
         return status;
       });
       if (outcome === 'published') result.published++; else if (outcome === 'cancelled') result.cancelled++;
     } catch {
       result.failed++;
       await tenantDb(db, tenant).table(TABLE).where({ event_id: candidate.event_id, status: 'pending' }).update({ attempts: db.raw('attempts + 1'), error_code: 'event_publication_failed',
-        next_attempt_at: db.raw("clock_timestamp() + least(3600, power(2, least(attempts, 10)) * 60) * interval '1 second'") });
+        next_attempt_at: db.raw("now() + least(3600, power(2, least(attempts, 10)) * 60) * interval '1 second'") });
     }
   }
   return result;

@@ -12,7 +12,7 @@ export async function cleanupCoManagedThreadTransfers(db: Knex, tenant: string, 
   await db.transaction(async trx => {
     const owner = tenantDb(trx, tenant), rows = await owner.table(TABLE).where('status', 'prepared')
       .whereRaw("last_activity_at <= clock_timestamp() - ? * interval '1 day'", [CO_MANAGED_UPLOAD_RETENTION_DAYS]).orderBy('last_activity_at').limit(limit).forUpdate().skipLocked();
-    for (const row of rows) { await owner.table(TABLE).where('operation_id', row.operation_id).update({ status: 'abandoned', abandoned_at: trx.raw('clock_timestamp()') }); result.abandonedTransfers++; }
+    for (const row of rows) { await owner.table(TABLE).where('operation_id', row.operation_id).update({ status: 'abandoned', abandoned_at: trx.raw('now()') }); result.abandonedTransfers++; }
   });
   const due = await tenantDb(db, tenant).table(TABLE).where('status', 'abandoned').whereNull('cleaned_at').where('cleanup_next_attempt_at', '<=', db.raw('clock_timestamp()'))
     .orderBy('cleanup_next_attempt_at').orderBy('operation_id').limit(limit).select('operation_id');
@@ -26,14 +26,14 @@ export async function cleanupCoManagedThreadTransfers(db: Knex, tenant: string, 
           if (file.path !== disclosedAttachmentPath(row.customer_tenant, tenant, row.operation_id, file.targetId, row.project_task_id ? 'project_task' : 'ticket')) throw new Error('Invalid transfer cleanup path');
           await remove(file.path);
         }
-        await owner.table(TABLE).where('operation_id', row.operation_id).update({ cleaned_at: trx.raw('clock_timestamp()'), comment_map: {}, manifest: '[]', cleanup_error_code: null });
+        await owner.table(TABLE).where('operation_id', row.operation_id).update({ cleaned_at: trx.raw('now()'), comment_map: {}, manifest: '[]', cleanup_error_code: null });
         return true;
       });
       if (cleaned) result.cleanedTransfers++;
     } catch {
       result.failedTransfers++;
       await tenantDb(db, tenant).table(TABLE).where({ operation_id: candidate.operation_id, status: 'abandoned' }).whereNull('cleaned_at').update({ cleanup_attempts: db.raw('cleanup_attempts + 1'),
-        cleanup_error_code: 'thread_transfer_cleanup_failed', cleanup_next_attempt_at: db.raw("clock_timestamp() + least(3600, power(2, least(cleanup_attempts, 10)) * 60) * interval '1 second'") });
+        cleanup_error_code: 'thread_transfer_cleanup_failed', cleanup_next_attempt_at: db.raw("now() + least(3600, power(2, least(cleanup_attempts, 10)) * 60) * interval '1 second'") });
     }
   }
   return result;

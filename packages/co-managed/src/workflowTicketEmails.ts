@@ -46,8 +46,8 @@ async function finish(trx: Knex.Transaction, row: any, result: CoManagedEmailDel
   const delay = Math.min(3600000, Math.max(60000 * 2 ** Math.min(attempts - 1, 6),
     result.status === 'failed' && Number.isFinite(result.retryAfterMs) ? result.retryAfterMs! : 0));
   await tenantDb(trx, row.tenant).table(TABLE).where('delivery_key', row.delivery_key).update({ status: retry ? 'pending' : result.status,
-    attempt_count: attempts, next_attempt_at: retry ? trx.raw("clock_timestamp() + ? * interval '1 millisecond'", [delay]) : null,
-    completed_at: retry ? null : trx.raw('clock_timestamp()'), error_code: result.status === 'failed' ? result.errorCode.slice(0, 100) : null });
+    attempt_count: attempts, next_attempt_at: retry ? trx.raw("now() + ? * interval '1 millisecond'", [delay]) : null,
+    completed_at: retry ? null : trx.raw('now()'), error_code: result.status === 'failed' ? result.errorCode.slice(0, 100) : null });
 }
 
 /** A completed action is durable authority to attempt delivery, not authority

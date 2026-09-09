@@ -63,7 +63,7 @@ async function beginCreation(db: Knex, tenant: string, operationId: string, iden
     const row = await retainCreation(trx, tenant, operationId, identify);
     if (row.status !== 'prepared') return false;
     await tenantDb(trx, tenant).table(TABLE).where('operation_id', operationId).update({ status: 'uncertain', external_attempted_at: trx.fn.now(),
-      attempt_count: row.attempt_count + 1, next_attempt_at: trx.raw("clock_timestamp() + interval '2 minutes'"), updated_at: trx.fn.now() });
+      attempt_count: row.attempt_count + 1, next_attempt_at: trx.raw("now() + interval '2 minutes'"), updated_at: trx.fn.now() });
     return true;
   });
 }
@@ -86,7 +86,7 @@ async function executeCreation(db: Knex, tenant: string, operationId: string, id
       event_receipt: event ? JSON.stringify(event) : null, provider_meeting_id: meetingId,
       completed_at: outcome.status === 'skipped' ? trx.fn.now() : null,
       last_error_code: created ? null : outcome.status === 'skipped' ? 'provider_unavailable' : 'provider_creation_failed',
-      next_attempt_at: trx.raw("clock_timestamp() + interval '2 minutes'"), updated_at: trx.fn.now(),
+      next_attempt_at: trx.raw("now() + interval '2 minutes'"), updated_at: trx.fn.now(),
     });
   });
 }
@@ -239,7 +239,7 @@ export async function recoverCoManagedAppointmentMeeting(db: Knex, tenant: strin
     await owner.table(TABLE).where('operation_id', operationId).update({ status: terminal ? 'cleaned' : status,
       event_receipt: event ? JSON.stringify(event) : null, provider_meeting_id: meetingId, completed_at: terminal ? trx.fn.now() : null,
       attempt_count: Math.min(2147483647, row.attempt_count + 1), last_error_code: terminal || status === 'created' ? null : 'creation_recovery_pending',
-      next_attempt_at: trx.raw("clock_timestamp() + (least(3600, power(2, least(?, 12)) * 30) * interval '1 second')", [row.attempt_count + 1]), updated_at: trx.fn.now() });
+      next_attempt_at: trx.raw("now() + (least(3600, power(2, least(?, 12)) * 30) * interval '1 second')", [row.attempt_count + 1]), updated_at: trx.fn.now() });
     return { status: terminal ? 'cleaned' as const : status === 'created' ? 'attach' as const : 'retry' as const, actor: actorFor(tenant, row) };
   });
   if (recovered.status !== 'attach') return { status: recovered.status };

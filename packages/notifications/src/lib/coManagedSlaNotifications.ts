@@ -33,11 +33,11 @@ export async function persistCoManagedSlaNotifications(db: Knex, tenant: string,
           category: 'sla', ...coManagedSlaPresentation(message),
         });
         await owner.table('sla_organization_notification_recipients').where(key).update({ status: notification ? 'created' : 'disabled',
-          notification_id: notification?.internal_notification_id ?? null, completed_at: context.trx.raw('clock_timestamp()') });
+          notification_id: notification?.internal_notification_id ?? null, completed_at: context.trx.raw('now()') });
         if (notification) await enqueueCoManagedNotificationDeliveries(context.trx, notification);
       });
       await home.table('sla_organization_notification_events').where({ notification_event_id: event.notification_event_id, status: 'pending' })
-        .update({ status: 'completed', completed_at: db.raw('clock_timestamp()') });
+        .update({ status: 'completed', completed_at: db.raw('now()') });
       completed++;
     } catch (error) { failures.push(error); }
   }

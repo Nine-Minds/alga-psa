@@ -19,8 +19,8 @@ async function finish(trx: Knex.Transaction, row: any, result: CoManagedEmailDel
     result.status === 'failed' && Number.isFinite(result.retryAfterMs) ? result.retryAfterMs! : 0));
   const code = result.status === 'failed' ? (/^[a-z0-9_]{1,100}$/.test(result.errorCode) ? result.errorCode : 'email_transport_failed') : null;
   await tenantDb(trx, row.tenant).table(TABLE).where(key(row)).update({ status: retry ? 'pending' : result.status,
-    attempt_count: attempts, next_attempt_at: retry ? trx.raw("clock_timestamp() + ? * interval '1 millisecond'", [delay]) : null,
-    completed_at: retry ? null : trx.raw('clock_timestamp()'), error_code: code });
+    attempt_count: attempts, next_attempt_at: retry ? trx.raw("now() + ? * interval '1 millisecond'", [delay]) : null,
+    completed_at: retry ? null : trx.raw('now()'), error_code: code });
 }
 
 /** Reauthorize the source/recipient before claiming its email row and await the

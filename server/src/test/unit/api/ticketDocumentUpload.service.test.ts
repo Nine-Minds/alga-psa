@@ -76,6 +76,14 @@ describe('TicketService.uploadTicketDocument', () => {
     const insertedAuditLogs: Record<string, unknown>[] = [];
 
     const trx = ((table: string) => {
+      if (table === 'tenants') {
+        // Lifecycle admission reads the workspace product before the write.
+        // These fixtures are an ordinary PSA tenant, so the write is admitted.
+        return {
+          first: vi.fn().mockResolvedValue({ product_code: 'psa' }),
+        };
+      }
+
       if (table === 'documents') {
         return {
           insert: vi.fn(async (record: Record<string, unknown>) => {
@@ -112,7 +120,23 @@ describe('TicketService.uploadTicketDocument', () => {
       throw new Error(`Unexpected transaction table ${table}`);
     }) as any;
 
+    trx.isTransaction = true;
+
     withTransactionMock.mockImplementation(async (_knex: unknown, callback: (trxArg: unknown) => unknown) => callback(trx));
+
+    // The document rows are now written through the storage service's own
+    // transaction (persistRelatedRecords), so the file record and the document
+    // it belongs to commit together. Drive that callback the way it does.
+    uploadFileMock.mockImplementation(async (
+      _tenant: string,
+      _buffer: Buffer,
+      _fileName: string,
+      options: { persistRelatedRecords?: (trxArg: unknown, file: unknown) => Promise<void> },
+    ) => {
+      const uploadResult = { file_id: 'file-1', storage_path: '/docs/file-1' };
+      await options.persistRelatedRecords?.(trx, uploadResult);
+      return uploadResult;
+    });
 
     const knex = vi.fn((table: string) => {
       if (table === 'tickets') {

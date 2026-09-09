@@ -87,7 +87,7 @@ export async function discloseCoManagedThread(db: Knex, inputActor: CoManagedSes
         is_internal: request.audience !== 'requester', last_activity_at: appliedAt });
       await owner.table(resource.kind === 'project_task' ? 'project_task_comments' : 'comments').where({ thread_id: request.threadId, [resource.kind === 'project_task' ? 'task_id' : 'ticket_id']: resource.id }).update({
         ...(resource.kind === 'project_task' ? { collaboration_revision: trx.raw('collaboration_revision + 1') } : { is_internal: request.audience !== 'requester' }),
-        updated_at: trx.raw("GREATEST(clock_timestamp(), COALESCE(updated_at, '-infinity'::timestamptz) + interval '1 microsecond')") });
+        updated_at: trx.raw("GREATEST(now(), COALESCE(updated_at, '-infinity'::timestamptz) + interval '1 microsecond')") });
       await afterChange({ ...context, operationId: request.operationId, threadId: request.threadId, rootCommentId: root.comment_id, commentIds: comments.map(row => row.comment_id),
         previousAudience: preview.audience, audience: request.audience, appliedAt: appliedAt.toISOString(), actorReferenceId: root.actor_reference_id ?? undefined });
       await owner.table('co_management_command_receipts').insert({ tenant: resource.tenant, operation_id: request.operationId, relationship_id: resource.relationshipId,

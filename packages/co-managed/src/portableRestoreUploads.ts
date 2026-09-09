@@ -89,7 +89,7 @@ export async function settlePortableRestoreUpload(db: Knex, attempt: PortableRes
       .forUpdate().first() as UploadRow | undefined;
     if (!row) fail(); validate(row!);
     if (row!.status === 'committed' || await referenced(trx, row!)) return true;
-    await own.table(TABLE).where('attempt_id', attempt.attemptId).update({ status: 'abandoned', next_cleanup_at: trx.raw('clock_timestamp()') });
+    await own.table(TABLE).where('attempt_id', attempt.attemptId).update({ status: 'abandoned', next_cleanup_at: trx.raw('now()') });
     return false;
   });
 }
@@ -120,11 +120,11 @@ export async function cleanupPortableRestoreUploads(db: Knex, tenant: string, pr
       }
       if (await referenced(trx, current)) {
         await tenantDb(trx, tenant).table(TABLE).where('attempt_id', current.attempt_id).update({
-          next_cleanup_at: trx.raw("clock_timestamp() + interval '1 day'"), cleanup_error_code: 'native_reference_retained' });
+          next_cleanup_at: trx.raw("now() + interval '1 day'"), cleanup_error_code: 'native_reference_retained' });
         return;
       }
       await tenantDb(trx, tenant).table(TABLE).where('attempt_id', current.attempt_id).update({ status: 'abandoned', cleanup_claim: claim,
-        cleanup_attempts: trx.raw('cleanup_attempts + 1'), next_cleanup_at: trx.raw("clock_timestamp() + interval '10 minutes'") });
+        cleanup_attempts: trx.raw('cleanup_attempts + 1'), next_cleanup_at: trx.raw("now() + interval '10 minutes'") });
       return current;
     });
     if (!row) { result.skipped++; continue; }
@@ -139,8 +139,8 @@ export async function cleanupPortableRestoreUploads(db: Knex, tenant: string, pr
       await assertPortableRestoreInstallationAuthority(trx);
       await tenantDb(trx, tenant).table(TABLE).where({ attempt_id: row.attempt_id, status: 'abandoned', cleanup_claim: claim })
         .update({ cleanup_claim: null, cleanup_error_code: failed ? 'portable_restore_cleanup_failed' : null,
-          ...(failed ? {} : { cleaned_at: trx.raw('clock_timestamp()') }),
-          next_cleanup_at: trx.raw(failed ? "clock_timestamp() + interval '1 minute'" : "clock_timestamp() + interval '1 day'") });
+          ...(failed ? {} : { cleaned_at: trx.raw('now()') }),
+          next_cleanup_at: trx.raw(failed ? "now() + interval '1 minute'" : "now() + interval '1 day'") });
     });
     if (failed) result.failed++; else result.cleaned++;
   }

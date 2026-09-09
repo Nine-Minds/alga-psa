@@ -58,10 +58,10 @@ export async function retryCoManagedInitialAdministratorInvitation(db: Knex, inp
     if (expired) {
       await assertInvitationCapacity(trx, context);
       await context.customer.table('user_invitations').where('invitation_id', context.invitation.invitation_id).update({
-        token: randomBytes(32).toString('hex'), expires_at: trx.raw("clock_timestamp() + interval '24 hours'"),
+        token: randomBytes(32).toString('hex'), expires_at: trx.raw("now() + interval '24 hours'"),
       });
       await context.sponsor.table('co_managed_provisioning_operations').where('operation_id', operationId).update({
-        invitation_sent_at: null, invitation_delivery_error: null, updated_at: trx.raw('clock_timestamp()'),
+        invitation_sent_at: null, invitation_delivery_error: null, updated_at: trx.raw('now()'),
       });
     }
     await credential.assertCurrent();
@@ -77,12 +77,12 @@ export async function deliverCoManagedInitialAdministratorInvitation(db: Knex, s
     if (!context || context.operation.invitation_sent_at) return true;
     await assertInvitationCapacity(trx, context);
     await context.customer.table('user_invitations').where('invitation_id', context.invitation.invitation_id)
-      .update({ expires_at: trx.raw("clock_timestamp() + interval '24 hours'") });
+      .update({ expires_at: trx.raw("now() + interval '24 hours'") });
     const delivered = await send({ customerTenant: context.operation.customer_tenant, workspaceName: context.operation.request.workspaceName,
       administratorName: `${context.invitation.first_name} ${context.invitation.last_name}`, email: context.invitation.email, token: context.invitation.token });
     await context.sponsor.table('co_managed_provisioning_operations').where('operation_id', operationId).update({
-      invitation_sent_at: delivered ? trx.raw('clock_timestamp()') : null,
-      invitation_delivery_error: delivered ? null : 'INVITATION_DELIVERY_FAILED', updated_at: trx.raw('clock_timestamp()'),
+      invitation_sent_at: delivered ? trx.raw('now()') : null,
+      invitation_delivery_error: delivered ? null : 'INVITATION_DELIVERY_FAILED', updated_at: trx.raw('now()'),
     });
     return delivered;
   });

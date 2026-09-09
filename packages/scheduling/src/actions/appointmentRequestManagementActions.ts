@@ -117,7 +117,14 @@ function appointmentRequestActionErrorMessage(error: unknown, fallback: string):
     message === 'Service not found' ||
     message === 'Ticket not found' ||
     message === 'Ticket does not belong to the same client as the appointment request' ||
-    message === 'Online Meeting interaction type is not configured'
+    message === 'Online Meeting interaction type is not configured' ||
+    // Preconditions of the "Generate Teams meeting" retry action. Each names
+    // the state the operator has to change, so the generic fallback would
+    // strip the only actionable part of the failure.
+    message === 'A Teams meeting can only be generated for approved appointment requests' ||
+    message === 'This appointment request already has a meeting link' ||
+    message === 'The approved request has no schedule entry to attach a meeting to' ||
+    message === 'Schedule entry not found for the approved request'
   ) {
     return message;
   }

@@ -24,14 +24,14 @@ export async function persistCoManagedRoutingNotifications(db: Knex, tenant: str
             ...coManagedRoutingPresentation(message),
           });
           await local.table(CO_MANAGED_ROUTING_RECIPIENTS).where(key).update({ status: notification ? 'created' : 'disabled',
-            notification_id: notification?.internal_notification_id ?? null, completed_at: trx.raw('clock_timestamp()') });
+            notification_id: notification?.internal_notification_id ?? null, completed_at: trx.raw('now()') });
           if (notification) await enqueueCoManagedNotificationDeliveries(context.trx, notification);
           return true;
         });
       if (delivered !== null) return;
       const local = tenantDb(trx, tenant);
       if (await local.table(CO_MANAGED_ROUTING_RECIPIENTS).where(key).forUpdate().skipLocked().first())
-        await local.table(CO_MANAGED_ROUTING_RECIPIENTS).where(key).update({ status: 'skipped', completed_at: trx.raw('clock_timestamp()') });
+        await local.table(CO_MANAGED_ROUTING_RECIPIENTS).where(key).update({ status: 'skipped', completed_at: trx.raw('now()') });
     });
     processed++;
   } catch (error) { failures.push(error); }

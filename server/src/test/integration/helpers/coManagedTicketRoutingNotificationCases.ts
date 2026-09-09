@@ -53,7 +53,7 @@ export function registerCoManagedTicketRoutingNotificationTests(getDb: () => Kne
     const send = vi.fn().mockResolvedValueOnce({ status: 'failed', retryable: true, errorCode: 'provider_down' }).mockResolvedValue({ status: 'delivered' });
     await processCoManagedRoutingEmailDeliveries(db, f.principal.tenant, send);
     expect(send).toHaveBeenCalledTimes(1);
-    await f.sponsor.table(R).where({ event_id: input.operationId, channel: 'email' }).update({ next_attempt_at: db.raw('clock_timestamp()') });
+    await f.sponsor.table(R).where({ event_id: input.operationId, channel: 'email' }).update({ next_attempt_at: db.raw('now()') });
     await Promise.all([processCoManagedRoutingEmailDeliveries(db, f.principal.tenant, send), processCoManagedRoutingEmailDeliveries(db, f.principal.tenant, send)]);
     expect(send).toHaveBeenCalledTimes(2);
     expect(send.mock.calls[1][0].messageId).toBe(send.mock.calls[0][0].messageId);
@@ -66,7 +66,7 @@ export function registerCoManagedTicketRoutingNotificationTests(getDb: () => Kne
   it.each(['unassigned', 'revoked', 'inactive', 'denied'] as const)('routing notifications skip delayed delivery when recipient becomes %s', async reason => withAssignment(async f => {
     const db = getDb(), input = await assign(f);
     if (reason === 'unassigned') await f.assignments.assignCoManagedTicket(db, f.customerPrincipal, f.resource, { operationId: randomUUID(), expectedRevision: 2, assignee: null });
-    if (reason === 'revoked') await f.customer.table('co_management_ticket_work').where('ticket_id', f.resource.id).update({ grant_revoked_at: db.raw('clock_timestamp()'), can_collaborate: false });
+    if (reason === 'revoked') await f.customer.table('co_management_ticket_work').where('ticket_id', f.resource.id).update({ grant_revoked_at: db.raw('now()'), can_collaborate: false });
     if (reason === 'inactive') await f.sponsor.table('users').where('user_id', f.principal.userId).update({ is_inactive: true });
     if (reason === 'denied') await f.sponsor.table('role_permissions').whereIn('permission_id', f.sponsor.table('permissions').where({ resource: 'ticket', action: 'read' }).select('permission_id')).delete();
     await persistCoManagedRoutingNotifications(db, f.principal.tenant);

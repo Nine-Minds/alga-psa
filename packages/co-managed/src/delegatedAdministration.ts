@@ -140,7 +140,7 @@ export async function revokeCoManagedDelegatedGrant(db: Knex, actor: CoManagedSe
     const row = await context.owner.table(GRANTS).where({ grant_id: grantId, relationship_id: target.relationshipId }).forUpdate().first();
     if (!row) deny(); if (row.revoked_at) return { revision: context.relationship.revision };
     if (expectedRevision !== context.relationship.revision) throw new Error('Co-managed delegation changed; refresh before saving');
-    await context.owner.table(GRANTS).where('grant_id',grantId).update({ revoked_at: context.trx.raw('clock_timestamp()') });
+    await context.owner.table(GRANTS).where('grant_id',grantId).update({ revoked_at: context.trx.raw('now()') });
     return { revision: await recordGrantChange(context,grantId,'delegation_revoked',{}) };
   });
 }

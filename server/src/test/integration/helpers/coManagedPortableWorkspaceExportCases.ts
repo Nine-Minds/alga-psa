@@ -453,7 +453,7 @@ export function registerCoManagedPortableWorkspaceExportTests(getDb: () => Knex,
         // A provider read must not retain the destination row lock. A changed
         // local billing row must invalidate the already prepared candidate.
         await db.transaction(async trx => { await trx.raw("SET LOCAL lock_timeout = '100ms'");
-          await tenantDb(trx, tenant).table('stripe_subscriptions').update({ updated_at: trx.raw("clock_timestamp() + interval '1 second'") }); });
+          await tenantDb(trx, tenant).table('stripe_subscriptions').update({ updated_at: trx.raw("now() + interval '1 second'") }); });
         return read(...args);
       });
       await expect(activate(db, activation, log, dependencies)).rejects.toThrow('destination subscription changed');

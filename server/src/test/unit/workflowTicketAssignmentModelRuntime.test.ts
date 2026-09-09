@@ -137,6 +137,17 @@ class FakeQueryBuilder {
     return this;
   }
 
+  // Assignment resolution now takes row locks while it reads the users, teams
+  // and ticket rows it is about to reconcile. The fake runs single-threaded, so
+  // the lock modifiers only need to keep the chain going.
+  forShare(): this {
+    return this;
+  }
+
+  forUpdate(): this {
+    return this;
+  }
+
   join(tableName: string, callback: (this: FakeJoinClause, clause?: FakeJoinClause) => void): this {
     const clause = new FakeJoinClause();
     callback.call(clause, clause);
@@ -299,7 +310,10 @@ class FakeQueryBuilder {
 }
 
 function createFakeTrx(tables: TableMap) {
-  return ((tableName: string) => new FakeQueryBuilder(tableName, tables)) as any;
+  const trx = ((tableName: string) => new FakeQueryBuilder(tableName, tables)) as any;
+  // Ticket mutations refuse to run outside the transaction that read the row.
+  trx.isTransaction = true;
+  return trx;
 }
 
 function setTenantTx(tables: TableMap): void {

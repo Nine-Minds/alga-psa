@@ -117,7 +117,7 @@ async function withDraft<T>(db: Knex, actor: CoManagedSessionActor, resource: Co
       relationship_id: resource.relationshipId, ticket_id: resource.id, actor_tenant: actor.tenant, actor_user_id: actor.userId }).forUpdate().first();
     if (!row) deny();
     if (row.abandoned_at) throw new CoManagedConversationDraftError('CONVERSATION_DRAFT_ABANDONED');
-    if (row.status === 'draft') await tenantDb(context.trx, reference.storeTenant).table(TABLE).where('operation_id', row.operation_id).update({ last_activity_at: context.trx.raw('clock_timestamp()') });
+    if (row.status === 'draft') await tenantDb(context.trx, reference.storeTenant).table(TABLE).where('operation_id', row.operation_id).update({ last_activity_at: context.trx.raw('now()') });
     const request = snapshotRequest({ ...row.request, files: row.manifest });
     const admitted = await destination(context, request, reference.storeTenant);
     if (admitted.audience !== row.audience || admitted.comment.threadId !== row.thread_id) deny();
@@ -154,7 +154,7 @@ export async function beginCoManagedConversationDraft(db: Knex, inputActor: CoMa
     }
     if (row.request_hash !== hash || row.audience !== context.audience) conflict();
     if (row.abandoned_at) throw new CoManagedConversationDraftError('CONVERSATION_DRAFT_ABANDONED');
-    if (row.status === 'draft') await owner.table(TABLE).where('operation_id', row.operation_id).update({ last_activity_at: base.trx.raw('clock_timestamp()') });
+    if (row.status === 'draft') await owner.table(TABLE).where('operation_id', row.operation_id).update({ last_activity_at: base.trx.raw('now()') });
     return progress(context, row);
   });
 }
@@ -203,7 +203,7 @@ export async function publishCoManagedConversationDraft(db: Knex, inputActor: Co
       ? await mutateCoManagedPrivateTicketComment(context.trx, actor, resource, { ...common, kind: 'create', ...(request.parent ? { parent: request.parent } : {}) })
       : await publishCustomer(context.trx, actor, resource, { ...common, ...(request.parent ? { parent: request.parent, ...(request.expectedAudience !== undefined ? { expectedAudience: request.expectedAudience } : {}) } : { audience: request.audience! }) });
     checkedReceipt(receipt, context);
-    await owner.table(TABLE).where('operation_id', row.operation_id).update({ status: 'published', receipt: JSON.stringify(receipt), published_at: context.trx.raw('clock_timestamp()') });
+    await owner.table(TABLE).where('operation_id', row.operation_id).update({ status: 'published', receipt: JSON.stringify(receipt), published_at: context.trx.raw('now()') });
     if (reference.storeTenant === resource.tenant) await stageCoManagedConversationFiles(context.trx, resource.tenant, resource.id, row.operation_id);
     else await stageCoManagedPrivateConversationFiles(context.trx, reference.storeTenant, resource, row.operation_id);
     await assertCoManagedSessionUnexpired(context.trx, actor);

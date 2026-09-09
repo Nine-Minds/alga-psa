@@ -94,7 +94,7 @@ export async function discloseCoManagedPrivateThread(db: Knex, inputActor: CoMan
       if (!row || row.request_hash !== requestHash || row.customer_tenant !== resource.tenant || row.relationship_id !== resource.relationshipId || Object.entries(coManagedAttachmentParent(resource)).some(([key,value]) => row[key] !== value) ||
         row.source_thread_id !== reference.threadId || row.actor_user_id !== actor.userId || row.audience !== request.audience || row.source_snapshot !== request.expectedSnapshot) throw new CoManagedThreadDisclosureError('THREAD_DISCLOSURE_OPERATION_CONFLICT');
       if (row.status === 'abandoned') conflict();
-      if (row.status === 'prepared') await owner.table(TABLE).where('operation_id', operationId).update({ last_activity_at: context.trx.raw('clock_timestamp()') });
+      if (row.status === 'prepared') await owner.table(TABLE).where('operation_id', operationId).update({ last_activity_at: context.trx.raw('now()') });
       return work(context, row);
     });
     await withAuthority(db, actor, resource, async context => {

@@ -74,7 +74,7 @@ export async function createRequesterTaskComment(db: Knex, actor: CoManagedSessi
       actor_display_name: [user.first_name, user.last_name].filter(Boolean).join(' ') || user.email,
       actor_organization_name: organization.client_name || actor.tenant, ...encodeConversationContent(content), collaboration_revision: 1, request_hash: hash,
       created_at: trx.raw('clock_timestamp()'), updated_at: trx.raw('clock_timestamp()') });
-    if (parent) await own.table('comment_threads').where('thread_id', threadId).update({ reply_count: trx.raw('reply_count + 1'), last_activity_at: trx.raw('clock_timestamp()') });
+    if (parent) await own.table('comment_threads').where('thread_id', threadId).update({ reply_count: trx.raw('reply_count + 1'), last_activity_at: trx.raw('now()') });
     await retainCoManagedTaskCommentEvent(trx, { tenant: actor.tenant, eventId: operationId, taskId: target.taskId, commentId: operationId, kind: 'create' });
     return { operationId, commentId: operationId, threadId };
   });

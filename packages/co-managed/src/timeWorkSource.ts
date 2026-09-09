@@ -71,7 +71,7 @@ export async function admitCoManagedTimeWorkSource(trx: Knex.Transaction, actor:
       await retainReference(true);
       await home.table('co_managed_time_work_references').where('reference_id', referenceId).update({
         title: presented.workItem.name || null, description: presented.workItem.description || null,
-        ticket_number: presented.workItem.ticket_number ?? null, captured_at: trx.raw('clock_timestamp()'),
+        ticket_number: presented.workItem.ticket_number ?? null, captured_at: trx.raw('now()'),
       });
       return presented;
     }));

@@ -19,8 +19,31 @@ const hoisted = vi.hoisted(() => {
     fetchAndPersistMeetingArtifactsMock: vi.fn(async () => ({})),
     isRecordingFetchDueMock: vi.fn(() => true),
     buildTeamsArtifactCaptureDepsMock: vi.fn(async () => ({ marker: 'capture-deps' })),
+    // The sweep reconciles co-managed meeting creation before anything else,
+    // then reads the workspace row to decide whether the tenant is still
+    // entitled to more than compensation.
+    recoverCoManagedAppointmentMeetingsMock: vi.fn(async () => undefined),
+    synchronizeCoManagedScheduleMeetingsMock: vi.fn(async () => undefined),
+    workspaceRow: { value: { suspended_at: null } as Record<string, unknown> | undefined },
   };
 });
+
+vi.mock('@alga-psa/db', () => ({
+  getConnection: vi.fn(async () => ({ marker: 'connection' })),
+  tenantDb: () => ({
+    table: (_name: string) => ({
+      first: async (..._cols: string[]) => hoisted.workspaceRow.value,
+    }),
+  }),
+}));
+
+vi.mock('@alga-psa/scheduling/lib/appointmentMeetingCreation', () => ({
+  recoverCoManagedAppointmentMeetings: hoisted.recoverCoManagedAppointmentMeetingsMock,
+}));
+
+vi.mock('@alga-psa/scheduling/lib/scheduleMeetingSynchronization', () => ({
+  synchronizeCoManagedScheduleMeetings: hoisted.synchronizeCoManagedScheduleMeetingsMock,
+}));
 
 vi.mock('@alga-psa/clients/models', () => ({
   OnlineMeetingModel: {
@@ -164,6 +187,7 @@ describe('teamsMeetingCleanupHandler', () => {
 describe('teamsMeetingSweepHandler', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    hoisted.workspaceRow.value = { suspended_at: null };
     hoisted.resolveTeamsMeetingGraphConfigMock.mockResolvedValue({ clientId: 'client-1' });
     hoisted.listPendingRecordingsMock.mockResolvedValue([]);
     hoisted.listPendingCleanupMock.mockResolvedValue([]);
@@ -222,6 +246,25 @@ describe('teamsMeetingSweepHandler', () => {
       { status: 'cancelled', error_code: null },
       TENANT,
     );
+  });
+
+  it('a suspended workspace keeps only compensation: creation recovery runs, nothing else does', async () => {
+    // The fan-out deliberately lists suspended tenants for this job
+    // (includeSuspended), because meetings already created in Graph still have
+    // to be reconciled. Everything past the recovery step must stop here.
+    hoisted.workspaceRow.value = { suspended_at: new Date('2026-07-01T00:00:00.000Z') };
+    hoisted.listPendingRecordingsMock.mockResolvedValue([
+      meeting({ meeting_id: 'due-1', status: 'recording_pending' }),
+    ]);
+    hoisted.listPendingCleanupMock.mockResolvedValue([meeting({ meeting_id: 'stale-1' })]);
+
+    await teamsMeetingSweepHandler({ tenantId: TENANT });
+
+    expect(hoisted.recoverCoManagedAppointmentMeetingsMock).toHaveBeenCalledTimes(1);
+    expect(hoisted.synchronizeCoManagedScheduleMeetingsMock).not.toHaveBeenCalled();
+    expect(hoisted.resolveTeamsMeetingGraphConfigMock).not.toHaveBeenCalled();
+    expect(hoisted.listPendingRecordingsMock).not.toHaveBeenCalled();
+    expect(hoisted.deleteTeamsMeetingWithResultMock).not.toHaveBeenCalled();
   });
 
   it('isolates per-meeting fetch failures so one meeting cannot abort the sweep', async () => {

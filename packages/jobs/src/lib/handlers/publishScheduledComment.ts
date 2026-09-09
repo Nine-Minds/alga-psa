@@ -127,7 +127,7 @@ export async function publishScheduledComment(knex: Knex, data: PublishScheduled
     // this attempt rolled back must keep its new due time and clear retry state.
     if (coManaged) await tenantDb(knex, data.tenantId).table('comments')
       .where({ comment_id: data.commentId, ticket_id: data.ticketId, scheduled_publish_at: snapshot.scheduled_publish_at })
-      .update({ scheduled_publish_retry_at: knex.raw("clock_timestamp() + interval '15 minutes'") });
+      .update({ scheduled_publish_retry_at: knex.raw("now() + interval '15 minutes'") });
     throw error;
   }
 }
@@ -156,7 +156,7 @@ async function retainScheduledConversationEvents(db: Knex | Knex.Transaction, te
         previousResponseState: comment.scheduled_previous_response_state ?? null, newResponseState: 'awaiting_client',
         previousState: comment.scheduled_previous_response_state ?? null, newState: 'awaiting_client', trigger: 'comment',
       } }, { eventId: comment.scheduled_response_event_id });
-      await owner.table('comments').where('comment_id', commentId).update({ scheduled_response_dispatched_at: trx.raw('clock_timestamp()') });
+      await owner.table('comments').where('comment_id', commentId).update({ scheduled_response_dispatched_at: trx.raw('now()') });
     }
     if (comment.scheduled_publish_event_id && !comment.scheduled_publish_dispatched_at) {
       const author = comment.user_id ? await owner.table('users').where('user_id', comment.user_id).first('first_name', 'last_name') : null;
@@ -172,7 +172,7 @@ async function retainScheduledConversationEvents(db: Knex | Knex.Transaction, te
         workflowContext: { tenantId: tenant, occurredAt: new Date(comment.published_at).toISOString(), correlationId: commentId,
           actor: { actorType: 'USER', actorUserId: comment.user_id } },
       }, { eventId: uuidv5(`${tenant}:TICKET_MESSAGE_ADDED`, comment.scheduled_publish_event_id) });
-      await owner.table('comments').where('comment_id', commentId).update({ scheduled_publish_dispatched_at: trx.raw('clock_timestamp()') });
+      await owner.table('comments').where('comment_id', commentId).update({ scheduled_publish_dispatched_at: trx.raw('now()') });
     }
     await owner.table('comments').where('comment_id', commentId).update({ scheduled_publish_retry_at: null });
     return true;

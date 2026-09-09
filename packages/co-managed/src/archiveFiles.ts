@@ -126,14 +126,14 @@ export async function storeCoManagedArchiveFiles(db: Knex, tenant: string, limit
         const path = coManagedArchiveFilePath(tenant, row.archive_file_id), provider = await StorageProviderFactory.createProvider();
         const uploaded = await provider.upload(row.staged_bytes, path, { mime_type: row.mime_type });
         if (uploaded.path !== path || uploaded.size !== row.file_size) throw new Error('Archive storage did not confirm the complete object');
-        await owner.table(TABLE).where('archive_file_id', row.archive_file_id).update({ status: 'ready', staged_bytes: null, stored_at: trx.raw('clock_timestamp()'), error_code: null });
+        await owner.table(TABLE).where('archive_file_id', row.archive_file_id).update({ status: 'ready', staged_bytes: null, stored_at: trx.raw('now()'), error_code: null });
         return true;
       });
       if (stored) result.stored++;
     } catch {
       result.failed++;
       await tenantDb(db, tenant).table(TABLE).where({ archive_file_id: candidate.archive_file_id, status: 'pending' }).update({ attempts: db.raw('attempts + 1'),
-        error_code: 'archive_storage_failed', next_attempt_at: db.raw("clock_timestamp() + least(3600, power(2, least(attempts, 10)) * 60) * interval '1 second'") });
+        error_code: 'archive_storage_failed', next_attempt_at: db.raw("now() + least(3600, power(2, least(attempts, 10)) * 60) * interval '1 second'") });
     }
   }
   return result;

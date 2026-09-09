@@ -181,7 +181,7 @@ export async function transferAuthorizedCoManagedAttachment(db: Knex, inputActor
     assertContext(context);
     const owner = tenantDb(context.trx, comment.storeTenant);
     const previous = await owner.table(TABLE).where('attachment_id', attachmentId).forUpdate().first();
-    if (previous) { if (previous.discarded_at) throw new CoManagedAttachmentError('ATTACHMENT_OPERATION_CONFLICT'); if (previous.request_hash !== hash || previous.draft_operation_id !== (context.draftOperationId ?? null)) throw new CoManagedAttachmentError('ATTACHMENT_OPERATION_CONFLICT'); await owner.table(TABLE).where('attachment_id', attachmentId).update({ last_activity_at: context.trx.raw('clock_timestamp()') }); return; }
+    if (previous) { if (previous.discarded_at) throw new CoManagedAttachmentError('ATTACHMENT_OPERATION_CONFLICT'); if (previous.request_hash !== hash || previous.draft_operation_id !== (context.draftOperationId ?? null)) throw new CoManagedAttachmentError('ATTACHMENT_OPERATION_CONFLICT'); await owner.table(TABLE).where('attachment_id', attachmentId).update({ last_activity_at: context.trx.raw('now()') }); return; }
     if (resource.kind === 'project_task' && context.draftOperationId) deny();
     await owner.table(TABLE).insert({ tenant: comment.storeTenant, attachment_id: attachmentId, customer_tenant: resource.tenant, relationship_id: resource.relationshipId,
       ...coManagedAttachmentParent(resource), thread_id: comment.threadId, comment_id: comment.commentId, actor_tenant: actor.tenant, actor_user_id: actor.userId,
@@ -198,7 +198,7 @@ export async function transferAuthorizedCoManagedAttachment(db: Knex, inputActor
     if (row.status !== 'ready') {
       await upload(row.storage_path, content, mimeType);
       await context.assertWriteAuthority();
-      await attachmentQuery(context).where('attachment_id', attachmentId).update({ status: 'ready', ready_at: context.trx.raw('clock_timestamp()'), last_activity_at: context.trx.raw('clock_timestamp()') });
+      await attachmentQuery(context).where('attachment_id', attachmentId).update({ status: 'ready', ready_at: context.trx.raw('now()'), last_activity_at: context.trx.raw('now()') });
     } else await context.assertWriteAuthority();
     if (comment.storeTenant === resource.tenant) await stageCoManagedCanonicalConversationFiles(context.trx, resource.tenant, resource, comment.commentId, { attachmentId, content });
     else await stageCoManagedPrivateConversationFiles(context.trx, comment.storeTenant, resource, comment.commentId, { attachmentId, content });
@@ -239,8 +239,8 @@ export async function removeCoManagedConversationAttachment(db: Knex, inputActor
     // An unrelated comment using a staged draft's future ID cannot authorize
     // removal of its hidden files. Only published attachments reach this path.
     if (!await visibleAttachmentQuery(context).where('attachment_id', attachmentId).first()) deny();
-    const [removed] = await owner.table(TABLE).where('attachment_id', attachmentId).update({ discarded_at: context.trx.raw('clock_timestamp()'),
-      removal_actor_tenant: actor.tenant, removal_actor_user_id: actor.userId, cleanup_next_attempt_at: context.trx.raw('clock_timestamp()') }).returning('discarded_at');
+    const [removed] = await owner.table(TABLE).where('attachment_id', attachmentId).update({ discarded_at: context.trx.raw('now()'),
+      removal_actor_tenant: actor.tenant, removal_actor_user_id: actor.userId, cleanup_next_attempt_at: context.trx.raw('now()') }).returning('discarded_at');
     return { ...qualified, removedAt: new Date(removed.discarded_at).toISOString() };
   });
 }

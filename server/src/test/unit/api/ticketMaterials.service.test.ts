@@ -2,6 +2,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { TicketService } from '../../../lib/api/services/TicketService';
 
+// These cases cover materials semantics against a fake knex. Co-managed
+// lifecycle admission needs a real transaction and has dedicated PostgreSQL
+// coverage, so it is stubbed out here rather than re-asserted.
+vi.mock('@alga-psa/licensing', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  assertCoManagedOperationalWrite: vi.fn(),
+}));
+
 function createMaterialsListBuilder(rows: unknown[]) {
   const builder = {
     leftJoin: vi.fn(() => builder),

@@ -101,7 +101,7 @@ export function registerCoManagedRequesterTaskEmailCases(getDb: () => Knex, with
     await processCoManagedRequesterEmailDeliveries(f.db, f.portal.tenant, send);
     const edit = await mutateCoManagedProjectTaskComment(f.db, f.customerPrincipal, f.resource, { operationId: randomUUID(), kind: 'edit', text: 'Current requester body',
       comment: { storeTenant: f.portal.tenant, threadId: comment.threadId, commentId: comment.commentId }, expectedRevision: 1 });
-    await f.customer.table(TABLE).where('comment_id', comment.commentId).update({ next_attempt_at: f.db.raw('clock_timestamp()') });
+    await f.customer.table(TABLE).where('comment_id', comment.commentId).update({ next_attempt_at: f.db.raw('now()') });
     await Promise.all([processCoManagedRequesterEmailDeliveries(f.db, f.portal.tenant, send), processCoManagedRequesterEmailDeliveries(f.db, f.portal.tenant, send)]);
     expect(send).toHaveBeenCalledTimes(2); expect(send.mock.calls[1][0].messageId).toBe(send.mock.calls[0][0].messageId);
     expect(send.mock.calls[1][0].message.note).toContain('Current requester body'); expect(edit).toBeDefined();

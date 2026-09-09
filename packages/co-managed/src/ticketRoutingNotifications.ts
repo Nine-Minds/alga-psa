@@ -65,7 +65,7 @@ export async function retainCoManagedTicketRoutingNotification(context: CoManage
   }))));
   // Fanout is complete once its recipient obligations are durable; each channel
   // records delivery independently, including events with no eligible candidate.
-  await home.table(CO_MANAGED_ROUTING_EVENTS).where('event_id', eventId).update({ status: 'completed', completed_at: trx.raw('clock_timestamp()') });
+  await home.table(CO_MANAGED_ROUTING_EVENTS).where('event_id', eventId).update({ status: 'completed', completed_at: trx.raw('now()') });
 }
 
 /** Owner reads retain their native ticket policy after departure. Foreign reads
