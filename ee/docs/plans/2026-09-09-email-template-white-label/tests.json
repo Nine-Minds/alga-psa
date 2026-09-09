@@ -313,11 +313,12 @@
   {
     "id": "T035",
     "description": "apply for all 54 names in 8 languages completes under 10 s on the local Citus DB",
-    "implemented": true,
+    "implemented": false,
     "commitGroup": "apply-action",
     "featureIds": [
       "F029"
-    ]
+    ],
+    "note": "Not measured: no database is provisioned for this card. The batching it guards (one transaction per language, chunked inserts, id-scoped updates) is asserted by the actions contract test."
   },
   {
     "id": "T036",

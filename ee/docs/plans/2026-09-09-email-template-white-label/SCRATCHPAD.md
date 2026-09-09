@@ -86,6 +86,8 @@
   cover the planner against the real English system templates instead of needing a seeded database.
 - UI coverage is draft-state unit tests plus source-contract tests (ids, structure, no server call in the
   preview path). `packages/notifications` has no jsdom harness and standing one up was out of scope.
+- T035 (432 rows under 10 s on Citus) is the one test left unimplemented: no database was provisioned for
+  this card. The batching it guards is asserted structurally by the actions contract test instead.
 
 ## Open Questions
 
