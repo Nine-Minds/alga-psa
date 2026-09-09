@@ -1473,6 +1473,9 @@
       "notice": "Está viendo una vista previa de un tema sin guardar. El resto conserva el tema guardado hasta que lo aplique.",
       "save": "Aplicar para todos",
       "discard": "Descartar"
+    },
+    "upgrade": {
+      "pitch": "Los pares de temas para toda la organización, el editor de paleta personalizada y la marca blanca de la aplicación MSP forman parte de la edición Enterprise."
     }
   },
   "mspLanguage": {

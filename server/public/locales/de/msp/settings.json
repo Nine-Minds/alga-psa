@@ -1473,6 +1473,9 @@
       "notice": "Sie sehen eine Vorschau eines nicht gespeicherten Themes. Alle anderen behalten das gespeicherte, bis Sie es anwenden.",
       "save": "Für alle übernehmen",
       "discard": "Verwerfen"
+    },
+    "upgrade": {
+      "pitch": "Organisationsweite Themenpaare, ein Editor für eigene Farbpaletten und das White-Labeling der MSP-App gehören zur Enterprise Edition."
     }
   },
   "mspLanguage": {

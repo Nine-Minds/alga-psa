@@ -1473,6 +1473,9 @@
       "notice": "U bekijkt een voorbeeld van een niet-opgeslagen thema. De rest houdt het opgeslagen thema tot u dit toepast.",
       "save": "Voor iedereen toepassen",
       "discard": "Verwerpen"
+    },
+    "upgrade": {
+      "pitch": "Organisatiebrede themaparen, een editor voor een eigen kleurenpalet en white-labeling van de MSP-app maken deel uit van de Enterprise Edition."
     }
   },
   "mspLanguage": {

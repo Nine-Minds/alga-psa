@@ -1473,6 +1473,9 @@
       "notice": "Está a pré-visualizar um tema não guardado. Os restantes mantêm o tema guardado até o aplicar.",
       "save": "Aplicar a todos",
       "discard": "Descartar"
+    },
+    "upgrade": {
+      "pitch": "Pares de temas para toda a organização, um editor de paleta personalizada e o white-label do aplicativo MSP fazem parte da edição Enterprise."
     }
   },
   "mspLanguage": {

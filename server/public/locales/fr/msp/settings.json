@@ -1473,6 +1473,9 @@
       "notice": "Vous prévisualisez un thème non enregistré. Les autres gardent le thème enregistré jusqu’à ce que vous l’appliquiez.",
       "save": "Appliquer pour tous",
       "discard": "Abandonner"
+    },
+    "upgrade": {
+      "pitch": "Les paires de thèmes à l'échelle de l'organisation, l'éditeur de palette personnalisée et la marque blanche de l'application MSP font partie de l'édition Enterprise."
     }
   },
   "mspLanguage": {

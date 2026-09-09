@@ -1473,6 +1473,9 @@
       "notice": "Stai visualizzando l’anteprima di un tema non salvato. Gli altri mantengono quello salvato finché non lo applichi.",
       "save": "Applica a tutti",
       "discard": "Annulla modifiche"
+    },
+    "upgrade": {
+      "pitch": "Le coppie di temi a livello di organizzazione, l'editor della tavolozza personalizzata e il white-label dell'app MSP fanno parte dell'edizione Enterprise."
     }
   },
   "mspLanguage": {

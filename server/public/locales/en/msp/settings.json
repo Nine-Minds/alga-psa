@@ -1473,6 +1473,9 @@
       "notice": "You are previewing an unsaved theme. Everyone else keeps the saved one until you apply this.",
       "save": "Apply to everyone",
       "discard": "Discard"
+    },
+    "upgrade": {
+      "pitch": "Organization-wide theme pairs, a custom palette editor and MSP white-labeling are part of Enterprise Edition."
     }
   },
   "mspLanguage": {

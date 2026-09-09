@@ -1479,6 +1479,9 @@
       "notice": "Oglądasz podgląd niezapisanego motywu. Pozostali widzą zapisany motyw, dopóki go nie zastosujesz.",
       "save": "Zastosuj dla wszystkich",
       "discard": "Odrzuć"
+    },
+    "upgrade": {
+      "pitch": "Pary motywów dla całej organizacji, edytor własnej palety kolorów oraz white-labeling aplikacji MSP są częścią edycji Enterprise."
     }
   },
   "mspLanguage": {
