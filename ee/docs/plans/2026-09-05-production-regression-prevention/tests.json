@@ -164,7 +164,7 @@
   {
     "id": "T017",
     "description": "Against EE/Citus migrated/upgraded schema, create and query tenant-scoped business rows and generate a representative invoice; forbidden cross-tenant reads/writes are rejected. Confirm runtime behavior, not just distribution counts.",
-    "implemented": false,
+    "implemented": true,
     "kind": "citus-integration",
     "featureIds": [
       "F022"

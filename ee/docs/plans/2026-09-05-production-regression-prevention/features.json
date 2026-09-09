@@ -290,7 +290,7 @@
   {
     "id": "F022",
     "description": "Run representative EE/Citus tenant-scoped reads, writes and billing against migrated/upgraded schema, documenting topology limitations.",
-    "implemented": false,
+    "implemented": true,
     "workPackage": "WP4",
     "priority": "P1",
     "prdRefs": [

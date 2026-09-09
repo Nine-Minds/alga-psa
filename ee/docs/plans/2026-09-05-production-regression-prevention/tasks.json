@@ -504,10 +504,10 @@
     {
       "id": "R060",
       "title": "Repair Temporal development readiness failure in both browser editions",
-      "status": "in_progress",
+      "status": "done",
       "dependsOn": [],
       "owner": "qbo_protocol and coordinator",
-      "notes": "Current logs confirm frontend bound at container IP and namespace registration succeeds; loopback healthcheck is wrong endpoint. Probe now targets temporal-dev:7233 like workers, retaining namespace describe and all timeouts. Native real Temporal proof: bound address succeeds, wrongloopback and missingnamespace fail. Prior run also eventually reported unhealthy despite continuing; prior continuation unexplained. Actual pinned-image/Compose DNS validation pending. Evidence: evidence/native-temporal-bind-health.json."
+      "notes": "Current logs confirm frontend bound at container IP and namespace registration succeeds; loopback healthcheck is wrong endpoint. Probe now targets temporal-dev:7233 like workers, retaining namespace describe and all timeouts. Native real Temporal proof: bound address succeeds, wrongloopback and missingnamespace fail. Prior run also eventually reported unhealthy despite continuing; prior continuation unexplained. Actual pinned-image/Compose DNS validation pending. Evidence: evidence/native-temporal-bind-health.json. Current b413 CI verifies background-worker startup in both editions; completed community artifact 10085508872 records temporalio/auto-setup:1.24.2 Up 7 minutes (healthy). This confirms the pinned frontend-address health repair; provider topology remains separate."
     },
     {
       "id": "R061",
