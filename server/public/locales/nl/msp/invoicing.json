@@ -1954,7 +1954,12 @@
         "headerPlaceholder": "Koptekstlabel",
         "bindingKey": "Bindingssleutel",
         "type": "Type",
-        "width": "Breedte"
+        "width": "Breedte",
+        "stackedLines": "Gestapelde regels",
+        "addLine": "+ Regel",
+        "clearLines": "Enkele regel",
+        "stackedLinesHint": "Elke niet-lege regel wordt op een eigen rij weergegeven. Wanneer alle regels leeg zijn, wordt de hierboven vermelde bindingssleutel van de kolom weergegeven.",
+        "removeLine": "Regel {{index}} verwijderen"
       },
       "columnTypes": {
         "text": "Tekst",

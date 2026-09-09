@@ -1954,7 +1954,12 @@
         "headerPlaceholder": "Rótulo do cabeçalho",
         "bindingKey": "Chave de vinculação",
         "type": "Tipo",
-        "width": "Largura"
+        "width": "Largura",
+        "stackedLines": "Linhas empilhadas",
+        "addLine": "+ Linha",
+        "clearLines": "Linha única",
+        "stackedLinesHint": "Cada linha não vazia é exibida em sua própria linha. Quando todas as linhas estão vazias, é exibida a chave de vinculação da coluna indicada acima.",
+        "removeLine": "Remover a linha {{index}}"
       },
       "columnTypes": {
         "text": "Texto",
