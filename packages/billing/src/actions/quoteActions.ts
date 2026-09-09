@@ -1003,6 +1003,12 @@ export const reorderQuoteItems = withAuth(async (
  * applies_to_item_id pointing at the copied target. This keeps item-targeted
  * discounts resolvable even when a discount is stored ahead of its target in
  * the source list, and regardless of creation-time cadence flags.
+ *
+ * Every caller (create-from-template / duplicate / save-as-template) is one of
+ * the server-internal copy flows allowed to replay a catalog-description
+ * snapshot verbatim, so each row's stored snapshot is passed through
+ * QuoteItem.create's internal channel rather than being re-derived from the
+ * live catalog — including `null`, which records "no description captured".
  */
 export async function copyQuoteItemsToQuote(
   trx: Knex.Transaction,
@@ -1045,7 +1051,7 @@ export async function copyQuoteItemsToQuote(
       cost_currency: sourceItem.cost_currency ?? null,
       location_id: sourceItem.location_id ?? null,
       created_by: options.createdBy,
-    });
+    }, { catalogDescriptionSnapshot: sourceItem.catalog_description ?? null });
   };
 
   for (const item of baseItems) {

@@ -329,7 +329,7 @@ const renderTableCellContent = (
       return (
         <div
           key={`${column.id}-line-${index}`}
-          className={line.className || undefined}
+          className={joinClassNames('ast-table-cell-line', line.className) || undefined}
           style={{ ...(line.style ?? {}), ...(normalized.multiline ? { whiteSpace: 'pre-line' } : {}) }}
         >
           {normalized.text}
@@ -370,6 +370,12 @@ const buildAstCss = (ast: TemplateAst): string => {
 .invoice-template-root tbody td {
   padding: 6px 8px;
   vertical-align: top;
+}
+.invoice-template-root .ast-table-cell-line {
+  white-space: pre-line;
+}
+.invoice-template-root .ast-table-cell-line + .ast-table-cell-line {
+  margin-top: 2px;
 }
 .invoice-template-root tbody tr + tr td { border-top: 1px solid #f3f4f6; }
 

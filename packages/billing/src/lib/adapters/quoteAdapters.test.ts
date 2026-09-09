@@ -771,3 +771,75 @@ describe('quoteAdapters discount group allocation', () => {
     expect(viewModel.recurring_items?.some((item) => item.is_discount)).toBe(false);
   });
 });
+
+describe('quoteAdapters catalog-description mapping', () => {
+  const catalogItem = (overrides: Record<string, unknown> = {}): never =>
+    ({
+      tenant: 'tenant-1',
+      quote_item_id: 'item-1',
+      quote_id: 'quote-1',
+      description: 'Managed Firewall Service',
+      catalog_description: 'Central management, rule review, and firmware patching for the managed firewall fleet.',
+      service_name: 'Managed Firewall Service',
+      service_sku: null,
+      service_item_kind: 'service',
+      quantity: 1,
+      unit_price: 25000,
+      total_price: 25000,
+      tax_amount: 2000,
+      net_amount: 27000,
+      display_order: 1,
+      is_optional: false,
+      is_selected: true,
+      is_recurring: true,
+      billing_frequency: 'monthly',
+      ...overrides,
+    }) as never;
+
+  it('maps catalog_description onto flat and grouped line-item collections with null handling', async () => {
+    const viewModel = await mapLoadedQuoteToViewModel(
+      fakeKnex,
+      'tenant-1',
+      buildQuote({
+        quote_items: [
+          catalogItem(),
+          catalogItem({
+            quote_item_id: 'item-2',
+            is_recurring: false,
+            billing_frequency: null,
+            service_item_kind: 'product',
+            service_name: 'Firewall Appliance',
+            description: 'Firewall Appliance',
+            catalog_description: null,
+          }),
+          catalogItem({
+            quote_item_id: 'item-3',
+            is_discount: true,
+            service_name: null,
+            service_sku: null,
+            service_item_kind: null,
+            catalog_description: null,
+            description: 'Discount (10%)',
+            quantity: 1,
+            unit_price: -2500,
+            total_price: -2500,
+            tax_amount: 0,
+            net_amount: -2500,
+          }),
+        ],
+      })
+    );
+
+    const flat = viewModel.line_items;
+    expect(flat[0]?.catalog_description).toBe(
+      'Central management, rule review, and firmware patching for the managed firewall fleet.',
+    );
+    expect(flat[1]?.catalog_description).toBeNull();
+    expect(flat[2]?.catalog_description).toBeNull();
+
+    expect(viewModel.recurring_items?.find((item) => item.quote_item_id === 'item-1')?.catalog_description)
+      .toBe('Central management, rule review, and firmware patching for the managed firewall fleet.');
+    expect(viewModel.onetime_items?.find((item) => item.quote_item_id === 'item-2')?.catalog_description)
+      .toBeNull();
+  });
+});

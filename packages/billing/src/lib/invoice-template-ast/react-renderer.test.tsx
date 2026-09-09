@@ -1129,8 +1129,8 @@ describe('renderEvaluatedTemplateAst stacked table-cell lines', () => {
       ]
     );
 
-    expect(rendered.html).toContain('<div style="font-weight:600;line-height:1.3">Managed Support</div>');
-    expect(rendered.html).toContain('<div style="color:#4b5563;font-size:12px">Full-service support</div>');
+    expect(rendered.html).toContain('<div class="ast-table-cell-line" style="font-weight:600;line-height:1.3">Managed Support</div>');
+    expect(rendered.html).toContain('<div class="ast-table-cell-line" style="color:#4b5563;font-size:12px">Full-service support</div>');
     // All-empty lines fall back to the column value so discounts/custom rows stay readable.
     expect(rendered.html).toContain('>Discount<');
     expect(rendered.html).not.toContain('ignored when lines resolve');
@@ -1200,7 +1200,7 @@ describe('renderEvaluatedTemplateAst stacked table-cell lines', () => {
     );
 
     expect(rendered.html).toContain(
-      '<div class="ast-line-strong" style="font-weight:600">Managed Support</div>'
+      '<div class="ast-table-cell-line ast-line-strong" style="font-weight:600">Managed Support</div>'
     );
   });
 
@@ -1225,7 +1225,7 @@ describe('renderEvaluatedTemplateAst stacked table-cell lines', () => {
     );
 
     expect(rendered.html).toContain(
-      '<div class="ast-line-strong" style="font-weight:600">Managed Support</div>'
+      '<div class="ast-table-cell-line ast-line-strong" style="font-weight:600">Managed Support</div>'
     );
   });
 
@@ -1255,8 +1255,8 @@ describe('renderEvaluatedTemplateAst stacked table-cell lines', () => {
       'table'
     );
 
-    expect(rendered.html).toContain('<div>Managed Support</div>');
-    expect(rendered.html).toContain('<div>Full-service support</div>');
+    expect(rendered.html).toContain('<div class="ast-table-cell-line">Managed Support</div>');
+    expect(rendered.html).toContain('<div class="ast-table-cell-line">Full-service support</div>');
     expect(rendered.html).toContain('>Discount</td>');
     expect(rendered.html).toContain('$25.00');
     expect(rendered.html).toContain('-$5.00');

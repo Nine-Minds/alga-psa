@@ -259,7 +259,7 @@ describe('workspaceAst roundtrip preserves stacked table-cell lines', () => {
 
       expect(html).toContain('Managed Support');
       expect(html).toContain('Full-service support');
-      expect(html).toContain('class="ast-line-strong"');
+      expect(html).toContain('class="ast-table-cell-line ast-line-strong"');
       expect(html).toContain('>Discount</td>');
       expect(html).toContain('$25.00');
       expect(html).toContain('-$5.00');

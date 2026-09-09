@@ -102,6 +102,21 @@ type ValueExpressionInput =
   | { type: 'template'; template: string; args?: Record<string, ValueExpressionInput> }
   | { type: 'i18n'; i18nKey: string; defaultValue: string };
 
+type TableColumnLineInput = {
+  id: string;
+  value: ValueExpressionInput;
+  style?: z.infer<typeof nodeStyleRefSchema>;
+};
+
+type TableColumnInput = {
+  id: string;
+  header?: I18nTextInput;
+  value: ValueExpressionInput;
+  format?: z.infer<typeof valueFormatSchema>;
+  style?: z.infer<typeof nodeStyleRefSchema>;
+  lines?: TableColumnLineInput[];
+};
+
 const valueExpressionSchema: z.ZodTypeAny = z.lazy(() =>
   z.discriminatedUnion('type', [
     z.object({
@@ -127,6 +142,31 @@ const valueExpressionSchema: z.ZodTypeAny = z.lazy(() =>
       defaultValue: z.string(),
     }).strict(),
   ])
+);
+
+/** One optional stacked line inside a table cell: its own value expression
+ *  and optional per-line format/style. Lines are additive — columns authored
+ *  before this key existed carry none and validate unchanged. */
+const tableColumnLineSchema: z.ZodTypeAny = z.lazy(() =>
+  z.object({
+    id: z.string().min(1),
+    value: valueExpressionSchema,
+    format: valueFormatSchema.optional(),
+    style: nodeStyleRefSchema.optional(),
+  }).strict()
+);
+
+/** Backward-compatible table column: legacy single `value` stays required and
+ *  keeps its meaning; `lines` (optional stacked lines) is additive. */
+const tableColumnSchema: z.ZodTypeAny = z.lazy(() =>
+  z.object({
+    id: z.string().min(1),
+    header: i18nTextSchema.optional(),
+    value: valueExpressionSchema,
+    format: valueFormatSchema.optional(),
+    style: nodeStyleRefSchema.optional(),
+    lines: z.array(tableColumnLineSchema).optional(),
+  }).strict()
 );
 
 type ComputationExpressionInput =
@@ -323,13 +363,7 @@ type NodeInput =
       style?: z.infer<typeof nodeStyleRefSchema>;
       sourceBinding: z.infer<typeof bindingRefSchema>;
       rowBinding: string;
-      columns: Array<{
-        id: string;
-        header?: I18nTextInput;
-        value: ValueExpressionInput;
-        format?: z.infer<typeof valueFormatSchema>;
-        style?: z.infer<typeof nodeStyleRefSchema>;
-      }>;
+      columns: TableColumnInput[];
       emptyStateText?: I18nTextInput;
     }
   | {
@@ -341,13 +375,7 @@ type NodeInput =
         itemBinding: string;
         keyPath?: string;
       };
-      columns: Array<{
-        id: string;
-        header?: I18nTextInput;
-        value: ValueExpressionInput;
-        format?: z.infer<typeof valueFormatSchema>;
-        style?: z.infer<typeof nodeStyleRefSchema>;
-      }>;
+      columns: TableColumnInput[];
       emptyStateText?: I18nTextInput;
     }
   | {
@@ -364,16 +392,6 @@ type NodeInput =
         labelStyle?: z.infer<typeof nodeStyleRefSchema>;
       }>;
     };
-
-// A single stacked line within a table cell: its own value expression and
-// optional per-line style/format. Lines are additive — columns authored before
-// this key existed carry none and validate unchanged.
-const tableColumnLineSchema = z.object({
-  id: z.string().min(1),
-  value: valueExpressionSchema,
-  format: valueFormatSchema.optional(),
-  style: nodeStyleRefSchema.optional(),
-}).strict();
 
 const nodeSchema: z.ZodTypeAny = z.lazy(() =>
   z.discriminatedUnion('type', [
@@ -440,14 +458,7 @@ const nodeSchema: z.ZodTypeAny = z.lazy(() =>
       headerStyle: nodeStyleRefSchema.optional(),
       sourceBinding: bindingRefSchema,
       rowBinding: z.string().min(1),
-      columns: z.array(z.object({
-        id: z.string().min(1),
-        header: i18nTextSchema.optional(),
-        value: valueExpressionSchema,
-        format: valueFormatSchema.optional(),
-        style: nodeStyleRefSchema.optional(),
-        lines: z.array(tableColumnLineSchema).optional(),
-      }).strict()).min(1),
+      columns: z.array(tableColumnSchema).min(1),
       emptyStateText: i18nTextSchema.optional(),
     }).strict(),
     z.object({
@@ -460,14 +471,7 @@ const nodeSchema: z.ZodTypeAny = z.lazy(() =>
         itemBinding: z.string().min(1),
         keyPath: z.string().min(1).optional(),
       }).strict(),
-      columns: z.array(z.object({
-        id: z.string().min(1),
-        header: i18nTextSchema.optional(),
-        value: valueExpressionSchema,
-        format: valueFormatSchema.optional(),
-        style: nodeStyleRefSchema.optional(),
-        lines: z.array(tableColumnLineSchema).optional(),
-      }).strict()).min(1),
+      columns: z.array(tableColumnSchema).min(1),
       emptyStateText: i18nTextSchema.optional(),
     }).strict(),
     z.object({

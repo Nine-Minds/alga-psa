@@ -11,6 +11,10 @@ export type DraftQuoteItem = {
   service_sku?: string | null;
   billing_method?: 'fixed' | 'hourly' | 'usage' | 'per_unit' | null;
   description: string;
+  /** Quote-time snapshot of the catalog item's description (null for custom,
+   *  discount, and legacy lines). Carried for immediate draft preview only —
+   *  the server re-resolves the authoritative snapshot on persistence. */
+  catalog_description?: string | null;
   quantity: number;
   unit_price: number;
   /** Product cost snapshot in minor currency units (from service_catalog). */
@@ -61,6 +65,7 @@ export function createDraftQuoteItemFromQuoteItem(item: IQuoteItem): DraftQuoteI
     service_sku: item.service_sku ?? null,
     billing_method: item.billing_method ?? null,
     description: item.description,
+    catalog_description: item.catalog_description ?? null,
     quantity: Number(item.quantity ?? 1),
     unit_price: Number(item.unit_price ?? 0),
     cost: item.cost ?? null,
@@ -98,6 +103,7 @@ export function createDraftQuoteItemFromService(item: CatalogPickerItem, quoteCu
     service_sku: item.sku ?? null,
     billing_method: item.billing_method,
     description: item.service_name,
+    catalog_description: item.description && item.description.trim() ? item.description.trim() : null,
     quantity: 1,
     unit_price: needsPrice ? 0 : Number(item.currency_rate ?? item.default_rate ?? 0),
     cost: item.item_kind === 'product' ? (item.cost ?? null) : null,
@@ -135,6 +141,7 @@ export function createCustomDraftQuoteItem(input: {
     service_sku: null,
     billing_method: null,
     description: input.description,
+    catalog_description: null,
     quantity: Number(input.quantity ?? 1),
     unit_price: Number(input.unit_price ?? 0),
     unit_of_measure: input.unit_of_measure ?? null,
@@ -171,6 +178,7 @@ export function createDraftDiscountQuoteItem(input: {
     service_sku: null,
     billing_method: null,
     description: input.description,
+    catalog_description: null,
     quantity: 1,
     unit_price: input.discount_type === 'fixed' ? Number(input.fixed_amount ?? 0) : 0,
     unit_of_measure: null,
