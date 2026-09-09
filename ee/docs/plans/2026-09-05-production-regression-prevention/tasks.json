@@ -660,6 +660,14 @@
       "dependsOn": [],
       "owner": "qbo_protocol",
       "notes": "Read-only audit found consumer recovery tests cover401 only. Add real HTTP429/503 cases asserting bounded actionable failure, no credential mutation and successful next operation after fault removal. No invented automatic retry policy. Coordinator reviewed two429/503 cases; focused real HTTP5/5pass. Synthetic transport-body boundary, not Intuit wire-format parity or automatic backoff. F036/T030 release-enforcement acceptance remains open."
+    },
+    {
+      "id": "R080",
+      "title": "Release completed primary-phase pools before upgrade browser execution",
+      "status": "in_progress",
+      "dependsOn": [],
+      "owner": "coordinator and calendar_review",
+      "notes": "Current a0d077 PG upgrade3browsercases pass, but retained logs show2 app-user login denials and snapshot shows30 idle original server DB sessions. After real upgrade-pooler readiness probe, stop primary server/email/mainpooler before existing candidate recreation. Keep Temporal for Teams and diagnostics. Actionlint passes; actual absence of pressure awaits subsequent CI. No production pool limits changed."
     }
   ]
 }

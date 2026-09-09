@@ -3449,3 +3449,5 @@ Completed artifact-based revision discovery and completion-triggered read-only r
 Canonical native tooling at clean8e144665b57f827d6005981a74aaeec5fb828797 passes906 tests across85requiredfiles in172.9seconds; zero fail/skip/TODO/cancel. Evidence native-node-tooling-8e144.json. Current CI34308610232 remains live; no push. R079 adds missing real QBO consumer429/503 boundary coverage.
 
 Currenta0d077 CI regression audit records exact passing assertions: Tier1 seeded lifecycle2/clientatomicity3/ticketsearch4; workspaceDB78cases across5files/8ledgerrecords; manualinvoice16; calendar+Temporal bounded evidence. Ledger ciAfter links preserve local replay history and incident/deployment limits. T023 remains open: usage-context/inbound incident mappings and named follow-up ownership are not established by passing suites.
+
+Currenta0d077 primarybrowser artifacts verified:42CE+47EE firstattemptpass, no retries/failures/missing, fullselection andcleanunchanged merge3db700f653e28ddd322dfdb652f1689a54f6b65d. Evidence ci-primary-browsers-a0d077.json. CE APIstep passed; EE laterphases and serverunit remainlive. No push.

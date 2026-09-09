@@ -1084,6 +1084,11 @@ jobs:
             sleep 2
           done
           test "$pooler_ready" = true
+          # Browser and API phases are complete. Release their database pools
+          # before starting the upgrade app; the original pooler retains idle
+          # sessions even after its clients disconnect. Keep Temporal available
+          # for the later Teams phase and retain stopped-container diagnostics.
+          docker-compose -p alga-e2e-test stop server email-service pgbouncer
           docker-compose -p alga-e2e-test up --no-build --no-deps --force-recreate -d server
           container=$(docker-compose -p alga-e2e-test ps -q server)
           test "$(docker inspect --format '{{.Image}}' "$container")" = "$expected_image"
