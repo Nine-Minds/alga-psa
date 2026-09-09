@@ -140,7 +140,7 @@ export function TimeEntryProvider({ children }: { children: React.ReactNode }): 
       const operational = billingMode === 'operational' || Boolean(existingEntries?.length && existingEntries.every(entry => entry.billing_mode === 'operational'));
 
       const clientId = !operational && (workItem.type === 'ticket' || workItem.type === 'project_task' || workItem.type === 'co_managed')
-        ? await getClientIdForWorkItem(workItem.work_item_id, workItem.type, existingEntries?.[0]?.entry_id)
+        ? await getClientIdForWorkItem(workItem.work_item_id, workItem.type, existingEntries?.[0]?.entry_id ?? undefined)
         : null;
 
       const [services, taxRegions, client] = await Promise.all([

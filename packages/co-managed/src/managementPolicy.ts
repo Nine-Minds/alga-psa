@@ -148,13 +148,19 @@ export async function changeCoManagedAllocationForActor(db: Knex, actor: CoManag
     { customerTenant: operation.customer_tenant, relationshipId: operation.relationship_id, seats: request.seats, expectedSeats: request.expectedSeats }));
 }
 
+export interface CoManagedManagementStatusItem {
+  operationId: string; workspaceName: string | null; administratorEmail: string | null; seats: number; canManage: boolean;
+  canChangeSeats: boolean; canCancel: boolean; cleanupFailed: boolean; state: string; invitationSent: boolean;
+  invitationExpired: boolean; deliveryFailed: boolean; canRetry: boolean;
+}
+
 export async function getCoManagedManagementStatus(db: Knex, actor: CoManagedSessionActor, page = 0) {
   if (!Number.isSafeInteger(page) || page < 0 || page > 1000000) deny();
   return withManagement(db, actor, 'read', async context => {
     const query = operations(context);
     if (!hidden(context, ['created_at', 'co_managed_provisioning_operations.created_at'])) query.orderBy('q.created_at', 'desc');
     const rows = await query.orderBy('q.operation_id').offset(page * 25).limit(26);
-    const items = [];
+    const items: CoManagedManagementStatusItem[] = [];
     for (const operation of rows.slice(0, 25)) {
       let canManage = context.canManage;
       if (canManage) try { await authorizeCoManagedLocalRecord(context.trx, context.actor, context.subject, 'co_management', 'manage',

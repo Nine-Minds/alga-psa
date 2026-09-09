@@ -5856,6 +5856,9 @@ it('guards the actual Redis broadcaster and asynchronous post-creation hooks wit
   const teams = await import('../../../../packages/notifications/src/realtime/teamsNotificationDelivery');
   const { broadcastNotification } = await import('../../../../packages/notifications/src/realtime/internalNotificationBroadcaster');
   const { registerInternalNotificationHook, runPostCreationHooks } = await import('../../../../packages/notifications/src/actions/internal-notification-actions/notificationHooks');
+  // Production wiring: notificationCreatedEffects injects deliverCurrentNotification
+  // (notificationHooks itself must stay free of server-only imports).
+  const { deliverCurrentNotification } = await import('../../../../packages/notifications/src/lib/notificationDelivery');
   await persist(db, event);
   const queued = await sponsor.table('internal_notifications').where('user_id', principal.userId).first();
   const publish = vi.fn(async (_channel: string, _payload: string) => 1), observed: any[] = [];
@@ -5871,13 +5874,13 @@ it('guards the actual Redis broadcaster and asynchronous post-creation hooks wit
   });
   try {
     await customer.table('comments').where('comment_id', event.payload.comment.id).update({ note: 'Current transport body' });
-    await broadcastNotification(queued); await runPostCreationHooks(queued);
+    await broadcastNotification(queued); await runPostCreationHooks(queued, deliverCurrentNotification);
     expect(publish).toHaveBeenCalledTimes(1);
     const sent = JSON.parse(publish.mock.calls[0][1] as string).notification;
     expect(sent.message).toContain('Current transport body'); expect(sent.metadata.coManaged.resource).toEqual(resource);
     expect(observed).toHaveLength(1); expect(observed[0].message).toContain('Current transport body');
     await customer.table('co_management_ticket_work').where('ticket_id', resource.id).update({ grant_revoked_at: new Date() });
-    await broadcastNotification(queued); await runPostCreationHooks(queued);
+    await broadcastNotification(queued); await runPostCreationHooks(queued, deliverCurrentNotification);
     expect(publish).toHaveBeenCalledTimes(1); expect(observed).toHaveLength(1);
   } finally { for (const spy of spies.reverse()) spy.mockRestore(); }
 }));

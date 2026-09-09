@@ -42,8 +42,21 @@ export async function handleCoManagedPortableExport(request: Request): Promise<R
   let download: Awaited<ReturnType<NonNullable<typeof prepared>['acquireDownload']>> | undefined;
   try {
     const origin = request.headers.get('origin');
+    const site = request.headers.get('sec-fetch-site');
     const expectedOrigin = new URL(process.env.NEXTAUTH_URL || request.url).origin;
-    if (!origin || origin !== expectedOrigin || request.headers.get('sec-fetch-site') === 'cross-site') return failure(403, 'Export requires a same-origin request.');
+    // This screen's own form submits with target="_blank" rel="noopener" (so the
+    // download tab can never reach window.opener). That makes the browser send
+    // Origin: null for the otherwise same-origin navigation, so an Origin-equality
+    // check alone rejects the legitimate export. Sec-Fetch-Site is set by the
+    // browser and unforgeable by a cross-site page, so it is the authoritative
+    // same-origin signal here: a present, non-null Origin must still match exactly,
+    // but a null/absent Origin is accepted only when Sec-Fetch-Site proves the
+    // request originated same-origin (or from a direct user navigation). A
+    // cross-site request is always refused.
+    const originAcceptable = origin && origin !== 'null'
+      ? origin === expectedOrigin
+      : site === 'same-origin' || site === 'none';
+    if (!originAcceptable || site === 'cross-site') return failure(403, 'Export requires a same-origin request.');
     const session = await getSession();
     if (getApiKeyUserOverride() || !session?.session_id || session.user?.user_type !== 'internal' || !session.user.tenant || !session.user.id)
       return failure(401, 'Sign in to your customer workspace to export.');

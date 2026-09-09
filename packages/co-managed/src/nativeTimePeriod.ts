@@ -77,7 +77,7 @@ export async function commandCoManagedNativeTimePeriods(db: Knex, tenant: string
     const periods = input.action === 'create' ? await insertTimePeriodCalendar(trx, tenant, typeof input.periods === 'function' ? await input.periods(trx) : input.periods) :
       input.action === 'update' ? [await updateTimePeriodCalendar(trx, tenant, input.id, input.dates)] :
       (await deleteTimePeriodCalendar(trx, tenant, input.id, input.preserveDate), []);
-    const views = [];
+    const views: Record<string, unknown>[] = [];
     for (const period of periods) {
       const policy = await authorizeCoManagedLocalRecord(trx, actor, credential.subject, 'time_period', 'read', { id: period.period_id });
       views.push(periodView(period, [...fields, ...policy.redactedFields]));
@@ -92,7 +92,7 @@ export async function commandCoManagedNativeTimePeriods(db: Knex, tenant: string
 export function generateTimePeriodCalendar(input: { start_date?: string; end_date?: string; frequency: string; frequency_unit?: number }) {
   const start = timePeriodCalendarDate(input.start_date), end = timePeriodCalendarDate(input.end_date), unit = input.frequency_unit ?? 1;
   if (start >= end || !Number.isSafeInteger(unit) || unit < 1 || !['daily', 'weekly', 'monthly', 'quarterly', 'yearly', 'custom'].includes(input.frequency)) throw new TimePeriodCalendarError('PERIOD_INVALID_DATES');
-  const anchor = new Date(`${start}T00:00:00Z`), periods = [];
+  const anchor = new Date(`${start}T00:00:00Z`), periods: Array<{ start_date: string; end_date: string }> = [];
   let current = start;
   for (let index = 1; index <= 1000; index++) {
     const next = new Date(anchor);

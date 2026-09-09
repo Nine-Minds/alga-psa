@@ -1,36 +1,8 @@
-// TODO: Consolidate with @alga-psa/ui/lib/i18n/config after circular dependency is resolved
-// This is a temporary duplication to break the email -> ui cycle
-
-export const LOCALE_CONFIG = {
-  defaultLocale: 'en',
-  supportedLocales: ['en', 'fr', 'es', 'de', 'nl', 'it', 'pl', 'pt'] as const,
-  localeNames: {
-    en: 'English',
-    fr: 'Français',
-    es: 'Español',
-    de: 'Deutsch',
-    nl: 'Nederlands',
-    it: 'Italiano',
-    pl: 'Polski',
-    pt: 'Português (Brasil)',
-  } as const,
-  rtlLocales: [] as string[],
-} as const;
-
-export type SupportedLocale = typeof LOCALE_CONFIG.supportedLocales[number];
-
-export function isSupportedLocale(locale: string): locale is SupportedLocale {
-  return LOCALE_CONFIG.supportedLocales.includes(locale as SupportedLocale);
-}
-
-/** Mirrors normalizeLocale in @alga-psa/core/i18n/config — see the TODO above. */
-export function normalizeLocale(value: unknown): SupportedLocale | null {
-  if (typeof value !== 'string') return null;
-
-  const trimmed = value.trim().toLowerCase();
-  if (!trimmed) return null;
-  if (isSupportedLocale(trimmed)) return trimmed;
-
-  const languagePart = trimmed.split(/[-_]/)[0];
-  return isSupportedLocale(languagePart) ? languagePart : null;
-}
+// Locale configuration for the email package.
+//
+// This file previously held a hand-copied subset of the i18n config to break the
+// email -> ui dependency cycle. The canonical config now lives in
+// @alga-psa/core (extracted from ui for the same reason), which this package
+// already depends on, so re-export it instead of maintaining a drifting copy.
+export { LOCALE_CONFIG, isSupportedLocale, normalizeLocale } from '@alga-psa/core/i18n/config';
+export type { SupportedLocale } from '@alga-psa/core/i18n/config';

@@ -12,7 +12,7 @@ export async function synchronizeCoManagedScheduleMeetings(db: Knex, tenant: str
     .orderBy('co_managed_sync_requested_at').orderBy('meeting_id').limit(25).select('meeting_id', 'co_managed_sync_operation_id');
   if (!pending.length) return [];
   const provider = await resolveTeamsMeetingService();
-  const results = [];
+  const results: Awaited<ReturnType<typeof synchronizeNativeScheduleMeeting>>[] = [];
   for (const row of pending) results.push(await synchronizeNativeScheduleMeeting(db, {
     tenant, meetingId: row.meeting_id, operationId: row.co_managed_sync_operation_id,
   }, operation => {

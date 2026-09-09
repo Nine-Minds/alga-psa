@@ -5,12 +5,24 @@
 # are gitignored.
 #
 # Layout this script assumes (see docs/plans/co-managed-local-dev-environment.md):
-#   - app server:        localhost:3374 (board-owned service, npm run dev)
+#   - app server:        localhost:3374 (board-owned service running
+#                        `NODE_ENV=development NODE_OPTIONS="--max-old-space-size=32768 --enable-source-maps"
+#                         PORT=3374 ../node_modules/.bin/next dev` from server/ —
+#                        NOT `npm run dev`: its nx build-deps step forces a
+#                        production server:build on every cache miss, which
+#                        OOMed/died repeatedly here. Build workspace deps first
+#                        (npx nx build-deps server, or the per-package builds
+#                        in the docs) and run next dev directly.)
 #   - isolated database: server_co_managed on the alga-psa-local-test postgres
 #                        (direct 127.0.0.1:5472 — pgbouncer only routes "server")
 #   - temporal dev:      docker container co-managed-it-temporal-dev, 127.0.0.1:7374
-#   - redis:             shared alga-psa-local-test redis with branch-specific
-#                        stream prefixes (no cross-worktree event consumption)
+#   - redis:             dedicated branch redis (docker container
+#                        co-managed-it-redis, 127.0.0.1:6374). NOTE: the
+#                        workflow runtime v2 stream client hardcodes
+#                        workflow:events:* names and IGNORES
+#                        WORKFLOW_REDIS_STREAM_PREFIX, so prefix-based
+#                        isolation on a shared redis does NOT work — a
+#                        dedicated instance is the only real isolation.
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -73,8 +85,6 @@ CREDENTIAL_ENCRYPTION_KEY=$CREDENTIAL_ENCRYPTION_KEY
 REDIS_HOST=$REDIS_HOST
 REDIS_PORT=$REDIS_PORT
 REDIS_PASSWORD=$REDIS_PASSWORD
-REDIS_PREFIX=alga-psa-comanaged:
-WORKFLOW_REDIS_STREAM_PREFIX=comanaged:workflow:events:
 ENABLE_HEALTH_CHECK=true
 HEALTH_CHECK_PORT=8375
 EOF
@@ -107,10 +117,8 @@ CREDENTIAL_ENCRYPTION_KEY=$CREDENTIAL_ENCRYPTION_KEY
 REDIS_HOST=$REDIS_HOST
 REDIS_PORT=$REDIS_PORT
 REDIS_PASSWORD=$REDIS_PASSWORD
-REDIS_PREFIX=alga-psa-comanaged:
 WORKFLOW_WORKER_MODE=v2
 WORKFLOW_DISTRIBUTED_MODE=true
-WORKFLOW_REDIS_STREAM_PREFIX=comanaged:workflow:events:
 WORKFLOW_REDIS_CONSUMER_GROUP=workflow-workers
 PORT=4374
 EOF

@@ -8,10 +8,14 @@ export type { RequesterTaskTarget };
 import { encodeConversationContent, snapshotConversationContent } from './conversationContent';
 import { projectTaskAudienceSql } from './projectTaskAudience';
 import { retainCoManagedTaskCommentEvent } from './projectTaskEvents';
-import { listPublishedCoManagedAttachments, readPublishedCoManagedAttachment, type CoManagedAttachmentReadContext } from './conversationAttachments';
+import { listPublishedCoManagedAttachments, readPublishedCoManagedAttachment, type CoManagedAttachmentReadContext, type CoManagedConversationAttachment } from './conversationAttachments';
 
 const deny = (): never => { throw new CoManagedSharedWorkError(); };
 export interface RequesterTaskReply { operationId: string; text: string; parent?: { threadId: string; commentId: string } }
+export interface RequesterTaskConversationItem {
+  commentId: string; threadId: string; parentCommentId: string | null; createdAt: string; deleted: boolean; canReply: boolean;
+  note: string | null; markdown: string | null; authorName: string | null; organizationName: string | null; attachments: CoManagedConversationAttachment[];
+}
 export class RequesterTaskCommentConflict extends Error { constructor() { super('This comment operation was already used.'); } }
 
 function requesterComments(context: Access) {
@@ -32,7 +36,7 @@ export async function getRequesterTaskConversation(db: Knex, actor: CoManagedSes
     const rows = await query.forShare('c', 't', 'root').select('c.task_comment_id', 'c.thread_id', 'c.parent_comment_id', 'c.note', 'c.markdown_content', 'c.deleted_at',
       'c.actor_display_name', 'c.actor_organization_name', { root_deleted_at: 'root.deleted_at' },
       context.trx.raw(`to_char(c.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as created_at_exact`));
-    const items = [];
+    const items: RequesterTaskConversationItem[] = [];
     for (const row of rows.slice(0, 25)) {
       const attachmentContext = { trx: context.trx, resource: { tenant: context.actor.tenant, id: context.target.taskId, kind: 'project_task' as const },
         comment: { storeTenant: context.actor.tenant, threadId: row.thread_id, commentId: row.task_comment_id }, audience: 'requester' as const };

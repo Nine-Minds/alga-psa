@@ -320,9 +320,12 @@ export const saveTimeEntry = withAuth(async (user, { tenant }, timeEntry: Omit<I
       }
       if (access) assertCoManagedTimeSaveFields(access, timeEntry.work_item_type);
       const mode = await lockTimeEntryBillingMode(trx, tenant, timeEntry.entry_id || undefined);
-      if (stored?.work_item_type === 'co_managed') await retainCoManagedTimeParticipation(trx, tenant, timeEntry.entry_id);
+      if (timeEntry.entry_id && stored?.work_item_type === 'co_managed') await retainCoManagedTimeParticipation(trx, tenant, timeEntry.entry_id);
       const result = await saveTimeEntryWithConnection(user, tenant, timeEntry, trx, mode === 'operational', access);
-      if (result.work_item_type === 'co_managed') await retainCoManagedTimeParticipation(trx, tenant, result.entry_id);
+      if (result.work_item_type === 'co_managed') {
+        if (!result.entry_id) throw new Error('Time entry save returned a row without an entry ID.');
+        await retainCoManagedTimeParticipation(trx, tenant, result.entry_id);
+      }
       await access?.assertCurrent();
       return result;
     });
