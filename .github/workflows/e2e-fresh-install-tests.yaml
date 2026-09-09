@@ -1270,19 +1270,23 @@ jobs:
           # The image's node_modules is root-owned. Give only the development
           # compiler cache a writable, disk-backed directory for UID 1000.
           sudo install -d -o 1000 -g 1000 -m 0700 "$RUNNER_TEMP/teams-webpack-cache"
+          sudo install -d -o 1000 -g 1000 -m 0700 "$RUNNER_TEMP/teams-static-chunks"
           node --input-type=module <<'JS'
           import { writeFileSync } from 'node:fs';
           const workspace = process.env.GITHUB_WORKSPACE;
           const volumes = ['packages', 'ee'].map(part => ({ type: 'bind', source: `${workspace}/${part}`, target: `/app/${part}`, read_only: true }));
           volumes.push({ type: 'bind', source: `${workspace}/e2e-tests/harness/start-teams-development-ci.mjs`, target: '/app/start-teams-development-ci.mjs', read_only: true });
           volumes.push({ type: 'bind', source: `${workspace}/e2e-tests/harness/check-teams-development-auth.mjs`, target: '/app/check-teams-development-auth.mjs', read_only: true });
+          volumes.push({ type: 'bind', source: `${workspace}/e2e-tests/harness/capture-teams-static-chunks.mjs`, target: '/app/capture-teams-static-chunks.mjs', read_only: true });
+          volumes.push({ type: 'bind', source: `${process.env.RUNNER_TEMP}/teams-static-chunks`, target: '/app/teams-static-chunks' });
           volumes.push({ type: 'bind', source: `${process.env.RUNNER_TEMP}/teams-webpack-cache`, target: '/app/server/node_modules/.cache/webpack' });
           const server = { entrypoint: ['node', '/app/start-teams-development-ci.mjs'], command: [], volumes,
             environment: { NODE_ENV: 'development', TEAMS_EMULATOR_MODE: 'true', NEXT_PUBLIC_FORCE_FEATURE_FLAGS: 'release-v1-6-feature:true', NEXT_DIST_DIR: '.next/teams-development',
+              E2E_TEAMS_DEVELOPMENT: 'true', E2E_DATABASE_ISOLATED: 'true', E2E_STATIC_CHUNK_DIAGNOSTICS_DIR: '/app/teams-static-chunks',
               DB_HOST: 'postgres', DB_PORT: '5432', DB_NAME_SERVER: 'server', REDIS_PREFIX: 'teams-development:',
               TEAMS_BOT_APP_ID: 'e2e-teams-bot', TEAMS_BOT_APP_TENANT_ID: 'e2e-bot-tenant', TEAMS_BOT_APP_PASSWORD: 'synthetic-e2e-teams-bot-secret',
               TEAMS_BOT_OPENID_CONFIG_URL: 'http://algasim:4010/v1/.well-known/openidconfiguration', TEAMS_BOT_SERVICE_URL_ALLOWLIST: 'http://algasim:4010',
-              NEXT_PUBLIC_APP_URL: 'http://localhost:3000', NODE_OPTIONS: '--max-old-space-size=12288' } };
+              NEXT_PUBLIC_APP_URL: 'http://localhost:3000', NODE_OPTIONS: '--max-old-space-size=12288 --import=/app/capture-teams-static-chunks.mjs' } };
           writeFileSync(`${process.env.RUNNER_TEMP}/teams-development-compose.json`, JSON.stringify({ services: { server } }));
           JS
           export COMPOSE_FILE="$COMPOSE_FILE:$RUNNER_TEMP/teams-development-compose.json"
@@ -1358,6 +1362,14 @@ jobs:
           path: test-results/teams-development/
           if-no-files-found: error
           retention-days: 7
+
+      - name: Collect bounded Teams static chunk diagnostics
+        if: ${{ always() && steps.teams_development_server.outcome == 'success' }}
+        timeout-minutes: 1
+        run: |
+          mkdir -p e2e-tests/test-results/local/static-chunks
+          sudo cp -R "$RUNNER_TEMP/teams-static-chunks/." e2e-tests/test-results/local/static-chunks/
+          sudo chown -R "$(id -u):$(id -g)" e2e-tests/test-results/local/static-chunks
 
       - name: Upload Teams development diagnostics
         if: ${{ always() && steps.teams_development_server.outcome == 'success' && !env.ACT }}

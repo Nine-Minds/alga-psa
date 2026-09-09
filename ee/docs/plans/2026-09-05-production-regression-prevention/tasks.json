@@ -867,7 +867,7 @@
       "status": "in_progress",
       "dependsOn": [],
       "owner": "stripe_protocol",
-      "notes": "CurrentCIwarmdashboardpassesbutactualTeamscasefailsinitialsettingsgoto90s. TraceSyntaxError+ChunkLoadError app/msp/layout.js HTTP200after80.27s; sourcebytesnotretained. Authreacheddashboard, settings307redirectthenpendingresponse. Cannotattributeonlycoldcompileorjustifydeadline/heapincrease. Waitterminalserverlogs; no speculativefix."
+      "notes": "CurrentCIwarmdashboardpassesbutactualTeamscasefailsinitialsettingsgoto90s. TraceSyntaxError+ChunkLoadError app/msp/layout.js HTTP200after80.27s; sourcebytesnotretained. Authreacheddashboard, settings307redirectthenpendingresponse. Cannotattributeonlycoldcompileorjustifydeadline/heapincrease. Waitterminalserverlogs; no speculativefix. Fresh isolated native12GiB run on unchanged70926ee reproduced browserSyntaxError/ChunkLoadError, captured HTTP200 gzip decoded46727168byte truncated prefix of valid81713954byte layout, then explicit Next80%-heap-threshold restart. Warmup passed; test failedscheduleconnectionrefused. Initial reused-dist attempt failedcredentialpreflight and is retained separately. TerminalCIserverlogs corroborateSyntaxError but no restartmarker/body, so CIcause remainsunproven. Guarded boundedchunkpreload added for nextCI; independentreview and9/9nativeHTTPtests pass. Narrow Googleicon dependency mitigation under investigation; no deadline/heap increase."
     },
     {
       "id": "R106",
