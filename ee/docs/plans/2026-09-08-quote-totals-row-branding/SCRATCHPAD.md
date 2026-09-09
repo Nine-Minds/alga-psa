@@ -24,3 +24,20 @@
 4. Strengthen quote/invoice round-trip and renderer tests.
 5. Run save/reopen preview/PDF smoke with distinct row colors.
 
+## Completion
+
+- Implemented `totals-rows-editor` widget (`inspector/widgets/TotalsRowsEditorWidget.tsx`)
+  mounted on the `totals` component; edits only `metadata.totalsRows[*].style.inline`
+  background/text colors, replaces the whole rows array immutably through
+  `setNodeProp`, preserves `labelStyle`, and prunes only emptied inline/style wrappers.
+- Canvas totals preview now renders the saved rows with their styles so color edits
+  are reflected live on the design surface (fallback summary retained for empty rows).
+- New locales: `invoiceDesigner.totalsRowsEditor.*` + `designer.schema.panels.totals-rows.title`
+  in all 10 locale packs (pseudo regenerated).
+- Tests: `TotalsRowsEditorWidget.integration.test.tsx` (T001/T002/T003/T008),
+  `workspaceAst.totalsRowsRoundtrip.test.ts` (T004/T005/T007),
+  `lib/invoice-template-ast/totalsRowBranding.render.test.tsx` (T006). Evidence under
+  `evidence/` covers the quote/invoice preview + PDF render paths (T009/T010) with the
+  same evaluator/renderer code the app runs.
+- Full invoice-designer + schema + react-renderer suite (105 files / 531 tests) green.
+

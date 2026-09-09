@@ -1602,6 +1602,9 @@
               "label": "Contrat.pdf"
             }
           }
+        },
+        "totals-rows": {
+          "title": "Lignes de totaux"
         }
       }
     },
@@ -1999,6 +2002,15 @@
       "visibleInPortal": "Visible dans le portail client",
       "dialogTitle": "Sélectionner une image",
       "dialogDescription": "Choisissez dans vos documents une image à utiliser dans ce modèle."
+    },
+    "totalsRowsEditor": {
+      "rowBackground": "Fond de ligne",
+      "rowTextColor": "Couleur du texte",
+      "resetColors": "Réinitialiser les couleurs",
+      "clearRowBackground": "Effacer la couleur de fond de la ligne",
+      "clearRowTextColor": "Effacer la couleur du texte de la ligne",
+      "labelColorOverrideNote": "Cette étiquette conserve sa propre couleur enregistrée et n’hérite pas de la couleur de texte de la ligne définie ci-dessus. Le montant suit la couleur de texte de la ligne.",
+      "noRows": "Ce bloc de totaux ne contient pas encore de lignes enregistrées. Enregistrez le modèle puis rouvrez-le pour modifier les couleurs des lignes."
     }
   },
   "draftInvoiceDetails": {
