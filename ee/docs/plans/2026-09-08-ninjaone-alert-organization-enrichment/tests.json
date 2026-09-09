@@ -1,0 +1,10 @@
+[
+  {"id":"T001","description":"Adapter test feeds the real sparse NinjaOne alert shape and proves one mapped realm enriches organization while preserving order and other fields.","featureIds":["F001","F003","F004","F006","F008"],"implemented":false},
+  {"id":"T002","description":"Adapter test proves explicit provider organization identity is preserved and excluded from fallback overwrite.","featureIds":["F002"],"implemented":false},
+  {"id":"T003","description":"Adapter test proves missing, null, and multiple distinct realms remain unresolved.","featureIds":["F006","F007","F013"],"implemented":false},
+  {"id":"T004","description":"DB-backed integration happy path creates and links a ticket for a fresh sparse alert mapped to an allowed organization.","featureIds":["F005","F009","F015"],"implemented":false},
+  {"id":"T005","description":"DB-backed isolation guard proves identical device ids in another tenant or provider cannot enrich or create an organization-scoped ticket.","featureIds":["F005","F007"],"implemented":false},
+  {"id":"T006","description":"DB-backed forward-only guard proves a pre-existing active or acknowledged alert without a ticket remains skipped.","featureIds":["F010"],"implemented":false},
+  {"id":"T007","description":"Redelivery test proves a newly handled alert creates no duplicate ticket and retains normal dedup semantics.","featureIds":["F010","F015"],"implemented":false},
+  {"id":"T008","description":"Focused regressions prove organization exclusions, first-match keyword/severity priority, maintenance suppression, and resolved retrigger behavior remain unchanged.","featureIds":["F009","F011","F014"],"implemented":false}
+]
