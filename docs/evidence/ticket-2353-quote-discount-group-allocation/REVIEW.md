@@ -1,4 +1,6 @@
-# Ticket 2353 — Draft review packet (rev 2)
+# Ticket 2353 — Draft review packet
+
+Latest completion and review entry point: [TAKEOVER.md](TAKEOVER.md).
 
 Branch: `feature/correct-recurring-quote-discount-allocation-and` (isolated
 checkout, not pushed). Plan:
@@ -114,9 +116,9 @@ green; billing typecheck clean).
 
 8. **Sales-order conversion conserves product allocations**
    (`convertQuoteToDraftSalesOrder`): product-attributed discount shares are
-   written as reduced per-unit product prices; if the reduction cannot be
-   expressed as an integer per-unit price the conversion is refused with an
-   explicit error rather than silently dropping the discount. Preview's
+   originally written as reduced per-unit product prices with indivisible
+   reductions refused; takeover supersedes that restriction with quantity
+   splitting (see TAKEOVER.md). Preview's
    sales-order bucket shows the same net product rows and invoice execution
    excludes product shares. Persisted test T212: $10 product + $10 service
    with a $4 whole-quote discount → SO line $8, invoice service −$2 → $8, full

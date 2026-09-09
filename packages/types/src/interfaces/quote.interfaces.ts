@@ -152,6 +152,8 @@ export interface QuoteConversionPreviewItem {
 export interface QuoteConversionPreview {
   quote_id: string;
   available_actions: Array<'contract' | 'invoice' | 'both'>;
+  /** An existing sales order must be reconciled before creating the remaining invoice. */
+  invoice_error?: string | null;
   contract_items: QuoteConversionPreviewItem[];
   /** One-time items an invoice conversion would bill right now — mirrors the
    *  runtime exclusion of product lines already claimed by a sales order. */

@@ -167,7 +167,7 @@
   },
   {
     "id": "T017",
-    "description": "Sales-order conversion represents product-attributed discount allocations as reduced product unit prices and refuses non-representable splits; invoice exclusion conserves the full reduction.",
+    "description": "Sales-order conversion preserves product-attributed allocations in net product prices; invoice exclusion conserves the full reduction.",
     "featureIds": [
       "F014",
       "F015"
@@ -184,5 +184,25 @@
     ],
     "implemented": true,
     "evidence": "quoteConversion.test.ts T213/T214 after recalculatePercentageDiscountInvoiceCharges"
+  },
+  {
+    "id": "T019",
+    "description": "Indivisible product allocations split quantities across adjacent cent prices; direct invoice conversion remains available, persisted sales-order quantities/costs and retry behavior remain correct.",
+    "featureIds": [
+      "F006",
+      "F015"
+    ],
+    "implemented": true,
+    "evidence": "quoteConversionService.preview.test.ts and quoteConversion.test.ts T215 (invoice and sales_order)"
+  },
+  {
+    "id": "T020",
+    "description": "Existing sales-order preview shows stored prices; mismatched discounted product quantities/amounts block only the remaining invoice, without writes, until explicit reconciliation.",
+    "featureIds": [
+      "F013",
+      "F015"
+    ],
+    "implemented": true,
+    "evidence": "quoteConversionService.preview.test.ts and quoteConversion.test.ts T216"
   }
 ]

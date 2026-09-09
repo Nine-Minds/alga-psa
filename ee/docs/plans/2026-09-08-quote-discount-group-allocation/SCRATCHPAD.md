@@ -28,3 +28,14 @@
 - `packages/billing/src/lib/adapters/quoteAdapters.ts`
 - `packages/billing/src/services/quoteCalculationService.ts`
 - Focused unit/integration tests beside those modules and quote preview/PDF smoke evidence.
+
+## Takeover completion
+
+- Round-three repairs already preserved unmatched copy targets and fixed invoice allocations; retained them.
+- New regressions reproduced a conversion-preview exception for a 100-cent discount over three products, and a legacy order showing 800 cents in preview while storing 1000 cents.
+- Replaced indivisible-price refusal with deterministic quantity splitting (three 1000-cent units less 100 cents -> one at 966, two at 967).
+- Existing orders are compared by service quantity and net amount, allowing equivalent line splits. Preview displays persisted order lines. Mismatches block the remaining invoice with a reconciliation message, with no order/quote repair writes.
+- Updated both quote conversion dialogs to display the invoice-specific error and disable only invoice creation.
+- New coverage: preview cases and DB-backed T215/T216. Uses isolated test database test_database_2353_takeover on port 5472.
+- Billing package build/typecheck pass. Full test and evidence details are in docs/evidence/ticket-2353-quote-discount-group-allocation/TAKEOVER.md.
+- The browser CLI timed out twice; the Browser runtime listed no connected browsers. Existing editor/PDF evidence remains valid for unchanged quote rendering; no new live screenshot of the conversion warning is claimed.

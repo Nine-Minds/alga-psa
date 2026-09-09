@@ -108,3 +108,5 @@ made.
   in a harness against the same quote/template/user.
 - Production re-verification (tenant 8ec33c81…, QUO-0001 b0ba8a84…) belongs
   to a later approved deployment and was not performed.
+
+Final takeover results and remaining verification limits: [TAKEOVER.md](TAKEOVER.md).

@@ -293,6 +293,63 @@ function allocatedReductionForBase(
   return total;
 }
 
+type ProductPriceRow = { quantity: number; unit_price: number };
+
+/** Preserve quantity and integer cents by splitting at most once between adjacent prices. */
+function productSalesOrderPrices(
+  item: IQuoteItem,
+  shares: Map<string, QuoteDiscountConversionShare>,
+): ProductPriceRow[] {
+  const quantity = Number(item.quantity);
+  const net = quantity * Number(item.unit_price) - allocatedReductionForBase(shares, item.quote_item_id);
+  if (!Number.isInteger(quantity) || quantity <= 0 || !Number.isSafeInteger(net) || net < 0) {
+    throw new Error(`Product "${item.description}" must have a positive integer quantity and a non-negative net price in cents.`);
+  }
+  const lowerPrice = Math.floor(net / quantity);
+  const higherQuantity = net % quantity;
+  const rows = [{ quantity: quantity - higherQuantity, unit_price: lowerPrice }];
+  if (higherQuantity > 0) rows.push({ quantity: higherQuantity, unit_price: lowerPrice + 1 });
+  return rows;
+}
+
+/**
+ * Existing orders may predate allocation or have been edited. Never assume a
+ * product discount has been carried there merely because the order exists.
+ * Compare quantity and net cents per service (independent of line splitting).
+ * A mismatch requires explicit reconciliation, not a historical order rewrite.
+ */
+function existingSalesOrderDiscountError(
+  products: IQuoteItem[],
+  shares: Map<string, QuoteDiscountConversionShare>,
+  salesOrder: ISalesOrder & { lines: ISalesOrderLine[] },
+): string | null {
+  if (!products.some((item) => allocatedReductionForBase(shares, item.quote_item_id) > 0)) return null;
+
+  const totals = (rows: Array<{ serviceId: string; quantity: number; amount: number }>) => {
+    const byService = new Map<string, { quantity: number; amount: number }>();
+    for (const row of rows) {
+      const current = byService.get(row.serviceId) ?? { quantity: 0, amount: 0 };
+      byService.set(row.serviceId, { quantity: current.quantity + row.quantity, amount: current.amount + row.amount });
+    }
+    return byService;
+  };
+  const expected = totals(products.map((item) => ({
+    serviceId: item.service_id ?? '',
+    quantity: Number(item.quantity),
+    amount: Number(item.quantity) * Number(item.unit_price) - allocatedReductionForBase(shares, item.quote_item_id),
+  })));
+  const actual = totals(salesOrder.lines.map((line) => ({
+    serviceId: line.service_id,
+    quantity: Number(line.quantity_ordered),
+    amount: Number(line.quantity_ordered) * Number(line.unit_price),
+  })));
+  const matches = expected.size === actual.size && [...expected].every(([id, value]) => {
+    const stored = actual.get(id);
+    return stored?.quantity === value.quantity && stored.amount === value.amount;
+  });
+  return matches ? null : `Sales order ${salesOrder.so_number || salesOrder.so_id} does not match the quote's discounted product quantities and amounts. Reconcile the sales order with the quote before creating the remaining invoice.`;
+}
+
 async function resolveProductServiceIds(
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string,
@@ -447,40 +504,35 @@ export async function buildQuoteConversionPreview(
     return row;
   };
 
-  // A product's sales-order line carries its product-attributed discount
-  // allocations in a reduced per-unit price. The reduction must divide evenly
-  // per unit or the destination cannot represent it (see
-  // convertQuoteToDraftSalesOrder); surfacing it as a plain product row would
-  // silently drop the discount, so this is an explicit unsupported conversion.
-  const productNetRow = (item: IQuoteItem): QuoteConversionPreviewItem => {
-    const reduction = allocatedReductionForBase(shares, item.quote_item_id);
-    const qty = Number(item.quantity) || 1;
-    if (reduction === 0) {
-      return toPreviewItem(item, 'sales_order', null, lookupName(item));
-    }
-    if (reduction % qty !== 0) {
-      throw new Error(
-        `Sales-order conversion cannot represent the ${reduction}-cent discount allocated to "${item.description}" ` +
-        `as an integer per-unit price across a quantity of ${qty}.`,
-      );
-    }
-    const netUnitPrice = Number(item.unit_price) - (reduction / qty);
-    if (netUnitPrice < 0) {
-      throw new Error(
-        `Sales-order conversion discount on "${item.description}" exceeds its price.`,
-      );
-    }
-    return {
+  const productNetRows = (item: IQuoteItem): QuoteConversionPreviewItem[] =>
+    productSalesOrderPrices(item, shares).map((price, index) => ({
       ...toPreviewItem(item, 'sales_order', null, lookupName(item)),
-      quantity: qty,
-      unit_price: netUnitPrice,
-      total_price: netUnitPrice * qty,
-    };
-  };
+      quote_item_id: index === 0 ? item.quote_item_id : `${item.quote_item_id}:price-${index}`,
+      ...price,
+      total_price: price.quantity * price.unit_price,
+    }));
+  const invoiceError = salesOrder
+    ? existingSalesOrderDiscountError(oneTimeBaseItems.filter((item) => productBaseIds.has(item.quote_item_id)), shares, salesOrder)
+    : null;
 
   const contractItems: QuoteConversionPreviewItem[] = [];
   const invoiceItems: QuoteConversionPreviewItem[] = [];
-  const salesOrderItems: QuoteConversionPreviewItem[] = [];
+  const salesOrderItems: QuoteConversionPreviewItem[] = salesOrder
+    ? salesOrder.lines.map((line) => {
+      const source = quoteItems.find((item) => !item.is_discount && item.service_id === line.service_id);
+      return {
+        quote_item_id: line.so_line_id,
+        description: source?.description ?? line.service_id,
+        quantity: Number(line.quantity_ordered),
+        unit_price: Number(line.unit_price),
+        total_price: Number(line.quantity_ordered) * Number(line.unit_price),
+        is_optional: false,
+        is_selected: true,
+        is_recurring: false,
+        target: 'sales_order',
+      };
+    })
+    : [];
   const excludedItems: QuoteConversionPreviewItem[] = [];
 
   for (const item of quoteItems) {
@@ -512,9 +564,7 @@ export async function buildQuoteConversionPreview(
 
     if (oneTimeBaseItems.some((base) => base.quote_item_id === item.quote_item_id)) {
       if (salesOrder && !invoiceableBaseIds.has(item.quote_item_id)) {
-        // Claimed by the existing sales order — its discount allocation is
-        // embedded in the reduced product unit price below.
-        salesOrderItems.push(productNetRow(item));
+        // Existing rows above show actual stored prices, including legacy orders.
         continue;
       }
       if (!salesOrder && newSalesOrderItemIds.has(item.quote_item_id)) {
@@ -522,7 +572,7 @@ export async function buildQuoteConversionPreview(
         // exactly what a sales-order conversion would take (at the reduced
         // per-unit price that conversion would write). Listed in both buckets
         // so either dialog mode shows the truth for its action.
-        salesOrderItems.push(productNetRow(item));
+        salesOrderItems.push(...productNetRows(item));
       }
       invoiceItems.push(toPreviewItem(item, 'invoice', null, lookupName(item)));
       continue;
@@ -546,16 +596,17 @@ export async function buildQuoteConversionPreview(
   if (contractItems.length > 0) {
     availableActions.push('contract');
   }
-  if (invoiceItems.length > 0) {
+  if (invoiceItems.length > 0 && !invoiceError) {
     availableActions.push('invoice');
   }
-  if (contractItems.length > 0 && invoiceItems.length > 0) {
+  if (contractItems.length > 0 && invoiceItems.length > 0 && !invoiceError) {
     availableActions.push('both');
   }
 
   return {
     quote_id: quote.quote_id,
     available_actions: availableActions,
+    invoice_error: invoiceError,
     contract_items: contractItems,
     invoice_items: invoiceItems,
     sales_order_items: salesOrderItems,
@@ -865,29 +916,10 @@ export async function convertQuoteToDraftSalesOrder(
   const nowIso = new Date().toISOString();
   const soNumber = await SharedNumberingService.getNextNumber('SALES_ORDER', { knex: knexOrTrx, tenant });
 
-  // Product rows carry their product-attributed discount allocations as a
-  // reduced per-unit price so the full reduction survives conversion. If the
-  // allocation cannot be expressed as an integer per-unit price, refuse the
-  // conversion instead of silently dropping discount money.
   const shares = resolveQuoteDiscountConversionShares(quoteItems);
-  const productUnitPrices = productItems.map((item) => {
-    const reduction = allocatedReductionForBase(shares, item.quote_item_id);
-    const qty = Number(item.quantity);
-    if (reduction === 0) {
-      return Number(item.unit_price);
-    }
-    if (reduction % qty !== 0) {
-      throw new Error(
-        `Sales-order conversion cannot represent the ${reduction}-cent discount allocated to "${item.description}" ` +
-        `as an integer per-unit price across a quantity of ${qty}.`,
-      );
-    }
-    const netUnitPrice = Number(item.unit_price) - (reduction / qty);
-    if (netUnitPrice < 0) {
-      throw new Error(`Sales-order conversion discount on "${item.description}" exceeds its price.`);
-    }
-    return netUnitPrice;
-  });
+  const pricedProducts = productItems.flatMap((item) =>
+    productSalesOrderPrices(item, shares).map((price) => ({ item, price })),
+  );
 
   const [salesOrder] = await knexOrTrx('sales_orders')
     .insert({
@@ -915,16 +947,16 @@ export async function convertQuoteToDraftSalesOrder(
   const costFallbacks = await resolveProductCostFallbacks(knexOrTrx, tenant, serviceIds);
 
   await knexOrTrx('sales_order_lines').insert(
-    productItems.map((item, index) => {
+    pricedProducts.map(({ item, price }) => {
       const serviceId = item.service_id as string;
       return {
         tenant,
         so_id: soId,
         service_id: serviceId,
-        quantity_ordered: Number(item.quantity),
+        quantity_ordered: price.quantity,
         quantity_fulfilled: 0,
         quantity_invoiced: 0,
-        unit_price: productUnitPrices[index] ?? Number(item.unit_price),
+        unit_price: price.unit_price,
         cost_snapshot: toIntegerCents(item.cost) ?? costFallbacks.get(serviceId) ?? null,
         tax_rate_id: null,
         fulfillment_type: 'from_stock',
@@ -1017,6 +1049,14 @@ export async function convertQuoteToDraftInvoice(
   const oneTimeBaseItems = quoteItemsForInvoice.filter(
     (item) => !item.is_recurring && !item.is_discount && isItemSelected(item),
   );
+  if (salesOrderForQuote) {
+    const error = existingSalesOrderDiscountError(
+      oneTimeBaseItems.filter((item) => isProductQuoteItem(item, productServiceIds)),
+      shares,
+      salesOrderForQuote,
+    );
+    if (error) throw new Error(error);
+  }
   const invoiceableBaseItems = salesOrderForQuote
     ? oneTimeBaseItems.filter((item) => !isProductQuoteItem(item, productServiceIds))
     : oneTimeBaseItems;

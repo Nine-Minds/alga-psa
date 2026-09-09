@@ -1011,7 +1011,7 @@ describe('Quote conversion infrastructure', () => {
 
     const acceptedQuote = await Quote.getById(context.db, context.tenantId, quote.quote_id);
     const preview = await buildQuoteConversionPreview(acceptedQuote!, context.db, context.tenantId);
-    const soPreviewRow = preview.sales_order_items.find((item) => item.quote_item_id === productItem?.quote_item_id);
+    const soPreviewRow = preview.sales_order_items.find((item) => item.quote_item_id === soLines[0].so_line_id);
     expect(soPreviewRow?.total_price).toBe(800);
     const invoiceDiscountPreview = preview.invoice_items.find((item) => item.is_discount);
     expect(invoiceDiscountPreview?.total_price).toBe(-200);
@@ -1214,4 +1214,66 @@ describe('Quote conversion infrastructure', () => {
     const totals = invoiceCharges.reduce((sum, row) => sum + Number(row.net_amount), 0);
     expect(totals).toBe(2900);
   });
+
+  it.each(['invoice', 'sales_order'] as const)('T215: indivisible product discounts conserve cents through %s conversion', async (destination) => {
+    const { quote } = await createAcceptedQuote([
+      { description: 'Three products', quantity: 3, unit_price: 1000, service_item_kind: 'product', cost: 600, is_taxable: false },
+      { description: 'One dollar off', unit_price: 100, is_discount: true, discount_type: 'fixed', is_taxable: false },
+    ]);
+    const preview = await buildQuoteConversionPreview(quote, context.db, context.tenantId);
+    expect(preview.available_actions).toContain('invoice');
+    expect(preview.sales_order_items.map((row) => [row.quantity, row.unit_price])).toEqual([[1, 966], [2, 967]]);
+    expect(preview.invoice_items.reduce((sum, row) => sum + row.total_price, 0)).toBe(2900);
+
+    if (destination === 'invoice') {
+      const result = await context.db.transaction((trx) => convertQuoteToDraftInvoice(trx, context.tenantId, quote.quote_id, context.userId));
+      expect(Number(result.invoice.subtotal)).toBe(2900);
+      return;
+    }
+    const result = await context.db.transaction((trx) => convertQuoteToDraftSalesOrder(trx, context.tenantId, quote.quote_id, context.userId));
+    const lines = await context.db('sales_order_lines').where({ tenant: context.tenantId, so_id: result.salesOrder.so_id }).orderBy('unit_price');
+    expect(lines.map((line) => [Number(line.quantity_ordered), Number(line.unit_price)])).toEqual([[1, 966], [2, 967]]);
+    expect(lines.reduce((sum, line) => sum + Number(line.quantity_ordered), 0)).toBe(3);
+    expect(lines.reduce((sum, line) => sum + Number(line.quantity_ordered) * Number(line.unit_price), 0)).toBe(2900);
+    expect(lines.every((line) => Number(line.cost_snapshot) === 600)).toBe(true);
+    const storedPreview = await buildQuoteConversionPreview(quote, context.db, context.tenantId);
+    expect(storedPreview.invoice_error).toBeNull();
+    expect(storedPreview.sales_order_items.reduce((sum, row) => sum + row.total_price, 0)).toBe(2900);
+    const retry = await context.db.transaction((trx) => convertQuoteToDraftSalesOrder(trx, context.tenantId, quote.quote_id, context.userId));
+    expect(retry.salesOrder.so_id).toBe(result.salesOrder.so_id);
+    expect(retry.salesOrder.lines).toHaveLength(2);
+  });
+
+  it('T216: existing undiscounted orders block invoice creation until explicitly reconciled, without mutating the order', async () => {
+    const { quote } = await createAcceptedQuote([
+      { description: 'Legacy product', unit_price: 1000, service_item_kind: 'product', is_taxable: false },
+      { description: 'Installation', unit_price: 1000, is_taxable: false },
+      { description: 'Whole quote discount', unit_price: 400, is_discount: true, discount_type: 'fixed', is_taxable: false },
+    ]);
+    const result = await context.db.transaction((trx) => convertQuoteToDraftSalesOrder(trx, context.tenantId, quote.quote_id, context.userId));
+    const orderKey = { tenant: context.tenantId, so_id: result.salesOrder.so_id };
+    // Faithful pre-change destination: the existing SO has the undiscounted price.
+    await context.db('sales_order_lines').where(orderKey).update({ unit_price: 1000 });
+    const before = await context.db('sales_order_lines').where(orderKey);
+    const invoiceCount = await context.db('invoices').where({ tenant: context.tenantId }).count('* as count').first();
+    const preview = await buildQuoteConversionPreview(quote, context.db, context.tenantId);
+    expect(preview.sales_order_items[0].total_price).toBe(1000);
+    expect(preview.invoice_error).toContain('Reconcile the sales order');
+    expect(preview.available_actions).not.toContain('invoice');
+
+    await expect(context.db.transaction((trx) => convertQuoteToDraftInvoice(trx, context.tenantId, quote.quote_id, context.userId)))
+      .rejects.toThrow('Reconcile the sales order');
+    expect(await context.db('sales_order_lines').where(orderKey)).toEqual(before);
+    expect(await context.db('invoices').where({ tenant: context.tenantId }).count('* as count').first()).toEqual(invoiceCount);
+    expect((await Quote.getById(context.db, context.tenantId, quote.quote_id))?.converted_invoice_id).toBeNull();
+
+    // Simulate an explicit operator reconciliation; the converter never edits an SO.
+    await context.db('sales_order_lines').where(orderKey).update({ unit_price: 800 });
+    expect((await buildQuoteConversionPreview(quote, context.db, context.tenantId)).invoice_error).toBeNull();
+    const invoice = await context.db.transaction((trx) => convertQuoteToDraftInvoice(trx, context.tenantId, quote.quote_id, context.userId));
+    expect(Number(invoice.invoice.subtotal)).toBe(800);
+    const finalLines = await context.db('sales_order_lines').where(orderKey);
+    expect(Number(finalLines[0].unit_price) + Number(invoice.invoice.subtotal)).toBe(1600);
+  });
+
 });

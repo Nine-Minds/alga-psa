@@ -56,3 +56,9 @@ An MSP user adds fixed or percentage discounts to a whole quote, a specific item
 - Editor, persisted calculation, preview, standard grouped PDF, and duplicated/custom-template PDF agree.
 - Rendered evidence records rows and recurring/one-time/overall totals and explains the former positive-sum discrepancy.
 
+
+## Conversion compatibility (takeover completion)
+
+- New sales orders preserve allocated product net amounts in integer cents. When a quantity cannot share one cent price evenly, split it across at most two adjacent cent prices, preserving total quantity and per-unit cost snapshots. The preview uses the same split; direct invoice conversion remains available.
+- Existing sales-order preview uses stored line quantities and prices. For orders claiming discounted products, compare per-service quantity and net amount against the current quote allocations before creating the remaining invoice. A mismatch disables that invoice action and fails execution before writing; contract conversion remains available. Reconcile the order explicitly rather than rewriting historical orders or assuming their discounts were already applied.
+- Converted quote discounts remain fixed allocated invoice amounts through later invoice recalculation. No customer quote backfill or template rewrite is required.
