@@ -511,7 +511,7 @@
   {
     "id": "F056",
     "description": "all new strings live under notifications.emailBranding.* in msp/settings for every shipped locale",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-docs",
     "prdRefs": [
       "UX / UI Notes"

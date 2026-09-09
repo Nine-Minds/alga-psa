@@ -613,7 +613,7 @@
   {
     "id": "T068",
     "description": "localeQualityGates passes with the new keys in all locales",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-docs",
     "featureIds": [
       "F056"
@@ -622,7 +622,7 @@
   {
     "id": "T069",
     "description": "no hardcoded English in the new components (i18n detector clean)",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-docs",
     "featureIds": [
       "F056"

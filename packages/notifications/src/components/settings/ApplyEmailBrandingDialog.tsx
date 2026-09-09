@@ -19,22 +19,10 @@ import {
   summarizeApplyResult,
 } from "./applyEmailBrandingState";
 
-const GROUP_FALLBACKS: Record<TenantTemplateState, { title: string; action: string }> = {
-  system: { title: 'Not customized', action: 'Create branded copy' },
-  branded: { title: 'Branded by you', action: 'Update colors' },
-  customized: { title: 'Customized', action: 'Replace remaining stock colors only' },
-  'no-stock-colors': { title: 'No stock colors', action: 'Nothing to replace' },
-};
-
 const DIFFERS_FALLBACKS: Record<string, string> = {
   colors: 'colors',
   text: 'text',
   subject: 'subject',
-};
-
-const LANGUAGE_NAMES: Record<string, string> = {
-  en: 'English', fr: 'French', es: 'Spanish', de: 'German',
-  nl: 'Dutch', it: 'Italian', pl: 'Polish', pt: 'Portuguese',
 };
 
 /**
@@ -56,6 +44,33 @@ export function ApplyEmailBrandingDialog({
   onApplied: () => void | Promise<void>;
 }) {
   const { t } = useTranslation('msp/settings');
+
+  const groupTitle = (state: TenantTemplateState) => {
+    switch (state) {
+      case 'system': return t('notifications.emailBranding.apply.groups.system.title', 'Not customized');
+      case 'branded': return t('notifications.emailBranding.apply.groups.branded.title', 'Branded by you');
+      case 'customized': return t('notifications.emailBranding.apply.groups.customized.title', 'Customized');
+      default: return t('notifications.emailBranding.apply.groups.no-stock-colors.title', 'No stock colors');
+    }
+  };
+
+  const groupAction = (state: TenantTemplateState) => {
+    switch (state) {
+      case 'system': return t('notifications.emailBranding.apply.groups.system.action', 'Create branded copy');
+      case 'branded': return t('notifications.emailBranding.apply.groups.branded.action', 'Update colors');
+      case 'customized': return t('notifications.emailBranding.apply.groups.customized.action', 'Replace remaining stock colors only');
+      default: return t('notifications.emailBranding.apply.groups.no-stock-colors.action', 'Nothing to replace');
+    }
+  };
+
+  const skipReason = (reason: string) => {
+    switch (reason) {
+      case 'customized': return t('notifications.emailBranding.apply.skipReasons.customized', 'Customized — not selected');
+      case 'nothing-to-replace': return t('notifications.emailBranding.apply.skipReasons.nothing-to-replace', 'Nothing to replace');
+      default: return t('notifications.emailBranding.apply.skipReasons.unchanged', 'Already up to date');
+    }
+  };
+
   const [languages, setLanguages] = useState<string[]>(status.languages.length > 0 ? status.languages : ['en']);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [applying, setApplying] = useState(false);
@@ -173,8 +188,7 @@ export function ApplyEmailBrandingDialog({
               <ul className="max-h-40 space-y-1 overflow-y-auto text-xs text-gray-600">
                 {result!.skipped.map((skip) => (
                   <li key={`${skip.name}-${skip.language}-${skip.reason}`}>
-                    {skip.name} ({skip.language}) —{' '}
-                    {t(`notifications.emailBranding.apply.skipReasons.${skip.reason}`, SKIP_FALLBACKS[skip.reason])}
+                    {skip.name} ({skip.language}) — {skipReason(skip.reason)}
                   </li>
                 ))}
               </ul>
@@ -199,7 +213,7 @@ export function ApplyEmailBrandingDialog({
                   <Checkbox
                     key={code}
                     id={`apply-branding-language-${code}`}
-                    label={t(`notifications.emailTemplatesUi.languages.${code}`, LANGUAGE_NAMES[code] || code.toUpperCase())}
+                    label={t(`notifications.emailTemplatesUi.languages.${code}`, code.toUpperCase())}
                     checked={languages.includes(code)}
                     onChange={() => toggleLanguage(code)}
                   />
@@ -217,12 +231,8 @@ export function ApplyEmailBrandingDialog({
                   <div key={state} className="rounded border">
                     <div className="flex items-center justify-between border-b bg-gray-50 px-3 py-2">
                       <div>
-                        <span className="text-sm font-medium">
-                          {t(`notifications.emailBranding.apply.groups.${state}.title`, GROUP_FALLBACKS[state].title)}
-                        </span>
-                        <span className="ml-2 text-xs text-gray-500">
-                          {t(`notifications.emailBranding.apply.groups.${state}.action`, GROUP_FALLBACKS[state].action)}
-                        </span>
+                        <span className="text-sm font-medium">{groupTitle(state)}</span>
+                        <span className="ml-2 text-xs text-gray-500">{groupAction(state)}</span>
                       </div>
                       {!disabled && (
                         <div className="flex gap-2">
@@ -258,7 +268,7 @@ export function ApplyEmailBrandingDialog({
                           />
                           <span className="text-xs text-gray-500">
                             {disabled
-                              ? t('notifications.emailBranding.apply.groups.no-stock-colors.action', GROUP_FALLBACKS['no-stock-colors'].action)
+                              ? groupAction('no-stock-colors')
                               : entry.differs.length > 0
                                 ? t('notifications.emailBranding.apply.differs', {
                                   defaultValue: 'Differs in {{parts}}',
@@ -281,9 +291,3 @@ export function ApplyEmailBrandingDialog({
     </Dialog>
   );
 }
-
-const SKIP_FALLBACKS: Record<string, string> = {
-  customized: 'Customized — not selected',
-  'nothing-to-replace': 'Nothing to replace',
-  unchanged: 'Already up to date',
-};

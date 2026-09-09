@@ -1627,6 +1627,96 @@
         "pt": "Portoghese"
       }
     },
+    "emailBranding": {
+      "title": "Branding delle email",
+      "description": "Applica i tuoi colori a tutte le email in uscita. Guarda qui l'anteprima, poi scegli a quali modelli applicarli.",
+      "unsavedHint": "Salva la palette prima di applicarla.",
+      "source": {
+        "saved": "Salvata",
+        "custom-theme": "Dal tuo tema personalizzato",
+        "theme-pair": "Dal tuo tema",
+        "portal-branding": "Dal branding del tuo portale clienti",
+        "default": "Predefinito di AlgaPSA"
+      },
+      "fields": {
+        "primary": "Colore principale",
+        "secondary": "Colore secondario",
+        "singleColor": "Colore unico (il gradiente deriva dal colore principale)"
+      },
+      "tokens": {
+        "dark": "Accento scuro",
+        "outerBg": "Sfondo esterno",
+        "footerBg": "Sfondo del piè di pagina",
+        "cardBorder": "Bordo della scheda",
+        "infoBoxBg": "Sfondo del riquadro informativo",
+        "infoBoxBorder": "Bordo del riquadro informativo"
+      },
+      "preview": {
+        "title": "Anteprima"
+      },
+      "actions": {
+        "save": "Salva la palette",
+        "saving": "Salvataggio...",
+        "useSuggested": "Usa i colori suggeriti",
+        "adjust": "Regola i colori derivati",
+        "apply": "Applica ai modelli",
+        "applying": "Applicazione...",
+        "applyCount": "Applica a {{count}} modelli",
+        "applyToTemplate": "Applica la mia palette",
+        "remove": "Rimuovi il branding da tutti i modelli",
+        "removing": "Rimozione...",
+        "cancel": "Annulla",
+        "done": "Fatto"
+      },
+      "apply": {
+        "title": "Applica il branding ai modelli",
+        "languages": "Lingue",
+        "selectAll": "Seleziona tutto",
+        "selectNone": "Deseleziona tutto",
+        "differs": "Differisce per {{parts}}",
+        "differsParts": {
+          "colors": "colori",
+          "text": "testo",
+          "subject": "oggetto"
+        },
+        "summary": "{{written}} con il tuo branding, {{skipped}} ignorati, {{failed}} non riusciti",
+        "groups": {
+          "system": {
+            "title": "Non personalizzati",
+            "action": "Crea una copia con il tuo branding"
+          },
+          "branded": {
+            "title": "Con il tuo branding",
+            "action": "Aggiorna i colori"
+          },
+          "customized": {
+            "title": "Personalizzati",
+            "action": "Sostituisci solo i colori originali rimasti"
+          },
+          "no-stock-colors": {
+            "title": "Nessun colore originale",
+            "action": "Niente da sostituire"
+          }
+        },
+        "skipReasons": {
+          "customized": "Personalizzato: non selezionato",
+          "nothing-to-replace": "Niente da sostituire",
+          "unchanged": "Già aggiornato"
+        }
+      },
+      "newTemplates": {
+        "message": "Sono stati aggiunti {{count}} modelli dall'ultima volta che hai applicato la palette.",
+        "action": "Applica la palette ai nuovi modelli",
+        "dismiss": "Ignora"
+      },
+      "enterprise": {
+        "useLogo": "Usa il mio logo nell'intestazione delle email",
+        "logoWide": "Logo largo",
+        "logoDefault": "Logo quadrato",
+        "noLogo": "Carica un logo in Impostazioni → Portale clienti → Branding per usarlo qui.",
+        "showAttribution": "Mostra «Powered by AlgaPSA» nel piè di pagina"
+      }
+    },
     "categoriesUi": {
       "errors": {
         "loadCategories": "Caricamento delle categorie non riuscito",

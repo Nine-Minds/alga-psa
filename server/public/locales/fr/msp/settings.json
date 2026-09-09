@@ -1627,6 +1627,96 @@
         "pt": "Portugais"
       }
     },
+    "emailBranding": {
+      "title": "Image de marque des courriels",
+      "description": "Appliquez vos couleurs à tous les courriels sortants. Prévisualisez-les ici, puis choisissez les modèles auxquels les appliquer.",
+      "unsavedHint": "Enregistrez la palette avant de l'appliquer.",
+      "source": {
+        "saved": "Enregistrée",
+        "custom-theme": "D'après votre thème personnalisé",
+        "theme-pair": "D'après votre thème",
+        "portal-branding": "D'après l'image de marque de votre portail client",
+        "default": "Valeur par défaut AlgaPSA"
+      },
+      "fields": {
+        "primary": "Couleur principale",
+        "secondary": "Couleur secondaire",
+        "singleColor": "Couleur unique (dégradé dérivé de la couleur principale)"
+      },
+      "tokens": {
+        "dark": "Accent foncé",
+        "outerBg": "Arrière-plan extérieur",
+        "footerBg": "Arrière-plan du pied de page",
+        "cardBorder": "Bordure de la carte",
+        "infoBoxBg": "Arrière-plan de l'encadré d'information",
+        "infoBoxBorder": "Bordure de l'encadré d'information"
+      },
+      "preview": {
+        "title": "Aperçu"
+      },
+      "actions": {
+        "save": "Enregistrer la palette",
+        "saving": "Enregistrement...",
+        "useSuggested": "Utiliser les couleurs suggérées",
+        "adjust": "Ajuster les couleurs dérivées",
+        "apply": "Appliquer aux modèles",
+        "applying": "Application...",
+        "applyCount": "Appliquer à {{count}} modèles",
+        "applyToTemplate": "Appliquer ma palette",
+        "remove": "Retirer l'image de marque de tous les modèles",
+        "removing": "Retrait...",
+        "cancel": "Annuler",
+        "done": "Terminé"
+      },
+      "apply": {
+        "title": "Appliquer l'image de marque aux modèles",
+        "languages": "Langues",
+        "selectAll": "Tout sélectionner",
+        "selectNone": "Tout désélectionner",
+        "differs": "Diffère par : {{parts}}",
+        "differsParts": {
+          "colors": "couleurs",
+          "text": "texte",
+          "subject": "objet"
+        },
+        "summary": "{{written}} traités, {{skipped}} ignorés, {{failed}} en échec",
+        "groups": {
+          "system": {
+            "title": "Non personnalisés",
+            "action": "Créer une copie à vos couleurs"
+          },
+          "branded": {
+            "title": "À vos couleurs",
+            "action": "Mettre à jour les couleurs"
+          },
+          "customized": {
+            "title": "Personnalisés",
+            "action": "Remplacer uniquement les couleurs d'origine restantes"
+          },
+          "no-stock-colors": {
+            "title": "Aucune couleur d'origine",
+            "action": "Rien à remplacer"
+          }
+        },
+        "skipReasons": {
+          "customized": "Personnalisé — non sélectionné",
+          "nothing-to-replace": "Rien à remplacer",
+          "unchanged": "Déjà à jour"
+        }
+      },
+      "newTemplates": {
+        "message": "{{count}} modèles ont été ajoutés depuis la dernière application de votre palette.",
+        "action": "Appliquer la palette aux nouveaux modèles",
+        "dismiss": "Ignorer"
+      },
+      "enterprise": {
+        "useLogo": "Utiliser mon logo dans l'en-tête des courriels",
+        "logoWide": "Logo large",
+        "logoDefault": "Logo carré",
+        "noLogo": "Téléversez un logo dans Paramètres → Portail client → Image de marque pour l'utiliser ici.",
+        "showAttribution": "Afficher « Powered by AlgaPSA » dans le pied de page"
+      }
+    },
     "categoriesUi": {
       "errors": {
         "loadCategories": "Échec du chargement des catégories",

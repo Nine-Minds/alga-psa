@@ -1627,6 +1627,96 @@
         "pt": "Portugués"
       }
     },
+    "emailBranding": {
+      "title": "Marca de los correos electrónicos",
+      "description": "Aplique sus colores a todos los correos electrónicos salientes. Véalos aquí en vista previa y luego elija a qué plantillas aplicarlos.",
+      "unsavedHint": "Guarde la paleta antes de aplicarla.",
+      "source": {
+        "saved": "Guardada",
+        "custom-theme": "De su tema personalizado",
+        "theme-pair": "De su tema",
+        "portal-branding": "De la marca de su portal de clientes",
+        "default": "Predeterminado de AlgaPSA"
+      },
+      "fields": {
+        "primary": "Color principal",
+        "secondary": "Color secundario",
+        "singleColor": "Color único (el degradado se deriva del color principal)"
+      },
+      "tokens": {
+        "dark": "Acento oscuro",
+        "outerBg": "Fondo exterior",
+        "footerBg": "Fondo del pie de página",
+        "cardBorder": "Borde de la tarjeta",
+        "infoBoxBg": "Fondo del cuadro informativo",
+        "infoBoxBorder": "Borde del cuadro informativo"
+      },
+      "preview": {
+        "title": "Vista previa"
+      },
+      "actions": {
+        "save": "Guardar paleta",
+        "saving": "Guardando...",
+        "useSuggested": "Usar los colores sugeridos",
+        "adjust": "Ajustar los colores derivados",
+        "apply": "Aplicar a las plantillas",
+        "applying": "Aplicando...",
+        "applyCount": "Aplicar a {{count}} plantillas",
+        "applyToTemplate": "Aplicar mi paleta",
+        "remove": "Quitar la marca de todas las plantillas",
+        "removing": "Quitando...",
+        "cancel": "Cancelar",
+        "done": "Listo"
+      },
+      "apply": {
+        "title": "Aplicar la marca a las plantillas",
+        "languages": "Idiomas",
+        "selectAll": "Seleccionar todo",
+        "selectNone": "Deseleccionar todo",
+        "differs": "Difiere en {{parts}}",
+        "differsParts": {
+          "colors": "colores",
+          "text": "texto",
+          "subject": "asunto"
+        },
+        "summary": "{{written}} con su marca, {{skipped}} omitidas, {{failed}} con errores",
+        "groups": {
+          "system": {
+            "title": "Sin personalizar",
+            "action": "Crear una copia con su marca"
+          },
+          "branded": {
+            "title": "Con su marca",
+            "action": "Actualizar los colores"
+          },
+          "customized": {
+            "title": "Personalizadas",
+            "action": "Reemplazar solo los colores originales restantes"
+          },
+          "no-stock-colors": {
+            "title": "Sin colores originales",
+            "action": "Nada que reemplazar"
+          }
+        },
+        "skipReasons": {
+          "customized": "Personalizada: no seleccionada",
+          "nothing-to-replace": "Nada que reemplazar",
+          "unchanged": "Ya está actualizada"
+        }
+      },
+      "newTemplates": {
+        "message": "Se agregaron {{count}} plantillas desde la última vez que aplicó su paleta.",
+        "action": "Aplicar la paleta a las plantillas nuevas",
+        "dismiss": "Descartar"
+      },
+      "enterprise": {
+        "useLogo": "Usar mi logo en el encabezado del correo electrónico",
+        "logoWide": "Logo ancho",
+        "logoDefault": "Logo cuadrado",
+        "noLogo": "Cargue un logo en Configuración → Portal de clientes → Marca para usarlo aquí.",
+        "showAttribution": "Mostrar «Powered by AlgaPSA» en el pie de página"
+      }
+    },
     "categoriesUi": {
       "errors": {
         "loadCategories": "Error al cargar las categorías",
