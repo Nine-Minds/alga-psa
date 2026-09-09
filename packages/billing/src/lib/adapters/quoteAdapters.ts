@@ -43,6 +43,19 @@ const toFiniteNumber = (value: unknown): number => {
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
+/**
+ * Unified quote-item eligibility shared with the draft totals and the
+ * persisted recalculation service: required (non-optional) rows always
+ * contribute, optional rows contribute only while selected. This is the one
+ * rule every consumer applies when deciding bases, discounts, and group
+ * totals, so optional-to-required transitions and unselected required rows
+ * render identically before and after save.
+ */
+const isQuoteItemIncluded = (item: { is_optional?: boolean | null; is_selected?: boolean | null }): boolean => {
+  if (!item.is_optional) return true;
+  return item.is_selected === true;
+};
+
 const buildAddress = (record: Record<string, unknown> | null | undefined): string | null => {
   if (!record) {
     return null;
@@ -146,7 +159,7 @@ const buildLocationGroups = (
   }
 
   for (const entry of grouped.values()) {
-    const included = entry.items.filter((i) => !i.is_discount && i.is_selected !== false);
+    const included = entry.items.filter((i) => !i.is_discount && isQuoteItemIncluded(i));
     entry.subtotal = included.reduce((sum, i) => sum + toFiniteNumber(i.total_price), 0);
     entry.tax = included.reduce((sum, i) => sum + toFiniteNumber(i.tax_amount), 0);
     entry.total = entry.subtotal + entry.tax;
@@ -232,6 +245,15 @@ const buildQuoteItemGroupSummary = (
 
 type QuoteDiscountCadenceSplit = Pick<QuoteDiscountAllocationResult, 'recurringAmount' | 'onetimeAmount'>;
 
+interface ResolvedQuoteDiscounts {
+  /** Per-discount cadence split keyed by quote_item_id. */
+  splits: Map<string, QuoteDiscountCadenceSplit>;
+  /** Per-discount fully-resolved positive amount keyed by quote_item_id. */
+  amountsById: Map<string, number>;
+  /** Sum of all resolved discounts. */
+  totalDiscount: number;
+}
+
 /**
  * Resolve each persisted discount row's derived reduction across the eligible
  * base items it targets. Discount cadence fields (`is_recurring`,
@@ -239,10 +261,10 @@ type QuoteDiscountCadenceSplit = Pick<QuoteDiscountAllocationResult, 'recurringA
  * classified by the cadence of the base items it actually reduces, so legacy
  * discounts persisted with `false`/null cadence land on the correct group.
  */
-function resolveQuoteItemDiscountSplits(
+function resolveQuoteItemDiscounts(
   rawItems: NonNullable<IQuote['quote_items']>[number][]
-): Map<string, QuoteDiscountCadenceSplit> {
-  const includedBases = rawItems.filter((item) => !item.is_discount && item.is_selected !== false);
+): ResolvedQuoteDiscounts {
+  const includedBases = rawItems.filter((item) => !item.is_discount && isQuoteItemIncluded(item));
   const bases = includedBases.map((item) => ({
     id: item.quote_item_id,
     serviceId: item.service_id ?? null,
@@ -251,7 +273,7 @@ function resolveQuoteItemDiscountSplits(
   }));
 
   const discounts = rawItems
-    .filter((item) => item.is_discount === true && item.is_selected !== false)
+    .filter((item) => item.is_discount === true && isQuoteItemIncluded(item))
     .map((item) => ({
       id: item.quote_item_id,
       discountType: (item.discount_type === 'percentage' ? 'percentage' : 'fixed') as 'percentage' | 'fixed',
@@ -263,14 +285,16 @@ function resolveQuoteItemDiscountSplits(
 
   const allocation = allocateQuoteDiscounts(bases, discounts);
   const splits = new Map<string, QuoteDiscountCadenceSplit>();
+  const amountsById = new Map<string, number>();
   for (const result of allocation.discounts) {
     splits.set(result.discountId, {
       recurringAmount: result.recurringAmount,
       onetimeAmount: result.onetimeAmount,
     });
+    amountsById.set(result.discountId, result.resolvedAmount);
   }
 
-  return splits;
+  return { splits, amountsById, totalDiscount: allocation.totalDiscount };
 }
 
 /**
@@ -324,12 +348,12 @@ function buildCadenceCollections(
 }
 
 /**
- * Summaries count only items that actually contribute to the quote: selected
- * base rows (persisted totals already exclude optional-unselected rows) plus
- * the negative discount entries that reduce each group.
+ * Summaries count only items that actually contribute to the quote: included
+ * base rows (required rows regardless of selection, optional rows only while
+ * selected) plus the negative discount entries that reduce each group.
  */
 const buildQuoteGroupSummary = (items: QuoteViewModelLineItem[]): QuoteItemGroupSummary => {
-  const counted = items.filter((item) => item.is_discount || item.is_selected !== false);
+  const counted = items.filter((item) => item.is_discount || isQuoteItemIncluded(item));
   const subtotal = counted.reduce((sum, item) => sum + toFiniteNumber(item.total_price), 0);
   const tax = counted.reduce((sum, item) => sum + toFiniteNumber(item.tax_amount), 0);
 
@@ -499,13 +523,45 @@ export async function mapLoadedQuoteToViewModel(
     locationsById.set(location.id, location);
   }
 
-  const lineItems = rawItems.map((item) => mapQuoteItemToViewModel(item, locationsById));
-  const discountSplits = resolveQuoteItemDiscountSplits(rawItems);
-  const cadenceCollections = buildCadenceCollections(lineItems, discountSplits);
+  const mappedItems = rawItems.map((item) => mapQuoteItemToViewModel(item, locationsById));
+  const resolvedDiscounts = resolveQuoteItemDiscounts(rawItems);
+
+  // The general collection keeps discount rows positive but shows each at its
+  // derived resolved amount (a legacy $40 row on a $25 base renders $25, an
+  // unmatched row renders $0), so displayed rows, group totals, and the
+  // overall totals below all tell the same derived story.
+  const lineItems = mappedItems.map((item) => {
+    if (!item.is_discount) return item;
+    const resolvedAmount = resolvedDiscounts.amountsById.get(item.quote_item_id) ?? 0;
+    return {
+      ...item,
+      quantity: 1,
+      unit_price: resolvedAmount,
+      total_price: resolvedAmount,
+      net_amount: resolvedAmount,
+      tax_amount: 0,
+    };
+  });
+
+  const cadenceCollections = buildCadenceCollections(lineItems, resolvedDiscounts.splits);
   const recurringSummary = buildQuoteGroupSummary(cadenceCollections.recurring);
   const onetimeSummary = buildQuoteGroupSummary(cadenceCollections.onetime);
   const serviceSummary = buildQuoteItemGroupSummary(lineItems, (item) => item.service_item_kind === 'service');
   const productSummary = buildQuoteItemGroupSummary(lineItems, (item) => item.service_item_kind === 'product');
+
+  // Overall financials are derived from the same included bases and resolved
+  // discounts the groups show. Legacy quotes saved under the old positive-sum
+  // rules may carry a discount_total/total_amount that no longer matches the
+  // derived allocation (unmatched targets, oversized discounts). Presenting
+  // the persisted values next to derived groups was internally inconsistent
+  // ($0 grouped total beside a -$15 overall total), so the view model reports
+  // derived figures everywhere. Persistence is untouched - no backfill - and a
+  // later save recalculates the stored row the same way.
+  const includedBases = rawItems.filter((item) => !item.is_discount && isQuoteItemIncluded(item));
+  const derivedSubtotal = includedBases.reduce((sum, item) => sum + toFiniteNumber(item.total_price), 0);
+  const derivedTax = includedBases.reduce((sum, item) => sum + toFiniteNumber(item.tax_amount), 0);
+  const derivedDiscountTotal = resolvedDiscounts.totalDiscount;
+  const derivedTotal = derivedSubtotal - derivedDiscountTotal + derivedTax;
 
   return {
     quote_id: quote.quote_id,
@@ -519,10 +575,10 @@ export async function mapLoadedQuoteToViewModel(
     version: Number(quote.version ?? 1),
     po_number: quote.po_number ?? null,
     currency_code: quote.currency_code,
-    subtotal: toFiniteNumber(quote.subtotal),
-    discount_total: toFiniteNumber(quote.discount_total),
-    tax: toFiniteNumber(quote.tax),
-    total_amount: toFiniteNumber(quote.total_amount),
+    subtotal: derivedSubtotal,
+    discount_total: derivedDiscountTotal,
+    tax: derivedTax,
+    total_amount: derivedTotal,
     terms_and_conditions: quote.terms_and_conditions ?? null,
     client_notes: quote.client_notes ?? null,
     client_id: quote.client_id ?? null,

@@ -1,127 +1,108 @@
-# Ticket 2353 — Draft review packet
+# Ticket 2353 — Draft review packet (rev 2)
 
 Branch: `feature/correct-recurring-quote-discount-allocation-and` (isolated
-checkout, not yet pushed). Plan:
-`ee/docs/plans/2026-09-08-quote-discount-group-allocation/` (18 features
-F001–F018, 10 tests T001–T010; features and tests all marked implemented with
-evidence pointers).
+checkout, not pushed). Plan:
+`ee/docs/plans/2026-09-08-quote-discount-group-allocation/`.
 
-## What was implemented
+## What changed since rev 1 (review responses)
 
-A single pure allocation module, `quoteDiscountAllocation.ts`, is now the
-shared source of truth for how a persisted (or draft) discount reduces the
-eligible base items it targets:
+1. **Monthly sidebar figure** (`QuoteForm.tsx` +
+   `quoteLineItemDraft.calculateDraftMonthlyRecurringNet`): the "$X recurring /
+   month" figure is now derived from the shared per-base discount allocation,
+   so discounts aimed at monthly services reduce it ($50.00, not $60.00) and
+   mixed billing frequencies reduce only their own monthly rows. Verified in
+   the editor on port 3172 after save/reopen
+   (`editor/2353-editor-reopen-50monthly.png`) and by draft unit tests.
 
-- `packages/billing/src/services/quoteDiscountAllocation.ts` (new) —
-  deterministic integer-cent allocation with largest-remainder rounding,
-  stable display order tie-break, per-cadence splits, caps.
-- `quoteLineItemDraft.ts` — draft totals and the editor's discount-row amount
-  column derive from the shared module (`calculateDraftQuoteTotals`,
-  `resolveDraftDiscountAmounts`).
-- `QuoteLineItemsEditor.tsx` — discount rows display the derived resolved
-  reduction; amount column and sidebar discount total agree.
-- `quoteCalculationService.ts` — `recalculateQuoteFinancials` persists derived
-  `discount_total`/item totals from the same module (quotes keep the
-  `subtotal - discount_total + tax` contract; discount rows stay positive).
-- `quoteAdapters.ts` — `mapLoadedQuoteToViewModel` derives cadence membership
-  from target relationships (not the discount row's own cadence fields). Base
-  items keep their cadence; each discount contributes a negative per-cadence
-  row to `recurring_items`/`onetime_items`, exactly once; group subtotals are
-  the sum of selected base rows plus those reductions. `line_items`,
-  service/product/location/phase collections and overall quote totals are
-  preserved. No customer recreation, backfill, or template AST rewrite.
+2. **Copy paths remap item targets** (`quoteActions.ts`
+   `copyQuoteItemsToQuote` used by createQuoteFromTemplate, duplicateQuote,
+   saveQuoteAsTemplate; `models/quote.ts` createRevision now two-phase):
+   base rows are copied first, then discount rows receive the copied target's
+   new id via a complete old→new map, regardless of display order. Persisted
+   behavioral tests: infra `quoteConversion/quoteInfrastructure` T202 (revision)
+   and T204 (helper used by duplication/template flows, discount stored ahead
+   of its target); action-level unit tests T140/T141/T142 assert each copy flow
+   remaps and saveQuoteAsTemplate forces selection.
 
-## Allocation policy (with the concrete numbers the tests lock)
+3. **Conversion uses allocated shares** (`quoteConversionService.ts`): shared
+   `resolveQuoteDiscountConversionShares` feeds preview and invoice execution.
+   A whole-quote or mixed-cadence discount contributes only its allocated
+   one-time share to one-time invoices; recurring reductions never leak into
+   them. Invoice discount rows are sized from allocations (single-target rows
+   keep an `applies_to_item_id`). Infra conversion tests T210/T211 (mixed
+   service + whole-quote: $30 recurring / $10 one-time with a $4 discount ⇒
+   invoice −$1.00 discount, $9.00 subtotal) plus updated T116.
 
-- Eligibility: selected, non-discount base items; optional-unselected items
-  contribute neither base nor allocation. Zero/negative bases contribute
-  nothing.
-- Targets: item → only that item; service → every eligible item with that
-  service (all rows/cadences, never just the first match); no target → all
-  eligible base items.
-- Cadence split: proportional to eligible base amount. Example: service with
-  $30 recurring + $10 one-time base and a $4 fixed service discount →
-  $3.00 recurring / $1.00 one-time (300/100 cents).
-- Rounding: largest-remainder, exact cent conservation, display order as tie
-  break. Example: $5 fixed over a $25/$35 whole-quote/… base → 208/292.
-- Caps / overlap: discounts process in display order against remaining base
-  capacity per item, so a group/base can never go negative. Nominal for a
-  percentage is computed on the original eligible base with existing rounding,
-  then capped by remaining capacity. Concrete locked examples:
-  - Two $20 item discounts stacked on a $25 item → first 2000, second capped
-    at 500, total 2500.
-  - $25 item-targeted fixed discount then a whole-quote 10% over a $60 base →
-    item consumes 2500; 10% nominal 600 then lands wholly on the remaining
-    $35 item; total 3100. (Earlier discounts win; documented ambiguity
-    resolved as "display order + per-base remaining capacity".)
-  - Removed/unmatched targets and zero eligible bases → zero allocation.
-- Persistence: discount rows remain positive with their original cadence
-  fields; quote-level subtraction preserved.
+4. **Unified eligibility**: adapter now applies the same included-item rule as
+   the draft and the persisted recalculation (`required rows always count;
+   optional rows only while selected`). Adapter T210 and infra T203 cover a
+   required row with `is_selected=false` (draft $25−$5 = $20 also renders $20
+   in the cadence totals) and an optional→required transition across
+   save/reload. Optional-unselected rows still contribute neither base nor
+   allocation.
 
-## Existing-quote compatibility
+5. **Read-time financial consistency**: the adapter now reports derived
+   overall financials (and derived positive discount rows) instead of mixing
+   persisted `discount_total`/`total_amount` with derived groups. Legacy
+   oversized ($40 discount on a $25 base) and unmatched fixtures render $0 /
+   $0 consistently (adapter T211/T212), with positive storage preserved and no
+   backfill. Persisted rows are recalculated only when the quote is next saved.
 
-On read, the adapter derives allocation purely from persisted target
-relationships and positive amounts, so quotes saved before this change render
-correctly on first load (and after save/reload, since re-saving runs the same
-derivation). Backward-compatible `line_items`. Verified by the DB-backed
-T005/T006 tests, adapter T007/T008, and the reopened QUO-0003 editor session.
+6. **Evidence packet** (`docs/evidence/ticket-2353-quote-discount-group-allocation/`):
+   editor screenshots are included in the commit (`.gitignore` negation);
+   standard-grouped preview/PDF verified via an isolated catalog swap that
+   restores ticket 2354's shared catalog byte-for-byte
+   (`pdfs/QUO-0003-standard-grouped-isolated-catalog.pdf`);
+   custom-template coverage retained; a pre-fix render of the faithful fixture
+   documents the old positive-discount-in-one-time grouping and explicitly
+   leaves the customer's reported subtraction unresolved
+   (`pdfs/QUO-0003-PRE-FIX-adapter-grouping.pdf` +
+   `preview/pre-fix-viewmodel.json`); unsupported "production unaffected" /
+   "2354 merge necessarily resolves" claims removed from the blocker note and
+   README.
 
-## Validation results
+## Allocation policy (unchanged, concrete amounts in tests)
 
-- Pre-fix (HEAD adapter) reproduction: `quoteAdapters` discount-group suite
-  6 failed / 6 passed — see
-  `docs/evidence/ticket-2353-quote-discount-group-allocation/pre-fix-adapter-reproduction*.txt`.
-- Post-fix unit suites (47 tests): allocation 13, draft 5, adapters 12,
-  calculation service 17 — all pass.
-- DB-backed: `quoteInfrastructure.test.ts` full file 85/85 pass (includes
-  T200/T005 and T201/T006).
-- Adjacent suites (24 tests): quote template bindings, standard quote
-  templates, invoice standard templates, quote document-template editor
-  existing-quote/tenant-branding — pass.
-- Typecheck: `@alga-psa/billing` `tsc --noEmit` clean.
-- Browser (localhost:3172): created quote QUO-0003 with the two monthly
-  services ($25/$35), four one-time charges (37353/210863/5581/45000 cents),
-  and two **Fixed Discount > Specific Service** $5 discounts; saved; reloaded.
-  Editor shows rows `- USD 5.00` and sidebar Subtotal $3,047.97 / Discounts
-  −$10.00 / Tax $0.00 / Total $3,037.97. DB after save/reload:
-  304797 / 1000 / 0 / 303797.
-- PDF evidence (same service the app calls): custom-template and explicit
-  standard-grouped renders both show Monthly Items $50.00 (incl. two −$5
-  discounts) and One-time $2,987.97 — see `pdfs/` + `preview/*.txt`.
+Eligibility/scope/splits/rounding/caps as rev 1. Copy & conversion now consume
+the same module/derived outputs.
 
-## Artifacts
+## Validation commands (reproducible)
 
-`docs/evidence/ticket-2353-quote-discount-group-allocation/`:
-`README.md` (expected-vs-actual table), `editor/*.png`, `pdfs/*.pdf`,
-`preview/*.txt` + `viewmodel.json`, blocker note, pre-fix reproductions.
+From the repo root against the local test DB (shared dev Postgres on
+`127.0.0.1:5472`, secrets under `./secrets`; use a worktree-unique
+`TEST_DB_NAME`):
 
-## Discrepancies / remaining uncertainty
+```bash
+export TEST_DB_NAME=test_database_2353dbq DB_HOST=127.0.0.1 DB_PORT=5472 \
+  DB_USER_ADMIN=postgres DB_USER_SERVER=app_user
 
-- **UI "Grouped Quote Template (Standard)" returns HTTP 500 in this shared
-  dev DB** because ticket 2354 has overwritten the shared standard-template
-  catalog AST with `lines` description columns this branch cannot evaluate
-  (`preview/2353-standard-catalog-blocker.txt`). Rendered standard evidence
-  therefore uses the branch-canonical code AST. Production (where migration
-  and code match) is unaffected; this is a coordination item with 2354, not a
-  product regression. After 2354 merges this goes away.
-- Tax: new items under the Emerald City client defaulted to the tenant's 6%
-  rate; to mirror the customer's zero-tax scenario the fixture rows were
-  flagged non-taxable and re-saved through the app (recalculation path).
-  Tax behavior itself is unchanged by this branch.
-- The PDF service call from the UI returns 200, but this browser harness does
-  not persist downloads to disk; the saved PDFs were produced by the exact
-  same server code path (`downloadQuotePdf` → `pdfService.generatePDF`) in a
-  vitest harness against the same quote/template/user.
-- No customer reproduction of the exact PDF (different tenant/template/
-  branding); production re-verification remains for a later approved
-  deployment (tenant 8ec33c81…, quote b0ba8a84…/QUO-0001).
+# pure/unit + colocated adapter/draft suites (server-root vitest config):
+npx vitest run \
+  ../packages/billing/src/services/quoteDiscountAllocation.test.ts \
+  ../packages/billing/src/components/billing-dashboard/quotes/quoteLineItemDraft.test.ts \
+  ../packages/billing/src/lib/adapters/quoteAdapters.test.ts \
+  ../packages/billing/tests/quote/quoteCalculationService.test.ts \
+  ../packages/billing/src/services/quoteConversionService.preview.test.ts \
+  ../packages/billing/tests/quote/quoteActions.test.ts
+
+# DB-backed suites:
+npx vitest run src/test/infrastructure/billing/quotes/quoteInfrastructure.test.ts
+npx vitest run src/test/infrastructure/billing/quotes/quoteConversion.test.ts
+
+# Typecheck:
+npm -w @alga-psa/billing run typecheck
+```
+
+Recorded results: adapter 15, draft 9, allocation 13, calculation-service 17,
+conversion preview unit 3, quoteActions 42 all pass; quoteInfrastructure 88/88;
+quoteConversion 18/18; billing typecheck clean.
 
 ## Reviewer: inspect first
 
-1. `packages/billing/src/services/quoteDiscountAllocation.ts` — policy and
-   rounding/cap rules.
-2. `quoteAdapters.ts` diff — cadence-group derivation and summary contract.
-3. `quoteAdapters.test.ts` new describe — T007/T008 runtime assertions.
-4. `quoteInfrastructure.test.ts` T200/T201 and `quoteCalculationService`
-   T215 — save/reload/persistence.
-5. `quoteLineItemDraft.test.ts` + editor/draft diffs.
+1. `quoteDiscountAllocation.ts` (policy) and `quoteAdapters.ts` (eligibility +
+   derived financials).
+2. `quoteActions.ts` `copyQuoteItemsToQuote` + `models/quote.ts` createRevision.
+3. `quoteConversionService.ts` shares + invoice/preview wiring.
+4. New regressions: adapter T210–T212, infra T202–T204, conversion T210/T211,
+   action unit T140–T142, draft monthly-net tests.
+5. Evidence README/REVIEW and `preview/2353-standard-catalog-blocker.txt`.

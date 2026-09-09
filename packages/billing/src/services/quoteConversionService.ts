@@ -12,6 +12,7 @@ import type {
 import { tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import { SharedNumberingService } from '@shared/services/numberingService';
+import { allocateQuoteDiscounts } from './quoteDiscountAllocation';
 import { getClientDefaultBillingProfileId } from '../lib/billing/billingProfileLookup';
 import Contract from '../models/contract';
 import Quote from '../models/quote';
@@ -160,57 +161,6 @@ function isItemSelected(item: IQuoteItem): boolean {
   return item.is_selected === true;
 }
 
-function getSelectedRecurringItems(items: IQuoteItem[] = []): IQuoteItem[] {
-  return items.filter((item) => {
-    if (!item.is_recurring || item.is_discount) {
-      return false;
-    }
-
-    return isItemSelected(item);
-  });
-}
-
-function getSelectedOneTimeItems(items: IQuoteItem[] = []): IQuoteItem[] {
-  const includedItems = items.filter((item) => {
-    if (item.is_recurring) {
-      return false;
-    }
-
-    return isItemSelected(item);
-  });
-
-  const baseItemIds = new Set(
-    includedItems
-      .filter((item) => !item.is_discount)
-      .map((item) => item.quote_item_id)
-  );
-  const baseServiceIds = new Set(
-    includedItems
-      .filter((item) => !item.is_discount && item.service_id)
-      .map((item) => item.service_id as string)
-  );
-
-  return includedItems.filter((item) => {
-    if (!item.is_discount) {
-      return true;
-    }
-
-    if (!item.applies_to_item_id && !item.applies_to_service_id) {
-      return true;
-    }
-
-    if (item.applies_to_item_id && baseItemIds.has(item.applies_to_item_id)) {
-      return true;
-    }
-
-    if (item.applies_to_service_id && baseServiceIds.has(item.applies_to_service_id)) {
-      return true;
-    }
-
-    return false;
-  });
-}
-
 function toIntegerCents(value: unknown): number | null {
   if (value === undefined || value === null || value === '') {
     return null;
@@ -222,6 +172,111 @@ function toIntegerCents(value: unknown): number | null {
   }
 
   return Math.round(numberValue);
+}
+
+export interface QuoteDiscountConversionShare {
+  recurringAmount: number;
+  onetimeAmount: number;
+  /** Allocations landing on one-time base rows (baseItemId -> amount). */
+  onetimeByBase: Map<string, number>;
+}
+
+/**
+ * Resolve every quote discount to the share of its reduction that lands on
+ * recurring versus one-time base rows, using the same shared allocation model
+ * the quote document adapter and the editor use. Conversion must never apply a
+ * whole persisted discount to a one-time invoice when part of that discount
+ * reduces a recurring service.
+ */
+function resolveQuoteDiscountConversionShares(items: IQuoteItem[]): Map<string, QuoteDiscountConversionShare> {
+  const bases = items
+    .filter((item) => !item.is_discount && isItemSelected(item))
+    .map((item) => ({
+      id: item.quote_item_id,
+      serviceId: item.service_id ?? null,
+      amount: toIntegerCents(Number(item.quantity) * Number(item.unit_price)) ?? 0,
+      isRecurring: item.is_recurring === true,
+    }));
+
+  const discounts = items
+    .filter((item) => item.is_discount && isItemSelected(item))
+    .map((item) => ({
+      id: item.quote_item_id,
+      discountType: (item.discount_type === 'percentage' ? 'percentage' : 'fixed') as 'percentage' | 'fixed',
+      fixedAmount: Math.abs(toIntegerCents(Number(item.quantity ?? 1) * Number(item.unit_price)) ?? 0),
+      discountPercentage: item.discount_percentage != null ? Number(item.discount_percentage) : null,
+      appliesToItemId: item.applies_to_item_id ?? null,
+      appliesToServiceId: item.applies_to_service_id ?? null,
+    }));
+
+  const allocation = allocateQuoteDiscounts(bases, discounts);
+  const shares = new Map<string, QuoteDiscountConversionShare>();
+  for (const result of allocation.discounts) {
+    const onetimeByBase = new Map<string, number>();
+    let onetimeAmount = 0;
+    for (const itemAllocation of result.allocations) {
+      if (itemAllocation.isRecurring) continue;
+      onetimeByBase.set(itemAllocation.baseItemId, itemAllocation.amount);
+      onetimeAmount += itemAllocation.amount;
+    }
+    shares.set(result.discountId, {
+      recurringAmount: result.recurringAmount,
+      onetimeAmount,
+      onetimeByBase,
+    });
+  }
+
+  return shares;
+}
+
+function getSelectedRecurringItems(items: IQuoteItem[] = []): IQuoteItem[] {
+  return items.filter((item) => {
+    if (!item.is_recurring || item.is_discount) {
+      return false;
+    }
+
+    return isItemSelected(item);
+  });
+}
+
+function getSelectedOneTimeItems(items: IQuoteItem[] = []): IQuoteItem[] {
+  const shares = resolveQuoteDiscountConversionShares(items);
+  const includedItems = items.filter((item) => {
+    if (item.is_recurring) {
+      return false;
+    }
+
+    return isItemSelected(item);
+  });
+
+  return includedItems.filter((item) => {
+    if (!item.is_discount) {
+      return true;
+    }
+
+    return (shares.get(item.quote_item_id)?.onetimeAmount ?? 0) > 0;
+  });
+}
+
+/**
+ * Sum a discount's allocated one-time reduction over the given base rows.
+ * Used to size invoice/sales-order discount entries from allocation shares
+ * instead of whole persisted amounts.
+ */
+function allocatedOneTimeAmountFor(
+  shares: Map<string, QuoteDiscountConversionShare>,
+  discountItemId: string,
+  baseItemIds: Set<string>
+): number {
+  const share = shares.get(discountItemId);
+  if (!share) return 0;
+  let total = 0;
+  for (const [baseItemId, amount] of share.onetimeByBase) {
+    if (baseItemIds.has(baseItemId)) {
+      total += amount;
+    }
+  }
+  return total;
 }
 
 async function resolveProductServiceIds(
@@ -261,41 +316,6 @@ function getSelectedProductOneTimeItems(
   return getSelectedOneTimeItems(items).filter((item) =>
     !item.is_discount && isProductQuoteItem(item, productServiceIds)
   );
-}
-
-function excludeSalesOrderProductItems(
-  oneTimeItems: IQuoteItem[],
-  productServiceIds: Set<string>
-): IQuoteItem[] {
-  const productItems = oneTimeItems.filter((item) =>
-    !item.is_discount && isProductQuoteItem(item, productServiceIds)
-  );
-  const productQuoteItemIds = new Set(productItems.map((item) => item.quote_item_id));
-  const productServiceIdsInQuote = new Set(
-    productItems
-      .map((item) => item.service_id)
-      .filter((id): id is string => typeof id === 'string' && id.length > 0)
-  );
-
-  if (productQuoteItemIds.size === 0 && productServiceIdsInQuote.size === 0) {
-    return oneTimeItems;
-  }
-
-  return oneTimeItems.filter((item) => {
-    if (!item.is_discount) {
-      return !productQuoteItemIds.has(item.quote_item_id);
-    }
-
-    if (item.applies_to_item_id && productQuoteItemIds.has(item.applies_to_item_id)) {
-      return false;
-    }
-
-    if (item.applies_to_service_id && productServiceIdsInQuote.has(item.applies_to_service_id)) {
-      return false;
-    }
-
-    return true;
-  });
 }
 
 async function getSalesOrderByQuoteId(
@@ -364,7 +384,6 @@ export async function buildQuoteConversionPreview(
   const recurringItems = getSelectedRecurringItems(quoteItems);
   const oneTimeItems = getSelectedOneTimeItems(quoteItems);
   const recurringIds = new Set(recurringItems.map((item) => item.quote_item_id));
-  const oneTimeIds = new Set(oneTimeItems.map((item) => item.quote_item_id));
 
   const resolvedTenant = tenant ?? quote.tenant;
   const locationNameMap = await resolveLocationNames(knexOrTrx, resolvedTenant, quoteItems);
@@ -382,13 +401,37 @@ export async function buildQuoteConversionPreview(
   const productServiceIds = knexOrTrx && resolvedTenant
     ? await resolveProductServiceIds(knexOrTrx, resolvedTenant, quoteItems)
     : new Set<string>();
-  const invoiceableOneTimeIds = new Set(
-    (salesOrder ? excludeSalesOrderProductItems(oneTimeItems, productServiceIds) : oneTimeItems)
+  const shares = resolveQuoteDiscountConversionShares(quoteItems);
+
+  // One-time base rows that would actually land on an invoice. When a sales
+  // order exists its product rows are claimed there, so they (and the discount
+  // share allocated to them) are excluded from the invoice.
+  const oneTimeBaseItems = oneTimeItems.filter((item) => !item.is_discount);
+  const invoiceableBaseIds = new Set(
+    (salesOrder
+      ? oneTimeBaseItems.filter((item) => !isProductQuoteItem(item, productServiceIds))
+      : oneTimeBaseItems
+    ).map((item) => item.quote_item_id)
+  );
+  const productBaseIds = new Set(
+    oneTimeBaseItems
+      .filter((item) => isProductQuoteItem(item, productServiceIds))
       .map((item) => item.quote_item_id)
   );
   const newSalesOrderItemIds = new Set(
     getSelectedProductOneTimeItems(quoteItems, productServiceIds).map((item) => item.quote_item_id)
   );
+
+  // Sizing helper: preview rows must reflect the exact amounts the execution
+  // paths write, so discount rows carry their allocated share, not the whole
+  // persisted discount.
+  const previewItem = (item: IQuoteItem, target: QuoteConversionPreviewItem['target'], reason?: string | null, totalPriceOverride?: number): QuoteConversionPreviewItem => {
+    const row = toPreviewItem(item, target, reason ?? null, lookupName(item));
+    if (totalPriceOverride !== undefined) {
+      return { ...row, total_price: totalPriceOverride, unit_price: totalPriceOverride, quantity: 1 };
+    }
+    return row;
+  };
 
   const contractItems: QuoteConversionPreviewItem[] = [];
   const invoiceItems: QuoteConversionPreviewItem[] = [];
@@ -401,10 +444,36 @@ export async function buildQuoteConversionPreview(
       continue;
     }
 
-    if (oneTimeIds.has(item.quote_item_id)) {
-      if (salesOrder && !invoiceableOneTimeIds.has(item.quote_item_id)) {
-        // Claimed by the existing sales order (product line or a discount tied
-        // to one) — billed from the sales order on fulfillment, never twice.
+    if (item.is_discount) {
+      const discountOnetime = allocatedOneTimeAmountFor(shares, item.quote_item_id, invoiceableBaseIds);
+      const discountOnProduct = allocatedOneTimeAmountFor(shares, item.quote_item_id, productBaseIds);
+      if (discountOnetime > 0) {
+        if (salesOrder && discountOnProduct > 0 && productBaseIds.size > 0) {
+          // Part of this discount reduces a product row claimed by the sales
+          // order; only the product-attributed share travels with it.
+          salesOrderItems.push(previewItem(item, 'sales_order', null, -discountOnProduct));
+        }
+        invoiceItems.push(previewItem(item, 'invoice', null, -discountOnetime));
+        continue;
+      }
+      if (salesOrder && discountOnProduct > 0) {
+        salesOrderItems.push(previewItem(item, 'sales_order', null, -discountOnProduct));
+        continue;
+      }
+      excludedItems.push(
+        previewItem(
+          item,
+          'excluded',
+          'Discount reduces recurring items only and is excluded from one-time conversion',
+        )
+      );
+      continue;
+    }
+
+    if (oneTimeBaseItems.some((base) => base.quote_item_id === item.quote_item_id)) {
+      if (salesOrder && !invoiceableBaseIds.has(item.quote_item_id)) {
+        // Claimed by the existing sales order — billed from the sales order on
+        // fulfillment, never twice.
         salesOrderItems.push(toPreviewItem(item, 'sales_order', null, lookupName(item)));
         continue;
       }
@@ -870,14 +939,33 @@ export async function convertQuoteToDraftInvoice(
     throw new Error('Quotes must be linked to a client before they can be converted to an invoice');
   }
 
-  let oneTimeItems = getSelectedOneTimeItems(quote.quote_items ?? []);
+  const quoteItemsForInvoice = quote.quote_items ?? [];
+  const shares = resolveQuoteDiscountConversionShares(quoteItemsForInvoice);
   const salesOrderForQuote = await getSalesOrderByQuoteId(knexOrTrx, tenant, quote.quote_id);
-  if (salesOrderForQuote) {
-    const productServiceIds = await resolveProductServiceIds(knexOrTrx, tenant, oneTimeItems);
-    oneTimeItems = excludeSalesOrderProductItems(oneTimeItems, productServiceIds);
-  }
+  const productServiceIds = salesOrderForQuote
+    ? await resolveProductServiceIds(knexOrTrx, tenant, quoteItemsForInvoice)
+    : new Set<string>();
 
-  if (oneTimeItems.length === 0) {
+  // One-time base rows the invoice actually bills. When a sales order exists,
+  // its product rows are claimed there and their allocated discount share is
+  // excluded from this invoice.
+  const oneTimeBaseItems = quoteItemsForInvoice.filter(
+    (item) => !item.is_recurring && !item.is_discount && isItemSelected(item),
+  );
+  const invoiceableBaseItems = salesOrderForQuote
+    ? oneTimeBaseItems.filter((item) => !isProductQuoteItem(item, productServiceIds))
+    : oneTimeBaseItems;
+  const invoiceableBaseIds = new Set(invoiceableBaseItems.map((item) => item.quote_item_id));
+
+  const invoiceableDiscounts = quoteItemsForInvoice
+    .filter((item) => item.is_discount && isItemSelected(item))
+    .map((item) => ({
+      item,
+      amount: allocatedOneTimeAmountFor(shares, item.quote_item_id, invoiceableBaseIds),
+    }))
+    .filter((entry) => entry.amount > 0);
+
+  if (invoiceableBaseItems.length === 0 && invoiceableDiscounts.length === 0) {
     throw new Error(salesOrderForQuote
       ? 'Quote does not contain any invoiceable one-time items after excluding sales-order product lines'
       : 'Quote does not contain any one-time items selected for invoice conversion');
@@ -917,39 +1005,44 @@ export async function convertQuoteToDraftInvoice(
     tenant,
     quote.client_id,
   );
-  const invoiceChargeRows = oneTimeItems.map((item) => {
-    const itemId = uuidv4();
-    invoiceItemIdsByQuoteItemId.set(item.quote_item_id, itemId);
 
-    const netAmount = item.is_discount
-      ? -Math.abs(Number(item.net_amount ?? item.total_price ?? (item.quantity * item.unit_price)))
-      : Number(item.net_amount ?? (item.quantity * item.unit_price));
-    const taxAmount = item.is_discount ? 0 : Number(item.tax_amount ?? 0);
+  const invoiceChargeRowFor = (
+    source: IQuoteItem,
+    netAmount: number,
+    appliesToQuoteItemId: string | null = null,
+  ): Record<string, unknown> => {
+    const itemId = uuidv4();
+    if (!source.is_discount) {
+      invoiceItemIdsByQuoteItemId.set(source.quote_item_id, itemId);
+    }
+
+    const isDiscount = source.is_discount === true;
+    const taxAmount = isDiscount ? 0 : Number(source.tax_amount ?? 0);
 
     return {
       tenant,
       item_id: itemId,
       invoice_id: invoiceId,
-      service_id: item.service_id ?? null,
-      service_item_kind: item.service_item_kind ?? null,
-      service_sku: item.service_sku ?? null,
-      service_name: item.service_name ?? null,
-      description: item.description,
-      quantity: item.quantity,
-      unit_price: item.unit_price,
+      service_id: source.service_id ?? null,
+      service_item_kind: source.service_item_kind ?? null,
+      service_sku: source.service_sku ?? null,
+      service_name: source.service_name ?? null,
+      description: source.description,
+      quantity: isDiscount ? 1 : source.quantity,
+      unit_price: isDiscount ? -Math.abs(netAmount) : source.unit_price,
       net_amount: netAmount,
       tax_amount: taxAmount,
-      tax_region: item.tax_region ?? null,
-      tax_rate: item.tax_rate ?? 0,
+      tax_region: source.tax_region ?? null,
+      tax_rate: isDiscount ? 0 : (source.tax_rate ?? 0),
       total_price: netAmount + taxAmount,
       is_manual: true,
-      is_taxable: item.is_discount ? false : (item.is_taxable ?? true),
-      is_discount: item.is_discount ?? false,
-      discount_type: item.discount_type ?? null,
-      discount_percentage: item.discount_percentage ?? null,
-      applies_to_item_id: item.applies_to_item_id ?? null,
-      applies_to_service_id: item.applies_to_service_id ?? null,
-      location_id: item.location_id ?? null,
+      is_taxable: isDiscount ? false : (source.is_taxable ?? true),
+      is_discount: isDiscount,
+      discount_type: source.discount_type ?? null,
+      discount_percentage: source.discount_percentage ?? null,
+      applies_to_item_id: appliesToQuoteItemId,
+      applies_to_service_id: source.applies_to_service_id ?? null,
+      location_id: source.location_id ?? null,
       billing_profile_id: quoteBillingProfileId,
       billing_profile_source: 'client_default',
       created_by: quote.accepted_by ?? quote.updated_by ?? quote.created_by ?? null,
@@ -957,10 +1050,41 @@ export async function convertQuoteToDraftInvoice(
       created_at: nowIso,
       updated_at: nowIso,
     };
-  }).map((row) => ({
+  };
+
+  const baseChargeRows = invoiceableBaseItems.map((item) => {
+    const netAmount = Number(item.net_amount ?? (Number(item.quantity) * Number(item.unit_price)));
+    return invoiceChargeRowFor(item, netAmount);
+  });
+
+  const resolveSingleAllocatedBaseId = (
+    item: IQuoteItem,
+    amount: number,
+  ): string | null => {
+    if (amount <= 0) return null;
+    // Preserve the original item target when it is an invoiceable base row.
+    if (
+      item.applies_to_item_id
+      && invoiceableBaseIds.has(item.applies_to_item_id)
+    ) {
+      return item.applies_to_item_id;
+    }
+    // Otherwise keep the mapping when the allocation lands on exactly one
+    // invoiceable base row so downstream display can still point at it.
+    const share = shares.get(item.quote_item_id);
+    if (!share) return null;
+    const targets = [...share.onetimeByBase.entries()]
+      .filter(([baseItemId, value]) => value > 0 && invoiceableBaseIds.has(baseItemId));
+    return targets.length === 1 ? (targets[0]?.[0] ?? null) : null;
+  };
+
+  const discountChargeRows = invoiceableDiscounts.map(({ item, amount }) =>
+    invoiceChargeRowFor(item, -amount, resolveSingleAllocatedBaseId(item, amount)),
+  );
+  const invoiceChargeRows: Record<string, unknown>[] = [...baseChargeRows, ...discountChargeRows].map((row) => ({
     ...row,
     applies_to_item_id: row.applies_to_item_id
-      ? (invoiceItemIdsByQuoteItemId.get(row.applies_to_item_id) ?? null)
+      ? (invoiceItemIdsByQuoteItemId.get(row.applies_to_item_id as string) ?? null)
       : null,
   }));
 
@@ -997,7 +1121,7 @@ export async function convertQuoteToDraftInvoice(
     metadata: {
       invoice_id: invoiceId,
       invoice_number: invoiceNumber,
-      one_time_item_count: oneTimeItems.length,
+      one_time_item_count: invoiceChargeRows.length,
     },
   });
 

@@ -13,6 +13,7 @@ import type { IContract, IInvoice, TemplateAst, IQuote, IQuoteItem, IQuoteListIt
 import Quote, { type QuoteListOptions } from '../models/quote';
 import QuoteActivity from '../models/quoteActivity';
 import QuoteItem from '../models/quoteItem';
+import { recalculateQuoteFinancials } from '../services/quoteCalculationService';
 import { buildQuoteReminderEmailTemplate, buildQuoteSentEmailTemplate, formatQuoteDate } from '../lib/quote-email-templates';
 import { fetchTenantParty } from '../lib/adapters/tenantPartyAdapter';
 import { mapLoadedQuoteToViewModel } from '../lib/adapters/quoteAdapters';
@@ -993,6 +994,73 @@ export const reorderQuoteItems = withAuth(async (
   });
 });
 
+/**
+ * Copy source quote items into a target quote, remapping item-targeted
+ * discount references (applies_to_item_id) onto the newly created rows.
+ *
+ * Discount targets are base items, so all non-discount rows are created first
+ * while their new ids are recorded; discounts are created afterwards with
+ * applies_to_item_id pointing at the copied target. This keeps item-targeted
+ * discounts resolvable even when a discount is stored ahead of its target in
+ * the source list, and regardless of creation-time cadence flags.
+ */
+export async function copyQuoteItemsToQuote(
+  trx: Knex.Transaction,
+  tenant: string,
+  targetQuoteId: string,
+  sourceItems: IQuoteItem[],
+  options: { forceSelected?: boolean; createdBy?: string | null } = {}
+): Promise<void> {
+  const baseItems = sourceItems.filter((item) => !item.is_discount);
+  const discountItems = sourceItems.filter((item) => item.is_discount);
+  const oldToNew = new Map<string, string>();
+
+  const createItem = async (sourceItem: IQuoteItem, appliesToItemId: string | null): Promise<IQuoteItem> => {
+    return QuoteItem.create(trx, tenant, {
+      quote_id: targetQuoteId,
+      service_id: sourceItem.service_id ?? null,
+      service_item_kind: sourceItem.service_item_kind ?? null,
+      service_name: sourceItem.service_name ?? null,
+      service_sku: sourceItem.service_sku ?? null,
+      billing_method: sourceItem.billing_method ?? null,
+      description: sourceItem.description,
+      quantity: sourceItem.quantity,
+      unit_price: sourceItem.unit_price,
+      unit_of_measure: sourceItem.unit_of_measure ?? null,
+      display_order: sourceItem.display_order,
+      phase: sourceItem.phase ?? null,
+      is_optional: sourceItem.is_optional,
+      is_selected: options.forceSelected === true ? true : (sourceItem.is_selected ?? true),
+      is_recurring: sourceItem.is_recurring,
+      billing_frequency: sourceItem.billing_frequency ?? null,
+      is_discount: sourceItem.is_discount ?? false,
+      discount_type: sourceItem.discount_type ?? null,
+      discount_percentage: sourceItem.discount_percentage ?? null,
+      applies_to_item_id: appliesToItemId,
+      applies_to_service_id: sourceItem.applies_to_service_id ?? null,
+      is_taxable: sourceItem.is_taxable ?? true,
+      tax_region: sourceItem.tax_region ?? null,
+      tax_rate: sourceItem.tax_rate ?? null,
+      cost: sourceItem.cost ?? null,
+      cost_currency: sourceItem.cost_currency ?? null,
+      location_id: sourceItem.location_id ?? null,
+      created_by: options.createdBy,
+    });
+  };
+
+  for (const item of baseItems) {
+    const createdItem = await createItem(item, null);
+    oldToNew.set(item.quote_item_id, createdItem.quote_item_id);
+  }
+
+  for (const item of discountItems) {
+    const remappedTarget = item.applies_to_item_id
+      ? (oldToNew.get(item.applies_to_item_id) ?? null)
+      : null;
+    await createItem(item, remappedTarget);
+  }
+}
+
 export const createQuoteFromTemplate = withAuth(async (
   user,
   { tenant },
@@ -1049,36 +1117,11 @@ export const createQuoteFromTemplate = withAuth(async (
       total_amount: input.total_amount ?? 0,
     } as any);
 
-    for (const templateItem of template.quote_items ?? []) {
-      await QuoteItem.create(trx, tenant, {
-        quote_id: createdQuote.quote_id,
-        service_id: templateItem.service_id ?? null,
-        service_item_kind: templateItem.service_item_kind ?? null,
-        service_name: templateItem.service_name ?? null,
-        service_sku: templateItem.service_sku ?? null,
-        billing_method: templateItem.billing_method ?? null,
-        description: templateItem.description,
-        quantity: templateItem.quantity,
-        unit_price: templateItem.unit_price,
-        unit_of_measure: templateItem.unit_of_measure ?? null,
-        display_order: templateItem.display_order,
-        phase: templateItem.phase ?? null,
-        is_optional: templateItem.is_optional,
-        is_selected: templateItem.is_selected,
-        is_recurring: templateItem.is_recurring,
-        billing_frequency: templateItem.billing_frequency ?? null,
-        is_discount: templateItem.is_discount ?? false,
-        discount_type: templateItem.discount_type ?? null,
-        discount_percentage: templateItem.discount_percentage ?? null,
-        applies_to_item_id: templateItem.applies_to_item_id ?? null,
-        applies_to_service_id: templateItem.applies_to_service_id ?? null,
-        is_taxable: templateItem.is_taxable ?? true,
-        cost: templateItem.cost ?? null,
-        cost_currency: templateItem.cost_currency ?? null,
-        location_id: templateItem.location_id ?? null,
-        created_by: actorUserId,
-      });
-    }
+    await copyQuoteItemsToQuote(trx, tenant, createdQuote.quote_id, template.quote_items ?? [], {
+      createdBy: actorUserId,
+    });
+
+    await recalculateQuoteFinancials(trx, tenant, createdQuote.quote_id);
 
     return await Quote.getById(trx, tenant, createdQuote.quote_id) as IQuote;
   });
@@ -1134,38 +1177,11 @@ export const duplicateQuote = withAuth(async (
       total_amount: 0,
     } as any);
 
-    for (const sourceItem of sourceQuote.quote_items ?? []) {
-      await QuoteItem.create(trx, tenant, {
-        quote_id: duplicatedQuote.quote_id,
-        service_id: sourceItem.service_id ?? null,
-        service_item_kind: sourceItem.service_item_kind ?? null,
-        service_name: sourceItem.service_name ?? null,
-        service_sku: sourceItem.service_sku ?? null,
-        billing_method: sourceItem.billing_method ?? null,
-        description: sourceItem.description,
-        quantity: sourceItem.quantity,
-        unit_price: sourceItem.unit_price,
-        unit_of_measure: sourceItem.unit_of_measure ?? null,
-        display_order: sourceItem.display_order,
-        phase: sourceItem.phase ?? null,
-        is_optional: sourceItem.is_optional,
-        is_selected: sourceItem.is_selected,
-        is_recurring: sourceItem.is_recurring,
-        billing_frequency: sourceItem.billing_frequency ?? null,
-        is_discount: sourceItem.is_discount ?? false,
-        discount_type: sourceItem.discount_type ?? null,
-        discount_percentage: sourceItem.discount_percentage ?? null,
-        applies_to_item_id: sourceItem.applies_to_item_id ?? null,
-        applies_to_service_id: sourceItem.applies_to_service_id ?? null,
-        is_taxable: sourceItem.is_taxable ?? true,
-        tax_region: sourceItem.tax_region ?? null,
-        tax_rate: sourceItem.tax_rate ?? null,
-        cost: sourceItem.cost ?? null,
-        cost_currency: sourceItem.cost_currency ?? null,
-        location_id: sourceItem.location_id ?? null,
-        created_by: actorUserId,
-      });
-    }
+    await copyQuoteItemsToQuote(trx, tenant, duplicatedQuote.quote_id, sourceQuote.quote_items ?? [], {
+      createdBy: actorUserId,
+    });
+
+    await recalculateQuoteFinancials(trx, tenant, duplicatedQuote.quote_id);
 
     await QuoteActivity.create(trx, tenant, {
       quote_id: duplicatedQuote.quote_id,
@@ -1233,38 +1249,12 @@ export const saveQuoteAsTemplate = withAuth(async (
       total_amount: 0,
     } as any);
 
-    for (const sourceItem of sourceQuote.quote_items ?? []) {
-      await QuoteItem.create(trx, tenant, {
-        quote_id: templateQuote.quote_id,
-        service_id: sourceItem.service_id ?? null,
-        service_item_kind: sourceItem.service_item_kind ?? null,
-        service_name: sourceItem.service_name ?? null,
-        service_sku: sourceItem.service_sku ?? null,
-        billing_method: sourceItem.billing_method ?? null,
-        description: sourceItem.description,
-        quantity: sourceItem.quantity,
-        unit_price: sourceItem.unit_price,
-        unit_of_measure: sourceItem.unit_of_measure ?? null,
-        display_order: sourceItem.display_order,
-        phase: sourceItem.phase ?? null,
-        is_optional: sourceItem.is_optional,
-        is_selected: true,
-        is_recurring: sourceItem.is_recurring,
-        billing_frequency: sourceItem.billing_frequency ?? null,
-        is_discount: sourceItem.is_discount ?? false,
-        discount_type: sourceItem.discount_type ?? null,
-        discount_percentage: sourceItem.discount_percentage ?? null,
-        applies_to_item_id: sourceItem.applies_to_item_id ?? null,
-        applies_to_service_id: sourceItem.applies_to_service_id ?? null,
-        is_taxable: sourceItem.is_taxable ?? true,
-        tax_region: sourceItem.tax_region ?? null,
-        tax_rate: sourceItem.tax_rate ?? null,
-        cost: sourceItem.cost ?? null,
-        cost_currency: sourceItem.cost_currency ?? null,
-        location_id: sourceItem.location_id ?? null,
-        created_by: actorUserId,
-      });
-    }
+    await copyQuoteItemsToQuote(trx, tenant, templateQuote.quote_id, sourceQuote.quote_items ?? [], {
+      forceSelected: true,
+      createdBy: actorUserId,
+    });
+
+    await recalculateQuoteFinancials(trx, tenant, templateQuote.quote_id);
 
     await QuoteActivity.create(trx, tenant, {
       quote_id: templateQuote.quote_id,

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  calculateDraftMonthlyRecurringNet,
   calculateDraftQuoteTotals,
   createCustomDraftQuoteItem,
   createDraftDiscountQuoteItem,
@@ -141,5 +142,57 @@ describe('quoteLineItemDraft discount totals', () => {
     const totals = calculateDraftQuoteTotals(items);
     expect(totals.discount_total).toBe(250); // 10% of the $25 service
     expect(totals.total_amount).toBe(6000 - 250);
+  });
+});
+
+describe('quoteLineItemDraft monthly recurring net (sidebar)', () => {
+  it('reduces the recurring-per-month figure by service-targeted discounts', () => {
+    const items = [
+      serviceItem({ local_id: 'svc-a', description: 'Managed Support A', unit_price: 2500, is_recurring: true, billing_frequency: 'monthly' }),
+      serviceItem({ local_id: 'svc-b', description: 'Managed Support B', unit_price: 3500, is_recurring: true, billing_frequency: 'monthly' }),
+      fixedDiscount('disc-a', 500, { applies_to_service_id: 'svc-svc-a' }),
+      fixedDiscount('disc-b', 500, { applies_to_service_id: 'svc-svc-b' }),
+    ];
+
+    expect(calculateDraftMonthlyRecurringNet(items)).toBe(5000); // $60 - $10
+  });
+
+  it('allocates whole-quote discounts across mixed billing frequencies but only reduces the monthly rows', () => {
+    const items = [
+      serviceItem({ local_id: 'svc-m', description: 'Monthly service', unit_price: 3000, is_recurring: true, billing_frequency: 'monthly' }),
+      serviceItem({ local_id: 'svc-q', description: 'Quarterly service', unit_price: 2000, is_recurring: true, billing_frequency: 'quarterly' }),
+      fixedDiscount('disc-whole', 500),
+    ];
+
+    // 500 over a $50 recurring base splits 300 monthly / 200 quarterly. The
+    // sidebar figure is monthly-only, so it reads $30 - $3 = $27 (2700).
+    expect(calculateDraftMonthlyRecurringNet(items)).toBe(2700);
+  });
+
+  it('ignores optional unselected rows and treats required rows regardless of is_selected', () => {
+    const items = [
+      serviceItem({ local_id: 'svc-req', description: 'Required monthly', unit_price: 2500, is_recurring: true, billing_frequency: 'monthly', is_optional: false, is_selected: false }),
+      serviceItem({ local_id: 'svc-opt', description: 'Optional monthly', unit_price: 4000, is_recurring: true, billing_frequency: 'monthly', is_optional: true, is_selected: false }),
+      fixedDiscount('disc-req', 500, { applies_to_service_id: 'svc-svc-req' }),
+    ];
+
+    expect(calculateDraftMonthlyRecurringNet(items)).toBe(2000); // $25 - $5; optional excluded
+  });
+
+  it('treats an optional item with a null/default selection as selected', () => {
+    const items = [
+      serviceItem({ local_id: 'svc-a', description: 'Managed Support', unit_price: 2500, is_recurring: true, billing_frequency: 'monthly' }),
+      serviceItem({
+        local_id: 'svc-b',
+        description: 'Optional defaulted',
+        unit_price: 1500,
+        is_recurring: true,
+        billing_frequency: 'monthly',
+        is_optional: true,
+        is_selected: null as unknown as boolean,
+      }),
+    ];
+
+    expect(calculateDraftMonthlyRecurringNet(items)).toBe(4000);
   });
 });

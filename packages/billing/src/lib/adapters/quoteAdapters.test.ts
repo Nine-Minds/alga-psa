@@ -625,4 +625,149 @@ describe('quoteAdapters discount group allocation', () => {
     expect(discountRows.length).toBe(1);
     expect(discountRows[0]?.total_price).toBe(-600);
   });
+
+  it('T210: a required (non-optional) row counts even with is_selected=false, matching draft and recalculation', async () => {
+    const quote = buildQuote({
+      subtotal: 2500,
+      discount_total: 500,
+      tax: 0,
+      total_amount: 2000,
+      quote_items: [
+        baseQuoteItem({
+          quote_item_id: 'monthly-a',
+          description: 'Managed Support A',
+          unit_price: 2500,
+          total_price: 2500,
+          is_recurring: true,
+          billing_frequency: 'monthly',
+          service_id: 'svc-a',
+          service_item_kind: 'service',
+          is_optional: false,
+          is_selected: false,
+        }),
+        baseQuoteItem({
+          quote_item_id: 'monthly-opt',
+          description: 'Optional support',
+          unit_price: 4000,
+          total_price: 4000,
+          is_recurring: true,
+          billing_frequency: 'monthly',
+          service_id: 'svc-opt',
+          service_item_kind: 'service',
+          is_optional: true,
+          is_selected: false,
+        }),
+        baseQuoteItem({
+          quote_item_id: 'disc-a',
+          description: 'Discount on required service',
+          unit_price: 500,
+          total_price: 500,
+          is_discount: true,
+          discount_type: 'fixed',
+          applies_to_service_id: 'svc-a',
+          is_recurring: false,
+          billing_frequency: null,
+        }),
+      ],
+    });
+
+    const viewModel = await mapLoadedQuoteToViewModel(fakeKnex, 'tenant-1', quote);
+
+    // Required row is a base even though is_selected=false; the optional row
+    // stays out of every total (it may still be listed for templates).
+    expect(viewModel.recurring_subtotal).toBe(2500 - 500);
+    expect(viewModel.recurring_total).toBe(2000);
+    const optionalRecurringRow = viewModel.recurring_items?.find((item) => item.quote_item_id === 'monthly-opt');
+    expect(optionalRecurringRow).toBeTruthy();
+    expect(viewModel.discount_total).toBe(500);
+    expect(viewModel.total_amount).toBe(2000);
+  });
+
+  it('T211: legacy oversized discount renders derived $0 grouped total and consistent overall figures', async () => {
+    // A genuinely pre-change quote: saved with discount_total 4000 against a
+    // $25 base, so persisted total_amount was -$15. No recalculation has run.
+    const quote = buildQuote({
+      subtotal: 2500,
+      discount_total: 4000,
+      tax: 0,
+      total_amount: -1500,
+      quote_items: [
+        baseQuoteItem({
+          quote_item_id: 'monthly-a',
+          description: 'Managed Support A',
+          unit_price: 2500,
+          total_price: 2500,
+          is_recurring: true,
+          billing_frequency: 'monthly',
+          service_id: 'svc-a',
+          service_item_kind: 'service',
+        }),
+        baseQuoteItem({
+          quote_item_id: 'disc-a',
+          description: 'Oversized discount',
+          unit_price: 4000,
+          total_price: 4000,
+          net_amount: 4000,
+          is_discount: true,
+          discount_type: 'fixed',
+          applies_to_service_id: 'svc-a',
+          is_recurring: false,
+          billing_frequency: null,
+        }),
+      ],
+    });
+
+    const viewModel = await mapLoadedQuoteToViewModel(fakeKnex, 'tenant-1', quote);
+
+    // Displayed rows, group totals, and overall totals all tell the derived
+    // story: capped $25 discount, $0 group/overall total.
+    expect(viewModel.recurring_subtotal).toBe(0);
+    expect(viewModel.recurring_total).toBe(0);
+    expect(viewModel.discount_total).toBe(2500);
+    expect(viewModel.total_amount).toBe(0);
+    // General collection keeps discount positive but shows the derived amount.
+    const discountLine = viewModel.line_items?.find((item) => item.quote_item_id === 'disc-a');
+    expect(discountLine?.total_price).toBe(2500);
+  });
+
+  it('T212: legacy unmatched-target discount renders zero and never corrupts overall totals', async () => {
+    const quote = buildQuote({
+      subtotal: 2500,
+      discount_total: 2000,
+      tax: 0,
+      total_amount: 500,
+      quote_items: [
+        baseQuoteItem({
+          quote_item_id: 'monthly-a',
+          description: 'Managed Support A',
+          unit_price: 2500,
+          total_price: 2500,
+          is_recurring: true,
+          billing_frequency: 'monthly',
+          service_id: 'svc-a',
+          service_item_kind: 'service',
+        }),
+        baseQuoteItem({
+          quote_item_id: 'disc-orphan',
+          description: 'Orphan discount',
+          unit_price: 2000,
+          total_price: 2000,
+          net_amount: 2000,
+          is_discount: true,
+          discount_type: 'fixed',
+          applies_to_service_id: 'svc-gone',
+          is_recurring: false,
+          billing_frequency: null,
+        }),
+      ],
+    });
+
+    const viewModel = await mapLoadedQuoteToViewModel(fakeKnex, 'tenant-1', quote);
+
+    expect(viewModel.recurring_subtotal).toBe(2500);
+    expect(viewModel.discount_total).toBe(0);
+    expect(viewModel.total_amount).toBe(2500);
+    expect(viewModel.line_items?.find((item) => item.is_discount)?.total_price).toBe(0);
+    expect(viewModel.recurring_items?.some((item) => item.is_discount)).toBe(false);
+  });
 });

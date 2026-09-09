@@ -271,6 +271,60 @@ export function resolveDraftDiscountAmounts(items: DraftQuoteItem[]): Map<string
   return byId;
 }
 
+/**
+ * Recurring monthly net after derived discount allocation, in minor units.
+ *
+ * Feeds the "$X recurring / month" sidebar figure. It starts from the same
+ * per-base allocations as the group subtotals so discounts aimed at recurring
+ * monthly services reduce the figure (two $5 discounts over $25 + $35 monthly
+ * services read $50, not $60). Mixed billing frequencies participate through
+ * their own allocations; only strictly-monthly (or unset-frequency) recurring
+ * base rows contribute to the per-month figure.
+ */
+export function calculateDraftMonthlyRecurringNet(items: DraftQuoteItem[]): number {
+  const includedBaseItems = items.filter((item) => !item.is_discount && included(item));
+  const baseItemId = (item: DraftQuoteItem): string => item.quote_item_id ?? item.local_id;
+
+  const bases = includedBaseItems.map((item) => ({
+    id: baseItemId(item),
+    serviceId: item.service_id ?? null,
+    amount: item.quantity * item.unit_price,
+    isRecurring: item.is_recurring === true,
+  }));
+
+  const discounts = items
+    .filter((item) => item.is_discount && included(item))
+    .map((item) => ({
+      id: baseItemId(item),
+      discountType: (item.discount_type === 'percentage' ? 'percentage' : 'fixed') as 'percentage' | 'fixed',
+      fixedAmount: item.quantity * item.unit_price,
+      discountPercentage: item.discount_percentage ?? 0,
+      appliesToItemId: item.applies_to_item_id ?? null,
+      appliesToServiceId: item.applies_to_service_id ?? null,
+    }));
+
+  const allocation = allocateQuoteDiscounts(bases, discounts);
+  const consumedByBase = new Map<string, number>();
+  for (const result of allocation.discounts) {
+    for (const itemAllocation of result.allocations) {
+      consumedByBase.set(
+        itemAllocation.baseItemId,
+        (consumedByBase.get(itemAllocation.baseItemId) ?? 0) + itemAllocation.amount,
+      );
+    }
+  }
+
+  let net = 0;
+  for (const item of includedBaseItems) {
+    if (!item.is_recurring) continue;
+    const freq = (item.billing_frequency || '').toLowerCase();
+    if (freq && freq !== 'monthly') continue;
+    const base = item.quantity * item.unit_price;
+    net += Math.max(0, base - (consumedByBase.get(baseItemId(item)) ?? 0));
+  }
+  return net;
+}
+
 export function formatDraftQuoteMoney(minorUnits: number, currencyCode: string): string {
   return new Intl.NumberFormat(undefined, {
     style: 'currency',

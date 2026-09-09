@@ -1,34 +1,46 @@
-Environment blocker: UI "Grouped Quote Template (Standard)" PDF generation returns HTTP 500
-in this shared dev database.
+Shared standard-template catalog interference (ticket 2354) — status and handling
 
-Root cause observed (vitest harness invoking the exact downloadQuotePdf code path):
+Symptom in this shared dev database: resolving a quote's document layout to the
+standard "Grouped Quote Template (Standard)" id (08a528dd-6cc5-4c4d-b6c9-cf8bea390a2a)
+returns HTTP 500 because the shared standard_quote_document_templates catalog
+row was overwritten (last updated 2026-08-25) with a ticket-2354 style
+Description column ({ "lines": [ item-name, catalog-description ] }) that this
+branch's invoice-template AST schema does not accept:
+
   TemplateEvaluationError: Invoice template AST schema validation failed:
     layout.children.5.columns.0: Unrecognized key(s) in object: 'lines';
     layout.children.7.columns.0: Unrecognized key(s) in object: 'lines'
 
-The shared infra database's global standard-template catalog
-(standard_quote_document_templates, row 08a528dd-6cc5-4c4d-b6c9-cf8bea390a2a /
-standard-quote-grouped, updated 2026-08-25) holds a Grouped Quote AST whose
-Description column was overwritten with a ticket-2354-style two-line column
-({ "lines": [ item-name, catalog-description ] }), which this branch's
-evaluator schema does not accept. Quotes resolved to that catalog row (or to a
-per-quote assignment of the standard grouped id) fail at PDF/preview
-evaluation.
+This is a cross-branch data/code mismatch in the shared dev catalog, not a
+product defect of this change on its own. The two branches will need to agree
+on the catalog schema/content (likely when ticket 2354's `lines` column support
+lands); until then whichever branch's migration last seeded the catalog decides
+what every branch can render. This ticket does NOT reseed or otherwise overwrite
+that shared row.
 
-Evidence artifacts were therefore produced with the branch-canonical Grouped
-AST:
-  - pdfs/QUO-0003-grouped-custom-template.pdf  -- quote assigned to a tenant
-    custom template whose AST is a byte copy of this branch's
-    buildStandardQuoteGroupedAst() (the "duplicated/custom template equivalent
-    to FTS direct bindings" requirement). The UI download action returns 200
-    for this quote.
-  - pdfs/QUO-0003-standard-grouped-code-ast.pdf -- same quote rendered with
-    getStandardQuoteTemplateAstByCode('standard-quote-grouped') passed
-    explicitly, proving the standard grouped template renders the corrected
-    view model once the catalog AST matches the branch code (post-2354-merge
-    or after re-running this branch's standard-template migration).
+Verification performed instead:
+- pdfs/QUO-0003-standard-grouped-isolated-catalog.pdf was produced by
+  temporarily replacing ONLY that shared catalog row with this branch's
+  canonical buildStandardQuoteGroupedAst(), pointing QUO-0003 at the standard
+  grouped template id, generating through the app's normal PDF service path,
+  and then restoring the ticket-2354 catalog AST and the quote's original
+  custom template id. The swap was performed inside a single scripted session
+  (see REVIEW.md "Validation commands"); the shared catalog now holds its
+  previous (2354) AST unchanged.
+- pdfs/QUO-0003-standard-grouped-code-ast.pdf renders the same quote with
+  getStandardQuoteTemplateAstByCode('standard-quote-grouped') passed
+  explicitly, without touching the catalog.
+- pdfs/QUO-0003-grouped-custom-template.pdf keeps the duplicated/custom
+  template coverage (tenant quote_document_template whose AST is a byte copy of
+  the branch grouped AST).
 
-Coordination: ticket 2354 (Quote item name and catalog description,
-055ac9f7-2fd3-45ad-9d1f-30ad1b49e523) owns the 'lines' column shape. Do not
-reseed/overwrite the shared catalog from this branch without agreeing with
-that work.
+Pre-fix sign behavior (faithful fixture):
+pdfs/QUO-0003-PRE-FIX-adapter-grouping.pdf and preview/pre-fix-viewmodel.json
+render QUO-0003 through the PRE-FIX adapter (this branch's HEAD^ grouping):
+the two legacy-style discounts were classified by their own cadence fields
+(is_recurring=false) into the one-time group as POSITIVE $5 rows, making the
+one-time group $2,997.97 and leaving Monthly at $60.00. Local rendering
+therefore reproduces the misclassification and sign direction of the old
+adapter but does NOT reproduce the customer's reported "one-time charges
+decrease by $10" subtraction; that discrepancy (a template/document-specific
+sign behavior) remains unresolved by this local evidence and is left open.
