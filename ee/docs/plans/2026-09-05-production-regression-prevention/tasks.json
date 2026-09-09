@@ -548,6 +548,46 @@
       "dependsOn": [],
       "owner": "calendar_review",
       "notes": "Native behavioral fixture reproduces build-only email-service rejection before fix;24 reviewed tests pass after validated Compose-generated tag fallback. Missing image+build still rejects and image/revision binding preserved. EE explicitly enables enterprise profile; independent native config-only rendering and pinned Compose2.36 source confirm profiled temporal-worker otherwise omitted and ps -q prints full IDs. Safe fixed phase/service diagnostics exclude raw command data. Current CI predates fix; actual replica proof remains R039/R065. No daemon/container execution."
+    },
+    {
+      "id": "R066",
+      "title": "Serialize admin pool initialization and replacement",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "qbo_protocol",
+      "notes": "Admin acquisition, initialization, refresh and cleanup now share and serialize lifecycle work. Failed candidates are destroyed and never published; failed teardown detaches cached state. Six native failures reproduced before the fix; ten admin cases pass afterward, including read-only recovery. Combined lifecycle suite passes 25 tests and package TypeScript passes. Coordinator and independent review accepted; current CI predates this repair."
+    },
+    {
+      "id": "R067",
+      "title": "Serialize general connection pool initialization and cleanup",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "stripe_protocol",
+      "notes": "General connection initialization and cleanup now share pending work. Deferred-secret tests reproduce the old orphaned-pool race; five cases pass, including cleanup failure rejecting waiting callers and later creating a fresh pool. Coordinator fixed stale cache after rejected teardown during review. Combined lifecycle suite passes 25 tests; current CI predates this repair."
+    },
+    {
+      "id": "R068",
+      "title": "Retain upgrade runtime diagnostics before container replacement",
+      "status": "in_progress",
+      "dependsOn": [],
+      "owner": "coordinator",
+      "notes": "PostgreSQL application logs were lost when Citus recreated the server; Citus logs were lost at Teams recreation. Capture each phase\u2019s server/database logs and grouped connection counts with explicit isolated database authentication before existing diagnostic uploads. Actionlint and independent review pass; actual CI capture is pending."
+    },
+    {
+      "id": "R069",
+      "title": "Diagnose current Teams development browser failure",
+      "status": "in_progress",
+      "dependsOn": [],
+      "owner": "stripe_protocol",
+      "notes": "Current Teams trace confirms credentials callback succeeded but dashboard navigation remained pending with a compiling indicator beyond 90 seconds. CI also stopped Temporal before the EE development server tried to connect. Keep the frontend available and add bounded authenticated dashboard warmup before unchanged browser assertions. Nine native HTTP cases and independent integration review pass; actual app CI remains pending."
+    },
+    {
+      "id": "R070",
+      "title": "Route supported PostgreSQL upgrade through an isolated candidate pooler",
+      "status": "in_progress",
+      "dependsOn": [],
+      "owner": "qbo_protocol and coordinator",
+      "notes": "Final enterprise PostgreSQL logs confirm 237 connection-limit errors overlapping all failing PG upgrade journeys. Generate an isolated upgrade_ci mapping using the same candidate pooler image and unchanged auth/pool policy, verify image and real app-user SQL readiness, keep admin access direct, and stop the isolated pooler after diagnostics. Four native configuration/CLI tests and independent review pass. Current CI predates this harness repair; no local Docker."
     }
   ]
 }

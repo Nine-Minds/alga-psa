@@ -1055,8 +1055,35 @@ jobs:
           image=alga-e2e-test_server_ee_local:latest
           test "$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "$image")" = "$GITHUB_SHA"
           expected_image=$(docker image inspect --format '{{.Id}}' "$image")
-          printf '%s\n' '{"services":{"server":{"environment":{"DB_HOST":"postgres","DB_PORT":"5432","DB_NAME_SERVER":"upgrade_ci"}}}}' > "$RUNNER_TEMP/upgrade-compose.json"
-          export COMPOSE_FILE="$COMPOSE_FILE:$RUNNER_TEMP/upgrade-compose.json"
+          node e2e-tests/harness/create-upgrade-pgbouncer.mjs "$RUNNER_TEMP/fresh-install-compose.json" "$RUNNER_TEMP/upgrade-pooler"
+          export COMPOSE_FILE="$COMPOSE_FILE:$RUNNER_TEMP/upgrade-pooler/upgrade-compose.json"
+          pooler_image=$(jq -r '.services["upgrade-pgbouncer"].image' "$RUNNER_TEMP/upgrade-pooler/upgrade-compose.json")
+          test "$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "$pooler_image")" = "$GITHUB_SHA"
+          expected_pooler_image=$(docker image inspect --format '{{.Id}}' "$pooler_image")
+          docker-compose -p alga-e2e-test up --no-build --no-deps -d upgrade-pgbouncer
+          pooler_container=$(docker-compose -p alga-e2e-test ps -q upgrade-pgbouncer)
+          test "$(docker inspect --format '{{.Image}}' "$pooler_container")" = "$expected_pooler_image"
+          pooler_ready=false
+          for _attempt in $(seq 1 30); do
+            if docker-compose -p alga-e2e-test exec -T server node <<'JS'
+          const { Client } = require('pg');
+          const { readFileSync } = require('node:fs');
+          const client = new Client({ host: 'upgrade-pgbouncer', port: 6432, database: 'upgrade_ci',
+            user: process.env.DB_USER_SERVER || 'app_user', password: readFileSync('/run/secrets/db_password_server', 'utf8').trim(),
+            connectionTimeoutMillis: 2000, query_timeout: 2000 });
+          (async () => {
+            try {
+              await client.connect();
+              const result = await client.query('SELECT current_database() AS database');
+              if (result.rows[0]?.database !== 'upgrade_ci') throw new Error('Unexpected database');
+            } catch { process.exitCode = 1; }
+            finally { await client.end(); }
+          })();
+          JS
+            then pooler_ready=true; break; fi
+            sleep 2
+          done
+          test "$pooler_ready" = true
           docker-compose -p alga-e2e-test up --no-build --no-deps --force-recreate -d server
           container=$(docker-compose -p alga-e2e-test ps -q server)
           test "$(docker inspect --format '{{.Image}}' "$container")" = "$expected_image"
@@ -1083,6 +1110,18 @@ jobs:
           E2E_USER_PASSWORD: ${{ steps.capture_creds.outputs.e2e_user_password }}
         run: xvfb-run --auto-servernum node e2e-tests/run-upgrade.mjs
 
+      - name: Preserve PostgreSQL upgrade runtime diagnostics before server replacement
+        if: ${{ always() && matrix.edition == 'enterprise' && steps.upgrade_server.outcome == 'success' }}
+        timeout-minutes: 2
+        run: |
+          export COMPOSE_FILE="$COMPOSE_FILE:$RUNNER_TEMP/upgrade-pooler/upgrade-compose.json"
+          mkdir -p e2e-tests/test-results/upgrade-postgres-runtime
+          docker-compose -p alga-e2e-test logs --no-color --timestamps server > e2e-tests/test-results/upgrade-postgres-runtime/server.log
+          docker-compose -p alga-e2e-test logs --no-color --timestamps postgres pgbouncer upgrade-pgbouncer > e2e-tests/test-results/upgrade-postgres-runtime/database.log
+          docker-compose -p alga-e2e-test exec -T -e PGPASSWORD=placeholder-password postgres psql --no-password -v ON_ERROR_STOP=1 -U postgres -d postgres -Atc \
+            "SELECT json_build_object('max_connections', current_setting('max_connections'), 'connections', (SELECT json_agg(s) FROM (SELECT datname, usename, backend_type, state, count(*) FROM pg_stat_activity GROUP BY datname, usename, backend_type, state) s));" \
+            > e2e-tests/test-results/upgrade-postgres-runtime/connection-counts.json
+
       - name: Upload supported-upgrade evidence
         if: ${{ always() && matrix.edition == 'enterprise' && steps.upgrade_schema.outcome != 'skipped' && !env.ACT }}
         uses: actions/upload-artifact@v4
@@ -1099,6 +1138,15 @@ jobs:
           name: supported-upgrade-diagnostics
           path: e2e-tests/test-results/
           retention-days: 7
+
+      - name: Release PostgreSQL upgrade pooler before the next phase
+        if: ${{ always() && matrix.edition == 'enterprise' && steps.upgrade_schema.outcome == 'success' }}
+        timeout-minutes: 2
+        run: |
+          if [ -f "$RUNNER_TEMP/upgrade-pooler/upgrade-compose.json" ]; then
+            export COMPOSE_FILE="$COMPOSE_FILE:$RUNNER_TEMP/upgrade-pooler/upgrade-compose.json"
+            docker-compose -p alga-e2e-test stop upgrade-pgbouncer
+          fi
 
       - name: Start isolated Citus upgrade service
         id: citus_upgrade_service
@@ -1180,6 +1228,17 @@ jobs:
           E2E_USER_PASSWORD: ${{ steps.capture_creds.outputs.e2e_user_password }}
         run: xvfb-run --auto-servernum node e2e-tests/run-upgrade.mjs
 
+      - name: Preserve Citus upgrade runtime diagnostics before server replacement
+        if: ${{ always() && steps.citus_upgrade_server.outcome == 'success' }}
+        timeout-minutes: 2
+        run: |
+          export COMPOSE_FILE="$COMPOSE_FILE:$RUNNER_TEMP/citus-upgrade-compose.json"
+          mkdir -p e2e-tests/test-results/upgrade-citus-runtime
+          docker-compose -p alga-e2e-test logs --no-color --timestamps server upgrade-citus > e2e-tests/test-results/upgrade-citus-runtime/services.log
+          docker-compose -p alga-e2e-test exec -T -e PGPASSWORD=placeholder-password upgrade-citus psql --no-password -v ON_ERROR_STOP=1 -U postgres -d postgres -Atc \
+            "SELECT json_build_object('max_connections', current_setting('max_connections'), 'connections', (SELECT json_agg(s) FROM (SELECT datname, usename, backend_type, state, count(*) FROM pg_stat_activity GROUP BY datname, usename, backend_type, state) s));" \
+            > e2e-tests/test-results/upgrade-citus-runtime/connection-counts.json
+
       - name: Upload supported Citus upgrade evidence
         if: ${{ always() && steps.citus_upgrade_browser.outcome != 'skipped' && matrix.edition == 'enterprise' && !env.ACT }}
         uses: actions/upload-artifact@v4
@@ -1224,7 +1283,9 @@ jobs:
           export COMPOSE_FILE="$COMPOSE_FILE:$RUNNER_TEMP/teams-development-compose.json"
           # Earlier production/provider phases have completed. Retain their logs,
           # but release worker memory before compiling the development app.
-          docker-compose -p alga-e2e-test stop email-service hocuspocus workflow-worker temporal-worker temporal-dev
+          # The EE development server still uses Temporal for job initialization.
+          # Keep its frontend available while releasing the consumer processes.
+          docker-compose -p alga-e2e-test stop email-service hocuspocus workflow-worker temporal-worker
           docker-compose -p alga-e2e-test up --no-build --no-deps --force-recreate -d server
           docker-compose -p alga-e2e-test exec -T server node -e 'const fs = require("node:fs"); const probe = "/app/server/node_modules/.cache/webpack/.write-probe"; fs.writeFileSync(probe, "cache-writable", { flag: "wx" }); fs.unlinkSync(probe);'
           ready=false
@@ -1252,9 +1313,21 @@ jobs:
             -e E2E_DATABASE_ISOLATED -e E2E_USER_EMAIL -e E2E_USER_PASSWORD server \
             node --import /app/node_modules/tsx/dist/loader.mjs /app/check-teams-development-auth.mjs
 
+      - name: Warm authenticated Teams dashboard
+        id: teams_dashboard_ready
+        if: ${{ !cancelled() && steps.teams_auth_preflight.outcome == 'success' && steps.browser_ready.outcome == 'success' }}
+        timeout-minutes: 5
+        env:
+          E2E_TEAMS_DEVELOPMENT: 'true'
+          E2E_DATABASE_ISOLATED: 'true'
+          E2E_BASE_URL: http://localhost:3000
+          E2E_USER_EMAIL: ${{ steps.teams_creds.outputs.e2e_user_email }}
+          E2E_USER_PASSWORD: ${{ steps.teams_creds.outputs.e2e_user_password }}
+        run: node e2e-tests/harness/warm-teams-dashboard.mjs
+
       - name: Run Teams development execution gate
         id: teams_development_browser
-        if: ${{ !cancelled() && steps.teams_development_server.outcome == 'success' && steps.teams_auth_preflight.outcome == 'success' && steps.browser_ready.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.teams_development_server.outcome == 'success' && steps.teams_auth_preflight.outcome == 'success' && steps.browser_ready.outcome == 'success' && steps.teams_dashboard_ready.outcome == 'success' }}
         timeout-minutes: 10
         env:
           E2E_TEAMS_DEVELOPMENT: 'true'
