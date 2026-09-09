@@ -1,9 +1,13 @@
 import { expect, it, vi } from 'vitest';
 import { EmulatorHost } from '@alga-psa/emulator-host';
 import xero from '../src/index';
+import axios from 'axios';
+import { XeroClientService } from '../../../integrations/src/lib/xero/xeroClientService';
 
 // Real XeroClientService + Axios + vendor HTTP. Credential storage is private
 // memory; disconnect serialization/DB infrastructure is outside this contract.
+// Load the real client during collection; its endpoints resolve lazily. This
+// keeps Vite compilation outside the bounded HTTP recovery operation.
 const state = vi.hoisted(() => ({ secrets: new Map<string, string>(), writes: 0 }));
 vi.mock('@alga-psa/core/secrets', () => ({ getSecretProviderInstance: async () => ({
   getAppSecret: async () => undefined,
@@ -64,8 +68,6 @@ it('refreshes the selected organisation once without overwriting a newer sibling
     state.secrets.set(`${tenant}:xero_client_secret`, 'fixture-secret');
     process.env.XERO_OAUTH_TOKEN_URL = `${vendor}/connect/token`;
     process.env.XERO_API_BASE_URL = `${vendor}/api.xro/2.0`;
-    vi.resetModules();
-    const axios = (await import('axios')).default;
     const blocked: string[] = [];
     const observedTenants: string[] = [];
     const guard = axios.interceptors.request.use(config => {
@@ -76,7 +78,6 @@ it('refreshes the selected organisation once without overwriting a newer sibling
       return config;
     });
     removeGuard = () => axios.interceptors.request.eject(guard);
-    const { XeroClientService } = await import('../../../integrations/src/lib/xero/xeroClientService');
     // Select by organisation ID, deliberately not the default first connection.
     const service = await XeroClientService.create(tenant, 'selected-org');
     // A concurrent writer updates another connection after this instance read it.
@@ -101,7 +102,6 @@ it('refreshes the selected organisation once without overwriting a newer sibling
   } finally {
     removeGuard();
     for (const [name, value] of Object.entries(previous)) { if (value === undefined) delete process.env[name]; else process.env[name] = value; }
-    vi.resetModules();
     await host.stop();
   }
 });

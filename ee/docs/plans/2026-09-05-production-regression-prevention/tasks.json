@@ -688,10 +688,10 @@
     {
       "id": "R083",
       "title": "Cover and repair remaining bucket units on Citus",
-      "status": "in_progress",
+      "status": "done",
       "dependsOn": [],
       "owner": "qbo_protocol and coordinator",
-      "notes": "Current upgrade diagnostics show2unsupportedcomplexjoin errors from getRemainingBucketUnits despite3passingbrowsercases. UsageTracking catchesconsole-only and mayretainstaledata. Add realDB actioncoverage for membership/remainingunits/tenant isolation, preserve querysemantics and wireCitusverification. No claimofCitusfix beforeactualCI. Reviewed querysplit preserves tenant/client scope and labels/nullfallbacks;3realPostgreSQLcases+reportingtsc pass. Tier1/Citus producer/consumer wired;2runnerbehavioralchecks pass. Actual Citus CI remains required; keep taskopen. Evidence native-remaining-bucket-units.json. Independent cross-review added colliding contract/line/bucket/service UUIDs across tenants with distinct values; all4 real PostgreSQL tests pass12.24s, owned database cleaned. Actual Citus candidate validation remains pending."
+      "notes": "Current upgrade diagnostics show2unsupportedcomplexjoin errors from getRemainingBucketUnits despite3passingbrowsercases. UsageTracking catchesconsole-only and mayretainstaledata. Add realDB actioncoverage for membership/remainingunits/tenant isolation, preserve querysemantics and wireCitusverification. No claimofCitusfix beforeactualCI. Reviewed querysplit preserves tenant/client scope and labels/nullfallbacks;3realPostgreSQLcases+reportingtsc pass. Tier1/Citus producer/consumer wired;2runnerbehavioralchecks pass. Actual Citus CI remains required; keep taskopen. Evidence native-remaining-bucket-units.json. Independent cross-review added colliding contract/line/bucket/service UUIDs across tenants with distinct values; all4 real PostgreSQL tests pass12.24s, owned database cleaned. Actual Citus candidate validation remains pending. Actual current34320694357 Citus artifact10092017844 confirms4/4 bucketcases collected/executed/pass oncleancec08351189624fb4db8db7ec453e788157fbdad, all12runtimecasespass and independentgatepass. ci-remaining-bucket-units-c523.json. Single-nodeCitus proof; newfullupgradebrowser remainsR090."
     },
     {
       "id": "R084",
@@ -812,6 +812,30 @@
       "dependsOn": [],
       "owner": "stripe_protocol",
       "notes": "Audit found calendar discards teamsMeetingWarning when local schedule saves but Graph rescheduling fails. Add behavioral warning and deniedPATCH recovery with stable provideridentity and reopenedstate; native first. CurrentcandidateCI is separate. Three warning regressions reproduced; fix reviewed across all six action calls. Strengthened11componentcases and scopedtsc pass. Actual full nativeTeams1/1 firstattempt121.44s proves denial/local-provider divergence/reopenedidentity/recovery/delete/bot. native-teams-denied-reschedule.json. Prelinkeddevelopment only; current-source CI and broaderF034/T028 remainopen."
+    },
+    {
+      "id": "R099",
+      "title": "Make bucket recovery component tests independent across package runners",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "calendar_review",
+      "notes": "Current Nx package3failures reproduced: missing jest-dom matcher aborts firstcase, queued mockresponses thencontaminate nextcases. Explicit matcherimport and bucketmockreset preserveassertions.10/10 package and10/10 server targetedcasespass. No productchange."
+    },
+    {
+      "id": "R100",
+      "title": "Separate Xero client compilation from bounded HTTP recovery test",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "coordinator",
+      "notes": "Current Nx Xero testhit5second deadline. Native samecase passes but487ms of553ms isdynamicclientmoduleloading. Staticimports move preparation tocollection, preservingrealHTTPbehavior anddeadline.23/23 packagecasespass; scopedtsc/currentCI pending. No claim exactCI timeoutcauseproven. Scopedtsc exit0; reviewedlocalsetupcomplete, actualCIrecoverypending."
+    },
+    {
+      "id": "R101",
+      "title": "Exercise actual Microsoft NextAuth callback with a controlled signed authority",
+      "status": "in_progress",
+      "dependsOn": [],
+      "owner": "stripe_protocol",
+      "notes": "Remaining Microsoft user sign-in/accountlink proof requires actualNextAuth route/options. Build test-only canonical-authority fetchinterception with realRS256 discovery/JWKS/tokenexchange+PKCE, ownedDB persistedidentity andstate/issuernegative. No productionendpointoverride or liveEntra consentclaim."
     }
   ]
 }

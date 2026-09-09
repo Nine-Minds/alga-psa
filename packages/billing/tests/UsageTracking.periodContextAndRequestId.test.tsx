@@ -14,6 +14,7 @@
  *     Add Usage date into the period when "today" falls outside it.
  */
 import React from 'react';
+import '@testing-library/jest-dom/vitest';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { todayUsageDate, usageDateToStored } from '../src/lib/usageDate';
@@ -30,6 +31,11 @@ const actionMocks = vi.hoisted(() => ({
   getAllClientsForBilling: vi.fn(),
   getRemainingBucketUnits: vi.fn(),
 }));
+
+// One-shot responses must not leak if an earlier assertion aborts a test.
+beforeEach(() => {
+  actionMocks.getRemainingBucketUnits.mockReset().mockResolvedValue([]);
+});
 
 vi.mock('next/navigation', () => ({useRouter: () => ({push: actionMocks.push})}));
 vi.mock('../src/actions/usagePeriodTotalActions', () => ({
