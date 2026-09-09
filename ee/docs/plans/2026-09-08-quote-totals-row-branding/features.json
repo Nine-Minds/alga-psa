@@ -1,0 +1,21 @@
+[
+  {"id":"F001","description":"Add a totals-rows-editor inspector widget type and mount it on the totals component.","implemented":false},
+  {"id":"F002","description":"List every totals row using its stable id and imported/localized display label.","implemented":false},
+  {"id":"F003","description":"Edit each row background color independently through the existing color-picker conventions.","implemented":false},
+  {"id":"F004","description":"Edit each row inherited text color independently for label and amount.","implemented":false},
+  {"id":"F005","description":"Replace totalsRows immutably so store history and sibling row data remain correct.","implemented":false},
+  {"id":"F006","description":"Preserve row ids, labels, i18n refs, values, formats, emphasis, order, and non-color style fields during edits.","implemented":false},
+  {"id":"F007","description":"Preserve explicit labelStyle color as a label-only override and explain its precedence in the inspector.","implemented":false},
+  {"id":"F008","description":"Support clearing background color without removing unrelated row style properties.","implemented":false},
+  {"id":"F009","description":"Support clearing row text color to restore inherited/default color.","implemented":false},
+  {"id":"F010","description":"Prune only empty inline/style wrappers created by color editing.","implemented":false},
+  {"id":"F011","description":"Reflect color edits immediately in the visual canvas and commit them through existing undo/history semantics.","implemented":false},
+  {"id":"F012","description":"Round-trip edited row and label styles through workspace AST import/export.","implemented":false},
+  {"id":"F013","description":"Render edited row colors consistently in interactive preview and PDF output.","implemented":false},
+  {"id":"F014","description":"Keep rows without explicit styles valid and visually unchanged.","implemented":false},
+  {"id":"F015","description":"Make existing saved invoice and quote templates editable without migration or re-duplication.","implemented":false},
+  {"id":"F016","description":"Add localized inspector copy for row colors, reset actions, and label-color precedence.","implemented":false},
+  {"id":"F017","description":"Keep totals row membership, ordering, bindings, and calculations outside this editor's mutation surface.","implemented":false},
+  {"id":"F018","description":"Preserve unrelated table/header branding and neighboring totals rows when one row changes.","implemented":false}
+]
+

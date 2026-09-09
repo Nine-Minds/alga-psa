@@ -1,0 +1,13 @@
+[
+  {"id":"T001","description":"Inspector integration: imported monthly and one-time rows initialize with saved colors and editing one row updates only that row and the live canvas.","featureIds":["F001","F002","F003","F004","F005","F011","F018"],"implemented":false},
+  {"id":"T002","description":"Inspector integration: clearing background/text colors restores inheritance while preserving padding, margin, radius, emphasis, labelStyle, and sibling rows.","featureIds":["F006","F008","F009","F010","F018"],"implemented":false},
+  {"id":"T003","description":"Inspector integration: an explicit labelStyle color remains label-only, the amount inherits row text color, and the precedence notice is shown.","featureIds":["F004","F007","F016"],"implemented":false},
+  {"id":"T004","description":"Quote AST round trip preserves edited colors plus row ids, i18n label refs, bindings, formats, emphasis, ordering, and unrelated styles.","featureIds":["F006","F012","F015","F017"],"implemented":false},
+  {"id":"T005","description":"Invoice AST round trip exercises the same widget contract and preserves unstyled rows without adding synthetic styles.","featureIds":["F012","F014","F015"],"implemented":false},
+  {"id":"T006","description":"Renderer behavior: two totals rows render distinct backgrounds/text colors and labelStyle overrides only its label.","featureIds":["F007","F013"],"implemented":false},
+  {"id":"T007","description":"Save/reopen integration confirms existing grouped-template row colors load, edits persist, and untouched header/table branding remains unchanged.","featureIds":["F003","F004","F015","F018"],"implemented":false},
+  {"id":"T008","description":"Undo/history behavior restores prior totalsRows after a committed color edit without corrupting nested metadata.","featureIds":["F005","F011"],"implemented":false},
+  {"id":"T009","description":"Manual quote smoke: assign visibly distinct monthly and one-time total colors, save/reopen, and verify preview and generated PDF screenshots.","featureIds":["F002","F003","F004","F013","F015"],"implemented":false},
+  {"id":"T010","description":"Manual invoice smoke: edit an existing total row, clear one color, and verify preview/PDF plus unchanged totals calculations and bindings.","featureIds":["F008","F009","F013","F014","F017"],"implemented":false}
+]
+
