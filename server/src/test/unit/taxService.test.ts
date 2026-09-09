@@ -353,6 +353,12 @@ describe('TaxService', () => {
     });
     // Transaction-date and currency SQL filtering run against PostgreSQL in
     // packages/billing/src/services/taxService.rateSelection.db.test.ts.
+    // Three placeholders were removed here rather than left to read as coverage.
+    // International rates are region codes, already exercised by
+    // taxService.rateSelection.db.test.ts. Tax caps and period-spanning tax are
+    // not implemented at all -- calculateTax resolves a single date and no cap
+    // concept exists -- so they are product gaps tracked on the board, not
+    // missing tests for existing behavior.
     it('does not tax an exempt client even when a default rate is available', async () => {
         db.rows['clients'] = { is_tax_exempt: true };
         expect(await taxService.calculateTax('client1', 10000, '2023-06-01')).toEqual({ taxAmount: 0, taxRate: 0 });
@@ -364,10 +370,8 @@ describe('TaxService', () => {
     it.each([[1, 1], [9, 1], [11, 2]])('rounds fractional tax cents upward (%s cents)', async (amount, taxAmount) => {
         expect(await taxService.calculateTax('client1', amount, '2023-06-01')).toEqual({ taxAmount, taxRate: 10 });
     });
-    it.todo('should apply the correct tax rate for international transactions');
     // Multi-item invoice tax persistence is exercised in the infrastructure
     // billing/invoices/billingInvoiceGeneration_tax.test.ts suite.
-    it.todo('should apply tax caps correctly when present');
     it('applies reverse charge before looking up an otherwise taxable default rate', async () => {
         mockClientTaxSettings.get.mockResolvedValue({
             tenant: 'test_tenant', client_id: 'client1', tax_rate_id: 'rate1',
@@ -376,7 +380,6 @@ describe('TaxService', () => {
         expect(await taxService.calculateTax('client1', 10000, '2023-06-01')).toEqual({ taxAmount: 0, taxRate: 0 });
         expect(db.queriedTables).toEqual(['clients']);
     });
-    it.todo('should handle tax calculation for subscriptions spanning multiple tax periods');
     it.each([[10000, 500, 1], [10001, 501, 2], [25000, 2250, 3]])('taxes each reached progressive bracket separately (%s cents)', async (amount, taxAmount, reached) => {
         mockClientTaxSettings.getTaxRateThresholds.mockResolvedValue([
             { tenant: 'test_tenant', tax_rate_threshold_id: 't1', tax_rate_id: 'rate1', min_amount: 0, max_amount: 10000, rate: 5 },
