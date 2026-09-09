@@ -223,6 +223,152 @@ describe('Quote item catalog-description snapshot', () => {
     expect(custom.catalog_description).toBeNull();
   });
 
+  it('TR-1: create ignores a caller-forged catalog_description and persists the server-derived value instead', async () => {
+    const quote = await createQuote('Forge-create quote');
+    const serviceId = await seedCatalogService();
+
+    // Catalog-backed create: a value smuggled into the item payload must not
+    // survive; the authoritative tenant-scoped catalog text wins.
+    const forgedServiceItem = await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      service_id: serviceId,
+      description: NAME,
+      quantity: 1,
+      unit_price: 25000,
+      is_optional: false,
+      is_selected: true,
+      is_recurring: false,
+      catalog_description: 'CALLER FORGED SNAPSHOT',
+    } as any);
+    expect(forgedServiceItem.catalog_description).toBe(CATALOG_DESCRIPTION);
+
+    // Custom line: the forged value is dropped and the snapshot stays null.
+    const forgedCustom = await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      description: 'Custom audit',
+      quantity: 1,
+      unit_price: 3500,
+      is_optional: false,
+      is_selected: true,
+      is_recurring: false,
+      catalog_description: 'CALLER FORGED SNAPSHOT',
+    } as any);
+    expect(forgedCustom.catalog_description).toBeNull();
+
+    const rows = await context.db('quote_items')
+      .where({ tenant: context.tenantId, quote_id: quote.quote_id })
+      .select('catalog_description');
+    expect(rows.map((row: any) => row.catalog_description)).not.toContain('CALLER FORGED SNAPSHOT');
+  });
+
+  it('TR-2: ordinary updates ignore a caller-supplied catalog_description and leave the stored snapshot byte-identical', async () => {
+    const quote = await createQuote('Mutate-update quote');
+    const serviceId = await seedCatalogService();
+    const item = await createCatalogItem(quote.quote_id, serviceId);
+
+    const edited = await QuoteItem.update(context.db, context.tenantId, item.quote_item_id, {
+      description: 'Edited line description',
+      quantity: 2,
+      unit_price: 30000,
+      catalog_description: 'CALLER MUTATED SNAPSHOT',
+    } as any);
+    expect(edited.description).toBe('Edited line description');
+    expect(edited.catalog_description).toBe(CATALOG_DESCRIPTION);
+
+    const row = await context.db('quote_items')
+      .where({ tenant: context.tenantId, quote_item_id: item.quote_item_id })
+      .first();
+    expect(row.catalog_description).toBe(CATALOG_DESCRIPTION);
+  });
+
+  it('TR-3: service-selection change recaptures from the current catalog and ignores any caller-forged value', async () => {
+    const quote = await createQuote('Recapture quote');
+    const serviceId = await seedCatalogService();
+    const item = await createCatalogItem(quote.quote_id, serviceId);
+
+    const secondServiceId = await seedCatalogService({
+      service_name: 'Patch Management',
+      description: 'Automated patch deployment for endpoints, tested before release.',
+      default_rate: 12000,
+      unit_of_measure: 'seat',
+    });
+    const recaptured = await QuoteItem.update(context.db, context.tenantId, item.quote_item_id, {
+      service_id: secondServiceId,
+      catalog_description: 'CALLER FORGED SNAPSHOT',
+    } as any);
+    expect(recaptured.service_name).toBe('Patch Management');
+    expect(recaptured.catalog_description).toBe('Automated patch deployment for endpoints, tested before release.');
+
+    // Clearing the catalog selection must also null the snapshot, not the caller value.
+    const cleared = await QuoteItem.update(context.db, context.tenantId, item.quote_item_id, {
+      service_id: null,
+      catalog_description: 'CALLER FORGED SNAPSHOT',
+    } as any);
+    expect(cleared.service_id).toBeNull();
+    expect(cleared.catalog_description).toBeNull();
+  });
+
+  it('TR-4: copy flows carry the stored snapshot verbatim through the internal channel, including null', async () => {
+    const sourceQuote = await createQuote('Source for internal-channel copy');
+    const serviceId = await seedCatalogService();
+    await createCatalogItem(sourceQuote.quote_id, serviceId);
+    await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: sourceQuote.quote_id,
+      description: 'Custom one-time audit',
+      quantity: 1,
+      unit_price: 5000,
+      is_optional: false,
+      is_selected: true,
+      is_recurring: false,
+    });
+
+    // Catalog deletion nulls the FK; duplication must still carry the original
+    // snapshot for the catalog-backed line and null for the custom line.
+    await context.db('service_catalog')
+      .where({ tenant: context.tenantId, service_id: serviceId })
+      .del();
+    const sourceItems = await QuoteItem.listByQuoteId(context.db, context.tenantId, sourceQuote.quote_id);
+
+    const duplicated = await createQuote('Duplicated for internal channel');
+    for (const sourceItem of sourceItems) {
+      await QuoteItem.create(context.db, context.tenantId, {
+        quote_id: duplicated.quote_id,
+        service_id: sourceItem.service_id ?? null,
+        service_item_kind: sourceItem.service_item_kind ?? null,
+        service_name: sourceItem.service_name ?? null,
+        service_sku: sourceItem.service_sku ?? null,
+        billing_method: sourceItem.billing_method ?? null,
+        description: sourceItem.description,
+        quantity: sourceItem.quantity,
+        unit_price: sourceItem.unit_price,
+        unit_of_measure: sourceItem.unit_of_measure ?? null,
+        display_order: sourceItem.display_order,
+        phase: sourceItem.phase ?? null,
+        is_optional: sourceItem.is_optional,
+        is_selected: sourceItem.is_selected,
+        is_recurring: sourceItem.is_recurring,
+        billing_frequency: sourceItem.billing_frequency ?? null,
+        is_discount: sourceItem.is_discount ?? false,
+        discount_type: sourceItem.discount_type ?? null,
+        discount_percentage: sourceItem.discount_percentage ?? null,
+        applies_to_item_id: sourceItem.applies_to_item_id ?? null,
+        applies_to_service_id: sourceItem.applies_to_service_id ?? null,
+        is_taxable: sourceItem.is_taxable ?? true,
+        cost: sourceItem.cost ?? null,
+        cost_currency: sourceItem.cost_currency ?? null,
+        location_id: sourceItem.location_id ?? null,
+        created_by: context.userId,
+      }, { catalogDescriptionSnapshot: sourceItem.catalog_description ?? null });
+    }
+
+    const duplicatedItems = await QuoteItem.listByQuoteId(context.db, context.tenantId, duplicated.quote_id);
+    const duplicatedService = duplicatedItems.find((i) => i.description === NAME);
+    const duplicatedCustom = duplicatedItems.find((i) => i.description === 'Custom one-time audit');
+    expect(duplicatedService?.service_id).toBeNull();
+    expect(duplicatedService?.catalog_description).toBe(CATALOG_DESCRIPTION);
+    expect(duplicatedCustom?.catalog_description).toBeNull();
+  });
+
   it('T004: revision copies snapshots verbatim even after catalog edits or deletion', async () => {
     const quote = await createQuote('Revision source');
     const serviceId = await seedCatalogService();
@@ -274,7 +420,6 @@ describe('Quote item catalog-description snapshot', () => {
         service_sku: sourceItem.service_sku ?? null,
         billing_method: sourceItem.billing_method ?? null,
         description: sourceItem.description,
-        catalog_description: sourceItem.catalog_description ?? null,
         quantity: sourceItem.quantity,
         unit_price: sourceItem.unit_price,
         unit_of_measure: sourceItem.unit_of_measure ?? null,
@@ -296,7 +441,7 @@ describe('Quote item catalog-description snapshot', () => {
         cost_currency: sourceItem.cost_currency ?? null,
         location_id: sourceItem.location_id ?? null,
         created_by: context.userId,
-      });
+      }, { catalogDescriptionSnapshot: sourceItem.catalog_description ?? null });
     }
     const duplicatedItems = await QuoteItem.listByQuoteId(context.db, context.tenantId, duplicated.quote_id);
     expect(duplicatedItems[0]?.catalog_description).toBe(CATALOG_DESCRIPTION);
@@ -313,7 +458,6 @@ describe('Quote item catalog-description snapshot', () => {
         service_sku: sourceItem.service_sku ?? null,
         billing_method: sourceItem.billing_method ?? null,
         description: sourceItem.description,
-        catalog_description: sourceItem.catalog_description ?? null,
         quantity: sourceItem.quantity,
         unit_price: sourceItem.unit_price,
         display_order: sourceItem.display_order,
@@ -334,7 +478,7 @@ describe('Quote item catalog-description snapshot', () => {
         cost_currency: sourceItem.cost_currency ?? null,
         location_id: sourceItem.location_id ?? null,
         created_by: context.userId,
-      });
+      }, { catalogDescriptionSnapshot: sourceItem.catalog_description ?? null });
     }
 
     // Catalog deletion between template save and quote-from-template.
@@ -355,7 +499,6 @@ describe('Quote item catalog-description snapshot', () => {
         service_sku: templateItem.service_sku ?? null,
         billing_method: templateItem.billing_method ?? null,
         description: templateItem.description,
-        catalog_description: templateItem.catalog_description ?? null,
         quantity: templateItem.quantity,
         unit_price: templateItem.unit_price,
         display_order: templateItem.display_order,
@@ -376,7 +519,7 @@ describe('Quote item catalog-description snapshot', () => {
         cost_currency: templateItem.cost_currency ?? null,
         location_id: templateItem.location_id ?? null,
         created_by: context.userId,
-      });
+      }, { catalogDescriptionSnapshot: templateItem.catalog_description ?? null });
     }
     const fromTemplateItems = await QuoteItem.listByQuoteId(context.db, context.tenantId, fromTemplate.quote_id);
     expect(fromTemplateItems[0]?.catalog_description).toBe(CATALOG_DESCRIPTION);

@@ -1058,7 +1058,6 @@ export const createQuoteFromTemplate = withAuth(async (
         service_sku: templateItem.service_sku ?? null,
         billing_method: templateItem.billing_method ?? null,
         description: templateItem.description,
-        catalog_description: templateItem.catalog_description ?? null,
         quantity: templateItem.quantity,
         unit_price: templateItem.unit_price,
         unit_of_measure: templateItem.unit_of_measure ?? null,
@@ -1078,7 +1077,7 @@ export const createQuoteFromTemplate = withAuth(async (
         cost_currency: templateItem.cost_currency ?? null,
         location_id: templateItem.location_id ?? null,
         created_by: actorUserId,
-      });
+      }, { catalogDescriptionSnapshot: templateItem.catalog_description ?? null });
     }
 
     return await Quote.getById(trx, tenant, createdQuote.quote_id) as IQuote;
@@ -1144,7 +1143,6 @@ export const duplicateQuote = withAuth(async (
         service_sku: sourceItem.service_sku ?? null,
         billing_method: sourceItem.billing_method ?? null,
         description: sourceItem.description,
-        catalog_description: sourceItem.catalog_description ?? null,
         quantity: sourceItem.quantity,
         unit_price: sourceItem.unit_price,
         unit_of_measure: sourceItem.unit_of_measure ?? null,
@@ -1166,7 +1164,7 @@ export const duplicateQuote = withAuth(async (
         cost_currency: sourceItem.cost_currency ?? null,
         location_id: sourceItem.location_id ?? null,
         created_by: actorUserId,
-      });
+      }, { catalogDescriptionSnapshot: sourceItem.catalog_description ?? null });
     }
 
     await QuoteActivity.create(trx, tenant, {
@@ -1244,7 +1242,6 @@ export const saveQuoteAsTemplate = withAuth(async (
         service_sku: sourceItem.service_sku ?? null,
         billing_method: sourceItem.billing_method ?? null,
         description: sourceItem.description,
-        catalog_description: sourceItem.catalog_description ?? null,
         quantity: sourceItem.quantity,
         unit_price: sourceItem.unit_price,
         unit_of_measure: sourceItem.unit_of_measure ?? null,
@@ -1266,7 +1263,7 @@ export const saveQuoteAsTemplate = withAuth(async (
         cost_currency: sourceItem.cost_currency ?? null,
         location_id: sourceItem.location_id ?? null,
         created_by: actorUserId,
-      });
+      }, { catalogDescriptionSnapshot: sourceItem.catalog_description ?? null });
     }
 
     await QuoteActivity.create(trx, tenant, {

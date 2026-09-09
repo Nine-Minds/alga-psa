@@ -60,9 +60,11 @@ export const createQuoteItemSchema = z.object({
   service_name: z.string().max(255).optional().nullable(),
   service_sku: z.string().max(100).optional().nullable(),
   service_item_kind: z.string().max(50).optional().nullable(),
-  catalog_description: z.string().optional().nullable().transform((value) =>
-    value == null || value.trim() === '' ? null : value.trim()
-  ),
+  // The catalog-description snapshot is intentionally absent from this input
+  // shape: it is a server-captured, tenant-scoped snapshot of the catalog row,
+  // authoritative and immutable from the caller's perspective. Zod strips
+  // unknown keys, so any caller-supplied value is dropped here and never
+  // reaches the model.
 });
 
 export const updateQuoteItemSchema = createQuoteItemSchema.partial();
