@@ -1,8 +1,8 @@
 # Provider protocol coverage
 
 Reviewed 2026-09-08. This inventory supplements the [suite guide](README.md).
-It records bounded evidence, not complete vendor compatibility. F037 remains
-incomplete. Native test results below are recorded runs, not a claim that the
+It records bounded evidence, not complete vendor compatibility. Native test
+results below are recorded runs, not a claim that the
 current revision passed the full CI or browser matrix.
 
 | Surface | Implemented and exercised | Evidence boundary / remaining gap |
@@ -47,11 +47,17 @@ there; those browser runs do not establish the newly added cleanup paths.
 Both Xero revocation variables and QBO's revocation variable must reach each
 requesting process. Rendered Compose values prove configuration only. A generic
 invalid-credential probe proves endpoint reachability, not that a real consumer
-uses that endpoint. Current CI configuration builds and starts the authored worker in both editions
-and the traditional Temporal worker in EE, with strict readiness and retained
-per-process routing evidence. That configuration has not yet completed a green
-image/browser run. Native compiled authored-workflow execution proves its
-state-node persistence boundary, without provider actions. Running-process
+uses that endpoint. Completed [CI run 34287571495](https://github.com/Nine-Minds/alga-psa/actions/runs/34287571495)
+tested merge revision `3c046458a0fca6cc43c63f9ac791154410a8a1e3` and passed
+worker startup, candidate image identity and shared-secret checks in both editions.
+It also executed the authored workflow through Temporal to successful persisted
+state-node results, without provider actions. Its seven routing records identify
+service classes; they do not establish coverage of every running replica.
+The stricter per-container topology check in [run 34299806767](https://github.com/Nine-Minds/alga-psa/actions/runs/34299806767)
+fails despite successful worker startup. Local repairs address Compose-generated
+image names and enterprise profile selection; actual replica-level CI verification
+is still pending. No whole-run green claim follows from the earlier bounded passes.
+Running-process
 provider journeys, the remaining
 Temporal constructors, denied callback/disconnect journeys, and optional
 sanitized live-provider drift checks remain explicit follow-up work.

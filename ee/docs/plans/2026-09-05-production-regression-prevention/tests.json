@@ -303,7 +303,7 @@
   {
     "id": "T031",
     "description": "Validate covered emulator auth/error/callback shapes against independently sourced provider contracts or sanitized captures; deliberately introduce a response-contract mismatch and verify parity validation detects it. Unsupported routes fail explicitly and missing real-sandbox verification is recorded as a limitation.",
-    "implemented": false,
+    "implemented": true,
     "kind": "provider-contract",
     "featureIds": [
       "F037"

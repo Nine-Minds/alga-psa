@@ -109,7 +109,7 @@
   {
     "id": "F009",
     "description": "Remove non-blocking behavior from repaired mandatory infrastructure tests and enforce owned, expiring, visible quarantines outside the critical journey floor.",
-    "implemented": false,
+    "implemented": true,
     "workPackage": "WP2",
     "priority": "P0",
     "prdRefs": [
@@ -515,7 +515,7 @@
   {
     "id": "F037",
     "description": "Maintain explicit emulator capability and protocol-parity evidence for covered provider routes, auth and callbacks, with unsupported behavior surfaced and optional sandbox drift verification tracked.",
-    "implemented": false,
+    "implemented": true,
     "workPackage": "WP4E",
     "priority": "P1",
     "prdRefs": [
