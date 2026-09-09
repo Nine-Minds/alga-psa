@@ -1957,7 +1957,12 @@
         "headerPlaceholder": "Header label",
         "bindingKey": "Binding key",
         "type": "Type",
-        "width": "Width"
+        "width": "Width",
+        "stackedLines": "Stacked lines",
+        "addLine": "+ Line",
+        "clearLines": "Single line",
+        "stackedLinesHint": "Each non-empty line renders on its own row. When all lines are empty the column’s binding key above is shown.",
+        "removeLine": "Remove line {{index}}"
       },
       "columnTypes": {
         "text": "Text",

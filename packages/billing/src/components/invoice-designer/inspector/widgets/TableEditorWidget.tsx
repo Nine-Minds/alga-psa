@@ -304,14 +304,61 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
       if (!preset) {
         return;
       }
-      appendColumn({
+      const nextColumn: Omit<ColumnModel, 'id'> = {
         header: preset.header,
         key: preset.key,
         type: preset.type,
         width: preset.width,
-      });
+      };
+      if (preset.lines && preset.lines.length > 0) {
+        nextColumn.lines = preset.lines.map((line) => ({
+          id: line.id,
+          key: line.key,
+          ...(line.style ? { style: line.style } : {}),
+        }));
+      }
+      appendColumn(nextColumn);
     },
     [appendColumn, columnPresets]
+  );
+
+  const updateColumnLines = useCallback(
+    (columnId: string, lines: Array<Record<string, unknown>> | undefined, commit: boolean) => {
+      updateColumn(columnId, { lines }, commit);
+    },
+    [updateColumn]
+  );
+
+  const handleAddColumnLine = useCallback(
+    (columnId: string) => {
+      const column = columns.find((candidate) => candidate.id === columnId);
+      if (!column) {
+        return;
+      }
+      const existing = Array.isArray(column.lines) ? (column.lines as Array<Record<string, unknown>>) : [];
+      updateColumnLines(
+        columnId,
+        [...existing, { id: createLocalId(), key: 'item.field' }],
+        true
+      );
+    },
+    [columns, updateColumnLines]
+  );
+
+  const handleRemoveColumnLine = useCallback(
+    (columnId: string, lineId: string) => {
+      const column = columns.find((candidate) => candidate.id === columnId);
+      if (!column) {
+        return;
+      }
+      const existing = Array.isArray(column.lines) ? (column.lines as Array<Record<string, unknown>>) : [];
+      updateColumnLines(
+        columnId,
+        existing.filter((line) => String(line.id) !== lineId),
+        true
+      );
+    },
+    [columns, updateColumnLines]
   );
 
   const handleRemoveColumn = useCallback(
@@ -643,6 +690,89 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
                 </div>
               )}
             </div>
+            {(() => {
+              const hasLines = Array.isArray(column.lines) && (column.lines as Array<Record<string, unknown>>).length > 0;
+              return (
+                <div>
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] font-medium text-slate-500 dark:text-slate-400 block mb-0.5">
+                      {t('invoiceDesigner.tableEditor.columns.stackedLines', { defaultValue: 'Stacked lines' })}
+                    </label>
+                    <div className="flex items-center gap-1">
+                      <button
+                        id={`add-stacked-line-${column.id}`}
+                        type="button"
+                        className="rounded border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-slate-50 dark:bg-[rgb(var(--color-background))] px-1.5 py-0.5 text-[10px] text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+                        onClick={() => handleAddColumnLine(column.id)}
+                      >
+                        {t('invoiceDesigner.tableEditor.columns.addLine', { defaultValue: '+ Line' })}
+                      </button>
+                      {hasLines && (
+                        <button
+                          id={`clear-stacked-lines-${column.id}`}
+                          type="button"
+                          className="rounded border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-slate-50 dark:bg-[rgb(var(--color-background))] px-1.5 py-0.5 text-[10px] text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+                          onClick={() => updateColumnLines(column.id, undefined, true)}
+                        >
+                          {t('invoiceDesigner.tableEditor.columns.clearLines', { defaultValue: 'Single line' })}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <p className="mb-1 text-[10px] text-slate-400 dark:text-slate-500">
+                    {t('invoiceDesigner.tableEditor.columns.stackedLinesHint', {
+                      defaultValue: 'Each non-empty line renders on its own row. When all lines are empty the column’s binding key above is shown.',
+                    })}
+                  </p>
+                  {hasLines && (
+                    <div className="space-y-1">
+                      {(column.lines as Array<Record<string, unknown>>).map((line, lineIndex) => {
+                        const lineId = String(line.id);
+                        return (
+                          <div key={lineId} className="flex items-center gap-1">
+                            <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded bg-slate-100 dark:bg-slate-800 text-[10px] font-medium text-slate-400 tabular-nums">
+                              {lineIndex + 1}
+                            </span>
+                            <Input
+                              id={`column-line-key-${column.id}-${lineId}`}
+                              size="sm"
+                              containerClassName="w-full"
+                              value={asTrimmedString(line.key)}
+                              onChange={(event) => {
+                                const next = (column.lines as Array<Record<string, unknown>>).map((entry) =>
+                                  String(entry.id) === lineId ? { ...entry, key: event.target.value } : entry
+                                );
+                                updateColumnLines(column.id, next, false);
+                              }}
+                              onBlur={(event) => {
+                                const next = (column.lines as Array<Record<string, unknown>>).map((entry) =>
+                                  String(entry.id) === lineId ? { ...entry, key: event.target.value } : entry
+                                );
+                                updateColumnLines(column.id, next, true);
+                              }}
+                              placeholder="item.field"
+                              className="text-xs font-mono"
+                            />
+                            <button
+                              id={`remove-stacked-line-${column.id}-${lineId}`}
+                              type="button"
+                              aria-label={t('invoiceDesigner.tableEditor.columns.removeLine', {
+                                defaultValue: 'Remove line {{index}}',
+                                index: lineIndex + 1,
+                              })}
+                              className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded text-slate-400 hover:text-destructive hover:bg-destructive/10"
+                              onClick={() => handleRemoveColumnLine(column.id, lineId)}
+                            >
+                              ×
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
             <div className="grid grid-cols-[minmax(0,1fr)_88px] gap-1.5">
               <div>
                 <label className="text-[10px] font-medium text-slate-500 dark:text-slate-400 block mb-0.5">

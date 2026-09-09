@@ -80,6 +80,11 @@ const createQuoteItemBaseSchema = z.object({
   quote_id: z.string().uuid(),
   service_id: z.string().uuid().optional().nullable(),
   description: z.string().trim().min(1),
+  // The catalog-description snapshot is intentionally absent from this input
+  // shape: it is a server-captured, tenant-scoped snapshot of the catalog row,
+  // authoritative and immutable from the caller's perspective. Zod strips
+  // unknown keys, so any client-supplied value is dropped here and never
+  // reaches the model.
   quantity: z.number().int().positive(),
   unit_price: z.number().int().min(0).optional(),
   unit_of_measure: z.string().trim().optional().nullable(),

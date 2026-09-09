@@ -33,6 +33,12 @@ export interface IQuoteItem extends TenantEntity {
   service_sku?: string | null;
   billing_method?: 'fixed' | 'hourly' | 'usage' | 'per_unit' | null;
   description: string;
+  /** Snapshot of the catalog item's description taken when the line was added
+   *  or its catalog selection changed. Null for custom/discount lines, for
+   *  catalog rows whose description was empty at capture time, and for rows
+   *  created before this column existed. Never refreshed from the catalog
+   *  after capture. */
+  catalog_description?: string | null;
   quantity: number;
   unit_price: number;
   cost?: number | null;
@@ -197,6 +203,9 @@ export interface QuoteViewModelLineItem {
   service_sku?: string | null;
   billing_method?: 'fixed' | 'hourly' | 'usage' | 'per_unit' | null;
   description: string;
+  /** Quote-time snapshot of the catalog description; null when none was
+   *  captured (custom/discount lines, legacy rows, empty catalog text). */
+  catalog_description?: string | null;
   quantity: number;
   unit_price: number;
   total_price: number;

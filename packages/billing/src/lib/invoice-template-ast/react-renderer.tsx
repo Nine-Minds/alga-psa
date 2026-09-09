@@ -11,6 +11,7 @@ import type {
   TemplateNode,
   TemplateNodeStyleRef,
   TemplateStyleDeclaration,
+  TemplateTableColumn,
   TemplateValueExpression,
   TemplateValueFormat,
 } from '@alga-psa/types';
@@ -286,6 +287,12 @@ const buildAstCss = (ast: TemplateAst): string => {
   padding: 6px 8px;
   vertical-align: top;
 }
+.invoice-template-root .ast-table-cell-line {
+  white-space: pre-line;
+}
+.invoice-template-root .ast-table-cell-line + .ast-table-cell-line {
+  margin-top: 2px;
+}
 .invoice-template-root tbody tr + tr td { border-top: 1px solid #f3f4f6; }
 
 .invoice-template-root .ast-node-type-field {
@@ -385,6 +392,54 @@ const resolveExpressionValue = (
       return '';
   }
 };
+
+/**
+ * Cell content for a table/dynamic-table column. Columns may stack optional
+ * ordered lines (e.g. item name above catalog description) with independent
+ * per-line styles. Each line that resolves to a non-empty value renders on its
+ * own block line; empty lines collapse. When every line is empty the legacy
+ * single `value` renders as the cell fallback, so custom/discount/legacy rows
+ * that carry only a line description stay readable. Columns without `lines`
+ * render `value` exactly as before.
+ */
+const renderTableCell = (
+  column: TemplateTableColumn,
+  evaluation: TemplateEvaluationResult,
+  scope: RenderScope,
+  ctx: RenderContext
+): React.ReactNode => {
+  const lines = column.lines;
+  if (lines && lines.length > 0) {
+    const renderedLines = lines
+      .map((line) => {
+        const lineValue = resolveExpressionValue(line.value, evaluation, scope, ctx);
+        const text = formatValue(lineValue ?? '', undefined, ctx);
+        const { className, style } = resolveStyleRef(line.style);
+        return { id: line.id, text, className, style };
+      })
+      .filter((line) => line.text !== '');
+
+    if (renderedLines.length === 0) {
+      const fallbackValue = resolveExpressionValue(column.value, evaluation, scope, ctx);
+      return formatValue(fallbackValue ?? '', column.format, ctx);
+    }
+
+    return renderedLines.map((line) => (
+      <div
+        key={line.id}
+        className={joinClassNames('ast-table-cell-line', line.className) || undefined}
+        style={line.style}
+      >
+        {line.text}
+      </div>
+    ));
+  }
+
+  const value = resolveExpressionValue(column.value, evaluation, scope, ctx);
+  return formatValue(value ?? '', column.format, ctx);
+};
+
+
 
 /**
  * Resolve an array value referenced by `bindingId` against either the render
@@ -572,7 +627,6 @@ const renderNode = (
               rows.map((row, index) => (
                 <tr key={`${node.id}-row-${index}`}>
                   {node.columns.map((column) => {
-                    const value = resolveExpressionValue(column.value, evaluation, { ...scope, row, items: { ...scope.items, [node.rowBinding]: row } }, ctx);
                     const { className: colClassName, style: colStyle } = resolveStyleRef(column.style);
                     const alignRight = column.format === 'currency' || column.format === 'number';
                     return (
@@ -581,7 +635,7 @@ const renderNode = (
                         className={colClassName || undefined}
                         style={{ ...(colStyle ?? {}), ...(alignRight ? { textAlign: 'right' } : {}) }}
                       >
-                        {formatValue(value ?? '', column.format, ctx)}
+                        {renderTableCell(column, evaluation, { ...scope, row, items: { ...scope.items, [node.rowBinding]: row } }, ctx)}
                       </td>
                     );
                   })}
@@ -623,7 +677,6 @@ const renderNode = (
               rows.map((row, index) => (
                 <tr key={`${node.id}-row-${index}`}>
                   {node.columns.map((column) => {
-                    const value = resolveExpressionValue(column.value, evaluation, { ...scope, row, items: { ...scope.items, [node.repeat.itemBinding]: row } }, ctx);
                     const { className: colClassName, style: colStyle } = resolveStyleRef(column.style);
                     const alignRight = column.format === 'currency' || column.format === 'number';
                     return (
@@ -632,7 +685,7 @@ const renderNode = (
                         className={colClassName || undefined}
                         style={{ ...(colStyle ?? {}), ...(alignRight ? { textAlign: 'right' } : {}) }}
                       >
-                        {formatValue(value ?? '', column.format, ctx)}
+                        {renderTableCell(column, evaluation, { ...scope, row, items: { ...scope.items, [node.repeat.itemBinding]: row } }, ctx)}
                       </td>
                     );
                   })}

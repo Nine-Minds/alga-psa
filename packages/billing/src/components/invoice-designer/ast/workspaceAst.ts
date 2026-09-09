@@ -8,6 +8,7 @@ import type {
   TemplateI18nRef,
   TemplateI18nText,
   TemplateTableColumn,
+  TemplateTableColumnLine,
   TemplateTotalsRow,
   TemplateValueExpression,
   TemplateValueFormat,
@@ -828,6 +829,21 @@ const mapTableColumns = (node: WorkspaceNode, documentKind: DesignerDocumentKind
   const metadata = getWorkspaceNodeMetadata(node);
   const columns = Array.isArray(metadata.columns) ? metadata.columns : [];
 
+  const resolveColumnValue = (
+    key: string,
+    preservedExpression: TemplateValueExpression | null,
+    fallbackId: string,
+  ): TemplateValueExpression => {
+    const placeholderKey = sanitizeId(fallbackId);
+    if (preservedExpression?.type === 'path') {
+      return { type: 'path' as const, path: key.length > 0 ? key : 'description' };
+    }
+    if (key.length > 0 && key !== placeholderKey) {
+      return { type: 'path' as const, path: key };
+    }
+    return preservedExpression ?? { type: 'path' as const, path: key.length > 0 ? key : 'description' };
+  };
+
   const mappedColumns = columns
     .map((column, index): TemplateTableColumn | null => {
       if (!isRecord(column)) {
@@ -843,13 +859,7 @@ const mapTableColumns = (node: WorkspaceNode, documentKind: DesignerDocumentKind
         ? column.valueExpression
         : null;
       const parsedFormat = parseTemplateValueFormat(column.format ?? column.type);
-      const placeholderKey = sanitizeId(id);
-      const resolvedValue =
-        preservedExpression?.type === 'path'
-          ? { type: 'path' as const, path: key.length > 0 ? key : 'description' }
-          : key.length > 0 && key !== placeholderKey
-            ? { type: 'path' as const, path: key }
-            : preservedExpression ?? { type: 'path' as const, path: key.length > 0 ? key : 'description' };
+      const resolvedValue = resolveColumnValue(key, preservedExpression, id);
 
       const mapped: TemplateTableColumn = {
         id: sanitizeId(id),
@@ -863,6 +873,35 @@ const mapTableColumns = (node: WorkspaceNode, documentKind: DesignerDocumentKind
       if (parsedFormat) {
         mapped.format = parsedFormat;
       }
+
+      const rawLines = Array.isArray(column.lines) ? column.lines : [];
+      if (rawLines.length > 0) {
+        mapped.lines = rawLines
+          .map((rawLine, lineIndex): TemplateTableColumnLine | null => {
+            if (!isRecord(rawLine)) {
+              return null;
+            }
+            const lineId = asTrimmedString(rawLine.id) || `line-${lineIndex + 1}`;
+            const lineKey = normalizeInvoiceBindingPath(
+              asTrimmedString(rawLine.key) || asTrimmedString(rawLine.path) || asTrimmedString(rawLine.bindingKey),
+              documentKind
+            );
+            const lineExpression = isTemplateValueExpression(rawLine.valueExpression)
+              ? rawLine.valueExpression
+              : null;
+            const mappedLine: TemplateTableColumnLine = {
+              id: sanitizeId(lineId),
+              value: resolveColumnValue(lineKey, lineExpression, lineId),
+            };
+            const lineStyle = mapTemplateNodeStyleRef(rawLine.style);
+            if (lineStyle) {
+              mappedLine.style = lineStyle;
+            }
+            return mappedLine;
+          })
+          .filter((line): line is TemplateTableColumnLine => Boolean(line));
+      }
+
       return mapped;
     })
     .filter((column): column is TemplateTableColumn => Boolean(column));
@@ -1880,7 +1919,7 @@ export const importTemplateAstToWorkspace = (
           metadata.__astTableSourceBindingId = rawBindingId;
           const collectionPath = resolveImportedCollectionBindingPath(astInput, rawBindingId, documentKind);
           metadata.collectionBindingKey = denormalizeBindingPath(collectionPath, documentKind);
-          metadata.columns = inputNode.columns.map((column) => {
+            metadata.columns = inputNode.columns.map((column) => {
             const importedHeader = importI18nText(column.header);
             const mappedColumn: Record<string, unknown> = {
               id: column.id,
@@ -1898,6 +1937,22 @@ export const importTemplateAstToWorkspace = (
             }
             if (column.style) {
               mappedColumn.style = { ...column.style } as Record<string, unknown>;
+            }
+
+            if (Array.isArray(column.lines) && column.lines.length > 0) {
+              mappedColumn.lines = column.lines.map((line) => {
+                const mappedLine: Record<string, unknown> = {
+                  id: line.id,
+                  key: line.value.type === 'path'
+                    ? line.value.path.startsWith(`${rowBinding}.`) ? line.value.path : `item.${line.value.path}`
+                    : line.id,
+                  valueExpression: line.value,
+                };
+                if (line.style) {
+                  mappedLine.style = { ...line.style } as Record<string, unknown>;
+                }
+                return mappedLine;
+              });
             }
 
             return mappedColumn;

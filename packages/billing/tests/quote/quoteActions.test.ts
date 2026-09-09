@@ -476,7 +476,8 @@ describe('quoteActions', () => {
         is_optional: true,
         is_recurring: true,
         billing_frequency: 'monthly',
-      })
+      }),
+      { catalogDescriptionSnapshot: null }
     );
     expect(QuoteItem.create).toHaveBeenNthCalledWith(
       2,
@@ -487,7 +488,8 @@ describe('quoteActions', () => {
         description: 'Onboarding',
         is_optional: false,
         is_recurring: false,
-      })
+      }),
+      { catalogDescriptionSnapshot: null }
     );
     expect(result).toMatchObject({ quote_id: QUOTE_ID, quote_items: templateQuote.quote_items });
   });

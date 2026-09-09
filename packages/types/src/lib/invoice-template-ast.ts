@@ -127,6 +127,22 @@ export interface TemplateTableColumn {
   value: TemplateValueExpression;
   format?: TemplateValueFormat;
   style?: TemplateNodeStyleRef;
+  /**
+   * Optional ordered stacked lines for a cell. When present, each line that
+   * resolves to a non-empty value renders stacked (top to bottom) inside the
+   * cell with its own per-line style; empty lines collapse. If every line is
+   * empty, the legacy single `value` is rendered as the cell fallback — which
+   * keeps custom/discount/legacy rows that carry only a line description
+   * readable without duplicating the item name. Columns without `lines`
+   * render `value` exactly as before.
+   */
+  lines?: TemplateTableColumnLine[];
+}
+
+export interface TemplateTableColumnLine {
+  id: string;
+  value: TemplateValueExpression;
+  style?: TemplateNodeStyleRef;
 }
 
 export interface TemplateTableNode extends TemplateNodeBase {
