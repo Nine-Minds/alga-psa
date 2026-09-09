@@ -56,6 +56,11 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
   // on unmount, so a late resolution reached React after teardown -- which surfaced
   // in CI as an unhandled "window is not defined" rejection from setIsLoading in the
   // finally below. It is a race, so it failed intermittently rather than every run.
+  // LEVERAGE: pattern unguarded-async-load -- 169 components carry the same
+  // load-then-setIsLoading(false)-in-finally shape with no unmount guard. Each is
+  // a latent intermittent failure once readiness is a required check. The answer
+  // is a loader hook that makes cancellation the default, not this guard repeated
+  // 169 times.
   const mounted = useRef(true);
   useEffect(() => {
     mounted.current = true;
