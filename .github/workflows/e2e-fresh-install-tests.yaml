@@ -748,17 +748,13 @@ jobs:
 
       - name: Verify provider routing from running Alga processes
         if: steps.wait_for_setup.outputs.status == 'success' && steps.install_docker_compose.outcome == 'success'
+        env:
+          E2E_EDITION: ${{ matrix.edition }}
         run: |
+          set -euo pipefail
           test "$(docker network inspect alga-e2e-test_app-network --format '{{.Internal}}')" = true
-          services="server email-service workflow-worker"
-          if [ "${{ matrix.edition }}" = enterprise ]; then services="$services temporal-worker"; fi
-          mkdir -p logs/provider-readiness
-          for service in $services; do
-            docker-compose -p alga-e2e-test exec -T \
-              -e PROVIDER_PROBE_SERVICE="$service" -e E2E_CANDIDATE_REVISION="$GITHUB_SHA" \
-              "$service" node --input-type=module < e2e-tests/harness/check-provider-routing.mjs > "logs/provider-readiness/$service.json"
-            jq -e --arg service "$service" --arg revision "$GITHUB_SHA" '.status == "passed" and .service == $service and .revision == $revision' "logs/provider-readiness/$service.json"
-          done
+          mkdir -p logs
+          node e2e-tests/harness/check-provider-topology.mjs > logs/provider-readiness-topology.json
 
       - name: Trigger Login Page to Generate Credentials
         if: steps.wait_for_setup.outputs.status == 'success' && steps.install_docker_compose.outcome == 'success'

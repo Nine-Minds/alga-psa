@@ -32,11 +32,14 @@
   {
     "id": "T004",
     "description": "Use a disposable test workspace to add and move a test outside configured runners; discovery fails and identifies it, then passes when a real runner collects it; zero mandatory tests and an expired exclusion fail while a valid owned manual exclusion is explicit.",
-    "implemented": false,
+    "implemented": true,
     "kind": "discovery-behavior",
     "featureIds": [
       "F004",
       "F006"
+    ],
+    "evidence": [
+      "evidence/ci-repository-inventory.json"
     ]
   },
   {

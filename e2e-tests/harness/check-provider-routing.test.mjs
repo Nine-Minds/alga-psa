@@ -6,6 +6,7 @@ import { verifyProviderRouting } from './check-provider-routing.mjs';
 
 const env = {
   PROVIDER_PROBE_SERVICE: 'workflow-worker', E2E_CANDIDATE_REVISION: 'a'.repeat(40),
+  PROVIDER_PROBE_CONTAINER_ID: 'b'.repeat(64),
   MICROSOFT_GRAPH_BASE_URL: 'http://algasim:4010/v1.0', MICROSOFT_LOGIN_BASE_URL: 'http://algasim.test:4010',
   QBO_API_BASE_URL: 'http://algasim:4020/v3/company', QBO_OAUTH_REVOKE_URL: 'http://algasim:4020/v2/oauth2/tokens/revoke',
   XERO_API_BASE_URL: 'http://algasim:4060/api.xro/2.0', XERO_OAUTH_REVOKE_URL: 'http://algasim:4060/connect/revocation',
@@ -60,6 +61,7 @@ test('records process, revision and safe origins only after real HTTP and journa
   const evidence = await verifyProviderRouting({ env, request: f.request });
   assert.equal(evidence.status, 'passed');
   assert.equal(evidence.service, 'workflow-worker');
+  assert.equal(evidence.containerId, env.PROVIDER_PROBE_CONTAINER_ID);
   assert.equal(evidence.revision, env.E2E_CANDIDATE_REVISION);
   assert.deepEqual(Object.values(evidence.checks), [true, true, true, true]);
   assert.equal(evidence.endpoints.QBO_API_BASE_URL, 'http://algasim:4020');
@@ -88,3 +90,23 @@ for (const [name, override] of [
     assert.equal(calls, 0);
   });
 }
+
+for (const containerId of [undefined, '', 'b'.repeat(12), 'g'.repeat(64), 'b'.repeat(64) + '\n']) {
+  test(`rejects missing or malformed container identity ${JSON.stringify(containerId)}`, async () => {
+    let requests = 0;
+    await assert.rejects(verifyProviderRouting({ env: { ...env, PROVIDER_PROBE_CONTAINER_ID: containerId },
+      request: async () => { requests++; throw new Error('Unexpected request'); } }), /Expected full container identity/);
+    assert.equal(requests, 0);
+  });
+}
+
+test('retains distinct full identities for two successful replicas of the same service', async t => {
+  const f = await fixture(t);
+  const containerIds = ['c'.repeat(64), 'd'.repeat(64)];
+  const records = [];
+  for (const containerId of containerIds) {
+    records.push(await verifyProviderRouting({ env: { ...env, PROVIDER_PROBE_CONTAINER_ID: containerId }, request: f.request }));
+  }
+  assert.deepEqual(records.map(record => record.containerId), containerIds);
+  assert.ok(records.every(record => record.service === 'workflow-worker' && record.status === 'passed'));
+});

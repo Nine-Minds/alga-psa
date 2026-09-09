@@ -9,6 +9,7 @@ const endpointNames = [
 
 export async function verifyProviderRouting({ env = process.env, request = fetch } = {}) {
   assert.ok(['server', 'email-service', 'workflow-worker', 'temporal-worker'].includes(env.PROVIDER_PROBE_SERVICE), 'Expected an application process identity');
+  assert.match(env.PROVIDER_PROBE_CONTAINER_ID ?? '', /^[a-f0-9]{64}$/, 'Expected full container identity');
   assert.match(env.E2E_CANDIDATE_REVISION ?? '', /^[a-f0-9]{40}$/, 'Expected candidate revision');
   for (const name of endpointNames) {
     const url = new URL(env[name]);
@@ -84,6 +85,7 @@ export async function verifyProviderRouting({ env = process.env, request = fetch
   return {
     schemaVersion: 1, kind: 'provider-process-readiness', status: 'passed',
     service: env.PROVIDER_PROBE_SERVICE, revision: env.E2E_CANDIDATE_REVISION,
+    containerId: env.PROVIDER_PROBE_CONTAINER_ID,
     checkedAt: new Date().toISOString(),
     endpoints: Object.fromEntries(endpointNames.map(name => [name, new URL(env[name]).origin])),
     checks: { providerHttpAndJournal: true, accountingRevocationHttpAndJournal: true, sharedLoginResolution: true, externalFallbackBlocked: true },

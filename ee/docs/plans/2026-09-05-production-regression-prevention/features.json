@@ -39,7 +39,7 @@
   {
     "id": "F004",
     "description": "Build a runner-derived test inventory that fails for unmatched or moved tests, empty mandatory collection and expired exclusions.",
-    "implemented": false,
+    "implemented": true,
     "workPackage": "WP1",
     "priority": "P0",
     "prdRefs": [
@@ -47,6 +47,9 @@
     ],
     "dependsOn": [
       "F003"
+    ],
+    "evidence": [
+      "evidence/ci-repository-inventory.json"
     ]
   },
   {

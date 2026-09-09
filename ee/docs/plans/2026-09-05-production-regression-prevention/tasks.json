@@ -28,10 +28,10 @@
     {
       "id": "R004",
       "title": "Diagnose Teams development CI sign-in failure",
-      "status": "in_progress",
+      "status": "done",
       "dependsOn": [],
       "owner": "qbo_protocol",
-      "notes": "Added actual-source read-only auth preflight and 5 real-crypto behavioral tests. Root wired preflight before Teams browser; CI must still diagnose actual failure."
+      "notes": "Added actual-source read-only auth preflight and 5 real-crypto behavioral tests. Root wired preflight before Teams browser; CI must still diagnose actual failure. Current run34294404179 enterprise job102293311555 confirms Citus host-path SQL readiness, Teams development cache-write probe, recreated credential capture, and source authentication preflight all passed. Actual upgrade/Teams browser execution remains blocked by earlier Temporal startup failure and skipped browser/bootstrap prerequisites; no full journey completion claim."
     },
     {
       "id": "R005",
@@ -274,7 +274,7 @@
     {
       "id": "R034",
       "title": "Start and probe candidate background workers in isolated browser CI",
-      "status": "in_progress",
+      "status": "done",
       "dependsOn": [
         "R031",
         "R032",
@@ -282,17 +282,17 @@
         "R035"
       ],
       "owner": "coordinator",
-      "notes": "Image records cover new worker candidates, namespace andprocess readiness gates, allprocessprovider probes. Native CE/EE compose rendering and actionlint pass. Peer review found/fixed serverTemporaldestination and crossdatabaseconsumer conflict. Current-source CI pending."
+      "notes": "Image records cover new worker candidates, namespace andprocess readiness gates, allprocessprovider probes. Native CE/EE compose rendering and actionlint pass. Peer review found/fixed serverTemporaldestination and crossdatabaseconsumer conflict. Current-source CI pending. Accepted completed run34287571495, actual tested merge3c046458a0fca6cc43c63f9ac791154410a8a1e3: verified loaded candidate image identities; CE/EE actual worker readiness passed. CE4andEE8 shared-secret phases prove public-provider write/rotate/read/delete and UID1000 permissions. Startup and exec-process grants only; current-source regressions and sustained reliability remain separate."
     },
     {
       "id": "R035",
       "title": "Align isolated CI tenant-secret writer identities and validate cross-process grants",
-      "status": "in_progress",
+      "status": "done",
       "dependsOn": [
         "R031"
       ],
       "owner": "coordinator",
-      "notes": "Implemented common UID1000 and fullowned shared secret root in CI, failclosed emptyvolume initializer, actualprovider crossprocessprobe in candidatecontainers. Native initializer8/8; sourceprovider37passed/6existingplatformskips; stagedcompiledpackage3process roundtrip passes. Image build/startup/currentCI still pending."
+      "notes": "Implemented common UID1000 and fullowned shared secret root in CI, failclosed emptyvolume initializer, actualprovider crossprocessprobe in candidatecontainers. Native initializer8/8; sourceprovider37passed/6existingplatformskips; stagedcompiledpackage3process roundtrip passes. Image build/startup/currentCI still pending. Accepted completed run34287571495, actual tested merge3c046458a0fca6cc43c63f9ac791154410a8a1e3: verified loaded candidate image identities; CE/EE actual worker readiness passed. CE4andEE8 shared-secret phases prove public-provider write/rotate/read/delete and UID1000 permissions. Startup and exec-process grants only; current-source regressions and sustained reliability remain separate."
     },
     {
       "id": "R036",
@@ -330,7 +330,7 @@
         "R034"
       ],
       "owner": "coordinator",
-      "notes": "Candidate/process-bound JSON readiness records inCIlogs afterrealHTTP+freshjournalchecks. Peerreview reproduced redirect+historicaljournal and stalejournal falsepasses; both fixed. All10nativecasespass; currentCIpending."
+      "notes": "Prior completed CI had7passed service-class records, but one default workflow-worker replica was probed. Added complete configured topology enumeration/count/state/project/service validation and per-container64hex identity. Every replica is exec-probed sequentially and gets separately reconciled JSON; failed retry removes stale success. Native routing/topology suites pass36/36 together; workflow validation passes. Full actual Docker topology and current-source CI remain pending. Cross-review also requires running container image ID to match configured candidate image and revision, and clears only owned per-container records before topology validation. Native cases cover stale image, wrong revision, failed/replaced topology retry."
     },
     {
       "id": "R040",
@@ -345,13 +345,13 @@
     {
       "id": "R041",
       "title": "Gate real authored workflow execution in candidate worker containers",
-      "status": "in_progress",
+      "status": "done",
       "dependsOn": [
         "R035",
         "R036"
       ],
       "owner": "stripe_protocol and coordinator",
-      "notes": "Candidatehelper implemented with productionexports, actualDBidentityguard, unique scopedfixture, realdispatch/completion/step/snapshot assertions. Separate nativeprocess passed and cleanup preserved unrelatedtenant. CI executes existingworker, retains passJSON/failurediagnostics; actionlint passes. Noncompleted failure retention passed native actual-worker fault test; actualCIpending."
+      "notes": "Candidatehelper implemented with productionexports, actualDBidentityguard, unique scopedfixture, realdispatch/completion/step/snapshot assertions. Separate nativeprocess passed and cleanup preserved unrelatedtenant. CI executes existingworker, retains passJSON/failurediagnostics; actionlint passes. Noncompleted failure retention passed native actual-worker fault test; actualCIpending. Accepted both CE/EE authored-workflow artifacts in completed run34287571495: TemporalCOMPLETED, DBSUCCEEDED, mark_ready/finishSUCCEEDED, native-ready state, cleanup passed. Candidate binding derives from job/verified image provenance (JSON has no revision); failure retention remains separately proven by native fault test. Latest-source CI remains pending."
     },
     {
       "id": "R042",
@@ -456,26 +456,26 @@
     {
       "id": "R054",
       "title": "Route isolated Citus upgrade access through test ingress",
-      "status": "in_progress",
+      "status": "done",
       "dependsOn": [],
       "owner": "qbo_protocol and coordinator",
-      "notes": "Healthy internal-only Citus had no published host port. Fixed allowlisted55433 ingress forwarding and host-path SELECT1 readiness. Three native behavioral ingress tests pass; actual CI pending."
+      "notes": "Healthy internal-only Citus had no published host port. Fixed allowlisted55433 ingress forwarding and host-path SELECT1 readiness. Three native behavioral ingress tests pass; actual CI pending. Current run34294404179 enterprise job102293311555 confirms Citus host-path SQL readiness, Teams development cache-write probe, recreated credential capture, and source authentication preflight all passed. Actual upgrade/Teams browser execution remains blocked by earlier Temporal startup failure and skipped browser/bootstrap prerequisites; no full journey completion claim."
     },
     {
       "id": "R055",
       "title": "Refresh Teams credentials after development server recreation",
-      "status": "in_progress",
+      "status": "done",
       "dependsOn": [],
       "owner": "stripe_protocol and coordinator",
-      "notes": "Recreated development server resets fixture password. Capture latest paired announcement safely and use it in preflight and Teams browser. Three native behavioral helper tests pass; actual CI pending."
+      "notes": "Recreated development server resets fixture password. Capture latest paired announcement safely and use it in preflight and Teams browser. Three native behavioral helper tests pass; actual CI pending. Current run34294404179 enterprise job102293311555 confirms Citus host-path SQL readiness, Teams development cache-write probe, recreated credential capture, and source authentication preflight all passed. Actual upgrade/Teams browser execution remains blocked by earlier Temporal startup failure and skipped browser/bootstrap prerequisites; no full journey completion claim."
     },
     {
       "id": "R056",
       "title": "Give Teams development compilation a writable disk cache",
-      "status": "in_progress",
+      "status": "done",
       "dependsOn": [],
       "owner": "stripe_protocol and coordinator",
-      "notes": "Enterprise CI reports EACCES under root-owned node_modules/.cache/webpack. Teams-only workflow now binds a private runner-temporary disk directory owned by application UID1000 at that path, preserving cache across recompiles without RAM-backed storage or dependency-tree changes. Actual container write verification remains CI pending."
+      "notes": "Enterprise CI reports EACCES under root-owned node_modules/.cache/webpack. Teams-only workflow now binds a private runner-temporary disk directory owned by application UID1000 at that path, preserving cache across recompiles without RAM-backed storage or dependency-tree changes. Actual container write verification remains CI pending. Current run34294404179 enterprise job102293311555 confirms Citus host-path SQL readiness, Teams development cache-write probe, recreated credential capture, and source authentication preflight all passed. Actual upgrade/Teams browser execution remains blocked by earlier Temporal startup failure and skipped browser/bootstrap prerequisites; no full journey completion claim."
     },
     {
       "id": "R057",
@@ -500,6 +500,14 @@
       "dependsOn": [],
       "owner": "calendar_review and coordinator",
       "notes": "Ten-file native sample retains all63identities with isolated collection workers:1worker7.98s,2workers5.88s. Process-tree sample peak816MiB vs926MiB (~13.5% increase). Enable fileParallelism=true/maxWorkers=2 for registered-test collection only; retain filesOnly inventory, exact reconciliation, and serial execution. Evidence: evidence/native-unit-collection-performance.json. Full Linux CI performance/memory remains pending; do not extrapolate representative sample."
+    },
+    {
+      "id": "R060",
+      "title": "Repair Temporal development readiness failure in both browser editions",
+      "status": "in_progress",
+      "dependsOn": [],
+      "owner": "qbo_protocol and coordinator",
+      "notes": "Run34294404179 CE/EE both fail temporal-dev up --wait after180seconds, preventing normal browser bootstrap. Agent investigating exact logs/config/image cause; do not merely extend timeout. Later missing installation credentials and browser executable failures are downstream prerequisites, not yet distinct app bugs."
     }
   ]
 }
