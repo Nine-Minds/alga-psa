@@ -2,7 +2,7 @@
   {
     "id": "F001",
     "description": "stockPalette.ts exports the stock token map with the same keys and values as server/migrations/utils/templates/_shared/constants.cjs",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "palette-engine",
     "prdRefs": [
       "FR3",
@@ -12,7 +12,7 @@
   {
     "id": "F002",
     "description": "resolveEmailPalette derives dark, outerBg, footerBg, cardBorder, infoBoxBg, infoBoxBorder, cardShadow, badgeBg and gradient from primary and secondary",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "palette-engine",
     "prdRefs": [
       "FR2"
@@ -21,7 +21,7 @@
   {
     "id": "F003",
     "description": "resolveEmailPalette in single-color mode (secondary null) derives the gradient end from primary lightened 18%",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "palette-engine",
     "prdRefs": [
       "FR2"
@@ -30,7 +30,7 @@
   {
     "id": "F004",
     "description": "resolveEmailPalette applies per-token overrides on top of derived values",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "palette-engine",
     "prdRefs": [
       "FR2"
@@ -39,7 +39,7 @@
   {
     "id": "F005",
     "description": "applyEmailPalette replaces every stock token occurrence, case-insensitively for hex and tolerant of spacing variants in rgba and 'background: #' forms",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "palette-engine",
     "prdRefs": [
       "FR3"
@@ -48,7 +48,7 @@
   {
     "id": "F006",
     "description": "applyEmailPalette leaves non-palette colors (status ambers, comment-box blues, text grays) untouched",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "palette-engine",
     "prdRefs": [
       "FR3"
@@ -57,7 +57,7 @@
   {
     "id": "F007",
     "description": "applyEmailPalette rewrites auth templates that use <style> blocks as well as inline-style templates",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "palette-engine",
     "prdRefs": [
       "FR3"
@@ -66,7 +66,7 @@
   {
     "id": "F008",
     "description": "applyEmailPalette accepts a previously applied token map as 'from' so a re-apply recolors rows the tool wrote earlier",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "palette-engine",
     "prdRefs": [
       "FR3",

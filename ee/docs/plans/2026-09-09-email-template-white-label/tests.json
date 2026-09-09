@@ -2,7 +2,7 @@
   {
     "id": "T001",
     "description": "stock palette constant matches constants.cjs value for value (test reads the .cjs file)",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "palette-engine",
     "featureIds": [
       "F001"
@@ -11,7 +11,7 @@
   {
     "id": "T002",
     "description": "resolveEmailPalette with the stock primary/secondary reproduces the stock token map exactly",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "palette-engine",
     "featureIds": [
       "F002"
@@ -20,7 +20,7 @@
   {
     "id": "T003",
     "description": "resolveEmailPalette darkens primary by 25% lightness for dark and mixes 95%/96%/88%/90% white for the tints",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "palette-engine",
     "featureIds": [
       "F002"
@@ -29,7 +29,7 @@
   {
     "id": "T004",
     "description": "resolveEmailPalette single-color mode produces a gradient ending in a lighter tint of primary",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "palette-engine",
     "featureIds": [
       "F003"
@@ -38,7 +38,7 @@
   {
     "id": "T005",
     "description": "resolveEmailPalette override for cardBorder wins over the derived value and other tokens stay derived",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "palette-engine",
     "featureIds": [
       "F004"
@@ -47,7 +47,7 @@
   {
     "id": "T006",
     "description": "applyEmailPalette on every English system template removes all stock hex and rgba tokens",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "palette-engine",
     "featureIds": [
       "F005",
@@ -57,7 +57,7 @@
   {
     "id": "T007",
     "description": "applyEmailPalette matches lower-case #8a4dea, upper-case #8A4DEA and 'background: #8a4dea' with a space",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "palette-engine",
     "featureIds": [
       "F005"
@@ -66,7 +66,7 @@
   {
     "id": "T008",
     "description": "applyEmailPalette matches rgba(138,77,234,0.12) with and without spaces",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "palette-engine",
     "featureIds": [
       "F005"
@@ -75,7 +75,7 @@
   {
     "id": "T009",
     "description": "applyEmailPalette leaves #f59e0b, #eff6ff, #1e40af and #0f172a untouched",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "palette-engine",
     "featureIds": [
       "F006"
@@ -84,7 +84,7 @@
   {
     "id": "T010",
     "description": "applyEmailPalette applied twice (stock\u2192A, A\u2192B) equals applying stock\u2192B directly",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "palette-engine",
     "featureIds": [
       "F008"
@@ -93,7 +93,7 @@
   {
     "id": "T011",
     "description": "applyEmailPalette never modifies template variables such as {{ticket.title}}",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "palette-engine",
     "featureIds": [
       "F005"
