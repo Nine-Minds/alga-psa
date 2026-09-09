@@ -1958,7 +1958,12 @@
         "headerPlaceholder": "Libellé de l’en-tête",
         "bindingKey": "Clé de liaison",
         "type": "Type",
-        "width": "Largeur"
+        "width": "Largeur",
+        "stackedLines": "Lignes empilées",
+        "addLine": "+ Ligne",
+        "clearLines": "Ligne unique",
+        "stackedLinesHint": "Chaque ligne non vide s’affiche sur sa propre ligne. Lorsque toutes les lignes sont vides, la clé de liaison de la colonne ci-dessus est affichée.",
+        "removeLine": "Retirer la ligne {{index}}"
       },
       "columnTypes": {
         "text": "Texte",

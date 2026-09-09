@@ -2008,7 +2008,12 @@
         "headerPlaceholder": "Etykieta nagłówka",
         "bindingKey": "Klucz powiązania",
         "type": "Typ",
-        "width": "Szerokość"
+        "width": "Szerokość",
+        "stackedLines": "Wiersze skumulowane",
+        "addLine": "+ Wiersz",
+        "clearLines": "Pojedynczy wiersz",
+        "stackedLinesHint": "Każdy niepusty wiersz jest wyświetlany w osobnym wierszu. Gdy wszystkie wiersze są puste, wyświetlany jest klucz powiązania kolumny podany powyżej.",
+        "removeLine": "Usuń wiersz {{index}}"
       },
       "columnTypes": {
         "text": "Tekst",

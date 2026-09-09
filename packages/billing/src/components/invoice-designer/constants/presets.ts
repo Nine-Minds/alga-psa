@@ -43,6 +43,24 @@ export interface LayoutPresetDefinition {
   constraints?: LayoutPresetConstraintDefinition[];
 }
 
+// Stacked cell lines for quote line-item name + catalog description. When the
+// column renders, each non-empty line stacks on its own row above the column's
+// single-value fallback (the editable line description). Shared by the quote
+// grouped-table presets below; the designer workspace map and the export path
+// preserve these as optional `lines` on the table column AST.
+const QUOTE_ITEM_NAME_CATALOG_LINES = [
+  {
+    id: 'item-name',
+    key: 'item.service_name',
+    style: { inline: { fontWeight: 600, lineHeight: 1.35 } },
+  },
+  {
+    id: 'catalog-description',
+    key: 'item.catalog_description',
+    style: { inline: { color: '#4b5563', fontSize: '12px', lineHeight: 1.4 } },
+  },
+];
+
 export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
   ...BILLED_TIME_PRESETS,
   {
@@ -581,7 +599,7 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
         metadata: {
           collectionBindingKey: 'recurringItems',
           columns: [
-            { id: 'recurring-description', header: 'Description', key: 'item.description', type: 'text', width: 280 },
+            { id: 'recurring-description', header: 'Description', key: 'item.description', type: 'text', width: 280, lines: QUOTE_ITEM_NAME_CATALOG_LINES },
             { id: 'recurring-quantity', header: 'Qty', key: 'item.quantity', type: 'number', width: 90 },
             { id: 'recurring-rate', header: 'Rate', key: 'item.unitPrice', type: 'currency', width: 120 },
             { id: 'recurring-amount', header: 'Amount', key: 'item.total', type: 'currency', width: 140 },
@@ -603,7 +621,7 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
         metadata: {
           collectionBindingKey: 'onetimeItems',
           columns: [
-            { id: 'onetime-description', header: 'Description', key: 'item.description', type: 'text', width: 280 },
+            { id: 'onetime-description', header: 'Description', key: 'item.description', type: 'text', width: 280, lines: QUOTE_ITEM_NAME_CATALOG_LINES },
             { id: 'onetime-quantity', header: 'Qty', key: 'item.quantity', type: 'number', width: 90 },
             { id: 'onetime-rate', header: 'Rate', key: 'item.unitPrice', type: 'currency', width: 120 },
             { id: 'onetime-amount', header: 'Amount', key: 'item.total', type: 'currency', width: 140 },

@@ -1077,7 +1077,7 @@ export const createQuoteFromTemplate = withAuth(async (
         cost_currency: templateItem.cost_currency ?? null,
         location_id: templateItem.location_id ?? null,
         created_by: actorUserId,
-      });
+      }, { catalogDescriptionSnapshot: templateItem.catalog_description ?? null });
     }
 
     return await Quote.getById(trx, tenant, createdQuote.quote_id) as IQuote;
@@ -1164,7 +1164,7 @@ export const duplicateQuote = withAuth(async (
         cost_currency: sourceItem.cost_currency ?? null,
         location_id: sourceItem.location_id ?? null,
         created_by: actorUserId,
-      });
+      }, { catalogDescriptionSnapshot: sourceItem.catalog_description ?? null });
     }
 
     await QuoteActivity.create(trx, tenant, {
@@ -1263,7 +1263,7 @@ export const saveQuoteAsTemplate = withAuth(async (
         cost_currency: sourceItem.cost_currency ?? null,
         location_id: sourceItem.location_id ?? null,
         created_by: actorUserId,
-      });
+      }, { catalogDescriptionSnapshot: sourceItem.catalog_description ?? null });
     }
 
     await QuoteActivity.create(trx, tenant, {

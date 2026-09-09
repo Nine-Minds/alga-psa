@@ -379,6 +379,14 @@ describe('UsageTracking contextual period reporting', () => {
       initialContractLineId="line-a" initialConfigId="config-a" initialPeriodStart="2026-08-01" initialPeriodEnd="2026-09-01" returnToPreview />);
     const input = await screen.findByRole('spinbutton', {name: 'Period count for Managed Seats'});
     expect((input as HTMLInputElement).value).toBe(total ? '10' : '');
+    // For the null case the expected value is '' both before and after the
+    // context load, so the assertion above cannot tell "loaded" from "still
+    // loading". Typing into an unsettled component let the load land afterwards,
+    // reset the input and swallow the click -- which is why only this parameter
+    // failed in CI, with the save action never called. Wait for the load to
+    // actually settle before interacting.
+    await waitFor(() => expect(actionMocks.getUsagePeriodEntryContext).toHaveBeenCalled());
+    await act(async () => {});
     fireEvent.change(input, {target: {value: '12'}});
     fireEvent.click(document.getElementById('period-total-save-usage-tracking-context')!);
     await waitFor(() => expect(actionMocks.upsertUsagePeriodTotal).toHaveBeenCalledWith(expect.objectContaining({

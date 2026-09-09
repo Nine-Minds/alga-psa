@@ -1958,7 +1958,12 @@
         "headerPlaceholder": "Kopfzeilenbezeichnung",
         "bindingKey": "Bindungsschlüssel",
         "type": "Typ",
-        "width": "Breite"
+        "width": "Breite",
+        "stackedLines": "Gestapelte Zeilen",
+        "addLine": "+ Zeile",
+        "clearLines": "Einzelne Zeile",
+        "stackedLinesHint": "Jede nicht leere Zeile wird in einer eigenen Zeile dargestellt. Wenn alle Zeilen leer sind, wird der oben stehende Bindungsschlüssel der Spalte angezeigt.",
+        "removeLine": "Zeile {{index}} entfernen"
       },
       "columnTypes": {
         "text": "Text",

@@ -22,6 +22,7 @@ function normalizeQuoteItem(row: Record<string, any>): IQuoteItem {
     tax_rate: row.tax_rate == null ? row.tax_rate : Number(row.tax_rate),
     cost: row.cost == null ? null : Number(row.cost),
     cost_currency: row.cost_currency ?? null,
+    catalog_description: row.catalog_description ?? null,
   } as IQuoteItem;
 }
 
@@ -37,6 +38,7 @@ type QuoteItemServiceLookupRow = {
   tenant?: string;
   service_id?: string;
   service_name: string;
+  description?: string | null;
   sku?: string | null;
   default_rate?: number | string | null;
   unit_of_measure?: string | null;
@@ -72,6 +74,43 @@ async function getNextDisplayOrder(
   return Number(result?.max ?? -1) + 1;
 }
 
+/** Empty or whitespace-only catalog text snapshots as `null`. */
+function normalizeCatalogDescription(value: unknown): string | null {
+  if (typeof value !== 'string') {
+    return null;
+  }
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+/**
+ * Internal-only channel for the catalog-description snapshot. Only trusted,
+ * server-internal copy flows (duplicate / save-as-template /
+ * create-from-template) supply this so the stored snapshot survives the copy
+ * verbatim — including `null` for lines whose catalog entry was deleted.
+ * Caller-facing payloads never carry a snapshot: fresh catalog-backed lines
+ * capture it from the tenant-scoped catalog row instead, and custom/discount
+ * lines store `null`.
+ */
+export type QuoteItemCreateOptions = {
+  catalogDescriptionSnapshot?: string | null;
+};
+
+/** Payload accepted by `QuoteItem.create`. `catalog_description` is excluded:
+ *  the snapshot is never part of the caller-facing item shape. */
+type CreateQuoteItemPayload = Omit<
+  IQuoteItem,
+  | 'quote_item_id'
+  | 'tenant'
+  | 'total_price'
+  | 'net_amount'
+  | 'tax_amount'
+  | 'display_order'
+  | 'catalog_description'
+  | 'created_at'
+  | 'updated_at'
+> & Partial<Pick<IQuoteItem, 'display_order'>>;
+
 const QuoteItem = {
   async listByQuoteId(
     knexOrTrx: Knex | Knex.Transaction,
@@ -93,7 +132,8 @@ const QuoteItem = {
   async create(
     knexOrTrx: Knex | Knex.Transaction,
     tenant: string,
-    item: Omit<IQuoteItem, 'quote_item_id' | 'tenant' | 'total_price' | 'net_amount' | 'tax_amount' | 'display_order' | 'created_at' | 'updated_at'> & Partial<Pick<IQuoteItem, 'display_order'>>
+    item: CreateQuoteItemPayload,
+    options: QuoteItemCreateOptions = {}
   ): Promise<IQuoteItem> {
     if (!tenant) {
       throw new Error('Tenant context is required for creating quote item');
@@ -102,13 +142,26 @@ const QuoteItem = {
     ensureIntegerField(item.quantity, 'Quantity');
     ensureIntegerField(item.unit_price, 'Unit price');
 
-    let resolvedItem = { ...item };
+    // The catalog-description snapshot is never read from the item payload.
+    // It is not part of any caller-facing input shape, and a value smuggled
+    // past schema validation (defense in depth) is dropped before insert so it
+    // can never persist. Verbatim snapshots arrive only through the internal
+    // `options.catalogDescriptionSnapshot` channel.
+    const itemPayload: CreateQuoteItemPayload = { ...item };
+    delete (itemPayload as Partial<IQuoteItem>).catalog_description;
+    let resolvedItem: Partial<IQuoteItem> = { ...itemPayload };
+
+    const snapshotFromOptions =
+      options.catalogDescriptionSnapshot !== undefined
+        ? normalizeCatalogDescription(options.catalogDescriptionSnapshot)
+        : undefined;
 
     if (item.service_id) {
       const service = await quoteTable<QuoteItemServiceLookupRow>(knexOrTrx, tenant, 'service_catalog')
         .where({ service_id: item.service_id })
         .select(
           'service_name',
+          'description',
           'sku',
           'default_rate',
           'unit_of_measure',
@@ -142,6 +195,16 @@ const QuoteItem = {
 
       const resolvedItemKind = resolvedItem.service_item_kind ?? service.item_kind ?? 'service';
 
+      // Catalog-description snapshot policy: a trusted server-internal copy
+      // flow that supplies `options.catalogDescriptionSnapshot` keeps that
+      // value verbatim (including null). Otherwise — a freshly selected
+      // catalog-backed line — the authoritative, tenant-scoped catalog text is
+      // captured here. Persistence never trusts picker or caller data.
+      const resolvedCatalogDescription =
+        snapshotFromOptions !== undefined
+          ? snapshotFromOptions
+          : normalizeCatalogDescription(service.description);
+
       resolvedItem = {
         ...resolvedItem,
         service_name: resolvedItem.service_name ?? service.service_name,
@@ -151,9 +214,20 @@ const QuoteItem = {
         billing_method: resolvedItem.billing_method ?? service.billing_method ?? null,
         service_item_kind: resolvedItemKind,
         description: resolvedItem.description || service.service_name,
+        catalog_description: resolvedCatalogDescription,
         // Snapshot cost for product items so markup can be calculated on the quote
         cost: resolvedItemKind === 'product' && service.cost != null ? Number(service.cost) : (resolvedItem as any).cost ?? null,
         cost_currency: resolvedItemKind === 'product' && service.cost_currency ? service.cost_currency : (resolvedItem as any).cost_currency ?? null,
+      };
+    } else {
+      // Custom and discount lines have no catalog identity, so there is no
+      // snapshot to capture. When a trusted copy flow passes a verbatim
+      // snapshot (a copy of a line whose catalog entry was deleted and whose
+      // FK was SET NULL), keep it so duplication/template flows preserve
+      // historical output; otherwise store null.
+      resolvedItem = {
+        ...resolvedItem,
+        catalog_description: snapshotFromOptions !== undefined ? snapshotFromOptions : null,
       };
     }
 
@@ -188,7 +262,7 @@ const QuoteItem = {
     knexOrTrx: Knex | Knex.Transaction,
     tenant: string,
     quoteItemId: string,
-    updateData: Partial<IQuoteItem>
+    updateData: Omit<Partial<IQuoteItem>, 'catalog_description'>
   ): Promise<IQuoteItem> {
     if (!tenant) {
       throw new Error('Tenant context is required for updating quote item');
@@ -210,10 +284,54 @@ const QuoteItem = {
 
     const totalPrice = Number(quantity) * Number(unitPrice);
 
+    // `catalog_description` is not caller-writable. Drop it from the update
+    // payload unconditionally — even if a value smuggles past schema
+    // validation — so ordinary edits can never overwrite the stored snapshot.
+    let resolvedUpdate: Partial<IQuoteItem> = { ...updateData };
+    delete (resolvedUpdate as Partial<IQuoteItem> & { catalog_description?: string | null }).catalog_description;
+
+    // Catalog selection change: recapture name/SKU/kind/catalog description
+    // together from the fresh, tenant-scoped catalog row. Ordinary edits
+    // (quantity, price, line description) leave service_id unchanged and never
+    // touch the snapshot. No caller may override the recaptured value.
+    const serviceSelectionChanged =
+      updateData.service_id !== undefined && updateData.service_id !== existingItem.service_id;
+
+    if (serviceSelectionChanged) {
+      if (updateData.service_id) {
+        const service = await quoteTable<QuoteItemServiceLookupRow>(knexOrTrx, tenant, 'service_catalog')
+          .where({ service_id: updateData.service_id })
+          .select('service_name', 'description', 'sku', 'unit_of_measure', 'billing_method', 'item_kind')
+          .first();
+
+        if (!service) {
+          throw new Error(`Service ${updateData.service_id} not found in tenant ${tenant}`);
+        }
+
+        resolvedUpdate = {
+          ...resolvedUpdate,
+          service_name: service.service_name,
+          service_sku: service.sku ?? null,
+          unit_of_measure: service.unit_of_measure ?? null,
+          billing_method: service.billing_method ?? null,
+          service_item_kind: service.item_kind ?? 'service',
+          catalog_description: normalizeCatalogDescription(service.description),
+        };
+      } else {
+        resolvedUpdate = {
+          ...resolvedUpdate,
+          service_name: null,
+          service_sku: null,
+          service_item_kind: null,
+          catalog_description: null,
+        };
+      }
+    }
+
     const [updatedItem] = await quoteTable<IQuoteItem>(knexOrTrx, tenant, 'quote_items')
       .where({ quote_item_id: quoteItemId })
       .update({
-        ...updateData,
+        ...resolvedUpdate,
         quantity,
         unit_price: unitPrice,
         total_price: totalPrice,

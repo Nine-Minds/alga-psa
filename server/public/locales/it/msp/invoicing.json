@@ -1958,7 +1958,12 @@
         "headerPlaceholder": "Etichetta intestazione",
         "bindingKey": "Chiave di associazione",
         "type": "Tipo",
-        "width": "Larghezza"
+        "width": "Larghezza",
+        "stackedLines": "Righe impilate",
+        "addLine": "+ Riga",
+        "clearLines": "Riga singola",
+        "stackedLinesHint": "Ogni riga non vuota viene visualizzata su una riga propria. Quando tutte le righe sono vuote, viene mostrata la chiave di associazione della colonna indicata sopra.",
+        "removeLine": "Rimuovi la riga {{index}}"
       },
       "columnTypes": {
         "text": "Testo",
