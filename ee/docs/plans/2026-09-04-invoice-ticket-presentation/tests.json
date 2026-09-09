@@ -1,0 +1,239 @@
+[
+  {
+    "id": "T001",
+    "description": "Generate an invoice from approved source time for two tickets and multiple services plus a real non-time charge through generateInvoice or the supported selection-input action. Use real compute, persistence, reader, adapter, and renderer. Reconcile contribution identities and minor-unit amounts to persisted charges and assert exactly one usual-case primary row per ticket, every other charge once, and no duplicate time-charge table.",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F002",
+      "F003",
+      "F005",
+      "F007",
+      "F013",
+      "F016"
+    ],
+    "kind": "DB-backed integration"
+  },
+  {
+    "id": "T002",
+    "description": "Exercise the actual calculator with 60 minutes at 15000 plus 60 overtime minutes at 22500. Assert 120 minutes, 37500 net, version-2 mixed evidence, and mixed/null rate in both entry and ticket output. Render actual HTML and assert neither $150 nor $187.50 is claimed as the uniform rate for the 2-hour amount. Include equal overtime rates as a uniform control.",
+    "implemented": true,
+    "featureIds": [
+      "F010",
+      "F011",
+      "F015"
+    ],
+    "kind": "Compute-to-render behavior"
+  },
+  {
+    "id": "T003",
+    "description": "Run actual supported entry override, user-type/phase/catalog-rate, minimum-duration and rounding cases plus multiple entries with different proven rates. Include a positive-duration zero-rate case and unavailable/zero-duration evidence. Assert unchanged compute totals and semantic rate behavior, comparing actual rendered values rather than fabricated row objects.",
+    "implemented": true,
+    "featureIds": [
+      "F010",
+      "F011",
+      "F012",
+      "F015"
+    ],
+    "kind": "Parameterized calculator behavior"
+  },
+  {
+    "id": "T004",
+    "description": "Generate and reload a real invoice, capture stored version-2 snapshots and semantic HTML/PDF content, then edit source ticket number/title/description and permitted source time metadata. Reload through a fresh production read and regenerate the PDF. Assert unchanged billed content, rates and amounts; disclose any direct DB source edit required because invoiced records are locked.",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F010",
+      "F013",
+      "F028"
+    ],
+    "kind": "DB-backed persistence and immutable rendering"
+  },
+  {
+    "id": "T005",
+    "description": "Trigger the production already-invoiced/duplicate source guard against migrated schema after setting up source fixtures. Verify actual queried invoice-time links, snapshots, and source invoiced flags show no partial commit or extra charge. Do not mock the transaction, generation result, or persistence layer.",
+    "implemented": true,
+    "featureIds": [
+      "F002",
+      "F013",
+      "F029"
+    ],
+    "kind": "DB-backed transaction guard"
+  },
+  {
+    "id": "T006",
+    "description": "Use supported flows to add taxable/non-taxable charges, a line discount, a negative credit and a zero row; apply account credit through its supported action. Render the complete primary table and reconcile signed line amounts, stored subtotal/tax/total, discount treatment, applied credit and balance independently. Verify a multi-tax-rate ticket does not display a fabricated single tax rate.",
+    "implemented": true,
+    "featureIds": [
+      "F003",
+      "F005",
+      "F007",
+      "F008",
+      "F016"
+    ],
+    "kind": "DB-backed financial behavior"
+  },
+  {
+    "id": "T007",
+    "description": "Produce linked invoices through generation, then deliberately null selected stored snapshots to model legacy and partial history. Test a fully legacy invoice, one eligible and one unavailable charge, and a charge with only some valid linked snapshots (using a supported aggregate path or a disclosed historical aggregate fixture). Assert original rows or complete replacements partition charges exactly; partial snapshot contributions never appear again in the primary table.",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F002",
+      "F003",
+      "F004",
+      "F014",
+      "F017"
+    ],
+    "kind": "DB-backed legacy and partial coverage"
+  },
+  {
+    "id": "T008",
+    "description": "Use explicitly disclosed historical/corrupt snapshot fixtures for invalid versions, malformed amounts, missing link snapshots, duplicate/conflicting attribution, and net mismatch. Pass them through real reader and projection. Assert affected original charges survive once, no invalid values become zero, whole-invoice reconciliation holds, and no current ticket/time lookup repairs history.",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F002",
+      "F004",
+      "F014"
+    ],
+    "kind": "DB-backed malformed ownership guards"
+  },
+  {
+    "id": "T009",
+    "description": "Generate supported project/task and ticketless source time with mixed services, missing optional labels, and distinct tasks sharing a name. Include ordinary products/usage and prepaid/hour-block rows. Assert identity-based grouping and stable ordering, no fabricated ticket fields, no lost zero/informational rows, and unchanged retained service-period text.",
+    "implemented": true,
+    "featureIds": [
+      "F005",
+      "F006",
+      "F007"
+    ],
+    "kind": "DB-backed fallback variants"
+  },
+  {
+    "id": "T010",
+    "description": "Exercise the existing project-cap write-down path and a representative supported bucket/inline-adjustment case. Compare computed snapshot amounts to final persisted charges. Where they differ, verify complete canonical-row fallback, no residual allocation, correct final net/tax values, and no stale uniform rate claim in the by-ticket table.",
+    "implemented": true,
+    "featureIds": [
+      "F004",
+      "F008",
+      "F009",
+      "F012",
+      "F015"
+    ],
+    "kind": "Post-compute adjustment behavior"
+  },
+  {
+    "id": "T011",
+    "description": "Read persisted version-1 uniform-looking and overtime-shaped snapshots plus version-2 known/unknown entries. Assert v1 remains byte-unchanged and displays Rate unavailable even when amount equals stored rate times hours. Test group precedence: known mixed plus unknown is mixed; equal known rates plus unknown is unknown; differing proven rates are mixed.",
+    "implemented": true,
+    "featureIds": [
+      "F010",
+      "F014",
+      "F015",
+      "F028"
+    ],
+    "kind": "Version compatibility and mixed evidence"
+  },
+  {
+    "id": "T012",
+    "description": "Open an existing saved custom invoice layout through the UI, select billed-time data, add Ticket/Hours/Rate/Amount columns, create a sort transform, bind its output, save, close and reopen. Compare actual canvas/full-preview/generated-PDF rows, order, rate states and amounts on the same generated invoice; capture screenshots and PDF text. Repeat the primary-source choice to verify its complete charge presentation.",
+    "implemented": true,
+    "featureIds": [
+      "F016",
+      "F018",
+      "F019",
+      "F020",
+      "F022",
+      "F023"
+    ],
+    "kind": "Browser and PDF acceptance"
+  },
+  {
+    "id": "T013",
+    "description": "Through table/transform controls, select billed-time sources and use sort/filter with zero-row and populated samples. Verify fields remain discoverable and filtering displays only matching time rows. Exercise supported grouping and aggregation, assert wrapper fields match evaluator output, and add nested entry fields only in the correct scope; no generic item presets leak onto unsupported output shapes.",
+    "implemented": true,
+    "featureIds": [
+      "F018",
+      "F019",
+      "F020",
+      "F022"
+    ],
+    "kind": "Behavioral transform and empty-source authoring"
+  },
+  {
+    "id": "T014",
+    "description": "Render actual saved AST/workspace cases using canonical aliases, an explicit custom collection path, nested entry scope, transform output, valid empty source, missing binding and non-array source. Assert intended rows or visible empty/error states in canvas and full preview, never unrelated items. Roundtrip through save/import and verify the same behavior, including source-less legacy normalization.",
+    "implemented": true,
+    "featureIds": [
+      "F018",
+      "F020",
+      "F021",
+      "F023"
+    ],
+    "kind": "Binding resolution and roundtrip behavior"
+  },
+  {
+    "id": "T015",
+    "description": "Through the UI, add explicit entry-level and nested-entry supporting detail to a copied layout; save/reopen and generate a multi-page PDF with long ticket titles/descriptions. Verify readable wrapping, repeated headers, included-in-charges labeling, mixed within-entry rate state, partial-detail notice when applicable, and unchanged authoritative totals.",
+    "implemented": true,
+    "featureIds": [
+      "F015",
+      "F016",
+      "F017",
+      "F020",
+      "F023"
+    ],
+    "kind": "Optional detail and long-document behavior"
+  },
+  {
+    "id": "T016",
+    "description": "Use English and French document locales on the same generated invoice. Capture canvas, full preview and PDF with mixed and unavailable rates, ticketless/task fallback, coverage notes and optional entry detail. Verify translated labels and locale-consistent money/date values while snapshot text remains unchanged; exercise unsupported locale or locale-load failure fallback through the real localization seam.",
+    "implemented": true,
+    "featureIds": [
+      "F014",
+      "F015",
+      "F024",
+      "F025"
+    ],
+    "kind": "Locale behavior and live evidence"
+  },
+  {
+    "id": "T017",
+    "description": "Sign in as a client-portal user and follow the actual invoice/ticket routes available to that user. Record whether invoice-specific billed entries/rates exist and the required access conditions. Verify the default instruction requests a billed-time breakdown from the service provider, enable optional ticket-update guidance only if supported, and review the catalog/help against the tested primary and optional-detail flows.",
+    "implemented": true,
+    "featureIds": [
+      "F026",
+      "F027"
+    ],
+    "kind": "Client-visible portal and documentation smoke"
+  },
+  {
+    "id": "T018",
+    "description": "Run canonical export payload construction for the same generated invoice before/after applying presentation projection and compare descriptions, service/account mappings, quantities, net/tax values and totals. Render representative non-opted-in custom, default/location invoice, quote and sales-order layouts, and verify canonical row resolution and authored columns remain unchanged. Confirm saved custom ASTs are not automatically rewritten.",
+    "implemented": true,
+    "featureIds": [
+      "F003",
+      "F008",
+      "F018",
+      "F021",
+      "F023",
+      "F028"
+    ],
+    "kind": "Accounting and template compatibility regression"
+  },
+  {
+    "id": "T019",
+    "description": "Create source fixtures with distinct public ticket content, private ticket/time-note sentinels, and another tenant's time links. Generate/read through authenticated tenant-scoped production paths, inspect actual persisted snapshots and renderer data, and render primary/optional/transformed detail. Assert only permitted content and ownership appear and unrelated tenant records cannot supply coverage or rows.",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F002",
+      "F013",
+      "F020",
+      "F024",
+      "F029"
+    ],
+    "kind": "DB-backed privacy and tenant isolation"
+  }
+]

@@ -35,6 +35,7 @@ import { Label } from "@alga-psa/ui/components/Label";
 import { Input } from "@alga-psa/ui/components/Input";
 import { TextArea } from "@alga-psa/ui/components/TextArea";
 import CustomSelect from "@alga-psa/ui/components/CustomSelect";
+import CurrencyPicker from "@alga-psa/ui/components/CurrencyPicker";
 
 import { IContract, IContractAssignmentSummary } from "@alga-psa/types";
 import type { DetailedContractLine } from "../../../repositories/contractLineRepository";
@@ -58,7 +59,6 @@ import {
 } from "@alga-psa/billing/actions/contractLineServiceActions";
 import { toPlainDate } from "@alga-psa/core";
 import { useBillingFrequencyOptions } from "@alga-psa/billing/hooks/useBillingEnumOptions";
-import { CURRENCY_OPTIONS } from "@alga-psa/core";
 import { useCurrencyFormat } from "@alga-psa/ui/lib";
 import { getDefaultBillingSettings } from "@alga-psa/billing/actions/billingSettingsActions";
 import { listContractSimulationClients } from "@alga-psa/billing/actions/contractSimulationActions";
@@ -1055,9 +1055,8 @@ const ContractTemplateDetail: React.FC = () => {
                         defaultValue: "Currency",
                       })}
                     </Label>
-                    <CustomSelect
+                    <CurrencyPicker
                       id="template-currency-code-inline"
-                      options={CURRENCY_OPTIONS}
                       value={basicsForm.currency_code}
                       onValueChange={(value) =>
                         setBasicsForm((prev) => ({
@@ -1853,7 +1852,10 @@ const ContractTemplateDetail: React.FC = () => {
                                 </p>
                               </div>
                               <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-                                {service.quantity != null && (
+                                {/* Usage configs bill recorded usage; a legacy configured
+                                    quantity is inert metadata and must not read as billable. */}
+                                {service.quantity != null &&
+                                  service.configuration.configuration_type !== "Usage" && (
                                   <span>
                                     {t(
                                       "templateDetail.composition.quantityLabel",

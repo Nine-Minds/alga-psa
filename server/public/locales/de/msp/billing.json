@@ -211,6 +211,12 @@
       "updateError": "Der Nutzungsdatensatz konnte nicht aktualisiert werden",
       "deleteSuccess": "Nutzungsdatensatz erfolgreich gelöscht",
       "deleteError": "Nutzungsdatensatz konnte nicht gelöscht werden"
+    },
+    "periodReport": "Nutzungsmeldung für den Zeitraum",
+    "periodAlreadyInvoiced": "Dieser Zeitraum ist bereits in Rechnung gestellt. Korrigieren Sie ihn über den Rechnungsanpassungsprozess.",
+    "periodFilter": {
+      "notice": "Nutzung für den Leistungszeitraum {{start}} bis {{end}} wird angezeigt",
+      "clear": "Zurücksetzen"
     }
   },
   "lineItem": {
@@ -666,7 +672,9 @@
     },
     "recurringRun": {
       "selectPeriods": "Wählen Sie mindestens einen wiederkehrenden Abrechnungszeitraum zum Generieren aus.",
-      "invoicePermission": "Berechtigung verweigert: Berechtigung zum Erstellen oder Generieren von Rechnungen erforderlich"
+      "invoicePermission": "Berechtigung verweigert: Berechtigung zum Erstellen oder Generieren von Rechnungen erforderlich",
+      "monthEndCloseNotMaterialized": "Für dieses wiederkehrende Ausführungsfenster wurden keine wiederkehrenden Serviceperioden materialisiert.",
+      "monthEndCloseNotEligible": "Der Zeitraum {{servicePeriod}} kann nur zum Monatsende am {{finalCalendarDay}} abgeschlossen werden. Nur im Nachhinein abgerechnete Serviceperioden, die einen vollen Kalendermonat umfassen, können an ihrem letzten Kalendertag vorzeitig abgeschlossen werden."
     },
     "recurringServicePeriod": {
       "scheduleKeyRequiredInspect": "Zum Prüfen wiederkehrender Serviceperioden ist ein Zeitplanschlüssel erforderlich.",

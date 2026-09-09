@@ -1051,7 +1051,8 @@
         "name": "Nom",
         "status": "Statut",
         "order": "Ordre",
-        "actions": "Actions"
+        "actions": "Actions",
+        "default": "Par défaut"
       },
       "statusLabels": {
         "closedHelp": "Les interactions avec ce statut seront marquées comme fermées",
@@ -1067,14 +1068,21 @@
         "success": {
           "updated": "Statut mis à jour avec succès",
           "deleted": "Statut supprimé avec succès",
-          "imported": "{{count}} statuts importés avec succès"
+          "imported": "{{count}} statuts importés avec succès",
+          "defaultUpdated": "Statut d’interaction par défaut mis à jour"
         },
         "error": {
           "lastClosed": "Au moins un statut doit rester marqué comme fermé",
           "deleteLastClosed": "Impossible de supprimer le dernier statut fermé pour ce type.",
           "skipped": "{{count}} statuts ignorés ({{reason}})",
-          "importFailed": "Échec de l'importation des statuts"
+          "importFailed": "Échec de l'importation des statuts",
+          "defaultRequired": "Un statut doit rester le statut par défaut — définissez plutôt un autre statut par défaut.",
+          "closedCannotBeDefault": "Un statut fermé ne peut pas être le statut par défaut des nouvelles interactions."
         }
+      },
+      "defaultLabels": {
+        "isDefault": "Par défaut pour les nouvelles interactions",
+        "setDefault": "Utiliser par défaut"
       }
     },
     "quickAdd": {
@@ -1132,6 +1140,8 @@
         "companyName": "Nom de l'entreprise",
         "companyLogo": "Logo de l'entreprise",
         "companyLogoDark": "Logo pour fonds sombres",
+        "companyLogoWide": "Logo large (facultatif)",
+        "companyLogoWideDark": "Logo large pour arrière-plans sombres (facultatif)",
         "colorPalette": "Palette de couleurs",
         "primaryColor": "Couleur principale",
         "secondaryColor": "Couleur secondaire",
@@ -1148,6 +1158,8 @@
         "companyLogo": "Recommandé : PNG ou SVG, 2 Mo max, fond transparent",
         "companyLogoMsp": "Ce logo remplace également la marque Alga dans le menu latéral MSP.",
         "companyLogoDark": "Facultatif. Utilisé dans le panneau latéral du portail et sur les écrans en mode sombre. À défaut, le logo de l'entreprise est utilisé.",
+        "companyLogoWide": "Affiché en haut du panneau latéral déployé du portail, sur 32 px de haut. Intégrez le nom de votre entreprise à l’image : le panneau cesse alors de l’afficher séparément.",
+        "companyLogoWideDark": "Facultatif. Utilisé tant que l’arrière-plan du panneau latéral est sombre. Se rabat sur le logo large.",
         "primaryColor": "Utilisée pour les boutons, les liens et les éléments mis en avant",
         "secondaryColor": "Utilisée pour les accents et les actions secondaires",
         "supportEmail": "Affiché aux clients dans les confirmations de rendez-vous et autres e-mails sortants comme adresse de contact pour obtenir de l'aide.",
@@ -1177,7 +1189,11 @@
         "previewSignIn": "Aperçu de la page de connexion",
         "hideSignIn": "Masquer la page de connexion"
       },
-      "customDomainRequired": "Un domaine personnalisé doit être configuré"
+      "customDomainRequired": "Un domaine personnalisé doit être configuré",
+      "warnings": {
+        "expectSquare": "Cette image est bien plus large que haute. Cet emplacement remplit des espaces carrés — vous cherchez probablement celui du logo large.",
+        "expectWide": "Cette image est presque carrée. L’emplacement du logo large attend un logo au format paysage — une marque carrée va dans l’emplacement ci-dessus."
+      }
     },
     "dashboardPreview": {
       "title": "Votre portail client",
@@ -1282,11 +1298,11 @@
         "canonicalHostFallback": "hôte canonique"
       },
       "appliance": {
-        "helpText": "Pointez ce nom d'hôte vers votre appliance et faites en sorte que votre proxy inverse transmette l'en-tête Host d'origine avant d'enregistrer.",
+        "helpText": "Pointez ce nom d'hôte vers votre serveur et faites en sorte que votre proxy inverse transmette l'en-tête Host d'origine avant d'enregistrer.",
         "checklistTitle": "Configuration du proxy inverse",
         "step1Prefix": "Pointez ",
-        "step1Suffix": " vers cette appliance (un enregistrement A vers son adresse, ou un CNAME vers votre hôte d'appliance).",
-        "step2": "Sur votre proxy inverse, terminez TLS pour le domaine et transmettez à cette appliance sur le port 3000, en préservant l'en-tête Host d'origine (par ex. proxy_set_header Host $host) et en envoyant X-Forwarded-Proto: https.",
+        "step1Suffix": " vers ce serveur (un enregistrement A vers son adresse, ou un CNAME vers le nom d'hôte de votre serveur).",
+        "step2": "Sur votre proxy inverse, terminez TLS pour le domaine et transmettez à ce serveur sur le port 3000, en préservant l'en-tête Host d'origine (par ex. proxy_set_header Host $host) et en envoyant X-Forwarded-Proto: https.",
         "step3": "Obtenez et maintenez le certificat TLS pour le domaine sur votre proxy.",
         "step4": "Enregistrez le domaine ici — il s'active immédiatement. Configurez d'abord le DNS et votre proxy, car les liens du portail basculent immédiatement vers ce domaine.",
         "docLinkText": "Guide de configuration et de dépannage du proxy inverse",
@@ -1423,10 +1439,24 @@
     "whiteLabel": {
       "title": "Personnaliser la marque de l’application MSP",
       "description": "Téléversez votre logo une seule fois. Il remplace la marque Alga dans le menu latéral MSP, et le portail client utilise les mêmes images.",
-      "logoHelp": "Le menu latéral MSP est sombre dans les deux thèmes : il utilise le logo pour arrière-plans sombres lorsque vous en fournissez un, sinon le logo principal.",
+      "logoHelp": "La marque carrée est utilisée partout où l’espace est carré : le menu latéral réduit et les cadres circulaires. Le logo large facultatif remplace la marque et le nom dans le menu latéral déployé : téléversez-en donc un qui contient déjà le nom de votre entreprise. Le menu latéral s’adapte à son propre arrière-plan : les variantes pour arrière-plans sombres sur un menu sombre, les claires sur un menu clair, et à défaut la variante que vous avez téléversée.",
       "fields": {
-        "logo": "Logo",
-        "logoDark": "Logo pour arrière-plans sombres"
+        "mark": "Marque carrée",
+        "markDark": "Marque carrée pour arrière-plans sombres",
+        "wide": "Logo large (facultatif)",
+        "wideDark": "Logo large pour arrière-plans sombres (facultatif)",
+        "favicon": "Icône du navigateur (favicon)"
+      },
+      "hints": {
+        "mark": "Utilisée dans le menu latéral réduit et dans tous les cadres circulaires. Le format carré fonctionne le mieux.",
+        "markDark": "Facultatif. Se rabat sur la marque carrée.",
+        "wide": "Affiché uniquement dans le menu latéral déployé, sur 32 px de haut. Intégrez le nom de votre entreprise à l’image.",
+        "wideDark": "Facultatif. Utilisé tant que l’arrière-plan du menu latéral est sombre, ce qui est le cas dans tous les thèmes fournis.",
+        "favicon": "PNG, SVG ou ICO. Les images matricielles sont redimensionnées en 32x32. S’applique à l’application MSP et au portail client de votre organisation."
+      },
+      "warnings": {
+        "expectSquare": "Cette image est bien plus large que haute. L’emplacement de la marque carrée sert aux espaces carrés — vous cherchez probablement celui du logo large.",
+        "expectWide": "Cette image est presque carrée. L’emplacement large attend un logo au format paysage — vous cherchez probablement celui de la marque carrée."
       },
       "colors": {
         "label": "Utiliser vos couleurs de marque dans l’application MSP",
@@ -3141,7 +3171,9 @@
       "nameRequired": "Le nom du statut est obligatoire",
       "nameEmpty": "Le nom du statut ne peut pas être vide",
       "idRequired": "L’identifiant du statut est obligatoire",
-      "manageFromBoard": "Les statuts de ticket doivent être gérés depuis les paramètres du tableau"
+      "manageFromBoard": "Les statuts de ticket doivent être gérés depuis les paramètres du tableau",
+      "closedCannotBeDefault": "Un statut fermé ne peut pas être le statut par défaut",
+      "defaultMustStayOpen": "Définissez un autre statut par défaut avant de fermer celui-ci"
     },
     "priority": {
       "notFound": "Priorité introuvable.",
@@ -3236,7 +3268,7 @@
       "needsDot": "Le domaine doit contenir au moins un point.",
       "notCanonicalHost": "Veuillez choisir un domaine différent de l'hôte canonique.",
       "noLeadingTrailingDot": "Le domaine ne peut pas commencer ni se terminer par un point.",
-      "notApplianceHost": "Choisissez un domaine différent de l'hôte principal de cet appareil. Le domaine personnalisé du portail doit être un autre nom d'hôte que votre proxy inverse redirige ici.",
+      "notApplianceHost": "Choisissez un domaine différent de l'hôte principal de ce serveur. Le domaine personnalisé du portail doit être un autre nom d'hôte que votre proxy inverse redirige ici.",
       "nothingToRetry": "Aucun enregistrement de domaine personnalisé en échec à relancer.",
       "retryOnlyAfterFailure": "La relance n'est possible qu'après un enregistrement en échec."
     }

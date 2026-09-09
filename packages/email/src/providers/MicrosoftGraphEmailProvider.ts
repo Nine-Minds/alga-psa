@@ -355,7 +355,14 @@ export class MicrosoftGraphEmailProvider implements IEmailProvider {
     const status = Number(error?.status || error?.response?.status || 0) || undefined;
     const code = String(error?.code || error?.response?.data?.error?.code || status || 'SEND_FAILED');
     const requestId = error?.requestId || error?.response?.headers?.['request-id'];
-    const retryable = status === 429 || Boolean(status && status >= 500);
+    // A named Graph code does not identify acceptance. HTTP 429 is an explicit
+    // rejection; network failures and 5xx responses may follow an accepted send.
+    const definitelyNotSent = Boolean(status && status >= 400 && status < 500 && status !== 408);
+    const retryable = status === 429;
+    const retryAfter = error?.retryAfter ?? error?.response?.headers?.['retry-after'];
+    const seconds = Number(retryAfter);
+    const retryAfterMs = retryAfter == null ? undefined : Number.isFinite(seconds)
+      ? Math.max(0, seconds * 1000) : Math.max(0, Date.parse(String(retryAfter)) - Date.now());
 
     let message = 'Microsoft Graph could not send the email.';
     if (status === 401) {
@@ -381,7 +388,8 @@ export class MicrosoftGraphEmailProvider implements IEmailProvider {
       this.providerType,
       retryable,
       code,
-      { status, requestId }
+      { status, requestId, definitelyNotSent, requiresReconciliation: !definitelyNotSent,
+        ...(Number.isFinite(retryAfterMs) ? { retryAfterMs } : {}) }
     );
   }
 }

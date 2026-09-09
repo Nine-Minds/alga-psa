@@ -14,6 +14,7 @@
         "manualEntryHelp": "Introduzca el identificador exactamente como aparece en su sistema contable.",
         "metadataLabel": "Metadatos (JSON)",
         "metadataPlaceholder": "Metadatos opcionales en formato JSON",
+        "noKindOptions": "No se encontraron registros utilizables de este tipo en la organización conectada.",
         "realmIdLabel": "ID de Realm",
         "saveMapping": "Guardar asignación",
         "saving": "Guardando…",

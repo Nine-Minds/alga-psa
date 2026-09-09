@@ -1,13 +1,18 @@
+import { isValidInvoiceTimeSnapshot, snapshotRate, combineTimeRates } from '../billing/invoiceTimeSnapshot';
+import type { InvoiceTicketPresentationRow } from '@alga-psa/types';
 // Import the source and target types with aliases for clarity
 import type {
   InvoiceViewModel as DbInvoiceViewModel, // Source type from DB/interfaces
-  IInvoiceCharge
+  IInvoiceCharge,
+  IInvoiceChargeTimeEntrySnapshot
 } from '@alga-psa/types';
 import type {
   WasmInvoiceViewModel,
   WasmInvoiceLineItem,
   WasmInvoiceLineItemLocation,
   WasmInvoiceLocationGroup,
+  WasmInvoiceTicketGroup,
+  WasmInvoiceTimeEntry,
   DateValue,
 } from '@alga-psa/types';
 import { Temporal } from '@js-temporal/polyfill';
@@ -251,12 +256,245 @@ export function buildInvoiceLocationGroups(items: WasmInvoiceLineItem[]): WasmIn
   return order.map((key) => grouped.get(key)!);
 }
 
+/** Round minor-unit minutes to display hours (2dp, minutes stay authoritative). */
+const minutesToHours = (minutes: number): number => Math.round((minutes / 60) * 100) / 100;
+
+/** Snapshot input for the billed-time collections: entry + owning charge id. */
+export type InvoiceTimeCollectionSource = IInvoiceChargeTimeEntrySnapshot & {
+  itemId?: string | null;
+};
+
+const AD_HOC_GROUP_LABEL = '';
+
+/**
+ * Build the renderer collections for ticket-level billed-time detail from
+ * immutable generation-time snapshots. Pure and deterministic:
+ * - integer minute / minor-unit sums only (no float money math);
+ * - stable ordering (tickets by number, then title, then key; entries by
+ *   date, then entry id);
+ * - a group whose entries bill at more than one rate reports
+ *   `hasMixedRates: true` with `rate: null` — never a fabricated blended rate;
+ * - project-task time groups under the task name; time with no work item
+ *   falls back to a single "Other billed time" group.
+ *
+ * Shared by the persisted-invoice read path and the recurring preview builder
+ * so designer preview and generated PDF agree by construction.
+ */
+export function buildInvoiceTimeCollections(
+  sources: InvoiceTimeCollectionSource[],
+): { timeEntries: WasmInvoiceTimeEntry[]; ticketGroups: WasmInvoiceTicketGroup[] } {
+  const timeEntries: WasmInvoiceTimeEntry[] = sources
+    .filter(isValidInvoiceTimeSnapshot)
+    .map((source): WasmInvoiceTimeEntry => ({
+      timePresentation: true,
+      id: source.entryId,
+      itemId: source.itemId ?? null,
+      workItemType: source.workItemType ?? null,
+      workItemId: source.workItemId ?? null,
+      ticketNumber: source.ticketNumber ?? null,
+      title: source.title ?? null,
+      description: source.description ?? null,
+      date: source.entryDate ?? null,
+      billedMinutes: Math.round(toFiniteNumber(source.billedMinutes)),
+      hours: minutesToHours(Math.round(toFiniteNumber(source.billedMinutes))),
+      ...snapshotRate(source),
+      rateDisplay: snapshotRate(source).rate,
+      label: [source.ticketNumber, source.title].filter(Boolean).join(' — '),
+      labelKey: !source.ticketNumber && !source.title ? `time.${source.workItemType === 'ticket' ? 'ticket' : source.workItemType === 'project_task' ? 'task' : 'other'}` : undefined,
+      amount: Math.round(toFiniteNumber(source.netAmount)),
+      serviceId: source.serviceId ?? null,
+      serviceName: source.serviceName ?? null,
+    }))
+    .sort((left, right) => {
+      if (left.date !== right.date) {
+        return String(left.date ?? '').localeCompare(String(right.date ?? ''));
+      }
+      return left.id.localeCompare(right.id);
+    });
+
+  const groupKeyFor = (entry: WasmInvoiceTimeEntry): string => {
+    if (entry.workItemType === 'ticket' && entry.workItemId) {
+      return `ticket:${entry.workItemId}`;
+    }
+    if (entry.workItemType === 'project_task' && entry.workItemId) {
+      return `task:${entry.workItemId}`;
+    }
+    return 'ad_hoc';
+  };
+
+  const grouped = new Map<string, WasmInvoiceTimeEntry[]>();
+  for (const entry of timeEntries) {
+    const key = groupKeyFor(entry);
+    const existing = grouped.get(key) ?? [];
+    existing.push(entry);
+    grouped.set(key, existing);
+  }
+
+  const ticketGroups: WasmInvoiceTicketGroup[] = Array.from(grouped.entries())
+    .map(([key, entries]): WasmInvoiceTicketGroup => {
+      const first = entries[0];
+      const isTicket = key.startsWith('ticket:');
+      const isTask = key.startsWith('task:');
+      const totalMinutes = entries.reduce((sum, entry) => sum + entry.billedMinutes, 0);
+      const totalAmount = entries.reduce((sum, entry) => sum + entry.amount, 0);
+      const { rateKind, rate } = combineTimeRates(entries);
+      const hasMixedRates = rateKind === 'mixed';
+      const dates = entries
+        .map((entry) => entry.date)
+        .filter((value): value is string => typeof value === 'string' && value.length > 0)
+        .sort();
+
+      const label = isTicket
+        ? [first.ticketNumber, first.title].filter(Boolean).join(' — ') || AD_HOC_GROUP_LABEL
+        : isTask
+          ? first.title ?? AD_HOC_GROUP_LABEL
+          : AD_HOC_GROUP_LABEL;
+
+      return {
+        timePresentation: true,
+        key,
+        workItemType: isTicket ? 'ticket' : isTask ? 'project_task' : 'ad_hoc',
+        workItemId: isTicket || isTask ? first.workItemId : null,
+        ticketNumber: isTicket ? first.ticketNumber : null,
+        title: isTicket || isTask ? first.title : null,
+        description: isTicket ? first.description : null,
+        label,
+        labelKey: !label ? `time.${isTicket ? 'ticket' : isTask ? 'task' : 'other'}` : undefined,
+        rateKind,
+        dateStart: dates[0] ?? null,
+        dateEnd: dates[dates.length - 1] ?? null,
+        totalMinutes,
+        totalHours: minutesToHours(totalMinutes),
+        totalAmount,
+        hasMixedRates,
+        rate,
+        rateDisplay: rate,
+        entryCount: entries.length,
+        entries,
+      };
+    })
+    .sort((left, right) => {
+      // Tickets first (by ticket number), then project tasks (by title),
+      // then the ad-hoc fallback group.
+      const rank = (group: WasmInvoiceTicketGroup): number =>
+        group.workItemType === 'ticket' ? 0 : group.workItemType === 'project_task' ? 1 : 2;
+      if (rank(left) !== rank(right)) {
+        return rank(left) - rank(right);
+      }
+      const leftSort = left.ticketNumber ?? left.title ?? '';
+      const rightSort = right.ticketNumber ?? right.title ?? '';
+      if (leftSort !== rightSort) {
+        return leftSort.localeCompare(rightSort);
+      }
+      return left.key.localeCompare(right.key);
+    });
+
+  return { timeEntries, ticketGroups };
+}
+
+/**
+ * Collect snapshot sources from invoice charges and, when any exist, set the
+ * `timeEntries` / `ticketGroups` collections on the view model. Legacy
+ * invoices (no snapshots) leave both fields untouched so existing layouts
+ * render byte-identically.
+ */
+export function attachInvoiceTimeCollections(
+  viewModel: WasmInvoiceViewModel,
+  charges: Array<Pick<IInvoiceCharge, 'item_id' | 'time_entry_snapshots'> & Partial<IInvoiceCharge>>,
+): WasmInvoiceViewModel {
+  const sources: InvoiceTimeCollectionSource[] = charges.flatMap((charge) =>
+    (charge.time_entry_snapshots ?? []).map((snapshot) => ({
+      ...snapshot,
+      itemId: charge.item_id ?? null,
+    })),
+  );
+
+  const { timeEntries, ticketGroups } = buildInvoiceTimeCollections(sources);
+  if (sources.length) {
+    viewModel.timeEntries = timeEntries;
+    viewModel.ticketGroups = ticketGroups;
+  }
+  attachTicketPresentation(viewModel, charges);
+  return viewModel;
+}
+
+/**
+ * Atomic replacement: frozen time-only origin + every unique owned link valid +
+ * exact integer net coverage. A failed charge contributes no primary detail.
+ * Conflicting entry ownership invalidates every involved charge. Canonical
+ * rows (including signed and zero rows) retain their original relative order.
+ */
+function attachTicketPresentation(
+  vm: WasmInvoiceViewModel,
+  charges: Array<Pick<IInvoiceCharge, 'item_id' | 'time_entry_snapshots'> & Partial<IInvoiceCharge>>,
+): void {
+  const byId = new Map(charges.map((charge) => [charge.item_id, charge]));
+  const conflicts = new Set<string>();
+  const owners = new Map<string, string[]>();
+  for (const charge of charges) {
+    for (const link of charge.time_entry_links ?? []) {
+      const prior = owners.get(link.entryId) ?? [];
+      prior.push(charge.item_id);
+      owners.set(link.entryId, prior);
+    }
+  }
+  for (const ids of owners.values()) if (ids.length > 1) ids.forEach((id) => conflicts.add(id));
+  const eligible = new Set<string>();
+  const sources: InvoiceTimeCollectionSource[] = [];
+  const isTime = (id: string): boolean => {
+    const charge = byId.get(id);
+    return charge?.billing_charge_type != null
+      ? charge.billing_charge_type === 'time'
+      : Boolean(charge?.time_entry_links?.length);
+  };
+  const canonicalRow = (item: WasmInvoiceViewModel['items'][number]): InvoiceTicketPresentationRow => ({
+    ...item, timePresentation: true, label: '', rate: isTime(item.id) ? null : item.unitPrice,
+    ...(isTime(item.id) ? { rateKind: 'unknown' as const } : {}),
+    rateDisplay: isTime(item.id) ? null : item.unitPrice, amount: item.total,
+    contributions: [{ itemId: item.id, entryId: null, amount: item.total }],
+  });
+  for (const item of vm.items) {
+    const charge = byId.get(item.id);
+    const links = charge?.time_entry_links ?? [];
+    if (!charge || charge.billing_charge_type !== 'time' || charge.is_discount || conflicts.has(item.id) || links.length === 0) continue;
+    if (!links.every((link) => link.itemId === item.id && link.invoiceId === charge.invoice_id && link.tenant === charge.tenant && Boolean(link.entryId) && isValidInvoiceTimeSnapshot(link.snapshot))) continue;
+    const snapshots = links.map((link) => ({ ...link.snapshot as import('@alga-psa/types').InvoiceTimeEntrySnapshot, entryId: link.entryId, itemId: item.id }));
+    const amount = snapshots.reduce((sum, snapshot) => sum + snapshot.netAmount, 0);
+    if (!Number.isSafeInteger(amount) || !Number.isSafeInteger(item.total) || amount !== item.total || amount !== Number(charge.net_amount)) continue;
+    eligible.add(item.id);
+    sources.push(...snapshots);
+  }
+  const groups = buildInvoiceTimeCollections(sources).ticketGroups;
+  let rows: InvoiceTicketPresentationRow[] = [
+    ...groups.map((group) => ({
+      timePresentation: true as const, id: group.key, label: group.label, labelKey: group.labelKey,
+      description: group.description ?? '', quantity: group.totalHours,
+      rate: group.rate, rateKind: group.rateKind, rateDisplay: group.rate,
+      amount: group.totalAmount,
+      contributions: group.entries.map((entry) => ({ itemId: entry.itemId!, entryId: entry.id, amount: entry.amount })),
+    })),
+    ...vm.items.filter((item) => !eligible.has(item.id)).map(canonicalRow),
+  ];
+  // A projection-wide ambiguity fails closed, without deduplicating money.
+  if (new Set(vm.items.map((item) => item.id)).size !== vm.items.length ||
+      rows.reduce((sum, row) => sum + row.amount, 0) !== vm.items.reduce((sum, item) => sum + item.total, 0)) {
+    eligible.clear();
+    rows = vm.items.map(canonicalRow);
+  }
+  const hasTime = vm.items.some((item) => isTime(item.id));
+  const hasFallback = vm.items.some((item) => isTime(item.id) && !eligible.has(item.id));
+  vm.ticketPresentationRows = rows;
+  vm.ticketCoverageStatus = !hasTime ? 'none' : !hasFallback ? 'complete' : eligible.size ? 'partial' : 'unavailable';
+  vm.ticketDetailNote = '';
+}
+
 /**
  * Enriches a WasmInvoiceViewModel with recurring/one-time grouped item
  * collections and their separate subtotals, tax, and totals.
  * Derives grouping from existing timing fields — no database migration needed.
  */
 export function enrichWithGroupedItems(vm: WasmInvoiceViewModel): WasmInvoiceViewModel {
+  if (!vm.ticketPresentationRows) attachTicketPresentation(vm, []);
   const recurringItems = vm.items.filter(isRecurringItem);
   const onetimeItems = vm.items.filter((item) => !isRecurringItem(item));
 
@@ -420,6 +658,10 @@ export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | Wasm
         taxSource: dbData.tax_source || 'internal',
         currencyCode: (dbData as any).currency_code || (dbData as any).currencyCode || 'USD',
       };
+
+      // Ticket-level billed-time collections from the immutable generation
+      // snapshot. Invoices without snapshot data leave both fields absent.
+      attachInvoiceTimeCollections(viewModel, dbData.invoice_charges ?? []);
     }
     // Check if the input data is already in WasmInvoiceViewModel format
     else if (typeof inputData.invoiceNumber !== 'undefined' && typeof inputData.customer !== 'undefined' && typeof inputData.items !== 'undefined') {

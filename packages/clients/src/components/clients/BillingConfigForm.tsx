@@ -1,5 +1,7 @@
+import { useFeatureFlag } from '@alga-psa/ui/hooks/useFeatureFlag';
 import { Text } from '@radix-ui/themes';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import CurrencyPicker from '@alga-psa/ui/components/CurrencyPicker';
 import { Input } from '@alga-psa/ui/components/Input';
 import { getInvoiceTemplatesAsync, getDefaultTemplateAsync, getActiveTaxRegionsAsync } from '../../lib/billingHelpers';
 import { IInvoiceTemplate } from '@alga-psa/types';
@@ -8,7 +10,6 @@ import { ITaxRegion } from '@alga-psa/types'; // Added
 import { FileText, Settings } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
-import { CURRENCY_OPTIONS } from '@alga-psa/core';
 import QuickAddContact from '../contacts/QuickAddContact';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
@@ -35,6 +36,7 @@ const BillingConfigForm: React.FC<BillingConfigFormProps> = ({
     contacts
 }) => {
     const { t } = useTranslation('msp/clients');
+  const { enabled: releaseV16Enabled } = useFeatureFlag('release-v1-6-feature');
     const [templates, setTemplates] = useState<IInvoiceTemplate[]>([]);
     const [defaultTemplate, setDefaultTemplate] = useState<IInvoiceTemplate | null>(null);
     const [contactFilterState, setContactFilterState] = useState<'all' | 'active' | 'inactive'>('active');
@@ -85,7 +87,12 @@ const BillingConfigForm: React.FC<BillingConfigFormProps> = ({
         loadTaxRegions(); // Call new function
     }, [t]);
 
-    const templateOptions = templates.map(template => ({
+    const templateOptions = templates.filter(template =>
+        releaseV16Enabled ||
+        template.standard_invoice_template_code !== 'standard-invoice-by-ticket' ||
+        template.template_id === (billingConfig.invoice_template_id || defaultTemplate?.template_id) ||
+        !template.isStandard
+    ).map(template => ({
         value: template.template_id,
         label: (
             <div className="flex items-center gap-2">
@@ -212,11 +219,10 @@ const BillingConfigForm: React.FC<BillingConfigFormProps> = ({
             </div>
 
             <div className="space-y-2">
-                <CustomSelect
+                <CurrencyPicker
                     label={t('billingConfigForm.defaultCurrency', { defaultValue: 'Default currency' })}
                     value={billingConfig.default_currency_code || 'USD'}
                     onValueChange={handleSelectChange('default_currency_code')}
-                    options={CURRENCY_OPTIONS}
                 />
             </div>
 

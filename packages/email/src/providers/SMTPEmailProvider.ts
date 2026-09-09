@@ -119,6 +119,9 @@ export class SMTPEmailProvider implements IEmailProvider {
         error: 'SMTP send failed. Check the SMTP host, port, credentials, and TLS settings.',
         sentAt: new Date(),
         metadata: {
+          definitelyNotSent: ['ECONNREFUSED', 'ENOTFOUND', 'EDNS', 'EAUTH', 'EENVELOPE'].includes(error.code) ||
+            ['CONN', 'AUTH'].includes(error.command) ||
+            (Number(error.responseCode) >= 400 && Number(error.responseCode) < 600),
           errorCode: error.code,
           command: error.command,
           retryable: isRetryable

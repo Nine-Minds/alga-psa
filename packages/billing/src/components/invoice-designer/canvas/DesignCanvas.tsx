@@ -1,3 +1,9 @@
+import { localizeTimePresentation } from '../../../lib/invoice-template-ast/timePresentationLocalization';
+import type { TemplateLabelTranslator } from '../../../lib/invoice-template-ast/i18nLabels';
+import { exportWorkspaceToTemplateAst } from '../ast/workspaceAst';
+import { snapshotWorkspaceNodesById, useInvoiceDesignerStore } from '../state/designerStore';
+import type { TemplateAst } from '@alga-psa/types';
+
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useDroppable, useDraggable } from '@dnd-kit/core';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -20,6 +26,8 @@ import { resolveMediaFrameSize } from '../utils/mediaSizing';
 import { getNodeLayout, getNodeMetadata, getNodeName, getNodeStyle } from '../utils/nodeProps';
 import {
   isColumnHeaderTranslatable,
+  isTranslatableValue,
+  isTranslatableRef,
   isNodeLabelTranslatable,
   isNodeTextTranslatable,
 } from '../utils/translatableText';
@@ -28,10 +36,13 @@ import { resolveSortableStrategy } from '../utils/sortableStrategy';
 import {
   formatBoundValue,
   normalizeFieldFormat,
+  resolveCanvasCollection,
+  resolveCanvasRowScope,
   resolveFieldPreviewValue,
   resolveInvoiceBindingRawValue,
   resolveTableItemBindingRawValue,
 } from '../preview/previewBindings';
+import { evaluateTemplateAst, type TemplateEvaluationResult } from '../../../lib/invoice-template-ast/evaluator';
 
 type DesignerTranslator = (key: string, options?: Record<string, unknown>) => string;
 
@@ -57,6 +68,9 @@ const TranslatableMark: React.FC<{ t?: DesignerTranslator }> = ({ t }) => (
     </span>
   </Tooltip>
 );
+
+export const CanvasDocumentPreviewContext = React.createContext<{ data: WasmInvoiceViewModel | null; locale?: string; presentationLabels?: Record<string, string> }>({ data: null });
+const CanvasAstContext = React.createContext<TemplateAst | null | undefined>(undefined);
 
 interface DesignCanvasProps {
   nodes: DesignerNode[];
@@ -471,16 +485,20 @@ const shouldDeemphasizeNode = (
 
 const asTrimmedString = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
 const resolveTextInterpolationValue = (
   previewData: WasmInvoiceViewModel | null,
-  bindingPath: string
+  bindingPath: string,
+  scope?: Record<string, unknown>
 ): string | null => {
   const parsedToken = parseTemplateToken(bindingPath);
   if (!parsedToken || !parsedToken.path) {
     return null;
   }
 
-  const rawValue = resolveInvoiceBindingRawValue(previewData, parsedToken.path);
+  const rawValue = resolveInvoiceBindingRawValue(previewData, parsedToken.path, scope);
   if (rawValue === null || rawValue === undefined) {
     return null;
   }
@@ -541,7 +559,8 @@ const resolveTotalsRowAmountFallback = (
 
 const resolveTotalsRowPreviewModel = (
   node: DesignerNode,
-  previewData: WasmInvoiceViewModel | null = null
+  previewData: WasmInvoiceViewModel | null = null,
+  locale?: string
 ): TotalsRowPreviewModel => {
   const currencyCode = previewData?.currencyCode ?? 'USD';
   if (!isTotalsRowType(node.type)) {
@@ -561,7 +580,8 @@ const resolveTotalsRowPreviewModel = (
   const boundValue = formatBoundValue(
     resolveInvoiceBindingRawValue(previewData, bindingKey),
     format,
-    currencyCode
+    currencyCode,
+    locale
   );
   const previewValue =
     boundValue ||
@@ -581,7 +601,7 @@ const resolveTotalsRowPreviewModel = (
 const renderTablePreview = (
   metadata: Record<string, unknown>,
   previewData: WasmInvoiceViewModel | null,
-  options: { fillHeight: boolean; t?: DesignerTranslator }
+  options: { fillHeight: boolean; t?: DesignerTranslator; ast?: TemplateAst | null; locale?: string; scope?: Record<string, unknown>; presentationTranslator?: TemplateLabelTranslator }
 ): React.ReactNode => {
   const borderConfig = resolveTableBorderConfig(metadata);
   const headerWeightClass = FONT_WEIGHT_CLASS[
@@ -590,7 +610,12 @@ const renderTablePreview = (
   const columns = Array.isArray((metadata as { columns?: unknown }).columns)
     ? (metadata as { columns: Array<Record<string, unknown>> }).columns
     : [];
-  const rows = previewData?.items ?? [];
+  const sourceBindingId =
+    asTrimmedString((metadata as { collectionBindingKey?: unknown }).collectionBindingKey) ||
+    asTrimmedString((metadata as { collectionPath?: unknown }).collectionPath) ||
+    'items';
+  const { rows: neutralRows, diagnostic } = resolveCanvasCollection(previewData, sourceBindingId, options.ast, options.scope);
+  const rows = localizeTimePresentation(neutralRows, options.presentationTranslator);
 
   const resolvedColumns =
     columns.length > 0
@@ -601,7 +626,7 @@ const renderTablePreview = (
           { id: 'col-rate', header: 'Rate', key: 'item.unitPrice', type: 'currency' },
           { id: 'col-total', header: 'Amount', key: 'item.total', type: 'currency' },
         ];
-  const visibleColumns = resolvedColumns.slice(0, 4);
+  const visibleColumns = resolvedColumns;
   const tableGridTemplateColumns = resolveTableGridTemplateColumns(visibleColumns);
   const visibleRows = rows.slice(0, 5);
 
@@ -613,6 +638,7 @@ const renderTablePreview = (
         borderConfig.outer && ['border', INVOICE_BORDER_STRONG_COLOR_CLASS]
       )}
     >
+      {diagnostic && <div role="alert">{diagnostic}</div>}
       <div
         className={clsx(
           'grid gap-0 pb-1 uppercase tracking-wide',
@@ -636,17 +662,23 @@ const renderTablePreview = (
             )}
           >
             {isColumnHeaderTranslatable(column) && <TranslatableMark t={options.t} />}
-            {String(column.header ?? column.key ?? 'Column')}
+            {isColumnHeaderTranslatable(column) && isTranslatableRef(column.__astHeaderI18n)
+              ? options.presentationTranslator?.(column.__astHeaderI18n.i18nKey, { defaultValue: column.__astHeaderI18n.defaultValue }) ?? column.__astHeaderI18n.defaultValue
+              : String(column.header ?? column.key ?? 'Column')}
           </span>
         ))}
       </div>
       {visibleRows.length === 0 ? (
-        <div className="px-2 py-2 text-slate-400 italic">{options.t?.('designer.canvas.noLineItems', { defaultValue: 'No line items' }) ?? 'No line items'}</div>
+        <div className="px-2 py-2 text-slate-400 italic">{isTranslatableValue(metadata.emptyStateText, metadata.__astEmptyStateTextI18n) && isTranslatableRef(metadata.__astEmptyStateTextI18n)
+          ? options.presentationTranslator?.(metadata.__astEmptyStateTextI18n.i18nKey, { defaultValue: metadata.__astEmptyStateTextI18n.defaultValue }) ?? metadata.__astEmptyStateTextI18n.defaultValue
+          : asTrimmedString(metadata.emptyStateText) || options.t?.('designer.canvas.noLineItems', { defaultValue: 'No line items' }) || 'No line items'}</div>
       ) : (
         <div className="pt-1">
-          {visibleRows.map((item, rowIndex) => (
+          {visibleRows.map((item, rowIndex) => {
+            const rowKey = String(item.id ?? item.key ?? rowIndex);
+            return (
             <div
-              key={item.id}
+              key={rowKey}
                 className={clsx(
                   'grid gap-0',
                   borderConfig.rowDividers &&
@@ -657,11 +689,11 @@ const renderTablePreview = (
               {visibleColumns.map((column, columnIndex) => {
                 const key = asTrimmedString(column.key);
                 const type = normalizeFieldFormat(column.type);
-                const rawValue = resolveTableItemBindingRawValue(previewData, item, key);
-                const text = formatBoundValue(rawValue, type, previewData?.currencyCode ?? 'USD') ?? '—';
+                const rawValue = resolveTableItemBindingRawValue(previewData, item, key, asTrimmedString(metadata.__astTableItemBinding) || 'item');
+                const text = formatBoundValue(rawValue, type, previewData?.currencyCode ?? 'USD', options.locale) ?? '—';
                 return (
                   <span
-                    key={`${item.id}-${String(column.id ?? key)}`}
+                    key={`${rowKey}-${String(column.id ?? key)}`}
                     className={clsx(
                       'truncate px-1 py-0.5',
                       borderConfig.columnDividers &&
@@ -673,7 +705,8 @@ const renderTablePreview = (
                 );
               })}
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
       {rows.length > 5 && <div className="px-1 pt-1 text-[10px] text-slate-400">{options.t?.('designer.canvas.moreRows', { count: rows.length - 5, defaultValue: '+{{count}} more rows' }) ?? `+${rows.length - 5} more rows`}</div>}
@@ -681,12 +714,12 @@ const renderTablePreview = (
   );
 };
 
-const renderTotalsSummaryPreview = (previewData: WasmInvoiceViewModel | null, t?: DesignerTranslator): React.ReactNode => {
+const renderTotalsSummaryPreview = (previewData: WasmInvoiceViewModel | null, t?: DesignerTranslator, locale?: string): React.ReactNode => {
   const currencyCode = previewData?.currencyCode ?? 'USD';
   const zeroAmount = formatBoundValue(0, 'currency', currencyCode) ?? '';
-  const subtotal = formatBoundValue(previewData?.subtotal ?? null, 'currency', currencyCode) ?? zeroAmount;
-  const tax = formatBoundValue(previewData?.tax ?? null, 'currency', currencyCode) ?? zeroAmount;
-  const total = formatBoundValue(previewData?.total ?? null, 'currency', currencyCode) ?? zeroAmount;
+  const subtotal = formatBoundValue(previewData?.subtotal ?? null, 'currency', currencyCode, locale) ?? zeroAmount;
+  const tax = formatBoundValue(previewData?.tax ?? null, 'currency', currencyCode, locale) ?? zeroAmount;
+  const total = formatBoundValue(previewData?.total ?? null, 'currency', currencyCode, locale) ?? zeroAmount;
   return (
     <div className="space-y-1 text-[11px]">
       <div className="flex items-center justify-between text-slate-600">
@@ -705,8 +738,151 @@ const renderTotalsSummaryPreview = (previewData: WasmInvoiceViewModel | null, t?
   );
 };
 
-const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel | null, t?: DesignerTranslator): PreviewContentResult => {
+const isCanvasTotalsRowRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value) && typeof (value as { id?: unknown }).id === 'string';
+
+const getModelPathValue = (model: unknown, path: string): unknown => {
+  let cursor: unknown = model;
+  for (const segment of path.split('.').filter(Boolean)) {
+    if (cursor === null || typeof cursor !== 'object') {
+      return undefined;
+    }
+    cursor = (cursor as Record<string, unknown>)[segment];
+  }
+  return cursor;
+};
+
+/**
+ * Best-effort raw amount for a saved totals row, mirroring the template
+ * renderer's precedence: totals keyed by row id first, then the authored value
+ * expression. Evaluation is only available when the canvas has real preview
+ * data; rows that still cannot resolve render a neutral placeholder.
+ */
+const resolveCanvasTotalsRowRaw = (
+  row: Record<string, unknown>,
+  evaluation: TemplateEvaluationResult | null,
+  previewData: WasmInvoiceViewModel | null
+): unknown => {
+  const rowId = asTrimmedString(row.id);
+  if (evaluation && rowId.length > 0) {
+    const totalsValue = getModelPathValue(evaluation.totals, rowId);
+    if (totalsValue !== undefined) {
+      return totalsValue;
+    }
+  }
+  const expression = isRecord(row.valueExpression) ? (row.valueExpression as Record<string, unknown>) : null;
+  if (expression?.type === 'literal') {
+    return expression.value;
+  }
+  const valuePath = asTrimmedString(row.valuePath);
+  const expressionBindingId =
+    expression?.type === 'binding' ? asTrimmedString(expression.bindingId) : '';
+  const pathFallback =
+    valuePath ||
+    (expression?.type === 'path' ? asTrimmedString(expression.path) : '');
+
+  if (expression?.type === 'path' && evaluation && pathFallback.length > 0) {
+    const fromInvoice = getModelPathValue(evaluation.bindings?.invoice, pathFallback);
+    if (fromInvoice !== undefined) {
+      return fromInvoice;
+    }
+  }
+  if (evaluation && expressionBindingId.length > 0) {
+    const bound = evaluation.bindings[expressionBindingId];
+    if (bound !== undefined) {
+      return bound;
+    }
+  }
+  for (const candidate of [pathFallback, expressionBindingId]) {
+    if (candidate.length === 0) {
+      continue;
+    }
+    const raw = resolveInvoiceBindingRawValue(previewData, candidate);
+    if (raw !== null && raw !== undefined) {
+      return raw;
+    }
+  }
+  return undefined;
+};
+
+const renderTotalsRowsPreview = (
+  metadata: Record<string, unknown>,
+  previewData: WasmInvoiceViewModel | null,
+  ast: TemplateAst | null | undefined,
+  t?: DesignerTranslator,
+  locale?: string,
+  presentationTranslator?: TemplateLabelTranslator
+): React.ReactNode => {
+  const rows = Array.isArray(metadata.totalsRows) ? metadata.totalsRows.filter(isCanvasTotalsRowRecord) : [];
+  if (rows.length === 0) {
+    return renderTotalsSummaryPreview(previewData, t, locale);
+  }
+
+  const currencyCode = previewData?.currencyCode ?? 'USD';
+  let evaluation: TemplateEvaluationResult | null = null;
+  if (ast && previewData) {
+    try {
+      evaluation = evaluateTemplateAst(ast, previewData as unknown as Record<string, unknown>);
+    } catch {
+      evaluation = null;
+    }
+  }
+
+  return (
+    <div className="space-y-1" data-automation-id="designer-canvas-totals-rows">
+      {rows.map((row) => {
+        const rowId = asTrimmedString(row.id);
+        const inlineRowStyle = isRecord(row.style) && isRecord(row.style.inline)
+          ? (row.style.inline as Record<string, unknown>)
+          : {};
+        const inlineLabelStyle = isRecord(row.labelStyle) && isRecord(row.labelStyle.inline)
+          ? (row.labelStyle.inline as Record<string, unknown>)
+          : {};
+        const emphasize = row.emphasize === true;
+        const mergedRowStyle: React.CSSProperties = {
+          ...(emphasize ? { fontWeight: 600 } : {}),
+          ...(inlineRowStyle as React.CSSProperties),
+        };
+        const labelStyle = inlineLabelStyle as React.CSSProperties;
+
+        const ref = isRecord(row.__astLabelI18n) ? (row.__astLabelI18n as Record<string, unknown>) : null;
+        const fallbackLabel = asTrimmedString(row.label) || asTrimmedString(ref?.defaultValue) || rowId;
+        const displayLabel =
+          ref && typeof ref.i18nKey === 'string'
+            ? presentationTranslator?.(ref.i18nKey, { defaultValue: fallbackLabel }) ?? fallbackLabel
+            : fallbackLabel;
+
+        const raw = resolveCanvasTotalsRowRaw(row, evaluation, previewData);
+        const rowFormat = normalizeFieldFormat(asTrimmedString(row.format) || asTrimmedString(row.type) || 'currency');
+        const amount = raw !== undefined
+          ? formatBoundValue(raw, rowFormat, currencyCode, locale) ?? '—'
+          : '—';
+
+        return (
+          <div
+            key={rowId}
+            className="flex items-center justify-between gap-2"
+            style={mergedRowStyle}
+            data-automation-id={`designer-canvas-total-row-${rowId.replace(/[^a-zA-Z0-9_-]/g, '-')}`}
+          >
+            <span className="min-w-0 truncate" style={labelStyle}>
+              {displayLabel}
+            </span>
+            <span className="shrink-0 tabular-nums">{amount}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+
+const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel | null, t?: DesignerTranslator, ast?: TemplateAst | null, locale?: string, scope?: Record<string, unknown>, presentationTranslator?: TemplateLabelTranslator): PreviewContentResult => {
   const metadata = getNodeMetadata(node);
+  // Translate display-only field/text values; tables retain the neutral input
+  // and localize their rows only after resolving transforms.
+  const displayData = localizeTimePresentation(previewData, presentationTranslator);
+  const displayScope = localizeTimePresentation(scope, presentationTranslator);
   switch (node.type) {
     case 'field': {
       const bindingKey =
@@ -715,9 +891,11 @@ const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel
         asTrimmedString(metadata.key) ||
         asTrimmedString(metadata.path);
       const boundValue = resolveFieldPreviewValue({
-        invoice: previewData,
+        invoice: displayData,
         bindingKey,
         format: metadata.format,
+        locale,
+        scope: displayScope,
         displayFormat:
           metadata.displayFormat === 'single-line' ||
           metadata.displayFormat === 'multiline' ||
@@ -763,10 +941,14 @@ const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel
       };
     }
     case 'text': {
-      const text =
+      const authoredText =
         asTrimmedString(metadata.text) ||
         asTrimmedString(metadata.label) ||
         asTrimmedString(metadata.content);
+      const expression = metadata.astContentExpression;
+      const text = isNodeTextTranslatable(node) && isTranslatableRef(expression)
+        ? presentationTranslator?.(expression.i18nKey, { defaultValue: expression.defaultValue }) ?? expression.defaultValue
+        : authoredText;
       const content = text.length > 0 ? text.slice(0, 140) : '';
 
       // Check for interpolation variables {{var}}
@@ -797,7 +979,7 @@ const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel
             {parts.map((part, index) => {
               if (part.startsWith('{{') && part.endsWith('}}')) {
                 const tokenPath = part.replace(/^\{\{\s*|\s*\}\}$/g, '').trim();
-                const interpolatedValue = resolveTextInterpolationValue(previewData, tokenPath);
+                const interpolatedValue = resolveTextInterpolationValue(displayData, tokenPath, displayScope);
                 if (interpolatedValue !== null) {
                   return (
                     <span key={index} className="text-slate-800">
@@ -824,7 +1006,7 @@ const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel
     case 'tax':
     case 'discount':
     case 'custom-total': {
-      const totalsRow = resolveTotalsRowPreviewModel(node, previewData);
+      const totalsRow = resolveTotalsRowPreviewModel(node, previewData, locale);
       const labelInlineStyle = resolveLabelInlineStyle(metadata);
       return {
         content: (
@@ -873,7 +1055,7 @@ const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel
     case 'dynamic-table': {
       const fillHeight = inferHeightMode(getNodeStyle(node)) === 'fixed';
       return {
-        content: renderTablePreview(metadata, previewData, { fillHeight, t }),
+        content: renderTablePreview(metadata, previewData, { fillHeight, t, ast, locale, scope, presentationTranslator }),
       };
     }
     case 'action-button':
@@ -883,7 +1065,7 @@ const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel
     case 'attachment-list':
       return { content: metadata.title ? `${t?.('designer.canvas.attachmentsLabel', { defaultValue: 'Attachments' }) ?? 'Attachments'}: ${metadata.title}` : (t?.('designer.canvas.attachmentsLabel', { defaultValue: 'Attachments' }) ?? 'Attachments') };
     case 'totals':
-      return { content: renderTotalsSummaryPreview(previewData, t) };
+      return { content: renderTotalsRowsPreview(metadata, previewData, ast, t, locale, presentationTranslator) };
     case 'divider':
       return { content: <div className={clsx('w-full border-t my-1', INVOICE_BORDER_COLOR_CLASS)} /> };
 	    case 'spacer':
@@ -1079,7 +1261,9 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
   );
 
   const draggablePointerDown = listeners?.onPointerDown;
-  const previewContent = useMemo(() => getPreviewContent(node, previewData, t), [node, previewData, t]);
+  const canvasAst = React.useContext(CanvasAstContext);
+  const documentPreview = React.useContext(CanvasDocumentPreviewContext);
+  const previewContent = useMemo(() => getPreviewContent(node, previewData ?? documentPreview.data, t, canvasAst, documentPreview.locale, resolveCanvasRowScope(previewData ?? documentPreview.data, canvasAst, node.id), (key, options) => documentPreview.presentationLabels?.[key] ?? options.defaultValue), [node, previewData, t, canvasAst, documentPreview]);
   const fieldNodeStyle = isFieldNode ? getNodeStyle(node) : undefined;
   const fieldLayoutStyle = isFieldNode
     ? {
@@ -1449,6 +1633,17 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
   readOnly = false,
   previewData = null,
 }) => {
+  const exportWorkspace = useInvoiceDesignerStore((state) => state.exportWorkspace);
+  const transforms = useInvoiceDesignerStore((state) => state.transforms);
+  const canvasAst = useMemo(() => {
+    try {
+      return exportWorkspaceToTemplateAst({
+        ...exportWorkspace(),
+        rootId: nodes.find((node) => node.type === 'document' || node.parentId === null)?.id ?? '',
+        nodesById: snapshotWorkspaceNodesById(nodes),
+      });
+    } catch { return null; }
+  }, [nodes, transforms, exportWorkspace]);
   const { t } = useTranslation('msp/invoicing');
   const artboardRef = useRef<HTMLDivElement>(null);
   const documentNode = useMemo(
@@ -1642,6 +1837,7 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
   }, [canvasScale, snapToGrid, gridSize, onPointerLocationChange, readOnly]);
 
   return (
+    <CanvasAstContext.Provider value={canvasAst}>
     <div
       className="relative flex-1 overflow-auto bg-slate-100 dark:bg-[rgb(var(--color-background))]"
       onClick={() => {
@@ -1730,6 +1926,7 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
         </div>
       </div>
     </div>
+    </CanvasAstContext.Provider>
   );
 };
 

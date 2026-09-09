@@ -320,8 +320,15 @@
       "noContractLinesDescription": "Aggiungi linee contrattuali per definire ciò che è incluso in questo contratto",
       "noContractLinesYet": "Nessuna linea contrattuale ancora",
       "noServicesConfigured": "Nessun servizio configurato",
+      "billedOnRecordedUsage": "Fatturato in base all'utilizzo registrato",
       "serviceCountOne": "{{count}} servizio",
-      "serviceCountOther": "{{count}} servizi"
+      "serviceCountOther": "{{count}} servizi",
+      "previouslyConfiguredQuantity": "Quantità configurata in precedenza: {{count}} — non utilizzata per la fatturazione",
+      "billedOnPeriodCount": "Fatturato in base al conteggio comunicato per ogni periodo",
+      "recurringSeats": "{{count}} × {{rate}} (postazioni ricorrenti)",
+      "bundleAllocation": "Ripartizione del prezzo del pacchetto — non sono postazioni fatturabili",
+      "setUpRecurringSeats": "Configura postazioni ricorrenti",
+      "reportPeriodCount": "Comunica un conteggio di periodo"
     },
     "stats": {
       "contractLines": "Linee contrattuali",
@@ -331,7 +338,35 @@
       "variableSuffix": "+ variabile (oraria/utilizzo)",
       "viewDetails": "Visualizza dettagli"
     },
-    "title": "Cosa è incluso"
+    "title": "Cosa è incluso",
+    "legacyTransition": {
+      "recurringSeats": {
+        "title": "Configura postazioni ricorrenti",
+        "explanation": "Le postazioni ricorrenti fatturano quantità × tariffa unitaria in ogni periodo senza record di consumo, quindi vivono su una riga di contratto fissa prezzata a postazioni/unità ricorrenti — non su questa riga a consumo.",
+        "nextStep": "Vai alle righe di contratto, aggiungi (o apri) una riga fissa, aggiungi questo servizio e scegli «Postazioni/unità ricorrenti», quindi conferma quantità e tariffa unitaria. La modifica ha effetto dal successivo periodo di servizio non fatturato; questa riga a consumo e la sua cronologia restano invariate finché non la rimuovi.",
+        "manualHandoff": "Vai a Linee contrattuali → Crea personalizzata, scegli Tariffa fissa, aggiungi questo servizio e seleziona «Postazioni/unità ricorrenti». Verifica quantità, tariffa unitaria e pianificazione di fatturazione prima di salvare. Questo crea un impegno ricorrente separato; non converte né chiude questo servizio a consumo. Coordina il suo avvio con la fine della fatturazione a consumo e verifica l'utilizzo ancora da fatturare prima di attivare entrambi per lo stesso periodo."
+      },
+      "periodCount": {
+        "title": "Comunica un conteggio di periodo",
+        "explanation": "Comunicare un conteggio di periodo porta questo servizio a un conteggio sostituibile per periodo di servizio: correggere 10 in 12 fattura 12, mai 22, e il minimo si applica una sola volta. Il periodo successivo inizia non comunicato — nessun conteggio viene riportato.",
+        "nextStep": "La conferma cambia solo il modo in cui questo servizio viene misurato dal successivo periodo di servizio non fatturato. Le voci esistenti restano additive e non viene creato alcun conteggio — comunica poi il conteggio del periodo in Monitoraggio consumi."
+      },
+      "referenceHeading": "Riferimento non confermato dalla configurazione precedente",
+      "referenceQuantity": "Quantità configurata in precedenza: {{count}}",
+      "referenceRate": "Tariffa salvata: {{rate}}",
+      "referenceCaveat": "Questi valori non sono mai stati fatturati. Qui non viene salvato né addebitato nulla finché non confermi tu stesso i valori nel flusso qui sotto.",
+      "actions": {
+        "close": "Chiudi",
+        "cancel": "Annulla",
+        "switching": "Modifica in corso…",
+        "confirmPeriodCount": "Passa ai conteggi di periodo"
+      },
+      "errors": {
+        "missingConfiguration": "Questo servizio non ha una configurazione salvata da convertire. Aggiorna e riprova.",
+        "failed": "Non è stato possibile modificare il modo in cui questo servizio viene misurato."
+      },
+      "effectiveFrom": "Modifica della misurazione con effetto dal"
+    }
   },
   "contractDialog": {
     "actions": {
@@ -389,7 +424,7 @@
       "noServicesConfigured": "Nessun servizio configurato per questa preimpostazione",
       "notSet": "Non impostato",
       "overrideBaseRate": "Sovrascrivi tariffa base",
-      "quantity": "Quantità",
+      "usageRecordDrivenNote": "I servizi a consumo vengono fatturati in base all'utilizzo registrato nel monitoraggio utilizzo per ogni periodo di servizio. Un periodo senza record di utilizzo non produce alcun addebito: registra l'utilizzo (o uno zero esplicito) in ogni periodo per fatturare questi servizi.",
       "quantityShort": "Qtà: {{quantity}}",
       "ratePerUnit": "Tariffa (per unità)",
       "roundUpToNearestMinutes": "Arrotonda per eccesso al più vicino (minuti)",
@@ -559,7 +594,12 @@
       "typeLabel": "Servizio {{type}}",
       "unitOfMeasure": "Unità di misura",
       "unitPlaceholder": "unità",
-      "unitRate": "Tariffa unitaria"
+      "unitRate": "Tariffa unitaria",
+      "effectiveFrom": "Modifiche alle postazioni ricorrenti con effetto dal",
+      "prospectiveSeatHelp": "Le postazioni fatturano quantità × tariffa unitaria. Le modifiche si applicano al confine del periodo di servizio; quantità e prezzi precedenti restano invariati.",
+      "recurringUnits": "Postazioni/unità ricorrenti",
+      "semanticsEffectiveFrom": "Modifiche a prezzi e misurazione del servizio con effetto dal",
+      "prospectiveSemanticsHelp": "Le modifiche si applicano al confine del periodo di servizio; quantità, misurazione e prezzi precedenti restano invariati. Cambiando la data si ricaricano le impostazioni applicabili da rivedere."
     },
     "title": "Linee contrattuali"
   },
@@ -667,7 +707,7 @@
     "title": "Aggiungi linee contrattuali da preimpostazioni",
     "usageConfig": {
       "defaultRate": "Predefinito: ${{rate}}",
-      "quantity": "Quantità",
+      "recordDrivenNote": "I servizi a consumo vengono fatturati in base all'utilizzo registrato nel monitoraggio utilizzo per ogni periodo di servizio. Un periodo senza record di utilizzo non produce alcun addebito: registra l'utilizzo (o uno zero esplicito) in ogni periodo per fatturare questi servizi.",
       "ratePerUnit": "Tariffa (per unità)",
       "unitHint": "es., GB, chiamata API, utente",
       "unitOfMeasure": "Unità di misura",
@@ -692,7 +732,8 @@
       "hourlyDescription": "Fattura in base alle registrazioni di tempo approvate.",
       "hourlyTitle": "Orario",
       "usageDescription": "Fattura per unità consumate.",
-      "usageTitle": "Basato su utilizzo"
+      "usageTitle": "Basato su utilizzo",
+      "fixedSemantics": "Fattura un prezzo forfettario oppure quantità ricorrente × tariffa unitaria in ogni periodo."
     },
     "billingTiming": {
       "advance": "Anticipato (fatturazione all'inizio del periodo)",
@@ -758,8 +799,15 @@
       "unitOfMeasureRequired": "Servizio {{index}}: L'unità di misura è obbligatoria",
       "unitRateRequired": "Servizio {{index}}: La tariffa unitaria è obbligatoria",
       "usageServiceRequired": "È richiesto almeno un servizio basato su utilizzo",
-      "usageServiceSelectRequired": "Servizio {{index}}: Seleziona un servizio"
-    }
+      "usageServiceSelectRequired": "Servizio {{index}}: Seleziona un servizio",
+      "invalidQuantity": "La quantità deve essere maggiore o uguale a zero.",
+      "recurringUnitRateRequired": "Inserisci una tariffa unitaria per ogni servizio ricorrente."
+    },
+    "fixedServicesPricingIntent": "Scegli per ogni servizio un prezzo forfettario o postazioni/unità ricorrenti.",
+    "fixedServicesPricingExplanation": "Le allocazioni a prezzo forfettario condividono la tariffa base della linea. Le postazioni ricorrenti fatturano la quantità concordata × tariffa unitaria in ogni periodo senza record di utilizzo.",
+    "recurringQuantity": "Quantità ricorrente",
+    "allocationQuantity": "Quantità di allocazione",
+    "bundleBaseRateHelp": "Tariffa ricorrente per i servizi a prezzo forfettario. Le postazioni ricorrenti vengono fatturate separatamente a quantità × tariffa unitaria."
   },
   "pricingSchedules": {
     "list": {

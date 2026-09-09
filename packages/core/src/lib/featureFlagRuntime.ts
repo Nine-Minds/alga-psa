@@ -28,6 +28,7 @@ const DEFAULT_BOOLEAN_FLAGS: Record<string, boolean> = {
   'enable_jira_sync': false,
   'enable_salesforce_sync': false,
   'quoting-enabled': false,
+  'release-v1-6-feature': false,
 };
 
 const DEFAULT_VARIANT_FLAGS: Record<string, string> = {

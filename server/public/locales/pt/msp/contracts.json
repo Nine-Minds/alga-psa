@@ -320,8 +320,15 @@
       "noContractLinesDescription": "Adicione linhas de contrato para definir o que está incluído neste contrato",
       "noContractLinesYet": "Ainda não há linhas de contrato",
       "noServicesConfigured": "Nenhum serviço configurado",
+      "billedOnRecordedUsage": "Faturado com base na utilização registada",
       "serviceCountOne": "Serviço {{count}}",
-      "serviceCountOther": "Serviços {{count}}"
+      "serviceCountOther": "Serviços {{count}}",
+      "previouslyConfiguredQuantity": "Quantidade configurada anteriormente: {{count}} — não usada para faturamento",
+      "billedOnPeriodCount": "Faturado pela contagem informada em cada período",
+      "recurringSeats": "{{count}} × {{rate}} (postos recorrentes)",
+      "bundleAllocation": "Distribuição do preço do pacote — não são postos faturáveis",
+      "setUpRecurringSeats": "Configurar postos recorrentes",
+      "reportPeriodCount": "Informar uma contagem do período"
     },
     "stats": {
       "contractLines": "Linhas de Contrato",
@@ -331,7 +338,35 @@
       "variableSuffix": "+ variável (por hora/uso)",
       "viewDetails": "Ver detalhes"
     },
-    "title": "O que está incluído"
+    "title": "O que está incluído",
+    "legacyTransition": {
+      "recurringSeats": {
+        "title": "Configurar postos recorrentes",
+        "explanation": "Os postos recorrentes faturam quantidade × tarifa unitária em cada período sem registos de consumo, pelo que pertencem a uma linha de contrato fixa precificada por postos/unidades recorrentes — não a esta linha de consumo.",
+        "nextStep": "Vai a Linhas de contrato, adiciona (ou abre) uma linha fixa, adiciona este serviço e escolhe «Postos/unidades recorrentes»; depois confirma a quantidade e a tarifa unitária. A alteração passa a valer no próximo período de serviço não faturado; esta linha de consumo e o seu histórico mantêm-se até a removeres.",
+        "manualHandoff": "Acesse Linhas de contrato → Criar personalizada, escolha Taxa Fixa, adicione este serviço e selecione “Postos/unidades recorrentes”. Revise a quantidade, a taxa unitária e o cronograma de cobrança antes de salvar. Isso cria um compromisso recorrente separado; não converte nem encerra este serviço baseado em uso. Coordene o início dele com o fim do faturamento por uso e revise o uso pendente antes de habilitar os dois para o mesmo período."
+      },
+      "periodCount": {
+        "title": "Informar uma contagem do período",
+        "explanation": "Informar uma contagem do período muda este serviço para uma contagem substituível por período de serviço: corrigir 10 para 12 fatura 12, nunca 22, e o mínimo aplica-se uma vez. O período seguinte começa sem informação — nenhuma contagem é transportada.",
+        "nextStep": "Confirmar altera apenas a forma como este serviço é medido a partir do próximo período de serviço não faturado. Os lançamentos existentes continuam somando e nenhuma contagem é criada — depois, informe a contagem do período no Rastreamento de uso."
+      },
+      "referenceHeading": "Referência não confirmada da configuração anterior",
+      "referenceQuantity": "Quantidade configurada anteriormente: {{count}}",
+      "referenceRate": "Tarifa guardada: {{rate}}",
+      "referenceCaveat": "Estes valores nunca foram faturados. Nada aqui é guardado ou cobrado até confirmares tu próprio os valores no fluxo abaixo.",
+      "actions": {
+        "close": "Fechar",
+        "cancel": "Cancelar",
+        "switching": "A alterar…",
+        "confirmPeriodCount": "Mudar para contagens por período"
+      },
+      "errors": {
+        "missingConfiguration": "Este serviço não tem configuração guardada para converter. Atualiza e tenta novamente.",
+        "failed": "Não foi possível alterar a forma como este serviço é medido."
+      },
+      "effectiveFrom": "Alteração de medição em vigor a partir de"
+    }
   },
   "contractDialog": {
     "actions": {
@@ -389,7 +424,7 @@
       "noServicesConfigured": "Nenhum serviço configurado para esta predefinição",
       "notSet": "Não definido",
       "overrideBaseRate": "Substituir taxa básica",
-      "quantity": "Quantidade",
+      "usageRecordDrivenNote": "Os serviços baseados em uso são faturados com base no uso registrado no Rastreamento de uso para cada período de serviço. Um período sem registro de uso não gera cobrança — registre o uso (ou um zero explícito) em cada período para faturar esses serviços.",
       "quantityShort": "Quantidade: {{quantity}}",
       "ratePerUnit": "Taxa (por unidade)",
       "roundUpToNearestMinutes": "Arredondar para o mais próximo (minutos)",
@@ -559,7 +594,12 @@
       "typeLabel": "Serviço {{type}}",
       "unitOfMeasure": "Unidade de Medida",
       "unitPlaceholder": "unidade",
-      "unitRate": "Taxa unitária"
+      "unitRate": "Taxa unitária",
+      "effectiveFrom": "Alterações de postos recorrentes em vigor a partir de",
+      "prospectiveSeatHelp": "Os postos faturam quantidade × taxa unitária. As alterações se aplicam no limite deste período de serviço; as quantidades e os preços anteriores são preservados.",
+      "recurringUnits": "Postos/unidades recorrentes",
+      "semanticsEffectiveFrom": "Alterações de preços e medição do serviço em vigor a partir de",
+      "prospectiveSemanticsHelp": "As alterações se aplicam no limite deste período de serviço; as quantidades, a medição e os preços anteriores são preservados. Alterar a data recarrega as configurações aplicáveis para revisão."
     },
     "title": "Linhas de Contrato"
   },
@@ -667,7 +707,7 @@
     "title": "Adicionar linhas de contrato de predefinições",
     "usageConfig": {
       "defaultRate": "Padrão: ${{rate}}",
-      "quantity": "Quantidade",
+      "recordDrivenNote": "Os serviços baseados em uso são faturados com base no uso registrado no Rastreamento de uso para cada período de serviço. Um período sem registro de uso não gera cobrança — registre o uso (ou um zero explícito) em cada período para faturar esses serviços.",
       "ratePerUnit": "Taxa (por unidade)",
       "unitHint": "por exemplo, GB, chamada de API, usuário",
       "unitOfMeasure": "Unidade de Medida",
@@ -692,7 +732,8 @@
       "hourlyDescription": "Faturar com base em entradas de tempo aprovadas.",
       "hourlyTitle": "De hora em hora",
       "usageDescription": "Fatura por unidades consumidas.",
-      "usageTitle": "Baseado no uso"
+      "usageTitle": "Baseado no uso",
+      "fixedSemantics": "Fature um preço de pacote ou quantidade recorrente × taxa unitária a cada período."
     },
     "billingTiming": {
       "advance": "Adiantamento (fatura no início do período)",
@@ -758,8 +799,15 @@
       "unitOfMeasureRequired": "Serviço {{index}}: Unidade de medida obrigatória",
       "unitRateRequired": "Serviço {{index}}: taxa unitária é obrigatória",
       "usageServiceRequired": "É necessário pelo menos um serviço baseado em uso",
-      "usageServiceSelectRequired": "Serviço {{index}}: Selecione um serviço"
-    }
+      "usageServiceSelectRequired": "Serviço {{index}}: Selecione um serviço",
+      "invalidQuantity": "A quantidade deve ser zero ou maior.",
+      "recurringUnitRateRequired": "Insira uma taxa unitária para cada serviço recorrente."
+    },
+    "fixedServicesPricingIntent": "Escolha um preço de pacote ou postos/unidades recorrentes para cada serviço.",
+    "fixedServicesPricingExplanation": "As alocações de pacote compartilham a taxa básica da linha. Os postos recorrentes faturam a quantidade acordada × taxa unitária a cada período, sem registros de uso.",
+    "recurringQuantity": "Quantidade recorrente",
+    "allocationQuantity": "Quantidade de alocação",
+    "bundleBaseRateHelp": "Taxa recorrente para os serviços com preço de pacote. Os postos recorrentes são faturados separadamente por quantidade × taxa unitária."
   },
   "pricingSchedules": {
     "list": {

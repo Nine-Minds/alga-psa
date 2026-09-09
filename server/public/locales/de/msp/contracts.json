@@ -320,8 +320,15 @@
       "noContractLinesDescription": "Fügen Sie Vertragslinien hinzu, um festzulegen, was in diesem Vertrag enthalten ist",
       "noContractLinesYet": "Noch keine Vertragslinien",
       "noServicesConfigured": "Keine Services konfiguriert",
+      "billedOnRecordedUsage": "Abrechnung nach erfasstem Verbrauch",
       "serviceCountOne": "{{count}} Service",
-      "serviceCountOther": "{{count}} Services"
+      "serviceCountOther": "{{count}} Services",
+      "previouslyConfiguredQuantity": "Zuvor konfigurierte Menge: {{count}} — wird nicht für die Abrechnung verwendet",
+      "billedOnPeriodCount": "Abrechnung nach der je Zeitraum gemeldeten Menge",
+      "recurringSeats": "{{count}} × {{rate}} (wiederkehrende Plätze)",
+      "bundleAllocation": "Verteilung des Paketpreises — keine abrechenbaren Plätze",
+      "setUpRecurringSeats": "Wiederkehrende Plätze einrichten",
+      "reportPeriodCount": "Menge für den Zeitraum melden"
     },
     "stats": {
       "contractLines": "Vertragslinien",
@@ -331,7 +338,35 @@
       "variableSuffix": "+ variabel (stundenbasiert/nutzungsbasiert)",
       "viewDetails": "Details anzeigen"
     },
-    "title": "Was enthalten ist"
+    "title": "Was enthalten ist",
+    "legacyTransition": {
+      "recurringSeats": {
+        "title": "Wiederkehrende Plätze einrichten",
+        "explanation": "Wiederkehrende Plätze rechnen in jedem Zeitraum Menge × Einzelpreis ohne Verbrauchsdatensätze ab. Sie gehören daher auf eine feste Vertragsposition mit Preisbasis „Wiederkehrende Plätze/Einheiten“ — nicht auf diese nutzungsbasierte Position.",
+        "nextStep": "Öffnen Sie die Vertragspositionen, fügen Sie eine feste Position hinzu (oder öffnen Sie eine), nehmen Sie diesen Dienst auf, wählen Sie „Wiederkehrende Plätze/Einheiten“ und bestätigen Sie Menge und Einzelpreis. Die Änderung gilt ab dem nächsten nicht abgerechneten Leistungszeitraum; diese nutzungsbasierte Position und ihre Historie bleiben unverändert, bis Sie sie entfernen.",
+        "manualHandoff": "Öffnen Sie Vertragslinien → „Benutzerdefiniert erstellen“, wählen Sie „Festgebühr“, fügen Sie diesen Dienst hinzu und wählen Sie „Wiederkehrende Plätze/Einheiten“. Prüfen Sie Menge, Einzelpreis und Abrechnungszeitplan vor dem Speichern. Dadurch entsteht eine separate wiederkehrende Verpflichtung; dieser nutzungsbasierte Dienst wird weder umgestellt noch beendet. Stimmen Sie den Beginn auf das Ende der nutzungsbasierten Abrechnung ab und prüfen Sie den ausstehenden Verbrauch, bevor Sie beide für denselben Zeitraum aktivieren."
+      },
+      "periodCount": {
+        "title": "Menge für den Zeitraum melden",
+        "explanation": "Mit der Zeitraummeldung wechselt dieser Dienst zu einer ersetzbaren Menge je Leistungszeitraum: Eine Korrektur von 10 auf 12 wird mit 12 abgerechnet, nie mit 22, und die Mindestmenge gilt einmal. Der nächste Zeitraum beginnt ungemeldet — es wird nichts übernommen.",
+        "nextStep": "Die Bestätigung ändert nur, wie dieser Dienst ab dem nächsten nicht abgerechneten Leistungszeitraum gemessen wird. Bestehende Einträge bleiben additiv, und es wird keine Menge angelegt — melde die Menge für den Zeitraum anschließend in der Verbrauchserfassung."
+      },
+      "referenceHeading": "Unbestätigte Referenz aus der bisherigen Konfiguration",
+      "referenceQuantity": "Zuvor konfigurierte Menge: {{count}}",
+      "referenceRate": "Gespeicherter Preis: {{rate}}",
+      "referenceCaveat": "Diese Werte wurden nie abgerechnet. Hier wird nichts gespeichert oder berechnet, bis Sie die Werte im folgenden Ablauf selbst bestätigen.",
+      "actions": {
+        "close": "Schließen",
+        "cancel": "Abbrechen",
+        "switching": "Wird umgestellt …",
+        "confirmPeriodCount": "Auf Zeitraummengen umstellen"
+      },
+      "errors": {
+        "missingConfiguration": "Für diesen Dienst gibt es keine gespeicherte Konfiguration zum Umstellen. Aktualisiere die Seite und versuche es erneut.",
+        "failed": "Die Messweise dieses Dienstes konnte nicht geändert werden."
+      },
+      "effectiveFrom": "Messänderung wirksam ab"
+    }
   },
   "contractDialog": {
     "actions": {
@@ -389,7 +424,7 @@
       "noServicesConfigured": "Keine Services für diesen Vorlagenbaustein konfiguriert",
       "notSet": "Nicht festgelegt",
       "overrideBaseRate": "Grundtarif überschreiben",
-      "quantity": "Menge",
+      "usageRecordDrivenNote": "Nutzungsbasierte Dienste werden anhand des in der Verbrauchserfassung erfassten Verbrauchs je Leistungszeitraum abgerechnet. Ein Zeitraum ohne Verbrauchsdatensatz erzeugt keine Abrechnung — erfasse den Verbrauch (oder eine explizite Null) für jeden Zeitraum, um diese Dienste abzurechnen.",
       "quantityShort": "Menge: {{quantity}}",
       "ratePerUnit": "Tarif (pro Einheit)",
       "roundUpToNearestMinutes": "Auf nächstes (Minuten) aufrunden",
@@ -559,7 +594,12 @@
       "typeLabel": "{{type}}-Service",
       "unitOfMeasure": "Maßeinheit",
       "unitPlaceholder": "Einheit",
-      "unitRate": "Einheitstarif"
+      "unitRate": "Einheitstarif",
+      "effectiveFrom": "Änderungen wiederkehrender Plätze wirksam ab",
+      "prospectiveSeatHelp": "Plätze werden mit Menge × Einheitstarif abgerechnet. Änderungen gelten ab dieser Leistungszeitraumgrenze; frühere Mengen und Preise bleiben erhalten.",
+      "recurringUnits": "Wiederkehrende Plätze/Einheiten",
+      "semanticsEffectiveFrom": "Preis- und Messänderungen des Dienstes wirksam ab",
+      "prospectiveSemanticsHelp": "Änderungen gelten ab dieser Leistungszeitraumgrenze; frühere Mengen, Messweise und Preise bleiben erhalten. Bei Änderung des Datums werden die geltenden Einstellungen zur Prüfung neu geladen."
     },
     "title": "Vertragslinien"
   },
@@ -667,7 +707,7 @@
     "title": "Vertragslinien aus Vorlagenbausteinen hinzufügen",
     "usageConfig": {
       "defaultRate": "Standard: ${{rate}}",
-      "quantity": "Menge",
+      "recordDrivenNote": "Nutzungsbasierte Dienste werden anhand des in der Verbrauchserfassung erfassten Verbrauchs je Leistungszeitraum abgerechnet. Ein Zeitraum ohne Verbrauchsdatensatz erzeugt keine Abrechnung — erfasse den Verbrauch (oder eine explizite Null) für jeden Zeitraum, um diese Dienste abzurechnen.",
       "ratePerUnit": "Tarif (pro Einheit)",
       "unitHint": "z. B. GB, API-Aufruf, Benutzer",
       "unitOfMeasure": "Maßeinheit",
@@ -692,7 +732,8 @@
       "hourlyDescription": "Abrechnung basierend auf genehmigten Zeiteinträgen.",
       "hourlyTitle": "Stundenbasiert",
       "usageDescription": "Rechnung für verbrauchte Einheiten.",
-      "usageTitle": "Nutzungsbasiert"
+      "usageTitle": "Nutzungsbasiert",
+      "fixedSemantics": "In jeder Periode einen Paketpreis oder wiederkehrend Menge × Einheitstarif abrechnen."
     },
     "billingTiming": {
       "advance": "Voraus (Abrechnung zu Periodenbeginn)",
@@ -758,8 +799,15 @@
       "unitOfMeasureRequired": "Service {{index}}: Maßeinheit ist erforderlich",
       "unitRateRequired": "Service {{index}}: Einheitstarif ist erforderlich",
       "usageServiceRequired": "Mindestens ein nutzungsbasierter Service ist erforderlich",
-      "usageServiceSelectRequired": "Service {{index}}: Bitte wählen Sie einen Service aus"
-    }
+      "usageServiceSelectRequired": "Service {{index}}: Bitte wählen Sie einen Service aus",
+      "invalidQuantity": "Die Menge muss null oder größer sein.",
+      "recurringUnitRateRequired": "Geben Sie für jeden wiederkehrenden Service einen Einheitstarif ein."
+    },
+    "fixedServicesPricingIntent": "Wählen Sie für jeden Service Paketpreis oder wiederkehrende Plätze/Einheiten.",
+    "fixedServicesPricingExplanation": "Paketverteilungen teilen sich den Grundtarif der Vertragslinie. Wiederkehrende Plätze rechnen in jeder Periode die vereinbarte Menge × Einheitstarif ohne Verbrauchsdatensätze ab.",
+    "recurringQuantity": "Wiederkehrende Menge",
+    "allocationQuantity": "Verteilungsmenge",
+    "bundleBaseRateHelp": "Wiederkehrende Gebühr für Services mit Paketpreis. Wiederkehrende Plätze werden separat mit Menge × Einheitstarif abgerechnet."
   },
   "pricingSchedules": {
     "list": {

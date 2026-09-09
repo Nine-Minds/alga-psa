@@ -87,6 +87,10 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   company_billing_plans: { scope: 'tenant' },
   company_plan_bundles: { scope: 'tenant' },
   comments: { scope: 'tenant' },
+  ticket_comment_attachments: { scope: 'tenant' },
+  ticket_comment_email_deliveries: { scope: 'tenant' },
+  ticket_comment_attachment_challenges: { scope: 'tenant' },
+
   comment_reactions: { scope: 'tenant' },
   composite_tax_mappings: {
     scope: 'tenantViaParent',
@@ -535,6 +539,11 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   user_invitations: { scope: 'tenant' },
   user_type_rates: { scope: 'tenant' },
   usage_tracking: { scope: 'tenant' },
+  usage_period_totals: { scope: 'tenant' },
+  usage_period_total_requests: { scope: 'tenant' },
+  billing_semantics_locks: { scope: 'tenant' },
+  usage_measurement_revisions: { scope: 'tenant' },
+  contract_line_unit_pricing_revisions: { scope: 'tenant' },
   user_cost_rates: { scope: 'tenant' },
   user_preferences: { scope: 'tenant' },
   user_internal_notification_preferences: { scope: 'tenant' },

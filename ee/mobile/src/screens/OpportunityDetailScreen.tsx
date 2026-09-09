@@ -536,6 +536,7 @@ export function OpportunityDetailScreen({ route, navigation }: Props) {
         visible={logOpen}
         client={client}
         apiKey={session.accessToken}
+        userId={session.user?.id ?? null}
         opportunityId={opportunityId}
         clientId={deal.client_id}
         contactNameId={logPreset?.contactNameId ?? deal.contact_id}

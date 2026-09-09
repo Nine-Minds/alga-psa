@@ -259,6 +259,7 @@ export class XeroEmulatorCore implements EmulatorCore {
     if (existingId && !data.invoices.has(existingId)) {
       throw new XeroWireError(404, { Type: null, Title: 'Not Found', Status: 404, Detail: `Invoice ${existingId} not found` });
     }
+    this.validateInvoiceLineCatalogRefs(payload);
     const invoiceId = existingId ?? this.newId('inv');
     this.invoiceNumberCounter += 1;
     const existing = existingId ? data.invoices.get(existingId) : undefined;
@@ -277,6 +278,41 @@ export class XeroEmulatorCore implements EmulatorCore {
     };
     data.invoices.set(invoiceId, invoice);
     return invoice;
+  }
+
+  /**
+   * Mirror live Xero's line-level catalog validation: an ItemCode must name an
+   * item in Products & Services, and an AccountCode must name a usable (not
+   * archived) account. This is precisely the failure mode of support case
+   * alga0002321 — an account code sent as ItemCode — so the emulator rejects
+   * it the way api.xero.com does instead of accepting anything.
+   */
+  private validateInvoiceLineCatalogRefs(payload: Record<string, unknown>): void {
+    const lines = Array.isArray(payload.LineItems) ? (payload.LineItems as Array<Record<string, unknown>>) : [];
+    const itemCodes = new Set(this.items().map((item) => String(item.Code)));
+    const activeAccountCodes = new Set(
+      this.accounts()
+        .filter((account) => account.Status === 'ACTIVE')
+        .map((account) => String(account.Code)),
+    );
+    const validationErrors: Array<{ Message: string }> = [];
+    for (const line of lines) {
+      if (typeof line.ItemCode === 'string' && line.ItemCode !== '' && !itemCodes.has(line.ItemCode)) {
+        validationErrors.push({ Message: `Item code '${line.ItemCode}' is not valid` });
+      }
+      if (typeof line.AccountCode === 'string' && line.AccountCode !== '' && !activeAccountCodes.has(line.AccountCode)) {
+        validationErrors.push({ Message: `Account code '${line.AccountCode}' is not valid` });
+      }
+    }
+    if (validationErrors.length > 0) {
+      throw new XeroWireError(400, {
+        Type: 'ValidationException',
+        Title: 'A validation exception occurred',
+        Status: 400,
+        Detail: validationErrors[0].Message,
+        Elements: [{ ValidationErrors: validationErrors }],
+      });
+    }
   }
 
   getInvoice(xeroTenantId: string, invoiceId: string): Record<string, unknown> {

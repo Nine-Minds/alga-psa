@@ -15,6 +15,11 @@ const getInvoiceForRenderingMock = vi.fn();
 const mapDbInvoiceToWasmViewModelMock = vi.fn();
 const runAuthoritativeInvoiceTemplatePreviewMock = vi.fn();
 
+// Exercise the existing feature behavior with the release flag enabled.
+vi.mock('@alga-psa/ui/hooks/useFeatureFlag', () => ({
+  useFeatureFlag: () => ({ enabled: true, loading: false, error: null }),
+}));
+
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: pushMock }),
   useSearchParams: () => ({ toString: () => '', get: () => null }),
@@ -30,10 +35,11 @@ vi.mock('@alga-psa/billing/actions/invoiceQueries', () => ({
   getInvoiceForRendering: (...args: unknown[]) => getInvoiceForRenderingMock(...args),
 }));
 
-vi.mock('@alga-psa/billing/lib/adapters/invoiceAdapters', () => ({
+vi.mock('@alga-psa/billing/lib/adapters/invoiceAdapters', async (importOriginal) => ({
+  // sampleScenarios.ts calls enrichWithGroupedItems and buildInvoiceTimeCollections
+  // at module load; keep the real pure helpers so new exports never break this mock.
+  ...(await importOriginal<typeof import('@alga-psa/billing/lib/adapters/invoiceAdapters')>()),
   mapDbInvoiceToWasmViewModel: (...args: unknown[]) => mapDbInvoiceToWasmViewModelMock(...args),
-  // sampleScenarios.ts calls this at module load; grouping is irrelevant here.
-  enrichWithGroupedItems: (vm: unknown) => vm,
 }));
 
 vi.mock('@alga-psa/billing/actions/invoiceTemplatePreview', () => ({

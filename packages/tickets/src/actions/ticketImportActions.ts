@@ -439,30 +439,30 @@ export const importTickets = withAuth(async (
     return await withTransaction(db, async (trx: Knex.Transaction) => {
     const tenantScopedTable = (table: string) => tenantDb(trx, tenant).table(table);
 
-    if (!await hasPermission(user, 'ticket', 'create')) {
+    if (!await hasPermission(user, 'ticket', 'create', trx)) {
       throw new Error('Permission denied: Cannot create tickets');
     }
 
     // Check entity-creation permissions for each resolution type that has 'create' actions
     const hasClientCreates = clientResolutions.some(r => r.action === 'create');
-    if (hasClientCreates && !await hasPermission(user, 'client', 'create')) {
+    if (hasClientCreates && !await hasPermission(user, 'client', 'create', trx)) {
       throw new Error('Permission denied: Cannot create clients. Change unmatched clients to "Map to existing" or "Skip".');
     }
 
     const hasPriorityCreates = priorityResolutions.some(r => r.action === 'create');
-    if (hasPriorityCreates && !await hasPermission(user, 'priority', 'create')) {
+    if (hasPriorityCreates && !await hasPermission(user, 'priority', 'create', trx)) {
       throw new Error('Permission denied: Cannot create priorities. Change unmatched priorities to "Map to existing" or "Use default".');
     }
 
     const hasContactCreates = contactResolutions.some(r => r.action === 'create');
-    if (hasContactCreates && !await hasPermission(user, 'contact', 'create')) {
+    if (hasContactCreates && !await hasPermission(user, 'contact', 'create', trx)) {
       throw new Error('Permission denied: Cannot create contacts. Change unmatched contacts to "Map to existing" or "Skip".');
     }
 
     // Statuses and categories are board configuration — gated by ticket_settings:update
     const hasStatusCreates = statusResolutions.some(r => r.action === 'create');
     const hasCategoryCreates = categoryResolutions.some(r => r.action === 'create');
-    if ((hasStatusCreates || hasCategoryCreates) && !await hasPermission(user, 'ticket_settings', 'update')) {
+    if ((hasStatusCreates || hasCategoryCreates) && !await hasPermission(user, 'ticket_settings', 'update', trx)) {
       const entities = [hasStatusCreates && 'statuses', hasCategoryCreates && 'categories'].filter(Boolean).join(' and ');
       throw new Error(`Permission denied: Cannot create ${entities}. Change unmatched items to "Map to existing" or use defaults.`);
     }

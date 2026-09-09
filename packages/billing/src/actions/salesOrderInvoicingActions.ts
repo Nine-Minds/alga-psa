@@ -331,7 +331,7 @@ export const generateInvoiceForSalesOrder = withAuth(
         // grant alone must not authorize it (the append branch previously skipped this,
         // since it calls the persistence services directly rather than via the action).
         const billingAction = existingDraft ? 'update' : 'create';
-        if (!(await hasPermission(user, 'billing', billingAction))) {
+        if (!(await hasPermission(user, 'billing', billingAction, trx))) {
           return {
             success: false,
             invoiced: 0,

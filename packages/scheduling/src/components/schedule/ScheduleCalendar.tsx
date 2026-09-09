@@ -518,6 +518,17 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
     await fetchEvents();
   };
 
+  // Creating a Teams meeting rewrites the entry's notes server-side (and, for
+  // a recurring occurrence, materializes it into a new concrete entry), so the
+  // events fetched before the call are stale: refetch immediately so closing
+  // and reopening the popup binds to the persisted entry instead of
+  // resurrecting pre-link notes or a virtual occurrence that no longer exists.
+  // Deliberately not routed through onSave — that performs another update
+  // using the stale selected event and is unsafe for virtual occurrences.
+  const handleTeamsMeetingCreated = async () => {
+    await fetchEvents();
+  };
+
   const handleEntryPopupSave = async (entryData: IScheduleEntry) => {
     try {
       console.log('Saving entry:', entryData);
@@ -585,6 +596,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
         onClose={handleEntryPopupClose}
         onSave={handleEntryPopupSave}
         onDelete={handleDeleteEntry}
+        onTeamsMeetingCreated={handleTeamsMeetingCreated}
         canAssignMultipleAgents={canAssignOthers}
         currentUserId={currentUserId ?? ''}
         canModifySchedule={canModifySchedule}

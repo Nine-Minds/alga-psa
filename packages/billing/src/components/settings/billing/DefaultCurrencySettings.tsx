@@ -1,11 +1,10 @@
 import React from 'react';
-import CustomSelect from "@alga-psa/ui/components/CustomSelect";
+import CurrencyPicker from "@alga-psa/ui/components/CurrencyPicker";
 import toast from 'react-hot-toast';
 import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getDefaultBillingSettings, updateDefaultBillingSettings } from "../../../actions/billingSettingsActions";
 import type { BillingSettings } from "../../../actions/billingSettingsActions";
-import { CURRENCY_OPTIONS } from '@alga-psa/core';
 
 const DefaultCurrencySettings = (): React.JSX.Element => {
   const { t } = useTranslation('msp/billing-settings');
@@ -49,9 +48,8 @@ const DefaultCurrencySettings = (): React.JSX.Element => {
   };
 
   return (
-    <CustomSelect
+    <CurrencyPicker
       id="default-currency-code"
-      options={CURRENCY_OPTIONS}
       value={settings.defaultCurrencyCode || 'USD'}
       onValueChange={handleCurrencyChange}
       placeholder={t('general.currency.fields.currency.placeholder', { defaultValue: 'Select currency' })}

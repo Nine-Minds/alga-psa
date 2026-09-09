@@ -559,6 +559,17 @@ export const sendPortalInvitation = withAuth(async (
       };
     }
 
+    // Prefer the tenant's active custom portal domain (vanity host) so the
+    // invitation lands on the host the client portal is served from.
+    let vanityBaseUrl = '';
+    try {
+      const portalDomain = await getPortalDomainStatusForTenant(tenant);
+      if (portalDomain.status === 'active' && portalDomain.domain) {
+        vanityBaseUrl = `https://${portalDomain.domain}`;
+      }
+    } catch (domainError) {
+      console.warn('Failed to resolve custom portal domain for invitation link:', domainError);
+    }
     // Use a transaction to ensure atomicity
     const result = await knex.transaction(async (trx) => {
       const scopedDb = tenantDb(trx, tenant);
@@ -638,17 +649,6 @@ export const sendPortalInvitation = withAuth(async (
 
       const tenantSlug = await getTenantSlugForTenant(tenant);
 
-      // Prefer the tenant's active custom portal domain (vanity host) so the
-      // invitation lands on the host the client portal is served from.
-      let vanityBaseUrl = '';
-      try {
-        const portalDomain = await getPortalDomainStatusForTenant(tenant);
-        if (portalDomain.status === 'active' && portalDomain.domain) {
-          vanityBaseUrl = `https://${portalDomain.domain}`;
-        }
-      } catch (domainError) {
-        console.warn('Failed to resolve custom portal domain for invitation link:', domainError);
-      }
 
       // Generate portal setup URL with robust base URL fallback
       const baseUrl =

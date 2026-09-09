@@ -14,6 +14,7 @@
         "manualEntryHelp": "Saisissez l'identifiant exactement tel qu'il apparaît dans votre système comptable.",
         "metadataLabel": "Métadonnées (JSON)",
         "metadataPlaceholder": "Métadonnées optionnelles au format JSON",
+        "noKindOptions": "Aucun enregistrement utilisable de ce type n'a été trouvé dans l'organisation connectée.",
         "realmIdLabel": "ID du Realm",
         "saveMapping": "Enregistrer le mappage",
         "saving": "Enregistrement…",

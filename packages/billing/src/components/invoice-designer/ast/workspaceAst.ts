@@ -342,6 +342,7 @@ const resolveCollectionPath = (node: WorkspaceNode, documentKind: DesignerDocume
     asTrimmedString(metadata.bindingKey) ||
     asTrimmedString(metadata.path);
   const normalized = normalizeInvoiceBindingPath(rawPath, documentKind);
+  if (asTrimmedString(metadata.collectionBindingKey) || asTrimmedString(metadata.collectionPath)) return normalized;
   return normalized.length > 0 && normalized !== 'invoiceNumber' ? normalized : 'items';
 };
 
@@ -1018,8 +1019,8 @@ const mapDesignerNodeToAstNode = (
 	        // repeat its children once per item in a source collection. This
 	        // was added alongside `dynamic-table.repeat` as a compound-block
 	        // primitive for per-location (or other grouped) bands. Imported
-	        // AST nodes stash the original `repeat` on metadata; designer-
-	        // authored stacks simply omit it.
+	        // AST nodes retain the original repeat; visual presets author a
+	        // collection path which is registered like a table source.
 	        const metadata = getWorkspaceNodeMetadata(node);
 	        const importedRepeat = isRecord(metadata.__astStackRepeat)
 	          ? (metadata.__astStackRepeat as Record<string, unknown>)
@@ -1037,7 +1038,11 @@ const mapDesignerNodeToAstNode = (
 	          importedRepeat && typeof importedRepeat.keyPath === 'string' && importedRepeat.keyPath.trim().length > 0
 	            ? importedRepeat.keyPath.trim()
 	            : undefined;
-	        const repeat =
+	        const authoredRepeatSource = asTrimmedString(metadata.repeatCollectionBindingKey);
+	        const repeat = authoredRepeatSource
+	          ? { sourceBinding: { bindingId: resolveCollectionSourceBindingId(authoredRepeatSource, registerCollectionBinding, documentKind, transformOutputBindingId) },
+	              itemBinding: asTrimmedString(metadata.repeatItemBinding) || 'group' }
+	          :
 	          importedSourceBindingId.length > 0 && importedItemBinding.length > 0
 	            ? {
 	                sourceBinding: { bindingId: importedSourceBindingId },
@@ -1150,7 +1155,7 @@ const mapDesignerNodeToAstNode = (
         type: 'dynamic-table',
         repeat: {
           sourceBinding: { bindingId: sourceBindingId },
-          itemBinding: 'item',
+          itemBinding: asTrimmedString(metadata.__astTableItemBinding) || 'item',
         },
         columns: mapTableColumns(node, documentKind),
         headerStyle,
@@ -1863,6 +1868,8 @@ export const importTemplateAstToWorkspace = (
             metadata.placeholder = inputNode.placeholder;
           }
         } else if (inputNode.type === 'dynamic-table' || inputNode.type === 'table') {
+          const rowBinding = inputNode.type === 'dynamic-table' ? inputNode.repeat.itemBinding : inputNode.rowBinding;
+          metadata.__astTableItemBinding = rowBinding;
           const rawBindingId =
             inputNode.type === 'dynamic-table'
               ? inputNode.repeat.sourceBinding.bindingId
@@ -1870,13 +1877,7 @@ export const importTemplateAstToWorkspace = (
           // Preserve the raw source bindingId so scope-resolved bindings
           // (e.g. `group.items` inside a repeating stack) round-trip back
           // without being replaced by a synthesized `collection.*` id.
-          const isResolvableGlobalBinding =
-            Boolean(astInput.bindings?.collections?.[rawBindingId]) ||
-            normalizeInvoiceBindingPath(asTrimmedString(astInput.transforms?.outputBindingId), documentKind) ===
-              normalizeInvoiceBindingPath(rawBindingId, documentKind);
-          if (!isResolvableGlobalBinding) {
-            metadata.__astTableSourceBindingId = rawBindingId;
-          }
+          metadata.__astTableSourceBindingId = rawBindingId;
           const collectionPath = resolveImportedCollectionBindingPath(astInput, rawBindingId, documentKind);
           metadata.collectionBindingKey = denormalizeBindingPath(collectionPath, documentKind);
           metadata.columns = inputNode.columns.map((column) => {
@@ -1884,7 +1885,9 @@ export const importTemplateAstToWorkspace = (
             const mappedColumn: Record<string, unknown> = {
               id: column.id,
               header: importedHeader.text,
-              key: column.value.type === 'path' ? `item.${column.value.path}` : column.id,
+              key: column.value.type === 'path'
+                ? column.value.path.startsWith(`${rowBinding}.`) ? column.value.path : `item.${column.value.path}`
+                : column.id,
               valueExpression: column.value,
               ...(importedHeader.ref ? { __astHeaderI18n: importedHeader.ref } : {}),
             };

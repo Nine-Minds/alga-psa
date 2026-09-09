@@ -114,7 +114,8 @@
     "collapseSidebar": "Comprimi barra laterale",
     "collapseSection": "Comprimi {{section}}",
     "expandSection": "Espandi {{section}}",
-    "appLogoAlt": "Logo {{appName}}"
+    "appLogoAlt": "Logo {{appName}}",
+    "poweredBy": "Basato su"
   },
   "settings": {
     "sections": {

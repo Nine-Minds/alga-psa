@@ -1051,7 +1051,8 @@
         "name": "Nome",
         "status": "Status",
         "order": "Ordem",
-        "actions": "Ações"
+        "actions": "Ações",
+        "default": "Padrão"
       },
       "statusLabels": {
         "closedHelp": "As interações com este status serão marcadas como fechadas",
@@ -1067,14 +1068,21 @@
         "success": {
           "updated": "Status atualizado com sucesso",
           "deleted": "Status excluído com sucesso",
-          "imported": "Status {{count}} importados com sucesso"
+          "imported": "Status {{count}} importados com sucesso",
+          "defaultUpdated": "Status padrão de interação atualizado"
         },
         "error": {
           "lastClosed": "Pelo menos um status deve permanecer marcado como fechado",
           "deleteLastClosed": "Não é possível excluir o último status fechado deste tipo.",
           "skipped": "Status {{count}} ignorados ({{reason}})",
-          "importFailed": "Falha ao importar status"
+          "importFailed": "Falha ao importar status",
+          "defaultRequired": "Um status precisa continuar sendo o padrão — defina outro status como padrão.",
+          "closedCannotBeDefault": "Um status fechado não pode ser o padrão para novas interações."
         }
+      },
+      "defaultLabels": {
+        "isDefault": "Padrão para novas interações",
+        "setDefault": "Usar como padrão"
       }
     },
     "quickAdd": {
@@ -1132,6 +1140,8 @@
         "companyName": "nome da empresa",
         "companyLogo": "Logotipo da empresa",
         "companyLogoDark": "Logotipo para fundos escuros",
+        "companyLogoWide": "Logotipo largo (opcional)",
+        "companyLogoWideDark": "Logotipo largo para fundos escuros (opcional)",
         "colorPalette": "Paleta de cores",
         "primaryColor": "Cor Primária",
         "secondaryColor": "Cor Secundária",
@@ -1148,6 +1158,8 @@
         "companyLogo": "Recomendado: PNG ou SVG, máximo de 2 MB, fundo transparente",
         "companyLogoMsp": "Este logotipo também substitui a marca Alga no menu lateral MSP.",
         "companyLogoDark": "Opcional. Usado no painel lateral do portal e nas telas em modo escuro. Se ficar vazio, o logotipo da empresa é usado.",
+        "companyLogoWide": "Exibido no topo do painel lateral expandido do portal, com 32 px de altura. Inclua o nome da sua empresa na imagem — o painel deixa de escrevê-lo separadamente.",
+        "companyLogoWideDark": "Opcional. Usado enquanto o fundo do painel lateral for escuro. Recorre ao logotipo largo.",
         "primaryColor": "Usado para botões, links e destaques",
         "secondaryColor": "Usado para acentos e ações secundárias",
         "supportEmail": "Mostrado aos clientes em confirmações de compromissos e outros e-mails enviados como o endereço de contato para obter ajuda.",
@@ -1177,7 +1189,11 @@
         "previewSignIn": "Visualizar página de login",
         "hideSignIn": "Ocultar página de login"
       },
-      "customDomainRequired": "Deve ter um domínio personalizado configurado"
+      "customDomainRequired": "Deve ter um domínio personalizado configurado",
+      "warnings": {
+        "expectSquare": "Essa imagem é bem mais larga do que alta. Este espaço preenche áreas quadradas — você provavelmente quer o espaço do logotipo largo.",
+        "expectWide": "Essa imagem é quase quadrada. O espaço do logotipo largo espera um logotipo em paisagem — uma marca quadrada vai no espaço acima."
+      }
     },
     "dashboardPreview": {
       "title": "Seu Portal do Cliente",
@@ -1282,11 +1298,11 @@
         "canonicalHostFallback": "hospedeiro canônico"
       },
       "appliance": {
-        "helpText": "Aponte este nome de host para o seu appliance e faça com que o seu proxy reverso encaminhe o cabeçalho Host original antes de salvar.",
+        "helpText": "Aponte este nome de host para o seu servidor e faça com que o seu proxy reverso encaminhe o cabeçalho Host original antes de salvar.",
         "checklistTitle": "Configuração do proxy reverso",
         "step1Prefix": "Aponte ",
-        "step1Suffix": " para este appliance (um registro A para o seu endereço ou um CNAME para o seu host de appliance).",
-        "step2": "No seu proxy reverso, termine o TLS para o domínio e encaminhe para este appliance na porta 3000, preservando o cabeçalho Host original (ex. proxy_set_header Host $host) e enviando X-Forwarded-Proto: https.",
+        "step1Suffix": " para este servidor (um registro A para o seu endereço ou um CNAME para o nome de host do seu servidor).",
+        "step2": "No seu proxy reverso, termine o TLS para o domínio e encaminhe para este servidor na porta 3000, preservando o cabeçalho Host original (ex. proxy_set_header Host $host) e enviando X-Forwarded-Proto: https.",
         "step3": "Obtenha e mantenha o certificado TLS para o domínio no seu proxy.",
         "step4": "Salve o domínio aqui — ele é ativado imediatamente. Configure primeiro o DNS e o seu proxy, pois os links do portal mudam para este domínio imediatamente.",
         "docLinkText": "Guia de configuração e solução de problemas do proxy reverso",
@@ -1423,10 +1439,24 @@
     "whiteLabel": {
       "title": "Marca própria no aplicativo MSP",
       "description": "Envie seu logotipo uma vez. Ele substitui a marca Alga no menu lateral MSP, e o portal do cliente usa as mesmas imagens.",
-      "logoHelp": "O menu lateral MSP é escuro nos dois temas, por isso usa o logotipo para fundos escuros quando você fornece um e, caso contrário, o logotipo principal.",
+      "logoHelp": "A marca quadrada é usada sempre que o espaço é quadrado: no menu lateral recolhido e nas molduras circulares. O logotipo largo opcional substitui a marca e o nome no menu lateral expandido, então envie um que já contenha o nome da sua empresa. O menu lateral segue o próprio fundo: usa as variantes para fundos escuros quando o menu é escuro e as claras quando é claro, recorrendo à variante que você enviou.",
       "fields": {
-        "logo": "Logotipo",
-        "logoDark": "Logotipo para fundos escuros"
+        "mark": "Marca quadrada",
+        "markDark": "Marca quadrada para fundos escuros",
+        "wide": "Logotipo largo (opcional)",
+        "wideDark": "Logotipo largo para fundos escuros (opcional)",
+        "favicon": "Ícone do navegador (favicon)"
+      },
+      "hints": {
+        "mark": "Usada no menu lateral recolhido e em todas as molduras circulares. O formato quadrado funciona melhor.",
+        "markDark": "Opcional. Recorre à marca quadrada.",
+        "wide": "Exibido apenas no menu lateral expandido, com 32 px de altura. Inclua o nome da sua empresa na imagem.",
+        "wideDark": "Opcional. Usado enquanto o fundo do menu lateral for escuro, como acontece em todos os temas fornecidos.",
+        "favicon": "PNG, SVG ou ICO. Imagens raster são redimensionadas para 32x32. Vale para o aplicativo MSP e para o portal do cliente da sua organização."
+      },
+      "warnings": {
+        "expectSquare": "Essa imagem é bem mais larga do que alta. O espaço da marca quadrada é usado em áreas quadradas — você provavelmente quer o espaço do logotipo largo.",
+        "expectWide": "Essa imagem é quase quadrada. O espaço largo espera um logotipo em paisagem — você provavelmente quer o espaço da marca quadrada."
       },
       "colors": {
         "label": "Usar as cores da sua marca no aplicativo MSP",
@@ -3141,7 +3171,9 @@
       "nameRequired": "O nome do status é obrigatório",
       "nameEmpty": "O nome do status não pode ficar vazio",
       "idRequired": "O ID do status é obrigatório",
-      "manageFromBoard": "Os status de ticket devem ser gerenciados nas configurações do quadro"
+      "manageFromBoard": "Os status de ticket devem ser gerenciados nas configurações do quadro",
+      "closedCannotBeDefault": "Um status fechado não pode ser o status padrão",
+      "defaultMustStayOpen": "Defina outro status como padrão antes de fechar este"
     },
     "priority": {
       "notFound": "Prioridade não encontrada.",
@@ -3236,7 +3268,7 @@
       "needsDot": "O domínio deve incluir pelo menos um ponto.",
       "notCanonicalHost": "Escolha um domínio diferente do host canônico.",
       "noLeadingTrailingDot": "O domínio não pode começar nem terminar com um ponto.",
-      "notApplianceHost": "Escolha um domínio diferente do host principal deste appliance. O domínio personalizado do portal deve ser outro nome de host que seu proxy reverso encaminhe para cá.",
+      "notApplianceHost": "Escolha um domínio diferente do host principal deste servidor. O domínio personalizado do portal deve ser outro nome de host que seu proxy reverso encaminhe para cá.",
       "nothingToRetry": "Não há registro de domínio personalizado com falha para repetir.",
       "retryOnlyAfterFailure": "A repetição só está disponível após um registro com falha."
     }

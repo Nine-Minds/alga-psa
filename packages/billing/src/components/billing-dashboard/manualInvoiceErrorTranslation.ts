@@ -5,6 +5,10 @@ import type {
 
 const translatedManualInvoiceErrorCodes = new Set<ManualInvoiceErrorCode>([
   'NO_BILLING_EMAIL',
+  'USAGE_RECORDS_MISSING',
+  'USAGE_RECORDS_MISSING_ACK_REQUIRED',
+  'USAGE_PERIOD_TOTAL_STALE',
+  'USAGE_CALCULATION_ERROR',
   'CLIENT_NOT_FOUND',
   'SERVICE_NOT_FOUND',
   'INVALID_QUANTITY',

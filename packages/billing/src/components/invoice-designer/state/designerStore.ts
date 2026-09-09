@@ -498,7 +498,7 @@ const sanitizeTransformWorkspace = (value: unknown): DesignerTransformWorkspace 
   };
 };
 
-const snapshotWorkspaceNodesById = (
+export const snapshotWorkspaceNodesById = (
   nodes: DesignerNode[]
 ): DesignerWorkspaceSnapshot['nodesById'] =>
   Object.fromEntries(

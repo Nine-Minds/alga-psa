@@ -194,6 +194,10 @@ spec:
           # trusted X-Forwarded-Host). Defaults to "hosted"; the appliance sets "appliance".
           - name: DEPLOYMENT_PROFILE
             value: "{{ .Values.deploymentProfile | default "hosted" }}"
+          # Trust X-Forwarded-Host from the reverse proxy without adopting the
+          # appliance profile (self-hosted behind a Host-rewriting proxy).
+          - name: TRUST_FORWARDED_HOST
+            value: "{{ .Values.trustForwardedHost | default false }}"
           # ----------- APP ----------------
           - name: VERSION
             value: "{{ .Values.version }}"
@@ -907,6 +911,14 @@ spec:
           {{- if .Values.stripe.pro_annual_price_id }}
           - name: STRIPE_PRO_ANNUAL_PRICE_ID
             value: "{{ .Values.stripe.pro_annual_price_id }}"
+          {{- end }}
+          {{- if .Values.stripe.algadesk_user_price_id }}
+          - name: STRIPE_ALGADESK_USER_PRICE_ID
+            value: "{{ .Values.stripe.algadesk_user_price_id }}"
+          {{- end }}
+          {{- if .Values.stripe.algadesk_user_annual_price_id }}
+          - name: STRIPE_ALGADESK_USER_ANNUAL_PRICE_ID
+            value: "{{ .Values.stripe.algadesk_user_annual_price_id }}"
           {{- end }}
           {{- if .Values.stripe.early_adopters_base_price_id }}
           - name: STRIPE_EARLY_ADOPTERS_BASE_PRICE_ID

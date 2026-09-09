@@ -18,6 +18,7 @@ import type {
 } from '../types/notification';
 import { TenantEmailService, StaticTemplateProcessor } from '@alga-psa/email';
 import type { TenantEmailSettings } from '@alga-psa/types';
+import { resolveEmailPreferenceEnabled } from './emailPreferenceState';
 import { resolveEmailLocale } from './emailLocaleResolver';
 import type { SupportedLocale } from '@alga-psa/core/i18n/config';
 
@@ -416,7 +417,7 @@ export class EmailNotificationService implements NotificationService {
       })
       .first();
 
-    if (preference && !preference.is_enabled) {
+    if (!resolveEmailPreferenceEnabled(settings.is_enabled, isCategoryEnabled, isSubtypeEnabled, preference?.is_enabled)) {
       return;
     }
 

@@ -44,7 +44,7 @@ describe.skipIf(!helmAvailable)('temporal-worker shared tenant secrets Helm rend
     });
   });
 
-  it('renders the shared hostPath, read-only mount, and filesystem base path when enabled', () => {
+  it('renders the shared hostPath, writable mount, and filesystem base path when enabled', () => {
     const secrets = sharedTenantSecrets(renderDeployment(['--set', 'sharedTenantSecrets.enabled=true']));
 
     expect(secrets.volume).toEqual({
@@ -54,12 +54,24 @@ describe.skipIf(!helmAvailable)('temporal-worker shared tenant secrets Helm rend
         type: 'DirectoryOrCreate',
       },
     });
+    // Entra sync persists refreshed tokens through this mount; readOnly must not render.
+    expect(secrets.mount).toEqual({
+      name: 'shared-tenant-secrets',
+      mountPath: '/shared-tenant-secrets',
+    });
+    expect(secrets.env).toEqual({ name: 'SECRET_FS_BASE_PATH', value: '/shared-tenant-secrets' });
+  });
+
+  it('still honours an explicit read-only opt-in', () => {
+    const secrets = sharedTenantSecrets(
+      renderDeployment(['--set', 'sharedTenantSecrets.enabled=true', '--set', 'sharedTenantSecrets.readOnly=true'])
+    );
+
     expect(secrets.mount).toEqual({
       name: 'shared-tenant-secrets',
       mountPath: '/shared-tenant-secrets',
       readOnly: true,
     });
-    expect(secrets.env).toEqual({ name: 'SECRET_FS_BASE_PATH', value: '/shared-tenant-secrets' });
   });
 
   it('does not change the default hosted Deployment object graph', () => {
@@ -70,15 +82,23 @@ describe.skipIf(!helmAvailable)('temporal-worker shared tenant secrets Helm rend
     });
   });
 
-  it('enables the shared mount through the single-node Flux values overlay', () => {
-    const secrets = sharedTenantSecrets(renderDeployment(['--values', applianceValuesPath]));
+  it('enables a writable shared mount through the single-node Flux values overlay', () => {
+    const deployment = renderDeployment(['--values', applianceValuesPath]);
+    const secrets = sharedTenantSecrets(deployment);
 
-    expect(secrets.mount).toMatchObject({
+    expect(secrets.mount).toEqual({
       name: 'shared-tenant-secrets',
       mountPath: '/shared-tenant-secrets',
-      readOnly: true,
     });
     expect(secrets.env).toEqual({ name: 'SECRET_FS_BASE_PATH', value: '/shared-tenant-secrets' });
+  });
+
+  it('runs the appliance worker as root so it can write into the root-owned hostPath', () => {
+    const container = renderDeployment(['--values', applianceValuesPath]).spec.template.spec.containers.find(
+      (candidate: any) => candidate.name === 'temporal-worker'
+    );
+
+    expect(container.securityContext).toEqual({ runAsUser: 0, runAsGroup: 0 });
   });
 });
 

@@ -14,6 +14,7 @@
         "manualEntryHelp": "Geben Sie die Kennung genau so ein, wie sie in Ihrem Buchhaltungssystem erscheint.",
         "metadataLabel": "Metadaten (JSON)",
         "metadataPlaceholder": "Optionale Metadaten als JSON",
+        "noKindOptions": "In der verbundenen Organisation wurden keine verwendbaren Datensätze dieses Typs gefunden.",
         "realmIdLabel": "Realm-ID",
         "saveMapping": "Zuordnung speichern",
         "saving": "Speichern…",

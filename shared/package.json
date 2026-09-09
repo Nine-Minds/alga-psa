@@ -10,6 +10,8 @@
     "./core": "./dist/core/index.js",
     "./core/logger.js": "./dist/core/logger.js",
     "./core/secretProvider.js": "./dist/core/secretProvider.js",
+    "./core/deploymentProfile": "./dist/core/deploymentProfile.js",
+    "./core/deploymentProfile.js": "./dist/core/deploymentProfile.js",
     "./db": "./dist/db/index.js",
     "./db/admin.js": "./dist/db/admin.js",
     "./events/publisher.js": "./dist/events/publisher.js",

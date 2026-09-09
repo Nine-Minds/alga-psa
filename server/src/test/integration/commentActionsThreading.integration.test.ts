@@ -243,14 +243,23 @@ describe('ticket comment threading actions', () => {
         .first();
       threadId = root.thread_id;
 
-      const deniedInternalReply = await createComment({
-        ticket_id: context.ticket_id,
-        user_id: clientUser.user_id,
-        note: blockNote('Invalid internal reply from client user'),
-        is_internal: true,
-        is_resolution: false,
-        parent_comment_id: rootCommentId,
-      });
+      // Comment authorship is the authenticated user (callers cannot pass
+      // another user_id), so the denial must come from a client session.
+      const mspUser = userRef.user;
+      userRef.user = { user_id: clientUser.user_id, user_type: 'client' };
+      let deniedInternalReply;
+      try {
+        deniedInternalReply = await createComment({
+          ticket_id: context.ticket_id,
+          user_id: clientUser.user_id,
+          note: blockNote('Invalid internal reply from client user'),
+          is_internal: true,
+          is_resolution: false,
+          parent_comment_id: rootCommentId,
+        });
+      } finally {
+        userRef.user = mspUser;
+      }
       expect(deniedInternalReply).toMatchObject({
         actionError: 'Only MSP users can create internal comments',
       });

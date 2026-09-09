@@ -1,0 +1,84 @@
+[
+  {
+    "id": "T001",
+    "description": "DB-backed authenticated read hydrates saved overrides, inherited defaults, mixed category state, and tenant-disabled controls",
+    "featureIds": [
+      "F001",
+      "F002",
+      "F003",
+      "F004",
+      "F005",
+      "F018"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "T002",
+    "description": "DB-backed subtype mutation upserts only the session user's valid tenant subtype and rejects spoofed identity or invalid subtype",
+    "featureIds": [
+      "F006",
+      "F007"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "T003",
+    "description": "DB-backed category mutation writes every eligible subtype in one transaction and rolls back all rows on an injected failure",
+    "featureIds": [
+      "F008",
+      "F009",
+      "F010"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "T004",
+    "description": "MSP component test covers load, individual persistence, category mixed state, pending controls, failure rollback, and retry",
+    "featureIds": [
+      "F001",
+      "F003",
+      "F011",
+      "F012",
+      "F013"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "T005",
+    "description": "Overlapping category and subtype operations settle to the latest accepted intent without stale-response overwrite",
+    "featureIds": [
+      "F014"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "T006",
+    "description": "Representative delivery test suppresses a disabled user subtype and tenant-disabled notification regardless of personal row",
+    "featureIds": [
+      "F004",
+      "F018"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "T007",
+    "description": "Focused running-UI smoke toggles subtype and category, refreshes and starts a fresh session, and confirms persisted database state",
+    "featureIds": [
+      "F001",
+      "F006",
+      "F008",
+      "F011",
+      "F015"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "T008",
+    "description": "Regression smoke confirms Internal MSP and client-portal Email preference flows still load and save",
+    "featureIds": [
+      "F016",
+      "F017"
+    ],
+    "implemented": true
+  }
+]

@@ -1051,7 +1051,8 @@
         "name": "Nome",
         "status": "Stato",
         "order": "Ordine",
-        "actions": "Azioni"
+        "actions": "Azioni",
+        "default": "Predefinito"
       },
       "statusLabels": {
         "closedHelp": "Le interazioni con questo stato saranno contrassegnate come chiuse",
@@ -1067,14 +1068,21 @@
         "success": {
           "updated": "Stato aggiornato con successo",
           "deleted": "Stato eliminato con successo",
-          "imported": "{{count}} stati importati con successo"
+          "imported": "{{count}} stati importati con successo",
+          "defaultUpdated": "Stato di interazione predefinito aggiornato"
         },
         "error": {
           "lastClosed": "Almeno uno stato deve rimanere contrassegnato come chiuso",
           "deleteLastClosed": "Impossibile eliminare l'ultimo stato chiuso per questo tipo.",
           "skipped": "{{count}} stati saltati ({{reason}})",
-          "importFailed": "Impossibile importare gli stati"
+          "importFailed": "Impossibile importare gli stati",
+          "defaultRequired": "Uno stato deve restare quello predefinito: imposta un altro stato come predefinito.",
+          "closedCannotBeDefault": "Uno stato chiuso non può essere quello predefinito per le nuove interazioni."
         }
+      },
+      "defaultLabels": {
+        "isDefault": "Predefinito per le nuove interazioni",
+        "setDefault": "Usa come predefinito"
       }
     },
     "quickAdd": {
@@ -1132,6 +1140,8 @@
         "companyName": "Nome dell'azienda",
         "companyLogo": "Logo dell'azienda",
         "companyLogoDark": "Logo per sfondi scuri",
+        "companyLogoWide": "Logo largo (facoltativo)",
+        "companyLogoWideDark": "Logo largo per sfondi scuri (facoltativo)",
         "colorPalette": "Palette di colori",
         "primaryColor": "Colore primario",
         "secondaryColor": "Colore secondario",
@@ -1148,6 +1158,8 @@
         "companyLogo": "Consigliato: PNG o SVG, massimo 2 MB, sfondo trasparente",
         "companyLogoMsp": "Questo logo sostituisce anche il marchio Alga nel menu laterale MSP.",
         "companyLogoDark": "Facoltativo. Utilizzato nel pannello laterale del portale e nelle schermate in modalità scura. Se vuoto, viene usato il logo dell'azienda.",
+        "companyLogoWide": "Mostrato in cima al pannello laterale espanso del portale, alto 32 px. Includi il nome della tua azienda nell’immagine: il pannello smette di scriverlo separatamente.",
+        "companyLogoWideDark": "Facoltativo. Usato finché lo sfondo del pannello laterale è scuro. Ricorre al logo largo.",
         "primaryColor": "Utilizzato per pulsanti, link e evidenziazioni",
         "secondaryColor": "Utilizzato per accenti e azioni secondarie",
         "supportEmail": "Viene mostrata ai clienti nelle conferme degli appuntamenti e in altre e-mail in uscita come indirizzo di contatto per ricevere assistenza.",
@@ -1177,7 +1189,11 @@
         "previewSignIn": "Anteprima pagina di accesso",
         "hideSignIn": "Nascondi pagina di accesso"
       },
-      "customDomainRequired": "E necessario configurare un dominio personalizzato"
+      "customDomainRequired": "E necessario configurare un dominio personalizzato",
+      "warnings": {
+        "expectSquare": "Questa immagine è molto più larga che alta. Questo spazio riempie aree quadrate: probabilmente cerchi lo spazio del logo largo.",
+        "expectWide": "Questa immagine è quasi quadrata. Lo spazio del logo largo si aspetta un logo orizzontale: un marchio quadrato va nello spazio qui sopra."
+      }
     },
     "dashboardPreview": {
       "title": "Il tuo portale clienti",
@@ -1282,11 +1298,11 @@
         "canonicalHostFallback": "host canonico"
       },
       "appliance": {
-        "helpText": "Punta questo nome host alla tua appliance e fai in modo che il tuo reverse proxy inoltri l'header Host originale prima di salvare.",
+        "helpText": "Punta questo nome host al tuo server e fai in modo che il tuo reverse proxy inoltri l'header Host originale prima di salvare.",
         "checklistTitle": "Configurazione del reverse proxy",
         "step1Prefix": "Punta ",
-        "step1Suffix": " a questa appliance (un record A al suo indirizzo o un CNAME al tuo host appliance).",
-        "step2": "Sul tuo reverse proxy, termina TLS per il dominio e inoltra a questa appliance sulla porta 3000, preservando l'header Host originale (es. proxy_set_header Host $host) e inviando X-Forwarded-Proto: https.",
+        "step1Suffix": " a questo server (un record A al suo indirizzo o un CNAME al nome host del tuo server).",
+        "step2": "Sul tuo reverse proxy, termina TLS per il dominio e inoltra a questo server sulla porta 3000, preservando l'header Host originale (es. proxy_set_header Host $host) e inviando X-Forwarded-Proto: https.",
         "step3": "Ottieni e mantieni il certificato TLS per il dominio sul tuo proxy.",
         "step4": "Salva il dominio qui — si attiva immediatamente. Configura prima il DNS e il tuo proxy, poiché i link del portale passano subito a questo dominio.",
         "docLinkText": "Guida alla configurazione e risoluzione dei problemi del reverse proxy",
@@ -1423,10 +1439,24 @@
     "whiteLabel": {
       "title": "Personalizza il marchio dell’app MSP",
       "description": "Carica il tuo logo una volta sola. Sostituisce il marchio Alga nel menu laterale MSP e il portale clienti usa le stesse immagini.",
-      "logoHelp": "Il menu laterale MSP è scuro in entrambi i temi, quindi usa il logo per sfondi scuri quando lo fornisci e altrimenti ricorre al logo principale.",
+      "logoHelp": "Il marchio quadrato viene usato ovunque lo spazio sia quadrato: nel menu laterale compresso e nelle cornici circolari. Il logo largo facoltativo sostituisce il marchio e il nome nel menu laterale espanso, quindi caricane uno che contenga già il nome della tua azienda. Il menu laterale segue il proprio sfondo: le varianti per sfondi scuri quando il menu è scuro e quelle chiare quando è chiaro, ricorrendo comunque alla variante che hai caricato.",
       "fields": {
-        "logo": "Logo",
-        "logoDark": "Logo per sfondi scuri"
+        "mark": "Marchio quadrato",
+        "markDark": "Marchio quadrato per sfondi scuri",
+        "wide": "Logo largo (facoltativo)",
+        "wideDark": "Logo largo per sfondi scuri (facoltativo)",
+        "favicon": "Icona del browser (favicon)"
+      },
+      "hints": {
+        "mark": "Usato nel menu laterale compresso e in ogni cornice circolare. Il formato quadrato è il migliore.",
+        "markDark": "Facoltativo. Ricorre al marchio quadrato.",
+        "wide": "Mostrato solo nel menu laterale espanso, alto 32 px. Includi il nome della tua azienda nell’immagine.",
+        "wideDark": "Facoltativo. Usato finché lo sfondo del menu laterale è scuro, come accade in tutti i temi inclusi.",
+        "favicon": "PNG, SVG o ICO. Le immagini raster vengono ridimensionate a 32x32. Vale per l’app MSP e per il portale clienti della tua organizzazione."
+      },
+      "warnings": {
+        "expectSquare": "Questa immagine è molto più larga che alta. Lo spazio del marchio quadrato serve per le aree quadrate: probabilmente cerchi lo spazio del logo largo.",
+        "expectWide": "Questa immagine è quasi quadrata. Lo spazio largo si aspetta un logo orizzontale: probabilmente cerchi lo spazio del marchio quadrato."
       },
       "colors": {
         "label": "Usa i colori del tuo marchio nell’app MSP",
@@ -3141,7 +3171,9 @@
       "nameRequired": "Il nome dello stato è obbligatorio",
       "nameEmpty": "Il nome dello stato non può essere vuoto",
       "idRequired": "L’ID dello stato è obbligatorio",
-      "manageFromBoard": "Gli stati dei ticket devono essere gestiti dalle impostazioni della bacheca"
+      "manageFromBoard": "Gli stati dei ticket devono essere gestiti dalle impostazioni della bacheca",
+      "closedCannotBeDefault": "Uno stato chiuso non può essere lo stato predefinito",
+      "defaultMustStayOpen": "Imposta un altro stato come predefinito prima di chiudere questo"
     },
     "priority": {
       "notFound": "Priorità non trovata.",
@@ -3236,7 +3268,7 @@
       "needsDot": "Il dominio deve contenere almeno un punto.",
       "notCanonicalHost": "Scegli un dominio diverso dall'host canonico.",
       "noLeadingTrailingDot": "Il dominio non può iniziare o terminare con un punto.",
-      "notApplianceHost": "Scegli un dominio diverso dall'host principale di questa appliance. Il dominio personalizzato del portale deve essere un altro nome host che il tuo reverse proxy inoltra qui.",
+      "notApplianceHost": "Scegli un dominio diverso dall'host principale di questo server. Il dominio personalizzato del portale deve essere un altro nome host che il tuo reverse proxy inoltra qui.",
       "nothingToRetry": "Non c'è alcuna registrazione di dominio personalizzato non riuscita da ritentare.",
       "retryOnlyAfterFailure": "Il nuovo tentativo è disponibile solo dopo una registrazione non riuscita."
     }

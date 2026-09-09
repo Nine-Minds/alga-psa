@@ -327,17 +327,7 @@ export async function shouldAllocateUnassignedEntry(
   }
 }
 
-/**
- * Gets eligible contract lines for a client and service - UI friendly version
- * @param clientId The client ID
- * @param serviceId The service ID
- * @returns Array of eligible contract lines with simplified structure
- */
-export async function getEligibleContractLinesForUI(
-  clientId: string,
-  serviceId: string,
-  effectiveDate?: string | Date
-): Promise<Array<{
+export interface EligibleContractLineForUI {
   client_contract_line_id: string;
   contract_line_name: string;
   contract_line_type: string;
@@ -346,36 +336,47 @@ export async function getEligibleContractLinesForUI(
   end_date: string | null;
   has_bucket_overlay: boolean;
   bucket_overlay?: EligibleContractLine['bucket_overlay'];
-}>> {
-  const { knex, tenant } = await createTenantKnex();
+}
 
-  if (!tenant) {
-    throw new Error("Tenant context not found");
-  }
+/**
+ * Gets eligible contract lines for a client and service - UI friendly version.
+ *
+ * Tenant-bound: this delegates to `getEligibleContractLines` with the caller's
+ * knex/tenant. It never resolves its own tenant context — invoke it through an
+ * authenticated action (see `usageActions.getEligibleContractLinesForUI`) so
+ * the tenant comes from the request, not from a bare server-action call.
+ *
+ * @param knex The Knex instance
+ * @param tenant The tenant ID
+ * @param clientId The client ID
+ * @param serviceId The service ID
+ * @param effectiveDate The effective date used to narrow eligibility
+ * @returns Array of eligible contract lines with simplified structure
+ */
+export async function getEligibleContractLinesForUI(
+  knex: Knex,
+  tenant: string,
+  clientId: string,
+  serviceId: string,
+  effectiveDate?: string | Date
+): Promise<EligibleContractLineForUI[]> {
+  const contractLines = await getEligibleContractLines(knex, tenant, clientId, serviceId, effectiveDate);
 
-  try {
-    const contractLines = await getEligibleContractLines(knex, tenant, clientId, serviceId, effectiveDate);
+  // Transform to the structure expected by the UI, including dates
+  return contractLines.map(contractLine => {
+    const hasBucketOverlay = Boolean(contractLine.bucket_overlay?.config_id);
 
-    // Transform to a simpler structure for UI
-    // Transform to the structure expected by the UI, including dates
-    return contractLines.map(contractLine => {
-      const hasBucketOverlay = Boolean(contractLine.bucket_overlay?.config_id);
-
-      return {
-        client_contract_line_id: contractLine.client_contract_line_id,
-        contract_line_name: contractLine.contract_line_name || 'Unnamed Contract Line',
-        contract_line_type: contractLine.contract_line_type,
-        contract_name: contractLine.contract_name,
-        start_date: contractLine.start_date,
-        end_date: contractLine.end_date,
-        has_bucket_overlay: hasBucketOverlay,
-        bucket_overlay: contractLine.bucket_overlay
-      };
-    });
-  } catch (error) {
-    console.error('Error getting eligible contract lines for UI:', error);
-    return [];
-  }
+    return {
+      client_contract_line_id: contractLine.client_contract_line_id,
+      contract_line_name: contractLine.contract_line_name || 'Unnamed Contract Line',
+      contract_line_type: contractLine.contract_line_type,
+      contract_name: contractLine.contract_name,
+      start_date: contractLine.start_date,
+      end_date: contractLine.end_date,
+      has_bucket_overlay: hasBucketOverlay,
+      bucket_overlay: contractLine.bucket_overlay
+    };
+  });
 }
 
 /**

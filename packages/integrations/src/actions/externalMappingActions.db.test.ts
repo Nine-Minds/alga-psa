@@ -11,6 +11,7 @@ import {
 const qboReadMock = vi.hoisted(() => vi.fn());
 const xeroListItemsMock = vi.hoisted(() => vi.fn());
 const xeroListTaxRatesMock = vi.hoisted(() => vi.fn());
+const xeroListAccountsMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: (...args: any[]) => any) => async (...args: any[]) => fn(...args),
@@ -37,6 +38,7 @@ vi.mock('../lib/xero/xeroClientService', () => ({
     create: vi.fn(async () => ({
       listItems: xeroListItemsMock,
       listTaxRates: xeroListTaxRatesMock,
+      listAccounts: xeroListAccountsMock,
     })),
   },
 }));
@@ -165,11 +167,19 @@ beforeEach(async () => {
   } as any);
   xeroListItemsMock.mockReset();
   xeroListTaxRatesMock.mockReset();
+  xeroListAccountsMock.mockReset();
   xeroListItemsMock.mockResolvedValue([
     { itemId: 'item-guid-1', code: 'XERO-ITEM-1', name: 'Managed Service', status: 'ACTIVE' },
   ]);
   xeroListTaxRatesMock.mockResolvedValue([
     { taxRateId: 'rate-guid-1', name: 'Sales Tax', taxType: 'OUTPUT2', status: 'ACTIVE' },
+  ]);
+  // Chart of accounts: an eligible active revenue account (200), an archived
+  // revenue account (299), and an active but non-revenue account (090).
+  xeroListAccountsMock.mockResolvedValue([
+    { accountId: 'acct-1', code: '200', name: 'Sales - IT Professional Services', type: 'REVENUE', status: 'ACTIVE' },
+    { accountId: 'acct-2', code: '299', name: 'Legacy Sales', type: 'REVENUE', status: 'ARCHIVED' },
+    { accountId: 'acct-3', code: '090', name: 'Business Bank Account', type: 'BANK', status: 'ACTIVE' },
   ]);
 });
 
@@ -531,6 +541,148 @@ describe('createExternalEntityMapping — Xero catalog links are proven against 
     expect(xeroListItemsMock).not.toHaveBeenCalled();
     expect(xeroListTaxRatesMock).not.toHaveBeenCalled();
     expect(await db('tenant_external_entity_mappings').where({ tenant: tenantA })).toHaveLength(0);
+  });
+});
+
+describe('createExternalEntityMapping — Xero account-mode service mappings', () => {
+  const accountMapping = (overrides: Record<string, unknown> = {}) => ({
+    integration_type: 'xero',
+    alga_entity_type: 'service',
+    alga_entity_id: serviceA,
+    external_entity_id: '200',
+    external_realm_id: xeroRealm,
+    metadata: { xeroTargetKind: 'account' },
+    ...overrides,
+  });
+
+  it('accepts an explicit account mapping to an active revenue account, validated against Accounts not Items', async () => {
+    const result = await (createExternalEntityMapping as any)(
+      { user_id: 'u' },
+      { tenant: tenantA },
+      accountMapping()
+    );
+    expect(result).toMatchObject({ id: expect.any(String), external_entity_id: '200' });
+    expect(xeroListAccountsMock).toHaveBeenCalled();
+    expect(xeroListItemsMock).not.toHaveBeenCalled();
+    const rows = await db('tenant_external_entity_mappings').where({ tenant: tenantA, alga_entity_id: serviceA });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].metadata).toMatchObject({ xeroTargetKind: 'account' });
+  });
+
+  it('rejects an account code that does not exist in the connected organisation', async () => {
+    const result = await (createExternalEntityMapping as any)(
+      { user_id: 'u' },
+      { tenant: tenantA },
+      accountMapping({ external_entity_id: '999' })
+    );
+    expect(result).toMatchObject({
+      actionError: expect.stringContaining('does not exist in the connected organisation'),
+    });
+    expect(await db('tenant_external_entity_mappings').where({ tenant: tenantA })).toHaveLength(0);
+  });
+
+  it('rejects the account display name — mappings store the code, not the name', async () => {
+    const result = await (createExternalEntityMapping as any)(
+      { user_id: 'u' },
+      { tenant: tenantA },
+      accountMapping({ external_entity_id: 'Sales - IT Professional Services' })
+    );
+    expect(result).toMatchObject({
+      actionError: expect.stringContaining('Select the account by its code'),
+    });
+    expect(await db('tenant_external_entity_mappings').where({ tenant: tenantA })).toHaveLength(0);
+  });
+
+  it('rejects an archived account', async () => {
+    const result = await (createExternalEntityMapping as any)(
+      { user_id: 'u' },
+      { tenant: tenantA },
+      accountMapping({ external_entity_id: '299' })
+    );
+    expect(result).toMatchObject({
+      actionError: expect.stringContaining('archived or deleted'),
+    });
+    expect(await db('tenant_external_entity_mappings').where({ tenant: tenantA })).toHaveLength(0);
+  });
+
+  it('rejects an account type Xero does not accept on sales invoice lines', async () => {
+    const result = await (createExternalEntityMapping as any)(
+      { user_id: 'u' },
+      { tenant: tenantA },
+      accountMapping({ external_entity_id: '090' })
+    );
+    expect(result).toMatchObject({
+      actionError: expect.stringContaining('not a revenue account'),
+    });
+    expect(await db('tenant_external_entity_mappings').where({ tenant: tenantA })).toHaveLength(0);
+  });
+
+  it('rejects an unrecognised xeroTargetKind fail-closed instead of defaulting to item', async () => {
+    const result = await (createExternalEntityMapping as any)(
+      { user_id: 'u' },
+      { tenant: tenantA },
+      accountMapping({ metadata: { xeroTargetKind: 'ledger' } })
+    );
+    expect(result).toMatchObject({
+      actionError: expect.stringContaining('must declare xeroTargetKind'),
+    });
+    expect(xeroListItemsMock).not.toHaveBeenCalled();
+    expect(xeroListAccountsMock).not.toHaveBeenCalled();
+    expect(await db('tenant_external_entity_mappings').where({ tenant: tenantA })).toHaveLength(0);
+  });
+
+  it('rejects an account mapping scoped to a realm that is not a connected organisation', async () => {
+    const result = await (createExternalEntityMapping as any)(
+      { user_id: 'u' },
+      { tenant: tenantA },
+      accountMapping({ external_realm_id: 'xero-org-not-connected' })
+    );
+    expect(result).toMatchObject({ actionError: expect.stringContaining('not a connected Xero') });
+    expect(xeroListAccountsMock).not.toHaveBeenCalled();
+    expect(await db('tenant_external_entity_mappings').where({ tenant: tenantA })).toHaveLength(0);
+  });
+
+  it('update that flips a legacy item mapping to account mode revalidates against the Accounts catalog', async () => {
+    // Legacy item mapping saved before account mode existed (no target kind).
+    const created = await (createExternalEntityMapping as any)(
+      { user_id: 'u' },
+      { tenant: tenantA },
+      {
+        integration_type: 'xero',
+        alga_entity_type: 'service',
+        alga_entity_id: serviceA,
+        external_entity_id: 'XERO-ITEM-1',
+        external_realm_id: xeroRealm,
+      }
+    );
+    expect(created).toMatchObject({ id: expect.any(String) });
+    xeroListItemsMock.mockClear();
+    xeroListAccountsMock.mockClear();
+
+    // Explicit conversion: retarget to account 200 with the account kind.
+    const converted = await (updateExternalEntityMapping as any)(
+      { user_id: 'u' },
+      { tenant: tenantA },
+      created.id,
+      { external_entity_id: '200', metadata: { xeroTargetKind: 'account' } }
+    );
+    expect(converted).toMatchObject({ external_entity_id: '200' });
+    expect(xeroListAccountsMock).toHaveBeenCalled();
+    expect(xeroListItemsMock).not.toHaveBeenCalled();
+
+    // A metadata-only kind flip (same code) must also revalidate — and fail
+    // here because "200" is not an item in the connected org.
+    const flippedBack = await (updateExternalEntityMapping as any)(
+      { user_id: 'u' },
+      { tenant: tenantA },
+      created.id,
+      { metadata: { xeroTargetKind: 'item' } }
+    );
+    expect(flippedBack).toMatchObject({
+      actionError: expect.stringContaining('does not exist in the connected organisation'),
+    });
+    const rows = await db('tenant_external_entity_mappings').where({ id: created.id });
+    expect(rows[0].metadata).toMatchObject({ xeroTargetKind: 'account' });
   });
 });
 

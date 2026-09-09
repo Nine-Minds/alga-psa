@@ -14,6 +14,7 @@
         "manualEntryHelp": "Wprowadź identyfikator dokładnie tak, jak pojawia się w systemie księgowym.",
         "metadataLabel": "Metadane (JSON)",
         "metadataPlaceholder": "Opcjonalne metadane w formacie JSON",
+        "noKindOptions": "Nie znaleziono użytecznych rekordów tego typu w połączonej organizacji.",
         "realmIdLabel": "Identyfikator Realm",
         "saveMapping": "Zapisz mapowanie",
         "saving": "Zapisywanie…",

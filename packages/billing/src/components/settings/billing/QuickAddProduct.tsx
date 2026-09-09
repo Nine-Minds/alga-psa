@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import CurrencyPicker from '@alga-psa/ui/components/CurrencyPicker';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { EditableServiceTypeSelect } from '@alga-psa/ui/components/EditableServiceTypeSelect';
 import {
@@ -588,7 +589,7 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
           {prices.map((price, index) => (
             <div key={`${price.currency_code}-${index}`} className="flex items-center gap-3">
               <div className="w-28">
-                <CustomSelect
+                <CurrencyPicker
                   id={`quick-add-product-price-currency-${index}`}
                   options={CURRENCY_OPTIONS.filter((opt) => {
                     if (opt.value === price.currency_code) return true;
@@ -834,9 +835,8 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
               </label>
               <div className="flex gap-2">
                 <div className="w-24">
-                  <CustomSelect
+                  <CurrencyPicker
                     id="quick-add-product-cost-currency"
-                    options={CURRENCY_OPTIONS.map(c => ({ value: c.value, label: c.label }))}
                     value={formProduct.cost_currency || 'USD'}
                     onValueChange={(v) => setFormProduct({ ...formProduct, cost_currency: v })}
                   />

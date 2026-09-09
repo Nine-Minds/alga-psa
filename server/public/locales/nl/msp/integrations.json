@@ -14,6 +14,7 @@
         "manualEntryHelp": "Voer de identifier exact in zoals deze verschijnt in uw boekhoudsysteem.",
         "metadataLabel": "Metagegevens (JSON)",
         "metadataPlaceholder": "Optionele metadata als JSON",
+        "noKindOptions": "Er zijn geen bruikbare records van dit type gevonden in de gekoppelde organisatie.",
         "realmIdLabel": "Realm-ID",
         "saveMapping": "Toewijzing opslaan",
         "saving": "Opslaan…",

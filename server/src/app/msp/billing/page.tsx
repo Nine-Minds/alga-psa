@@ -51,6 +51,18 @@ const BillingPage = async ({ searchParams }: BillingPageProps) => {
   const presetId = typeof params.presetId === 'string' ? params.presetId : undefined;
   const contractId = typeof params.contractId === 'string' ? params.contractId : undefined;
   const contractView = typeof params.contractView === 'string' ? params.contractView : undefined;
+  // Usage Tracking deep links (contract overview, missing-usage invoice
+  // preview) carry client/service prefills plus the service-period boundaries
+  // (YYYY-MM-DD, end exclusive); they must survive the initial server render
+  // or the filters mount as "All Clients / All Services" with no period scope.
+  const clientId = typeof params.clientId === 'string' ? params.clientId : undefined;
+  const serviceId = typeof params.serviceId === 'string' ? params.serviceId : undefined;
+  const contractLineId = typeof params.contractLineId === 'string' ? params.contractLineId : undefined;
+  const configId = typeof params.configId === 'string' ? params.configId : undefined;
+  const returnToPreview = typeof params.returnToPreview === 'string' ? params.returnToPreview : undefined;
+  const resumeUsagePreview = typeof params.resumeUsagePreview === 'string' ? params.resumeUsagePreview : undefined;
+  const periodStart = typeof params.periodStart === 'string' ? params.periodStart : undefined;
+  const periodEnd = typeof params.periodEnd === 'string' ? params.periodEnd : undefined;
 
   // Fetch services (always needed)
   const servicesResponse = await getServices();
@@ -86,7 +98,7 @@ const BillingPage = async ({ searchParams }: BillingPageProps) => {
         initialServices={services}
         contractDocuments={contractDocuments}
         currentUserId={currentUserId}
-        initialQuery={{ tab, subtab, templateId, presetId, contractId, contractView }}
+        initialQuery={{ tab, subtab, templateId, presetId, contractId, contractView, clientId, serviceId, contractLineId, configId, returnToPreview, resumeUsagePreview, periodStart, periodEnd }}
       />
     </Suspense>
   );

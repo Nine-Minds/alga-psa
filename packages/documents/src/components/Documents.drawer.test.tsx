@@ -11,6 +11,7 @@ import { getDocumentsByFolder } from '../actions/documentActions';
 const mockRefresh = vi.fn();
 const mockReplace = vi.fn();
 let mockSearchParams = new URLSearchParams();
+let mockRealStorageCards = false;
 const mockFolderTreeView = vi.fn((props: { selectedFolder: string | null; entityId?: string; entityType?: string }) => (
   <div
     data-testid="folder-tree-view"
@@ -66,6 +67,7 @@ vi.mock('../actions/documentActions', () => ({
   toggleDocumentVisibility: vi.fn(),
   updateDocument: vi.fn(),
   ensureEntityFolders: vi.fn().mockResolvedValue({ success: true }),
+  getDocumentPreview: vi.fn().mockResolvedValue(null),
 }));
 
 vi.mock('../actions/documentBlockContentActions', () => ({
@@ -78,13 +80,14 @@ vi.mock('../actions/collaborativeEditingActions', () => ({
   syncCollabSnapshot: vi.fn().mockResolvedValue({ success: true }),
 }));
 
-vi.mock('./DocumentStorageCard', () => ({
-  default: ({ onClick }: { onClick: () => void }) => (
-    <button data-testid="doc-card" onClick={onClick}>
+vi.mock('./DocumentStorageCard', async () => {
+  const { default: RealStorageCard } = await vi.importActual<typeof import('./DocumentStorageCard')>('./DocumentStorageCard.tsx');
+  return { default: (props: any) => mockRealStorageCards ? <RealStorageCard {...props} /> : (
+    <button data-testid="doc-card" onClick={props.onClick}>
       Doc
     </button>
-  ),
-}));
+  ) };
+});
 
 vi.mock('./DocumentUpload', () => ({ default: () => null }));
 vi.mock('./DocumentSelector', () => ({ default: () => null }));
@@ -178,6 +181,13 @@ vi.mock('react-hot-toast', () => ({
 
 describe('Documents drawer', () => {
   beforeAll(() => {
+    if (!window.IntersectionObserver) {
+      window.IntersectionObserver = class {
+        observe = vi.fn();
+        unobserve = vi.fn();
+        disconnect = vi.fn();
+      } as unknown as typeof IntersectionObserver;
+    }
     if (!window.matchMedia) {
       window.matchMedia = ((query: string) => ({
         matches: false,
@@ -194,6 +204,7 @@ describe('Documents drawer', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockRealStorageCards = false;
     mockCollabStatus = 'connected';
     mockFallbackUnsaved = false;
     mockFallbackContent = null;
@@ -202,6 +213,35 @@ describe('Documents drawer', () => {
       documents: [],
       total: 0,
     });
+  });
+
+  it('refreshes the rendered badge and toggle for same-ID claim, edit and visibility changes', async () => {
+    mockRealStorageCards = true;
+    const document = {
+      document_id: 'same-id', document_name: 'attachment.pdf', file_id: 'file-1',
+      tenant: 'tenant-1', type_id: null, user_id: 'user-1', created_by: 'user-1',
+      order_number: 0, is_client_visible: true, comment_attachment_is_public: false,
+    };
+    const props = { id: 'documents', gridColumns: 3, userId: 'user-1', entityId: 'ticket-1', entityType: 'ticket' as const };
+    const { rerender } = render(<Documents {...props} documents={[document]} />);
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Hidden from clients' })).toBeDisabled());
+    expect(screen.getByText('Internal')).toBeInTheDocument();
+
+    const claimed = { ...document, comment_attachment_is_public: true };
+    rerender(<Documents {...props} documents={[claimed]} />);
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Visible to clients' })).toBeEnabled());
+    expect(screen.getByText('Client visible')).toBeInTheDocument();
+
+    rerender(<Documents {...props} documents={[{ ...claimed, is_client_visible: false }]} />);
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Hidden from clients' })).toBeEnabled());
+    expect(screen.getByText('Internal')).toBeInTheDocument();
+
+    rerender(<Documents {...props} documents={[document]} searchTermFromParent="attachment" />);
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Hidden from clients' })).toBeDisabled());
+    expect(screen.queryByText('Client visible')).not.toBeInTheDocument();
+    rerender(<Documents {...props} documents={[{ ...claimed, document_name: 'renamed.pdf' }]} searchTermFromParent="attachment" />);
+    await waitFor(() => expect(screen.queryByText('attachment.pdf')).not.toBeInTheDocument());
+    expect(screen.queryByRole('button', { name: 'Visible to clients' })).not.toBeInTheDocument();
   });
 
   // The folder sidebar is folder-mode only (main Documents page); entity

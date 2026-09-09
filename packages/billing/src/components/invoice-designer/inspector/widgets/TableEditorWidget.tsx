@@ -1,3 +1,6 @@
+import { isBilledTimeCollection } from '../../utils/billedTimeUi';
+import { useFeatureFlag } from '@alga-psa/ui/hooks/useFeatureFlag';
+import { humanizeCollectionBindingLabel } from '../../../../lib/invoice-template-ast/collectionDescriptors';
 import React, { useCallback, useMemo } from 'react';
 import type { TFunction } from 'i18next';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -8,10 +11,16 @@ import { exportWorkspaceToTemplateAst } from '../../ast/workspaceAst';
 import type { DesignerNode } from '../../state/designerStore';
 import { createEmptyDesignerTransformWorkspace, useInvoiceDesignerStore } from '../../state/designerStore';
 import { hasDesignerTransforms } from '../../transforms/transformWorkspace';
+import { resolveDesignerDocumentKind } from '../../utils/documentKind';
 import { getNodeMetadata } from '../../utils/nodeProps';
+import { buildInvoiceTemplateBindings } from '../../../../lib/invoice-template-ast/standardTemplates';
+import { resolveCollectionDescriptor, resolveColumnPresetsForBinding, resolveExtraBindingKeySuggestions } from '../../../../lib/invoice-template-ast/collectionDescriptors';
+export { buildTicketGroupColumnPresets, buildTimeEntryColumnPresets, resolveColumnPresetsForBinding, resolveExtraBindingKeySuggestions } from '../../../../lib/invoice-template-ast/collectionDescriptors';
 import { generateUUID } from '@alga-psa/core';
 
 const createLocalId = () => generateUUID();
+
+type ColumnPreset = ReturnType<typeof resolveColumnPresetsForBinding>[number];
 
 type Props = {
   node: DesignerNode;
@@ -25,72 +34,7 @@ type ColumnModel = {
   width?: number;
 } & Record<string, unknown>;
 
-// Binding ids are the data contract; only their display labels are translated.
-const buildCollectionBindingLabels = (t: TFunction): Record<string, string> => ({
-  lineItems: t('invoiceDesigner.tableEditor.bindings.lineItems', { defaultValue: 'All Line Items' }),
-  phases: t('invoiceDesigner.tableEditor.bindings.phases', { defaultValue: 'Phases' }),
-  recurringItems: t('invoiceDesigner.tableEditor.bindings.recurringItems', { defaultValue: 'Recurring Items' }),
-  onetimeItems: t('invoiceDesigner.tableEditor.bindings.onetimeItems', { defaultValue: 'One-time Items' }),
-  serviceItems: t('invoiceDesigner.tableEditor.bindings.serviceItems', { defaultValue: 'Service Items' }),
-  productItems: t('invoiceDesigner.tableEditor.bindings.productItems', { defaultValue: 'Product Items' }),
-  items: t('invoiceDesigner.tableEditor.bindings.items', { defaultValue: 'Items' }),
-});
-
-const humanizeCollectionBindingLabel = (bindingId: string, _path: string, t: TFunction): string => {
-  return buildCollectionBindingLabels(t)[bindingId] ?? bindingId;
-};
-
 type BorderPreset = 'list' | 'boxed' | 'grid' | 'none' | 'custom';
-
-type ColumnPreset = {
-  id: string;
-  label: string;
-  header: string;
-  key: string;
-  type: string;
-  width: number;
-  description: string;
-};
-
-// Preset ids, binding keys, types and widths are the data contract; only labels are translated.
-const buildColumnPresets = (t: TFunction): ColumnPreset[] => [
-  {
-    id: 'description',
-    label: t('invoiceDesigner.tableEditor.presets.description.label', { defaultValue: 'Description' }),
-    header: t('invoiceDesigner.tableEditor.presets.description.label', { defaultValue: 'Description' }),
-    key: 'item.description',
-    type: 'text',
-    width: 280,
-    description: t('invoiceDesigner.tableEditor.presets.description.hint', { defaultValue: 'Line item description' }),
-  },
-  {
-    id: 'quantity',
-    label: t('invoiceDesigner.tableEditor.presets.quantity.label', { defaultValue: 'Qty' }),
-    header: t('invoiceDesigner.tableEditor.presets.quantity.label', { defaultValue: 'Qty' }),
-    key: 'item.quantity',
-    type: 'number',
-    width: 90,
-    description: t('invoiceDesigner.tableEditor.presets.quantity.hint', { defaultValue: 'Quantity' }),
-  },
-  {
-    id: 'unit-price',
-    label: t('invoiceDesigner.tableEditor.presets.unitPrice.label', { defaultValue: 'Rate' }),
-    header: t('invoiceDesigner.tableEditor.presets.unitPrice.label', { defaultValue: 'Rate' }),
-    key: 'item.unitPrice',
-    type: 'currency',
-    width: 120,
-    description: t('invoiceDesigner.tableEditor.presets.unitPrice.hint', { defaultValue: 'Unit price' }),
-  },
-  {
-    id: 'amount',
-    label: t('invoiceDesigner.tableEditor.presets.amount.label', { defaultValue: 'Amount' }),
-    header: t('invoiceDesigner.tableEditor.presets.amount.label', { defaultValue: 'Amount' }),
-    key: 'item.total',
-    type: 'currency',
-    width: 140,
-    description: t('invoiceDesigner.tableEditor.presets.amount.hint', { defaultValue: 'Line total' }),
-  },
-];
 
 const sanitizeJsonValue = (value: unknown): unknown => {
   if (typeof value === 'undefined') return undefined;
@@ -140,8 +84,9 @@ const getUniqueStrings = (values: Array<string | undefined | null>): string[] =>
 
 export const TableEditorWidget: React.FC<Props> = ({ node }) => {
   const { t } = useTranslation('msp/invoicing');
-  const columnPresets = useMemo(() => buildColumnPresets(t), [t]);
+  const { enabled: releaseV16Enabled } = useFeatureFlag('release-v1-6-feature');
   const setNodeProp = useInvoiceDesignerStore((state) => state.setNodeProp);
+  const unsetNodeProp = useInvoiceDesignerStore((state) => state.unsetNodeProp);
   const nodes = useInvoiceDesignerStore((state) => state.nodes);
   const rootId = useInvoiceDesignerStore((state) => state.rootId);
   const transforms = useInvoiceDesignerStore((state) => state.transforms);
@@ -151,22 +96,7 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
   const showRulers = useInvoiceDesignerStore((state) => state.showRulers);
   const canvasScale = useInvoiceDesignerStore((state) => state.canvasScale);
 
-  const metadata = useMemo(() => getNodeMetadata(node), [node]);
-  const sourceBindingId = useMemo(() => resolveTableSourceBindingId(metadata), [metadata]);
-  const isGroupedTransformsOutput = useMemo(() => {
-    if (sourceBindingId !== transforms.outputBindingId || !hasDesignerTransforms(transforms)) {
-      return false;
-    }
-
-    return transforms.operations.some((operation) => operation.type === 'group');
-  }, [sourceBindingId, transforms]);
-
-  const columns: ColumnModel[] = useMemo(() => {
-    const raw = (metadata as { columns?: unknown }).columns;
-    return Array.isArray(raw) ? (raw as ColumnModel[]).filter((col) => typeof col?.id === 'string') : [];
-  }, [metadata]);
-
-  const collectionBindingOptions = useMemo(() => {
+  const collectionAst = useMemo(() => {
     const workspaceWithoutTransforms = {
       rootId,
       nodesById: Object.fromEntries(
@@ -188,7 +118,32 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
       canvasScale,
     };
 
-    const baseAst = exportWorkspaceToTemplateAst(workspaceWithoutTransforms);
+    return exportWorkspaceToTemplateAst(workspaceWithoutTransforms);
+  }, [rootId, nodes, snapToGrid, gridSize, showGuides, showRulers, canvasScale]);
+
+  const metadata = useMemo(() => getNodeMetadata(node), [node]);
+  const sourceBindingId = useMemo(() => resolveTableSourceBindingId(metadata), [metadata]);
+  // Presets follow the bound collection so ticket/time tables offer their own
+  // columns (Ticket | Description | Hours | Rate | Amount) via quick-add.
+  const columnPresets = useMemo(
+    () => resolveCollectionDescriptor(sourceBindingId, transforms, collectionAst)?.presets(t) ?? [],
+    [t, sourceBindingId, transforms, collectionAst]
+  );
+  const isGroupedTransformsOutput = useMemo(() => {
+    if (sourceBindingId !== transforms.outputBindingId || !hasDesignerTransforms(transforms)) {
+      return false;
+    }
+
+    return transforms.operations.some((operation) => operation.type === 'group');
+  }, [sourceBindingId, transforms, collectionAst]);
+
+  const columns: ColumnModel[] = useMemo(() => {
+    const raw = (metadata as { columns?: unknown }).columns;
+    return Array.isArray(raw) ? (raw as ColumnModel[]).filter((col) => typeof col?.id === 'string') : [];
+  }, [metadata]);
+
+  const collectionBindingOptions = useMemo(() => {
+    const baseAst = collectionAst;
     const options: Array<{ value: string; label: string }> = [];
 
     if (hasDesignerTransforms(transforms)) {
@@ -208,12 +163,32 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
       });
     }
 
+    // Catalog options carry the collection's data PATH, not its binding id:
+    // `metadata.collectionBindingKey` is a path everywhere else (AST import
+    // writes denormalized paths, presets write paths), and export registers
+    // the binding by path — so a raw id like `lineItems` would be registered
+    // as a bogus `collection.lineItems` path the evaluator cannot resolve.
+    // Ids that equal their path (timeEntries, ticketGroups, …) are unaffected.
     options.push(
       ...Object.entries(baseAst.bindings?.collections ?? {}).map(([bindingId, binding]) => ({
-        value: bindingId,
+        value: binding.path,
         label: humanizeCollectionBindingLabel(bindingId, binding.path, t),
       }))
     );
+
+    // The exported workspace only registers collections that are already in
+    // use, which would make new data sources undiscoverable. For invoice
+    // documents, always offer the canonical catalog (line items, recurring /
+    // one-time splits, location groups, and the billed-time ticketGroups /
+    // timeEntries snapshot collections).
+    if (resolveDesignerDocumentKind(nodes) === 'invoice') {
+      options.push(
+        ...Object.entries(buildInvoiceTemplateBindings().collections ?? {}).map(([bindingId, binding]) => ({
+          value: binding.path,
+          label: humanizeCollectionBindingLabel(bindingId, binding.path, t),
+        }))
+      );
+    }
 
     if (!options.some((option) => option.value === sourceBindingId)) {
       options.unshift({
@@ -223,6 +198,7 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
     }
 
     return options
+      .filter(option => releaseV16Enabled || option.value === sourceBindingId || !isBilledTimeCollection(option.value))
       .filter((option, index, array) => array.findIndex((candidate) => candidate.value === option.value) === index)
       .sort((left, right) => left.label.localeCompare(right.label));
   }, [
@@ -236,14 +212,14 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
     sourceBindingId,
     t,
     transforms,
+    collectionAst,
+    releaseV16Enabled,
   ]);
 
   const bindingKeySuggestions = useMemo(() => {
     const rawSuggestions = getUniqueStrings([
       ...columnPresets.map((preset) => preset.key),
-      'item.servicePeriodStart',
-      'item.servicePeriodEnd',
-      'item.billingTiming',
+      ...(resolveCollectionDescriptor(sourceBindingId, transforms, collectionAst)?.fields.map((field) => `item.${field.name}`) ?? []),
       ...columns.map((column) => asTrimmedString(column.key)),
     ]);
 
@@ -260,7 +236,7 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
       'item.items',
       ...aggregateSuggestions,
     ]);
-  }, [columnPresets, columns, isGroupedTransformsOutput, transforms]);
+  }, [columnPresets, columns, isGroupedTransformsOutput, sourceBindingId, transforms, collectionAst]);
 
   const resolvedBorderPreset: BorderPreset = useMemo(() => {
     const preset = (metadata as { tableBorderPreset?: unknown }).tableBorderPreset;
@@ -434,7 +410,13 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
             id="designer-table-source-binding"
             options={collectionBindingOptions}
             value={sourceBindingId}
-            onValueChange={(value: string) => setNodeProp(node.id, 'metadata.collectionBindingKey', value, true)}
+            onValueChange={(value: string) => {
+              // `setNodeProp(..., undefined)` is rejected by patchOps (non-json-value), which
+              // would leave the preserved AST binding id in place and silently discard the
+              // user's new selection on save — key removal must go through `unsetNodeProp`.
+              unsetNodeProp(node.id, 'metadata.__astTableSourceBindingId', true);
+              setNodeProp(node.id, 'metadata.collectionBindingKey', value, true);
+            }}
             size="sm"
           />
         </div>

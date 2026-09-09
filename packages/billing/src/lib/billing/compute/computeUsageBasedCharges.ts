@@ -19,6 +19,13 @@ export interface UsageRecordComputeRow {
   quantity: number | string;
   tax_rate_id?: string | null;
   currency_rate?: number | string | null;
+  /**
+   * Present when this row is a period-total report (usage_period_totals)
+   * rather than a dated additive usage_tracking entry. Carries the total's row
+   * id and revision so persistence consumes exactly that total+revision.
+   */
+  period_total_id?: string | null;
+  period_total_revision?: number | string | null;
 }
 
 export interface UsageRateTier {
@@ -235,6 +242,12 @@ export function computeUsageBasedCharges(
       tax_amount: taxAmount,
       tax_rate: taxRate,
       usageId: record.usage_id,
+      ...(record.period_total_id
+        ? {
+            usagePeriodTotalId: record.period_total_id,
+            usagePeriodTotalRevision: Number(record.period_total_revision ?? 1),
+          }
+        : {}),
       is_taxable: isTaxable,
       servicePeriodStart: timing.servicePeriodStart,
       servicePeriodEnd: timing.servicePeriodEnd,

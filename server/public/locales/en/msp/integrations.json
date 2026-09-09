@@ -14,6 +14,7 @@
         "manualEntryHelp": "Enter the identifier exactly as it appears in your accounting system.",
         "metadataLabel": "Metadata (JSON)",
         "metadataPlaceholder": "Optional metadata as JSON",
+        "noKindOptions": "No usable records of this type were found in the connected organisation.",
         "realmIdLabel": "Realm ID",
         "saveMapping": "Save Mapping",
         "saving": "Saving…",

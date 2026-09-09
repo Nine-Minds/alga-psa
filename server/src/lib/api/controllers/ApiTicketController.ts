@@ -1105,7 +1105,7 @@ export class ApiTicketController extends ApiBaseController {
             ]);
           }
 
-          const document = await this.ticketService.uploadTicketDocument(ticketId, file, apiRequest.context!);
+          const document = await this.ticketService.uploadTicketDocument(ticketId, file, apiRequest.context!, formData.get('commentAttachmentDraft') === 'true');
 
           return createSuccessResponse(document, 201, undefined, apiRequest);
         });

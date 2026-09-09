@@ -7,7 +7,6 @@ import {
   getXeroAccounts,
   getXeroItems,
   getXeroTaxRates,
-  getXeroTrackingCategories,
   updateExternalEntityMapping,
   type CreateMappingData,
   type ExternalEntityMapping,
@@ -24,8 +23,50 @@ import {
   isActionMessageError,
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
+import {
+  readXeroServiceTargetKind,
+  XERO_SALES_ACCOUNT_TYPES,
+  XERO_TARGET_KIND_METADATA_KEY,
+  type XeroServiceTargetKind
+} from '../../lib/xero/xeroServiceMappingTarget';
 
 const ADAPTER_TYPE = 'xero';
+
+/**
+ * UI option ids for the service module are kind-prefixed (`item:CONSULT`,
+ * `account:200`) so identical Item and Account codes can never collide in the
+ * picker or the table lookup. The prefix is a UI addressing concern only —
+ * the persisted mapping stores the bare code plus an explicit
+ * `metadata.xeroTargetKind`.
+ */
+const KIND_PREFIXES: Record<XeroServiceTargetKind, string> = {
+  item: 'item:',
+  account: 'account:'
+};
+
+function toOptionId(kind: XeroServiceTargetKind, code: string): string {
+  return `${KIND_PREFIXES[kind]}${code}`;
+}
+
+function parseOptionId(optionId: string): { kind: XeroServiceTargetKind; code: string } {
+  for (const [kind, prefix] of Object.entries(KIND_PREFIXES) as Array<
+    [XeroServiceTargetKind, string]
+  >) {
+    if (optionId.startsWith(prefix)) {
+      return { kind, code: optionId.slice(prefix.length) };
+    }
+  }
+  // Fail fast: the picker only produces prefixed ids, so anything else is a
+  // caller bug — persisting it could save an untyped mapping.
+  throw new Error(`Xero service mapping selection "${optionId}" is missing its item/account kind.`);
+}
+
+/** A Xero catalog record in DELETED/ARCHIVED state is unusable for new mappings. */
+function isUsableStatus(status: string | undefined): boolean {
+  if (!status) return true;
+  const normalized = status.toUpperCase();
+  return normalized !== 'DELETED' && normalized !== 'ARCHIVED';
+}
 
 type MappingLoadConfig<TAlga> = {
   context: AccountingMappingContext;
@@ -61,20 +102,20 @@ function createServiceModule(tabLabel: string): AccountingMappingModule {
     labels: {
       tab: tabLabel,
       description:
-        'Map Alga services to Xero item codes. Revenue accounts and tracking categories are loaded from the default connected Xero organisation and can be referenced in the metadata JSON as `accountCode` and `tracking`.',
-      addButton: 'Add Item Mapping',
+        'Map each Alga service to a Xero target. "Xero Item" sends the item code (ItemCode) from your Products and Services catalog. "Xero Revenue Account" is for organisations that invoice without items: lines are sent with the account code (AccountCode) only. Item codes and account codes are different Xero concepts — a value like 200 can exist in both catalogs, so pick the target type explicitly. Tracking categories may be referenced in the metadata JSON as `tracking`.',
+      addButton: 'Add Service Mapping',
       algaColumn: 'Alga Service',
-      externalColumn: 'Xero Item',
+      externalColumn: 'Xero Target',
       dialog: {
-        addTitle: 'Add Live Xero Item Mapping',
-        editTitle: 'Edit Live Xero Item Mapping',
+        addTitle: 'Add Live Xero Service Mapping',
+        editTitle: 'Edit Live Xero Service Mapping',
         algaField: 'Alga Service',
-        externalField: 'Xero Item Code',
+        externalField: 'Xero Item or Account',
         helpText:
-          'Choose the Xero item code for this service. Optional metadata JSON may include {"accountCode":"200","tracking":[{"name":"Region","option":"North"}]}.'
+          'Xero Item Code and Account Code are different concepts: an item comes from Products and Services, while a revenue account comes from the chart of accounts. Choose the target type first, then pick the record. Optional metadata JSON may include {"tracking":[{"name":"Region","option":"North"}]}; item mappings may also set {"accountCode":"200"}.'
       },
       deleteConfirmation: {
-        title: 'Delete Item Mapping',
+        title: 'Delete Service Mapping',
         message: ({ algaName, externalName }) =>
           `Delete mapping${algaName ? ` for ${algaName}` : ''}${
             externalName ? ` ↔ ${externalName}` : ''
@@ -85,6 +126,26 @@ function createServiceModule(tabLabel: string): AccountingMappingModule {
     },
     metadata: {
       enableJsonEditor: true
+    },
+    externalTarget: {
+      label: 'Map To',
+      kinds: [
+        { id: 'item', label: 'Xero Item' },
+        { id: 'account', label: 'Xero Revenue Account' }
+      ],
+      defaultKindId: 'item',
+      kindForMapping: (mapping) =>
+        // Unrecognised stored kinds render as item so the row is visibly
+        // invalid against the item catalog instead of crashing the screen;
+        // the server rejects such rows at save time.
+        readXeroServiceTargetKind(mapping.metadata ?? null) ?? 'item',
+      optionIdForMapping: (mapping) =>
+        toOptionId(
+          readXeroServiceTargetKind(mapping.metadata ?? null) ?? 'item',
+          mapping.external_entity_id
+        ),
+      invalidNotice:
+        'This mapping no longer matches a usable record in the connected Xero organisation. Pick a valid Xero Item, or explicitly switch it to a Xero Revenue Account — it will not convert automatically.'
     },
     elements: {
       addButton: 'add-xero-live-item-mapping-button',
@@ -111,23 +172,51 @@ function createServiceModule(tabLabel: string): AccountingMappingModule {
         },
         loadExternalEntities: async (currentContext) => {
           const connectionId = currentContext.connectionId ?? null;
-          const [itemsResult, accountsResult, trackingCategoriesResult] = await Promise.all([
+          const [itemsResult, accountsResult] = await Promise.all([
             getXeroItems(connectionId),
-            getXeroAccounts(connectionId),
-            getXeroTrackingCategories(connectionId)
+            getXeroAccounts(connectionId)
           ]);
           throwIfActionError(itemsResult);
           throwIfActionError(accountsResult);
-          throwIfActionError(trackingCategoriesResult);
 
-          const items = itemsResult as Array<{ id: string; name: string; code?: string }>;
-          void accountsResult;
-          void trackingCategoriesResult;
+          const items = itemsResult as Array<{
+            id: string;
+            name: string;
+            code?: string;
+            status?: string;
+          }>;
+          const accounts = accountsResult as Array<{
+            id: string;
+            name: string;
+            code?: string;
+            type?: string;
+          }>;
 
-          return items.map((item) => ({
-            id: item.code ?? item.id,
-            name: item.code ? `${item.name} (${item.code})` : item.name
-          }));
+          const itemOptions = items
+            .filter((item) => isUsableStatus(item.status))
+            .map((item) => ({
+              id: toOptionId('item', item.code ?? item.id),
+              name: `Item · ${item.code ? `${item.name} (${item.code})` : item.name}`,
+              kind: 'item' as const
+            }));
+
+          // Account mode sends the code as the invoice line AccountCode, so
+          // only accounts Xero accepts on ACCREC sales lines are offered:
+          // active (getXeroAccounts already filters status), revenue-class
+          // type, and carrying a non-empty code.
+          const accountOptions = accounts
+            .filter(
+              (account) =>
+                Boolean(account.code && account.code.trim()) &&
+                XERO_SALES_ACCOUNT_TYPES.has((account.type ?? '').toUpperCase())
+            )
+            .map((account) => ({
+              id: toOptionId('account', account.code!.trim()),
+              name: `Revenue account · ${account.name} (${account.code!.trim()})`,
+              kind: 'account' as const
+            }));
+
+          return [...itemOptions, ...accountOptions];
         },
         mapAlga: (service) => ({
           id: service.service_id,
@@ -138,14 +227,26 @@ function createServiceModule(tabLabel: string): AccountingMappingModule {
       });
     },
     create(context, input) {
+      const { kind, code } = parseOptionId(input.externalEntityId);
       return createMapping({
         context,
-        input,
+        input: {
+          ...input,
+          externalEntityId: code,
+          metadata: { ...(input.metadata ?? {}), [XERO_TARGET_KIND_METADATA_KEY]: kind }
+        },
         algaEntityType: 'service'
       });
     },
     update(_context, mappingId, input) {
-      return updateMapping(mappingId, input);
+      const { kind, code } = parseOptionId(input.externalEntityId);
+      return updateMapping(mappingId, {
+        ...input,
+        externalEntityId: code,
+        // The kind chosen in the picker is authoritative; it overrides any
+        // stale xeroTargetKind carried over in the metadata JSON editor.
+        metadata: { ...(input.metadata ?? {}), [XERO_TARGET_KIND_METADATA_KEY]: kind }
+      });
     },
     async remove(_context, mappingId) {
       throwIfActionError(await deleteExternalEntityMapping(mappingId));

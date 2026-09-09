@@ -5,6 +5,7 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import CurrencyPicker from '@alga-psa/ui/components/CurrencyPicker';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { RadioGroup } from '@alga-psa/ui/components/RadioGroup';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
@@ -343,9 +344,8 @@ export function ContractBasicsStep({
           <Coins className="h-4 w-4" />
           {t('wizardBasics.currency.label', { defaultValue: 'Currency' })} *
         </Label>
-        <CustomSelect
+        <CurrencyPicker
           id="currency"
-          options={CURRENCY_OPTIONS.map((c) => ({ value: c.value, label: c.label }))}
           onValueChange={(value: string) => updateData({ currency_code: value })}
           value={data.currency_code}
           placeholder={t('wizardBasics.currency.placeholder', { defaultValue: 'Select currency' })}

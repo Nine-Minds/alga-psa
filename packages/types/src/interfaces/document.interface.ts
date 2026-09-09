@@ -26,6 +26,8 @@ export interface IDocument extends TenantEntity {
     // Folder organization
     folder_path?: string;
     is_client_visible?: boolean;
+    /** Read-time comment lifecycle gate; does not replace the document visibility setting. */
+    comment_attachment_is_public?: boolean;
 
     // Render provenance (generated documents only)
     source_template_id?: string | null;
