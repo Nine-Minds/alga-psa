@@ -58,3 +58,27 @@ for (const defect of ['wrong-origin', 'auth-redirect', 'wrong-session', 'http-re
     assert.equal(f.calls.includes('/auth/msp/signin'), false);
   });
 }
+
+for (const [defect, stage, code] of [
+  ['missing-dashboard', 'dashboard', 'dashboard-marker-missing'],
+  ['error-boundary', 'dashboard', 'dashboard-error-sentinel'],
+  ['wrong-session', 'session', 'session-identity-mismatch'],
+  ['server-error', 'dashboard', 'unexpected-http-status'],
+]) test(`reports sanitized ${defect} diagnostics from actual HTTP`, async t => {
+  const f = await fixture(t, defect);
+  await assert.rejects(f.run(), error => {
+    assert.equal(error.diagnostics.stage, stage);
+    assert.equal(error.diagnostics.code, code);
+    assert.ok(error.diagnostics.elapsedMs >= 0);
+    if (defect === 'missing-dashboard' || defect === 'error-boundary') {
+      assert.equal(error.diagnostics.dashboardMarkerPresent, defect !== 'missing-dashboard');
+      assert.equal(error.diagnostics.errorSentinelPresent, defect === 'error-boundary');
+      assert.ok(error.diagnostics.htmlLength > 0);
+    }
+    const serialized = JSON.stringify(error);
+    for (const forbidden of ['synthetic-password', 'fixture@example.test', 'part1', 'part2', '<html>', '$RX']) {
+      assert.equal(serialized.includes(forbidden), false);
+    }
+    return true;
+  });
+});

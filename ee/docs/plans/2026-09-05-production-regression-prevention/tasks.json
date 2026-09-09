@@ -668,6 +668,14 @@
       "dependsOn": [],
       "owner": "coordinator and calendar_review",
       "notes": "Current a0d077 PG upgrade3browsercases pass, but retained logs show2 app-user login denials and snapshot shows30 idle original server DB sessions. After real upgrade-pooler readiness probe, stop primary server/email/mainpooler before existing candidate recreation. Keep Temporal for Teams and diagnostics. Actionlint passes; actual absence of pressure awaits subsequent CI. No production pool limits changed."
+    },
+    {
+      "id": "R081",
+      "title": "Expose sanitized Teams warmup failure stage and predicate",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "stripe_protocol and coordinator",
+      "notes": "Current run34308610232 terminalfailure: warmup failed94.8s after dashboardHTTP200; no rawHTML retained, exact predicate unknown. Added fixedstage/code/elapsed/status/HTMLlength+boolean diagnostics without HTML/credentials.13 nativeHTTPcases pass; assertions/deadline unchanged. R069 Teams actual recovery remains open. Evidence ci-teams-warmup-a0d077.json."
     }
   ]
 }
