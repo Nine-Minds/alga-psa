@@ -58,7 +58,7 @@ test('Teams profile recovery and calendar meeting creation preserve saved identi
       install_status: 'active', default_meeting_organizer_upn: 'organizer@contoso.example',
       default_meeting_organizer_object_id: randomUUID(), send_meeting_invites: true,
     });
-    const title = `Teams appointment ${actors.runId}`;
+    let title = `Teams appointment ${actors.runId}`;
     await page.goto('/msp/schedule');
     const noon = page.locator('.rbc-day-slot.rbc-today .rbc-time-slot').nth(24);
     await noon.scrollIntoViewIfNeeded();
@@ -98,6 +98,50 @@ test('Teams profile recovery and calendar meeting creation preserve saved identi
     expect(await reopened.locator('#notes').inputValue()).toContain(meeting.join_url);
     expect(await database('online_meetings').where(meetingScope)).toHaveLength(1);
     expect((await database('schedule_entries').where({ ...scope, entry_id: entryId }).first()).notes).toContain(meeting.join_url);
+
+    const rescheduledTitle = `${title} rescheduled`;
+    await reopened.locator('#title').fill(rescheduledTitle);
+    const startTime = reopened.locator('#scheduled_start')
+      .locator('xpath=ancestor::div[contains(@class,"dtf-fields")][1]')
+      .getByRole('combobox', { name: 'Select time', exact: true });
+    await startTime.fill('1:00 PM');
+    await startTime.press('Tab');
+    await reopened.locator('#save-entry-btn').click();
+    await expect(reopened).toBeHidden();
+    title = rescheduledTitle;
+    const rescheduled = await database('schedule_entries').where({ ...scope, entry_id: entryId }).first();
+    expect(rescheduled.title).toBe(title);
+    expect(new Date(rescheduled.scheduled_start).getTime()).not.toBe(new Date(rows[0].scheduled_start).getTime());
+    const retainedMeeting = await database('online_meetings').where(meetingScope).first();
+    expect(retainedMeeting).toMatchObject({ meeting_id: meeting.meeting_id,
+      provider_event_id: meeting.provider_event_id, provider_meeting_id: meeting.provider_meeting_id,
+      join_url: meeting.join_url, status: 'scheduled', subject: title });
+    expect(new Date(retainedMeeting.start_time).toISOString()).toBe(new Date(rescheduled.scheduled_start).toISOString());
+    expect(new Date(retainedMeeting.end_time).toISOString()).toBe(new Date(rescheduled.scheduled_end).toISOString());
+    await expect.poll(async () => emulators.state('msgraph', 'calendar-events')).toEqual([
+      expect.objectContaining({ id: meeting.provider_event_id, subject: title,
+        start: expect.objectContaining({ dateTime: new Date(rescheduled.scheduled_start).toISOString() }),
+        end: expect.objectContaining({ dateTime: new Date(rescheduled.scheduled_end).toISOString() }) }),
+    ]);
+    await page.reload();
+    const afterReschedule = await openEntry();
+    await expect(afterReschedule.locator('#join-entry-teams-meeting-button')).toBeVisible();
+    await expect(afterReschedule.locator('#title')).toHaveValue(title);
+    expect(await database('online_meetings').where(meetingScope)).toHaveLength(1);
+    await afterReschedule.locator('#delete-entry-btn').click();
+    await page.locator(`#delete-entry-${entryId}-confirm`).click();
+    await expect.poll(async () => database('schedule_entries').where({ ...scope, entry_id: entryId })).toEqual([]);
+    await expect.poll(async () => emulators.state('msgraph', 'calendar-events')).toEqual([]);
+    expect(await database('online_meetings').where({ ...scope, meeting_id: meeting.meeting_id }).first())
+      .toMatchObject({ status: 'cancelled', provider_event_id: meeting.provider_event_id });
+    await page.reload();
+    await expect(page.locator('.rbc-event').filter({ hasText: title })).toHaveCount(0);
+    const lifecycleRequests = await emulators.requests('msgraph');
+    expect(lifecycleRequests.complete).toBe(true);
+    for (const [method, status] of [['PATCH', 200], ['DELETE', 204]] as const) {
+      expect(lifecycleRequests.requests).toContainEqual(expect.objectContaining({ method, status,
+        path: expect.stringContaining(`/events/${meeting.provider_event_id}`) }));
+    }
 
     // Prelinked MSP identity is a fixture; sign-in/account-linking is a separate journey.
     const microsoftTenantId = randomUUID(), microsoftUserId = randomUUID();

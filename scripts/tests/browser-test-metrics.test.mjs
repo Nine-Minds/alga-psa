@@ -97,3 +97,72 @@ test('dirty, missing and changed source evidence cannot produce passed readiness
     assert.equal(check({ evidence }).status, 'failed');
   }
 });
+
+test('provider observations bind real-format attachments to verified archives without exporting payloads', async t => {
+  const { writeFile } = await import('node:fs/promises');
+  const { gzipSync } = await import('node:zlib');
+  const { recordDockerArchiveBuild } = await import('../record-docker-archive-build.mjs');
+  const { browserArtifactServices, createBrowserArchiveReceipt, buildBrowserArtifactManifest } = await import('../lib/browser-artifact-manifest.mjs');
+  const dir = mkdtempSync(path.join(tmpdir(), 'provider-metrics-'));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const context = { revision, edition: 'enterprise', runId: '123', runAttempt: 2 };
+  const components = [];
+  for (const service of browserArtifactServices('enterprise')) {
+    const archive = path.join(dir, `${service}.tar.gz`);
+    await writeFile(archive, gzipSync(Buffer.alloc(1024)));
+    const id = `sha256:${'1'.repeat(64)}`, digest = `sha256:${'2'.repeat(64)}`;
+    const record = await recordDockerArchiveBuild({ ...context, attempt: 2, service, image: 'candidate:latest', dockerfile: 'Dockerfile.build', platform: 'linux/amd64', configImageId: id, buildReportedDigest: digest,
+      metadata: { 'containerimage.config.digest': id, 'containerimage.digest': digest } }, archive, path.join(dir, `${service}.json`));
+    const receipt = await createBrowserArchiveReceipt(record, archive, context);
+    components.push({ record, receipt, inspection: [{ Id: id, Os: 'linux', Architecture: 'amd64', Config: { Labels: { 'org.opencontainers.image.revision': revision } } }] });
+  }
+  const manifest = buildBrowserArtifactManifest({ ...context, components });
+  const data = () => ({ controlOrigin: 'http://sensitive-host:9500', providers: ['xero'], operations: [{ body: 'secret-value' }], requests: {
+    xero: { supported: true, complete: true, generation: 1, capacity: 1000, dropped: 0, inFlight: 0,
+      requests: [{ sequence: 1, method: 'GET', path: '/sensitive-path', status: 200, aborted: false, body: 'secret-value' }] },
+  } });
+  const attachment = value => ({ name: 'emulator-evidence', contentType: 'application/json', body: Buffer.from(JSON.stringify(value)).toString('base64') });
+  const execute = (attachments, overrides = {}) => check({ artifactManifest: manifest, runId: '123', runAttempt: 2,
+    report: report([{ status: 'passed', retry: 0, attachments }]), ...overrides });
+  const result = execute([attachment(data())]);
+  const observation = result.journeys[0].attempts[0].providerObservations;
+  assert.equal(result.status, 'passed');
+  assert.equal(observation.status, 'observed');
+  assert.equal(observation.revision, revision);
+  assert.equal(observation.runAttempt, 2);
+  assert.equal(observation.retry, 0);
+  const { createHash } = await import('node:crypto');
+  assert.equal(observation.artifactManifestSha256, createHash('sha256').update(JSON.stringify(manifest)).digest('hex'));
+  assert.equal(execute([attachment(data())], { report: report([{ status: 'failed', retry: 0 }, { status: 'passed', retry: 1, attachments: [attachment(data())] }], 'flaky') }).journeys[0].attempts[1].providerObservations.retry, 1);
+  assert.deepEqual(observation.providers, [{ provider: 'xero', mode: 'emulator', supported: true, complete: true, requestCount: 1, dropped: 0, inFlight: 0 }]);
+  for (const secret of ['sensitive-host', 'sensitive-path', 'secret-value']) assert.ok(!JSON.stringify(result).includes(secret));
+  for (const mutate of [
+    d => { d.providers = ['invented']; },
+    d => { d.providers.push('xero'); },
+    d => { d.requests.xero.complete = false; },
+    d => { d.requests.xero.dropped = -1; },
+    d => { d.requests.xero.requests[0].status = '200'; },
+    d => { d.requests.xero.requests[0].status = null; },
+    d => { d.requests.xero.requests[0].aborted = true; },
+    d => { d.requests.xero.requests.push(d.requests.xero.requests[0]); },
+    d => { delete d.requests.xero; },
+  ]) {
+    const malformed = data(); mutate(malformed);
+    assert.equal(execute([attachment(malformed)]).journeys[0].attempts[0].providerObservations.reason, 'malformed-observations');
+  }
+  for (const attachments of [[{ name: 'emulator-evidence', contentType: 'application/json', path: '/do-not-read' }],
+    [{ ...attachment(data()), body: 'not-base64!' }]]) {
+    assert.equal(execute(attachments).journeys[0].attempts[0].providerObservations.status, 'unavailable');
+  }
+  assert.equal(execute([]).journeys[0].attempts[0].providerObservations.reason, 'missing-observations');
+  assert.equal(execute([attachment(data()), attachment(data())]).journeys[0].attempts[0].providerObservations.reason, 'duplicate-observations');
+  for (const override of [{ artifactManifest: null }, { runAttempt: 3 }, { evidence: { ...cleanEvidence(), workingTreeDirty: true } }, { revision: 'b'.repeat(40) }]) {
+    assert.equal(execute([attachment(data())], override).journeys[0].attempts[0].providerObservations.reason, 'unverified-candidate-context');
+  }
+  const aborted = data(); aborted.requests.xero.requests[0].status = null; aborted.requests.xero.requests[0].aborted = true;
+  assert.equal(execute([attachment(aborted)]).journeys[0].attempts[0].providerObservations.status, 'observed');
+  const unsupported = data(); unsupported.providers = ['smtp-sink'];
+  unsupported.requests = { 'smtp-sink': { supported: false, complete: false, generation: 0, capacity: 1000, dropped: 0, inFlight: 0, requests: [] } };
+  assert.deepEqual(execute([attachment(unsupported)]).journeys[0].attempts[0].providerObservations.providers,
+    [{ provider: 'smtp-sink', mode: 'emulator', supported: false, complete: false, requestCount: 0, dropped: 0, inFlight: 0 }]);
+});

@@ -707,7 +707,7 @@
       "status": "in_progress",
       "dependsOn": [],
       "owner": "stripe_protocol",
-      "notes": "Extend existing real UI meeting journey with update/delete, stable provider identity, Graph and database readback; isolated native execution, no SSO claim."
+      "notes": "Extend existing real UI meeting journey with update/delete, stable provider identity, Graph and database readback; isolated native execution, no SSO claim. Actual native run executed every new scheduling lifecycle assertion successfully, then failed existing bot delivery. Native setup secret-chain mismatch fixed privately. native-teams-scheduling-lifecycle.json preserves bounded proof; full spec remains pending bot diagnosis."
     },
     {
       "id": "R086",
@@ -732,6 +732,14 @@
       "dependsOn": [],
       "owner": "coordinator",
       "notes": "Require explicit per-check configuration policy and exact result match, including provider modes/protocol/authentication. Ten native red tests before fix;56 targeted tests pass after, including CLI. Actual release enforcement remains separate. Independent review approved policy/CLI path; direct API sparse-array edge fixed with two red regressions. Final58/58 targeted tests pass. Native evidence recorded; F036 remains open for actual release rollout."
+    },
+    {
+      "id": "R089",
+      "title": "Preserve sanitized per-journey provider observations in browser evidence",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "qbo_protocol",
+      "notes": "Audit found emulator attachment observations omitted from metrics configuration. Build bounded validated summary tied to full journey identity/attempt/source/artifact context; absent/malformed observations explicit, no OAuth/parity inference from routing probes. Consumer release policy remains independent. Independent review and18/18 native tests pass, including malformed abort/status pairs. Actual historical artifact replay: CE2observed/40unavailable, EE11observed/36unavailable; missing attachments explicit and SMTP unsupported journal incomplete. Summary unchanged after review fix. provider-observation-historical-replay.json; F036 still open for required-provider policy/release rollout."
     }
   ]
 }
