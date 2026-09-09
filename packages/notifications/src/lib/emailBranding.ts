@@ -178,3 +178,18 @@ export function normalizeEmailBrandingInput(
     ...(enterprise && input.hideAttribution ? { hideAttribution: true } : {}),
   };
 }
+
+/**
+ * Knex prefixes the failing SQL — bound HTML and all — onto the driver's
+ * report. Keep only the report so the apply dialog never shows raw SQL.
+ */
+export function describeTemplateWriteError(error: unknown): string {
+  if (error instanceof Error && error.message) {
+    const separator = error.message.lastIndexOf(' - ');
+    const summary = (separator >= 0 ? error.message.slice(separator + 3) : error.message).trim();
+    if (summary && !/^(insert|update|select|delete|alter|with)\b/i.test(summary)) {
+      return summary.length > 200 ? `${summary.slice(0, 200)}…` : summary;
+    }
+  }
+  return 'Failed to write templates';
+}

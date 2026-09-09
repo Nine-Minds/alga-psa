@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  describeTemplateWriteError,
   normalizeEmailBrandingInput,
   readEmailBrandingPalette,
   resolveTenantLanguages,
@@ -90,5 +91,29 @@ describe('resolveTenantLanguages', () => {
 
   it('drops languages the templates do not ship', () => {
     expect(resolveTenantLanguages({ defaultLocale: 'ja' }, ALL_LANGUAGES)).toEqual(['en']);
+  });
+});
+
+describe('describeTemplateWriteError', () => {
+  it('keeps only the driver report, not the SQL knex prefixes onto it', () => {
+    const error = new Error(
+      `insert into "tenant_email_templates" ("html_content", "name") values ('<html>lots of markup - dashes included</html>', 'ticket-created') - duplicate key value violates unique constraint "tenant_email_templates_tenant_name_unique"`,
+    );
+
+    expect(describeTemplateWriteError(error)).toBe(
+      'duplicate key value violates unique constraint "tenant_email_templates_tenant_name_unique"',
+    );
+  });
+
+  it('falls back to a generic message when only SQL is available', () => {
+    expect(describeTemplateWriteError(new Error('insert into "tenant_email_templates" default values'))).toBe(
+      'Failed to write templates',
+    );
+    expect(describeTemplateWriteError('boom')).toBe('Failed to write templates');
+  });
+
+  it('passes short driver messages through and caps long ones', () => {
+    expect(describeTemplateWriteError(new Error('connection refused'))).toBe('connection refused');
+    expect(describeTemplateWriteError(new Error('x'.repeat(300))).length).toBe(201);
   });
 });

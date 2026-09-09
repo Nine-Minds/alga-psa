@@ -18,6 +18,7 @@ import {
   type EmailPaletteTokens,
 } from '@alga-psa/email/branding';
 import {
+  describeTemplateWriteError,
   normalizeEmailBrandingInput,
   readEmailBrandingPalette,
   resolveTenantLanguages,
@@ -296,7 +297,7 @@ export const applyEmailBrandingAction = withAuth(async (
         ...updates.map((update) => ({ name: update.name, language, action: 'updated' as const })),
       );
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to write templates';
+      const message = describeTemplateWriteError(error);
       failed.push(
         ...inserts.map((insert) => ({ name: insert.name, language, error: message })),
         ...updates.map((update) => ({ name: update.name, language, error: message })),
