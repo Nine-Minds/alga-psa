@@ -3445,3 +3445,5 @@ R071 acceptedfromcurrenta0d077 CI34308610232:Temporalengine61/61cases12filesfull
 ### 2026-09-09 — R077/R078 automatic reconciliation implementation
 
 Completed artifact-based revision discovery and completion-triggered read-only reporting. Coordinator verification passed 116 combined native cases and actionlint. [Live artifact evidence](evidence/automatic-browser-reconciliation.json) binds both editions of run `34304828149`, attempt 1, to candidate `f71e845a2c5d66fb634a01daa39161c82dd3e4ff`. Missing or conflicting source evidence stays visible and non-green; this does not attest deployment. F025 remains open for default-branch deployment, a credentialed workflow run, and scorecard rollout.
+
+Canonical native tooling at clean8e144665b57f827d6005981a74aaeec5fb828797 passes906 tests across85requiredfiles in172.9seconds; zero fail/skip/TODO/cancel. Evidence native-node-tooling-8e144.json. Current CI34308610232 remains live; no push. R079 adds missing real QBO consumer429/503 boundary coverage.

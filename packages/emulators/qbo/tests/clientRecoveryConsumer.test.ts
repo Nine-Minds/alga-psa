@@ -145,3 +145,27 @@ it('stops after one refresh when the replacement access token also expires befor
     axios.interceptors.response.eject(interceptor);
   }
 });
+
+it.each([429, 503])('surfaces HTTP%s once without refreshing credentials and recovers on the next operation', async status => {
+  const original = state.secrets.get(`${tenant}:qbo_credentials`);
+  const offset = (await journal()).length;
+  // An explicit transport outage: this synthetic body does not claim Intuit
+  // wire parity, and recovery is a new operation rather than automatic backoff.
+  await command('faults/transport:error/arm', { status });
+  await expect(service.query('SELECT Id, DisplayName, Active FROM Customer STARTPOSITION 1 MAXRESULTS 100'))
+    .rejects.toMatchObject({ details: { provider: 'qbo', status, qboOperation: 'query' } });
+  expect((await journal()).slice(offset)).toEqual([
+    { method: 'GET', path: `/v3/company/${realm}/query`, status },
+  ]);
+  expect(state.secrets.get(`${tenant}:qbo_credentials`)).toBe(original);
+  expect(state.writes).toBe(0);
+  await command('faults/transport:error/disarm');
+  expect(await service.query('SELECT Id, DisplayName, Active FROM Customer STARTPOSITION 1 MAXRESULTS 100'))
+    .toEqual([expect.objectContaining({ DisplayName: 'Recovery Customer' })]);
+  expect((await journal()).slice(offset)).toEqual([
+    { method: 'GET', path: `/v3/company/${realm}/query`, status },
+    { method: 'GET', path: `/v3/company/${realm}/query`, status: 200 },
+  ]);
+  expect(state.secrets.get(`${tenant}:qbo_credentials`)).toBe(original);
+  expect(state.writes).toBe(0);
+});

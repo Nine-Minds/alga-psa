@@ -652,6 +652,14 @@
       "dependsOn": [],
       "owner": "qbo_protocol and coordinator",
       "notes": "Implementation complete. Coordinator combined 116 native tests and actionlint passed. Real current-run artifact resolution evidence: evidence/automatic-browser-reconciliation.json. Unknown tested revisions remain visible and non-green; trusted default-branch reporting reads artifacts and Sheets without writes. F025 remains open for default-branch deployment, a credentialed workflow run, and scorecard rollout."
+    },
+    {
+      "id": "R079",
+      "title": "Exercise QBO consumer rate-limit and server-error recovery",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "qbo_protocol",
+      "notes": "Read-only audit found consumer recovery tests cover401 only. Add real HTTP429/503 cases asserting bounded actionable failure, no credential mutation and successful next operation after fault removal. No invented automatic retry policy. Coordinator reviewed two429/503 cases; focused real HTTP5/5pass. Synthetic transport-body boundary, not Intuit wire-format parity or automatic backoff. F036/T030 release-enforcement acceptance remains open."
     }
   ]
 }
