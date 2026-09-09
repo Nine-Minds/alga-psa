@@ -63,7 +63,8 @@ The Client Portal is a secure, multi-tenant web application that allows MSP clie
 **Authentication Providers:**
 - **Credentials Provider** - Email/password authentication
 - **Google OAuth** - Optional OAuth authentication
-- **Keycloak** - Enterprise identity management integration
+- **Microsoft OAuth** - Optional OAuth authentication
+- **Keycloak** - Optional OpenID Connect authentication through a Keycloak realm (`KEYCLOAK_*` settings); users are matched by email to existing accounts
 
 **Security Measures:**
 - Password hashing using bcrypt/argon2

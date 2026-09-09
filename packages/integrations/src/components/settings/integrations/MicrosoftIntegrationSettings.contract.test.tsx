@@ -622,7 +622,7 @@ describe('MicrosoftIntegrationSettings contracts', () => {
       expect(document.getElementById('microsoft-profile-profile-1')).not.toBeNull();
     });
     expect(
-      screen.getByText("Manage your company's Microsoft app registrations for staff sign-in and Outlook email.")
+      screen.getByText("Manage your company's Microsoft app registrations for Outlook email.")
     ).toBeInTheDocument();
     expect(screen.getByTestId('microsoft-binding-select-msp_sso')).toBeInTheDocument();
     expect(screen.getByTestId('microsoft-binding-select-email')).toBeInTheDocument();

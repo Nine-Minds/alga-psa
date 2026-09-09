@@ -127,6 +127,7 @@ import {
   normalizeResolverEmail,
   parseAndVerifyMspSsoDiscoveryCookie,
   parseAndVerifyMspSsoResolutionCookie,
+  readTenantKeycloakConfig,
   resolveMspSsoCredentialSource,
   resolveTenantForMspSsoDomain,
 } from './mspSsoResolution';
@@ -144,7 +145,8 @@ describe('mspSsoResolution helpers', () => {
   });
 
   beforeEach(() => {
-    delete process.env.EDITION;
+    // Google/Microsoft discovery is Enterprise-only; CE cases set EDITION explicitly.
+    process.env.EDITION = 'ee';
     delete process.env.NEXT_PUBLIC_EDITION;
     tenantSecrets.clear();
     appSecrets.clear();
@@ -185,6 +187,7 @@ describe('mspSsoResolution helpers', () => {
   });
 
   it('T014: resolves mapped domain to single tenant and marks ambiguous duplicates as unresolved', async () => {
+    process.env.EDITION = 'ce';
     domainRows.push(
       { tenant: 'tenant-1', domain: 'acme.com', is_active: true },
       { tenant: 'tenant-2', domain: 'shared.com', is_active: true },
@@ -206,7 +209,7 @@ describe('mspSsoResolution helpers', () => {
   });
 
   it('T020/T049: known mapped domain with tenant Microsoft configured returns only azure-ad', async () => {
-    domainRows.push({ tenant: 'tenant-1', domain: 'acme.com', is_active: true });
+    domainRows.push({ tenant: 'tenant-1', domain: 'acme.com', is_active: true, claim_status: 'verified' });
     tenantSecrets.set('tenant-1:microsoft_client_id', 'ms-id');
     tenantSecrets.set('tenant-1:microsoft_client_secret', 'ms-secret');
 
@@ -319,7 +322,7 @@ describe('mspSsoResolution helpers', () => {
     });
   });
 
-  it('T059: CE advisory claim can route to tenant provider source', async () => {
+  it('T059: CE advisory claim still routes to the tenant source but offers no Google/Microsoft sign-in', async () => {
     process.env.EDITION = 'ce';
     domainRows.push({
       tenant: 'tenant-1',
@@ -333,42 +336,69 @@ describe('mspSsoResolution helpers', () => {
     await expect(discoverMspSsoProviderOptions('person@advisory.io')).resolves.toEqual({
       source: 'tenant',
       tenantId: 'tenant-1',
-      providers: ['google'],
+      providers: [],
       domain: 'advisory.io',
       ambiguous: false,
     });
   });
 
-  it('T032: CE unregistered domain returns app-level fallback providers', async () => {
+  it('T032: CE unregistered domain offers Keycloak only, never the Google/Microsoft app fallback', async () => {
     process.env.EDITION = 'ce';
     appSecrets.set('MICROSOFT_OAUTH_CLIENT_ID', 'app-ms-id');
     appSecrets.set('MICROSOFT_OAUTH_CLIENT_SECRET', 'app-ms-secret');
+    appSecrets.set('GOOGLE_OAUTH_CLIENT_ID', 'app-google-id');
+    appSecrets.set('GOOGLE_OAUTH_CLIENT_SECRET', 'app-google-secret');
+    appSecrets.set('KEYCLOAK_CLIENT_ID', 'kc-id');
+    appSecrets.set('KEYCLOAK_CLIENT_SECRET', 'kc-secret');
+    appSecrets.set('KEYCLOAK_URL', 'https://keycloak.example.com');
+    appSecrets.set('KEYCLOAK_REALM', 'alga');
 
     await expect(discoverMspSsoProviderOptions('person@unregistered.com')).resolves.toEqual({
       source: 'app',
-      providers: ['azure-ad'],
+      providers: ['keycloak'],
       domain: 'unregistered.com',
+      ambiguous: false,
+    });
+
+    process.env.EDITION = 'ee';
+    await expect(discoverMspSsoProviderOptions('person@unregistered.com')).resolves.toMatchObject({
+      providers: ['google', 'azure-ad', 'keycloak'],
+    });
+  });
+
+  it('CE resolver refuses Google/Microsoft even when app credentials exist, but resolves Keycloak', async () => {
+    process.env.EDITION = 'ce';
+    appSecrets.set('GOOGLE_OAUTH_CLIENT_ID', 'app-google-id');
+    appSecrets.set('GOOGLE_OAUTH_CLIENT_SECRET', 'app-google-secret');
+    appSecrets.set('KEYCLOAK_CLIENT_ID', 'kc-id');
+    appSecrets.set('KEYCLOAK_CLIENT_SECRET', 'kc-secret');
+    appSecrets.set('KEYCLOAK_URL', 'https://keycloak.example.com');
+    appSecrets.set('KEYCLOAK_REALM', 'alga');
+
+    await expect(resolveMspSsoCredentialSource({ provider: 'google', email: 'user@unknown.com' })).resolves.toEqual({
+      resolved: false,
+    });
+    await expect(resolveMspSsoCredentialSource({ provider: 'keycloak', email: 'user@unknown.com' })).resolves.toEqual({
+      resolved: true,
+      source: 'app',
+    });
+  });
+
+  it('T033: unresolved domain on EE returns the app-level fallback provider set', async () => {
+    appSecrets.set('GOOGLE_OAUTH_CLIENT_ID', 'app-google-id');
+    appSecrets.set('GOOGLE_OAUTH_CLIENT_SECRET', 'app-google-secret');
+
+    process.env.EDITION = 'ee';
+    await expect(discoverMspSsoProviderOptions('person@unknown-ee.com')).resolves.toEqual({
+      source: 'app',
+      providers: ['google'],
+      domain: 'unknown-ee.com',
       ambiguous: false,
     });
   });
 
-  it('T033: unresolved domain in both editions returns app-level fallback provider set', async () => {
-    appSecrets.set('GOOGLE_OAUTH_CLIENT_ID', 'app-google-id');
-    appSecrets.set('GOOGLE_OAUTH_CLIENT_SECRET', 'app-google-secret');
-
-    for (const edition of ['ce', 'ee'] as const) {
-      process.env.EDITION = edition;
-      await expect(discoverMspSsoProviderOptions(`person@unknown-${edition}.com`)).resolves.toEqual({
-        source: 'app',
-        providers: ['google'],
-        domain: `unknown-${edition}.com`,
-        ambiguous: false,
-      });
-    }
-  });
-
   it('T021: known mapped domain with both tenant providers configured returns google and azure-ad', async () => {
-    domainRows.push({ tenant: 'tenant-1', domain: 'acme.com', is_active: true });
+    domainRows.push({ tenant: 'tenant-1', domain: 'acme.com', is_active: true, claim_status: 'verified' });
     tenantSecrets.set('tenant-1:google_client_id', 'google-id');
     tenantSecrets.set('tenant-1:google_client_secret', 'google-secret');
     tenantSecrets.set('tenant-1:microsoft_client_id', 'ms-id');
@@ -384,7 +414,7 @@ describe('mspSsoResolution helpers', () => {
   });
 
   it('T022: known mapped domain with no tenant providers configured returns an empty provider list', async () => {
-    domainRows.push({ tenant: 'tenant-1', domain: 'acme.com', is_active: true });
+    domainRows.push({ tenant: 'tenant-1', domain: 'acme.com', is_active: true, claim_status: 'verified' });
 
     await expect(discoverMspSsoProviderOptions('person@acme.com')).resolves.toEqual({
       source: 'tenant',
@@ -417,6 +447,102 @@ describe('mspSsoResolution helpers', () => {
       domain: 'unknown.com',
       ambiguous: false,
     });
+  });
+
+  it('offers keycloak from app-level KEYCLOAK_* secrets on an unresolved domain, in both editions', async () => {
+    appSecrets.set('KEYCLOAK_CLIENT_ID', 'kc-id');
+    appSecrets.set('KEYCLOAK_CLIENT_SECRET', 'kc-secret');
+    appSecrets.set('KEYCLOAK_URL', 'https://keycloak.example.com');
+    appSecrets.set('KEYCLOAK_REALM', 'alga');
+
+    for (const edition of ['ce', 'ee'] as const) {
+      process.env.EDITION = edition;
+      await expect(discoverMspSsoProviderOptions(`person@unknown-${edition}.com`)).resolves.toEqual({
+        source: 'app',
+        providers: ['keycloak'],
+        domain: `unknown-${edition}.com`,
+        ambiguous: false,
+      });
+    }
+  });
+
+  it('does not offer keycloak when any of the four KEYCLOAK_* values is missing', async () => {
+    appSecrets.set('KEYCLOAK_CLIENT_ID', 'kc-id');
+    appSecrets.set('KEYCLOAK_CLIENT_SECRET', 'kc-secret');
+    appSecrets.set('KEYCLOAK_URL', 'https://keycloak.example.com');
+
+    await expect(discoverMspSsoProviderOptions('person@unknown.com')).resolves.toEqual({
+      source: 'app',
+      providers: [],
+      domain: 'unknown.com',
+      ambiguous: false,
+    });
+  });
+
+  it('keeps keycloak available (after google and azure-ad) on a tenant-sourced discovery and resolves it from the app source', async () => {
+    domainRows.push({ tenant: 'tenant-1', domain: 'acme.com', is_active: true, claim_status: 'verified' });
+    tenantSecrets.set('tenant-1:google_client_id', 'google-id');
+    tenantSecrets.set('tenant-1:google_client_secret', 'google-secret');
+    appSecrets.set('KEYCLOAK_CLIENT_ID', 'kc-id');
+    appSecrets.set('KEYCLOAK_CLIENT_SECRET', 'kc-secret');
+    appSecrets.set('KEYCLOAK_URL', 'https://keycloak.example.com');
+    appSecrets.set('KEYCLOAK_REALM', 'alga');
+
+    const discovery = await discoverMspSsoProviderOptions('person@acme.com');
+    expect(discovery).toEqual({
+      source: 'tenant',
+      tenantId: 'tenant-1',
+      providers: ['google', 'keycloak'],
+      domain: 'acme.com',
+      ambiguous: false,
+    });
+
+    await expect(
+      resolveMspSsoCredentialSource({
+        provider: 'keycloak',
+        email: 'person@acme.com',
+        discovery: {
+          ...discovery!,
+          issuedAt: 1,
+          expiresAt: Number.MAX_SAFE_INTEGER,
+          nonce: 'nonce-kc',
+        },
+      })
+    ).resolves.toEqual({ resolved: true, source: 'app' });
+  });
+
+  it('offers keycloak from the tenant secrets on a claimed domain and resolves it from the tenant source', async () => {
+    domainRows.push({ tenant: 'tenant-1', domain: 'acme.com', is_active: true, claim_status: 'verified' });
+    tenantSecrets.set('tenant-1:keycloak_url', 'https://kc.acme.com');
+    tenantSecrets.set('tenant-1:keycloak_realm', 'acme');
+    tenantSecrets.set('tenant-1:keycloak_client_id', 'algapsa');
+    tenantSecrets.set('tenant-1:keycloak_client_secret', 'secret');
+
+    const discovery = await discoverMspSsoProviderOptions('person@acme.com');
+    expect(discovery).toEqual({
+      source: 'tenant',
+      tenantId: 'tenant-1',
+      providers: ['keycloak'],
+      domain: 'acme.com',
+      ambiguous: false,
+    });
+
+    await expect(
+      resolveMspSsoCredentialSource({
+        provider: 'keycloak',
+        email: 'person@acme.com',
+        discovery: { ...discovery!, issuedAt: 1, expiresAt: Number.MAX_SAFE_INTEGER, nonce: 'nonce-kc-tenant' },
+      })
+    ).resolves.toEqual({ resolved: true, source: 'tenant', tenantId: 'tenant-1' });
+
+    await expect(readTenantKeycloakConfig('tenant-1')).resolves.toEqual({
+      url: 'https://kc.acme.com',
+      realm: 'acme',
+      clientId: 'algapsa',
+      clientSecret: 'secret',
+    });
+    tenantSecrets.delete('tenant-1:keycloak_realm');
+    await expect(readTenantKeycloakConfig('tenant-1')).resolves.toBeNull();
   });
 
   it('T025: unresolved domain with no app fallback providers configured returns an empty provider list', async () => {
@@ -458,7 +584,7 @@ describe('mspSsoResolution helpers', () => {
   });
 
   it('T026/T041: discovery contract avoids user lookup and resolver falls back when discovery is missing', async () => {
-    domainRows.push({ tenant: 'tenant-1', domain: 'acme.com', is_active: true, claim_status: 'advisory' });
+    domainRows.push({ tenant: 'tenant-1', domain: 'acme.com', is_active: true, claim_status: 'verified' });
     tenantSecrets.set('tenant-1:microsoft_client_id', 'ms-id');
     tenantSecrets.set('tenant-1:microsoft_client_secret', 'ms-secret');
     appSecrets.set('GOOGLE_OAUTH_CLIENT_ID', 'google-id');

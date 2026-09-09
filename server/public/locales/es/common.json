@@ -163,6 +163,7 @@
     },
     "sso": {
       "signInWithMicrosoft": "Iniciar sesión con Microsoft",
+      "signInWithKeycloak": "Iniciar sesión con Keycloak",
       "signInWithGoogle": "Iniciar sesión con Google",
       "redirecting": "Redirigiendo...",
       "startFailed": "No se pudo iniciar el inicio de sesión SSO. Verifique la configuración del proveedor e inténtelo de nuevo."

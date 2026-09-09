@@ -237,6 +237,7 @@
     },
     "sso": {
       "signInWithMicrosoft": "Zaloguj się za pomocą konta Microsoft",
+      "signInWithKeycloak": "Zaloguj się za pomocą Keycloak",
       "signInWithGoogle": "Zaloguj się za pomocą konta Google",
       "redirecting": "Przekierowywanie...",
       "startFailed": "Nie udało się rozpocząć logowania SSO. Sprawdź konfigurację dostawcy i spróbuj ponownie."
