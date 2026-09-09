@@ -86,4 +86,19 @@ describe('componentSchema', () => {
     expect(paths).toContain('metadata.labelStyle.inline.fontSize');
     expect(paths).toContain('metadata.labelStyle.inline.color');
   });
+
+  // alga-2026-0002355 — totals row colours are edited per row. A second,
+  // global "recolor every emphasized row" control cannot coexist with the row
+  // editor: both write row.style.inline, so the global one silently clobbers
+  // per-row edits on export.
+  it('edits totals row colours only through the per-row editor', () => {
+    const panels = getComponentSchema('totals').inspector?.panels ?? [];
+    const fields = panels.flatMap((panel) => panel.fields);
+
+    expect(fields.some((field) => 'widget' in field && field.widget === 'totals-rows-editor')).toBe(true);
+
+    const paths = fields.flatMap((field) => ('path' in field ? [field.path] : []));
+    expect(paths).not.toContain('metadata.totalsEmphasisBackgroundColor');
+    expect(paths).not.toContain('metadata.totalsEmphasisColor');
+  });
 });

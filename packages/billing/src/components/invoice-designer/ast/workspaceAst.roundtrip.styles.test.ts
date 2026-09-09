@@ -100,7 +100,8 @@ describe('workspaceAst roundtrip style matrix', () => {
 });
 
 // alga-2026-0002355 — emphasized totals rows shipped with a hardcoded brand
-// color; the designer now exposes it as an editable Highlight Row Style.
+// color; the designer now exposes each row's colors individually through the
+// Totals Rows editor, so sibling rows can carry different brand colors.
 describe('workspaceAst totals highlight row colors', () => {
   const createTotalsAst = (emphasisStyle?: Record<string, unknown>): TemplateAst =>
     createAstDocument([
@@ -152,27 +153,44 @@ describe('workspaceAst totals highlight row colors', () => {
     }
   });
 
-  it('seeds the inspector fields from the first emphasized row', () => {
+  it('surfaces each saved row colour on import so the row editor can load it', () => {
     const workspace = importTemplateAstToWorkspace(createTotalsAst(purple));
     const totalsNode = Object.values(workspace.nodesById).find((node) => node.id === 'totals') as any;
+    const rows = totalsNode?.props?.metadata?.totalsRows as Array<Record<string, any>>;
 
-    expect(totalsNode?.props?.metadata?.totalsEmphasisBackgroundColor).toBe('#7c45d3');
-    expect(totalsNode?.props?.metadata?.totalsEmphasisColor).toBe('#ffffff');
+    for (const id of ['monthly-total', 'onetime-total']) {
+      const row = rows.find((candidate) => candidate.id === id);
+      expect(row?.style?.inline?.backgroundColor).toBe('#7c45d3');
+      expect(row?.style?.inline?.color).toBe('#ffffff');
+    }
+    // The retired global Highlight Row Style override must not reappear: it
+    // clobbered per-row edits on export (see totalsRowsRoundtrip T004/T005/T007).
+    expect(totalsNode?.props?.metadata?.totalsEmphasisBackgroundColor).toBeUndefined();
+    expect(totalsNode?.props?.metadata?.totalsEmphasisColor).toBeUndefined();
   });
 
-  it('exports edited highlight colors onto every emphasized row', () => {
+  it('exports per-row colours independently so siblings keep distinct brands', () => {
     const workspace = importTemplateAstToWorkspace(createTotalsAst(purple));
     const totalsId = Object.values(workspace.nodesById).find((node) => node.id === 'totals')!.id;
     const totalsNode = workspace.nodesById[totalsId]!;
+    const metadata = totalsNode.props.metadata as Record<string, unknown>;
+    const edits: Record<string, { backgroundColor: string; color: string }> = {
+      'monthly-total': { backgroundColor: '#0f766e', color: '#f0fdfa' },
+      'onetime-total': { backgroundColor: '#b91c1c', color: '#fef2f2' },
+    };
 
     workspace.nodesById[totalsId] = {
       ...totalsNode,
       props: {
         ...totalsNode.props,
         metadata: {
-          ...(totalsNode.props.metadata as Record<string, unknown>),
-          totalsEmphasisBackgroundColor: '#0f766e',
-          totalsEmphasisColor: '#f0fdfa',
+          ...metadata,
+          totalsRows: (metadata.totalsRows as Array<Record<string, any>>).map((row) => {
+            const target = edits[String(row.id)];
+            return target
+              ? { ...row, style: { inline: { ...(row.style?.inline ?? {}), ...target } } }
+              : row;
+          }),
         },
       },
     };
@@ -182,13 +200,14 @@ describe('workspaceAst totals highlight row colors', () => {
     expect(emphasized.length).toBe(2);
 
     for (const row of emphasized) {
-      expect(row.style?.inline?.backgroundColor).toBe('#0f766e');
-      expect(row.style?.inline?.color).toBe('#f0fdfa');
-      // Untouched decorations survive the overlay.
+      const expected = edits[row.id]!;
+      expect(row.style?.inline?.backgroundColor).toBe(expected.backgroundColor);
+      expect(row.style?.inline?.color).toBe(expected.color);
+      // Untouched decorations survive the per-row edit.
       expect(row.style?.inline?.borderRadius).toBe('4px');
     }
 
-    // Non-emphasized rows stay uncolored.
+    // Non-emphasized rows stay uncoloured.
     expect(totals.rows.find((row) => row.id === 'monthly-subtotal')?.style?.inline?.backgroundColor).toBeUndefined();
   });
 

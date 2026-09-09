@@ -718,17 +718,12 @@ const renderTotalsSummaryPreview = (
   previewData: WasmInvoiceViewModel | null,
   t?: DesignerTranslator,
   locale?: string,
-  metadata?: Record<string, unknown>,
 ): React.ReactNode => {
   const currencyCode = previewData?.currencyCode ?? 'USD';
   const zeroAmount = formatBoundValue(0, 'currency', currencyCode) ?? '';
   const subtotal = formatBoundValue(previewData?.subtotal ?? null, 'currency', currencyCode, locale) ?? zeroAmount;
   const tax = formatBoundValue(previewData?.tax ?? null, 'currency', currencyCode, locale) ?? zeroAmount;
   const total = formatBoundValue(previewData?.total ?? null, 'currency', currencyCode, locale) ?? zeroAmount;
-  // Highlight Row Style: the canvas mirrors the colors the renderer applies to
-  // emphasized totals rows.
-  const emphasisBackgroundColor = asTrimmedString(metadata?.totalsEmphasisBackgroundColor);
-  const emphasisColor = asTrimmedString(metadata?.totalsEmphasisColor);
   return (
     <div className="space-y-1 text-[11px]">
       <div className="flex items-center justify-between text-slate-600">
@@ -741,14 +736,9 @@ const renderTotalsSummaryPreview = (
       </div>
       <div
         className={clsx(
-          'flex items-center justify-between border-t pt-1 font-semibold',
-          emphasisColor ? undefined : 'text-slate-900',
+          'flex items-center justify-between border-t pt-1 font-semibold text-slate-900',
           INVOICE_BORDER_COLOR_CLASS,
         )}
-        style={{
-          ...(emphasisBackgroundColor ? { backgroundColor: emphasisBackgroundColor, padding: '2px 4px', borderRadius: '4px' } : {}),
-          ...(emphasisColor ? { color: emphasisColor } : {}),
-        }}
       >
         <span>{t?.('designer.canvas.total', { defaultValue: 'Total' }) ?? 'Total'}</span>
         <span className="tabular-nums">{total}</span>
@@ -834,7 +824,7 @@ const renderTotalsRowsPreview = (
 ): React.ReactNode => {
   const rows = Array.isArray(metadata.totalsRows) ? metadata.totalsRows.filter(isCanvasTotalsRowRecord) : [];
   if (rows.length === 0) {
-    return renderTotalsSummaryPreview(previewData, t, locale, metadata);
+    return renderTotalsSummaryPreview(previewData, t, locale);
   }
 
   const currencyCode = previewData?.currencyCode ?? 'USD';
