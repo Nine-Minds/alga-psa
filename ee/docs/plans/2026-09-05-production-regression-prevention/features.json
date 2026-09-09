@@ -68,7 +68,7 @@
   {
     "id": "F006",
     "description": "Publish expected, collected and executed identities and reject incomplete mandatory runs independently of aggregate pass percentages.",
-    "implemented": false,
+    "implemented": true,
     "workPackage": "WP1",
     "priority": "P0",
     "prdRefs": [
@@ -82,7 +82,7 @@
   {
     "id": "F007",
     "description": "Provide a stable aggregate gate that rejects failed, cancelled, missing, empty or unexpectedly skipped mandatory jobs and explains legitimate not-applicable selections.",
-    "implemented": false,
+    "implemented": true,
     "workPackage": "WP2",
     "priority": "P0",
     "prdRefs": [

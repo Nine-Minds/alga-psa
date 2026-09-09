@@ -41,9 +41,12 @@ The production browser runner also writes
 existing Playwright diagnostics upload. It records each required journey's
 file/project/title identity, first attempt, retry count, attempt statuses,
 edition and lane outcome. Missing execution stays incomplete; retry-only passes
-stay failed. It omits raw error and attachment payloads. `artifactManifest` is
-currently null until immutable release-component identity is wired; this browser
-lane result does not establish release readiness.
+stay failed. It omits raw error and attachment payloads. In CI, `artifactManifest`
+identifies the candidate build archives whose bytes were verified before loading,
+and the inspected loaded image IDs. It binds the revision, edition, run and attempt
+and covers candidate-built archives only. It does not attest registry publication,
+deployed artifacts or release readiness. Native runs without a configured manifest
+retain null; a configured missing or invalid manifest makes metrics incomplete.
 
 `scripts/record-browser-metrics.mjs` consumes this artifact through
 `TEST_METRICS_BROWSER`. The browser workflow invokes it after diagnostics and
@@ -56,13 +59,17 @@ once; `row_kind=journey` carries file/project/title identity, required/observed
 flags, outcome, first attempt and retry count. Both carry edition, full tested
 SHA, lane status and run URL. The appended `run_kind` and `event_name` columns
 (S:T) distinguish PR, main, nightly, branch, manual and local runs using the same
-classification as standard metrics. The original A:R columns retain their order;
+classification as standard metrics. Columns U:Y append `project_id`, `run_id`,
+`run_attempt`, `authentication` and `server_lifecycle`, preserving the existing
+A:T order. Project IDs distinguish projects with the same display name; run attempts
+distinguish reruns of the same GitHub run. Missing optional metadata stays blank;
 historical rows without a category remain unclassified. Incomplete runs retain
 their triggering event so they remain visible in the corresponding trend. Missing, stale or wrong-edition evidence produces
 an incomplete run row with unknown counts blank. Filter by `row_kind` before
 aggregating. A PR's tested SHA may be GitHub's merge commit, rather than its
-branch head; mismatches are rejected. Artifact identity remains blank until
-release manifests are wired. `--dry-run` prints rows without accessing Google.
+branch head; mismatches are rejected. The run row carries the validated CI artifact
+manifest; journey rows reference the same run and attempt. `--dry-run` prints rows
+without accessing Google.
 
 Rows land on the `metrics` tab. The script writes the header row on first use.
 For an older schema, it verifies every existing heading and appends only the

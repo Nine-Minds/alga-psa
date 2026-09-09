@@ -480,18 +480,18 @@
     {
       "id": "R057",
       "title": "Repair Teams action typecheck and helper lint failures",
-      "status": "in_progress",
+      "status": "done",
       "dependsOn": [],
       "owner": "qbo_protocol",
-      "notes": "Full prior-head PR audit found readonly NODE_ENV assignments and React hook lint classification of plain helper. Renamed shouldUseTeamsEmulatorEndpoints and used Vitest environment stubbing/restoration. All20focused behavioral tests, integrations TypeScript, and action ESLint pass. Coordinator reviewed behavior-preserving diff; next published CI proof pending."
+      "notes": "Full prior-head PR audit found readonly NODE_ENV assignments and React hook lint classification of plain helper. Renamed shouldUseTeamsEmulatorEndpoints and used Vitest environment stubbing/restoration. All20focused behavioral tests, integrations TypeScript, and action ESLint pass. Coordinator reviewed behavior-preserving diff. Current b413 PR CI confirms TypeScript34299806398 and ext-v2 guardrails34299806367 success."
     },
     {
       "id": "R058",
       "title": "Restore Graph organizer test environment using supported Vitest API",
-      "status": "in_progress",
+      "status": "done",
       "dependsOn": [],
       "owner": "stripe_protocol",
-      "notes": "Direct NODE_ENV assignments replaced with vi.stubEnv/vi.unstubAllEnvs in real Graph organizer routing tests. Full Graph suite92tests across8files and package TypeScript pass. Coordinator reviewed isolation/restoration; next published CI proof pending."
+      "notes": "Direct NODE_ENV assignments replaced with vi.stubEnv/vi.unstubAllEnvs in real Graph organizer routing tests. Full Graph suite92tests across8files and package TypeScript pass. Coordinator reviewed isolation/restoration. Current b413 PR CI confirms TypeScript34299806398 and ext-v2 guardrails34299806367 success."
     },
     {
       "id": "R059",
@@ -516,6 +516,30 @@
       "dependsOn": [],
       "owner": "coordinator and stripe_protocol",
       "notes": "Earlier worker failure skipped initialcredentials/browserinstall but independent upgrades/Teams still executed without them. Make serverhealth/capture and Node/Playwright bootstrap explicit independent chains; actual Chromiumlaunch verifies cachehit/install readiness. PG/Citusprepare require sourcecredentials; every browserphase requires browser_ready; primary requires provider topology. API remains independent and mandatory aggregate unchanged. Native Chromiumlaunch and actionlint pass; full GitHub failure-path behavior pending."
+    },
+    {
+      "id": "R062",
+      "title": "Record verified browser CI archive identity",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "qbo_protocol",
+      "notes": "Implemented candidate-built archive receipt/manifest builder and CLI;17 native behavioral cases pass for CE/EE inventory, verified bytes, loaded identity, source/run/attempt binding, stale-output cleanup and input preservation. Sanitized evidence explicitly excludes registry/deployment claims; archives can still be deleted immediately. Coordinator reviewed; actual workflow proof remains R064."
+    },
+    {
+      "id": "R063",
+      "title": "Preserve browser project, rerun and configuration metrics",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "stripe_protocol",
+      "notes": "Appended project ID, run ID, attempt, authentication and server lifecycle after existing20 columns.10 dedicated native tests cover distinct projects/reruns, producer-to-recorder verified artifact pipeline, unknown metadata, rejection/sanitization and actual appendRows U1:Y1 suffix behavior with historical row preservation. No external workbook mutation; live readback remains F024/R064."
+    },
+    {
+      "id": "R064",
+      "title": "Review and integrate browser metrics provenance",
+      "status": "in_progress",
+      "dependsOn": [],
+      "owner": "coordinator",
+      "notes": "Wired archive verification receipts and loaded-image manifest into actual browser runner metrics and diagnostics.67 combined native metrics/archive/schema tests pass, plus actionlint and plan/task validators. Independent review accepted runtime integration; coordinator fixed CLI input-alias deletion identified during review and updated docs. CI candidate publication awaits current run completion; actual new artifact/Sheets readback still pending. No local Docker."
     }
   ]
 }

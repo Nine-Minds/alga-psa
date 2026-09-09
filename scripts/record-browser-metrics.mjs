@@ -1,11 +1,13 @@
 #!/usr/bin/env node
 import { readFileSync, appendFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
+import { validateBrowserArtifactManifest } from './lib/browser-artifact-manifest.mjs';
 import { appendRows, getAccessToken, parseServiceAccountKey, runKind } from './record-test-metrics.mjs';
 
 export const BROWSER_HEADER = ['timestamp_utc', 'schema_version', 'row_kind', 'tested_sha', 'edition',
   'lane_status', 'run_url', 'collected', 'executed', 'project', 'file', 'journey', 'required',
-  'observed', 'outcome', 'first_attempt', 'retry_count', 'artifact_manifest', 'run_kind', 'event_name'];
+  'observed', 'outcome', 'first_attempt', 'retry_count', 'artifact_manifest', 'run_kind', 'event_name',
+  'project_id', 'run_id', 'run_attempt', 'authentication', 'server_lifecycle'];
 
 export function browserRows(metrics, { revision = '', edition = '', runUrl = '', timestamp = new Date().toISOString(), env = process.env } = {}) {
   const validJourney = journey => Array.isArray(journey?.identity) && journey.identity.length === 4
@@ -20,19 +22,31 @@ export function browserRows(metrics, { revision = '', edition = '', runUrl = '',
     && (metrics.status !== 'passed' || (metrics.collected > 0 && metrics.executed === metrics.collected
       && metrics.journeys.length === metrics.collected && metrics.journeys.every(journey =>
         journey.required && journey.observed && journey.firstAttempt === 'passed' && journey.retryCount === 0 && journey.outcome === 'expected')));
-  const status = valid ? metrics.status : 'incomplete';
   const classification = [runKind(env), env.GITHUB_EVENT_NAME || ''];
+  const optionalText = value => typeof value === 'string' && value.trim() && !/[\x00-\x1f\x7f]/.test(value) ? value : '';
+  const runId = typeof env.GITHUB_RUN_ID === 'string' && /^[1-9][0-9]*$/.test(env.GITHUB_RUN_ID) ? env.GITHUB_RUN_ID : '';
+  const attempt = Number(env.GITHUB_RUN_ATTEMPT);
+  const runAttempt = runId && /^[1-9][0-9]*$/.test(env.GITHUB_RUN_ATTEMPT ?? '') && Number.isSafeInteger(attempt) ? attempt : '';
+  const metadata = [runId, runAttempt, valid ? optionalText(metrics.configuration.authentication) : '',
+    valid ? optionalText(metrics.configuration.serverLifecycle) : ''];
+  let artifact = '', artifactInvalid = false;
+  if (metrics?.artifactManifest !== undefined && metrics.artifactManifest !== null) {
+    try {
+      artifact = JSON.stringify(validateBrowserArtifactManifest(metrics.artifactManifest, { revision, edition, runId, runAttempt }));
+    } catch { artifactInvalid = true; }
+  }
+  const status = valid && !artifactInvalid ? metrics.status : 'incomplete';
+  if (!valid) artifact = '';
   const base = [timestamp, 2, 'run', revision, edition, status, runUrl];
   const count = value => Number.isSafeInteger(value) && value >= 0 ? value : '';
-  const artifact = valid && metrics.artifactManifest ? JSON.stringify(metrics.artifactManifest) : '';
   const rows = [[...base, valid ? count(metrics.collected) : '', valid ? count(metrics.executed) : '',
-    '', '', '', '', '', '', '', '', artifact, ...classification]];
+    '', '', '', '', '', '', '', '', artifact, ...classification, '', ...metadata]];
   if (!valid) return rows;
   for (const journey of metrics.journeys) {
     const identity = journey.identity;
     rows.push([timestamp, 2, 'journey', revision, edition, status, runUrl, '', '', identity[2], identity[0],
       JSON.stringify(identity[3]), journey.required === true, journey.observed === true,
-      journey.outcome, journey.firstAttempt, count(journey.retryCount), '', ...classification]);
+      journey.outcome, journey.firstAttempt, count(journey.retryCount), '', ...classification, identity[1], ...metadata]);
   }
   return rows;
 }

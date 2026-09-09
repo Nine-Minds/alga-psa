@@ -418,6 +418,7 @@ jobs:
           BUILD_RECORD_DIRECTORY: ${{ runner.temp }}/fresh-install-build-records
           SERVER_ARCHIVE: ${{ matrix.server_archive }}
           EDITION: ${{ matrix.edition }}
+          E2E_EDITION: ${{ matrix.edition }}
         run: |
           node e2e-tests/harness/create-calendar-callback-tls.mjs "$RUNNER_TEMP/calendar-callback-tls"
           export E2E_CALLBACK_TLS_DIR="$RUNNER_TEMP/calendar-callback-tls"
@@ -426,7 +427,7 @@ jobs:
           if [ "$EDITION" = enterprise ]; then worker_images="$worker_images temporal-worker"; fi
           for service in "$SERVER_ARCHIVE" setup email-service hocuspocus redis pgbouncer algasim $worker_images; do
             archive="$IMAGE_DIRECTORY/$service.tar.gz"
-            node scripts/verify-docker-archive-build.mjs archive "$archive" "$BUILD_RECORD_DIRECTORY/$service-build.json" "$service"
+            node scripts/browser-artifact-manifest.mjs archive "$archive" "$RUNNER_TEMP/verified-$service.json" "$BUILD_RECORD_DIRECTORY/$service-build.json" "$service"
             docker load --input "$archive"
             rm "$archive"
           done
@@ -442,6 +443,19 @@ jobs:
             docker image inspect "$image" > "$inspection"
             node scripts/verify-docker-archive-build.mjs loaded "$inspection" "$BUILD_RECORD_DIRECTORY/$record_service-build.json" "$record_service"
           done
+          node --input-type=module <<'NODE'
+          import { writeFileSync } from 'node:fs';
+          import path from 'node:path';
+          const { RUNNER_TEMP: temp, BUILD_RECORD_DIRECTORY: records, SERVER_ARCHIVE: server, EDITION: edition } = process.env;
+          const services = [server, 'setup', 'email-service', 'hocuspocus', 'redis', 'pgbouncer', 'algasim', 'workflow-worker',
+            ...(edition === 'enterprise' ? ['temporal-worker'] : [])];
+          writeFileSync(path.join(temp, 'browser-artifact-input.json'), JSON.stringify(services.map(service => ({
+            record: path.join(records, `${service}-build.json`),
+            receipt: path.join(temp, `verified-${service}.json`),
+            inspection: path.join(temp, `loaded-${service === server ? 'server' : service}.json`),
+          }))));
+          NODE
+          node scripts/browser-artifact-manifest.mjs manifest "$RUNNER_TEMP/browser-artifact-input.json" "$RUNNER_TEMP/browser-artifact-manifest.json"
 
       - name: Start and verify candidate service emulators
         if: steps.install_docker_compose.outcome == 'success'
@@ -904,6 +918,7 @@ jobs:
           E2E_BASE_URL: http://localhost:3000
           E2E_EDITION: ${{ matrix.edition }}
           E2E_REVISION: ${{ github.sha }}
+          E2E_ARTIFACT_MANIFEST: ${{ runner.temp }}/browser-artifact-manifest.json
           E2E_BUILD_FEATURE_FLAGS: release-v1-6-feature:true
           E2E_USER_EMAIL: ${{ steps.capture_creds.outputs.e2e_user_email }}
           E2E_USER_PASSWORD: ${{ steps.capture_creds.outputs.e2e_user_password }}
@@ -936,6 +951,7 @@ jobs:
             e2e-tests/execution-evidence/
             ${{ runner.temp }}/algasim-catalog.json
             ${{ runner.temp }}/algasim-image-id.txt
+            ${{ runner.temp }}/browser-artifact-manifest.json
           retention-days: 7
 
       - name: Record browser journey readiness

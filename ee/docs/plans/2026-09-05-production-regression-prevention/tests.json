@@ -54,7 +54,7 @@
   {
     "id": "T006",
     "description": "Feed actual-format runner reports with success, intentional skip, todo, pending work, missing file, collection failure and truncated execution into reconciliation; verify required identities and completeness survive serialization and incomplete runs never become ready.",
-    "implemented": false,
+    "implemented": true,
     "kind": "report-behavior",
     "featureIds": [
       "F006",
@@ -65,7 +65,7 @@
   {
     "id": "T007",
     "description": "Evaluate aggregate decisions across success, failure, cancellation, unexpected skip, empty collection, absent/stale artifact, expired quarantine and explicit not-applicable selection; only a complete eligible mandatory set passes.",
-    "implemented": false,
+    "implemented": true,
     "kind": "gate-behavior",
     "featureIds": [
       "F007",

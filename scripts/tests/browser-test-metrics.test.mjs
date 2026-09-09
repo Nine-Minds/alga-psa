@@ -59,7 +59,7 @@ test('the actual browser runner emits incomplete metrics when execution cannot s
   t.after(() => rmSync(root, { recursive: true, force: true }));
   mkdirSync(path.join(root, 'e2e-tests'), { recursive: true });
   mkdirSync(path.join(root, 'scripts/lib'), { recursive: true });
-  for (const file of ['e2e-tests/run.mjs', ...['browser-test-metrics', 'test-discovery', 'test-revision',
+  for (const file of ['e2e-tests/run.mjs', 'scripts/verify-docker-archive-build.mjs', ...['browser-test-metrics', 'browser-artifact-manifest', 'test-discovery', 'test-revision',
     'test-execution-evidence', 'playwright-execution-evidence'].map(name => `scripts/lib/${name}.mjs`)]) {
     cpSync(path.join(repository, file), path.join(root, file));
   }
@@ -71,6 +71,18 @@ test('the actual browser runner emits incomplete metrics when execution cannot s
   assert.equal(metrics.collected, 0);
   assert.equal(metrics.executed, 0);
   assert.equal(metrics.revision, null);
+});
+
+test('configured missing or invalid artifact provenance cannot publish complete metrics', () => {
+  for (const artifactManifest of [null, {}, { revision, image: 'latest' }]) {
+    const result = check({ artifactManifest, artifactManifestRequired: true });
+    assert.equal(result.status, 'incomplete');
+    assert.equal(result.artifactManifest, null);
+    assert.equal(result.collected, 1);
+    assert.equal(result.executed, 1);
+    assert.equal(result.journeys[0].firstAttempt, 'passed');
+    assert.ok(result.failures.includes('Missing or invalid CI test artifact identity'));
+  }
 });
 
 test('dirty, missing and changed source evidence cannot produce passed readiness metrics', () => {

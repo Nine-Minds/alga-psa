@@ -1,8 +1,10 @@
 import { playwrightTests, reconcilePlaywrightExecution } from './playwright-execution-evidence.mjs';
+import { validateBrowserArtifactManifest } from './browser-artifact-manifest.mjs';
 
 // Reporting projection of raw collection/execution. Never copy request bodies,
 // error payloads or credentials from Playwright attachments into the scorecard.
-export function browserTestMetrics({ collected, report, evidence, root, revision }) {
+export function browserTestMetrics({ collected, report, evidence, root, revision,
+  artifactManifest, artifactManifestRequired = false, runId, runAttempt }) {
   const verified = reconcilePlaywrightExecution({ collected, report, root, revision,
     exitCode: evidence?.status === 'passed' ? 0 : 1 });
   let expected = [], actual = [], readable = true;
@@ -34,23 +36,32 @@ export function browserTestMetrics({ collected, report, evidence, root, revision
     return source?.revision === revision && source.dirty === false
       && Array.isArray(source.changes) && source.changes.length === 0;
   });
+  let verifiedManifest = null;
+  let artifactFailure = false;
+  if (artifactManifest != null) {
+    try {
+      verifiedManifest = validateBrowserArtifactManifest(artifactManifest, {
+        revision, edition: collected?.config?.metadata?.edition, runId, runAttempt,
+      });
+    } catch { artifactFailure = true; }
+  } else if (artifactManifestRequired) artifactFailure = true;
   return {
     schemaVersion: 2, suite: 'production-browser', revision: revision ?? null,
-    status: !readable || !expected.length || missing ? 'incomplete'
+    status: !readable || !expected.length || missing || artifactFailure ? 'incomplete'
       : !revisionMatches || !cleanSource || evidence?.status !== 'passed' || verified.status !== 'passed' ? 'failed' : 'passed',
     configuration: {
       edition: collected?.config?.metadata?.edition ?? null,
       authentication: collected?.config?.metadata?.authentication ?? null,
       serverLifecycle: collected?.config?.metadata?.serverLifecycle ?? null,
     },
-    // The deployment pipeline must supply a verified immutable component set.
-    // A source SHA or local image tag is not an artifact manifest.
-    artifactManifest: null,
+    // This identifies verified CI archives and loaded images, not a deployment.
+    artifactManifest: verifiedManifest,
     collected: expected.length,
     executed: journeys.filter(journey => journey.observed && journey.attempts.some(attempt =>
       ['passed', 'failed', 'timedOut', 'interrupted'].includes(attempt.status))).length,
     counts: verified.counts, journeys,
     failures: [...verified.failures, ...(!revisionMatches ? ['Missing or mismatched candidate revision'] : []),
-      ...(!cleanSource ? ['Missing, dirty or changed source evidence'] : [])],
+      ...(!cleanSource ? ['Missing, dirty or changed source evidence'] : []),
+      ...(artifactFailure ? ['Missing or invalid CI test artifact identity'] : [])],
   };
 }

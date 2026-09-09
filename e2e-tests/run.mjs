@@ -67,6 +67,9 @@ const readReport = file => {
   try { return JSON.parse(readFileSync(file, 'utf8')); } catch { return null; }
 };
 save(files.metrics, browserTestMetrics({ collected: readReport(files.collected), report: readReport(files.results),
-  evidence, root, revision: before?.revision }));
+  evidence, root, revision: before?.revision,
+  artifactManifest: process.env.E2E_ARTIFACT_MANIFEST ? readReport(process.env.E2E_ARTIFACT_MANIFEST) : null,
+  artifactManifestRequired: Boolean(process.env.E2E_ARTIFACT_MANIFEST),
+  runId: process.env.GITHUB_RUN_ID, runAttempt: Number(process.env.GITHUB_RUN_ATTEMPT) }));
 for (const failure of evidence.failures) console.error(failure);
 process.exit(evidence.status === 'passed' ? 0 : 1);
