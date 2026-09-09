@@ -158,7 +158,7 @@
   {
     "id": "F018",
     "description": "saveEmailBrandingAction persists settings.emailBranding under withAuth with settings:update",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "settings-actions",
     "prdRefs": [
       "FR7",
@@ -168,7 +168,7 @@
   {
     "id": "F019",
     "description": "saveEmailBrandingAction rejects malformed hex values",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "settings-actions",
     "prdRefs": [
       "FR7"
@@ -177,7 +177,7 @@
   {
     "id": "F020",
     "description": "saveEmailBrandingAction strips logo and hideAttribution on Community",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "settings-actions",
     "prdRefs": [
       "FR7"
@@ -186,7 +186,7 @@
   {
     "id": "F021",
     "description": "getEmailBrandingStatusAction returns saved palette, suggestion with source, and per-template classification for the tenant's languages",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "settings-actions",
     "prdRefs": [
       "FR9",
@@ -196,7 +196,7 @@
   {
     "id": "F022",
     "description": "getEmailBrandingStatusAction lists system template names newer than appliedAt with no tenant row",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "settings-actions",
     "prdRefs": [
       "FR9"

@@ -28,6 +28,7 @@
     "@alga-psa/db": "*",
     "@alga-psa/event-bus": "*",
     "@alga-psa/shared": "*",
+    "@alga-psa/tenancy": "*",
     "@alga-psa/types": "*",
     "axios": "^1.18.0",
     "nodemailer": "^9.0.3"

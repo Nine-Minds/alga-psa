@@ -203,7 +203,7 @@
   {
     "id": "T023",
     "description": "save without settings:update permission throws Permission denied",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "settings-actions",
     "featureIds": [
       "F018"
@@ -212,7 +212,7 @@
   {
     "id": "T024",
     "description": "save with '#zzz' primary is rejected",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "settings-actions",
     "featureIds": [
       "F019"
@@ -221,7 +221,7 @@
   {
     "id": "T025",
     "description": "save on Community drops logo/hideAttribution while keeping colors",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "settings-actions",
     "featureIds": [
       "F020"
@@ -230,7 +230,7 @@
   {
     "id": "T026",
     "description": "status returns classification for every (name, language) in the tenant's languages",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "settings-actions",
     "featureIds": [
       "F021"
@@ -239,7 +239,7 @@
   {
     "id": "T027",
     "description": "status lists a template created after appliedAt with no tenant row and omits one that already has a row",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "settings-actions",
     "featureIds": [
       "F022"
@@ -248,7 +248,7 @@
   {
     "id": "T028",
     "description": "status reads and writes only rows for the calling tenant (contract test against a second tenant's rows)",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "settings-actions",
     "featureIds": [
       "F018",
