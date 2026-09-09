@@ -1,0 +1,13 @@
+[
+  {"id":"T001","description":"DB-backed integration: migrated schema creates a catalog-backed product and service with authoritative description snapshots and rejects a cross-tenant service id.","featureIds":["F001","F002","F005"],"implemented":false},
+  {"id":"T002","description":"Behavioral draft test: cached and fallback picker paths retain distinct name, catalog description, and editable line description; null/custom/discount cases remain clean.","featureIds":["F003","F004","F006"],"implemented":false},
+  {"id":"T003","description":"DB-backed lifecycle test: line-description, quantity, and price edits preserve the snapshot while a catalog-selection change recaptures all catalog identity fields.","featureIds":["F005","F007"],"implemented":false},
+  {"id":"T004","description":"Lifecycle integration: duplicate, revision, save-as-template, and create-from-template preserve the original snapshot after catalog edit or deletion.","featureIds":["F008","F009","F017"],"implemented":false},
+  {"id":"T005","description":"Adapter and binding-catalog test: all three quote item fields resolve in ordinary and grouped collections without undefined fallbacks.","featureIds":["F010","F011"],"implemented":false},
+  {"id":"T006","description":"AST compatibility test: legacy single-value columns and new stacked-line columns both validate and round-trip through workspace import/export.","featureIds":["F012","F013","F017"],"implemented":false},
+  {"id":"T007","description":"Renderer parity test: stacked name and long/multiline catalog description render in order with independent styles and missing lines collapse in client and server renderers.","featureIds":["F014","F015"],"implemented":false},
+  {"id":"T008","description":"Standard-template test: ordinary, recurring, one-time, grouped, and location-grouped quote tables use the stacked preset while custom saved ASTs remain unchanged.","featureIds":["F015","F016","F017"],"implemented":false},
+  {"id":"T009","description":"Regression test: quote totals, discounts, taxes, ordering, and conversion outputs are identical before and after adding catalog-description snapshots.","featureIds":["F018"],"implemented":false},
+  {"id":"T010","description":"Live smoke: select representative product and service, edit line description, save/reopen layout, and capture preview plus exported PDF showing name above catalog description with long-text pagination.","featureIds":["F003","F004","F010","F011","F014","F015","F016"],"implemented":false}
+]
+
