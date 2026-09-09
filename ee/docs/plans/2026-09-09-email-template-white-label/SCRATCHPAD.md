@@ -89,6 +89,19 @@
 - T035 (432 rows under 10 s on Citus) is the one test left unimplemented: no database was provisioned for
   this card. The batching it guards is asserted structurally by the actions contract test instead.
 
+## Browser-check fix round (2026-09-09)
+
+- Multi-language apply failed with `tenant_email_templates_tenant_name_unique`: the table still carried the
+  knex-named `(tenant, name)` unique constraint because `20250916150719_add_language_to_email_templates`
+  dropped it under the wrong name (`..._tenant_name_key`). New migration
+  `20260909150000_drop_stale_email_template_unique` removes it; `(tenant, name, language_code)` remains the
+  only uniqueness. This also unblocks the pre-existing per-language Customize flow.
+- Apply failure rows now go through `describeTemplateWriteError`, which strips the SQL knex prefixes onto
+  driver errors so the dialog reports "duplicate key value violates…" instead of pages of bound HTML.
+- `replaceTemplateVariables` expands `{{#each path}}` blocks once for preview, qualifying `{{this.*}}`
+  (and `{{#if this.*}}`) against the path so the registry's per-item examples resolve — credit-expiring
+  previews render CR-1001 rows instead of literal handlebars. Pre-existing gap, surfaced by the panel.
+
 ## Open Questions
 
 - Are `settings.branding.logoUrl` / `logoWideUrl` fetchable by a mail client without a session? FR10 writes
