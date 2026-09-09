@@ -18,6 +18,9 @@ test('Teams profile recovery and calendar meeting creation preserve saved identi
   await emulators.seed('msgraph', 'client', { clientId, clientSecret });
   try {
     await signIn(page, { email: tenant.admin.email, password: credentials.password });
+    // The URL changes before the dashboard layout finishes loading in development.
+    // Complete this page's readiness before starting the settings navigation.
+    await expect(page.locator('[data-automation-id="dashboard-main"]')).toBeVisible();
     await createMicrosoftProfile(page, { name: profileName, clientId, clientSecret, capability: 'teams' });
     const profile = await database('microsoft_profiles').where({ ...scope, client_id: clientId }).first();
     expect(profile).toBeTruthy();

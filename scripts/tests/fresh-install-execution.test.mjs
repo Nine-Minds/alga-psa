@@ -47,7 +47,7 @@ function fixture(t) {
     write(apiDir, 'evidence.json', evidence); write(apiDir, 'collected.json', [api]);
     write(apiDir, 'collected-tests.json', [{ file: api, name: 'persists' }]);
     write(apiDir, 'results.json', { success: true, numTotalTests: 1, testResults: [{ name: api, status: 'passed', assertionResults: [{ title: 'persists', status: 'passed' }] }] });
-    const browserDir = path.join(input, `fresh-install-playwright-${edition}`, 'nested', 'execution-evidence');
+    const browserDir = path.join(input, `fresh-install-playwright-${edition}`, 'alga-psa', 'alga-psa', 'e2e-tests', 'execution-evidence');
     const report = { config: { rootDir: root, metadata: { edition } }, errors: [], stats: { expected: browsers.length, unexpected: 0, skipped: 0, flaky: 0 },
       suites: [{ specs: browsers.map(file => ({ file, title: 'persists', tests: [{ projectId: edition, projectName: edition, expectedStatus: 'passed', status: 'expected', results: [{ retry: 0, status: 'passed' }] }] })) }] };
     for (const requirement of policy.editions[edition].requirements) {
@@ -64,7 +64,7 @@ function fixture(t) {
         expectedStatus: 'passed', status: 'expected', results: [{ retry: 0, status: 'passed', attachments: [attachment] }] }] });
     }
     report.stats.expected = report.suites[0].specs.length;
-    write(browserDir, 'browser-artifact-manifest.json', manifests[edition]);
+    write(path.join(input, `fresh-install-playwright-${edition}`, '_temp'), 'browser-artifact-manifest.json', manifests[edition]);
     write(browserDir, 'evidence.json', evidence); write(browserDir, 'collected.json', report); write(browserDir, 'results.json', report);
   }
   return { root, revision, runId, runAttempt, input, candidates: [api, ...browsers], shouldRun: true,
@@ -92,7 +92,7 @@ test('critical browser journeys cannot disappear from both checkout inventory an
     const file = `e2e-tests/tests/${name}.spec.ts`;
     input.candidates = input.candidates.filter(candidate => candidate !== file);
     for (const edition of ['community', 'enterprise']) {
-      const directory = path.join(input.input, `fresh-install-playwright-${edition}`, 'nested', 'execution-evidence');
+      const directory = path.join(input.input, `fresh-install-playwright-${edition}`, 'alga-psa', 'alga-psa', 'e2e-tests', 'execution-evidence');
       for (const artifact of ['collected.json', 'results.json']) {
         const target = path.join(directory, artifact);
         const report = JSON.parse(readFileSync(target, 'utf8'));
@@ -126,7 +126,7 @@ test('newly executed browser journeys must join the permanent floor before they 
   const file = 'e2e-tests/tests/new-required-journey.spec.ts';
   input.candidates.push(file);
   for (const edition of ['community', 'enterprise']) {
-    const directory = path.join(input.input, `fresh-install-playwright-${edition}`, 'nested', 'execution-evidence');
+    const directory = path.join(input.input, `fresh-install-playwright-${edition}`, 'alga-psa', 'alga-psa', 'e2e-tests', 'execution-evidence');
     for (const artifact of ['collected.json', 'results.json']) {
       const target = path.join(directory, artifact);
       const report = JSON.parse(readFileSync(target, 'utf8'));
@@ -143,13 +143,13 @@ test('newly executed browser journeys must join the permanent floor before they 
 for (const damage of ['missing-journal', 'wrong-provider', 'manifest', 'run', 'missing-policy-journey', 'retry']) {
   test(`provider gate rejects ${damage} despite green recorded evidence`, t => {
     const input = fixture(t);
-    const directory = path.join(input.input, 'fresh-install-playwright-enterprise/nested/execution-evidence');
+    const directory = path.join(input.input, 'fresh-install-playwright-enterprise/alga-psa/alga-psa/e2e-tests/execution-evidence');
     const target = path.join(directory, 'results.json');
     const report = JSON.parse(readFileSync(target, 'utf8'));
     const spec = report.suites[0].specs.find(s => s.tests[0].results[0].attachments);
     if (damage === 'missing-journal') spec.tests[0].results[0].attachments = [];
     if (damage === 'wrong-provider') spec.tests[0].results[0].attachments[0].body = Buffer.from(JSON.stringify({ providers: ['invented'], requests: {} })).toString('base64');
-    if (damage === 'manifest') writeFileSync(path.join(directory, 'browser-artifact-manifest.json'), '{}');
+    if (damage === 'manifest') writeFileSync(path.join(input.input, 'fresh-install-playwright-enterprise/_temp/browser-artifact-manifest.json'), '{}');
     if (damage === 'run') input.runId = '999';
     if (damage === 'missing-policy-journey') {
       report.suites[0].specs = report.suites[0].specs.filter(s => s !== spec);
@@ -164,3 +164,27 @@ for (const damage of ['missing-journal', 'wrong-provider', 'manifest', 'run', 'm
     assert.equal(verifyFreshInstallExecution(input).status, 'failed');
   });
 }
+
+for (const damage of ['diagnostics-only', 'missing-canonical', 'ambiguous-canonical']) test(`canonical browser bundle selection: ${damage}`, t => {
+  const input = fixture(t);
+  const artifact = path.join(input.input, 'fresh-install-playwright-community');
+  const canonical = path.join(artifact, 'alga-psa/alga-psa/e2e-tests/execution-evidence');
+  const decoy = path.join(artifact, damage === 'ambiguous-canonical' ? 'other/e2e-tests/execution-evidence' : 'alga-psa/alga-psa/e2e-tests/harness-results/passing');
+  mkdirSync(decoy, { recursive: true });
+  for (const name of ['evidence.json', 'collected.json', 'results.json']) writeFileSync(path.join(decoy, name), readFileSync(path.join(canonical, name)));
+  if (damage === 'missing-canonical') rmSync(canonical, { recursive: true });
+  const result = verifyFreshInstallExecution(input);
+  assert.equal(result.status, damage === 'diagnostics-only' ? 'passed' : 'failed', result.failures.join('\n'));
+});
+
+for (const damage of ['diagnostics-only', 'missing-canonical', 'ambiguous-canonical']) test(`canonical manifest selection: ${damage}`, t => {
+  const input = fixture(t);
+  const artifact = path.join(input.input, 'fresh-install-playwright-community');
+  const canonical = path.join(artifact, '_temp/browser-artifact-manifest.json');
+  const decoy = path.join(artifact, damage === 'ambiguous-canonical' ? 'other/_temp' : 'diagnostics');
+  mkdirSync(decoy, { recursive: true });
+  writeFileSync(path.join(decoy, 'browser-artifact-manifest.json'), readFileSync(canonical));
+  if (damage === 'missing-canonical') rmSync(canonical);
+  const result = verifyFreshInstallExecution(input);
+  assert.equal(result.status, damage === 'diagnostics-only' ? 'passed' : 'failed', result.failures.join('\n'));
+});

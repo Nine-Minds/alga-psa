@@ -38,11 +38,17 @@ const criticalBrowserFiles = [
 
 function browserArtifact(directory, filename) {
   const found = [];
+  // upload-artifact preserves the common ancestor of the workspace and runner
+  // temp paths. Only these producer-owned suffixes identify primary evidence;
+  // harness-results contains intentional failure/skip reports with the same names.
+  const suffix = filename === 'browser-artifact-manifest.json'
+    ? ['_temp', filename] : ['e2e-tests', 'execution-evidence', filename];
   const visit = current => {
     for (const entry of readdirSync(current, { withFileTypes: true })) {
       const target = path.join(current, entry.name);
       if (entry.isDirectory()) visit(target);
-      else if (entry.name === filename) found.push(target);
+      else if (entry.isFile() && entry.name === filename
+        && path.relative(directory, target).split(path.sep).slice(-suffix.length).join('/') === suffix.join('/')) found.push(target);
     }
   };
   visit(directory);
