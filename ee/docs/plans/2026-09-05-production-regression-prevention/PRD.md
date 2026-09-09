@@ -3,6 +3,8 @@
 - Slug: `production-regression-prevention`
 - Date: 2026-09-05
 - Status: Implementation in progress in draft PR #3343; see tracking files for verified scope
+- Enforcement: F008 is prepared but not applied. `production-regression.yml` reaches `main` only with this pull request, and requiring a check that other branches cannot produce would block every open pull request, so enforcement follows the merge. See [f008-enforcement.md](f008-enforcement.md).
+- Quarantine: `teams-development-execution` is quarantined to 2026-10-21 under F034/T028 (`scripts/lib/quarantine.json`). Teams coverage is deferred, not obtained.
 - Audit baseline: `origin/main` at `457654d6f0`; implementation rebased onto `a90cd88edc`
 - Scope authority: user's request to implement the preceding testing-audit recommendations
 - Tracking: [features.json](features.json), [tests.json](tests.json), [SCRATCHPAD.md](SCRATCHPAD.md)
