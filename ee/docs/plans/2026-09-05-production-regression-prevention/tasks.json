@@ -448,10 +448,10 @@
     {
       "id": "R053",
       "title": "Prevent concurrent cold database initialization from leaking pools",
-      "status": "in_progress",
+      "status": "done",
       "dependsOn": [],
       "owner": "calendar_review",
-      "notes": "CI screenshot shows PostgreSQL connection exhaustion during retained-ticket reload. Concurrent cold calls now share pending pool initialization; reset waits for initialization and teardown, and failures permit retry. Three behavioral failures reproduced before fix; five new lifecycle cases plus seven existing transaction/context cases pass natively (12/12), independently rerun by coordinator. DB TypeScript check passes. Full upgrade browser recovery remains pending in CI; retained-ticket assertions unchanged."
+      "notes": "CI screenshot shows PostgreSQL connection exhaustion during retained-ticket reload. Concurrent cold calls now share pending pool initialization; reset waits for initialization and teardown, and failures permit retry. Three behavioral failures reproduced before fix; five new lifecycle cases plus seven existing transaction/context cases pass natively (12/12), independently rerun by coordinator. DB TypeScript check passes. Full upgrade browser recovery remains pending in CI; retained-ticket assertions unchanged. Accepted against completed run 34320694357, tested merge cec08351189624fb4db8db7ec453e788157fbdad: PostgreSQL and Citus raw upgrade artifacts each passed all three journeys first attempt, including retained-ticket. Native concurrency cases provide the causal race coverage; browser success alone is not race proof. Previous overall CI remained failed; latest f3a candidate execution is pending."
     },
     {
       "id": "R054",
@@ -568,10 +568,10 @@
     {
       "id": "R068",
       "title": "Retain upgrade runtime diagnostics before container replacement",
-      "status": "in_progress",
+      "status": "done",
       "dependsOn": [],
       "owner": "coordinator",
-      "notes": "PostgreSQL application logs were lost when Citus recreated the server; Citus logs were lost at Teams recreation. Capture each phase\u2019s server/database logs and grouped connection counts with explicit isolated database authentication before existing diagnostic uploads. Actionlint and independent review pass; actual CI capture is pending."
+      "notes": "PostgreSQL application logs were lost when Citus recreated the server; Citus logs were lost at Teams recreation. Capture each phase\u2019s server/database logs and grouped connection counts with explicit isolated database authentication before existing diagnostic uploads. Actionlint and independent review pass; actual CI capture is pending. Accepted against run 34320694357: PG diagnostic artifact 10093567045 and Citus artifact 10093682770 contain phase logs and actual connection-count JSON. Capture steps 50/58 and uploads 52/60 succeeded before server replacement. Counts are snapshots, not peak-load claims. Previous overall CI remained failed; latest f3a candidate execution is pending."
     },
     {
       "id": "R069",
@@ -584,10 +584,10 @@
     {
       "id": "R070",
       "title": "Route supported PostgreSQL upgrade through an isolated candidate pooler",
-      "status": "in_progress",
+      "status": "done",
       "dependsOn": [],
       "owner": "qbo_protocol and coordinator",
-      "notes": "Final enterprise PostgreSQL logs confirm 237 connection-limit errors overlapping all failing PG upgrade journeys. Generate an isolated upgrade_ci mapping using the same candidate pooler image and unchanged auth/pool policy, verify image and real app-user SQL readiness, keep admin access direct, and stop the isolated pooler after diagnostics. Four native configuration/CLI tests and independent review pass. Current CI predates this harness repair; no local Docker."
+      "notes": "Final enterprise PostgreSQL logs confirm 237 connection-limit errors overlapping all failing PG upgrade journeys. Generate an isolated upgrade_ci mapping using the same candidate pooler image and unchanged auth/pool policy, verify image and real app-user SQL readiness, keep admin access direct, and stop the isolated pooler after diagnostics. Four native configuration/CLI tests and independent review pass. Current CI predates this harness repair; no local Docker. Accepted against run 34320694357: step 48 successfully enforced candidate revision and running image equality, authenticated real app_user SQL through the isolated upgrade pooler into upgrade_ci. Step 53 stopped it before Citus. Exact pooler SHA was not retained; evidence is the executed fail-closed identity check. Previous overall CI remained failed; latest f3a candidate execution is pending."
     },
     {
       "id": "R071",
@@ -876,6 +876,22 @@
       "dependsOn": [],
       "owner": "qbo_protocol",
       "notes": "CurrentEEdiagnosticstep07:59:32 stillreportedlive08:07:45 beyondnominal5mdeadline; actualcauseunproven. SeveralDockercommandsunboundedorTERM-only. Prioritizehostmemory/disk+serverlogs, boundedkill-afterqueries, partialoutput+exitcodes, limitSaveandprojectcleanup. Actionlintsyntaxpasses; noDockerlocal/noassertion/retry/deadlinechangeforbehavioraltests. Futureexecutionpending; notrootcauseclaim."
+    },
+    {
+      "id": "R107",
+      "title": "Complete bucket recovery translations across supported locales",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "stripe_protocol",
+      "notes": "Current f3a translation consistency check reports 18 missing keys: two recovery messages across seven translated and two pseudo locales. Preserve checks and supply translations. Added 18 missing entries using natural locale translations and the existing pseudoString transform. Actual enforced validator passed all nine locales with zero errors/warnings; locale-quality audit passed seven real locales with zero untranslated/forbidden/parse/missing findings. Current-source CI remains pending next publication."
+    },
+    {
+      "id": "R108",
+      "title": "Bind release provider journeys to tested and promoted image identity",
+      "status": "in_progress",
+      "dependsOn": [],
+      "owner": "qbo_protocol",
+      "notes": "Fresh-install gate independently validates provider observations, but release promotion currently accepts configuration declarations without raw journey evidence. Require consumer-policy journeys and verified archive identity, with raw OCI manifest digest/config binding to promoted registry image; no archive-to-registry identity substitution. Actual publisher/deployment rollout remains separate."
     }
   ]
 }

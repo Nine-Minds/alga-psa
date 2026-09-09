@@ -141,6 +141,8 @@
   },
   "usage": {
     "bucketHoursOverview": "Übersicht über Stundenkontingente",
+    "bucketLoadError": "Die Reststunden der Stundenkontingente konnten nicht geladen werden. Versuchen Sie es erneut, um die aktuellen Reststunden anzuzeigen.",
+    "retryBucketBalances": "Reststunden erneut laden",
     "usageRecords": "Nutzungsaufzeichnungen",
     "actions": {
       "addUsage": "Nutzung hinzufügen",
