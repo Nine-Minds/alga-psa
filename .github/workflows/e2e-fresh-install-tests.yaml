@@ -1394,39 +1394,21 @@ jobs:
         if: failure() && steps.install_docker_compose.outcome == 'success'
         timeout-minutes: 5
         run: |
-          echo "=== COLLECTING ALL LOGS DUE TO FAILURE ==="
-
-          echo "=== CONTAINER STATUS ==="
-          timeout 60 docker-compose -p alga-e2e-test ps || echo "Could not get container status"
-
-          echo -e "\n=== DOCKER SYSTEM INFO ==="
-          # `docker system df` can hang for minutes against a disk-full/wedged
-          # daemon (it previously stalled here until the step was SIGTERM'd ->
-          # exit 143), so cap it with `timeout`.
-          timeout 60 docker system df || echo "docker system df timed out or failed"
-          timeout 60 docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}\t{{.CreatedAt}}" || echo "docker images timed out or failed"
-          
-          echo -e "\n=== ALL CONTAINER LOGS ==="
-          docker-compose -p alga-e2e-test logs --tail=1000 || echo "Could not get compose logs"
-          
-          echo -e "\n=== INDIVIDUAL SERVICE LOGS ==="
-          for service in server setup postgres redis pgbouncer hocuspocus workflow-worker temporal-worker temporal-dev; do
-            echo "--- $service logs ---"
-            docker-compose -p alga-e2e-test logs $service --tail=200 2>/dev/null || echo "No logs for $service"
-          done
-          
-          echo -e "\n=== DOCKER INSPECT (running containers) ==="
-          docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" | grep alga-e2e-test || echo "No running containers found"
-          
-          # Try to get logs from any containers that might have the project name
-          echo -e "\n=== DIRECT DOCKER LOGS ==="
-          for container in $(docker ps -a --filter "name=alga-e2e-test" --format "{{.Names}}"); do
-            echo "--- Direct logs for $container ---"
-            docker logs "$container" --tail=100 2>/dev/null || echo "Could not get logs for $container"
-          done
+          mkdir -p logs
+          timeout --kill-after=2s 5s free -m > logs/host-memory.txt 2>&1 || { capture_exit=$?; echo "Memory capture exit: $capture_exit" >> logs/host-memory.txt; }
+          timeout --kill-after=2s 5s df -h > logs/host-disk.txt 2>&1 || { capture_exit=$?; echo "Disk capture exit: $capture_exit" >> logs/host-disk.txt; }
+          # Preserve the useful logs before inspecting a potentially wedged daemon.
+          # Kill-after also bounds clients that ignore TERM; partial output survives.
+          timeout --kill-after=5s 45s docker-compose -p alga-e2e-test logs --no-color --tail=1000 server > logs/failure-server.log 2>&1 || { capture_exit=$?; echo "Server log collection timed out or failed; exit: $capture_exit" >> logs/failure-server.log; }
+          timeout --kill-after=5s 45s docker-compose -p alga-e2e-test logs --no-color --tail=1000 > logs/failure-all-services.log 2>&1 || { capture_exit=$?; echo "Combined log collection timed out or failed; exit: $capture_exit" >> logs/failure-all-services.log; }
+          timeout --kill-after=5s 15s docker-compose -p alga-e2e-test ps > logs/failure-container-status.txt 2>&1 || { capture_exit=$?; echo "Container status timed out or failed; exit: $capture_exit" >> logs/failure-container-status.txt; }
+          # Avoid redundant per-container reads and expensive system disk scans.
+          tail -n 200 logs/failure-server.log
+          tail -n 200 logs/failure-all-services.log
         shell: bash
 
       - name: Save container logs as artifacts
+        timeout-minutes: 5
         if: always() && steps.install_docker_compose.outcome == 'success'
         run: |
           mkdir -p logs
@@ -1435,18 +1417,15 @@ jobs:
           cp e2e-tests/*.png logs/ 2>/dev/null || echo "No Playwright screenshots found"
           cp e2e-tests/test-results/**/*.png logs/ 2>/dev/null || echo "No test-results screenshots found"
 
-          # Save logs for each service
-          for service in server setup postgres redis pgbouncer hocuspocus workflow-worker temporal-worker temporal-dev; do
-            echo "Saving logs for $service..."
-            docker-compose -p alga-e2e-test logs $service --no-color > "logs/${service}.log" 2>/dev/null || echo "No logs for $service" > "logs/${service}.log"
+          # Each request has a hard kill bound, keeping artifact upload reachable.
+          # Append failure markers instead of overwriting partial diagnostic output.
+          timeout --kill-after=5s 45s docker-compose -p alga-e2e-test logs --no-color server > logs/server.log 2>&1 || { capture_exit=$?; echo "Server log collection timed out or failed; exit: $capture_exit" >> logs/server.log; }
+          timeout --kill-after=5s 45s docker-compose -p alga-e2e-test logs --no-color > logs/all-services.log 2>&1 || { capture_exit=$?; echo "Combined log collection timed out or failed; exit: $capture_exit" >> logs/all-services.log; }
+          for service in setup postgres redis pgbouncer hocuspocus workflow-worker temporal-worker temporal-dev; do
+            timeout --kill-after=2s 10s docker-compose -p alga-e2e-test logs --no-color "$service" > "logs/${service}.log" 2>&1 || { capture_exit=$?; echo "Service log collection timed out or failed; exit: $capture_exit" >> "logs/${service}.log"; }
           done
-          
-          # Save combined logs
-          docker-compose -p alga-e2e-test logs --no-color > "logs/all-services.log" 2>/dev/null || echo "Could not save combined logs"
-          
-          # Save container status
-          docker-compose -p alga-e2e-test ps > "logs/container-status.txt" 2>/dev/null || echo "Could not save container status"
-          
+          timeout --kill-after=2s 10s docker-compose -p alga-e2e-test ps > logs/container-status.txt 2>&1 || { capture_exit=$?; echo "Container status timed out or failed; exit: $capture_exit" >> logs/container-status.txt; }
+
           # Save environment info
           echo "Environment variables:" > logs/environment.txt
           env | grep -E "(APP_|NODE_|DB_|REDIS_)" >> logs/environment.txt || echo "Could not save environment"
@@ -1463,12 +1442,13 @@ jobs:
           retention-days: 7
 
       - name: Cleanup Docker Compose
+        timeout-minutes: 3
         if: always() && steps.install_docker_compose.outcome == 'success' # Ensure docker-compose was attempted to be installed
         run: |
           echo "Cleaning up Docker Compose environment..."
           # Check if docker-compose command is available before trying to use it
           if command -v docker-compose &> /dev/null; then
-            docker-compose -p alga-e2e-test down -v --remove-orphans || echo "Docker Compose cleanup failed, but continuing."
+            timeout --kill-after=10s 120s docker-compose -p alga-e2e-test down -v --remove-orphans || echo "Docker Compose cleanup failed, but continuing."
           else
             echo "docker-compose command not found, skipping cleanup."
           fi

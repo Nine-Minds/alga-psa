@@ -868,6 +868,14 @@
       "dependsOn": [],
       "owner": "stripe_protocol",
       "notes": "CurrentCIwarmdashboardpassesbutactualTeamscasefailsinitialsettingsgoto90s. TraceSyntaxError+ChunkLoadError app/msp/layout.js HTTP200after80.27s; sourcebytesnotretained. Authreacheddashboard, settings307redirectthenpendingresponse. Cannotattributeonlycoldcompileorjustifydeadline/heapincrease. Waitterminalserverlogs; no speculativefix."
+    },
+    {
+      "id": "R106",
+      "title": "Bound CI Docker diagnostics so partial evidence can reach artifact upload",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "qbo_protocol",
+      "notes": "CurrentEEdiagnosticstep07:59:32 stillreportedlive08:07:45 beyondnominal5mdeadline; actualcauseunproven. SeveralDockercommandsunboundedorTERM-only. Prioritizehostmemory/disk+serverlogs, boundedkill-afterqueries, partialoutput+exitcodes, limitSaveandprojectcleanup. Actionlintsyntaxpasses; noDockerlocal/noassertion/retry/deadlinechangeforbehavioraltests. Futureexecutionpending; notrootcauseclaim."
     }
   ]
 }
