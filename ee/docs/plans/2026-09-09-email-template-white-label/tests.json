@@ -1,0 +1,631 @@
+[
+  {
+    "id": "T001",
+    "description": "stock palette constant matches constants.cjs value for value (test reads the .cjs file)",
+    "implemented": false,
+    "commitGroup": "palette-engine",
+    "featureIds": [
+      "F001"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "resolveEmailPalette with the stock primary/secondary reproduces the stock token map exactly",
+    "implemented": false,
+    "commitGroup": "palette-engine",
+    "featureIds": [
+      "F002"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "resolveEmailPalette darkens primary by 25% lightness for dark and mixes 95%/96%/88%/90% white for the tints",
+    "implemented": false,
+    "commitGroup": "palette-engine",
+    "featureIds": [
+      "F002"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "resolveEmailPalette single-color mode produces a gradient ending in a lighter tint of primary",
+    "implemented": false,
+    "commitGroup": "palette-engine",
+    "featureIds": [
+      "F003"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "resolveEmailPalette override for cardBorder wins over the derived value and other tokens stay derived",
+    "implemented": false,
+    "commitGroup": "palette-engine",
+    "featureIds": [
+      "F004"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "applyEmailPalette on every English system template removes all stock hex and rgba tokens",
+    "implemented": false,
+    "commitGroup": "palette-engine",
+    "featureIds": [
+      "F005",
+      "F007"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "applyEmailPalette matches lower-case #8a4dea, upper-case #8A4DEA and 'background: #8a4dea' with a space",
+    "implemented": false,
+    "commitGroup": "palette-engine",
+    "featureIds": [
+      "F005"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "applyEmailPalette matches rgba(138,77,234,0.12) with and without spaces",
+    "implemented": false,
+    "commitGroup": "palette-engine",
+    "featureIds": [
+      "F005"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "applyEmailPalette leaves #f59e0b, #eff6ff, #1e40af and #0f172a untouched",
+    "implemented": false,
+    "commitGroup": "palette-engine",
+    "featureIds": [
+      "F006"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "applyEmailPalette applied twice (stock\u2192A, A\u2192B) equals applying stock\u2192B directly",
+    "implemented": false,
+    "commitGroup": "palette-engine",
+    "featureIds": [
+      "F008"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "applyEmailPalette never modifies template variables such as {{ticket.title}}",
+    "implemented": false,
+    "commitGroup": "palette-engine",
+    "featureIds": [
+      "F005"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "missing tenant row classifies as system",
+    "implemented": false,
+    "commitGroup": "classification",
+    "featureIds": [
+      "F009"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "a row written by the tool classifies as branded after the palette is saved",
+    "implemented": false,
+    "commitGroup": "classification",
+    "featureIds": [
+      "F010"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "a branded row whose subject was edited classifies as customized with differs ['subject']",
+    "implemented": false,
+    "commitGroup": "classification",
+    "featureIds": [
+      "F011"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "a system clone with only a color swap classifies as customized with differs ['colors']",
+    "implemented": false,
+    "commitGroup": "classification",
+    "featureIds": [
+      "F011"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "a system clone with a copy edit classifies as customized with differs ['text']",
+    "implemented": false,
+    "commitGroup": "classification",
+    "featureIds": [
+      "F011"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "a full dark redesign with <style> blocks and no stock tokens classifies as no-stock-colors",
+    "implemented": false,
+    "commitGroup": "classification",
+    "featureIds": [
+      "F012"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "custom theme present and pair 'custom' \u2192 custom-theme source with the custom light colors",
+    "implemented": false,
+    "commitGroup": "suggestion",
+    "featureIds": [
+      "F013"
+    ]
+  },
+  {
+    "id": "T019",
+    "description": "pair 'ocean' with no custom theme \u2192 theme-pair source with #1d4ed8 primary",
+    "implemented": false,
+    "commitGroup": "suggestion",
+    "featureIds": [
+      "F014"
+    ]
+  },
+  {
+    "id": "T020",
+    "description": "pair 'alga' with portal branding primary set \u2192 portal-branding source",
+    "implemented": false,
+    "commitGroup": "suggestion",
+    "featureIds": [
+      "F015",
+      "F017"
+    ]
+  },
+  {
+    "id": "T021",
+    "description": "pair 'alga', no branding colors \u2192 default source with #8A4DEA/#40CFF9",
+    "implemented": false,
+    "commitGroup": "suggestion",
+    "featureIds": [
+      "F016"
+    ]
+  },
+  {
+    "id": "T022",
+    "description": "custom theme present but pairId 'ocean' \u2192 theme-pair source (normalizeTenantTheme rules apply)",
+    "implemented": false,
+    "commitGroup": "suggestion",
+    "featureIds": [
+      "F013",
+      "F014"
+    ]
+  },
+  {
+    "id": "T023",
+    "description": "save without settings:update permission throws Permission denied",
+    "implemented": false,
+    "commitGroup": "settings-actions",
+    "featureIds": [
+      "F018"
+    ]
+  },
+  {
+    "id": "T024",
+    "description": "save with '#zzz' primary is rejected",
+    "implemented": false,
+    "commitGroup": "settings-actions",
+    "featureIds": [
+      "F019"
+    ]
+  },
+  {
+    "id": "T025",
+    "description": "save on Community drops logo/hideAttribution while keeping colors",
+    "implemented": false,
+    "commitGroup": "settings-actions",
+    "featureIds": [
+      "F020"
+    ]
+  },
+  {
+    "id": "T026",
+    "description": "status returns classification for every (name, language) in the tenant's languages",
+    "implemented": false,
+    "commitGroup": "settings-actions",
+    "featureIds": [
+      "F021"
+    ]
+  },
+  {
+    "id": "T027",
+    "description": "status lists a template created after appliedAt with no tenant row and omits one that already has a row",
+    "implemented": false,
+    "commitGroup": "settings-actions",
+    "featureIds": [
+      "F022"
+    ]
+  },
+  {
+    "id": "T028",
+    "description": "status reads and writes only rows for the calling tenant (contract test against a second tenant's rows)",
+    "implemented": false,
+    "commitGroup": "settings-actions",
+    "featureIds": [
+      "F018",
+      "F021"
+    ]
+  },
+  {
+    "id": "T029",
+    "description": "apply on a fresh tenant for 3 names \u00d7 2 languages creates 6 rows whose HTML has no stock tokens",
+    "implemented": false,
+    "commitGroup": "apply-action",
+    "featureIds": [
+      "F023"
+    ]
+  },
+  {
+    "id": "T030",
+    "description": "apply twice with a changed primary updates the 6 rows and leaves no trace of the first palette",
+    "implemented": false,
+    "commitGroup": "apply-action",
+    "featureIds": [
+      "F024",
+      "F028"
+    ]
+  },
+  {
+    "id": "T031",
+    "description": "apply with a customized row not ticked leaves its HTML byte-identical and reports it skipped",
+    "implemented": false,
+    "commitGroup": "apply-action",
+    "featureIds": [
+      "F026"
+    ]
+  },
+  {
+    "id": "T032",
+    "description": "apply with a customized row ticked changes only stock tokens; its edited copy survives",
+    "implemented": false,
+    "commitGroup": "apply-action",
+    "featureIds": [
+      "F025"
+    ]
+  },
+  {
+    "id": "T033",
+    "description": "apply against a no-stock-colors row never writes and reports 'nothing to replace'",
+    "implemented": false,
+    "commitGroup": "apply-action",
+    "featureIds": [
+      "F026"
+    ]
+  },
+  {
+    "id": "T034",
+    "description": "apply result counts written + skipped + failed equal the selection size",
+    "implemented": false,
+    "commitGroup": "apply-action",
+    "featureIds": [
+      "F027"
+    ]
+  },
+  {
+    "id": "T035",
+    "description": "apply for all 54 names in 8 languages completes under 10 s on the local Citus DB",
+    "implemented": false,
+    "commitGroup": "apply-action",
+    "featureIds": [
+      "F029"
+    ]
+  },
+  {
+    "id": "T036",
+    "description": "apply without settings:update permission throws before any write",
+    "implemented": false,
+    "commitGroup": "apply-action",
+    "featureIds": [
+      "F023"
+    ]
+  },
+  {
+    "id": "T037",
+    "description": "removeEmailBranding deletes branded rows, keeps customized rows, clears appliedAt",
+    "implemented": false,
+    "commitGroup": "apply-action",
+    "featureIds": [
+      "F030"
+    ]
+  },
+  {
+    "id": "T038",
+    "description": "text_content is never modified by apply",
+    "implemented": false,
+    "commitGroup": "apply-action",
+    "featureIds": [
+      "F023",
+      "F024"
+    ]
+  },
+  {
+    "id": "T039",
+    "description": "card renders with id email-branding-card above email-templates-table",
+    "implemented": false,
+    "commitGroup": "brand-panel-ui",
+    "featureIds": [
+      "F031"
+    ]
+  },
+  {
+    "id": "T040",
+    "description": "with an ocean theme the primary input shows #1d4ed8 and the chip reads 'From your Ocean theme'",
+    "implemented": false,
+    "commitGroup": "brand-panel-ui",
+    "featureIds": [
+      "F032"
+    ]
+  },
+  {
+    "id": "T041",
+    "description": "with a saved palette differing from the suggestion the chip reads 'Saved' and 'Use suggested colors' restores it",
+    "implemented": false,
+    "commitGroup": "brand-panel-ui",
+    "featureIds": [
+      "F033"
+    ]
+  },
+  {
+    "id": "T042",
+    "description": "toggling single color hides secondary-color input",
+    "implemented": false,
+    "commitGroup": "brand-panel-ui",
+    "featureIds": [
+      "F034"
+    ]
+  },
+  {
+    "id": "T043",
+    "description": "Adjust reveals a cardBorder input whose change updates the preview",
+    "implemented": false,
+    "commitGroup": "brand-panel-ui",
+    "featureIds": [
+      "F035"
+    ]
+  },
+  {
+    "id": "T044",
+    "description": "changing primary updates both preview iframes' srcdoc and calls no server action",
+    "implemented": false,
+    "commitGroup": "brand-panel-ui",
+    "featureIds": [
+      "F036"
+    ]
+  },
+  {
+    "id": "T045",
+    "description": "navigating away with unsaved palette prompts via UnsavedChangesProvider",
+    "implemented": false,
+    "commitGroup": "brand-panel-ui",
+    "featureIds": [
+      "F037"
+    ]
+  },
+  {
+    "id": "T046",
+    "description": "all interactive controls in the panel have kebab-case ids",
+    "implemented": false,
+    "commitGroup": "brand-panel-ui",
+    "featureIds": [
+      "F031",
+      "F034",
+      "F035"
+    ]
+  },
+  {
+    "id": "T047",
+    "description": "dialog opens with en preselected for a tenant with only en",
+    "implemented": false,
+    "commitGroup": "scope-apply-ui",
+    "featureIds": [
+      "F038"
+    ]
+  },
+  {
+    "id": "T048",
+    "description": "system and branded rows are checked; customized rows unchecked with hint text 'colors' / 'text' / 'subject'",
+    "implemented": false,
+    "commitGroup": "scope-apply-ui",
+    "featureIds": [
+      "F039"
+    ]
+  },
+  {
+    "id": "T049",
+    "description": "no-stock-colors row checkbox is disabled with hint 'Nothing to replace'",
+    "implemented": false,
+    "commitGroup": "scope-apply-ui",
+    "featureIds": [
+      "F039"
+    ]
+  },
+  {
+    "id": "T050",
+    "description": "'Select none' in the system group drops the confirm count accordingly",
+    "implemented": false,
+    "commitGroup": "scope-apply-ui",
+    "featureIds": [
+      "F040"
+    ]
+  },
+  {
+    "id": "T051",
+    "description": "confirm shows summary 'N branded, M skipped, 0 failed' from the action result",
+    "implemented": false,
+    "commitGroup": "scope-apply-ui",
+    "featureIds": [
+      "F041"
+    ]
+  },
+  {
+    "id": "T052",
+    "description": "a failed row appears in the summary with its reason",
+    "implemented": false,
+    "commitGroup": "scope-apply-ui",
+    "featureIds": [
+      "F041"
+    ]
+  },
+  {
+    "id": "T053",
+    "description": "after apply the templates table shows the new tenant rows",
+    "implemented": false,
+    "commitGroup": "scope-apply-ui",
+    "featureIds": [
+      "F042"
+    ]
+  },
+  {
+    "id": "T054",
+    "description": "button absent without a saved palette, present with one",
+    "implemented": false,
+    "commitGroup": "editor-integration",
+    "featureIds": [
+      "F043"
+    ]
+  },
+  {
+    "id": "T055",
+    "description": "click replaces stock tokens in the editor textarea and the Preview tab reflects it; no action call until Save",
+    "implemented": false,
+    "commitGroup": "editor-integration",
+    "featureIds": [
+      "F044"
+    ]
+  },
+  {
+    "id": "T056",
+    "description": "clone with a saved palette produces a tenant row that classifies as branded",
+    "implemented": false,
+    "commitGroup": "editor-integration",
+    "featureIds": [
+      "F045"
+    ]
+  },
+  {
+    "id": "T057",
+    "description": "banner shows '3 templates added\u2026' for 3 unbranded newer templates and is absent when 0",
+    "implemented": false,
+    "commitGroup": "new-template-banner",
+    "featureIds": [
+      "F046"
+    ]
+  },
+  {
+    "id": "T058",
+    "description": "banner button opens dialog with exactly those 3 checked",
+    "implemented": false,
+    "commitGroup": "new-template-banner",
+    "featureIds": [
+      "F047"
+    ]
+  },
+  {
+    "id": "T059",
+    "description": "dismiss hides banner; a status refresh with a higher count shows it again",
+    "implemented": false,
+    "commitGroup": "new-template-banner",
+    "featureIds": [
+      "F048"
+    ]
+  },
+  {
+    "id": "T060",
+    "description": "Enterprise section absent when NEXT_PUBLIC_EDITION is community",
+    "implemented": false,
+    "commitGroup": "ee-logo-attribution",
+    "featureIds": [
+      "F049"
+    ]
+  },
+  {
+    "id": "T061",
+    "description": "variant picker lists wide and default when both uploaded, only default when just the square exists",
+    "implemented": false,
+    "commitGroup": "ee-logo-attribution",
+    "featureIds": [
+      "F050"
+    ]
+  },
+  {
+    "id": "T062",
+    "description": "applied ticket-created HTML contains one data-alga-brand-logo img inside the gradient header cell",
+    "implemented": false,
+    "commitGroup": "ee-logo-attribution",
+    "featureIds": [
+      "F051"
+    ]
+  },
+  {
+    "id": "T063",
+    "description": "applied password-reset HTML contains the img before its first heading",
+    "implemented": false,
+    "commitGroup": "ee-logo-attribution",
+    "featureIds": [
+      "F051"
+    ]
+  },
+  {
+    "id": "T064",
+    "description": "applying twice leaves exactly one data-alga-brand-logo img",
+    "implemented": false,
+    "commitGroup": "ee-logo-attribution",
+    "featureIds": [
+      "F052"
+    ]
+  },
+  {
+    "id": "T065",
+    "description": "hideAttribution removes '&middot; Powered by AlgaPSA' from a layout footer and '<p>Powered by AlgaPSA</p>' from portal-invitation",
+    "implemented": false,
+    "commitGroup": "ee-logo-attribution",
+    "featureIds": [
+      "F053"
+    ]
+  },
+  {
+    "id": "T066",
+    "description": "turning attribution back on re-clones and re-applies branded rows so the footer returns",
+    "implemented": false,
+    "commitGroup": "ee-logo-attribution",
+    "featureIds": [
+      "F054"
+    ]
+  },
+  {
+    "id": "T067",
+    "description": "apply on Community with logo set writes no img and keeps the attribution",
+    "implemented": false,
+    "commitGroup": "ee-logo-attribution",
+    "featureIds": [
+      "F055"
+    ]
+  },
+  {
+    "id": "T068",
+    "description": "localeQualityGates passes with the new keys in all locales",
+    "implemented": false,
+    "commitGroup": "i18n-docs",
+    "featureIds": [
+      "F056"
+    ]
+  },
+  {
+    "id": "T069",
+    "description": "no hardcoded English in the new components (i18n detector clean)",
+    "implemented": false,
+    "commitGroup": "i18n-docs",
+    "featureIds": [
+      "F056"
+    ]
+  }
+]
