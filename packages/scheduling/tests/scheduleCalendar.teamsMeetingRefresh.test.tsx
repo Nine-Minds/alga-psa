@@ -7,6 +7,7 @@ vi.mock('@alga-psa/ui/hooks/useFeatureFlag', () => ({
 }));
 
 import React from 'react';
+import toast from 'react-hot-toast';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -144,10 +145,7 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => {
 });
 
 vi.mock('react-hot-toast', () => ({
-  default: {
-    success: vi.fn(),
-    error: vi.fn(),
-  },
+  default: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() }),
 }));
 
 vi.mock('@alga-psa/ui/lib/errorHandling', () => ({
@@ -379,6 +377,53 @@ describe('ScheduleCalendar refreshes its events after a Teams meeting is created
 
   afterEach(() => {
     vi.clearAllMocks();
+  });
+
+  it.each(['save', 'resize', 'drop'] as const)('surfaces a provider warning after a successful local %s without reverting it', async (gesture) => {
+    const warning = 'Entry moved, but the Microsoft Teams meeting could not be rescheduled. Please update it manually in Teams.';
+    const entry = baseEntry({ entry_id: 'entry-warning', notes: `Join Teams Meeting: ${JOIN_URL}` });
+    serverEvents = [entry];
+    serverMeetings['entry-warning'] = { meeting_id: 'meeting-warning', join_url: JOIN_URL };
+    updateScheduleEntry.mockImplementation(async (entryId, data) => {
+      const updated = { ...entry, ...data, entry_id: entryId };
+      serverEvents = [updated];
+      return { success: true, entry: updated, teamsMeetingWarning: warning };
+    });
+    render(<ScheduleCalendar />);
+    await screen.findByTestId('calendar-event-entry-warning');
+    if (gesture === 'save') {
+      openEntry('entry-warning');
+      await screen.findByRole('button', { name: 'Join Teams Meeting' });
+      fireEvent.change(screen.getByTestId('scheduled_start'), { target: { value: '2026-09-04T14:30:00.000Z' } });
+      clickSave();
+    } else {
+      const props = calendarSurface.props;
+      const args = { event: entry, start: new Date('2026-09-04T14:30:00Z'), end: new Date('2026-09-04T15:30:00Z'), isAllDay: false };
+      await act(async () => gesture === 'resize' ? props.onEventResize(args) : props.onEventDrop(args));
+    }
+    await waitFor(() => expect(toast).toHaveBeenCalledWith(warning, { icon: '⚠️' }));
+    expect(toast).toHaveBeenCalledTimes(1);
+    expect(updateScheduleEntry).toHaveBeenCalledTimes(1);
+    expect(new Date(serverEvents[0].scheduled_start).toISOString()).toBe('2026-09-04T14:30:00.000Z');
+    openEntry('entry-warning');
+    await screen.findByRole('button', { name: 'Join Teams Meeting' });
+    expect(notesField().value).toContain(JOIN_URL);
+    expect((screen.getByTestId('scheduled_start') as HTMLInputElement).value).toBe('2026-09-04T14:30:00.000Z');
+  });
+
+  it('rolls back a rejected resize and does not announce its supplied success warning', async () => {
+    const entry = baseEntry({ entry_id: 'entry-rejected' });
+    serverEvents = [entry];
+    updateScheduleEntry.mockResolvedValue({ success: false, error: 'Schedule update rejected', teamsMeetingWarning: 'Do not announce this failed save' });
+    render(<ScheduleCalendar />);
+    await screen.findByTestId('calendar-event-entry-rejected');
+    await act(async () => calendarSurface.props.onEventResize({ event: entry,
+      start: new Date('2026-09-04T14:30:00Z'), end: new Date('2026-09-04T15:30:00Z') }));
+    expect(updateScheduleEntry).toHaveBeenCalledTimes(1);
+    expect(toast).not.toHaveBeenCalled();
+    openEntry('entry-rejected');
+    await screen.findByRole('button', { name: 'Create Teams meeting' });
+    expect((screen.getByTestId('scheduled_start') as HTMLInputElement).value).toBe('2026-09-04T14:00:00.000Z');
   });
 
   it('supplies local all-day grid dates and persists exclusive UTC dates after resize and drop', async () => {

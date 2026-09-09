@@ -146,10 +146,15 @@
   {
     "id": "T015",
     "description": "Validate the tested manifest against component image digests and simulated deployed identities; replacing only the email-service digest or presenting a result from another manifest must reject promotion, while the exact tested component set passes.",
-    "implemented": false,
+    "implemented": true,
     "kind": "artifact-verification",
     "featureIds": [
       "F020"
+    ],
+    "evidence": [
+      "evidence/native-release-check-configuration.json",
+      "evidence/native-node-tooling-d683f3.json",
+      "evidence/release-simulation-acceptance-audit.json"
     ]
   },
   {
@@ -238,10 +243,17 @@
   {
     "id": "T025",
     "description": "Run a real-login browser operation through production-built Alga to a wire-level provider emulator; verify server/worker routing, callback reachability, vendor and DB readback, isolated concurrent scenarios and reset. Capture a controlled failure with sanitized emulator/browser diagnostics and reject unexpected live-vendor traffic.",
-    "implemented": false,
+    "implemented": true,
     "kind": "provider-wire-browser",
     "featureIds": [
       "F031"
+    ],
+    "evidence": [
+      "evidence/ci-primary-browser-api-561a6.json",
+      "evidence/ci-provider-replicas-cb884.json",
+      "evidence/native-concurrent-provider-isolation.json",
+      "evidence/ci-concurrent-provider-isolation-561a6.json",
+      "evidence/provider-observation-historical-replay.json"
     ]
   },
   {

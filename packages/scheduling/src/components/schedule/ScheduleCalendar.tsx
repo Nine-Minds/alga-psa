@@ -1,5 +1,6 @@
 'use client'
 
+import toast from 'react-hot-toast';
 import React, { useState, useEffect, useCallback, useMemo, useRef, Suspense } from 'react';
 import { createPortal } from 'react-dom';
 import { calendarDisplayDates, calendarStoredDates, hasAllDayDates } from '../../lib/calendarDateDisplay';
@@ -30,7 +31,7 @@ import { CalendarStyleProvider } from './CalendarStyleProvider';
 import TechnicianSidebar from './TechnicianSidebar';
 import WeeklyScheduleEvent from './WeeklyScheduleEvent';
 import { ScheduleCalendarEventContext, ScheduleCalendarEventRenderer } from './ScheduleCalendarEventRenderer';
-import { getScheduleEntries, addScheduleEntry, updateScheduleEntry, deleteScheduleEntry, getAppointmentRequestById, IAppointmentRequest } from '@alga-psa/scheduling/actions';
+import { getScheduleEntries, addScheduleEntry, updateScheduleEntry as updateScheduleEntryAction, deleteScheduleEntry, getAppointmentRequestById, IAppointmentRequest } from '@alga-psa/scheduling/actions';
 import { IEditScope, IScheduleEntry, DeletionValidationResult } from '@alga-psa/types';
 import { produce } from 'immer';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
@@ -48,6 +49,16 @@ import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Label } from '@alga-psa/ui/components/Label';
 import { isSourceOwnedWorkItemType } from '../../lib/entryOwnedWorkItems';
+
+// A local save can succeed while its Teams reschedule fails. Every calendar
+// update gesture must surface the server warning without reverting that save.
+async function updateScheduleEntry(...args: Parameters<typeof updateScheduleEntryAction>) {
+  const result = await updateScheduleEntryAction(...args);
+  if (result.success && result.teamsMeetingWarning) {
+    toast(result.teamsMeetingWarning, { icon: '⚠️' });
+  }
+  return result;
+}
 
 const localizer = momentLocalizer(moment);
 

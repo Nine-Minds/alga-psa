@@ -788,6 +788,30 @@
       "dependsOn": [],
       "owner": "calendar_review",
       "notes": "Current CI scheduled marketing fanout failed before Teams because temporal-worker lacked NEXT_PUBLIC_BASE_URL. Pass existing configured CI value through disposable overlay and preserve rejection of internal URLs. Independent background wiring gap, not established Teams failure cause. Actual EE Compose renders existing public URL identical for server/worker.9/9 native marketing activity tests preserve internal-only refusal and mock mail delivery. native-marketing-worker-public-url.json; actual CI pending."
+    },
+    {
+      "id": "R096",
+      "title": "Keep dependency-free CI accounting separate from installed Vitest execution",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "calendar_review",
+      "notes": "Current34320694357 lightweight budgetjob failed because realVitest fixture imported absentdependency. Relocated unchanged behavioral case to separately discovered runtimefile; no-dependency exactcommand26/26 and installedruntime1/1 pass, fullNodejob discovers it after npmci. No exclusions or budgetchanges."
+    },
+    {
+      "id": "R097",
+      "title": "Register English locale entries for bucket balance recovery",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "coordinator",
+      "notes": "Current Missing locale keys job102366427260 reports two new usage error/retry keys. Added same user-visible copy to English billingcatalog. Exact I18N_ENFORCE checker passes. No assertion-only test added for translation strings."
+    },
+    {
+      "id": "R098",
+      "title": "Expose Teams rescheduling rejection and verify provider recovery",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "stripe_protocol",
+      "notes": "Audit found calendar discards teamsMeetingWarning when local schedule saves but Graph rescheduling fails. Add behavioral warning and deniedPATCH recovery with stable provideridentity and reopenedstate; native first. CurrentcandidateCI is separate. Three warning regressions reproduced; fix reviewed across all six action calls. Strengthened11componentcases and scopedtsc pass. Actual full nativeTeams1/1 firstattempt121.44s proves denial/local-provider divergence/reopenedidentity/recovery/delete/bot. native-teams-denied-reschedule.json. Prelinkeddevelopment only; current-source CI and broaderF034/T028 remainopen."
     }
   ]
 }

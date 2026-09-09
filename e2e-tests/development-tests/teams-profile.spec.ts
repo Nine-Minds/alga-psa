@@ -92,12 +92,46 @@ test('Teams profile recovery and calendar meeting creation preserve saved identi
     await editEntry.locator('#save-entry-btn').click();
     await expect(editEntry).toBeHidden();
     await page.reload();
-    const reopened = await openEntry();
+    let reopened = await openEntry();
     await expect(reopened.locator('#join-entry-teams-meeting-button')).toBeVisible();
     await expect(reopened.locator('#create-teams-meeting-button')).toHaveCount(0);
     expect(await reopened.locator('#notes').inputValue()).toContain(meeting.join_url);
     expect(await database('online_meetings').where(meetingScope)).toHaveLength(1);
     expect((await database('schedule_entries').where({ ...scope, entry_id: entryId }).first()).notes).toContain(meeting.join_url);
+
+    // A provider permission denial must be visible even though the local
+    // schedule move commits. Reopen that divergent state before recovering.
+    const providerBeforeDenial = await emulators.state('msgraph', 'calendar-events');
+    const meetingBeforeDenial = await database('online_meetings').where(meetingScope).first();
+    await emulators.arm('msgraph', 'operation-fault', {
+      operation: `PATCH /users/${encodeURIComponent('organizer@contoso.example')}/events/${encodeURIComponent(meeting.provider_event_id)}`,
+      status: 403, remaining: 1, body: { error: { code: 'ErrorAccessDenied', message: 'Synthetic reschedule permission denial' } },
+    });
+    const deniedTitle = `${title} moved locally`;
+    await reopened.locator('#title').fill(deniedTitle);
+    const deniedTime = reopened.locator('#scheduled_start')
+      .locator('xpath=ancestor::div[contains(@class,"dtf-fields")][1]')
+      .getByRole('combobox', { name: 'Select time', exact: true });
+    await deniedTime.fill('12:30 PM');
+    await deniedTime.press('Tab');
+    await reopened.locator('#save-entry-btn').click();
+    await expect(reopened).toBeHidden();
+    await expect(page.getByText('Entry moved, but the Microsoft Teams meeting could not be rescheduled. Please update it manually in Teams.', { exact: true })).toBeVisible();
+    title = deniedTitle;
+    const movedLocally = await database('schedule_entries').where({ ...scope, entry_id: entryId }).first();
+    expect(movedLocally.title).toBe(title);
+    expect(new Date(movedLocally.scheduled_start).getTime()).not.toBe(new Date(rows[0].scheduled_start).getTime());
+    expect(await database('online_meetings').where(meetingScope)).toEqual([meetingBeforeDenial]);
+    expect(await emulators.state('msgraph', 'calendar-events')).toEqual(providerBeforeDenial);
+    expect((await emulators.requests('msgraph')).requests.some((request: any) =>
+      request.method === 'PATCH' && request.status === 403 && request.path.endsWith(`/events/${meeting.provider_event_id}`))).toBe(true);
+    await page.reload();
+    reopened = await openEntry();
+    await expect(reopened.locator('#title')).toHaveValue(title);
+    await expect(reopened.locator('#join-entry-teams-meeting-button')).toBeVisible();
+    await expect(reopened.locator('#create-teams-meeting-button')).toHaveCount(0);
+    expect(await reopened.locator('#notes').inputValue()).toContain(meeting.join_url);
+    await emulators.disarm('msgraph', 'operation-fault');
 
     const rescheduledTitle = `${title} rescheduled`;
     await reopened.locator('#title').fill(rescheduledTitle);
