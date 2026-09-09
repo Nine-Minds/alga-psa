@@ -46,3 +46,56 @@ The [native CLI evidence](evidence/native-microsoft-nextauth-callback-cli.json) 
 The observed callback requested no nonce and made zero JWKS requests. The authority signs a JWT, and its independent fixture tests verify that signature, but neither fact establishes application signature verification. Issuer/audience rejection and nonce rejection were not exercised by this callback run. The fixture tests also check discovery, client/redirect/PKCE rejection and transport isolation; those checks validate the fixture rather than substitute for the full callback/DB run.
 
 The enterprise workflow registers `scripts/run-microsoft-callback-ci.mjs` after the Teams phase, using the existing candidate image with read-only source mounts and a separate writable cache. It publishes `microsoft-callback-execution`; the evidence validator checks execution, cleanup, source and runtime binding. This registration is pending actual CI execution. Its `releaseValidation:false` result remains development evidence, separate from the production browser lane. It does not prove live Entra consent, tenant provisioning, or the Teams embedded sign-in popup flow.
+
+## Current-source CI inventory
+
+Run `34339167571` (candidate `a9efecc`) closes the "current-source CI result"
+requirement that most rows above were still waiting on. Every Microsoft case
+below passed on its first attempt, against the emulator, in the candidate's own
+CI run.
+
+Production browser lane, enterprise, production build:
+
+| Spec | Cases | What it establishes |
+| --- | --- | --- |
+| `microsoft-calendar.spec.ts` | 4 | OAuth import of vendor events and export of UI edits, each recovering from provider outage, permission denial, throttling and all-day throttling without losing remote linkage |
+| `microsoft-mailbox.spec.ts` | 1 | Receives a ticket, sends a UI reply through Graph, deduplicates callbacks |
+| `microsoft-oauth-rejection.spec.ts` | 4 | Missing code, missing state, malformed state and unsigned state rejected through the popup result |
+| `microsoft-webhook-validation.spec.ts` | 4 | Opaque validation token echoed by the calendar, email, Teams-recordings and telephony endpoints |
+
+Callback lane: `microsoft-callback-execution`, 2 cases.
+
+Wire level, in the unit lane against the emulator: `calendar` 45, `smoke` 15,
+`callRecords` 12, `teamsBotAdapters` 6, `teamsOrganizerRouting` 4,
+`teamsMeetingAdapter` 3, `tokenIdentity` 1 — 86 cases.
+
+101 Microsoft cases in total.
+
+### Where the line sits
+
+This split is the PRD's own doctrine rather than an accident: one representative
+recovery journey per provider in the browser, the wider protocol matrix in
+faster wire-level tests, and no attempt to route every API case through a
+browser. Mailbox and calendar are the representative browser journeys. Teams bot
+and meeting behavior is protocol-matrix work and lives at the wire level, where
+it runs on every candidate.
+
+So the deferred item is the Teams **browser** journey specifically, not Teams
+and not Microsoft. `development-tests/teams-profile.spec.ts` is quarantined to
+2026-10-21 under F034/T028 for the development-server chunk truncation recorded
+in `evidence/native-teams-12gib-chunk-failure.json`. Teams wire coverage is
+unaffected and keeps running.
+
+### Recurrence and timezone expansion
+
+Recurring-series delta expansion and non-UTC timezone delta expansion are not
+modelled. That exclusion is enforced rather than assumed: `calendar.test.ts`
+asserts the emulator answers `400 Request_UnsupportedQuery` for both, so an
+unmodelled case fails loudly instead of returning data that looks real. Windows
+timezone names and a genuine DST transition date are exercised directly —
+`W. Europe Standard Time` across 2026-10-25, and `Pacific Standard Time`
+all-day boundary rejection.
+
+Live-provider parity is still not established by any of this. Emulator success
+is not a Microsoft certification, and no sandbox credentials exist in this
+plan's evidence.
