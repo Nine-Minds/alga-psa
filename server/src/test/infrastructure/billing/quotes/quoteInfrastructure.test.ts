@@ -2067,4 +2067,663 @@ describe('Quote infrastructure', () => {
     expect(activities[0].activity_type).toBe('created');
     expect(activities[activities.length - 1].activity_type).toBe('viewed');
   });
+
+  it('T200 (plan T005): DB-backed $25 + $35 monthly services with service-targeted $5 discounts persist positive rows, recalculate exact totals, and derive cadence grouping on load', async () => {
+    const svcA = await createTestService(context, {
+      service_name: 'Managed Support A',
+      billing_method: 'fixed',
+      default_rate: 2500,
+    });
+    const svcB = await createTestService(context, {
+      service_name: 'Managed Support B',
+      billing_method: 'fixed',
+      default_rate: 3500,
+    });
+
+    const quote = await createFinancialQuote();
+
+    const monthlyA = await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      service_id: svcA,
+      description: 'Managed Support A',
+      quantity: 1,
+      unit_price: 2500,
+      is_recurring: true,
+      billing_frequency: 'monthly',
+      is_taxable: false,
+      created_by: context.userId,
+    });
+    const monthlyB = await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      service_id: svcB,
+      description: 'Managed Support B',
+      quantity: 1,
+      unit_price: 3500,
+      is_recurring: true,
+      billing_frequency: 'monthly',
+      is_taxable: false,
+      created_by: context.userId,
+    });
+
+    // Legacy-style discounts: persisted with false/null cadence even though the
+    // base services they target are monthly recurring.
+    const discA = await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      description: 'Discount A',
+      quantity: 1,
+      unit_price: 500,
+      is_discount: true,
+      discount_type: 'fixed',
+      applies_to_service_id: svcA,
+      is_recurring: false,
+      billing_frequency: null,
+      is_taxable: false,
+      created_by: context.userId,
+    });
+    const discB = await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      description: 'Discount B',
+      quantity: 1,
+      unit_price: 500,
+      is_discount: true,
+      discount_type: 'fixed',
+      applies_to_service_id: svcB,
+      is_recurring: false,
+      billing_frequency: null,
+      is_taxable: false,
+      created_by: context.userId,
+    });
+
+    for (const [index, cents] of [37353, 210863, 5581, 45000].entries()) {
+      await QuoteItem.create(context.db, context.tenantId, {
+        quote_id: quote.quote_id,
+        description: `One-time charge ${index}`,
+        quantity: 1,
+        unit_price: cents,
+        is_recurring: false,
+        is_taxable: false,
+        created_by: context.userId,
+      });
+    }
+
+    // Reload from the DB after the creates recalculated financials.
+    const reloadedQuote = await Quote.getById(context.db, context.tenantId, quote.quote_id);
+    expect(Number(reloadedQuote?.subtotal)).toBe(304797);
+    expect(Number(reloadedQuote?.discount_total)).toBe(1000);
+    expect(Number(reloadedQuote?.tax)).toBe(0);
+    expect(Number(reloadedQuote?.total_amount)).toBe(303797);
+
+    // Discount rows stay positive in persistence with their original cadence fields.
+    const persistedDiscA = await loadQuoteItemRow(discA.quote_item_id);
+    const persistedDiscB = await loadQuoteItemRow(discB.quote_item_id);
+    expect(Number(persistedDiscA.total_price)).toBe(500);
+    expect(Number(persistedDiscA.net_amount)).toBe(500);
+    expect(Number(persistedDiscB.total_price)).toBe(500);
+    expect(persistedDiscA.is_recurring).toBe(false);
+    expect(persistedDiscA.billing_frequency).toBeNull();
+    expect(monthlyA.quote_item_id).toBeTruthy();
+    expect(monthlyB.quote_item_id).toBeTruthy();
+
+    // Adapter derives cadence membership from the targets: discounts land in the
+    // recurring group as reductions, one-time charges stay untouched.
+    const viewModel = await mapDbQuoteToViewModel(context.db, context.tenantId, quote.quote_id);
+    expect(viewModel?.recurring_subtotal).toBe(5000);
+    expect(viewModel?.recurring_total).toBe(5000);
+    expect(viewModel?.onetime_subtotal).toBe(298797);
+    expect(viewModel?.onetime_total).toBe(298797);
+    const recurringDiscountRows = viewModel?.recurring_items?.filter((item) => item.is_discount) ?? [];
+    expect(recurringDiscountRows.map((item) => item.total_price)).toEqual([-500, -500]);
+    // The general line-item collection keeps discounts positive.
+    const generalDiscountRows = viewModel?.line_items?.filter((item) => item.is_discount) ?? [];
+    expect(generalDiscountRows.map((item) => item.total_price)).toEqual([500, 500]);
+    expect(viewModel?.discount_total).toBe(1000);
+    expect(viewModel?.total_amount).toBe(303797);
+
+    // Save/reload: editing a base price re-runs recalculation and the reloaded
+    // quote + view model stay consistent without touching the discount rows.
+    await QuoteItem.update(context.db, context.tenantId, monthlyB.quote_item_id, { unit_price: 4000 });
+
+    const savedQuote = await Quote.getById(context.db, context.tenantId, quote.quote_id);
+    expect(Number(savedQuote?.subtotal)).toBe(305297);
+    expect(Number(savedQuote?.discount_total)).toBe(1000);
+    expect(Number(savedQuote?.total_amount)).toBe(304297);
+
+    const savedViewModel = await mapDbQuoteToViewModel(context.db, context.tenantId, quote.quote_id);
+    expect(savedViewModel?.recurring_subtotal).toBe(5500);
+    expect(savedViewModel?.onetime_subtotal).toBe(298797);
+    expect(savedViewModel?.total_amount).toBe(304297);
+  });
+
+  it('T201 (plan T006): unmatched item/service discount targets resolve to zero and do not corrupt saved quote or item financials', async () => {
+    const quote = await createFinancialQuote();
+
+    await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      description: 'Base item',
+      quantity: 1,
+      unit_price: 5000,
+      is_taxable: false,
+      created_by: context.userId,
+    });
+
+    const missingItemId = '00000000-0000-4000-8000-0000000000a1';
+    const missingServiceId = '00000000-0000-4000-8000-0000000000a2';
+
+    const orphanItemDiscount = await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      description: 'Discount for removed item',
+      quantity: 1,
+      unit_price: 2000,
+      is_discount: true,
+      discount_type: 'fixed',
+      applies_to_item_id: missingItemId,
+      is_taxable: false,
+      created_by: context.userId,
+    });
+    const orphanServiceDiscount = await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      description: 'Discount for removed service',
+      quantity: 1,
+      unit_price: 3000,
+      is_discount: true,
+      discount_type: 'fixed',
+      applies_to_service_id: missingServiceId,
+      is_taxable: false,
+      created_by: context.userId,
+    });
+
+    const reloadedQuote = await loadQuoteRow(quote.quote_id);
+    expect(Number(reloadedQuote.subtotal)).toBe(5000);
+    expect(Number(reloadedQuote.discount_total)).toBe(0);
+    expect(Number(reloadedQuote.tax)).toBe(0);
+    expect(Number(reloadedQuote.total_amount)).toBe(5000);
+
+    const orphanItemRow = await loadQuoteItemRow(orphanItemDiscount.quote_item_id);
+    const orphanServiceRow = await loadQuoteItemRow(orphanServiceDiscount.quote_item_id);
+    expect(Number(orphanItemRow.total_price)).toBe(0);
+    expect(Number(orphanItemRow.net_amount)).toBe(0);
+    expect(Number(orphanServiceRow.total_price)).toBe(0);
+    expect(Number(orphanServiceRow.net_amount)).toBe(0);
+
+    const viewModel = await mapDbQuoteToViewModel(context.db, context.tenantId, quote.quote_id);
+    expect(viewModel?.recurring_subtotal).toBe(0);
+    expect(viewModel?.onetime_subtotal).toBe(5000);
+    expect(viewModel?.discount_total).toBe(0);
+    expect(viewModel?.total_amount).toBe(5000);
+  });
+
+  it('T202 (plan: revision remap): createRevision remaps applies_to_item_id onto the copied base item and persists correct financials', async () => {
+    const svcA = await createTestService(context, {
+      service_name: 'Revision target service',
+      billing_method: 'fixed',
+      default_rate: 2500,
+    });
+
+    const sourceQuote = await createFinancialQuote();
+    await context.db('quotes').where({ quote_id: sourceQuote.quote_id }).update({ status: 'sent' });
+
+    const baseItem = await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: sourceQuote.quote_id,
+      service_id: svcA,
+      description: 'Revision base',
+      quantity: 1,
+      unit_price: 2500,
+      is_recurring: true,
+      billing_frequency: 'monthly',
+      is_taxable: false,
+      created_by: context.userId,
+    });
+
+    // Store the discount with the OLD target before creating the revision.
+    const discountItem = await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: sourceQuote.quote_id,
+      description: 'Revision item discount',
+      quantity: 1,
+      unit_price: 500,
+      is_discount: true,
+      discount_type: 'fixed',
+      applies_to_item_id: baseItem.quote_item_id,
+      is_recurring: false,
+      billing_frequency: null,
+      is_taxable: false,
+      created_by: context.userId,
+    });
+    expect(discountItem.applies_to_item_id).toBe(baseItem.quote_item_id);
+
+    const revision = await Quote.createRevision(context.db, context.tenantId, sourceQuote.quote_id, context.userId);
+    expect(revision.quote_items).toHaveLength(2);
+
+    const revisionBase = revision.quote_items?.find((item) => item.description === 'Revision base');
+    const revisionDiscount = revision.quote_items?.find((item) => item.description === 'Revision item discount');
+    expect(revisionBase?.quote_item_id).toBeTruthy();
+    expect(revisionBase?.quote_item_id).not.toBe(baseItem.quote_item_id);
+    expect(revisionDiscount?.applies_to_item_id).toBe(revisionBase?.quote_item_id);
+    expect(revisionDiscount?.quote_item_id).not.toBe(discountItem.quote_item_id);
+
+    const reloaded = await Quote.getById(context.db, context.tenantId, revision.quote_id);
+    expect(Number(reloaded?.discount_total)).toBe(500);
+    expect(Number(reloaded?.total_amount)).toBe(2000);
+
+    const viewModel = await mapDbQuoteToViewModel(context.db, context.tenantId, revision.quote_id);
+    expect(viewModel?.recurring_subtotal).toBe(2000);
+    const discountRows = viewModel?.recurring_items?.filter((item) => item.is_discount) ?? [];
+    expect(discountRows.map((item) => item.total_price)).toEqual([-500]);
+  });
+
+  it('T203 (plan: eligibility): optional-to-required transition stays consistent across save/reload', async () => {
+    const quote = await createFinancialQuote();
+    const svcA = await createTestService(context, {
+      service_name: 'Transition service',
+      billing_method: 'fixed',
+      default_rate: 2500,
+    });
+
+    // Start as an optional, unselected row - excluded from bases and discounts.
+    const optionalItem = await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      service_id: svcA,
+      description: 'Transition item',
+      quantity: 1,
+      unit_price: 2500,
+      is_optional: true,
+      is_selected: false,
+      is_recurring: true,
+      billing_frequency: 'monthly',
+      is_taxable: false,
+      created_by: context.userId,
+    });
+
+    const discount = await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      description: 'Transition discount',
+      quantity: 1,
+      unit_price: 500,
+      is_discount: true,
+      discount_type: 'fixed',
+      applies_to_item_id: optionalItem.quote_item_id,
+      is_recurring: false,
+      billing_frequency: null,
+      is_taxable: false,
+      created_by: context.userId,
+    });
+
+    let reloaded = await Quote.getById(context.db, context.tenantId, quote.quote_id);
+    expect(Number(reloaded?.subtotal)).toBe(0);
+    expect(Number(reloaded?.discount_total)).toBe(0);
+
+    // Transition the row to required while leaving is_selected=false: the
+    // unified eligibility rule includes required rows regardless of selection.
+    await QuoteItem.update(context.db, context.tenantId, optionalItem.quote_item_id, {
+      is_optional: false,
+      is_selected: false,
+      unit_price: 2500,
+    });
+
+    reloaded = await Quote.getById(context.db, context.tenantId, quote.quote_id);
+    expect(Number(reloaded?.subtotal)).toBe(2500);
+    expect(Number(reloaded?.discount_total)).toBe(500);
+    expect(Number(reloaded?.total_amount)).toBe(2000);
+
+    const persistedRow = await loadQuoteItemRow(optionalItem.quote_item_id);
+    expect(Number(persistedRow.net_amount)).toBe(2500);
+    expect(persistedRow.is_optional).toBe(false);
+    expect(persistedRow.is_selected).toBe(false);
+
+    const viewModel = await mapDbQuoteToViewModel(context.db, context.tenantId, quote.quote_id);
+    expect(viewModel?.recurring_subtotal).toBe(2000);
+    expect(viewModel?.discount_total).toBe(500);
+    expect(viewModel?.total_amount).toBe(2000);
+    expect(discount.quote_item_id).toBeTruthy();
+  });
+
+  it('T204 (plan: copy remap helper): item-copy helper used by duplication/template flows remaps discount targets when the discount precedes its base', async () => {
+    const { copyQuoteItemsToQuote } = await import('../../../../../../packages/billing/src/actions/quoteActions');
+
+    const quote = await createFinancialQuote();
+    const svcA = await createTestService(context, {
+      service_name: 'Copy helper service',
+      billing_method: 'fixed',
+      default_rate: 2500,
+    });
+
+    const baseItem = await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      service_id: svcA,
+      description: 'Copy helper base',
+      quantity: 1,
+      unit_price: 2500,
+      is_recurring: true,
+      billing_frequency: 'monthly',
+      is_taxable: false,
+      created_by: context.userId,
+    });
+    const discountItem = await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      description: 'Copy helper discount',
+      quantity: 1,
+      unit_price: 500,
+      is_discount: true,
+      discount_type: 'fixed',
+      applies_to_item_id: baseItem.quote_item_id,
+      is_recurring: false,
+      billing_frequency: null,
+      is_taxable: false,
+      created_by: context.userId,
+    });
+    // Force the stored display order to put the discount AHEAD of its target.
+    await context.db('quote_items').where({ quote_item_id: discountItem.quote_item_id }).update({ display_order: 0 });
+    await context.db('quote_items').where({ quote_item_id: baseItem.quote_item_id }).update({ display_order: 1 });
+
+    const sourceQuote = await Quote.getById(context.db, context.tenantId, quote.quote_id);
+    const sourceItems = sourceQuote?.quote_items ?? [];
+
+    const targetQuote = await createFinancialQuote({ title: 'Copy helper target' });
+    await copyQuoteItemsToQuote(
+      context.db,
+      context.tenantId,
+      targetQuote.quote_id,
+      sourceItems,
+      { createdBy: context.userId },
+    );
+    const recalc = await import('../../../../../../packages/billing/src/services/quoteCalculationService');
+    await recalc.recalculateQuoteFinancials(context.db, context.tenantId, targetQuote.quote_id);
+
+    const copiedQuote = await Quote.getById(context.db, context.tenantId, targetQuote.quote_id);
+    const copiedBase = copiedQuote?.quote_items?.find((item) => item.description === 'Copy helper base');
+    const copiedDiscount = copiedQuote?.quote_items?.find((item) => item.description === 'Copy helper discount');
+    expect(copiedBase?.quote_item_id).toBeTruthy();
+    expect(copiedBase?.quote_item_id).not.toBe(baseItem.quote_item_id);
+    expect(copiedDiscount?.applies_to_item_id).toBe(copiedBase?.quote_item_id);
+    expect(Number(copiedQuote?.discount_total)).toBe(500);
+    expect(Number(copiedQuote?.total_amount)).toBe(2000);
+
+    const viewModel = await mapDbQuoteToViewModel(context.db, context.tenantId, targetQuote.quote_id);
+    expect(viewModel?.recurring_subtotal).toBe(2000);
+  });
+
+  it('T205: createRevision preserves an unmatched item-targeted discount scope (stays zero, never whole-quote)', async () => {
+    const sourceQuote = await createFinancialQuote();
+    await context.db('quotes').where({ quote_id: sourceQuote.quote_id }).update({ status: 'sent' });
+
+    const baseItem = await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: sourceQuote.quote_id,
+      description: 'Revision base',
+      quantity: 1,
+      unit_price: 2500,
+      is_recurring: true,
+      billing_frequency: 'monthly',
+      is_taxable: false,
+      created_by: context.userId,
+    });
+    expect(baseItem.quote_item_id).toBeTruthy();
+
+    // Orphan: targets a removed item that no longer exists on the quote.
+    const orphanTargetId = '99999999-0000-4000-8000-00000000dead';
+    await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: sourceQuote.quote_id,
+      description: 'Orphan item discount',
+      quantity: 1,
+      unit_price: 500,
+      is_discount: true,
+      discount_type: 'fixed',
+      applies_to_item_id: orphanTargetId,
+      is_recurring: false,
+      billing_frequency: null,
+      is_taxable: false,
+      created_by: context.userId,
+    });
+
+    const reloaded = await Quote.getById(context.db, context.tenantId, sourceQuote.quote_id);
+    expect(Number(reloaded?.discount_total)).toBe(0);
+
+    const revision = await Quote.createRevision(context.db, context.tenantId, sourceQuote.quote_id, context.userId);
+    const orphanDiscount = revision.quote_items?.find((item) => item.description === 'Orphan item discount');
+    expect(orphanDiscount?.applies_to_item_id).toBe(orphanTargetId);
+    expect(Number(revision.discount_total)).toBe(0);
+    expect(Number(revision.total_amount)).toBe(2500);
+
+    const viewModel = await mapDbQuoteToViewModel(context.db, context.tenantId, revision.quote_id);
+    expect(viewModel?.recurring_subtotal).toBe(2500);
+    expect(viewModel?.discount_total).toBe(0);
+    expect(viewModel?.recurring_items?.some((item) => item.is_discount)).toBe(false);
+  });
+
+  it('T206: copy helper keeps item/service precedence for removed targets (duplication/template flows)', async () => {
+    const { copyQuoteItemsToQuote } = await import('../../../../../../packages/billing/src/actions/quoteActions');
+    const { recalculateQuoteFinancials } = await import('../../../../../../packages/billing/src/services/quoteCalculationService');
+
+    const svcA = await createTestService(context, {
+      service_name: 'Copy precedence service',
+      billing_method: 'fixed',
+      default_rate: 2500,
+    });
+    const quote = await createFinancialQuote();
+    const baseItem = await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      service_id: svcA,
+      description: 'Precedence base',
+      quantity: 1,
+      unit_price: 2500,
+      is_recurring: false,
+      is_taxable: false,
+      created_by: context.userId,
+    });
+    const removedItemId = '99999999-0000-4000-8000-00000000beef';
+
+    // Both an item target (removed) and a service target (present): the item
+    // target wins in the source, so the discount resolves to zero.
+    await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      description: 'Precedence discount',
+      quantity: 1,
+      unit_price: 500,
+      is_discount: true,
+      discount_type: 'fixed',
+      applies_to_item_id: removedItemId,
+      applies_to_service_id: svcA,
+      is_recurring: false,
+      billing_frequency: null,
+      is_taxable: false,
+      created_by: context.userId,
+    });
+
+    const reloaded = await Quote.getById(context.db, context.tenantId, quote.quote_id);
+    expect(Number(reloaded?.discount_total)).toBe(0);
+
+    const targetQuote = await createFinancialQuote({ title: 'Precedence copy' });
+    await copyQuoteItemsToQuote(
+      context.db,
+      context.tenantId,
+      targetQuote.quote_id,
+      reloaded?.quote_items ?? [],
+      { createdBy: context.userId },
+    );
+    await recalculateQuoteFinancials(context.db, context.tenantId, targetQuote.quote_id);
+
+    const copied = await Quote.getById(context.db, context.tenantId, targetQuote.quote_id);
+    const copiedDiscount = copied?.quote_items?.find((item) => item.description === 'Precedence discount');
+    // Scope preserved: still item-targeted at the (absent) id, so it still
+    // resolves to zero instead of broadening into the matching service.
+    expect(copiedDiscount?.applies_to_item_id).toBe(removedItemId);
+    expect(copiedDiscount?.applies_to_service_id).toBe(svcA);
+    expect(Number(copied?.discount_total)).toBe(0);
+    expect(Number(copied?.total_amount)).toBe(2500);
+
+    const viewModel = await mapDbQuoteToViewModel(context.db, context.tenantId, targetQuote.quote_id);
+    expect(viewModel?.onetime_subtotal).toBe(2500);
+    expect(viewModel?.discount_total).toBe(0);
+    expect(baseItem.quote_item_id).toBeTruthy();
+  });
+
+  it('T220 (plan T005 render): the actual standard-grouped catalog row renders stacked description lines and generates a grouped PDF', async () => {
+    // Shared dev catalog AST (ticket 2354 authoring): the Description column of
+    // the monthly/one-time tables carries stacked `lines` (name over catalog
+    // description) in addition to the flat `value` binding. This branch's
+    // runtime must render that row through the real quote preview/PDF path.
+    const sharedDescriptionLines = [
+      {
+        id: 'item-name',
+        style: { inline: { fontWeight: 600, lineHeight: 1.3 } },
+        value: { type: 'path', path: 'service_name' },
+      },
+      {
+        id: 'catalog-description',
+        style: { inline: { color: '#4b5563', fontSize: '12px', lineHeight: 1.4 } },
+        value: { type: 'path', path: 'catalog_description' },
+      },
+    ];
+
+    const addSharedLinesToAst = (node: Record<string, any>): void => {
+      if (Array.isArray(node)) {
+        node.forEach(addSharedLinesToAst);
+        return;
+      }
+      if (!node || typeof node !== 'object') {
+        return;
+      }
+      if (Array.isArray(node.columns)) {
+        for (const column of node.columns) {
+          if (column?.id === 'description') {
+            column.lines = JSON.parse(JSON.stringify(sharedDescriptionLines));
+          }
+        }
+      }
+      if (Array.isArray(node.children)) {
+        node.children.forEach(addSharedLinesToAst);
+      }
+    };
+
+    // Load the actual shared standard catalog row (not the branch canonical AST).
+    const catalogRow = await context.db('standard_quote_document_templates')
+      .where({ standard_quote_document_template_code: 'standard-quote-grouped' })
+      .first<{ template_id: string; templateAst: any }>();
+    expect(catalogRow).toBeTruthy();
+
+    const rowAst = JSON.parse(JSON.stringify(catalogRow.templateAst));
+    addSharedLinesToAst(rowAst.layout);
+    await context.db('standard_quote_document_templates')
+      .where({ template_id: catalogRow.template_id })
+      .update({ templateAst: JSON.stringify(rowAst) });
+
+    const svcA = await createTestService(context, {
+      service_name: 'Managed Support A',
+      billing_method: 'fixed',
+      default_rate: 2500,
+    });
+    const svcB = await createTestService(context, {
+      service_name: 'Managed Support B',
+      billing_method: 'fixed',
+      default_rate: 3500,
+    });
+
+    const quote = await createFinancialQuote({ template_id: catalogRow.template_id, title: 'Grouped render' });
+
+    await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      service_id: svcA,
+      description: 'Managed Support A — full-service support',
+      quantity: 1,
+      unit_price: 2500,
+      is_recurring: true,
+      billing_frequency: 'monthly',
+      is_taxable: false,
+      created_by: context.userId,
+    });
+    await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      service_id: svcB,
+      description: 'Managed Support B — full-service support',
+      quantity: 1,
+      unit_price: 3500,
+      is_recurring: true,
+      billing_frequency: 'monthly',
+      is_taxable: false,
+      created_by: context.userId,
+    });
+    // Legacy-style fixed service-targeted discounts persisted with false/null
+    // cadence. The description cell has no `service_name`, so rendering falls
+    // back to the flat `value` (the discount's own description).
+    await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      description: 'Discount A',
+      quantity: 1,
+      unit_price: 500,
+      is_discount: true,
+      discount_type: 'fixed',
+      applies_to_service_id: svcA,
+      is_recurring: false,
+      billing_frequency: null,
+      is_taxable: false,
+      created_by: context.userId,
+    });
+    await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      description: 'Discount B',
+      quantity: 1,
+      unit_price: 500,
+      is_discount: true,
+      discount_type: 'fixed',
+      applies_to_service_id: svcB,
+      is_recurring: false,
+      billing_frequency: null,
+      is_taxable: false,
+      created_by: context.userId,
+    });
+    for (const [index, cents] of [37353, 210863, 5581, 45000].entries()) {
+      await QuoteItem.create(context.db, context.tenantId, {
+        quote_id: quote.quote_id,
+        description: `One-time charge ${index}`,
+        quantity: 1,
+        unit_price: cents,
+        is_recurring: false,
+        is_taxable: false,
+        created_by: context.userId,
+      });
+    }
+
+    // Real quote preview path resolves the quote's template_id to the shared
+    // catalog row and renders through the same evaluator/renderer as the PDF.
+    const service = createPDFGenerationService(context.tenantId);
+    const preview = await service.renderQuotePreview({ quoteId: quote.quote_id });
+
+    expect(preview.html).toContain('Monthly Items');
+    expect(preview.html).toContain('<div style="font-weight:600;line-height:1.3">Managed Support A</div>');
+    expect(preview.html).toContain('<div style="font-weight:600;line-height:1.3">Managed Support B</div>');
+    // Empty-name discount rows fall back to their description, never drop out.
+    expect(preview.html).toContain('Discount A');
+    expect(preview.html).toContain('Discount B');
+    expect(preview.html).toContain('$25.00');
+    expect(preview.html).toContain('$35.00');
+    expect(preview.html).toContain('-$5.00');
+    expect(preview.html).toContain('$2,987.97');
+    expect(preview.html).toContain('$50.00');
+
+    // PDF generation: same AST + view model through the real getQuoteHtml path,
+    // with only the browser print mocked.
+    const capturedHtml: { value: string } = { value: '' };
+    const pageMock = {
+      setContent: vi.fn(async (_html: string) => {
+        capturedHtml.value = _html;
+      }),
+      pdf: vi.fn().mockResolvedValue(Buffer.from('%PDF-quote-lines')),
+      close: vi.fn().mockResolvedValue(undefined),
+    };
+    const browserMock = { newPage: vi.fn().mockResolvedValue(pageMock) };
+    const getBrowserSpy = vi.spyOn(browserPoolService, 'getBrowser').mockResolvedValue(browserMock as never);
+    const releaseSpy = vi.spyOn(browserPoolService, 'releaseBrowser').mockResolvedValue(undefined);
+
+    try {
+      const pdf = await service.generatePDF({ quoteId: quote.quote_id, userId: context.userId });
+      expect(Buffer.isBuffer(pdf)).toBe(true);
+      expect(pdf.toString('utf8')).toContain('%PDF-quote-lines');
+      expect(capturedHtml.value).toContain('<!doctype html>');
+      expect(capturedHtml.value).toContain('Monthly Items');
+      expect(capturedHtml.value).toContain('<div style="font-weight:600;line-height:1.3">Managed Support A</div>');
+      expect(capturedHtml.value).toContain('-$5.00');
+      expect(capturedHtml.value).toContain('$50.00');
+    } finally {
+      getBrowserSpy.mockRestore();
+      releaseSpy.mockRestore();
+    }
+  });
 });

@@ -259,6 +259,90 @@ const formatValue = (value: unknown, format: TemplateValueFormat | undefined, ct
   return String(value);
 };
 
+/**
+ * Table cells may stack lines (e.g. an item name over its description). Drop the
+ * blank lines a missing part leaves behind and keep the remaining line breaks —
+ * same multiline convention field nodes already use.
+ */
+const resolveTableCellText = (text: string): { text: string; multiline: boolean } => {
+  if (!text.includes('\n')) {
+    return { text, multiline: false };
+  }
+
+  const trimmed = text.replace(/^[^\S\n]*\n+/, '').replace(/\n+[^\S\n]*$/, '');
+  return { text: trimmed, multiline: trimmed.includes('\n') };
+};
+
+interface RenderedCellLine {
+  text: string;
+  style?: React.CSSProperties;
+  className?: string | null;
+}
+
+/**
+ * A table column may carry stacked per-line content (`lines`). Each line that
+ * resolves to non-empty text renders on its own styled line inside the cell;
+ * blank lines (missing names, absent descriptions) are dropped. When a column
+ * has no `lines`, or every line resolves empty, the function returns null so
+ * the caller falls back to the flat `value` expression — keeping discount and
+ * custom rows whose name is absent readable.
+ */
+const resolveColumnCellLines = (
+  column: TemplateTableColumn,
+  evaluation: TemplateEvaluationResult,
+  scope: RenderScope,
+  ctx: RenderContext
+): RenderedCellLine[] | null => {
+  if (!Array.isArray(column.lines) || column.lines.length === 0) {
+    return null;
+  }
+
+  const lines = column.lines
+    .map((line) => {
+      const raw = resolveExpressionValue(line.value, evaluation, scope, ctx);
+      const { className: lineClassName, style: lineStyle } = resolveStyleRef(line.style);
+      return {
+        text: formatValue(raw ?? '', line.format ?? column.format, ctx),
+        style: lineStyle,
+        className: lineClassName,
+      };
+    })
+    .filter((entry) => entry.text.trim().length > 0);
+
+  return lines.length > 0 ? lines : null;
+};
+
+/**
+ * Cell content for a table column. Stacked `lines` win when any resolves to
+ * non-empty text; otherwise the column's flat `value` renders exactly as before.
+ */
+const renderTableCellContent = (
+  column: TemplateTableColumn,
+  evaluation: TemplateEvaluationResult,
+  rowScope: RenderScope,
+  ctx: RenderContext
+): React.ReactNode => {
+  const lines = resolveColumnCellLines(column, evaluation, rowScope, ctx);
+  if (lines) {
+    return lines.map((line, index) => {
+      const normalized = resolveTableCellText(line.text);
+      return (
+        <div
+          key={`${column.id}-line-${index}`}
+          className={joinClassNames('ast-table-cell-line', line.className) || undefined}
+          style={{ ...(line.style ?? {}), ...(normalized.multiline ? { whiteSpace: 'pre-line' } : {}) }}
+        >
+          {normalized.text}
+        </div>
+      );
+    });
+  }
+
+  const value = resolveExpressionValue(column.value, evaluation, rowScope, ctx);
+  const cell = resolveTableCellText(formatValue(value ?? '', column.format, ctx));
+  return cell.multiline ? <span style={{ whiteSpace: 'pre-line' }}>{cell.text}</span> : cell.text;
+};
+
 const buildAstCss = (ast: TemplateAst): string => {
   const baseCss = `
 .invoice-template-root {
@@ -392,54 +476,6 @@ const resolveExpressionValue = (
       return '';
   }
 };
-
-/**
- * Cell content for a table/dynamic-table column. Columns may stack optional
- * ordered lines (e.g. item name above catalog description) with independent
- * per-line styles. Each line that resolves to a non-empty value renders on its
- * own block line; empty lines collapse. When every line is empty the legacy
- * single `value` renders as the cell fallback, so custom/discount/legacy rows
- * that carry only a line description stay readable. Columns without `lines`
- * render `value` exactly as before.
- */
-const renderTableCell = (
-  column: TemplateTableColumn,
-  evaluation: TemplateEvaluationResult,
-  scope: RenderScope,
-  ctx: RenderContext
-): React.ReactNode => {
-  const lines = column.lines;
-  if (lines && lines.length > 0) {
-    const renderedLines = lines
-      .map((line) => {
-        const lineValue = resolveExpressionValue(line.value, evaluation, scope, ctx);
-        const text = formatValue(lineValue ?? '', undefined, ctx);
-        const { className, style } = resolveStyleRef(line.style);
-        return { id: line.id, text, className, style };
-      })
-      .filter((line) => line.text !== '');
-
-    if (renderedLines.length === 0) {
-      const fallbackValue = resolveExpressionValue(column.value, evaluation, scope, ctx);
-      return formatValue(fallbackValue ?? '', column.format, ctx);
-    }
-
-    return renderedLines.map((line) => (
-      <div
-        key={line.id}
-        className={joinClassNames('ast-table-cell-line', line.className) || undefined}
-        style={line.style}
-      >
-        {line.text}
-      </div>
-    ));
-  }
-
-  const value = resolveExpressionValue(column.value, evaluation, scope, ctx);
-  return formatValue(value ?? '', column.format, ctx);
-};
-
-
 
 /**
  * Resolve an array value referenced by `bindingId` against either the render
@@ -627,6 +663,7 @@ const renderNode = (
               rows.map((row, index) => (
                 <tr key={`${node.id}-row-${index}`}>
                   {node.columns.map((column) => {
+                    const rowScope = { ...scope, row, items: { ...scope.items, [node.rowBinding]: row } };
                     const { className: colClassName, style: colStyle } = resolveStyleRef(column.style);
                     const alignRight = column.format === 'currency' || column.format === 'number';
                     return (
@@ -635,7 +672,7 @@ const renderNode = (
                         className={colClassName || undefined}
                         style={{ ...(colStyle ?? {}), ...(alignRight ? { textAlign: 'right' } : {}) }}
                       >
-                        {renderTableCell(column, evaluation, { ...scope, row, items: { ...scope.items, [node.rowBinding]: row } }, ctx)}
+                        {renderTableCellContent(column, evaluation, rowScope, ctx)}
                       </td>
                     );
                   })}
@@ -677,6 +714,7 @@ const renderNode = (
               rows.map((row, index) => (
                 <tr key={`${node.id}-row-${index}`}>
                   {node.columns.map((column) => {
+                    const rowScope = { ...scope, row, items: { ...scope.items, [node.repeat.itemBinding]: row } };
                     const { className: colClassName, style: colStyle } = resolveStyleRef(column.style);
                     const alignRight = column.format === 'currency' || column.format === 'number';
                     return (
@@ -685,7 +723,7 @@ const renderNode = (
                         className={colClassName || undefined}
                         style={{ ...(colStyle ?? {}), ...(alignRight ? { textAlign: 'right' } : {}) }}
                       >
-                        {renderTableCell(column, evaluation, { ...scope, row, items: { ...scope.items, [node.repeat.itemBinding]: row } }, ctx)}
+                        {renderTableCellContent(column, evaluation, rowScope, ctx)}
                       </td>
                     );
                   })}

@@ -144,11 +144,14 @@ const valueExpressionSchema: z.ZodTypeAny = z.lazy(() =>
   ])
 );
 
-/** One optional stacked line inside a table cell. */
+/** One optional stacked line inside a table cell: its own value expression
+ *  and optional per-line format/style. Lines are additive — columns authored
+ *  before this key existed carry none and validate unchanged. */
 const tableColumnLineSchema: z.ZodTypeAny = z.lazy(() =>
   z.object({
     id: z.string().min(1),
     value: valueExpressionSchema,
+    format: valueFormatSchema.optional(),
     style: nodeStyleRefSchema.optional(),
   }).strict()
 );

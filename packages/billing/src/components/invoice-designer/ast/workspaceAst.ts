@@ -825,6 +825,60 @@ const coerceNodeStyleFromInlineStyle = (inline: Record<string, unknown> | undefi
   return Object.keys(style).length > 0 ? style : undefined;
 };
 
+/**
+ * Designer table columns may carry stacked per-line content (`lines`) that the
+ * runtime schema understands but the designer's simple column model does not.
+ * Preserve each line's id, value expression, format and style (including token
+ * ids) verbatim so a duplicated/custom template never loses its stacked cell on
+ * save. Both `value` (the runtime key imported from an AST) and
+ * `valueExpression` (the designer's usual expression slot) are accepted.
+ */
+const mapWorkspaceColumnLines = (
+  value: unknown,
+  resolveLineValue?: (entry: Record<string, unknown>, lineId: string) => TemplateValueExpression | null,
+): TemplateTableColumn['lines'] => {
+  if (!Array.isArray(value) || value.length === 0) {
+    return undefined;
+  }
+
+  const mapped: NonNullable<TemplateTableColumn['lines']> = [];
+
+  for (const [index, entry] of value.entries()) {
+    if (!isRecord(entry)) {
+      continue;
+    }
+    const id = sanitizeId(asTrimmedString(entry.id)) || `line-${index + 1}`;
+    const preserved = isTemplateValueExpression(entry.valueExpression)
+      ? entry.valueExpression
+      : isTemplateValueExpression(entry.value)
+        ? entry.value
+        : null;
+    // A designer-authored line carries an editable binding key; a line imported
+    // straight from an AST carries only its expression. Let the caller resolve
+    // the former (so an edited key wins, exactly as it does for the column
+    // itself) and fall back to the preserved expression for the latter.
+    const valueExpression = resolveLineValue?.(entry, id) ?? preserved;
+    if (!valueExpression) {
+      continue;
+    }
+    const line: TemplateTableColumnLine = {
+      id,
+      value: valueExpression,
+    };
+    const format = parseTemplateValueFormat(entry.format ?? entry.type);
+    if (format) {
+      line.format = format;
+    }
+    const style = mapTemplateNodeStyleRef(entry.style);
+    if (style) {
+      line.style = style;
+    }
+    mapped.push(line);
+  }
+
+  return mapped.length > 0 ? mapped : undefined;
+};
+
 const mapTableColumns = (node: WorkspaceNode, documentKind: DesignerDocumentKind): TemplateTableColumn[] => {
   const metadata = getWorkspaceNodeMetadata(node);
   const columns = Array.isArray(metadata.columns) ? metadata.columns : [];
@@ -870,38 +924,26 @@ const mapTableColumns = (node: WorkspaceNode, documentKind: DesignerDocumentKind
       if (style) {
         mapped.style = style;
       }
+      const lines = mapWorkspaceColumnLines(column.lines, (entry, lineId) => {
+        const lineKey = normalizeInvoiceBindingPath(
+          asTrimmedString(entry.key) || asTrimmedString(entry.path) || asTrimmedString(entry.bindingKey),
+          documentKind
+        );
+        const lineExpression = isTemplateValueExpression(entry.valueExpression)
+          ? entry.valueExpression
+          : isTemplateValueExpression(entry.value)
+            ? entry.value
+            : null;
+        return lineKey.length > 0 || lineExpression
+          ? resolveColumnValue(lineKey, lineExpression, lineId)
+          : null;
+      });
+      if (lines) {
+        mapped.lines = lines;
+      }
       if (parsedFormat) {
         mapped.format = parsedFormat;
       }
-
-      const rawLines = Array.isArray(column.lines) ? column.lines : [];
-      if (rawLines.length > 0) {
-        mapped.lines = rawLines
-          .map((rawLine, lineIndex): TemplateTableColumnLine | null => {
-            if (!isRecord(rawLine)) {
-              return null;
-            }
-            const lineId = asTrimmedString(rawLine.id) || `line-${lineIndex + 1}`;
-            const lineKey = normalizeInvoiceBindingPath(
-              asTrimmedString(rawLine.key) || asTrimmedString(rawLine.path) || asTrimmedString(rawLine.bindingKey),
-              documentKind
-            );
-            const lineExpression = isTemplateValueExpression(rawLine.valueExpression)
-              ? rawLine.valueExpression
-              : null;
-            const mappedLine: TemplateTableColumnLine = {
-              id: sanitizeId(lineId),
-              value: resolveColumnValue(lineKey, lineExpression, lineId),
-            };
-            const lineStyle = mapTemplateNodeStyleRef(rawLine.style);
-            if (lineStyle) {
-              mappedLine.style = lineStyle;
-            }
-            return mappedLine;
-          })
-          .filter((line): line is TemplateTableColumnLine => Boolean(line));
-      }
-
       return mapped;
     })
     .filter((column): column is TemplateTableColumn => Boolean(column));
@@ -1938,8 +1980,12 @@ export const importTemplateAstToWorkspace = (
             if (column.style) {
               mappedColumn.style = { ...column.style } as Record<string, unknown>;
             }
-
             if (Array.isArray(column.lines) && column.lines.length > 0) {
+              // Stacked per-line content has to survive a designer roundtrip
+              // intact: `key` is what the line editor binds to, while
+              // `valueExpression`, `format` and `style` carry the parts the
+              // editor does not model, so re-exporting the template
+              // (duplicate / save-as) neither flattens nor downgrades the cell.
               mappedColumn.lines = column.lines.map((line) => {
                 const mappedLine: Record<string, unknown> = {
                   id: line.id,
@@ -1948,6 +1994,9 @@ export const importTemplateAstToWorkspace = (
                     : line.id,
                   valueExpression: line.value,
                 };
+                if (line.format) {
+                  mappedLine.format = line.format;
+                }
                 if (line.style) {
                   mappedLine.style = { ...line.style } as Record<string, unknown>;
                 }
