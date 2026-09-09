@@ -496,10 +496,10 @@
     {
       "id": "R059",
       "title": "Reduce registration collection overhead without parallelizing execution",
-      "status": "in_progress",
+      "status": "done",
       "dependsOn": [],
       "owner": "calendar_review and coordinator",
-      "notes": "Ten-file native sample retains all63identities with isolated collection workers:1worker7.98s,2workers5.88s. Process-tree sample peak816MiB vs926MiB (~13.5% increase). Enable fileParallelism=true/maxWorkers=2 for registered-test collection only; retain filesOnly inventory, exact reconciliation, and serial execution. Evidence: evidence/native-unit-collection-performance.json. Full Linux CI performance/memory remains pending; do not extrapolate representative sample."
+      "notes": "Ten-file native sample retains all63identities with isolated collection workers:1worker7.98s,2workers5.88s. Process-tree sample peak816MiB vs926MiB (~13.5% increase). Enable fileParallelism=true/maxWorkers=2 for registered-test collection only; retain filesOnly inventory, exact reconciliation, and serial execution. Evidence: evidence/native-unit-collection-performance.json. Full Linux CI performance/memory remains pending; do not extrapolate representative sample. Full current CI collection succeeds for 2746 files and 14986 executed identities plus three visible tax TODOs. Pre-execution interval observed about 19m56s versus 27m57s in the prior one-worker run; this includes startup overhead and is not a controlled benchmark. CI memory was not separately instrumented; native memory sampling and complete CI execution provide bounded evidence."
     },
     {
       "id": "R060",
@@ -512,10 +512,10 @@
     {
       "id": "R061",
       "title": "Preserve independent browser bootstrap and require explicit phase prerequisites",
-      "status": "in_progress",
+      "status": "done",
       "dependsOn": [],
       "owner": "coordinator and stripe_protocol",
-      "notes": "Earlier worker failure skipped initialcredentials/browserinstall but independent upgrades/Teams still executed without them. Make serverhealth/capture and Node/Playwright bootstrap explicit independent chains; actual Chromiumlaunch verifies cachehit/install readiness. PG/Citusprepare require sourcecredentials; every browserphase requires browser_ready; primary requires provider topology. API remains independent and mandatory aggregate unchanged. Native Chromiumlaunch and actionlint pass; full GitHub failure-path behavior pending."
+      "notes": "Earlier worker failure skipped initialcredentials/browserinstall but independent upgrades/Teams still executed without them. Make serverhealth/capture and Node/Playwright bootstrap explicit independent chains; actual Chromiumlaunch verifies cachehit/install readiness. PG/Citusprepare require sourcecredentials; every browserphase requires browser_ready; primary requires provider topology. API remains independent and mandatory aggregate unchanged. Native Chromiumlaunch and actionlint pass; full GitHub failure-path behavior pending. Current b413 CI confirms initial credentials and browser readiness still run after provider topology failure; independent API, PostgreSQL upgrade, Citus upgrade and Teams phases actually execute. Citus gate passes. This verifies downstream bootstrap despite an earlier failed step; it does not waive any failed mandatory lane."
     },
     {
       "id": "R062",
