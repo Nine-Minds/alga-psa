@@ -51,16 +51,13 @@ eligibility tests (T210) for the exact numbers.
 ## Artifacts
 
 - Editor (browser screenshots, port 3172):
-  - `editor/2353-new-quote-form.png` – new-quote form with client Emerald City.
   - `editor/2353-editor-six-items-no-discount.png` – six base rows; sidebar
     Subtotal $3,047.97 / Discounts $0.00 / Total $3,047.97.
-  - `editor/2353-editor-with-discounts.png` – after adding two fixed discounts
-    via Fixed Discount > Specific Service; rows show `- USD 5.00`; sidebar
-    Subtotal $3,047.97 / Discounts −$10.00 / Tax $0.00 / Total $3,037.97.
-  - `editor/2353-editor-reopen-50monthly.png` – the quote after save + reload
-    (legacy-style persisted discounts): sidebar reads **$50.00 recurring /
-    month**, Subtotal $3,047.97 / Discounts −$10.00 / Tax $0.00 / Total
-    $3,037.97 (fixes review gap #1).
+  - `editor/2353-editor-reopen-50monthly.png` – the quote with both discounts
+    after save + reload (legacy-style persisted discounts): rows show
+    `- USD 5.00`; sidebar reads **$50.00 recurring / month**, Subtotal
+    $3,047.97 / Discounts −$10.00 / Tax $0.00 / Total $3,037.97 (fixes review
+    gap #1).
 - PDFs (rendered by the quote PDF service from the DB quote):
   - `pdfs/QUO-0003-grouped-custom-template.pdf` – custom template whose AST is
     a copy of this branch's `buildStandardQuoteGroupedAst()` (the
