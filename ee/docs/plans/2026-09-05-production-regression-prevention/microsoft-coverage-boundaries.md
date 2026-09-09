@@ -120,18 +120,29 @@ So the 81.7MB single-chunk behavior was a dev-webpack artifact. The heap tuning
 in the sections above describes a problem that no longer applies to this lane,
 and should be read as history rather than current configuration.
 
-What the infrastructure failure had been hiding is ordinary: the Microsoft
-profile dialog overflows the 1280x720 Desktop Chrome window instead of scrolling
-internally, so the first capability checkbox is below the fold and Playwright
-reports it visible, enabled and stable but "outside of the viewport". Only this
-lane is affected because it forces `release-v1-6-feature` on an enterprise
-development build and therefore renders more capability rows than the production
-lane, where the same fixture passes. The lane now runs at 1280x1200. Forcing the
-click was rejected: it would assert on an element a user at that window size
-also could not reach.
+What the infrastructure failure had been hiding is a different problem, and
+three explanations for it were wrong before the evidence settled it. It is not
+a dialog overflowing the window: a 1280x1200 lane reproduced the failure
+identically and that change was reverted. It is not the component: the checkbox
+is a plain visible input with a proper label association. It is not CSS failing
+to load: every stylesheet request returned 200, including the local Next chunks
+and the unpkg-hosted Radix and react-big-calendar sheets.
 
-Whether that overflow affects real laptop users is a separate product question
-and is tracked as such, not answered from a CI log.
+The failure screenshot shows Radix and component styling present while layout
+utilities are absent, so the page renders as a long unstyled flow rather than a
+dialog. That is why Playwright reports the control visible, enabled and stable
+yet "outside of the viewport" -- there is no dialog for it to sit inside. The
+working theory is that Tailwind is not processed under Turbopack in this lane.
+It is a theory, not a finding, and the next person should confirm it before
+acting on it.
+
+Forcing the click was rejected throughout: it would assert on an element no user
+could reach, which is a pass that means nothing.
+
+Net position on the bundler: Turbopack removed a memory-dependent chunk failure
+and left a deterministic styling one. Neither passes today, but "make Tailwind
+work under Turbopack in a development lane" is a considerably more tractable
+problem than "reduce an 81.7MB webpack chunk", so the lane stays on Turbopack.
 
 The quarantine entry remains until a run reports the lane passing. A quarantined
 requirement that passes is reported as `quarantined-passing`, which is the signal
