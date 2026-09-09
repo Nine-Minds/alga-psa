@@ -1599,5 +1599,9 @@
   },
   "callLink": {
     "teamsCall": "Bellen in Microsoft Teams"
+  },
+  "users": {
+    "soloLicenseLimit": "Het Solo-abonnement ondersteunt één technicus. Waardeer de werkruimte op voordat u nog een gebruiker activeert.",
+    "technicianLicenseLimit": "Deze werkruimte kan geen extra technicus activeren. Controleer de activeringsstatus en de beschikbare licentietoewijzing."
   }
 }

@@ -102,6 +102,8 @@
       "channels": "Kanalen"
     },
     "passwords": "Wachtwoorden",
+    "coManaged": "Gezamenlijk beheerde IT",
+    "coManagedDelegation": "Gedelegeerd beheer",
     "coManagedAccess": "Toegang voor gezamenlijk beheer"
   },
   "sidebar": {

@@ -1,0 +1,43 @@
+{
+  "title": "Administração delegada",
+  "description": "Assistência aprovada pelo cliente em configurações selecionadas e registros de usuário.",
+  "banner": "Espaço de trabalho do cliente: {{customer}} · MSP: {{sponsor}}",
+  "loading": "Carregando o acesso aprovado…",
+  "refresh": "Atualizar acesso",
+  "loadError": "Não foi possível carregar o acesso. Atualize para verificar suas permissões atuais.",
+  "noWorkspaces": "No momento, nenhum espaço de trabalho de cliente tem tarefas de administração aprovadas para você.",
+  "noGrants": "No momento não há tarefas de administração aprovadas.",
+  "readOnly": "Este espaço de trabalho é somente leitura. Os administradores do cliente ainda podem revogar o acesso.",
+  "approveTitle": "Aprovar uma tarefa de administração específica",
+  "approvalHint": "Escolha um técnico ou equipe do MSP atribuído, uma operação e um único registro do cliente. A aprovação não concede acesso administrativo geral.",
+  "approvalSummary": "Permitir que {{principal}} execute “{{operation}}” para {{target}}.",
+  "principal": "Técnico ou equipe do MSP atribuído",
+  "target": "Registro do cliente",
+  "operation": "Operação",
+  "search": "Pesquisar registros",
+  "previous": "Anterior",
+  "next": "Próximo",
+  "approve": "Aprovar tarefa",
+  "retry": "Repetir a mesma solicitação",
+  "revoke": "Revogar acesso",
+  "save": "Salvar alterações",
+  "resend": "Reenviar o convite aprovado",
+  "saveError": "Não foi possível confirmar a solicitação. Repita a mesma solicitação ou atualize o acesso antes de fazer outra alteração.",
+  "unavailable": "Registro indisponível",
+  "unavailableHint": "Esta aprovação não permite mais o acesso ao seu registro. Você pode revogá-la.",
+  "invitationHint": "O reenvio mantém o destinatário, a função, o link de configuração e a validade definidos pelo cliente. Ele não estende nem substitui o convite.",
+  "invitationTerms": "Destinatário: {{email}} · Função: {{role}} · Expira em: {{expires}}",
+  "operations": {
+    "board_settings": "Editar as configurações de exibição de um quadro",
+    "user_profile": "Editar o perfil de um usuário sem permissões de administração",
+    "invitation_resend": "Reenviar um convite criado pelo cliente"
+  },
+  "fields": {
+    "board_name": "Nome do quadro",
+    "description": "Descrição",
+    "enable_live_ticket_timer": "Ativar o cronômetro de ticket ao vivo",
+    "first_name": "Nome",
+    "last_name": "Sobrenome",
+    "timezone": "Fuso horário"
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "title": "Amministrazione delegata",
+  "description": "Assistenza approvata dal cliente su impostazioni selezionate e schede utente.",
+  "banner": "Spazio di lavoro del cliente: {{customer}} · MSP: {{sponsor}}",
+  "loading": "Caricamento degli accessi approvati…",
+  "refresh": "Aggiorna gli accessi",
+  "loadError": "Impossibile caricare gli accessi. Aggiorna per controllare le tue autorizzazioni attuali.",
+  "noWorkspaces": "Al momento nessuno spazio di lavoro dei clienti ha attività di amministrazione approvate per te.",
+  "noGrants": "Al momento non ci sono attività di amministrazione approvate.",
+  "readOnly": "Questo spazio di lavoro è in sola lettura. Gli amministratori del cliente possono comunque revocare gli accessi.",
+  "approveTitle": "Approva una singola attività di amministrazione",
+  "approvalHint": "Scegli un tecnico o un team MSP assegnato, un’operazione e una sola scheda del cliente. L’approvazione non concede un accesso amministrativo generale.",
+  "approvalSummary": "Consenti a {{principal}} di eseguire «{{operation}}» per {{target}}.",
+  "principal": "Tecnico o team MSP assegnato",
+  "target": "Scheda del cliente",
+  "operation": "Operazione",
+  "search": "Cerca schede",
+  "previous": "Precedente",
+  "next": "Successivo",
+  "approve": "Approva l’attività",
+  "retry": "Riprova la stessa richiesta",
+  "revoke": "Revoca l’accesso",
+  "save": "Salva le modifiche",
+  "resend": "Invia di nuovo l’invito approvato",
+  "saveError": "Impossibile confermare la richiesta. Riprova con la stessa richiesta oppure aggiorna gli accessi prima di apportare un’altra modifica.",
+  "unavailable": "Scheda non disponibile",
+  "unavailableHint": "Questa approvazione non consente più di accedere alla sua scheda. Puoi revocarla.",
+  "invitationHint": "L’invio ripetuto mantiene destinatario, ruolo, link di configurazione e scadenza scelti dal cliente. Non proroga né sostituisce l’invito.",
+  "invitationTerms": "Destinatario: {{email}} · Ruolo: {{role}} · Scade il: {{expires}}",
+  "operations": {
+    "board_settings": "Modificare le impostazioni di visualizzazione di una bacheca",
+    "user_profile": "Modificare il profilo di un utente non amministratore",
+    "invitation_resend": "Inviare di nuovo un invito creato dal cliente"
+  },
+  "fields": {
+    "board_name": "Nome della bacheca",
+    "description": "Descrizione",
+    "enable_live_ticket_timer": "Attiva il timer live del ticket",
+    "first_name": "Nome",
+    "last_name": "Cognome",
+    "timezone": "Fuso orario"
+  }
+}

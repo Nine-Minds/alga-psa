@@ -1633,5 +1633,9 @@
   },
   "callLink": {
     "teamsCall": "Zadzwoń w Microsoft Teams"
+  },
+  "users": {
+    "soloLicenseLimit": "Plan Solo obsługuje jednego technika. Podnieś plan obszaru roboczego, zanim aktywujesz kolejnego użytkownika.",
+    "technicianLicenseLimit": "W tym obszarze roboczym nie można aktywować kolejnego technika. Sprawdź jego stan aktywacji i dostępny przydział licencji."
   }
 }

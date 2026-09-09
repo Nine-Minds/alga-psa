@@ -1,0 +1,43 @@
+{
+  "title": "Administración delegada",
+  "description": "Asistencia aprobada por el cliente en determinados ajustes y registros de usuario.",
+  "banner": "Espacio de trabajo del cliente: {{customer}} · MSP: {{sponsor}}",
+  "loading": "Cargando el acceso aprobado…",
+  "refresh": "Actualizar el acceso",
+  "loadError": "No se pudo cargar el acceso. Actualice para comprobar sus permisos actuales.",
+  "noWorkspaces": "Ningún espacio de trabajo de cliente tiene actualmente tareas de administración aprobadas para usted.",
+  "noGrants": "No hay tareas de administración aprobadas en este momento.",
+  "readOnly": "Este espacio de trabajo es de solo lectura. Los administradores del cliente pueden revocar el acceso en cualquier momento.",
+  "approveTitle": "Aprobar una tarea de administración concreta",
+  "approvalHint": "Elija un técnico o equipo del MSP asignado, una operación y un único registro del cliente. La aprobación no concede acceso general de administración.",
+  "approvalSummary": "Permitir que {{principal}} realice «{{operation}}» para {{target}}.",
+  "principal": "Técnico o equipo del MSP asignado",
+  "target": "Registro del cliente",
+  "operation": "Operación",
+  "search": "Buscar registros",
+  "previous": "Anterior",
+  "next": "Siguiente",
+  "approve": "Aprobar la tarea",
+  "retry": "Reintentar la misma solicitud",
+  "revoke": "Revocar el acceso",
+  "save": "Guardar los cambios",
+  "resend": "Reenviar la invitación aprobada",
+  "saveError": "No se pudo confirmar la solicitud. Reintente la misma solicitud o actualice el acceso antes de hacer otro cambio.",
+  "unavailable": "Registro no disponible",
+  "unavailableHint": "Esta aprobación ya no permite acceder a su registro. Puede revocarla.",
+  "invitationHint": "Al reenviarla se conservan el destinatario, el rol, el enlace de configuración y la caducidad definidos por el cliente. No amplía ni sustituye la invitación.",
+  "invitationTerms": "Destinatario: {{email}} · Rol: {{role}} · Caduca: {{expires}}",
+  "operations": {
+    "board_settings": "Editar los ajustes de visualización de un tablero",
+    "user_profile": "Editar el perfil de un usuario sin permisos de administración",
+    "invitation_resend": "Reenviar una invitación creada por el cliente"
+  },
+  "fields": {
+    "board_name": "Nombre del tablero",
+    "description": "Descripción",
+    "enable_live_ticket_timer": "Activar el temporizador de ticket en vivo",
+    "first_name": "Nombre",
+    "last_name": "Apellidos",
+    "timezone": "Zona horaria"
+  }
+}

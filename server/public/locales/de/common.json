@@ -1599,5 +1599,9 @@
   },
   "callLink": {
     "teamsCall": "In Microsoft Teams anrufen"
+  },
+  "users": {
+    "soloLicenseLimit": "Der Solo-Tarif unterstützt einen Techniker. Führen Sie ein Upgrade des Workspaces durch, bevor Sie einen weiteren Benutzer aktivieren.",
+    "technicianLicenseLimit": "In diesem Workspace kann kein weiterer Techniker aktiviert werden. Prüfen Sie seinen Aktivierungsstatus und die verfügbare Lizenzzuteilung."
   }
 }

@@ -1599,5 +1599,9 @@
   },
   "callLink": {
     "teamsCall": "Ligar no Microsoft Teams"
+  },
+  "users": {
+    "soloLicenseLimit": "O plano Solo permite um técnico. Faça o upgrade do espaço de trabalho antes de ativar outro usuário.",
+    "technicianLicenseLimit": "Este espaço de trabalho não pode ativar outro técnico. Verifique o status de ativação e a alocação de licenças disponível."
   }
 }

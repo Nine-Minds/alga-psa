@@ -1599,5 +1599,9 @@
   },
   "callLink": {
     "teamsCall": "Appeler dans Microsoft Teams"
+  },
+  "users": {
+    "soloLicenseLimit": "L’offre Solo permet un seul technicien. Faites évoluer l’espace de travail avant d’activer un autre utilisateur.",
+    "technicianLicenseLimit": "Cet espace de travail ne peut pas activer de technicien supplémentaire. Vérifiez son état d’activation et les licences encore disponibles."
   }
 }

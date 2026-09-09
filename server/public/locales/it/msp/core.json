@@ -102,6 +102,8 @@
       "channels": "Canali"
     },
     "passwords": "Password",
+    "coManaged": "IT cogestita",
+    "coManagedDelegation": "Amministrazione delegata",
     "coManagedAccess": "Accesso cogestito"
   },
   "sidebar": {

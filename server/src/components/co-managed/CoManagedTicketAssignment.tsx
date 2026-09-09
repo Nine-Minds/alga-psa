@@ -79,7 +79,7 @@ function Assignment({ resource, onSaved, onUnavailable, onReload }: Props) {
   return <section className="space-y-3 border-t border-[rgb(var(--color-border-200))] pt-5" aria-labelledby="co-ticket-assignment-title">
     <h2 id="co-ticket-assignment-title" className="text-lg font-semibold">{t('coManaged.projects.assignment.title')}</h2>
     {loadError ? <p role="alert" className="text-destructive">{t('coManaged.editor.loadError')}</p> : !state ? <p role="status">{t('coManaged.ticket.loading')}</p> : state.revision === undefined ?
-      <p className="text-sm text-muted-foreground">{t('hasAssignment' in state ? 'coManaged.ticket.assignment.needsHandoff' : 'coManaged.ticket.restricted')}</p> : <>
+      <p className="text-sm text-muted-foreground">{'hasAssignment' in state ? t('coManaged.ticket.assignment.needsHandoff') : t('coManaged.ticket.restricted')}</p> : <>
       <p className="text-sm text-muted-foreground">{assignment ? `${assignment.organizationName} · ${assignment.name}` : t(state.hasAssignment ? 'coManaged.ticket.assignment.unavailable' : 'coManaged.projects.assignment.unassigned')}</p>
       {state.canAssign && <div className="space-y-3">
         <CustomSelect id="co-ticket-assignment-kind" label={t('coManaged.projects.assignment.kind')} value={kind} disabled={disabled}

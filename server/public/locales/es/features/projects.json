@@ -1455,7 +1455,7 @@
       "organization_private": "Solo mi organización"
     },
     "authorUnavailable": "Autor no disponible",
-    "loadError": "No se puede cargar la conversación. Actualiza para comprobar tu acceso."
+    "loadError": "No se puede cargar la conversación. Actualice para comprobar su acceso."
   },
   "clientPortal": {
     "clientsWillSee": "Los clientes verán:",

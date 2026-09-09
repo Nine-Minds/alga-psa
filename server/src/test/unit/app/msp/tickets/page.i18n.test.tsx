@@ -199,6 +199,14 @@ vi.mock('@alga-psa/auth/client', () => ({
   AppSessionProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
+// AppSessionProvider is stubbed above, so nothing supplies next-auth's session
+// context to the hooks the page tree reaches (useFeatureFlag reads useSession
+// for the flag's distinct id). The layout renders the real provider in the app.
+vi.mock('next-auth/react', () => ({
+  SessionProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useSession: () => ({ data: null, status: 'unauthenticated', update: vi.fn() }),
+}));
+
 vi.mock('@/components/layout/DefaultLayout', () => ({
   default: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="default-layout">{children}</div>

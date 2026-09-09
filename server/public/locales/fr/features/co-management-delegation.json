@@ -1,0 +1,43 @@
+{
+  "title": "Administration déléguée",
+  "description": "Assistance approuvée par le client sur certains paramètres et fiches utilisateur.",
+  "banner": "Espace de travail du client : {{customer}} · MSP : {{sponsor}}",
+  "loading": "Chargement des accès approuvés…",
+  "refresh": "Actualiser les accès",
+  "loadError": "Impossible de charger les accès. Actualisez pour vérifier vos autorisations actuelles.",
+  "noWorkspaces": "Aucun espace de travail client n’a actuellement de tâche d’administration approuvée pour vous.",
+  "noGrants": "Aucune tâche d’administration n’est approuvée pour le moment.",
+  "readOnly": "Cet espace de travail est en lecture seule. Les administrateurs du client peuvent toujours révoquer les accès.",
+  "approveTitle": "Approuver une tâche d’administration précise",
+  "approvalHint": "Choisissez un technicien ou une équipe MSP affecté, une opération et une seule fiche client. L’approbation n’accorde pas d’accès général d’administration.",
+  "approvalSummary": "Autoriser {{principal}} à effectuer « {{operation}} » pour {{target}}.",
+  "principal": "Technicien ou équipe MSP affecté",
+  "target": "Fiche client",
+  "operation": "Opération",
+  "search": "Rechercher des fiches",
+  "previous": "Précédent",
+  "next": "Suivant",
+  "approve": "Approuver la tâche",
+  "retry": "Réessayer la même demande",
+  "revoke": "Révoquer l’accès",
+  "save": "Enregistrer les modifications",
+  "resend": "Renvoyer l’invitation approuvée",
+  "saveError": "La demande n’a pas pu être confirmée. Réessayez la même demande ou actualisez les accès avant d’effectuer une autre modification.",
+  "unavailable": "Fiche indisponible",
+  "unavailableHint": "Cette approbation ne donne plus accès à sa fiche. Vous pouvez la révoquer.",
+  "invitationHint": "Le renvoi conserve le destinataire, le rôle, le lien de configuration et l’expiration définis par le client. Il ne prolonge ni ne remplace l’invitation.",
+  "invitationTerms": "Destinataire : {{email}} · Rôle : {{role}} · Expire le : {{expires}}",
+  "operations": {
+    "board_settings": "Modifier les paramètres d’affichage d’un tableau",
+    "user_profile": "Modifier le profil d’un utilisateur non administrateur",
+    "invitation_resend": "Renvoyer une invitation créée par le client"
+  },
+  "fields": {
+    "board_name": "Nom du tableau",
+    "description": "Description",
+    "enable_live_ticket_timer": "Activer le minuteur de ticket en direct",
+    "first_name": "Prénom",
+    "last_name": "Nom",
+    "timezone": "Fuseau horaire"
+  }
+}

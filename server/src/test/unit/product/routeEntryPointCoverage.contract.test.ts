@@ -95,10 +95,21 @@ function normalizeRoute(raw: string): string {
 
 // One source path yields one ref, plus — when it ends in a slash — the dynamic
 // child it is about to be concatenated with: `'/msp/extensions/' + id`.
+//
+// A third ref covers the optional-query shape, where an interpolation is glued
+// straight onto the last segment rather than following a slash:
+//   href={`/msp/co-management/departure${id ? `?operationId=${id}` : ''}`}
+// The collapsed token leaves `departure<DYNAMIC_SEGMENT>`, which normalizes to a
+// dynamic sibling and would hide a real link. The interpolation can render
+// empty, so the literal prefix is a genuine entry point to the concrete route.
 function refsFrom(rawPath: string): string[] {
   const trimmed = rawPath.replace(/\/+$/, '');
   const refs = [normalizeRoute(trimmed)];
   if (rawPath.endsWith('/')) refs.push(normalizeRoute(`${trimmed}/${DYNAMIC_SEGMENT}`));
+  const lastSegment = trimmed.split('/').pop() ?? '';
+  if (lastSegment.endsWith(DYNAMIC_SEGMENT) && lastSegment !== DYNAMIC_SEGMENT) {
+    refs.push(normalizeRoute(trimmed.slice(0, trimmed.length - DYNAMIC_SEGMENT.length)));
+  }
   return refs;
 }
 

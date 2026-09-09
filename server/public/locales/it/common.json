@@ -1599,5 +1599,9 @@
   },
   "callLink": {
     "teamsCall": "Chiama in Microsoft Teams"
+  },
+  "users": {
+    "soloLicenseLimit": "Il piano Solo prevede un solo tecnico. Aggiorna il piano dello spazio di lavoro prima di attivare un altro utente.",
+    "technicianLicenseLimit": "Questo spazio di lavoro non può attivare un altro tecnico. Controlla il suo stato di attivazione e le licenze ancora disponibili."
   }
 }
