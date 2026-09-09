@@ -13,9 +13,21 @@ export function replaceTemplateVariables(
   content: string,
   data: Record<string, string>
 ): string {
-  // First, process {{#if condition}}...{{/if}} blocks.
-  // For preview, show the block content (with variables replaced) since sample data is available.
+  // Expand {{#each path}}...{{/each}} blocks once for preview, qualifying
+  // {{this.*}} references (including {{#if this.*}}) against the block's path
+  // so the registry's per-item examples (e.g. credits.items.creditId) resolve.
   let result = content.replace(
+    /\{\{#each\s+([^{}\s]+)\s*\}\}([\s\S]*?)\{\{\/each\}\}/g,
+    (_match, path, blockContent: string) =>
+      blockContent.replace(
+        /(\{{2,3})(#if\s+)?this\.([^{}]+?)(\}{2,3})/g,
+        (_inner, open, ifTag, key, close) => `${open}${ifTag ?? ''}${path}.${key}${close}`
+      )
+  );
+
+  // Then, process {{#if condition}}...{{/if}} blocks.
+  // For preview, show the block content (with variables replaced) since sample data is available.
+  result = result.replace(
     /\{\{#if\s+([^}]+)\}\}([\s\S]*?)\{\{\/if\}\}/g,
     (_match, _condition, blockContent) => blockContent
   );
