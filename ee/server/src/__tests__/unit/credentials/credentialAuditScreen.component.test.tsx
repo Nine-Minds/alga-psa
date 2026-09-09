@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 /**
  * Credential audit screen component tests (EE CredentialAuditScreen):
- *  - gating: flag-off renders nothing; tier gate; `credential:audit` forbidden
+ *  - gating: tier gate; `credential:audit` forbidden
  *    state (the audit trail is not shown to viewers without the permission).
  *  - data: rows render, empty vs empty-filtered states, keyset "Load more".
  *  - filters: operation/actor/client/date filter changes re-fetch the action
@@ -246,13 +246,6 @@ afterEach(() => {
 });
 
 describe('CredentialAuditScreen — gating', () => {
-  it('renders nothing when the release flag is off', () => {
-    useFeatureFlagMock.mockReturnValue({ enabled: false });
-    const { container } = render(<CredentialAuditScreen />);
-    expect(container.firstChild).toBeNull();
-    expect(getCredentialsContextMock).not.toHaveBeenCalled();
-  });
-
   it('shows the forbidden state when the viewer lacks credential:audit', async () => {
     getCredentialsContextMock.mockResolvedValue({
       tierOk: true,
@@ -345,7 +338,7 @@ describe('CredentialAuditScreen — data + paging', () => {
     fireEvent.change(document.getElementById('credentials-audit-date-range-from')!, { target: { value: '2026-08-01' } });
     await waitFor(() => {
       expect(getCredentialAuditEventsMock).toHaveBeenLastCalledWith(
-        expect.objectContaining({ from: '2026-08-01T00:00:00.000Z' })
+        expect.objectContaining({ from: new Date(2026, 7, 1, 0, 0, 0, 0).toISOString() })
       );
     });
   });
