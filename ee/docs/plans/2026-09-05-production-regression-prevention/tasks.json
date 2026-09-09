@@ -883,7 +883,7 @@
       "status": "done",
       "dependsOn": [],
       "owner": "stripe_protocol",
-      "notes": "Current f3a translation consistency check reports 18 missing keys: two recovery messages across seven translated and two pseudo locales. Preserve checks and supply translations. Added 18 missing entries using natural locale translations and the existing pseudoString transform. Actual enforced validator passed all nine locales with zero errors/warnings; locale-quality audit passed seven real locales with zero untranslated/forbidden/parse/missing findings. Current-source CI remains pending next publication."
+      "notes": "Current f3a translation consistency check reports 18 missing keys: two recovery messages across seven translated and two pseudo locales. Preserve checks and supply translations. Added 18 missing entries using natural locale translations and the existing pseudoString transform. Actual enforced validator passed all nine locales with zero errors/warnings; locale-quality audit passed seven real locales with zero untranslated/forbidden/parse/missing findings. Current-source CI remains pending next publication. Exact two failed Nx billing cases now pass using package configuration (2 selected cases,54 excluded by titlefilter). T001 invokes the real pseudo generator, which reordered the two new keys to English order; retain canonical generated order. Concurrent Node tooling1044/1044 passed but source-after recorded this change, so not accepted as clean-source validation."
     },
     {
       "id": "R108",
