@@ -112,7 +112,7 @@
   {
     "id": "F013",
     "description": "suggestEmailPalette returns customTheme.light primary/secondary with source 'custom-theme' when a custom theme is configured",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "suggestion",
     "prdRefs": [
       "FR5",
@@ -122,7 +122,7 @@
   {
     "id": "F014",
     "description": "suggestEmailPalette returns the CUSTOM_THEME_PRESETS light primary/secondary with source 'theme-pair' when a non-default pair is picked",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "suggestion",
     "prdRefs": [
       "FR5"
@@ -131,7 +131,7 @@
   {
     "id": "F015",
     "description": "suggestEmailPalette returns branding primary/secondary with source 'portal-branding' when only client portal colors are set",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "suggestion",
     "prdRefs": [
       "FR5"
@@ -140,7 +140,7 @@
   {
     "id": "F016",
     "description": "suggestEmailPalette returns the stock palette with source 'default' otherwise",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "suggestion",
     "prdRefs": [
       "FR5"
@@ -149,7 +149,7 @@
   {
     "id": "F017",
     "description": "the default 'alga' pair does not count as a picked theme for suggestion purposes",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "suggestion",
     "prdRefs": [
       "FR5"

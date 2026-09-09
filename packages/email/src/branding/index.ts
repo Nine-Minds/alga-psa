@@ -19,3 +19,4 @@ export {
   type ClassifiableTemplate,
   type ClassifyTenantTemplateInput,
 } from './classifyTenantTemplate';
+export { suggestEmailPalette, type SuggestEmailPaletteInput } from './suggestEmailPalette';

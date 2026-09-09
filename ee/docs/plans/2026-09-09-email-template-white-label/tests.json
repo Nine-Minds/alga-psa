@@ -156,7 +156,7 @@
   {
     "id": "T018",
     "description": "custom theme present and pair 'custom' \u2192 custom-theme source with the custom light colors",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "suggestion",
     "featureIds": [
       "F013"
@@ -165,7 +165,7 @@
   {
     "id": "T019",
     "description": "pair 'ocean' with no custom theme \u2192 theme-pair source with #1d4ed8 primary",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "suggestion",
     "featureIds": [
       "F014"
@@ -174,7 +174,7 @@
   {
     "id": "T020",
     "description": "pair 'alga' with portal branding primary set \u2192 portal-branding source",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "suggestion",
     "featureIds": [
       "F015",
@@ -184,7 +184,7 @@
   {
     "id": "T021",
     "description": "pair 'alga', no branding colors \u2192 default source with #8A4DEA/#40CFF9",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "suggestion",
     "featureIds": [
       "F016"
@@ -193,7 +193,7 @@
   {
     "id": "T022",
     "description": "custom theme present but pairId 'ocean' \u2192 theme-pair source (normalizeTenantTheme rules apply)",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "suggestion",
     "featureIds": [
       "F013",
