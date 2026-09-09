@@ -19875,7 +19875,15 @@ async function withPortableVaultExportFixture(work: (fixture: any) => Promise<vo
   });
   const exportVault = () => portable.exportCoManagedPortableVault(db, f.customerPrincipal, context.packageId, 'customer-held portable recovery phrase');
   try { await work({ ...f, context, credentialId, mspCredentialId, provider, values, exportVault, encryption, readPermissionId: read.permission_id }); }
-  finally { provider.mockRestore(); process.env = env; encryption.resetCredentialAesKeyCache(); }
+  // Restore keys in place: assigning a fresh object to process.env swaps it out
+  // from under modules holding the original reference (`import { env } from
+  // 'node:process'`), so later files write to one object and read another.
+  finally {
+    provider.mockRestore();
+    for (const key of Object.keys(process.env)) if (!(key in env)) delete process.env[key];
+    for (const [key, value] of Object.entries(env)) if (process.env[key] !== value) process.env[key] = value;
+    encryption.resetCredentialAesKeyCache();
+  }
 }
 
 it('portable vault export retains customer metadata and audited usable secrets after departure without MSP private data', async () => withPortableVaultExportFixture(async f => {

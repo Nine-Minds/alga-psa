@@ -15,15 +15,29 @@ const passphrase = 'customer held recovery phrase';
 const secret = { password: 'saved customer password', otpSecret: 'JBSWY3DPEHPK3PXP' };
 let vault: PortableCredentialVault, stored: Awaited<ReturnType<typeof encryptCredentialValues>>;
 const environment = { ...process.env };
+// Restore keys in place. Assigning a fresh object to process.env swaps the
+// object out from under every module that captured the original reference —
+// `import { env } from 'node:process'` keeps pointing at the old one — so later
+// files in the shared fork write to one object and read from another. That is
+// how this file used to leave the chat completions route reading a stale
+// EDITION and answering 404.
+function restoreEnvironment() {
+  for (const key of Object.keys(process.env)) {
+    if (!(key in environment)) delete process.env[key];
+  }
+  for (const [key, value] of Object.entries(environment)) {
+    if (process.env[key] !== value) process.env[key] = value;
+  }
+}
 function localOnly() { for (const key of ['VAULT_ADDR', 'VAULT_TOKEN', 'ALGA_VAULT_ADDR', 'ALGA_VAULT_TOKEN']) delete process.env[key]; }
 beforeAll(async () => {
   localOnly(); getSecret.mockResolvedValue('source key discarded after export'); resetCredentialAesKeyCache();
   stored = await encryptCredentialValues(secret);
   vault = await sealPortableCredentialVault(context, [{ credentialId: id(50), ...stored }], passphrase);
-  process.env = { ...environment }; resetCredentialAesKeyCache();
+  restoreEnvironment(); resetCredentialAesKeyCache();
 });
 beforeEach(() => { localOnly(); getSecret.mockReset().mockResolvedValue('new destination vault key'); resetCredentialAesKeyCache(); });
-afterEach(() => { process.env = { ...environment }; resetCredentialAesKeyCache(); vi.unstubAllGlobals(); });
+afterEach(() => { restoreEnvironment(); resetCredentialAesKeyCache(); vi.unstubAllGlobals(); });
 
 function fixture() {
   const sections = Object.fromEntries(Object.entries(CO_MANAGED_PORTABLE_RESTORE_SECTIONS).map(([name, tables]) =>

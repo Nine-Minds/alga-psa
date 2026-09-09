@@ -14,6 +14,18 @@ import {
 
 const passphrase = 'customer-held portable recovery phrase';
 const originalEnvironment = { ...process.env };
+// Restore keys in place rather than assigning a fresh object: replacing
+// process.env swaps it out from under modules that captured the original
+// reference (`import { env } from 'node:process'` keeps the old one), so a
+// later file in the shared fork writes to one object and reads from another.
+function restoreEnvironment() {
+  for (const key of Object.keys(process.env)) {
+    if (!(key in originalEnvironment)) delete process.env[key];
+  }
+  for (const [key, value] of Object.entries(originalEnvironment)) {
+    if (process.env[key] !== value) process.env[key] = value;
+  }
+}
 
 beforeEach(() => {
   for (const key of ['VAULT_ADDR', 'VAULT_TOKEN', 'ALGA_VAULT_ADDR', 'ALGA_VAULT_TOKEN']) delete process.env[key];
@@ -21,7 +33,7 @@ beforeEach(() => {
   resetCredentialAesKeyCache();
 });
 afterEach(() => {
-  process.env = { ...originalEnvironment };
+  restoreEnvironment();
   resetCredentialAesKeyCache();
   vi.unstubAllGlobals();
 });
