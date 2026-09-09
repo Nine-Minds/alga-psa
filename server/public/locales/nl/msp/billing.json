@@ -141,6 +141,8 @@
   },
   "usage": {
     "bucketHoursOverview": "Overzicht van bucketuren",
+    "bucketLoadError": "De saldi van de urenbundels konden niet worden geladen. Probeer het opnieuw om de huidige saldi te bekijken.",
+    "retryBucketBalances": "Saldi van urenbundels opnieuw laden",
     "usageRecords": "Gebruiksrecords",
     "actions": {
       "addUsage": "Gebruik toevoegen",

@@ -112,7 +112,7 @@ export const addTaxRate = withAuth(async (
     }
 
     const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
       const taxService = new TaxService();
 
       if (!taxRateData.region_code) {
@@ -156,7 +156,7 @@ export const updateTaxRate = withAuth(async (
     }
 
     const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
       const taxService = new TaxService();
 
       if (!taxRateData.tax_rate_id) {

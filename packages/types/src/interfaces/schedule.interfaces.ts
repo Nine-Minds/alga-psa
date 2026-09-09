@@ -38,6 +38,8 @@ export interface IScheduleEntry extends TenantEntity {
   original_entry_id?: string;
   updateType?: IEditScope;
   is_private?: boolean;
+  /** Explicit date-only semantics; absent values are timed, never inferred. */
+  is_all_day?: boolean;
 }
 
 export interface IResource extends TenantEntity {

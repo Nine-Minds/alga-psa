@@ -20,34 +20,34 @@ exports.seed = async function (knex) {
     const [wonderlandProject, emeraldCityProject] = await db.table('projects').insert([
         {
             tenant: tenantId,
-            client_id: db.table('clients').where({
+            client_id: (await db.table('clients').where({
                 client_name: 'Wonderland'
-            }).select('client_id'),
+            }).select('client_id').first())?.client_id ?? null,
             project_name: 'Wonderland Expansion',
             description: 'Expanding Wonderland territories and improving infrastructure',
             start_date: knex.raw("CURRENT_DATE - INTERVAL '2 months'"),
             end_date: knex.raw("CURRENT_DATE + INTERVAL '10 months'"),
             wbs_code: '1',
-            status: db.table('statuses').where({
+            status: (await db.table('statuses').where({
                 name: 'Casting in Progress',
                 'status_type': 'project'
-            }).select('status_id').first(),
+            }).select('status_id').first())?.status_id ?? null,
             project_number: projectNumber1.rows[0].number
         },
         {
             tenant: tenantId,
-            client_id: db.table('clients').where({
+            client_id: (await db.table('clients').where({
                 client_name: 'Emerald City'
-            }).select('client_id'),
+            }).select('client_id').first())?.client_id ?? null,
             project_name: 'Emerald City Beautification',
             description: 'Enhancing the beauty and safety of Emerald City',
             start_date: knex.raw("CURRENT_DATE - INTERVAL '1 month'"),
             end_date: knex.raw("CURRENT_DATE + INTERVAL '5 months'"),
             wbs_code: '2',
-            status: db.table('statuses').where({
+            status: (await db.table('statuses').where({
                 name: 'Casting in Progress',
                 'status_type': 'project'
-            }).select('status_id').first(),
+            }).select('status_id').first())?.status_id ?? null,
             project_number: projectNumber2.rows[0].number
         }
     ]).returning('*');

@@ -66,6 +66,7 @@ const { getTemplate: timeRejected } = require('../../migrations/utils/templates/
 
 // Surveys
 const { getTemplate: surveyTicketClosed } = require('../../migrations/utils/templates/email/surveys/surveyTicketClosed.cjs');
+const { getTemplate: surveyProjectClosed } = require('../../migrations/utils/templates/email/surveys/surveyProjectClosed.cjs');
 
 // SLA
 const { getTemplate: slaWarning } = require('../../migrations/utils/templates/email/sla/slaWarning.cjs');
@@ -112,6 +113,7 @@ const TEMPLATE_GETTERS = [
   timeApproved,
   timeRejected,
   surveyTicketClosed,
+  surveyProjectClosed,
   slaWarning,
   slaBreach,
   slaEscalation,

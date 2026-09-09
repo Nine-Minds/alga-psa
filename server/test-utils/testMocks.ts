@@ -167,8 +167,8 @@ export function mockRBAC(
     (user) => user.roles?.some(role => role.role_name.toLowerCase() === 'admin') ?? true
 ) {
   permissionCheckRef.fn = permissionCheck;
-  vi.mocked(hasPermission).mockImplementation((user: IUserWithRoles, resource?: string, action?: string) =>
-    Promise.resolve(permissionCheckRef.fn(user, resource, action))
+  vi.mocked(hasPermission).mockImplementation((user, resource, action) =>
+    Promise.resolve(permissionCheckRef.fn(user as IUserWithRoles, resource, action))
   );
 }
 

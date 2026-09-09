@@ -1,0 +1,300 @@
+{
+  "scope": "Native representative collection only; test bodies were not executed. Working-tree sample, not immutable CI candidate proof.",
+  "platform": "macOS / Node25 / Vitest3.2.7",
+  "files": [
+    "packages/billing/src/components/billing-dashboard/invoicing/InvoicePreviewPanel.test.tsx",
+    "packages/billing/tests/InvoicePreviewPanel.i18n.test.ts",
+    "packages/db/src/lib/tenant.initialization.test.ts",
+    "packages/emulators/msgraph/tests/teamsOrganizerRouting.test.ts",
+    "packages/integrations/src/utils/calendar/eventMapping.allDaySemantics.test.ts",
+    "packages/scheduling/tests/entryPopup.startEndSync.test.tsx",
+    "packages/scheduling/tests/scheduleCalendar.teamsMeetingRefresh.test.tsx",
+    "server/src/test/unit/billingCycleActions.test.ts",
+    "shared/billingClients/__tests__/hourBlockService.test.ts",
+    "shared/billingClients/__tests__/recurringTiming.windowExpectation.test.ts"
+  ],
+  "identityCount": 63,
+  "identitiesEqual": true,
+  "identities": [
+    {
+      "file": "packages/billing/src/components/billing-dashboard/invoicing/InvoicePreviewPanel.test.tsx",
+      "name": "InvoicePreviewPanel > keeps a previously selected by-ticket invoice renderable with the flag off"
+    },
+    {
+      "file": "packages/billing/src/components/billing-dashboard/invoicing/InvoicePreviewPanel.test.tsx",
+      "name": "InvoicePreviewPanel > keeps an explicit template selection over the resolved invoice template"
+    },
+    {
+      "file": "packages/billing/src/components/billing-dashboard/invoicing/InvoicePreviewPanel.test.tsx",
+      "name": "InvoicePreviewPanel > offers new by-ticket layouts only with the release flag enabled (false)"
+    },
+    {
+      "file": "packages/billing/src/components/billing-dashboard/invoicing/InvoicePreviewPanel.test.tsx",
+      "name": "InvoicePreviewPanel > offers new by-ticket layouts only with the release flag enabled (true)"
+    },
+    {
+      "file": "packages/billing/src/components/billing-dashboard/invoicing/InvoicePreviewPanel.test.tsx",
+      "name": "InvoicePreviewPanel > uses the invoice-resolved template when no explicit template is selected"
+    },
+    {
+      "file": "packages/billing/tests/InvoicePreviewPanel.i18n.test.ts",
+      "name": "InvoicePreviewPanel i18n wiring contract > T023: panel heading, action buttons, template picker, and source-quote action resolve through msp/invoicing"
+    },
+    {
+      "file": "packages/billing/tests/InvoicePreviewPanel.i18n.test.ts",
+      "name": "InvoicePreviewPanel i18n wiring contract > T024: empty state, loading state, error fallback, and preview error alerts resolve through msp/invoicing"
+    },
+    {
+      "file": "packages/db/src/lib/tenant.initialization.test.ts",
+      "name": "reports teardown failure and permits a fresh pool on a later request"
+    },
+    {
+      "file": "packages/db/src/lib/tenant.initialization.test.ts",
+      "name": "reset waits for an initializing pool and destroys it before another cold request"
+    },
+    {
+      "file": "packages/db/src/lib/tenant.initialization.test.ts",
+      "name": "shares concurrent teardown and holds new requests until the old pool is closed"
+    },
+    {
+      "file": "packages/db/src/lib/tenant.initialization.test.ts",
+      "name": "shares initialization failure but permits a later successful retry"
+    },
+    {
+      "file": "packages/db/src/lib/tenant.initialization.test.ts",
+      "name": "shares one pool across concurrent cold requests waiting for configuration"
+    },
+    {
+      "file": "packages/emulators/msgraph/tests/teamsOrganizerRouting.test.ts",
+      "name": "Teams organizer provider routing > T072: 'enterprise' 'save' through real Graph HTTP"
+    },
+    {
+      "file": "packages/emulators/msgraph/tests/teamsOrganizerRouting.test.ts",
+      "name": "Teams organizer provider routing > T072: 'enterprise' 'unknown organizer recovery' through real Graph HTTP"
+    },
+    {
+      "file": "packages/emulators/msgraph/tests/teamsOrganizerRouting.test.ts",
+      "name": "Teams organizer provider routing > T072: 'workspace' 'save' through real Graph HTTP"
+    },
+    {
+      "file": "packages/emulators/msgraph/tests/teamsOrganizerRouting.test.ts",
+      "name": "Teams organizer provider routing > T072: 'workspace' 'unknown organizer recovery' through real Graph HTTP"
+    },
+    {
+      "file": "packages/integrations/src/utils/calendar/eventMapping.allDaySemantics.test.ts",
+      "name": "enterprise explicit all-day synchronization semantics > exports legacy midnight entries without provenance as timed"
+    },
+    {
+      "file": "packages/integrations/src/utils/calendar/eventMapping.allDaySemantics.test.ts",
+      "name": "enterprise explicit all-day synchronization semantics > google records all-day provenance rather than inferring it from stored timestamps"
+    },
+    {
+      "file": "packages/integrations/src/utils/calendar/eventMapping.allDaySemantics.test.ts",
+      "name": "enterprise explicit all-day synchronization semantics > google retains a timed event that begins and ends exactly at UTC midnight"
+    },
+    {
+      "file": "packages/integrations/src/utils/calendar/eventMapping.allDaySemantics.test.ts",
+      "name": "enterprise explicit all-day synchronization semantics > microsoft records all-day provenance rather than inferring it from stored timestamps"
+    },
+    {
+      "file": "packages/integrations/src/utils/calendar/eventMapping.allDaySemantics.test.ts",
+      "name": "enterprise explicit all-day synchronization semantics > microsoft retains a timed event that begins and ends exactly at UTC midnight"
+    },
+    {
+      "file": "packages/integrations/src/utils/calendar/eventMapping.allDaySemantics.test.ts",
+      "name": "workspace explicit all-day synchronization semantics > exports legacy midnight entries without provenance as timed"
+    },
+    {
+      "file": "packages/integrations/src/utils/calendar/eventMapping.allDaySemantics.test.ts",
+      "name": "workspace explicit all-day synchronization semantics > google records all-day provenance rather than inferring it from stored timestamps"
+    },
+    {
+      "file": "packages/integrations/src/utils/calendar/eventMapping.allDaySemantics.test.ts",
+      "name": "workspace explicit all-day synchronization semantics > google retains a timed event that begins and ends exactly at UTC midnight"
+    },
+    {
+      "file": "packages/integrations/src/utils/calendar/eventMapping.allDaySemantics.test.ts",
+      "name": "workspace explicit all-day synchronization semantics > microsoft records all-day provenance rather than inferring it from stored timestamps"
+    },
+    {
+      "file": "packages/integrations/src/utils/calendar/eventMapping.allDaySemantics.test.ts",
+      "name": "workspace explicit all-day synchronization semantics > microsoft retains a timed event that begins and ends exactly at UTC midnight"
+    },
+    {
+      "file": "packages/scheduling/tests/entryPopup.startEndSync.test.tsx",
+      "name": "EntryPopup start/end synchronisation > adopts a new duration once the end itself is edited"
+    },
+    {
+      "file": "packages/scheduling/tests/entryPopup.startEndSync.test.tsx",
+      "name": "EntryPopup start/end synchronisation > keeps the hour-long duration when the start is built hour, minute, then period"
+    },
+    {
+      "file": "packages/scheduling/tests/entryPopup.startEndSync.test.tsx",
+      "name": "EntryPopup start/end synchronisation > keeps the hour-long duration when the start is built period, hour, then minute"
+    },
+    {
+      "file": "packages/scheduling/tests/entryPopup.startEndSync.test.tsx",
+      "name": "EntryPopup start/end synchronisation > preserves recurrence date semantics (existing false, all-day false)"
+    },
+    {
+      "file": "packages/scheduling/tests/entryPopup.startEndSync.test.tsx",
+      "name": "EntryPopup start/end synchronisation > preserves recurrence date semantics (existing false, all-day true)"
+    },
+    {
+      "file": "packages/scheduling/tests/entryPopup.startEndSync.test.tsx",
+      "name": "EntryPopup start/end synchronisation > preserves recurrence date semantics (existing true, all-day false)"
+    },
+    {
+      "file": "packages/scheduling/tests/entryPopup.startEndSync.test.tsx",
+      "name": "EntryPopup start/end synchronisation > preserves recurrence date semantics (existing true, all-day true)"
+    },
+    {
+      "file": "packages/scheduling/tests/entryPopup.startEndSync.test.tsx",
+      "name": "EntryPopup start/end synchronisation > refuses to save an entry that ends before it starts"
+    },
+    {
+      "file": "packages/scheduling/tests/entryPopup.startEndSync.test.tsx",
+      "name": "EntryPopup start/end synchronisation > shifts the end forward, keeping the duration, when the start passes it"
+    },
+    {
+      "file": "packages/scheduling/tests/entryPopup.startEndSync.test.tsx",
+      "name": "EntryPopup start/end synchronisation > shows imported all-day boundaries at local midnight and preserves their UTC dates on save"
+    },
+    {
+      "file": "packages/scheduling/tests/entryPopup.startEndSync.test.tsx",
+      "name": "EntryPopup start/end synchronisation > warns inline while the end is not after the start, without waiting for submit"
+    },
+    {
+      "file": "packages/scheduling/tests/scheduleCalendar.teamsMeetingRefresh.test.tsx",
+      "name": "ScheduleCalendar refreshes its events after a Teams meeting is created > recurring occurrence: the refetch replaces the dead virtual event with the materialized entry and save targets it"
+    },
+    {
+      "file": "packages/scheduling/tests/scheduleCalendar.teamsMeetingRefresh.test.tsx",
+      "name": "ScheduleCalendar refreshes its events after a Teams meeting is created > standalone entry: creating a meeting refetches events (not via save) so reopen binds the persisted entry"
+    },
+    {
+      "file": "packages/scheduling/tests/scheduleCalendar.teamsMeetingRefresh.test.tsx",
+      "name": "ScheduleCalendar refreshes its events after a Teams meeting is created > supplies local all-day grid dates and persists exclusive UTC dates after resize and drop"
+    },
+    {
+      "file": "server/src/test/unit/billingCycleActions.test.ts",
+      "name": "Billing Cycle Actions > getAllBillingCycles > should return all billing cycles"
+    },
+    {
+      "file": "server/src/test/unit/billingCycleActions.test.ts",
+      "name": "Billing Cycle Actions > getAllBillingCycles > should return an empty object if no billing cycles are set"
+    },
+    {
+      "file": "server/src/test/unit/billingCycleActions.test.ts",
+      "name": "Billing Cycle Actions > getAllBillingCycles > should throw an error if user is not authenticated"
+    },
+    {
+      "file": "server/src/test/unit/billingCycleActions.test.ts",
+      "name": "Billing Cycle Actions > getBillingCycle > should return \"monthly\" if no billing cycle is set"
+    },
+    {
+      "file": "server/src/test/unit/billingCycleActions.test.ts",
+      "name": "Billing Cycle Actions > getBillingCycle > should return the billing cycle for a client"
+    },
+    {
+      "file": "server/src/test/unit/billingCycleActions.test.ts",
+      "name": "Billing Cycle Actions > getBillingCycle > should throw an error if user is not authenticated"
+    },
+    {
+      "file": "server/src/test/unit/billingCycleActions.test.ts",
+      "name": "Billing Cycle Actions > updateBillingCycle > should throw an error if user is not authenticated"
+    },
+    {
+      "file": "server/src/test/unit/billingCycleActions.test.ts",
+      "name": "Billing Cycle Actions > updateBillingCycle > should update the billing cycle for a client"
+    },
+    {
+      "file": "shared/billingClients/__tests__/hourBlockService.test.ts",
+      "name": "computeFifoAllocation > allocates from a single block up to its remaining minutes"
+    },
+    {
+      "file": "shared/billingClients/__tests__/hourBlockService.test.ts",
+      "name": "computeFifoAllocation > allocates the full remaining minutes of the last covering block"
+    },
+    {
+      "file": "shared/billingClients/__tests__/hourBlockService.test.ts",
+      "name": "computeFifoAllocation > honors FIFO order (expiration-then-purchase) by consuming blocks in the given order"
+    },
+    {
+      "file": "shared/billingClients/__tests__/hourBlockService.test.ts",
+      "name": "computeFifoAllocation > is idempotent: same inputs yield the same allocations"
+    },
+    {
+      "file": "shared/billingClients/__tests__/hourBlockService.test.ts",
+      "name": "computeFifoAllocation > leaves the uncovered remainder unallocated when blocks run dry"
+    },
+    {
+      "file": "shared/billingClients/__tests__/hourBlockService.test.ts",
+      "name": "computeFifoAllocation > returns nothing for a non-positive need"
+    },
+    {
+      "file": "shared/billingClients/__tests__/hourBlockService.test.ts",
+      "name": "computeFifoAllocation > skips depleted blocks"
+    },
+    {
+      "file": "shared/billingClients/__tests__/hourBlockService.test.ts",
+      "name": "computeFifoAllocation > spans a single entry across two blocks, exhausting the first"
+    },
+    {
+      "file": "shared/billingClients/__tests__/recurringTiming.windowExpectation.test.ts",
+      "name": "isRecurringLineExpectedInClientCadenceWindow > does not expect an advance line that ended before the window start"
+    },
+    {
+      "file": "shared/billingClients/__tests__/recurringTiming.windowExpectation.test.ts",
+      "name": "isRecurringLineExpectedInClientCadenceWindow > does not expect an advance line whose assignment starts at the window end"
+    },
+    {
+      "file": "shared/billingClients/__tests__/recurringTiming.windowExpectation.test.ts",
+      "name": "isRecurringLineExpectedInClientCadenceWindow > does not expect an arrears line assigned after the window start"
+    },
+    {
+      "file": "shared/billingClients/__tests__/recurringTiming.windowExpectation.test.ts",
+      "name": "isRecurringLineExpectedInClientCadenceWindow > does not expect an arrears line assigned exactly at the window start"
+    },
+    {
+      "file": "shared/billingClients/__tests__/recurringTiming.windowExpectation.test.ts",
+      "name": "isRecurringLineExpectedInClientCadenceWindow > expects an advance line assigned at the window start"
+    },
+    {
+      "file": "shared/billingClients/__tests__/recurringTiming.windowExpectation.test.ts",
+      "name": "isRecurringLineExpectedInClientCadenceWindow > expects an arrears line that began mid prior period (prorated first period)"
+    },
+    {
+      "file": "shared/billingClients/__tests__/recurringTiming.windowExpectation.test.ts",
+      "name": "isRecurringLineExpectedInClientCadenceWindow > expects an arrears line whose assignment began before the window start"
+    }
+  ],
+  "timingSeconds": {
+    "oneWorker": 7.98,
+    "twoWorkers": 5.88
+  },
+  "processTreeSamples": [
+    {
+      "workers": 1,
+      "exit": 0,
+      "seconds": 8.39457229099935,
+      "sampledTreePeakRSSKiB": 835952,
+      "processesAtPeak": 3,
+      "samplingSeconds": 0.1
+    },
+    {
+      "workers": 2,
+      "exit": 0,
+      "seconds": 4.97228012495907,
+      "sampledTreePeakRSSKiB": 948528,
+      "processesAtPeak": 4,
+      "samplingSeconds": 0.1
+    }
+  ],
+  "limits": [
+    "10 representative files, not the complete 2745-file CI suite.",
+    "Process-tree RSS sums can double-count shared pages; 100ms samples can miss brief spikes.",
+    "Local Node25/macOS behavior does not prove full Node22/Linux CI performance or memory.",
+    "Execution remains serial; both independent inventories and completeness reconciliation remain required."
+  ]
+}

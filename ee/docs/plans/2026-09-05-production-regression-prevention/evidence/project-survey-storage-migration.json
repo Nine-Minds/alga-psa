@@ -1,0 +1,36 @@
+{
+  "scope": "Project survey storage migration foundation",
+  "baseRevision": "f7f1ee7cde",
+  "workingTreeDirty": true,
+  "migration": "server/migrations/20260907190000_add_project_survey_subjects.cjs",
+  "test": "server/migrations/__tests__/projectSurveySubjectsMigration.integration.test.ts",
+  "validation": {
+    "postgresql": "passed",
+    "distributedCitus": "passed",
+    "fixtureCleanup": "transaction rollback including isolated schema"
+  },
+  "assertions": [
+    "Existing ticket rows retained",
+    "Project invitation and response rows accepted",
+    "Foreign-tenant project rejected by composite foreign key",
+    "Missing or ambiguous subject rejected",
+    "Lossy downgrade rejected without changing project rows",
+    "Project deletion cascades survey rows",
+    "Safe downgrade restores ticket requirement and re-upgrade succeeds"
+  ],
+  "artifacts": [
+    {
+      "path": "/tmp/alga-project-survey-migration-pg.log",
+      "sha256": "c0e0becc4b241941e956d6a1966e3d2d4fa1d22cf1c161744c391ab102c592af"
+    },
+    {
+      "path": "/tmp/alga-project-survey-migration-citus.log",
+      "sha256": "06ccd9e717c551f4f53c64a2978057342604c3bdf07f905c8abd80fecf69ee86"
+    }
+  ],
+  "limits": [
+    "Minimal relational fixtures exercise actual migration SQL; full application migration chain remains unverified.",
+    "Application invitation/token/response/analytics support remains to implement.",
+    "Project dispatch test remains skipped until actual journey works."
+  ]
+}

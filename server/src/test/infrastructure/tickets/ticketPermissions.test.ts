@@ -1,25 +1,19 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
 import {
   setupCommonMocks,
-  mockNextHeaders,
-  mockNextAuth,
-  mockRBAC,
   createMockUser
 } from '../../../../test-utils/testMocks';
 import { v4 as uuidv4 } from 'uuid';
-import { ITicket } from '../../interfaces/ticket.interfaces';
+import type { ITicket } from '@alga-psa/types';
 import * as ticketActions from '@alga-psa/tickets/actions/ticketActions';
 import * as auth from '@alga-psa/auth';
+import * as rbac from '@alga-psa/auth/rbac';
 import { TestContext } from '../../../../test-utils/testContext';
 import {
-  createTenant,
-  createClient,
-  createUser,
-  createTestEnvironment
+  createUser
 } from '../../../../test-utils/testDataFactory';
 import {
-  expectPermissionDenied,
-  expectError
+  expectPermissionDenied
 } from '../../../../test-utils/errorUtils';
 import { tenantDb } from '@alga-psa/db';
 
@@ -39,7 +33,7 @@ describe('Ticket Permissions Infrastructure', () => {
     // file.
     runSeeds: true
   });
-  let testTicket: ITicket;
+  let testTicket: ITicket & { tenant: string; client_id: string };
   let regularUser: any;
   let adminUser: any;
   let boardId: string;
@@ -47,6 +41,8 @@ describe('Ticket Permissions Infrastructure', () => {
   let contactId: string;
   let statusId: string;
   let priorityId: string;
+  let regularRoleId: string;
+  let realPermissionCheck: typeof rbac.hasPermission;
 
   function tenantScope(tenantId: string) {
     return tenantDb(context.db, tenantId);
@@ -59,6 +55,7 @@ describe('Ticket Permissions Infrastructure', () => {
   // Set up test context with database connection
   beforeAll(async () => {
     await context.initialize();
+    realPermissionCheck = (await vi.importActual<typeof rbac>('@alga-psa/auth/rbac')).hasPermission;
   });
 
   afterAll(async () => {
@@ -158,15 +155,31 @@ describe('Ticket Permissions Infrastructure', () => {
     // Set up mocks
     setupCommonMocks({
       tenantId,
-      user: createMockUser('admin')
+      user: createMockUser('internal')
     });
 
-    // Mock RBAC with proper type annotations
-    mockRBAC((user: { username: string }, resource: string, action: string): boolean => {
-      if (user.username === 'janeadmin') return true;
-      if (user.username === 'johndoe' && resource === 'ticket' && action === 'read') return true;
-      return false;
-    });
+    // Keep only the session/transaction seams. Permission decisions and role
+    // hydration use production RBAC and the migrated database.
+    vi.mocked(rbac.hasPermission).mockImplementation(realPermissionCheck);
+    vi.mocked(auth.hasPermission).mockImplementation(realPermissionCheck);
+    const grantRole = async (userId: string, actions: string[]) => {
+      const roleId = uuidv4();
+      await tenantTable(tenantId, 'roles').insert({
+        tenant: tenantId, role_id: roleId, role_name: `Ticket test ${roleId}`,
+        msp: true, client: false,
+      });
+      const permissions = await tenantTable(tenantId, 'permissions')
+        .where({ resource: 'ticket', msp: true }).whereIn('action', actions)
+        .select('permission_id', 'action');
+      expect(new Set(permissions.map(permission => permission.action))).toEqual(new Set(actions));
+      await tenantTable(tenantId, 'role_permissions').insert(permissions.map(permission => ({
+        tenant: tenantId, role_id: roleId, permission_id: permission.permission_id,
+      })));
+      await tenantTable(tenantId, 'user_roles').insert({ tenant: tenantId, role_id: roleId, user_id: userId });
+      return roleId;
+    };
+    regularRoleId = await grantRole(regularUser.user_id, ['read']);
+    await grantRole(adminUser.user_id, ['read', 'update', 'create']);
 
     // Create test ticket
     testTicket = {
@@ -204,13 +217,14 @@ describe('Ticket Permissions Infrastructure', () => {
   it('should allow regular user to view tickets', async () => {
     vi.mocked(auth.getCurrentUser).mockResolvedValue(regularUser);
     const tickets = await ticketActions.getTickets();
+    if (!Array.isArray(tickets)) throw new Error(JSON.stringify(tickets));
     expect(tickets.length).toBeGreaterThanOrEqual(1);
     expect(tickets.map((ticket): string => ticket.ticket_id!)).toContain(testTicket.ticket_id);
   });
 
   it('should allow admin user to update a ticket', async () => {
     const updateData: Partial<ITicket> = {
-      status_id: statusId,
+      title: 'Updated by authorized user',
       updated_by: adminUser.user_id,
     };
     vi.mocked(auth.getCurrentUser).mockResolvedValue(adminUser);
@@ -218,12 +232,13 @@ describe('Ticket Permissions Infrastructure', () => {
     expect(result).toBe('success');
 
     const updatedTicket = await tenantTable(testTicket.tenant, 'tickets').where('ticket_id', testTicket.ticket_id).first();
-    expect(updatedTicket.status_id).toBe(updateData.status_id);
+    expect(updatedTicket.title).toBe(updateData.title);
+    expect(updatedTicket.updated_by).toBe(adminUser.user_id);
   });
 
   it('should not allow regular user to update a ticket', async () => {
     const updateData: Partial<ITicket> = {
-      status_id: statusId,
+      title: 'Unauthorized edit',
       updated_by: regularUser.user_id,
     };
 
@@ -233,7 +248,8 @@ describe('Ticket Permissions Infrastructure', () => {
     );
 
     const unchangedTicket = await tenantTable(testTicket.tenant, 'tickets').where('ticket_id', testTicket.ticket_id).first();
-    expect(unchangedTicket.status_id).toBe(testTicket.status_id);
+    expect(unchangedTicket.title).toBe(testTicket.title);
+    expect(unchangedTicket.updated_by).toBe(testTicket.updated_by);
   });
 
   it('should allow admin user to create a ticket', async () => {
@@ -249,6 +265,7 @@ describe('Ticket Permissions Infrastructure', () => {
 
     vi.mocked(auth.getCurrentUser).mockResolvedValue(adminUser);
     const newTicket = await ticketActions.addTicket(mockFormData);
+    if (!newTicket || !('ticket_id' in newTicket)) throw new Error(JSON.stringify(newTicket));
     expect(newTicket).toBeDefined();
     expect(newTicket?.title).toBe('New Test Ticket');
 
@@ -272,8 +289,36 @@ describe('Ticket Permissions Infrastructure', () => {
     mockFormData.append('priority_id', priorityId);
 
     vi.mocked(auth.getCurrentUser).mockResolvedValue(regularUser);
+    const before = await tenantTable(testTicket.tenant, 'tickets').select('ticket_id', 'title');
     await expectPermissionDenied(
       () => ticketActions.addTicket(mockFormData)
     );
+    expect(await tenantTable(testTicket.tenant, 'tickets').select('ticket_id', 'title')).toEqual(before);
   });
+
+  it('allows the administrator to read the persisted ticket', async () => {
+    vi.mocked(auth.getCurrentUser).mockResolvedValue(adminUser);
+    const result = await ticketActions.getTickets();
+    expect(result).toEqual(expect.arrayContaining([expect.objectContaining({ ticket_id: testTicket.ticket_id, title: testTicket.title })]));
+  });
+
+  it('denies reads immediately after the user role is revoked', async () => {
+    vi.mocked(auth.getCurrentUser).mockResolvedValue(regularUser);
+    expect(await ticketActions.getTickets()).toEqual(expect.arrayContaining([expect.objectContaining({ ticket_id: testTicket.ticket_id })]));
+    await tenantTable(testTicket.tenant, 'user_roles').where({ user_id: regularUser.user_id }).delete();
+    await expectPermissionDenied(() => ticketActions.getTickets());
+  });
+
+  it('does not grant an MSP user access through a client-only role', async () => {
+    vi.mocked(auth.getCurrentUser).mockResolvedValue(regularUser);
+    await tenantTable(testTicket.tenant, 'roles').where({ role_id: regularRoleId }).update({ msp: false, client: true });
+    await expectPermissionDenied(() => ticketActions.getTickets());
+  });
+
+  it('denies reads when the role no longer grants the read permission', async () => {
+    vi.mocked(auth.getCurrentUser).mockResolvedValue(regularUser);
+    await tenantTable(testTicket.tenant, 'role_permissions').where({ role_id: regularRoleId }).delete();
+    await expectPermissionDenied(() => ticketActions.getTickets());
+  });
+
 });

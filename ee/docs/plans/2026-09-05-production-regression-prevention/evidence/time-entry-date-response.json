@@ -1,0 +1,46 @@
+{
+  "status": "source repair verified; built-candidate HTTP rerun pending",
+  "sourceHeadBeforeRepair": "34f9af69a9",
+  "reproducer": {
+    "builtApplicationRevision": "9b12c5",
+    "response": "work_date=2024-07-01T00:00:00.000Z",
+    "expected": "work_date=2024-07-01",
+    "contract": "server/src/lib/api/schemas/timeEntry.ts timeEntryResponseSchema",
+    "httpLogLocal": "/tmp/alga-api-fixtures-full.log"
+  },
+  "change": "Project PostgreSQL work_date with to_char before pg Date hydration, preserving calendar date independently of Node timezone",
+  "paths": [
+    "getById (and create/update responses which reload it)",
+    "list",
+    "searchTimeEntries",
+    "search",
+    "JSON export",
+    "startTimeTracking",
+    "getActiveSession"
+  ],
+  "databaseRegression": {
+    "file": "server/src/test/integration/api/timeEntryWorkDateResponse.integration.test.ts",
+    "database": "time_date_response_82cc",
+    "timezones": [
+      "UTC",
+      "Pacific/Auckland",
+      "America/Los_Angeles"
+    ],
+    "beforeFailed": 3,
+    "afterPassed": 3,
+    "afterDurationSeconds": 15.2,
+    "beforeLogLocal": "/tmp/alga-api-time-date-before.log",
+    "afterLogLocal": "/tmp/alga-api-time-date-after-v2.log",
+    "note": "Real migrated PostgreSQL and actual service queries. Connection routing is supplied by a getKnex spy; no business reads or database results are mocked. Expanded after-test also covers the direct search method."
+  },
+  "relatedUnits": {
+    "files": 2,
+    "passed": 5,
+    "logLocal": "/tmp/alga-api-time-date-unit.log"
+  },
+  "types": {
+    "status": "passed",
+    "logLocal": "/tmp/alga-api-time-date-types.log"
+  },
+  "httpAcceptance": "Existing timezone API case remains strict and now checks a reopened entry and unchanged start_time. Application image predates repair, so a successful rebuilt HTTP run is still required."
+}

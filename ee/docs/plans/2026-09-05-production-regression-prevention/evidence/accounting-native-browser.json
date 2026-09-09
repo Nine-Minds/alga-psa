@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "scope": "QBO and Xero enterprise browser journeys",
+  "runId": 34104450316,
+  "artifactId": 10013131758,
+  "revision": "7c52ed7d53ade3306f2ec7fae2971bd5868efaf2",
+  "configuration": {
+    "edition": "enterprise",
+    "sourceRevision": "7c52ed7d53ade3306f2ec7fae2971bd5868efaf2",
+    "authentication": "real-credentials",
+    "serverLifecycle": "externally-started-production-build"
+  },
+  "status": "passed",
+  "fullBrowserGateStatus": "failed",
+  "fullBrowserCounts": {
+    "passed": 24,
+    "failed": 1,
+    "flaky": 0,
+    "skipped": 0,
+    "interrupted": 0,
+    "missing": 0
+  },
+  "tests": [
+    {
+      "file": "e2e-tests/tests/qbo-export.spec.ts",
+      "title": [
+        "QuickBooks OAuth and UI mapping export to the selected company and recover without duplicate invoices"
+      ],
+      "project": "enterprise-chromium",
+      "status": "passed",
+      "retry": 0,
+      "duration": 32991
+    },
+    {
+      "file": "e2e-tests/tests/xero-export.spec.ts",
+      "title": [
+        "Xero OAuth and UI mapping export to the selected organisation and recover without duplicate invoices"
+      ],
+      "project": "enterprise-chromium",
+      "status": "passed",
+      "retry": 0,
+      "duration": 29135
+    }
+  ],
+  "sourceHashes": {
+    "results.json": "b53afef0092a54dc86968fadc4d5e22636329e9c994b90a8185aceabeba5bf93",
+    "collected.json": "bc2593139e3ebf802b037e3eda27d558aba8cbe1093cafdce5a11856c62233d9",
+    "evidence.json": "f9c6a31a2552a32c040f41464cb8316f9826ac77d0f523ec4925e4aa3f688185"
+  },
+  "limits": [
+    "Full browser gate still fails on invoice ticket fixture setup.",
+    "Company/organisation selection follows the supported OAuth provider response; Xero uses the first connected organisation, not an additional Alga organisation picker.",
+    "Emulator success does not establish live vendor parity. Aggregate release enforcement and broader fault matrix remain incomplete."
+  ]
+}

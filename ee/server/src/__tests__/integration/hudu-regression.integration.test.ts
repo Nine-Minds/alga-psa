@@ -134,6 +134,7 @@ describe('hudu regression — tenant isolation (DB)', () => {
       'alga_entity_id',
       'alga_entity_type',
       'created_at',
+      'deleted_at',
       'external_entity_id',
       'external_realm_id',
       'id',

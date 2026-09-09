@@ -24,6 +24,7 @@ mockKnex.transaction = async (handler: (trx: typeof mockTrx) => Promise<unknown>
 const createTenantKnex = vi.fn();
 const hasPermissionMock = vi.fn();
 const sendEmailMock = vi.fn();
+const recalculateQuoteFinancialsMock = vi.fn();
 const getTenantEmailServiceInstance = vi.fn(() => ({ sendEmail: (...args: any[]) => sendEmailMock(...args) }));
 const generatePDFMock = vi.fn();
 const generateAndStoreMock = vi.fn();
@@ -104,6 +105,10 @@ vi.mock('../../src/lib/quoteApprovalSettings', async (importOriginal) => {
     getQuoteApprovalWorkflowSettings: (...args: any[]) => approvalSettingsMock(...args),
   };
 });
+
+vi.mock('../../src/services/quoteCalculationService', () => ({
+  recalculateQuoteFinancials: (...args: any[]) => recalculateQuoteFinancialsMock(...args),
+}));
 
 vi.mock('../../src/services', () => ({
   buildQuoteConversionPreview: vi.fn(),
@@ -238,6 +243,7 @@ describe('quoteActions', () => {
       throw new Error(`Unexpected mockKnex table access: ${table}`);
     });
     createTenantKnex.mockResolvedValue({ knex: mockKnex, tenant: TENANT_ID });
+    recalculateQuoteFinancialsMock.mockResolvedValue(undefined);
     delete emailTemplateRows.tenant_email_templates;
     delete emailTemplateRows.system_email_templates;
     emailTemplateLookups.length = 0;
@@ -476,7 +482,8 @@ describe('quoteActions', () => {
         is_optional: true,
         is_recurring: true,
         billing_frequency: 'monthly',
-      })
+      }),
+      { catalogDescriptionSnapshot: null }
     );
     expect(QuoteItem.create).toHaveBeenNthCalledWith(
       2,
@@ -487,7 +494,8 @@ describe('quoteActions', () => {
         description: 'Onboarding',
         is_optional: false,
         is_recurring: false,
-      })
+      }),
+      { catalogDescriptionSnapshot: null }
     );
     expect(result).toMatchObject({ quote_id: QUOTE_ID, quote_items: templateQuote.quote_items });
   });
@@ -876,6 +884,106 @@ describe('quoteActions', () => {
       valid_until: null,
       is_template: true,
     });
+  });
+
+  const targetedItems = (displayDiscountFirst = true): any[] => {
+    const base = {
+      quote_item_id: 'base-old-id',
+      quote_id: QUOTE_ID,
+      description: 'Target base item',
+      quantity: 1,
+      unit_price: 2500,
+      total_price: 2500,
+      net_amount: 2500,
+      tax_amount: 0,
+      display_order: displayDiscountFirst ? 1 : 0,
+      is_optional: false,
+      is_selected: true,
+      is_recurring: false,
+      billing_frequency: null,
+      is_taxable: true,
+      billing_method: 'fixed',
+    };
+    const discount = {
+      quote_item_id: 'disc-old-id',
+      quote_id: QUOTE_ID,
+      description: 'Item-targeted discount',
+      quantity: 1,
+      unit_price: 500,
+      total_price: 500,
+      net_amount: 500,
+      tax_amount: 0,
+      display_order: displayDiscountFirst ? 0 : 1,
+      is_optional: false,
+      is_selected: true,
+      is_recurring: false,
+      billing_frequency: null,
+      is_discount: true,
+      discount_type: 'fixed',
+      applies_to_item_id: 'base-old-id',
+      applies_to_service_id: null,
+      is_taxable: false,
+      billing_method: 'fixed',
+    };
+    return displayDiscountFirst ? [discount, base] : [base, discount];
+  };
+
+  const stubItemCreateWithSequentialIds = (ids: string[]) => {
+    let index = 0;
+    vi.spyOn(QuoteItem, 'create').mockImplementation(async (_knex, _tenant, input: any) => ({
+      quote_item_id: ids[Math.min(index++, ids.length - 1)],
+      ...input,
+    }) as any);
+  };
+
+  it('T140: createQuoteFromTemplate remaps item-targeted discounts even when stored before their target', async () => {
+    vi.spyOn(Quote, 'getById')
+      .mockResolvedValueOnce({ ...templateQuote, is_template: true, quote_items: targetedItems(true) } as any)
+      .mockResolvedValueOnce({ quote_id: QUOTE_ID, quote_number: 'Q-0101', is_template: false, quote_items: [] } as any);
+    vi.spyOn(Quote, 'create').mockResolvedValueOnce({ quote_id: QUOTE_ID } as any);
+    stubItemCreateWithSequentialIds(['new-base-1', 'new-disc-1']);
+
+    const { createQuoteFromTemplate } = await import('../../src/actions/quoteActions');
+    await createQuoteFromTemplate(templateQuote.quote_id, {
+      client_id: baseQuoteInput.client_id,
+      quote_date: baseQuoteInput.quote_date,
+      valid_until: baseQuoteInput.valid_until,
+    } as any);
+
+    const discountCall = QuoteItem.create.mock.calls.find((call: any[]) => (call[2] as any)?.is_discount === true);
+    expect(discountCall).toBeTruthy();
+    expect((discountCall![2] as any).applies_to_item_id).toBe('new-base-1');
+  });
+
+  it('T141: duplicateQuote remaps item-targeted discounts onto the copied base item', async () => {
+    vi.spyOn(Quote, 'getById')
+      .mockResolvedValueOnce({ ...templateQuote, quote_id: QUOTE_ID, quote_number: 'Q-0102', is_template: false, quote_items: targetedItems(false) } as any)
+      .mockResolvedValueOnce({ quote_id: 'dup-target', quote_number: 'Q-0103', is_template: false, quote_items: [] } as any);
+    vi.spyOn(Quote, 'create').mockResolvedValueOnce({ quote_id: 'dup-target' } as any);
+    stubItemCreateWithSequentialIds(['new-base-2', 'new-disc-2']);
+
+    const { duplicateQuote } = await import('../../src/actions/quoteActions');
+    await duplicateQuote(QUOTE_ID);
+
+    const discountCall = QuoteItem.create.mock.calls.find((call: any[]) => (call[2] as any)?.is_discount === true);
+    expect(discountCall).toBeTruthy();
+    expect((discountCall![2] as any).applies_to_item_id).toBe('new-base-2');
+  });
+
+  it('T142: saveQuoteAsTemplate remaps item-targeted discounts and forces selection', async () => {
+    vi.spyOn(Quote, 'getById')
+      .mockResolvedValueOnce({ ...templateQuote, quote_id: QUOTE_ID, quote_number: 'Q-0104', is_template: false, quote_items: targetedItems(true) } as any)
+      .mockResolvedValueOnce({ quote_id: 'template-target', quote_number: null, is_template: true, quote_items: [] } as any);
+    vi.spyOn(Quote, 'create').mockResolvedValueOnce({ quote_id: 'template-target' } as any);
+    stubItemCreateWithSequentialIds(['new-base-3', 'new-disc-3']);
+
+    const { saveQuoteAsTemplate } = await import('../../src/actions/quoteActions');
+    await saveQuoteAsTemplate(QUOTE_ID);
+
+    const discountCall = QuoteItem.create.mock.calls.find((call: any[]) => (call[2] as any)?.is_discount === true);
+    expect(discountCall).toBeTruthy();
+    expect((discountCall![2] as any).applies_to_item_id).toBe('new-base-3');
+    expect((discountCall![2] as any).is_selected).toBe(true);
   });
 
   it('T089: sendQuote returns an action error for quotes not in draft or approved status', async () => {

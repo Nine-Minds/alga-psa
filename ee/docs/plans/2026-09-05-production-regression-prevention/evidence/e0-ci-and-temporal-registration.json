@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "baseRevision": "97af25d6b4",
+  "ciRun": 34256378317,
+  "ciConclusion": "failure",
+  "ciSourceRevision": "e0bc8af8aa1c5aaacfbb4bf456812fefde2da768",
+  "serverUnit": {
+    "filesPassed": 2729,
+    "executableTestsPassed": 14856,
+    "todo": 3,
+    "failure": "Strict completeness gate rejects unresolved tax-policy TODOs"
+  },
+  "inventoryFinding": "Three trial-payment-reminder suites absent from explicit Temporal runner include lists; API inventory missing because browser image builds failed",
+  "fix": {
+    "readinessFilesRegistered": 2,
+    "engineFilesRegistered": 1,
+    "fastTestsPassed": 14,
+    "nativeEngineTestsPassed": 10,
+    "readinessCollectedFiles": 45,
+    "engineCollectedFiles": 12,
+    "actualCollectionRecognizedByInventory": true,
+    "discoveryTestsPassed": 7
+  },
+  "limits": [
+    "Current-source CI must validate published fixes",
+    "Tax policy remains unresolved",
+    "Browser build-cycle correction has native graph evidence but still requires current CI"
+  ]
+}

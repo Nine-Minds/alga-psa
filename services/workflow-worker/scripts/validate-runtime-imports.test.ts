@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -22,7 +23,7 @@ async function removeDirIfExists(dirPath: string): Promise<void> {
 
 describe('validate-runtime-imports', () => {
   const tempDirs: string[] = [];
-  const scriptPath = path.resolve(process.cwd(), 'scripts/validate-runtime-imports.mjs');
+  const scriptPath = fileURLToPath(new URL('./validate-runtime-imports.mjs', import.meta.url));
 
   afterEach(async () => {
     while (tempDirs.length > 0) {
@@ -49,8 +50,47 @@ describe('validate-runtime-imports', () => {
       encoding: 'utf8',
     });
 
-    expect(result.status).toBe(0);
+    expect(result.status, result.stderr).toBe(0);
     expect(result.stdout).toContain('validation passed');
+  });
+
+  it('ignores bundled JSDoc import types and string examples while validating executable imports', async () => {
+    const distRoot = await createDistFixture({
+      'dist/src/index.js': [
+        "/** @type {import('./get')} */",
+        "const example = \"import '@shared/example'\";",
+        "export const valid = true;",
+      ].join('\n'),
+    });
+    tempDirs.push(distRoot);
+    const run = () => spawnSync(process.execPath, [scriptPath], {
+      env: { ...process.env, WORKFLOW_WORKER_VALIDATE_DIST_ROOT: path.join(distRoot, 'dist') }, encoding: 'utf8',
+    });
+    const valid = run();
+    expect(valid.status, valid.stderr).toBe(0);
+    await fs.appendFile(path.join(distRoot, 'dist/src/index.js'), "\nawait import('./missing.js');\n");
+    const missing = run();
+    expect(missing.status).not.toBe(0);
+    expect(missing.stderr).toContain('relative import does not resolve');
+  });
+
+  it('accepts existing JSON modules and enforces literal template dynamic imports', async () => {
+    const distRoot = await createDistFixture({
+      'dist/src/index.js': "import data from './data.json' with { type: 'json' };\nexport { data };",
+      'dist/src/data.json': JSON.stringify({ message: 'import("./not-code")' }),
+    });
+    tempDirs.push(distRoot);
+    const run = () => spawnSync(process.execPath, [scriptPath], {
+      env: { ...process.env, WORKFLOW_WORKER_VALIDATE_DIST_ROOT: path.join(distRoot, 'dist') }, encoding: 'utf8',
+    });
+    const valid = run();
+    expect(valid.status, valid.stderr).toBe(0);
+    const runtime = spawnSync(process.execPath, [path.join(distRoot, 'dist/src/index.js')], { encoding: 'utf8' });
+    expect(runtime.status, runtime.stderr).toBe(0);
+    await fs.appendFile(path.join(distRoot, 'dist/src/index.js'), "\nawait import(`./missing.js`);\n");
+    const missing = run();
+    expect(missing.status).not.toBe(0);
+    expect(missing.stderr).toContain('relative import does not resolve');
   });
 
   it('fails when unresolved @shared alias appears in runtime startup graph', async () => {
@@ -93,7 +133,9 @@ describe('validate-runtime-imports', () => {
 
   it('allows AI runtime wiring only through the dedicated runtime/worker entrypoint', async () => {
     const distRoot = await createDistFixture({
-      'dist/src/index.js': "import '../../ee/packages/workflows/src/runtime/worker.js';\n",
+      'dist/src/index.js': "import '../ee/packages/workflows/src/runtime/worker.js';\n",
+      'dist/shared/workflow/runtime/actions/registerAiActions.js': 'export {};\n',
+      'dist/packages/ee/src/services/workflowInferenceService.js': 'export {};\n',
       'dist/ee/packages/workflows/src/runtime/worker.js': [
         "import '../../../../../shared/workflow/runtime/actions/registerAiActions.js';",
         "import '../../../../../packages/ee/src/services/workflowInferenceService.js';",
@@ -112,7 +154,7 @@ describe('validate-runtime-imports', () => {
       encoding: 'utf8',
     });
 
-    expect(result.status).toBe(0);
+    expect(result.status, result.stderr).toBe(0);
     expect(result.stdout).toContain('validation passed');
   });
 });

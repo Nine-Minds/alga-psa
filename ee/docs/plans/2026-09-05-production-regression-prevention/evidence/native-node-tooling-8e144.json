@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "suite": "node-tooling",
+  "revision": "8e144665b57f827d6005981a74aaeec5fb828797",
+  "runtime": "v25.5.0",
+  "status": "passed",
+  "failures": [],
+  "source": {
+    "before": {
+      "revision": "8e144665b57f827d6005981a74aaeec5fb828797",
+      "dirty": false,
+      "changes": []
+    },
+    "after": {
+      "revision": "8e144665b57f827d6005981a74aaeec5fb828797",
+      "dirty": false,
+      "changes": []
+    }
+  },
+  "counts": {
+    "tests": 906,
+    "passed": 906,
+    "failed": 0,
+    "skipped": 0,
+    "todo": 0,
+    "cancelled": 0
+  },
+  "expectedFileCount": 85,
+  "durationMs": 172934.488833
+}

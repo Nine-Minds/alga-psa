@@ -8,11 +8,12 @@ exports.seed = async function (knex) {
     const boards = await db.table('boards')
         .select('board_id');
 
-    const createdBy = db.table('users')
+    const creator = await db.table('users')
         .where({
             username: 'glinda'
         })
-        .select('user_id');
+        .select('user_id').first();
+    const createdBy = creator?.user_id ?? null;
 
     const ticketStatusTemplates = [
         {

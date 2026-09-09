@@ -1004,7 +1004,8 @@
     },
     "messages": {
       "success": "Factuur succesvol gegenereerd!",
-      "loadFailed": "Laden van gegevens is mislukt"
+      "loadFailed": "Laden van gegevens is mislukt",
+      "salesOrderSourcesUnavailable": "Bronverkooporders konden niet worden geladen. U kunt nog steeds handmatige factuurregels invoeren."
     }
   },
   "prepayment": {
@@ -1957,7 +1958,12 @@
         "headerPlaceholder": "Koptekstlabel",
         "bindingKey": "Bindingssleutel",
         "type": "Type",
-        "width": "Breedte"
+        "width": "Breedte",
+        "stackedLines": "Gestapelde regels",
+        "addLine": "+ Regel",
+        "clearLines": "Enkele regel",
+        "stackedLinesHint": "Elke niet-lege regel wordt op een eigen rij weergegeven. Wanneer alle regels leeg zijn, wordt de hierboven vermelde bindingssleutel van de kolom weergegeven.",
+        "removeLine": "Regel {{index}} verwijderen"
       },
       "columnTypes": {
         "text": "Tekst",

@@ -946,7 +946,7 @@ export async function applyCreditToInvoiceInternal(
                 invoice_id: invoiceId,
                 tenant
             })
-            .select('credit_applied', 'currency_code', 'project_id', 'billing_profile_id')
+            .select('credit_applied', 'total_amount', 'currency_code', 'project_id', 'billing_profile_id')
             .forUpdate()
             .first();
 
@@ -1159,9 +1159,16 @@ export async function applyCreditToInvoiceInternal(
         // already consumes part of it).
         const eligibleAmount = await computeEligibleCreditAmount(trx, tenant, invoiceId, policy);
         const remainingEligible = Math.max(0, eligibleAmount - alreadyAppliedCredit);
-        if (requestedAmount > remainingEligible) {
-            requestedAmount = remainingEligible;
-        }
+        // Payment writers acquire the same invoice lock. Read their net ledger
+        // amount while holding it so credits cannot consume money already paid,
+        // including when a payment was partially or fully reversed.
+        const paymentTotal = await tenantScopedTable(trx, tenant, 'invoice_payments')
+            .where({ invoice_id: invoiceId })
+            .sum('amount as total')
+            .first();
+        const remainingDue = Math.max(0,
+            Number(invoice.total_amount) - alreadyAppliedCredit - Number(paymentTotal?.total ?? 0));
+        requestedAmount = Math.min(requestedAmount, remainingEligible, remainingDue);
         if (requestedAmount <= 0) {
             console.log(`No eligible credit amount for invoice ${invoiceId}; skipping application.`);
             return;

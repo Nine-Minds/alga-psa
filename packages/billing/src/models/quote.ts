@@ -1,5 +1,5 @@
 import type { Knex } from 'knex';
-import { REVISABLE_QUOTE_STATUSES, type IQuote, type IQuoteListItem, type IQuoteWithClient, type PaginatedResult, type QuoteStatus } from '@alga-psa/types';
+import { REVISABLE_QUOTE_STATUSES, type IQuote, type IQuoteItem, type IQuoteListItem, type IQuoteWithClient, type PaginatedResult, type QuoteStatus } from '@alga-psa/types';
 import { tenantDb } from '@alga-psa/db';
 import { SharedNumberingService } from '@shared/services/numberingService';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
@@ -413,14 +413,37 @@ const Quote = {
       })
       .returning('*');
 
-    for (const item of sourceQuote.quote_items ?? []) {
-      const { quote_item_id, tenant: _itemTenant, created_at, updated_at, ...itemData } = item;
-      await quoteTable(knexOrTrx, tenant, 'quote_items')
+    const sourceItems = sourceQuote.quote_items ?? [];
+    const oldToNew = new Map<string, string>();
+    const insertCopiedItem = async (item: IQuoteItem, appliesToItemId: string | null) => {
+      const { quote_item_id: _quoteItemId, tenant: _itemTenant, created_at, updated_at, ...itemData } = item;
+      const [created] = await quoteTable<IQuoteItem>(knexOrTrx, tenant, 'quote_items')
         .insert({
           tenant,
           ...itemData,
           quote_id: revisedQuote.quote_id,
-        });
+          applies_to_item_id: appliesToItemId,
+        })
+        .returning('quote_item_id');
+      return created;
+    };
+
+    // Item-targeted discounts reference base items by id. Base rows are copied
+    // first so their new ids can remap applies_to_item_id on the discount rows,
+    // regardless of display order in the source quote.
+    for (const item of sourceItems.filter((i) => !i.is_discount)) {
+      const created = await insertCopiedItem(item, null);
+      oldToNew.set(item.quote_item_id, created.quote_item_id);
+    }
+    for (const item of sourceItems.filter((i) => i.is_discount)) {
+      // Preserve unmatched scope for removed targets: keep the original target
+      // id when it was not among the copied base rows, so the copied discount
+      // stays item-scoped and resolves to zero instead of broadening into a
+      // whole-quote discount.
+      const remapped = item.applies_to_item_id
+        ? (oldToNew.get(item.applies_to_item_id) ?? item.applies_to_item_id)
+        : null;
+      await insertCopiedItem(item, remapped);
     }
 
     await quoteTable(knexOrTrx, tenant, 'quotes')

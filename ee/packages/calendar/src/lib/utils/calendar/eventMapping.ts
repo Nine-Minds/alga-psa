@@ -9,6 +9,7 @@ import type {
   WorkItemType,
 } from '@alga-psa/types';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { parseCalendarDateTime } from '@alga-psa/core';
 import { convertRecurrencePatternToRRULE } from './recurrenceConverter';
 
 export async function mapScheduleEntryToExternalEvent(
@@ -25,7 +26,7 @@ export async function mapScheduleEntryToExternalEvent(
   const endDate =
     entry.scheduled_end instanceof Date ? entry.scheduled_end : new Date(entry.scheduled_end);
 
-  const isAllDay = isAllDayEvent(startDate, endDate);
+  const isAllDay = entry.is_all_day === true;
 
   const attendees = entry.assigned_user_ids
     .map((userId) => {
@@ -109,15 +110,15 @@ export async function mapExternalEventToScheduleEntry(
   }
 
   const startDate = event.start.dateTime
-    ? new Date(event.start.dateTime)
+    ? parseCalendarDateTime(event.start.dateTime, event.start.timeZone)
     : event.start.date
       ? new Date(`${event.start.date}T00:00:00Z`)
       : new Date();
 
   const endDate = event.end.dateTime
-    ? new Date(event.end.dateTime)
+    ? parseCalendarDateTime(event.end.dateTime, event.end.timeZone)
     : event.end.date
-      ? new Date(`${event.end.date}T23:59:59Z`)
+      ? new Date(`${event.end.date}T00:00:00Z`)
       : new Date();
 
   const algaEntryId = event.extendedProperties?.private?.['alga-entry-id'];
@@ -198,6 +199,7 @@ export async function mapExternalEventToScheduleEntry(
     notes: event.description,
     scheduled_start: startDate,
     scheduled_end: endDate,
+    is_all_day: !!event.start.date && !event.start.dateTime && !!event.end.date && !event.end.dateTime,
     status,
     assigned_user_ids: assignedUserIds,
     recurrence_pattern: recurrencePattern,
@@ -206,21 +208,6 @@ export async function mapExternalEventToScheduleEntry(
     ...(workItemId ? { work_item_id: workItemId } : {}),
     work_item_type: (workItemType ?? 'ad_hoc') as WorkItemType,
   };
-}
-
-function isAllDayEvent(start: Date, end: Date): boolean {
-  const startHour = start.getHours();
-  const startMinute = start.getMinutes();
-  const endHour = end.getHours();
-  const endMinute = end.getMinutes();
-
-  return (
-    startHour === 0 &&
-    startMinute === 0 &&
-    endHour === 0 &&
-    endMinute === 0 &&
-    end.getTime() - start.getTime() >= 86400000
-  );
 }
 
 function formatDateOnly(date: Date): string {

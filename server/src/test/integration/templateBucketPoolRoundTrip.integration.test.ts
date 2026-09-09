@@ -10,32 +10,22 @@
  *   - after-hours rule (multiplier + schedule reference),
  *   - pool identity never keyed into a config-id FK.
  *
- * Opt-in: needs a reachable database (RUN_DB_TESTS=1). Everything runs inside
+ * Required integration coverage against the isolated migrated test database. Everything runs inside
  * one transaction that is always rolled back.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import knexFactory, { Knex } from 'knex';
+import type { Knex } from 'knex';
+import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { randomUUID } from 'node:crypto';
 import { cloneTemplateContractLine } from '@alga-psa/shared/billingClients/templateClone';
 import { ensureTemplateLineSnapshot } from '@alga-psa/billing/actions/contractLineMappingActions';
 
-const ENABLED = process.env.RUN_DB_TESTS === '1';
 
 let db: Knex;
 
-describe.skipIf(!ENABLED)('template bucket pool round-trip (real DB)', () => {
-  beforeAll(() => {
-    db = knexFactory({
-      client: 'pg',
-      connection: {
-        host: process.env.BUCKET_TEST_DB_HOST || process.env.DB_HOST || '127.0.0.1',
-        port: Number(process.env.BUCKET_TEST_DB_PORT || process.env.DB_PORT || 5432),
-        database: process.env.BUCKET_TEST_DB_NAME || process.env.DB_NAME_SERVER || 'server',
-        user: process.env.BUCKET_TEST_DB_USER || process.env.DB_USER_SERVER || 'app_user',
-        password: process.env.BUCKET_TEST_DB_PASSWORD || process.env.DB_PASSWORD_SERVER,
-      },
-      pool: { min: 0, max: 2 },
-    });
+describe('template bucket pool round-trip (real DB)', () => {
+  beforeAll(async () => {
+    db = await createTestDbConnection();
   });
 
   afterAll(async () => {

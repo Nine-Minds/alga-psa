@@ -64,7 +64,7 @@ import {
   getCurrencySymbol,
 } from "@alga-psa/core";
 import { getClientDefaultTaxRegionCode as getClientDefaultTaxRegionCodeShared } from "@alga-psa/shared/billingClients";
-import { computePoolContributionsByService } from "@alga-psa/shared/billingClients/bucketUsageService";
+import { computePoolContributionsByService, resolveBucketForLine } from "@alga-psa/shared/billingClients/bucketUsageService";
 import {
   calculateServicePeriodCoverage,
   resolveCadenceOwner,
@@ -5041,6 +5041,23 @@ export class BillingEngine {
         );
       })
       .where("time_entries.approval_status", "APPROVED");
+
+    if (!projectTarget) {
+      const bucketServices = await Promise.all(configuredServiceIds.map(async (serviceId) => (
+        await resolveBucketForLine(this.knex, tenant, clientContractLine.contract_line_id, serviceId)
+          ? serviceId : null
+      )));
+      const coveredServiceIds = bucketServices.filter((serviceId): serviceId is string => serviceId !== null);
+      if (coveredServiceIds.length > 0) {
+        // Explicitly attributed bucket work is priced once by the pool's
+        // overage obligation. Unassigned rows have not drawn from that pool;
+        // retain their existing attribution path instead of hiding them.
+        query.where(function (this: Knex.QueryBuilder) {
+          this.whereNull("time_entries.contract_line_id")
+            .orWhereNotIn("time_entries.service_id", coveredServiceIds);
+        });
+      }
+    }
 
     if (projectTarget) {
       query.where("projects.project_id", projectTarget.projectId);

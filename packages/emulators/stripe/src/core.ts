@@ -401,7 +401,9 @@ export class StripeEmulatorCore implements EmulatorCore {
       created: this.nowUnix(),
       livemode: false,
       pending_webhooks: this.webhookTargets.length,
-      data: { object },
+      // Snapshot v1 event data at emission. Retries must retain the original
+      // state even when the live PaymentIntent or Checkout Session changes.
+      data: { object: structuredClone(object) },
     };
     this.events.set(event.id, event);
     return event;

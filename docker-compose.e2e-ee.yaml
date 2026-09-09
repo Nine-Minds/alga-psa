@@ -1,0 +1,19 @@
+# Layer over the isolated fresh-install stack to test the actual EE image and
+# migrated EE schema and background workflow storage registration.
+services:
+  server:
+    image: alga-e2e-test_server_ee_local:latest
+    environment:
+      EDITION: enterprise
+      APP_EDITION: enterprise
+      NEXT_PUBLIC_EDITION: enterprise
+    secrets:
+      - credential_encryption_key
+  setup:
+    environment:
+      EDITION: enterprise
+  workflow-worker:
+    environment:
+      EDITION: enterprise
+    secrets:
+      - credential_encryption_key

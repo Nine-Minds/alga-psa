@@ -1,0 +1,49 @@
+{
+  "status": "local projection and runner failure-path tests passed; new native browser execution pending",
+  "artifact": "e2e-tests/execution-evidence/metrics.json",
+  "schemaVersion": 2,
+  "validation": {
+    "passed": 10,
+    "failed": 0,
+    "skipped": 0,
+    "log": "/tmp/alga-browser-metrics-final.log",
+    "actualNativeReportReplay": {
+      "sourceRun": 34078331062,
+      "sourceJob": 101612274786,
+      "status": "failed",
+      "counts": {
+        "passed": 22,
+        "failed": 0,
+        "flaky": 2,
+        "skipped": 0,
+        "interrupted": 0,
+        "missing": 0
+      },
+      "collected": 24,
+      "executed": 24,
+      "retriedJourneys": [
+        [
+          "e2e-tests/tests/microsoft-calendar.spec.ts",
+          "enterprise-chromium",
+          "enterprise-chromium",
+          [
+            "Microsoft calendar OAuth imports vendor events, exports UI edits and recovers without losing remote linkage"
+          ]
+        ],
+        [
+          "e2e-tests/tests/tenant-identity.spec.ts",
+          "enterprise-chromium",
+          "enterprise-chromium",
+          [
+            "a technician cannot elevate its own role through an administrator action"
+          ]
+        ]
+      ]
+    }
+  },
+  "limits": [
+    "Historical report processing is not new browser execution.",
+    "Immutable artifact manifest is explicitly null pending release pipeline wiring.",
+    "No live Sheet readiness publishing or global release readiness claimed; F024/F025 remain incomplete."
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "applicationRevision": "c5938cdad5",
+  "application": "Reused host EE production build; no app or Docker rebuild",
+  "session": 76148,
+  "stats": {
+    "startTime": "2026-09-08T00:50:11.473Z",
+    "duration": 36893.476,
+    "expected": 1,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "coverage": [
+    "Real UI saves two approved-fixture time entries lasting one and three hours against a three-hour prepaid block; remaining balance progresses 120 then 0 minutes",
+    "Two real allocation rows; both time entries marked invoiced by invoice generation",
+    "Explicit UI date range includes the September billing cycle, combined with August recurring service periods",
+    "UI invoice preview and persisted subtotal102500/tax10250/total112750 minor units; one zero-dollar hour_block charge consumes three prepaid hours",
+    "Downloaded UI-authored PDF includes prepaid consumption and $1127.50 total, excludes private time notes",
+    "Existing historical, long multi-tax, and frozen project-task identity PDF cases pass in the same journey"
+  ],
+  "pdfArtifacts": [
+    {
+      "file": "e2e-tests/test-results/host-production/invoice-designer-persisten-63b85-ts-persisted-invoice-layout-enterprise-chromium/INV-000004-prepaid.pdf",
+      "bytes": 106982,
+      "sha256": "46402365107ac69a74419cd7fe4c39d3e738169a97e59fe8118ce5a06bf5836f"
+    }
+  ],
+  "limitations": [
+    "Host EE evidence only; native CI and container packaging remain unverified for these local changes",
+    "Not full parity with legacy invoice preview/canvas and ad-hoc fallback cases"
+  ]
+}

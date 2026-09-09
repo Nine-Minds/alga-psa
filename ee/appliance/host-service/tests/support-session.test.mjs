@@ -9,15 +9,15 @@ import { buildSupportConnectorSecret, buildSupportPod, isValidSupportAgentImage,
 const SESSION_ID = '11111111-1111-4111-8111-111111111111';
 const IMAGE = `ghcr.io/nine-minds/alga-appliance-support-agent@sha256:${'a'.repeat(64)}`;
 
-function fakeCentral() {
+function fakeCentral(now = Date.now) {
   const calls = [];
   return {
     configured: true,
     calls,
     async createSession({ durationHours }) {
       calls.push(['create', durationHours]);
-      const activatedAt = new Date().toISOString();
-      return { sessionId: SESSION_ID, shareCode: 'ABCDE-FGHJK', connectorToken: 'connector-token-123456', applianceToken: 'appliance-token-123456', resumeGrant: 'resume-grant-123456', statusUrl: 'https://support.example/v1/appliance/sessions/1', relayUrl: 'wss://relay.example/v1/sessions/1', activatedAt, expiresAt: new Date(Date.now() + durationHours * 3600000).toISOString() };
+      const activatedAt = new Date(now()).toISOString();
+      return { sessionId: SESSION_ID, shareCode: 'ABCDE-FGHJK', connectorToken: 'connector-token-123456', applianceToken: 'appliance-token-123456', resumeGrant: 'resume-grant-123456', statusUrl: 'https://support.example/v1/appliance/sessions/1', relayUrl: 'wss://relay.example/v1/sessions/1', activatedAt, expiresAt: new Date(Date.parse(activatedAt) + durationHours * 3600000).toISOString() };
     },
     async acknowledge(id) { calls.push(['ack', id]); return { ok: true }; },
     async abandon(id) { calls.push(['abandon', id]); return { ok: true }; },
@@ -42,7 +42,7 @@ function fakeKube() {
 function manager(tmp, overrides = {}) {
   return new SupportSessionManager({
     stateDir: path.join(tmp, 'support-sessions'),
-    central: fakeCentral(),
+    central: fakeCentral(overrides.now ?? Date.now),
     kube: fakeKube(),
     getLicense: async () => ({ edition: 'pro', status: 'active', source: 'live' }),
     getCredential: async () => 'long-lived-appliance-credential',

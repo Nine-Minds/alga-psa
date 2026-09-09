@@ -1,3 +1,4 @@
+import { createWorkerStripeClient } from '../config/stripeClient.js';
 /**
  * Trial payment reminder activities.
  *
@@ -86,10 +87,7 @@ function defaultStripeClient(env: NodeJS.ProcessEnv): Stripe {
     );
   }
 
-  stripeClient = new Stripe(secretKey, {
-    apiVersion: '2024-12-18.acacia' as any,
-    typescript: true,
-  });
+  stripeClient = createWorkerStripeClient(secretKey, env);
   return stripeClient;
 }
 

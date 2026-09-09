@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "baseRevision": "aa29040eb95efeee70de0bec2fff8529a6c7b42a",
+  "testFile": "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+  "boundary": "Real PostgreSQL date/currency/tenant predicates and numeric hydration to TaxService results",
+  "before": {
+    "passed": 11,
+    "failed": 6,
+    "log": "/tmp/alga-tax-rate-db-expanded-before.log",
+    "observed": "Simple default-rate results returned PostgreSQL numeric strings (5.0000 and 7.2500) instead of numeric taxRate values."
+  },
+  "after": {
+    "database": {
+      "passed": 17,
+      "failed": 0,
+      "skipped": 0,
+      "log": "/tmp/alga-tax-rate-db-final.log"
+    },
+    "nearbyUnit": {
+      "passed": 59,
+      "todo": 4,
+      "failed": 0,
+      "files": 5,
+      "log": "/tmp/alga-tax-rate-unit-final.log"
+    },
+    "remainingFixtureTenants": 0
+  },
+  "ci": {
+    "workflow": ".github/workflows/integration-tests.yml",
+    "job": "Workspace database tests",
+    "runner": "scripts/run-workspace-db-tests.mjs",
+    "config": "server/vitest.workspace-db.config.ts"
+  },
+  "hashes": {
+    "alga-tax-rate-db-expanded-before.log": "4436137616b876b32970ae8dc57a4eee04c41dd8476f40e28390760f13321584",
+    "alga-tax-rate-db-final.log": "2a4311c12e29b6f32a8e153623968b0dd9a3d3e68509c89a3374db3f6ae7a251",
+    "alga-tax-rate-unit-final.log": "9a50e7602214ec251d6e4297f7a172c58c8fe66efc585f0124ba20f94f3e3846"
+  },
+  "limitations": [
+    "Local focused database run uses the task-owned migrated visual_regression_82cc_test database; it bypasses bootstrap in a temporary config and rolls back every fixture.",
+    "Tenant context and reverse-charge/default-profile provisioning are substituted; rate selection, tenant predicates and PostgreSQL hydration are real.",
+    "Does not verify authentication, international policy selection, invoice orchestration, tax caps or subscription periods.",
+    "Current candidate native CI remains unverified."
+  ]
+}

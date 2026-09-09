@@ -240,6 +240,40 @@ describe('InvoiceTemplateEditor authoritative preview flow', () => {
       version: 1,
     });
     expect(JSON.stringify(payload.templateAst)).toContain('field-flow');
+    await waitFor(() => expect(pushMock).toHaveBeenCalled());
+    expect((document.getElementById('save-template-button') as HTMLButtonElement).disabled).toBe(true);
+    const callsAfterSave = runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.length;
+    await act(async () => {
+      useInvoiceDesignerStore.getState().loadWorkspace(createWorkspaceWithField('field-after-save'));
+      await new Promise(resolve => setTimeout(resolve, 200));
+    });
+    expect(runAuthoritativeInvoiceTemplatePreviewMock).toHaveBeenCalledTimes(callsAfterSave);
+  });
+
+  it('resumes editing and preview when saving fails', async () => {
+    const loadedTemplate = await getInvoiceTemplateMock();
+    let finishLoad!: (result: unknown) => void;
+    getInvoiceTemplateMock.mockImplementationOnce(() => new Promise(resolve => { finishLoad = resolve; }));
+    let finishSave!: (result: unknown) => void;
+    saveInvoiceTemplateMock.mockImplementationOnce(() => new Promise(resolve => { finishSave = resolve; }));
+    render(<InvoiceTemplateEditor templateId="tpl-flow" />);
+    await waitFor(() => expect(runAuthoritativeInvoiceTemplatePreviewMock).toHaveBeenCalled());
+    // Preview can dispatch before the separate template load completes. Its
+    // invocation is not a signal that Save is ready (the CI race).
+    expect(screen.queryByRole('button', { name: 'Save Template' })).toBeNull();
+    expect((screen.getByRole('button', { name: 'Saving...' }) as HTMLButtonElement).disabled).toBe(true);
+    await act(async () => { finishLoad(loadedTemplate); });
+    const save = await screen.findByRole('button', { name: 'Save Template' }) as HTMLButtonElement;
+    await waitFor(() => expect(save.disabled).toBe(false));
+    fireEvent.click(save);
+    await waitFor(() => expect(saveInvoiceTemplateMock).toHaveBeenCalledTimes(1));
+    expect(save.disabled).toBe(true);
+    const previewCalls = runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.length;
+    await act(async () => { finishSave({ success: false, error: 'Please try saving again.' }); });
+    await waitFor(() => expect(save.disabled).toBe(false));
+    await waitFor(() => expect(runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.length).toBeGreaterThan(previewCalls));
+    expect(screen.getByText('Please try saving again.')).toBeTruthy();
+    expect(pushMock).not.toHaveBeenCalled();
   });
 
   it('updates authoritative preview when switching to existing invoice data', async () => {

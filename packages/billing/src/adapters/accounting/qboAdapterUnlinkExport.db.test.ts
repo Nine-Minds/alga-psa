@@ -49,6 +49,7 @@ vi.mock('@alga-psa/integrations/lib/qbo/qboClientService', () => ({
 }));
 
 const tenantId = uuidv4();
+const clientId = uuidv4();
 const REALM = 'realm-aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 
 let db: Knex;
@@ -117,7 +118,19 @@ beforeAll(async () => {
     created_at: db.fn.now(),
     updated_at: db.fn.now(),
   });
+  await db('clients').insert({ tenant: tenantId, client_id: clientId, client_name: 'QBO Export Client' });
 });
+
+async function seedInvoice() {
+  const invoiceId = uuidv4();
+  await db('invoices').insert({
+    tenant: tenantId, invoice_id: invoiceId, client_id: clientId,
+    invoice_number: `INV-${invoiceId}`, invoice_date: '2026-09-01',
+    due_date: '2026-09-30', status: 'sent', total_amount: 10000, subtotal: 10000, tax: 0,
+    finalized_at: db.fn.now(),
+  });
+  return invoiceId;
+}
 
 beforeEach(() => {
   qboCreate.mockReset();
@@ -127,13 +140,15 @@ beforeEach(() => {
 
 afterAll(async () => {
   await db('tenant_external_entity_mappings').where({ tenant: tenantId }).del();
+  await db('invoices').where({ tenant: tenantId }).del();
+  await db('clients').where({ tenant: tenantId }).del();
   await db('tenants').where({ tenant: tenantId }).del();
   await db.destroy().catch(() => undefined);
 });
 
 describe('QuickBooksOnlineAdapter unlink-then-export suppression', () => {
   it('a tombstoned mapping refuses export with an actionable failure and no remote call', async () => {
-    const invoiceId = uuidv4();
+    const invoiceId = await seedInvoice();
     const now = new Date().toISOString();
     await db('tenant_external_entity_mappings').insert(
       mappingRow(invoiceId, { deleted_at: now, sync_status: 'unlinked', updated_at: now })
@@ -161,7 +176,7 @@ describe('QuickBooksOnlineAdapter unlink-then-export suppression', () => {
   });
 
   it('relinking the tombstone lets export proceed against the real remote document', async () => {
-    const invoiceId = uuidv4();
+    const invoiceId = await seedInvoice();
     const externalId = 'qbo-inv-relinked';
     const now = new Date().toISOString();
     const [inserted] = await db('tenant_external_entity_mappings')
@@ -201,7 +216,7 @@ describe('QuickBooksOnlineAdapter unlink-then-export suppression', () => {
   });
 
   it('an invoice that was never exported still exports normally (create path)', async () => {
-    const invoiceId = uuidv4();
+    const invoiceId = await seedInvoice();
     qboCreate.mockResolvedValue({
       Id: 'qbo-inv-new',
       SyncToken: '0',

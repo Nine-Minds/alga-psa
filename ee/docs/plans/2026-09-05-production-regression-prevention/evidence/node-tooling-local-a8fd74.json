@@ -1,0 +1,37 @@
+{
+  "revision": "a8fd74d09fd762930ac792d118d4a3fb1549c847",
+  "status": "passed",
+  "counts": {
+    "tests": 494,
+    "passed": 494,
+    "failed": 0,
+    "skipped": 0,
+    "todo": 0,
+    "cancelled": 0
+  },
+  "source": {
+    "before": {
+      "revision": "a8fd74d09fd762930ac792d118d4a3fb1549c847",
+      "dirty": false,
+      "changes": []
+    },
+    "after": {
+      "revision": "a8fd74d09fd762930ac792d118d4a3fb1549c847",
+      "dirty": false,
+      "changes": []
+    }
+  },
+  "discoveryStatus": "passed",
+  "hashes": {
+    "events.jsonl": "2bf38cc237e10af379d933e1d1552ab329ce8514d6ea28a964f27205485a06c1",
+    "runner.log": "640d8ea96593cfb3430a7dea9f4244f32af350667677afb1706a2bd7f1368696",
+    "evidence.json": "0822ca8e236d0e6c7c1206d338ff0de45205e81544577dcbef7fbf282233eacb",
+    "discovery.json": "564359b2b1528710db890483e29018da4ca74793cfb15b2b77ce07c17f0bc334"
+  },
+  "schemaVersion": 1,
+  "suite": "node-tooling",
+  "expectedFiles": 49,
+  "limitations": [
+    "Local full tooling lane; not native CI or full-plan completion."
+  ]
+}

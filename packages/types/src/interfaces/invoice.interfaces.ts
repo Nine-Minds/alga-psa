@@ -352,6 +352,7 @@ export interface IConditionalRule {
  */
 export type RecurringInvoiceFailureCode =
   | 'NO_BILLING_EMAIL'
+  | 'TIME_APPROVAL_REQUIRED'
   | 'USAGE_RECORDS_MISSING'
   | 'USAGE_CALCULATION_ERROR'
   | 'USAGE_PERIOD_TOTAL_STALE';

@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { z } from 'zod';
+import { createServer, connect } from 'node:net';
+import { once } from 'node:events';
 import type { Router } from 'express';
 import { EmulatorHost } from '../src/host';
 import type { ControlRegistry, EmulatorCore, EmulatorPackage, HostEnv } from '../src/types';
@@ -93,6 +95,39 @@ describe('EmulatorHost', () => {
     await host.start();
     return host;
   }
+
+  it('closes a started vendor socket after a control-port collision and can retry', async () => {
+    const occupied = createServer();
+    occupied.listen(0);
+    await once(occupied, 'listening');
+    const address = occupied.address();
+    if (!address || typeof address === 'string') throw new Error('Expected TCP listener');
+    const controlPort = address.port;
+    let vendorPort = 0;
+    const probeSocket = () => new Promise<void>((resolve, reject) => {
+      const socket = connect({ host: '127.0.0.1', port: vendorPort });
+      socket.setTimeout(1000, () => { socket.destroy(); reject(new Error('TCP probe timed out')); });
+      socket.once('error', reject);
+      socket.once('connect', () => { socket.destroy(); resolve(); });
+    });
+    host = new EmulatorHost({ emulators: [counterEmulator], controlPort,
+      log: (message, extra) => { if (message === 'counter vendor surface listening') vendorPort = Number(extra?.port); } });
+    try {
+      await expect(host.start()).rejects.toMatchObject({ code: 'EADDRINUSE' });
+      expect(vendorPort).toBeGreaterThan(0);
+      // New TCP connection proves the old listener is gone, independently of
+      // the host's arrays and fetch's connection pool.
+      await expect(probeSocket()).rejects.toMatchObject({ code: 'ECONNREFUSED' });
+    } finally {
+      await new Promise<void>((resolve, reject) => occupied.close(error => error ? reject(error) : resolve()));
+    }
+    await expect(host.start()).resolves.toMatchObject({ controlPort });
+    const response = await fetch(`http://127.0.0.1:${vendorPort}/value`);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ value: 0 });
+    await host.stop();
+    await expect(probeSocket()).rejects.toMatchObject({ code: 'ECONNREFUSED' });
+  });
 
   it('serves the vendor surface and the generated control surface', async () => {
     const h = await startHost();

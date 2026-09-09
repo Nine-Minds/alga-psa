@@ -1004,7 +1004,8 @@
     },
     "messages": {
       "success": "Rechnung erfolgreich erstellt!",
-      "loadFailed": "Daten konnten nicht geladen werden"
+      "loadFailed": "Daten konnten nicht geladen werden",
+      "salesOrderSourcesUnavailable": "Kundenaufträge konnten nicht geladen werden. Sie können weiterhin Positionen für manuelle Rechnungen eingeben."
     }
   },
   "prepayment": {
@@ -1957,7 +1958,12 @@
         "headerPlaceholder": "Kopfzeilenbezeichnung",
         "bindingKey": "Bindungsschlüssel",
         "type": "Typ",
-        "width": "Breite"
+        "width": "Breite",
+        "stackedLines": "Gestapelte Zeilen",
+        "addLine": "+ Zeile",
+        "clearLines": "Einzelne Zeile",
+        "stackedLinesHint": "Jede nicht leere Zeile wird in einer eigenen Zeile dargestellt. Wenn alle Zeilen leer sind, wird der oben stehende Bindungsschlüssel der Spalte angezeigt.",
+        "removeLine": "Zeile {{index}} entfernen"
       },
       "columnTypes": {
         "text": "Text",

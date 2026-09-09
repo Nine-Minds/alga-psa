@@ -467,8 +467,15 @@ export const evaluateTemplateAst = (
     };
   }
 
+  const sourcePath = resolveBindingPath(
+    ast.bindings?.collections?.[ast.transforms.sourceBindingId]?.path ?? ast.transforms.sourceBindingId,
+    options?.bindingAliases
+  );
+  const optionalHistoricalSource = !ast.bindings?.values?.[ast.transforms.sourceBindingId] &&
+    ['timeEntries', 'ticketGroups', 'ticketPresentationRows'].includes(sourcePath);
   if (
     !hasBindingReference(ast, ast.transforms.sourceBindingId) &&
+    !optionalHistoricalSource &&
     getPathValue(
       invoiceData,
       resolveBindingPath(ast.transforms.sourceBindingId, options?.bindingAliases)
@@ -487,10 +494,10 @@ export const evaluateTemplateAst = (
     options?.bindingAliases
   );
   // Billed-time collections are optional on legacy invoices. An explicitly
-  // declared, supported collection has zero rows when no snapshot data exists.
+  // supported collection has zero rows when no snapshot data exists, whether
+  // the designer references its data path directly or through a binding ID.
   // Invalid values and unknown binding IDs still fail with a diagnostic.
-  const sourcePath = ast.bindings?.collections?.[ast.transforms.sourceBindingId]?.path;
-  if (sourceValue == null && sourcePath && ['timeEntries', 'ticketGroups', 'ticketPresentationRows'].includes(sourcePath)) {
+  if (sourceValue == null && optionalHistoricalSource) {
     sourceValue = [];
   }
   if (!Array.isArray(sourceValue)) {

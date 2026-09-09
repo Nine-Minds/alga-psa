@@ -139,29 +139,29 @@ describe('Card demo', () => {
 });
 
 describe('Alert demo', () => {
-  test('info tone has left border and primary-soft background', () => {
+  test('info tone has border and primary-soft background', () => {
     render(<AlertDemo />);
-    const info = screen.getByText('Info').closest('[role="alert"]') as HTMLElement;
+    const info = screen.getByText('Information').closest('[role="alert"]') as HTMLElement;
     expect(info.style.background).toContain('var(--alga-primary-soft');
-    expect(info.style.borderLeft).toContain('var(--alga-primary');
+    expect(info.style.border).toContain('var(--alga-primary');
   });
 
-  test('success tone has green left border', () => {
+  test('success tone has green border', () => {
     render(<AlertDemo />);
     const success = screen.getByText('Success').closest('[role="alert"]') as HTMLElement;
-    expect(success.style.borderLeft).toContain('var(--alga-success');
+    expect(success.style.border).toContain('var(--alga-success');
   });
 
-  test('warning tone has amber/orange left border', () => {
+  test('warning tone has amber/orange border', () => {
     render(<AlertDemo />);
     const warning = screen.getByText('Warning').closest('[role="alert"]') as HTMLElement;
-    expect(warning.style.borderLeft).toContain('var(--alga-warning');
+    expect(warning.style.border).toContain('var(--alga-warning');
   });
 
-  test('danger tone has red left border', () => {
+  test('danger tone has red border', () => {
     render(<AlertDemo />);
     const danger = screen.getByText('Danger').closest('[role="alert"]') as HTMLElement;
-    expect(danger.style.borderLeft).toContain('var(--alga-danger');
+    expect(danger.style.border).toContain('var(--alga-danger');
   });
 });
 
@@ -218,14 +218,14 @@ describe('Badge demo', () => {
   test('success tone renders green styling', () => {
     render(<BadgeDemo />);
     const badge = screen.getByText('Success');
-    expect(badge.style.background).toContain('rgb(220, 252, 231)');
+    expect(badge.style.background).toContain('var(--alga-success');
   });
 
   test('warning and danger tones render correctly', () => {
     render(<BadgeDemo />);
     const warning = screen.getByText('Warning');
     const danger = screen.getByText('Danger');
-    expect(warning.style.background).toContain('rgb(254, 243, 199)');
-    expect(danger.style.background).toContain('rgb(255, 247, 237)');
+    expect(warning.style.background).toContain('var(--alga-warning');
+    expect(danger.style.background).toContain('var(--alga-danger');
   });
 });

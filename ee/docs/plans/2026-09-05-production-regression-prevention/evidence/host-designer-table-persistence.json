@@ -1,0 +1,31 @@
+{
+  "suite": "e2e-tests/tests/invoice-designer-persistence.spec.ts",
+  "status": "host EE development passed",
+  "releaseValidation": false,
+  "database": "host_ee_test_82cc",
+  "browserSession": 79377,
+  "log": "/tmp/alga-host-designer-table-fresh.log",
+  "stats": {
+    "startTime": "2026-09-07T22:53:11.667Z",
+    "duration": 96360.456,
+    "expected": 1,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "coverage": [
+    "Real login and date descending transform authoring",
+    "Add dynamic table through palette button",
+    "Bind table to authored transform output through inspector",
+    "Add Date column through inspector preset",
+    "Save through application; verify persisted table binding and date-path column",
+    "Clear editor cache, reopen/reload, verify transform output order and inspector binding",
+    "Persisted AST unchanged after reopening"
+  ],
+  "limitations": [
+    "Prior attempt 29368 failed during Next memory-threshold restart; no passing claim for that attempt",
+    "Development worker memory growth remains an unresolved host stability issue",
+    "Does not complete generated-invoice/PDF, custom two-table or nested-group acceptance",
+    "Current production/native CI remains pending"
+  ]
+}

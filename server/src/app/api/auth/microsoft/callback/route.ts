@@ -292,11 +292,12 @@ export async function GET(request: NextRequest) {
         }
       }
 
+      // Callback query values may contain credentials or provider-supplied
+      // private details. Retain only coarse diagnostics in application logs.
       console.error('[MS OAuth] OAuth error from Microsoft:', {
-        error,
-        errorDescription: errorDescription || '',
-        code: searchParams.get('code'),
-        state: searchParams.get('state')
+        hasProviderError: Boolean(error),
+        hasCode: Boolean(code),
+        hasState: Boolean(state),
       });
       return respondWithPostMessage({
         type: 'oauth-callback',

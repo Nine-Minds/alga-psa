@@ -1004,7 +1004,8 @@
     },
     "messages": {
       "success": "¡Factura generada exitosamente!",
-      "loadFailed": "No se pudieron cargar los datos"
+      "loadFailed": "No se pudieron cargar los datos",
+      "salesOrderSourcesUnavailable": "No se pudieron cargar las órdenes de venta de origen. Puede seguir introduciendo partidas de factura manuales."
     }
   },
   "prepayment": {
@@ -1957,7 +1958,12 @@
         "headerPlaceholder": "Etiqueta del encabezado",
         "bindingKey": "Clave de vinculación",
         "type": "Tipo",
-        "width": "Ancho"
+        "width": "Ancho",
+        "stackedLines": "Líneas apiladas",
+        "addLine": "+ Línea",
+        "clearLines": "Línea única",
+        "stackedLinesHint": "Cada línea no vacía se muestra en su propia fila. Cuando todas las líneas están vacías, se muestra la clave de vinculación de la columna indicada arriba.",
+        "removeLine": "Quitar la línea {{index}}"
       },
       "columnTypes": {
         "text": "Texto",

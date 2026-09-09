@@ -64,9 +64,11 @@ export default function TopIssuesPanel({ issues }: TopIssuesPanelProps) {
                     {issue.rating} ★
                   </span>
                   <span className="text-muted-foreground">
-                    {t('dashboard.topIssues.fallbacks.ticket', {
+                    {issue.projectId ? t('dashboard.topIssues.fallbacks.project', {
+                      defaultValue: 'Project {{project}}', project: issue.projectNumber ?? issue.projectId.slice(0, 7),
+                    }) : t('dashboard.topIssues.fallbacks.ticket', {
                       defaultValue: 'Ticket {{ticket}}',
-                      ticket: issue.ticketNumber ?? issue.ticketId.slice(0, 7),
+                      ticket: issue.ticketNumber ?? issue.ticketId?.slice(0, 7) ?? '—',
                     })}
                   </span>
                 </div>

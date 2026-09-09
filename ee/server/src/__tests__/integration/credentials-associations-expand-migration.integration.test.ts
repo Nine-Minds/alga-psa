@@ -32,9 +32,10 @@ const repoRoot = path.resolve(process.cwd(), '..', '..');
 
 // Load the wired-in dev DB connection (server/.env.local) into the test env,
 // matching the credentials integration suite.
-loadDotEnv({ path: path.join(repoRoot, 'server', '.env.local'), override: true });
+loadDotEnv({ path: path.join(repoRoot, 'server', '.env.local'), override: false });
 
 function readPostgresPassword(): string {
+  if (process.env.DB_PASSWORD_ADMIN) return process.env.DB_PASSWORD_ADMIN;
   try {
     return fs.readFileSync(path.join(repoRoot, 'secrets', 'postgres_password'), 'utf8').trim();
   } catch {
@@ -45,7 +46,7 @@ function readPostgresPassword(): string {
 // Direct postgres only (NOT pgbouncer): CREATE/DROP DATABASE and the Citus-style
 // DDL under test need a real postgres connection — pgbouncer rejects new
 // roles/databases.
-const POSTGRES_PORT = 5472;
+const POSTGRES_PORT = Number(process.env.DB_PORT_ADMIN || process.env.DB_PORT || '5432');
 
 function connectTo(database: string): Knex {
   return knexFactory({

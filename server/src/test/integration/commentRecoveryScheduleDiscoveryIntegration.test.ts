@@ -2,17 +2,16 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import { randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
 import * as dbModule from '@alga-psa/db';
-import { createTestDbConnection, wireLocalTestDbEnv } from '../../../test-utils/dbConfig';
+import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { createCommentRecoveryScheduleDiscovery } from '@/lib/jobs/commentRecoveryScheduleDiscovery';
 import { reconcileScheduledCommentPublications } from '@/lib/jobs/handlers/publishScheduledCommentHandler';
 import { persistCommentPublication } from '@shared/lib/ticketCommentAttachments';
 
-// Existing migrated isolated database; every fixture rolls back.
-describe.runIf(Boolean(process.env.TEST_DB_NAME))('comment recovery schedule discovery (PostgreSQL)', () => {
+// Required migrated-database coverage; every fixture rolls back.
+describe('comment recovery schedule discovery (PostgreSQL)', () => {
   let conn: Knex, trx: Knex.Transaction;
   beforeAll(async () => {
-    wireLocalTestDbEnv();
-    conn = await createTestDbConnection({ databaseName: process.env.TEST_DB_NAME, recreate: false });
+    conn = await createTestDbConnection();
   });
   beforeEach(async () => { trx = await conn.transaction(); vi.spyOn(dbModule, 'getConnection').mockResolvedValue(trx); });
   afterEach(async () => { vi.useRealTimers(); vi.restoreAllMocks(); await trx.rollback(); });
