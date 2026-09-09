@@ -108,14 +108,14 @@ F008 is not complete until enforcement is observed, not merely configured.
    from a commit that predates it. Confirm readiness runs and passes on the
    first, and record whether it reports at all on the second. That settles the
    question above before anyone else is affected.
-3. On that same branch, force a failure that readiness must catch — for example
+3. On the branch cut from the merge, force a failure that readiness must catch — for example
    a deliberately failing assertion in a suite feeding one of the nine verdicts.
    Confirm the check goes red **and** that GitHub actually refuses the merge.
    A red check that still permits merging is the exact failure this work exists
    to prevent, so this step is the one that matters.
 4. Confirm a cancelled run and a run missing an artifact both read as non-green
    rather than disappearing.
-5. Delete the disposable branch.
+5. Delete both disposable branches.
 
 Record the outcomes against T008. Until step 3 is observed, the correct
 description of this work is "configured", not "enforced".
