@@ -83,14 +83,31 @@ so a semantic conflict between two independently green branches can still reach
 before merging. Worth revisiting once the check has been green on `main` for a
 while; not worth paying for on day one.
 
+## Open question the rehearsal must settle
+
+Thirteen pull requests are open against `main` on branches that predate this
+work and do not carry `production-regression.yml`. After the merge, whether they
+report the check depends on where GitHub reads workflow files from for a
+`pull_request` event: the head branch, or the merge of head and base. If it is
+the merge, they report it and nothing is blocked. If it is the head, every one of
+them is blocked until it pulls `main`.
+
+Do not guess at this. Step 2 below answers it directly: branch a disposable pull
+request from a commit that predates the merge and see whether the check appears.
+If those branches are blocked, that is a normal rebase ask, but it should be a
+deliberate one communicated to their owners rather than something they discover
+when a merge button stops working.
+
 ## Validation after enabling
 
 F008 is not complete until enforcement is observed, not merely configured.
 
 1. `node scripts/readiness-enforcement.mjs status` — confirm the ruleset reads
    back as `active` with the expected check.
-2. Open a disposable pull request with a trivial change. Confirm readiness runs,
-   passes, and that the branch reports as mergeable.
+2. Open two disposable pull requests: one branched from the merge, one branched
+   from a commit that predates it. Confirm readiness runs and passes on the
+   first, and record whether it reports at all on the second. That settles the
+   question above before anyone else is affected.
 3. On that same branch, force a failure that readiness must catch — for example
    a deliberately failing assertion in a suite feeding one of the nine verdicts.
    Confirm the check goes red **and** that GitHub actually refuses the merge.
