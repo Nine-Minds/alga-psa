@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "scope": "Native scheduling-mediated Teams meeting lifecycle assertions; incomplete full Teams spec",
+  "scope": "Native scheduling-mediated Teams lifecycle with subsequent complete Teams scenario pass",
   "sourceHeadAfter": "a4462d1333f0865899ded82b81e62d2a1448acf3",
   "sourceDirty": true,
   "testFile": "e2e-tests/development-tests/teams-profile.spec.ts",
@@ -55,8 +55,36 @@
   },
   "limits": [
     "No SSO: bot identity linking is explicitly preseeded, real login is local credentials.",
-    "No full test pass or CI proof; later bot failure remains.",
     "Native source/cache/dependencies reused; root committed unrelated files during first attempt. No clean-source attestation.",
-    "No production behavior changed."
-  ]
+    "No production behavior changed.",
+    "First execution failed after lifecycle checks; later full scenario passed with additional native transport probes. No clean CI proof."
+  ],
+  "subsequentFullScenario": {
+    "status": "passed",
+    "sourceHeadAfter": "66d59767065e48af2aac3d0a266313c2b074ffc1",
+    "testSha256": "d2a6e6728a14e64ce9b3cdd71da77164797d6470663d3b725d2080d1b6916340",
+    "sourceCleanClaim": false,
+    "expected": 1,
+    "unexpected": 0,
+    "skipped": 0,
+    "flaky": 0,
+    "retries": 0,
+    "durationMs": 193833.683,
+    "report": "/tmp/alga-native-teams-yckqLo/lifecycle.log",
+    "startTime": "2026-09-09T05:51:31.421Z",
+    "ownedDatabase": "teams_native_1788933032684",
+    "ownedDatabaseDropped": true,
+    "ownedProcessesStopped": true,
+    "additionalNativeDiagnostics": [
+      "GET exact bot endpoint via localhost, IPv4 and IPv6 returned405",
+      "Empty unauthenticated POST returned401 before signed scenario delivery",
+      "Harness fetch error-cause instrumentation observed no failure during this run"
+    ],
+    "coverage": "Whole existing Teams profile recovery, meeting creation/reschedule/deletion and prelinked same-tenant/foreign-tenant bot scenario passed.",
+    "limits": [
+      "Earlier generic fetchfailed cause was not reproduced with additional read-only/auth-rejection probes; no product root cause or permanent transport fix claimed.",
+      "Native source/cache reused; source commits changed unrelated files during execution.",
+      "No SSO or production-container claim."
+    ]
+  }
 }

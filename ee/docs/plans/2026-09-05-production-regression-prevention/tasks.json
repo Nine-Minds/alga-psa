@@ -579,7 +579,7 @@
       "status": "in_progress",
       "dependsOn": [],
       "owner": "stripe_protocol",
-      "notes": "Current Teams trace confirms credentials callback succeeded but dashboard navigation remained pending with a compiling indicator beyond 90 seconds. CI also stopped Temporal before the EE development server tried to connect. Keep the frontend available and add bounded authenticated dashboard warmup before unchanged browser assertions. Nine native HTTP cases and independent integration review pass; actual app CI remains pending. Native reproduction now identifies i18n loading shell as legitimate SSR without dashboard marker; helper uses authenticated Chromium hydration and passes on actual isolated native app. Node tooling CI provisions pinned e2e Playwright Chromium. Current561a6 CI predates hydration repair; fresh candidate CI still required."
+      "notes": "Current Teams trace confirms credentials callback succeeded but dashboard navigation remained pending with a compiling indicator beyond 90 seconds. CI also stopped Temporal before the EE development server tried to connect. Keep the frontend available and add bounded authenticated dashboard warmup before unchanged browser assertions. Nine native HTTP cases and independent integration review pass; actual app CI remains pending. Native reproduction now identifies i18n loading shell as legitimate SSR without dashboard marker; helper uses authenticated Chromium hydration and passes on actual isolated native app. Node tooling CI provisions pinned e2e Playwright Chromium. Current561a6 CI predates hydration repair; fresh candidate CI still required. Extended full native development scenario now passes profile recovery, meeting CRUD and prelinked bot isolation after transport probes; earlier generic fetch failure remains unexplained and no first-attempt stability claim is made. See native-teams-scheduling-lifecycle.json. Current561a6 CI still predates all reviewed hydration/lifecycle changes."
     },
     {
       "id": "R070",
@@ -704,10 +704,10 @@
     {
       "id": "R085",
       "title": "Verify Teams scheduling update and deletion against Graph",
-      "status": "in_progress",
+      "status": "done",
       "dependsOn": [],
       "owner": "stripe_protocol",
-      "notes": "Extend existing real UI meeting journey with update/delete, stable provider identity, Graph and database readback; isolated native execution, no SSO claim. Actual native run executed every new scheduling lifecycle assertion successfully, then failed existing bot delivery. Native setup secret-chain mismatch fixed privately. native-teams-scheduling-lifecycle.json preserves bounded proof; full spec remains pending bot diagnosis."
+      "notes": "Extended real UI meeting scenario through reschedule/reopen/delete with stable provider identity and Graph/DB readback. Every added assertion passed on first executable lifecycle run, followed by a bot transport failure. Subsequent full native Teams scenario passed1/1, retries0,193.83s after additional GET405/unauthenticatedPOST401 transport probes. Earlier fetch failure root cause remains unproven; no product fix, clean-source, CI, SSO or repeatability claim. Owned resources cleaned; native-teams-scheduling-lifecycle.json. R069/current CI and F034 broader scope remain open."
     },
     {
       "id": "R086",
