@@ -8,6 +8,7 @@ import type {
   TemplateI18nRef,
   TemplateI18nText,
   TemplateTableColumn,
+  TemplateTableColumnLine,
   TemplateTotalsRow,
   TemplateValueExpression,
   TemplateValueFormat,
@@ -824,6 +825,52 @@ const coerceNodeStyleFromInlineStyle = (inline: Record<string, unknown> | undefi
   return Object.keys(style).length > 0 ? style : undefined;
 };
 
+/**
+ * Designer table columns may carry stacked per-line content (`lines`) that the
+ * runtime schema understands but the designer's simple column model does not.
+ * Preserve each line's id, value expression, format and style (including token
+ * ids) verbatim so a duplicated/custom template never loses its stacked cell on
+ * save. Both `value` (the runtime key imported from an AST) and
+ * `valueExpression` (the designer's usual expression slot) are accepted.
+ */
+const mapWorkspaceColumnLines = (value: unknown): TemplateTableColumn['lines'] => {
+  if (!Array.isArray(value) || value.length === 0) {
+    return undefined;
+  }
+
+  const mapped: NonNullable<TemplateTableColumn['lines']> = [];
+
+  for (const [index, entry] of value.entries()) {
+    if (!isRecord(entry)) {
+      continue;
+    }
+    const id = sanitizeId(asTrimmedString(entry.id)) || `line-${index + 1}`;
+    const valueExpression = isTemplateValueExpression(entry.valueExpression)
+      ? entry.valueExpression
+      : isTemplateValueExpression(entry.value)
+        ? entry.value
+        : null;
+    if (!valueExpression) {
+      continue;
+    }
+    const line: TemplateTableColumnLine = {
+      id,
+      value: valueExpression,
+    };
+    const format = parseTemplateValueFormat(entry.format ?? entry.type);
+    if (format) {
+      line.format = format;
+    }
+    const style = mapTemplateNodeStyleRef(entry.style);
+    if (style) {
+      line.style = style;
+    }
+    mapped.push(line);
+  }
+
+  return mapped.length > 0 ? mapped : undefined;
+};
+
 const mapTableColumns = (node: WorkspaceNode, documentKind: DesignerDocumentKind): TemplateTableColumn[] => {
   const metadata = getWorkspaceNodeMetadata(node);
   const columns = Array.isArray(metadata.columns) ? metadata.columns : [];
@@ -859,6 +906,10 @@ const mapTableColumns = (node: WorkspaceNode, documentKind: DesignerDocumentKind
       const style = mapTemplateNodeStyleRef(column.style);
       if (style) {
         mapped.style = style;
+      }
+      const lines = mapWorkspaceColumnLines(column.lines);
+      if (lines) {
+        mapped.lines = lines;
       }
       if (parsedFormat) {
         mapped.format = parsedFormat;
@@ -1898,6 +1949,11 @@ export const importTemplateAstToWorkspace = (
             }
             if (column.style) {
               mappedColumn.style = { ...column.style } as Record<string, unknown>;
+            }
+            if (Array.isArray(column.lines) && column.lines.length > 0) {
+              // Keep stacked per-line content verbatim so re-exporting the
+              // template (duplicate/save-as) does not flatten the cell.
+              mappedColumn.lines = cloneJson(column.lines);
             }
 
             return mappedColumn;

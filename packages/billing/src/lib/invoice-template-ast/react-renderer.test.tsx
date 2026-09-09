@@ -1042,7 +1042,26 @@ describe('renderEvaluatedTemplateAst', () => {
 });
 
 describe('renderEvaluatedTemplateAst stacked table-cell lines', () => {
-  const renderAst = async (columns: Array<Record<string, unknown>>, rows: Array<Record<string, unknown>>) => {
+  const renderAst = async (
+    columns: Array<Record<string, unknown>>,
+    rows: Array<Record<string, unknown>>,
+    nodeType: 'dynamic-table' | 'table' = 'dynamic-table'
+  ) => {
+    const tableNode =
+      nodeType === 'table'
+        ? {
+            id: 'line-items',
+            type: 'table' as const,
+            sourceBinding: { bindingId: 'lineItems' },
+            rowBinding: 'row',
+            columns: columns as never,
+          }
+        : {
+            id: 'line-items',
+            type: 'dynamic-table' as const,
+            repeat: { sourceBinding: { bindingId: 'lineItems' }, itemBinding: 'item' },
+            columns: columns as never,
+          };
     const ast: TemplateAst = {
       kind: 'invoice-template-ast',
       version: TEMPLATE_AST_VERSION,
@@ -1057,14 +1076,7 @@ describe('renderEvaluatedTemplateAst stacked table-cell lines', () => {
       layout: {
         id: 'root',
         type: 'document',
-        children: [
-          {
-            id: 'line-items',
-            type: 'dynamic-table',
-            repeat: { sourceBinding: { bindingId: 'lineItems' }, itemBinding: 'item' },
-            columns: columns as never,
-          },
-        ],
+        children: [tableNode],
       },
     };
     const evaluation = evaluateTemplateAst(ast, { items: rows });
@@ -1166,5 +1178,87 @@ describe('renderEvaluatedTemplateAst stacked table-cell lines', () => {
 
     expect(rendered.html).toContain('<span style="white-space:pre-line">Managed Support\nFull-service support</span>');
     expect(rendered.html).toContain('>Discount</td>');
+  });
+
+  it('carries line tokenIds classes alongside inline styles on a dynamic-table', async () => {
+    const rendered = await renderAst(
+      [
+        {
+          id: 'description',
+          header: 'Description',
+          value: { type: 'path', path: 'description' },
+          lines: [
+            {
+              id: 'item-name',
+              value: { type: 'path', path: 'service_name' },
+              style: { tokenIds: ['line-strong'], inline: { fontWeight: 600 } },
+            },
+          ],
+        },
+      ],
+      [{ service_name: 'Managed Support', description: 'Description' }]
+    );
+
+    expect(rendered.html).toContain(
+      '<div class="ast-line-strong" style="font-weight:600">Managed Support</div>'
+    );
+  });
+
+  it('carries line tokenIds classes alongside inline styles on a plain table', async () => {
+    const rendered = await renderAst(
+      [
+        {
+          id: 'description',
+          header: 'Description',
+          value: { type: 'path', path: 'description' },
+          lines: [
+            {
+              id: 'item-name',
+              value: { type: 'path', path: 'service_name' },
+              style: { tokenIds: ['line-strong'], inline: { fontWeight: 600 } },
+            },
+          ],
+        },
+      ],
+      [{ service_name: 'Managed Support', description: 'Description' }],
+      'table'
+    );
+
+    expect(rendered.html).toContain(
+      '<div class="ast-line-strong" style="font-weight:600">Managed Support</div>'
+    );
+  });
+
+  it('stacks resolved lines inside a plain table node', async () => {
+    const rendered = await renderAst(
+      [
+        {
+          id: 'description',
+          header: 'Description',
+          value: { type: 'path', path: 'description' },
+          lines: [
+            { id: 'item-name', value: { type: 'path', path: 'service_name' } },
+            { id: 'catalog-description', value: { type: 'path', path: 'catalog_description' } },
+          ],
+        },
+        {
+          id: 'amount',
+          header: 'Amount',
+          value: { type: 'path', path: 'total_price' },
+          format: 'currency',
+        },
+      ],
+      [
+        { service_name: 'Managed Support', catalog_description: 'Full-service support', total_price: 2500 },
+        { service_name: null, catalog_description: null, description: 'Discount', total_price: -500 },
+      ],
+      'table'
+    );
+
+    expect(rendered.html).toContain('<div>Managed Support</div>');
+    expect(rendered.html).toContain('<div>Full-service support</div>');
+    expect(rendered.html).toContain('>Discount</td>');
+    expect(rendered.html).toContain('$25.00');
+    expect(rendered.html).toContain('-$5.00');
   });
 });

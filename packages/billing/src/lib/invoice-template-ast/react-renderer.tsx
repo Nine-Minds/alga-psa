@@ -276,6 +276,7 @@ const resolveTableCellText = (text: string): { text: string; multiline: boolean 
 interface RenderedCellLine {
   text: string;
   style?: React.CSSProperties;
+  className?: string | null;
 }
 
 /**
@@ -299,10 +300,11 @@ const resolveColumnCellLines = (
   const lines = column.lines
     .map((line) => {
       const raw = resolveExpressionValue(line.value, evaluation, scope, ctx);
-      const { style: lineStyle } = resolveStyleRef(line.style);
+      const { className: lineClassName, style: lineStyle } = resolveStyleRef(line.style);
       return {
         text: formatValue(raw ?? '', line.format ?? column.format, ctx),
         style: lineStyle,
+        className: lineClassName,
       };
     })
     .filter((entry) => entry.text.trim().length > 0);
@@ -327,6 +329,7 @@ const renderTableCellContent = (
       return (
         <div
           key={`${column.id}-line-${index}`}
+          className={line.className || undefined}
           style={{ ...(line.style ?? {}), ...(normalized.multiline ? { whiteSpace: 'pre-line' } : {}) }}
         >
           {normalized.text}

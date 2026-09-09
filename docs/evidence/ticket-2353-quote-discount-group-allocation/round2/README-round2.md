@@ -80,13 +80,35 @@ template's totals layout.
 
 ### Command / environment notes
 
-- Worktree: `feature/correct-recurring-quote-discount-allocation-and`,
-  HEAD `e6b92d7a3f` + uncommitted repair (schema/renderer/types/tests).
+- Worktree: `feature/correct-recurring-quote-discount-allocation-and`;
+  repair commits `f824277fca` (runtime lines support) plus the review-round
+  fixes (workspace lines roundtrip + renderer line classes). Not pushed.
 - Node v22.18.0; Vitest 3.2.7 (server/) and 4.1.10 (root); shared dev Postgres
   on 127.0.0.1:5472 (app via PgBouncer 6472).
 - `quoteInfrastructure.test.ts` T220 and the harness ran with
   `TEST_DB_NAME=test_database_2353db_full` (fresh, migrated) and
   `TEST_DB_NAME=test_database_2353lines_harness` (connects to the shared DB).
+
+## Review-round fixes (after round-2 review)
+
+Two independently reproduced compatibility gaps were fixed on top of the
+round-2 commit:
+
+1. **`invoice-designer/ast/workspaceAst.ts`** dropped `column.lines` during
+   workspace import/export, so duplicating/saving a custom template flattened
+   the stacked Description cell. Import now preserves `lines` verbatim and
+   export re-emits line ids, expressions, formats and styles (incl. `tokenIds`)
+   via `mapWorkspaceColumnLines`. Regressions: `workspaceAst.roundtrip.templates.test.ts`
+   covers `dynamic-table` and `table` inputs, determinism across cycles, and
+   rendered output after roundtrip.
+2. **`react-renderer.tsx`** discarded the `className` from
+   `resolveStyleRef(line.style)`, so supported `style.tokenIds` on stacked lines
+   were silently ignored. Lines now carry `class="ast-…"` next to their inline
+   styles. Regressions assert class + inline rendering for both table node kinds.
+
+Re-validation after these fixes: 183 unit/focused tests, 115 DB-backed infra
+tests (incl. T220), and 34 workspace roundtrip/regression tests pass; billing
+typecheck + build clean; ESLint 0 errors on touched files.
 - Pre-fix reproduction confirmed with the exact failure text (see README in the
   parent evidence dir); post-fix the same catalog AST evaluates and renders.
 

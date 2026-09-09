@@ -9,6 +9,30 @@ Description columns) now evaluates and renders through the real quote
 preview/PDF path. Runtime regression: infra test T220 in
 `server/src/test/infrastructure/billing/quotes/quoteInfrastructure.test.ts`.
 
+## Review response — round-3 compatibility fixes
+
+Reviewer independently reproduced two gaps; both are fixed and covered:
+
+1. **Workspace roundtrip dropped `lines`.** `importTemplateAstToWorkspace` now
+   preserves each table/dynamic-table column's `lines` verbatim, and
+   `exportWorkspaceToTemplateAst` (`mapWorkspaceColumnLines`) re-emits line
+   ids, value expressions, formats and styles (including `tokenIds`) — so a
+   duplicated/save-as custom template keeps its stacked Description cell.
+   Regressions in `workspaceAst.roundtrip.templates.test.ts`: lines survive
+   `roundTripAst` for both `dynamic-table` and `table` inputs, are
+   deterministic across further cycles, and the round-tripped AST still
+   renders the stacked lines through the real renderer.
+2. **Renderer dropped line `tokenIds` classes.** `resolveStyleRef(line.style)`
+   already returned `className`, but the cell-line code discarded it and the
+   line `<div>` never applied it. `react-renderer.tsx` now carries and renders
+   `class="ast-…"` alongside inline styles for every stacked line. Regressions
+   assert the class + inline style render for both `dynamic-table` and plain
+   `table` cells.
+
+Re-validation: 183 unit/focused tests + 115 DB-backed infra tests pass;
+`workspaceAst.roundtrip.*` (34 tests) green; billing typecheck + build clean;
+ESLint 0 errors on touched files.
+
 Branch: `feature/correct-recurring-quote-discount-allocation-and` (isolated
 checkout, not pushed). Plan:
 `ee/docs/plans/2026-09-08-quote-discount-group-allocation/`.
