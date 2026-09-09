@@ -744,10 +744,10 @@
     {
       "id": "R090",
       "title": "Assert visible bucket balances in primary and supported-upgrade browsers",
-      "status": "in_progress",
+      "status": "done",
       "dependsOn": [],
       "owner": "stripe_protocol",
-      "notes": "Existing Add Usage journeys could pass with absent/failed bucket panel. Assert independent fixture balances (primary unused40hours); add a minimal v1.5-compatible bucket seed for upgrade/Citus browser coverage and preserve retained data invariants. QBO agent independently reviews legacy schema compatibility. Native first, no Docker. Primary native journey passes1/1 with all new balances and existing invoice/isolation assertions. Exact v1.5 migration+retention passes. Upgrade invoice+usage pass across three runs, but ticket fulljourney remains over native dev deadline even after bounded read-only precompile; latest2pass/1fail196.18s. Keep fullsuite validation open for production CI; no retries/deadlines relaxed. See additive native-bucket-browser-balances.json."
+      "notes": "Existing Add Usage journeys could pass with absent/failed bucket panel. Assert independent fixture balances (primary unused40hours); add a minimal v1.5-compatible bucket seed for upgrade/Citus browser coverage and preserve retained data invariants. QBO agent independently reviews legacy schema compatibility. Native first, no Docker. Primary native journey passes1/1 with all new balances and existing invoice/isolation assertions. Exact v1.5 migration+retention passes. Upgrade invoice+usage pass across three runs, but ticket fulljourney remains over native dev deadline even after bounded read-only precompile; latest2pass/1fail196.18s. Keep fullsuite validation open for production CI; no retries/deadlines relaxed. See additive native-bucket-browser-balances.json. Currentpublishedc523 actualCI PG10093566639/Citus10093682343 eachschema+3browserfirstattemptpass oncleancec083; exacttestedmerge retainedusage sourcecontainsvisiblebalanceassertions before/afterAddUsage. Completesactualproductionupgradeverification; priornative2/3failuresremainretained. ci-upgrade-bucket-balances-c523.json."
     },
     {
       "id": "R091",
@@ -848,10 +848,10 @@
     {
       "id": "R103",
       "title": "Require actual per-journey provider observations and record SMTP DATA transactions",
-      "status": "in_progress",
+      "status": "done",
       "dependsOn": [],
       "owner": "coordinator",
-      "notes": "Independentauditfound sanitizedproviderobservations were reporting-only. Bind committedfulljourney/provider/mode policy to actualrawbrowserreports/cleansource/verifiedCIarchives atfreshinstallgate. Rejectmissing/wrong/incomplete/empty/unregisteredtraffic and retries. CurrentCEreplayfails specificallyunsupportedSMTP; EEalsoflaky. Implementrealmetadata-onlySMTPDATAjournal with250/4xx/5xx/abort,inflight/drop/resetisolation; nofakeHTTPor exemption. NativeSMTP7/7,host28/28,tsc; provider/freshgate/metrics19/19 pass. Fullreview/canonicaltoolingpending; production/release rolloutF036/T030 remainsopen."
+      "notes": "Independentauditfound sanitizedproviderobservations were reporting-only. Bind committedfulljourney/provider/mode policy to actualrawbrowserreports/cleansource/verifiedCIarchives atfreshinstallgate. Rejectmissing/wrong/incomplete/empty/unregisteredtraffic and retries. CurrentCEreplayfails specificallyunsupportedSMTP; EEalsoflaky. Implementrealmetadata-onlySMTPDATAjournal with250/4xx/5xx/abort,inflight/drop/resetisolation; nofakeHTTPor exemption. NativeSMTP7/7,host28/28,tsc; provider/freshgate/metrics19/19 pass. Fullreview/canonicaltoolingpending; production/release rolloutF036/T030 remainsopen. Independentcrossreview and accurateHTTP/SMTPdeclarationcheckpassed. CanonicalNode1004/1004 across90files oncleanunchanged93e79e,161.50s. ActualCIgateSMTPeffectpendingnextpublication."
     }
   ]
 }
