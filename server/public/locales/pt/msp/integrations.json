@@ -1856,7 +1856,8 @@
           "credentialsReady": "Credenciais prontas",
           "credentialsRequired": "Credenciais necessárias",
           "defaultConnected": "Empresa conectada",
-          "noCompany": "Nenhuma empresa conectada"
+          "noCompany": "Nenhuma empresa conectada",
+          "sharedApp": "Aplicativo Intuit compartilhado"
         },
         "callback": {
           "accessDenied": "O acesso ao QuickBooks foi negado antes da conexão ser concluída.",
@@ -1880,11 +1881,12 @@
         "connectSuccess": "QuickBooks conectados com sucesso. A empresa conectada agora é o contexto padrão do QuickBooks ativo.",
         "connection": {
           "defaultCompany": "Empresa conectada",
-          "description": "Inicie o OAuth somente depois que as credenciais do aplicativo QuickBooks forem configuradas. A desconexão remove os tokens de acesso armazenados do QuickBooks, mas mantém as credenciais do aplicativo de propriedade do locatário.",
-          "notConnected": "Nenhuma empresa QuickBooks está conectada ainda. Salve as credenciais e clique em Conectar QuickBooks.",
+          "description": "«Conectar QuickBooks» fica disponível quando há um aplicativo Intuit (veja o cartão «Aplicativo Intuit» acima). Desconectar remove os tokens de acesso do QuickBooks armazenados, mas mantém as credenciais do aplicativo Intuit próprio deste tenant.",
+          "notConnected": "Nenhuma empresa QuickBooks está conectada ainda. Clique em «Conectar QuickBooks» para fazer login na Intuit e escolher uma empresa.",
           "realmId": "ID do reino: {{id}}",
           "title": "Conexão QuickBooks ao vivo",
-          "unknown": "desconhecido"
+          "unknown": "desconhecido",
+          "descriptionShared": "Clique em «Conectar QuickBooks», faça login na Intuit e escolha a empresa a vincular. Nada mais precisa ser configurado antes. Desconectar remove os tokens de acesso do QuickBooks armazenados."
         },
         "credentialsSaved": "Credenciais do QuickBooks salvas. Agora você pode iniciar o fluxo QuickBooks OAuth.",
         "csvAvailableMiddle": "nesta mesma seção de Contabilidade e gerenciar as exportações de",
@@ -1901,7 +1903,7 @@
           "load": "Falha ao carregar as configurações do QuickBooks.",
           "saveCredentials": "Falha ao salvar as credenciais do QuickBooks."
         },
-        "howItWorksDescription": "Salve as credenciais do aplicativo QuickBooks aqui, conclua o fluxo Intuit OAuth e o AlgaPSA usará a empresa QuickBooks conectada como contexto ao vivo padrão para exportações e mapeamentos.",
+        "howItWorksDescription": "Conecte sua empresa QuickBooks fazendo login na Intuit, e o AlgaPSA a usará como contexto ao vivo padrão para exportações e mapeamentos. O cartão «Aplicativo Intuit» abaixo informa se sua implantação já fornece o aplicativo usado nesse login ou se você precisa registrar um primeiro.",
         "howItWorksTitle": "Como funciona o QuickBooks ao vivo nesta versão",
         "loading": "Carregando configurações do QuickBooks…",
         "mapping": {
@@ -1919,8 +1921,8 @@
         "requiredScopes": "Escopos necessários",
         "storedClientId": "ID do cliente armazenado: {{value}}",
         "storedClientSecret": "Segredo do cliente armazenado: {{value}}",
-        "tenantOauthDescription": "Através de que aplicação Intuit este inquilino se liga. Os segredos nunca são devolvidos ao navegador depois de guardados.",
-        "tenantOauthTitle": "Credenciais da aplicação Intuit",
+        "tenantOauthDescription": "O AlgaPSA acessa o QuickBooks por meio de um aplicativo Intuit: um registro de desenvolvedor em developer.intuit.com, não uma configuração dentro do QuickBooks ou do AlgaPSA. Este cartão informa se já existe um disponível para você.",
+        "tenantOauthTitle": "Aplicativo Intuit",
         "title": "QuickBooks Online",
         "automatedSalesTax": {
           "disabledMessage": "O modo Automated Sales Tax está desativado. O Alga continua a calcular o imposto desta empresa.",
@@ -1929,9 +1931,10 @@
           "label": "O QuickBooks calcula o imposto sobre vendas"
         },
         "credentialSource": {
-          "app": "Esta instalação fornece uma aplicação Intuit partilhada, por isso pode ligar o QuickBooks sem registar nenhuma. Preencha os campos abaixo apenas se quiser que este inquilino use a sua própria aplicação Intuit.",
-          "none": "Ainda não há nenhuma aplicação Intuit disponível. Registe uma no portal Intuit Developer e cole abaixo o ID de cliente e o segredo — o guia de configuração explica o processo.",
-          "tenant": "Este inquilino liga-se através da sua própria aplicação Intuit, com as credenciais guardadas abaixo."
+          "app": "Esta implantação fornece um aplicativo Intuit compartilhado, então você pode conectar o QuickBooks sem registrar um. Pule este cartão e clique em «Conectar QuickBooks» abaixo.",
+          "none": "Nenhum aplicativo Intuit está disponível ainda. Registre um na Intuit antes de poder conectar.",
+          "tenant": "Este tenant se conecta por meio do seu próprio aplicativo Intuit, usando as credenciais armazenadas abaixo. Para rotacionar uma chave, cole o novo valor e salve.",
+          "appTitle": "Nenhuma credencial necessária"
         },
         "setupGuideLink": "Guia de configuração do QuickBooks",
         "noPermissionDescription": "Você não tem permissão para visualizar ou configurar integrações contábeis.",
@@ -1946,6 +1949,19 @@
           "targetFailed": "Precisa de atenção",
           "targetPending": "Pendente",
           "failedPermanentDescription": "A limpeza do provedor encontrou um erro permanente. Você pode tentar novamente ou finalizar à força para remover as credenciais armazenadas com um registro de auditoria."
+        },
+        "registerSteps": {
+          "createApp": "Faça login em",
+          "createAppSuffix": "e crie um aplicativo para QuickBooks Online and Payments com o escopo Accounting. Seu login do QuickBooks funciona lá.",
+          "openKeys": "Abra a página «Keys & credentials» do aplicativo. Use as chaves Development se o ambiente Intuit abaixo indicar Sandbox, ou as chaves Production se indicar Produção.",
+          "addRedirect": "Adicione o Redirect URI mostrado abaixo à lista de URIs de redirecionamento do aplicativo, exatamente como exibido.",
+          "pasteKeys": "Copie o Client ID e o Client Secret dessa página para os dois campos abaixo e clique em «Salvar credenciais do QuickBooks».",
+          "connect": "Clique em «Conectar QuickBooks» e faça login na empresa QuickBooks que deseja vincular."
+        },
+        "ownApp": {
+          "show": "Usar meu próprio aplicativo Intuit (avançado)",
+          "hide": "Ocultar configurações do aplicativo próprio",
+          "intro": "Faça isso somente se quiser que este tenant autorize por meio de um aplicativo Intuit que você controla. Registre o aplicativo conforme descrito no guia de configuração e cole aqui as chaves. Até que ambas sejam salvas, o aplicativo compartilhado continua em uso."
         }
       },
       "sync": {

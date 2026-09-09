@@ -1856,7 +1856,8 @@
           "credentialsReady": "Poświadczenia gotowe",
           "credentialsRequired": "Wymagane poświadczenia",
           "defaultConnected": "Połączono firmę",
-          "noCompany": "Nie połączono żadnej firmy"
+          "noCompany": "Nie połączono żadnej firmy",
+          "sharedApp": "Współdzielona aplikacja Intuit"
         },
         "callback": {
           "accessDenied": "Dostęp do QuickBooks został odmówiony przed ukończeniem połączenia.",
@@ -1880,11 +1881,12 @@
         "connectSuccess": "QuickBooks połączone pomyślnie. Połączona firma jest teraz domyślnym kontekstem QuickBooks na żywo.",
         "connection": {
           "defaultCompany": "Połączona firma",
-          "description": "Uruchom OAuth dopiero po skonfigurowaniu poświadczeń aplikacji QuickBooks. Rozłączenie usuwa zapisane tokeny dostępu QuickBooks, ale zachowuje poświadczenia aplikacji należącej do tenanta.",
-          "notConnected": "Nie połączono jeszcze żadnej firmy QuickBooks. Zapisz poświadczenia, a następnie kliknij Połącz QuickBooks.",
+          "description": "„Połącz QuickBooks” staje się dostępne, gdy istnieje aplikacja Intuit (zobacz kartę „Aplikacja Intuit” powyżej). Rozłączenie usuwa zapisane tokeny dostępu QuickBooks, ale zachowuje własne dane aplikacji Intuit tej organizacji.",
+          "notConnected": "Żadna firma QuickBooks nie jest jeszcze połączona. Kliknij „Połącz QuickBooks”, aby zalogować się do Intuit i wybrać firmę.",
           "realmId": "Identyfikator obszaru: {{id}}",
           "title": "Połączenie QuickBooks na żywo",
-          "unknown": "nieznany"
+          "unknown": "nieznany",
+          "descriptionShared": "Kliknij „Połącz QuickBooks”, zaloguj się do Intuit i wybierz firmę do połączenia. Nic więcej nie trzeba wcześniej konfigurować. Rozłączenie usuwa zapisane tokeny dostępu QuickBooks."
         },
         "credentialsSaved": "Zapisano poświadczenia QuickBooks. Można teraz rozpocząć przepływ OAuth QuickBooks.",
         "csvAvailableMiddle": "w tej samej sekcji Księgowość i zarządzaj eksportami z",
@@ -1901,7 +1903,7 @@
           "load": "Nie udało się załadować ustawień QuickBooks.",
           "saveCredentials": "Nie udało się zapisać poświadczeń QuickBooks."
         },
-        "howItWorksDescription": "Zapisz tutaj poświadczenia aplikacji QuickBooks, ukończ przepływ OAuth Intuit, a AlgaPSA użyje połączonej firmy QuickBooks jako domyślnego kontekstu na żywo dla eksportów i mapowań.",
+        "howItWorksDescription": "Połącz swoją firmę QuickBooks, logując się do Intuit, a AlgaPSA użyje jej jako domyślnego kontekstu na żywo dla eksportów i mapowań. Karta „Aplikacja Intuit” poniżej informuje, czy Twoje wdrożenie już udostępnia aplikację używaną do tego logowania, czy najpierw trzeba ją zarejestrować.",
         "howItWorksTitle": "Jak działa QuickBooks na żywo w tej wersji",
         "loading": "Ładowanie ustawień QuickBooks…",
         "mapping": {
@@ -1919,8 +1921,8 @@
         "requiredScopes": "Wymagane zakresy",
         "storedClientId": "Zapisany Client ID: {{value}}",
         "storedClientSecret": "Zapisany Client Secret: {{value}}",
-        "tenantOauthDescription": "Przez którą aplikację Intuit łączy się ta organizacja. Sekrety nigdy nie są zwracane do przeglądarki po zapisaniu.",
-        "tenantOauthTitle": "Poświadczenia aplikacji Intuit",
+        "tenantOauthDescription": "AlgaPSA łączy się z QuickBooks przez aplikację Intuit: rejestrację dewelopera w developer.intuit.com, a nie ustawienie w QuickBooks ani w AlgaPSA. Ta karta informuje, czy taka aplikacja jest już dla Ciebie udostępniona.",
+        "tenantOauthTitle": "Aplikacja Intuit",
         "title": "QuickBooks Online",
         "automatedSalesTax": {
           "disabledMessage": "Tryb Automated Sales Tax jest wyłączony. Alga nadal nalicza podatek dla tej firmy.",
@@ -1929,9 +1931,10 @@
           "label": "QuickBooks oblicza podatek od sprzedaży"
         },
         "credentialSource": {
-          "app": "To wdrożenie udostępnia współdzieloną aplikację Intuit, więc możesz połączyć QuickBooks bez rejestrowania własnej. Wypełnij poniższe pola tylko wtedy, gdy ta organizacja ma używać własnej aplikacji Intuit.",
-          "none": "Nie ma jeszcze dostępnej aplikacji Intuit. Zarejestruj ją w portalu Intuit Developer i wklej poniżej identyfikator klienta oraz sekret — przewodnik konfiguracji opisuje ten proces.",
-          "tenant": "Ta organizacja łączy się przez własną aplikację Intuit, używając zapisanych poniżej poświadczeń."
+          "app": "To wdrożenie udostępnia współdzieloną aplikację Intuit, więc możesz połączyć QuickBooks bez rejestrowania własnej. Pomiń tę kartę i kliknij poniżej „Połącz QuickBooks”.",
+          "none": "Żadna aplikacja Intuit nie jest jeszcze dostępna. Zarejestruj ją w Intuit, zanim będzie można się połączyć.",
+          "tenant": "Ta organizacja łączy się przez własną aplikację Intuit, używając zapisanych poniżej danych. Aby zmienić klucz, wklej nową wartość i zapisz.",
+          "appTitle": "Dane uwierzytelniające nie są potrzebne"
         },
         "setupGuideLink": "Przewodnik konfiguracji QuickBooks",
         "noPermissionDescription": "Nie masz uprawnień do wyświetlania ani konfigurowania integracji księgowych.",
@@ -1946,6 +1949,19 @@
           "targetFailed": "wymaga uwagi",
           "targetPending": "oczekuje",
           "failedPermanentDescription": "Czyszczenie po stronie dostawcy napotkało trwały błąd. Możesz ponowić próbę lub wymusić finalizację, aby usunąć zapisane poświadczenia wraz z wpisem audytowym."
+        },
+        "registerSteps": {
+          "createApp": "Zaloguj się na",
+          "createAppSuffix": "i utwórz aplikację dla QuickBooks Online and Payments z zakresem Accounting. Działa tam Twój login QuickBooks.",
+          "openKeys": "Otwórz stronę „Keys & credentials” aplikacji. Użyj kluczy Development, gdy środowisko Intuit poniżej pokazuje Sandbox, lub kluczy Production, gdy pokazuje Produkcja.",
+          "addRedirect": "Dodaj pokazany poniżej Redirect URI do listy adresów przekierowania aplikacji, dokładnie tak, jak jest wyświetlony.",
+          "pasteKeys": "Skopiuj Client ID i Client Secret z tej strony do dwóch pól poniżej, a następnie kliknij „Zapisz dane uwierzytelniające QuickBooks”.",
+          "connect": "Kliknij „Połącz QuickBooks” i zaloguj się do firmy QuickBooks, którą chcesz połączyć."
+        },
+        "ownApp": {
+          "show": "Użyj zamiast tego własnej aplikacji Intuit (zaawansowane)",
+          "hide": "Ukryj ustawienia własnej aplikacji",
+          "intro": "Zrób to tylko wtedy, gdy ta organizacja ma autoryzować się przez aplikację Intuit, którą kontrolujesz. Zarejestruj aplikację zgodnie z przewodnikiem konfiguracji i wklej tutaj jej klucze. Dopóki oba nie zostaną zapisane, nadal używana jest aplikacja współdzielona."
         }
       },
       "sync": {

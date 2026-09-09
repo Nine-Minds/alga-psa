@@ -1856,7 +1856,8 @@
           "credentialsReady": "Credenziali pronte",
           "credentialsRequired": "Credenziali richieste",
           "defaultConnected": "Azienda connessa",
-          "noCompany": "Nessuna azienda connessa"
+          "noCompany": "Nessuna azienda connessa",
+          "sharedApp": "App Intuit condivisa"
         },
         "callback": {
           "accessDenied": "L'accesso a QuickBooks è stato negato prima del completamento della connessione.",
@@ -1880,11 +1881,12 @@
         "connectSuccess": "QuickBooks connesso con successo. L'azienda connessa è ora il contesto QuickBooks live predefinito.",
         "connection": {
           "defaultCompany": "Azienda connessa",
-          "description": "Avvia OAuth solo dopo aver configurato le credenziali dell'app QuickBooks. La disconnessione rimuove i token di accesso QuickBooks memorizzati ma mantiene le credenziali dell'app di proprietà del tenant.",
-          "notConnected": "Nessuna azienda QuickBooks è ancora connessa. Salva le credenziali, quindi clicca su Connetti QuickBooks.",
+          "description": "«Collega QuickBooks» diventa disponibile quando è presente un'app Intuit (vedi la scheda «App Intuit» sopra). La disconnessione rimuove i token di accesso QuickBooks salvati ma conserva le credenziali dell'app Intuit di questo tenant.",
+          "notConnected": "Nessuna azienda QuickBooks è ancora collegata. Fai clic su «Collega QuickBooks» per accedere a Intuit e scegliere un'azienda.",
           "realmId": "ID realm: {{id}}",
           "title": "Connessione QuickBooks live",
-          "unknown": "sconosciuto"
+          "unknown": "sconosciuto",
+          "descriptionShared": "Fai clic su «Collega QuickBooks», accedi a Intuit e scegli l'azienda da collegare. Non serve configurare altro prima. La disconnessione rimuove i token di accesso QuickBooks salvati."
         },
         "credentialsSaved": "Credenziali QuickBooks salvate. Ora è possibile avviare il flusso OAuth QuickBooks.",
         "csvAvailableMiddle": "in questa stessa sezione Contabilità e gestisci le esportazioni da",
@@ -1901,7 +1903,7 @@
           "load": "Impossibile caricare le impostazioni QuickBooks.",
           "saveCredentials": "Impossibile salvare le credenziali QuickBooks."
         },
-        "howItWorksDescription": "Salva qui le credenziali dell'app QuickBooks, completa il flusso OAuth Intuit e AlgaPSA utilizzerà l'azienda QuickBooks connessa come contesto live predefinito per esportazioni e mappature.",
+        "howItWorksDescription": "Collega la tua azienda QuickBooks accedendo a Intuit; AlgaPSA la userà come contesto live predefinito per esportazioni e mappature. La scheda «App Intuit» qui sotto indica se la tua installazione fornisce già l'app usata per quell'accesso o se devi prima registrarne una.",
         "howItWorksTitle": "Come funziona QuickBooks live in questa release",
         "loading": "Caricamento impostazioni QuickBooks…",
         "mapping": {
@@ -1919,8 +1921,8 @@
         "requiredScopes": "Scope richiesti",
         "storedClientId": "Client ID memorizzato: {{value}}",
         "storedClientSecret": "Client secret memorizzato: {{value}}",
-        "tenantOauthDescription": "Tramite quale app Intuit si collega questo tenant. I secret non vengono mai restituiti al browser dopo il salvataggio.",
-        "tenantOauthTitle": "Credenziali dell’app Intuit",
+        "tenantOauthDescription": "AlgaPSA raggiunge QuickBooks tramite un'app Intuit: una registrazione sviluppatore su developer.intuit.com, non un'impostazione dentro QuickBooks o AlgaPSA. Questa scheda indica se ne è già disponibile una per te.",
+        "tenantOauthTitle": "App Intuit",
         "title": "QuickBooks Online",
         "automatedSalesTax": {
           "disabledMessage": "La modalità Automated Sales Tax è disattivata. Alga continua a calcolare l’imposta per questa azienda.",
@@ -1929,9 +1931,10 @@
           "label": "QuickBooks calcola l’imposta sulle vendite"
         },
         "credentialSource": {
-          "app": "Questa installazione fornisce un’app Intuit condivisa, quindi puoi collegare QuickBooks senza registrarne una. Compila i campi seguenti solo se vuoi che questo tenant usi una propria app Intuit.",
-          "none": "Non è ancora disponibile alcuna app Intuit. Registrane una nel portale Intuit Developer e incolla qui sotto client ID e secret: la guida alla configurazione spiega come fare.",
-          "tenant": "Questo tenant si collega tramite la propria app Intuit, con le credenziali salvate qui sotto."
+          "app": "Questa installazione fornisce un'app Intuit condivisa, quindi puoi collegare QuickBooks senza registrarne una. Salta questa scheda e fai clic su «Collega QuickBooks» qui sotto.",
+          "none": "Non è ancora disponibile alcuna app Intuit. Registrane una presso Intuit prima di poter collegare.",
+          "tenant": "Questo tenant si collega tramite la propria app Intuit, usando le credenziali salvate qui sotto. Per ruotare una chiave, incolla il nuovo valore e salva.",
+          "appTitle": "Nessuna credenziale necessaria"
         },
         "setupGuideLink": "Guida alla configurazione di QuickBooks",
         "noPermissionDescription": "Non disponi dell'autorizzazione per visualizzare o configurare le integrazioni contabili.",
@@ -1946,6 +1949,19 @@
           "targetFailed": "richiede attenzione",
           "targetPending": "in sospeso",
           "failedPermanentDescription": "La pulizia lato provider ha riscontrato un errore permanente. Puoi riprovare oppure finalizzare forzatamente per rimuovere le credenziali memorizzate con un record di audit."
+        },
+        "registerSteps": {
+          "createApp": "Accedi su",
+          "createAppSuffix": "e crea un'app per QuickBooks Online and Payments con lo scope Accounting. Il tuo login QuickBooks funziona lì.",
+          "openKeys": "Apri la pagina «Keys & credentials» dell'app. Usa le chiavi Development se l'ambiente Intuit qui sotto indica Sandbox, oppure le chiavi Production se indica Produzione.",
+          "addRedirect": "Aggiungi l'URI di reindirizzamento mostrato qui sotto all'elenco degli URI di reindirizzamento dell'app, esattamente come visualizzato.",
+          "pasteKeys": "Copia Client ID e Client Secret da quella pagina nei due campi qui sotto, poi fai clic su «Salva credenziali QuickBooks».",
+          "connect": "Fai clic su «Collega QuickBooks» e accedi all'azienda QuickBooks che vuoi collegare."
+        },
+        "ownApp": {
+          "show": "Usa invece la tua app Intuit (avanzato)",
+          "hide": "Nascondi impostazioni app propria",
+          "intro": "Fallo solo se vuoi che questo tenant si autorizzi tramite un'app Intuit che controlli tu. Registra l'app come descritto nella guida di configurazione, poi incolla qui le sue chiavi. Finché entrambe non sono salvate, continua a essere usata l'app condivisa."
         }
       },
       "sync": {
