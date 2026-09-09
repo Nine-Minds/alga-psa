@@ -27,10 +27,15 @@ export async function getCoManagedEffortTotals(db: Knex, inputActor: CoManagedSe
     : resource.kind === 'ticket' ? withCoManagedCustomerTicket : withCoManagedCustomerProject;
   return boundary(db, actor, resource, 'read', async context => {
     const { trx } = context, owner = tenantDb(trx, resource.tenant);
-    const relationship = await owner.table('co_management_relationships').where('relationship_id', resource.relationshipId).first('sponsor_tenant', 'sponsor_client_id');
+    const relationship = await owner.table('co_management_relationships').where('relationship_id', resource.relationshipId)
+      .first('sponsor_tenant', 'sponsor_client_id', 'state', 'ended_at');
     if (!relationship) throw new CoManagedSharedWorkError();
     const customerIds: string[] = [], mspIds: string[] = [];
-    const shared = await hasEffectiveSharedGrant(context.trx, context.resource);
+    // hasEffectiveSharedGrant discloses scope rows only; it does not judge trust.
+    // Once the relationship has ended, retained customer reads must never carry
+    // MSP effort — leftover scope rows (kept for history) do not revive sharing.
+    const live = relationship.state === 'active' && !relationship.ended_at;
+    const shared = live && await hasEffectiveSharedGrant(context.trx, context.resource);
     let combinedVisible = visible(context, 'combinedMinutes');
     const collect = (current: CoManagedSharedWorkContext) => {
       combinedVisible &&= visible(current, 'combinedMinutes');

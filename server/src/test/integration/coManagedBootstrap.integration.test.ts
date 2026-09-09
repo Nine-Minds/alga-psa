@@ -18102,6 +18102,27 @@ it('shared effort totals retain customer-owned effort after revocation without r
   await expect(totals(db, f.customerPrincipal, f.resource)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
 }));
 
+it('shared effort totals retain customer-owned effort after termination while MSP reads and customer writes stay closed', async () => withMspSharedTimeSaveFixture(async f => {
+  const { getCoManagedEffortTotals: totals } = await import('../../../../packages/co-managed/src/effortTotals');
+  const { closeCoManagedRelationship: close } = await import('../../../../packages/co-managed/src/relationshipClosure');
+  const { withCoManagedCustomerTicket } = await import('../../../../packages/co-managed/src/customerWork');
+  await f.insertTime(f.resource.id, 'ticket', f.resource.tenant, f.customerPrincipal.userId);
+  await f.save();
+  expect(await totals(db, f.customerPrincipal, f.resource)).toEqual({ resource: f.resource, customerMinutes: 60, mspMinutes: 60, combinedMinutes: 120 });
+  const relationship = await f.customer.table('co_management_relationships').first();
+  await close(db, f.customerPrincipal, { customerTenant: f.resource.tenant, relationshipId: f.resource.relationshipId },
+    { operationId: randomUUID(), expectedRevision: relationship.revision, reason: 'departure' }, async () => {});
+  // Closure retains the ticket grant row for history; a leftover unrevoked
+  // grant must not revive MSP effort disclosure once the relationship ended.
+  expect((await f.customer.table('co_management_ticket_work').where('ticket_id', f.resource.id).first()).grant_revoked_at).toBeNull();
+  expect(await totals(db, f.customerPrincipal, f.resource)).toEqual({ resource: f.resource, customerMinutes: 60, mspMinutes: null, combinedMinutes: null });
+  await expect(totals(db, f.principal, f.resource)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  // Retained reads pass the customer-local boundary; updates stay read-only after departure.
+  await withCoManagedCustomerTicket(db, f.customerPrincipal, f.resource, 'read', async context => { expect(context.action).toBe('read'); });
+  await expect(withCoManagedCustomerTicket(db, f.customerPrincipal, f.resource, 'update', async () => {}))
+    .rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY', lifecycle: { state: 'terminated', canWrite: false } });
+}));
+
 it.each([
   [['time_entries.notes', 'time_entries.approval_status', 'billing'], { customerMinutes: 60, mspMinutes: 60, combinedMinutes: 120 }],
   [['effort_totals.mspMinutes'], { customerMinutes: 60, mspMinutes: null, combinedMinutes: null }],
@@ -18160,6 +18181,14 @@ it('native task effort action binds customer work to the current browser and den
     browser.override.mockReturnValue(undefined);
     browser.session.mockResolvedValue({ session_id: f.customerPrincipal.sessionId, user: { id: randomUUID(), tenant: f.resource.tenant, user_type: 'internal' } });
     await expect(actions.getSharedEffortTotalsAction(request)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    // After departure the local target still resolves through the ended
+    // relationship: the customer keeps its own effort view, MSP totals do not.
+    browser.session.mockResolvedValue({ session_id: f.customerPrincipal.sessionId, user: { id: f.customerPrincipal.userId, tenant: f.resource.tenant, user_type: 'internal' } });
+    const { closeCoManagedRelationship: close } = await import('../../../../packages/co-managed/src/relationshipClosure');
+    const relationship = await f.customer.table('co_management_relationships').first();
+    await close(db, f.customerPrincipal, { customerTenant: f.resource.tenant, relationshipId: relationship.relationship_id },
+      { operationId: randomUUID(), expectedRevision: relationship.revision, reason: 'departure' }, async () => {});
+    expect(await actions.getSharedEffortTotalsAction(request)).toEqual({ resource: f.resource, customerMinutes: 0, mspMinutes: null, combinedMinutes: null });
   })));
   } finally { current.mockRestore(); connection.mockRestore(); }
 }));

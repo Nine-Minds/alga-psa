@@ -35,7 +35,14 @@ export const getSharedEffortTotalsAction = withAuth(async (user, { tenant }, tar
   return withTransaction(knex, async trx => {
     if (target?.kind === 'shared') return getCoManagedEffortTotals(trx, actor, target.resource);
     if (target?.kind !== 'local_project' && target?.kind !== 'local_task') throw new CoManagedSharedWorkError();
-    const relationship = await tenantDb(trx, tenant).table('co_management_relationships').where({ state: 'active' }).whereNull('ended_at').first('relationship_id');
+    // Customer-local reads are retained history: a terminated relationship still
+    // resolves the resource identity so the customer keeps its own effort view
+    // after departure. Prefer the live relationship, else the most recently
+    // ended one; the local-work boundary and the effort query decide what a
+    // non-live relationship may still disclose (customer-owned effort only).
+    const relationship = await tenantDb(trx, tenant).table('co_management_relationships')
+      .orderByRaw(`(state = 'active' and ended_at is null) desc`).orderBy('ended_at', 'desc')
+      .first('relationship_id');
     if (!relationship) throw new CoManagedSharedWorkError();
     return getCoManagedEffortTotals(trx, actor, { tenant, relationshipId: relationship.relationship_id,
       kind: target.kind === 'local_project' ? 'project' : 'project_task', id: target.kind === 'local_project' ? target.projectId : target.taskId });

@@ -110,16 +110,19 @@ export function registerCoManagedPortableWorkspaceExportTests(getDb: () => Knex,
       expect((await handleCoManagedPortableExport(request(undefined, 'passphrase=short'))).status).toBe(400);
       expect((await handleCoManagedPortableExport(request(undefined, 'passphrase=' + 'x'.repeat(5000)))).status).toBe(400);
       // The export screen's own target="_blank" rel="noopener" form makes the
-      // browser send Origin: null; a cross-site request must still be refused
-      // whether or not the Origin header is present, and a null Origin with no
-      // Sec-Fetch-Site proof cannot be accepted. (The accepted null-origin path
-      // is exercised by the real 200 download below.)
+      // browser send the LITERAL header `Origin: null` (an opaque origin), which
+      // is distinct from omitting the Origin header. Both variants must refuse a
+      // cross-site request, and neither may be accepted without Sec-Fetch-Site
+      // proving same-origin. (The accepted literal-null path is exercised by the
+      // real 200 download below.)
+      expect((await handleCoManagedPortableExport(request('null', undefined, { 'sec-fetch-site': 'cross-site' }))).status).toBe(403);
+      expect((await handleCoManagedPortableExport(request('null'))).status).toBe(403);
       expect((await handleCoManagedPortableExport(request(null as any, undefined, { 'sec-fetch-site': 'cross-site' }))).status).toBe(403);
-      expect((await handleCoManagedPortableExport(request('https://customer.example.test', undefined, { 'sec-fetch-site': 'cross-site' }))).status).toBe(403);
       expect((await handleCoManagedPortableExport(request(null as any))).status).toBe(403);
+      expect((await handleCoManagedPortableExport(request('https://customer.example.test', undefined, { 'sec-fetch-site': 'cross-site' }))).status).toBe(403);
       expect(f.provider).not.toHaveBeenCalled();
-      // Realistic browser shape: Origin: null (noopener form) + same-origin proof.
-      const response = await handleCoManagedPortableExport(request(null as any, undefined, { 'sec-fetch-site': 'same-origin' }));
+      // Realistic browser shape: literal Origin: null (noopener form) + same-origin proof.
+      const response = await handleCoManagedPortableExport(request('null', undefined, { 'sec-fetch-site': 'same-origin' }));
       expect(response.status).toBe(200); expect(response.headers.get('content-disposition')).toMatch(/alga-workspace-.*\.alga-backup/);
       expect(response.headers.get('cache-control')).toContain('no-store');
       // The response owns an open encrypted descriptor; no source lock survives
