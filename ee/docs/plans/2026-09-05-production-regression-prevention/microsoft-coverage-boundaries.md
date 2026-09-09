@@ -99,3 +99,40 @@ all-day boundary rejection.
 Live-provider parity is still not established by any of this. Emulator success
 is not a Microsoft certification, and no sandbox credentials exist in this
 plan's evidence.
+
+## The development-server failure is a bundler problem, not a Teams problem
+
+The chunk truncation recorded above is gone under Turbopack. The lane had pinned
+`next dev --webpack`, and every mitigation tried against the failure stayed
+inside webpack: 8GiB failed, 12GiB was marginal, source maps were disabled, and
+`webpackMemoryOptimizations` was investigated and rejected as build-path only.
+Turbopack was never tried, despite being the Next 16 default, despite
+`server/next.config.mjs` carrying a maintained `turbopack.resolveAlias` map, and
+despite `ee/server/next.config.mjs` stating that its webpack block is kept only
+"for fallback compatibility when Turbopack isn't used".
+
+Under Turbopack, run 34367564576 shows no `SyntaxError`, no `ChunkLoadError` and
+no memory restart. The lane starts, captures credentials, passes its
+authentication check and warms the authenticated dashboard, then runs the
+journey for 74.8s.
+
+So the 81.7MB single-chunk behavior was a dev-webpack artifact. The heap tuning
+in the sections above describes a problem that no longer applies to this lane,
+and should be read as history rather than current configuration.
+
+What the infrastructure failure had been hiding is ordinary: the Microsoft
+profile dialog overflows the 1280x720 Desktop Chrome window instead of scrolling
+internally, so the first capability checkbox is below the fold and Playwright
+reports it visible, enabled and stable but "outside of the viewport". Only this
+lane is affected because it forces `release-v1-6-feature` on an enterprise
+development build and therefore renders more capability rows than the production
+lane, where the same fixture passes. The lane now runs at 1280x1200. Forcing the
+click was rejected: it would assert on an element a user at that window size
+also could not reach.
+
+Whether that overflow affects real laptop users is a separate product question
+and is tracked as such, not answered from a CI log.
+
+The quarantine entry remains until a run reports the lane passing. A quarantined
+requirement that passes is reported as `quarantined-passing`, which is the signal
+to remove the entry rather than an assumption that it can be removed.
