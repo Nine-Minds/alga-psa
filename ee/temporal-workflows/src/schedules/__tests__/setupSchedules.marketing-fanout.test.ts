@@ -26,7 +26,7 @@ vi.mock('@temporalio/client', () => ({
   Connection: {
     connect: connectMock,
   },
-  Client: vi.fn(() => ({
+  Client: vi.fn(function () { return ({
     schedule: {
       create: scheduleCreateMock,
       getHandle: vi.fn((scheduleId: string) => ({
@@ -39,7 +39,7 @@ vi.mock('@temporalio/client', () => ({
       })),
       list: scheduleListMock,
     },
-  })),
+  }); }),
   ScheduleOverlapPolicy: {
     SKIP: 'SKIP',
   },

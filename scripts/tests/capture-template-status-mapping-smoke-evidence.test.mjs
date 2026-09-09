@@ -6,7 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
 import test from 'node:test';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import {
   parseDotenvValue,
@@ -44,7 +44,7 @@ const APPLIED_PROJECT_ID = '33333333-3333-4333-8333-333333333333';
 const PROJECT_ID = 'dd0fc9af-a8e3-4fe6-b0f6-78b9fd67a42c';
 const BROWSER_PANE = '43218e9e-e1ea-49b5-9a7b-186dec8a09f4';
 const DEV_SERVER_SESSION = 'card-service:dd0fc9af-a8e3-4fe6-b0f6-78b9fd67a42c:dev-server:3';
-const WORKTREE = '/home/robert/alga-copies/fix-template-status-mapping-fk';
+const WORKTREE = path.resolve(fileURLToPath(new URL('../../', import.meta.url)));
 
 // A structurally valid 1x1 PNG (base64). Every "complete" screenshot slot must
 // carry a real PNG, not arbitrary bytes.

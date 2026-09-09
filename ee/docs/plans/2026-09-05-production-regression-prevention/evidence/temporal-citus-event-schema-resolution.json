@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "observedAt": "2026-09-08",
+  "ciFailure": {
+    "runId": 34235374733,
+    "jobId": 102091752163,
+    "precedingRuntimeTestsPassed": 8,
+    "stage": "Temporal database test collection",
+    "error": "Failed to resolve entry for package @alga-psa/event-schemas"
+  },
+  "change": "Resolve event-schemas through source alongside the existing Temporal package aliases.",
+  "validation": {
+    "runtime": "existing isolated Citus on port 55433",
+    "database": "upgrade_citus_layout_82cc_20260908",
+    "passed": 27,
+    "failed": 0,
+    "skipped": 0,
+    "files": 6,
+    "report": "/tmp/alga-temporal-citus-schema-8f4.json",
+    "reportSha256": "2ff170fd764c9131c34d893f0da55b6463ae8d5612d8a840d1e7dafa98dfd44d"
+  },
+  "limits": [
+    "Native runtime validation, not current-source CI completion.",
+    "No new image builds or database-wide reset."
+  ]
+}

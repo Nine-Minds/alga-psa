@@ -244,10 +244,18 @@ export async function loadSimulationCalculationInput(
         service.item_kind !== "product" &&
         service.configuration.configuration_type === "Fixed",
     );
+    // A bucket overlay prices the service's assumed hours through included
+    // consumption and overage. BillingEngine excludes the same attributed
+    // work from hourly charges; charging both here inflates the preview.
+    const hourlyBucketServiceIds = new Set(line.services
+      .filter((service) => service.item_kind !== "product" &&
+        service.configuration.configuration_type === "Bucket")
+      .map((service) => service.service_id));
     const hourlyServices = line.services.filter(
       (service) =>
         service.item_kind !== "product" &&
-        service.configuration.configuration_type === "Hourly",
+        service.configuration.configuration_type === "Hourly" &&
+        !hourlyBucketServiceIds.has(service.service_id),
     );
     const usageServices = line.services.filter(
       (service) =>

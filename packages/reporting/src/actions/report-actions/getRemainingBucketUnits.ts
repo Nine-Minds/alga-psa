@@ -63,74 +63,67 @@ export const getRemainingBucketUnits = withAuth(async (
     const results: RemainingBucketUnitsResult[] = await withTransaction(knex, async (trx: Knex.Transaction) => {
       const scopedDb = tenantDb(trx, tenant);
 
-      // Active client contract lines owning at least one bucket pool.
-      const lineQuery = scopedDb.table('client_contracts as cc');
-      scopedDb.tenantJoin(
-        lineQuery,
-        'contracts as c',
-        'c.contract_id',
-        trx.raw('coalesce(cc.template_contract_id, cc.contract_id)') as unknown as string,
-        { rootTenantColumn: 'cc.tenant' }
-      );
-      scopedDb.tenantJoin(lineQuery, 'contract_lines as cl', 'cl.contract_id', 'c.contract_id');
-      scopedDb.tenantJoin(lineQuery, 'contract_line_buckets as clb', 'cl.contract_line_id', 'clb.contract_line_id');
-
-      // Member (first member only, for the label when member-scoped).
-      scopedDb.tenantJoin(
-        lineQuery,
-        'contract_line_bucket_services as first_member',
-        'first_member.bucket_id',
-        'clb.bucket_id',
-        {
-          type: 'left',
-          on: (join) => {
-            // Deterministic "first" member for the display label.
-            join.andOn('first_member.service_id', '=', trx.raw('(' +
-              'SELECT ms.service_id FROM contract_line_bucket_services ms ' +
-              'WHERE ms.tenant = first_member.tenant AND ms.bucket_id = first_member.bucket_id ' +
-              'ORDER BY ms.service_id ASC LIMIT 1' +
-            ')'));
-          },
+      // Keep each query tenant-routed. Citus cannot plan the former combined
+      // COALESCE join and correlated first-member subquery on the upgrade
+      // topology. Resolve those relationships from client-scoped tenant result sets.
+      // These reads retain the transaction's default isolation; concurrent edits
+      // can become visible between queries, unlike a single-statement snapshot.
+      const assignments = await scopedDb.table('client_contracts')
+        .where({ client_id: clientId, is_active: true })
+        .andWhere('start_date', '<=', currentDate)
+        .andWhere(function() { this.whereNull('end_date').orWhere('end_date', '>', currentDate); })
+        .select('contract_id', 'template_contract_id');
+      const contractIds = [...new Set(assignments.map((row: any) => row.template_contract_id ?? row.contract_id).filter(Boolean))];
+      if (!contractIds.length) return [];
+      const contracts = await scopedDb.table('contracts').whereIn('contract_id', contractIds).select('contract_id');
+      const lines = await scopedDb.table('contract_lines').whereIn('contract_id', contracts.map((row: any) => row.contract_id))
+        .select('contract_id', 'contract_line_id', 'contract_line_name');
+      if (!lines.length) return [];
+      const pools = await scopedDb.table('contract_line_buckets').whereIn('contract_line_id', lines.map((row: any) => row.contract_line_id))
+        .select('bucket_id', 'contract_line_id', 'bucket_name', 'covers_all_services', 'total_minutes');
+      if (!pools.length) return [];
+      const bucketIds = pools.map((row: any) => row.bucket_id);
+      const members = await scopedDb.table('contract_line_bucket_services').whereIn('bucket_id', bucketIds)
+        .orderBy('service_id').select('bucket_id', 'service_id');
+      const services = members.length ? await scopedDb.table('service_catalog')
+        .whereIn('service_id', members.map((row: any) => row.service_id)).select('service_id', 'service_name') : [];
+      const usage = await scopedDb.table('bucket_usage').where({ client_id: clientId }).whereIn('bucket_id', bucketIds)
+        .andWhere('period_start', '<=', currentDate).andWhere('period_end', '>', currentDate)
+        .select('bucket_id', 'minutes_used', 'rolled_over_minutes', 'period_start', 'period_end');
+      const groupBy = (rows: any[], key: string) => {
+        const grouped = new Map<string, any[]>();
+        for (const row of rows) {
+          const group = grouped.get(row[key]) ?? [];
+          group.push(row);
+          grouped.set(row[key], group);
         }
-      );
-      scopedDb.tenantJoin(lineQuery, 'service_catalog as sc', 'first_member.service_id', 'sc.service_id', {
-        type: 'left',
-      });
-      scopedDb.tenantJoin(lineQuery, 'bucket_usage as bu', 'clb.bucket_id', 'bu.bucket_id', {
-        type: 'left',
-        rootTenantColumn: 'cc.tenant',
-        on: (join) => {
-          join
-            .andOn('cc.client_id', '=', 'bu.client_id')
-            .andOn('bu.period_start', '<=', trx.raw('?', [currentDate]))
-            .andOn('bu.period_end', '>', trx.raw('?', [currentDate]));
-        },
-      });
-
-      lineQuery
-        .where('cc.client_id', clientId)
-        .andWhere('cc.is_active', true)
-        .andWhere('cc.start_date', '<=', trx.raw('?', [currentDate]))
-        .andWhere(function() {
-          this.whereNull('cc.end_date')
-              .orWhere('cc.end_date', '>', trx.raw('?', [currentDate]));
-        })
-        .select(
-          'cl.contract_line_id',
-          'cl.contract_line_name',
-          'clb.bucket_id',
-          'clb.bucket_name',
-          'clb.covers_all_services',
-          'clb.total_minutes',
-          'first_member.service_id',
-          'sc.service_name',
-          trx.raw('COALESCE(bu.minutes_used, 0) as minutes_used'),
-          trx.raw('COALESCE(bu.rolled_over_minutes, 0) as rolled_over_minutes'),
-          'bu.period_start',
-          'bu.period_end'
-        );
-
-      const rawResults: any[] = await lineQuery;
+        return grouped;
+      };
+      const linesByContract = groupBy(lines, 'contract_id');
+      const poolsByLine = groupBy(pools, 'contract_line_id');
+      const membersByPool = groupBy(members, 'bucket_id');
+      const usageByPool = groupBy(usage, 'bucket_id');
+      const servicesById = new Map(services.map((row: any) => [row.service_id, row]));
+      const rawResults: any[] = [];
+      // Preserve the previous join's assignment and matching-period multiplicity,
+      // including zero-use pools and the first member's deterministic label.
+      for (const assignment of assignments) {
+        for (const line of linesByContract.get(assignment.template_contract_id ?? assignment.contract_id) ?? []) {
+          for (const pool of poolsByLine.get(line.contract_line_id) ?? []) {
+            const member = membersByPool.get(pool.bucket_id)?.[0];
+            const service = servicesById.get(member?.service_id);
+            const periods = usageByPool.get(pool.bucket_id) ?? [];
+            for (const period of periods.length ? periods : [{ minutes_used: 0, rolled_over_minutes: 0 }]) {
+              rawResults.push({
+                ...line, ...pool, ...period,
+                minutes_used: period.minutes_used ?? 0,
+                rolled_over_minutes: period.rolled_over_minutes ?? 0,
+                service_id: member?.service_id, service_name: service?.service_name,
+              });
+            }
+          }
+        }
+      }
 
       return rawResults.map(row => {
         const totalMinutes = typeof row.total_minutes === 'string' ? parseFloat(row.total_minutes) : row.total_minutes;

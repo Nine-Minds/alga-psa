@@ -1488,7 +1488,11 @@ it('parity: recurring due-work blocks uniquely assignable unassigned hourly time
 
   await expect(
     generateInvoiceForSelectionInput(blockedCandidate!.members[0]!.selectorInput),
-  ).rejects.toThrow('1 unapproved entry');
+  ).resolves.toEqual({
+    actionError: 'Blocked until approval: 1 unapproved entry.',
+    messageKey: 'msp/invoicing:automaticInvoices.executionRows.blockedUntilApproval',
+    messageParams: { count: '1' },
+  });
 }, HOOK_TIMEOUT);
 
 it('T047: DB-backed unresolved discovery hydrates only the billing period containing eligible non-contract time', async () => {
@@ -1731,7 +1735,11 @@ it('T003/T008/T017: mixed-charge recurring windows are blocked in full by matchi
 
   await expect(
     generateInvoiceForSelectionInput(fixedMember!.selectorInput),
-  ).rejects.toThrow('1 unapproved entry');
+  ).resolves.toEqual({
+    actionError: 'Blocked until approval: 1 unapproved entry.',
+    messageKey: 'msp/invoicing:automaticInvoices.executionRows.blockedUntilApproval',
+    messageParams: { count: '1' },
+  });
 }, HOOK_TIMEOUT);
 
 it('T009/T011: server-side guard re-checks approval state at generation time and windows transition from Needs Approval to Ready after approval', async () => {
@@ -1800,7 +1808,11 @@ it('T009/T011: server-side guard re-checks approval state at generation time and
 
   await expect(
     generateInvoiceForSelectionInput(readyMember!.selectorInput),
-  ).rejects.toThrow('1 unapproved entry');
+  ).resolves.toEqual({
+    actionError: 'Blocked until approval: 1 unapproved entry.',
+    messageKey: 'msp/invoicing:automaticInvoices.executionRows.blockedUntilApproval',
+    messageParams: { count: '1' },
+  });
 
   await tenantTable(db, tenantId, 'time_entries')
     .where({ tenant: tenantId, entry_id: mutableEntry.entry_id })

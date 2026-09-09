@@ -1,0 +1,29 @@
+{
+  "status": "fixed_local_validation_native_pending",
+  "publishedFailure": {
+    "revision": "9a0ea31e57ac9b9825232bda312cc04cc33dc213",
+    "cycleJob": 101650526690,
+    "communityBuildJob": 101650617313,
+    "nxToolingJob": 101650526808
+  },
+  "cause": "A server-owned integration test imported Temporal activities, adding server -> temporal-workflows to the Nx graph and causing server build-deps to schedule worker/application builds.",
+  "change": "Move the suite to the Temporal project. Explicitly include its owned directory in server integration collection, affected/full selection, repository discovery reconciliation and direct integration scripts; include the suite in the mandatory Tier-1 floor. Exclude it from the standalone worker Vitest runner.",
+  "newPath": "ee/temporal-workflows/src/__tests__/integration/workflowInvocationPersistence.integration.test.ts",
+  "validation": {
+    "cycleGuard": "Actual Nx graph: three existing cycles, zero new cycles; baseline unchanged",
+    "nxWorkspace": "4/4 behavioral workspace and build-plan cases passed",
+    "database": "7/7 passed through server integration configuration at the new path",
+    "runner": "Real Vitest selection test passed including worker-owned suite in full runs",
+    "typescript": "targeted relocated suite check passed",
+    "logs": [
+      "/tmp/alga-graph-relocated.json",
+      "/tmp/alga-relocated-nx-workspace.log",
+      "/tmp/alga-relocated-workflow-db.log",
+      "/tmp/alga-integration-relocation-selection.log"
+    ]
+  },
+  "limits": [
+    "Fresh CE/EE production image builds still require native validation.",
+    "Broader local Nx suite had two cache-test failures due denied access to primary-checkout .nx lock files; the focused workspace suite passed."
+  ]
+}

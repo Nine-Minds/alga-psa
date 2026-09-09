@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import type { EmulatorCore, HostEnv } from '@alga-psa/emulator-host';
 
 /** Xero-shaped error the wire shell serializes. */
@@ -34,13 +35,11 @@ interface OrgData {
 
 export interface XeroTokenResponse {
   access_token: string;
-  refresh_token: string;
+  refresh_token?: string;
   expires_in: number;
   token_type: 'Bearer';
   scope: string;
 }
-
-const DEFAULT_SCOPE = 'offline_access accounting.settings.read accounting.invoices accounting.contacts';
 
 /**
  * Pure state machine behind the Xero vendor surface: the identity authorize +
@@ -48,12 +47,17 @@ const DEFAULT_SCOPE = 'offline_access accounting.settings.read accounting.invoic
  * shipped integration touches (Invoices, Contacts, and read-only settings).
  * Time flows through env.clock, randomness through env.rng.
  */
+export type XeroApplication = { clientId: string; redirectUris: string[] } &
+  ({ type: 'confidential'; clientSecret: string } | { type: 'pkce' });
+
 export class XeroEmulatorCore implements EmulatorCore {
+  private applications = new Map<string, XeroApplication>();
+  private clientConnections = new Map<string, Set<string>>();
   accessTokenTtlSeconds = 1800;
   authorizeRequests: XeroAuthorizeRequest[] = [];
-  private codes = new Map<string, { clientId: string; scope: string }>();
-  private accessTokens = new Map<string, { expiresAt: number; scope: string }>();
-  private refreshTokens = new Map<string, { scope: string }>();
+  private codes = new Map<string, { clientId: string; redirectUri: string; scope: string; codeChallenge?: string }>();
+  private accessTokens = new Map<string, { expiresAt: number; scope: string; clientId: string }>();
+  private refreshTokens = new Map<string, { clientId: string; scope: string; expiresAt: number }>();
   private organisations: XeroOrganisation[] = [];
   private orgData = new Map<string, OrgData>();
   private invoiceNumberCounter = 0;
@@ -64,6 +68,8 @@ export class XeroEmulatorCore implements EmulatorCore {
   }
 
   reset(): void {
+    this.applications.clear();
+    this.clientConnections.clear();
     this.authorizeRequests = [];
     this.codes.clear();
     this.accessTokens.clear();
@@ -72,8 +78,7 @@ export class XeroEmulatorCore implements EmulatorCore {
     this.orgData.clear();
     this.invoiceNumberCounter = 0;
     this.accessTokenTtlSeconds = 1800;
-    // One organisation out of the box so the callback's non-empty connections
-    // requirement holds without seeding; seed more for multi-org flows.
+    // Seed an organisation; fixtures must explicitly grant application consent.
     this.seedOrganisation({ tenantName: 'Alga Emulated Org' });
   }
 
@@ -89,10 +94,48 @@ export class XeroEmulatorCore implements EmulatorCore {
 
   // --- OAuth (identity.xero.com authorize + connect/token) ---
 
+  registerApplication(application: XeroApplication): { clientId: string; type: string } {
+    this.applications.set(application.clientId, structuredClone(application));
+    return { clientId: application.clientId, type: application.type };
+  }
+
+  private authenticateClient(clientId: string, secret: string | undefined): void {
+    const app = this.applications.get(clientId);
+    if (!app || (app.type === 'confidential' && app.clientSecret !== secret)) {
+      throw new XeroWireError(401, { error: 'invalid_client' });
+    }
+  }
+
+  revokeRefreshToken(params: Record<string, string>): void {
+    this.authenticateClient(params.client_id, params.client_secret);
+    if (!params.token) throw new XeroWireError(400, { error: 'invalid_request' });
+    const record = this.refreshTokens.get(params.token);
+    // RFC 7009 returns success for invalid tokens without disclosing ownership.
+    if (!record || record.clientId !== params.client_id) return;
+    // This emulator models one resource owner per application. Revocation
+    // removes that owner's connected organisations and all rotated credentials.
+    for (const [token, value] of this.refreshTokens) {
+      if (value.clientId === record.clientId) this.refreshTokens.delete(token);
+    }
+    for (const [token, value] of this.accessTokens) {
+      if (value.clientId === record.clientId) this.accessTokens.delete(token);
+    }
+    this.clientConnections.delete(record.clientId);
+  }
+
   authorize(query: Record<string, string>): { redirectUri: string; code: string; state: string } {
     const redirectUri = query.redirect_uri ?? '';
     if (!query.client_id || !redirectUri) {
       throw new XeroWireError(400, { error: 'invalid_request', Detail: 'client_id and redirect_uri are required' });
+    }
+    const app = this.applications.get(query.client_id);
+    if (!app || !app.redirectUris.includes(redirectUri) || query.response_type !== 'code') {
+      throw new XeroWireError(400, { error: 'invalid_request' });
+    }
+    const codeChallenge = query.code_challenge;
+    if ((app.type === 'pkce' || codeChallenge !== undefined || query.code_challenge_method !== undefined)
+      && (query.code_challenge_method !== 'S256' || !/^[A-Za-z0-9_-]{43}$/.test(codeChallenge ?? ''))) {
+      throw new XeroWireError(400, { error: 'invalid_request' });
     }
     const code = this.newId('code');
     const scope = query.scope ?? '';
@@ -104,45 +147,56 @@ export class XeroEmulatorCore implements EmulatorCore {
       code,
       query,
     });
-    this.codes.set(code, { clientId: query.client_id, scope });
+    this.codes.set(code, { clientId: query.client_id, redirectUri, scope, codeChallenge });
     return { redirectUri, code, state: query.state ?? '' };
   }
 
   grantToken(params: Record<string, string>): XeroTokenResponse {
     if (params.grant_type === 'authorization_code') {
       const record = this.codes.get(String(params.code));
-      if (!record) {
+      if (!record || record.clientId !== params.client_id || record.redirectUri !== params.redirect_uri) {
         throw new XeroWireError(400, { error: 'invalid_grant' });
       }
+      this.authenticateClient(record.clientId, params.client_secret);
+      if (record.codeChallenge) {
+        const verifier = params.code_verifier ?? '';
+        if (!/^[A-Za-z0-9._~-]{43,128}$/.test(verifier)
+          || createHash('sha256').update(verifier).digest('base64url') !== record.codeChallenge) {
+          throw new XeroWireError(400, { error: 'invalid_grant' });
+        }
+      }
       this.codes.delete(String(params.code));
-      return this.issueTokens(record.scope || DEFAULT_SCOPE);
+      return this.issueTokens(record.scope, record.clientId);
     }
     if (params.grant_type === 'refresh_token') {
       const record = this.refreshTokens.get(String(params.refresh_token));
-      if (!record) {
+      if (!record || record.clientId !== params.client_id || record.expiresAt <= this.nowMs()) {
         throw new XeroWireError(400, { error: 'invalid_grant' });
       }
-      this.refreshTokens.delete(String(params.refresh_token));
-      return this.issueTokens(record.scope);
+      this.authenticateClient(record.clientId, params.client_secret);
+      // A lost token response can be retried for 30 minutes. Reusing the old
+      // token must not continually extend that original recovery window.
+      record.expiresAt = Math.min(record.expiresAt, this.nowMs() + 30 * 60 * 1000);
+      return this.issueTokens(record.scope, record.clientId);
     }
     throw new XeroWireError(400, { error: 'unsupported_grant_type' });
   }
 
-  private issueTokens(scope: string): XeroTokenResponse {
+  private issueTokens(scope: string, clientId: string): XeroTokenResponse {
     const accessToken = this.newId('access');
-    const refreshToken = this.newId('refresh');
-    this.accessTokens.set(accessToken, { expiresAt: this.nowMs() + this.accessTokenTtlSeconds * 1000, scope });
-    this.refreshTokens.set(refreshToken, { scope });
+    const refreshToken = scope.split(/\s+/).includes('offline_access') ? this.newId('refresh') : undefined;
+    this.accessTokens.set(accessToken, { expiresAt: this.nowMs() + this.accessTokenTtlSeconds * 1000, scope, clientId });
+    if (refreshToken) this.refreshTokens.set(refreshToken, { scope, clientId, expiresAt: this.nowMs() + 60 * 24 * 60 * 60 * 1000 });
     return {
       access_token: accessToken,
-      refresh_token: refreshToken,
+      ...(refreshToken ? { refresh_token: refreshToken } : {}),
       expires_in: this.accessTokenTtlSeconds,
       token_type: 'Bearer',
       scope,
     };
   }
 
-  authenticate(bearerToken: string): { scope: string } {
+  authenticate(bearerToken: string): { scope: string; clientId: string } {
     const record = this.accessTokens.get(bearerToken);
     if (!record || record.expiresAt <= this.nowMs()) {
       throw new XeroWireError(401, { Type: null, Title: 'Unauthorized', Status: 401, Detail: 'AuthenticationUnsuccessful' });
@@ -157,14 +211,14 @@ export class XeroEmulatorCore implements EmulatorCore {
     return this.accessTokens.size;
   }
 
-  tokens(): { accessTokens: Array<{ token: string; expiresAt: string; scope: string }>; refreshTokens: Array<{ token: string; scope: string }> } {
+  tokens(): { accessTokens: Array<{ token: string; expiresAt: string; scope: string }>; refreshTokens: Array<{ token: string; scope: string; clientId: string }> } {
     return {
       accessTokens: [...this.accessTokens.entries()].map(([token, record]) => ({
         token,
         expiresAt: new Date(record.expiresAt).toISOString(),
         scope: record.scope,
       })),
-      refreshTokens: [...this.refreshTokens.entries()].map(([token, record]) => ({ token, scope: record.scope })),
+      refreshTokens: [...this.refreshTokens.entries()].map(([token, record]) => ({ token, scope: record.scope, clientId: record.clientId })),
     };
   }
 
@@ -182,8 +236,30 @@ export class XeroEmulatorCore implements EmulatorCore {
     return organisation;
   }
 
-  connections(): XeroOrganisation[] {
-    return [...this.organisations];
+  connections(clientId?: string): XeroOrganisation[] {
+    return this.organisations.filter(org => clientId === undefined || this.clientConnections.get(clientId)?.has(org.tenantId));
+  }
+
+  setConnections(clientId: string, xeroTenantIds: string[]): { clientId: string; xeroTenantIds: string[] } {
+    if (!this.applications.has(clientId)) throw new XeroWireError(400, { error: 'invalid_client' });
+    for (const tenantId of xeroTenantIds) this.org(tenantId);
+    this.clientConnections.set(clientId, new Set(xeroTenantIds));
+    return { clientId, xeroTenantIds: [...this.clientConnections.get(clientId)!] };
+  }
+
+  assertConnection(clientId: string, xeroTenantId: string): void {
+    if (!this.clientConnections.get(clientId)?.has(xeroTenantId)) {
+      throw new XeroWireError(403, { Type: null, Title: 'Forbidden', Status: 403, Detail: `Tenant ${xeroTenantId} is not connected` });
+    }
+    this.org(xeroTenantId);
+  }
+
+  /** Alga's supported live context is the first returned connection. */
+  selectOrganisation(xeroTenantId: string): XeroOrganisation {
+    this.org(xeroTenantId);
+    const selected = this.organisations.find(org => org.tenantId === xeroTenantId)!;
+    this.organisations = [selected, ...this.organisations.filter(org => org !== selected)];
+    return selected;
   }
 
   org(xeroTenantId: string): OrgData {

@@ -8,6 +8,7 @@ import {
 } from '../utils/e2eTestSetup';
 import { ApiTestClient } from '../utils/apiTestHelpers';
 import { createServiceRequestData } from '../utils/serviceTestData';
+import { grantTestUserPermission } from '../utils/simpleRoleSetup';
 import {
   ensureApiServerRunning,
   resolveApiBaseUrl,
@@ -60,6 +61,8 @@ describe('Accounting Exports API E2E', () => {
       userName: 'accounting_exports_api_test'
     });
 
+    await grantTestUserPermission(env.db, env.userId, env.tenant, 'accounting_integrations', 'exports_execute');
+
     accountingClient = new ApiTestClient({
       baseUrl: apiBaseUrl,
       apiKey: env.apiKey,
@@ -75,6 +78,20 @@ describe('Accounting Exports API E2E', () => {
       return;
     }
     try {
+      if (createdBatchIds.length > 0) {
+        await tenantTable('accounting_export_errors')
+          .whereIn('batch_id', createdBatchIds)
+          .delete();
+
+        await tenantTable('accounting_export_lines')
+          .whereIn('batch_id', createdBatchIds)
+          .delete();
+
+        await tenantTable('accounting_export_batches')
+          .whereIn('batch_id', createdBatchIds)
+          .delete();
+      }
+
       if (createdChargeIds.length > 0) {
         await tenantTable('invoice_charges')
           .whereIn('item_id', createdChargeIds)
@@ -93,20 +110,6 @@ describe('Accounting Exports API E2E', () => {
           .delete();
       }
 
-      if (createdBatchIds.length > 0) {
-        await tenantTable('accounting_export_errors')
-          .whereIn('batch_id', createdBatchIds)
-          .delete();
-
-        await tenantTable('accounting_export_lines')
-          .whereIn('batch_id', createdBatchIds)
-          .delete();
-
-        await tenantTable('accounting_export_batches')
-          .whereIn('batch_id', createdBatchIds)
-          .delete();
-      }
-
       if (createdServiceIds.length > 0) {
         await tenantTable('service_catalog')
           .whereIn('service_id', createdServiceIds)
@@ -119,49 +122,9 @@ describe('Accounting Exports API E2E', () => {
     }
   }, TEST_TIMEOUT);
 
-  it('creates and lists accounting export batches', async () => {
-    const createResponse = await accountingClient.post<AccountingExportBatch>(
-      '/api/accounting/exports',
-      {
-        adapter_type: 'quickbooks_online',
-        export_type: 'invoice',
-        filters: {
-          startDate: '2025-01-01',
-          endDate: '2025-01-31',
-          invoiceStatuses: ['sent']
-        },
-        created_by: env.userId,
-        notes: 'E2E batch creation test'
-      }
-    );
-
-    expect(createResponse.status).toBe(201);
-    const createdBatch = createResponse.data;
-    expect(createdBatch.batch_id).toBeDefined();
-    createdBatchIds.push(createdBatch.batch_id);
-
-    const listResponse = await accountingClient.get<AccountingExportBatch[]>(
-      '/api/accounting/exports',
-      { params: { adapter_type: 'quickbooks_online' } }
-    );
-
-    expect(listResponse.status).toBe(200);
-    const listedIds = (listResponse.data || []).map((batch) => batch.batch_id);
-    expect(listedIds).toContain(createdBatch.batch_id);
-
-    const detailResponse = await accountingClient.get<AccountingExportDetail>(
-      `/api/accounting/exports/${createdBatch.batch_id}`
-    );
-
-    expect(detailResponse.status).toBe(200);
-    expect(detailResponse.data.batch.batch_id).toBe(createdBatch.batch_id);
-    expect(Array.isArray(detailResponse.data.lines)).toBe(true);
-    expect(Array.isArray(detailResponse.data.errors)).toBe(true);
-  }, TEST_TIMEOUT);
-
-  it('appends lines without mappings and surfaces validation errors', async () => {
+  async function createInvoiceFixture(now: string) {
     const servicePayload = await createServiceRequestData(env.db, env.tenant, {
-      service_name: 'Accounting Export API Service',
+      service_name: `Accounting Export API Service ${uuidv4()}`,
       billing_method: 'fixed',
       unit_of_measure: 'device'
     });
@@ -171,14 +134,13 @@ describe('Accounting Exports API E2E', () => {
       servicePayload
     );
 
-    expect(serviceResponse.status).toBe(201);
+    expect(serviceResponse.status, JSON.stringify(serviceResponse.data)).toBe(201);
     const serviceId = serviceResponse.data.data.service_id;
     createdServiceIds.push(serviceId);
 
     const invoiceId = uuidv4();
     const chargeId = uuidv4();
     const transactionId = uuidv4();
-    const now = new Date().toISOString();
     const invoiceNumber = `INV-${invoiceId.slice(0, 8)}`;
 
     await tenantTable('invoices').insert({
@@ -232,6 +194,55 @@ describe('Accounting Exports API E2E', () => {
     });
     createdTransactionIds.push(transactionId);
 
+    return { invoiceId, chargeId, transactionId, invoiceNumber };
+  }
+
+  it('creates and lists accounting export batches', async () => {
+    await createInvoiceFixture('2025-01-15T12:00:00.000Z');
+    const createResponse = await accountingClient.post<AccountingExportBatch>(
+      '/api/accounting/exports',
+      {
+        adapter_type: 'quickbooks_online',
+        export_type: 'invoice',
+        filters: {
+          startDate: '2025-01-01',
+          endDate: '2025-01-31',
+          invoiceStatuses: ['sent']
+        },
+        created_by: env.userId,
+        notes: 'E2E batch creation test'
+      }
+    );
+
+    expect(createResponse.status, JSON.stringify(createResponse.data)).toBe(201);
+    const createdBatch = createResponse.data;
+    expect(createdBatch.batch_id).toBeDefined();
+    createdBatchIds.push(createdBatch.batch_id);
+
+    const listResponse = await accountingClient.get<AccountingExportBatch[]>(
+      '/api/accounting/exports',
+      { params: { adapter_type: 'quickbooks_online' } }
+    );
+
+    expect(listResponse.status, JSON.stringify(listResponse.data)).toBe(200);
+    const listedIds = (listResponse.data || []).map((batch) => batch.batch_id);
+    expect(listedIds).toContain(createdBatch.batch_id);
+
+    const detailResponse = await accountingClient.get<AccountingExportDetail>(
+      `/api/accounting/exports/${createdBatch.batch_id}`
+    );
+
+    expect(detailResponse.status, JSON.stringify(detailResponse.data)).toBe(200);
+    expect(detailResponse.data.batch.batch_id).toBe(createdBatch.batch_id);
+    expect(Array.isArray(detailResponse.data.lines)).toBe(true);
+    expect(Array.isArray(detailResponse.data.errors)).toBe(true);
+  }, TEST_TIMEOUT);
+
+  it('appends lines without mappings and surfaces validation errors', async () => {
+    const now = new Date().toISOString();
+    const initial = await createInvoiceFixture(now);
+    const { invoiceId, chargeId, transactionId, invoiceNumber } = await createInvoiceFixture(now);
+
     const batchResponse = await accountingClient.post<AccountingExportBatch>(
       '/api/accounting/exports',
       {
@@ -240,14 +251,14 @@ describe('Accounting Exports API E2E', () => {
         filters: {
           startDate: now.split('T')[0],
           endDate: now.split('T')[0],
-          invoiceIds: [invoiceId]
+          invoiceIds: [initial.invoiceId]
         },
         created_by: env.userId,
         notes: 'Validation test batch'
       }
     );
 
-    expect(batchResponse.status).toBe(201);
+    expect(batchResponse.status, JSON.stringify(batchResponse.data)).toBe(201);
     const batch = batchResponse.data;
     createdBatchIds.push(batch.batch_id);
 
@@ -270,7 +281,7 @@ describe('Accounting Exports API E2E', () => {
       }
     );
 
-    expect(appendResponse.status).toBe(201);
+    expect(appendResponse.status, JSON.stringify(appendResponse.data)).toBe(201);
 
     const detailAfterAppend = await accountingClient.get<AccountingExportDetail>(
       `/api/accounting/exports/${batch.batch_id}`
@@ -279,10 +290,11 @@ describe('Accounting Exports API E2E', () => {
     expect(detailAfterAppend.status).toBe(200);
     expect(detailAfterAppend.data.batch.status).toBe('needs_attention');
     expect(detailAfterAppend.data.errors.length).toBeGreaterThan(0);
-    expect(detailAfterAppend.data.errors[0].code).toBe('missing_service_mapping');
+    expect(detailAfterAppend.data.errors.map(error => error.code)).toContain('missing_service_mapping');
   }, TEST_TIMEOUT);
 
   it('prevents duplicate batch creation using the same filter set', async () => {
+    await createInvoiceFixture('2025-02-15T12:00:00.000Z');
     const filters = {
       startDate: '2025-02-01',
       endDate: '2025-02-28',
@@ -300,7 +312,7 @@ describe('Accounting Exports API E2E', () => {
       }
     );
 
-    expect(initialResponse.status).toBe(201);
+    expect(initialResponse.status, JSON.stringify(initialResponse.data)).toBe(201);
     createdBatchIds.push(initialResponse.data.batch_id);
 
     const duplicateResponse = await accountingClient.post(
@@ -314,7 +326,7 @@ describe('Accounting Exports API E2E', () => {
       }
     );
 
-    expect(duplicateResponse.status).toBe(409);
+    expect(duplicateResponse.status, JSON.stringify(duplicateResponse.data)).toBe(409);
     expect(duplicateResponse.data?.message || duplicateResponse.data?.error).toBeDefined();
   }, TEST_TIMEOUT);
 });

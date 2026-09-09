@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "scope": "completed-ci-concurrent-provider-isolation",
+  "runId": "34313560297",
+  "artifactId": "10090888641",
+  "artifactName": "server-unit-execution",
+  "revision": "9ba03b9f3ad6b2e369c561399cd4049d590ac0c4",
+  "source": {
+    "before": {
+      "revision": "9ba03b9f3ad6b2e369c561399cd4049d590ac0c4",
+      "dirty": false,
+      "changes": []
+    },
+    "after": {
+      "revision": "9ba03b9f3ad6b2e369c561399cd4049d590ac0c4",
+      "dirty": false,
+      "changes": []
+    }
+  },
+  "testFile": "packages/emulators/stripe/tests/concurrentIsolation.test.ts",
+  "testSourceSha256": "02115485f717c0e467597563929cec44854742151636d61e907a73b50e64f927",
+  "collected": [
+    {
+      "name": "resetting one scenario leaves another in-flight callback, state, credentials and faults isolated",
+      "file": "/home/runner/work/alga-psa/alga-psa/packages/emulators/stripe/tests/concurrentIsolation.test.ts"
+    }
+  ],
+  "executed": [
+    {
+      "ancestorTitles": [],
+      "fullName": "resetting one scenario leaves another in-flight callback, state, credentials and faults isolated",
+      "status": "passed",
+      "title": "resetting one scenario leaves another in-flight callback, state, credentials and faults isolated",
+      "duration": 144.655445,
+      "failureMessages": [],
+      "meta": {}
+    }
+  ],
+  "status": "passed",
+  "aggregate": {
+    "status": "failed",
+    "counts": {
+      "passed": 15025,
+      "failed": 1,
+      "skipped": 0,
+      "todo": 3,
+      "pending": 0
+    },
+    "limitation": "Separate template-editor readiness failure; this passing assertion does not make aggregate green."
+  },
+  "inputSha256": "b1c1e661b2a0b491d1299828540fe2c447fbe8a5174244dda87a23a17a86310b",
+  "limits": [
+    "Concurrent native HTTP EmulatorHost fixtures, not simultaneous full Alga browser stacks.",
+    "Separate production-build browser evidence establishes real-login application journeys; process-mode probes alone do not establish OAuth/parity.",
+    "No live-provider/deployment-policy claim."
+  ]
+}

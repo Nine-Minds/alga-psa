@@ -1,0 +1,46 @@
+{
+  "status": "passed",
+  "counts": {
+    "passed": 1,
+    "failed": 0,
+    "flaky": 0,
+    "skipped": 0,
+    "interrupted": 0,
+    "missing": 0
+  },
+  "source": {
+    "before": {
+      "revision": "3aa447b2828a72f53c8f45ca67f8948eafc02688",
+      "dirty": false,
+      "changes": []
+    },
+    "after": {
+      "revision": "3aa447b2828a72f53c8f45ca67f8948eafc02688",
+      "dirty": false,
+      "changes": []
+    }
+  },
+  "releaseValidation": false,
+  "schemaVersion": 1,
+  "suite": "teams-development-browser",
+  "configuration": {
+    "heapMiB": 12288,
+    "nodeSourceMaps": false,
+    "usePrebuilt": false,
+    "node": "25.5.0"
+  },
+  "observedResidentMemoryKiB": 6503456,
+  "memoryRestartObserved": false,
+  "hashes": {
+    "test-results/teams-development/evidence.json": "6bf5ee7a0d7ad0346f8e39dce714b3a1f4361865e392dd0d521e872fe9a39992",
+    "test-results/teams-development/results.json": "50f0fdca29662c65ee9c6f795d94dd072e3c71cb59da634e3d9179159e03be7a",
+    "test-results/teams-development/runner.json": "ff8ae5796bcef71911ff9c5c3eaea341819c471f669549e252b830106edd4305",
+    "/tmp/alga-teams-gate-12g-no-maps.log": "f88c384a36a4808bc068d40a3e6335aedaa943635e9606b5fb321188f499d1fa"
+  },
+  "limitations": [
+    "Resident memory is one sample near completion, not a measured peak.",
+    "Local host execution does not establish Linux container/CI resource usage.",
+    "Prior 8 GiB configurations failed, including prebuilt packages; failures are preserved under /tmp/alga-teams-8g-no-maps-gate-failure and /tmp/alga-teams-8g-prebuilt-gate-failure.",
+    "Current-source GitHub execution remains unpublished and unverified."
+  ]
+}

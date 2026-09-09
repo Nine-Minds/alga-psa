@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "observedAt": "2026-09-06",
+  "kind": "local-execution",
+  "revision": "e23148e2865d82c41ec9dc163ddcbfc09d54209a",
+  "dirty": true,
+  "status": "passed",
+  "counts": {
+    "browser": 1,
+    "wire": 8,
+    "failed": 0,
+    "skipped": 0
+  },
+  "reports": {
+    "browser": {
+      "path": "/tmp/alga-xero-browser-initial.log",
+      "sha256": "f42300d2bc4e01d67442efaf9f2207f42f5a74fa9d6a78029a70b1012e4b4fea"
+    },
+    "wire": {
+      "path": "/tmp/alga-xero-selection-wire.log",
+      "sha256": "f290ac5af72042dc96aa2cab996e9cbdce1b1f01ede247dbf4034ed2e54da5f3"
+    }
+  },
+  "appImage": "sha256:5804ee43c0ef750d635990185626e21ee3c2d3d279a10c6bb6754007ab73565d",
+  "emulatorBaseImage": "sha256:d84d082a5f830f6ac3a33005b0b8c4d177914814ddb11d20231cc03973323d86",
+  "checks": [
+    "Xero package build and typecheck",
+    "Production browser TypeScript check",
+    "Workflow lint"
+  ],
+  "ciWorkflow": ".github/workflows/e2e-fresh-install-tests.yaml",
+  "limits": [
+    "Headed filtered local execution against an existing production app image and locally replaced emulator dist; native candidate CI remains pending.",
+    "Organisation choice is modelled by the emulator ordering its connections response; Alga uses its supported first-connection default. This does not exercise a separate Alga organisation picker.",
+    "OAuth exchange reaches the wire emulator but provider authentication parity, PKCE enforcement and real-sandbox verification remain separate requirements.",
+    "CE collects an explicit 501 refusal assertion; its native execution remains pending."
+  ]
+}

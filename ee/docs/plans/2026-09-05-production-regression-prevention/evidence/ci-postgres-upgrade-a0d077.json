@@ -1,0 +1,538 @@
+{
+  "schemaVersion": 1,
+  "observedAt": "2026-09-09T04:57:04.788878+00:00",
+  "scope": "PostgreSQL supported upgrade phases only",
+  "repository": "Nine-Minds/alga-psa",
+  "runId": "34308610232",
+  "runAttempt": 1,
+  "runUrl": "https://github.com/Nine-Minds/alga-psa/actions/runs/34308610232",
+  "testedRevision": "3db700f653e28ddd322dfdb652f1689a54f6b65d",
+  "job": {
+    "conclusion": null,
+    "head_sha": "a0d0771b8dbc61eb56b618f8c6a734f150329466",
+    "id": 102335315962,
+    "name": "browser / Production browser (enterprise)",
+    "run_attempt": 1,
+    "status": "in_progress",
+    "steps": [
+      {
+        "completed_at": "2026-09-09T04:51:05Z",
+        "conclusion": "success",
+        "name": "Prepare populated v1.5.0 upgrade",
+        "started_at": "2026-09-09T04:50:26Z",
+        "status": "completed"
+      },
+      {
+        "completed_at": "2026-09-09T04:51:40Z",
+        "conclusion": "success",
+        "name": "Switch candidate server to upgraded database",
+        "started_at": "2026-09-09T04:51:05Z",
+        "status": "completed"
+      },
+      {
+        "completed_at": "2026-09-09T04:52:41Z",
+        "conclusion": "success",
+        "name": "Run supported-upgrade browser gate",
+        "started_at": "2026-09-09T04:51:40Z",
+        "status": "completed"
+      },
+      {
+        "completed_at": "2026-09-09T04:52:42Z",
+        "conclusion": "success",
+        "name": "Preserve PostgreSQL upgrade runtime diagnostics before server replacement",
+        "started_at": "2026-09-09T04:52:41Z",
+        "status": "completed"
+      },
+      {
+        "completed_at": "2026-09-09T04:52:43Z",
+        "conclusion": "success",
+        "name": "Upload supported-upgrade evidence",
+        "started_at": "2026-09-09T04:52:42Z",
+        "status": "completed"
+      },
+      {
+        "completed_at": "2026-09-09T04:52:44Z",
+        "conclusion": "success",
+        "name": "Upload upgrade browser diagnostics",
+        "started_at": "2026-09-09T04:52:43Z",
+        "status": "completed"
+      },
+      {
+        "completed_at": "2026-09-09T04:52:55Z",
+        "conclusion": "success",
+        "name": "Release PostgreSQL upgrade pooler before the next phase",
+        "started_at": "2026-09-09T04:52:44Z",
+        "status": "completed"
+      },
+      {
+        "completed_at": "2026-09-09T04:53:14Z",
+        "conclusion": "success",
+        "name": "Start isolated Citus upgrade service",
+        "started_at": "2026-09-09T04:52:55Z",
+        "status": "completed"
+      },
+      {
+        "completed_at": "2026-09-09T04:55:13Z",
+        "conclusion": "success",
+        "name": "Prepare populated supported Citus upgrade",
+        "started_at": "2026-09-09T04:53:14Z",
+        "status": "completed"
+      },
+      {
+        "completed_at": "2026-09-09T04:55:36Z",
+        "conclusion": "success",
+        "name": "Switch the same candidate image to upgraded Citus",
+        "started_at": "2026-09-09T04:55:13Z",
+        "status": "completed"
+      },
+      {
+        "completed_at": null,
+        "conclusion": null,
+        "name": "Run supported Citus upgrade browser gate",
+        "started_at": "2026-09-09T04:55:36Z",
+        "status": "in_progress"
+      },
+      {
+        "completed_at": null,
+        "conclusion": null,
+        "name": "Preserve Citus upgrade runtime diagnostics before server replacement",
+        "started_at": null,
+        "status": "pending"
+      },
+      {
+        "completed_at": null,
+        "conclusion": null,
+        "name": "Upload supported Citus upgrade evidence",
+        "started_at": null,
+        "status": "pending"
+      },
+      {
+        "completed_at": null,
+        "conclusion": null,
+        "name": "Upload supported Citus upgrade diagnostics",
+        "started_at": null,
+        "status": "pending"
+      }
+    ]
+  },
+  "artifacts": [
+    {
+      "id": "10088920145",
+      "name": "supported-upgrade-execution",
+      "downloadSha256": "efa1b789115bc1e3d87c16b0d51a238e36791ae7e6ea1b179ef28d9dd25d4e26"
+    },
+    {
+      "id": "10088920615",
+      "name": "supported-upgrade-diagnostics",
+      "downloadSha256": "29412b3fc38b983d256f2919acb09763c76bbb7bf98e72e4245babc0585a70fa"
+    }
+  ],
+  "schema": {
+    "schemaVersion": 1,
+    "phase": "schema-and-retention",
+    "status": "passed",
+    "database": "upgrade_ci",
+    "backend": "postgres",
+    "source": {
+      "revision": "3db700f653e28ddd322dfdb652f1689a54f6b65d",
+      "dirty": false,
+      "changes": []
+    },
+    "baseline": {
+      "schemaVersion": 1,
+      "release": "v1.5.0",
+      "commit": "f3579f3a317cf51df5f4489e5dcd8f649bb71289",
+      "selection": "Explicitly approved by the user for the supported-upgrade test",
+      "fixtureStatus": "implemented"
+    },
+    "limitations": [
+      "Browser behavior and application tenant isolation require separate execution.",
+      "Migration dependencies use the installed candidate dependency tree."
+    ],
+    "migrations": {
+      "baseline": 1028,
+      "upgrade": [
+        "20260827090000_create_tenant_secrets.cjs",
+        "20260827091000_reconcile_tenant_permissions.cjs",
+        "20260827110000_rename_time_permission_resources.cjs",
+        "20260827120000_reconcile_permission_catalog.cjs",
+        "20260828120000_add_credential_audit_permission.cjs",
+        "20260830120000_add_accounting_capability_permissions.cjs",
+        "20260830120000_external_mapping_tombstone_and_realm_normalization.cjs",
+        "20260830120000_prune_accounting_export_error_metadata.cjs",
+        "20260830120000_tighten_accounting_mapping_realm.cjs",
+        "20260830130000_create_provider_disconnect_records.cjs",
+        "20260831000000_add_accounting_catalog_read_permission.cjs",
+        "20260831000000_add_prefix_date_format_to_next_number.cjs",
+        "20260831090000_unique_pending_accounting_sync_operations.cjs",
+        "20260902090000_add_service_request_submission_client_key.cjs",
+        "20260902090000_add_work_item_snapshot_to_invoice_time_entries.cjs",
+        "20260902090100_add_by_ticket_standard_invoice_template.cjs",
+        "20260903120000_fix_interaction_default_status.cjs",
+        "20260903160000_unique_active_online_meeting_per_schedule_entry.cjs",
+        "20260904100000_contract_quantity_usage_semantics.cjs",
+        "20260904110000_usage_tracking_request_id.cjs",
+        "20260904120000_allow_chargeless_invoice_claims_on_recurring_service_periods.cjs",
+        "20260904120000_enforce_availability_scope_uniqueness.cjs",
+        "20260904120000_usage_period_total_request_history.cjs",
+        "20260904130000_billing_semantics_lock.cjs",
+        "20260904140000_usage_measurement_revisions.cjs",
+        "20260904210725_ticket_comment_attachments.cjs",
+        "20260904221253_ticket_comment_attachment_recovery.cjs",
+        "20260905025507_invoice_ticket_charge_provenance.cjs",
+        "20260905031510_invoice_ticket_primary_template.cjs",
+        "20260906123000_add_usage_comments.cjs",
+        "20260907190000_add_project_survey_subjects.cjs",
+        "20260907200000_add_project_survey_email_template.cjs",
+        "20260907210000_add_workflow_action_replay_output.cjs",
+        "20260908170000_add_schedule_entry_all_day.cjs"
+      ],
+      "batch": 2
+    },
+    "sourceAfter": {
+      "revision": "3db700f653e28ddd322dfdb652f1689a54f6b65d",
+      "dirty": false,
+      "changes": []
+    }
+  },
+  "gate": {
+    "schemaVersion": 1,
+    "scope": "supported-upgrade",
+    "revision": "3db700f653e28ddd322dfdb652f1689a54f6b65d",
+    "status": "passed",
+    "failures": [],
+    "database": "upgrade_ci",
+    "backend": "postgres",
+    "baselineRevision": "f3579f3a317cf51df5f4489e5dcd8f649bb71289",
+    "results": [
+      {
+        "id": "upgrade-schema",
+        "counts": {
+          "passed": 1,
+          "failed": 0
+        },
+        "status": "passed",
+        "failures": []
+      },
+      {
+        "schemaVersion": 1,
+        "suite": "production-browser",
+        "revision": "3db700f653e28ddd322dfdb652f1689a54f6b65d",
+        "status": "passed",
+        "expectedTests": [
+          {
+            "identity": [
+              "e2e-tests/upgrade-tests/retained-invoice.spec.ts",
+              "enterprise-chromium",
+              "enterprise-chromium",
+              [
+                "upgraded billing sources generate a correctly priced invoice without consuming other tenant records"
+              ]
+            ],
+            "count": 1
+          },
+          {
+            "identity": [
+              "e2e-tests/upgrade-tests/retained-ticket.spec.ts",
+              "enterprise-chromium",
+              "enterprise-chromium",
+              [
+                "upgraded tenants retain ticket writes and reject other-tenant record access"
+              ]
+            ],
+            "count": 1
+          },
+          {
+            "identity": [
+              "e2e-tests/upgrade-tests/retained-usage.spec.ts",
+              "enterprise-chromium",
+              "enterprise-chromium",
+              [
+                "Add Usage after upgrade preserves the old record and uses its existing contract line"
+              ]
+            ],
+            "count": 1
+          }
+        ],
+        "executedTests": [
+          {
+            "identity": [
+              "e2e-tests/upgrade-tests/retained-invoice.spec.ts",
+              "enterprise-chromium",
+              "enterprise-chromium",
+              [
+                "upgraded billing sources generate a correctly priced invoice without consuming other tenant records"
+              ]
+            ],
+            "count": 1
+          },
+          {
+            "identity": [
+              "e2e-tests/upgrade-tests/retained-ticket.spec.ts",
+              "enterprise-chromium",
+              "enterprise-chromium",
+              [
+                "upgraded tenants retain ticket writes and reject other-tenant record access"
+              ]
+            ],
+            "count": 1
+          },
+          {
+            "identity": [
+              "e2e-tests/upgrade-tests/retained-usage.spec.ts",
+              "enterprise-chromium",
+              "enterprise-chromium",
+              [
+                "Add Usage after upgrade preserves the old record and uses its existing contract line"
+              ]
+            ],
+            "count": 1
+          }
+        ],
+        "counts": {
+          "passed": 3,
+          "failed": 0,
+          "flaky": 0,
+          "skipped": 0,
+          "interrupted": 0,
+          "missing": 0
+        },
+        "failures": [],
+        "id": "upgrade-browser"
+      }
+    ],
+    "source": {
+      "before": {
+        "revision": "3db700f653e28ddd322dfdb652f1689a54f6b65d",
+        "dirty": false,
+        "changes": []
+      },
+      "after": {
+        "revision": "3db700f653e28ddd322dfdb652f1689a54f6b65d",
+        "dirty": false,
+        "changes": []
+      }
+    }
+  },
+  "rawBrowser": {
+    "stats": {
+      "startTime": "2026-09-09T04:51:42.638Z",
+      "duration": 59129.376000000004,
+      "expected": 3,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    },
+    "errors": [],
+    "cases": [
+      {
+        "file": "retained-invoice.spec.ts",
+        "title": "upgraded billing sources generate a correctly priced invoice without consuming other tenant records",
+        "projectId": "enterprise-chromium",
+        "projectName": "enterprise-chromium",
+        "status": "expected",
+        "attempts": [
+          {
+            "retry": 0,
+            "status": "passed",
+            "startTime": "2026-09-09T04:51:44.463Z",
+            "durationMs": 19301
+          }
+        ]
+      },
+      {
+        "file": "retained-ticket.spec.ts",
+        "title": "upgraded tenants retain ticket writes and reject other-tenant record access",
+        "projectId": "enterprise-chromium",
+        "projectName": "enterprise-chromium",
+        "status": "expected",
+        "attempts": [
+          {
+            "retry": 0,
+            "status": "passed",
+            "startTime": "2026-09-09T04:52:04.047Z",
+            "durationMs": 30873
+          }
+        ]
+      },
+      {
+        "file": "retained-usage.spec.ts",
+        "title": "Add Usage after upgrade preserves the old record and uses its existing contract line",
+        "projectId": "enterprise-chromium",
+        "projectName": "enterprise-chromium",
+        "status": "expected",
+        "attempts": [
+          {
+            "retry": 0,
+            "status": "passed",
+            "startTime": "2026-09-09T04:52:34.946Z",
+            "durationMs": 6700
+          }
+        ]
+      }
+    ]
+  },
+  "assertedBrowserInvariants": [
+    "Retained secondary-tenant time and usage preview $962.50, persist one draft with subtotal87500/total96250 cents, invoice usage and four time links, preserve other-tenant records.",
+    "Both retained tenants can edit and restore ticket titles after reload; cross-tenant action requests and ticket/client reads are rejected without modifying the other record.",
+    "Adding quantity2 usage preserves the old row, links the existing contract line, stays uninvoiced, preserves the other tenant, and remains visible after reload."
+  ],
+  "connectionDiagnostics": {
+    "snapshot": {
+      "max_connections": "100",
+      "connections": [
+        {
+          "datname": "upgrade_ci",
+          "usename": "app_user",
+          "backend_type": "client backend",
+          "state": "idle",
+          "count": 10
+        },
+        {
+          "datname": "temporal_visibility",
+          "usename": "postgres",
+          "backend_type": "client backend",
+          "state": "idle",
+          "count": 7
+        },
+        {
+          "datname": null,
+          "usename": null,
+          "backend_type": "checkpointer",
+          "state": null,
+          "count": 1
+        },
+        {
+          "datname": "server",
+          "usename": "postgres",
+          "backend_type": "client backend",
+          "state": "idle",
+          "count": 10
+        },
+        {
+          "datname": "postgres",
+          "usename": "postgres",
+          "backend_type": "client backend",
+          "state": "active",
+          "count": 1
+        },
+        {
+          "datname": "server",
+          "usename": "app_user",
+          "backend_type": "client backend",
+          "state": "idle",
+          "count": 20
+        },
+        {
+          "datname": null,
+          "usename": null,
+          "backend_type": "autovacuum launcher",
+          "state": null,
+          "count": 1
+        },
+        {
+          "datname": "postgres",
+          "usename": "postgres",
+          "backend_type": "client backend",
+          "state": "idle",
+          "count": 1
+        },
+        {
+          "datname": null,
+          "usename": "postgres",
+          "backend_type": "logical replication launcher",
+          "state": null,
+          "count": 1
+        },
+        {
+          "datname": null,
+          "usename": null,
+          "backend_type": "walwriter",
+          "state": null,
+          "count": 1
+        },
+        {
+          "datname": "upgrade_ci",
+          "usename": "postgres",
+          "backend_type": "client backend",
+          "state": "idle",
+          "count": 11
+        },
+        {
+          "datname": "temporal",
+          "usename": "postgres",
+          "backend_type": "client backend",
+          "state": "idle",
+          "count": 35
+        },
+        {
+          "datname": null,
+          "usename": null,
+          "backend_type": "background writer",
+          "state": null,
+          "count": 1
+        }
+      ]
+    },
+    "clientBackendCount": 95,
+    "backgroundRows": 5,
+    "exhaustionAbsent": false,
+    "observations": [
+      {
+        "member": "upgrade-postgres-runtime/database.log",
+        "line": 51,
+        "timestamp": "2026-09-09T04:52:12.325791751Z",
+        "service": "upgrade-pgbouncer-1",
+        "message": "remaining connection slots are reserved for non-replication superuser connections"
+      },
+      {
+        "member": "upgrade-postgres-runtime/database.log",
+        "line": 52,
+        "timestamp": "2026-09-09T04:52:12.325797893Z",
+        "service": "upgrade-pgbouncer-1",
+        "message": "remaining connection slots are reserved for non-replication superuser connections"
+      },
+      {
+        "member": "upgrade-postgres-runtime/database.log",
+        "line": 70,
+        "timestamp": "2026-09-09T04:52:29.337572694Z",
+        "service": "upgrade-pgbouncer-1",
+        "message": "remaining connection slots are reserved for non-replication superuser connections"
+      },
+      {
+        "member": "upgrade-postgres-runtime/database.log",
+        "line": 71,
+        "timestamp": "2026-09-09T04:52:29.337583712Z",
+        "service": "upgrade-pgbouncer-1",
+        "message": "remaining connection slots are reserved for non-replication superuser connections"
+      },
+      {
+        "member": "upgrade-postgres-runtime/database.log",
+        "line": 528,
+        "timestamp": "2026-09-09T04:52:12.325722158Z",
+        "service": "postgres-1",
+        "message": "remaining connection slots are reserved for non-replication superuser connections"
+      },
+      {
+        "member": "upgrade-postgres-runtime/database.log",
+        "line": 532,
+        "timestamp": "2026-09-09T04:52:29.337481748Z",
+        "service": "postgres-1",
+        "message": "remaining connection slots are reserved for non-replication superuser connections"
+      }
+    ],
+    "retainedServerLogLines": 37617,
+    "serverExhaustionOrKnexTimeoutMatches": 0,
+    "interpretation": "Two denied PostgreSQL app-user logins, each recorded by PostgreSQL and pooler, occurred during the retained-ticket case. All three browser cases passed without Playwright retries; no matching exhaustion or KnexTimeoutError appeared in the retained server log. This is consistent with pooler recovery, not proof of absent pressure.",
+    "observedIdlePrimaryServerDatabaseConnections": 30,
+    "recommendedNextBoundary": "After the isolated upgrade pooler passes its real app-user readiness probe through the still-running original server, stop server, email-service and main pgbouncer, then recreate only server with --no-deps using the upgrade overlay. Already-stopped workflow/Temporal workers remain stopped; retain Temporal frontend and Hocuspocus. This releases original pools before upgraded browser load, without changing production pool limits."
+  },
+  "limits": [
+    "The suite verifies the approved v1.5.0 baseline, not every historical release or live customer dataset.",
+    "Schema phase reports retention success; raw per-row snapshots were not included in this uploaded artifact. Migration dependencies use the candidate dependency tree.",
+    "No Citus or Teams completion is inferred from this PostgreSQL evidence.",
+    "Connection snapshot is a point-in-time aggregate without client_addr/application_name attribution; primary pooler ownership is supported by configured routing and pool behavior, not per-PID attribution.",
+    "Browser first-attempt success does not mean no internal network/database retries. Existing server logs also contain unrelated geolocation and missing Hocuspocus JWT diagnostics; this is not a clean-log claim.",
+    "Job status is the read-time snapshot; successful upgrade phases do not imply whole-job or release readiness."
+  ]
+}

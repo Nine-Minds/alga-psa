@@ -1,0 +1,27 @@
+{
+  "status": "fixed_local_behavior_verified_native_pending",
+  "problem": "Completion discovered a step only by step_id while mutating the separately supplied run_id. A nonexistent step fell back to an unscoped run update.",
+  "change": "Require step_id, run_id and step_path to match an existing step before updating either record.",
+  "test": "server/src/test/integration/workflowInvocationPersistence.integration.test.ts",
+  "behavior": [
+    "Missing step rejects without changing run or step state.",
+    "Step belonging to another run rejects without changing either run.",
+    "Wrong step path rejects without changing run or step state.",
+    "Valid failed completion updates its owned step and run; the other run remains running."
+  ],
+  "validation": {
+    "before": "New database case failed: promise resolved instead of rejecting.",
+    "after": "All six database persistence cases passed.",
+    "temporalReadiness": "72 cases in six files passed.",
+    "targetedTypeScript": "passed",
+    "logs": [
+      "/tmp/alga-step-ownership-before.log",
+      "/tmp/alga-step-ownership-after.log",
+      "/tmp/alga-step-ownership-readiness.log"
+    ]
+  },
+  "limits": [
+    "Does not restore the five legacy redaction/snapshot cases.",
+    "No claim of Temporal server execution or native CI validation for this local fix."
+  ]
+}

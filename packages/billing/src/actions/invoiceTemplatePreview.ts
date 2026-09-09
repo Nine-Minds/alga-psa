@@ -122,7 +122,14 @@ export const runAuthoritativeInvoiceTemplatePreview = withAuth(
       };
     }
 
-    const ast = exportWorkspaceToTemplateAst(input.workspace);
+    let ast;
+    try {
+      ast = exportWorkspaceToTemplateAst(input.workspace);
+    } catch (error) {
+      // Live editing can temporarily leave transforms incomplete. Report the
+      // compiler diagnostic through the preview UI instead of rejecting the action.
+      return previewFailureResult(error instanceof Error ? error.message : 'Workspace export failed.');
+    }
     const generatedSource = JSON.stringify(ast, null, 2);
     const sourceHash = crypto.createHash('sha256').update(generatedSource).digest('hex');
 

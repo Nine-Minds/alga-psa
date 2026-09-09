@@ -1,0 +1,259 @@
+name: Additional workspace tests
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  enterprise-integration:
+    name: Enterprise integration execution complete
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    services:
+      postgres:
+        image: ankane/pgvector:latest
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: '5432'
+      DB_USER_ADMIN: postgres
+      DB_PASSWORD_ADMIN: test_password
+      DB_USER_SERVER: app_user
+      DB_PASSWORD_SERVER: test_password
+      REDIS_HOST: 127.0.0.1
+      REDIS_PORT: '6379'
+      NODE_OPTIONS: '--max-old-space-size=8192'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm install -g npm@11
+      - run: npm ci
+      - name: Collect and execute EE integration tests against combined migrations
+        run: node scripts/run-additional-workspace-tests.mjs enterprise-integration
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: enterprise-integration-${{ github.sha }}
+          path: test-results/enterprise-integration/
+          if-no-files-found: error
+          retention-days: 30
+
+  ai-gateway:
+    name: AI gateway execution complete
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: alga_ai_gateway_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d alga_ai_gateway_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      AI_GATEWAY_TEST_DATABASE_URL: postgresql://postgres:test_password@127.0.0.1:5432/alga_ai_gateway_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm install -g npm@11
+      - run: npm ci
+      - name: Collect and execute service API, ledger and unit tests
+        run: node scripts/run-additional-workspace-tests.mjs ai-gateway
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-gateway-${{ github.sha }}
+          path: test-results/ai-gateway/
+          if-no-files-found: error
+          retention-days: 30
+
+  workspace-tests:
+    name: ${{ matrix.suite }} execution complete
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [workspace-unit, workspace-runtime, server-colocated, nx-tooling, ui-kit-showcase]
+    env:
+      VITEST_SEED: '20260610'
+      # Nx graph/config tests do not launch a browser. Avoid Puppeteer's
+      # unrelated Chrome download (which failed with ECONNRESET in CI).
+      PUPPETEER_SKIP_DOWNLOAD: ${{ matrix.suite == 'nx-tooling' && 'true' || 'false' }}
+      STORAGE_S3_ENDPOINT: http://127.0.0.1:59000
+      STORAGE_S3_REGION: us-east-1
+      STORAGE_S3_BUCKET: alga-regression-bundles
+      STORAGE_S3_ACCESS_KEY: regression-test
+      STORAGE_S3_SECRET_KEY: regression-test-password
+      STORAGE_S3_FORCE_PATH_STYLE: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm install -g npm@11
+      - run: npm ci
+      - name: Install locked showcase dependencies and build its iframe
+        if: matrix.suite == 'ui-kit-showcase'
+        run: |
+          npm ci --prefix ee/extensions/samples/ui-kit-showcase
+          npm run build --prefix ee/extensions/samples/ui-kit-showcase
+      - name: Verify runner refuses incomplete execution
+        if: matrix.suite == 'workspace-unit'
+        run: node --test scripts/tests/additional-workspace-runner.test.mjs
+      - name: Start disposable object storage
+        if: matrix.suite == 'workspace-runtime'
+        shell: bash
+        run: |
+          docker run -d --name workspace-test-minio \
+            -p 127.0.0.1:59000:9000 \
+            -e MINIO_ROOT_USER=regression-test \
+            -e MINIO_ROOT_PASSWORD=regression-test-password \
+            minio/minio:RELEASE.2025-04-22T22-12-26Z server /data
+          for ((attempt = 1; attempt <= 60; attempt++)); do
+            if curl --fail --silent http://127.0.0.1:59000/minio/health/ready; then exit 0; fi
+            sleep 1
+          done
+          docker logs workspace-test-minio
+          exit 1
+      - name: Collect, execute and reconcile every required test
+        run: node scripts/run-additional-workspace-tests.mjs ${{ matrix.suite }}
+      - name: Retain execution evidence and first-failure progress
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.suite }}-${{ github.sha }}
+          path: test-results/${{ matrix.suite }}/
+          if-no-files-found: error
+          retention-days: 30
+      - name: Stop disposable object storage
+        if: always() && matrix.suite == 'workspace-runtime'
+        run: docker rm -f workspace-test-minio
+
+  enterprise-unit:
+    name: Enterprise unit shard ${{ matrix.shard }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    env:
+      WORKSPACE_SHARD_INDEX: ${{ matrix.shard }}
+      WORKSPACE_SHARD_TOTAL: '3'
+      NODE_OPTIONS: '--max-old-space-size=8192'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm install -g npm@11
+      - run: npm ci
+      - name: Collect, execute and reconcile assigned EE unit tests
+        run: node scripts/run-additional-workspace-tests.mjs enterprise-unit
+      - name: Retain EE unit execution evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: enterprise-unit-shard-${{ matrix.shard }}
+          path: test-results/enterprise-unit/shard-${{ matrix.shard }}/
+          if-no-files-found: error
+          retention-days: 30
+
+  enterprise-unit-complete:
+    name: Enterprise unit execution complete
+    needs: enterprise-unit
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      WORKSPACE_SHARD_TOTAL: '3'
+      WORKSPACE_JOB_RESULT: ${{ needs.enterprise-unit.result }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: enterprise-unit-shard-*
+          path: test-results/enterprise-unit-shards
+      - name: Verify every EE unit partition and assertion
+        if: always()
+        run: node scripts/verify-enterprise-unit-shards.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: enterprise-unit-execution-evidence
+          path: test-results/enterprise-unit/aggregate.json
+          if-no-files-found: error
+          retention-days: 30
+
+  workspace-execution-complete:
+    name: Workspace execution gate
+    needs: [workspace-tests, enterprise-integration, ai-gateway, enterprise-unit, enterprise-unit-complete]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      WORKSPACE_GATE_JOB_RESULTS: ${{ toJSON(needs) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify gate rejects incomplete or stale evidence
+        run: node --test scripts/tests/workspace-execution-gate.test.mjs
+      - uses: actions/download-artifact@v4
+        if: always()
+        with:
+          path: test-results/workspace-gate-input
+          # This reusable workflow shares a run with multi-GB browser images.
+          # Fetch only the reports consumed by verify-workspace-execution.mjs.
+          pattern: '{workspace-unit-*,workspace-runtime-*,server-colocated-*,nx-tooling-*,ui-kit-showcase-*,enterprise-integration-*,ai-gateway-*,enterprise-unit-shard-*}'
+      - name: Reconcile all required workspace reports and source identities
+        if: always()
+        run: node scripts/verify-workspace-execution.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: workspace-execution-gate
+          path: test-results/workspace-gate/aggregate.json
+          if-no-files-found: error
+          retention-days: 30

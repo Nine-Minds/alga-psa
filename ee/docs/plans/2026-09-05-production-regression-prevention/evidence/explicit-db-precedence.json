@@ -1,0 +1,24 @@
+{
+  "status": "passed",
+  "configurationRegression": {
+    "before": {
+      "passed": 2,
+      "failed": 4
+    },
+    "after": {
+      "passed": 6,
+      "failed": 0
+    },
+    "file": "packages/db/src/lib/knexfile.test.ts"
+  },
+  "upgradeDatabase": {
+    "passed": 10,
+    "failed": 0,
+    "runtime": "Owned migrated single-node Citus database invoice_citus_82cc",
+    "file": "ee/temporal-workflows/src/db/__tests__/product-upgrade-operations.integration.test.ts"
+  },
+  "limits": [
+    "Native verification pending. Product upgrade DB suite still needs required runner assignment.",
+    "Product upgrade within current schema does not prove previous-release schema upgrade."
+  ]
+}

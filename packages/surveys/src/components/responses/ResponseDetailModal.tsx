@@ -42,7 +42,9 @@ export default function ResponseDetailModal({
         label: t('responses.detail.labels.technician', { defaultValue: 'Technician' }),
         value: response.technicianName ?? t('responses.detail.fallbacks.unassigned', { defaultValue: 'Unassigned' }),
       },
-      { label: t('responses.detail.labels.ticket', { defaultValue: 'Ticket' }), value: response.ticketNumber ?? response.ticketId },
+      response.projectId
+        ? { label: t('responses.detail.labels.project', { defaultValue: 'Project' }), value: response.projectNumber ?? response.projectId }
+        : { label: t('responses.detail.labels.ticket', { defaultValue: 'Ticket' }), value: response.ticketNumber ?? response.ticketId },
       { label: t('responses.detail.labels.rating', { defaultValue: 'Rating' }), value: `${response.rating} ★` },
     ];
   }, [formatDate, response, t]);

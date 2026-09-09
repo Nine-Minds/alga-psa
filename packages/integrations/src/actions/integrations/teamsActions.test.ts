@@ -359,6 +359,30 @@ describe('Teams integration actions', () => {
     expect(reloaded).toEqual(saved);
   });
 
+  it.each([
+    ['production', 'true'], ['development', undefined], ['development', 'false'], ['staging', 'staging'],
+  ])('workspace keeps live Microsoft defaults in %s with emulator gate %s', async (nodeEnv, gate) => {
+    try {
+      vi.stubEnv('NODE_ENV', nodeEnv);
+      vi.stubEnv('TEAMS_EMULATOR_MODE', gate);
+      vi.stubEnv('MICROSOFT_GRAPH_BASE_URL', 'http://untrusted.invalid/v1.0');
+      vi.stubEnv('MICROSOFT_LOGIN_BASE_URL', 'http://untrusted.invalid');
+      addMicrosoftProfile({ tenant: 'tenant-1', profileId: 'profile-1', clientId: 'organizer-client',
+        tenantId: 'organizer-tenant', secretRef: 'organizer-secret-ref' });
+      tenantSecrets.set('tenant-1:organizer-secret-ref', 'organizer-secret');
+      fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ access_token: 'graph-token' }), { status: 200 }))
+        .mockResolvedValueOnce(new Response(JSON.stringify({ id: 'organizer-object' }), { status: 200 }));
+      expect(await saveTeamsIntegrationSettings({ selectedProfileId: 'profile-1', installStatus: 'install_pending',
+        defaultMeetingOrganizerUpn: 'scheduler@acme.com' })).toMatchObject({ success: true });
+      expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+        'https://login.microsoftonline.com/organizer-tenant/oauth2/v2.0/token',
+        'https://graph.microsoft.com/v1.0/users/scheduler%40acme.com',
+      ]);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
   it('T072/T073: resolves the meeting organizer object id and stores recording toggles', async () => {
     addMicrosoftProfile({
       tenant: 'tenant-1',

@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const setCookieMock = vi.fn();
-const consumeLimiterMock = vi.fn(async () => ({ remainingPoints: 7 }));
-const getSigningSecretMock = vi.fn(async () => 'unit-test-signing-secret');
+const consumeLimiterMock = vi.fn(async (_key: string) => ({ remainingPoints: 7 }));
+const getSigningSecretMock = vi.fn(async (): Promise<string | null> => 'unit-test-signing-secret');
 const parseDiscoveryCookieMock = vi.fn();
 const resolveTenantContextMock = vi.fn();
-const createCookieMock = vi.fn(() => ({ value: 'signed-client-portal-resolution-cookie' }));
+const createCookieMock = vi.fn((..._args: unknown[]) => ({ value: 'signed-client-portal-resolution-cookie' }));
 
 vi.mock('rate-limiter-flexible', () => ({
   RateLimiterMemory: class {

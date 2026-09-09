@@ -7,6 +7,14 @@ function withOptionalTimestamp(field: string, value?: string): Record<string, un
   return value ? { [field]: value } : {};
 }
 
+function surveySubject(params: { ticketId?: string; projectId?: string }): Record<string, string> {
+  if (params.ticketId && params.projectId) throw new Error('Provide only one survey subject');
+  return {
+    ...(params.ticketId ? { ticketId: params.ticketId } : {}),
+    ...(params.projectId ? { projectId: params.projectId } : {}),
+  };
+}
+
 export type SurveyType = 'csat' | 'nps' | 'custom';
 export type NotificationChannel = 'email' | 'sms' | 'in_app' | 'push';
 
@@ -15,6 +23,7 @@ export function buildSurveySentPayload(params: {
   surveyType: SurveyType;
   recipientId: string;
   ticketId?: string;
+  projectId?: string;
   sentAt?: string;
   channel: NotificationChannel;
   templateId?: string;
@@ -28,7 +37,7 @@ export function buildSurveySentPayload(params: {
     surveyId: params.surveyId,
     surveyType: params.surveyType,
     recipientId: params.recipientId,
-    ...(params.ticketId ? { ticketId: params.ticketId } : {}),
+    ...surveySubject(params),
     ...withOptionalTimestamp('sentAt', params.sentAt),
     channel: params.channel,
     ...(params.templateId ? { templateId: params.templateId } : {}),
@@ -40,6 +49,7 @@ export function buildSurveyResponseReceivedPayload(params: {
   responseId: string;
   recipientId: string;
   ticketId?: string;
+  projectId?: string;
   respondedAt?: string;
   score: number;
   comment?: string;
@@ -53,7 +63,7 @@ export function buildSurveyResponseReceivedPayload(params: {
     surveyId: params.surveyId,
     responseId: params.responseId,
     recipientId: params.recipientId,
-    ...(params.ticketId ? { ticketId: params.ticketId } : {}),
+    ...surveySubject(params),
     ...withOptionalTimestamp('respondedAt', params.respondedAt),
     score: params.score,
     ...(params.comment ? { comment: params.comment } : {}),
@@ -64,6 +74,7 @@ export function buildSurveyReminderSentPayload(params: {
   surveyId: string;
   recipientId: string;
   ticketId?: string;
+  projectId?: string;
   sentAt?: string;
   channel: NotificationChannel;
   reminderNumber: number;
@@ -78,7 +89,7 @@ export function buildSurveyReminderSentPayload(params: {
   return {
     surveyId: params.surveyId,
     recipientId: params.recipientId,
-    ...(params.ticketId ? { ticketId: params.ticketId } : {}),
+    ...surveySubject(params),
     ...withOptionalTimestamp('sentAt', params.sentAt),
     channel: params.channel,
     reminderNumber: params.reminderNumber,
@@ -89,6 +100,7 @@ export function buildSurveyExpiredPayload(params: {
   surveyId: string;
   recipientId: string;
   ticketId?: string;
+  projectId?: string;
   expiredAt?: string;
 }): Record<string, unknown> {
   requireNonEmpty(params.surveyId, 'surveyId');
@@ -97,7 +109,7 @@ export function buildSurveyExpiredPayload(params: {
   return {
     surveyId: params.surveyId,
     recipientId: params.recipientId,
-    ...(params.ticketId ? { ticketId: params.ticketId } : {}),
+    ...surveySubject(params),
     ...withOptionalTimestamp('expiredAt', params.expiredAt),
   };
 }

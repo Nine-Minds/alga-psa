@@ -406,6 +406,53 @@ npm run test:watch         # Run tests in watch mode
 
 # Local with config
 npm run test:local         # Run with local config
+```
+
+### Collaboration integration tests
+
+Install the collaboration service's locked dependencies from the repository
+root with `npm ci --prefix hocuspocus --ignore-scripts`. With the isolated test
+database configuration described above, run from `server/`:
+
+```bash
+CI=true REQUIRE_DB=1 REAL_REDIS=1 npx vitest run --config vitest.config.ts \
+  src/test/integration/collaborativeEditing.integration.test.ts
+```
+
+The suite recreates its test database and owns ephemeral WebSocket and HTTP
+ports. It does not require `RUN_HOCUSPOCUS_TESTS` or a developer's running
+Hocuspocus instance. CI installs the same service lockfile before integration
+execution. Do not run migration bootstraps concurrently on one PostgreSQL
+instance, even with separate databases: role settings are shared.
+
+The live cases use the actual Hocuspocus server, room validator, persistence
+extension, persistence route and snapshot action. They verify two-client edits,
+awareness, rejected tenant access, durable content after room eviction, and
+HTTP authorization and tenant isolation. Browser authentication and database
+routing are fixture seams; this suite does not prove browser UI behavior,
+Redis fanout or the built collaboration container.
+
+### RMM schedules with Temporal
+
+`server/src/test/integration/rmm/rmmDeviceSyncSchedule.db.test.ts` runs both
+PgBoss and Temporal coverage in the normal integration lane. The Temporal
+fixture uses the installed `@temporalio/testing` SDK to launch its own local
+server on an available port, with CLI release `v1.5.1` pinned. The SDK downloads
+and caches that executable; a download or startup failure fails the suite.
+No developer broker or `TEMPORAL_HOST` setting is required.
+
+With the same isolated database configuration, run from `server/`:
+
+```bash
+CI=true REQUIRE_DB=1 REAL_REDIS=1 npx vitest run --config vitest.config.ts \
+  src/test/integration/rmm/rmmDeviceSyncSchedule.db.test.ts
+```
+
+The Temporal cases verify schedule payload, reconciliation without duplicate
+schedules, and cancellation when sync is disabled. They do not run a Temporal
+worker or contact an RMM provider. PgBoss delivery and forwarded handler
+dispatch have separate cases in the same suite. Fixture teardown closes the
+runner connection and the owned Temporal server.
 
 ### Runner backend smoke tests
 
@@ -426,7 +473,6 @@ npm run runner:down
 ```
 
 Use `.env.runner` (see `.env.runner.example`) to point the runner container at your bundle storage (MinIO/S3) and registry endpoints when validating the compose stack.
-```
 
 ### Vitest Configuration
 
@@ -435,8 +481,82 @@ Tests use Vitest as the primary test runner, configured in `server/vitest.config
 - **Environment:** Node (default), jsdom (for React components)
 - **Setup files:** `./src/test/setup.ts`
 - **Global setup:** `./vitest.globalSetup.js`
-- **Execution:** Single fork mode (for database isolation)
+- **Execution:** Serial files; server unit commands use a fresh worker per file, while DB suites retain their configured isolation
 - **Timeout:** 20 seconds default
+
+### Workspace execution gate
+
+The **Workspace execution gate** in `workspace-tests.yml` combines the eight
+additional workspace suites, including all three enterprise unit partitions.
+It runs after every prerequisite reaches an outcome, including failure or
+cancellation, and retains `test-results/workspace-gate/aggregate.json`.
+
+The verifier reads the raw file/assertion collections and execution reports,
+recomputes their results, and compares them with both the manifests and the
+repository's candidate files. Every job must succeed; every required partition
+must be present, complete, unfiltered and from the candidate revision with a
+clean before/after source state. Missing or malformed artifacts, stale reports,
+unmatched tests, unexpected skips and retrying only part of a suite cannot
+satisfy the gate. An individual suite's result remains distinct from a failed
+sibling in the same matrix.
+
+Run the gate's behavioral and command-line checks with:
+
+```bash
+node --test scripts/tests/workspace-execution-gate.test.mjs
+```
+
+This check covers the additional-workspace workflow. It does not yet aggregate
+the separate server unit, integration, infrastructure, browser and deployment
+workflows, or establish effective GitHub branch protection by itself.
+
+### Node tooling execution integrity
+
+Run `node scripts/run-node-tooling-tests.mjs` from a checkout with Node 22 and
+dependencies installed through `npm ci`. The `Node tooling execution complete`
+job runs this command on every PR. It covers Node tests under `scripts/tests`,
+the workflow and translation tooling, Microsoft Graph endpoint validation,
+the browser emulator-control helper, the Graph emulator harness and the custom
+ESLint rule. It needs localhost listeners for emulator tests; it does not need
+vendor credentials or a production environment.
+The launcher rebuilds the host and Stripe emulator packages from the checkout
+before running their wire-level control tests.
+
+The launcher discovers tracked and new test files, executes them serially, and
+compares actual Node file summaries, registered cases and terminal results. Empty
+files, missing completion, failed or cancelled cases, skips and todos reject the
+lane even when Node itself exits zero. Node registers dynamic subtests during
+execution, so the evidence labels those registrations accordingly; it does not
+claim a separate static collection enumerated them in advance.
+
+`test-results/node-tooling/` contains `events.jsonl`, `runner.log`, `discovery.json`
+and `evidence.json`. CI retains them on success and failure. The evidence includes
+revision, local dirty state, observed test identities and the complete selection.
+Direct `node --test <file>` remains useful for diagnosis but does not establish
+that the complete lane ran.
+
+Manual exclusions live in `scripts/node-test-exclusions.json` and require a reason,
+owner, tracking link and future review deadline. The optional local translation
+baseline comparison is currently excluded because its baselines are gitignored
+and CI uses explicit translation gates instead. It is not counted as passing
+coverage. New roots and other test frameworks still need their own execution
+assignment; this tooling lane alone is not the repository-wide test inventory.
+
+### Appliance Node execution
+
+Run `npm --prefix ee/appliance/status-ui ci`, then
+`node scripts/run-appliance-tests.mjs` with Node 22, Docker and Helm available.
+The `Appliance Node execution complete` job performs that preparation on every
+PR. The runner rebuilds the status UI from the checkout and runs all Node test
+files under `ee/appliance`, excluding generated overlays and dependencies.
+It uses the same execution reconciliation as the tooling lane and currently
+has no manual exclusions. Evidence is retained in `test-results/appliance/`.
+
+These tests cover host-service HTTP behavior, operator/status models, rendered
+Helm resources and packaging scripts. The ISO tests use a simulated ISO writer;
+they do not establish that a physical machine or VM completed installation.
+VM boot, upgrade and deployed application journeys still require their own
+execution evidence.
 
 ## Test File Templates
 
@@ -726,9 +846,98 @@ describe('Companies API E2E Tests', () => {
 - Refer to billing `contract lines` and `contracts` instead of the legacy `plans` and `bundles`.
 - When bringing in legacy helpers (e.g., `createFixedPlanAssignment`), alias them to the new naming in your test files so intent stays aligned with the schema.
 
+## Diagnosing interrupted unit and integration runs
+
+The full server unit and Tier-1/full integration jobs retain a JSONL progress
+journal alongside the final JSON test results. Download `server-unit-execution`
+or `server-integration-execution` from the workflow's artifacts. A journal without
+`run-finished` is incomplete. Even a `run-finished` event is only diagnostic:
+release readiness still requires successful process exit and reconciled final
+execution results.
+
+To capture the same evidence locally from `server/`, add the reporter to the
+normal Vitest command:
+
+```sh
+TEST_PROGRESS_PATH=/tmp/alga-test-progress.jsonl npx vitest run <test-paths> \
+  --reporter=default --reporter=../scripts/lib/vitest-progress-reporter.mjs
+```
+
+Each event records a run ID, sequence, timestamp and module/test identity. Find
+modules with `module-queued` and no corresponding `module-finished`; collection
+or setup may have stalled before the first assertion. Within those modules,
+`test-ready` without `test-finished` narrows the investigation further. Readiness
+also occurs for skipped tests and does not prove that assertions executed.
+Worker events can be buffered, so the last completed test is not necessarily
+the cause of a hang. Preserve the original job and its logs while reproducing
+the unfinished module with the same shuffle seed and environment.
+
+Each process must use its own output path. Starting a new run replaces the old
+journal to prevent stale completion from being mistaken for current evidence.
+The reporter excludes test console output, error payloads and environment dumps.
+Its regression tests run the installed Vitest 3 and 4 binaries, exercise passing,
+failing and skipped cases, then deliberately kill a worker stuck during import
+and verify that partial evidence survives without a fabricated completion.
+
 ## Additional Resources
 
+- [Test discovery and execution evidence](./test-execution-evidence.md) - Run and extend the reconciled workspace database lane
 - [Vitest Documentation](https://vitest.dev/)
 - [Testing Library Documentation](https://testing-library.com/)
 - [Contact API E2E Test Plan](../archive/contact-api-e2e-test-plan.md) - Example E2E test implementation
 - [Inbound Email Testing Guide](../inbound-email/development/testing.md) - Email workflow testing examples
+
+
+## Service, SDK and EE library execution lanes
+
+Run `node scripts/run-additional-workspace-tests.mjs workspace-unit` from the
+repository root for the unit suites under `services/email-service`,
+`services/workflow-worker`, `sdk` and `ee/server/src/lib`. The corresponding
+`workspace-runtime` lane runs their `*.integration.test.*` / `*.integration.spec.*`
+suites against actual services. The S3 bundle store suite requires an isolated
+MinIO endpoint and the `STORAGE_S3_*` configuration; the Temporal worker suite
+starts and tears down its own SDK test server. See
+`.github/workflows/workspace-tests.yml` for the complete service setup.
+
+Both lanes independently inventory candidate files, collect actual Vitest file
+and test identities, execute them, and reconcile results. Any omitted file,
+failed assertion, skip/todo, empty mandatory collection or missing report fails
+the command. Optional positional file filters are recorded as partial coverage;
+CI invokes the full lanes. Evidence, raw results, collection manifests and
+interrupted-run diagnostics live in `test-results/<lane>/` and are uploaded even
+on failure. Tests should resolve fixture resources relative to their own module,
+or explicitly establish a working-directory contract if that is what they test.
+
+These lanes close specific collection gaps. They do not constitute the complete
+repository-wide test inventory: remaining runners and manual exclusions still
+need explicit reconciliation. Likewise a passing job becomes a merge gate only
+when its check is registered in the effective repository rules.
+
+
+The full unit coverage CI command overrides `poolOptions.forks.singleFork=false`
+with `maxWorkers=1`. Files still run serially, but each gets a fresh process. This
+avoids carrying worker state across thousands of files; the ordinary database
+runners retain their existing process configuration. The real-Vitest check in
+`scripts/tests/vitest-worker-isolation.test.mjs` verifies the override with worker
+PIDs. Inspect `module-queued` without `module-started` in the progress journal as
+an import/setup stall, not a completed test or an assertion timeout.
+
+### Financial state-model regression
+
+`packages/billing/tests/financialStateModel.db.test.ts` runs in the workspace database lane. It creates two isolated tenants per example and drives real finalization, credit grants/application, payment ingestion through the mapping ledger, payment replay/reversal, and voiding. Expected cash and credit balances are calculated independently of production balance helpers. Both tenants are checked after every operation, including rejected requests.
+
+The default property seed is `20260906`, with 100 generated sequences of up to 25 operations. Fast-check reports the seed and shrinking path on failure; the runner JSON preserves that failure output. Retain useful minimized examples under `packages/billing/tests/fixtures`, then execute them as permanent deterministic cases. The saved payment-credit counterexample proves that prior cash must reduce the credit cap.
+
+Run the complete mandatory lane from the repository root with the isolated test database environment configured:
+
+```sh
+node scripts/run-workspace-db-tests.mjs
+```
+
+For a focused local replay, from `server` with the same database environment:
+
+```sh
+FINANCIAL_MODEL_SEED=20260906 FINANCIAL_MODEL_PATH='0:0:2:0:2:3:8:7:7:7:7:7:7:9:7:8:8:8:5:5:5' ../node_modules/.bin/vitest run --config vitest.workspace-db.config.ts ../packages/billing/tests/financialStateModel.db.test.ts -t 'generated two-tenant'
+```
+
+The workspace configuration bootstraps a disposable database: use only the owned test database, and serialize local DB suites. The model preserves real transactions but wraps each example in a rollback transaction; it does not prove concurrent commit behavior. The separate `creditDrawdownConcurrentApply` and `invoiceCreditReversalConcurrency` infrastructure suites exercise real competing connections. Authentication and external event/provider delivery are explicit seams covered by their respective browser/service suites.

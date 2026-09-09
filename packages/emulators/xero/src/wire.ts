@@ -31,7 +31,30 @@ export function wire(router: Router, core: XeroEmulatorCore, _env: HostEnv): voi
   // Client credentials arrive either as HTTP Basic or in the form body (the
   // Alga client sends them in the body); the emulator accepts both.
   router.post('/connect/token', (req, res) => {
-    res.json(core.grantToken(req.body ?? {}));
+    const params = { ...(req.body ?? {}) };
+    if (req.headers.authorization) {
+      const match = /^Basic ([A-Za-z0-9+/]+={0,2})$/i.exec(req.headers.authorization);
+      const decoded = match ? Buffer.from(match[1], 'base64').toString('utf8') : '';
+      const separator = decoded.indexOf(':');
+      const clientId = decoded.slice(0, separator);
+      if (separator < 1 || (params.client_id && params.client_id !== clientId)) {
+        throw new XeroWireError(401, { error: 'invalid_client' });
+      }
+      params.client_id = clientId;
+      params.client_secret = decoded.slice(separator + 1);
+    }
+    res.json(core.grantToken(params));
+  });
+
+  // Xero revokes refresh tokens using HTTP Basic client authentication and a
+  // form body. PKCE clients keep the colon with an empty client secret.
+  router.post('/connect/revocation', (req, res) => {
+    const match = /^Basic ([A-Za-z0-9+/]+={0,2})$/i.exec(req.headers.authorization ?? '');
+    const decoded = match ? Buffer.from(match[1], 'base64').toString('utf8') : '';
+    const separator = decoded.indexOf(':');
+    if (separator < 1) throw new XeroWireError(401, { error: 'invalid_client' });
+    core.revokeRefreshToken({ ...req.body, client_id: decoded.slice(0, separator), client_secret: decoded.slice(separator + 1) });
+    res.status(200).end();
   });
 
   const authenticate = (req: Request, res: Response, next: NextFunction) => {
@@ -41,7 +64,7 @@ export function wire(router: Router, core: XeroEmulatorCore, _env: HostEnv): voi
   };
 
   router.get('/connections', authenticate, (_req, res) => {
-    res.json(core.connections());
+    res.json(core.connections(res.locals.access.clientId));
   });
 
   const api = express.Router();
@@ -50,7 +73,7 @@ export function wire(router: Router, core: XeroEmulatorCore, _env: HostEnv): voi
   api.use(authenticate);
   api.use((req, res, next) => {
     const xeroTenantId = String(req.headers['xero-tenant-id'] ?? '');
-    core.org(xeroTenantId); // 403 when the header names an unconnected tenant
+    core.assertConnection(res.locals.access.clientId, xeroTenantId);
     res.locals.xeroTenantId = xeroTenantId;
     next();
   });
@@ -105,6 +128,17 @@ export function wire(router: Router, core: XeroEmulatorCore, _env: HostEnv): voi
 
   router.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
     if (err instanceof XeroWireError) {
+      if (err.status === 400 && err.body.Type === 'ValidationException') {
+        res.status(400).json({
+          ErrorNumber: 10,
+          Type: 'ValidationException',
+          Message: 'A validation exception occurred',
+          Elements: Array.isArray(err.body.Elements) ? err.body.Elements : [{
+            ValidationErrors: [{ Message: String(err.body.Detail ?? err.message) }],
+          }],
+        });
+        return;
+      }
       res.status(err.status).json(err.body);
       return;
     }

@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "kind": "native-ci-execution",
+  "revision": "76235f800b56734db1872112ba5a875ecef57909",
+  "job": "https://github.com/Nine-Minds/alga-psa/actions/runs/34060406086/job/101559799569",
+  "conclusion": "success",
+  "completedAt": "2026-09-06T22:04:08Z",
+  "counts": {
+    "filesPassed": 2678,
+    "filesSkipped": 1,
+    "testsPassed": 14456,
+    "testsSkipped": 2,
+    "todo": 22
+  },
+  "durationSeconds": 2867.18,
+  "coverage": {
+    "statements": {
+      "covered": 90100,
+      "total": 259836,
+      "percent": 34.67
+    },
+    "branches": {
+      "covered": 59927,
+      "total": 191384,
+      "percent": 31.31
+    },
+    "functions": {
+      "covered": 16799,
+      "total": 48690,
+      "percent": 34.5
+    },
+    "lines": {
+      "covered": 86255,
+      "total": 245831,
+      "percent": 35.08
+    }
+  },
+  "logSha256": "dc65ad367bb91c005c786bac67a4bc23dbfd7d740d758eb29cfa4b605f989db8",
+  "limitations": [
+    "Existing two skipped assertions and22TODOs remain outstanding. This report predates the local ticket, financial, calendar and accounting draft checkpoints. Percentages cover the configured source inventory, not a claim of whole-repository coverage."
+  ]
+}

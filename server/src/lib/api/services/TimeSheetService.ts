@@ -1051,6 +1051,7 @@ export class TimeSheetService extends BaseService<any> {
           work_item_type: workItemType,
           notes: data.notes,
           is_private: data.is_private,
+          is_all_day: data.is_all_day ?? false,
           recurrence_pattern: data.recurrence_pattern ? JSON.parse(data.recurrence_pattern) : null,
           assigned_user_ids: data.assigned_user_ids || [],
           status: 'scheduled'
@@ -1118,6 +1119,14 @@ export class TimeSheetService extends BaseService<any> {
           updated_at: new Date()
         };
   
+
+        const { validateAllDayInterval } = await import('@alga-psa/shared/models/scheduleEntry');
+        validateAllDayInterval({
+          is_all_day: data.is_all_day ?? existing.is_all_day,
+          scheduled_start: data.scheduled_start === undefined ? existing.scheduled_start : new Date(data.scheduled_start),
+          scheduled_end: data.scheduled_end === undefined ? existing.scheduled_end : new Date(data.scheduled_end),
+        });
+
         await tenantDb(trx, context.tenant).table('schedule_entries')
           .where({ entry_id: id })
           .update(updateData);

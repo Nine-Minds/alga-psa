@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "status": "passed",
+  "tests": 3,
+  "database": "upgrade_final_82cc_20260908",
+  "fixtureOutput": "/var/folders/8g/3xyjqdpd4hx2h39h4qb2lyvm0000gn/T/alga-supported-upgrade-3laV01",
+  "baselineRevision": "f3579f3a317cf51df5f4489e5dcd8f649bb71289",
+  "migrationRevision": "8bc3d1a6142d691401abae0245b6367a83d3a23f",
+  "appRevision": "c5938cdad5",
+  "logs": {
+    "/tmp/alga-upgrade-final-runner.log": "65772e39164887376e952e2540414011d431505bd31c6f7fcaefdda06ea31b94",
+    "/tmp/alga-upgrade-final-browser.log": "99d2b0ded479d40c63613f84ff9ea76597d387153d5856ff6ee5a53d71a7f1d8"
+  },
+  "priorFailureCause": "Obsolete local app processes exhausted PostgreSQL connections; session revocation correctly failed closed. Removed obsolete instances; no auth or assertion changes.",
+  "limitations": [
+    "Existing app build differs from migration candidate",
+    "Native CI wiring and current-source run remain pending",
+    "No Citus upgrade proof"
+  ]
+}

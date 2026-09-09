@@ -4,6 +4,7 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PNG } from 'pngjs';
+import { loadVisualBaseline } from '../../../test-utils/visualBaseline';
 
 import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
@@ -28,9 +29,8 @@ import { seedBillingCycle } from '../../../test-utils/billingProfileTestHelpers'
 // Chromium at a fixed A4-at-96dpi viewport and compared against checked-in
 // baseline PNGs pixel by pixel.
 //
-// First run (no baseline for a template) WRITES the baseline into
-// __baselines__/ and passes; subsequent runs compare with a ~1% differing-
-// pixel tolerance. See README.md in this directory for baseline updates and
+// Missing baselines fail. Explicit local UPDATE_VISUAL_BASELINES=1 updates
+// reviewed inputs; comparison uses a ~1% differing-pixel tolerance. See README.md in this directory for baseline updates and
 // the renderer-version brittleness warning. This suite is deliberately NOT in
 // tier1.manifest.json — it reviews template changes, it does not gate PRs.
 //
@@ -476,6 +476,9 @@ describeDb('visual goldens: standard invoice templates', () => {
       : dbInvoiceData;
     const viewModel = mapDbInvoiceToWasmViewModel(enrichedData);
     expect(viewModel, 'invoice view model').toBeTruthy();
+    // Pixel tolerance can miss small digit changes: verify money separately.
+    expect(viewModel).toMatchObject({ subtotal: 40000, tax: 3550, total: 43550 });
+    expect(viewModel!.items.map(item => item.total).sort((a, b) => a - b)).toEqual([15000, 25000]);
 
     // getInvoiceCharges has no ORDER BY, so heap order decides item order.
     // Pin it before groups are derived: sort by description (the two items
@@ -495,10 +498,10 @@ describeDb('visual goldens: standard invoice templates', () => {
         'standard-detailed',
         'standard-grouped',
         'standard-invoice-by-location',
+        'standard-invoice-by-ticket',
       ]),
     );
 
-    await fs.mkdir(BASELINE_DIR, { recursive: true });
 
     // ---- rasterize + compare ----------------------------------------------
     const generatedBaselines: string[] = [];
@@ -509,6 +512,7 @@ describeDb('visual goldens: standard invoice templates', () => {
     try {
       await page.setViewport({ width: PAGE_WIDTH, height: PAGE_HEIGHT, deviceScaleFactor: 1 });
       await page.emulateMediaType('print');
+      await page.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: 'light' }]);
 
       for (const code of codes) {
         const template = templates.find(
@@ -524,6 +528,9 @@ describeDb('visual goldens: standard invoice templates', () => {
           knex: db,
         });
 
+        await fs.mkdir(OUTPUT_DIR, { recursive: true });
+        await fs.writeFile(path.join(OUTPUT_DIR, '.gitignore'), '*\n');
+        await fs.writeFile(path.join(OUTPUT_DIR, `${code}.actual.html`), html);
         await page.setContent(html, { waitUntil: 'load' });
         await page.evaluate(() => (document as any).fonts?.ready ?? Promise.resolve());
         const actualPng = Buffer.from(
@@ -534,10 +541,20 @@ describeDb('visual goldens: standard invoice templates', () => {
         );
 
         const baselinePath = path.join(BASELINE_DIR, `${code}.png`);
-        const baselineBuf = await fs.readFile(baselinePath).catch(() => null);
-        if (!baselineBuf) {
-          await fs.writeFile(baselinePath, actualPng);
-          generatedBaselines.push(code);
+        let baselineBuf: Buffer;
+        try {
+          const loaded = await loadVisualBaseline(baselinePath, actualPng, {
+            update: process.env.UPDATE_VISUAL_BASELINES === '1',
+            ci: Boolean(process.env.CI && process.env.CI !== 'false'),
+          });
+          if (loaded.updated) {
+            generatedBaselines.push(code);
+            continue;
+          }
+          baselineBuf = loaded.baseline;
+        } catch (error) {
+          const outputDir = await writeFailureArtifacts(code, actualPng);
+          failures.push(`${code}: ${error instanceof Error ? error.message : String(error)} (actual written to ${outputDir})`);
           continue;
         }
 

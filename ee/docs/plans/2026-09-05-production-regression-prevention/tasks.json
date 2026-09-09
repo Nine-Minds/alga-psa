@@ -1,0 +1,940 @@
+{
+  "version": 1,
+  "tasks": [
+    {
+      "id": "R001",
+      "title": "Review all-day calendar, recurrence and API changes",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "calendar_review",
+      "notes": "Reviewed calendar changes and fixed recurrence editor date boundaries. Two regressions failed before; 11 component cases pass in UTC, Berlin and Los Angeles. Coordinator reviewed diff. Current full browser rerun remains R005."
+    },
+    {
+      "id": "R002",
+      "title": "Diagnose Citus supported-upgrade role provisioning failure",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "qbo_protocol",
+      "notes": "Investigation complete; actual CI cause remains unknown. Recorded service timestamps rule out startup race for observed run. Coordinator added fixed phase labels and sanitized error codes; next CI execution must establish cause."
+    },
+    {
+      "id": "R003",
+      "title": "Verify mobile editor generator portability and reproducibility",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "stripe_protocol",
+      "notes": "Generator reproducibility and runtime portability verified, including mobile-versus-root shadowing, nested dependency and rejection of root fallback. Current-source CI still required."
+    },
+    {
+      "id": "R004",
+      "title": "Diagnose Teams development CI sign-in failure",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "qbo_protocol",
+      "notes": "Added actual-source read-only auth preflight and 5 real-crypto behavioral tests. Root wired preflight before Teams browser; CI must still diagnose actual failure. Current run34294404179 enterprise job102293311555 confirms Citus host-path SQL readiness, Teams development cache-write probe, recreated credential capture, and source authentication preflight all passed. Actual upgrade/Teams browser execution remains blocked by earlier Temporal startup failure and skipped browser/bootstrap prerequisites; no full journey completion claim."
+    },
+    {
+      "id": "R005",
+      "title": "Integrate reviewed changes and validate current source",
+      "status": "in_progress",
+      "dependsOn": [
+        "R001",
+        "R002",
+        "R003"
+      ],
+      "owner": "coordinator",
+      "notes": "Review and native validation can proceed while Teams diagnosis continues; retain unresolved CI requirements explicitly."
+    },
+    {
+      "id": "R006",
+      "title": "Locate existing authoritative tax policy for pending TODOs",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "stripe_protocol",
+      "notes": "No authoritative policy resolves three TODOs. Repository describes international jurisdiction rules as future, defines taxable brackets rather than caps, and has conflicting invoice tax dates. Pending user decisions remain required."
+    },
+    {
+      "id": "R007",
+      "title": "Verify registration of new calendar behavioral tests",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "calendar_review",
+      "notes": "Actual runners collect 64 focused unit cases, 42 DB recurrence cases and 4 Microsoft browser cases. Coordinator added targeted Berlin/Los Angeles CI runs; 39 cases pass in each zone."
+    },
+    {
+      "id": "R008",
+      "title": "Apply and test calendar semantics through actual enterprise mapper",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "calendar_review",
+      "notes": "Actual EE mapper now shares strict datetime parser and explicit provenance semantics. Both mapper implementations run the same behavioral contracts: 7 pre-fix failures; 32 cases pass in each of three timezones."
+    },
+    {
+      "id": "R009",
+      "title": "Apply and test Graph all-day HTTP contract through enterprise adapter",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "stripe_protocol",
+      "notes": "Real HTTP test reproduced EE createEvent Graph400; both adapters now run the same date contract. All45 Graph calendarcases pass."
+    },
+    {
+      "id": "R010",
+      "title": "Fix and verify merged availability UI test scrolling harness",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "calendar_review",
+      "notes": "Test-local scrolling spy restores descriptor and awaits real rAF. Six related UI files/30cases pass without unhandled errors."
+    },
+    {
+      "id": "R011",
+      "title": "Remove calendar parser build dependency cycle",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "calendar_review",
+      "notes": "Parser moved to core; core build and32mapping cases in Berlin/LA pass. Root verified58-taskserverbuild and114-taskaffectedtest graphs acyclic."
+    },
+    {
+      "id": "R012",
+      "title": "Match Stripe redirect failure semantics",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "stripe_protocol",
+      "notes": "Actual302/307 HTTP tests failedbefore fix; all26Stripecasespass withoutfollowingredirects, preserving othercallbacksignatures."
+    },
+    {
+      "id": "R013",
+      "title": "Bind promotion to complete rendered resource inventory",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "qbo_protocol",
+      "notes": "Requiredcomplete renderedresources bind policy/manifest/runtime target. All53release-relatedtests pass includingactualcollector envelope caller. Docs updated forrequired6argument CLI. Realpipelinewiring remainsF020open."
+    },
+    {
+      "id": "R014",
+      "title": "Exercise actual seeded board ticket lifecycle and permanent CI selection",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "stripe_protocol",
+      "notes": "Reviewed actual seed replay: 2 historical failures; 2 current fresh-migrated database passes; zero owned databases left. Permanent Tier-1 floor collects95files including regression. Current CI pending."
+    },
+    {
+      "id": "R015",
+      "title": "Route Teams organizer validation through real Graph emulator HTTP",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "calendar_review",
+      "notes": "Reviewed37focused tests plus8enterprise gate tests; both realHTTP organizer paths pass. Review corrected workspace gate and relocated HTTP tests to emulator package to avoid build cycle. Full server tsc passes. Current browser validation pending."
+    },
+    {
+      "id": "R016",
+      "title": "Record actual CI Docker archive build identity",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "qbo_protocol",
+      "notes": "Reviewed9native helper tests and actionlint pass. Workflow writes separate per-service archive records from action outputs. Registry publication and actual CI metadata remain unverified."
+    },
+    {
+      "id": "R017",
+      "title": "Implement QBO grant revocation with wire-level behavioral evidence",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "qbo_protocol",
+      "notes": "Reviewed 6 pre-fix HTTP 404 failures, 23 passing QBO tests and package typecheck. Grant family and foreign-client isolation are covered; RFC edge semantics are distinguished from live parity."
+    },
+    {
+      "id": "R018",
+      "title": "Implement Xero grant revocation with wire-level behavioral evidence",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "calendar_review",
+      "notes": "Reviewed 4 pre-fix HTTP 404 failures, 20 passing Xero tests and package typecheck. Resource-owner scope and JWT timing limits are documented."
+    },
+    {
+      "id": "R019",
+      "title": "Route actual Temporal Stripe clients through configured endpoints",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "stripe_protocol",
+      "notes": "Reviewed actual service POST and deletion DELETE. Deletion-only revert is blocked before live network connection. All 20 related tests pass, both new cases are collected, and Temporal build-graph typecheck passes."
+    },
+    {
+      "id": "R020",
+      "title": "Wire revocation endpoints into the isolated provider environment",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "coordinator",
+      "notes": "Rendered CE/EE compose confirms three revocation variables on server, email-service and workflow-worker. Probe syntax and actionlint pass. Actual running-process CI remains unverified."
+    },
+    {
+      "id": "R021",
+      "title": "Exercise real QBO callback cleanup against the emulator",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "qbo_protocol",
+      "notes": "Real QBO cleanup consumer passes three HTTP cases; destination guard and journal prevent silent fallback. Both accounting packages pass 48 tests together."
+    },
+    {
+      "id": "R022",
+      "title": "Exercise real Xero callback cleanup against the emulator",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "calendar_review",
+      "notes": "Real Xero cleanup consumer passes two HTTP cases with revoked state readback and failed-cleanup preservation. Both accounting packages pass 48 tests together."
+    },
+    {
+      "id": "R023",
+      "title": "Verify native workflow-worker startup requirements and packaging gaps",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "stripe_protocol",
+      "notes": "Native full worker typecheck and four startup tests pass. Concrete manifest-copy omissions documented. No clean image or running worker proof; F031 remains open."
+    },
+    {
+      "id": "R024",
+      "title": "Bind downloaded archives and loaded CI images to build records",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "coordinator",
+      "notes": "Reviewed archive-before-load and actual image-after-load verification. All 22 producer/consumer tests and actionlint pass. Earlier same-run build attempts supported; actual CI execution pending."
+    },
+    {
+      "id": "R025",
+      "title": "Register trial reminder tests exposed by completed CI inventory",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "stripe_protocol and coordinator",
+      "notes": "Two fast suites and one engine suite now registered and reconciled against actual collection. All 24 targeted tests and seven discovery tests pass; current-source CI pending."
+    },
+    {
+      "id": "R026",
+      "title": "Repair and reproduce workflow-worker build workspace inputs",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "stripe_protocol",
+      "notes": "Reviewed reusable native npm resolution checker: original staged inputs fail; 43 manifests and all 19 selectors now resolve. Node22 Debian stages align with root engines. Native CI preflight added; no clean image proof."
+    },
+    {
+      "id": "R027",
+      "title": "Document provider protocol evidence and unresolved capabilities",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "calendar_review",
+      "notes": "Reviewed bounded provider parity inventory and corrected Stripe redirect test link. Native/CI/browser/standards evidence distinguished; F037 remains open."
+    },
+    {
+      "id": "R028",
+      "title": "Make client creation atomic with default tax initialization",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "qbo_protocol",
+      "notes": "Real missing-tax failure reproduced orphan client. Tax initialization now shares transaction; all 31 focused and neighboring tests pass. Permanent Tier-1 manifest and canonical collection include regression."
+    },
+    {
+      "id": "R029",
+      "title": "Fix Teams HTTP test isolation under actual emulator runner",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "calendar_review",
+      "notes": "Reproduced exact package-runner failure. Test-only auth barrel isolation fixes unrelated NextAuth loading; all 90 Graph package tests and both server-runner organizer cases pass."
+    },
+    {
+      "id": "R030",
+      "title": "Make Temporal email deadline test finish and clean up deterministically",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "stripe_protocol",
+      "notes": "Explicit activity barrier, test-side time advancement and finally cleanup preserve deadline rejection. Full native engine61/61 passes; missing-deadline mutation fails promptly and still drains worker. Original CI timeout not reproduced; current CI validation remains required."
+    },
+    {
+      "id": "R031",
+      "title": "Prove compiled workflow-worker startup against isolated native services",
+      "status": "done",
+      "dependsOn": [
+        "R026"
+      ],
+      "owner": "stripe_protocol",
+      "notes": "Actual compiled entrypoint returns200 with temporal/eventStream/dataStoreSweep ready. Private migratedDB, Redis and Temporal cleaned. Reused installed dependencies and compiled packages; no cleanimage or graceful-shutdown claim."
+    },
+    {
+      "id": "R032",
+      "title": "Require explicit background-worker readiness with native HTTP tests",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "calendar_review",
+      "notes": "Nine realHTTP behavioral checks pass, including unready/malformed/hung responses and actual CLI. Canonical node-tooling discovery includes suite automatically."
+    },
+    {
+      "id": "R033",
+      "title": "Repair Temporal image health probe and target architecture",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "qbo_protocol",
+      "notes": "Reviewed Node22, architecture-aware kubectl and exact200/no-redirect /ready probes. Twelve realHTTP extracted-command cases and three architecture checks pass. Clean Linux image install and currentCI pending."
+    },
+    {
+      "id": "R034",
+      "title": "Start and probe candidate background workers in isolated browser CI",
+      "status": "done",
+      "dependsOn": [
+        "R031",
+        "R032",
+        "R033",
+        "R035"
+      ],
+      "owner": "coordinator",
+      "notes": "Image records cover new worker candidates, namespace andprocess readiness gates, allprocessprovider probes. Native CE/EE compose rendering and actionlint pass. Peer review found/fixed serverTemporaldestination and crossdatabaseconsumer conflict. Current-source CI pending. Accepted completed run34287571495, actual tested merge3c046458a0fca6cc43c63f9ac791154410a8a1e3: verified loaded candidate image identities; CE/EE actual worker readiness passed. CE4andEE8 shared-secret phases prove public-provider write/rotate/read/delete and UID1000 permissions. Startup and exec-process grants only; current-source regressions and sustained reliability remain separate."
+    },
+    {
+      "id": "R035",
+      "title": "Align isolated CI tenant-secret writer identities and validate cross-process grants",
+      "status": "done",
+      "dependsOn": [
+        "R031"
+      ],
+      "owner": "coordinator",
+      "notes": "Implemented common UID1000 and fullowned shared secret root in CI, failclosed emptyvolume initializer, actualprovider crossprocessprobe in candidatecontainers. Native initializer8/8; sourceprovider37passed/6existingplatformskips; stagedcompiledpackage3process roundtrip passes. Image build/startup/currentCI still pending. Accepted completed run34287571495, actual tested merge3c046458a0fca6cc43c63f9ac791154410a8a1e3: verified loaded candidate image identities; CE/EE actual worker readiness passed. CE4andEE8 shared-secret phases prove public-provider write/rotate/read/delete and UID1000 permissions. Startup and exec-process grants only; current-source regressions and sustained reliability remain separate."
+    },
+    {
+      "id": "R036",
+      "title": "Execute a real authored workflow through the compiled native worker",
+      "status": "done",
+      "dependsOn": [
+        "R031"
+      ],
+      "owner": "stripe_protocol",
+      "notes": "Actual compiledworker+productiondispatcher execute real pinnedstate.set/control.return definition. TemporalCOMPLETED, DB SUCCEEDED, exacttwo projectedstepsSUCCEEDED and persistedstate proven. FinalnativeCLIrun cleanlystoppedworker/Redis anddroppedownDB. Existingcompiledartifacts reused; candidateCIhelper next."
+    },
+    {
+      "id": "R037",
+      "title": "Cover QBO unauthorized response refresh and bounded retry through actual consumer",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "qbo_protocol",
+      "notes": "Actual QboClientService over nativeHTTP:401\u2192refresh\u2192successfulretry/persistedreplacement, revokedrefresh withoutoverwrite/replay, repeated401 stopsafterone refresh. FullQBO29/29 andtypecheckpass; privatecredential/disconnectinfra mocks, no productfix."
+    },
+    {
+      "id": "R038",
+      "title": "Cover Teams organizer lookup failure with preserved settings and recovery",
+      "status": "done",
+      "dependsOn": [
+        "R029"
+      ],
+      "owner": "calendar_review",
+      "notes": "Both actual save actions return actionable404 failure without changing existingrow; seededlookup recovery persists one row. All4casespass actualpackage andserverrunners. No productfixneeded."
+    },
+    {
+      "id": "R039",
+      "title": "Retain candidate-bound provider readiness evidence for each application process",
+      "status": "done",
+      "dependsOn": [
+        "R034"
+      ],
+      "owner": "coordinator",
+      "notes": "Prior completed CI had7passed service-class records, but one default workflow-worker replica was probed. Added complete configured topology enumeration/count/state/project/service validation and per-container64hex identity. Every replica is exec-probed sequentially and gets separately reconciled JSON; failed retry removes stale success. Native routing/topology suites pass36/36 together; workflow validation passes. Full actual Docker topology and current-source CI remain pending. Cross-review also requires running container image ID to match configured candidate image and revision, and clears only owned per-container records before topology validation. Native cases cover stale image, wrong revision, failed/replaced topology retry. Currentcb884 finalcontainerartifacts prove all4CE/5EE configuredreplicas, matching perCID probes and actualmanifest imageIDs, including EETemporalprofile and2workflowreplicas. Evidence ci-provider-replicas-cb884.json. Processrouting scopeonly."
+    },
+    {
+      "id": "R040",
+      "title": "Replace obsolete Teams source-string contract with actual HTTP behavior",
+      "status": "done",
+      "dependsOn": [
+        "R038"
+      ],
+      "owner": "calendar_review",
+      "notes": "CI14895passed with one source-onlyT072 failure and3taxTODO. Removed brittlehardcodedURL assertions; T072ID now onactualHTTP organizercases, explicitreturned/persistedUPN+objectID. Package4/4 andserver7/7pass."
+    },
+    {
+      "id": "R041",
+      "title": "Gate real authored workflow execution in candidate worker containers",
+      "status": "done",
+      "dependsOn": [
+        "R035",
+        "R036"
+      ],
+      "owner": "stripe_protocol and coordinator",
+      "notes": "Candidatehelper implemented with productionexports, actualDBidentityguard, unique scopedfixture, realdispatch/completion/step/snapshot assertions. Separate nativeprocess passed and cleanup preserved unrelatedtenant. CI executes existingworker, retains passJSON/failurediagnostics; actionlint passes. Noncompleted failure retention passed native actual-worker fault test; actualCIpending. Accepted both CE/EE authored-workflow artifacts in completed run34287571495: TemporalCOMPLETED, DBSUCCEEDED, mark_ready/finishSUCCEEDED, native-ready state, cleanup passed. Candidate binding derives from job/verified image provenance (JSON has no revision); failure retention remains separately proven by native fault test. Latest-source CI remains pending."
+    },
+    {
+      "id": "R042",
+      "title": "Replace expired Bullseye security repository base for Temporal image",
+      "status": "done",
+      "dependsOn": [
+        "R033"
+      ],
+      "owner": "qbo_protocol",
+      "notes": "CurrentCIapt100 explicitlyexpired bullseye-security metadata. Changedbase toofficialnode22-bookworm, retainingaptsecuritychecks. OfficialNode/architecture/engine/glibc compatibility reviewed; publicBookwormsecuritymetadata validSept15. CleanimageCIpending."
+    },
+    {
+      "id": "R043",
+      "title": "Assert all-day event placement in browser calendar",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "calendar_review",
+      "notes": "Afterimport andvendorupdate requireonevisibleall-dayregion event andnoneintimedgrid; keepDBexplicitflag/dates andglobaluniqueness. InstalledTimeGridDOMverified;4Playwrightcasescollect. Browserexecutionpending; placementalone cannotproveflagprovenance."
+    },
+    {
+      "id": "R044",
+      "title": "Fault-test authored workflow termination with retained fixtures",
+      "status": "done",
+      "dependsOn": [
+        "R041"
+      ],
+      "owner": "stripe_protocol",
+      "notes": "Native actual compiled worker passed bounded event.wait failure, owned Temporal execution termination, retained diagnostic fixtures, and unrelated tenant preservation. Combined positive/negative harness exited 0 and dropped only its disposable database. Current-source candidate image validation remains pending."
+    },
+    {
+      "id": "R045",
+      "title": "Remove QBO consumer test dependency on unbuilt application packages",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "qbo_protocol",
+      "notes": "Source aliases for mocked infrastructure and real core exports. Process-local filesystem shim hides DB/core dist without altering shared artifacts: original config reproduces CI resolution failure, fixed config passes 29 behavioral tests. Typecheck passes; actual image CI pending."
+    },
+    {
+      "id": "R046",
+      "title": "Declare shared sanitizer jsdom types for clean worker compilation",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "stripe_protocol and coordinator",
+      "notes": "Shared workspace now declares existing locked @types/jsdom 21.1.7, and lock workspace entry matches. Isolated actual sanitizer compile reproduces TS7016 before and passes after real declarations. Full Temporal noEmit and manifest selection checks pass; clean image CI pending."
+    },
+    {
+      "id": "R047",
+      "title": "Classify browser metrics by triggering run while preserving existing columns",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "stripe_protocol and coordinator",
+      "notes": "Appends run_kind/event_name after original18 columns, shares standard classifier, and retains category on incomplete rows. Before-fix runtime regression reproduced;35 related native tests pass. External workbook view/readback and artifact identity remain pending."
+    },
+    {
+      "id": "R048",
+      "title": "Bind QBO grants to selected company and reject foreign operations",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "qbo_protocol and coordinator",
+      "notes": "Pre-fix real HTTP returned200 for wrong company. Grant binding persists through refresh; tests verify read/write403 and unchanged foreign entities, and independent company OAuth fixtures. Final default runs29/29 normally and with application dist hidden; typecheck passes. Two prior intermittent HTTP failures remain unexplained; currentCI required. SIM_REALM_MISMATCH is an explicit emulator guard, not verified Intuit denial parity. Clean Linux npm-ci image job102266789015 in run34287571495 passed QBO29/29 across5files and Xero22/22 across3files. Exact PR merge3c046458a0fca6cc43c63f9ac791154410a8a1e3 includes realm isolation/refresh/foreign-write unchanged-data assertions. Earlier native transients did not recur in this job."
+    },
+    {
+      "id": "R049",
+      "title": "Roll back emulator listeners after failed startup",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "calendar_review and coordinator",
+      "notes": "Real occupied control-port regression reproduced masked EADDRINUSE and live vendor socket after failure. Handle Express listen callback error and roll back prior listeners, preserving startup/cleanup failures. Regression verifies socket refusal, successful retry/HTTP and shutdown; full host28/28 and typecheck pass. Not established as cause of QBO transients."
+    },
+    {
+      "id": "R050",
+      "title": "Isolate unrelated notification dependencies in Teams organizer consumer tests",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "calendar_review",
+      "notes": "Clean resolver simulation rejects unrelated event-schemas entry, reproducing both EE failures. Fail-on-use notification builders and publisher mocks preserve real actions/Graph HTTP. Four guarded cases,92 Graph cases and4 canonical server cases pass. Corresponding clean image build passed in current-source CI34287571495 at9c1f2908e3."
+    },
+    {
+      "id": "R051",
+      "title": "Align standalone shared DOMPurify override with direct dependency",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "qbo_protocol",
+      "notes": "Actual npm Arborist reproduced EOVERRIDE before and passes45 direct dependency edges after override references $dompurify. Security constraint remains^3.4.13; no lock/Dockerfile changes. Corresponding clean image build passed in current-source CI34287571495 at9c1f2908e3."
+    },
+    {
+      "id": "R052",
+      "title": "Parse executable worker imports instead of bundled documentation",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "stripe_protocol and coordinator",
+      "notes": "Actual bundled dunder-proto JSDoc reproduces false ./get import failure. TypeScript AST ignores comments/strings while retaining static/dynamic/template checks; JSON paths still validated without parsing JSON as JS. Six behavioral tests and full native worker build pass. Corresponding clean image build passed in current-source CI34287571495 at9c1f2908e3."
+    },
+    {
+      "id": "R053",
+      "title": "Prevent concurrent cold database initialization from leaking pools",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "calendar_review",
+      "notes": "CI screenshot shows PostgreSQL connection exhaustion during retained-ticket reload. Concurrent cold calls now share pending pool initialization; reset waits for initialization and teardown, and failures permit retry. Three behavioral failures reproduced before fix; five new lifecycle cases plus seven existing transaction/context cases pass natively (12/12), independently rerun by coordinator. DB TypeScript check passes. Full upgrade browser recovery remains pending in CI; retained-ticket assertions unchanged. Accepted against completed run 34320694357, tested merge cec08351189624fb4db8db7ec453e788157fbdad: PostgreSQL and Citus raw upgrade artifacts each passed all three journeys first attempt, including retained-ticket. Native concurrency cases provide the causal race coverage; browser success alone is not race proof. Previous overall CI remained failed; latest f3a candidate execution is pending."
+    },
+    {
+      "id": "R054",
+      "title": "Route isolated Citus upgrade access through test ingress",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "qbo_protocol and coordinator",
+      "notes": "Healthy internal-only Citus had no published host port. Fixed allowlisted55433 ingress forwarding and host-path SELECT1 readiness. Three native behavioral ingress tests pass; actual CI pending. Current run34294404179 enterprise job102293311555 confirms Citus host-path SQL readiness, Teams development cache-write probe, recreated credential capture, and source authentication preflight all passed. Actual upgrade/Teams browser execution remains blocked by earlier Temporal startup failure and skipped browser/bootstrap prerequisites; no full journey completion claim."
+    },
+    {
+      "id": "R055",
+      "title": "Refresh Teams credentials after development server recreation",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "stripe_protocol and coordinator",
+      "notes": "Recreated development server resets fixture password. Capture latest paired announcement safely and use it in preflight and Teams browser. Three native behavioral helper tests pass; actual CI pending. Current run34294404179 enterprise job102293311555 confirms Citus host-path SQL readiness, Teams development cache-write probe, recreated credential capture, and source authentication preflight all passed. Actual upgrade/Teams browser execution remains blocked by earlier Temporal startup failure and skipped browser/bootstrap prerequisites; no full journey completion claim."
+    },
+    {
+      "id": "R056",
+      "title": "Give Teams development compilation a writable disk cache",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "stripe_protocol and coordinator",
+      "notes": "Enterprise CI reports EACCES under root-owned node_modules/.cache/webpack. Teams-only workflow now binds a private runner-temporary disk directory owned by application UID1000 at that path, preserving cache across recompiles without RAM-backed storage or dependency-tree changes. Actual container write verification remains CI pending. Current run34294404179 enterprise job102293311555 confirms Citus host-path SQL readiness, Teams development cache-write probe, recreated credential capture, and source authentication preflight all passed. Actual upgrade/Teams browser execution remains blocked by earlier Temporal startup failure and skipped browser/bootstrap prerequisites; no full journey completion claim."
+    },
+    {
+      "id": "R057",
+      "title": "Repair Teams action typecheck and helper lint failures",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "qbo_protocol",
+      "notes": "Full prior-head PR audit found readonly NODE_ENV assignments and React hook lint classification of plain helper. Renamed shouldUseTeamsEmulatorEndpoints and used Vitest environment stubbing/restoration. All20focused behavioral tests, integrations TypeScript, and action ESLint pass. Coordinator reviewed behavior-preserving diff. Current b413 PR CI confirms TypeScript34299806398 and ext-v2 guardrails34299806367 success."
+    },
+    {
+      "id": "R058",
+      "title": "Restore Graph organizer test environment using supported Vitest API",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "stripe_protocol",
+      "notes": "Direct NODE_ENV assignments replaced with vi.stubEnv/vi.unstubAllEnvs in real Graph organizer routing tests. Full Graph suite92tests across8files and package TypeScript pass. Coordinator reviewed isolation/restoration. Current b413 PR CI confirms TypeScript34299806398 and ext-v2 guardrails34299806367 success."
+    },
+    {
+      "id": "R059",
+      "title": "Reduce registration collection overhead without parallelizing execution",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "calendar_review and coordinator",
+      "notes": "Ten-file native sample retains all63identities with isolated collection workers:1worker7.98s,2workers5.88s. Process-tree sample peak816MiB vs926MiB (~13.5% increase). Enable fileParallelism=true/maxWorkers=2 for registered-test collection only; retain filesOnly inventory, exact reconciliation, and serial execution. Evidence: evidence/native-unit-collection-performance.json. Full Linux CI performance/memory remains pending; do not extrapolate representative sample. Full current CI collection succeeds for 2746 files and 14986 executed identities plus three visible tax TODOs. Pre-execution interval observed about 19m56s versus 27m57s in the prior one-worker run; this includes startup overhead and is not a controlled benchmark. CI memory was not separately instrumented; native memory sampling and complete CI execution provide bounded evidence."
+    },
+    {
+      "id": "R060",
+      "title": "Repair Temporal development readiness failure in both browser editions",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "qbo_protocol and coordinator",
+      "notes": "Current logs confirm frontend bound at container IP and namespace registration succeeds; loopback healthcheck is wrong endpoint. Probe now targets temporal-dev:7233 like workers, retaining namespace describe and all timeouts. Native real Temporal proof: bound address succeeds, wrongloopback and missingnamespace fail. Prior run also eventually reported unhealthy despite continuing; prior continuation unexplained. Actual pinned-image/Compose DNS validation pending. Evidence: evidence/native-temporal-bind-health.json. Current b413 CI verifies background-worker startup in both editions; completed community artifact 10085508872 records temporalio/auto-setup:1.24.2 Up 7 minutes (healthy). This confirms the pinned frontend-address health repair; provider topology remains separate."
+    },
+    {
+      "id": "R061",
+      "title": "Preserve independent browser bootstrap and require explicit phase prerequisites",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "coordinator and stripe_protocol",
+      "notes": "Earlier worker failure skipped initialcredentials/browserinstall but independent upgrades/Teams still executed without them. Make serverhealth/capture and Node/Playwright bootstrap explicit independent chains; actual Chromiumlaunch verifies cachehit/install readiness. PG/Citusprepare require sourcecredentials; every browserphase requires browser_ready; primary requires provider topology. API remains independent and mandatory aggregate unchanged. Native Chromiumlaunch and actionlint pass; full GitHub failure-path behavior pending. Current b413 CI confirms initial credentials and browser readiness still run after provider topology failure; independent API, PostgreSQL upgrade, Citus upgrade and Teams phases actually execute. Citus gate passes. This verifies downstream bootstrap despite an earlier failed step; it does not waive any failed mandatory lane."
+    },
+    {
+      "id": "R062",
+      "title": "Record verified browser CI archive identity",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "qbo_protocol",
+      "notes": "Implemented candidate-built archive receipt/manifest builder and CLI;17 native behavioral cases pass for CE/EE inventory, verified bytes, loaded identity, source/run/attempt binding, stale-output cleanup and input preservation. Sanitized evidence explicitly excludes registry/deployment claims; archives can still be deleted immediately. Coordinator reviewed; actual workflow proof remains R064."
+    },
+    {
+      "id": "R063",
+      "title": "Preserve browser project, rerun and configuration metrics",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "stripe_protocol",
+      "notes": "Appended project ID, run ID, attempt, authentication and server lifecycle after existing20 columns.10 dedicated native tests cover distinct projects/reruns, producer-to-recorder verified artifact pipeline, unknown metadata, rejection/sanitization and actual appendRows U1:Y1 suffix behavior with historical row preservation. No external workbook mutation; live readback remains F024/R064."
+    },
+    {
+      "id": "R064",
+      "title": "Review and integrate browser metrics provenance",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "coordinator",
+      "notes": "Wired archive verification receipts and loaded-image manifest into actual browser runner metrics and diagnostics.67 combined native metrics/archive/schema tests pass, plus actionlint and plan/task validators. Independent review accepted runtime integration; coordinator fixed CLI input-alias deletion identified during review and updated docs. CI candidate publication awaits current run completion; actual new artifact/Sheets readback still pending. No local Docker. Approved-copy validation at new tab validation_browser_identity A1:Y8 passes exact native readback: legacy20 header/history preserved, six exporter rows distinguish same-name projects and execution attempts1/2, runtime config and two full12883-character synthetic verified archive manifests retained. Evidence isolated-browser-identity.json. Synthetic only; actual current CI manifest remains pending. Currentcb884 CI testedmergef71e845 verifies42CE+47EEfirstattempt journeys and valid8/9service manifests. OriginalSheets all91rows matchactual exporter output across25columns;562historicalrows+20originalheadings unchanged. Evidence ci-browser-metrics-cb884.json. F024 accepted; fullworkflow/rollout remainsseparate."
+    },
+    {
+      "id": "R065",
+      "title": "Resolve build-only Compose images in provider topology verification",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "calendar_review",
+      "notes": "Native behavioral fixture reproduces build-only email-service rejection before fix;24 reviewed tests pass after validated Compose-generated tag fallback. Missing image+build still rejects and image/revision binding preserved. EE explicitly enables enterprise profile; independent native config-only rendering and pinned Compose2.36 source confirm profiled temporal-worker otherwise omitted and ps -q prints full IDs. Safe fixed phase/service diagnostics exclude raw command data. Current CI predates fix; actual replica proof remains R039/R065. No daemon/container execution. Currentcb884 finalcontainerartifacts prove all4CE/5EE configuredreplicas, matching perCID probes and actualmanifest imageIDs, including EETemporalprofile and2workflowreplicas. Evidence ci-provider-replicas-cb884.json. Processrouting scopeonly."
+    },
+    {
+      "id": "R066",
+      "title": "Serialize admin pool initialization and replacement",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "qbo_protocol",
+      "notes": "Admin acquisition, initialization, refresh and cleanup now share and serialize lifecycle work. Failed candidates are destroyed and never published; failed teardown detaches cached state. Six native failures reproduced before the fix; ten admin cases pass afterward, including read-only recovery. Combined lifecycle suite passes 25 tests and package TypeScript passes. Coordinator and independent review accepted; current CI predates this repair."
+    },
+    {
+      "id": "R067",
+      "title": "Serialize general connection pool initialization and cleanup",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "stripe_protocol",
+      "notes": "General connection initialization and cleanup now share pending work. Deferred-secret tests reproduce the old orphaned-pool race; five cases pass, including cleanup failure rejecting waiting callers and later creating a fresh pool. Coordinator fixed stale cache after rejected teardown during review. Combined lifecycle suite passes 25 tests; current CI predates this repair."
+    },
+    {
+      "id": "R068",
+      "title": "Retain upgrade runtime diagnostics before container replacement",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "coordinator",
+      "notes": "PostgreSQL application logs were lost when Citus recreated the server; Citus logs were lost at Teams recreation. Capture each phase\u2019s server/database logs and grouped connection counts with explicit isolated database authentication before existing diagnostic uploads. Actionlint and independent review pass; actual CI capture is pending. Accepted against run 34320694357: PG diagnostic artifact 10093567045 and Citus artifact 10093682770 contain phase logs and actual connection-count JSON. Capture steps 50/58 and uploads 52/60 succeeded before server replacement. Counts are snapshots, not peak-load claims. Previous overall CI remained failed; latest f3a candidate execution is pending."
+    },
+    {
+      "id": "R069",
+      "title": "Diagnose current Teams development browser failure",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "stripe_protocol",
+      "notes": "Superseded by R105. The dashboard warmup was never the defect; the settings navigation failure is the same dev-server chunk truncation. Covered by the quarantine entry pending the durable fix."
+    },
+    {
+      "id": "R070",
+      "title": "Route supported PostgreSQL upgrade through an isolated candidate pooler",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "qbo_protocol and coordinator",
+      "notes": "Final enterprise PostgreSQL logs confirm 237 connection-limit errors overlapping all failing PG upgrade journeys. Generate an isolated upgrade_ci mapping using the same candidate pooler image and unchanged auth/pool policy, verify image and real app-user SQL readiness, keep admin access direct, and stop the isolated pooler after diagnostics. Four native configuration/CLI tests and independent review pass. Current CI predates this harness repair; no local Docker. Accepted against run 34320694357: step 48 successfully enforced candidate revision and running image equality, authenticated real app_user SQL through the isolated upgrade pooler into upgrade_ci. Step 53 stopped it before Citus. Exact pooler SHA was not retained; evidence is the executed fail-closed identity check. Previous overall CI remained failed; latest f3a candidate execution is pending."
+    },
+    {
+      "id": "R071",
+      "title": "Avoid concurrent auto time-skipping in Temporal email engine tests",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "calendar_review and coordinator",
+      "notes": "Current cb884 CI Temporal engine job102319307339 fails concurrent email workflow while60cases pass. SDK shared auto time-skipping does not support concurrent workflows. Agent implements ordinary Client with explicit deadline time advancement and activity-overlap barrier; native focused6pass, full61case engine verification pending. Full canonical native engine suite passes61/61 across12files in23.19s; focused6/6 includes explicit deadline and three-activity overlap. Local baseline passed intermittently; actual CI supplies pre-fix failure, not deterministic local red. Coordinator reviewed; current-source CI proof pending. Currenta0d077 CI34308610232 engine+gatepass atclean3db700f653e28ddd322dfdb652f1689a54f6b65d:12files/61cases, nofail/skip/TODO/pending, fullselection. Evidence ci-temporal-engine-a0d077.json."
+    },
+    {
+      "id": "R072",
+      "title": "Preserve original failures in stateful supported-upgrade journeys",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "stripe_protocol and coordinator",
+      "notes": "Invoice journey commits retained billing state before final PDF assertion; retries reuse mutated fixture and obscure original failure. Disable retries only in supported-upgrade config; resolved Playwright configuration validation pending. Actual CI=true enterprise Playwright collection verifies upgrade3tests/retries0 and general47tests/retries1, no collection errors. Coordinator reviewed; no browser/DB execution claimed."
+    },
+    {
+      "id": "R073",
+      "title": "Reconcile observed browser CI executions against metrics exports",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "qbo_protocol",
+      "notes": "Implemented pure reconciliation and JSON CLI with51 behavioral cases. Exact current repo/run/attempt/edition/source, complete nonblank journeys/config, explicit recorder state, legacy18/20/25 headers, missing/stale/duplicate/conflict/cancelled outcomes and safe output/summary. Independent and coordinator review integrated. Overall release readiness remains outside this bounded report. Real legacy exports now retain legacyRunExportCount and explicit unverified-identity reason instead of suggesting no rows exist.53 core tests pass."
+    },
+    {
+      "id": "R074",
+      "title": "Integrate read-only missing-export reporting and review identity boundaries",
+      "status": "in_progress",
+      "dependsOn": [],
+      "owner": "coordinator and stripe_protocol",
+      "notes": "Read-only GitHub/Sheets collector and manual workflow integrated;32 collector cases plus51 core cases pass together (83). Validates current-attempt pagination, PRmergeparent relationship, repo casing, jobidentity, bounded Sheets chunks, legacy/missing tabs and recorderstate. Full collect-to-reconcile CE/EE behavior tested. Operator-supplied SHA is not independent checkoutproof. Manual CI execution, automatic reporting and scorecard publication remain pending; no originalwrites. Real read-only remote snapshots exposed mutable PR head/base in historical run metadata. Fixed association to immutable run head in supplied merge parents; never claim historicalbase/checkout verification.33 collector plus53core tests pass; actual snapshot replay reports both failed editions and their legacyunverified rows. Evidence real-browser-metrics-reconciliation.json. Standalone credentials/workflow execution remain unverified."
+    },
+    {
+      "id": "R075",
+      "title": "Recover a transient API dependency download reset without retrying test failures",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "calendar_review and coordinator",
+      "notes": "Current EE job102324221161 failed npmci withECONNRESET before API/upgrade/Teams. Add at mostone retry for this classified install failure, preserving lockedci and10minuteCIlimit. No application/test assertions change; native wrapper proof pending. Nine nativebehavioral tests pass for exactECONNRESET-only retry, mixedterminalcodes no retry, max2attempts, exit/signal/cancellation handling. Rootworkflow10mincap preserved; currentCIprecedeswrapper, realCIvalidation pending."
+    },
+    {
+      "id": "R076",
+      "title": "Prove concurrent isolated provider scenarios do not share reset or callback state",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "stripe_protocol",
+      "notes": "T025 audit found no assertion for two simultaneously active independently seeded emulator scenarios. Implement real HTTP isolation/reset/callback proof with ephemeral native hosts; preserve one-worker guard for a shared host. Fullbrowseracceptance remains separately audited. Real2hostStripeHTTP/signature/resetbarrier testpasses;27packagecases+typecheck andcanonicalserver-unit1file/1test pass. F031foundationaccepted; T025fullcurrentCI proof retains newtestpublication requirement. Evidence native-concurrent-provider-isolation.json."
+    },
+    {
+      "id": "R077",
+      "title": "Discover current browser artifact revisions for automatic read-only reconciliation",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "calendar_review",
+      "notes": "Implementation complete. Coordinator combined 116 native tests and actionlint passed. Real current-run artifact resolution evidence: evidence/automatic-browser-reconciliation.json. Unknown tested revisions remain visible and non-green; trusted default-branch reporting reads artifacts and Sheets without writes. F025 remains open for default-branch deployment, a credentialed workflow run, and scorecard rollout."
+    },
+    {
+      "id": "R078",
+      "title": "Keep unknown tested revisions visible and wire completion-triggered reporting",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "qbo_protocol and coordinator",
+      "notes": "Implementation complete. Coordinator combined 116 native tests and actionlint passed. Real current-run artifact resolution evidence: evidence/automatic-browser-reconciliation.json. Unknown tested revisions remain visible and non-green; trusted default-branch reporting reads artifacts and Sheets without writes. F025 remains open for default-branch deployment, a credentialed workflow run, and scorecard rollout."
+    },
+    {
+      "id": "R079",
+      "title": "Exercise QBO consumer rate-limit and server-error recovery",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "qbo_protocol",
+      "notes": "Read-only audit found consumer recovery tests cover401 only. Add real HTTP429/503 cases asserting bounded actionable failure, no credential mutation and successful next operation after fault removal. No invented automatic retry policy. Coordinator reviewed two429/503 cases; focused real HTTP5/5pass. Synthetic transport-body boundary, not Intuit wire-format parity or automatic backoff. F036/T030 release-enforcement acceptance remains open."
+    },
+    {
+      "id": "R080",
+      "title": "Release completed primary-phase pools before upgrade browser execution",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "coordinator and calendar_review",
+      "notes": "Current a0d077 PG upgrade3browsercases pass, but retained logs show2 app-user login denials and snapshot shows30 idle original server DB sessions. After real upgrade-pooler readiness probe, stop primary server/email/mainpooler before existing candidate recreation. Keep Temporal for Teams and diagnostics. Actionlint passes; actual absence of pressure awaits subsequent CI. No production pool limits changed. Current run34313560297 actual PG upgrade schema+3 first-attempt browser passes; retained logs contain zero pressure/Knex acquisition matches, original server DB has0 connections versus30 prior, totalclientbackends71 versus95. Evidence ci-postgres-upgrade-r080.json. Bounded retained-phase observation, not peakcapacity proof."
+    },
+    {
+      "id": "R081",
+      "title": "Expose sanitized Teams warmup failure stage and predicate",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "stripe_protocol and coordinator",
+      "notes": "Current run34308610232 terminalfailure: warmup failed94.8s after dashboardHTTP200; no rawHTML retained, exact predicate unknown. Added fixedstage/code/elapsed/status/HTMLlength+boolean diagnostics without HTML/credentials.13 nativeHTTPcases pass; assertions/deadline unchanged. R069 Teams actual recovery remains open. Evidence ci-teams-warmup-a0d077.json."
+    },
+    {
+      "id": "R082",
+      "title": "Reproduce Teams warmup with isolated native runtime",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "stripe_protocol",
+      "notes": "Reproduced HTTP200 missing dashboard marker in an owned native DB/Redis/Temporal runtime: I18nProvider SSR renders Loading translations until client hydration. Same authenticated session rendered dashboard in Chromium. Warmup now preserves HTTP/auth/error checks and waits for visible hydrated dashboard within original240-second deadline. Actual isolated native app passes; owned resources cleaned and source DB untouched. See native-teams-hydration.json. CI candidate proof remains R069."
+    },
+    {
+      "id": "R083",
+      "title": "Cover and repair remaining bucket units on Citus",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "qbo_protocol and coordinator",
+      "notes": "Current upgrade diagnostics show2unsupportedcomplexjoin errors from getRemainingBucketUnits despite3passingbrowsercases. UsageTracking catchesconsole-only and mayretainstaledata. Add realDB actioncoverage for membership/remainingunits/tenant isolation, preserve querysemantics and wireCitusverification. No claimofCitusfix beforeactualCI. Reviewed querysplit preserves tenant/client scope and labels/nullfallbacks;3realPostgreSQLcases+reportingtsc pass. Tier1/Citus producer/consumer wired;2runnerbehavioralchecks pass. Actual Citus CI remains required; keep taskopen. Evidence native-remaining-bucket-units.json. Independent cross-review added colliding contract/line/bucket/service UUIDs across tenants with distinct values; all4 real PostgreSQL tests pass12.24s, owned database cleaned. Actual Citus candidate validation remains pending. Actual current34320694357 Citus artifact10092017844 confirms4/4 bucketcases collected/executed/pass oncleancec08351189624fb4db8db7ec453e788157fbdad, all12runtimecasespass and independentgatepass. ci-remaining-bucket-units-c523.json. Single-nodeCitus proof; newfullupgradebrowser remainsR090."
+    },
+    {
+      "id": "R084",
+      "title": "Show bucket usage refresh errors without retaining stale balances",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "calendar_review",
+      "notes": "Citusquery failure exposedconsole-only UsageTracking error handling. Clear stale bucketresults and show actionable refreshfailure; verify successfulload thenfailure thenrecovery with componentbehavioral test. Queryfix separatelyR083. Reviewed10nativecases+scopedtypecheck pass; actualpre-fixalertfailure reproduced. Evidence native-bucket-usage-error-recovery.json; browserverification remains separate."
+    },
+    {
+      "id": "R085",
+      "title": "Verify Teams scheduling update and deletion against Graph",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "stripe_protocol",
+      "notes": "Extended real UI meeting scenario through reschedule/reopen/delete with stable provider identity and Graph/DB readback. Every added assertion passed on first executable lifecycle run, followed by a bot transport failure. Subsequent full native Teams scenario passed1/1, retries0,193.83s after additional GET405/unauthenticatedPOST401 transport probes. Earlier fetch failure root cause remains unproven; no product fix, clean-source, CI, SSO or repeatability claim. Owned resources cleaned; native-teams-scheduling-lifecycle.json. R069/current CI and F034 broader scope remain open."
+    },
+    {
+      "id": "R086",
+      "title": "Distinguish Vitest TODO registrations from executed identities",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "calendar_review",
+      "notes": "Fix misleading unexpected-executed diagnostics when Vitest list omits TODO/skip; preserve required status failures and test with actual Vitest list/run.19/19 native checks pass including real Vitest3 list/run. Historical artifact replay preserves all identities and15010pass/3TODO counts and failed verdict, removing only three redundant diagnostics; native-todo-execution-diagnostics.json."
+    },
+    {
+      "id": "R087",
+      "title": "Verify Xero refresh preserves concurrent organisation credentials",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "qbo_protocol",
+      "notes": "Actual XeroClientService HTTP scenario verifies selected tenant routing, one refresh/retry and sibling credential preservation using isolated emulator state.23/23 native Xero tests and package TypeScript pass. Exact GET401/tokenPOST200/GET200 trace and one credential write; private secret memory and mocked lock limits explicit. Existing default CI glob discovers test; xero-selected-organisation-recovery.json."
+    },
+    {
+      "id": "R088",
+      "title": "Bind release results to consumer-owned check configuration",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "coordinator",
+      "notes": "Require explicit per-check configuration policy and exact result match, including provider modes/protocol/authentication. Ten native red tests before fix;56 targeted tests pass after, including CLI. Actual release enforcement remains separate. Independent review approved policy/CLI path; direct API sparse-array edge fixed with two red regressions. Final58/58 targeted tests pass. Native evidence recorded; F036 remains open for actual release rollout."
+    },
+    {
+      "id": "R089",
+      "title": "Preserve sanitized per-journey provider observations in browser evidence",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "qbo_protocol",
+      "notes": "Audit found emulator attachment observations omitted from metrics configuration. Build bounded validated summary tied to full journey identity/attempt/source/artifact context; absent/malformed observations explicit, no OAuth/parity inference from routing probes. Consumer release policy remains independent. Independent review and18/18 native tests pass, including malformed abort/status pairs. Actual historical artifact replay: CE2observed/40unavailable, EE11observed/36unavailable; missing attachments explicit and SMTP unsupported journal incomplete. Summary unchanged after review fix. provider-observation-historical-replay.json; F036 still open for required-provider policy/release rollout."
+    },
+    {
+      "id": "R090",
+      "title": "Assert visible bucket balances in primary and supported-upgrade browsers",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "stripe_protocol",
+      "notes": "Existing Add Usage journeys could pass with absent/failed bucket panel. Assert independent fixture balances (primary unused40hours); add a minimal v1.5-compatible bucket seed for upgrade/Citus browser coverage and preserve retained data invariants. QBO agent independently reviews legacy schema compatibility. Native first, no Docker. Primary native journey passes1/1 with all new balances and existing invoice/isolation assertions. Exact v1.5 migration+retention passes. Upgrade invoice+usage pass across three runs, but ticket fulljourney remains over native dev deadline even after bounded read-only precompile; latest2pass/1fail196.18s. Keep fullsuite validation open for production CI; no retries/deadlines relaxed. See additive native-bucket-browser-balances.json. Currentpublishedc523 actualCI PG10093566639/Citus10093682343 eachschema+3browserfirstattemptpass oncleancec083; exacttestedmerge retainedusage sourcecontainsvisiblebalanceassertions before/afterAddUsage. Completesactualproductionupgradeverification; priornative2/3failuresremainretained. ci-upgrade-bucket-balances-c523.json."
+    },
+    {
+      "id": "R091",
+      "title": "Keep invoice row filtering and selection changes atomic",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "calendar_review",
+      "notes": "New browser journey exposed300ms delayed reset wiping a subsequent selection. Local immediate filter/reset with deferred URL persistence passes52 component cases and full native primary journey; CI pending. Independent review approved; native-invoice-filter-selection.json records exact source and first browser pass. Full server tsc passed; new CI validation remains separate."
+    },
+    {
+      "id": "R092",
+      "title": "Publish persisted project status identities in workflow events",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "qbo_protocol",
+      "notes": "Current CI named status input emitted in_progress into downstream UUID lookup. Publish normalized row and retain separate named API response.9 native DB cases pass; server typecheck and candidate CI pending. Independent review and full server tsc passed. project-event-status-identity.json retains delivery-boundary limit; actual CI pending."
+    },
+    {
+      "id": "R093",
+      "title": "Provide matching Hocuspocus JWT secrets in browser CI",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "calendar_review",
+      "notes": "Production server and Hocuspocus test services lacked matching JWT secret; repair scoped test compose wiring and verify runtime token validation. No daemon or local image build. Matching synthetic secret now assigned in disposable overlay. Exact CE/EE Compose render plus real token consumers verify valid and wrong-key/expired/cross-tenant/cross-ticket behavior;13 existing tests pass. Native evidence recorded, actual container/WebSocket verification pending."
+    },
+    {
+      "id": "R094",
+      "title": "Resolve invoice template failed-save test failure",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "qbo_protocol",
+      "notes": "Completed run34313560297 has1 failed unit case: resumes editing and preview when saving fails. Investigate exact behavior and fix without hiding failure via retries. Controlled deferred template loading reproduced exact missing Save Template failure. Test waits on actual enabled Save after load, preserving failed-save assertions.3/3 targeted pass; no product, retry or timeout changes. native-invoice-template-save-readiness.json; current CI pending."
+    },
+    {
+      "id": "R095",
+      "title": "Pass existing public application URL to CI marketing worker",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "calendar_review",
+      "notes": "Current CI scheduled marketing fanout failed before Teams because temporal-worker lacked NEXT_PUBLIC_BASE_URL. Pass existing configured CI value through disposable overlay and preserve rejection of internal URLs. Independent background wiring gap, not established Teams failure cause. Actual EE Compose renders existing public URL identical for server/worker.9/9 native marketing activity tests preserve internal-only refusal and mock mail delivery. native-marketing-worker-public-url.json; actual CI pending."
+    },
+    {
+      "id": "R096",
+      "title": "Keep dependency-free CI accounting separate from installed Vitest execution",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "calendar_review",
+      "notes": "Current34320694357 lightweight budgetjob failed because realVitest fixture imported absentdependency. Relocated unchanged behavioral case to separately discovered runtimefile; no-dependency exactcommand26/26 and installedruntime1/1 pass, fullNodejob discovers it after npmci. No exclusions or budgetchanges."
+    },
+    {
+      "id": "R097",
+      "title": "Register English locale entries for bucket balance recovery",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "coordinator",
+      "notes": "Current Missing locale keys job102366427260 reports two new usage error/retry keys. Added same user-visible copy to English billingcatalog. Exact I18N_ENFORCE checker passes. No assertion-only test added for translation strings."
+    },
+    {
+      "id": "R098",
+      "title": "Expose Teams rescheduling rejection and verify provider recovery",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "stripe_protocol",
+      "notes": "Audit found calendar discards teamsMeetingWarning when local schedule saves but Graph rescheduling fails. Add behavioral warning and deniedPATCH recovery with stable provideridentity and reopenedstate; native first. CurrentcandidateCI is separate. Three warning regressions reproduced; fix reviewed across all six action calls. Strengthened11componentcases and scopedtsc pass. Actual full nativeTeams1/1 firstattempt121.44s proves denial/local-provider divergence/reopenedidentity/recovery/delete/bot. native-teams-denied-reschedule.json. Prelinkeddevelopment only; current-source CI and broaderF034/T028 remainopen."
+    },
+    {
+      "id": "R099",
+      "title": "Make bucket recovery component tests independent across package runners",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "calendar_review",
+      "notes": "Current Nx package3failures reproduced: missing jest-dom matcher aborts firstcase, queued mockresponses thencontaminate nextcases. Explicit matcherimport and bucketmockreset preserveassertions.10/10 package and10/10 server targetedcasespass. No productchange."
+    },
+    {
+      "id": "R100",
+      "title": "Separate Xero client compilation from bounded HTTP recovery test",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "coordinator",
+      "notes": "Current Nx Xero testhit5second deadline. Native samecase passes but487ms of553ms isdynamicclientmoduleloading. Staticimports move preparation tocollection, preservingrealHTTPbehavior anddeadline.23/23 packagecasespass; scopedtsc/currentCI pending. No claim exactCI timeoutcauseproven. Scopedtsc exit0; reviewedlocalsetupcomplete, actualCIrecoverypending."
+    },
+    {
+      "id": "R101",
+      "title": "Exercise actual Microsoft NextAuth callback with a controlled signed authority",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "stripe_protocol",
+      "notes": "Reusable CLI actual native pass on dirty521c9c94d6: realNextAuth routes/options, correcttenant/user/email session, oneMicrosoft OID accountlink, wrongstate rejected beforeexchange with unchangedidentity. Authority PKCE/RS256 fixture behavior separatelytested; observedJWKS0/noncefalse, no appsignature/nonce/liveconsent claim. Native evidence retains failedattempts/testedhashes and scopedcleanup. Subsequent signalcleanup subprocess tests pass. CI registration reusesbuiltEEimage and explicitloopbackauthority; host verifies actualimage/mounts/cleansource, readiness independently revalidatesrawcallback/runner. Current-source CI pending; keepF034/T028 open. Current f3a CI artifact10098014408 independently revalidates passed: realvalidcallbackaccepted andinvalidstate rejected, runnerexit0, clean testedmergea9305d0b43dc0242156b92f3ab189e680ccecb26, exactimage/containerID andreadonlysourcebinding, ownedfixture/processcleanup. JWKS0/noncefalse andsyntheticdevelopmentlimitsretained. Teamsstillfails;F034/T028remainopen."
+    },
+    {
+      "id": "R102",
+      "title": "Wait for calendar deletion transaction before asserting mapping cleanup",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "calendar_review",
+      "notes": "Current c523 EE browser45firstattempt+2flaky: bothcalendarrecoverycases readmapping immediatelyafterremoteDELETEvisible, beforeasyncsubscriberDBtransactioncommit. Sharedassertionnowboundedpollforexactemptyresult usingexisting60sassertionbudget; overallcasetimeout/retriesunchanged.4/4browsercasescollect,5/5nearbydelegator/subscribertestspass (not deferredcommit proof). Actualcurrentbrowserexecutionpending; no persistentproductorphan claim. Current f3a CI artifact10097275264 confirms all47primaryEEbrowsercasespassfirstattempt, includingall4calendarrecoveryvariants; noflaky/skipped/failure. Committedproviderpolicyreplaypasses all11requiredjourneys."
+    },
+    {
+      "id": "R103",
+      "title": "Require actual per-journey provider observations and record SMTP DATA transactions",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "coordinator",
+      "notes": "Independentauditfound sanitizedproviderobservations were reporting-only. Bind committedfulljourney/provider/mode policy to actualrawbrowserreports/cleansource/verifiedCIarchives atfreshinstallgate. Rejectmissing/wrong/incomplete/empty/unregisteredtraffic and retries. CurrentCEreplayfails specificallyunsupportedSMTP; EEalsoflaky. Implementrealmetadata-onlySMTPDATAjournal with250/4xx/5xx/abort,inflight/drop/resetisolation; nofakeHTTPor exemption. NativeSMTP7/7,host28/28,tsc; provider/freshgate/metrics19/19 pass. Fullreview/canonicaltoolingpending; production/release rolloutF036/T030 remainsopen. Independentcrossreview and accurateHTTP/SMTPdeclarationcheckpassed. CanonicalNode1004/1004 across90files oncleanunchanged93e79e,161.50s. ActualCIgateSMTPeffectpendingnextpublication. Current CI community artifact10097133130:42/42firstattemptpass, independentcommitted-policy replaypasses SMTP5completeDATAtransactions and Graph33requests. This replaces previousunsupportedSMTP gap; overallfreshinstallgate/release rolloutstillpending. CurrentEEartifact10097275264:47/47firstattempt and all11requiredproviderjourneys passindependentreplay, includingSMTP5completeDATAtransactions. Productionpromotionrolloutandfinalfreshinstallaggregate remainseparate."
+    },
+    {
+      "id": "R104",
+      "title": "Avoid unrelated survey development seeds and clean up owned bootstrap resources",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "calendar_review",
+      "notes": "CurrentCIshard1 surveybeforeAll60stimeout skips3cases; secondaryundefineddb.destroy. Casesseedowncompletegraphs. Preservefullmigrations+60sdeadline, omitdevseeds, awaitinitializationcleanup, useownedrandomDB andalign/restoreDB_NAME_SERVER for migrationgranttarget. Native3/3pass11.75s vsbaseline12.89s; timeoutnotreproducedlocally. FinalownedDB+rolecleaned; earliernativeisolationlimitationsretained. CurrentCIpending. Current f3a CI artifact10096360589 on testeda9305d0b43dc0242156b92f3ab189e680ccecb26 confirms all3surveycasespassed; shard579/579,zero skips/failures/TODOs/pending. Overallrun34330619264 remainslive/non-green."
+    },
+    {
+      "id": "R105",
+      "title": "Diagnose Teams development layout chunk failure during settings navigation",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "stripe_protocol",
+      "notes": "Root cause established and closed by decision, not by a timeout change. Teams emulator overrides are denied under NODE_ENV=production by design (emulatorMode.ts: the guard decides where the bot secret is POSTed and whose JWTs are accepted), so the journey can only run on a development server. That server compiles an 81.7MB app/msp/layout chunk, crosses Next's 0.8 heap threshold and restarts mid-response, yielding an HTTP 200 whose body is an exact 46,727,168-byte prefix of the valid 81,713,954-byte chunk. Lane is already at 12GiB; no runner headroom remains. User chose the PRD's quarantine option: teams-development-execution is now an owned, expiring entry in scripts/lib/quarantine.json (expires 2026-10-21, F034/T028). Verdict still executes, uploads and reports; it no longer vetoes readiness. Teams coverage is deferred, not obtained."
+    },
+    {
+      "id": "R106",
+      "title": "Bound CI Docker diagnostics so partial evidence can reach artifact upload",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "qbo_protocol",
+      "notes": "CurrentEEdiagnosticstep07:59:32 stillreportedlive08:07:45 beyondnominal5mdeadline; actualcauseunproven. SeveralDockercommandsunboundedorTERM-only. Prioritizehostmemory/disk+serverlogs, boundedkill-afterqueries, partialoutput+exitcodes, limitSaveandprojectcleanup. Actionlintsyntaxpasses; noDockerlocal/noassertion/retry/deadlinechangeforbehavioraltests. Futureexecutionpending; notrootcauseclaim."
+    },
+    {
+      "id": "R107",
+      "title": "Complete bucket recovery translations across supported locales",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "stripe_protocol",
+      "notes": "Current f3a translation consistency check reports 18 missing keys: two recovery messages across seven translated and two pseudo locales. Preserve checks and supply translations. Added 18 missing entries using natural locale translations and the existing pseudoString transform. Actual enforced validator passed all nine locales with zero errors/warnings; locale-quality audit passed seven real locales with zero untranslated/forbidden/parse/missing findings. Current-source CI remains pending next publication. Exact two failed Nx billing cases now pass using package configuration (2 selected cases,54 excluded by titlefilter). T001 invokes the real pseudo generator, which reordered the two new keys to English order; retain canonical generated order. Concurrent Node tooling1044/1044 passed but source-after recorded this change, so not accepted as clean-source validation. Combined clean-source validation on9861966e9a:1044/1044 nativeNode cases across91files,162.70s,zero failures/skips/TODOs/cancellations; sourceunchanged. Terminal server unit artifact10098274971 confirms the same two translation failures and pseudo changes, with 15039 passed and three existing tax TODOs; no additional failed assertions. Current a9ef Nx job102425612657 succeeds: billing286files/1286tests, including both prior failing locale files (52 and4cases). Three server taxTODOs remain separate; Nx has no source-after snapshot, so no pseudo-cleanliness claim from this log. See ci-a9ef-nx-translation-repair.json."
+    },
+    {
+      "id": "R108",
+      "title": "Bind release provider journeys to tested and promoted image identity",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "qbo_protocol",
+      "notes": "Fresh-install gate independently validates provider observations, but release promotion currently accepts configuration declarations without raw journey evidence. Require consumer-policy journeys and verified archive identity, with raw OCI manifest digest/config binding to promoted registry image; no archive-to-registry identity substitution. Actual publisher/deployment rollout remains separate. Implemented mandatory consumer policy and committed per-edition journey requirements, actual provider traffic/configuration, complete application service mapping and exact build identity. Raw single-platform OCI/Docker manifest bytes hash to immutable registry digest; valid config descriptor binds tested config image ID. Independent review reproduced malformed digest-only manifest false green; descriptor validation now rejects it. Three declaration-vs-observation cases failed before repair. Root reran 80/80 release/Kubernetes native cases successfully. Protocol versions remain declared, indexes unsupported, publisher/deployment integration still pending; F036/T030 remain open. Combined clean-source validation on9861966e9a:1044/1044 nativeNode cases across91files,162.70s,zero failures/skips/TODOs/cancellations; sourceunchanged."
+    },
+    {
+      "id": "R109",
+      "title": "Recover narrowly from transient dependency download failures",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "calendar_review and coordinator",
+      "notes": "Current f3a appliance job102398085497 did not run tests: root npm ci failed downloading ffmpeg-static Linux license from GitHub HTTP500. Reuse existing bounded installer with appliance-only opt-in: one retry after2s for recognized terminal ffmpeg download5xx, preserving lifecycle scripts, finalfailure andsignals. Two redcases reproduced;18/18nativecasespass including401/404/unrelated/conflictingerrors, opt-out and subprocess signals. Workflow scopedtoappliance, actionlintpasses. ActualCI recoverypending; no test retries or skipchanges. Mutation job102398083391 independently failed at the same GitHub license downloadHTTP500 beforeStryker. Apply the same opt-in bounded recovery there, named FFMPEG_STATIC_DOWNLOAD_RETRY; no system-binary assumptions, additional script skips or mutation-test changes. Combined clean-source validation on9861966e9a:1044/1044 nativeNode cases across91files,162.70s,zero failures/skips/TODOs/cancellations; sourceunchanged. Current a9ef CI artifact10099117448 verifies239/239 appliance cases,47 discovered files,clean tested16264b7 source. Root install succeeded first attempt with retry opt-in, so actual compatibility is proven but retry execution is not. Full CI still live."
+    },
+    {
+      "id": "R110",
+      "title": "Select canonical browser execution evidence without diagnostic basename collisions",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "calendar_review",
+      "notes": "Terminal fresh-install gate rejects both current browser archives because recursive evidence.json lookup returns five matches. Preserve required parent-job success and provider checks; select canonical execution layout and reject missing or ambiguous canonical bundles. Add behavioral collision regression cases and replay actual artifacts. Implemented canonical execution and manifest suffix selection. Root reran 16/16 behavioral cases, including diagnostic collisions and missing/ambiguous canonical execution and manifest files. Actual four CI archives pass consumer replay with both provider gates; replay supplies successful job prerequisites, so it does not change the failed CI outcome. Current-source CI remains required."
+    },
+    {
+      "id": "R111",
+      "title": "Assemble validated release provider evidence from actual artifact inputs",
+      "status": "done",
+      "dependsOn": [
+        "R108",
+        "R110"
+      ],
+      "owner": "qbo_protocol",
+      "notes": "Only test fixtures currently assemble browserProviderExecution. Add an offline CLI consuming explicit trusted policy, release manifest, existing check evidence, canonical browser archive and exact raw OCI files. Reuse release verifier before output; never synthesize passing checks. Actual publisher and deployed rollout remain open. Implemented explicit-input CLI emitting only a validated browserProviderExecution object. Sixteen real CLI cases pass, including individual canonical file uniqueness/common parent, identity mismatches, failed check verdicts, private output permissions and symlink-parent containment. Independent review reproduced the symlink-parent bypass before repair; nearest-existing-ancestor canonicalization now rejects it. Unresolved aliases/malformed mappings preserve paths and exit nonzero; callers must require this invocation exit zero, never output existence. Existing release/Kubernetes suites also passed (80 cases). Actual publisher wiring remains open. Combined native tooling on clean unchanged0412a755 passes1066/1066 cases across92 required files in163.07s, zero failures/skips/TODOs/cancellations. Current publishedCI remains live on prior a9ef candidate; assembler not yet published."
+    },
+    {
+      "id": "R112",
+      "title": "Map usage-context and inbound-email exemplars to observed test evidence",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "calendar_review",
+      "notes": "T023 names these exemplars but ledger lacks entries. Link real test identities and known CI proof; retain missing incident identifiers, owners and pre-fix replay as unknown rather than fabricating attribution or completion. Added exact permanent test mappings and source-bound prior CI proof. Root independently checked raw log/archive hashes and passing file counts. Null incident/owner and unknown pre-fix proof preserved; T023 and operational review remain open. JSON and linked-file checks passed; no artificial source-string tests added."
+    },
+    {
+      "id": "R113",
+      "title": "Review observed mutation survivors for meaningful behavioral gaps",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "calendar_review and stripe_protocol",
+      "notes": "Actual current mutation run34339167186 executed83 mutants:79 killed,3 survived and1 uncovered. Inspect month-end normalization and authorization scope fallback; add only observable behavioral tests with red/green mutant proof where warranted. Equivalent mutants remain explicitly recorded; do not change score threshold or invent financial policy. Billing survivors29/31/37 preserve public outcomes and are documented as equivalent; no implementation-detail tests added. Added two authorization nullish-runtime cases preserving an existing restriction. Current auth11/11 and combined pilot33/33 pass; exact mutant20 temporary-copy replay fails both new cases while nine existing cases pass. No production or threshold changes. Full mutation pilot verification next. Full native Stryker pilot on clean3bd7df7 source completed in4s:33 dry-run cases pass;80/83 mutants killed,zero uncovered,three equivalent billing survivors retained. Score96.39%,threshold0 unchanged. Source clean after. Current CI publication still pending existing live run."
+    }
+  ]
+}

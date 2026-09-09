@@ -1,0 +1,51 @@
+{
+  "applicationSourceRevision": "7274946079",
+  "applicationBuildId": "build-1788822404978",
+  "build": {
+    "host": "macOS ARM64 Node25.5.0",
+    "type": "Next production build on host; no Docker",
+    "exitCode": 0,
+    "session": 98136,
+    "log": "/tmp/alga-host-production-build.log",
+    "edition": "enterprise",
+    "clientFeatureOverride": "release-v1-6-feature:true",
+    "typeValidation": "Next config skips types; separate type/native CI validation remains required"
+  },
+  "serverSession": 91205,
+  "database": "host_ee_test_82cc",
+  "browser": {
+    "session": 94942,
+    "suite": "e2e-tests/tests/invoice-designer-persistence.spec.ts",
+    "config": "playwright.config.ts",
+    "stats": {
+      "startTime": "2026-09-07T23:14:56.042Z",
+      "duration": 6896.053,
+      "expected": 1,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    },
+    "log": "/tmp/alga-host-production-designer-pdf.log"
+  },
+  "coverage": [
+    "Real login and UI authoring of sorted billed-time transform",
+    "Line Items Table, six-column billed-time detail table and Totals block created through UI",
+    "Saved AST bindings/columns and reopened inspector verified",
+    "Approved source records seeded; authenticated API generates actual invoice",
+    "Client layout preference points to UI-authored template; UI downloads rendered PDF",
+    "PDF headers, public ticket text, descending dates, mixed-rate text, amounts and generated invoice total verified",
+    "Private sentinel excluded and invoice snapshots unchanged"
+  ],
+  "helperRegression": {
+    "suite": "e2e-tests/tests/invoice-ticket-ownership.spec.ts",
+    "passed": true,
+    "durationSeconds": 2.8,
+    "log": "/tmp/alga-host-production-invoice-browser.log"
+  },
+  "priorFailure": "First expanded PDF run expected an unsupported grouped amount and used generic table defaults for charges; fixture now uses the Line Items Table/Totals blocks and asserts actual generated amounts. Ownership case passed in that run.",
+  "limitations": [
+    "Host production evidence does not verify Docker packaging or native CI",
+    "Not a full Citus, supported-release upgrade, nested-group or locale matrix",
+    "Long-lived development server memory issue remains unresolved"
+  ]
+}

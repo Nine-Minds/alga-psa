@@ -1054,7 +1054,8 @@
     },
     "messages": {
       "success": "Faktura została wygenerowana pomyślnie!",
-      "loadFailed": "Nie udało się wczytać danych"
+      "loadFailed": "Nie udało się wczytać danych",
+      "salesOrderSourcesUnavailable": "Nie udało się wczytać źródłowych zamówień sprzedaży. Nadal można ręcznie wprowadzać pozycje faktury."
     }
   },
   "prepayment": {

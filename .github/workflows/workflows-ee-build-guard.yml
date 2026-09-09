@@ -6,6 +6,11 @@ on:
       - server/**
       - ee/server/**
       - packages/workflows/**
+      - ee/packages/workflows/**
+      - packages/ee/**
+      - package.json
+      - package-lock.json
+      - nx.json
       - scripts/guard-ee-workflows-next-build.mjs
       - scripts/guard-no-legacy-workflows-shims.mjs
       - .github/workflows/workflows-ee-build-guard.yml
@@ -16,6 +21,11 @@ on:
       - server/**
       - ee/server/**
       - packages/workflows/**
+      - ee/packages/workflows/**
+      - packages/ee/**
+      - package.json
+      - package-lock.json
+      - nx.json
       - scripts/guard-ee-workflows-next-build.mjs
       - scripts/guard-no-legacy-workflows-shims.mjs
       - .github/workflows/workflows-ee-build-guard.yml
@@ -32,18 +42,23 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
 
       - name: Upgrade npm to version 11
         run: npm install -g npm@11
 
       - name: Install dependencies
+        run: npm ci
+
+      - name: Provide production build memory headroom
         run: |
-          if ! npm ci; then
-            echo "npm ci failed; attempting npm install fallback to regenerate lock data"
-            npm install --legacy-peer-deps
-          fi
+          free -h
+          sudo fallocate -l 8G /swapfile-alga-ee-guard
+          sudo chmod 600 /swapfile-alga-ee-guard
+          sudo mkswap /swapfile-alga-ee-guard
+          sudo swapon /swapfile-alga-ee-guard
+          free -h
 
       - name: Provide build-time env
         run: |

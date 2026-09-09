@@ -121,7 +121,6 @@ export async function createTestService(
         id: uuidv4(),
         tenant: tenantId,
         name: 'Default Service Type',
-        billing_method: 'fixed' as const,
         is_active: true,
         order_number: 1
       };
@@ -130,6 +129,7 @@ export async function createTestService(
     }
   }
 
+  if (!serviceTypeId) throw new Error('Test service type must have an id');
   const serviceData: Service = {
     service_id: overrides.service_id || uuidv4(),
     tenant: tenantId,

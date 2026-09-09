@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "scope": "host-browser-oauth-listener-navigation",
+  "applicationRevision": "c5938cdad5",
+  "testBaseRevision": "d2e5e16dc5",
+  "edition": "enterprise",
+  "headed": true,
+  "before": {
+    "unexpected": 1,
+    "assertion": "After opener reload callback result is undefined instead of expected Microsoft failure payload",
+    "reportSha256": "27d4ca7b94f5c4654ea874657eeb16a057a6a61eb308835dbfd86c28b3b1a63a"
+  },
+  "after": {
+    "passed": 4,
+    "unexpected": 0,
+    "skipped": 0,
+    "flaky": 0,
+    "durationMs": 4154.845,
+    "reportSha256": "21d04a932046adfc93d7a2f1d4293cc6344e0bd1c7220752073070138eb4196b"
+  },
+  "changes": [
+    "Install same-origin message listener through addInitScript before navigation",
+    "Store callback results in runner through exposed function",
+    "Exercise explicit reload in missing-code case",
+    "Avoid returning popup Window from page.evaluate"
+  ],
+  "limits": [
+    "Existing host application, not current-source production image or native CI",
+    "Does not establish calendar/Graph provider or Teams SSO coverage",
+    "Initial run without exported environment used default configuration and is excluded from evidence",
+    "No Docker build"
+  ]
+}

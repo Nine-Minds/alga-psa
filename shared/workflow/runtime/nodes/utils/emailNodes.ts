@@ -1,3 +1,5 @@
+import { sanitizeEmailHtml } from '../../../../lib/email/sanitizeEmailHtml';
+
 type ParseEmailResult = {
   success: boolean;
   parsed?: {
@@ -34,7 +36,7 @@ export async function parseEmailBodyWithFallback(
 
     const parsed = parseResult.parsed;
     const sanitizedText = parsed.sanitizedText || params.text || '';
-    const sanitizedHtml = parsed.sanitizedHtml || undefined;
+    const sanitizedHtml = await sanitizeEmailHtml(parsed.sanitizedHtml || undefined);
     const parserMeta: Record<string, unknown> = {
       confidence: parsed.confidence,
       strategy: parsed.strategy,
@@ -80,10 +82,10 @@ export async function renderCommentBlocksWithFallback(
   return [{ type: 'paragraph', content: [{ type: 'text', text: params.text || '' }] }];
 }
 
-function createFallback(params: { text?: string; html?: string }, warnings: string[], errorMessage?: string): ParsedBody {
+async function createFallback(params: { text?: string; html?: string }, warnings: string[], errorMessage?: string): Promise<ParsedBody> {
   return {
     sanitizedText: params.text || '',
-    sanitizedHtml: params.html,
+    sanitizedHtml: await sanitizeEmailHtml(params.html),
     confidence: 'low',
     metadata: {
       parser: {

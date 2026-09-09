@@ -39,7 +39,8 @@
     "react-dom": "^19",
     "sharp": "^0.35.3",
     "tar-stream": "^3.1.7",
-    "uuid": "^11.0.5"
+    "uuid": "^11.0.5",
+    "@alga-psa/workflow-inference": "*"
   },
   "devDependencies": {
     "@playwright/test": "^1.40.0",

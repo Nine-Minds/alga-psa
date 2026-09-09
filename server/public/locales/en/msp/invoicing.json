@@ -1004,7 +1004,8 @@
     },
     "messages": {
       "success": "Invoice generated successfully!",
-      "loadFailed": "Failed to load data"
+      "loadFailed": "Failed to load data",
+      "salesOrderSourcesUnavailable": "Sales order sources could not be loaded. You can still enter manual invoice items."
     }
   },
   "prepayment": {

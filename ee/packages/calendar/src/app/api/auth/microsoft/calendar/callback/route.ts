@@ -10,6 +10,7 @@ import { TIER_FEATURES, FEATURE_MINIMUM_TIER, TIER_LABELS, resolveTier, tierHasF
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { getWebhookBaseUrl } from '../../../../../../lib/utils/email/webhookHelpers';
 import axios from 'axios';
+import { getMicrosoftTokenUrl } from '@alga-psa/shared/services/email/microsoftGraphEndpoints';
 import { randomBytes } from 'crypto';
 import { resolveCalendarRedirectUri } from '../../../../../../lib/utils/calendar/redirectUri';
 
@@ -275,7 +276,7 @@ export async function GET(request: NextRequest) {
     // Exchange authorization code for tokens
     try {
       // Always use 'common' for multi-tenant Azure AD apps
-      const tokenUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/token`;
+      const tokenUrl = getMicrosoftTokenUrl('common');
       const params = new URLSearchParams({
         client_id: clientId,
         client_secret: clientSecret,

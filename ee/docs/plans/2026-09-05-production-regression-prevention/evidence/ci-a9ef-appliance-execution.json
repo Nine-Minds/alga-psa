@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "scope": "ci-appliance-execution",
+  "runId": "34339167571",
+  "jobId": "102425613144",
+  "artifactId": 10099117448,
+  "publishedRevision": "a9efecce23230ead68afb69ddc85613c6becf1fa",
+  "testedRevision": "16264b7e71ade1ec39a1caf1654e81d860f95ba3",
+  "checkoutProof": {
+    "log": "appliance job log",
+    "workflowLine": 33,
+    "checkoutRevisionLine": 124
+  },
+  "status": "passed",
+  "counts": {
+    "passed": 239,
+    "failed": 0,
+    "skipped": 0,
+    "todo": 0,
+    "cancelled": 0
+  },
+  "sourceCleanBeforeAndAfter": true,
+  "selection": "full",
+  "discovery": {
+    "files": 47,
+    "unmatched": 0
+  },
+  "artifactSha256": "71c447166789e2d1c48b9fb859057378b57f63a9d526927809e2449a50300413",
+  "installation": {
+    "ffmpegRetryOptIn": true,
+    "rootInstallAttempts": 1,
+    "transientRetryExercised": false
+  },
+  "limitations": [
+    "Successful actual appliance execution proves compatibility with the installer change; it does not exercise a transient download retry.",
+    "The full current CI run remains live; this lane does not establish overall readiness."
+  ]
+}

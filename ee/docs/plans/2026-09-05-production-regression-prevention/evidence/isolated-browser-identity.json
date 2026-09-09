@@ -1,0 +1,33 @@
+{
+  "scope": "synthetic-native-google-sheets-additive-schema-validation",
+  "sourceRevision": "cb88424b6c4e4b9ecf98ded3a791a0b45d00e24b",
+  "spreadsheetId": "1v7rjj0_8tMOGbibDghxcjmSgN1Ejvyvjkyz0jOUHl7I",
+  "sheetId": 9060807,
+  "sheet": "validation_browser_identity",
+  "range": "A1:Y8",
+  "status": "passed",
+  "procedure": [
+    "Generate rows using current browserRows exporter and real archive-record, receipt and manifest builders over synthetic gzip bytes and synthetic inspections.",
+    "Create a new isolated tab with the original twenty-column header and one synthetic historical row; read native cells before migration.",
+    "Extend only U1:Y1 and write six current-schema rows at A3:Y8.",
+    "Read all native values back and compare the complete 8x25 rectangle exactly with expected data."
+  ],
+  "verified": {
+    "historicalRowUnchanged": true,
+    "legacyHeaderUnchanged": true,
+    "projectIds": ["", "project-a", "project-b", "", "project-a", "project-b"],
+    "sameProjectDisplayName": "same display name",
+    "runId": "900000000001",
+    "runAttempts": [1, 1, 1, 2, 2, 2],
+    "authentication": "real-credentials",
+    "serverLifecycle": "externally-started-production-build",
+    "artifactManifestCharacterCounts": [12883, 12883],
+    "artifactManifestExactReadback": true
+  },
+  "limitations": [
+    "Synthetic validation only; no real browser execution, Docker inspection, registry publication or deployment is claimed.",
+    "Native Sheets writes use connector batchUpdate; automatic exporter appendRows behavior is separately covered by native mock-HTTP behavioral tests.",
+    "Only the newly created validation tab in the previously approved copy was written; the original workbook and existing copied tabs were not edited.",
+    "Header wrapping, fixed widths, frozen row and clipped artifact JSON were set; screenshot-based visual fit remains unverified."
+  ]
+}

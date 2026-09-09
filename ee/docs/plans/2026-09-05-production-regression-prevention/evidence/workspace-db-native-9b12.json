@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "kind": "native-ci-execution",
+  "revision": "9b12c5fa638a6757b990b3894d8f8c1682cddb19",
+  "testedMergeRevision": "275bb4f0b708caab40e79c6948510b05a27f3acc",
+  "job": "https://github.com/Nine-Minds/alga-psa/actions/runs/34064092834/job/101569754955",
+  "conclusion": "success",
+  "filesPassed": 59,
+  "counts": {
+    "passed": 425,
+    "failed": 0,
+    "skipped": 0,
+    "todo": 0,
+    "pending": 0
+  },
+  "selection": {
+    "mode": "full",
+    "filters": []
+  },
+  "source": {
+    "before": {
+      "revision": "275bb4f0b708caab40e79c6948510b05a27f3acc",
+      "dirty": false,
+      "changes": []
+    },
+    "after": {
+      "revision": "275bb4f0b708caab40e79c6948510b05a27f3acc",
+      "dirty": false,
+      "changes": []
+    }
+  },
+  "durationSeconds": 368.15,
+  "artifactId": 9998527708,
+  "executionEvidenceSha256": "ce7ca65ae89c364b66b296d785cfc0564e9d20817b98ec2084f3137b1da4de17",
+  "reportSha256": "c019247b165c49f0e16e9b833252ce79501f16e79205df1d767f265e268a13ca",
+  "logSha256": "c288c79e96e9191080b678795bc7b7e5c35bbecde3b80a93f61fadd3d98ab12b",
+  "model": {
+    "tests": [
+      {
+        "title": "does not apply credit to an amount already paid",
+        "status": "passed",
+        "durationMs": 75.12494600002537
+      },
+      {
+        "title": "conserves credit and cash across finalization, delivery retries, reversal and repeated void",
+        "status": "passed",
+        "durationMs": 114.34670100000221
+      },
+      {
+        "title": "replays the saved shrunk payment-credit counterexample",
+        "status": "passed",
+        "durationMs": 64.20340900000883
+      },
+      {
+        "title": "checks generated two-tenant operation sequences and reports shrunk replay seeds",
+        "status": "passed",
+        "durationMs": 6085.702484999987
+      }
+    ],
+    "generatedRuns": 100,
+    "maxGeneratedOperations": 25,
+    "propertySeed": 20260906,
+    "savedCounterexampleExecuted": true
+  },
+  "limitations": [
+    "Auth and remote delivery are fixture seams; this model verifies actual transactional billing behavior, not browser authentication or vendor compatibility.",
+    "The global runner inventory, exclusions and release requirements remain outstanding."
+  ]
+}

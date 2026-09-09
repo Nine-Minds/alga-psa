@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "baseRevision": "95d63fae79",
+  "workingTreeDirty": true,
+  "checks": [
+    {
+      "scope": "Actual accounting callback cleanup consumers",
+      "testFiles": [
+        "packages/emulators/qbo/tests/accountingCleanupConsumer.test.ts",
+        "packages/emulators/xero/tests/accountingCleanup.test.ts"
+      ],
+      "newCases": 5,
+      "combinedProviderPassed": 48,
+      "combinedFiles": 7,
+      "fullServerBuildGraphAcyclicTasks": 58,
+      "packageTypechecks": "passed",
+      "assertions": [
+        "Real revokeAccountingOAuthGrant and Axios send native HTTP requests",
+        "Successful cleanup invalidates credentials and Xero connections",
+        "Failed cleanup remains best effort and preserves credentials",
+        "Destination guards and request journals prevent silent live fallback"
+      ],
+      "limits": [
+        "Authentication/session/nonce infrastructure and logging are isolated",
+        "These tests invoke cleanup directly, not the full OAuth browser callback"
+      ]
+    },
+    {
+      "scope": "Workflow worker native readiness audit",
+      "buildGraphTypecheck": "passed",
+      "startupTestsPassed": 4,
+      "startupTestFiles": 2,
+      "requirements": [
+        "PostgreSQL and Redis with matching application credentials",
+        "Reachable Temporal frontend and explicit TEMPORAL_ADDRESS",
+        "Compiled workflow and activity artifacts",
+        "Shared tenant secrets and provider endpoint configuration",
+        "GET /readyz on port 4000 must report all three workers ready"
+      ],
+      "packagingFindings": [
+        "Dependency manifest copy omits direct workflow-streams workspace dependency",
+        "Several Temporal workspace dependencies are also absent from initial Dockerfile manifest copy"
+      ],
+      "limits": [
+        "No clean image build attempted",
+        "No worker process started",
+        "No application database connected or mutated",
+        "Browser topology still omits worker execution; configuration and compilation are insufficient proof"
+      ]
+    },
+    {
+      "scope": "Candidate archive consumption",
+      "nativeTestsPassed": 22,
+      "workflowLint": "passed",
+      "limits": [
+        "Actual CI exporter metadata and Docker inspect remain unverified",
+        "Candidate archive checks do not establish registry publication or production promotion"
+      ],
+      "assertions": [
+        "Exact run, revision and service required",
+        "Earlier successful build attempts accepted; future or invalid attempts rejected",
+        "Downloaded compressed bytes verified before Docker load",
+        "Actual Compose-selected image config ID, revision label and architecture verified after load"
+      ]
+    }
+  ],
+  "planStatus": "Full plan remains incomplete; F020 and F031 remain open."
+}

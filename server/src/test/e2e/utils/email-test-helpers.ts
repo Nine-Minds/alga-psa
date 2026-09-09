@@ -1,3 +1,5 @@
+import { readTicketsForEmailMessage } from './email-message-tickets';
+import { waitForEmailMessage } from './wait-for-email-message';
 import { PersistentE2ETestContext } from './persistent-test-context';
 import { tenantDb } from '@alga-psa/db';
 
@@ -76,6 +78,8 @@ export class EmailTestHelpers {
     // Ensure proper tenant synchronization
     await this.ensureTenantSynchronization(tenant);
 
+    let sentMessageId: string | undefined;
+
     // Create scenario object with helper methods
     const scenario: EmailTestScenario = {
       tenant,
@@ -83,11 +87,17 @@ export class EmailTestHelpers {
       contact,
 
       sendEmail: async (config: EmailTestConfig) => {
-        return await this.sendEmailWithTenantHandling(config, contact, tenant);
+        const result = await this.sendEmailWithTenantHandling(config, contact, tenant);
+        sentMessageId = result.sentEmail.messageId;
+        return result;
       },
 
       waitForProcessing: async (timeout: number = 15000) => {
-        await this.context.waitForWorkflowProcessing(timeout);
+        await waitForEmailMessage({
+          messageId: sentMessageId, timeout,
+          readTickets: () => this.getTicketsForContact(tenant.tenant, contact.email),
+          readComments: ticketId => this.getCommentsForTicket(tenant.tenant, ticketId),
+        });
       },
 
       getTickets: async () => {
@@ -124,6 +134,7 @@ export class EmailTestHelpers {
     await this.ensureTenantSynchronization(tenant);
 
     const unknownEmail = 'unknown@example.com';
+    let sentMessageId: string | undefined;
 
     return {
       tenant,
@@ -131,15 +142,21 @@ export class EmailTestHelpers {
       
       sendEmail: async (config: EmailTestConfig) => {
         const emailConfig = { ...config, from: unknownEmail };
-        return await this.sendEmailWithTenantHandling(emailConfig, { email: unknownEmail }, tenant);
+        const result = await this.sendEmailWithTenantHandling(emailConfig, { email: unknownEmail }, tenant);
+        sentMessageId = result.sentEmail.messageId;
+        return result;
       },
 
       waitForProcessing: async (timeout: number = 15000) => {
-        await this.context.waitForWorkflowProcessing(timeout);
+        await waitForEmailMessage({
+          messageId: sentMessageId, timeout,
+          readTickets: () => readTicketsForEmailMessage(this.context.db, tenant.tenant, sentMessageId),
+          readComments: ticketId => this.getCommentsForTicket(tenant.tenant, ticketId),
+        });
       },
 
       getTickets: async () => {
-        return await this.getTicketsForContact(tenant.tenant, unknownEmail);
+        return await readTicketsForEmailMessage(this.context.db, tenant.tenant, sentMessageId);
       }
     };
   }

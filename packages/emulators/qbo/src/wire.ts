@@ -3,11 +3,12 @@ import type { NextFunction, Request, Response, Router } from 'express';
 import { QboSimError } from '@alga-psa/billing/testing/qboSimulator';
 import { route } from '@alga-psa/emulator-host';
 import type { HostEnv } from '@alga-psa/emulator-host';
-import { QboWireError } from './core';
+import { QboOAuthError, QboWireError } from './core';
 import type { QboEmulatorCore } from './core';
 
 const ENTITY_PATHS: Record<string, string> = {
   customer: 'Customer',
+  item: 'Item',
   invoice: 'Invoice',
   creditmemo: 'CreditMemo',
   payment: 'Payment',
@@ -24,7 +25,7 @@ function entityTypeFromPath(pathSegment: string): string {
 function parseBasicAuth(req: Request): { clientId: string; clientSecret: string } {
   const header = String(req.headers.authorization ?? '');
   if (!header.startsWith('Basic ')) {
-    throw new QboWireError(401, '3200', 'invalid_client: Basic authorization required');
+    throw new QboOAuthError(401, 'invalid_client', 'Basic authorization required');
   }
   const decoded = Buffer.from(header.slice('Basic '.length), 'base64').toString('utf8');
   const separator = decoded.indexOf(':');
@@ -36,7 +37,7 @@ function parseBasicAuth(req: Request): { clientId: string; clientSecret: string 
  * appcenter authorize (GET /connect/oauth2), the OAuth token endpoint
  * (POST /oauth2/v1/tokens/bearer), and the v3 accounting API
  * (/v3/company/:realmId/...). Point QBO_OAUTH_AUTHORIZE_URL,
- * QBO_OAUTH_TOKEN_URL, and QBO_API_BASE_URL here.
+ * QBO_OAUTH_TOKEN_URL, QBO_OAUTH_REVOKE_URL, and QBO_API_BASE_URL here.
  */
 export function wire(router: Router, core: QboEmulatorCore, _env: HostEnv): void {
   router.use(express.json());
@@ -48,13 +49,12 @@ export function wire(router: Router, core: QboEmulatorCore, _env: HostEnv): void
     if (!clientId || !redirectUri) {
       throw new QboWireError(400, '3200', 'client_id and redirect_uri are required');
     }
-    const code = core.authorize(clientId, redirectUri);
     // Intuit's company picker equivalent: ?realmId=... on the request, else the
     // control-selected company, else the default realm. Must be a known realm.
     const chosenRealm = req.query.realmId
       ? String(req.query.realmId)
       : core.authorizeRealmId ?? core.realmId;
-    core.simFor(chosenRealm);
+    const code = core.authorize(clientId, redirectUri, chosenRealm);
     const callback = new URL(redirectUri);
     callback.searchParams.set('code', code);
     callback.searchParams.set('realmId', chosenRealm);
@@ -69,14 +69,25 @@ export function wire(router: Router, core: QboEmulatorCore, _env: HostEnv): void
     res.json(core.grantToken(clientId, clientSecret, req.body ?? {}));
   });
 
+  router.post('/v2/oauth2/tokens/revoke', (req, res) => {
+    const { clientId, clientSecret } = parseBasicAuth(req);
+    core.revokeToken(clientId, clientSecret, req.body?.token);
+    res.status(200).end();
+  });
+
   const company = express.Router({ mergeParams: true });
   router.use('/v3/company/:realmId', company);
 
   company.use((req, res, next) => {
     const bearer = String(req.headers.authorization ?? '').replace(/^Bearer\s+/i, '');
     res.locals.access = core.authenticate(bearer);
-    // Throws the Intuit-shaped 403 when the realm has no company file.
+    // Throws the existing 403 when the realm has no company file.
     res.locals.sim = core.simFor(String(req.params.realmId));
+    // Explicit emulator mismatch guard: the exact Intuit denial envelope is
+    // not independently verified. A grant cannot authorize a different company.
+    if (res.locals.access.realmId !== String(req.params.realmId)) {
+      throw new QboWireError(403, 'SIM_REALM_MISMATCH', 'Token does not authorize the requested company');
+    }
     next();
   });
 
@@ -100,8 +111,8 @@ export function wire(router: Router, core: QboEmulatorCore, _env: HostEnv): void
   company.get('/companyinfo/:companyId', (req, res) => {
     res.json({
       CompanyInfo: {
-        Id: core.realmId,
-        CompanyName: core.sim.options.companyName,
+        Id: simOf(res).options.realmId,
+        CompanyName: simOf(res).options.companyName,
         Country: 'US',
         CompanyStartDate: '2020-01-01',
       },
@@ -153,6 +164,10 @@ export function wire(router: Router, core: QboEmulatorCore, _env: HostEnv): void
   }));
 
   router.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
+    if (err instanceof QboOAuthError) {
+      res.status(err.status).json({ error: err.error, error_description: err.message });
+      return;
+    }
     if (err instanceof QboWireError) {
       res.status(err.status).json(err.toFault());
       return;

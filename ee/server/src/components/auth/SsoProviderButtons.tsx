@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import clsx from 'clsx';
 import { signIn } from 'next-auth/react';
 import { Loader2 } from 'lucide-react';
-import { SiGoogle } from 'react-icons/si';
+import { GoogleIcon } from '@alga-psa/ui/components/GoogleIcon';
 // Imports react-i18next directly rather than the @alga-psa/ui wrapper: the MSP
 // sign-in page renders this outside any I18nProvider, so `useSuspense: false`
 // keeps it from throwing a promise with no Suspense boundary above it, and each
@@ -245,7 +245,7 @@ export default function SsoProviderButtons({
 
   const renderProviderIcon = (providerId: MspSsoProvider['id']) => {
     if (providerId === 'google') {
-      return <SiGoogle className="h-8 w-8" style={{ color: '#34A853' }} aria-hidden />;
+      return <GoogleIcon className="h-8 w-8" style={{ color: '#34A853' }} aria-hidden />;
     }
     return <MicrosoftMulticolorLogo />;
   };

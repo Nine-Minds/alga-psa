@@ -954,8 +954,8 @@ const mapTableColumns = (node: WorkspaceNode, documentKind: DesignerDocumentKind
 
   return [
     { id: 'description', header: 'Description', value: { type: 'path', path: 'description' } },
-    { id: 'quantity', header: 'Qty', value: { type: 'path', path: 'quantity' } },
-    { id: 'total', header: 'Amount', value: { type: 'path', path: 'total' } },
+    { id: 'quantity', header: 'Qty', value: { type: 'path', path: 'quantity' }, format: 'number' },
+    { id: 'total', header: 'Amount', value: { type: 'path', path: 'total' }, format: 'currency' },
   ];
 };
 

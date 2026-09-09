@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "observedAt": "2026-09-06",
+  "kind": "local-execution",
+  "revision": "2d6ef9f2393031cfb802b348ac64e1547eeb97e5",
+  "dirty": true,
+  "status": "passed",
+  "counts": {
+    "browser": 1,
+    "wire": 10,
+    "simulator": 23,
+    "failed": 0,
+    "skipped": 0
+  },
+  "reports": {
+    "browser": {
+      "path": "/tmp/alga-qbo-drift-browser-clock.log",
+      "sha256": "30af70bddddbddbde5049950df83bbe234f1497b12bb121104217a06b6e1b67c"
+    },
+    "wire": {
+      "path": "/tmp/alga-qbo-drift-control-final.log",
+      "sha256": "a95b8d906912c2114fa206e8b154548315fa9f95c629e76bb13547b0ed258d56"
+    },
+    "simulator": {
+      "path": "/tmp/alga-qbo-logical-clock-regression.log",
+      "sha256": "169a445f94f2873b5db309fd55eddbc0655763250cde85912637fbdf7d6907f8"
+    }
+  },
+  "checks": [
+    "QBO package build and typecheck",
+    "Production browser TypeScript check",
+    "Existing deterministic simulator scenarios"
+  ],
+  "ciWorkflow": ".github/workflows/e2e-fresh-install-tests.yaml",
+  "limits": [
+    "Focused headed local browser execution against an existing production app image and locally replaced emulator dist; native candidate CI remains pending.",
+    "The initial browser run failed to detect drift because the emulator used a January logical clock. The wire emulator now uses its shared host clock; pure simulator defaults remain deterministic.",
+    "This extends F033 but does not establish provider sandbox parity or complete the full plan."
+  ]
+}
