@@ -31,6 +31,10 @@ The feature was also English-only outside English: the delegation namespace exis
 
 The remaining failures were stale test doubles: fake knex objects missing methods and tables the product legitimately started using, mocks that never invoked a callback the product moved its inserts into, and fixtures lacking a transaction flag or tenant row for lifecycle admission. Deliberate registries were updated where the branch intentionally added entries.
 
+Suite hygiene. The suite runs every file in one process with file order shuffled, so a global left behind reaches whichever file runs next. Two leaks were removed: a branch-new conversation document test installed `window.matchMedia` as a `vi.fn()` and never restored it, so a later `vi.resetAllMocks()` blanked it and the next file to read a media query failed; and three pre-existing streaming chat tests replaced `window.localStorage` with a partial stub, which only became visible when this branch added a test calling `localStorage.clear()`. Both are now restored after use.
+
+One order-dependent failure remains unexplained: under one shuffle seed the two chat completions stream route tests see the enterprise edition gate as closed and get 404. Their route and both test files are byte-identical to `main`, the failure does not reproduce in isolation, in either half of the preceding file order, or across the full 250-file prefix, and `main`'s own full unit suite passes. It is a pre-existing order-dependent flake this branch's added files reshuffle into view, not co-managed behaviour. Reproduce with `VITEST_SEED=1788965309417`.
+
 **Second item to review.** Every document authorization, including plain PSA tenants, now runs a co-managed operational state read plus a `tenants` row lookup and a possible `time_entries` probe. The row lock is shared, so readers do not contend, but this sits on a hot read path used by document listing.
 
 The exact release flag remains UI-only; production source inspection finds it only in the shared client boundary and sidebar evaluator. Feature deployment does not add backend flag checks.
