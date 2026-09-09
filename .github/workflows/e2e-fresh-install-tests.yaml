@@ -1275,6 +1275,11 @@ jobs:
           import { writeFileSync } from 'node:fs';
           const workspace = process.env.GITHUB_WORKSPACE;
           const volumes = ['packages', 'ee'].map(part => ({ type: 'bind', source: `${workspace}/${part}`, target: `/app/${part}`, read_only: true }));
+          // Production images omit CSS compiler configuration. The development
+          // server needs both files to expand Tailwind's directives and scan UI sources.
+          for (const file of ['postcss.config.mjs', 'tailwind.config.ts']) {
+            volumes.push({ type: 'bind', source: `${workspace}/server/${file}`, target: `/app/server/${file}`, read_only: true });
+          }
           volumes.push({ type: 'bind', source: `${workspace}/e2e-tests/harness/start-teams-development-ci.mjs`, target: '/app/start-teams-development-ci.mjs', read_only: true });
           volumes.push({ type: 'bind', source: `${workspace}/e2e-tests/harness/check-teams-development-auth.mjs`, target: '/app/check-teams-development-auth.mjs', read_only: true });
           volumes.push({ type: 'bind', source: `${workspace}/e2e-tests/harness/capture-teams-static-chunks.mjs`, target: '/app/capture-teams-static-chunks.mjs', read_only: true });
