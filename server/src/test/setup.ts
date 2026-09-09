@@ -63,6 +63,21 @@ afterEach(async () => {
   loadRootRtl()?.configure?.({ testIdAttribute: 'data-testid' });
 });
 
+// Testing Library's async utilities (waitFor/findBy*) default to a 1s timeout.
+// This single fork runs ~2700 files serially with v8 coverage instrumentation,
+// which stretches a render + effect settle well past 1s on CI runners — a
+// legitimately-passing waitFor then times out (a flake, not a real failure).
+// The scheduling/clients packages already raise this in their own setups for
+// the same reason; mirror it here so package component tests under the server
+// suite get the same headroom. Both RTL copies are configured (the 16.x copy
+// this file resolves and the hoisted 14.x root copy package tests resolve);
+// configure() merges, so the testIdAttribute reset above never clears it.
+if (typeof document !== 'undefined') {
+  const { configure } = await import('@testing-library/react');
+  configure({ asyncUtilTimeout: 10_000 });
+  loadRootRtl()?.configure?.({ asyncUtilTimeout: 10_000 });
+}
+
 // Edition-gated suites set EDITION / NEXT_PUBLIC_EDITION per test and not all
 // restore; in the shared fork a leaked edition flips later suites' code paths
 // (Temporal-vs-PgBoss SLA backend, Microsoft consumer availability, ...).
@@ -231,6 +246,18 @@ global.ResizeObserver = class ResizeObserver {
   unobserve() {}
   disconnect() {}
 };
+
+// jsdom does not implement scrollIntoView; components (e.g. scheduling's
+// AvailabilitySettings) call it inside requestAnimationFrame on selection
+// changes. Unstubbed, that rAF throws asynchronously AFTER the test settles,
+// and vitest reports it as an unhandled error that fails the whole run. The
+// packages' own vitest setups stub it, but under this single server suite only
+// this file's setup applies — and because the suite reuses one jsdom across
+// files with shuffled ordering, whether some earlier file happened to define it
+// was pure luck. Define it unconditionally so ordering can never expose the gap.
+if (typeof Element !== 'undefined' && !Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = function scrollIntoView() {};
+}
 
 // Mock UI reflection hooks. The stubs sever registration (context/websocket)
 // but must stay faithful to the real hook's rendered-DOM contract: the real
