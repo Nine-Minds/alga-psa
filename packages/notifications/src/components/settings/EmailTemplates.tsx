@@ -26,6 +26,7 @@ import {
   SystemEmailTemplate,
   TenantEmailTemplate
 } from "../../types/notification";
+import { applyEmailPalette, STOCK_EMAIL_PALETTE, type EmailPaletteTokens } from "@alga-psa/email/branding";
 import { EmailTemplatePreview } from "./EmailTemplatePreview";
 import { EmailBrandingPanel } from "./EmailBrandingPanel";
 import type { EmailBrandingStatus } from "../../lib/emailBranding";
@@ -169,6 +170,12 @@ export function EmailTemplates() {
     init();
   }, [session]);
 
+  // The token map a "make this mine" action should write: what the last apply
+  // wrote when there is one, otherwise the palette as currently saved.
+  const brandingTarget: EmailPaletteTokens | null = brandingStatus?.palette
+    ? brandingStatus.palette.appliedPalette ?? brandingStatus.resolved
+    : null;
+
   const refreshTemplates = useCallback(async () => {
     const currentTenant = tenant ?? ((session?.user as any)?.tenant as string | undefined);
     if (!currentTenant) return;
@@ -201,9 +208,16 @@ export function EmailTemplates() {
         return;
       }
 
-      // Refresh templates
-      const currentTemplates = await getTemplatesAction(tenant);
-      setTemplates(currentTemplates);
+      // With a palette saved, the copy the tenant starts editing should already
+      // wear their colors instead of the stock purple.
+      if (brandingTarget) {
+        const branded = applyEmailPalette(template.html_content, STOCK_EMAIL_PALETTE, brandingTarget);
+        if (branded !== template.html_content) {
+          await updateTenantTemplateAction(tenant, result.id, { html_content: branded });
+        }
+      }
+
+      await refreshTemplates();
     } catch (error) {
       console.error("Failed to create custom template:", error);
     } finally {
@@ -568,6 +582,8 @@ export function EmailTemplates() {
         template={editingTemplate}
         tenant={tenant}
         onTemplatesChange={setTemplates}
+        brandingPalette={brandingTarget}
+        appliedPalette={brandingStatus?.palette?.appliedPalette ?? null}
       />
 
       <VariableReferenceDialog
@@ -706,12 +722,18 @@ function EditTemplateDialog({
   template,
   tenant,
   onTemplatesChange,
+  brandingPalette,
+  appliedPalette,
 }: {
   isOpen: boolean;
   onClose: () => void;
   template: TenantEmailTemplate | null;
   tenant: string;
   onTemplatesChange: (templates: { systemTemplates: (SystemEmailTemplate & { category: string })[]; tenantTemplates: TenantEmailTemplate[] }) => void;
+  /** Token map to rewrite into the editor, null when no palette is saved. */
+  brandingPalette: EmailPaletteTokens | null;
+  /** What the last apply wrote, so its tokens are recognized too. */
+  appliedPalette: EmailPaletteTokens | null;
 }) {
   type EditableField = 'subject' | 'html_content' | 'text_content';
   const { t } = useTranslation('msp/settings');
@@ -866,6 +888,17 @@ function EditTemplateDialog({
     document.body,
   ) : null;
 
+  // Rewrites the draft in place so the tenant reviews it in the Preview tab and
+  // saves normally: no row is touched until they do.
+  const applyPaletteToEditor = () => {
+    if (!brandingPalette) return;
+    const sources = appliedPalette ? [appliedPalette, STOCK_EMAIL_PALETTE] : [STOCK_EMAIL_PALETTE];
+    setFormData((previous) => ({
+      ...previous,
+      html_content: applyEmailPalette(previous.html_content ?? '', sources, brandingPalette),
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
@@ -965,7 +998,20 @@ function EditTemplateDialog({
           </div>
 
           <div>
-            <Label htmlFor="html-content">{t('notifications.emailTemplatesUi.fields.htmlContent', 'HTML Content')}</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="html-content">{t('notifications.emailTemplatesUi.fields.htmlContent', 'HTML Content')}</Label>
+              {brandingPalette && (
+                <Button
+                  id="apply-palette-to-template"
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={applyPaletteToEditor}
+                >
+                  {t('notifications.emailBranding.actions.applyToTemplate', 'Apply my palette')}
+                </Button>
+              )}
+            </div>
             <Tabs value={htmlTab} onValueChange={setHtmlTab}>
               <TabsList>
                 <TabsTrigger value="source">{t('notifications.emailTemplatesUi.tabs.source', 'Source')}</TabsTrigger>

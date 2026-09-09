@@ -389,7 +389,7 @@
   {
     "id": "F043",
     "description": "edit dialog shows 'Apply my palette' (apply-palette-to-template) when a palette is saved, disabled otherwise",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "editor-integration",
     "prdRefs": [
       "FR8"
@@ -398,7 +398,7 @@
   {
     "id": "F044",
     "description": "clicking it rewrites the editor HTML client-side from stock/applied tokens to the saved palette without saving",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "editor-integration",
     "prdRefs": [
       "FR8"
@@ -407,7 +407,7 @@
   {
     "id": "F045",
     "description": "Customize (clone) on a template starts from the branded HTML when a palette is saved",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "editor-integration",
     "prdRefs": [
       "Users and Primary Flows"

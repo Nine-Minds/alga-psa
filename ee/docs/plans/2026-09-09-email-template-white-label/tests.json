@@ -487,7 +487,7 @@
   {
     "id": "T054",
     "description": "button absent without a saved palette, present with one",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "editor-integration",
     "featureIds": [
       "F043"
@@ -496,7 +496,7 @@
   {
     "id": "T055",
     "description": "click replaces stock tokens in the editor textarea and the Preview tab reflects it; no action call until Save",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "editor-integration",
     "featureIds": [
       "F044"
@@ -505,7 +505,7 @@
   {
     "id": "T056",
     "description": "clone with a saved palette produces a tenant row that classifies as branded",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "editor-integration",
     "featureIds": [
       "F045"
