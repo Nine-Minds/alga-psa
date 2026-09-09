@@ -625,6 +625,7 @@ jobs:
         shell: bash
 
       - name: Start remaining services after setup completion
+        id: services_started
         if: steps.wait_for_setup.outputs.status == 'success' && steps.install_docker_compose.outcome == 'success'
         run: |
           echo "Setup completed successfully. Starting remaining services..."
@@ -712,7 +713,8 @@ jobs:
         shell: bash
 
       - name: Wait for Server service to be healthy
-        if: steps.wait_for_setup.outputs.status == 'success' && steps.install_docker_compose.outcome == 'success'
+        id: server_ready
+        if: ${{ !cancelled() && steps.services_started.outcome == 'success' }}
         run: |
           echo "Waiting for server service to be healthy..."
           MAX_ATTEMPTS=30 # 5 minutes (30 attempts * 10 seconds)
@@ -747,6 +749,7 @@ jobs:
         shell: bash
 
       - name: Verify provider routing from running Alga processes
+        id: provider_topology
         if: steps.wait_for_setup.outputs.status == 'success' && steps.install_docker_compose.outcome == 'success'
         env:
           E2E_EDITION: ${{ matrix.edition }}
@@ -757,7 +760,8 @@ jobs:
           node e2e-tests/harness/check-provider-topology.mjs > logs/provider-readiness-topology.json
 
       - name: Trigger Login Page to Generate Credentials
-        if: steps.wait_for_setup.outputs.status == 'success' && steps.install_docker_compose.outcome == 'success'
+        id: login_trigger
+        if: ${{ !cancelled() && steps.server_ready.outcome == 'success' }}
         run: |
           echo "Attempting to trigger login page to generate credentials in server logs..."
           APP_PORT_VALUE=$(grep APP_PORT .env | cut -d '=' -f2 | head -n 1 || echo "3000")
@@ -771,41 +775,12 @@ jobs:
         shell: bash
 
       - name: Capture Credentials from Server Logs
-        if: steps.wait_for_setup.outputs.status == 'success' && steps.install_docker_compose.outcome == 'success'
         id: capture_creds
-        run: |
-          echo "Attempting to capture credentials from server logs..."
-          # Wait a few seconds for logs to flush if needed
-          sleep 5
-          SERVER_LOGS=$(docker-compose -p alga-e2e-test logs server)
-
-          # Extract email (should be glinda@emeraldcity.oz)
-          USER_EMAIL=$(echo "$SERVER_LOGS" | grep -oP 'User Email is -> \[ \K[^ ]+' || echo "")
-          # Extract password
-          USER_PASSWORD=$(echo "$SERVER_LOGS" | grep -oP 'Password is -> \[ \K[^ ]+' || echo "")
-
-          if [ -z "$USER_EMAIL" ] || [ -z "$USER_PASSWORD" ]; then
-            echo "Failed to extract credentials from server logs."
-            echo "Server Logs:"
-            echo "$SERVER_LOGS"
-            exit 1
-          fi
-
-          echo "Successfully extracted credentials."
-          echo "e2e_user_email=$USER_EMAIL" >> "$GITHUB_OUTPUT"
-          # Use a delimiter to safely pass passwords with special characters
-          EOF_DELIM=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
-          {
-            echo "e2e_user_password<<$EOF_DELIM"
-            echo "$USER_PASSWORD"
-            echo "$EOF_DELIM"
-          } >> "$GITHUB_OUTPUT"
-          # Mask the password in logs
-          echo "::add-mask::$USER_PASSWORD"
-        shell: bash
+        if: ${{ !cancelled() && steps.login_trigger.outcome == 'success' }}
+        run: docker-compose -p alga-e2e-test logs --no-color server | node e2e-tests/harness/capture-server-credentials.mjs
 
       - name: Warm up authentication system
-        if: steps.wait_for_setup.outputs.status == 'success' && steps.capture_creds.outputs.e2e_user_email != ''
+        if: ${{ !cancelled() && steps.capture_creds.outcome == 'success' }}
         run: |
           echo "Warming up authentication system to prime database connections..."
           APP_PORT_VALUE=$(grep APP_PORT .env | cut -d '=' -f2 | head -n 1 || echo "3000")
@@ -828,19 +803,21 @@ jobs:
         shell: bash
 
       - name: Set up Node.js
-        if: steps.wait_for_setup.outputs.status == 'success'
+        id: browser_node
+        if: ${{ !cancelled() && steps.wait_for_setup.outputs.status == 'success' }}
         uses: actions/setup-node@v4
         with:
           node-version: '22'
 
       - name: Install Playwright npm packages
-        if: steps.wait_for_setup.outputs.status == 'success'
+        id: browser_packages
+        if: ${{ !cancelled() && steps.browser_node.outcome == 'success' }}
         working-directory: ./e2e-tests
         run: npm ci
         shell: bash
 
       - name: Get Playwright version
-        if: steps.wait_for_setup.outputs.status == 'success'
+        if: ${{ !cancelled() && steps.browser_packages.outcome == 'success' }}
         id: playwright_version
         working-directory: ./e2e-tests
         run: |
@@ -850,7 +827,7 @@ jobs:
         shell: bash
 
       - name: Cache Playwright browsers
-        if: steps.wait_for_setup.outputs.status == 'success'
+        if: ${{ !cancelled() && steps.playwright_version.outcome == 'success' }}
         id: playwright_cache
         uses: actions/cache@v4
         with:
@@ -858,13 +835,15 @@ jobs:
           key: ${{ runner.os }}-playwright-chromium-${{ steps.playwright_version.outputs.version }}
 
       - name: Install Playwright browsers
-        if: steps.wait_for_setup.outputs.status == 'success' && steps.playwright_cache.outputs.cache-hit != 'true'
+        id: browser_install
+        if: ${{ !cancelled() && steps.playwright_version.outcome == 'success' && steps.playwright_cache.outputs.cache-hit != 'true' }}
         working-directory: ./e2e-tests
         run: npx playwright install chromium
         shell: bash
 
       - name: Install Playwright system dependencies
-        if: steps.wait_for_setup.outputs.status == 'success'
+        id: browser_system
+        if: ${{ !cancelled() && steps.browser_packages.outcome == 'success' }}
         working-directory: ./e2e-tests
         # Hard ceiling so this step can never again consume the whole job budget.
         timeout-minutes: 12
@@ -901,9 +880,17 @@ jobs:
           done
         shell: bash
 
+      - name: Verify installed browser can launch
+        id: browser_ready
+        if: ${{ !cancelled() && steps.browser_system.outcome == 'success' && (steps.browser_install.outcome == 'success' || steps.playwright_cache.outputs.cache-hit == 'true') }}
+        working-directory: ./e2e-tests
+        timeout-minutes: 2
+        run: |
+          node --input-type=module -e 'import { chromium } from "@playwright/test"; const browser = await chromium.launch({ headless: true }); await browser.close();'
+
       - name: Verify browser retry and first-failure diagnostics policy
         id: browser_policy
-        if: steps.wait_for_setup.outputs.status == 'success'
+        if: ${{ !cancelled() && steps.browser_ready.outcome == 'success' }}
         working-directory: ./e2e-tests
         timeout-minutes: 7
         run: xvfb-run --auto-servernum npm run test:harness
@@ -911,7 +898,7 @@ jobs:
       - name: Run Playwright E2E tests
         # A diagnostic-policy failure must still fail the job, but should not
         # prevent collecting independent customer-journey evidence.
-        if: ${{ !cancelled() && (steps.browser_policy.outcome == 'success' || steps.browser_policy.outcome == 'failure') }}
+        if: ${{ !cancelled() && steps.provider_topology.outcome == 'success' && steps.capture_creds.outcome == 'success' && steps.browser_ready.outcome == 'success' && (steps.browser_policy.outcome == 'success' || steps.browser_policy.outcome == 'failure') }}
         working-directory: ./e2e-tests
         env:
           E2E_BASE_URL: http://localhost:3000
@@ -1029,7 +1016,7 @@ jobs:
 
       - name: Prepare populated v1.5.0 upgrade
         id: upgrade_schema
-        if: ${{ !cancelled() && matrix.edition == 'enterprise' && steps.api_database.outcome == 'success' }}
+        if: ${{ !cancelled() && matrix.edition == 'enterprise' && steps.api_database.outcome == 'success' && steps.capture_creds.outcome == 'success' }}
         timeout-minutes: 10
         env:
           DB_HOST: 127.0.0.1
@@ -1066,7 +1053,7 @@ jobs:
           test "$ready" = true
 
       - name: Run supported-upgrade browser gate
-        if: ${{ !cancelled() && steps.upgrade_server.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.upgrade_server.outcome == 'success' && steps.browser_ready.outcome == 'success' }}
         timeout-minutes: 10
         env:
           E2E_BASE_URL: http://localhost:3000
@@ -1124,7 +1111,7 @@ jobs:
 
       - name: Prepare populated supported Citus upgrade
         id: citus_upgrade_schema
-        if: ${{ !cancelled() && steps.citus_upgrade_service.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.citus_upgrade_service.outcome == 'success' && steps.capture_creds.outcome == 'success' }}
         timeout-minutes: 20
         env:
           DB_HOST: 127.0.0.1
@@ -1162,7 +1149,7 @@ jobs:
 
       - name: Run supported Citus upgrade browser gate
         id: citus_upgrade_browser
-        if: ${{ !cancelled() && steps.citus_upgrade_server.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.citus_upgrade_server.outcome == 'success' && steps.browser_ready.outcome == 'success' }}
         timeout-minutes: 10
         env:
           UPGRADE_DB_BACKEND: citus
@@ -1251,7 +1238,7 @@ jobs:
 
       - name: Run Teams development execution gate
         id: teams_development_browser
-        if: ${{ !cancelled() && steps.teams_development_server.outcome == 'success' && steps.teams_auth_preflight.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.teams_development_server.outcome == 'success' && steps.teams_auth_preflight.outcome == 'success' && steps.browser_ready.outcome == 'success' }}
         timeout-minutes: 10
         env:
           E2E_TEAMS_DEVELOPMENT: 'true'

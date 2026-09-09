@@ -507,7 +507,15 @@
       "status": "in_progress",
       "dependsOn": [],
       "owner": "qbo_protocol and coordinator",
-      "notes": "Run34294404179 CE/EE both fail temporal-dev up --wait after180seconds, preventing normal browser bootstrap. Agent investigating exact logs/config/image cause; do not merely extend timeout. Later missing installation credentials and browser executable failures are downstream prerequisites, not yet distinct app bugs."
+      "notes": "Current logs confirm frontend bound at container IP and namespace registration succeeds; loopback healthcheck is wrong endpoint. Probe now targets temporal-dev:7233 like workers, retaining namespace describe and all timeouts. Native real Temporal proof: bound address succeeds, wrongloopback and missingnamespace fail. Prior run also eventually reported unhealthy despite continuing; prior continuation unexplained. Actual pinned-image/Compose DNS validation pending. Evidence: evidence/native-temporal-bind-health.json."
+    },
+    {
+      "id": "R061",
+      "title": "Preserve independent browser bootstrap and require explicit phase prerequisites",
+      "status": "in_progress",
+      "dependsOn": [],
+      "owner": "coordinator and stripe_protocol",
+      "notes": "Earlier worker failure skipped initialcredentials/browserinstall but independent upgrades/Teams still executed without them. Make serverhealth/capture and Node/Playwright bootstrap explicit independent chains; actual Chromiumlaunch verifies cachehit/install readiness. PG/Citusprepare require sourcecredentials; every browserphase requires browser_ready; primary requires provider topology. API remains independent and mandatory aggregate unchanged. Native Chromiumlaunch and actionlint pass; full GitHub failure-path behavior pending."
     }
   ]
 }

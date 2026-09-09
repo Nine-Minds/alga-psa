@@ -1,0 +1,14 @@
+{
+  "status": "passed",
+  "realTemporalNativeServer": true,
+  "boundEndpointNamespaceDescribe": true,
+  "wrongLoopbackRejected": true,
+  "missingNamespaceRejected": true,
+  "limitation": "Native CLI protocol proof; pinned Linux image and Compose DNS require CI.",
+  "observedRunId": 34294404179,
+  "observedCommunityJobId": 102293311640,
+  "observedEnterpriseJobId": 102293311555,
+  "observedCause": "Frontend binds to container IP; loopback healthcheck refused. Use same temporal-dev:7233 service address as workers.",
+  "timeoutsChanged": false,
+  "localDockerRuns": false
+}

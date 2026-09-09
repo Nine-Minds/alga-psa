@@ -163,7 +163,7 @@ services:
     secrets:
       - postgres_password
     healthcheck:
-      test: ['CMD', 'tctl', '--address', '127.0.0.1:7233', '--namespace', 'default', 'namespace', 'describe']
+      test: ['CMD', 'tctl', '--address', 'temporal-dev:7233', '--namespace', 'default', 'namespace', 'describe']
       interval: 5s
       timeout: 5s
       retries: 60
