@@ -26,7 +26,13 @@ x-provider-environment: &provider-environment
   stripe_payment_webhook_secret: whsec_algasim
   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: pk_test_algasim
 
+# Shared only by this disposable CI stack; never use this value in deployments.
+x-hocuspocus-jwt-secret: &hocuspocus-jwt-secret regression-hocuspocus-jwt-only-20260909
+
 services:
+  hocuspocus:
+    environment:
+      HOCUSPOCUS_JWT_SECRET: *hocuspocus-jwt-secret
   worker-test-state:
     image: alga-e2e-test-algasim:latest
     user: '0:0'
@@ -107,6 +113,7 @@ services:
     ports: !reset []
     environment:
       <<: *provider-environment
+      HOCUSPOCUS_JWT_SECRET: *hocuspocus-jwt-secret
       TEMPORAL_ADDRESS: temporal-dev:7233
       TEMPORAL_NAMESPACE: default
       IMAP_WEBHOOK_SECRET: regression-imap-only

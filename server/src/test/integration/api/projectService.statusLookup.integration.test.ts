@@ -1,5 +1,7 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import type { Knex } from 'knex';
+import knex, { type Knex } from 'knex';
+import { getSecret } from '../../../lib/utils/getSecret';
+import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
 import { v4 as uuidv4 } from 'uuid';
 
 import { tenantDb } from '@alga-psa/db';
@@ -24,6 +26,7 @@ type Fixture = {
 type ColumnInfoMap = Record<string, unknown>;
 
 let db: Knex;
+const databaseName = `project_status_test_${uuidv4().replaceAll('-', '')}`;
 const tenantsToCleanup = new Set<string>();
 let tenantColumns: ColumnInfoMap;
 let userColumns: ColumnInfoMap;
@@ -151,12 +154,12 @@ async function createFixture(): Promise<Fixture> {
 
 describe('project service status lookup integration', () => {
   beforeAll(async () => {
-    db = await createTestDbConnection();
+    db = await createTestDbConnection({ databaseName });
     tenantColumns = await schemaTable('tenants').columnInfo();
     userColumns = await schemaTable('users').columnInfo();
     clientColumns = await schemaTable('clients').columnInfo();
     statusColumns = await schemaTable('statuses').columnInfo();
-  });
+  }, 180_000);
 
   afterEach(async () => {
     for (const tenantId of tenantsToCleanup) {
@@ -169,6 +172,13 @@ describe('project service status lookup integration', () => {
     if (db) {
       await db.destroy();
     }
+    const admin = knex({ client: 'pg', connection: {
+      host: process.env.DB_HOST || '127.0.0.1', port: Number(process.env.DB_PORT || 5432),
+      user: process.env.DB_USER_ADMIN || 'postgres',
+      password: await getSecret('postgres_password', 'DB_PASSWORD_ADMIN', 'postpass123'), database: 'postgres',
+    }, pool: { min: 0, max: 1 } });
+    try { await admin.raw('DROP DATABASE IF EXISTS ??', [databaseName]); }
+    finally { await admin.destroy(); }
   });
 
   it('creates a project when project statuses only populate status_type', async () => {
@@ -281,6 +291,33 @@ describe('project service status lookup integration', () => {
     } finally {
       failure.mockRestore();
     }
+  });
+
+  it.each(['in_progress', 'uuid'])('publishes persisted status identity while preserving %s response compatibility', async input => {
+    const fixture = await createFixture();
+    const context = { tenant: fixture.tenantId, userId: fixture.userId };
+    const service = new ProjectService();
+    vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex: db, tenant: fixture.tenantId });
+    const project = await service.createProject({ project_name: 'Event status identity', client_id: fixture.clientId } as any, context);
+    vi.mocked(publishWorkflowEvent).mockClear();
+    const status = input === 'uuid' ? fixture.activeStatusId : input;
+    const response = await service.update(project.project_id, { status } as any, context);
+    expect(response.status).toBe(status);
+    expect(await tenantTable(fixture.tenantId, 'projects').where({ project_id: project.project_id }).first())
+      .toMatchObject({ status: fixture.activeStatusId });
+    const events = vi.mocked(publishWorkflowEvent).mock.calls.map(([event]) => event);
+    expect(events.find(event => event.eventType === 'PROJECT_UPDATED')?.payload).toMatchObject({
+      changes: { status: { previous: fixture.defaultStatusId, new: fixture.activeStatusId } },
+    });
+    expect(events.find(event => event.eventType === 'PROJECT_STATUS_CHANGED')?.payload).toMatchObject({
+      previousStatus: fixture.defaultStatusId, newStatus: fixture.activeStatusId,
+    });
+    vi.mocked(publishWorkflowEvent).mockClear();
+    const repeated = await service.update(project.project_id, { status } as any, context);
+    expect(repeated.status).toBe(status);
+    const repeatedEvents = vi.mocked(publishWorkflowEvent).mock.calls.map(([event]) => event);
+    expect(repeatedEvents.some(event => event.eventType === 'PROJECT_STATUS_CHANGED')).toBe(false);
+    expect(repeatedEvents.find(event => event.eventType === 'PROJECT_UPDATED')?.payload).not.toHaveProperty('changes.status');
   });
 
   it('resolves named project statuses from status_type rows during create', async () => {

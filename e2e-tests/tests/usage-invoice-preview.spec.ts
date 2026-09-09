@@ -21,6 +21,17 @@ test('Add Usage selects the usage line over an overlapping bucket and previews t
   const params = new URLSearchParams({ tab: 'usage-tracking', clientId: client.id,
     serviceId: service.id, periodStart: period.start, periodEnd: period.end });
   await page.goto(`/msp/billing?${params}`);
+  // The fixture grants 40 hours and has no bucket usage. Usage-line records
+  // must neither consume that entitlement nor hide a failed balance panel.
+  const assertBucketBalance = async () => {
+    const chart = page.getByText(bucketLine.name, { exact: true }).locator('xpath=../../..');
+    await expect(chart.getByText('0.0 hours used', { exact: true })).toBeVisible();
+    await expect(chart.getByText('40.0 hours total', { exact: true })).toBeVisible();
+    await expect(chart.getByText('0%', { exact: true })).toBeVisible();
+    await expect(page.locator('#retry-bucket-usage')).toBeHidden();
+    await expect(page.getByText('Bucket balances could not be loaded. Retry to see the current balances.', { exact: true })).toBeHidden();
+  };
+  await assertBucketBalance();
   await page.locator('#add-usage-button').click();
   const dialog = page.getByRole('dialog', { name: 'Add Usage Record', exact: true });
   await expect(dialog.locator('#client-select-trigger')).toContainText(client.name);
@@ -44,6 +55,7 @@ test('Add Usage selects the usage line over an overlapping bucket and previews t
   expect(record.comments).toBe(comment);
   expect(record.invoiced).toBe(false);
   await page.reload();
+  await assertBucketBalance();
   const usageTable = page.locator('[data-automation-id="usage-tracking-table"]');
   const usageRow = page.getByRole('row').filter({ has: page.locator(`#usage-actions-menu-${record.usage_id}`) });
   await expect(usageRow).toContainText(service.name);

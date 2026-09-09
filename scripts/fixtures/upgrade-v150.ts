@@ -53,7 +53,30 @@ export async function seedUpgradeV150(db: Knex, hashedPassword: string, baseline
           provenance_kind: 'generated', source_rule_version: 'client_schedule|monthly|dom:1|moy:none|dow:none|ref:none',
           reason_code: 'backfill_materialization', source_run_key: `upgrade-v150:${tenant}` });
       }
-      identities.push({ label, tenant, userId, email, billing });
+      // These line-owned pool/member tables ship in v1.5.0. Keep the bucket
+      // separate from retained billable sources so invoice amounts stay unchanged.
+      const bucketLineId = randomUUID(), bucketId = randomUUID(), bucketServiceId = randomUUID(), bucketContractId = randomUUID();
+      const bucketStart = new Date().toISOString().slice(0, 10);
+      if (bucketStart < '2026-09-01') throw new Error('Bucket fixture must start after the retained invoice period');
+      await tx('contracts').insert({ tenant, contract_id: bucketContractId, contract_name: `Retained ${label} bucket contract`,
+        billing_frequency: 'monthly', is_active: true, status: 'active', currency_code: 'USD', owner_client_id: billing.clientId });
+      await tx('client_contracts').insert({ tenant, client_contract_id: randomUUID(), client_id: billing.clientId,
+        contract_id: bucketContractId, start_date: bucketStart, is_active: true });
+      const bucketLineName = `Retained ${label} bucket line`;
+      await tx('contract_lines').insert({ tenant, contract_line_id: bucketLineId, contract_id: bucketContractId,
+        contract_line_name: bucketLineName, contract_line_type: 'Fixed', billing_frequency: 'monthly',
+        billing_timing: 'arrears', cadence_owner: 'client', is_active: true, custom_rate: 0 });
+      await tx('service_catalog').insert({ tenant, service_id: bucketServiceId, service_name: `Retained ${label} bucket support`,
+        billing_method: 'hourly', custom_service_type_id: typeId, default_rate: 0, unit_of_measure: 'hour' });
+      await tx('contract_line_services').insert({ tenant, contract_line_id: bucketLineId, service_id: bucketServiceId, quantity: 1, custom_rate: 0 });
+      await tx('contract_line_buckets').insert({ tenant, bucket_id: bucketId, contract_line_id: bucketLineId,
+        bucket_name: `Retained ${label} 40-hour pool`, total_minutes: 2400, overage_rate: 0,
+        allow_rollover: false, billing_period: 'monthly', covers_all_services: false });
+      await tx('contract_line_bucket_services').insert({ tenant, bucket_id: bucketId, contract_line_id: bucketLineId,
+        service_id: bucketServiceId, burn_multiplier: 1 });
+      const bucket = { bucketId, contractId: bucketContractId, startDate: bucketStart, lineId: bucketLineId, lineName: bucketLineName, serviceId: bucketServiceId,
+        expectedTotalMinutes: 2400, expectedUsedMinutes: 0, expectedRolloverMinutes: 0 };
+      identities.push({ label, tenant, userId, email, billing: { ...billing, bucket } });
     }
     // Use the archived release's permission catalog, never the candidate catalog.
     await require(path.join(baselineRoot, 'server/seeds/dev/47_permissions.cjs')).seed(tx);

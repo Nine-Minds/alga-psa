@@ -577,6 +577,60 @@ describe('AutomaticInvoices grouped parent rows', () => {
     }, { timeout: 5000 });
   });
 
+  it('clears prior bulk selections immediately when the client filter changes', async () => {
+    render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
+    const checkbox = await waitFor(() => {
+      const element = document.getElementById('select-parent-group:client-1:2026-03-01:2026-04-01');
+      expect(element).not.toBeNull();
+      return element as HTMLInputElement;
+    });
+    vi.useFakeTimers();
+    try {
+      fireEvent.click(checkbox);
+      expect(checkbox).toBeChecked();
+      fireEvent.change(screen.getByPlaceholderText('Filter by client'), { target: { value: 'Acme' } });
+      expect(checkbox).not.toBeChecked();
+      expect(screen.queryByRole('button', { name: 'Preview Selected' })).not.toBeInTheDocument();
+      fireEvent.change(screen.getByPlaceholderText('Filter by client'), { target: { value: 'Other client' } });
+      expect(screen.getByTestId('automatic-invoices-table-row-count')).toHaveTextContent('0');
+    } finally {
+      cleanup();
+      vi.useRealTimers();
+    }
+  });
+
+  it('keeps a new filtered selection through URL persistence and previews its exact obligations', async () => {
+    const originalUrl = window.location.href;
+    window.history.replaceState({}, '', '/msp/billing?tab=invoicing&automaticClientFilter=Acme#ready');
+    render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
+    const checkbox = await waitFor(() => {
+      const element = document.getElementById('select-parent-group:client-1:2026-03-01:2026-04-01');
+      expect(element).not.toBeNull();
+      return element as HTMLInputElement;
+    });
+    expect(screen.getByPlaceholderText('Filter by client')).toHaveValue('Acme');
+    vi.useFakeTimers();
+    try {
+      fireEvent.change(screen.getByPlaceholderText('Filter by client'), { target: { value: 'Acme Co' } });
+      fireEvent.click(checkbox);
+      expect(checkbox).toBeChecked();
+      await act(async () => { await vi.advanceTimersByTimeAsync(300); });
+      expect(checkbox).toBeChecked();
+      expect(new URL(window.location.href).searchParams.get('automaticClientFilter')).toBe('Acme Co');
+      expect(new URL(window.location.href).searchParams.get('tab')).toBe('invoicing');
+      expect(window.location.hash).toBe('#ready');
+      await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Preview Selected' })); });
+      expect(mockPreviewGroupedInvoicesForSelectionInputs).toHaveBeenCalledTimes(1);
+      const groups = mockPreviewGroupedInvoicesForSelectionInputs.mock.calls[0][0];
+      expect(groups).toHaveLength(1);
+      expect(groups[0].selectorInputs).toEqual(mockDueWorkResponse.invoiceCandidates[0].members.map((member: any) => member.selectorInput));
+    } finally {
+      cleanup();
+      vi.useRealTimers();
+      window.history.replaceState({}, '', originalUrl);
+    }
+  });
+
   it('previewing a selected combinable parent renders one combined invoice preview count (T015)', async () => {
     render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
 

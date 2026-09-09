@@ -9,12 +9,18 @@ export async function captureUpgradeRecords(db, fixture) {
     contracts: ['contract_id', 'contract_name', 'status', 'currency_code'],
     usage_tracking: ['usage_id', 'client_id', 'service_id', 'contract_line_id', 'usage_date', 'quantity', 'invoiced'],
     time_entries: ['entry_id', 'user_id', 'work_item_id', 'contract_line_id', 'billable_duration', 'approval_status', 'invoiced'],
+    contract_line_buckets: ['bucket_id', 'contract_line_id', 'bucket_name', 'total_minutes', 'overage_rate', 'allow_rollover', 'billing_period', 'after_hours_multiplier', 'business_hours_schedule_id', 'covers_all_services'],
+    contract_line_bucket_services: ['bucket_id', 'service_id', 'contract_line_id', 'burn_multiplier'],
+    bucket_usage: ['usage_id', 'client_id', 'contract_line_id', 'bucket_id', 'service_catalog_id', 'period_start', 'period_end', 'minutes_used', 'overage_minutes', 'rolled_over_minutes'],
   };
   for (const { tenant } of fixture.identities) {
     result[tenant] = {};
     for (const [table, fields] of Object.entries(columns)) {
-      result[tenant][table] = await db(table).where({ tenant }).select(fields).orderBy(fields[0]);
-      assert.ok(result[tenant][table].length > 0, `Baseline fixture has no ${table}`);
+      const order = table === 'contract_line_bucket_services' ? ['bucket_id', 'service_id'] : fields[0];
+      result[tenant][table] = await db(table).where({ tenant }).select(fields).orderBy(order);
+      // An unused pool legitimately has no usage yet; preserve its empty state
+      // too, so an upgrade cannot manufacture consumption or rollover.
+      if (table !== 'bucket_usage') assert.ok(result[tenant][table].length > 0, `Baseline fixture has no ${table}`);
     }
   }
   return JSON.parse(JSON.stringify(result));

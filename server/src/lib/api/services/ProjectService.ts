@@ -381,11 +381,6 @@ export class ProjectService extends BaseService<IProject> {
           throw new NotFoundError('Project not found');
         }
         
-        // If status is requested in response, resolve it back to the expected format
-        if (data.status && !this.isUUID(data.status)) {
-          project.status = data.status;
-        }
-  
         return { beforeProject, project, occurredAt: updateData.updated_at };
       });
 
@@ -438,7 +433,12 @@ export class ProjectService extends BaseService<IProject> {
         }),
       });
 
-      return result.project as IProject;
+      // Keep events based on the persisted UUID. Named API inputs retain their
+      // response compatibility without changing the row used by subscribers.
+      return {
+        ...result.project,
+        ...(data.status && !this.isUUID(data.status) ? { status: data.status } : {}),
+      } as IProject;
     }
 
 

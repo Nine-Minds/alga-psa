@@ -21,6 +21,18 @@ test('Add Usage after upgrade preserves the old record and uses its existing con
     await signIn(page, { email: actor.email, password: process.env.E2E_USER_PASSWORD! });
     await page.goto(`/msp/billing?${new URLSearchParams({ tab: 'usage-tracking', clientId: b.clientId,
       serviceId: b.usageServiceId, periodStart: '2026-08-01', periodEnd: '2026-09-01' })}`);
+    // Expectations were authored when seeding v1.5.0, never inferred from
+    // the upgraded balance response. A broken Citus panel must fail this journey.
+    expect(b.bucket).toMatchObject({ expectedTotalMinutes: 2400, expectedUsedMinutes: 0, expectedRolloverMinutes: 0 });
+    const assertBucketBalance = async () => {
+      const chart = page.getByText(b.bucket.lineName, { exact: true }).locator('xpath=../../..');
+      await expect(chart.getByText('0.0 hours used', { exact: true })).toBeVisible();
+      await expect(chart.getByText('40.0 hours total', { exact: true })).toBeVisible();
+      await expect(chart.getByText('0%', { exact: true })).toBeVisible();
+      await expect(page.locator('#retry-bucket-usage')).toBeHidden();
+      await expect(page.getByText('Bucket balances could not be loaded. Retry to see the current balances.', { exact: true })).toBeHidden();
+    };
+    await assertBucketBalance();
     await page.locator('#add-usage-button').click();
     const dialog = page.getByRole('dialog', { name: 'Add Usage Record', exact: true });
     await expect(dialog).toBeVisible();
@@ -37,6 +49,7 @@ test('Add Usage after upgrade preserves the old record and uses its existing con
     expect(await db('usage_tracking').where({ tenant: actor.tenant, usage_id: old.usage_id }).first()).toEqual(old);
     expect(await db('usage_tracking').where({ tenant: other.tenant }).orderBy('usage_id')).toEqual(otherBefore);
     await page.reload();
+    await assertBucketBalance();
     await expect(page.locator(`#usage-actions-menu-${row.usage_id}`)).toBeVisible();
   } finally { await db.destroy(); }
 });

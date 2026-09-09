@@ -664,10 +664,10 @@
     {
       "id": "R080",
       "title": "Release completed primary-phase pools before upgrade browser execution",
-      "status": "in_progress",
+      "status": "done",
       "dependsOn": [],
       "owner": "coordinator and calendar_review",
-      "notes": "Current a0d077 PG upgrade3browsercases pass, but retained logs show2 app-user login denials and snapshot shows30 idle original server DB sessions. After real upgrade-pooler readiness probe, stop primary server/email/mainpooler before existing candidate recreation. Keep Temporal for Teams and diagnostics. Actionlint passes; actual absence of pressure awaits subsequent CI. No production pool limits changed."
+      "notes": "Current a0d077 PG upgrade3browsercases pass, but retained logs show2 app-user login denials and snapshot shows30 idle original server DB sessions. After real upgrade-pooler readiness probe, stop primary server/email/mainpooler before existing candidate recreation. Keep Temporal for Teams and diagnostics. Actionlint passes; actual absence of pressure awaits subsequent CI. No production pool limits changed. Current run34313560297 actual PG upgrade schema+3 first-attempt browser passes; retained logs contain zero pressure/Knex acquisition matches, original server DB has0 connections versus30 prior, totalclientbackends71 versus95. Evidence ci-postgres-upgrade-r080.json. Bounded retained-phase observation, not peakcapacity proof."
     },
     {
       "id": "R081",
@@ -748,6 +748,38 @@
       "dependsOn": [],
       "owner": "stripe_protocol",
       "notes": "Existing Add Usage journeys could pass with absent/failed bucket panel. Assert independent fixture balances (primary unused40hours); add a minimal v1.5-compatible bucket seed for upgrade/Citus browser coverage and preserve retained data invariants. QBO agent independently reviews legacy schema compatibility. Native first, no Docker."
+    },
+    {
+      "id": "R091",
+      "title": "Keep invoice row filtering and selection changes atomic",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "calendar_review",
+      "notes": "New browser journey exposed300ms delayed reset wiping a subsequent selection. Local immediate filter/reset with deferred URL persistence passes52 component cases and full native primary journey; CI pending. Independent review approved; native-invoice-filter-selection.json records exact source and first browser pass. Full server tsc passed; new CI validation remains separate."
+    },
+    {
+      "id": "R092",
+      "title": "Publish persisted project status identities in workflow events",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "qbo_protocol",
+      "notes": "Current CI named status input emitted in_progress into downstream UUID lookup. Publish normalized row and retain separate named API response.9 native DB cases pass; server typecheck and candidate CI pending. Independent review and full server tsc passed. project-event-status-identity.json retains delivery-boundary limit; actual CI pending."
+    },
+    {
+      "id": "R093",
+      "title": "Provide matching Hocuspocus JWT secrets in browser CI",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "calendar_review",
+      "notes": "Production server and Hocuspocus test services lacked matching JWT secret; repair scoped test compose wiring and verify runtime token validation. No daemon or local image build. Matching synthetic secret now assigned in disposable overlay. Exact CE/EE Compose render plus real token consumers verify valid and wrong-key/expired/cross-tenant/cross-ticket behavior;13 existing tests pass. Native evidence recorded, actual container/WebSocket verification pending."
+    },
+    {
+      "id": "R094",
+      "title": "Resolve invoice template failed-save test failure",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "qbo_protocol",
+      "notes": "Completed run34313560297 has1 failed unit case: resumes editing and preview when saving fails. Investigate exact behavior and fix without hiding failure via retries. Controlled deferred template loading reproduced exact missing Save Template failure. Test waits on actual enabled Save after load, preserving failed-save assertions.3/3 targeted pass; no product, retry or timeout changes. native-invoice-template-save-readiness.json; current CI pending."
     }
   ]
 }
