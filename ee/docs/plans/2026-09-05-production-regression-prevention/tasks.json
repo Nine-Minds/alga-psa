@@ -476,6 +476,30 @@
       "dependsOn": [],
       "owner": "stripe_protocol and coordinator",
       "notes": "Enterprise CI reports EACCES under root-owned node_modules/.cache/webpack. Teams-only workflow now binds a private runner-temporary disk directory owned by application UID1000 at that path, preserving cache across recompiles without RAM-backed storage or dependency-tree changes. Actual container write verification remains CI pending."
+    },
+    {
+      "id": "R057",
+      "title": "Repair Teams action typecheck and helper lint failures",
+      "status": "in_progress",
+      "dependsOn": [],
+      "owner": "qbo_protocol",
+      "notes": "Full prior-head PR audit found readonly NODE_ENV assignments and React hook lint classification of plain helper. Renamed shouldUseTeamsEmulatorEndpoints and used Vitest environment stubbing/restoration. All20focused behavioral tests, integrations TypeScript, and action ESLint pass. Coordinator reviewed behavior-preserving diff; next published CI proof pending."
+    },
+    {
+      "id": "R058",
+      "title": "Restore Graph organizer test environment using supported Vitest API",
+      "status": "in_progress",
+      "dependsOn": [],
+      "owner": "stripe_protocol",
+      "notes": "Direct NODE_ENV assignments replaced with vi.stubEnv/vi.unstubAllEnvs in real Graph organizer routing tests. Full Graph suite92tests across8files and package TypeScript pass. Coordinator reviewed isolation/restoration; next published CI proof pending."
+    },
+    {
+      "id": "R059",
+      "title": "Reduce registration collection overhead without parallelizing execution",
+      "status": "in_progress",
+      "dependsOn": [],
+      "owner": "calendar_review and coordinator",
+      "notes": "Ten-file native sample retains all63identities with isolated collection workers:1worker7.98s,2workers5.88s. Process-tree sample peak816MiB vs926MiB (~13.5% increase). Enable fileParallelism=true/maxWorkers=2 for registered-test collection only; retain filesOnly inventory, exact reconciliation, and serial execution. Evidence: evidence/native-unit-collection-performance.json. Full Linux CI performance/memory remains pending; do not extrapolate representative sample."
     }
   ]
 }

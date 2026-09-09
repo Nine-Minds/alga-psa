@@ -236,7 +236,9 @@ jobs:
           mkdir -p ../test-results/server-coverage
           node ../scripts/verify-server-unit-execution.mjs --capture-source
           npx vitest list "${selection[@]}" --filesOnly --json=../test-results/server-coverage/collected.json
-          npx vitest list "${selection[@]}" --poolOptions.forks.singleFork=false --maxWorkers=1 --json=../test-results/server-coverage/collected-tests.json
+          # Collect registrations in two isolated processes; test execution
+          # below remains serial. Keep the same independent identity inventory.
+          npx vitest list "${selection[@]}" --poolOptions.forks.singleFork=false --fileParallelism=true --maxWorkers=2 --json=../test-results/server-coverage/collected-tests.json
           node -e 'for (const file of ["collected.json", "collected-tests.json"]) { const entries = require("../test-results/server-coverage/" + file); if (!Array.isArray(entries) || entries.length === 0) throw new Error("Empty mandatory collection: " + file); }'
           npx vitest run "${selection[@]}" --poolOptions.forks.singleFork=false --maxWorkers=1 --coverage.enabled=true --coverage.reporter=text-summary --coverage.reporter=lcov --coverage.reporter=json-summary --reporter=default --reporter=json --reporter=../scripts/lib/vitest-progress-reporter.mjs --outputFile.json=./test-results.json
         env:
