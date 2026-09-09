@@ -1,4 +1,4 @@
-const { ensureTenantDistribution } = require('./utils/citusDistribution.cjs');
+const { ensureTenantDistribution, supportsTriggers } = require('./utils/citusDistribution.cjs');
 const TABLE = 'portable_workspace_restore_uploads';
 exports.up = async knex => {
   if (!await knex.schema.hasTable(TABLE)) await knex.schema.createTable(TABLE, table => {
@@ -27,8 +27,10 @@ exports.up = async knex => {
       THEN RAISE EXCEPTION 'Invalid portable restore upload transition' USING ERRCODE = '23514'; END IF;
       RETURN NEW;
     END; $$`);
-  await knex.raw(`DROP TRIGGER IF EXISTS portable_restore_upload_transition ON ${TABLE}`);
-  await knex.raw(`CREATE TRIGGER portable_restore_upload_transition BEFORE UPDATE ON ${TABLE} FOR EACH ROW EXECUTE FUNCTION portable_restore_upload_transition()`);
+  if (await supportsTriggers(knex, TABLE)) {
+    await knex.raw(`DROP TRIGGER IF EXISTS portable_restore_upload_transition ON ${TABLE}`);
+    await knex.raw(`CREATE TRIGGER portable_restore_upload_transition BEFORE UPDATE ON ${TABLE} FOR EACH ROW EXECUTE FUNCTION portable_restore_upload_transition()`);
+  }
   // Every native writer must retain the attempt fence before publishing a
   // reference. Otherwise a copy inserted after cleanup's check could point at
   // an object concurrently being deleted. Unjournaled legacy paths are outside
@@ -49,12 +51,16 @@ exports.up = async knex => {
       END IF;
       RETURN NEW;
     END; $$`);
-  await knex.raw('DROP TRIGGER IF EXISTS portable_restore_file_reference_fence ON external_files');
-  await knex.raw('CREATE TRIGGER portable_restore_file_reference_fence BEFORE INSERT OR UPDATE OF tenant, storage_path ON external_files FOR EACH ROW EXECUTE FUNCTION portable_restore_file_reference_fence()');
+  if (await supportsTriggers(knex, 'external_files')) {
+    await knex.raw('DROP TRIGGER IF EXISTS portable_restore_file_reference_fence ON external_files');
+    await knex.raw('CREATE TRIGGER portable_restore_file_reference_fence BEFORE INSERT OR UPDATE OF tenant, storage_path ON external_files FOR EACH ROW EXECUTE FUNCTION portable_restore_file_reference_fence()');
+  }
 };
 exports.down = async knex => {
   if (await knex.schema.hasTable(TABLE) && await knex(TABLE).first()) throw new Error('Cannot remove retained portable upload recovery records');
-  await knex.raw('DROP TRIGGER IF EXISTS portable_restore_file_reference_fence ON external_files');
+  if (await supportsTriggers(knex, 'external_files')) {
+    await knex.raw('DROP TRIGGER IF EXISTS portable_restore_file_reference_fence ON external_files');
+  }
   await knex.raw('DROP FUNCTION IF EXISTS portable_restore_file_reference_fence()');
   await knex.raw('DROP INDEX IF EXISTS portable_restore_file_path_idx');
   await knex.schema.dropTableIfExists(TABLE); await knex.raw('DROP FUNCTION IF EXISTS portable_restore_upload_transition()');

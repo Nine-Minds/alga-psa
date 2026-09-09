@@ -1,4 +1,4 @@
-const { ensureTenantDistribution } = require('./utils/citusDistribution.cjs');
+const { ensureTenantDistribution, supportsTriggers } = require('./utils/citusDistribution.cjs');
 const TABLE = 'co_managed_archive_manifests';
 exports.up = async knex => {
   if (!await knex.schema.hasTable(TABLE)) await knex.schema.createTable(TABLE, table => {
@@ -20,8 +20,10 @@ exports.up = async knex => {
     await knex.schema.alterTable(TABLE, table => table.foreign(['tenant'], 'co_archive_manifest_owner_fk').references(['tenant']).inTable('tenants'));
   await knex.raw(`CREATE OR REPLACE FUNCTION co_managed_archive_manifest_immutable() RETURNS trigger LANGUAGE plpgsql AS $$
     BEGIN RAISE EXCEPTION 'Retained archive manifest is immutable' USING ERRCODE = '23514'; END; $$`);
-  await knex.raw(`DROP TRIGGER IF EXISTS co_managed_archive_manifest_immutable ON ${TABLE}`);
-  await knex.raw(`CREATE TRIGGER co_managed_archive_manifest_immutable BEFORE UPDATE ON ${TABLE} FOR EACH ROW EXECUTE FUNCTION co_managed_archive_manifest_immutable()`);
+  if (await supportsTriggers(knex, TABLE)) {
+    await knex.raw(`DROP TRIGGER IF EXISTS co_managed_archive_manifest_immutable ON ${TABLE}`);
+    await knex.raw(`CREATE TRIGGER co_managed_archive_manifest_immutable BEFORE UPDATE ON ${TABLE} FOR EACH ROW EXECUTE FUNCTION co_managed_archive_manifest_immutable()`);
+  }
 };
 exports.down = async knex => {
   if (await knex.schema.hasTable(TABLE) && await knex(TABLE).first()) throw new Error('Cannot remove retained archive manifests');

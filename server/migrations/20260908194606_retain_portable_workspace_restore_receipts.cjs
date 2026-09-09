@@ -1,4 +1,4 @@
-const { ensureTenantDistribution } = require('./utils/citusDistribution.cjs');
+const { ensureTenantDistribution, supportsTriggers } = require('./utils/citusDistribution.cjs');
 const TABLE = 'portable_workspace_restores';
 exports.up = async knex => {
   if (!await knex.schema.hasTable(TABLE)) await knex.schema.createTable(TABLE, table => {
@@ -17,8 +17,10 @@ exports.up = async knex => {
   }
   await knex.raw(`CREATE OR REPLACE FUNCTION portable_workspace_restore_immutable() RETURNS trigger LANGUAGE plpgsql AS $$
     BEGIN RAISE EXCEPTION 'Portable restore receipt is immutable' USING ERRCODE = '23514'; END; $$`);
-  await knex.raw(`DROP TRIGGER IF EXISTS portable_workspace_restore_immutable ON ${TABLE}`);
-  await knex.raw(`CREATE TRIGGER portable_workspace_restore_immutable BEFORE UPDATE ON ${TABLE} FOR EACH ROW EXECUTE FUNCTION portable_workspace_restore_immutable()`);
+  if (await supportsTriggers(knex, TABLE)) {
+    await knex.raw(`DROP TRIGGER IF EXISTS portable_workspace_restore_immutable ON ${TABLE}`);
+    await knex.raw(`CREATE TRIGGER portable_workspace_restore_immutable BEFORE UPDATE ON ${TABLE} FOR EACH ROW EXECUTE FUNCTION portable_workspace_restore_immutable()`);
+  }
 };
 exports.down = async knex => {
   if (await knex.schema.hasTable(TABLE) && await knex(TABLE).first()) throw new Error('Cannot remove retained portable restore ownership');

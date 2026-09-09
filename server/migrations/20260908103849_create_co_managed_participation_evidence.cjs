@@ -1,4 +1,4 @@
-const { ensureTenantDistribution } = require('./utils/citusDistribution.cjs');
+const { ensureTenantDistribution, supportsTriggers } = require('./utils/citusDistribution.cjs');
 const TABLE = 'co_managed_participation_evidence';
 exports.up = async function(knex) {
   if (!await knex.schema.hasTable(TABLE)) await knex.schema.createTable(TABLE, table => {
@@ -34,8 +34,10 @@ exports.up = async function(knex) {
   // No customer, source, actor or client FK: this is already-retained evidence.
   await knex.raw(`CREATE OR REPLACE FUNCTION co_managed_evidence_immutable() RETURNS trigger LANGUAGE plpgsql AS $$
     BEGIN RAISE EXCEPTION 'Retained co-management evidence is immutable' USING ERRCODE = '23514'; END; $$`);
-  await knex.raw(`DROP TRIGGER IF EXISTS co_managed_evidence_immutable ON ${TABLE}`);
-  await knex.raw(`CREATE TRIGGER co_managed_evidence_immutable BEFORE UPDATE ON ${TABLE} FOR EACH ROW EXECUTE FUNCTION co_managed_evidence_immutable()`);
+  if (await supportsTriggers(knex, TABLE)) {
+    await knex.raw(`DROP TRIGGER IF EXISTS co_managed_evidence_immutable ON ${TABLE}`);
+    await knex.raw(`CREATE TRIGGER co_managed_evidence_immutable BEFORE UPDATE ON ${TABLE} FOR EACH ROW EXECUTE FUNCTION co_managed_evidence_immutable()`);
+  }
 };
 exports.down = async function(knex) {
   if (await knex.schema.hasTable(TABLE) && await knex(TABLE).first()) throw new Error('Cannot remove retained participation evidence');

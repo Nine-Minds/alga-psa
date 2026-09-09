@@ -10,10 +10,13 @@ const TABLES = [
 ];
 
 exports.up = async function up(knex) {
+  // One utility statement per raw call: `tenants` is distributed, and Citus
+  // rejects a multi-statement utility command with "cannot execute multiple
+  // utility events".
+  await knex.raw('ALTER TABLE tenants DROP CONSTRAINT IF EXISTS tenants_product_code_check');
   await knex.raw(`
-    ALTER TABLE tenants DROP CONSTRAINT IF EXISTS tenants_product_code_check;
     ALTER TABLE tenants ADD CONSTRAINT tenants_product_code_check
-      CHECK (product_code IS NOT NULL AND product_code IN ('psa', 'algadesk', 'co_managed'));
+      CHECK (product_code IS NOT NULL AND product_code IN ('psa', 'algadesk', 'co_managed'))
   `);
 
   if (!await knex.schema.hasTable('co_management_relationships')) await knex.schema.createTable('co_management_relationships', (table) => {
@@ -106,10 +109,10 @@ exports.down = async function down(knex) {
     if (await knex(table).first()) throw new Error(`Cannot roll back nonempty ${table}`);
   }
   for (const table of [...TABLES].reverse()) await knex.schema.dropTable(table);
+  await knex.raw('ALTER TABLE tenants DROP CONSTRAINT IF EXISTS tenants_product_code_check');
   await knex.raw(`
-    ALTER TABLE tenants DROP CONSTRAINT tenants_product_code_check;
     ALTER TABLE tenants ADD CONSTRAINT tenants_product_code_check
-      CHECK (product_code IS NOT NULL AND product_code IN ('psa', 'algadesk'));
+      CHECK (product_code IS NOT NULL AND product_code IN ('psa', 'algadesk'))
   `);
 };
 

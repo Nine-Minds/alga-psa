@@ -1,4 +1,4 @@
-const { ensureTenantDistribution } = require('./utils/citusDistribution.cjs');
+const { ensureTenantDistribution, supportsTriggers } = require('./utils/citusDistribution.cjs');
 const GRANTS = 'co_management_delegated_grants', RECEIPTS = 'co_management_delegated_receipts';
 exports.up = async knex => {
   if (!await knex.schema.hasTable(GRANTS)) await knex.schema.createTable(GRANTS, t => {
@@ -25,8 +25,10 @@ exports.up = async knex => {
   }
   await knex.raw(`CREATE OR REPLACE FUNCTION co_delegated_receipt_immutable() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN
     RAISE EXCEPTION 'Delegated administration receipts are immutable' USING ERRCODE = '23514'; END; $$`);
-  await knex.raw('DROP TRIGGER IF EXISTS co_delegated_receipt_immutable ON co_management_delegated_receipts');
-  await knex.raw('CREATE TRIGGER co_delegated_receipt_immutable BEFORE UPDATE ON co_management_delegated_receipts FOR EACH ROW EXECUTE FUNCTION co_delegated_receipt_immutable()');
+  if (await supportsTriggers(knex, 'co_management_delegated_receipts')) {
+    await knex.raw('DROP TRIGGER IF EXISTS co_delegated_receipt_immutable ON co_management_delegated_receipts');
+    await knex.raw('CREATE TRIGGER co_delegated_receipt_immutable BEFORE UPDATE ON co_management_delegated_receipts FOR EACH ROW EXECUTE FUNCTION co_delegated_receipt_immutable()');
+  }
 };
 exports.down = async knex => {
   for (const table of [GRANTS,RECEIPTS]) if (await knex(table).first()) throw new Error('Cannot discard delegated administration history');

@@ -1,4 +1,4 @@
-const { ensureTenantDistribution } = require('./utils/citusDistribution.cjs');
+const { ensureTenantDistribution, supportsTriggers } = require('./utils/citusDistribution.cjs');
 const TABLE = 'co_managed_archive_files';
 exports.up = async knex => {
   if (!await knex.schema.hasTable(TABLE)) await knex.schema.createTable(TABLE, table => {
@@ -28,8 +28,10 @@ exports.up = async knex => {
        (NEW.status = 'pending' AND NEW.staged_bytes IS DISTINCT FROM OLD.staged_bytes)
     THEN RAISE EXCEPTION 'Retained archive file identity and content are immutable' USING ERRCODE = '23514'; END IF;
     RETURN NEW; END; $$`);
-  await knex.raw(`DROP TRIGGER IF EXISTS co_archive_file_immutable ON ${TABLE}`);
-  await knex.raw(`CREATE TRIGGER co_archive_file_immutable BEFORE UPDATE ON ${TABLE} FOR EACH ROW EXECUTE FUNCTION co_archive_file_immutable()`);
+  if (await supportsTriggers(knex, TABLE)) {
+    await knex.raw(`DROP TRIGGER IF EXISTS co_archive_file_immutable ON ${TABLE}`);
+    await knex.raw(`CREATE TRIGGER co_archive_file_immutable BEFORE UPDATE ON ${TABLE} FOR EACH ROW EXECUTE FUNCTION co_archive_file_immutable()`);
+  }
 };
 exports.down = async knex => {
   if (await knex.schema.hasTable(TABLE) && await knex(TABLE).first()) throw new Error('Cannot remove retained archive files');

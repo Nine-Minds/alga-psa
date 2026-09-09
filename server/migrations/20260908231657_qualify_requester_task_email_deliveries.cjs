@@ -1,3 +1,4 @@
+const { supportsTriggers } = require('./utils/citusDistribution.cjs');
 const TABLE = 'co_management_requester_email_deliveries';
 async function removeRecipientCheck(knex) {
   const checks = await knex.raw("SELECT conname, pg_get_constraintdef(oid) AS definition FROM pg_constraint WHERE conrelid = ?::regclass AND contype = 'c'", [TABLE]);
@@ -10,8 +11,10 @@ exports.up = async function(knex) {
   await knex.raw(`CREATE OR REPLACE FUNCTION co_management_requester_email_qualify_resource() RETURNS trigger AS $$ BEGIN
     IF NEW.resource_type = 'ticket' AND NEW.resource_id IS NULL THEN NEW.resource_id := NEW.ticket_id; END IF;
     RETURN NEW; END; $$ LANGUAGE plpgsql`);
-  await knex.raw('DROP TRIGGER IF EXISTS co_management_requester_email_qualify_resource ON ??', [TABLE]);
-  await knex.raw('CREATE TRIGGER co_management_requester_email_qualify_resource BEFORE INSERT OR UPDATE ON ?? FOR EACH ROW EXECUTE FUNCTION co_management_requester_email_qualify_resource()', [TABLE]);
+  if (await supportsTriggers(knex, TABLE)) {
+    await knex.raw('DROP TRIGGER IF EXISTS co_management_requester_email_qualify_resource ON ??', [TABLE]);
+    await knex.raw('CREATE TRIGGER co_management_requester_email_qualify_resource BEFORE INSERT OR UPDATE ON ?? FOR EACH ROW EXECUTE FUNCTION co_management_requester_email_qualify_resource()', [TABLE]);
+  }
   await knex(TABLE).whereNull('resource_id').update({ resource_id: knex.ref('ticket_id') });
   await knex.raw('ALTER TABLE ?? ALTER COLUMN resource_id SET NOT NULL, ALTER COLUMN ticket_id DROP NOT NULL', [TABLE]);
   await removeRecipientCheck(knex);
@@ -27,7 +30,9 @@ exports.up = async function(knex) {
 exports.down = async function(knex) {
   if (await knex(TABLE).where('resource_type', 'project_task').first()) throw new Error('Cannot discard retained requester task mail');
   await removeRecipientCheck(knex);
-  await knex.raw('DROP TRIGGER IF EXISTS co_management_requester_email_qualify_resource ON ??', [TABLE]);
+  if (await supportsTriggers(knex, TABLE)) {
+    await knex.raw('DROP TRIGGER IF EXISTS co_management_requester_email_qualify_resource ON ??', [TABLE]);
+  }
   await knex.raw('DROP FUNCTION IF EXISTS co_management_requester_email_qualify_resource()');
   await knex.raw("ALTER TABLE ?? ALTER COLUMN ticket_id SET NOT NULL, ADD CHECK (recipient_kind IN ('requester_contact', 'requester_location') AND attempt_count >= 0)", [TABLE]);
   await knex.schema.alterTable(TABLE, table => { for (const column of ['resource_type', 'resource_id', 'project_id', 'contact_id']) table.dropColumn(column); });

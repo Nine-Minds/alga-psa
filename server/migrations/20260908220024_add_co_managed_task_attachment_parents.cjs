@@ -1,3 +1,4 @@
+const { supportsTriggers } = require('./utils/citusDistribution.cjs');
 const TABLES = ['co_management_conversation_attachments', 'co_managed_archive_files'];
 exports.up = async knex => {
   for (const table of TABLES) {
@@ -17,12 +18,16 @@ exports.up = async knex => {
     IF NEW.project_task_id IS DISTINCT FROM OLD.project_task_id THEN
       RAISE EXCEPTION 'Retained archive task identity is immutable' USING ERRCODE = '23514';
     END IF; RETURN NEW; END; $$`);
-  await knex.raw('DROP TRIGGER IF EXISTS co_archive_file_task_immutable ON co_managed_archive_files');
-  await knex.raw('CREATE TRIGGER co_archive_file_task_immutable BEFORE UPDATE ON co_managed_archive_files FOR EACH ROW EXECUTE FUNCTION co_archive_file_task_immutable()');
+  if (await supportsTriggers(knex, 'co_managed_archive_files')) {
+    await knex.raw('DROP TRIGGER IF EXISTS co_archive_file_task_immutable ON co_managed_archive_files');
+    await knex.raw('CREATE TRIGGER co_archive_file_task_immutable BEFORE UPDATE ON co_managed_archive_files FOR EACH ROW EXECUTE FUNCTION co_archive_file_task_immutable()');
+  }
 };
 exports.down = async knex => {
   for (const table of TABLES) if (await knex(table).whereNotNull('project_task_id').first()) throw new Error('Cannot discard retained task attachments');
-  await knex.raw('DROP TRIGGER IF EXISTS co_archive_file_task_immutable ON co_managed_archive_files');
+  if (await supportsTriggers(knex, 'co_managed_archive_files')) {
+    await knex.raw('DROP TRIGGER IF EXISTS co_archive_file_task_immutable ON co_managed_archive_files');
+  }
   await knex.raw('DROP FUNCTION IF EXISTS co_archive_file_task_immutable()');
   await knex.raw('ALTER TABLE co_management_conversation_attachments DROP CONSTRAINT co_task_attachment_publication_check');
   await knex.raw('DROP INDEX IF EXISTS co_attachment_task_comment_idx');

@@ -1,4 +1,4 @@
-const { ensureTenantDistribution } = require('./utils/citusDistribution.cjs');
+const { ensureTenantDistribution, supportsTriggers } = require('./utils/citusDistribution.cjs');
 const TABLE = 'co_managed_meeting_creation_operations';
 exports.up = async function(knex) {
   if (!await knex.schema.hasTable(TABLE)) await knex.schema.createTable(TABLE, table => {
@@ -45,8 +45,10 @@ exports.up = async function(knex) {
     END IF;
     RETURN NEW;
   END $$`);
-  await knex.raw('DROP TRIGGER IF EXISTS preserve_co_managed_meeting_creation_identity ON ??', [TABLE]);
-  await knex.raw('CREATE TRIGGER preserve_co_managed_meeting_creation_identity BEFORE UPDATE ON ?? FOR EACH ROW EXECUTE FUNCTION preserve_co_managed_meeting_creation_identity()', [TABLE]);
+  if (await supportsTriggers(knex, TABLE)) {
+    await knex.raw('DROP TRIGGER IF EXISTS preserve_co_managed_meeting_creation_identity ON ??', [TABLE]);
+    await knex.raw('CREATE TRIGGER preserve_co_managed_meeting_creation_identity BEFORE UPDATE ON ?? FOR EACH ROW EXECUTE FUNCTION preserve_co_managed_meeting_creation_identity()', [TABLE]);
+  }
 };
 exports.down = async function(knex) {
   if (!await knex.schema.hasTable(TABLE)) return;

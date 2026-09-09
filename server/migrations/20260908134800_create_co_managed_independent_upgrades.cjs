@@ -1,4 +1,4 @@
-const { ensureTenantDistribution } = require('./utils/citusDistribution.cjs');
+const { ensureTenantDistribution, supportsTriggers } = require('./utils/citusDistribution.cjs');
 const TABLE = 'co_managed_independent_upgrades';
 exports.up = async knex => {
   if (!await knex.schema.hasTable(TABLE)) await knex.schema.createTable(TABLE, table => {
@@ -26,8 +26,10 @@ exports.up = async knex => {
     await knex.schema.alterTable(TABLE, table => table.foreign(['tenant'], 'co_independent_upgrade_owner_fk').references(['tenant']).inTable('tenants'));
   await knex.raw(`CREATE OR REPLACE FUNCTION co_managed_independent_upgrade_immutable() RETURNS trigger LANGUAGE plpgsql AS $$
     BEGIN RAISE EXCEPTION 'Independent upgrade receipt is immutable' USING ERRCODE = '23514'; END; $$`);
-  await knex.raw(`DROP TRIGGER IF EXISTS co_managed_independent_upgrade_immutable ON ${TABLE}`);
-  await knex.raw(`CREATE TRIGGER co_managed_independent_upgrade_immutable BEFORE UPDATE ON ${TABLE} FOR EACH ROW EXECUTE FUNCTION co_managed_independent_upgrade_immutable()`);
+  if (await supportsTriggers(knex, TABLE)) {
+    await knex.raw(`DROP TRIGGER IF EXISTS co_managed_independent_upgrade_immutable ON ${TABLE}`);
+    await knex.raw(`CREATE TRIGGER co_managed_independent_upgrade_immutable BEFORE UPDATE ON ${TABLE} FOR EACH ROW EXECUTE FUNCTION co_managed_independent_upgrade_immutable()`);
+  }
 };
 exports.down = async knex => {
   if (await knex.schema.hasTable(TABLE) && await knex(TABLE).first()) throw new Error('Cannot remove independent upgrade receipts');
