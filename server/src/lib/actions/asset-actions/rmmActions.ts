@@ -1,1 +1,1 @@
-export * from '@enterprise/lib/actions/asset-actions/rmmActions';
+export * from '@alga-psa/assets/actions/rmmActions';

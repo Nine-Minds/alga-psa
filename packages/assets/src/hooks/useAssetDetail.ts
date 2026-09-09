@@ -1,7 +1,7 @@
 import useSWR from 'swr';
 import { useState, useCallback } from 'react';
 import { getAsset, getAssetSummaryMetrics, getAvailableAssetFacts } from '@alga-psa/assets/actions/assetActions';
-import { getAssetRmmData, refreshAssetRmmData } from '@alga-psa/assets/actions/rmmActions';
+import { getAssetRmmData, refreshAssetRmmData, triggerRmmReboot } from '@alga-psa/assets/actions/rmmActions';
 import { toast } from 'react-hot-toast';
 import { unwrapAssetActionResult } from '@alga-psa/assets/actions/assetActionErrors';
 
@@ -62,6 +62,30 @@ export function useAssetDetail(assetId: string) {
     [assetId, mutateAsset, mutateRmmData]
   );
 
+  const [isRebooting, setIsRebooting] = useState(false);
+
+  const rebootDevice = useCallback(
+    async () => {
+      if (!assetId) return;
+
+      try {
+        setIsRebooting(true);
+        const result = await triggerRmmReboot(assetId);
+        if (result.success) {
+          toast.success(result.message);
+        } else {
+          toast.error(result.message);
+        }
+      } catch (error) {
+        console.error('Error sending reboot command:', error);
+        toast.error(error instanceof Error ? error.message : 'Failed to send reboot command');
+      } finally {
+        setIsRebooting(false);
+      }
+    },
+    [assetId]
+  );
+
   return {
     asset,
     metrics,
@@ -70,6 +94,8 @@ export function useAssetDetail(assetId: string) {
     isLoading: assetLoading || metricsLoading || rmmLoading || assetFactsLoading,
     isRefreshing,
     refreshRmmData,
+    isRebooting,
+    rebootDevice,
     errors: {
       asset: assetError,
       metrics: metricsError,

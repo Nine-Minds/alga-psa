@@ -22,6 +22,26 @@ const EXPECTED_RMM_MESSAGES: Array<[match: string, response: RmmRouteError]> = [
     status: 404,
     message: 'This asset is not managed by NinjaOne.',
   }],
+  ['Asset is not managed by an RMM', {
+    status: 404,
+    message: 'This asset is not managed by an RMM integration.',
+  }],
+  ['Asset is not mapped to a Tactical RMM agent', {
+    status: 404,
+    message: 'This asset is no longer mapped to a Tactical RMM agent.',
+  }],
+  ['Device actions are not available for', {
+    status: 501,
+    message: 'Device actions are not available for this RMM provider.',
+  }],
+  ['No active Tactical RMM integration found', {
+    status: 409,
+    message: 'No active Tactical RMM integration is configured.',
+  }],
+  ['Permission denied', {
+    status: 403,
+    message: 'You do not have permission to perform this action on assets.',
+  }],
   ['No active NinjaOne integration found', {
     status: 409,
     message: 'No active NinjaOne integration is configured.',
