@@ -350,7 +350,7 @@
   {
     "id": "T039",
     "description": "card renders with id email-branding-card above email-templates-table",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "brand-panel-ui",
     "featureIds": [
       "F031"
@@ -359,7 +359,7 @@
   {
     "id": "T040",
     "description": "with an ocean theme the primary input shows #1d4ed8 and the chip reads 'From your Ocean theme'",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "brand-panel-ui",
     "featureIds": [
       "F032"
@@ -368,7 +368,7 @@
   {
     "id": "T041",
     "description": "with a saved palette differing from the suggestion the chip reads 'Saved' and 'Use suggested colors' restores it",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "brand-panel-ui",
     "featureIds": [
       "F033"
@@ -377,7 +377,7 @@
   {
     "id": "T042",
     "description": "toggling single color hides secondary-color input",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "brand-panel-ui",
     "featureIds": [
       "F034"
@@ -386,7 +386,7 @@
   {
     "id": "T043",
     "description": "Adjust reveals a cardBorder input whose change updates the preview",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "brand-panel-ui",
     "featureIds": [
       "F035"
@@ -395,7 +395,7 @@
   {
     "id": "T044",
     "description": "changing primary updates both preview iframes' srcdoc and calls no server action",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "brand-panel-ui",
     "featureIds": [
       "F036"
@@ -404,7 +404,7 @@
   {
     "id": "T045",
     "description": "navigating away with unsaved palette prompts via UnsavedChangesProvider",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "brand-panel-ui",
     "featureIds": [
       "F037"
@@ -413,7 +413,7 @@
   {
     "id": "T046",
     "description": "all interactive controls in the panel have kebab-case ids",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "brand-panel-ui",
     "featureIds": [
       "F031",

@@ -278,7 +278,7 @@
   {
     "id": "F031",
     "description": "Email branding card renders above the language filter on the Email templates tab with id email-branding-card",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "brand-panel-ui",
     "prdRefs": [
       "UX / UI Notes"
@@ -287,7 +287,7 @@
   {
     "id": "F032",
     "description": "panel prefills primary/secondary from the suggestion and shows a source chip naming the source",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "brand-panel-ui",
     "prdRefs": [
       "UX / UI Notes",
@@ -297,7 +297,7 @@
   {
     "id": "F033",
     "description": "panel shows 'Saved' chip and a 'Use suggested colors' link when a saved palette differs from the suggestion",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "brand-panel-ui",
     "prdRefs": [
       "UX / UI Notes"
@@ -306,7 +306,7 @@
   {
     "id": "F034",
     "description": "single-color toggle hides the secondary input and switches derivation",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "brand-panel-ui",
     "prdRefs": [
       "UX / UI Notes",
@@ -316,7 +316,7 @@
   {
     "id": "F035",
     "description": "derived tokens render as read-only swatches with an Adjust disclosure exposing each as an overridable color",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "brand-panel-ui",
     "prdRefs": [
       "UX / UI Notes"
@@ -325,7 +325,7 @@
   {
     "id": "F036",
     "description": "two preview iframes re-render from system template HTML with the draft palette on every change, with no server writes",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "brand-panel-ui",
     "prdRefs": [
       "UX / UI Notes"
@@ -334,7 +334,7 @@
   {
     "id": "F037",
     "description": "Save palette persists via saveEmailBrandingAction and registers with UnsavedChangesProvider while dirty",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "brand-panel-ui",
     "prdRefs": [
       "FR7"
