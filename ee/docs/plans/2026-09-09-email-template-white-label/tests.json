@@ -258,7 +258,7 @@
   {
     "id": "T029",
     "description": "apply on a fresh tenant for 3 names \u00d7 2 languages creates 6 rows whose HTML has no stock tokens",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "apply-action",
     "featureIds": [
       "F023"
@@ -267,7 +267,7 @@
   {
     "id": "T030",
     "description": "apply twice with a changed primary updates the 6 rows and leaves no trace of the first palette",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "apply-action",
     "featureIds": [
       "F024",
@@ -277,7 +277,7 @@
   {
     "id": "T031",
     "description": "apply with a customized row not ticked leaves its HTML byte-identical and reports it skipped",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "apply-action",
     "featureIds": [
       "F026"
@@ -286,7 +286,7 @@
   {
     "id": "T032",
     "description": "apply with a customized row ticked changes only stock tokens; its edited copy survives",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "apply-action",
     "featureIds": [
       "F025"
@@ -295,7 +295,7 @@
   {
     "id": "T033",
     "description": "apply against a no-stock-colors row never writes and reports 'nothing to replace'",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "apply-action",
     "featureIds": [
       "F026"
@@ -304,7 +304,7 @@
   {
     "id": "T034",
     "description": "apply result counts written + skipped + failed equal the selection size",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "apply-action",
     "featureIds": [
       "F027"
@@ -313,7 +313,7 @@
   {
     "id": "T035",
     "description": "apply for all 54 names in 8 languages completes under 10 s on the local Citus DB",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "apply-action",
     "featureIds": [
       "F029"
@@ -322,7 +322,7 @@
   {
     "id": "T036",
     "description": "apply without settings:update permission throws before any write",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "apply-action",
     "featureIds": [
       "F023"
@@ -331,7 +331,7 @@
   {
     "id": "T037",
     "description": "removeEmailBranding deletes branded rows, keeps customized rows, clears appliedAt",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "apply-action",
     "featureIds": [
       "F030"
@@ -340,7 +340,7 @@
   {
     "id": "T038",
     "description": "text_content is never modified by apply",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "apply-action",
     "featureIds": [
       "F023",

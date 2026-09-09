@@ -8,15 +8,21 @@ import { isEnterprise } from '@alga-psa/core/features';
 import { updateTenantSettings } from '@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions';
 import {
   classifyTenantTemplate,
+  planEmailBrandingApply,
+  planEmailBrandingRemoval,
   resolveEmailPalette,
   suggestEmailPalette,
+  type EmailBrandingApplyScope,
   type EmailBrandingPalette,
+  type EmailPaletteTokens,
 } from '@alga-psa/email/branding';
 import {
   normalizeEmailBrandingInput,
   readEmailBrandingPalette,
   resolveTenantLanguages,
+  type EmailBrandingApplyResult,
   type EmailBrandingPaletteInput,
+  type EmailBrandingRemoveResult,
   type EmailBrandingStatus,
   type EmailBrandingTemplateStatus,
   type TenantSettingsBlob,
@@ -172,4 +178,154 @@ export const getEmailBrandingStatusAction = withAuth(async (
       },
     };
   });
+});
+
+/** Citus distributes tenant_email_templates, so writes go in batches per language. */
+const INSERT_BATCH_SIZE = 50;
+
+function chunked<T>(rows: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let index = 0; index < rows.length; index += size) chunks.push(rows.slice(index, index + size));
+  return chunks;
+}
+
+async function persistAppliedPalette(
+  tenant: string,
+  palette: EmailBrandingPalette,
+  applied: { appliedAt: string; appliedPalette: EmailPaletteTokens } | null,
+): Promise<void> {
+  await updateTenantSettings({
+    emailBranding: applied ? { ...palette, ...applied } : { ...palette, appliedAt: undefined, appliedPalette: undefined },
+  });
+}
+
+/**
+ * Materializes the saved palette into tenant_email_templates for the selected
+ * templates and languages.
+ *
+ * Each language is written in its own transaction: a failure there is reported
+ * per row instead of losing the languages that already landed.
+ */
+export const applyEmailBrandingAction = withAuth(async (
+  user,
+  { tenant },
+  scope: EmailBrandingApplyScope,
+): Promise<EmailBrandingApplyResult> => {
+  const { knex } = await createTenantKnex();
+
+  const context = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    await requireSettingsUpdate(user, trx);
+    const settings = await readTenantSettings(trx, tenant);
+    const palette = readEmailBrandingPalette(settings.emailBranding);
+    if (!palette) throw new Error('No email branding palette has been saved');
+
+    const rows = await loadTemplateRows(trx, tenant);
+    return { settings, palette, ...rows };
+  });
+
+  const target = resolveEmailPalette(context.palette);
+  const plan = planEmailBrandingApply({
+    systemRows: context.systemTemplates,
+    tenantRows: context.tenantTemplates,
+    target,
+    appliedPalette: context.palette.appliedPalette ?? null,
+    scope,
+  });
+
+  const written: EmailBrandingApplyResult['written'] = [];
+  const failed: EmailBrandingApplyResult['failed'] = [];
+
+  for (const language of scope.languages) {
+    const inserts = plan.inserts.filter((insert) => insert.language === language);
+    const updates = plan.updates.filter((update) => update.language === language);
+    if (inserts.length === 0 && updates.length === 0) continue;
+
+    try {
+      await withTransaction(knex, async (trx: Knex.Transaction) => {
+        const now = new Date();
+
+        for (const batch of chunked(inserts, INSERT_BATCH_SIZE)) {
+          await tenantScopedTable(trx, "tenant_email_templates", tenant).insert(batch.map((insert) => ({
+            tenant,
+            name: insert.name,
+            language_code: insert.language,
+            subject: insert.subject,
+            html_content: insert.html,
+            text_content: insert.text,
+            system_template_id: insert.systemTemplateId,
+            created_at: now,
+            updated_at: now,
+          })));
+        }
+
+        // Selected first, updated by id with plain parameters: Citus rejects
+        // column references in the SET clause of a distributed table.
+        for (const update of updates) {
+          await tenantScopedTable(trx, "tenant_email_templates", tenant)
+            .where({ id: update.id })
+            .update({ html_content: update.html, updated_at: now });
+        }
+      });
+
+      written.push(
+        ...inserts.map((insert) => ({ name: insert.name, language, action: 'created' as const })),
+        ...updates.map((update) => ({ name: update.name, language, action: 'updated' as const })),
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to write templates';
+      failed.push(
+        ...inserts.map((insert) => ({ name: insert.name, language, error: message })),
+        ...updates.map((update) => ({ name: update.name, language, error: message })),
+      );
+    }
+  }
+
+  const appliedAt = written.length > 0 ? new Date().toISOString() : context.palette.appliedAt ?? null;
+  if (written.length > 0) {
+    await persistAppliedPalette(tenant, context.palette, { appliedAt: appliedAt!, appliedPalette: target });
+  }
+
+  revalidatePath(SETTINGS_PATH);
+
+  return { written, skipped: plan.skipped, failed, appliedAt };
+});
+
+/**
+ * Removes the branding this tool applied: deletes only rows that still match
+ * what it wrote, so hand-edited templates stay exactly where they are.
+ */
+export const removeEmailBrandingAction = withAuth(async (
+  user,
+  { tenant },
+): Promise<EmailBrandingRemoveResult> => {
+  const { knex } = await createTenantKnex();
+
+  const context = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    await requireSettingsUpdate(user, trx);
+    const settings = await readTenantSettings(trx, tenant);
+    const rows = await loadTemplateRows(trx, tenant);
+    return { palette: readEmailBrandingPalette(settings.emailBranding), ...rows };
+  });
+
+  const { deletable, kept } = planEmailBrandingRemoval({
+    systemRows: context.systemTemplates,
+    tenantRows: context.tenantTemplates,
+    appliedPalette: context.palette?.appliedPalette ?? null,
+  });
+
+  for (const batch of chunked(deletable, INSERT_BATCH_SIZE)) {
+    await withTransaction(knex, async (trx: Knex.Transaction) => {
+      await tenantScopedTable(trx, "tenant_email_templates", tenant)
+        .whereIn('id', batch.map((row) => row.id))
+        .del();
+    });
+  }
+
+  if (context.palette) {
+    await persistAppliedPalette(tenant, context.palette, null);
+  }
+
+  revalidatePath(SETTINGS_PATH);
+
+  return { removed: deletable.length, kept: kept.length };
 });

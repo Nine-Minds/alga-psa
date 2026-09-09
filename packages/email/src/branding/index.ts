@@ -20,3 +20,16 @@ export {
   type ClassifyTenantTemplateInput,
 } from './classifyTenantTemplate';
 export { suggestEmailPalette, type SuggestEmailPaletteInput } from './suggestEmailPalette';
+export {
+  planEmailBrandingApply,
+  planEmailBrandingRemoval,
+  type BrandableSystemRow,
+  type BrandableTenantRow,
+  type EmailBrandingApplyPlan,
+  type EmailBrandingApplyPlanInput,
+  type EmailBrandingApplyScope,
+  type EmailBrandingSkipReason,
+  type PlannedTemplateInsert,
+  type PlannedTemplateSkip,
+  type PlannedTemplateUpdate,
+} from './planEmailBrandingApply';

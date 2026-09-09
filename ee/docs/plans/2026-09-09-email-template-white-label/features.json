@@ -205,7 +205,7 @@
   {
     "id": "F023",
     "description": "applyEmailBrandingAction inserts branded clones for 'system' selections with system_template_id set",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "apply-action",
     "prdRefs": [
       "FR6"
@@ -214,7 +214,7 @@
   {
     "id": "F024",
     "description": "applyEmailBrandingAction updates 'branded' rows by rewriting from appliedPalette to the new map",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "apply-action",
     "prdRefs": [
       "FR6"
@@ -223,7 +223,7 @@
   {
     "id": "F025",
     "description": "applyEmailBrandingAction rewrites ticked 'customized' rows replacing only stock/applied tokens",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "apply-action",
     "prdRefs": [
       "FR6"
@@ -232,7 +232,7 @@
   {
     "id": "F026",
     "description": "applyEmailBrandingAction skips unticked customized rows and no-stock-colors rows and reports them",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "apply-action",
     "prdRefs": [
       "FR6"
@@ -241,7 +241,7 @@
   {
     "id": "F027",
     "description": "applyEmailBrandingAction returns written/skipped/failed with per-row reasons",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "apply-action",
     "prdRefs": [
       "FR6"
@@ -250,7 +250,7 @@
   {
     "id": "F028",
     "description": "applyEmailBrandingAction records appliedAt and appliedPalette after success",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "apply-action",
     "prdRefs": [
       "FR6",
@@ -260,7 +260,7 @@
   {
     "id": "F029",
     "description": "applyEmailBrandingAction batches inserts and updates per language inside a transaction",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "apply-action",
     "prdRefs": [
       "Non-functional Requirements"
@@ -269,7 +269,7 @@
   {
     "id": "F030",
     "description": "removeEmailBrandingAction deletes only rows classified branded and clears appliedAt",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "apply-action",
     "prdRefs": [
       "FR12"

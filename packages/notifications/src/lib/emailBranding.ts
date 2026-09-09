@@ -13,6 +13,7 @@ import {
   type EmailBrandingSuggestion,
   type EmailPaletteOverrides,
   type EmailPaletteTokens,
+  type PlannedTemplateSkip,
   type TenantTemplateDifference,
   type TenantTemplateState,
 } from '@alga-psa/email/branding';
@@ -46,6 +47,30 @@ export interface EmailBrandingStatus {
   canEdit: boolean;
   isEnterprise: boolean;
   logoOptions: EmailBrandingLogoOptions;
+}
+
+export interface EmailBrandingWrittenRow {
+  name: string;
+  language: string;
+  action: 'created' | 'updated';
+}
+
+export interface EmailBrandingFailedRow {
+  name: string;
+  language: string;
+  error: string;
+}
+
+export interface EmailBrandingApplyResult {
+  written: EmailBrandingWrittenRow[];
+  skipped: PlannedTemplateSkip[];
+  failed: EmailBrandingFailedRow[];
+  appliedAt: string | null;
+}
+
+export interface EmailBrandingRemoveResult {
+  removed: number;
+  kept: number;
 }
 
 export interface EmailBrandingPaletteInput {
