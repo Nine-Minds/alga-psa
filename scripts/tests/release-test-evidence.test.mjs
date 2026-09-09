@@ -10,6 +10,7 @@ function fixture() {
     revision: String(index + 1).repeat(40), build: { provider: 'github-actions', runId: 100 + index },
   })) };
   const input = { revision, edition, manifest, requiredComponents, requiredChecks: ['browser-ee', 'email-intake', 'worker-runtime'] };
+  input.requiredCheckConfigurations = { 'browser-ee': { providers: { stripe: { mode: 'emulator', protocol: 'fixture-v1' } }, authentication: 'credentials' }, 'email-intake': { transport: 'smtp-test-sink' }, 'worker-runtime': {} };
   const digest = releaseManifestDigest(input);
   const expectedTarget = { context: 'release-smoke', namespace: 'isolated', workloads: ['server', 'email-service', 'worker'].map(name => ({ kind: 'Deployment', name })) };
   const renderedResources = manifest.components.map(component => ({ kind: 'Deployment',
@@ -18,7 +19,7 @@ function fixture() {
   return { ...input, renderedResources, expectedTarget, maxObservationAgeSeconds: 300,
     runtimeEvidence: { schemaVersion: 1, scope: 'kubernetes-runtime-image-observations', target: structuredClone(expectedTarget),
       observedAt: new Date().toISOString(), observations: structuredClone(manifest.components) }, evidence: { schemaVersion: 1, revision, edition,
-    manifestDigest: digest, results: input.requiredChecks.map(id => ({ id, status: 'passed', failures: [], manifestDigest: digest })) } };
+    manifestDigest: digest, results: input.requiredChecks.map(id => ({ id, status: 'passed', failures: [], manifestDigest: digest, configuration: structuredClone(input.requiredCheckConfigurations[id]) })) } };
 }
 
 test('exact tested and deployed component set passes, including explicitly distinct component source revisions', () => {
@@ -95,7 +96,7 @@ test('promotion CLI rejects an email-only replacement even when the runtime matc
   t.after(() => rmSync(root, { recursive: true, force: true }));
   const input = fixture();
   const write = (name, value) => writeFileSync(path.join(root, name), JSON.stringify(value));
-  write('policy.json', { revision: input.revision, edition: input.edition, requiredComponents: input.requiredComponents, requiredChecks: input.requiredChecks, expectedTarget: input.expectedTarget, maxObservationAgeSeconds: input.maxObservationAgeSeconds });
+  write('policy.json', { revision: input.revision, edition: input.edition, requiredComponents: input.requiredComponents, requiredChecks: input.requiredChecks, requiredCheckConfigurations: input.requiredCheckConfigurations, expectedTarget: input.expectedTarget, maxObservationAgeSeconds: input.maxObservationAgeSeconds });
   write('rendered.json', input.renderedResources); write('manifest.json', input.manifest); write('evidence.json', input.evidence); write('observations.json', input.runtimeEvidence);
   const cli = fileURLToPath(new URL('../verify-release-promotion.mjs', import.meta.url));
   const run = () => {
@@ -104,6 +105,12 @@ test('promotion CLI rejects an email-only replacement even when the runtime matc
     assert.equal(child.status, result.status === 'passed' ? 0 : 1, child.stderr);
     return result;
   };
+  assert.equal(run().status, 'passed');
+  input.evidence.results[0].configuration.providers.stripe.mode = 'sandbox';
+  write('evidence.json', input.evidence);
+  assert.equal(run().status, 'failed');
+  input.evidence.results[0].configuration.providers.stripe.mode = 'emulator';
+  write('evidence.json', input.evidence);
   assert.equal(run().status, 'passed');
   input.manifest.components[1].image = `registry.example.test/email-service@sha256:${'e'.repeat(64)}`;
   input.runtimeEvidence.observations = structuredClone(input.manifest.components);
@@ -197,4 +204,39 @@ test('explicitly inventoried and tested init container passes with the same rend
   input.evidence.manifestDigest = digest;
   for (const result of input.evidence.results) result.manifestDigest = digest;
   assert.equal(verifyReleasePromotion(input).status, 'passed');
+});
+
+for (const [label, mutate] of [
+  ['missing consumer policy', x => { delete x.requiredCheckConfigurations; }],
+  ['missing required configuration', x => { delete x.requiredCheckConfigurations['browser-ee']; }],
+  ['unknown policy check', x => { x.requiredCheckConfigurations['not-required'] = {}; }],
+  ['missing result configuration', x => { delete x.evidence.results[0].configuration; }],
+  ['provider mode changed', x => { x.evidence.results[0].configuration.providers.stripe.mode = 'sandbox'; }],
+  ['protocol changed', x => { x.evidence.results[0].configuration.providers.stripe.protocol = 'fixture-v2'; }],
+  ['authentication changed', x => { x.evidence.results[0].configuration.authentication = 'prelinked'; }],
+  ['extra unapproved configuration', x => { x.evidence.results[0].configuration.override = true; }],
+  ['non-JSON configuration', x => { x.requiredCheckConfigurations['worker-runtime'].value = undefined; }],
+]) test(`release configuration rejects ${label} despite passing checks and matching images`, () => {
+  const input = fixture(); mutate(input);
+  const result = verifyReleasePromotion(input);
+  assert.equal(result.status, 'failed');
+  assert.ok(result.failures.some(message => /configuration/i.test(message)));
+});
+
+test('configuration comparison ignores object key order but keeps array order and exact values', () => {
+  const input = fixture();
+  input.evidence.results[0].configuration = { authentication: 'credentials', providers: { stripe: { protocol: 'fixture-v1', mode: 'emulator' } } };
+  assert.equal(verifyReleasePromotion(input).status, 'passed');
+  input.requiredCheckConfigurations['worker-runtime'] = { phases: ['start', 'consume'] };
+  input.evidence.results[2].configuration = { phases: ['consume', 'start'] };
+  assert.equal(verifyReleasePromotion(input).status, 'failed');
+});
+
+for (const side of ['policy', 'result']) test(`sparse arrays cannot disappear from direct ${side} configuration`, () => {
+  const input = fixture();
+  input.requiredCheckConfigurations['worker-runtime'] = { values: [] };
+  input.evidence.results[2].configuration = { values: [] };
+  if (side === 'policy') input.requiredCheckConfigurations['worker-runtime'].values = Array(1);
+  else input.evidence.results[2].configuration.values = Array(1);
+  assert.equal(verifyReleasePromotion(input).status, 'failed');
 });

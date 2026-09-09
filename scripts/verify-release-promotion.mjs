@@ -13,6 +13,7 @@ try {
   const policy = read(policyFile);
   result = verifyReleasePromotion({ revision: policy.revision, edition: policy.edition,
     requiredComponents: policy.requiredComponents, requiredChecks: policy.requiredChecks,
+    requiredCheckConfigurations: policy.requiredCheckConfigurations,
     expectedTarget: policy.expectedTarget, maxObservationAgeSeconds: policy.maxObservationAgeSeconds,
     renderedResources: read(renderedFile), manifest: read(manifestFile), evidence: read(evidenceFile), runtimeEvidence: read(observationsFile) });
 } catch (error) { result = { schemaVersion: 1, scope: 'release-promotion-identities', status: 'failed', failures: [error.message] }; }

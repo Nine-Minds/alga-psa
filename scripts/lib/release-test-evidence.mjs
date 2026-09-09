@@ -6,7 +6,7 @@ import { validateReleaseManifest, compareReleaseDeployment } from './release-com
 function canonical(value) {
   if (value === null || typeof value === 'string' || typeof value === 'boolean') return JSON.stringify(value);
   if (typeof value === 'number' && Number.isFinite(value)) return JSON.stringify(value);
-  if (Array.isArray(value)) return `[${value.map(canonical).join(',')}]`;
+  if (Array.isArray(value)) return `[${Array.from(value, canonical).join(',')}]`;
   if (value && typeof value === 'object' && Object.getPrototypeOf(value) === Object.prototype) {
     return `{${Object.keys(value).sort().map(key => `${JSON.stringify(key)}:${canonical(value[key])}`).join(',')}}`;
   }
@@ -40,7 +40,7 @@ export function releaseManifestDigest(input) {
 // Required check identities are supplied by the consuming release policy,
 // independently of submitted evidence. The producer must bind every verdict
 // when testing the actual running component set; this does not attest provenance.
-export function verifyReleaseTestEvidence({ manifest, revision, edition, requiredComponents, requiredChecks, evidence }) {
+export function verifyReleaseTestEvidence({ manifest, revision, edition, requiredComponents, requiredChecks, requiredCheckConfigurations, evidence }) {
   const input = { manifest, revision, edition, requiredComponents };
   const failures = [...validateReleaseManifest(input).failures];
   let manifestDigest;
@@ -48,6 +48,22 @@ export function verifyReleaseTestEvidence({ manifest, revision, edition, require
   if (!Array.isArray(requiredChecks) || !requiredChecks.length || requiredChecks.some(id => typeof id !== 'string' || !id.trim())
     || new Set(requiredChecks).size !== requiredChecks.length) failures.push('Missing, empty or duplicate required release checks');
   const checks = Array.isArray(requiredChecks) ? requiredChecks : [];
+  const plainObject = value => value !== null && typeof value === 'object' && Object.getPrototypeOf(value) === Object.prototype;
+  // Every check has an explicit consumer-owned configuration, including {} for
+  // checks without configuration. Evidence cannot choose its own expectations.
+  const configurations = new Map();
+  if (!plainObject(requiredCheckConfigurations)) failures.push('Missing required release check configuration policy');
+  else {
+    for (const id of Object.keys(requiredCheckConfigurations)) {
+      if (!checks.includes(id)) failures.push(`Configuration for unexpected release check: ${id}`);
+    }
+    for (const id of checks) {
+      try {
+        if (!Object.hasOwn(requiredCheckConfigurations, id) || !plainObject(requiredCheckConfigurations[id])) throw new Error();
+        configurations.set(id, canonical(requiredCheckConfigurations[id]));
+      } catch { failures.push(`${id}: missing or invalid required configuration`); }
+    }
+  }
   if (evidence?.schemaVersion !== 1 || evidence?.revision !== revision || evidence?.edition !== edition) failures.push('Unsupported or stale release test evidence');
   if (!manifestDigest || evidence?.manifestDigest !== manifestDigest) failures.push('Tests belong to a different release manifest');
   if (!Array.isArray(evidence?.results) || !evidence.results.length) failures.push('Missing release test results');
@@ -57,6 +73,10 @@ export function verifyReleaseTestEvidence({ manifest, revision, edition, require
     seen.add(result?.id);
     if (result?.manifestDigest !== manifestDigest) failures.push(`${result?.id}: check belongs to a different manifest`);
     if (result?.status !== 'passed' || !Array.isArray(result?.failures) || result.failures.length) failures.push(`${result?.id}: incomplete release check`);
+    try {
+      if (!configurations.has(result?.id) || !plainObject(result?.configuration)
+        || canonical(result.configuration) !== configurations.get(result.id)) throw new Error();
+    } catch { failures.push(`${result?.id}: missing, invalid or mismatched release check configuration`); }
   }
   for (const id of checks) if (!seen.has(id)) failures.push(`Missing required release check: ${id}`);
   return { schemaVersion: 1, scope: 'tested-release-manifest', revision, edition, manifestDigest,

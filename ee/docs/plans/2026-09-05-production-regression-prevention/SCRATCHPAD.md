@@ -3463,3 +3463,9 @@ The native Teams reproduction traced missing SSR dashboard markup to the i18n lo
 Final cross-review: Teams fixtures15/15 pass with exact browser failure predicates and fixture-only cold-launch budgets; billing component10/10 and scoped typecheck pass; real PostgreSQL bucket suite4/4 now includes colliding child IDs across tenants; Citus runner/consumer behavioral checks2/2 pass. No local Docker. Commit reviewed batch before full native tooling execution; current CI remains on preceding561a6 source.
 
 Complete canonical native tooling on clean b37974f54025c94756dfe899f42390cd640ef61d:912/912 tests,85 required files,0 fail/skip/TODO/cancel,161.32seconds. Source snapshots unchanged and clean before/after; evidence/native-node-tooling-b37974.json. Local Node25.5.0, not CI Node22 proof. Active34313560297 still tests561a6; no push while it remains active.
+
+### Remaining behavioral boundaries after clean native batch
+
+Current CI34313560297 remains live on561a6, so the reviewed b37974/2c539 batch is still local. Parallel work adds scheduling-mediated Teams meeting update/delete, real Xero multi-organisation refresh isolation, and accurate Vitest TODO diagnostics without relaxing completeness. Coordinator found release configuration was informational: passed IDs and manifest digests could hide different provider/auth configuration. Added mandatory consumer-owned per-check configurations and exact result matching;10 new behavioral cases fail before,56 related tests pass after including real CLI serialization. No deployment target or operational policy invented; actual policy rollout remains outstanding.
+
+Review completion: release configuration58/58 tests pass after independent review and sparse-array API correction; Xero23/23 plus TypeScript; TODO diagnostics19/19 plus full historical15010pass/3TODO replay, failed gate preserved. Teams update/delete actual native journey remains running and its spec is not yet included in the reviewed commit.

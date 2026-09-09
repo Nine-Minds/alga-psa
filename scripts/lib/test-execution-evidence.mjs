@@ -49,6 +49,7 @@ export function reconcileExecution({ collected, report, root, suite, revision, e
   if (report?.success !== true) failures.push('Runner did not report success');
   const expectedTests = new Map();
   const executedTests = new Map();
+  const ranTestIdentities = new Set();
   const identity = (file, name) => JSON.stringify([normalize(file), name]);
   if (collectedTests !== undefined) {
     if (!Array.isArray(collectedTests) || !collectedTests.length) failures.push('Required test collection is empty');
@@ -83,7 +84,10 @@ export function reconcileExecution({ collected, report, root, suite, revision, e
       executedTests.set(key, (executedTests.get(key) ?? 0) + 1);
       if (!(status in counts)) failures.push(`Unknown assertion status ${status}: ${name}`);
       else counts[status]++;
-      if (status === 'passed' || status === 'failed') executed++;
+      if (status === 'passed' || status === 'failed') {
+        executed++;
+        ranTestIdentities.add(key);
+      }
       if (['pending', 'failed', 'skipped', 'todo'].includes(status)) failures.push(`${status}: ${name} > ${assertion.fullName}`);
     }
     // A suite whose setup silently skips every test does not provide DB
@@ -96,7 +100,10 @@ export function reconcileExecution({ collected, report, root, suite, revision, e
       if (executedTests.get(key) !== count) failures.push(`Collected/executed test count differs: ${key}`);
     }
     for (const key of executedTests.keys()) {
-      if (!expectedTests.has(key)) failures.push(`Unexpected executed test: ${key}`);
+      // Vitest list omits statically skipped/TODO registrations, while its
+      // JSON reporter includes them. Their required status failures above stay
+      // intact; only bodies that ran can be unexpectedly executed tests.
+      if (!expectedTests.has(key) && ranTestIdentities.has(key)) failures.push(`Unexpected executed test: ${key}`);
     }
   }
   const assertions = Object.values(counts).reduce((sum, count) => sum + count, 0);

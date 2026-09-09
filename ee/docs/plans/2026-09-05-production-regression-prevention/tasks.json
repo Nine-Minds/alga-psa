@@ -700,6 +700,38 @@
       "dependsOn": [],
       "owner": "calendar_review",
       "notes": "Citusquery failure exposedconsole-only UsageTracking error handling. Clear stale bucketresults and show actionable refreshfailure; verify successfulload thenfailure thenrecovery with componentbehavioral test. Queryfix separatelyR083. Reviewed10nativecases+scopedtypecheck pass; actualpre-fixalertfailure reproduced. Evidence native-bucket-usage-error-recovery.json; browserverification remains separate."
+    },
+    {
+      "id": "R085",
+      "title": "Verify Teams scheduling update and deletion against Graph",
+      "status": "in_progress",
+      "dependsOn": [],
+      "owner": "stripe_protocol",
+      "notes": "Extend existing real UI meeting journey with update/delete, stable provider identity, Graph and database readback; isolated native execution, no SSO claim."
+    },
+    {
+      "id": "R086",
+      "title": "Distinguish Vitest TODO registrations from executed identities",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "calendar_review",
+      "notes": "Fix misleading unexpected-executed diagnostics when Vitest list omits TODO/skip; preserve required status failures and test with actual Vitest list/run.19/19 native checks pass including real Vitest3 list/run. Historical artifact replay preserves all identities and15010pass/3TODO counts and failed verdict, removing only three redundant diagnostics; native-todo-execution-diagnostics.json."
+    },
+    {
+      "id": "R087",
+      "title": "Verify Xero refresh preserves concurrent organisation credentials",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "qbo_protocol",
+      "notes": "Actual XeroClientService HTTP scenario verifies selected tenant routing, one refresh/retry and sibling credential preservation using isolated emulator state.23/23 native Xero tests and package TypeScript pass. Exact GET401/tokenPOST200/GET200 trace and one credential write; private secret memory and mocked lock limits explicit. Existing default CI glob discovers test; xero-selected-organisation-recovery.json."
+    },
+    {
+      "id": "R088",
+      "title": "Bind release results to consumer-owned check configuration",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "coordinator",
+      "notes": "Require explicit per-check configuration policy and exact result match, including provider modes/protocol/authentication. Ten native red tests before fix;56 targeted tests pass after, including CLI. Actual release enforcement remains separate. Independent review approved policy/CLI path; direct API sparse-array edge fixed with two red regressions. Final58/58 targeted tests pass. Native evidence recorded; F036 remains open for actual release rollout."
     }
   ]
 }
