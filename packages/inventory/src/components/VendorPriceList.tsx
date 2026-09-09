@@ -7,8 +7,9 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { CurrencyInput } from '@alga-psa/ui/components/CurrencyInput';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import CurrencyPicker from '@alga-psa/ui/components/CurrencyPicker';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
-import { CURRENCY_OPTIONS, toMinorUnits } from '@alga-psa/core';
+import { toMinorUnits } from '@alga-psa/core';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
@@ -253,12 +254,11 @@ export function VendorPriceList({
               value={form.unit_cost ? Number(form.unit_cost) : undefined}
               onChange={(value) => setForm({ ...form, unit_cost: value == null ? '' : String(value) })}
             />
-            <CustomSelect
+            <CurrencyPicker
               id="vendor-offer-currency"
               label={t('vendorPriceList.fields.currency', 'Currency')}
               value={form.cost_currency}
               onValueChange={(value) => setForm({ ...form, cost_currency: value })}
-              options={CURRENCY_OPTIONS.map((option) => ({ value: option.value, label: option.label }))}
             />
             <Input
               id="vendor-offer-lead-time"

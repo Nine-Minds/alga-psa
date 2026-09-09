@@ -4,6 +4,7 @@ import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { SearchableSelect } from '@alga-psa/ui/components/SearchableSelect';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import type { ExternalEntityMapping } from '@alga-psa/integrations/actions';
@@ -245,14 +246,15 @@ export function AccountingMappingDialog({
             <Label htmlFor={`${module.id}-alga-select`} className="text-sm font-medium text-foreground">
               {module.labels.dialog.algaField}
             </Label>
-            <CustomSelect
+            <SearchableSelect
               id={`${module.id}-alga-select`}
               options={algaOptions}
               value={selectedAlgaId}
-              onValueChange={(value: string) => setSelectedAlgaId(value || '')}
+              onChange={(value: string) => setSelectedAlgaId(value || '')}
               placeholder={t('integrations.accounting.dialog.selectPlaceholder', { defaultValue: 'Select {{field}}...', field: module.labels.dialog.algaField })}
               required
               className="w-full"
+              dropdownMode="overlay"
             />
           </div>
 
@@ -286,17 +288,18 @@ export function AccountingMappingDialog({
               // With a multi-catalog target config the picker is catalog-backed
               // only — no free-text fallback, so an arbitrary string, display
               // name, or other-organisation code can never be submitted.
-              <CustomSelect
+              <SearchableSelect
                 id={`${module.id}-external-select`}
                 options={externalOptions}
                 value={selectedExternalId}
-                onValueChange={(value: string) => {
+                onChange={(value: string) => {
                   setSelectedExternalId(value || '');
                   if (value) setStaleTarget(false);
                 }}
                 placeholder={t('integrations.accounting.dialog.selectPlaceholder', { defaultValue: 'Select {{field}}...', field: module.labels.dialog.externalField })}
                 required
                 className="w-full"
+                dropdownMode="overlay"
               />
             ) : (
               <Input

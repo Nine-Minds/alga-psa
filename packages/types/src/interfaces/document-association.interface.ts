@@ -2,8 +2,8 @@ import { TenantEntity } from ".";
 
 export type DocumentAssociationEntityType = 'user' | 'ticket' | 'client' | 'contact' | 'asset' | 'project_task' | 'contract' | 'tenant' | 'quote' | 'invoice' | 'sales_order' | 'document';
 
-/** Light ('default') vs dark logo slot for entity logos. */
-export type EntityLogoVariant = 'default' | 'dark';
+/** Logo slot for entity logos: light/dark mark, landscape wordmark, or favicon. */
+export type EntityLogoVariant = 'default' | 'dark' | 'wide' | 'wide-dark' | 'favicon';
 
 export interface IDocumentAssociation extends TenantEntity {
     association_id: string;

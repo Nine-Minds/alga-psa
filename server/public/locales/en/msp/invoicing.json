@@ -1603,6 +1603,9 @@
               "label": "Contract.pdf"
             }
           }
+        },
+        "totals-rows": {
+          "title": "Totals Rows"
         }
       }
     },
@@ -2000,6 +2003,15 @@
       "visibleInPortal": "Visible in client portal",
       "dialogTitle": "Select Image",
       "dialogDescription": "Choose an image from your documents to use in this template."
+    },
+    "totalsRowsEditor": {
+      "rowBackground": "Row background",
+      "rowTextColor": "Text color",
+      "resetColors": "Reset colors",
+      "clearRowBackground": "Clear row background color",
+      "clearRowTextColor": "Clear row text color",
+      "labelColorOverrideNote": "This label keeps its own saved color and does not inherit the row text color set above. The amount still follows the row text color.",
+      "noRows": "This totals block has no saved rows yet. Save the template and reopen it to edit row colors."
     }
   },
   "draftInvoiceDetails": {

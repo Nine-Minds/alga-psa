@@ -466,7 +466,8 @@
     "collapseSidebar": "⟦Ƈȯŀŀȧƥşḗ şīḓḗƀȧř⟧",
     "collapseSection": "⟦Ƈȯŀŀȧƥşḗ {{section}}⟧",
     "expandSection": "⟦Ḗẋƥȧƞḓ {{section}}⟧",
-    "appLogoAlt": "⟦{{appName}} Ŀȯɠȯ⟧"
+    "appLogoAlt": "⟦{{appName}} Ŀȯɠȯ⟧",
+    "poweredBy": "⟦Ƥȯẇḗřḗḓ ƀẏ⟧"
   },
   "settings": {
     "sections": {

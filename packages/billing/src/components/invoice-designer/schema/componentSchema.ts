@@ -699,6 +699,23 @@ const TABLE_INSPECTOR: DesignerInspectorSchema = {
   ],
 };
 
+const TOTALS_ROWS_INSPECTOR: DesignerInspectorSchema = {
+  panels: [
+    {
+      id: 'totals-rows',
+      title: 'Totals Rows',
+      fields: [
+        {
+          kind: 'widget',
+          id: 'totalsRows',
+          domId: 'designer-totals-rows-editor',
+          widget: 'totals-rows-editor',
+        },
+      ],
+    },
+  ],
+};
+
 export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerComponentSchema> = {
   document: {
     type: 'document',
@@ -867,7 +884,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
       allowedChildren: [],
       allowedParents: ['page', 'column', 'container', 'section'],
     },
-    inspector: COMMON_INSPECTOR,
+    inspector: mergeInspectorSchemas(COMMON_INSPECTOR, TOTALS_ROWS_INSPECTOR),
   },
   table: {
     type: 'table',

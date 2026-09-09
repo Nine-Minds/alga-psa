@@ -1603,6 +1603,9 @@
               "label": "Contrato.pdf"
             }
           }
+        },
+        "totals-rows": {
+          "title": "Filas de totales"
         }
       }
     },
@@ -2000,6 +2003,15 @@
       "visibleInPortal": "Visible en el portal del cliente",
       "dialogTitle": "Seleccionar imagen",
       "dialogDescription": "Elija una imagen de sus documentos para usarla en esta plantilla."
+    },
+    "totalsRowsEditor": {
+      "rowBackground": "Fondo de fila",
+      "rowTextColor": "Color del texto",
+      "resetColors": "Restablecer colores",
+      "clearRowBackground": "Borrar color de fondo de la fila",
+      "clearRowTextColor": "Borrar color de texto de la fila",
+      "labelColorOverrideNote": "Esta etiqueta conserva su propio color guardado y no hereda el color de texto de la fila establecido arriba. El importe sigue el color de texto de la fila.",
+      "noRows": "Este bloque de totales aún no tiene filas guardadas. Guarde la plantilla y vuelva a abrirla para editar los colores de las filas."
     }
   },
   "draftInvoiceDetails": {

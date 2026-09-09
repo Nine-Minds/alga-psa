@@ -1603,6 +1603,9 @@
               "label": "Contrato.pdf"
             }
           }
+        },
+        "totals-rows": {
+          "title": "Linhas de totais"
         }
       }
     },
@@ -2000,6 +2003,15 @@
       "visibleInPortal": "Visível no portal do cliente",
       "dialogTitle": "Selecionar imagem",
       "dialogDescription": "Escolha uma imagem dos seus documentos para usar neste modelo."
+    },
+    "totalsRowsEditor": {
+      "rowBackground": "Fundo da linha",
+      "rowTextColor": "Cor do texto",
+      "resetColors": "Redefinir cores",
+      "clearRowBackground": "Limpar cor de fundo da linha",
+      "clearRowTextColor": "Limpar cor do texto da linha",
+      "labelColorOverrideNote": "Este rótulo mantém a sua própria cor guardada e não herda a cor do texto da linha definida acima. O valor continua a seguir a cor do texto da linha.",
+      "noRows": "Este bloco de totais ainda não tem linhas guardadas. Guarde o modelo e reabra-o para editar as cores das linhas."
     }
   },
   "draftInvoiceDetails": {

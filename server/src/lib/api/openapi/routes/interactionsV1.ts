@@ -57,7 +57,7 @@ export function registerInteractionsV1Routes(registry: ApiOpenApiRegistry) {
   const errors = {
     400: { description: 'Validation or query parsing failure.', schema: ApiError },
     401: { description: 'API key missing or invalid.', schema: ApiError },
-    403: { description: 'Interaction RBAC denied.', schema: ApiError },
+    403: { description: 'Interaction RBAC or assignment to another user’s schedule denied.', schema: ApiError },
     404: { description: 'Interaction not found.', schema: ApiError },
     500: { description: 'Unexpected controller or service failure.', schema: ApiError },
   };
@@ -78,6 +78,7 @@ export function registerInteractionsV1Routes(registry: ApiOpenApiRegistry) {
     method: 'post',
     path: '/api/v1/interactions',
     summary: 'Create an interaction',
+    description: 'Optionally creates a linked AlgaPSA calendar entry in the same transaction. Set create_schedule_entry and start_time; end_time defaults to start_time plus duration (or 30 minutes). schedule_assigned_user_ids defaults to the API key owner; booking other users requires user_schedule:update. This does not create a Teams meeting.',
     request: { body: { schema: CreateBody } },
     responses: {
       201: { description: 'Interaction created.', schema: InteractionSuccess },

@@ -64,8 +64,12 @@ describe('AppearanceSettings edition gate', () => {
 
     expect(screen.getByText(CUSTOM_THEME_HEADING)).toBeTruthy();
     expect(screen.getByText(WHITE_LABEL_HEADING)).toBeTruthy();
-    // Both shared logo slots are available here, but the MSP opt-in is explicit.
-    expect(screen.getAllByTestId('entity-image-upload')).toHaveLength(2);
+    // Square mark (light/dark), wide logo (light/dark) and the favicon are all
+    // available here, but the MSP opt-in is still explicit.
+    expect(screen.getAllByTestId('entity-image-upload')).toHaveLength(5);
+    expect(screen.getByText('Square mark')).toBeTruthy();
+    expect(screen.getByText('Wide logo (optional)')).toBeTruthy();
+    expect(screen.getByText('Browser icon (favicon)')).toBeTruthy();
     expect(screen.getByText('Enable MSP UI customization')).toBeTruthy();
   });
 

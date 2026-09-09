@@ -114,7 +114,8 @@
     "collapseSidebar": "Seitenleiste einklappen",
     "collapseSection": "{{section}} einklappen",
     "expandSection": "{{section}} ausklappen",
-    "appLogoAlt": "{{appName}}-Logo"
+    "appLogoAlt": "{{appName}}-Logo",
+    "poweredBy": "Bereitgestellt von"
   },
   "settings": {
     "sections": {

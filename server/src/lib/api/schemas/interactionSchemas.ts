@@ -21,7 +21,17 @@ export const createInteractionApiSchema = z.object({
   start_time: optionalDateTime,
   end_time: optionalDateTime,
   interaction_date: optionalDateTime,
+  create_schedule_entry: z.boolean().optional().describe('Also book an AlgaPSA calendar entry. Requires start_time; defaults to false.'),
+  schedule_assigned_user_ids: z.array(uuidSchema).optional().describe('Calendar assignees; omitted or empty defaults to the API key owner. Assigning others requires user_schedule:update.'),
 }).superRefine((value, ctx) => {
+  if (value.create_schedule_entry && !value.start_time) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['start_time'],
+      message: 'start_time is required when creating a schedule entry',
+    });
+  }
+
   if (!value.client_id && !value.contact_name_id) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
