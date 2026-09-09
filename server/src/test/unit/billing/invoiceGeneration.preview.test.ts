@@ -188,6 +188,7 @@ const mocks = vi.hoisted(() => {
     return createQueryBuilder(rowsByTable[normalizedTableName] ?? [], raw);
   }) as any;
   knex.raw = raw;
+  knex.transaction = vi.fn(async (callback: (trx: any) => Promise<unknown>) => callback(knex));
 
   const createTenantKnex = vi.fn(async () => ({ knex }));
   const withTransaction = vi.fn(async (_knex: unknown, callback: (trx: any) => Promise<unknown>) =>

@@ -46,6 +46,17 @@ const schedulingContractLineDisambiguationSource = readFileSync(
   resolve(__dirname, '../../../../../packages/scheduling/src/lib/contractLineDisambiguation.ts'),
   'utf8',
 );
+// Scheduling delegates its eligible-line query to the shared time contract
+// candidate loader, which carries the system-managed exclusion for time
+// entries and timers alike.
+const schedulingTimeEntryContractSource = readFileSync(
+  resolve(__dirname, '../../../../../packages/scheduling/src/lib/timeEntryContract.ts'),
+  'utf8',
+);
+const schedulingTimeContractCandidatesSource = readFileSync(
+  resolve(__dirname, '../../../../../packages/scheduling/src/lib/timeContractCandidates.ts'),
+  'utf8',
+);
 const usageActionsSource = readFileSync(
   resolve(__dirname, '../../../../../packages/billing/src/actions/usageActions.ts'),
   'utf8',
@@ -88,17 +99,22 @@ describe('system-managed default attribution-shell cutover wiring', () => {
   it('routes time and usage auto-assignment only through authored contracts, never system-managed default lines', () => {
     expect(billingContractLineDisambiguationSource).toContain("whereNull('contracts.is_system_managed_default')");
     expect(billingContractLineDisambiguationSource).toContain(".orWhere('contracts.is_system_managed_default', false)");
-    expect(schedulingContractLineDisambiguationSource).toContain("whereNull('contracts.is_system_managed_default')");
-    expect(schedulingContractLineDisambiguationSource).toContain(".orWhere('contracts.is_system_managed_default', false)");
+    expect(schedulingContractLineDisambiguationSource).toContain("from './timeContractCandidates'");
+    expect(schedulingContractLineDisambiguationSource).toContain('loadEligibleTimeContractLines');
+    expect(schedulingTimeContractCandidatesSource).toContain("whereNull('contracts.is_system_managed_default')");
+    expect(schedulingTimeContractCandidatesSource).toContain(".orWhere('contracts.is_system_managed_default', false)");
     expect(usageActionsSource).toContain("from '@alga-psa/billing/lib/contractLineDisambiguation'");
     expect(usageActionsSource).toContain('getEligibleContractLines');
     expect(usageActionsSource).toContain('resolveDeterministicContractLineSelection');
-    // Time entries route through `resolveContractLineSelection`, the same
-    // disambiguation module with the same system-managed exclusion, which
-    // additionally reports *why* it could not pick a line. Both entry points
-    // still go through that module and nowhere else.
-    expect(timeEntryCrudActionsSource).toContain('resolveContractLineSelection');
-    expect(timeEntryCrudActionsSource).toContain("from '../lib/contractLineDisambiguation'");
+    // Time entries route through `resolveTimeEntryContract`, which loads the
+    // same system-managed-excluded candidates and applies the same shared
+    // deterministic selector, reporting *why* it could not pick a line. Both
+    // entry points still go through that candidate loader and nowhere else.
+    expect(timeEntryCrudActionsSource).toContain('resolveTimeEntryContract');
+    expect(timeEntryCrudActionsSource).toContain("from '../lib/timeEntryContract'");
+    expect(schedulingTimeEntryContractSource).toContain("from './timeContractCandidates'");
+    expect(schedulingTimeEntryContractSource).toContain('loadEligibleTimeContractLines');
+    expect(schedulingTimeEntryContractSource).toContain('resolveDeterministicContractLineSelection');
   });
 
   it('F073/F074: contract line and pricing schedule UI surfaces become read-only with attribution-only guidance', () => {

@@ -28,6 +28,14 @@ const stableT = (key: string, options?: Record<string, unknown>) => {
   return template.replace(/\{\{(\w+)\}\}/g, (_match, name: string) =>
     String(options?.[name] ?? `{{${name}}}`));
 };
+// UsageTracking pushes back to the invoice preview after a quick usage save;
+// the app router is not mounted under the test renderer.
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }),
+  useSearchParams: () => new URLSearchParams(),
+  usePathname: () => '/msp/billing',
+}));
+
 vi.mock('@alga-psa/ui/lib/i18n/client', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   useTranslation: () => ({ t: stableT, i18n: { language: 'en' } }),
