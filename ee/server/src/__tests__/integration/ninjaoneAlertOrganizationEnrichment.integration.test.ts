@@ -52,10 +52,13 @@ const forwardOnlyIntegrationId = uuidv4();
 // Reusable IDs per fixture tenant (populated by seedPipelineTenant).
 let fixture: Record<string, string> = {};
 let ruleFixture: Record<string, string> = {};
+let forwardFixture: Record<string, string> = {};
 
-// Org-500 catch-all rule for the happy-path/lifecycle tenant. Seeded at file
-// level so every suite on that tenant is order-independent.
+// Org-500 catch-all rules for the happy-path/lifecycle tenant and the
+// forward-only tenant. Seeded at file level so every suite on those tenants is
+// order-independent.
 const allowedRuleId = uuid();
+const forwardRuleId = uuid();
 
 function uuid(): string {
   return uuidv4();
@@ -398,8 +401,28 @@ beforeAll(async () => {
     }
   );
 
-  await seedTenantRow(forwardOnlyTenantId, 'Forward');
   await seedTenantRow(otherTenantId, 'Other');
+
+  // The forward-only tenant runs under a real org-500 ticket-creating rule and
+  // valid device mappings (seeded by its suite) so the guard is proven against
+  // a configuration that WOULD ticket a fresh alert.
+  forwardFixture = await seedPipelineTenant(forwardOnlyTenantId, forwardOnlyIntegrationId, 'Forward');
+  await seedRule(
+    forwardOnlyTenantId,
+    forwardOnlyIntegrationId,
+    forwardRuleId,
+    'Forward org 500 alerts',
+    0,
+    { organizationIds: ['500'], severities: ['critical', 'major', 'moderate', 'minor'] },
+    {
+      createTicket: true,
+      boardId: forwardFixture.boardId,
+      priorityOverride: forwardFixture.priorityUrgentId,
+      assignToUserId: forwardFixture.userId,
+      autoResolveTicket: true,
+      resetAlertOnTicketClose: true,
+    }
+  );
 
   // The real NinjaOne fetcher drives every reconciliation in this file; the
   // NinjaOne client HTTP layer is mocked above.
@@ -551,27 +574,24 @@ describe('enriched sparse alerts reach the normal ticket pipeline', { shuffle: f
   });
 });
 
-describe('forward-only guard: pre-existing active/acknowledged rows without tickets stay skipped', { shuffle: false }, () => {
+describe('forward-only guard: pre-existing active/acknowledged rows stay skipped under a live ticket config', { shuffle: false }, () => {
   const activeExtId = 'pre-existing-active';
   const ackExtId = 'pre-existing-ack';
+  const freshExtId = 'forward-fresh-1';
   const activeDeviceId = 901001;
   const ackDeviceId = 901002;
+  const freshDeviceId = 901003;
 
   beforeAll(async () => {
-    // rmm_alerts carries an FK to rmm_integrations (tenant, integration_id).
-    await tenantTable(forwardOnlyTenantId, 'rmm_integrations').insert({
-      tenant: forwardOnlyTenantId,
-      integration_id: forwardOnlyIntegrationId,
-      provider: 'ninjaone',
-      instance_url: 'https://app.ninjarmm.com',
-      is_active: true,
-      connected_at: db.fn.now(),
-      settings: JSON.stringify({}),
-    });
+    // Valid device/asset mappings: these devices resolve to org 500 during
+    // enrichment exactly like any newly polled sparse alert would.
+    await seedMappedAsset(forwardOnlyTenantId, forwardFixture.clientId, activeDeviceId, '500');
+    await seedMappedAsset(forwardOnlyTenantId, forwardFixture.clientId, ackDeviceId, '500');
+    await seedMappedAsset(forwardOnlyTenantId, forwardFixture.clientId, freshDeviceId, '500');
 
-    // Rows that predate the fix: active/acknowledged, no ticket, no rule
-    // would ever have run for them. They carry the poller ingest marker, so
-    // they are exactly the kind of row a backfill would have touched.
+    // Rows that predate the fix: active/acknowledged, no ticket. They carry the
+    // poller ingest marker, so they are exactly the kind of row a backfill
+    // would have touched.
     const now = new Date().toISOString();
     const seedRow = async (alertId: string, extAlertId: string, extDevice: number, status: string, ack?: boolean) => {
       await tenantTable(forwardOnlyTenantId, 'rmm_alerts').insert({
@@ -599,20 +619,41 @@ describe('forward-only guard: pre-existing active/acknowledged rows without tick
     await seedRow(uuid(), ackExtId, ackDeviceId, 'acknowledged', true);
   }, HOOK_TIMEOUT);
 
-  it('reconciliation leaves both rows untouched and creates no retroactive tickets', async () => {
-    mockState.remoteAlerts = [
-      sparseAlert({ uid: activeExtId, deviceId: activeDeviceId, sourceName: 'DISK_HIGH', data: { statusCode: 'DISK_HIGH' } }),
-      sparseAlert({ uid: ackExtId, deviceId: ackDeviceId, sourceName: 'DISK_HIGH', data: { statusCode: 'DISK_HIGH' } }),
+  function remoteSparse(): NinjaOneAlert[] {
+    return [
+      sparseAlert({ uid: activeExtId, deviceId: activeDeviceId, sourceName: 'DISK_HIGH', data: { statusCode: 'DISK_HIGH' }, message: 'pre-existing active' }),
+      sparseAlert({ uid: ackExtId, deviceId: ackDeviceId, sourceName: 'DISK_HIGH', data: { statusCode: 'DISK_HIGH' }, message: 'pre-existing ack' }),
+      sparseAlert({ uid: freshExtId, deviceId: freshDeviceId, sourceName: 'DISK_HIGH', data: { statusCode: 'DISK_HIGH' }, message: 'fresh forward alert' }),
     ];
+  }
+
+  it('enriches the sparse payloads for every device, pre-existing and fresh, to org 500', async () => {
+    mockState.remoteAlerts = remoteSparse();
+    const events = await ninjaOneAlertFetcher.fetchActiveAlerts({
+      tenantId: forwardOnlyTenantId,
+      integrationId: forwardOnlyIntegrationId,
+    });
+    const byExternalId = new Map(events.map((event) => [event.externalAlertId, event]));
+    expect(byExternalId.get(activeExtId)?.externalOrganizationId).toBe('500');
+    expect(byExternalId.get(ackExtId)?.externalOrganizationId).toBe('500');
+    expect(byExternalId.get(freshExtId)?.externalOrganizationId).toBe('500');
+  });
+
+  it('reconciliation keeps pre-existing rows skipped while a fresh alert on a new device creates a ticket', async () => {
+    mockState.remoteAlerts = remoteSparse();
     const before = await ticketCount(forwardOnlyTenantId);
     const result = await runRmmAlertReconciliation(
       { knex: db },
       { tenantId: forwardOnlyTenantId, integrationId: forwardOnlyIntegrationId, provider: 'ninjaone' }
     );
 
-    expect(result.ingested).toBe(0);
+    // Only the fresh alert is new; the two pre-existing rows are redeliveries
+    // of live-state alerts and must stay skipped even though enrichment would
+    // now resolve their organization.
+    expect(result.ingested).toBe(1);
     expect(result.resetsSynthesized).toBe(0);
-    expect(await ticketCount(forwardOnlyTenantId)).toBe(before);
+    expect(result.warnings).toEqual([]);
+    expect(await ticketCount(forwardOnlyTenantId)).toBe(before + 1);
 
     const activeRow = await tenantTable(forwardOnlyTenantId, 'rmm_alerts')
       .where({ tenant: forwardOnlyTenantId, external_alert_id: activeExtId })
@@ -624,6 +665,24 @@ describe('forward-only guard: pre-existing active/acknowledged rows without tick
     expect(activeRow.ticket_id).toBeNull();
     expect(ackRow.status).toBe('acknowledged');
     expect(ackRow.ticket_id).toBeNull();
+
+    // A fresh sparse alert on a separate device flows through the same org-500
+    // rule and creates/link a ticket under the shared configuration.
+    const freshRow = await tenantTable(forwardOnlyTenantId, 'rmm_alerts')
+      .where({ tenant: forwardOnlyTenantId, external_alert_id: freshExtId })
+      .first();
+    expect(freshRow).not.toBeNull();
+    expect(freshRow.status).toBe('active');
+    expect(freshRow.matched_rule_id).toBe(forwardRuleId);
+    expect(freshRow.ticket_id).not.toBeNull();
+
+    const ticket = await tenantTable(forwardOnlyTenantId, 'tickets')
+      .where({ tenant: forwardOnlyTenantId, ticket_id: freshRow.ticket_id })
+      .first();
+    expect(ticket.board_id).toBe(forwardFixture.boardId);
+    expect(ticket.assigned_to).toBe(forwardFixture.userId);
+    expect(ticket.client_id).toBe(forwardFixture.clientId);
+    expect(ticket.source).toBe('ninjaone');
   });
 });
 
@@ -751,6 +810,7 @@ describe('lifecycle regressions on enriched sparse alerts', { shuffle: false }, 
   // so rows stay independent.
   const suppressionDevice = 903001;
   const retriggerDevice = 903002;
+  const sameIdDevice = 903003;
   const windowId = uuid();
 
   const now = new Date().toISOString();
@@ -771,6 +831,7 @@ describe('lifecycle regressions on enriched sparse alerts', { shuffle: false }, 
   beforeAll(async () => {
     await seedMappedAsset(tenantId, fixture.clientId, suppressionDevice, '500');
     await seedMappedAsset(tenantId, fixture.clientId, retriggerDevice, '500');
+    await seedMappedAsset(tenantId, fixture.clientId, sameIdDevice, '500');
   }, HOOK_TIMEOUT);
 
   it('suppresses an enriched sparse alert inside a maintenance window, then tickets it once the window ends', async () => {
@@ -842,6 +903,59 @@ describe('lifecycle regressions on enriched sparse alerts', { shuffle: false }, 
     ]);
     expect(refire[0].outcome).toBe('ticket_created');
     expect(await ticketCount(tenantId)).toBe(before + 1);
+  });
+
+  it('a resolved alert re-triggering under its original external id reopens a ticket and redelivery then skips', async () => {
+    const externalAlertId = 'retrigger-same';
+
+    const first = await fetchAndProcess(tenantId, integrationId, [
+      sparseAlert({ uid: externalAlertId, deviceId: sameIdDevice, sourceName: 'SVC_DOWN', data: { statusCode: 'SVC_DOWN' }, message: 'same id first' }),
+    ]);
+    expect(first[0].outcome).toBe('ticket_created');
+    const firstTicketId = first[0].ticketId!;
+    const alertRow = await tenantTable(tenantId, 'rmm_alerts')
+      .where({ tenant: tenantId, external_alert_id: externalAlertId })
+      .first();
+    expect(alertRow.status).toBe('active');
+    expect(alertRow.ticket_id).toBe(firstTicketId);
+
+    const reset = await processRmmAlertEvent(
+      { knex: db },
+      resetEvent(tenantId, integrationId, externalAlertId)
+    );
+    expect(reset.outcome).toBe('resolved');
+    const resolved = await tenantTable(tenantId, 'rmm_alerts')
+      .where({ tenant: tenantId, alert_id: alertRow.alert_id })
+      .first();
+    expect(['resolved', 'auto_resolved']).toContain(resolved.status);
+    expect(resolved.ticket_id).toBe(firstTicketId); // row keeps its (now closed) link
+
+    // The same NinjaOne alert uid fires again after resolution: the pipeline
+    // reuses the same rmm_alerts row and creates a brand-new ticket.
+    const before = await ticketCount(tenantId);
+    const refire = await fetchAndProcess(tenantId, integrationId, [
+      sparseAlert({ uid: externalAlertId, deviceId: sameIdDevice, sourceName: 'SVC_DOWN', data: { statusCode: 'SVC_DOWN' }, message: 'same id again' }),
+    ]);
+    expect(refire[0].outcome).toBe('ticket_created');
+    expect(refire[0].ticketId).not.toBe(firstTicketId);
+    expect(await ticketCount(tenantId)).toBe(before + 1);
+
+    const reOpened = await tenantTable(tenantId, 'rmm_alerts')
+      .where({ tenant: tenantId, alert_id: alertRow.alert_id })
+      .first();
+    expect(reOpened.alert_id).toBe(alertRow.alert_id); // same row, not a duplicate
+    expect(reOpened.status).toBe('active');
+    expect(reOpened.resolved_at).toBeNull();
+    expect(reOpened.matched_rule_id).toBe(allowedRuleId);
+    expect(reOpened.ticket_id).toBe(refire[0].ticketId);
+
+    // Redelivery of the same external id while active is a duplicate skip.
+    const afterRefire = await ticketCount(tenantId);
+    const duplicate = await fetchAndProcess(tenantId, integrationId, [
+      sparseAlert({ uid: externalAlertId, deviceId: sameIdDevice, sourceName: 'SVC_DOWN', data: { statusCode: 'SVC_DOWN' }, message: 'same id duplicate' }),
+    ]);
+    expect(duplicate[0].outcome).toBe('skipped');
+    expect(await ticketCount(tenantId)).toBe(afterRefire);
   });
 
   it('a repeat firing of an open condition appends to the open ticket instead of duplicating', async () => {
