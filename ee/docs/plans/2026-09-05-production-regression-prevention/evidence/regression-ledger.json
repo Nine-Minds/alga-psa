@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-09-08",
+  "updatedAt": "2026-09-09",
   "purpose": "Track proven regression boundaries and verification limits; null incident identifiers must not be counted as production escapes.",
   "records": [
     {
@@ -26,7 +26,14 @@
       "limits": [
         "Replay proves real migrated PostgreSQL hydration and eligibility; invoice creation and authentication are mocked.",
         "No production incident identifier was supplied; this is not an attributed incident count."
-      ]
+      ],
+      "ciAfter": {
+        "evidence": "ci-workspace-db-regression-mappings-a0d077.json",
+        "runId": "34308610232",
+        "testedRevision": "3db700f653e28ddd322dfdb652f1689a54f6b65d",
+        "status": "mapped-assertions-passed",
+        "scope": "Only mapped assertions and boundaries in linked evidence; not all listed tests, full incident closure, deployment proof or latest local source readiness."
+      }
     },
     {
       "id": "manual-invoice-optional-sales-order-permission",
@@ -136,6 +143,13 @@
         ],
         "status": "passed-first-attempt",
         "currentCandidateReadiness": false
+      },
+      "ciAfter": {
+        "evidence": "ci-manual-invoice-regression-a0d077.json",
+        "runId": "34308610232",
+        "testedRevision": "3db700f653e28ddd322dfdb652f1689a54f6b65d",
+        "status": "mapped-assertions-passed",
+        "scope": "Only mapped assertions and boundaries in linked evidence; not all listed tests, full incident closure, deployment proof or latest local source readiness."
       }
     },
     {
@@ -216,7 +230,14 @@
       "limits": [
         "No production incident identifier was supplied.",
         "Latest committed revision CI verification remains pending."
-      ]
+      ],
+      "ciAfter": {
+        "evidence": "ci-workspace-db-regression-mappings-a0d077.json",
+        "runId": "34308610232",
+        "testedRevision": "3db700f653e28ddd322dfdb652f1689a54f6b65d",
+        "status": "mapped-assertions-passed",
+        "scope": "Only mapped assertions and boundaries in linked evidence; not all listed tests, full incident closure, deployment proof or latest local source readiness."
+      }
     },
     {
       "id": "shard-manifest-raw-report-mismatch",
@@ -390,7 +411,14 @@
         "Each model example rolls back a real transaction. The separate concurrency suites exercise competing committed connections.",
         "Authentication, external event delivery and remote notifications are fixture seams.",
         "No production incident identifier supplied. Native candidate execution remains required."
-      ]
+      ],
+      "ciAfter": {
+        "evidence": "ci-workspace-db-regression-mappings-a0d077.json",
+        "runId": "34308610232",
+        "testedRevision": "3db700f653e28ddd322dfdb652f1689a54f6b65d",
+        "status": "mapped-assertions-passed",
+        "scope": "Only mapped assertions and boundaries in linked evidence; not all listed tests, full incident closure, deployment proof or latest local source readiness."
+      }
     },
     {
       "id": "accounting-mapping-catalog-refresh-erases-draft",
@@ -560,6 +588,13 @@
       "subsequentCoverage": {
         "evidence": "tax-settings-postgres.json",
         "details": "Later tests remove settings/profile mocks; original evidence limits above describe the historical run."
+      },
+      "ciAfter": {
+        "evidence": "ci-workspace-db-regression-mappings-a0d077.json",
+        "runId": "34308610232",
+        "testedRevision": "3db700f653e28ddd322dfdb652f1689a54f6b65d",
+        "status": "mapped-assertions-passed",
+        "scope": "Only mapped assertions and boundaries in linked evidence; not all listed tests, full incident closure, deployment proof or latest local source readiness."
       }
     },
     {
@@ -601,7 +636,14 @@
         "Requires disposable PostgreSQL/Redis services for canonical runner; local evidence used the task-owned migrated database with rollback fixtures.",
         "No production incident identifier was supplied; do not count as an attributed production escape.",
         "Current candidate native CI remains unverified."
-      ]
+      ],
+      "ciAfter": {
+        "evidence": "ci-workspace-db-regression-mappings-a0d077.json",
+        "runId": "34308610232",
+        "testedRevision": "3db700f653e28ddd322dfdb652f1689a54f6b65d",
+        "status": "mapped-assertions-passed",
+        "scope": "Only mapped assertions and boundaries in linked evidence; not all listed tests, full incident closure, deployment proof or latest local source readiness."
+      }
     },
     {
       "id": "tax-action-asynchronous-error-mapping",
@@ -642,7 +684,14 @@
         "No production incident identifier was supplied; do not count as an attributed production escape.",
         "Current candidate native CI remains unverified.",
         "Auth, RBAC and product-access guards are substituted. Transaction/savepoint, validation and persistence behavior are real."
-      ]
+      ],
+      "ciAfter": {
+        "evidence": "ci-workspace-db-regression-mappings-a0d077.json",
+        "runId": "34308610232",
+        "testedRevision": "3db700f653e28ddd322dfdb652f1689a54f6b65d",
+        "status": "mapped-assertions-passed",
+        "scope": "Only mapped assertions and boundaries in linked evidence; not all listed tests, full incident closure, deployment proof or latest local source readiness."
+      }
     },
     {
       "id": "tax-threshold-minimum-and-gaps",
@@ -676,7 +725,14 @@
         "Existing three tax policy TODOs remain unresolved.",
         "Local focused runs, not full candidate native execution.",
         "Database fixture substitutes tenant connection context and rolls back each test."
-      ]
+      ],
+      "ciAfter": {
+        "evidence": "ci-workspace-db-regression-mappings-a0d077.json",
+        "runId": "34308610232",
+        "testedRevision": "3db700f653e28ddd322dfdb652f1689a54f6b65d",
+        "status": "mapped-assertions-passed",
+        "scope": "Only mapped assertions and boundaries in linked evidence; not all listed tests, full incident closure, deployment proof or latest local source readiness."
+      }
     },
     {
       "id": "survey-unverified-domain-false-success",
@@ -702,7 +758,14 @@
         "Synthetic transport rejection with actual database/template/token behavior.",
         "No production incident identifier supplied."
       ],
-      "relocationEvidence": "survey-server-test-relocation.json"
+      "relocationEvidence": "survey-server-test-relocation.json",
+      "ciAfter": {
+        "evidence": "ci-workspace-db-regression-mappings-a0d077.json",
+        "runId": "34308610232",
+        "testedRevision": "3db700f653e28ddd322dfdb652f1689a54f6b65d",
+        "status": "mapped-assertions-passed",
+        "scope": "Only mapped assertions and boundaries in linked evidence; not all listed tests, full incident closure, deployment proof or latest local source readiness."
+      }
     },
     {
       "id": "work-item-picker-ticket-number-search",
@@ -728,7 +791,14 @@
         "Auth and connection boundary use fixture identity; query and PostgreSQL are real.",
         "Current-source browser and GitHub CI verification remain pending.",
         "No production incident identifier supplied."
-      ]
+      ],
+      "ciAfter": {
+        "evidence": "ci-tier1-regression-mappings-a0d077.json",
+        "runId": "34308610232",
+        "testedRevision": "3db700f653e28ddd322dfdb652f1689a54f6b65d",
+        "status": "mapped-assertions-passed",
+        "scope": "Only mapped assertions and boundaries in linked evidence; not all listed tests, full incident closure, deployment proof or latest local source readiness."
+      }
     },
     {
       "id": "invoice-preview-unfinished-transform",
@@ -815,7 +885,14 @@
       "limits": [
         "Full incident remains open: browser rendering/editor save, deployed timezone behavior, and current-source CI are not yet proven.",
         "Owner role is provisional; named operational owner still required."
-      ]
+      ],
+      "ciAfter": {
+        "evidence": "ci-calendar-temporal-regression-mappings-a0d077.json",
+        "runId": "34308610232",
+        "testedRevision": "3db700f653e28ddd322dfdb652f1689a54f6b65d",
+        "status": "mapped-assertions-passed",
+        "scope": "Only mapped assertions and boundaries in linked evidence; not all listed tests, full incident closure, deployment proof or latest local source readiness."
+      }
     },
     {
       "id": "3338-seeded-board-ticket-lifecycle",
@@ -841,7 +918,14 @@
         "Only issue 3338 defect 3 is covered",
         "Current-source CI has not run this new regression",
         "Isolated tenant selection; browser and authentication are outside scope"
-      ]
+      ],
+      "ciAfter": {
+        "evidence": "ci-tier1-regression-mappings-a0d077.json",
+        "runId": "34308610232",
+        "testedRevision": "3db700f653e28ddd322dfdb652f1689a54f6b65d",
+        "status": "mapped-assertions-passed",
+        "scope": "Only mapped assertions and boundaries in linked evidence; not all listed tests, full incident closure, deployment proof or latest local source readiness."
+      }
     },
     {
       "id": "client-creation-tax-initialization-atomicity",
@@ -867,7 +951,14 @@
         "Not attributed to the original cause of issue 3338",
         "Current-source CI remains required",
         "Auth/session and event publishing are outside this regression"
-      ]
+      ],
+      "ciAfter": {
+        "evidence": "ci-tier1-regression-mappings-a0d077.json",
+        "runId": "34308610232",
+        "testedRevision": "3db700f653e28ddd322dfdb652f1689a54f6b65d",
+        "status": "mapped-assertions-passed",
+        "scope": "Only mapped assertions and boundaries in linked evidence; not all listed tests, full incident closure, deployment proof or latest local source readiness."
+      }
     }
   ]
 }
