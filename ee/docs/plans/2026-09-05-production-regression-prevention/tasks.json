@@ -835,7 +835,7 @@
       "status": "in_progress",
       "dependsOn": [],
       "owner": "stripe_protocol",
-      "notes": "Remaining Microsoft user sign-in/accountlink proof requires actualNextAuth route/options. Build test-only canonical-authority fetchinterception with realRS256 discovery/JWKS/tokenexchange+PKCE, ownedDB persistedidentity andstate/issuernegative. No productionendpointoverride or liveEntra consentclaim."
+      "notes": "Reusable CLI actual native pass on dirty521c9c94d6: realNextAuth routes/options, correcttenant/user/email session, oneMicrosoft OID accountlink, wrongstate rejected beforeexchange with unchangedidentity. Authority PKCE/RS256 fixture behavior separatelytested; observedJWKS0/noncefalse, no appsignature/nonce/liveconsent claim. Native evidence retains failedattempts/testedhashes and scopedcleanup. Subsequent signalcleanup subprocess tests pass. CI registration reusesbuiltEEimage and explicitloopbackauthority; host verifies actualimage/mounts/cleansource, readiness independently revalidatesrawcallback/runner. Current-source CI pending; keepF034/T028 open."
     }
   ]
 }

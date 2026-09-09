@@ -29,10 +29,10 @@ function fixture() {
 }
 const evaluate = input => evaluateProductionReadiness(JSON.parse(JSON.stringify(input)));
 
-test('all required serialized workflow verdicts pass and preserve thirteen separate requirements', () => {
+test('all required serialized workflow verdicts pass and preserve fourteen separate requirements', () => {
   const result = evaluate(fixture());
   assert.equal(result.status, 'passed', result.failures.join('\n'));
-  assert.equal(result.results.length, 13);
+  assert.equal(result.results.length, 14);
 });
 
 for (const outcome of ['failure', 'cancelled', 'skipped', undefined]) {
@@ -172,6 +172,20 @@ test('CLI reads candidate artifacts, fails on missing JSON, and rejects a dirty 
   write(`${teamsDirectory}/runner.json`, { exitCode: 0 });
   const teamsEvidence = { status: 'passed', revision, releaseValidation: false, source: { before: cleanSource, after: cleanSource } };
   write(`${teamsDirectory}/evidence.json`, teamsEvidence);
+  const callbackDirectory = 'test-results/readiness-input/microsoft-callback-execution';
+  const callbackReport = { schemaVersion: 1, scope: 'microsoft-nextauth-callback-development',
+    status: 'passed', stage: 'completed', releaseValidation: false,
+    sourceRevision: revision, sourceRevisionOrigin: 'git', sourceRevisionAfter: revision,
+    fixtureCleanup: 'removed', processCleanup: 'stopped',
+    configuration: { edition: 'enterprise', serverLifecycle: 'next-development', provider: 'microsoft',
+      authority: 'synthetic-loopback', applicationAuthentication: 'nextauth' },
+    execution: { status: 'passed', accepted: { stateAccepted: true, nonceRequested: false },
+      rejected: { stateAccepted: false, nonceRequested: false }, tokenRequests: 1, jwksRequests: 0 } };
+  const callbackSource = { ...cleanSource, changes: [] };
+  const callbackRunner = { exitCode: 0, source: { before: callbackSource, after: callbackSource } };
+  write(`${callbackDirectory}/microsoft-callback-report.json`, callbackReport);
+  write(`${callbackDirectory}/microsoft-callback-runner.json`, callbackRunner);
+  write(`${callbackDirectory}/microsoft-callback-evidence.json`, { status: 'passed' });
   const run = () => {
     const child = spawnSync(process.execPath, ['scripts/verify-production-readiness.mjs'], {
       cwd: root, encoding: 'utf8', timeout: 10000,
@@ -182,6 +196,40 @@ test('CLI reads candidate artifacts, fails on missing JSON, and rejects a dirty 
     return output;
   };
   { const result = run(); assert.equal(result.status, 'passed', result.failures.join('\n')); }
+  const containerReport = { ...callbackReport, sourceRevisionOrigin: 'environment', sourceRevisionAfter: null };
+  const containerRunner = { ...callbackRunner, runtimeBinding: { imageRevision: revision,
+    imageId: `sha256:${'1'.repeat(64)}`, containerImageId: `sha256:${'1'.repeat(64)}`,
+    mountedSourceRevision: revision, mountsReadOnly: true } };
+  write(`${callbackDirectory}/microsoft-callback-report.json`, containerReport);
+  write(`${callbackDirectory}/microsoft-callback-runner.json`, containerRunner);
+  assert.equal(run().status, 'passed');
+  for (const corrupt of [
+    ({ report }) => { report.execution.rejected.stateAccepted = true; },
+    ({ report }) => { report.execution.tokenRequests = 2; },
+    ({ report }) => { report.fixtureCleanup = 'retained'; },
+    ({ report }) => { report.configuration.serverLifecycle = 'next-production'; },
+    ({ report }) => { report.sourceRevision = 'b'.repeat(40); },
+    ({ runner }) => { runner.exitCode = 1; },
+    ({ runner }) => { delete runner.exitCode; },
+    ({ runner }) => { runner.source.after.dirty = true; },
+    ({ runner }) => { runner.runtimeBinding.mountsReadOnly = false; },
+    ({ runner }) => { runner.runtimeBinding.containerImageId = `sha256:${'2'.repeat(64)}`; },
+    ({ runner }) => { delete runner.runtimeBinding; },
+  ]) {
+    const inputs = structuredClone({ report: containerReport, runner: containerRunner });
+    corrupt(inputs);
+    write(`${callbackDirectory}/microsoft-callback-report.json`, inputs.report);
+    write(`${callbackDirectory}/microsoft-callback-runner.json`, inputs.runner);
+    const result = run();
+    assert.equal(result.results.find(({ id }) => id === 'microsoft-callback-execution').status, 'failed');
+  }
+  write(`${callbackDirectory}/microsoft-callback-report.json`, callbackReport);
+  write(`${callbackDirectory}/microsoft-callback-runner.json`, callbackRunner);
+  // Missing raw inputs cannot be replaced by the still-green recorded evidence.
+  rmSync(path.join(root, `${callbackDirectory}/microsoft-callback-report.json`));
+  assert.equal(run().status, 'failed');
+  write(`${callbackDirectory}/microsoft-callback-report.json`, callbackReport);
+  assert.equal(run().status, 'passed');
   const unrelatedTeams = structuredClone(teamsReport);
   unrelatedTeams.suites[0].specs[0].title = 'unrelated passing callback';
   for (const name of ['collected', 'results']) write(`${teamsDirectory}/${name}.json`, unrelatedTeams);

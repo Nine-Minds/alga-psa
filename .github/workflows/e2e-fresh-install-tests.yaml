@@ -1367,6 +1367,29 @@ jobs:
           path: e2e-tests/test-results/local/
           retention-days: 7
 
+      - name: Run actual Microsoft callback against isolated authority
+        id: microsoft_callback
+        if: ${{ !cancelled() && matrix.edition == 'enterprise' && steps.api_database.outcome == 'success' }}
+        timeout-minutes: 9
+        env:
+          NATIVE_MICROSOFT_OIDC_SOURCE_EMAIL: ${{ steps.capture_creds.outputs.e2e_user_email }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/microsoft-callback"
+          sudo install -d -o 1000 -g 1000 -m 0700 "$RUNNER_TEMP/microsoft-callback/dist" "$RUNNER_TEMP/microsoft-callback/webpack"
+          # Both the host verifier and image UID write separate evidence files.
+          sudo install -d -o 1000 -g 1000 -m 0777 "$GITHUB_WORKSPACE/test-results/microsoft-callback"
+          node scripts/run-microsoft-callback-ci.mjs
+
+      - name: Upload Microsoft callback execution
+        if: ${{ always() && steps.microsoft_callback.outcome != 'skipped' && matrix.edition == 'enterprise' && !env.ACT }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: microsoft-callback-execution
+          path: test-results/microsoft-callback/
+          if-no-files-found: error
+          retention-days: 7
+
       - name: Collect all container logs on failure
         if: failure() && steps.install_docker_compose.outcome == 'success'
         timeout-minutes: 5

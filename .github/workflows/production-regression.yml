@@ -201,6 +201,13 @@ jobs:
         with:
           name: teams-development-execution
           path: test-results/readiness-input/teams-development-execution
+      - name: Download Microsoft callback execution
+        if: always()
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: microsoft-callback-execution
+          path: test-results/readiness-input/microsoft-callback-execution
       - name: Download repository inventory
         continue-on-error: true
         uses: actions/download-artifact@v4

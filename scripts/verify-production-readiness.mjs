@@ -6,6 +6,7 @@ import { readinessRequirements, evaluateProductionReadiness } from './lib/produc
 import { readChangedFiles, selectIntegration } from './lib/integration-selection.mjs';
 import { verifySupportedUpgrade } from './lib/supported-upgrade-evidence.mjs';
 import { verifyTeamsDevelopment } from './lib/teams-development-evidence.mjs';
+import { verifyMicrosoftCallbackEvidence } from './lib/microsoft-callback-evidence.mjs';
 import { testRevision } from './lib/test-revision.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
@@ -19,6 +20,31 @@ try {
   const selection = selectIntegration(changed);
   for (const { artifact, revisionSuffix, conditionalWorkflow, job } of readinessRequirements) {
     if (conditionalWorkflow && !selection.shouldRun && jobs[job]?.result === 'skipped') continue;
+    if (artifact === 'microsoft-callback-execution') {
+      if (!selection.shouldRun) {
+        artifacts[artifact] = { schemaVersion: 1, revision: source.revision,
+          scope: 'microsoft-callback-development-evidence', status: 'not-applicable',
+          reason: selection.reason, failures: [], releaseValidation: false };
+        continue;
+      }
+      try {
+        const directory = path.join(root, 'test-results/readiness-input', artifact);
+        const read = name => JSON.parse(readFileSync(path.join(directory, `${name}.json`), 'utf8'));
+        const runner = read('microsoft-callback-runner');
+        // The precomputed evidence is diagnostic only. Reconcile raw execution
+        // against the trusted candidate and the independent host wrapper.
+        const verified = verifyMicrosoftCallbackEvidence({ revision: source.revision,
+          report: read('microsoft-callback-report'), source: runner.source,
+          runtimeBinding: runner.runtimeBinding });
+        if (runner.exitCode !== 0) {
+          verified.failures.push('callback-runner-unsuccessful');
+          verified.status = 'failed';
+          delete verified.counts;
+        }
+        artifacts[artifact] = verified;
+      } catch { unreadable.push(`${artifact}: missing or unreadable callback inputs`); }
+      continue;
+    }
     if (artifact === 'teams-development-execution') {
       if (!selection.shouldRun) {
         artifacts[artifact] = { schemaVersion: 1, revision: source.revision, suite: 'teams-development-browser',
