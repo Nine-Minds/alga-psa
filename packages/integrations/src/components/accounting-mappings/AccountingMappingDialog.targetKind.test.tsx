@@ -52,9 +52,16 @@ function buildModule(overrides: Partial<AccountingMappingModule> = {}): Accounti
 }
 
 const context = { realmId: 'xero-tenant-1', connectionId: 'conn-1' };
-async function choose(id: string, name: string) {
-  fireEvent.keyDown(document.getElementById(id)!, { key: 'Enter', code: 'Enter' });
-  fireEvent.click(await screen.findByRole('option', { name }));
+// Both pickers are SearchableSelect now. Open by the trigger's visible text and
+// click the option directly, matching AccountingMappingDialog.search.test.tsx:
+// the id lands on the trigger through the automation-id registry rather than as
+// a plain attribute, so getElementById is not a handle here. Every call below
+// opens an unselected picker, so the visible text is its placeholder.
+async function choose(triggerText: string, name: string) {
+  const trigger = screen.getByText(triggerText).closest('button');
+  if (!trigger) throw new Error(`No picker trigger for "${triggerText}"`);
+  fireEvent.click(trigger);
+  fireEvent.click(await screen.findByText(name));
 }
 function draftProps() {
   return {
@@ -80,8 +87,8 @@ describe('AccountingMappingDialog explicit target-kind selection', () => {
     const props = draftProps();
     const { onSubmit } = props;
     const { rerender } = render(<AccountingMappingDialog {...props} />);
-    await choose('xero-live-service-mappings-alga-select', 'IT Professional Services');
-    await choose('xero-live-service-mappings-external-select', 'Consulting Services');
+    await choose('Select Alga Service...', 'IT Professional Services');
+    await choose('Select Xero Item or Account...', 'Consulting Services');
     fireEvent.change(screen.getByPlaceholderText('Optional metadata as JSON'), { target: { value: '{"accountCode":"200"}' } });
 
     // A background catalog fetch returns a fresh array while the user edits.
@@ -95,15 +102,15 @@ describe('AccountingMappingDialog explicit target-kind selection', () => {
   it('preserves the service and metadata but requires re-selection when a provider item disappears', async () => {
     const props = draftProps();
     const { rerender } = render(<AccountingMappingDialog {...props} />);
-    await choose('xero-live-service-mappings-alga-select', 'IT Professional Services');
-    await choose('xero-live-service-mappings-external-select', 'Consulting Services');
+    await choose('Select Alga Service...', 'IT Professional Services');
+    await choose('Select Xero Item or Account...', 'Consulting Services');
     fireEvent.change(screen.getByPlaceholderText('Optional metadata as JSON'), { target: { value: '{"accountCode":"200"}' } });
     const catalog = [{ id: 'item:NEW', name: 'Replacement Service', kind: 'item' }];
     rerender(<AccountingMappingDialog {...props} externalEntities={catalog} />);
     expect(screen.getByTestId('xero-live-service-mappings-stale-target-notice')).toBeVisible();
     fireEvent.click(screen.getByRole('button', { name: 'Save Mapping' }));
     expect(props.onSubmit).not.toHaveBeenCalled();
-    await choose('xero-live-service-mappings-external-select', 'Replacement Service');
+    await choose('Select Xero Item or Account...', 'Replacement Service');
     expect(screen.queryByTestId('xero-live-service-mappings-stale-target-notice')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Save Mapping' }));
     await waitFor(() => expect(props.onSubmit).toHaveBeenCalledWith({
@@ -117,8 +124,8 @@ describe('AccountingMappingDialog explicit target-kind selection', () => {
     const pending = new Promise<void>(resolve => { finish = resolve; });
     const onSubmit = vi.fn(() => pending);
     const { rerender } = render(<AccountingMappingDialog {...props} onSubmit={onSubmit} />);
-    await choose('xero-live-service-mappings-alga-select', 'IT Professional Services');
-    await choose('xero-live-service-mappings-external-select', 'Consulting Services');
+    await choose('Select Alga Service...', 'IT Professional Services');
+    await choose('Select Xero Item or Account...', 'Consulting Services');
     fireEvent.click(screen.getByRole('button', { name: 'Save Mapping' }));
     rerender(<AccountingMappingDialog {...props} onSubmit={onSubmit} externalEntities={[...props.externalEntities]} />);
     expect(screen.getByRole('button', { name: 'Saving…' })).toBeDisabled();
@@ -130,8 +137,8 @@ describe('AccountingMappingDialog explicit target-kind selection', () => {
   it.each(['reopen', 'change organisation'])('starts a fresh draft on %s', async action => {
     const props = draftProps();
     const { rerender } = render(<AccountingMappingDialog {...props} />);
-    await choose('xero-live-service-mappings-alga-select', 'IT Professional Services');
-    await choose('xero-live-service-mappings-external-select', 'Consulting Services');
+    await choose('Select Alga Service...', 'IT Professional Services');
+    await choose('Select Xero Item or Account...', 'Consulting Services');
     fireEvent.change(screen.getByPlaceholderText('Optional metadata as JSON'), { target: { value: '{"accountCode":"200"}' } });
     if (action === 'reopen') {
       rerender(<AccountingMappingDialog {...props} isOpen={false} />);
@@ -139,8 +146,9 @@ describe('AccountingMappingDialog explicit target-kind selection', () => {
     } else {
       rerender(<AccountingMappingDialog {...props} context={{ realmId: 'different-org', connectionId: 'conn-2' }} />);
     }
-    expect(document.getElementById('xero-live-service-mappings-alga-select')).toHaveTextContent('Select Alga Service...');
-    expect(document.getElementById('xero-live-service-mappings-external-select')).toHaveTextContent('Select Xero Item or Account...');
+    // Both pickers are back to their placeholders, so the draft really is fresh.
+    expect(screen.getByText('Select Alga Service...')).toBeInTheDocument();
+    expect(screen.getByText('Select Xero Item or Account...')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Optional metadata as JSON')).toHaveValue('');
     fireEvent.click(screen.getByRole('button', { name: 'Save Mapping' }));
     expect(props.onSubmit).not.toHaveBeenCalled();
