@@ -354,3 +354,20 @@ test('a quarantined requirement that was not applicable does not read as passing
   assert.notEqual(reported.status, 'quarantined-passing', 'a skipped run is not evidence the entry can be removed');
   assert.match(reported.reason, /documentation/i);
 });
+
+test('quarantining one requirement cannot hide a failure of the job it shares', () => {
+  // teams-development-execution runs inside the browser job, alongside the P0
+  // fresh-install journey. If the quarantine could absorb a job-level failure,
+  // it would hide every other requirement that job carries.
+  const input = fixture();
+  input.jobs.browser.result = 'failure';
+  const result = withQuarantine(input, entry());
+  assert.equal(result.status, 'failed', 'a failed browser job must still veto readiness');
+  assert.equal(resultFor(result, QUARANTINABLE).status, 'quarantined-failing');
+  const p0 = readinessRequirements.find(requirement => requirement.p0Journey);
+  assert.equal(resultFor(result, p0.artifact).status, 'failed');
+  assert.match(result.failures.join('\n'), new RegExp(`${p0.artifact}: Required workflow: failure`));
+  // And the quarantined requirement contributes nothing to the veto.
+  assert.ok(!result.failures.some(failure => failure.startsWith(QUARANTINABLE)),
+    'the quarantined requirement must not appear in the top-level failures');
+});
