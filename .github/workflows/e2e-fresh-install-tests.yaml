@@ -1337,6 +1337,10 @@ jobs:
       - name: Run Teams development execution gate
         id: teams_development_browser
         if: ${{ !cancelled() && steps.teams_development_server.outcome == 'success' && steps.teams_auth_preflight.outcome == 'success' && steps.browser_ready.outcome == 'success' && steps.teams_dashboard_ready.outcome == 'success' }}
+        # Owned, expiring quarantine (scripts/lib/quarantine.json). The verdict is
+        # still produced, uploaded and reported by the readiness gate; it just does
+        # not veto the job while the entry is valid. Readiness fails once it expires.
+        continue-on-error: true
         timeout-minutes: 10
         env:
           E2E_TEAMS_DEVELOPMENT: 'true'

@@ -95,13 +95,21 @@ try {
     try { artifacts[artifact] = JSON.parse(readFileSync(path.join(root, 'test-results/readiness-input', name, 'aggregate.json'), 'utf8')); }
     catch (error) { unreadable.push(`${artifact}: ${error.message}`); }
   }
+  const quarantine = JSON.parse(readFileSync(path.join(root, 'scripts/lib/quarantine.json'), 'utf8'));
   result = evaluateProductionReadiness({ revision: source.revision,
-    changed, jobs, artifacts });
+    changed, jobs, artifacts, quarantine });
   result.failures.push(...unreadable);
   if (result.failures.length) result.status = 'failed';
 } catch (error) { result = { schemaVersion: 1, scope: 'production-regression-readiness', status: 'failed', failures: [error.message] }; }
 const directory = path.join(root, 'test-results/production-readiness');
 mkdirSync(directory, { recursive: true });
 writeFileSync(path.join(directory, 'aggregate.json'), JSON.stringify(result, null, 2) + '\n');
+// Quarantined outcomes never veto readiness, so print them where they cannot be
+// missed rather than letting a silent exemption look like coverage.
+for (const entry of result.results ?? []) {
+  if (!String(entry.status).startsWith('quarantined')) continue;
+  console.error(`QUARANTINED ${entry.id} (${entry.status}) owner=${entry.quarantine.owner} expires=${entry.quarantine.expires}${entry.quarantine.tracking ? ` tracking=${entry.quarantine.tracking}` : ''}`);
+  for (const failure of entry.failures) console.error(`  ${entry.id}: ${failure}`);
+}
 for (const failure of result.failures) console.error(failure);
 process.exitCode = result.status === 'passed' ? 0 : 1;

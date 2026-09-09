@@ -121,6 +121,8 @@ test('CLI reads candidate artifacts, fails on missing JSON, and rejects a dirty 
   };
   cpSync(new URL('../lib', import.meta.url), path.join(root, 'scripts/lib'), { recursive: true });
   cpSync(new URL('../verify-production-readiness.mjs', import.meta.url), path.join(root, 'scripts/verify-production-readiness.mjs'));
+  // This fixture exercises full enforcement; quarantine behavior is covered separately.
+  write('scripts/lib/quarantine.json', { schemaVersion: 1, entries: [] });
   write('.gitignore', 'test-results/\n');
   for (const file of [...upgradeBrowserFiles, ...teamsDevelopmentFiles]) write(file, '// Runtime report fixture identity\n');
   const git = args => execFileSync('git', args, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
@@ -256,4 +258,86 @@ test('CLI reads candidate artifacts, fails on missing JSON, and rejects a dirty 
   write(filenames[0], original); assert.equal(run().status, 'passed');
   write('uncommitted.md', 'Uncommitted consumer change');
   assert.match(run().failures.join('\n'), /dirty/);
+});
+
+// F009: a quarantine keeps a mandatory outcome visible without vetoing
+// readiness. Each way it could instead become a silent hole must fail loudly.
+const QUARANTINABLE = 'teams-development-execution';
+const entry = (overrides = {}) => ({ schemaVersion: 1, entries: [{ artifact: QUARANTINABLE,
+  owner: 'integration-owners', reason: 'Tracked development-server limitation', expires: '2026-10-21', ...overrides }] });
+const withQuarantine = (input, quarantine, now = '2026-09-09') => evaluate({ ...input, quarantine, now });
+const resultFor = (result, id) => result.results.find(candidate => candidate.id === id);
+
+test('a valid quarantine reports a failing requirement without failing readiness', () => {
+  const input = fixture();
+  input.artifacts[QUARANTINABLE].status = 'failed';
+  input.artifacts[QUARANTINABLE].failures = ['ChunkLoadError: Loading chunk app/msp/layout failed'];
+  assert.equal(evaluate(input).status, 'failed', 'unquarantined failure must still veto readiness');
+  const result = withQuarantine(input, entry());
+  assert.equal(result.status, 'passed', result.failures.join('\n'));
+  const reported = resultFor(result, QUARANTINABLE);
+  assert.equal(reported.status, 'quarantined-failing');
+  assert.equal(reported.quarantine.owner, 'integration-owners');
+  assert.ok(reported.failures.length, 'the underlying problems stay visible');
+});
+
+test('a quarantined requirement that passes is reported as ready to un-quarantine', () => {
+  const result = withQuarantine(fixture(), entry());
+  assert.equal(result.status, 'passed', result.failures.join('\n'));
+  assert.equal(resultFor(result, QUARANTINABLE).status, 'quarantined-passing');
+});
+
+test('an expired quarantine fails readiness instead of silently continuing', () => {
+  const input = fixture();
+  input.artifacts[QUARANTINABLE].status = 'failed';
+  for (const now of ['2026-10-21', '2026-10-22']) {
+    const result = withQuarantine(input, entry(), now);
+    assert.equal(result.status, 'failed', `expiry must not survive ${now}`);
+    assert.match(result.failures.join('\n'), /Quarantine expired/);
+  }
+});
+
+for (const [label, overrides] of [['owner', { owner: '  ' }], ['reason', { reason: '' }],
+  ['expiry', { expires: 'soon' }], ['impossible expiry', { expires: '2026-02-30' }]]) {
+  test(`a quarantine entry missing a valid ${label} fails readiness`, () => {
+    const input = fixture();
+    input.artifacts[QUARANTINABLE].status = 'failed';
+    const result = withQuarantine(input, entry(overrides));
+    assert.equal(result.status, 'failed');
+    assert.equal(resultFor(result, QUARANTINABLE).status, 'failed', 'the requirement stays mandatory');
+  });
+}
+
+test('a P0 customer journey can never be quarantined', () => {
+  const p0 = readinessRequirements.filter(requirement => requirement.p0Journey);
+  assert.ok(p0.length, 'the P0 journey floor must be marked');
+  for (const requirement of p0) {
+    const input = fixture();
+    input.artifacts[requirement.artifact].status = 'failed';
+    const result = withQuarantine(input, entry({ artifact: requirement.artifact }));
+    assert.equal(result.status, 'failed', requirement.artifact);
+    assert.match(result.failures.join('\n'), /P0 journey cannot be quarantined/);
+  }
+});
+
+test('stale, duplicate and unsupported quarantine registries fail readiness', () => {
+  const input = fixture();
+  assert.match(withQuarantine(input, entry({ artifact: 'retired-suite' })).failures.join('\n'), /unknown requirement/);
+  const duplicated = entry(); duplicated.entries.push({ ...duplicated.entries[0] });
+  assert.match(withQuarantine(input, duplicated).failures.join('\n'), /Duplicate quarantine entry/);
+  for (const registry of [{ schemaVersion: 2, entries: [] }, { schemaVersion: 1 }, { entries: [] }]) {
+    assert.equal(withQuarantine(input, registry).status, 'failed', JSON.stringify(registry));
+  }
+  // An absent registry means nothing is quarantined, not that everything is.
+  const unquarantined = evaluate({ ...input, now: '2026-09-09' });
+  assert.equal(resultFor(unquarantined, QUARANTINABLE).status, 'passed');
+});
+
+test('the committed quarantine registry is valid and every entry is still in date', async () => {
+  const { readFileSync } = await import('node:fs');
+  const registry = JSON.parse(readFileSync(new URL('../lib/quarantine.json', import.meta.url), 'utf8'));
+  const { resolveQuarantine } = await import('../lib/quarantine.mjs');
+  const resolved = resolveQuarantine({ registry, requirements: readinessRequirements,
+    now: new Date().toISOString().slice(0, 10) });
+  assert.deepEqual(resolved.failures, [], 'committed quarantine entries must be owned, justified and unexpired');
 });

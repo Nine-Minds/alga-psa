@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "artifact": "teams-development-execution",
+      "owner": "integration-owners",
+      "reason": "Teams emulator overrides are denied under NODE_ENV=production by design (ee/packages/microsoft-teams/src/lib/teams/emulatorMode.ts), so this journey can only run against a Next development server. That server compiles an 81.7MB app/msp/layout chunk, crosses Next's used_heap > 0.8 * heap_size_limit threshold and self-restarts mid-response, delivering a truncated HTTP 200 body that the browser rejects with SyntaxError/ChunkLoadError. The lane is already at --max-old-space-size=12288, so no headroom remains on a hosted runner. Tracked as F034/T028; the durable fix is either reducing the layout chunk or resolving Graph/login endpoints from tenant configuration so a production build can be used. The security guard must not be relaxed to clear this.",
+      "expires": "2026-10-21",
+      "tracking": "F034/T028"
+    }
+  ]
+}

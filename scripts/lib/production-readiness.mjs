@@ -1,5 +1,6 @@
 import { selectIntegration } from './integration-selection.mjs';
 import { workspaceRequirements } from './workspace-execution-gate.mjs';
+import { resolveQuarantine } from './quarantine.mjs';
 
 export const readinessRequirements = [
   { job: 'inventory', artifact: 'repository-inventory', scope: 'repository-inventory', conditional: true, collectionOnly: true },
@@ -10,7 +11,8 @@ export const readinessRequirements = [
   { job: 'integration', artifact: 'infrastructure-execution-evidence', suite: 'infrastructure', conditional: true },
   { job: 'integration', artifact: 'workspace-db-aggregate', scope: 'workspace-db-execution', members: ['workspace-db'], conditional: true },
   { job: 'browser', artifact: 'fresh-install-execution-gate', scope: 'fresh-install-execution',
-    members: ['vitest-community', 'playwright-community', 'vitest-enterprise', 'playwright-enterprise'], conditional: true },
+    members: ['vitest-community', 'playwright-community', 'vitest-enterprise', 'playwright-enterprise'],
+    conditional: true, p0Journey: true },
   { job: 'browser', artifact: 'supported-upgrade-execution', scope: 'supported-upgrade', members: ['upgrade-schema', 'upgrade-browser'], conditional: true },
   { job: 'browser', artifact: 'supported-citus-upgrade-execution', scope: 'supported-upgrade', members: ['upgrade-schema', 'upgrade-browser'], conditional: true },
   { job: 'browser', artifact: 'microsoft-callback-execution', scope: 'microsoft-callback-development-evidence', conditional: true },
@@ -21,8 +23,11 @@ export const readinessRequirements = [
 
 // Consumes the independently verified per-workflow verdicts, downloaded from
 // this parent run. It cannot replace those raw-report verifiers or protections.
-export function evaluateProductionReadiness({ revision, changed, jobs, artifacts }) {
+export function evaluateProductionReadiness({ revision, changed, jobs, artifacts, quarantine, now }) {
   const failures = [], results = [];
+  const quarantined = resolveQuarantine({ registry: quarantine ?? { schemaVersion: 1, entries: [] },
+    requirements: readinessRequirements, now: now ?? new Date().toISOString().slice(0, 10) });
+  failures.push(...quarantined.failures);
   if (!/^[a-f0-9]{40}$/.test(revision ?? '')) failures.push('Invalid candidate revision');
   const selection = selectIntegration(changed);
   if (jobs?.selection?.result !== 'success') failures.push('Readiness selection did not succeed');
@@ -68,6 +73,13 @@ export function evaluateProductionReadiness({ revision, changed, jobs, artifacts
           if (counts && Object.entries(counts).some(([key, value]) => !Number.isSafeInteger(value) || value < 0 || (!['tests', 'passed'].includes(key) && value !== 0))) problems.push(`${id}: skipped or incomplete execution`);
         }
       }
+    }
+    // A valid quarantine keeps the outcome visible but stops it vetoing readiness.
+    const exemption = quarantined.entries.get(requirement.artifact);
+    if (exemption) {
+      results.push({ id: requirement.artifact, status: problems.length ? 'quarantined-failing' : 'quarantined-passing',
+        reason: notApplicable ? verdict.reason : undefined, quarantine: exemption, failures: problems });
+      continue;
     }
     results.push({ id: requirement.artifact, status: problems.length ? 'failed' : notApplicable ? 'not-applicable' : 'passed', reason: notApplicable ? verdict.reason : undefined, failures: problems });
     failures.push(...problems.map(problem => `${requirement.artifact}: ${problem}`));
