@@ -11675,7 +11675,12 @@ it('task events retain metadata-only qualified intent and consumer work atomical
   expect(rows.map((row: any) => row.publication.payload.collaboration.revision)).toEqual([1, 2, 3]);
   expect(rows.every((row: any) => row.ticket_id === null && row.resource_type === 'project_task' && row.resource_id === resource.id)).toBe(true);
   expect(JSON.stringify(rows)).not.toMatch(/Never retain|Changed body|MSP private content|actor_display_name/);
-  expect(await customer.table('co_management_event_consumers')).toHaveLength(5);
+  // Four consumers fan out from the create and one each from the edit and delete. The repeated
+  // create adds none: consumers are keyed (tenant, event_id, consumer) against one retained event.
+  const consumers = await customer.table('co_management_event_consumers');
+  expect(consumers).toHaveLength(6);
+  expect(consumers.filter((row: any) => row.event_id === rows[0].event_id).map((row: any) => row.consumer).sort())
+    .toEqual(['co-managed-email', 'internal-notifications', 'requester-email', 'search-index']);
   expect(await sponsor.table('co_management_event_outbox')).toHaveLength(0);
   const { EventSchemas } = await import('@alga-psa/event-schemas');
   for (const row of rows) {
@@ -18337,7 +18342,9 @@ it('relationship closure pauses the existing MSP SLA at the archive cutoff and b
 });
 
 it('participation evidence retains explicit handoff history through revocation and source deletion without private ticket fields', async () => withSharedTicketMutationFixture(async f => {
-  const evidence = () => f.sponsor.table('co_managed_participation_evidence').where({ customer_tenant: f.resource.tenant, resource_id: f.resource.id }).orderBy('occurred_at');
+  // Revocation retains the access_revoked handoff and the archived work snapshot under one
+  // clock_timestamp(), so occurred_at alone leaves their order undefined; tiebreak for a stable read.
+  const evidence = () => f.sponsor.table('co_managed_participation_evidence').where({ customer_tenant: f.resource.tenant, resource_id: f.resource.id }).orderBy('occurred_at').orderBy('evidence_id');
   const original = await evidence(); expect(original).toHaveLength(1);
   expect(original[0]).toMatchObject({ resource_type: 'ticket', source_type: 'ticket_handoff', event_type: 'escalated', payload: { audience: 'shared_it', revision: 1 } });
   await f.customer.table('tickets').where('ticket_id', f.resource.id).update({ attributes: JSON.stringify({ secret: 'Customer-only password', description: 'Private operational description' }) });
@@ -18346,7 +18353,12 @@ it('participation evidence retains explicit handoff history through revocation a
   await handoff.handBackCoManagedTicket(db, f.principal, f.resource, request);
   await handoff.handBackCoManagedTicket(db, f.principal, f.resource, request);
   await handoff.revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource, { operationId: randomUUID(), expectedRevision: 2, note: 'End sharing' });
-  const captured = await evidence(); expect(captured).toHaveLength(3);
+  // The repeated handback collapses into the single handed_back row it retained the first time;
+  // the fourth row is revocation's archived work snapshot, not a replayed duplicate.
+  const captured = await evidence(); expect(captured).toHaveLength(4);
+  expect(captured.map((row: any) => `${row.source_type}:${row.event_type}`).sort()).toEqual(
+    ['ticket_handoff:escalated', 'ticket_handoff:handed_back', 'ticket_handoff:access_revoked', 'work_snapshot:work_archived'].sort());
+  expect(captured.filter((row: any) => row.operation_id === request.operationId)).toHaveLength(1);
   expect(captured[1]).toMatchObject({ operation_id: request.operationId, actor_tenant: f.principal.tenant, payload: { note: request.note } });
   expect(JSON.stringify(captured)).not.toMatch(/Customer-only password|Private operational description/);
   await f.customer.table('tickets').where('ticket_id', f.resource.id).del();
@@ -18354,6 +18366,35 @@ it('participation evidence retains explicit handoff history through revocation a
   const migration = require('../../../migrations/20260908103849_create_co_managed_participation_evidence.cjs');
   await migration.up(db); await expect(migration.down(db)).rejects.toThrow('retained participation');
   await expect(f.sponsor.table('co_managed_participation_evidence').where('evidence_id', captured[0].evidence_id).update({ payload: '{}' })).rejects.toMatchObject({ code: '23514' });
+}));
+
+it('a repeated handback operation converges to one retained handoff, one evidence row and the first receipt', async () => withSharedTicketMutationFixture(async f => {
+  const handoff = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  const handedBack = () => f.customer.table('co_management_ticket_handoffs').where({ ticket_id: f.resource.id, transition: 'handed_back' });
+  const evidence = () => f.sponsor.table('co_managed_participation_evidence')
+    .where({ customer_tenant: f.resource.tenant, resource_id: f.resource.id, source_type: 'ticket_handoff', event_type: 'handed_back' });
+  const request = { operationId: randomUUID(), expectedRevision: 1, note: 'Return responsibility' };
+  const first = await handoff.handBackCoManagedTicket(db, f.principal, f.resource, request);
+  expect(await handoff.handBackCoManagedTicket(db, f.principal, f.resource, request)).toEqual(first);
+  expect(await handedBack()).toHaveLength(1);
+  expect(await evidence()).toHaveLength(1);
+  // The replay must not advance work either: one operation, one revision.
+  expect((await f.customer.table('co_management_ticket_work').where('ticket_id', f.resource.id).first()).revision).toBe(2);
+  // A retry is frozen exactly: reusing the operation with changed content is refused, never merged.
+  await expect(handoff.handBackCoManagedTicket(db, f.principal, f.resource, { ...request, note: 'Different note' }))
+    .rejects.toMatchObject({ code: 'HANDOFF_CHANGED' });
+  expect(await handedBack()).toHaveLength(1);
+  expect((await handedBack().first()).note).toBe(request.note);
+  // Concurrent duplicates converge as well: (tenant, operation_id) admits exactly one row.
+  await handoff.escalateCoManagedTicket(db, f.customerPrincipal, f.resource, { operationId: randomUUID(), expectedRevision: 2, note: 'Share again.' });
+  const concurrent = { operationId: randomUUID(), expectedRevision: 3, note: 'Hand back once more' };
+  const settled = await Promise.allSettled([
+    handoff.handBackCoManagedTicket(db, f.principal, f.resource, concurrent),
+    handoff.handBackCoManagedTicket(db, f.principal, f.resource, concurrent),
+  ]);
+  expect(settled.filter(outcome => outcome.status === 'fulfilled').length).toBeGreaterThanOrEqual(1);
+  expect(await f.customer.table('co_management_ticket_handoffs').where('operation_id', concurrent.operationId)).toHaveLength(1);
+  expect(await evidence()).toHaveLength(2);
 }));
 
 it('participation evidence excludes oversight and customer-only work until the MSP actually contributes', async () => withSharedProjectTaskFixture(async f => {
