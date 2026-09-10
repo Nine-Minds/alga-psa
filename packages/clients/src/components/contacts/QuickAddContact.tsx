@@ -132,10 +132,12 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
     if (isOpen) {
       const fetchFormMetadata = async () => {
         try {
+          // The preselected dial country is a nicety; it must not take the country
+          // list and the phone types down with it.
           const [countriesData, suggestionLabels, tenantCountry] = await Promise.all([
             countries.length > 0 ? Promise.resolve(countries) : getAllCountries(),
             listContactPhoneTypeSuggestions(),
-            getTenantDefaultCountry(),
+            getTenantDefaultCountry().catch(() => null),
           ]);
           setCountries(countriesData);
           setCustomPhoneTypeSuggestions(suggestionLabels);
