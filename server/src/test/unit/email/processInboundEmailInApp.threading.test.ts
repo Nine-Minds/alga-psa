@@ -655,8 +655,29 @@ describe('processInboundEmailInApp threaded inbound routing', () => {
         }
 
         if (table === 'email_sending_logs') {
-          emailLogQueried = true;
-          return makeQueryBuilder({ threadId: 'thread-header-that-should-not-win' });
+          // notificationLoopDetection.ts also queries this table (by
+          // reply_token_hash / status, tenant-scoped) as part of the loop
+          // guard that now runs before any threading decision — that is
+          // expected and does not indicate header threading ran. Only a
+          // query keyed on rfc_message_id is the header-threading lookup
+          // this test cares about (resolveReplyTargetFromOutboundMessageId),
+          // so track that specifically.
+          const builder: any = {
+            select: vi.fn().mockReturnThis(),
+            where: vi.fn((criteria: Record<string, unknown>) => {
+              if (criteria && typeof criteria === 'object' && 'rfc_message_id' in criteria) {
+                emailLogQueried = true;
+              }
+              return builder;
+            }),
+            andWhereRaw: vi.fn().mockReturnThis(),
+            orderBy: vi.fn().mockReturnThis(),
+            // Lacks from_address/to_addresses, so notificationLoopDetection's
+            // sender/recipient correlation can never match it — only the
+            // header-threading path's `{ threadId }` shape is meaningful here.
+            first: vi.fn().mockResolvedValue({ threadId: 'thread-header-that-should-not-win' }),
+          };
+          return builder;
         }
 
         throw new Error(`Unexpected table in unit test: ${table}`);
