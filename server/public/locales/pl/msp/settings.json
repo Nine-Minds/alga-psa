@@ -2904,7 +2904,8 @@
         "fieldCount": "Pola",
         "order": "Kolejność",
         "actions": "Akcje",
-        "openMenu": "Otwórz menu"
+        "openMenu": "Otwórz menu",
+        "searchPlaceholder": "Szukaj typów zasobów…"
       },
       "actions": {
         "addType": "Dodaj typ zasobu",
