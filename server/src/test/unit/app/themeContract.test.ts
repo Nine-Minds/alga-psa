@@ -500,6 +500,19 @@ describe('picker surface contract', () => {
 
     expect(offenders, `receding/hardcoded surface(s):\n${offenders.join('\n')}`).toEqual([]);
   });
+
+  /**
+   * The country-code badges shipped filled with border-200 and no ink of their
+   * own — 1.09:1 in high-contrast dark, where that rung is a near-white
+   * hairline and the inherited ink is white. Layer 6 cannot see it: the element
+   * names no foreground token at all, so only the fill is measurable.
+   */
+  it('CountryPicker.tsx tints its country-code badges with a chip utility', () => {
+    const badges = read('CountryPicker.tsx').split('\n').filter((line) => line.includes('font-mono'));
+
+    expect(badges).toHaveLength(2);
+    badges.forEach((line) => expect(line.trim()).toContain('chip-neutral'));
+  });
 });
 
 /* ------------------------------------------------------------------------- *
