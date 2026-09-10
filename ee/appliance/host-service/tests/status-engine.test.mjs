@@ -701,3 +701,102 @@ test('collectStatusSnapshot maps failure phases to expected categories', () => {
     process.env.PATH = originalPath;
   }
 });
+
+// Async runner standing in for a healthy single-node cluster with no app
+// workloads yet (platformReady, nothing else), so rollup logic past the
+// "Preparing Kubernetes" gate is exercised.
+const healthyEmptyClusterRunner = (command) => {
+  if (command.includes('get nodes -o json')) {
+    return Promise.resolve({ ok: true, status: 0, command, stderr: '', stdout: '{"items":[{"metadata":{"name":"node-1"},"status":{"conditions":[{"type":"Ready","status":"True"}]}}]}' });
+  }
+  if (command.includes('get pods -A --no-headers')) {
+    return Promise.resolve({ ok: true, status: 0, command, stderr: '', stdout: 'kube-system coredns-1 1/1 Running 0 5m\n' });
+  }
+  if (command.includes('get events -A -o json')) {
+    return Promise.resolve({ ok: true, status: 0, command, stderr: '', stdout: '{"items":[]}' });
+  }
+  return Promise.resolve({ ok: true, status: 0, command, stderr: '', stdout: '' });
+};
+
+test('an install-code redemption failure is not neutralized by a passing live network probe', async () => {
+  const stateFile = writeStateFile({
+    phase: 'install-code',
+    status: 'runtime-values-blocked',
+    lastAction: 'Could not redeem the install code.',
+    failure: {
+      phase: 'install-code',
+      step: 'redeem-install-code',
+      message: 'Could not redeem the install code.',
+      suspectedCause: 'Could not redeem the install code.',
+      suggestedNextStep: 'Install-code redemption failed (HTTP 403): Access denied',
+      retrySafe: true
+    }
+  });
+
+  const snapshot = await collectStatusSnapshotAsync({
+    stateFile,
+    kubeconfigPath: '/tmp/k3s.yaml',
+    kubectlPrefix: 'kubectl --kubeconfig /tmp/k3s.yaml',
+    runCommand: healthyEmptyClusterRunner,
+    networkProbe: { ok: true, checkedAt: '2026-09-04T10:56:00.000Z', failure: null }
+  });
+
+  assert.equal(snapshot.lastRecordedError, null);
+  assert.equal(snapshot.failures.length, 1);
+  assert.equal(snapshot.failures[0].category, 'install-code');
+  assert.match(snapshot.failures[0].suggestedNextStep, /HTTP 403/);
+  assert.equal(snapshot.rollup.state, 'blocked');
+  assert.equal(snapshot.topBlockers[0].component, 'install-code');
+});
+
+test('an in-flight automatic retry surfaces the failure that triggered it', async () => {
+  const stateFile = writeStateFile({
+    phase: 'storage',
+    status: 'storage-install-running',
+    lastAction: 'Reconciling the appliance local-path storage provider'
+  });
+  const lastFailure = {
+    attempt: 4,
+    at: '2026-09-04T10:55:10.000Z',
+    status: 'runtime-values-blocked',
+    phase: 'install-code',
+    step: 'redeem-install-code',
+    message: 'Could not redeem the install code.',
+    details: 'Install-code redemption failed (HTTP 403): Access denied',
+    retrySafe: true
+  };
+
+  const snapshot = await collectStatusSnapshotAsync({
+    stateFile,
+    kubeconfigPath: '/tmp/k3s.yaml',
+    kubectlPrefix: 'kubectl --kubeconfig /tmp/k3s.yaml',
+    runCommand: healthyEmptyClusterRunner,
+    autoRetry: { inFlight: true, willRetry: false, exhausted: false, attempts: 4, maxAttempts: 10, nextAttemptInSeconds: 0, lastAttemptAt: lastFailure.at, lastFailure, history: [lastFailure] }
+  });
+
+  assert.equal(snapshot.rollup.state, 'installing');
+  assert.equal(snapshot.rollup.message, 'Reconciling the appliance local-path storage provider');
+  assert.match(snapshot.rollup.nextAction, /Automatic retry 4 of 10 is running/);
+  assert.match(snapshot.rollup.nextAction, /install-code\/redeem-install-code: Could not redeem the install code\./);
+  assert.equal(snapshot.lastRecordedError.fromAutoRetry, true);
+  assert.equal(snapshot.lastRecordedError.step, 'redeem-install-code');
+  assert.equal(snapshot.autoRetry.attempts, 4);
+  assert.equal(snapshot.failures.length, 0, 'the carried failure is informational, not a new blocker');
+});
+
+test('a first run without retry history leaves the snapshot unchanged', async () => {
+  const stateFile = writeStateFile({
+    phase: 'storage',
+    status: 'storage-install-running',
+    lastAction: 'Reconciling the appliance local-path storage provider'
+  });
+  const snapshot = await collectStatusSnapshotAsync({
+    stateFile,
+    kubeconfigPath: '/tmp/k3s.yaml',
+    kubectlPrefix: 'kubectl --kubeconfig /tmp/k3s.yaml',
+    runCommand: healthyEmptyClusterRunner
+  });
+  assert.equal(snapshot.lastRecordedError, null);
+  assert.equal(snapshot.autoRetry, null);
+  assert.equal(snapshot.rollup.nextAction, 'Wait for Flux and Helm releases to finish reconciling.');
+});

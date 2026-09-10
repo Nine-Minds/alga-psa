@@ -113,10 +113,16 @@ export function generateSupportBundle(options = {}) {
     `releaseSelectionFile=${releaseSelectionFile}`
   ].join('\n'));
 
+  const stateDir = path.dirname(stateFile);
   const maybeFiles = [
     [stateFile, path.join(tempDir, 'meta', 'install-state.json')],
     [releaseSelectionFile, path.join(tempDir, 'meta', 'release-selection.json')],
-    [setupInputsFile, path.join(tempDir, 'meta', 'setup-inputs.json')]
+    [setupInputsFile, path.join(tempDir, 'meta', 'setup-inputs.json')],
+    // Auto-retry bookkeeping and the detached engine logs: the only durable
+    // record of a setup step that keeps failing and being re-queued.
+    [path.join(stateDir, 'auto-retry-state.json'), path.join(tempDir, 'meta', 'auto-retry-state.json')],
+    [path.join(stateDir, 'setup-engine.log'), path.join(tempDir, 'meta', 'setup-engine.log')],
+    [path.join(stateDir, 'update-engine.log'), path.join(tempDir, 'meta', 'update-engine.log')]
   ];
   for (const [src, dest] of maybeFiles) {
     const content = readIfExists(src);

@@ -96,6 +96,11 @@ function classifyFailureCategory(phase, status, failure) {
   const lowerStatus = (status || '').toLowerCase();
   const lowerStep = (failure?.step || '').toLowerCase();
 
+  // Install-code redemption is a licensing failure, never a network-class one:
+  // it must not be neutralized by a passing live network probe.
+  if (lowerPhase.includes('install-code') || lowerStep === 'redeem-install-code') {
+    return 'install-code';
+  }
   if (lowerPhase.includes('dns') || lowerStep.includes('resolve')) {
     return 'dns';
   }
@@ -131,6 +136,7 @@ function isEarlyKubernetesBootstrapPhase(phase) {
     'network',
     'registry-release-source',
     'release',
+    'install-code',
     'storage',
     'k3s',
     'flux'
@@ -219,6 +225,9 @@ function guidanceForCategory(category) {
   }
   if (category === 'registry-release-source') {
     return 'Verify GHCR access, the selected appliance release channel, and proxy/firewall policy.';
+  }
+  if (category === 'install-code') {
+    return 'Check the install code from your registration email and that the appliance can reach https://license.nineminds.com; re-issue the code from the portal if it was already used.';
   }
   if (category === 'k3s') {
     return 'Inspect k3s installer output and `systemctl status k3s` on the host.';
@@ -689,6 +698,22 @@ function buildStatusSnapshot({
     }
   }
 
+  // A retried run is in flight. install-state now describes the running phase,
+  // so the failure that keeps triggering retries is only in the retry record;
+  // carry it into the snapshot so "installing" is never a blank wall.
+  let retryCarriedFailure = null;
+  if (autoRetry?.inFlight && autoRetry.lastFailure) {
+    const last = autoRetry.lastFailure;
+    retryCarriedFailure = { ...last, fromAutoRetry: true };
+    if (rollup.state === 'installing') {
+      const where = [last.phase, last.step].filter(Boolean).join('/') || 'an earlier step';
+      rollup = {
+        ...rollup,
+        nextAction: `Automatic retry ${autoRetry.attempts} of ${autoRetry.maxAttempts} is running. The previous attempt stopped at ${where}: ${last.message}`
+      };
+    }
+  }
+
   const topBlockers = failures.map(blockerFromFailure);
   const recentEvents = eventsResult.ok ? parseEventsJson(eventsResult.stdout).slice(-40) : [];
   const activeOperations = deriveActiveOperations(podLines);
@@ -703,7 +728,8 @@ function buildStatusSnapshot({
     status: installState?.status || 'unknown',
     kubeconfigPath,
     network: networkStatus,
-    lastRecordedError: resolvedNetworkFailure,
+    lastRecordedError: resolvedNetworkFailure || retryCarriedFailure,
+    autoRetry: autoRetry || null,
     tiers,
     failures,
     readinessTiers,
