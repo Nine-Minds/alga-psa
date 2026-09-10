@@ -801,6 +801,7 @@
     },
     "sso": {
       "signInWithMicrosoft": "Mit Microsoft anmelden",
+      "signInWithKeycloak": "Mit Keycloak anmelden",
       "signInWithGoogle": "Mit Google anmelden",
       "redirecting": "Weiterleitung...",
       "startFailed": "Die SSO-Anmeldung konnte nicht gestartet werden. Bitte prüfen Sie die Anbieterkonfiguration und versuchen Sie es erneut."

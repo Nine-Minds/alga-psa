@@ -223,6 +223,7 @@
     },
     "sso": {
       "signInWithMicrosoft": "Accedi con Microsoft",
+      "signInWithKeycloak": "Accedi con Keycloak",
       "signInWithGoogle": "Accedi con Google",
       "redirecting": "Reindirizzamento...",
       "startFailed": "Non è stato possibile avviare l'accesso SSO. Verifica la configurazione del provider e riprova."

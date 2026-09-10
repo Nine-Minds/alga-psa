@@ -1698,7 +1698,7 @@
             "label": "Teams"
           }
         },
-        "descriptionCe": "Gerencie perfis da Microsoft de propriedade do locatário para SSO do MSP, entrada da Microsoft e descoberta de domínio de login.",
+        "descriptionCe": "Gerencie os registros de aplicativos Microsoft da sua empresa para o e-mail do Outlook.",
         "descriptionEe": "Gerencie perfis da Microsoft de propriedade de locatários para MSP SSO, email do Outlook, sincronização de calendário e Microsoft Teams.",
         "dialog": {
           "cancel": "Cancelar",
@@ -1724,7 +1724,7 @@
         },
         "empty": {
           "createButton": "Criar perfil da Microsoft",
-          "descriptionCe": "Crie primeiro um perfil nomeado e, em seguida, vincule-o explicitamente ao SSO do MSP e aos fluxos de login do domínio de login.",
+          "descriptionCe": "Crie um registro de aplicativo Microsoft para o e-mail do Outlook.",
           "descriptionEe": "Crie primeiro um perfil nomeado e, em seguida, vincule-o explicitamente ao SSO do MSP, ao email do Outlook, à sincronização de calendário e ao Teams.",
           "title": "Ainda não há perfis da Microsoft"
         },
@@ -2774,6 +2774,52 @@
       }
     },
     "sso": {
+      "keycloak": {
+        "title": "Keycloak / OpenID Connect",
+        "description": "Permita que a equipe entre pelo seu próprio realm do Keycloak. Os usuários são associados por e-mail a contas existentes do AlgaPSA; o Keycloak nunca cria usuários aqui.",
+        "status": {
+          "configured": "Configurado",
+          "notConfigured": "Não configurado"
+        },
+        "actions": {
+          "refresh": "Atualizar",
+          "save": "Verificar e salvar",
+          "saving": "Verificando e salvando…",
+          "remove": "Remover"
+        },
+        "setup": {
+          "redirectUri": "Crie um cliente OpenID Connect confidencial no seu realm e permita este URI de redirecionamento:",
+          "domainsEe": "Depois, reivindique e verifique o domínio de login da equipe em «Avançado» para que e-mails desse domínio sejam direcionados a este realm.",
+          "domainsCe": "Depois, adicione o domínio de login da equipe em «Avançado» para que e-mails desse domínio sejam direcionados a este realm.",
+          "issuer": "Emissor: {{issuer}}"
+        },
+        "fields": {
+          "url": "URL do servidor Keycloak",
+          "realm": "Realm",
+          "clientId": "ID do cliente",
+          "clientSecret": "Segredo do cliente",
+          "clientSecretKeep": "Deixe em branco para manter {{masked}}"
+        },
+        "errors": {
+          "loadFailed": "Falha ao carregar as configurações do Keycloak",
+          "saveFailed": "Falha ao salvar as configurações do Keycloak",
+          "removeFailed": "Falha ao remover as configurações do Keycloak"
+        },
+        "toasts": {
+          "savedTitle": "Configurações do Keycloak salvas",
+          "savedDescription": "O realm respondeu à descoberta OpenID e a equipe já pode entrar com o Keycloak.",
+          "saveFailedTitle": "Não foi possível salvar as configurações do Keycloak",
+          "removedTitle": "Configurações do Keycloak removidas",
+          "removedDescription": "O login com o Keycloak não é mais oferecido para este tenant.",
+          "removeFailedTitle": "Não foi possível remover as configurações do Keycloak"
+        },
+        "removeDialog": {
+          "title": "Remover o login com o Keycloak?",
+          "message": "A equipe deixará de ver o botão do Keycloak. O login com senha não é afetado.",
+          "confirm": "Remover",
+          "cancel": "Cancelar"
+        }
+      },
       "msp": {
         "actions": {
           "add": "Adicionar",
@@ -3617,7 +3663,7 @@
         "label": "Google"
       },
       "microsoft": {
-        "descriptionCe": "MSP SSO, Microsoft sign-in, and login-domain discovery.",
+        "descriptionCe": "E-mail de entrada do Outlook para o registro de aplicativo Microsoft da sua empresa.",
         "descriptionEe": "MSP SSO, Outlook email, calendar sync, and Teams.",
         "label": "Microsoft"
       },

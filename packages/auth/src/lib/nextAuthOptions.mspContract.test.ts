@@ -14,6 +14,17 @@ describe('NextAuth MSP SSO contract', () => {
     expect(source).toContain('AzureADProvider({');
   });
 
+  it('Keycloak registers from the four KEYCLOAK_* secrets and resolves users through the shared OAuth mapper', () => {
+    expect(source).toContain('secrets.keycloakClientId &&');
+    expect(source).toContain('buildKeycloakProvider({');
+    expect(source).toContain("provider: 'keycloak',");
+    expect(source).toContain("keycloak: 'keycloak',");
+    // Raw realm claims must never become the session identity (issue #3347).
+    expect(source).not.toContain('tenant: profile.tenant,');
+    expect(source).not.toContain('user_type: profile.user_type,');
+    expect(source).not.toContain('keycloak-credentials');
+  });
+
   it('T047: auth options are rebuilt per request (no stale static cache)', () => {
     expect(source).toContain('export async function getAuthOptions(): Promise<NextAuthConfig> {');
     expect(source).toContain('return buildAuthOptions();');

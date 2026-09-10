@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import clsx from 'clsx';
 import { signIn } from 'next-auth/react';
 import { Loader2 } from 'lucide-react';
+import { SiKeycloak } from 'react-icons/si';
 import { GoogleIcon } from '@alga-psa/ui/components/GoogleIcon';
 // Imports react-i18next directly rather than the @alga-psa/ui wrapper: the MSP
 // sign-in page renders this outside any I18nProvider, so `useSuspense: false`
@@ -17,7 +18,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 // behavioural difference, so both copies must be edited in lockstep.
 
 const MicrosoftMulticolorLogo = () => (
-  <svg className="h-8 w-8" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
     <rect x="2" y="2" width="8" height="8" fill="#F25022" />
     <rect x="14" y="2" width="8" height="8" fill="#7FBA00" />
     <rect x="2" y="14" width="8" height="8" fill="#00A4EF" />
@@ -26,7 +27,7 @@ const MicrosoftMulticolorLogo = () => (
 );
 
 type MspSsoProvider = {
-  id: 'google' | 'azure-ad';
+  id: 'google' | 'azure-ad' | 'keycloak';
   nameKey: string;
   nameFallback: string;
 };
@@ -34,7 +35,29 @@ type MspSsoProvider = {
 const MSP_SSO_PROVIDERS: MspSsoProvider[] = [
   { id: 'google', nameKey: 'auth.sso.signInWithGoogle', nameFallback: 'Sign in with Google' },
   { id: 'azure-ad', nameKey: 'auth.sso.signInWithMicrosoft', nameFallback: 'Sign in with Microsoft' },
+  { id: 'keycloak', nameKey: 'auth.sso.signInWithKeycloak', nameFallback: 'Sign in with Keycloak' },
 ];
+const MSP_SSO_PROVIDER_IDS = new Set<string>(MSP_SSO_PROVIDERS.map((provider) => provider.id));
+
+function isMspSsoProviderId(value: unknown): value is MspSsoProvider['id'] {
+  return typeof value === 'string' && MSP_SSO_PROVIDER_IDS.has(value);
+}
+
+// Same rule as `isEnterprise` in @alga-psa/core/features, read at render time so
+// one bundle can be exercised under both editions.
+function isEnterpriseEdition(): boolean {
+  return (process.env.NEXT_PUBLIC_EDITION ?? '').toLowerCase() === 'enterprise';
+}
+
+// Community Edition ships Keycloak as its only SSO provider (mirroring the
+// single-vendor CE integrations such as Tactical RMM); Google and Microsoft
+// sign-in stay Enterprise. The discovery endpoints enforce the same split.
+function visibleProviders(authSurface: 'msp' | 'client_portal'): MspSsoProvider[] {
+  if (isEnterpriseEdition()) return MSP_SSO_PROVIDERS;
+  // The CE profile mapper only resolves internal MSP users.
+  if (authSurface === 'client_portal') return [];
+  return MSP_SSO_PROVIDERS.filter((provider) => provider.id === 'keycloak');
+}
 const LAST_PROVIDER_STORAGE_KEY = 'msp_sso_last_provider';
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -64,9 +87,28 @@ export default function SsoProviderButtons({
   storageKey,
 }: SsoProviderButtonsProps): React.ReactElement {
   const { t } = useTranslation('common', { useSuspense: false });
+  const editionProviders = useMemo(() => visibleProviders(authSurface), [authSurface]);
+  // A provider button exists when NextAuth registers it app-wide (deployment-level
+  // credentials) or when discovery offers it for the typed email (tenant-level
+  // credentials, which NextAuth only loads once sign-in resolution runs). Until
+  // the registry answers, every edition-visible provider renders (disabled) so
+  // SSR and the first paint stay stable.
+  const [registeredProviders, setRegisteredProviders] = useState<Set<string> | null>(null);
+  const [allowedProviders, setAllowedProviders] = useState<MspSsoProvider['id'][]>([]);
+  const providers = useMemo(
+    () =>
+      registeredProviders
+        ? editionProviders.filter(
+            (provider) => registeredProviders.has(provider.id) || allowedProviders.includes(provider.id)
+          )
+        : editionProviders,
+    [editionProviders, registeredProviders, allowedProviders]
+  );
+  // Discovery runs against the edition set, not the visible set: a tenant-only
+  // provider is invisible until discovery names it.
+  const discoveryKey = editionProviders.map((provider) => provider.id).join(',');
   const [pendingProvider, setPendingProvider] = useState<string | null>(null);
   const [isDiscovering, setIsDiscovering] = useState(false);
-  const [allowedProviders, setAllowedProviders] = useState<MspSsoProvider['id'][]>([]);
   const [preferredProvider, setPreferredProvider] = useState<MspSsoProvider['id'] | null>(null);
   const normalizedEmail = (email || '').trim().toLowerCase();
   const hasValidEmail = EMAIL_PATTERN.test(normalizedEmail);
@@ -94,9 +136,29 @@ export default function SsoProviderButtons({
     portalDomainHint || (authSurface === 'client_portal' ? inferredPortalDomain : undefined);
 
   useEffect(() => {
+    if (editionProviders.length === 0) return;
+    let cancelled = false;
+    const loadRegisteredProviders = async () => {
+      try {
+        const response = await fetch('/api/auth/providers', { credentials: 'include' });
+        if (!response.ok) return;
+        const registry = (await response.json()) as Record<string, unknown> | null;
+        if (cancelled || !registry || typeof registry !== 'object') return;
+        setRegisteredProviders(new Set(Object.keys(registry)));
+      } catch {
+        // Leave the edition set in place; discovery still gates each button.
+      }
+    };
+    void loadRegisteredProviders();
+    return () => {
+      cancelled = true;
+    };
+  }, [editionProviders]);
+
+  useEffect(() => {
     if (typeof window === 'undefined') return;
     const stored = window.localStorage.getItem(effectiveStorageKey);
-    if (stored === 'google' || stored === 'azure-ad') {
+    if (isMspSsoProviderId(stored)) {
       setPreferredProvider(stored);
     }
   }, [effectiveStorageKey]);
@@ -104,7 +166,7 @@ export default function SsoProviderButtons({
   useEffect(() => {
     let cancelled = false;
 
-    if (!hasValidEmail) {
+    if (!hasValidEmail || discoveryKey.length === 0) {
       setAllowedProviders([]);
       setIsDiscovering(false);
       return () => {
@@ -140,8 +202,7 @@ export default function SsoProviderButtons({
           return;
         }
 
-        const providers = result.providers
-          .filter((provider): provider is MspSsoProvider['id'] => provider === 'google' || provider === 'azure-ad');
+        const providers = result.providers.filter(isMspSsoProviderId);
         setAllowedProviders(Array.from(new Set(providers)));
       } catch {
         if (!cancelled) {
@@ -159,20 +220,21 @@ export default function SsoProviderButtons({
     return () => {
       cancelled = true;
     };
-  }, [callbackUrl, effectiveDiscoveryEndpoint, hasValidEmail, normalizedEmail, portalDomainContext, tenantHint]);
+  }, [callbackUrl, effectiveDiscoveryEndpoint, hasValidEmail, normalizedEmail, portalDomainContext, discoveryKey, tenantHint]);
 
   const orderedProviders = useMemo(() => {
     if (!preferredProvider || !allowedProviders.includes(preferredProvider)) {
-      return MSP_SSO_PROVIDERS;
+      return providers;
     }
     return [
-      ...MSP_SSO_PROVIDERS.filter((provider) => provider.id === preferredProvider),
-      ...MSP_SSO_PROVIDERS.filter((provider) => provider.id !== preferredProvider),
+      ...providers.filter((provider) => provider.id === preferredProvider),
+      ...providers.filter((provider) => provider.id !== preferredProvider),
     ];
-  }, [preferredProvider, allowedProviders]);
+  }, [providers, preferredProvider, allowedProviders]);
 
   const handleSignIn = async (providerId: MspSsoProvider['id']) => {
     if (!hasValidEmail || isDiscovering || !allowedProviders.includes(providerId)) return;
+    if (!providers.some((provider) => provider.id === providerId)) return;
     setPendingProvider(providerId);
     try {
       onError?.('');
@@ -245,13 +307,20 @@ export default function SsoProviderButtons({
 
   const renderProviderIcon = (providerId: MspSsoProvider['id']) => {
     if (providerId === 'google') {
-      return <GoogleIcon className="h-8 w-8" style={{ color: '#34A853' }} aria-hidden />;
+      return <GoogleIcon className="h-6 w-6" style={{ color: '#34A853' }} aria-hidden />;
+    }
+    if (providerId === 'keycloak') {
+      return <SiKeycloak className="h-6 w-6" style={{ color: '#4D4D4D' }} aria-hidden />;
     }
     return <MicrosoftMulticolorLogo />;
   };
 
+  if (orderedProviders.length === 0) {
+    return <></>;
+  }
+
   return (
-    <div className="flex gap-3">
+    <div className="flex flex-col gap-3">
       {orderedProviders.map((provider) => {
         const isPending = pendingProvider === provider.id;
         const isAllowed = allowedProviders.includes(provider.id);
@@ -269,12 +338,13 @@ export default function SsoProviderButtons({
             autoFocus={Boolean(preferredProvider && preferredProvider === provider.id && isAllowed)}
             data-preferred={preferredProvider === provider.id && isAllowed ? 'true' : 'false'}
             className={clsx(
-              'flex items-center gap-2 px-6 py-2 h-auto',
+              'flex w-full items-center justify-center gap-2 whitespace-nowrap px-6 py-2 h-auto',
               provider.id === 'google' && 'border-[#34A853] hover:bg-[#34A853]/5',
-              provider.id === 'azure-ad' && 'border-[#0078D4] hover:bg-[#0078D4]/5'
+              provider.id === 'azure-ad' && 'border-[#0078D4] hover:bg-[#0078D4]/5',
+              provider.id === 'keycloak' && 'border-[#4D4D4D] hover:bg-[#4D4D4D]/5'
             )}
           >
-            {isPending ? <Loader2 className="h-8 w-8 animate-spin" /> : renderProviderIcon(provider.id)}
+            {isPending ? <Loader2 className="h-6 w-6 animate-spin" /> : renderProviderIcon(provider.id)}
             {isPending
               ? t('auth.sso.redirecting', { defaultValue: 'Redirecting...' })
               : t(provider.nameKey, { defaultValue: provider.nameFallback })}
