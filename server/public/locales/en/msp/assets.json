@@ -406,11 +406,17 @@
       "refreshing": "Refreshing...",
       "refreshData": "Refresh Data",
       "rebootDevice": "Reboot Device",
+      "rebooting": "Rebooting...",
       "editAsset": "Edit Asset",
       "deleteAsset": "Delete Asset"
     },
     "values": {
       "unknownClient": "Unknown Client"
+    },
+    "reboot": {
+      "title": "Reboot device?",
+      "message": "{{name}} will restart immediately through {{provider}}. Anyone signed in will lose unsaved work.",
+      "confirm": "Reboot now"
     }
   },
   "assetDetailTabs": {
