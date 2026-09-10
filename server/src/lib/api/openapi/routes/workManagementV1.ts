@@ -655,6 +655,28 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     extensions: ticketExt('read'), edition: 'both',
   });
 
+  for (const variant of [
+    { name: 'thumbnail', size: '200x200 cover-cropped' },
+    { name: 'preview', size: '800x600 fit-inside' },
+  ] as const) {
+    registry.registerRoute({
+      method: 'get', path: `/api/v1/tickets/{id}/documents/{documentId}/${variant.name}`,
+      summary: `Get a ticket document ${variant.name} image`,
+      description: `Serves the cached ${variant.size} JPEG ${variant.name} for an image, PDF, or video document attached to a ticket. Generated on first request for older uploads. Responds with an ETag and long-lived Cache-Control; honors If-None-Match with 304. Returns 404 for document types that have no ${variant.name}.`,
+      tags: [tag], security: [{ ApiKeyAuth: [] }],
+      request: { params: TicketDocumentParams },
+      responses: {
+        200: { description: `Binary ${variant.name} image (image/jpeg).`, schema: ApiSuccess },
+        304: { description: 'Not modified (ETag matched If-None-Match).', schema: ApiSuccess },
+        401: { description: 'API key missing/invalid.', schema: ApiError },
+        403: { description: 'RBAC denied for ticket resource action.', schema: ApiError },
+        404: { description: `Document not found or has no ${variant.name}.`, schema: ApiError },
+        500: { description: 'Unexpected failure.', schema: ApiError },
+      },
+      extensions: ticketExt('read'), edition: 'both',
+    });
+  }
+
   registry.registerRoute({
     method: 'delete', path: '/api/v1/tickets/{id}/documents/{documentId}',
     summary: 'Delete a ticket document',

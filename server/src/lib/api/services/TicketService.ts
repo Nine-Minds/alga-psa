@@ -69,6 +69,7 @@ import { renderTicketDescriptionHtml, renderTicketRichTextHtml } from './ticketR
 import { getClientLogoUrl, getContactAvatarUrl, getUserAvatarUrl } from '@alga-psa/formatting/avatarUtils';
 import { aggregateReactions } from '@alga-psa/types';
 import { StorageService } from '@alga-psa/storage/StorageService';
+import { generateDocumentPreviews, type PreviewGenerationResult } from '@alga-psa/documents/lib/documentPreviewGenerator';
 import { addMaterial, InsufficientStockError, MaterialValidationError } from '@alga-psa/inventory/lib';
 import { v4 as uuidv4 } from 'uuid';
 // import { performanceTracker } from '../../analytics/performanceTracking';
@@ -227,6 +228,13 @@ export interface BundleView {
   master: BundleMemberTicket | null;
   children: BundleMemberTicket[];
   settings: { mode: BundleMode; reopen_on_child_reply: boolean } | null;
+}
+
+export type TicketDocumentVariant = 'thumbnail' | 'preview';
+
+function isPreviewableMime(mimeType: string | null | undefined): boolean {
+  const mime = (mimeType ?? '').toLowerCase();
+  return mime.startsWith('image/') || mime === 'application/pdf' || mime.startsWith('video/');
 }
 
 export class TicketService extends BaseService<ITicket> {
@@ -1124,6 +1132,7 @@ export class TicketService extends BaseService<ITicket> {
     });
 
     documentCommitted = true;
+    await this.persistDocumentPreviews(knex, document, buffer, context.tenant);
     const createdDocument = await this.getDocumentById(documentId, context);
     if (!createdDocument) {
       throw new Error('Uploaded document could not be loaded');
@@ -1176,6 +1185,85 @@ export class TicketService extends BaseService<ITicket> {
       fileName: doc.document_name || result.metadata.original_name,
       mimeType: doc.mime_type || result.metadata.mime_type,
     };
+  }
+
+  /**
+   * Serve the cached thumbnail (200x200) or preview (800x600) image for a
+   * ticket document. Images and PDFs uploaded before previews existed get
+   * their previews generated on first request and persisted.
+   */
+  async downloadTicketDocumentVariant(
+    ticketId: string,
+    documentId: string,
+    variant: TicketDocumentVariant,
+    context: ServiceContext
+  ): Promise<{ buffer: Buffer; fileId: string; mimeType: string }> {
+    const { knex } = await this.getKnex();
+    this.assertValidTicketId(ticketId);
+
+    const scopedDb = tenantDb(knex, context.tenant);
+    const docQuery = tenantScopedTable(knex, 'documents as d', context.tenant);
+    scopedDb.tenantJoin(docQuery, 'document_associations as da', 'd.document_id', 'da.document_id');
+
+    const clientVisibility = await this.resolveClientTicketVisibility(context);
+    if (clientVisibility) {
+      docQuery.where('d.is_client_visible', true);
+    }
+
+    const doc = await docQuery
+      .where({
+        'da.entity_id': ticketId,
+        'da.entity_type': 'ticket',
+        'd.document_id': documentId,
+      })
+      .select('d.*')
+      .first() as IDocument | undefined;
+
+    if (!doc || !doc.file_id || !await canReadCommentAttachment(knex, context.tenant, context.userId, documentId)) {
+      throw new NotFoundError('Document not found');
+    }
+
+    const column = variant === 'thumbnail' ? 'thumbnail_file_id' : 'preview_file_id';
+    let fileId = doc[column] ?? null;
+
+    if (!fileId && !doc.preview_generated_at && isPreviewableMime(doc.mime_type)) {
+      const original = await StorageService.downloadFile(doc.file_id);
+      const generated = await this.persistDocumentPreviews(knex, doc, original.buffer, context.tenant);
+      fileId = generated?.[column] ?? null;
+    }
+
+    if (!fileId) {
+      throw new NotFoundError(`Document ${variant} not available`);
+    }
+
+    const result = await StorageService.downloadFile(fileId);
+    return {
+      buffer: result.buffer,
+      fileId,
+      mimeType: result.metadata.mime_type || 'image/jpeg',
+    };
+  }
+
+  private async persistDocumentPreviews(
+    knex: Knex,
+    document: IDocument,
+    buffer: Buffer,
+    tenant: string,
+  ): Promise<PreviewGenerationResult | null> {
+    try {
+      const result = await generateDocumentPreviews(document, buffer);
+      await tenantScopedTable(knex, 'documents', tenant)
+        .where({ document_id: document.document_id })
+        .update({
+          thumbnail_file_id: result.thumbnail_file_id,
+          preview_file_id: result.preview_file_id,
+          preview_generated_at: result.preview_generated_at,
+        });
+      return result;
+    } catch (error) {
+      console.error(`[TicketService] Preview generation failed for document ${document.document_id}:`, error);
+      return null;
+    }
   }
 
   async deleteTicketDocument(

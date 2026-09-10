@@ -254,7 +254,7 @@
     "title": "Documents",
     "attach": "Attach",
     "camera": "Camera",
-    "file": "File",
+    "file": "Files",
     "uploading": "Uploading attachment…",
     "empty": "No documents attached.",
     "unknownType": "Unknown type",
@@ -267,8 +267,19 @@
       "upload": "Unable to upload the document. Please try again.",
       "open": "Unable to open this document right now.",
       "cameraPermission": "Camera access is required to attach a photo.",
-      "delete": "Unable to delete the document. Please try again."
-    }
+      "delete": "Unable to delete the document. Please try again.",
+      "photosPermission": "Photo library access is required to attach photos.",
+      "preview": "Unable to load this image preview."
+    },
+    "photos": "Photos",
+    "uploadingProgress": "Uploading {{current}} of {{total}}…",
+    "uploadFailed": "Upload failed",
+    "retry": "Retry",
+    "dismiss": "Dismiss",
+    "share": "Share",
+    "previousImage": "Previous image",
+    "nextImage": "Next image",
+    "previewCounter": "{{current}} of {{total}}"
   },
   "materials": {
     "title": "Materials",

@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { ApiBaseController, AuthenticatedApiRequest } from './ApiBaseController';
-import { TicketService } from '../services/TicketService';
+import { TicketService, type TicketDocumentVariant } from '../services/TicketService';
 import { 
   createTicketSchema, updateTicketSchema, ticketListQuerySchema, ticketSearchSchema, ticketStatsResponseSchema, createTicketMaterialSchema, createTicketCommentSchema, updateTicketCommentSchema, updateTicketStatusSchema, updateTicketAssignmentSchema, createTicketFromAssetSchema, linkTicketAssetSchema, addTicketAgentSchema, assignTicketTeamSchema, removeTicketTeamSchema, createTicketChecklistItemSchema, updateTicketChecklistCompletionSchema
 } from '../schemas/ticket';
@@ -1153,6 +1153,54 @@ export class ApiTicketController extends ApiBaseController {
           headers.set('Content-Disposition', `attachment; filename="${encodeURIComponent(result.fileName)}"`);
           headers.set('Cache-Control', 'no-store');
 
+          return new NextResponse(new Uint8Array(result.buffer), { status: 200, headers });
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Serve a cached thumbnail or preview image for a ticket document
+   */
+  downloadDocumentVariant(variant: TicketDocumentVariant) {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          await this.checkPermission(apiRequest, this.options.permissions?.read || 'read');
+
+          const ticketId = await this.extractIdFromPath(apiRequest);
+          const knex = await getConnection(apiRequest.context!.tenant);
+          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+
+          const url = new URL(apiRequest.url || req.url);
+          const segments = url.pathname.split('/');
+          const docsIndex = segments.indexOf('documents');
+          const documentId = docsIndex >= 0 ? segments[docsIndex + 1] : undefined;
+
+          if (!documentId) {
+            throw new ValidationError('Validation failed', [
+              { path: ['documentId'], message: 'document ID is required' },
+            ]);
+          }
+
+          const result = await this.ticketService.downloadTicketDocumentVariant(ticketId, documentId, variant, apiRequest.context!);
+
+          const etag = `"${result.fileId}"`;
+          const headers = new Headers();
+          headers.set('Content-Type', result.mimeType);
+          headers.set('ETag', etag);
+          // Variants are immutable per file id: a regenerated preview gets a new id.
+          headers.set('Cache-Control', 'private, max-age=31536000, immutable');
+
+          if (req.headers.get('if-none-match') === etag) {
+            return new NextResponse(null, { status: 304, headers });
+          }
+
+          headers.set('Content-Length', String(result.buffer.length));
           return new NextResponse(new Uint8Array(result.buffer), { status: 200, headers });
         });
       } catch (error) {
