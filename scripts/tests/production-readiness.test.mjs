@@ -77,6 +77,9 @@ test('not-applicable requires independent documentation-only selection and an ex
   for (const requirement of readinessRequirements) {
     const input = fixture(), verdict = input.artifacts[requirement.artifact];
     verdict.status = 'not-applicable'; verdict.reason = 'Documentation-only diff';
+    // A full-coverage selection requires every lane, including the repository
+    // inventory, so not-applicable is unjustified for all requirements.
+    input.changed = ['scripts/ci.mjs'];
     assert.equal(evaluate(input).status, 'failed');
     input.changed = ['docs/testing.md'];
     assert.equal(evaluate(input).status, requirement.conditional ? 'passed' : 'failed');
@@ -87,6 +90,29 @@ test('not-applicable requires independent documentation-only selection and an ex
       assert.equal(evaluate(input).status, 'failed');
     }
   }
+});
+
+test('the repository inventory is only applicable to full-coverage runs', () => {
+  const input = fixture();
+  // In-graph (Tier-1) selection: the integration and infrastructure lanes run a
+  // single partial shard, so the repository-wide inventory cannot be proven and
+  // is legitimately not-applicable with the selection reason.
+  input.changed = ['shared/services/email/processInboundEmailInApp.ts'];
+  const inventory = input.artifacts['repository-inventory'];
+  inventory.status = 'not-applicable';
+  inventory.reason = 'Manifest floor plus affected integration suites';
+  assert.equal(evaluate(input).status, 'passed');
+  // The same verdict is unjustified when the selection is full: a full run must
+  // produce a complete inventory.
+  input.changed = ['scripts/ci.mjs'];
+  assert.equal(evaluate(input).status, 'failed');
+  // A partial selection does not excuse the integration lane itself, which does
+  // run (a subset) in Tier-1 mode and must still return a passing verdict.
+  const integration = fixture();
+  integration.changed = ['shared/services/email/processInboundEmailInApp.ts'];
+  integration.artifacts['integration-execution-gate'].status = 'not-applicable';
+  integration.artifacts['integration-execution-gate'].reason = 'Tier-1 subset';
+  assert.equal(evaluate(integration).status, 'failed');
 });
 
 test('collection cannot impersonate browser execution and missing edition is rejected', () => {
