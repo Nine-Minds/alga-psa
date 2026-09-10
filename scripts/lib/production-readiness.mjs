@@ -44,7 +44,14 @@ export function evaluateProductionReadiness({ revision, changed, jobs, artifacts
     if (!Array.isArray(verdict?.failures) || verdict.failures.length) problems.push('Failed or malformed verdict');
     const notApplicable = verdict?.status === 'not-applicable';
     if (notApplicable) {
-      if (!requirement.conditional || selection.shouldRun || typeof verdict.reason !== 'string' || !verdict.reason.trim()) problems.push('Unjustified not-applicable selection');
+      // The repository inventory (collectionOnly) proves repository-wide
+      // discoverability and is only meaningful when the integration and
+      // infrastructure lanes run their full shard matrices; a Tier-1 (non-full)
+      // selection legitimately makes it not-applicable. Every other conditional
+      // lane is justified when the selection did not need it to run at all.
+      const justified = requirement.conditional
+        && (requirement.collectionOnly ? !selection.full : !selection.shouldRun);
+      if (!justified || typeof verdict.reason !== 'string' || !verdict.reason.trim()) problems.push('Unjustified not-applicable selection');
     } else if (requirement.collectionOnly) {
       if (verdict?.status !== 'passed' || verdict.executionVerified !== false
         || !Array.isArray(verdict.candidates) || !verdict.candidates.length
