@@ -17,6 +17,47 @@ function fixture() {
       journey:'["test journey"]',required:true,observed:true,outcome:'expected',first_attempt:'passed',retry_count:0})]}};
 }
 const set = (input, index, field, value) => { input.exportedRows.rows[index][BROWSER_HEADER.indexOf(field)] = value; };
+function notSelectedFixture() {
+  const input = fixture();
+  input.exportedRows.rows = [];
+  Object.assign(input.expectedExecutions[0], { executionRequired: false, selectionEvidence: 'changes-filter',
+    revision: null, revisionEvidence: 'unavailable', revisionDiagnostics: ['artifact-missing'],
+    recorderStatus: 'completed', recorderConclusion: 'skipped' });
+  return input;
+}
+
+test('explicit non-selection is reported without claiming tested coverage', () => {
+  const result = reconcile(notSelectedFixture());
+  assert.equal(result.status, 'not-required');
+  assert.equal(result.records[0].exportStatus, 'not-required');
+  assert.deepEqual(result.records[0].issues, ['browser-tests-not-selected']);
+});
+
+test('unexpected current-attempt exports conflict with non-selection', () => {
+  const input = notSelectedFixture();
+  input.exportedRows.rows = fixture().exportedRows.rows;
+  const result = reconcile(input);
+  assert.equal(result.status, 'incomplete');
+  assert.deepEqual(result.records[0].issues, ['unexpected-export-for-unselected-tests']);
+});
+
+for (const change of [{ selectionEvidence: undefined }, { conclusion: 'failure' }, { recorderConclusion: 'success' }]) {
+  test(`rejects invalid non-selection: ${JSON.stringify(change)}`, () => {
+    const input = notSelectedFixture();
+    Object.assign(input.expectedExecutions[0], change);
+    assert.throws(() => reconcile(input), /Invalid non-selection evidence/);
+  });
+}
+
+test('CLI accepts non-selection and preserves that status in its report', async t => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'metric-not-selected-'));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  const input = path.join(dir, 'input.json'), output = path.join(dir, 'output.json');
+  await writeFile(input, JSON.stringify(notSelectedFixture()));
+  const result = spawnSync(process.execPath, ['scripts/reconcile-browser-metric-executions.mjs', input, output]);
+  assert.equal(result.status, 0);
+  assert.equal(JSON.parse(await readFile(output, 'utf8')).status, 'not-required');
+});
 test('current first-attempt pass joins exact run and is deterministic without mutating input',()=>{
   const input=fixture(), before=structuredClone(input), result=reconcile(input);
   assert.equal(result.records[0].status,'observed-pass'); assert.equal(result.status,'passed');
