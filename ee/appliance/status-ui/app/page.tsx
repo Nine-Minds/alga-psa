@@ -19,6 +19,26 @@ type RawTierMap = Record<
   string,
   boolean | { ready?: boolean; status?: string }
 >;
+type RetryFailure = {
+  attempt?: number;
+  at?: string;
+  status?: string | null;
+  phase?: string | null;
+  step?: string | null;
+  message?: string;
+  details?: string | null;
+};
+type AutoRetry = {
+  attempts?: number;
+  maxAttempts?: number;
+  inFlight?: boolean;
+  willRetry?: boolean;
+  exhausted?: boolean;
+  nextAttemptInSeconds?: number;
+  lastAttemptAt?: string | null;
+  lastFailure?: RetryFailure | null;
+  history?: RetryFailure[];
+};
 type Blocker = {
   severity?: string;
   component?: string;
@@ -66,6 +86,7 @@ type StatusResponse = {
   tiers?: RawTierMap;
   readinessTiers?: RawTierMap;
   topBlockers?: Blocker[];
+  autoRetry?: AutoRetry | null;
   failures?: Array<{
     category?: string;
     phase?: string;
@@ -652,6 +673,20 @@ export default function StatusPage() {
     status?.installState?.status ||
     "loading";
   const blockerList = blockers(status);
+  // Automatic retries in progress: the failure that keeps triggering them is
+  // not in the install state any more (the retried run has overwritten it), so
+  // it is shown here from the retry record instead of leaving "installing" blank.
+  const autoRetry =
+    status?.autoRetry &&
+    (status.autoRetry.attempts ?? 0) > 0 &&
+    status.autoRetry.lastFailure
+      ? status.autoRetry
+      : null;
+  const autoRetryWhere = autoRetry
+    ? [autoRetry.lastFailure?.phase, autoRetry.lastFailure?.step]
+        .filter(Boolean)
+        .join("/") || "an earlier step"
+    : "";
   const runningOperations = status?.activeOperations || [];
   const primaryOperation = runningOperations[0];
   const currentPhase =
@@ -926,21 +961,50 @@ export default function StatusPage() {
               <h2>Blockers</h2>
               {loadingStatus && !status ? (
                 <SkeletonBlock lines={3} />
-              ) : blockerList.length === 0 ? (
-                <p className={styles.muted}>
-                  No action-required blockers detected.
-                </p>
               ) : (
-                blockerList.map((blocker, index) => (
-                  <div
-                    className={`${styles.blocker} ${blocker.loginBlocking === false ? styles.backgroundBlocker : ""}`}
-                    key={index}
-                  >
-                    <strong>{blocker.component || blocker.layer}</strong>
-                    <p>{blocker.reason}</p>
-                    <small>{blocker.nextAction}</small>
-                  </div>
-                ))
+                <>
+                  {autoRetry ? (
+                    <div
+                      className={`${styles.blocker} ${styles.backgroundBlocker}`}
+                      aria-label="Automatic retry"
+                    >
+                      <strong>
+                        Automatic retry {autoRetry.attempts} of{" "}
+                        {autoRetry.maxAttempts}
+                        {autoRetry.inFlight
+                          ? " is running"
+                          : autoRetry.exhausted
+                            ? " (retries exhausted)"
+                            : ""}
+                      </strong>
+                      <p>
+                        The previous attempt stopped at {autoRetryWhere}:{" "}
+                        {autoRetry.lastFailure?.message}
+                      </p>
+                      {autoRetry.lastFailure?.details ? (
+                        <small>{autoRetry.lastFailure.details}</small>
+                      ) : null}
+                    </div>
+                  ) : null}
+                  {blockerList.length === 0 ? (
+                    <p className={styles.muted}>
+                      {autoRetry
+                        ? "No operator action needed yet; the appliance is retrying on its own."
+                        : "No action-required blockers detected."}
+                    </p>
+                  ) : (
+                    blockerList.map((blocker, index) => (
+                      <div
+                        className={`${styles.blocker} ${blocker.loginBlocking === false ? styles.backgroundBlocker : ""}`}
+                        key={index}
+                      >
+                        <strong>{blocker.component || blocker.layer}</strong>
+                        <p>{blocker.reason}</p>
+                        <small>{blocker.nextAction}</small>
+                      </div>
+                    ))
+                  )}
+                </>
               )}
             </article>
 

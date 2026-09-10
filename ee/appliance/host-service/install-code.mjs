@@ -34,6 +34,7 @@ const FRIENDLY_ERRORS = {
   invalid_claim_code: 'Invalid install code. Check the code from your registration email and try again.',
   expired_claim_code: 'Install code has expired. Request a fresh one from the portal (re-issue).',
   consumed_claim_code: 'Install code has already been used. Request a fresh one from the portal (re-issue).',
+  superseded_claim_code: 'Install code was superseded by a newer one. Use the newest code from the portal (re-issue).',
 };
 
 /**
@@ -63,9 +64,23 @@ export async function redeemInstallCode({ serviceUrl, installCode, applianceId, 
   }
 
   if (!res.ok) {
+    // Read the body once as text so a non-JSON response (a proxy or WAF block
+    // page, a gateway error) still leaves a diagnosable snippet in the message
+    // instead of a bare HTTP status.
     let body = {};
-    try { body = await res.json(); } catch { /* non-JSON error body */ }
-    const err = new Error(FRIENDLY_ERRORS[body.code] || body.error || `Install-code redemption failed (HTTP ${res.status}).`);
+    let rawBody = '';
+    try {
+      if (typeof res.text === 'function') {
+        rawBody = await res.text();
+        body = JSON.parse(rawBody);
+      } else {
+        body = await res.json();
+      }
+    } catch { /* non-JSON error body */ }
+    if (!body || typeof body !== 'object') body = {};
+    const snippet = rawBody.replace(/\s+/g, ' ').trim().slice(0, 200);
+    const fallback = `Install-code redemption failed (HTTP ${res.status})${snippet && !body.error ? `: ${snippet}` : '.'}`;
+    const err = new Error(FRIENDLY_ERRORS[body.code] || body.error || fallback);
     // An invalid/expired/used code is operator-correctable: setup keeps the form
     // open so they can re-enter a fresh (re-issued) code, and stops auto-retrying
     // a code that will never change. (Network/reach errors are transient — they

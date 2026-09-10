@@ -1101,8 +1101,12 @@ export async function applyRuntimeValuesAndReleaseSelection(inputs, releaseSelec
     try {
       redeemResult = await doRedeem({ serviceUrl, installCode: inputs.installCode, applianceId });
     } catch (error) {
+      // Own phase: a redemption failure is a licensing problem (bad/used code,
+      // license service unreachable or refusing), not a registry/release-source
+      // one. Filing it under 'registry-release-source' made the status engine
+      // treat it as network-class and hide it whenever the live probe passed.
       const failure = preflightFailure(
-        'registry-release-source',
+        'install-code',
         'redeem-install-code',
         'Could not redeem the install code.',
         error instanceof Error ? error.message : String(error)
@@ -1114,7 +1118,7 @@ export async function applyRuntimeValuesAndReleaseSelection(inputs, releaseSelec
         failure.correctable = true;
         failure.retrySafe = false;
       }
-      writeWorkflowInstallState({ status: 'runtime-values-blocked', phase: 'registry-release-source', lastAction: failure.message, failure, updatedAt: nowIso() }, stateFile, options);
+      writeWorkflowInstallState({ status: 'runtime-values-blocked', phase: 'install-code', lastAction: failure.message, failure, updatedAt: nowIso() }, stateFile, options);
       return failure;
     }
   }

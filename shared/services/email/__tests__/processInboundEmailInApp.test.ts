@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EmailMessageDetails } from '../../../interfaces/inbound-email.interfaces';
+import { parseEmailReply } from '../../../lib/email/replyParser';
 
 const withAdminTransactionMock = vi.fn();
 const parseEmailReplyBodyMock = vi.fn();
@@ -488,6 +489,33 @@ describe('processInboundEmailInApp', () => {
     expect(createTicketFromEmailMock).not.toHaveBeenCalled();
     expect(createCommentFromEmailMock).not.toHaveBeenCalled();
     expect(processInboundEmailArtifactsBestEffortMock).not.toHaveBeenCalled();
+  });
+
+  it.each(['', 'The restart worked.'])('processes actual notification parsing with reply %j', async (reply) => {
+    parseEmailReplyBodyMock.mockImplementation(async (body) => parseEmailReply(body));
+    findTicketByReplyTokenMock.mockResolvedValue({ ticketId: 'ticket-1' });
+    const token = '[ALGA-REPLY-TOKEN test-token ticketId=ticket-1 commentId=comment-1]';
+    const { processInboundEmailInApp } = await import('../processInboundEmailInApp');
+    const result = await processInboundEmailInApp({
+      tenantId: 'tenant-1',
+      providerId: 'provider-1',
+      emailData: buildEmailData({
+        from: { email: 'hello@example.com' },
+        body: {
+          text: `${reply}\n${token}\n--- Please reply above this line ---\nNew comment added\nA new comment has been added to your ticket.`,
+          html: `<p>${reply}</p><div>${token}</div><div data-alga-reply-boundary="true">New comment added</div>`,
+        },
+      }),
+    });
+    if (reply) {
+      expect(result.outcome).toBe('replied');
+      expect(createCommentFromEmailMock).toHaveBeenCalledTimes(1);
+    } else {
+      expect(result).toEqual({ outcome: 'skipped', reason: 'self_notification' });
+      expect(createCommentFromEmailMock).not.toHaveBeenCalled();
+      expect(processInboundEmailArtifactsBestEffortMock).not.toHaveBeenCalled();
+    }
+    expect(createTicketFromEmailMock).not.toHaveBeenCalled();
   });
 
   it('skips token-only inbound emails with no content above reply marker', async () => {

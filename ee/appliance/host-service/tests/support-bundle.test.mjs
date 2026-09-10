@@ -114,3 +114,41 @@ test('generateSupportBundle uses host agent diagnostics when running in Kubernet
     }
   }
 });
+
+test('generateSupportBundle collects auto-retry state and detached engine logs when present', () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-support-bundle-retry-'));
+  const stateFile = path.join(tmp, 'install-state.json');
+  const outputDir = path.join(tmp, 'out');
+  const captureDir = path.join(tmp, 'capture');
+
+  fs.writeFileSync(stateFile, JSON.stringify({ status: 'storage-install-running', phase: 'storage' }));
+  fs.writeFileSync(path.join(tmp, 'auto-retry-state.json'), JSON.stringify({
+    attempts: 7,
+    lastFailure: { step: 'redeem-install-code', message: 'Could not redeem the install code.', details: 'HTTP 403 token=abc123' }
+  }));
+  fs.writeFileSync(path.join(tmp, 'setup-engine.log'), '--- 2026-09-04T10:55:10.000Z setup-engine: auto-retry attempt 7/10\n{"ok":false,"step":"redeem-install-code"}\n');
+
+  const result = generateSupportBundle({
+    kubeconfigPath: '/tmp/k3s.yaml',
+    outputDir,
+    stateFile,
+    releaseSelectionFile: path.join(tmp, 'missing-release-selection.json'),
+    setupInputsFile: path.join(tmp, 'missing-setup-inputs.json'),
+    tempDir: captureDir,
+    runCommand: (command) => {
+      if (command.startsWith('tar -C ')) {
+        const bundlePath = command.split(' -czf ')[1].replace(/\s+\.$/, '').trim();
+        fs.mkdirSync(path.dirname(bundlePath), { recursive: true });
+        fs.writeFileSync(bundlePath, 'bundle');
+      }
+      return { ok: true, stdout: '', stderr: '', status: 0 };
+    }
+  });
+
+  assert.equal(result.ok, true);
+  const retryState = fs.readFileSync(path.join(captureDir, 'meta', 'auto-retry-state.json'), 'utf8');
+  assert.match(retryState, /redeem-install-code/);
+  assert.equal(retryState.includes('abc123'), false, 'retry state goes through the same redaction');
+  assert.match(fs.readFileSync(path.join(captureDir, 'meta', 'setup-engine.log'), 'utf8'), /auto-retry attempt 7\/10/);
+  assert.equal(fs.existsSync(path.join(captureDir, 'meta', 'update-engine.log')), false, 'absent files are skipped');
+});

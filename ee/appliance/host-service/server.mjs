@@ -17,6 +17,7 @@ import { ensurePodAccessRbac } from './pod-access-rbac.mjs';
 import { accessError, PodAccessError, requestHasSameOrigin } from './pod-access-common.mjs';
 import { createUpdateCoordinator } from './update-controller.mjs';
 import { DEFAULT_UPDATE_OWNER_MAX_AGE_MS } from './update-ownership.mjs';
+import { decideAutoRetry, deferForNetwork, summarizeAutoRetry } from './auto-retry.mjs';
 import {
   collectManageStatus,
   applyLicense,
@@ -181,31 +182,9 @@ const AUTO_RETRY_MAX_ATTEMPTS = Number(process.env.ALGA_APPLIANCE_AUTO_RETRY_MAX
 const AUTO_RETRY_BASE_MS = Number(process.env.ALGA_APPLIANCE_AUTO_RETRY_BASE_MS || 15_000);
 const AUTO_RETRY_MAX_MS = Number(process.env.ALGA_APPLIANCE_AUTO_RETRY_MAX_MS || 300_000);
 const RECONCILE_INTERVAL_MS = Number(process.env.ALGA_APPLIANCE_RECONCILE_INTERVAL_MS || 15_000);
-const NETWORK_CLASS_PHASES = ['network', 'dns', 'registry-release-source'];
+const AUTO_RETRY_OPTIONS = { maxAttempts: AUTO_RETRY_MAX_ATTEMPTS, baseMs: AUTO_RETRY_BASE_MS, maxMs: AUTO_RETRY_MAX_MS };
 const retryStateFile = path.join(path.dirname(stateFile), 'auto-retry-state.json');
 let reconcileRunning = false;
-
-function installStateBlocked(state) {
-  const isAppUpdate = state?.update?.scope === 'application-only';
-  return !isAppUpdate
-    && Boolean(state?.failure)
-    && state.failure.retrySafe !== false
-    && String(state.status || '').includes('blocked');
-}
-
-function installStateRunning(state) {
-  const status = String(state?.status || '');
-  return status === 'setup-queued' || status.endsWith('-running');
-}
-
-function failureCategory(state) {
-  const phase = String(state?.failure?.phase || state?.phase || '').toLowerCase();
-  return NETWORK_CLASS_PHASES.find((candidate) => phase.includes(candidate)) || phase;
-}
-
-function backoffMs(attempts) {
-  return Math.min(AUTO_RETRY_MAX_MS, AUTO_RETRY_BASE_MS * 2 ** Math.max(0, attempts - 1));
-}
 
 function readRetryState() {
   try {
@@ -229,16 +208,16 @@ function clearRetryState() {
 }
 
 // Summary used by the status snapshot so the UI shows "retrying automatically"
-// instead of a dead-end "re-run setup" instruction.
+// instead of a dead-end "re-run setup" instruction, and — while a retried run
+// is in flight — the failure that keeps triggering the retries (install-state
+// itself has already been overwritten by the running phases).
 function computeAutoRetrySummary(state) {
-  if (AUTO_RETRY_DISABLED || !installStateBlocked(state)) return undefined;
-  const retry = readRetryState();
-  const attempts = Number(retry.attempts || 0);
-  if (attempts >= AUTO_RETRY_MAX_ATTEMPTS) {
-    return { willRetry: false, exhausted: true, attempts, maxAttempts: AUTO_RETRY_MAX_ATTEMPTS };
-  }
-  const nextAttemptInSeconds = retry.nextAttemptAt ? Math.max(0, Math.round((retry.nextAttemptAt - Date.now()) / 1000)) : 0;
-  return { willRetry: true, exhausted: false, attempts, maxAttempts: AUTO_RETRY_MAX_ATTEMPTS, nextAttemptInSeconds };
+  return summarizeAutoRetry({
+    state,
+    retry: readRetryState(),
+    maxAttempts: AUTO_RETRY_MAX_ATTEMPTS,
+    disabled: AUTO_RETRY_DISABLED
+  });
 }
 
 async function reconcileBlockedSetup() {
@@ -246,29 +225,33 @@ async function reconcileBlockedSetup() {
   reconcileRunning = true;
   try {
     const state = readInstallStateSafe();
-    if (!state || !installStateBlocked(state)) {
+    const retry = readRetryState();
+    const decision = decideAutoRetry({ state, retry, ...AUTO_RETRY_OPTIONS });
+
+    if (decision.action === 'clear') {
+      if (Number(retry.attempts || 0) > 0) {
+        process.stdout.write(`alga-appliance auto-retry: setup is no longer blocked; clearing ${retry.attempts} recorded attempt(s)\n`);
+      }
       clearRetryState();
       return;
     }
-    if (installStateRunning(state)) return;
+    if (decision.action !== 'retry') return; // hold (running / not retry-safe), backoff, or exhausted
 
-    const retry = readRetryState();
-    const attempts = Number(retry.attempts || 0);
-    if (attempts >= AUTO_RETRY_MAX_ATTEMPTS) return; // exhausted; leave for manual action
-    const now = Date.now();
-    if (retry.nextAttemptAt && now < retry.nextAttemptAt) return; // still in backoff window
-
-    if (NETWORK_CLASS_PHASES.includes(failureCategory(state))) {
+    if (decision.requiresNetworkProbe) {
       const probe = await getNetworkProbe();
       if (!probe.ok) {
-        writeRetryState({ attempts, nextAttemptAt: now + backoffMs(attempts || 1), lastReason: 'network still unhealthy' });
+        writeRetryState(deferForNetwork(retry, Date.now(), AUTO_RETRY_OPTIONS));
         return;
       }
     }
 
-    const nextAttempts = attempts + 1;
-    writeRetryState({ attempts: nextAttempts, lastAttemptAt: new Date(now).toISOString(), nextAttemptAt: now + backoffMs(nextAttempts) });
-    queueSetupWorkflow();
+    // Persist the attempt before launching so a crash between the two cannot
+    // produce an uncounted run.
+    writeRetryState(decision.retryState);
+    const failure = decision.failure;
+    const summary = `attempt ${decision.attempt}/${AUTO_RETRY_MAX_ATTEMPTS} after ${failure.status} (${failure.phase}/${failure.step}): ${failure.message}`;
+    process.stdout.write(`alga-appliance auto-retry: launching ${summary}\n`);
+    queueSetupWorkflow({ reason: `auto-retry ${summary}` });
   } finally {
     reconcileRunning = false;
   }
@@ -541,42 +524,70 @@ function systemNetworkSummary() {
   return { addresses, resolvers };
 }
 
-function queueSetupWorkflow() {
+const ENGINE_LOG_MAX_BYTES = 5 * 1024 * 1024;
+
+// Setup and app-channel updates run in a detached child because the engines
+// shell out through spawnSync (storage reconcile, flux reconcile), which would
+// freeze this server's event loop — including /healthz — long enough for the
+// pod's liveness probe to kill the control plane mid-run (alga0002202). The
+// child writes install-state as it goes, so status/manage polling keeps working.
+//
+// Each run appends to <state-dir>/<engine>.log: a header line naming why it was
+// launched, then the engine's own stdout/stderr (its final JSON result
+// included). Before this the children ran with stdio ignored, so a workflow
+// that failed and was re-queued left no trace anywhere once install-state was
+// overwritten. The support bundle collects these logs.
+function openEngineLog(engineName, header) {
+  const logPath = path.join(path.dirname(stateFile), `${engineName}.log`);
+  try {
+    fs.mkdirSync(path.dirname(logPath), { recursive: true, mode: 0o750 });
+    try {
+      if (fs.statSync(logPath).size > ENGINE_LOG_MAX_BYTES) fs.renameSync(logPath, `${logPath}.1`);
+    } catch { /* no existing log */ }
+    const fd = fs.openSync(logPath, 'a', 0o600);
+    fs.writeSync(fd, `\n--- ${new Date().toISOString()} ${engineName}: ${header}\n`);
+    return fd;
+  } catch {
+    return null;
+  }
+}
+
+function queueEngineWorkflow(scriptName, args, header) {
+  const engineName = scriptName.replace(/\.mjs$/, '');
+  const fd = openEngineLog(engineName, header);
+  const child = spawn(process.execPath, [
+    new URL(`./${scriptName}`, import.meta.url).pathname,
+    ...args
+  ], {
+    detached: true,
+    stdio: fd == null ? 'ignore' : ['ignore', fd, fd],
+    env: process.env
+  });
+  child.unref();
+  if (fd != null) fs.closeSync(fd); // the child holds its own descriptor
+  return child.pid;
+}
+
+function queueSetupWorkflow({ reason = 'setup submitted' } = {}) {
   if (process.env.ALGA_APPLIANCE_DISABLE_SETUP_QUEUE === '1') {
-    return;
+    return undefined;
   }
 
-  const child = spawn(process.execPath, [
-    new URL('./setup-engine.mjs', import.meta.url).pathname,
+  return queueEngineWorkflow('setup-engine.mjs', [
     'run',
     '--setup-inputs', setupInputsFile,
     '--state-file', stateFile,
     '--release-selection-file', releaseSelectionFile,
     '--kubeconfig', kubeconfigPath
-  ], {
-    detached: true,
-    stdio: 'ignore',
-    env: process.env
-  });
-  child.unref();
+  ], reason);
 }
 
-// LEVERAGE: pattern detached-engine-workflow — queueSetupWorkflow and
-// queueUpdateWorkflow duplicate the detached-child spawn shape; a shared
-// queueEngineWorkflow(scriptUrl, args) would collapse them.
-// App-channel updates run in a detached child for the same reason setup does:
-// the engine shells out through spawnSync (storage reconcile, flux reconcile),
-// which would freeze this server's event loop — including /healthz — long
-// enough for the pod's liveness probe to kill the control plane mid-update
-// (alga0002202). The child writes install-state as it goes, so the Manage UI's
-// /api/manage/status polling keeps working while the update runs.
 function queueUpdateWorkflow(channel, startedAt) {
   if (process.env.ALGA_APPLIANCE_DISABLE_UPDATE_QUEUE === '1') {
     throw new Error('App update queue is disabled.');
   }
 
-  const child = spawn(process.execPath, [
-    new URL('./update-engine.mjs', import.meta.url).pathname,
+  return queueEngineWorkflow('update-engine.mjs', [
     'run',
     '--channel', channel,
     '--started-at', startedAt,
@@ -584,13 +595,7 @@ function queueUpdateWorkflow(channel, startedAt) {
     '--release-selection-file', releaseSelectionFile,
     '--update-history-file', updateHistoryFile,
     '--kubeconfig', kubeconfigPath
-  ], {
-    detached: true,
-    stdio: 'ignore',
-    env: process.env
-  });
-  child.unref();
-  return child.pid;
+  ], `app update channel=${channel} startedAt=${startedAt}`);
 }
 
 const updateCoordinator = createUpdateCoordinator({
@@ -1444,6 +1449,7 @@ const server = http.createServer(async (req, res) => {
         lastAction: 'Setup accepted; background workflow is starting',
         updatedAt: new Date().toISOString()
       }, null, 2)}\n`, { mode: 0o600 });
+      clearRetryState();
       queueSetupWorkflow();
 
       res.writeHead(303, { location: '/' });

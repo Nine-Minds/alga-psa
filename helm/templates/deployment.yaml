@@ -986,6 +986,12 @@ spec:
           - name: VAULT_TENANT_SECRET_PATH_TEMPLATE
             value: "{{ .Values.secrets_provider.vault.tenantSecretPathTemplate }}"
           {{- end }}
+          {{- if .Values.secrets_provider.vault.credentialsTransitKey }}
+          - name: ALGA_VAULT_CREDENTIALS_TRANSIT_KEY
+            value: {{ .Values.secrets_provider.vault.credentialsTransitKey | quote }}
+          - name: ALGA_VAULT_TRANSIT_MOUNT
+            value: {{ .Values.secrets_provider.vault.transitMount | default "transit" | quote }}
+          {{- end }}
           {{- end }}
           {{- if or (and .Values.server.persistence.enabled (not .Values.config.storage.providers.s3.enabled)) .Values.sharedTenantSecrets.enabled }}
           volumeMounts:

@@ -11,6 +11,48 @@
       "appMenu": { "label": "NineMinds Control Panel" }
     }
   },
+  "api": {
+    "endpoints": [
+      { "method": "GET", "path": "/reports", "handler": "dist/main" },
+      { "method": "POST", "path": "/reports", "handler": "dist/main" },
+      { "method": "GET", "path": "/reports/:id", "handler": "dist/main" },
+      { "method": "PUT", "path": "/reports/:id", "handler": "dist/main" },
+      { "method": "DELETE", "path": "/reports/:id", "handler": "dist/main" },
+      { "method": "POST", "path": "/reports/:id/execute", "handler": "dist/main" },
+      { "method": "GET", "path": "/schema", "handler": "dist/main" },
+      { "method": "POST", "path": "/access", "handler": "dist/main" },
+      { "method": "GET", "path": "/audit", "handler": "dist/main" },
+
+      { "method": "GET", "path": "/feature-flags", "handler": "dist/main" },
+      { "method": "POST", "path": "/feature-flags", "handler": "dist/main" },
+      { "method": "GET", "path": "/feature-flags/:id", "handler": "dist/main" },
+      { "method": "PUT", "path": "/feature-flags/:id", "handler": "dist/main" },
+      { "method": "DELETE", "path": "/feature-flags/:id", "handler": "dist/main" },
+      { "method": "POST", "path": "/feature-flags/:id/tenants", "handler": "dist/main" },
+
+      { "method": "GET", "path": "/notifications", "handler": "dist/main" },
+      { "method": "POST", "path": "/notifications", "handler": "dist/main" },
+      { "method": "GET", "path": "/notifications/:id", "handler": "dist/main" },
+      { "method": "PUT", "path": "/notifications/:id", "handler": "dist/main" },
+      { "method": "DELETE", "path": "/notifications/:id", "handler": "dist/main" },
+      { "method": "GET", "path": "/notifications/:id/stats", "handler": "dist/main" },
+      { "method": "GET", "path": "/notifications/:id/reads", "handler": "dist/main" },
+      { "method": "POST", "path": "/notifications/resolve-recipients", "handler": "dist/main" },
+
+      { "method": "GET", "path": "/api/v1/tenant-management/tenants", "handler": "dist/main" },
+      { "method": "GET", "path": "/api/v1/tenant-management/audit", "handler": "dist/main" },
+      { "method": "GET", "path": "/api/v1/tenant-management/pending-deletions", "handler": "dist/main" },
+      { "method": "GET", "path": "/api/v1/tenant-management/addons", "handler": "dist/main" },
+      { "method": "GET", "path": "/api/v1/tenant-management/export-status", "handler": "dist/main" },
+      { "method": "POST", "path": "/api/v1/tenant-management/resend-welcome-email", "handler": "dist/main" },
+      { "method": "POST", "path": "/api/v1/tenant-management/create-tenant", "handler": "dist/main" },
+      { "method": "POST", "path": "/api/v1/tenant-management/tenants/:id/addons", "handler": "dist/main" },
+      { "method": "POST", "path": "/api/v1/tenant-management/start-deletion", "handler": "dist/main" },
+      { "method": "POST", "path": "/api/v1/tenant-management/confirm-deletion", "handler": "dist/main" },
+      { "method": "POST", "path": "/api/v1/tenant-management/rollback-deletion", "handler": "dist/main" },
+      { "method": "POST", "path": "/api/v1/tenant-management/export-tenant", "handler": "dist/main" }
+    ]
+  },
   "precompiled": {
     "x86_64-linux-gnu": "precompiled/x86_64-linux-gnu.cwasm",
     "aarch64-linux-gnu": "precompiled/aarch64-linux-gnu.cwasm"

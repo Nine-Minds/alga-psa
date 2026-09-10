@@ -6,7 +6,7 @@
  *  - `vault-transit:v1` — Vault Transit (hosted EE). Follows the
  *    installConfig.ts precedent (raw fetch against the Transit HTTP API);
  *    credentials use a dedicated key name
- *    `ALGA_VAULT_CREDENTIALS_TRANSIT_KEY` (default `alga-credentials`).
+ *    `ALGA_VAULT_CREDENTIALS_TRANSIT_KEY` (explicitly configured).
  *  - `aes-256-gcm:v1` — AES-256-GCM with a key derived (SHA-256) from
  *    `getSecret('credential_encryption_key', 'CREDENTIAL_ENCRYPTION_KEY')`.
  *    Ciphertext format `enc:{base64(iv(12) + authTag(16) + ciphertext)}` —
@@ -51,7 +51,6 @@ export interface EncryptedCredentialValues {
 }
 
 const TRANSIT_MOUNT_DEFAULT = 'transit';
-const TRANSIT_KEY_DEFAULT = 'alga-credentials';
 
 export interface TransitConfig {
   addr: string;
@@ -64,10 +63,13 @@ export interface TransitConfig {
 export function resolveTransitConfig(): TransitConfig | null {
   const addr = process.env.ALGA_VAULT_ADDR || process.env.VAULT_ADDR;
   const token = process.env.ALGA_VAULT_TOKEN || process.env.VAULT_TOKEN;
-  if (!addr || !token) {
+  // VAULT_ADDR/VAULT_TOKEN are also used by the ordinary KV secret provider.
+  // Requiring the credential-specific key prevents KV-only installations from
+  // being mistaken for a configured Transit deployment.
+  const key = process.env.ALGA_VAULT_CREDENTIALS_TRANSIT_KEY;
+  if (!addr || !token || !key) {
     return null;
   }
-  const key = process.env.ALGA_VAULT_CREDENTIALS_TRANSIT_KEY || TRANSIT_KEY_DEFAULT;
   const mount = process.env.ALGA_VAULT_TRANSIT_MOUNT || TRANSIT_MOUNT_DEFAULT;
   const namespace = process.env.ALGA_VAULT_NAMESPACE || process.env.VAULT_NAMESPACE;
   return { addr, token, key, mount, namespace: namespace || undefined };

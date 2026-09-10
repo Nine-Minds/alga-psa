@@ -83,3 +83,27 @@ test('licenseSeedFromRedeem maps editions to seed literals', () => {
   assert.equal(free.INSTALL_EDITION, 'essentials');
   assert.equal(free.LICENSE_TOKEN, '');
 });
+
+test('redeemInstallCode treats a superseded code as operator-correctable', async () => {
+  const fetchImpl = mockFetch({ ok: false, status: 409, json: async () => ({ code: 'superseded_claim_code', error: 'superseded' }) });
+  await assert.rejects(
+    () => redeemInstallCode({ serviceUrl: 'https://lic', installCode: 'X', applianceId: 'a', fetchImpl }),
+    (err) => err.correctable === true && /superseded by a newer one/.test(err.message),
+  );
+});
+
+test('redeemInstallCode keeps a snippet of a non-JSON error body and stays retry-safe', async () => {
+  // A proxy/WAF block page or gateway error: no `code`, so it must not be
+  // flagged correctable, but the operator needs to see what came back.
+  const fetchImpl = mockFetch({
+    ok: false,
+    status: 403,
+    text: async () => '<html><body>Access denied by  corporate proxy</body></html>',
+  });
+  await assert.rejects(
+    () => redeemInstallCode({ serviceUrl: 'https://lic', installCode: 'X', applianceId: 'a', fetchImpl }),
+    (err) => err.correctable !== true
+      && /HTTP 403/.test(err.message)
+      && /Access denied by corporate proxy/.test(err.message),
+  );
+});
