@@ -13,7 +13,18 @@ import {
 import type { EmailBrandingStatus } from '../../lib/emailBranding';
 
 const panelSource = readFileSync(resolve(__dirname, 'EmailBrandingPanel.tsx'), 'utf8');
-const tabSource = readFileSync(resolve(__dirname, 'EmailTemplates.tsx'), 'utf8');
+const templatesSource = readFileSync(resolve(__dirname, 'EmailTemplates.tsx'), 'utf8');
+const tabHostSource = readFileSync(resolve(__dirname, 'EmailBrandingTab.tsx'), 'utf8');
+
+const repoRoot = resolve(__dirname, '../../../../..');
+const settingsHostSource = readFileSync(
+  resolve(repoRoot, 'server/src/components/settings/general/NotificationsTab.tsx'),
+  'utf8',
+);
+const pageHostSource = readFileSync(
+  resolve(repoRoot, 'server/src/app/msp/settings/notifications/page.tsx'),
+  'utf8',
+);
 
 const status = (overrides: Partial<EmailBrandingStatus> = {}): EmailBrandingStatus => ({
   palette: null,
@@ -74,10 +85,25 @@ describe('email branding draft', () => {
 });
 
 describe('email branding panel markup', () => {
-  it('renders as a card above the templates table', () => {
+  it('renders as a card on its own tab, out of the templates tab', () => {
     expect(panelSource).toContain('id="email-branding-card"');
-    expect(tabSource.indexOf('<EmailBrandingPanel')).toBeGreaterThan(-1);
-    expect(tabSource.indexOf('<EmailBrandingPanel')).toBeLessThan(tabSource.indexOf('id="email-templates-table"'));
+    expect(tabHostSource).toContain('<EmailBrandingPanel');
+    expect(templatesSource).not.toContain('EmailBrandingPanel');
+  });
+
+  it('is gated behind the release-v1-6-feature flag in both settings hosts', () => {
+    for (const host of [settingsHostSource, pageHostSource]) {
+      expect(host).toContain("useFeatureFlag('release-v1-6-feature')");
+      expect(host).toContain("id: 'email-branding'");
+      expect(host).toContain('!emailBrandingEnabled ? [] :');
+      expect(host).toContain("emailBrandingEnabled ? ['email-branding'] : []");
+    }
+  });
+
+  it('picks colors with the shared color picker, not native inputs', () => {
+    expect(panelSource).toContain("@alga-psa/ui/components/ColorPicker");
+    expect(panelSource).toContain('showTextColor={false}');
+    expect(panelSource).not.toContain('type="color"');
   });
 
   it('shows a source chip and the "use suggested colors" affordance', () => {

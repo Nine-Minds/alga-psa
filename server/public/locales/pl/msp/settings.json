@@ -1509,6 +1509,7 @@
     "emailTabs": {
       "settings": "Ustawienia",
       "emailTemplates": "Szablony e-mail",
+      "emailBranding": "Branding e-maili",
       "categories": "Kategorie",
       "telemetry": "Telemetria"
     },

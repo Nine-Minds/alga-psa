@@ -1503,6 +1503,7 @@
     "emailTabs": {
       "settings": "Settings",
       "emailTemplates": "Email Templates",
+      "emailBranding": "Email Branding",
       "categories": "Categories",
       "telemetry": "Telemetry"
     },

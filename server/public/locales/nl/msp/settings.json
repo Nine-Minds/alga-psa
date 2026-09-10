@@ -1503,6 +1503,7 @@
     "emailTabs": {
       "settings": "Instellingen",
       "emailTemplates": "E-mailsjablonen",
+      "emailBranding": "E-mailhuisstijl",
       "categories": "Categorieën",
       "telemetry": "Telemetrie"
     },

@@ -16,6 +16,7 @@ import { ChevronDown, ChevronRight, CornerDownRight, MoreVertical, Filter, Check
 import { useUserPreference } from "@alga-psa/user-composition/hooks";
 import {
   getTemplatesAction,
+  getEmailBrandingStatusAction,
   updateTenantTemplateAction,
   cloneSystemTemplateAction,
   deactivateTenantTemplateAction,
@@ -28,7 +29,6 @@ import {
 } from "../../types/notification";
 import { applyEmailPalette, STOCK_EMAIL_PALETTE, type EmailPaletteTokens } from "@alga-psa/email/branding";
 import { EmailTemplatePreview } from "./EmailTemplatePreview";
-import { EmailBrandingPanel } from "./EmailBrandingPanel";
 import type { EmailBrandingStatus } from "../../lib/emailBranding";
 import LoadingIndicator from "@alga-psa/ui/components/LoadingIndicator";
 import {
@@ -165,6 +165,14 @@ export function EmailTemplates() {
       } catch (err) {
         console.error('Failed to load email templates:', err);
         setError(t('notifications.emailTemplatesUi.errors.loadFailed', 'Failed to load templates'));
+      }
+
+      // The panel lives on its own tab now; the editor integration and
+      // branded clones still need to know what palette is saved.
+      try {
+        setBrandingStatus(await getEmailBrandingStatusAction());
+      } catch (statusErr) {
+        console.error('Failed to load email branding status:', statusErr);
       }
     }
     init();
@@ -474,13 +482,6 @@ export function EmailTemplates() {
 
   return (
     <div className="space-y-4">
-      <EmailBrandingPanel
-        systemTemplates={templates.systemTemplates}
-        selectedLanguages={selectedLanguages}
-        onStatusChange={setBrandingStatus}
-        onApplied={refreshTemplates}
-      />
-
       <div className="flex items-start justify-between">
         <p className="text-sm text-gray-600">
           {t('notifications.emailTemplatesUi.description', 'Each event type has a standard template that can be customized. You can either use the standard template or create a custom version.')}

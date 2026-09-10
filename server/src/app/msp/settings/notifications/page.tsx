@@ -4,12 +4,14 @@ import { Suspense, useState, useCallback, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { NotificationSettings } from "@alga-psa/notifications/components/settings/NotificationSettings";
 import { EmailTemplates } from "@alga-psa/notifications/components/settings/EmailTemplates";
+import { EmailBrandingTab } from "@alga-psa/notifications/components/settings/EmailBrandingTab";
 import { NotificationCategories } from "@alga-psa/notifications/components/settings/NotificationCategories";
 import { InternalNotificationCategories } from "@alga-psa/notifications/components/settings/InternalNotificationCategories";
 import { CustomTabs } from "@alga-psa/ui/components/CustomTabs";
 import ViewSwitcher, { ViewSwitcherOption } from "@alga-psa/ui/components/ViewSwitcher";
 import { Card } from "@alga-psa/ui/components/Card";
 import { UnsavedChangesProvider, useUnsavedChanges } from "@alga-psa/ui";
+import { useFeatureFlag } from "@alga-psa/ui/hooks";
 import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
 import { useProduct } from "@/context/ProductContext";
 
@@ -42,6 +44,7 @@ function NotificationsSettingsContent() {
   const { confirmNavigation } = useUnsavedChanges();
   const { productCode } = useProduct();
   const isAlgaDesk = productCode === 'algadesk';
+  const { enabled: emailBrandingEnabled } = useFeatureFlag('release-v1-6-feature');
 
   // Determine initial view and tab from URL
   const getInitialView = (): NotificationView => {
@@ -52,7 +55,9 @@ function NotificationsSettingsContent() {
   const getInitialTab = (view: NotificationView): string => {
     const requestedTab = tabParam?.toLowerCase();
     const validTabs: readonly string[] = view === 'email'
-      ? (isAlgaDesk ? ALGA_DESK_EMAIL_TAB_IDS : EMAIL_NOTIFICATION_TAB_IDS)
+      ? (isAlgaDesk
+        ? ALGA_DESK_EMAIL_TAB_IDS
+        : [...EMAIL_NOTIFICATION_TAB_IDS, ...(emailBrandingEnabled ? ['email-branding'] : [])])
       : INTERNAL_NOTIFICATION_TAB_IDS;
     const defaultTab = view === 'email' ? DEFAULT_EMAIL_TAB : DEFAULT_INTERNAL_TAB;
 
@@ -78,7 +83,7 @@ function NotificationsSettingsContent() {
     } else if (newTab !== currentTab) {
       setCurrentTab(newTab);
     }
-  }, [viewParam, tabParam, currentView, currentTab, isAlgaDesk]);
+  }, [viewParam, tabParam, currentView, currentTab, isAlgaDesk, emailBrandingEnabled]);
 
   // Update URL helper
   const updateURL = useCallback((view: NotificationView, tabId: string) => {
@@ -150,6 +155,15 @@ function NotificationsSettingsContent() {
       content: (
         <Suspense fallback={<div>{t('notifications.loading.templates')}</div>}>
           <EmailTemplates />
+        </Suspense>
+      ),
+    }]),
+    ...(isAlgaDesk || !emailBrandingEnabled ? [] : [{
+      id: 'email-branding',
+      label: t('notifications.emailTabs.emailBranding'),
+      content: (
+        <Suspense fallback={<div>{t('notifications.loading.templates')}</div>}>
+          <EmailBrandingTab />
         </Suspense>
       ),
     }]),
