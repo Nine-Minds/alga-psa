@@ -100,6 +100,7 @@ export interface TeamsMeetingCapability {
   reason?: string;
   recordingsAvailable?: boolean;
   recordingReason?: string;
+  sendMeetingInvites?: boolean;
 }
 
 export interface ScheduleTeamsMeetingFromClientInput {
@@ -109,12 +110,19 @@ export interface ScheduleTeamsMeetingFromClientInput {
   client_id?: string | null;
   contact_name_id?: string | null;
   attendees?: Array<{ emailAddress: string; name?: string }>;
+  /** Who the logged interaction belongs to — distinct from the Teams organizer. Defaults to the creator. */
+  interactionUserId?: string;
+  /** Also place the meeting on an AlgaPSA calendar. */
+  createScheduleEntry?: boolean;
+  /** Whose AlgaPSA calendar to book — distinct from the Teams invitees. Defaults to the creator. */
+  scheduleAssignedUserIds?: string[];
 }
 
 export interface ScheduleTeamsMeetingFromClientResult {
   success: boolean;
   data?: {
-    interaction_id: string;
+    /** Null when the meeting was attached to an existing schedule entry (no interaction is created). */
+    interaction_id: string | null;
     meeting_id: string;
     schedule_entry_id: string | null;
     join_url: string;

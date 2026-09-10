@@ -607,7 +607,7 @@ const LITERAL_BASELINE = new Map<string, number>([
   ['packages/client-portal/src/components/projects/ClientTaskListView.tsx', 1],
   ['packages/client-portal/src/components/tickets/TicketList.tsx', 1],
   ['packages/clients/src/components/clients/command-center/PulseCards.tsx', 2],
-  ['packages/msp-composition/src/reports/Reports.tsx', 3],
+  ['packages/msp-composition/src/reports/Reports.tsx', 2],
   ['packages/notifications/src/components/NotificationDetailView.tsx', 1],
   ['packages/notifications/src/components/NotificationItem.tsx', 1],
   ['packages/projects/src/components/ProjectDetail.tsx', 2],

@@ -5,12 +5,13 @@ import { v4 as uuidv4 } from 'uuid';
 import { TaxService } from './taxService';
 import { generateInvoiceNumber } from '@alga-psa/billing/actions/invoiceGeneration';
 import type { InvoiceViewModel, IInvoiceCharge as ManualInvoiceItem, NetAmountItem, DiscountType } from '@alga-psa/types'; // Renamed for clarity
-import type { IBillingCharge, IFixedPriceCharge, IService, TransactionType, RecurringChargeFamily, IHourBlockCharge } from '@alga-psa/types'; // Added import
+import type { IBillingCharge, IFixedPriceCharge, IService, TransactionType, RecurringChargeFamily, IHourBlockCharge, InvoiceTimeEntrySnapshot } from '@alga-psa/types'; // Added import
 import type { IClientWithLocation } from '@alga-psa/types';
 import { Knex } from 'knex';
 import { Session } from 'next-auth';
-import type { ISO8601String } from '@alga-psa/types';
+import type { ISO8601String, IRecurringDueSelectionInput, IUsageServicePeriodStatus } from '@alga-psa/types';
 import { getClientDefaultTaxRegionCode } from '@alga-psa/shared/billingClients';
+import { POST_DROP_RECURRING_OBLIGATION_TYPES } from '@alga-psa/shared/billingClients/postDropRecurringObligationIdentity';
 import { getClientDefaultBillingProfileId } from '../lib/billing/billingProfileLookup';
 import { resolveChargeProfile } from '../lib/billing/billingProfileResolution';
 import { resolveInvoiceBillingRecipient } from './invoiceBillingRecipientService';
@@ -113,6 +114,144 @@ function assertRecurringPeriodLinked(params: {
   }
 }
 
+/**
+ * Truncates a recurring window boundary to its date-only (YYYY-MM-DD) form.
+ * Selector inputs may carry full ISO timestamps; the `date` columns they are
+ * compared against are calendar dates.
+ */
+function toRecurringWindowDate(value: string): string {
+  return value.slice(0, 10);
+}
+
+/**
+ * Claims each fulfilled recurring service period represented by the generated
+ * selection's execution windows for `invoiceId` — atomically with charge
+ * persistence, inside the same transaction.
+ *
+ * Charge persistence links a period only when a charge references it. A
+ * grouped window whose lines produced NO charges (zero-dollar usage/bucket
+ * periods with no activity in the month) would otherwise leave its
+ * recurring_service_periods rows at lifecycle_state=generated with no
+ * invoice_id: invisible to the duplicate detector, so the same window could
+ * be invoiced twice. This sweep claims the leftover rows for the invoice (or
+ * aborts the whole transaction if a row was concurrently claimed by another
+ * invoice), making the created invoice the window's single owner.
+ *
+ * Explicitly omitted, unreported usage remains due for a later invoice.
+ * Swept rows keep `invoice_charge_detail_id` NULL — honestly recording that
+ * no charge line backs them — while `lifecycle_state='billed'` + `invoice_id`
+ * removes them from due-work listings and arms the duplicate guard.
+ */
+export async function claimRecurringServicePeriodsForSelectionInputs(params: {
+  tx: Knex.Transaction;
+  tenant: string;
+  invoiceId: string;
+  selectorInputs: IRecurringDueSelectionInput[];
+  linkedAt: string;
+  /** Unreported usage deliberately omitted from this invoice remains due. */
+  omittedUsagePeriods?: Pick<IUsageServicePeriodStatus, 'client_contract_line_id' | 'service_period_start' | 'service_period_end'>[];
+}): Promise<void> {
+  const { tx, tenant, invoiceId, selectorInputs, linkedAt } = params;
+  // Usage diagnoses expose inclusive ends; recurring period storage uses
+  // half-open boundaries. Match the complete line/period identity so another
+  // service period for the same line is still claimed when it was billed.
+  const omitted = new Set((params.omittedUsagePeriods ?? []).map((period) => JSON.stringify([
+    period.client_contract_line_id,
+    toRecurringWindowDate(period.service_period_start),
+    Temporal.PlainDate.from(toRecurringWindowDate(period.service_period_end)).add({ days: 1 }).toString(),
+  ])));
+  const storedDate = (value: string | Date) => value instanceof Date
+    ? value.toISOString().slice(0, 10)
+    : toRecurringWindowDate(value);
+
+  for (const selectorInput of selectorInputs) {
+    const executionWindow = selectorInput.executionWindow;
+    const windowStart = toRecurringWindowDate(String(selectorInput.windowStart));
+    const windowEnd = toRecurringWindowDate(String(selectorInput.windowEnd));
+
+    const query = tenantScopedTable(tx, tenant, 'recurring_service_periods')
+      .where({
+        invoice_window_start: windowStart,
+        invoice_window_end: windowEnd,
+      })
+      .whereNotIn('lifecycle_state', ['archived', 'superseded']);
+
+    if (executionWindow.kind === 'client_cadence_window') {
+      query
+        .where({
+          cadence_owner: 'client',
+          schedule_key: executionWindow.scheduleKey ?? null,
+          period_key: executionWindow.periodKey ?? null,
+        })
+        .whereIn('obligation_type', [...POST_DROP_RECURRING_OBLIGATION_TYPES]);
+    } else if (executionWindow.kind === 'contract_cadence_window') {
+      if (!executionWindow.contractLineId) {
+        // Without a line identity the window cannot be resolved to period
+        // rows; those windows keep linking exclusively through their charges.
+        continue;
+      }
+      query.where({
+        cadence_owner: 'contract',
+        obligation_type: 'contract_line',
+        obligation_id: executionWindow.contractLineId,
+      });
+    } else {
+      continue;
+    }
+
+    const rows = await query.select<{
+      record_id: string; invoice_id: string | null; obligation_id: string;
+      charge_family: string; service_period_start: string | Date; service_period_end: string | Date;
+    }[]>(
+      'record_id',
+      'invoice_id',
+      'obligation_id',
+      'charge_family',
+      'service_period_start',
+      'service_period_end',
+    );
+
+    if (rows.length === 0) {
+      throw new Error(
+        'Recurring service periods were not materialized for this recurring execution window.',
+      );
+    }
+
+    for (const row of rows) {
+      if (row.charge_family === 'usage' && omitted.has(JSON.stringify([
+        row.obligation_id, storedDate(row.service_period_start), storedDate(row.service_period_end),
+      ]))) {
+        continue;
+      }
+      if (row.invoice_id === invoiceId) {
+        continue; // Already linked through one of this invoice's charges.
+      }
+      if (row.invoice_id) {
+        throw new Error(
+          `Internal error: recurring service period ${row.record_id} is already claimed by invoice ${row.invoice_id}; cannot also claim it for invoice ${invoiceId}.`,
+        );
+      }
+
+      const updatedCount = await tenantScopedTable(tx, tenant, 'recurring_service_periods')
+        .where({ record_id: row.record_id })
+        .whereNull('invoice_id')
+        .whereIn('lifecycle_state', ['generated', 'edited', 'locked'])
+        .update({
+          lifecycle_state: 'billed',
+          invoice_id: invoiceId,
+          invoice_linked_at: linkedAt,
+          updated_at: linkedAt,
+        });
+
+      if (updatedCount !== 1) {
+        throw new Error(
+          `Internal error: recurring service period ${row.record_id} could not be claimed for invoice ${invoiceId}.`,
+        );
+      }
+    }
+  }
+}
+
 async function linkAndMarkSourceBillingRecord(params: {
   tx: Knex.Transaction;
   tenant: string;
@@ -137,11 +276,18 @@ async function linkAndMarkSourceBillingRecord(params: {
       throw new Error(`Internal error: Time entry ${entryId} could not be marked invoiced for invoice ${invoiceId}.`);
     }
 
+    // Freeze the work-item snapshot at generation time. This row is the only
+    // source ticket-level PDF detail may render from — finalized invoices
+    // never re-join the mutable tickets/time_entries tables.
+    const workItemSnapshot =
+      (charge as { workItemSnapshot?: InvoiceTimeEntrySnapshot | null }).workItemSnapshot ?? null;
+
     await tenantScopedTable(tx, tenant, 'invoice_time_entries').insert({
       invoice_time_entry_id: uuidv4(),
       invoice_id: invoiceId,
       item_id: invoiceItemId,
       entry_id: entryId,
+      work_item_snapshot: workItemSnapshot ? JSON.stringify(workItemSnapshot) : null,
       tenant,
       created_at: linkedAt,
     });
@@ -149,6 +295,39 @@ async function linkAndMarkSourceBillingRecord(params: {
   }
 
   if (charge.type === 'usage') {
+    const periodTotalId = (charge as { usagePeriodTotalId?: string | null })
+      .usagePeriodTotalId;
+    if (periodTotalId) {
+      // Period-total report: consume exactly the recorded total revision the
+      // charge carried. The conditional UPDATE (recorded + matching revision)
+      // is the single-consumption lock: concurrent generation or a retry
+      // cannot bill the total twice, and an invoiced total cannot be consumed
+      // again. The total row itself records invoice linkage.
+      const expectedRevision = (charge as {
+        usagePeriodTotalRevision?: number | null;
+      }).usagePeriodTotalRevision;
+      const totalUpdate = tenantScopedTable(tx, tenant, 'usage_period_totals')
+        .where({ period_total_id: periodTotalId, tenant })
+        .where('lifecycle_state', 'recorded');
+      if (expectedRevision != null) {
+        totalUpdate.where('revision', expectedRevision);
+      }
+      const updatedCount = await totalUpdate.update({
+        lifecycle_state: 'billed',
+        invoice_id: invoiceId,
+        invoice_charge_id: invoiceItemId,
+        consumed_at: linkedAt,
+        updated_at: linkedAt,
+      });
+
+      if (updatedCount !== 1) {
+        throw new Error(
+          `Internal error: Usage period total ${periodTotalId} (revision ${expectedRevision ?? 'any'}) could not be marked invoiced for invoice ${invoiceId}. It may have been edited, already invoiced, or deleted.`,
+        );
+      }
+      return;
+    }
+
     const usageId = (charge as { usageId?: string | null }).usageId;
     if (!usageId) {
       return;
@@ -656,7 +835,8 @@ async function persistFixedInvoiceCharges(
   client: any,
   session: Session,
   tenant: string,
-  requireRecurringServicePeriodLinkage: boolean
+  requireRecurringServicePeriodLinkage: boolean,
+  claimedServicePeriodRecordIds: Set<string>,
 ): Promise<number> {
   let fixedSubtotal = 0;
   const now = Temporal.Now.instant().toString();
@@ -848,7 +1028,6 @@ async function persistFixedInvoiceCharges(
 
   // Iterate using clientContractLineId as the key
   for (const [fixedPlanGroupKey, planEntry] of fixedPlanDetailsMap.entries()) {
-    const linkedServicePeriodRecordIds = new Set<string>();
     const planInfo = planInfoMap.get(planEntry.sourceClientContractLineId);
     if (!planInfo) {
         console.error(`Could not find plan info for clientContractLineId: ${planEntry.sourceClientContractLineId}`);
@@ -975,7 +1154,7 @@ async function persistFixedInvoiceCharges(
       if (
         requireRecurringServicePeriodLinkage
         && isRecurringFixedCharge(detail)
-        && !linkedServicePeriodRecordIds.has(detail.servicePeriodRecordId ?? '')
+        && !claimedServicePeriodRecordIds.has(detail.servicePeriodRecordId ?? '')
       ) {
         const linkedCount = await linkRecurringServicePeriodToInvoiceDetail({
           tx,
@@ -999,7 +1178,7 @@ async function persistFixedInvoiceCharges(
           invoiceChargeDetailId: detailId,
           servicePeriodRecordId: detail.servicePeriodRecordId ?? null,
         });
-        linkedServicePeriodRecordIds.add(detail.servicePeriodRecordId ?? '');
+        claimedServicePeriodRecordIds.add(detail.servicePeriodRecordId ?? '');
       }
     }
 
@@ -1039,13 +1218,11 @@ export async function persistInvoiceCharges(
   let otherSubtotal = 0;
   const now = Temporal.Now.instant().toString();
 
-  // Non-fixed recurring charges may legitimately share one recurring service
-  // period (e.g. several hourly time entries under one obligation). Each
-  // charge must still persist its own invoice charge, detail row, source
-  // mapping, subtotal, and tax contribution, but the recurring period row is
-  // claimed exactly once per invoice. The fixed path keeps its own set because
-  // a persisted fixed period has a single charge family and cannot cross paths.
-  const claimedNonFixedServicePeriodRecordIds = new Set<string>();
+  // One line period may produce fixed charges, multiple hourly/usage items,
+  // and bucket overage. Persist every detail, but claim the period once across
+  // all charge families on this invoice. A prior invoice still fails the DB
+  // lifecycle/linkage guard because this set is local to this invocation.
+  const claimedServicePeriodRecordIds = new Set<string>();
 
   // Separate fixed charges from others
   const fixedCharges: IFixedPriceCharge[] = [];
@@ -1069,7 +1246,8 @@ export async function persistInvoiceCharges(
     client,
     session,
     tenant,
-    requireRecurringServicePeriodLinkage
+    requireRecurringServicePeriodLinkage,
+    claimedServicePeriodRecordIds,
   );
 
   // --- Handle Other Billing Charge Types (Usage, Hourly, Product, License etc.) ---
@@ -1094,6 +1272,7 @@ export async function persistInvoiceCharges(
       // Use client_contract_line_id if the schema requires it
       // client_contract_line_id: charge.client_contract_line_id ?? null,
       description,
+      billing_charge_type: charge.type,
       quantity:
         charge.type === 'hour_block'
           ? (charge as IHourBlockCharge).hoursUsed
@@ -1170,7 +1349,7 @@ export async function persistInvoiceCharges(
         const servicePeriodRecordId = charge.servicePeriodRecordId ?? null;
         const alreadyClaimed =
           servicePeriodRecordId !== null
-          && claimedNonFixedServicePeriodRecordIds.has(servicePeriodRecordId);
+          && claimedServicePeriodRecordIds.has(servicePeriodRecordId);
         if (!alreadyClaimed) {
           const linkedCount = await linkRecurringServicePeriodToInvoiceDetail({
             tx,
@@ -1195,7 +1374,7 @@ export async function persistInvoiceCharges(
             servicePeriodRecordId,
           });
           if (servicePeriodRecordId !== null) {
-            claimedNonFixedServicePeriodRecordIds.add(servicePeriodRecordId);
+            claimedServicePeriodRecordIds.add(servicePeriodRecordId);
           }
         }
       }

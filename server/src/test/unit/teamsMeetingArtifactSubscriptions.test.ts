@@ -42,9 +42,6 @@ type IntegrationRow = Record<string, unknown>;
 function buildKnex(row: IntegrationRow) {
   const updates: Array<Record<string, unknown>> = [];
   const first = vi.fn(async function first(this: { table?: string }) {
-    if (this?.table === 'tenant_addons') {
-      return { addon_key: 'teams' };
-    }
     if (this?.table === 'teams_integrations') {
       return row;
     }

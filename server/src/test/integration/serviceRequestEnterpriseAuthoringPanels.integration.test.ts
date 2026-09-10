@@ -132,7 +132,7 @@ describe('service request enterprise authoring panel gating', () => {
     const visibilityProviderKeys =
       editorData?.execution.availableVisibilityProviders.map((provider) => provider.key) ?? [];
 
-    expect(executionProviderKeys).toEqual(['ticket-only']);
+    expect(executionProviderKeys).toEqual(['ticket-only', 'store-only']);
     expect(formBehaviorProviderKeys).toEqual(['basic']);
     expect(visibilityProviderKeys).toEqual(['all-authenticated-client-users']);
     expect(editorData?.execution.showWorkflowExecutionConfigPanel).toBe(false);

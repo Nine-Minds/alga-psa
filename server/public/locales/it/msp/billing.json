@@ -141,6 +141,8 @@
   },
   "usage": {
     "bucketHoursOverview": "Panoramica dei pacchetti ore",
+    "bucketLoadError": "Impossibile caricare i saldi dei pacchetti ore. Riprova per visualizzare i saldi attuali.",
+    "retryBucketBalances": "Ricarica i saldi dei pacchetti ore",
     "usageRecords": "Registrazioni di utilizzo",
     "actions": {
       "addUsage": "Aggiungi utilizzo",
@@ -211,6 +213,12 @@
       "updateError": "Impossibile aggiornare il record di utilizzo",
       "deleteSuccess": "Record di utilizzo eliminato correttamente",
       "deleteError": "Impossibile eliminare il record di utilizzo"
+    },
+    "periodReport": "Report di utilizzo del periodo",
+    "periodAlreadyInvoiced": "Questo periodo è già fatturato. Correggilo tramite il processo di rettifica della fattura.",
+    "periodFilter": {
+      "notice": "Visualizzazione dell'utilizzo per il periodo di servizio dal {{start}} al {{end}}",
+      "clear": "Rimuovi"
     }
   },
   "lineItem": {
@@ -387,7 +395,10 @@
       "loadingBatches": "Caricamento batch...",
       "empty": "Nessun batch di esportazione ancora.",
       "loadingDetails": "Caricamento dettagli batch...",
-      "batchNotFound": "Lotto non trovato."
+      "batchNotFound": "Lotto non trovato.",
+      "checkingAccess": "Verifica dell'accesso...",
+      "accessDeniedTitle": "Accesso negato",
+      "accessDeniedDescription": "Non disponi dell'autorizzazione per accedere alle esportazioni contabili."
     },
     "createDialog": {
       "title": "Nuova esportazione contabile",
@@ -663,7 +674,9 @@
     },
     "recurringRun": {
       "selectPeriods": "Selezionare almeno un periodo di fatturazione ricorrente da generare.",
-      "invoicePermission": "Autorizzazione negata: è richiesta l’autorizzazione per creare o generare fatture"
+      "invoicePermission": "Autorizzazione negata: è richiesta l’autorizzazione per creare o generare fatture",
+      "monthEndCloseNotMaterialized": "Nessun periodo di servizio ricorrente è stato materializzato per questa finestra di esecuzione ricorrente.",
+      "monthEndCloseNotEligible": "Il periodo {{servicePeriod}} può essere chiuso a fine mese solo il {{finalCalendarDay}}. Solo i periodi di servizio in arretrato che coprono un intero mese di calendario possono essere chiusi in anticipo nell'ultimo giorno di calendario."
     },
     "recurringServicePeriod": {
       "scheduleKeyRequiredInspect": "Per esaminare i periodi di servizio ricorrenti è necessaria una chiave di pianificazione.",
@@ -689,8 +702,10 @@
         "setDefault": "Autorizzazione negata: impossibile impostare il modello di documento predefinito",
         "clearOverride": "Autorizzazione negata: impossibile rimuovere la sostituzione del modello di documento",
         "delete": "Autorizzazione negata: impossibile eliminare i modelli di documento",
-        "preview": "Autorizzazione negata: impossibile visualizzare l’anteprima dei modelli di documento"
-      }
+        "preview": "Autorizzazione negata: impossibile visualizzare l’anteprima dei modelli di documento",
+        "readSalesOrders": "Autorizzazione negata: impossibile leggere gli ordini di vendita"
+      },
+      "existingNotFound": "Documento non trovato."
     },
     "billingProfile": {
       "periodOrder": "Scegliere un periodo il cui inizio non sia successivo alla fine.",

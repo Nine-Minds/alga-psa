@@ -12,7 +12,6 @@
       "downloadCsv": "CSV herunterladen",
       "edit": "Bearbeiten",
       "import": "Importieren",
-      "reactivate": "Reaktivieren",
       "remove": "Entfernen",
       "retry": "Wiederholen",
       "save": "Speichern",
@@ -181,7 +180,18 @@
     "shareTooltip": "Drucken, importieren und exportieren",
     "defaultClientDeleteError": "Der Standardkunde kann nicht gelöscht werden. Legen Sie zuerst in den allgemeinen Einstellungen einen anderen Kunden als Standard fest.",
     "clientNotFound": "Kunde nicht gefunden.",
-    "deletePermissionDenied": "Berechtigung verweigert: Kunden können nicht gelöscht werden."
+    "deletePermissionDenied": "Berechtigung verweigert: Kunden können nicht gelöscht werden.",
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} ausgewählt",
+        "markInactive": "Als inaktiv markieren",
+        "reactivate": "Reaktivieren",
+        "delete": "Löschen",
+        "print": "Ausgewählte drucken",
+        "more": "Mehr",
+        "clear": "Auswahl aufheben"
+      }
+    }
   },
   "clientDetails": {
     "opportunities": "Verkaufschancen",
@@ -1422,6 +1432,9 @@
       "viewTranscript": "Transkript anzeigen"
     },
     "quickAdd": {
+      "clientRequired": "Wählen Sie einen Kunden für diese Interaktion aus",
+      "contactPlaceholder": "Kontakt auswählen",
+      "selectClientFirst": "Zuerst Kunden auswählen",
       "teams": {
         "attendees": {
           "add": "Hinzufügen",
@@ -1450,11 +1463,32 @@
         "createFailed": "Teams-Besprechung konnte nicht erstellt werden",
         "createToggle": "Teams-Besprechung erstellen",
         "endRequired": "Zum Erstellen einer Teams-Besprechung ist eine Endzeit erforderlich",
+        "invitesDisabled": "E-Mail-Einladungen sind in den Einstellungen der Teams-Integration deaktiviert — Teilnehmer werden von Microsoft nicht benachrichtigt.",
+        "invitesSummary": "Microsoft sendet Kalendereinladungen per E-Mail an: {{recipients}}.",
+        "invitesSummaryYou": "Sie (Ersteller)",
+        "reason": {
+          "feature_disabled": "Microsoft Teams ist für diesen Mandanten nicht aktiviert.",
+          "ee_disabled": "Die Teams-Integration erfordert die Enterprise Edition.",
+          "no_organizer": "In den Teams-Einstellungen ist kein Standard-Besprechungsorganisator konfiguriert.",
+          "not_configured": "Die Teams-Integration wurde nicht konfiguriert."
+        },
+        "scheduleSummary": "Ein Zeitplaneintrag wird zu Ihrem AlgaPSA-Kalender hinzugefügt.",
         "startRequired": "Zum Erstellen einer Teams-Besprechung ist eine Startzeit erforderlich",
         "unavailable": "Die Erstellung von Teams-Besprechungen ist für diesen Mandanten nicht verfügbar."
       },
       "loadFailed": "Die Interaktionsoptionen konnten nicht geladen werden. Versuchen Sie es erneut.",
-      "saveFailed": "Die Interaktion konnte nicht gespeichert werden. Versuchen Sie es erneut."
+      "saveFailed": "Die Interaktion konnte nicht gespeichert werden. Versuchen Sie es erneut.",
+      "schedule": {
+        "addToggle": "Zum Zeitplan hinzufügen",
+        "addHelp": "Ein Zeitplaneintrag wird zu Ihrem AlgaPSA-Kalender hinzugefügt.",
+        "addHelpOthers": "Ein Zeitplaneintrag wird zu den AlgaPSA-Kalendern der ausgewählten Benutzer hinzugefügt.",
+        "assigneesLabel": "Planen für",
+        "assigneesPlaceholder": "Benutzer auswählen"
+      },
+      "assignedTo": {
+        "label": "Zugewiesen an",
+        "placeholder": "Benutzer auswählen"
+      }
     },
     "feed": {
       "addInteraction": "Interaktion hinzufügen",
@@ -1475,6 +1509,13 @@
       "allContacts": "Alle Kontakte",
       "allStatuses": "Alle Status",
       "allUsers": "Alle Benutzer",
+      "columns": { "type": "Typ", "title": "Titel", "client": "Kunde", "contact": "Kontakt", "user": "Benutzer", "date": "Datum", "status": "Status" },
+      "empty": "Keine Interaktionen entsprechen diesen Filtern.",
+      "loading": "Interaktionen werden geladen…",
+      "openClient": "Kunden {{name}} öffnen",
+      "openContact": "Kontakt {{name}} öffnen",
+      "openInteraction": "Interaktion {{title}} öffnen",
+      "openUser": "Benutzer {{name}} öffnen",
       "byUser": "Von {{name}}",
       "collapse": "Letzte Interaktionen einklappen",
       "contactsFromClient": "Kontakte des ausgewählten Kunden",
@@ -1743,7 +1784,9 @@
       "missingField": "Erforderliches Interaktionsfeld fehlt.",
       "missingFieldNamed": "Erforderliches Interaktionsfeld fehlt: {{field}}.",
       "referenceMissing": "Die ausgewählte Interaktion, der Kunde, Kontakt, Benutzer, Status oder Typ existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
-      "duplicate": "Eine Interaktion mit diesen Angaben existiert bereits."
+      "duplicate": "Eine Interaktion mit diesen Angaben existiert bereits.",
+      "scheduleAssignDenied": "Berechtigung verweigert: Zeitplaneinträge können anderen Benutzern nicht zugewiesen werden.",
+      "scheduleUsersMissing": "Ein oder mehrere zugewiesene Benutzer konnten nicht gefunden werden."
     },
     "interactionType": {
       "notFound": "Interaktionstyp nicht gefunden oder Sie haben keinen Zugriff darauf.",

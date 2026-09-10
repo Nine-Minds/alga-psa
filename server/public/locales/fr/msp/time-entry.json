@@ -302,6 +302,12 @@
     "reverseApproval": {
       "reason": "Approbation annulée par le responsable",
       "error": "Échec de l'annulation de l'approbation: {{error}}"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} sélectionnés",
+        "clear": "Effacer la sélection"
+      }
     }
   },
   "workItemDrawer": {

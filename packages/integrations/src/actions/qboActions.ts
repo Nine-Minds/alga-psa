@@ -1,15 +1,13 @@
 /* eslint-env node */
 'use server';
 
-import axios from 'axios';
 import logger from '@alga-psa/core/logger';
 import { withAuth } from '@alga-psa/auth';
 import { revalidatePath } from 'next/cache';
 import { ISecretProvider } from '@alga-psa/core';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { createTenantKnex } from '@alga-psa/db';
-import { notifyQboConnectionChanged } from '../lib/qbo/qboConnectionChangeProvider';
+import { createTenantKnex, writeAccountingAudit } from '@alga-psa/db';
 import {
   isQboAutomatedSalesTaxEnabled,
   setQboAutomatedSalesTaxEnabled
@@ -30,9 +28,15 @@ import {
   resolveQboOAuthCredentials,
   type QboEnvironment
 } from '../lib/qbo/qboClientService';
+import {
+  PROVIDER_QBO,
+  disconnectProvider,
+  forceFinalizeProviderDisconnect,
+  getProviderDisconnectStatusInfo,
+  type ProviderDisconnectStatusInfo,
+  type DisconnectServiceResult,
+} from '../lib/providerDisconnect';
 import type { IUserWithRoles } from '@alga-psa/types';
-
-const QBO_TOKEN_REVOKE_URL = 'https://developer.api.intuit.com/v2/oauth2/tokens/revoke';
 
 // Corrected QboCredentials interface (using ISO strings for dates)
 interface QboCredentials {
@@ -76,6 +80,12 @@ export interface QboConnectionStatus {
   scopes: string[];
   environment: QboEnvironment;
   credentials: QboCredentialStatus;
+  /**
+   * Durable disconnect state, when a disconnect has been started. Non-null
+   * while provider-side cleanup is pending or after it concluded; the settings
+   * UI uses it to show pending/partial/force-finalize states.
+   */
+  disconnect?: ProviderDisconnectStatusInfo | null;
   error?: string;
   errorCode?: 'FORBIDDEN' | 'ENTERPRISE_REQUIRED';
 }
@@ -249,9 +259,9 @@ async function getQboUpdateAccessError(user: IUserWithRoles): Promise<string | n
     return 'QuickBooks Online integration is only available in Enterprise Edition.';
   }
 
-  const allowed = await hasPermission(user, 'billing_settings', 'update');
+  const allowed = await hasPermission(user, 'accounting_integrations', 'connections_manage');
   if (!allowed) {
-    return 'Forbidden: You do not have permission to manage QuickBooks integration settings.';
+    return 'Forbidden: You do not have permission to manage QuickBooks integration connections.';
   }
 
   return null;
@@ -448,18 +458,24 @@ function normalizeTermRow(row: QboTermRow): QboTerm {
 }
 
 async function checkBillingReadAccess(user: IUserWithRoles): Promise<void> {
-  const allowed = await hasPermission(user, 'billing_settings', 'read');
+  const allowed = await hasPermission(user, 'accounting_integrations', 'catalog_read');
   if (!allowed) {
     throw new Error('Forbidden: You do not have permission to view QuickBooks integration settings.');
   }
 }
 
+/**
+ * Catalog contents (customers, accounts, classes, departments, items, tax
+ * codes, terms) require accounting_integrations:catalog_read — granted by default to Admin
+ * and Finance only. Connection diagnostics stay on billing_settings:read via
+ * checkBillingReadAccess so status screens work without catalog access.
+ */
 async function getQboCatalogAccessError(user: IUserWithRoles): Promise<QboCatalogActionError | null> {
   if (!isEnterpriseEdition()) {
     return actionError('QuickBooks Online integration is only available in Enterprise Edition.', 'msp/integrations:errors.qbo.enterpriseOnly');
   }
 
-  const allowed = await hasPermission(user, 'billing_settings', 'read');
+  const allowed = await hasPermission(user, 'accounting_integrations', 'catalog_read');
   if (!allowed) {
     return permissionError('Forbidden: You do not have permission to view QuickBooks integration settings.', 'msp/integrations:errors.qbo.viewPermission');
   }
@@ -508,20 +524,78 @@ async function getTenantCredentialMap(tenantId: string): Promise<QboCredentialsM
   }
 }
 
-function resolveRealmPriority(
+type QboRealmResolution =
+  | { realmId: string }
+  | { failure: 'not_connected' | 'invalid_realm' };
+
+/**
+ * Resolves the single realm a catalog read is allowed to touch. An explicitly
+ * requested realm must be one of the tenant's connected realms — otherwise the
+ * request fails closed with no provider query at all. Only when no realm is
+ * requested does the tenant's first connected realm serve as the default;
+ * there is never a fallback from one realm to another.
+ */
+function resolveCatalogRealm(
   credentials: QboCredentialsMap,
-  preferredRealmId?: string | null
-): string[] {
+  requestedRealmId: string | null
+): QboRealmResolution {
   const realmIds = Object.keys(credentials);
-  if (!preferredRealmId) {
-    return realmIds;
+  if (requestedRealmId) {
+    return realmIds.includes(requestedRealmId)
+      ? { realmId: requestedRealmId }
+      : { failure: 'invalid_realm' };
+  }
+  const [defaultRealmId] = realmIds;
+  return defaultRealmId ? { realmId: defaultRealmId } : { failure: 'not_connected' };
+}
+
+/**
+ * Shared catalog fetch: resolve exactly one realm, contact the provider only
+ * when that realm is valid, and surface a calm reconnect/not-connected error
+ * otherwise.
+ */
+async function fetchQboCatalog<T>(
+  tenant: string,
+  catalog: QboCatalog,
+  requestedRealmId: string | null,
+  fetchRows: (client: QboClientService) => Promise<T[]>
+): Promise<{ realmId: string; rows: T[] } | QboCatalogActionError> {
+  const credentials = await getTenantCredentialMap(tenant);
+  const resolution = resolveCatalogRealm(credentials, requestedRealmId);
+
+  if ('failure' in resolution) {
+    if (resolution.failure === 'invalid_realm') {
+      logger.warn('QBO catalog requested for a realm that is not connected', {
+        tenantId: tenant,
+        catalog,
+        requestedRealmId
+      });
+      return actionError(
+        `Reconnect QuickBooks before loading ${QBO_CATALOG_LABELS[catalog]}.`,
+        QBO_CATALOG_KEYS[catalog].reconnect,
+      );
+    }
+    logger.warn('Unable to load QBO catalog: no credential entries found', {
+      tenantId: tenant,
+      catalog
+    });
+    return qboCatalogNotConnected(catalog);
   }
 
-  if (realmIds.includes(preferredRealmId)) {
-    return [preferredRealmId, ...realmIds.filter((realmId) => realmId !== preferredRealmId)];
+  try {
+    logger.debug('Fetching QBO catalog', { tenantId: tenant, catalog, realmId: resolution.realmId });
+    const qboClient = await QboClientService.create(tenant, resolution.realmId);
+    const rows = await fetchRows(qboClient);
+    return { realmId: resolution.realmId, rows };
+  } catch (error) {
+    logger.warn('Failed to fetch QBO catalog', {
+      tenantId: tenant,
+      catalog,
+      realmId: resolution.realmId,
+      error
+    });
+    return qboCatalogFetchError(catalog, [error]);
   }
-
-  return realmIds;
 }
 
 export async function getTenantQboCredentials(
@@ -559,45 +633,72 @@ export async function getTenantQboCredentials(
   }
 }
 
-async function deleteTenantQboCredentials(secretProvider: ISecretProvider, tenantId: string): Promise<void> {
-  await secretProvider.deleteTenantSecret(tenantId, QBO_CREDENTIALS_SECRET_NAME);
-  logger.info('QBO credentials secret deleted', { tenantId });
-  clearAllCatalogCachesForTenant(tenantId);
-  await notifyQboConnectionChanged(tenantId);
+// --- Disconnect result types ---
+export interface QboDisconnectActionResult {
+  success: boolean;
+  /**
+   * 'disconnected' when provider cleanup was confirmed and local credentials
+   * were removed; 'pending'/'partial' while retryable provider cleanup is in
+   * flight; 'failed_permanent' when an operator force-finalize is required.
+   */
+  status: 'disconnected' | 'pending' | 'partial' | 'failed_permanent';
+  error?: string;
+  pendingTargets?: number;
+  failedTargets?: number;
 }
 
-async function revokeQboTokens(tenantId: string, credentialMap: QboCredentialsMap): Promise<void> {
-  const resolved = await resolveQboOAuthCredentials(tenantId).catch(() => null);
-  if (!resolved) {
-    logger.warn('Skipping QuickBooks token revocation: no usable client credentials', { tenantId });
-    return;
+function mapDisconnectProgress(progress: DisconnectServiceResult): QboDisconnectActionResult {
+  switch (progress.status) {
+    case 'disconnected':
+    case 'already_disconnected':
+    case 'no_credentials':
+      return { success: true, status: 'disconnected' };
+    case 'partial':
+      return {
+        success: false,
+        status: 'partial',
+        error: progress.error,
+        pendingTargets: progress.record?.targets.filter((t) => t.status === 'pending_revocation').length,
+        failedTargets: progress.record?.targets.filter((t) => t.status === 'failed_permanent').length,
+      };
+    case 'pending':
+      return { success: false, status: 'pending', error: progress.error };
+    case 'failed_permanent':
+      return { success: false, status: 'failed_permanent', error: progress.error };
   }
+}
 
-  const authHeader = `Basic ${Buffer.from(`${resolved.clientId}:${resolved.clientSecret}`).toString('base64')}`;
-  for (const [realmId, credentials] of Object.entries(credentialMap)) {
-    try {
-      await axios.post(
-        QBO_TOKEN_REVOKE_URL,
-        { token: credentials.refreshToken },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-            Authorization: authHeader
-          },
-          timeout: 10000
-        }
-      );
-      logger.info('Revoked QuickBooks tokens with Intuit', { tenantId, realmId });
-    } catch (error) {
-      logger.warn('Best-effort QuickBooks token revocation failed', {
-        tenantId,
-        realmId,
-        error: error instanceof Error ? error.message : error
-      });
+export const forceFinalizeQboDisconnect = withAuth(async (
+  user,
+  { tenant },
+  input: { reason: string }
+): Promise<{ success: boolean; error?: string }> => {
+  try {
+    const accessError = await getQboUpdateAccessError(user);
+    if (accessError) {
+      return { success: false, error: accessError };
     }
+
+    if (!input?.reason?.trim()) {
+      return { success: false, error: 'A reason is required to force-finalize a QuickBooks disconnect.' };
+    }
+
+    const { knex } = await createTenantKnex();
+    const progress = await forceFinalizeProviderDisconnect(knex, tenant, PROVIDER_QBO, {
+      userId: user.user_id,
+      reason: input.reason.trim(),
+    });
+
+    revalidatePath('/msp/settings');
+    if (progress.status === 'disconnected' || progress.status === 'already_disconnected') {
+      return { success: true };
+    }
+    return { success: false, error: progress.error };
+  } catch (error) {
+    logger.error('QuickBooks force-finalize disconnect failed', { tenantId: tenant, error });
+    return { success: false, error: 'Failed to finalize the QuickBooks disconnect. Please try again.' };
   }
-}
+});
 
 // --- QBO API Call Helper ---
 
@@ -714,34 +815,16 @@ export const getQboAccounts = withAuth(async (
     return [...cached];
   }
 
-  const credentials = await getTenantCredentialMap(tenant);
-  const candidateRealmIds = resolveRealmPriority(credentials, targetRealm);
+  const result = await fetchQboCatalog(tenant, 'accounts', targetRealm, async (qboClient) => {
+    const rows = await qboClient.query<QboAccountRow>('SELECT Id, Name, AccountType FROM Account');
+    return rows
+      .map(normalizeAccountRow)
+      .filter((a) => DEPOSIT_ACCOUNT_TYPES.has(a.accountType));
+  });
+  if (!('rows' in result)) return result;
 
-  if (candidateRealmIds.length === 0) {
-    logger.warn('Unable to load QBO accounts: no credential entries found', { tenantId: tenant });
-    return qboCatalogNotConnected('accounts');
-  }
-
-  const errors: unknown[] = [];
-  for (const realmId of candidateRealmIds) {
-    try {
-      logger.debug('Fetching QBO accounts', { tenantId: tenant, realmId });
-      const qboClient = await QboClientService.create(tenant, realmId);
-      const rows = await qboClient.query<QboAccountRow>('SELECT Id, Name, AccountType FROM Account');
-      const filtered = rows
-        .map(normalizeAccountRow)
-        .filter((a) => DEPOSIT_ACCOUNT_TYPES.has(a.accountType));
-      setCachedValue(accountCache, buildCacheKey(tenant, realmId, 'accounts'), filtered);
-      return [...filtered];
-    } catch (error) {
-      errors.push(error);
-      logger.warn('Failed to fetch QBO accounts', { tenantId: tenant, realmId, error });
-      continue;
-    }
-  }
-
-  logger.warn('Unable to fetch QBO accounts for any realm', { tenantId: tenant });
-  return qboCatalogFetchError('accounts', errors);
+  setCachedValue(accountCache, buildCacheKey(tenant, result.realmId, 'accounts'), result.rows);
+  return [...result.rows];
 });
 
 /**
@@ -763,34 +846,16 @@ export const getQboClasses = withAuth(async (
     return [...cached];
   }
 
-  const credentials = await getTenantCredentialMap(tenant);
-  const candidateRealmIds = resolveRealmPriority(credentials, targetRealm);
+  const result = await fetchQboCatalog(tenant, 'classes', targetRealm, async (qboClient) => {
+    const rows = await qboClient.query<QboClassRow>('SELECT Id, Name FROM Class');
+    return rows
+      .filter((r) => r.Active !== false)
+      .map(normalizeClassRow);
+  });
+  if (!('rows' in result)) return result;
 
-  if (candidateRealmIds.length === 0) {
-    logger.warn('Unable to load QBO classes: no credential entries found', { tenantId: tenant });
-    return qboCatalogNotConnected('classes');
-  }
-
-  const errors: unknown[] = [];
-  for (const realmId of candidateRealmIds) {
-    try {
-      logger.debug('Fetching QBO classes', { tenantId: tenant, realmId });
-      const qboClient = await QboClientService.create(tenant, realmId);
-      const rows = await qboClient.query<QboClassRow>('SELECT Id, Name FROM Class');
-      const mapped = rows
-        .filter((r) => r.Active !== false)
-        .map(normalizeClassRow);
-      setCachedValue(classCache, buildCacheKey(tenant, realmId, 'classes'), mapped);
-      return [...mapped];
-    } catch (error) {
-      errors.push(error);
-      logger.warn('Failed to fetch QBO classes', { tenantId: tenant, realmId, error });
-      continue;
-    }
-  }
-
-  logger.warn('Unable to fetch QBO classes for any realm', { tenantId: tenant });
-  return qboCatalogFetchError('classes', errors);
+  setCachedValue(classCache, buildCacheKey(tenant, result.realmId, 'classes'), result.rows);
+  return [...result.rows];
 });
 
 /**
@@ -812,32 +877,14 @@ export const getQboDepartments = withAuth(async (
     return [...cached];
   }
 
-  const credentials = await getTenantCredentialMap(tenant);
-  const candidateRealmIds = resolveRealmPriority(credentials, targetRealm);
+  const result = await fetchQboCatalog(tenant, 'departments', targetRealm, async (qboClient) => {
+    const rows = await qboClient.query<QboDepartmentRow>('SELECT Id, Name FROM Department');
+    return rows.map(normalizeDepartmentRow);
+  });
+  if (!('rows' in result)) return result;
 
-  if (candidateRealmIds.length === 0) {
-    logger.warn('Unable to load QBO departments: no credential entries found', { tenantId: tenant });
-    return qboCatalogNotConnected('departments');
-  }
-
-  const errors: unknown[] = [];
-  for (const realmId of candidateRealmIds) {
-    try {
-      logger.debug('Fetching QBO departments', { tenantId: tenant, realmId });
-      const qboClient = await QboClientService.create(tenant, realmId);
-      const rows = await qboClient.query<QboDepartmentRow>('SELECT Id, Name FROM Department');
-      const mapped = rows.map(normalizeDepartmentRow);
-      setCachedValue(departmentCache, buildCacheKey(tenant, realmId, 'departments'), mapped);
-      return [...mapped];
-    } catch (error) {
-      errors.push(error);
-      logger.warn('Failed to fetch QBO departments', { tenantId: tenant, realmId, error });
-      continue;
-    }
-  }
-
-  logger.warn('Unable to fetch QBO departments for any realm', { tenantId: tenant });
-  return qboCatalogFetchError('departments', errors);
+  setCachedValue(departmentCache, buildCacheKey(tenant, result.realmId, 'departments'), result.rows);
+  return [...result.rows];
 });
 
 /**
@@ -860,32 +907,14 @@ export const getQboItems = withAuth(async (
     return [...cached];
   }
 
-  const credentials = await getTenantCredentialMap(tenant);
-  const candidateRealmIds = resolveRealmPriority(credentials, targetRealm);
+  const result = await fetchQboCatalog(tenant, 'items', targetRealm, async (qboClient) => {
+    const qboItems = await qboClient.query<QboItemRow>('SELECT Id, Name FROM Item');
+    return qboItems.map(normalizeItemRow);
+  });
+  if (!('rows' in result)) return result;
 
-  if (candidateRealmIds.length === 0) {
-    logger.warn('Unable to load QBO items: no credential entries found', { tenantId: tenant });
-    return qboCatalogNotConnected('items');
-  }
-
-  const errors: unknown[] = [];
-  for (const realmId of candidateRealmIds) {
-    try {
-      logger.debug('Fetching QBO items', { tenantId: tenant, realmId });
-      const qboClient = await QboClientService.create(tenant, realmId);
-      const qboItems = await qboClient.query<QboItemRow>('SELECT Id, Name FROM Item');
-      const mappedItems = qboItems.map(normalizeItemRow);
-      setCachedValue(itemCache, buildCacheKey(tenant, realmId, 'items'), mappedItems);
-      return [...mappedItems];
-    } catch (error) {
-      errors.push(error);
-      logger.warn('Failed to fetch QBO items', { tenantId: tenant, realmId, error });
-      continue;
-    }
-  }
-
-  logger.warn('Unable to fetch QBO items for any realm', { tenantId: tenant });
-  return qboCatalogFetchError('items', errors);
+  setCachedValue(itemCache, buildCacheKey(tenant, result.realmId, 'items'), result.rows);
+  return [...result.rows];
 });
 
 /**
@@ -937,6 +966,10 @@ export const getQboConnectionStatus = withAuth(async (
     credentials: credentialStatus
   };
 
+  const { knex } = await createTenantKnex();
+  const disconnect = await getProviderDisconnectStatusInfo(knex, tenant, PROVIDER_QBO).catch(() => null);
+  const disconnectBlocking = disconnect !== null && disconnect.status !== 'finalized';
+
   try {
     const credentialMap = await getTenantCredentialMap(tenant);
     const entries = Object.entries(credentialMap);
@@ -947,9 +980,12 @@ export const getQboConnectionStatus = withAuth(async (
         ...baseStatus,
         connected: false,
         connections: [],
-        error: credentialStatus.ready
-          ? 'No QuickBooks company is connected yet. Click Connect QuickBooks to authorize one.'
-          : 'Add a QuickBooks client ID and client secret before connecting QuickBooks Online.'
+        disconnect,
+        error: disconnectBlocking
+          ? 'QuickBooks is being disconnected. Sync and exports are paused until the disconnect completes.'
+          : credentialStatus.ready
+            ? 'No QuickBooks company is connected yet. Click Connect QuickBooks to authorize one.'
+            : 'Add a QuickBooks client ID and client secret before connecting QuickBooks Online.'
       };
     }
 
@@ -1022,6 +1058,7 @@ export const getQboConnectionStatus = withAuth(async (
       connections: summaries,
       defaultRealmId,
       defaultConnection,
+      disconnect,
       error: hasActiveConnection
         ? undefined
         : aggregatedError ?? 'QuickBooks connections require attention. Please reconnect.'
@@ -1033,6 +1070,7 @@ export const getQboConnectionStatus = withAuth(async (
       ...baseStatus,
       connected: false,
       connections: [],
+      disconnect,
       error: message
     };
   }
@@ -1074,6 +1112,15 @@ export const saveQboCredentials = withAuth(async (
       clientSecretConfigured: true
     });
 
+    const { knex: auditKnex } = await createTenantKnex();
+    await writeAccountingAudit(auditKnex, tenant, 'accounting_credentials_saved', {
+      userId: user.user_id,
+      provider: 'qbo',
+      details: { action: 'replace_client_credentials', source: 'tenant' },
+    }).catch((error) => {
+      logger.warn('Failed to write QBO credentials audit entry', { tenantId: tenant, error });
+    });
+
     revalidatePath('/msp/settings');
     return { success: true };
   } catch (error) {
@@ -1089,40 +1136,53 @@ export const saveQboCredentials = withAuth(async (
 });
 
 /**
- * Disconnects the QuickBooks Online integration for the current tenant
- * by deleting stored credentials and optionally revoking the token with Intuit.
+ * Disconnects the QuickBooks Online integration for the current tenant.
+ *
+ * Durable, provider-first workflow: credentials are tombstoned immediately so
+ * sync/export paths stop using them, then each connected realm's OAuth grant
+ * is revoked with Intuit before local deletion. Transient provider failures
+ * leave the disconnect pending (retried by the scheduled job); permanent
+ * failures require an operator force-finalize. Repeat calls are idempotent.
  * Corresponds to Task 84.
  */
 export const disconnectQbo = withAuth(async (
   user,
   { tenant }
-): Promise<{ success: boolean; error?: string }> => {
-  const secretProvider = await getSecretProviderInstance();
-
+): Promise<QboDisconnectActionResult> => {
   try {
     const accessError = await getQboUpdateAccessError(user);
     if (accessError) {
-      return { success: false, error: accessError };
+      return { success: false, status: 'failed_permanent', error: accessError };
     }
 
     logger.info('Disconnecting QuickBooks integration', { tenantId: tenant });
 
-    const credentialMap = await getTenantCredentialMap(tenant);
+    // Drop any cached QBO catalog data immediately; the tombstone already stops
+    // the sync/export path, and the cache would otherwise serve up to 60s of
+    // stale data.
+    clearAllCatalogCachesForTenant(tenant);
 
-    await deleteTenantQboCredentials(secretProvider, tenant);
-    logger.info('Deleted stored QuickBooks credentials', { tenantId: tenant });
+    const { knex } = await createTenantKnex();
+    const progress = await disconnectProvider(knex, tenant, PROVIDER_QBO, {
+      userId: user.user_id,
+    });
 
-    if (Object.keys(credentialMap).length > 0) {
-      await revokeQboTokens(tenant, credentialMap);
-    }
+    const { knex: auditKnex } = await createTenantKnex();
+    await writeAccountingAudit(auditKnex, tenant, 'accounting_disconnected', {
+      userId: user.user_id,
+      provider: 'qbo',
+      details: { disconnectStatus: progress.status },
+    }).catch((error) => {
+      logger.warn('Failed to write QBO disconnect audit entry', { tenantId: tenant, error });
+    });
 
     revalidatePath('/msp/settings');
-
-    return { success: true };
+    return mapDisconnectProgress(progress);
   } catch (error: unknown) {
     logger.error('QuickBooks disconnect failed', { tenantId: tenant, error });
     return {
       success: false,
+      status: 'pending',
       error: 'Failed to disconnect QuickBooks. Please try again.'
     };
   }
@@ -1131,7 +1191,7 @@ export const disconnectQbo = withAuth(async (
 
 /**
  * Fetches a list of TaxCodes from QuickBooks Online.
- * Respects the requested realm and falls back to other connected realms.
+ * A requested realm must be connected; unknown realms return a validation error.
  */
 export const getQboTaxCodes = withAuth(async (
   user,
@@ -1148,58 +1208,40 @@ export const getQboTaxCodes = withAuth(async (
     return [...cached];
   }
 
-  const credentials = await getTenantCredentialMap(tenant);
-  const candidateRealmIds = resolveRealmPriority(credentials, targetRealm);
+  const result = await fetchQboCatalog(tenant, 'taxCodes', targetRealm, async (qboClient) => {
+    // SELECT * so the nested SalesTaxRateList comes back — Intuit's own
+    // documented TaxCode response carries the rate components only under it,
+    // and naming columns omits them. TaxRates then supply the percentages so
+    // labels can read "Name (7.25%)". Normalization below keeps only the
+    // id/name/description/rate fields the pick list renders.
+    const [taxCodeRows, taxRateRows] = await Promise.all([
+      queryAllPages<QboTaxCodeRow>(qboClient, 'SELECT * FROM TaxCode'),
+      queryAllPages<QboTaxRateRow>(qboClient, 'SELECT Id, RateValue FROM TaxRate')
+    ]);
 
-  if (candidateRealmIds.length === 0) {
-    logger.warn('Unable to load QBO tax codes: no credential entries found', { tenantId: tenant });
-    return qboCatalogNotConnected('taxCodes');
-  }
-
-  const errors: unknown[] = [];
-  for (const realmId of candidateRealmIds) {
-    try {
-      logger.debug('Fetching QBO tax codes', { tenantId: tenant, realmId });
-      const qboClient = await QboClientService.create(tenant, realmId);
-
-      // SELECT * so the nested SalesTaxRateList comes back — Intuit's own
-      // documented TaxCode response carries the rate components only under it,
-      // and naming columns omits them. TaxRates then supply the percentages so
-      // labels can read "Name (7.25%)".
-      const [taxCodeRows, taxRateRows] = await Promise.all([
-        queryAllPages<QboTaxCodeRow>(qboClient, 'SELECT * FROM TaxCode'),
-        queryAllPages<QboTaxRateRow>(qboClient, 'SELECT Id, RateValue FROM TaxRate')
-      ]);
-
-      const ratePercentByTaxRateId = new Map<string, number>();
-      for (const rate of taxRateRows) {
-        if (!rate.Id) continue;
-        const value = Number(rate.RateValue);
-        if (Number.isFinite(value)) {
-          ratePercentByTaxRateId.set(rate.Id, value);
-        }
+    const ratePercentByTaxRateId = new Map<string, number>();
+    for (const rate of taxRateRows) {
+      if (!rate.Id) continue;
+      const value = Number(rate.RateValue);
+      if (Number.isFinite(value)) {
+        ratePercentByTaxRateId.set(rate.Id, value);
       }
-
-      // Filtered here rather than as `WHERE Active = true`, which QBO does
-      // support: Intuit's published TaxCode response omits Active entirely on
-      // the TAX and NON pseudo codes, so a server-side filter would silently
-      // drop exactly the two entries an Automated Sales Tax company needs.
-      // Inactive codes leave the pick list either way; existing mappings that
-      // point at them stay readable via the persisted display-name metadata.
-      const mappedTaxCodes = taxCodeRows
-        .filter((row) => row.Active !== false)
-        .map((row) => normalizeTaxCodeRow(row, ratePercentByTaxRateId));
-      setCachedValue(taxCodeCache, buildCacheKey(tenant, realmId, 'tax-codes'), mappedTaxCodes);
-      return [...mappedTaxCodes];
-    } catch (error) {
-      errors.push(error);
-      logger.warn('Failed to fetch QBO tax codes', { tenantId: tenant, realmId, error });
-      continue;
     }
-  }
 
-  logger.warn('Unable to fetch QBO tax codes for any realm', { tenantId: tenant });
-  return qboCatalogFetchError('taxCodes', errors);
+    // Filtered here rather than as `WHERE Active = true`, which QBO does
+    // support: Intuit's published TaxCode response omits Active entirely on
+    // the TAX and NON pseudo codes, so a server-side filter would silently
+    // drop exactly the two entries an Automated Sales Tax company needs.
+    // Inactive codes leave the pick list either way; existing mappings that
+    // point at them stay readable via the persisted display-name metadata.
+    return taxCodeRows
+      .filter((row) => row.Active !== false)
+      .map((row) => normalizeTaxCodeRow(row, ratePercentByTaxRateId));
+  });
+  if (!('rows' in result)) return result;
+
+  setCachedValue(taxCodeCache, buildCacheKey(tenant, result.realmId, 'tax-codes'), result.rows);
+  return [...result.rows];
 });
 
 /**
@@ -1266,12 +1308,12 @@ export const setQboAutomatedSalesTaxMode = withAuth(async (
 
 /**
  * Fetches a list of Terms from QuickBooks Online.
- * Respects the requested realm and falls back to other connected realms.
+ * A requested realm must be connected; unknown realms return a validation error.
  */
 /**
  * Fetches a paged list of Customers from QuickBooks Online.
  * Pages through all results using STARTPOSITION/MAXRESULTS (1000 per page).
- * Respects the requested realm and falls back to other connected realms.
+ * A requested realm must be connected; unknown realms return a validation error.
  * Results are cached for CATALOG_CACHE_TTL_MS per (tenant, realm) pair.
  */
 export const getQboCustomers = withAuth(async (
@@ -1289,37 +1331,17 @@ export const getQboCustomers = withAuth(async (
     return [...cached];
   }
 
-  const credentials = await getTenantCredentialMap(tenant);
-  const candidateRealmIds = resolveRealmPriority(credentials, targetRealm);
+  const result = await fetchQboCatalog(tenant, 'customers', targetRealm, async (qboClient) => {
+    const customerRows = await queryAllPages<QboCustomerRow>(
+      qboClient,
+      'SELECT Id, DisplayName, Active FROM Customer'
+    );
+    return customerRows.map(normalizeCustomerRow);
+  });
+  if (!('rows' in result)) return result;
 
-  if (candidateRealmIds.length === 0) {
-    logger.warn('Unable to load QBO customers: no credential entries found', { tenantId: tenant });
-    return qboCatalogNotConnected('customers');
-  }
-
-  const errors: unknown[] = [];
-  for (const realmId of candidateRealmIds) {
-    try {
-      logger.debug('Fetching QBO customers', { tenantId: tenant, realmId });
-      const qboClient = await QboClientService.create(tenant, realmId);
-
-      const customerRows = await queryAllPages<QboCustomerRow>(
-        qboClient,
-        'SELECT Id, DisplayName, Active FROM Customer'
-      );
-      const allCustomers = customerRows.map(normalizeCustomerRow);
-
-      setCachedValue(customerCache, buildCacheKey(tenant, realmId, 'customers'), allCustomers);
-      return [...allCustomers];
-    } catch (error) {
-      errors.push(error);
-      logger.warn('Failed to fetch QBO customers', { tenantId: tenant, realmId, error });
-      continue;
-    }
-  }
-
-  logger.warn('Unable to fetch QBO customers for any realm', { tenantId: tenant });
-  return qboCatalogFetchError('customers', errors);
+  setCachedValue(customerCache, buildCacheKey(tenant, result.realmId, 'customers'), result.rows);
+  return [...result.rows];
 });
 
 export const getQboTerms = withAuth(async (
@@ -1337,30 +1359,12 @@ export const getQboTerms = withAuth(async (
     return [...cached];
   }
 
-  const credentials = await getTenantCredentialMap(tenant);
-  const candidateRealmIds = resolveRealmPriority(credentials, targetRealm);
+  const result = await fetchQboCatalog(tenant, 'paymentTerms', targetRealm, async (qboClient) => {
+    const qboTerms = await qboClient.query<QboTermRow>('SELECT Id, Name FROM Term');
+    return qboTerms.map(normalizeTermRow);
+  });
+  if (!('rows' in result)) return result;
 
-  if (candidateRealmIds.length === 0) {
-    logger.warn('Unable to load QBO terms: no credential entries found', { tenantId: tenant });
-    return qboCatalogNotConnected('paymentTerms');
-  }
-
-  const errors: unknown[] = [];
-  for (const realmId of candidateRealmIds) {
-    try {
-      logger.debug('Fetching QBO terms', { tenantId: tenant, realmId });
-      const qboClient = await QboClientService.create(tenant, realmId);
-      const qboTerms = await qboClient.query<QboTermRow>('SELECT Id, Name FROM Term');
-      const mappedTerms = qboTerms.map(normalizeTermRow);
-      setCachedValue(termCache, buildCacheKey(tenant, realmId, 'terms'), mappedTerms);
-      return [...mappedTerms];
-    } catch (error) {
-      errors.push(error);
-      logger.warn('Failed to fetch QBO terms', { tenantId: tenant, realmId, error });
-      continue;
-    }
-  }
-
-  logger.warn('Unable to fetch QBO terms for any realm', { tenantId: tenant });
-  return qboCatalogFetchError('paymentTerms', errors);
+  setCachedValue(termCache, buildCacheKey(tenant, result.realmId, 'terms'), result.rows);
+  return [...result.rows];
 });

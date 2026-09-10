@@ -573,7 +573,7 @@ describe('T113: network_error degrades every surface to a typed error state with
 
     expect(result).toEqual({
       state: 'error',
-      error: 'Hudu could not be reached.',
+      error: 'Unable to reach Hudu. Check the Hudu base URL and network connectivity.',
       errorKind: 'network_error',
     });
     expect('value' in (result as Record<string, unknown>)).toBe(false);

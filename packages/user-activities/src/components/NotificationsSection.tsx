@@ -15,7 +15,6 @@ import { getCurrentUser } from "@alga-psa/user-composition/actions";
 import { Badge } from "@alga-psa/ui/components/Badge";
 import Pagination from '@alga-psa/ui/components/Pagination';
 import { useInternalNotifications } from "@alga-psa/notifications/hooks";
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useSession } from 'next-auth/react';
 import CustomTabs from '@alga-psa/ui/components/CustomTabs';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -25,16 +24,14 @@ interface NotificationsSectionProps {
   onViewAll?: () => void;
   noCard?: boolean;
   /**
-   * Full-view mode (task 29.8.46, flag-gated): render the numbered server-side
-   * pager and priority filter chips instead of the fixed 5-item preview. Only
-   * takes effect when the `release-v1-5-feature` flag is enabled; with the flag
-   * off the component behaves exactly as before regardless of this prop.
+   * Full-view mode (task 29.8.46): render the numbered server-side pager and
+   * priority filter chips instead of the fixed 5-item preview.
    */
   fullMode?: boolean;
 }
 
 const DEFAULT_TAB = 'unread';
-// Page size for the flag-on full-view server-side pagination.
+// Page size for the full-view server-side pagination.
 const FULL_MODE_PAGE_SIZE = 20;
 type PriorityFilterKey = 'all' | 'high' | 'normal' | 'low';
 
@@ -55,9 +52,6 @@ function priorityKeyToActivityPriority(key: PriorityFilterKey): ActivityPriority
 
 export function NotificationsSection({ limit = 5, onViewAll, noCard = false, fullMode = false }: NotificationsSectionProps) {
   const { t } = useTranslation('msp/user-activities');
-  const { enabled } = useFeatureFlag('release-v1-5-feature');
-  // Full-view behaviour (pager + priority chips) is only active with the flag on.
-  const isFullView = enabled && fullMode;
   const { data: session } = useSession();
   const searchParams = useSearchParams();
   const notificationTabParam = searchParams?.get('notificationTab');
@@ -113,7 +107,7 @@ export function NotificationsSection({ limit = 5, onViewAll, noCard = false, ful
       setLoading(true);
       setError(null);
 
-      if (isFullView) {
+      if (fullMode) {
         // Full view (flag on): server-side paginated window + total count. The
         // underlying fetch already orders newest-first (chronological).
         const offset = (currentPage - 1) * FULL_MODE_PAGE_SIZE;
@@ -141,15 +135,15 @@ export function NotificationsSection({ limit = 5, onViewAll, noCard = false, ful
     } finally {
       setLoading(false);
     }
-  }, [limit, isFullView, currentPage]);
+  }, [limit, fullMode, currentPage]);
 
   // In full view, reset to the first page whenever the effective filters change so
   // the user is never stranded on an out-of-range page.
   useEffect(() => {
-    if (isFullView) {
+    if (fullMode) {
       setCurrentPage(1);
     }
-  }, [notificationFilters, isFullView]);
+  }, [notificationFilters, fullMode]);
 
   // Load activities initially and when filters change
   useEffect(() => {
@@ -398,7 +392,7 @@ export function NotificationsSection({ limit = 5, onViewAll, noCard = false, ful
     })();
 
     // Flag off / preview mode: identical markup to before.
-    if (!isFullView) {
+    if (!fullMode) {
       return body;
     }
 

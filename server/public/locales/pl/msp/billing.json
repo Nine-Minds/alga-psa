@@ -141,6 +141,8 @@
   },
   "usage": {
     "bucketHoursOverview": "Przegląd pakietu godzin",
+    "bucketLoadError": "Nie udało się wczytać sald pakietów godzin. Spróbuj ponownie, aby zobaczyć aktualne salda.",
+    "retryBucketBalances": "Wczytaj ponownie salda pakietów godzin",
     "usageRecords": "Zapisy użytkowania",
     "actions": {
       "addUsage": "Dodaj użycie",
@@ -211,6 +213,12 @@
       "updateError": "Nie udało się zaktualizować rekordu użycia",
       "deleteSuccess": "Zapis użycia został pomyślnie usunięty",
       "deleteError": "Nie udało się usunąć rekordu użycia"
+    },
+    "periodReport": "Raport użycia za okres",
+    "periodAlreadyInvoiced": "Ten okres jest już zafakturowany. Popraw go w procesie korekty faktury.",
+    "periodFilter": {
+      "notice": "Wyświetlane jest użycie dla okresu usługi od {{start}} do {{end}}",
+      "clear": "Wyczyść"
     }
   },
   "lineItem": {
@@ -387,7 +395,10 @@
       "loadingBatches": "Ładowanie partii...",
       "empty": "Nie ma jeszcze partii eksportowych.",
       "loadingDetails": "Ładowanie szczegółów partii...",
-      "batchNotFound": "Nie znaleziono partii."
+      "batchNotFound": "Nie znaleziono partii.",
+      "checkingAccess": "Sprawdzanie dostępu...",
+      "accessDeniedTitle": "Odmowa dostępu",
+      "accessDeniedDescription": "Nie masz uprawnień dostępu do eksportów księgowych."
     },
     "createDialog": {
       "title": "Nowy eksport księgowy",
@@ -663,7 +674,9 @@
     },
     "recurringRun": {
       "selectPeriods": "Wybierz co najmniej jeden cykliczny okres rozliczeniowy do wygenerowania.",
-      "invoicePermission": "Odmowa uprawnień: wymagane uprawnienie tworzenia lub generowania faktur"
+      "invoicePermission": "Odmowa uprawnień: wymagane uprawnienie tworzenia lub generowania faktur",
+      "monthEndCloseNotMaterialized": "Nie zmaterializowano cyklicznych okresów usługi dla tego cyklicznego okna wykonywania.",
+      "monthEndCloseNotEligible": "Okres {{servicePeriod}} można zamknąć na koniec miesiąca tylko w dniu {{finalCalendarDay}}. Tylko rozliczane z dołu okresy usługi obejmujące pełny miesiąc kalendarzowy można zamknąć wcześniej, w ich ostatnim dniu kalendarzowym."
     },
     "recurringServicePeriod": {
       "scheduleKeyRequiredInspect": "Do sprawdzenia cyklicznych okresów usługi wymagany jest klucz harmonogramu.",
@@ -689,8 +702,10 @@
         "setDefault": "Odmowa uprawnień: nie można ustawić domyślnego szablonu dokumentu",
         "clearOverride": "Odmowa uprawnień: nie można wyczyścić nadpisania szablonu dokumentu",
         "delete": "Odmowa uprawnień: nie można usuwać szablonów dokumentów",
-        "preview": "Odmowa uprawnień: nie można wyświetlać podglądu szablonów dokumentów"
-      }
+        "preview": "Odmowa uprawnień: nie można wyświetlać podglądu szablonów dokumentów",
+        "readSalesOrders": "Brak uprawnień: nie można odczytać zamówień sprzedaży"
+      },
+      "existingNotFound": "Nie znaleziono dokumentu."
     },
     "billingProfile": {
       "periodOrder": "Wybierz okres, którego początek nie jest późniejszy niż koniec.",

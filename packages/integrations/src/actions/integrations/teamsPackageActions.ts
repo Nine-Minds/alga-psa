@@ -4,7 +4,7 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import { withAuth } from '@alga-psa/auth/withAuth';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
-import { getTeamsAvailability, resolveTeamsAvailability } from '../../lib/teamsAvailability';
+import { getTeamsAvailability } from '../../lib/teamsAvailability';
 import { getMicrosoftProfileReadiness } from './providerReadiness';
 import type { TeamsAppPackageStatusResponse } from './teamsContracts';
 import type { TeamsInstallStatus } from './teamsShared';
@@ -203,7 +203,7 @@ function buildTeamsAppManifest(baseUrl: string, tenant: string, profile: Microso
     description: {
       short: 'Manage PSA tickets, time, notes, and approvals from Microsoft Teams.',
       full:
-        'AlgaPSA for Microsoft Teams gives MSP technicians a personal tab, personal-scope bot, message extension, and activity feed notifications backed by the tenant-selected Microsoft profile.',
+        'AlgaPSA for Microsoft Teams gives MSP technicians a personal tab, bot commands in personal chats, group chats, and team channels, a message extension, and activity feed notifications backed by the tenant-selected Microsoft profile.',
     },
     icons: {
       outline: 'outline.png',
@@ -223,12 +223,12 @@ function buildTeamsAppManifest(baseUrl: string, tenant: string, profile: Microso
     bots: [
       {
         botId: profile.client_id,
-        scopes: ['personal'],
+        scopes: ['personal', 'groupChat', 'team'],
         supportsFiles: false,
         isNotificationOnly: false,
         commandLists: [
           {
-            scopes: ['personal'],
+            scopes: ['personal', 'groupChat', 'team'],
             commands: [
               { title: 'my tickets', description: 'Show the technician work queue.' },
               { title: 'ticket <id>', description: 'Open a specific ticket summary.' },
@@ -442,7 +442,7 @@ export const getTeamsAppPackageStatus = withAuth(async (
   user,
   { tenant }
 ): Promise<TeamsAppPackageStatusResponse> => {
-  const availability = resolveTeamsAvailability({ tenantId: tenant });
+  const availability = await getTeamsAvailability({ tenantId: tenant, userId: (user as any)?.user_id });
   if (availability.enabled === false) {
     return { success: false, error: availability.message };
   }

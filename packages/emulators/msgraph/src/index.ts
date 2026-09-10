@@ -20,6 +20,7 @@ export type {
   BotConfig,
   BotConversation,
   CapturedBotActivity,
+  CapturedSendMail,
   GraphApplication,
   GraphChat,
   GraphChatMessage,

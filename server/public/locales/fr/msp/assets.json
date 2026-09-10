@@ -406,11 +406,17 @@
       "refreshing": "Rafraîchissant...",
       "refreshData": "Actualiser les données",
       "rebootDevice": "Redémarrer l'appareil",
+      "rebooting": "Redémarrage...",
       "editAsset": "Modifier l'actif",
       "deleteAsset": "Supprimer l'actif"
     },
     "values": {
       "unknownClient": "Client inconnu"
+    },
+    "reboot": {
+      "title": "Redémarrer l’appareil ?",
+      "message": "{{name}} va redémarrer immédiatement via {{provider}}. Toute personne connectée perdra son travail non enregistré.",
+      "confirm": "Redémarrer maintenant"
     }
   },
   "assetDetailTabs": {
@@ -1162,14 +1168,6 @@
       "saveFailed": "Échec de la création du calendrier de maintenance"
     }
   },
-  "documentsPasswordsTab": {
-    "title": "Documents et mots de passe",
-    "description": "Onglet combiné pour les documents d'actifs, les informations d'identification et les enregistrements sécurisés associés",
-    "passwords": {
-      "title": "Mots de passe et secrets",
-      "comingSoon": "Gestion sécurisée des mots de passe bientôt disponible."
-    }
-  },
   "maintenanceSchedulesTab": {
     "title": "Calendriers d'entretien",
     "description": "Onglet de gestion du calendrier de maintenance pour les services planifiés et les travaux récurrents",
@@ -1215,6 +1213,7 @@
     },
     "types": {
       "preventive": "Préventif",
+      "corrective": "Correctif",
       "inspection": "Inspection",
       "calibration": "Étalonnage",
       "replacement": "Remplacement"
@@ -1234,6 +1233,17 @@
         "title": "Supprimer le calendrier de maintenance",
         "message": "Êtes-vous sûr de vouloir supprimer « {{name}} » ? Cette action ne peut pas être annulée."
       }
+    }
+  },
+  "maintenanceCommandCenter": {
+    "title": "Centre de contrôle de maintenance",
+    "description": "La prochaine échéance est calculée à partir de la date de réalisation réelle.",
+    "assetsLink": "Actifs"
+  },
+  "maintenanceCompletionDialog": {
+    "errors": {
+      "performedDateRequired": "Une date d’exécution est requise.",
+      "completeFailed": "Impossible de terminer la maintenance."
     }
   },
   "relatedAssetsTab": {

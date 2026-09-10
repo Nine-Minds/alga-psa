@@ -1,6 +1,8 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 
+import { allocateQuoteDiscounts } from './quoteDiscountAllocation';
+
 interface QuoteCalculationContext {
   quote_id: string;
   client_id?: string | null;
@@ -21,6 +23,8 @@ interface QuoteItemRow {
   applies_to_service_id?: string | null;
   is_optional?: boolean | null;
   is_selected?: boolean | null;
+  is_recurring?: boolean | null;
+  billing_frequency?: string | null;
   is_taxable?: boolean | null;
   tax_region?: string | null;
   tax_rate?: number | string | null;
@@ -55,14 +59,35 @@ function isItemIncluded(item: QuoteItemRow): boolean {
   return item.is_selected === true;
 }
 
-function calculateDiscountAmount(item: QuoteItemRow, baseAmount: number): number {
-  if (item.discount_type === 'percentage') {
-    return Math.round(baseAmount * (toNumber(item.discount_percentage) / 100));
+function resolveQuoteDiscounts(
+  items: QuoteItemRow[]
+): { byItemId: Map<string, number>; totalDiscount: number } {
+  const includedBaseItems = items.filter((item) => !item.is_discount && isItemIncluded(item));
+  const bases = includedBaseItems.map((item) => ({
+    id: item.quote_item_id,
+    serviceId: item.service_id ?? null,
+    amount: toNumber(item.quantity) * toNumber(item.unit_price),
+    isRecurring: item.is_recurring === true,
+  }));
+
+  const discounts = items
+    .filter((item) => item.is_discount === true && isItemIncluded(item))
+    .map((item) => ({
+      id: item.quote_item_id,
+      discountType: (item.discount_type === 'percentage' ? 'percentage' : 'fixed') as 'percentage' | 'fixed',
+      fixedAmount: Math.abs(toNumber(item.quantity || 1) * toNumber(item.unit_price)),
+      discountPercentage: toNumber(item.discount_percentage),
+      appliesToItemId: item.applies_to_item_id ?? null,
+      appliesToServiceId: item.applies_to_service_id ?? null,
+    }));
+
+  const allocation = allocateQuoteDiscounts(bases, discounts);
+  const byItemId = new Map<string, number>();
+  for (const result of allocation.discounts) {
+    byItemId.set(result.discountId, result.resolvedAmount);
   }
 
-  // Fixed discount: the total_price represents the absolute discount amount.
-  // unit_price is the per-unit discount, quantity multiplies it.
-  return Math.abs(toNumber(item.quantity || 1) * toNumber(item.unit_price));
+  return { byItemId, totalDiscount: allocation.totalDiscount };
 }
 
 function isDateApplicable(row: { start_date?: string | Date | null; end_date?: string | Date | null }, date: string): boolean {
@@ -296,28 +321,15 @@ export async function recalculateQuoteFinancials(
   const quoteDate = toQuoteDate(quote.quote_date);
   const currencyCode = quote.currency_code ?? 'USD';
   const taxSource = quote.tax_source ?? 'internal';
-  const includedBaseItems = items.filter((item) => !item.is_discount && isItemIncluded(item));
-  const baseSubtotal = includedBaseItems.reduce((sum, item) => sum + (toNumber(item.quantity) * toNumber(item.unit_price)), 0);
-  const baseItemTotals = new Map(includedBaseItems.map((item) => [item.quote_item_id, toNumber(item.quantity) * toNumber(item.unit_price)]));
-  const baseServiceTotals = new Map<string, number>();
 
-  for (const item of includedBaseItems) {
-    if (!item.service_id) {
-      continue;
-    }
-
-    baseServiceTotals.set(
-      item.service_id,
-      (baseServiceTotals.get(item.service_id) ?? 0) + (toNumber(item.quantity) * toNumber(item.unit_price))
-    );
-  }
+  // Resolve discount reductions against the eligible base items they target,
+  // independent of each discount row's own persisted cadence fields.
+  const { byItemId: discountAmountById, totalDiscount } = resolveQuoteDiscounts(items);
 
   let subtotal = 0;
-  let discountTotal = 0;
   let tax = 0;
 
   for (const item of items) {
-    const totalPrice = toNumber(item.quantity) * toNumber(item.unit_price);
     const isIncludedInTotals = isItemIncluded(item);
     const isDiscount = item.is_discount === true;
     // Preserve manual override: if tax_region was explicitly set on the item, keep it.
@@ -327,20 +339,15 @@ export async function recalculateQuoteFinancials(
       : null;
     const taxRegion = item.tax_region ?? locationRegionCode ?? client?.region_code ?? null;
 
-    const scopedBaseAmount = item.applies_to_item_id
-      ? (baseItemTotals.get(item.applies_to_item_id) ?? 0)
-      : item.applies_to_service_id
-        ? (baseServiceTotals.get(item.applies_to_service_id) ?? 0)
-        : baseSubtotal;
-    const resolvedTotalPrice = isDiscount ? calculateDiscountAmount(item, scopedBaseAmount) : totalPrice;
+    const resolvedTotalPrice = isDiscount
+      ? (discountAmountById.get(item.quote_item_id) ?? 0)
+      : (toNumber(item.quantity) * toNumber(item.unit_price));
 
     let netAmount = isIncludedInTotals ? resolvedTotalPrice : 0;
     let taxAmount = 0;
     let taxRate = isIncludedInTotals ? toNumber(item.tax_rate) : 0;
 
-    if (isDiscount) {
-      discountTotal += isIncludedInTotals ? resolvedTotalPrice : 0;
-    } else {
+    if (!isDiscount) {
       subtotal += isIncludedInTotals ? resolvedTotalPrice : 0;
 
       if (isIncludedInTotals && quote.client_id && taxSource === 'internal') {
@@ -381,9 +388,9 @@ export async function recalculateQuoteFinancials(
     .where({ quote_id: quoteId })
     .update({
       subtotal,
-      discount_total: discountTotal,
+      discount_total: totalDiscount,
       tax,
-      total_amount: subtotal - discountTotal + tax,
+      total_amount: subtotal - totalDiscount + tax,
       updated_at: knexOrTrx.fn.now(),
     });
 }

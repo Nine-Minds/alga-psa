@@ -1204,10 +1204,12 @@ export async function createTicketFromEmail(
   const { WorkflowEventPublisher } = await import('../adapters/workflowEventPublisher');
   const { WorkflowAnalyticsTracker } = await import('../adapters/workflowAnalyticsTracker');
 
-  const eventPublisher = executionOptions?.eventPublisher ?? new WorkflowEventPublisher();
   const analyticsTracker = executionOptions?.analyticsTracker ?? new WorkflowAnalyticsTracker();
 
   return await withAdminTransaction(async (trx: Knex.Transaction) => {
+      // Durable inbound processing injects its transactional outbox publisher.
+      // Every other path defers event-bus publication until this transaction commits.
+      const eventPublisher = executionOptions?.eventPublisher ?? new WorkflowEventPublisher({ transaction: trx });
       const db = tenantDb(trx, tenant);
       // Determine assigned_to: use provided value or fall back to board's default
       let assignedTo = ticketData.assigned_to;
@@ -1524,6 +1526,7 @@ export async function createCommentFromEmail(
         executionOptions?.eventPublisher ??
         new WorkflowEventPublisher({
           suppressCommentEmail: commentData.suppressTechEmailNotification ?? false,
+          transaction: trx,
         });
       // The durable outbox publisher distinguishes the initial comment (in-app
       // only) from a reply comment; drive that from this call's flag.

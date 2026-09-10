@@ -269,7 +269,7 @@ async function loadMappings<TAlga>({
   loadAlgaEntities,
   mapAlga
 }: MappingLoadConfig<TAlga>): Promise<AccountingMappingLoadResult> {
-  const externalRealmId = context.realmId === undefined ? undefined : context.realmId;
+  const externalRealmId = context.realmId ?? null;
 
   const [mappings, algaEntities] = await Promise.all([
     getExternalEntityMappings({
@@ -307,8 +307,7 @@ function createMapping({
     alga_entity_id: input.algaEntityId,
     external_entity_id: input.externalEntityId,
     external_realm_id: context.realmId ?? null,
-    metadata: input.metadata ?? null,
-    sync_status: 'manual_link'
+    metadata: input.metadata ?? null
   };
 
   return createExternalEntityMapping(payload).then((result) => {

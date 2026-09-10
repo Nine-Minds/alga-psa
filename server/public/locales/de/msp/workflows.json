@@ -60,8 +60,6 @@
       "runNow": "Jetzt ausführen",
       "exportCsv": "CSV exportieren",
       "refresh": "Aktualisieren",
-      "cancelSelected": "Auswahl abbrechen ({{count}})",
-      "clearSelection": "Auswahl aufheben",
       "details": "Details",
       "loadMore": "Mehr laden",
       "preview": "Vorschau"
@@ -92,7 +90,12 @@
       "cancelMessage": "{{count}} gewählte Ausführung(en) abbrechen? Dies kann nicht rückgängig gemacht werden.",
       "reasonLabel": "Grund",
       "cancelReasonPlaceholder": "Geben Sie einen Grund für den Abbruch an",
-      "cancelConfirm": "Ausführungen abbrechen"
+      "cancelConfirm": "Ausführungen abbrechen",
+      "actionBar": {
+        "selectedCount": "{{count}} ausgewählt",
+        "cancel": "Läufe abbrechen",
+        "clear": "Auswahl aufheben"
+      }
     },
     "toasts": {
       "loadRunsFailed": "Ausführungen konnten nicht geladen werden",

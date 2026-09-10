@@ -189,7 +189,7 @@ export const applyCreditToInvoiceSchema = z.object({
 
 export const createPrepaymentInvoiceSchema = z.object({
   client_id: uuidSchema,
-  amount: amountSchema,
+  amount: monetaryAmountSchema,
   manual_expiration_date: dateSchema.optional()
 });
 

@@ -15,7 +15,6 @@ import {
   Network,
   Pencil,
   Shield,
-  StickyNote,
   X,
   type LucideIcon,
 } from 'lucide-react';
@@ -254,9 +253,7 @@ export function AssetBentoLayout({
 
             <CustomTypeDetailsPanel asset={asset} />
 
-            <BentoTile id="asset-bento-notes" title={t('assetBento.notes', { defaultValue: 'Notes' })} icon={<StickyNote className="h-4 w-4" />}>
-              <AssetNotesPanel assetId={asset.asset_id} />
-            </BentoTile>
+            <AssetNotesPanel assetId={asset.asset_id} />
           </div>
 
           {/* Centre — the spine */}

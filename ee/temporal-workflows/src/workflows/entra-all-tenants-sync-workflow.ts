@@ -1,4 +1,5 @@
 import { log, proxyActivities, workflowInfo } from '@temporalio/workflow';
+import { activityFailureMessage } from './activity-failure-message';
 import type {
   EntraAllTenantsSyncWorkflowInput,
   EntraSyncRunSummary,
@@ -141,7 +142,7 @@ export async function entraAllTenantsSyncWorkflow(
         ambiguous: 0,
         inactivated: 0,
         skipped: 0,
-        errorMessage: error instanceof Error ? error.message : 'Tenant sync failed.',
+        errorMessage: activityFailureMessage(error, 'Tenant sync failed.'),
       };
       tenantResults.push(failedResult);
       await activities.recordSyncTenantResultActivity({

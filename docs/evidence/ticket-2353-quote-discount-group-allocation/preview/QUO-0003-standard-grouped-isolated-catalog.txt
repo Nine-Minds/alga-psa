@@ -1,0 +1,66 @@
+Oz
+                                    QUOTE
+                                    Quote #:                       QUO-0003
+                                    Date:                         09/09/2026
+                                    Valid Until:                  09/10/2026
+                                    PO #:                                     -
+
+
+
+
+ From                               Prepared For
+
+ Oz                                 Emerald City
+                                    1010 Emerald Street, Suite 007, Emerald
+                                    City, OZ, 77777, United States
+
+
+
+QD2353 Recurring Discount Fixture
+
+ Monthly Items
+
+Description                                 Price        Qty          Amount
+
+QD2353 Managed Support A              USD 25.00             1       USD 25.00
+
+QD2353 Managed Support B              USD 35.00             1       USD 35.00
+
+Discount                               -USD 5.00            1       -USD 5.00
+
+Discount                               -USD 5.00            1       -USD 5.00
+
+
+ One-time Items
+
+Description                                 Price        Qty          Amount
+
+QD2353 Setup and onboarding          USD 373.53             1      USD 373.53
+
+One-time charge 2                   USD 2,108.63            1    USD 2,108.63
+
+One-time charge 3                     USD 55.81             1       USD 55.81
+
+One-time charge 4                    USD 450.00             1      USD 450.00
+  Notes              Monthly              USD 50.00
+                     Tax                   USD 0.00
+                      Monthly Total      USD 50.00
+                     One-time          USD 2,987.97
+                     Tax                   USD 0.00
+                      One-time Total   USD 2,987.97
+
+
+
+Terms & Conditions
+
+
+Accepted By          Authorized By
+
+
+
+                     Signature
+
+
+
+                     Date
+

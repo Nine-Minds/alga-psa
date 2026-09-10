@@ -1,12 +1,11 @@
 name: Unit Tests
 
 on:
-  pull_request:
-  push:
-    branches:
-      - main
-      - master
-      - develop
+  workflow_call:
+env:
+  # Ownership repair tests operate only on mkdtemp fixtures and restore the
+  # runner UID on exit. Fail if the capability is unavailable instead of skipping.
+  ALGA_TEST_PRIVILEGED_CHOWN: '1'
 
 jobs:
   skip-budget:
@@ -16,7 +15,13 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          # Node 22: the repo's engines range is >=22 <27 (see root package.json)
+          # and AMP's package suites read SQLite via node:sqlite (DatabaseSync),
+          # which only exists on Node >= 22.5. Node 20 fails those suites with
+          # "node:sqlite is unavailable in this runtime".
+          node-version: '22'
+      - name: Verify test selection and execution accounting
+        run: node --test scripts/tests/integration-selection.test.mjs scripts/tests/test-execution-evidence.test.mjs scripts/tests/test-discovery.test.mjs scripts/tests/playwright-execution-evidence.test.mjs scripts/tests/test-sharding.test.mjs
       - name: Check skip budget
         run: node scripts/check-skip-budget.mjs
 
@@ -25,8 +30,10 @@ jobs:
     runs-on: ubuntu-latest
     # A microtask-spinning test starves vitest's own timeout timer entirely
     # (see billing's RenewalAutomationSettings hang), so the job needs its own
-    # backstop instead of the 6h default.
-    timeout-minutes: 30
+    # backstop instead of the 6h default. The measured full affected run takes
+    # about 30 minutes including setup and cache cleanup (the server tests alone
+    # take 18 minutes). Allow bounded headroom so successful cleanup can finish.
+    timeout-minutes: 45
 
     steps:
       - name: Checkout
@@ -38,7 +45,11 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          # Node 22: the repo's engines range is >=22 <27 (see root package.json)
+          # and AMP's package suites read SQLite via node:sqlite (DatabaseSync),
+          # which only exists on Node >= 22.5. Node 20 fails those suites with
+          # "node:sqlite is unavailable in this runtime".
+          node-version: '22'
           cache: 'npm'
 
       - name: Cache Nx computation cache
@@ -58,6 +69,9 @@ jobs:
       # loudly instead.
       - name: Install dependencies
         run: npm ci
+
+      - name: Verify workflow worker build workspace inputs
+        run: npm run check:build-workspaces --workspace=workflow-worker
 
       # A few contract tests shell out to ripgrep (execFileSync('rg', ...)) to
       # assert on source layout; it isn't on the runner by default. Installed
@@ -83,11 +97,11 @@ jobs:
         shell: bash
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            echo "NX_BASE=${{ github.event.pull_request.base.sha }}" >> $GITHUB_ENV
-            echo "NX_HEAD=${{ github.event.pull_request.head.sha }}" >> $GITHUB_ENV
+            echo "NX_BASE=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_ENV"
+            echo "NX_HEAD=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_ENV"
           else
-            echo "NX_BASE=${{ github.event.before }}" >> $GITHUB_ENV
-            echo "NX_HEAD=${{ github.sha }}" >> $GITHUB_ENV
+            echo "NX_BASE=${{ github.event.before }}" >> "$GITHUB_ENV"
+            echo "NX_HEAD=${{ github.sha }}" >> "$GITHUB_ENV"
           fi
 
       # Same two-pass split as typecheck.yml: the server app's vitest config inlines
@@ -103,8 +117,10 @@ jobs:
       # each package's own `npm run test` -> vitest — not the broken
       # @nx/vite:test executor). A red step here is a real test failure; fix the
       # cause, never re-add continue-on-error.
+      # Stream output so a failed task cannot lose its final diagnostics when
+      # Nx exits after printing a large buffered test log.
       - name: Nx affected tests (libraries, parallel)
-        run: npx nx affected -t test --base=$NX_BASE --head=$NX_HEAD --output-style=static --parallel=3 --exclude=server,sebastian-ee,temporal-workflows
+        run: npx nx affected -t test --base="$NX_BASE" --head="$NX_HEAD" --output-style=stream --parallel=3 --exclude=server,sebastian-ee,temporal-workflows
         env:
           NX_DAEMON: 'false'
           NODE_OPTIONS: '--max-old-space-size=4096'
@@ -112,16 +128,27 @@ jobs:
           VITEST_SEED: '20260610'
 
       # sebastian-ee's inferred test target is a bare `vitest` over its full
-      # 209-file suite (~50 minutes serial — far past this job's 30-minute
+      # 209-file suite (~50 minutes serial — past this job's 45-minute
       # backstop, which it blew via WorkflowAiSchemaSection's render-loop hang
       # before that was fixed). Excluded until the suite gets a bounded
       # unit-test target that fits a PR gate.
       - name: Nx affected tests (apps, isolated & serial)
-        run: npx nx affected -t test --base=$NX_BASE --head=$NX_HEAD --output-style=static --parallel=1 --exclude=temporal-workflows,sebastian-ee
+        run: npx nx affected -t test --base="$NX_BASE" --head="$NX_HEAD" --output-style=stream --parallel=1 --exclude=temporal-workflows,sebastian-ee
         env:
           NX_DAEMON: 'false'
           NODE_OPTIONS: '--max-old-space-size=14336'
           VITEST_SEED: '20260610'
+          TEST_PROGRESS_PATH: ${{ github.workspace }}/test-results/affected-server/progress.jsonl
+
+      - name: Preserve affected-server failure progress
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: affected-server-progress-${{ github.sha }}
+          path: test-results/affected-server/
+          # An unrelated change may legitimately leave server:test unselected.
+          if-no-files-found: warn
+          retention-days: 30
 
   # Coverage report for the full server unit suite. This is the only gate that
   # runs the entire server suite, so it fails loudly on PRs and protected-branch
@@ -135,16 +162,20 @@ jobs:
   coverage-report:
     name: Server unit suite + coverage
     runs-on: ubuntu-latest
-    # Backstop like the sibling unit-tests job: without this the 6h runner
-    # default applies, and a hung apt mirror in "Install ripgrep" once stalled
-    # this job for ~6h before it was cancelled. An hour comfortably covers the
-    # full server suite while still catching a hang 6x sooner.
-    timeout-minutes: 60
+    # Native run 34118119027 hit 60 minutes while still making progress:
+    # 2544/2692 files and 13843/14550 cases had finished in the execution
+    # journal. Collection/import plus isolated per-file coverage needs more
+    # headroom; retain a bounded job and per-file progress diagnostics.
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          # Node 22: the repo's engines range is >=22 <27 (see root package.json)
+          # and AMP's package suites read SQLite via node:sqlite (DatabaseSync),
+          # which only exists on Node >= 22.5. Node 20 fails those suites with
+          # "node:sqlite is unavailable in this runtime".
+          node-version: '22'
           cache: 'npm'
       - name: Upgrade npm to version 11
         run: npm install -g npm@11
@@ -163,21 +194,71 @@ jobs:
         env:
           NX_DAEMON: 'false'
           NODE_OPTIONS: '--max-old-space-size=8192'
-      - name: Run server unit tests with coverage
+      - name: Verify per-file worker isolation
+        run: node --test scripts/tests/vitest-worker-isolation.test.mjs
+      - name: Exercise calendar boundaries in non-UTC timezones
         working-directory: ./server
-        run: npx vitest run src/test/unit ../packages ../shared ../ee/packages/workflows/src/actions --coverage.enabled=true --coverage.reporter=text-summary --coverage.reporter=lcov --coverage.reporter=json-summary --reporter=default --reporter=json --outputFile.json=./test-results.json
+        run: |
+          mkdir -p ../test-results/calendar-timezones
+          for zone in Europe/Berlin America/Los_Angeles; do
+            report=${zone//\//-}
+            TZ="$zone" npx vitest run \
+              ../packages/scheduling/tests/entryPopup.startEndSync.test.tsx \
+              ../packages/scheduling/tests/calendarDateDisplay.test.ts \
+              ../packages/scheduling/tests/scheduleCalendar.teamsMeetingRefresh.test.tsx \
+              ../packages/integrations/src/utils/calendar/eventMapping.allDaySemantics.test.ts \
+              ../packages/integrations/src/utils/calendar/eventMapping.timedTimezone.test.ts \
+              --poolOptions.forks.singleFork=false --maxWorkers=2 \
+              --reporter=default --reporter=json --outputFile.json="../test-results/calendar-timezones/$report.json"
+          done
         env:
+          NODE_OPTIONS: '--max-old-space-size=8192'
+          SKIP_DB_TESTS: '1'
+          DB_USER_ADMIN: ''
+          DB_PASSWORD_ADMIN: ''
+      - name: Upload calendar timezone execution
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: calendar-timezone-execution
+          path: test-results/calendar-timezones/
+          if-no-files-found: error
+          retention-days: 7
+      # A shared worker stalled during InvoicePreviewPanel module import after
+      # 20 minutes of successful files, before the test timeout could start.
+      # Recycle the process between files; retain serial execution and the same
+      # collection/coverage scope. The progress journal records any recurrence.
+      - name: Run server unit tests with coverage
+        id: server-unit-run
+        working-directory: ./server
+        run: |
+          selection=(src/test/unit ../packages ../shared ../ee/packages/workflows/src/actions)
+          mkdir -p ../test-results/server-coverage
+          node ../scripts/verify-server-unit-execution.mjs --capture-source
+          npx vitest list "${selection[@]}" --filesOnly --json=../test-results/server-coverage/collected.json
+          # Collect registrations in two isolated processes; test execution
+          # below remains serial. Keep the same independent identity inventory.
+          npx vitest list "${selection[@]}" --poolOptions.forks.singleFork=false --fileParallelism=true --maxWorkers=2 --json=../test-results/server-coverage/collected-tests.json
+          node -e 'for (const file of ["collected.json", "collected-tests.json"]) { const entries = require("../test-results/server-coverage/" + file); if (!Array.isArray(entries) || entries.length === 0) throw new Error("Empty mandatory collection: " + file); }'
+          npx vitest run "${selection[@]}" --poolOptions.forks.singleFork=false --maxWorkers=1 --coverage.enabled=true --coverage.reporter=text-summary --coverage.reporter=lcov --coverage.reporter=json-summary --reporter=default --reporter=json --reporter=../scripts/lib/vitest-progress-reporter.mjs --outputFile.json=./test-results.json
+        env:
+          TEST_PROGRESS_PATH: ${{ github.workspace }}/test-results/server-coverage/progress.jsonl
           NODE_OPTIONS: '--max-old-space-size=14336'
           # This job has no database; *.db.test.* suites are DB-backed
           # integration tests (see the exclude block in server/vitest.config.ts).
           SKIP_DB_TESTS: '1'
           # Root .env.localtest is committed and dotenv-loaded by
           # vitest.globalSetup.js, so it would hand DB admin credentials to
-          # opt-in DB suites (packages/inventory) that then dial a database
-          # this job does not run. Blank them so those suites self-skip.
+          # tests that must not connect from this database-free job. Required
+          # *.db.test.* suites execute separately in the workspace DB lane.
           DB_USER_ADMIN: ''
           DB_PASSWORD_ADMIN: ''
           VITEST_SEED: '20260610'
+      - name: Require complete server unit execution
+        if: always()
+        run: node scripts/verify-server-unit-execution.mjs
+        env:
+          SERVER_UNIT_RUN_OUTCOME: ${{ steps.server-unit-run.outcome }}
       # `if: always()`: a red run is exactly the data point the coverage
       # artifact and metrics sheet exist to capture.
       - name: Upload lcov artifact
@@ -186,6 +267,20 @@ jobs:
         with:
           name: server-unit-coverage
           path: server/coverage/lcov.info
+          retention-days: 30
+      - name: Upload unit execution diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-unit-execution
+          path: |
+            test-results/server-coverage/collected.json
+            test-results/server-coverage/collected-tests.json
+            test-results/server-coverage/progress.jsonl
+            test-results/server-coverage/evidence.json
+            test-results/server-coverage/source-before.json
+            server/test-results.json
+            server/coverage/coverage-summary.json
           retention-days: 30
       # Appends pass/coverage numbers to the shared metrics sheet
       # (docs/reference/test-metrics.md). No-op until the Google secrets exist.
@@ -196,10 +291,41 @@ jobs:
         env:
           TEST_METRICS_SUITE: unit-coverage
           TEST_METRICS_RESULTS: server/test-results.json
+          TEST_METRICS_EXECUTION: test-results/server-coverage/evidence.json
           TEST_METRICS_COVERAGE: server/coverage/coverage-summary.json
           TEST_METRICS_DETAIL: '1'
           GOOGLE_SA_KEY: ${{ secrets.TEST_METRICS_GOOGLE_SA_KEY }}
           TEST_METRICS_SHEET_ID: ${{ vars.TEST_METRICS_SHEET_ID }}
+
+  server-unit-complete:
+    name: Server unit execution complete
+    needs: [coverage-report]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SERVER_UNIT_JOB_RESULT: ${{ needs.coverage-report.result }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Download raw unit execution evidence
+        if: always()
+        uses: actions/download-artifact@v4
+        with:
+          name: server-unit-execution
+          path: test-results/server-unit-input
+      - name: Independently reconcile required files and assertions
+        if: always()
+        run: node scripts/verify-server-unit-aggregate.mjs
+      - name: Upload unit aggregate verdict
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-unit-aggregate
+          path: test-results/server-unit-gate/
+          if-no-files-found: error
 
   # DB-backed infrastructure tests run inside integration-tests.yml (sharing its
   # Postgres job): Tier-1 subset on PRs, full suite nightly — both non-blocking.

@@ -315,12 +315,17 @@
       "minimumUsage": {
         "placeholder": "0",
         "label": "Mindestnutzungsschwelle",
-        "help": "Mindestens abrechnungsfähige Nutzung pro Zeitraum (0 für kein Minimum)",
-        "errorNegative": "Die Mindestnutzung darf nicht negativ sein"
+        "help": "Untergrenze für den erfassten Verbrauch (0 für kein Minimum). Sie gilt nur, wenn für den Zeitraum ein Verbrauchsdatensatz existiert — auch eine explizite Null — und erzeugt niemals von sich aus eine Abrechnung.",
+        "errorNegative": "Die Mindestnutzung darf nicht negativ sein",
+        "labelAdditive": "Mindestmenge je Eintrag",
+        "labelPeriodTotal": "Mindestmenge je Zeitraummeldung",
+        "helpAdditive": "Untergrenze für jeden erfassten Eintrag (0 für keine Mindestmenge). Sie gilt nur, wenn der Zeitraum einen Verbrauchsdatensatz hat — auch eine explizite Null — und erzeugt nie von sich aus eine Abrechnung.",
+        "helpPeriodTotal": "Untergrenze, die einmal auf die gemeldete Menge des Zeitraums angewendet wird (0 für keine Mindestmenge). Sie gilt nur, wenn eine Menge gemeldet ist — auch eine explizite Null — und erzeugt nie von sich aus eine Abrechnung."
       },
       "enableTieredPricing": "Aktivieren Sie gestaffelte Preise"
     },
     "title": "Nutzungsbasierte Konfiguration",
+    "recordDrivenNote": "Nutzungsbasierte Dienste werden anhand des in der Verbrauchserfassung erfassten Verbrauchs je Leistungszeitraum abgerechnet. Ein Zeitraum ohne Verbrauchsdatensatz erzeugt keine Abrechnung — erfasse den Verbrauch (oder eine explizite Null) für jeden Zeitraum, um diesen Dienst abzurechnen.",
     "tiers": {
       "title": "Preisstufen",
       "addTier": "Stufe hinzufügen",
@@ -336,6 +341,18 @@
         "upperGreaterThanLower": "Die Obergrenze der Ebene muss größer als die Untergrenze sein",
         "rateNegative": "Die Staffelsätze dürfen nicht negativ sein"
       }
+    },
+    "measurementMode": {
+      "label": "Wie wird der Verbrauch gemessen?",
+      "additive": {
+        "label": "Verbrauch laufend erfassen",
+        "description": "Datierte Einträge addieren sich: Einträge von 10 und 12 werden mit 22 abgerechnet. Mindestmenge und Staffeln gelten je Eintrag. Der nächste Zeitraum beginnt ohne Einträge."
+      },
+      "periodTotal": {
+        "label": "Für jeden Zeitraum eine Menge melden",
+        "description": "Eine Menge je Leistungszeitraum ersetzt die vorherige: Eine Korrektur von 10 auf 12 wird mit 12 abgerechnet, nie mit 22. Mindestmenge und Staffeln gelten einmal für diese Menge. Der nächste Zeitraum beginnt ungemeldet — es wird nichts übernommen."
+      },
+      "transitionNote": "Eine Änderung des Modus gilt ab dem nächsten nicht abgerechneten Leistungszeitraum. Bereits erfasste Einträge oder Mengen in einem offenen Zeitraum müssen zuvor abgerechnet oder entfernt werden."
     }
   },
   "rateTiers": {
@@ -396,12 +413,30 @@
         "label": "Ausrichtung des Abrechnungszeitraums",
         "placeholder": "Ausrichtung auswählen",
         "help": "Steuert, wie die Teilzeitraumabdeckung berechnet wird, wenn die wiederkehrende Gebühr auf weniger als einen vollständigen Servicezeitraum skaliert werden muss."
+      },
+      "unitRate": {
+        "label": "Einzelpreis",
+        "placeholder": "0,00",
+        "help": "Preis, der je Platz/Einheit in jedem Leistungszeitraum abgerechnet wird."
       }
     },
     "options": {
       "start": "Beginn des Abrechnungszeitraums",
       "end": "Ende des Abrechnungszeitraums",
       "prorated": "Proportionale Abdeckung"
+    },
+    "pricingBasis": {
+      "label": "Wie wird dieser Dienst bepreist?",
+      "bundle": {
+        "label": "Paketpreis",
+        "description": "Abgerechnet wird der Festbetrag der Vertragsposition. Mengen an diesem Dienst verteilen nur einen Anteil dieses Betrags für die Auswertung — sie sind keine abrechenbaren Plätze, und ihre Änderung ändert den abgerechneten Betrag nicht.",
+        "allocationNote": "Verteilungsmenge: {{quantity}} — dient der Aufteilung des Paketbetrags für die Auswertung, wird nicht als Plätze abgerechnet."
+      },
+      "unit": {
+        "label": "Wiederkehrende Plätze/Einheiten",
+        "description": "Rechnet in jedem Zeitraum Menge × Einzelpreis ab; kein Positionsbetrag hat Vorrang. Menge und Preis werden im nächsten Zeitraum erneut abgerechnet, bis Sie eine Änderung planen. Eine Menge von null ergibt null.",
+        "summary": "{{quantity}} × {{rate}} (wiederkehrende Plätze) = {{total}} pro Zeitraum"
+      }
     }
   },
   "bucketConfig": {

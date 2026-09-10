@@ -20,10 +20,14 @@ export default defineConfig({
   },
   test: {
     globals: true,
+    reporters: process.env.TEST_PROGRESS_PATH
+      ? ['default', path.resolve(__dirname, '../scripts/lib/vitest-progress-reporter.mjs')]
+      : ['default'],
     environment: 'node',
     // This repo keeps a large number of tests under workspace packages (e.g. ../packages/*).
     // Include them explicitly because Vitest's default include globs do not match paths outside the config root.
     include: [
+      '../ee/temporal-workflows/src/__tests__/integration/**/*.test.ts',
       'src/**/*.{test,spec}.?(c|m)[jt]s?(x)',
       'migrations/__tests__/**/*.{test,spec}.?(c|m)[jt]s?(x)',
       '../packages/**/*.{test,spec}.?(c|m)[jt]s?(x)',
@@ -198,7 +202,7 @@ export default defineConfig({
       { find: /^@alga-psa\/licensing\/actions\/(.*)$/, replacement: path.resolve(__dirname, '../packages/licensing/src/actions/$1') },
       { find: /^@alga-psa\/auth$/, replacement: path.resolve(__dirname, '../packages/auth/src/index.ts') },
       { find: /^@alga-psa\/auth\/actions\/(.*)$/, replacement: path.resolve(__dirname, '../packages/auth/src/actions/$1') },
-      { find: /^@alga-psa\/auth\/sso\/entry$/, replacement: path.resolve(__dirname, '../packages/ee/src/components/auth/SsoProviderButtons.tsx') },
+      { find: /^@alga-psa\/auth\/sso\/entry$/, replacement: path.resolve(__dirname, '../packages/auth/src/components/SsoProviderButtons.tsx') },
       { find: /^@alga-psa\/auth\/session$/, replacement: path.resolve(__dirname, '../packages/auth/src/lib/session.ts') },
       { find: /^@alga-psa\/auth\/rbac$/, replacement: path.resolve(__dirname, '../packages/auth/src/lib/rbac.ts') },
       { find: /^@alga-psa\/auth\/withAuth$/, replacement: path.resolve(__dirname, '../packages/auth/src/lib/withAuth.ts') },
@@ -252,6 +256,8 @@ export default defineConfig({
       { find: /^@alga-psa\/jobs\/(.*)$/, replacement: path.resolve(__dirname, '../packages/jobs/src/$1') },
       { find: /^@alga-psa\/teams$/, replacement: path.resolve(__dirname, '../packages/teams/src/index.ts') },
       { find: /^@alga-psa\/teams\/(.*)$/, replacement: path.resolve(__dirname, '../packages/teams/src/$1') },
+      { find: /^@alga-psa\/telephony$/, replacement: path.resolve(__dirname, '../packages/telephony/src/index.ts') },
+      { find: /^@alga-psa\/telephony\/(.*)$/, replacement: path.resolve(__dirname, '../packages/telephony/src/$1') },
       { find: /^@alga-psa\/product-extension-actions$/, replacement: path.resolve(__dirname, '../packages/product-extension-actions/oss/entry.ts') },
       { find: /^@alga-psa\/tags$/, replacement: path.resolve(__dirname, '../packages/tags/src/index.ts') },
       { find: /^@alga-psa\/tags\/(.*)$/, replacement: path.resolve(__dirname, '../packages/tags/src/$1') },
@@ -302,6 +308,7 @@ export default defineConfig({
       { find: /^@alga-psa\/emulator-smtp-sink$/, replacement: path.resolve(__dirname, '../packages/emulators/smtp-sink/src/index.ts') },
       { find: /^@alga-psa\/emulator-stripe$/, replacement: path.resolve(__dirname, '../packages/emulators/stripe/src/index.ts') },
       { find: /^@alga-psa\/emulator-webhook-sink$/, replacement: path.resolve(__dirname, '../packages/emulators/webhook-sink/src/index.ts') },
+      { find: /^@alga-psa\/emulator-xero$/, replacement: path.resolve(__dirname, '../packages/emulators/xero/src/index.ts') },
 
       { find: /^@alga-psa\/media$/, replacement: path.resolve(__dirname, '../packages/media/src/index.ts') },
       { find: /^@alga-psa\/storage$/, replacement: path.resolve(__dirname, '../packages/storage/src/index.ts') },
@@ -309,6 +316,7 @@ export default defineConfig({
 
       { find: /^@alga-psa\/users$/, replacement: path.resolve(__dirname, '../packages/users/src/index.ts') },
       { find: /^@alga-psa\/users\/actions$/, replacement: path.resolve(__dirname, '../packages/users/src/actions/index.ts') },
+      { find: /^@alga-psa\/users\/(.*)$/, replacement: path.resolve(__dirname, '../packages/users/src/$1') },
       { find: /^@alga-psa\/user-composition$/, replacement: path.resolve(__dirname, '../packages/user-composition/src/index.ts') },
       { find: /^@alga-psa\/user-composition\/actions$/, replacement: path.resolve(__dirname, '../packages/user-composition/src/actions/index.ts') },
       { find: /^@alga-psa\/user-composition\/(.*)$/, replacement: path.resolve(__dirname, '../packages/user-composition/src/$1') },

@@ -1,0 +1,164 @@
+{
+  "scope": "Complete local Citus runtime and tenant database aggregate at one clean revision",
+  "revision": "2acda405cb76ac2ab35dc9eeffb94463a333a1d4",
+  "aggregate": {
+    "schemaVersion": 1,
+    "revision": "2acda405cb76ac2ab35dc9eeffb94463a333a1d4",
+    "scope": "citus-execution",
+    "status": "passed",
+    "results": [
+      {
+        "id": "citus-runtime",
+        "status": "passed",
+        "counts": {
+          "passed": 8,
+          "failed": 0,
+          "skipped": 0,
+          "todo": 0,
+          "pending": 0
+        },
+        "failures": []
+      },
+      {
+        "id": "temporal-database",
+        "status": "passed",
+        "counts": {
+          "passed": 27,
+          "failed": 0,
+          "skipped": 0,
+          "todo": 0,
+          "pending": 0
+        },
+        "failures": []
+      }
+    ],
+    "failures": []
+  },
+  "lanes": [
+    {
+      "suite": "citus-runtime",
+      "counts": {
+        "passed": 8,
+        "failed": 0,
+        "skipped": 0,
+        "todo": 0,
+        "pending": 0
+      },
+      "source": {
+        "before": {
+          "revision": "2acda405cb76ac2ab35dc9eeffb94463a333a1d4",
+          "dirty": false,
+          "changes": []
+        },
+        "after": {
+          "revision": "2acda405cb76ac2ab35dc9eeffb94463a333a1d4",
+          "dirty": false,
+          "changes": []
+        }
+      },
+      "selection": {
+        "mode": "full",
+        "filters": []
+      },
+      "discoveryStatus": "passed"
+    },
+    {
+      "suite": "temporal-database",
+      "counts": {
+        "passed": 27,
+        "failed": 0,
+        "skipped": 0,
+        "todo": 0,
+        "pending": 0
+      },
+      "source": {
+        "before": {
+          "revision": "2acda405cb76ac2ab35dc9eeffb94463a333a1d4",
+          "dirty": false,
+          "changes": []
+        },
+        "after": {
+          "revision": "2acda405cb76ac2ab35dc9eeffb94463a333a1d4",
+          "dirty": false,
+          "changes": []
+        }
+      },
+      "selection": {
+        "mode": "full",
+        "filters": [],
+        "allFiles": [
+          "ee/temporal-workflows/src/__tests__/e2e/tenant-creation-workflow.e2e.test.ts",
+          "ee/temporal-workflows/src/activities/__tests__/tenant-activities.test.ts",
+          "ee/temporal-workflows/src/activities/__tests__/user-activities-simple.test.ts",
+          "ee/temporal-workflows/src/db/__tests__/database-connection.integration.test.ts",
+          "ee/temporal-workflows/src/db/__tests__/product-upgrade-operations.integration.test.ts",
+          "ee/temporal-workflows/src/db/__tests__/tenant-setup-idempotency.integration.test.ts"
+        ],
+        "shard": {
+          "index": 1,
+          "total": 1
+        }
+      },
+      "discoveryStatus": "passed"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "test-results/citus-runtime/collected.json",
+      "sha256": "1143b577cf52aed0cf247421c288fd2610152202fa9bfe637d351bc297ebffb1"
+    },
+    {
+      "path": "test-results/citus-runtime/collected-tests.json",
+      "sha256": "ddbfa15c00475e3550eda12bc610dea7a725c29ad39bc6fad5e7c0ca7624ea4e"
+    },
+    {
+      "path": "test-results/citus-runtime/results.json",
+      "sha256": "6f6f2aef581703459ee2afd1347e5f02f9a47c747b7b9d461be771ea167cca10"
+    },
+    {
+      "path": "test-results/citus-runtime/evidence.json",
+      "sha256": "76311f0a0d4c0b98a0c170d297e87a90b3d4a23de011054609f71ab14475056d"
+    },
+    {
+      "path": "test-results/citus-runtime/discovery.json",
+      "sha256": "348dea3bdf6c3b6d291fa3aa812f103bc9350ed2c3135a46fec647c50fcf76e9"
+    },
+    {
+      "path": "test-results/temporal-database/collected.json",
+      "sha256": "d5e65023dadcb27673144e312e82779847be8641fa4313122e47a3da63734eee"
+    },
+    {
+      "path": "test-results/temporal-database/collected-tests.json",
+      "sha256": "a0172b80009f786ca15b012a133fb0dcca9768dc52f13d04e26a50dd854c764d"
+    },
+    {
+      "path": "test-results/temporal-database/results.json",
+      "sha256": "5dfa98256de8db1ea6fc797910cc11e359f25aac68335b24cbc382e547c48e58"
+    },
+    {
+      "path": "test-results/temporal-database/evidence.json",
+      "sha256": "052351a1e0b8573063b8f768868ac762c18017cf415c9981a67445f279dcf033"
+    },
+    {
+      "path": "test-results/temporal-database/discovery.json",
+      "sha256": "b01efeb2e78d066a272db55a34298147bf8bf973dc889053af97bb8df5c01ae3"
+    },
+    {
+      "path": "test-results/citus-gate/aggregate.json",
+      "sha256": "8de09dc7d8dec0025f2298a8e136beac22a124e95039da1d0859aef8546a2439"
+    },
+    {
+      "path": "/tmp/alga-citus-complete-2acda4.log",
+      "sha256": "19d9783b3113ee5936fd10d9ffb2853bac220631886705b20d48938e7334af7b"
+    }
+  ],
+  "migrationInputs": {
+    "verifiedCurrentMigrationAndUtilityFiles": 1138,
+    "mismatches": 0
+  },
+  "limitations": [
+    "Local Node 25 run, not native CI.",
+    "Single-node Citus and fresh/current migrated schema do not establish multi-node or previous-supported-release upgrades.",
+    "Effective GitHub required checks and publication remain outstanding."
+  ]
+}

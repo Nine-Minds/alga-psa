@@ -60,8 +60,6 @@
       "runNow": "Nu uitvoeren",
       "exportCsv": "CSV exporteren",
       "refresh": "Vernieuwen",
-      "cancelSelected": "Selectie annuleren ({{count}})",
-      "clearSelection": "Selectie wissen",
       "details": "Details",
       "loadMore": "Meer laden",
       "preview": "Voorbeeld"
@@ -92,7 +90,12 @@
       "cancelMessage": "{{count}} geselecteerde uitvoering(en) annuleren? Dit kan niet ongedaan worden gemaakt.",
       "reasonLabel": "Reden",
       "cancelReasonPlaceholder": "Geef een reden voor annulering",
-      "cancelConfirm": "Uitvoeringen annuleren"
+      "cancelConfirm": "Uitvoeringen annuleren",
+      "actionBar": {
+        "selectedCount": "{{count}} geselecteerd",
+        "cancel": "Uitvoeringen annuleren",
+        "clear": "Selectie wissen"
+      }
     },
     "toasts": {
       "loadRunsFailed": "Kan uitvoeringen niet laden",

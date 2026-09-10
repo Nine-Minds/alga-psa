@@ -77,7 +77,6 @@
     "invoiceAmount": "Rechnungsbetrag:",
     "selectCreditToApply": "Gutschrift zum Anwenden auswählen",
     "amountToApply": "Anzuwendender Betrag",
-    "creditOrderNote": "Gutschriften werden nach Ablaufdatum angewendet (älteste zuerst)",
     "creditOrderNoteExpirationFirst": "Gutschriften werden nach Ablaufdatum angewendet (bald ablaufende zuerst)",
     "creditOrderNoteOldestFirst": "Gutschriften werden nach Erstellungsdatum angewendet (älteste zuerst)",
     "creditOrderNoteNewestFirst": "Gutschriften werden nach Erstellungsdatum angewendet (neueste zuerst)",
@@ -144,7 +143,9 @@
       "reason": "Warum wird diese Gutschrift übertragen?"
     },
     "hints": {
-      "amount": "Bis zu {{amount}} verfügbar"
+      "amount": "Bis zu {{amount}} verfügbar",
+      "currencyMatch": "Der ausgewählte Kunde verwendet dieselbe Währung.",
+      "currencyMismatch": "Der ausgewählte Kunde verwendet eine andere Währung; eine Umrechnung kann erfolgen."
     },
     "impact": {
       "current": "Aktuelles Restguthaben",

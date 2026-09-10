@@ -12,7 +12,7 @@ export class PriorityService extends BaseService<IPriority> {
       tableName: 'priorities',
       primaryKey: 'priority_id',
       tenantColumn: 'tenant',
-      searchableFields: ['priority_name', 'description'],
+      searchableFields: ['priority_name'],
       defaultSort: 'order_number',
       defaultOrder: 'asc'
     });
@@ -48,12 +48,10 @@ export class PriorityService extends BaseService<IPriority> {
     if (filters.search) {
       const searchTerm = `%${filters.search}%`;
       dataQuery = dataQuery.where(function() {
-        this.whereILike('priority_name', searchTerm)
-          .orWhereILike('description', searchTerm);
+        this.whereILike('priority_name', searchTerm);
       });
       countQuery = countQuery.where(function() {
-        this.whereILike('priority_name', searchTerm)
-          .orWhereILike('description', searchTerm);
+        this.whereILike('priority_name', searchTerm);
       });
       delete filters.search;
     }

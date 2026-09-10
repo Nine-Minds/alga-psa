@@ -54,7 +54,11 @@ vi.mock('@alga-psa/db', () => ({
   registerAfterCommit: (_trx: unknown, hook: () => unknown | Promise<unknown>, _label?: string) => {
     afterCommitHooksQueue.push(hook);
   },
+  // After-commit publication dispatch re-reads the comment on a fresh connection.
+  getConnection: async () => lastTrx,
 }));
+
+let lastTrx: any;
 
 vi.mock('next/cache', () => ({
   revalidatePath: vi.fn(),
@@ -247,6 +251,23 @@ function buildTrx(params: {
     })),
   };
 
+  // The inserted comment row: attachment reconciliation locks it, the
+  // publication intent is written onto it, and after commit the dispatch
+  // re-reads it (jsonb payload) and marks it dispatched.
+  const commentRow: Record<string, any> = { comment_id: 'comment-1', ticket_id: 'ticket-1', note: '', publish_state: 'published' };
+  const commentRowQuery: any = {
+    whereNull: () => commentRowQuery,
+    forUpdate: () => commentRowQuery,
+    first: async () => commentRow,
+    update: async (row: Record<string, unknown>) => {
+      Object.assign(commentRow, row);
+      if (typeof commentRow.comment_publication_payload === 'string') {
+        commentRow.comment_publication_payload = JSON.parse(commentRow.comment_publication_payload);
+      }
+      return 1;
+    },
+  };
+
   const trx = ((table: string) => {
     if (table === 'tickets') {
       return ticketsTable;
@@ -286,14 +307,27 @@ function buildTrx(params: {
 
     if (table === 'comments') {
       return {
-        insert: vi.fn((row: Record<string, unknown>) => ({
-          returning: vi.fn(async () => [{ ...row, comment_id: 'comment-1' }]),
-        })),
+        insert: vi.fn((row: Record<string, unknown>) => {
+          Object.assign(commentRow, row);
+          return { returning: vi.fn(async () => [{ ...row, comment_id: 'comment-1' }]) };
+        }),
+        where: vi.fn(() => commentRowQuery),
       };
+    }
+
+    if (table === 'ticket_comment_attachments') {
+      // No draft uploads in these scenarios.
+      const builder: any = {};
+      for (const method of ['where', 'whereIn', 'orderBy', 'forUpdate']) builder[method] = vi.fn(() => builder);
+      builder.then = (resolve: any, reject?: any) => Promise.resolve([]).then(resolve, reject);
+      return builder;
     }
 
     throw new Error(`Unexpected table: ${table}`);
   }) as any;
+  trx.isTransaction = true;
+  trx.fn = { now: () => 'now()' };
+  lastTrx = trx;
   trx.raw = vi.fn(async () => ({
     rows: [{ comment_id: 'comment-1', thread_id: 'thread-1' }],
   }));
@@ -679,6 +713,7 @@ describe('updateTicketWithCache live updates', () => {
       ),
     ).resolves.toEqual(expect.objectContaining({ comment_id: 'comment-1' }));
 
+    // Dispatched after commit from the persisted intent, with a durable event id.
     expect(publishEventMock).toHaveBeenCalledWith(
       expect.objectContaining({
         eventType: 'TICKET_COMMENT_ADDED',
@@ -688,6 +723,7 @@ describe('updateTicketWithCache live updates', () => {
           suppressInternalNotifications: expectedInternalSuppression,
         }),
       }),
+      expect.objectContaining({ strict: true }),
     );
   });
 

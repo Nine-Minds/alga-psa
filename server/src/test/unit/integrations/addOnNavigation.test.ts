@@ -4,6 +4,6 @@ import { getAddOnDestination } from '@alga-psa/integrations/lib/addOnNavigation'
 
 describe('getAddOnDestination', () => {
   it('builds the canonical deep link for an add-on', () => {
-    expect(getAddOnDestination(ADD_ONS.TEAMS)).toBe('/msp/add-ons?addon=teams');
+    expect(getAddOnDestination(ADD_ONS.ENTERPRISE)).toBe('/msp/add-ons?addon=enterprise');
   });
 });

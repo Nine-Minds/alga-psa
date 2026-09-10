@@ -3,6 +3,7 @@ import type { TemplateAst } from '@alga-psa/types';
 import { TEMPLATE_AST_VERSION } from '@alga-psa/types';
 import type { TemplateEvaluationResult } from './evaluator';
 import { evaluateTemplateAst } from './evaluator';
+import { formatTemplateFieldValue } from './fieldFormatting';
 import { renderEvaluatedTemplateAst } from './react-renderer';
 
 const invoiceFixture = {
@@ -407,6 +408,108 @@ describe('renderEvaluatedTemplateAst', () => {
     expect(rendered.html).toContain('Products');
     expect(rendered.html).toContain('300');
     expect(rendered.html).toContain('30');
+  });
+
+  it('renders date-only dynamic-table cells without timezone shift in negative-offset timezones', async () => {
+    const previousTimeZone = process.env.TZ;
+    process.env.TZ = 'America/New_York';
+
+    try {
+      const ast: TemplateAst = {
+        kind: 'invoice-template-ast',
+        version: TEMPLATE_AST_VERSION,
+        bindings: {
+          collections: {
+            timeEntries: { id: 'timeEntries', kind: 'collection', path: 'items' },
+          },
+        },
+        layout: {
+          id: 'root',
+          type: 'document',
+          children: [
+            {
+              id: 'billed-time',
+              type: 'dynamic-table',
+              repeat: {
+                sourceBinding: { bindingId: 'timeEntries' },
+                itemBinding: 'item',
+              },
+              columns: [
+                { id: 'entry-date', header: 'Date', value: { type: 'path', path: 'entryDate' }, format: 'date' },
+                { id: 'entry-description', header: 'Description', value: { type: 'path', path: 'description' } },
+              ],
+            },
+          ],
+        },
+      };
+
+      const evaluation = evaluateTemplateAst(ast, {
+        items: [{ entryDate: '2026-01-18', description: 'Ticket work' }],
+      });
+      const rendered = await renderEvaluatedTemplateAst(ast, evaluation);
+
+      expect(rendered.html).toContain('1/18/2026');
+      expect(rendered.html).not.toContain('1/17/2026');
+    } finally {
+      if (previousTimeZone === undefined) {
+        delete process.env.TZ;
+      } else {
+        process.env.TZ = previousTimeZone;
+      }
+    }
+  });
+
+  it('renders dynamic-table date cells identically to field formatting in negative-offset timezones', async () => {
+    const previousTimeZone = process.env.TZ;
+    process.env.TZ = 'America/New_York';
+
+    try {
+      const entryDate = '2026-01-18';
+      const fieldText = formatTemplateFieldValue({
+        value: entryDate,
+        format: 'date',
+        currencyCode: 'USD',
+      }).text;
+
+      const ast: TemplateAst = {
+        kind: 'invoice-template-ast',
+        version: TEMPLATE_AST_VERSION,
+        bindings: {
+          collections: {
+            timeEntries: { id: 'timeEntries', kind: 'collection', path: 'items' },
+          },
+        },
+        layout: {
+          id: 'root',
+          type: 'document',
+          children: [
+            {
+              id: 'billed-time',
+              type: 'dynamic-table',
+              repeat: {
+                sourceBinding: { bindingId: 'timeEntries' },
+                itemBinding: 'item',
+              },
+              columns: [
+                { id: 'entry-date', header: 'Date', value: { type: 'path', path: 'entryDate' }, format: 'date' },
+              ],
+            },
+          ],
+        },
+      };
+
+      const evaluation = evaluateTemplateAst(ast, { items: [{ entryDate }] });
+      const rendered = await renderEvaluatedTemplateAst(ast, evaluation);
+
+      expect(fieldText).toBe('1/18/2026');
+      expect(rendered.html).toContain(fieldText as string);
+    } finally {
+      if (previousTimeZone === undefined) {
+        delete process.env.TZ;
+      } else {
+        process.env.TZ = previousTimeZone;
+      }
+    }
   });
 
   it('formats template path expressions using currency filter syntax', async () => {
@@ -935,5 +1038,227 @@ describe('renderEvaluatedTemplateAst', () => {
     });
     const emptyRendered = await renderEvaluatedTemplateAst(ast, emptyEvaluation);
     expect(emptyRendered.html).not.toContain('<img');
+  });
+});
+
+describe('renderEvaluatedTemplateAst stacked table-cell lines', () => {
+  const renderAst = async (
+    columns: Array<Record<string, unknown>>,
+    rows: Array<Record<string, unknown>>,
+    nodeType: 'dynamic-table' | 'table' = 'dynamic-table'
+  ) => {
+    const tableNode =
+      nodeType === 'table'
+        ? {
+            id: 'line-items',
+            type: 'table' as const,
+            sourceBinding: { bindingId: 'lineItems' },
+            rowBinding: 'row',
+            columns: columns as never,
+          }
+        : {
+            id: 'line-items',
+            type: 'dynamic-table' as const,
+            repeat: { sourceBinding: { bindingId: 'lineItems' }, itemBinding: 'item' },
+            columns: columns as never,
+          };
+    const ast: TemplateAst = {
+      kind: 'invoice-template-ast',
+      version: TEMPLATE_AST_VERSION,
+      bindings: {
+        values: {},
+        collections: {
+          lineItems: { id: 'lineItems', kind: 'collection', path: 'items' },
+          recurringItems: { id: 'recurringItems', kind: 'collection', path: 'recurring_items' },
+          onetimeItems: { id: 'onetimeItems', kind: 'collection', path: 'onetime_items' },
+        },
+      },
+      layout: {
+        id: 'root',
+        type: 'document',
+        children: [tableNode],
+      },
+    };
+    const evaluation = evaluateTemplateAst(ast, { items: rows });
+    return renderEvaluatedTemplateAst(ast, evaluation);
+  };
+
+  it('stacks resolved lines in a cell and drops empty lines', async () => {
+    const rendered = await renderAst(
+      [
+        {
+          id: 'description',
+          header: 'Description',
+          value: { type: 'path', path: 'description' },
+          lines: [
+            {
+              id: 'item-name',
+              value: { type: 'path', path: 'service_name' },
+              style: { inline: { fontWeight: 600, lineHeight: 1.3 } },
+            },
+            {
+              id: 'catalog-description',
+              value: { type: 'path', path: 'catalog_description' },
+              style: { inline: { color: '#4b5563', fontSize: '12px' } },
+            },
+          ],
+        },
+        {
+          id: 'amount',
+          header: 'Amount',
+          value: { type: 'path', path: 'total_price' },
+          format: 'currency',
+          style: { inline: { textAlign: 'right' } },
+        },
+      ],
+      [
+        {
+          quote_item_id: 'a1',
+          service_name: 'Managed Support',
+          catalog_description: 'Full-service support',
+          description: 'ignored when lines resolve',
+          total_price: 2500,
+        },
+        {
+          quote_item_id: 'a2',
+          service_name: null,
+          catalog_description: null,
+          description: 'Discount',
+          total_price: -500,
+        },
+      ]
+    );
+
+    expect(rendered.html).toContain('<div class="ast-table-cell-line" style="font-weight:600;line-height:1.3">Managed Support</div>');
+    expect(rendered.html).toContain('<div class="ast-table-cell-line" style="color:#4b5563;font-size:12px">Full-service support</div>');
+    // All-empty lines fall back to the column value so discounts/custom rows stay readable.
+    expect(rendered.html).toContain('>Discount<');
+    expect(rendered.html).not.toContain('ignored when lines resolve');
+    expect(rendered.html).toContain('$25.00');
+    expect(rendered.html).toContain('-$5.00');
+  });
+
+  it('renders the plain value exactly as before when a column has no lines', async () => {
+    const rendered = await renderAst(
+      [
+        {
+          id: 'description',
+          header: 'Description',
+          value: { type: 'path', path: 'description' },
+        },
+      ],
+      [{ description: 'Plain line', service_name: 'Ignored name' }]
+    );
+
+    expect(rendered.html).toContain('<td>Plain line</td>');
+    expect(rendered.html).not.toContain('Ignored name');
+  });
+
+  it('renders a newline value with the pre-line blank-line convention', async () => {
+    const rendered = await renderAst(
+      [
+        {
+          id: 'description',
+          header: 'Description',
+          value: {
+            type: 'template',
+            template: '{{name}}\n{{description}}',
+            args: {
+              name: { type: 'path', path: 'service_name' },
+              description: { type: 'path', path: 'description' },
+            },
+          },
+        },
+      ],
+      [
+        { service_name: 'Managed Support', description: 'Full-service support' },
+        { service_name: null, description: 'Discount' },
+      ]
+    );
+
+    expect(rendered.html).toContain('<span style="white-space:pre-line">Managed Support\nFull-service support</span>');
+    expect(rendered.html).toContain('>Discount</td>');
+  });
+
+  it('carries line tokenIds classes alongside inline styles on a dynamic-table', async () => {
+    const rendered = await renderAst(
+      [
+        {
+          id: 'description',
+          header: 'Description',
+          value: { type: 'path', path: 'description' },
+          lines: [
+            {
+              id: 'item-name',
+              value: { type: 'path', path: 'service_name' },
+              style: { tokenIds: ['line-strong'], inline: { fontWeight: 600 } },
+            },
+          ],
+        },
+      ],
+      [{ service_name: 'Managed Support', description: 'Description' }]
+    );
+
+    expect(rendered.html).toContain(
+      '<div class="ast-table-cell-line ast-line-strong" style="font-weight:600">Managed Support</div>'
+    );
+  });
+
+  it('carries line tokenIds classes alongside inline styles on a plain table', async () => {
+    const rendered = await renderAst(
+      [
+        {
+          id: 'description',
+          header: 'Description',
+          value: { type: 'path', path: 'description' },
+          lines: [
+            {
+              id: 'item-name',
+              value: { type: 'path', path: 'service_name' },
+              style: { tokenIds: ['line-strong'], inline: { fontWeight: 600 } },
+            },
+          ],
+        },
+      ],
+      [{ service_name: 'Managed Support', description: 'Description' }],
+      'table'
+    );
+
+    expect(rendered.html).toContain(
+      '<div class="ast-table-cell-line ast-line-strong" style="font-weight:600">Managed Support</div>'
+    );
+  });
+
+  it('stacks resolved lines inside a plain table node', async () => {
+    const rendered = await renderAst(
+      [
+        {
+          id: 'description',
+          header: 'Description',
+          value: { type: 'path', path: 'description' },
+          lines: [
+            { id: 'item-name', value: { type: 'path', path: 'service_name' } },
+            { id: 'catalog-description', value: { type: 'path', path: 'catalog_description' } },
+          ],
+        },
+        {
+          id: 'amount',
+          header: 'Amount',
+          value: { type: 'path', path: 'total_price' },
+          format: 'currency',
+        },
+      ],
+      [
+        { service_name: 'Managed Support', catalog_description: 'Full-service support', total_price: 2500 },
+        { service_name: null, catalog_description: null, description: 'Discount', total_price: -500 },
+      ],
+      'table'
+    );
+
+    expect(rendered.html).toContain('<div class="ast-table-cell-line">Managed Support</div>');
+    expect(rendered.html).toContain('<div class="ast-table-cell-line">Full-service support</div>');
+    expect(rendered.html).toContain('>Discount</td>');
+    expect(rendered.html).toContain('$25.00');
+    expect(rendered.html).toContain('-$5.00');
   });
 });

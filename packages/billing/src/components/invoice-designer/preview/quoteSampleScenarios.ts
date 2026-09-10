@@ -52,6 +52,8 @@ const createBaseQuote = (): QuoteViewModel => ({
     name: 'Dr. Sarah Chen',
     email: 'sarah.chen@hawthorneclinic.com',
   },
+  // Fallback issuer only: overlayQuoteSampleTenant replaces this with the tenant's real
+  // "Your Company" branding whenever it resolves.
   tenant: {
     name: 'Northwind MSP',
     address: '400 SW Main St, Portland, OR 97204',
@@ -60,9 +62,88 @@ const createBaseQuote = (): QuoteViewModel => ({
   phases: [],
 });
 
+/** Adds realistic catalog snapshots (name + catalog description) to the
+ *  catalog-backed line items so quote layouts that bind Item Name / Catalog
+ *  Description / Line Description render meaningful sample data. Discount
+ *  lines and legacy rows keep `null` snapshots. */
+function enrichSampleCatalogFields(data: QuoteViewModel): QuoteViewModel {
+  const catalogByItemId: Record<string, { service_name: string; catalog_description: string }> = {
+    'qi-1': {
+      service_name: 'Managed Endpoint Monitoring',
+      catalog_description: '24/7 monitoring of servers, workstations, and critical endpoints with alerting and monthly health reporting.',
+    },
+    'qi-2': {
+      service_name: 'Patch Management',
+      catalog_description: 'Automated patch deployment for operating systems and third-party applications, tested before release to managed endpoints.',
+    },
+    'qi-p1-1': {
+      service_name: 'Network Assessment & Planning',
+      catalog_description: 'On-site discovery of the current network, security posture, and capacity, followed by a phased modernization roadmap.',
+    },
+    'qi-p2-1': {
+      service_name: 'Server Migration',
+      catalog_description: 'Planned migration of a physical or virtual server to the target platform including cut-over and post-migration validation.',
+    },
+    'qi-p2-2': {
+      service_name: 'Cloud Backup Configuration',
+      catalog_description: 'Configuration of encrypted cloud backup with retention policy, monitoring, and quarterly restore testing.',
+    },
+    'qi-p3-1': {
+      service_name: 'Managed Firewall Service',
+      catalog_description: 'Central management, rule review, firmware patching, and security monitoring for the managed firewall fleet.',
+    },
+    'qi-p3-2': {
+      service_name: 'Security Awareness Training',
+      catalog_description: 'Role-based security awareness training with simulated phishing and measurable completion reporting.',
+    },
+    'ql-1': {
+      service_name: 'Managed User Seat',
+      catalog_description: 'Fully managed user seat covering identity, endpoint protection, help desk, and monthly reporting for the HQ site.',
+    },
+    'ql-2': {
+      service_name: 'Managed User Seat',
+      catalog_description: 'Fully managed user seat covering identity, endpoint protection, help desk, and monthly reporting for branch offices.',
+    },
+    'ql-3': {
+      service_name: 'Security Awareness Training',
+      catalog_description: 'Role-based security awareness training with simulated phishing and measurable completion reporting.',
+    },
+    'ql-4': {
+      service_name: 'Endpoint Backup Add-on',
+      catalog_description: 'Per-endpoint cloud backup add-on with 30-day retention, continuous backup, and automated restore testing.',
+    },
+    'ql-5': {
+      service_name: 'SOC Alert Triage',
+      catalog_description: 'Security operations center triage of alerts with defined response SLAs and monthly incident summary.',
+    },
+    'ql-6': {
+      service_name: 'After Hours On-Call Support',
+      catalog_description: 'On-call engineering coverage outside business hours with remote response and documented hand-offs.',
+    },
+    'ql-7': {
+      service_name: 'Network Infrastructure Audit',
+      catalog_description: 'One-time audit of network infrastructure, firmware levels, and security configuration with a findings report.',
+    },
+  };
+
+  data.line_items = data.line_items.map((item) => {
+    const catalog = catalogByItemId[item.quote_item_id];
+    if (!catalog) {
+      return item;
+    }
+    return {
+      ...item,
+      service_name: catalog.service_name,
+      catalog_description: catalog.catalog_description,
+    };
+  });
+
+  return data;
+}
+
 const enrichQuoteScenario = (scenario: QuotePreviewSampleScenario): QuotePreviewSampleScenario => ({
   ...scenario,
-  data: enrichQuoteSampleWithGroups({ ...scenario.data }),
+  data: enrichQuoteSampleWithGroups(enrichSampleCatalogFields({ ...scenario.data })),
 });
 
 export const QUOTE_PREVIEW_SAMPLE_SCENARIOS: QuotePreviewSampleScenario[] = [

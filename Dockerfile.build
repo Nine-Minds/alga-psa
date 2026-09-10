@@ -28,6 +28,8 @@ FROM deps AS builder
 # Fallback secret values ensure edge-auth guards pass during build; real values come from runtime secrets.
 ARG NEXTAUTH_SECRET_BUILD="dev-placeholder-nextauth-secret-32"
 ARG NEXT_BUILD_MAX_OLD_SPACE_SIZE="12288"
+ARG NEXT_PUBLIC_FORCE_FEATURE_FLAGS=""
+ENV NEXT_PUBLIC_FORCE_FEATURE_FLAGS=${NEXT_PUBLIC_FORCE_FEATURE_FLAGS}
 # Keep every Node-based build step in this stage on the same heap limit. The
 # set-image-tag.sh helper passes NEXT_BUILD_MAX_OLD_SPACE_SIZE as a build arg.
 ENV NODE_OPTIONS="--max-old-space-size=${NEXT_BUILD_MAX_OLD_SPACE_SIZE}"
@@ -71,6 +73,7 @@ RUN mkdir -p /app/secrets && \
     echo "secure-32char-crypto-key-placeholder-xxxx" > /app/secrets/crypto_key && \
     echo "secure-32char-token-key-placeholder-xxxx" > /app/secrets/token_secret_key && \
     echo "secure-32char-nextauth-key-placeholder-xx" > /app/secrets/nextauth_secret && \
+    echo "secure-32char-credential-encryption-key" > /app/secrets/credential_encryption_key && \
     echo "secure-email-password-placeholder" > /app/secrets/email_password && \
     echo "secure-oauth-client-id-placeholder" > /app/secrets/google_oauth_client_id && \
     echo "secure-oauth-client-secret-placeholder" > /app/secrets/google_oauth_client_secret && \
@@ -111,7 +114,9 @@ COPY .env.example /app/server/.env
 # Copy built application and node_modules from earlier stages -- minimalist approach
 COPY --from=builder /app/shared ./shared
 COPY --from=builder /app/ee/packages/workflows ./ee/packages/workflows
-COPY --from=builder /app/server/.next ./server/.next
+# Next writes runtime caches below .next, including server/app and pages.
+# Preserve compiled bytes while allowing the standard nonroot Node UID.
+COPY --from=builder --chown=1000:1000 /app/server/.next ./server/.next
 COPY --from=builder /app/server/public ./server/public
 COPY --from=builder /app/server/next.config.mjs ./server/
 COPY --from=builder /app/server/package.json ./server/
@@ -130,6 +135,11 @@ RUN npm install -g tsx
 
 # Copy core package.json for version info
 COPY packages/core/package.json /app/packages/core/package.json
+# Package the same compiled core used by the build for worker-state diagnostics.
+COPY --from=builder /app/packages/core/dist /app/packages/core/dist
+# Development validation creates next-env.d.ts and may update tsconfig; this
+# preserves the production entrypoint while supporting a nonroot runtime.
+RUN chown 1000:1000 /app/server /app/server/tsconfig.json
 
 COPY server/entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh

@@ -898,6 +898,9 @@ function createMockKnex() {
       case 'comments':
       case 'comments as cm':
         return createQuery(() => null);
+      case 'ticket_comment_attachments':
+        // No managed comment attachments in these scenarios: plain text-only delivery.
+        return createQuery(() => null);
       case 'tickets as t':
         return ticketTableBuilder();
       case 'projects as p':

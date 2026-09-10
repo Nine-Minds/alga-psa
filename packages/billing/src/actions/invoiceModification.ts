@@ -1203,7 +1203,7 @@ export async function finalizeInvoiceWithKnex(
         amount: creditAmount,
         type: 'credit_issuance',
         status: 'completed',
-        description: 'Credit issued from prepayment',
+        description: invoice.prepayment_description || 'Credit issued from prepayment',
         created_at: now,
         balance_after: (lastTransaction?.balance_after || 0) + creditAmount,
         tenant,
@@ -2333,6 +2333,23 @@ export const hardDeleteInvoice = withAuth(async (
           })
       )
       .update({ invoiced: false });
+
+    // 5b. Release period-total reports consumed by this invoice. A deleted
+    // draft is not an invoice: the total returns to 'recorded' so the same
+    // period can be billed once when a replacement invoice is generated.
+    await tenantScopedTable(trx, tenant, 'usage_period_totals')
+      .where({
+        invoice_id: invoiceId,
+        lifecycle_state: 'billed',
+        tenant
+      })
+      .update({
+        lifecycle_state: 'recorded',
+        invoice_id: null,
+        invoice_charge_id: null,
+        consumed_at: null,
+        updated_at: now,
+      });
 
     // 6. Delete other transactions related to the invoice (e.g., invoice_generated,
     // price_adjustment, and the credit_application/credit_adjustment ledger rows —

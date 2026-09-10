@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "suite": "node-tooling",
+  "revision": "0412a7551cae54d3233c0ee88ccd73643ca3188d",
+  "runtime": "v25.5.0",
+  "status": "passed",
+  "counts": {
+    "tests": 1066,
+    "passed": 1066,
+    "failed": 0,
+    "skipped": 0,
+    "todo": 0,
+    "cancelled": 0
+  },
+  "failures": [],
+  "source": {
+    "before": {
+      "revision": "0412a7551cae54d3233c0ee88ccd73643ca3188d",
+      "dirty": false,
+      "changes": []
+    },
+    "after": {
+      "revision": "0412a7551cae54d3233c0ee88ccd73643ca3188d",
+      "dirty": false,
+      "changes": []
+    }
+  },
+  "durationMs": 163067.863583,
+  "requiredFiles": 92,
+  "rawEvidenceSha256": "6da6426047ddf224018dcb1b5c13aec826904b09c399260bd102e7307c332ac9",
+  "execution": "Native Node suite; no local Docker build or daemon execution."
+}

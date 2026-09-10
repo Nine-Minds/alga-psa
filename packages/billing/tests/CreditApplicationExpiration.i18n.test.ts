@@ -47,7 +47,9 @@ describe('Credit application and expiration i18n contract', () => {
     expect(source).toContain("t('application.selectCreditError', { defaultValue: 'Please select a credit and enter a valid amount' })");
     expect(source).toContain("t('application.failedToApply', { defaultValue: 'Failed to apply credit' })");
     expect(source).toContain("t('application.noCreditsAvailable', { defaultValue: 'No credits available for this client' })");
-    expect(source).toContain("t('application.creditOrderNote', {");
+    expect(source).toContain("t('application.creditOrderNoteOldestFirst', {");
+    expect(source).toContain("t('application.creditOrderNoteNewestFirst', {");
+    expect(source).toContain("t('application.creditOrderNoteExpirationFirst', {");
 
     expect(getLeaf(pseudo, 'application.noCreditsAvailable')).toMatch(pseudoPattern('xx'));
     expect(getLeaf(pseudo, 'application.failedToLoadCredits')).toMatch(pseudoPattern('xx'));

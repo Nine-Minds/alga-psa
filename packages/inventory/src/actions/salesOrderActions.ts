@@ -4,6 +4,7 @@ import { Knex } from 'knex';
 import { withTransaction, createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
+import { SharedNumberingService } from '@alga-psa/shared/services/numberingService';
 import {
   actionError,
   permissionError,
@@ -47,6 +48,16 @@ const INVOICE_MODES: SalesOrderInvoiceMode[] = ['on_fulfillment', 'manual'];
 const ALLOCATION_MODES: SalesOrderAllocationMode[] = ['soft', 'hard'];
 const FULFILLMENT_TYPES: SalesOrderLineFulfillmentType[] = ['from_stock', 'drop_ship'];
 type StockUnitSearchTouch = { unit_id: string; service_id?: string };
+
+class InvalidSalesOrderReference extends Error {}
+
+// Sales-order tax references are logical because the legacy single-column FK
+// cannot be installed on the distributed schema. Validate at each write boundary.
+async function assertSalesOrderTaxRate(trx: Knex.Transaction, tenant: string, taxRateId?: string | null): Promise<void> {
+  if (taxRateId == null) return;
+  const rate = await trx('tax_rates').where({ tenant, tax_rate_id: taxRateId }).select('tax_rate_id').first();
+  if (!rate) throw new InvalidSalesOrderReference('Tax rate not found for this tenant');
+}
 
 function normalizeSalesOrderUnitPrice(value: unknown, fieldName = 'unit_price'): number {
   const price = Number(value);
@@ -94,6 +105,9 @@ async function requireSoPerm(user: any, action: 'create' | 'read' | 'update' | '
 type SalesOrderActionError = ActionMessageError | ActionPermissionError;
 
 function salesOrderActionErrorFrom(error: unknown): SalesOrderActionError | null {
+  if (error instanceof InvalidSalesOrderReference) {
+    return actionError('One of the selected sales order records is no longer valid. Please refresh and try again.', 'features/inventory:errors.salesOrders.recordInvalid');
+  }
   if (error instanceof Error) {
     if (error.message.startsWith('Permission denied') || error.message === 'user is not logged in') {
       return permissionError(error.message);
@@ -544,8 +558,10 @@ export const createSalesOrder = withAuth(
 
       const { knex: db } = await createTenantKnex();
       const result = await withTransaction(db, async (trx: Knex.Transaction) => {
-        const r = await trx.raw('SELECT generate_next_number(?::uuid, ?) as number', [tenant, 'SALES_ORDER']);
-        const soNumber: string = r.rows[0].number;
+        for (const line of input.lines ?? []) {
+          await assertSalesOrderTaxRate(trx, tenant, line.tax_rate_id);
+        }
+        const soNumber = await SharedNumberingService.getNextNumber('SALES_ORDER', { knex: trx, tenant });
 
         const [so] = await trx('sales_orders')
           .insert({
@@ -654,6 +670,7 @@ export const addSoLine = withAuth(
         const fulfillmentType: SalesOrderLineFulfillmentType = input.fulfillment_type ?? 'from_stock';
         if (!FULFILLMENT_TYPES.includes(fulfillmentType)) throw new Error(`Invalid fulfillment_type: ${fulfillmentType}`);
 
+        await assertSalesOrderTaxRate(trx, tenant, input.tax_rate_id);
         const meta = await getProductMeta(trx, tenant, input.service_id);
         if (meta.is_kit) {
           const kitUnitPrice = await resolveKitSalesOrderUnitPrice(
@@ -732,6 +749,7 @@ export const updateSoLine = withAuth(
           throw new Error('quantity_ordered must be greater than 0');
         }
 
+        if ('tax_rate_id' in patch) await assertSalesOrderTaxRate(trx, tenant, patch.tax_rate_id);
         const update: Record<string, unknown> = { updated_at: trx.fn.now() };
         for (const k of ['quantity_ordered', 'unit_price', 'tax_rate_id', 'fulfillment_type'] as const) {
           if (k in patch) update[k] = (patch as any)[k];
@@ -1095,8 +1113,7 @@ export const suggestPoFromBackorder = withAuth(
 
         const purchaseOrders: SuggestedPurchaseOrders['purchaseOrders'] = [];
         for (const [vendorId, items] of byVendor) {
-          const r = await trx.raw('SELECT generate_next_number(?::uuid, ?) as number', [tenant, 'PURCHASE_ORDER']);
-          const poNumber: string = r.rows[0].number;
+          const poNumber = await SharedNumberingService.getNextNumber('PURCHASE_ORDER', { knex: trx, tenant });
           const [po] = await trx('purchase_orders')
             .insert({
               tenant,

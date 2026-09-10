@@ -428,15 +428,15 @@
       "conflict": "Esta remessa de entrega direta está em conflito com um registro existente. Atualize a página e tente novamente.",
       "lineNotDropShip": "Esta linha do pedido de venda não está configurada para atendimento por entrega direta.",
       "lineRequired": "Selecione uma linha de entrega direta antes de confirmar o envio do fornecedor.",
-      "poLineNotLinked": "Esta linha da ordem de compra não está vinculada a uma linha de pedido de venda.",
-      "purchaseOrderNotDropShip": "Esta ordem de compra não está configurada para atendimento por entrega direta.",
-      "purchaseOrderNotFound": "Ordem de compra não encontrada. Pode ter sido excluída. Atualize a página e tente novamente.",
-      "purchaseOrderRequired": "Crie a ordem de compra de entrega direta antes de confirmar o envio do fornecedor.",
+      "poLineNotLinked": "Esta linha do pedido de compra não está vinculada a uma linha de pedido de venda.",
+      "purchaseOrderNotDropShip": "Este pedido de compra não está configurado para atendimento por entrega direta.",
+      "purchaseOrderNotFound": "Pedido de compra não encontrado. Pode ter sido excluído. Atualize a página e tente novamente.",
+      "purchaseOrderRequired": "Crie o pedido de compra de entrega direta antes de confirmar o envio do fornecedor.",
       "recordInvalid": "Um dos registros de entrega direta selecionados não existe mais. Atualize a página e tente novamente.",
       "salesOrderLineNotFound": "Linha do pedido de venda não encontrada. Pode ter sido excluída. Atualize a página e tente novamente.",
       "salesOrderNotFound": "Pedido de venda não encontrado. Pode ter sido excluído. Atualize a página e tente novamente.",
       "serialsRequired": "Informe pelo menos um número de série para esta remessa de entrega direta serializada.",
-      "vendorRequired": "Selecione um fornecedor antes de criar a ordem de compra de entrega direta."
+      "vendorRequired": "Selecione um fornecedor antes de criar o pedido de compra de entrega direta."
     },
     "fulfillment": {
       "conflict": "Este atendimento está em conflito com um registro existente. Atualize a página e tente novamente.",
@@ -477,8 +477,8 @@
       "amountPositive": "O valor do custo de importação deve ser maior que zero.",
       "appliedCannotRemove": "Lançamentos de custo de importação aplicados não podem ser removidos.",
       "conflict": "Esta atualização de custo de importação está em conflito com um registro existente. Atualize a página e tente novamente.",
-      "orderCancelled": "Não é possível adicionar custo de importação a uma ordem de compra cancelada.",
-      "receiveLineFirst": "Receba pelo menos uma linha da ordem de compra antes de aplicar o custo de importação.",
+      "orderCancelled": "Não é possível adicionar custo de importação a um pedido de compra cancelado.",
+      "receiveLineFirst": "Receba pelo menos uma linha do pedido de compra antes de aplicar o custo de importação.",
       "recordInvalid": "Um dos registros de custo de importação selecionados não é mais válido. Atualize a página e tente novamente."
     },
     "loaners": {
@@ -531,21 +531,21 @@
       "serializedUnitsExist": "Este produto tem unidades serializadas. Mova, desative ou remova essas unidades antes de desativar a serialização."
     },
     "purchaseOrders": {
-      "cancelledCannotEdit": "Esta ordem de compra está cancelada e não pode ser editada.",
-      "cancelledCannotReceive": "Esta ordem de compra está cancelada e não pode receber estoque.",
-      "currencyRequired": "Selecione uma moeda antes de criar a ordem de compra.",
-      "fullyReceivedCannotCancel": "Esta ordem de compra já foi totalmente recebida e não pode ser cancelada.",
-      "lineNotFound": "Linha da ordem de compra não encontrada. Pode ter sido atualizada ou excluída. Atualize a página e tente novamente.",
+      "cancelledCannotEdit": "Este pedido de compra está cancelado e não pode ser editado.",
+      "cancelledCannotReceive": "Este pedido de compra está cancelado e não pode receber estoque.",
+      "currencyRequired": "Selecione uma moeda antes de criar o pedido de compra.",
+      "fullyReceivedCannotCancel": "Este pedido de compra já foi totalmente recebido e não pode ser cancelado.",
+      "lineNotFound": "Linha do pedido de compra não encontrada. Pode ter sido atualizada ou excluída. Atualize a página e tente novamente.",
       "lineReceivedCannotRemove": "Esta linha já recebeu estoque e não pode ser removida.",
-      "lineRequired": "Adicione pelo menos uma linha antes de enviar esta ordem de compra.",
-      "onlyDraftDeletable": "Somente ordens de compra em rascunho podem ser excluídas. Cancele as ordens enviadas em vez disso.",
+      "lineRequired": "Adicione pelo menos uma linha antes de enviar este pedido de compra.",
+      "onlyDraftDeletable": "Somente pedidos de compra em rascunho podem ser excluídos. Cancele os pedidos enviados em vez disso.",
       "quantityPositive": "A quantidade deve ser maior que 0.",
-      "receivedStockCannotCancel": "Esta ordem de compra já recebeu estoque e não pode ser cancelada.",
-      "recordInvalid": "Um dos registros de ordem de compra selecionados não é mais válido. Atualize a página e tente novamente.",
+      "receivedStockCannotCancel": "Este pedido de compra já recebeu estoque e não pode ser cancelado.",
+      "recordInvalid": "Um dos registros de pedido de compra selecionados não é mais válido. Atualize a página e tente novamente.",
       "stockLocationNotFound": "Localização de estoque não encontrada. Pode ter sido excluída. Escolha outra localização.",
-      "submitBeforeReceiving": "Envie esta ordem de compra antes de receber estoque nela.",
+      "submitBeforeReceiving": "Envie este pedido de compra antes de receber estoque nele.",
       "trackingDisabled": "O controle de estoque está desativado para este produto.",
-      "vendorRequired": "Selecione um fornecedor antes de criar a ordem de compra."
+      "vendorRequired": "Selecione um fornecedor antes de criar o pedido de compra."
     },
     "reorder": {
       "destinationAndSourceRequired": "Escolha um destino de carga e uma prateleira de origem.",
@@ -612,7 +612,7 @@
       "inventorySettingsDisabled": "As configurações de estoque não estão ativadas para este produto. Ative primeiro o controle de estoque.",
       "lineQuantityPositive": "A quantidade de cada linha deve ser maior que 0.",
       "locationRequiredForReceipt": "Selecione uma localização antes de receber o estoque.",
-      "purchaseOrderNotFound": "Ordem de compra não encontrada. Pode ter sido atualizada ou excluída. Atualize a página e tente novamente.",
+      "purchaseOrderNotFound": "Pedido de compra não encontrado. Pode ter sido atualizado ou excluído. Atualize a página e tente novamente.",
       "salesOrderLineAlreadyFulfilled": "Esta linha do pedido de venda já foi totalmente atendida.",
       "salesOrderLineNotFound": "Linha do pedido de venda não encontrada. Pode ter sido atualizada ou excluída. Atualize a página e tente novamente.",
       "salesOrderNotFound": "Pedido de venda não encontrado. Pode ter sido atualizado ou excluído. Atualize a página e tente novamente.",
@@ -661,7 +661,7 @@
       "lineUnitCostNonNegative": "O custo unitário da linha não pode ser negativo.",
       "notFound": "Fatura de fornecedor não encontrada. Pode ter sido atualizada ou excluída. Atualize a página e tente novamente.",
       "numberRequired": "Informe o número da fatura do fornecedor.",
-      "receiveStockFirst": "Receba estoque nesta ordem de compra antes de criar uma fatura de fornecedor a partir dela.",
+      "receiveStockFirst": "Receba estoque neste pedido de compra antes de criar uma fatura de fornecedor a partir dele.",
       "recordInvalid": "Um dos registros de faturas de fornecedor selecionados não é mais válido. Atualize a página e tente novamente.",
       "vendorRequired": "Selecione um fornecedor antes de criar a fatura."
     },
@@ -673,7 +673,7 @@
     },
     "vendors": {
       "duplicateName": "Já existe um fornecedor chamado \"{{name}}\"",
-      "hasOpenPurchaseOrders": "Não é possível desativar um fornecedor com ordens de compra em aberto",
+      "hasOpenPurchaseOrders": "Não é possível desativar um fornecedor com pedidos de compra em aberto",
       "nameRequired": "O nome do fornecedor é obrigatório",
       "notFound": "Fornecedor não encontrado"
     }

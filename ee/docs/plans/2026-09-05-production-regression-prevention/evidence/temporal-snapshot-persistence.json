@@ -1,0 +1,26 @@
+{
+  "status": "implemented_local_verification_native_pending",
+  "behavior": [
+    "Every Temporal step-completion branch passes current scopes to the existing completion activity.",
+    "Completion transaction locks the verified step and writes at most one snapshot for an existing snapshot reference.",
+    "Snapshot envelope redacts secretRef, $secret and declared metadata JSON-pointer paths without changing execution scopes.",
+    "Payloads above 256 KiB become valid JSON truncation metadata; size_bytes records stored UTF-8 bytes.",
+    "Completion prunes snapshots older than WORKFLOW_SNAPSHOT_RETENTION_DAYS (default 30) within the verified run and tenant, and clears expired step references."
+  ],
+  "validation": {
+    "database": "7/7 workflow persistence cases passed, including snapshots, retry, retention and unrelated-run preservation",
+    "temporalReadiness": "72/72 passed, including assertion that action completion passes updated scopes",
+    "typescript": "targeted check passed",
+    "logs": [
+      "/tmp/alga-snapshot-persistence-verified.log",
+      "/tmp/alga-snapshot-readiness-final.log"
+    ]
+  },
+  "incidentalFix": "Reset mocked action handler and selected registry action before each shuffled test; previous shared spy counts caused an order-dependent retry failure.",
+  "limits": [
+    "No Temporal-server execution or Citus runtime verification yet.",
+    "Retention is run-local and triggered by completion; inactive runs are not swept by a background job.",
+    "Output replay persistence redaction and full run-studio integration remain unresolved.",
+    "Legacy skipped redaction suite remains present pending full parity verification."
+  ]
+}

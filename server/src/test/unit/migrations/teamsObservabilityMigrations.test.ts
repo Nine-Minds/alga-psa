@@ -11,6 +11,7 @@ describe('teams observability migrations', () => {
   const deliveriesMigration = readRepoFile('ee/server/migrations/20260524090000_create_teams_notification_deliveries.cjs');
   const auditMigration = readRepoFile('ee/server/migrations/20260524090100_create_teams_audit_events.cjs');
   const conversationsMigration = readRepoFile('ee/server/migrations/20260524090200_create_teams_conversation_references.cjs');
+  const featureGateMigration = readRepoFile('ee/server/migrations/20260827090000_replace_teams_addon_delivery_error_code.cjs');
 
   it('creates the Teams notification deliveries table with the expected columns and constraints', () => {
     expect(deliveriesMigration).toContain('CREATE TABLE IF NOT EXISTS teams_notification_deliveries');
@@ -40,6 +41,14 @@ describe('teams observability migrations', () => {
     expect(deliveriesMigration).toContain("create_distributed_table(?, 'tenant', colocate_with => 'teams_integrations')");
     expect(deliveriesMigration).toContain('Citus distribution smoke count');
     expect(deliveriesMigration).toContain('exports.config = { transaction: false }');
+  });
+
+  it('allows feature-disabled delivery outcomes while retaining historical add-on rows', () => {
+    expect(featureGateMigration).toContain("'feature_disabled'");
+    expect(featureGateMigration).toContain("'addon_inactive'");
+    expect(featureGateMigration).toContain('teams_notification_deliveries_error_code_check');
+    expect(featureGateMigration).toContain(".where({ error_code: 'feature_disabled' })");
+    expect(featureGateMigration).not.toMatch(/DROP CONSTRAINT[\s\S]*?,\s*ADD CONSTRAINT/);
   });
 
   it('defines cleanup functions with safe retention cutoffs for deliveries and audit events', () => {

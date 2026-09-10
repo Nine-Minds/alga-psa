@@ -406,11 +406,17 @@
       "refreshing": "Wird aktualisiert...",
       "refreshData": "Daten aktualisieren",
       "rebootDevice": "Gerät neu starten",
+      "rebooting": "Neustart läuft...",
       "editAsset": "Asset bearbeiten",
       "deleteAsset": "Asset löschen"
     },
     "values": {
       "unknownClient": "Unbekannter Kunde"
+    },
+    "reboot": {
+      "title": "Gerät neu starten?",
+      "message": "{{name}} wird sofort über {{provider}} neu gestartet. Angemeldete Benutzer verlieren nicht gespeicherte Arbeit.",
+      "confirm": "Jetzt neu starten"
     }
   },
   "assetDetailTabs": {
@@ -1162,14 +1168,6 @@
       "saveFailed": "Fehler beim Erstellen des Wartungsplans"
     }
   },
-  "documentsPasswordsTab": {
-    "title": "Dokumente und Passwörter",
-    "description": "Kombinierte Registerkarte für Asset-Dokumente, Anmeldeinformationen und zugehörige sichere Datensätze",
-    "passwords": {
-      "title": "Passwörter und Geheimnisse",
-      "comingSoon": "Sichere Passwortverwaltung bald verfügbar."
-    }
-  },
   "maintenanceSchedulesTab": {
     "title": "Wartungspläne",
     "description": "Registerkarte „Wartungsplanverwaltung“ für geplante Wartungsarbeiten und wiederkehrende Arbeiten",
@@ -1215,6 +1213,7 @@
     },
     "types": {
       "preventive": "Vorbeugend",
+      "corrective": "Korrektiv",
       "inspection": "Inspektion",
       "calibration": "Kalibrierung",
       "replacement": "Austausch"
@@ -1234,6 +1233,17 @@
         "title": "Wartungsplan löschen",
         "message": "Sind Sie sicher, dass Sie „{{name}}“ löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden."
       }
+    }
+  },
+  "maintenanceCommandCenter": {
+    "title": "Wartungsleitstelle",
+    "description": "Der nächste Fälligkeitstermin richtet sich nach dem tatsächlichen Abschlussdatum.",
+    "assetsLink": "Assets"
+  },
+  "maintenanceCompletionDialog": {
+    "errors": {
+      "performedDateRequired": "Ein Durchführungsdatum ist erforderlich.",
+      "completeFailed": "Die Wartung konnte nicht abgeschlossen werden."
     }
   },
   "relatedAssetsTab": {

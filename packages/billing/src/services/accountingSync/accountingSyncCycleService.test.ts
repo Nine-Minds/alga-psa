@@ -38,6 +38,7 @@ vi.mock('./syncMappingLedger', () => ({
   SyncMappingLedger: vi.fn().mockImplementation(function () { return ({
     findByExternalId: vi.fn(async () => undefined),
     findByAlgaId: vi.fn(async () => undefined),
+    findByAlgaIdAnyRealm: vi.fn(async () => []),
     insert: vi.fn(async () => ({})),
     update: vi.fn(async () => undefined),
     withKnex: vi.fn().mockReturnThis()
@@ -818,6 +819,7 @@ describe('runAccountingSyncCycle', () => {
     const ledgerInstance = {
       findByExternalId: vi.fn(async () => undefined),
       findByAlgaId: vi.fn(async () => driftMapping),
+      findByAlgaIdAnyRealm: vi.fn(async () => []),
       insert: vi.fn(async () => ({})),
       update: vi.fn(async () => undefined),
       withKnex: vi.fn().mockReturnThis()

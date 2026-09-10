@@ -17,6 +17,8 @@ type PoolConfig = KnexType.PoolConfig & {
 };
 
 let sharedKnexInstance: KnexType | null = null;
+let sharedKnexInitialization: Promise<KnexType> | null = null;
+let sharedKnexDestruction: Promise<void> | null = null;
 const tenantContext: AsyncLocalStorage<string> = (() => {
   const globalAny = globalThis as unknown as {
     __ALGA_PSA_TENANT_CONTEXT__?: AsyncLocalStorage<string>;
@@ -37,11 +39,25 @@ export async function runWithTenant<T>(tenant: string, fn: () => Promise<T>): Pr
   return tenantContext.run(tenant, fn);
 }
 
-export async function getConnection(tenantId?: string | null): Promise<KnexType> {
+export async function getConnection(_tenantId?: string | null): Promise<KnexType> {
+  if (sharedKnexDestruction) {
+    await sharedKnexDestruction;
+  }
   if (sharedKnexInstance) {
     return sharedKnexInstance;
   }
 
+  // Configuration loads secrets asynchronously. Share the pending initialization
+  // so concurrent cold requests cannot create and orphan separate pools.
+  if (!sharedKnexInitialization) {
+    sharedKnexInitialization = initializeTenantPool().finally(() => {
+      sharedKnexInitialization = null;
+    });
+  }
+  return sharedKnexInitialization;
+}
+
+async function initializeTenantPool(): Promise<KnexType> {
   const environment = process.env.NODE_ENV === 'test' ? 'development' : process.env.NODE_ENV || 'development';
   const baseConfig = await getKnexConfig(environment);
   logger.info('[db/tenant] Database configuration', {
@@ -88,13 +104,23 @@ export async function getConnection(tenantId?: string | null): Promise<KnexType>
  * stale backend connections after a coordinator failover).
  */
 export async function destroyTenantConnection(): Promise<void> {
-  if (sharedKnexInstance) {
-    try {
-      await sharedKnexInstance.destroy();
-    } finally {
-      sharedKnexInstance = null;
-    }
+  if (!sharedKnexDestruction) {
+    sharedKnexDestruction = (async () => {
+      // A reset during cold initialization must also release that pending pool.
+      // Initialization failures leave no pool to destroy and remain visible to
+      // the original getConnection callers.
+      await sharedKnexInitialization?.catch(() => undefined);
+      const instance = sharedKnexInstance;
+      try {
+        await instance?.destroy();
+      } finally {
+        sharedKnexInstance = null;
+      }
+    })().finally(() => {
+      sharedKnexDestruction = null;
+    });
   }
+  return sharedKnexDestruction;
 }
 
 /**
@@ -262,13 +288,6 @@ export async function setTenantContext(_conn: any, tenantId?: string | null): Pr
   }
 }
 
-async function destroySharedPool() {
-  if (sharedKnexInstance) {
-    await sharedKnexInstance.destroy();
-    sharedKnexInstance = null;
-  }
-}
-
 export async function resetTenantConnectionPool(): Promise<void> {
-  await destroySharedPool();
+  await destroyTenantConnection();
 }

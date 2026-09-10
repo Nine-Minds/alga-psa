@@ -141,6 +141,8 @@
   },
   "usage": {
     "bucketHoursOverview": "Aperçu du forfait d'heures",
+    "bucketLoadError": "Impossible de charger les soldes des forfaits d’heures. Réessayez pour afficher les soldes actuels.",
+    "retryBucketBalances": "Recharger les soldes des forfaits",
     "usageRecords": "Enregistrements d'utilisation",
     "actions": {
       "addUsage": "Ajouter une utilisation",
@@ -211,6 +213,12 @@
       "updateError": "Échec de la mise à jour de l'enregistrement d'utilisation",
       "deleteSuccess": "Enregistrement d'utilisation supprimé avec succès",
       "deleteError": "Échec de la suppression de l'enregistrement d'utilisation"
+    },
+    "periodReport": "Rapport d'utilisation de la période",
+    "periodAlreadyInvoiced": "Cette période est déjà facturée. Corrigez-la via le processus d'ajustement de facture.",
+    "periodFilter": {
+      "notice": "Affichage de l'utilisation pour la période de service du {{start}} au {{end}}",
+      "clear": "Effacer"
     }
   },
   "lineItem": {
@@ -387,7 +395,10 @@
       "loadingBatches": "Chargement des lots...",
       "empty": "Aucun lot d'exportation pour l'instant.",
       "loadingDetails": "Chargement des détails du lot...",
-      "batchNotFound": "Lot introuvable."
+      "batchNotFound": "Lot introuvable.",
+      "checkingAccess": "Vérification de l'accès...",
+      "accessDeniedTitle": "Accès refusé",
+      "accessDeniedDescription": "Vous n'avez pas l'autorisation d'accéder aux exportations comptables."
     },
     "createDialog": {
       "title": "Nouvel export comptable",
@@ -663,7 +674,9 @@
     },
     "recurringRun": {
       "selectPeriods": "Sélectionnez au moins une période de facturation récurrente à générer.",
-      "invoicePermission": "Autorisation refusée : autorisation de création ou de génération de factures requise"
+      "invoicePermission": "Autorisation refusée : autorisation de création ou de génération de factures requise",
+      "monthEndCloseNotMaterialized": "Aucune période de service récurrente n'a été matérialisée pour cette fenêtre d'exécution récurrente.",
+      "monthEndCloseNotEligible": "La période {{servicePeriod}} ne peut être clôturée en fin de mois que le {{finalCalendarDay}}. Seules les périodes de service facturées à terme échu qui couvrent un mois calendaire complet peuvent être clôturées par anticipation le dernier jour calendaire."
     },
     "recurringServicePeriod": {
       "scheduleKeyRequiredInspect": "Une clé de planning est requise pour inspecter les périodes de service récurrentes.",
@@ -689,8 +702,10 @@
         "setDefault": "Autorisation refusée : impossible de définir le modèle de document par défaut",
         "clearOverride": "Autorisation refusée : impossible de supprimer la substitution du modèle de document",
         "delete": "Autorisation refusée : impossible de supprimer les modèles de document",
-        "preview": "Autorisation refusée : impossible de prévisualiser les modèles de document"
-      }
+        "preview": "Autorisation refusée : impossible de prévisualiser les modèles de document",
+        "readSalesOrders": "Autorisation refusée : impossible de lire les commandes client"
+      },
+      "existingNotFound": "Document introuvable."
     },
     "billingProfile": {
       "periodOrder": "Choisissez une période dont le début est antérieur ou égal à la fin.",

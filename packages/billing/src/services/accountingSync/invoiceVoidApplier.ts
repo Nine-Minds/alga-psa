@@ -2,6 +2,7 @@ import { Knex } from 'knex';
 import logger from '@alga-psa/core/logger';
 // eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- sync-engine applier intentionally bridges billing to the QuickBooks client (same bridge as the accounting export adapter)
 import { QboClientService } from '@alga-psa/integrations/lib/qbo/qboClientService';
+import { writeAccountingAudit } from '@alga-psa/db';
 import type { AccountingSyncCycleStats } from './accountingSync.types';
 import { MAPPING_SYNC_STATUS } from './accountingSync.types';
 import type { SyncOperationsRepository } from './syncOperationsRepository';
@@ -55,9 +56,50 @@ export async function drainVoidInvoiceOps(deps: DrainDeps): Promise<void> {
   }
 
   for (const op of pending) {
-    const mapping = await deps.ledger.findByAlgaId('invoice', op.alga_entity_id);
+    // Exact tenant + provider + entity type + realm match, no NULL-realm
+    // fallback, tombstones excluded: a mapping in another company or one that
+    // was unlinked must never drive a void in this company.
+    const mapping = await deps.ledger.findByAlgaId('invoice', op.alga_entity_id, deps.targetRealm);
 
     if (!mapping) {
+      const blocked = await deps.ledger.findNonConsumable('invoice', op.alga_entity_id, deps.targetRealm);
+      if (blocked) {
+        const reason = blocked.deleted_at
+          ? 'invoice was unlinked from QuickBooks'
+          : 'invoice maps to a different QuickBooks company';
+        const message = `Cannot void in QuickBooks: ${reason}. Relink the invoice mapping to this company first.`;
+        logger.warn('[invoiceVoidApplier] Void blocked by non-consumable mapping', {
+          opId: op.op_id,
+          tenantId: deps.tenantId,
+          invoiceId: op.alga_entity_id,
+          mappingId: blocked.id,
+          deleted: Boolean(blocked.deleted_at),
+          externalRealm: blocked.external_realm_id
+        });
+        const nextStatus = await deps.ops.markFailed(deps.tenantId, op.op_id, message);
+        deps.stats.opsFailed += 1;
+        if (nextStatus === 'skipped') {
+          await deps.exceptions.createOrUpdate({
+            type: 'accounting_sync_export_error',
+            entityType: 'invoice',
+            entityId: op.alga_entity_id,
+            title: 'Invoice void blocked — mapping is unlinked or points at another company',
+            context: {
+              alga_entity_id: op.alga_entity_id,
+              external_entity_id: blocked.external_entity_id,
+              attempts: op.attempts + 1,
+              message,
+              details:
+                `${message} The QuickBooks document was not touched. ` +
+                'Relink the invoice in the accounting mapping screen, then retry the void.',
+              realm: deps.targetRealm
+            }
+          });
+          deps.stats.exceptionsCreated += 1;
+        }
+        continue;
+      }
+
       // Nothing to void in QBO — the invoice was never exported
       logger.debug('[invoiceVoidApplier] No mapping found; marking done', {
         opId: op.op_id,
@@ -78,6 +120,11 @@ export async function drainVoidInvoiceOps(deps: DrainDeps): Promise<void> {
     const externalEntityType: string =
       (mapping.metadata as any)?.external_entity_type ?? 'Invoice';
     const externalId = mapping.external_entity_id;
+    // The actor who voided the invoice in Alga (recorded on the op at enqueue
+    // time by the void action). Null for legacy ops enqueued before this field
+    // existed — the audit then records a system actor.
+    const requestedByUserId: string | null =
+      (op.payload as Record<string, unknown> | null)?.requestedByUserId as string | null ?? null;
 
     try {
       await deps.ops.markInProgress(deps.tenantId, op.op_id);
@@ -117,6 +164,28 @@ export async function drainVoidInvoiceOps(deps: DrainDeps): Promise<void> {
         externalId,
         externalEntityType
       });
+
+      // Remote destructive operations are audited with no secret material:
+      // only the provider, the remote entity, the outcome, and the actor who
+      // requested the void.
+      await writeAccountingAudit(deps.knex, deps.tenantId, 'accounting_remote_void', {
+        userId: requestedByUserId ?? undefined,
+        provider: 'quickbooks_online',
+        recordId: externalId,
+        details: {
+          algaEntityType: 'invoice',
+          algaEntityId: op.alga_entity_id,
+          externalEntityType,
+          operation: op.operation,
+          outcome: 'voided',
+          source: 'sync_cycle',
+        },
+      }).catch((error) => {
+        logger.warn('[invoiceVoidApplier] Failed to write remote-void audit entry', {
+          tenantId: deps.tenantId,
+          error,
+        });
+      });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'QBO void/delete failed';
       logger.warn('[invoiceVoidApplier] Failed to void invoice in QBO', {
@@ -127,6 +196,28 @@ export async function drainVoidInvoiceOps(deps: DrainDeps): Promise<void> {
       });
       const nextStatus = await deps.ops.markFailed(deps.tenantId, op.op_id, message);
       deps.stats.opsFailed += 1;
+
+      // Record the failed remote-void attempt with the same actor as the
+      // enqueue, so partial failures still leave an audit trail.
+      await writeAccountingAudit(deps.knex, deps.tenantId, 'accounting_remote_void', {
+        userId: requestedByUserId ?? undefined,
+        provider: 'quickbooks_online',
+        recordId: externalId,
+        details: {
+          algaEntityType: 'invoice',
+          algaEntityId: op.alga_entity_id,
+          externalEntityType,
+          operation: op.operation,
+          outcome: 'failed',
+          error: message,
+          source: 'sync_cycle',
+        },
+      }).catch((error) => {
+        logger.warn('[invoiceVoidApplier] Failed to write remote-void failure audit entry', {
+          tenantId: deps.tenantId,
+          error,
+        });
+      });
 
       if (nextStatus === 'skipped') {
         await deps.exceptions.createOrUpdate({

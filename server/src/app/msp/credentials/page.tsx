@@ -14,12 +14,12 @@ export async function generateMetadata(): Promise<Metadata> {
 /**
  * Global credentials vault screen (`/msp/credentials`).
  *
- * The edition/tier/release gates are the same three the nav item uses: the
- * route is server-rendered for the sidebar's "Passwords" entry, the EE
- * implementation in `ee/server/src/components/credentials/CredentialsScreen`
- * re-checks `release-v1-5-feature` + `getCredentialsContext` and renders
- * nothing (or the tier message) when unavailable. CE builds resolve the
- * `@enterprise` import to the render-null stub.
+ * The edition/tier gates are the same ones the nav item uses: the route is
+ * server-rendered for the sidebar's "Passwords" entry, the EE implementation
+ * in `ee/server/src/components/credentials/CredentialsScreen` re-checks
+ * `getCredentialsContext` and renders nothing (or the tier message) when
+ * unavailable. CE builds resolve the `@enterprise` import to the render-null
+ * stub.
  */
 export default async function CredentialsPage() {
   const session = await getSession();

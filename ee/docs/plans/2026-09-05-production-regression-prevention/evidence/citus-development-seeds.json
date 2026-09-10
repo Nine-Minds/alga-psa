@@ -1,0 +1,171 @@
+{
+  "status": "verified_locally",
+  "problem": "Citus rejects scalar INSERT subqueries used by development seeds and nonimmutable expressions in upsert SET clauses.",
+  "changes": [
+    "Resolve tenant-scoped foreign key lookups before INSERT without changing fixture identities.",
+    "Resolve the database timestamp once before notification upserts.",
+    "Run workflow persistence suite in Citus CI with combined migrations, real distribution assertions and JSON test artifacts.",
+    "Resolve parent run tenant before locking and validating step completion."
+  ],
+  "verification": {
+    "resumed_citus_seeds": "Passed through final numeric seed 89 after fixing each observed bootstrap failure.",
+    "postgres_workflow_suite": {
+      "passed": 7,
+      "failed": 0,
+      "log": "/tmp/alga-workflow-postgres-tenant-lock.log",
+      "includes": "tenant-routed step completion fix"
+    },
+    "fresh_citus_workflow_suite": {
+      "status": "failed",
+      "passed": 5,
+      "failed": 2,
+      "log": "/tmp/alga-workflow-citus-runtime-seeds-fixed.log",
+      "cause": "Step completion FOR UPDATE omitted tenant routing; Citus rejected the distributed lock query. Fresh combined migrations and all development seeds completed."
+    },
+    "native_temporal": {
+      "job": "https://github.com/Nine-Minds/alga-psa/actions/runs/34097042794/job/101662884343",
+      "readiness_tests_passed": 72,
+      "built_workflow_smoke_and_replay": "passed; verified from job log"
+    },
+    "citus_gate_rerun": {
+      "status": "passed",
+      "counts": {
+        "passed": 7,
+        "failed": 0,
+        "skipped": 0,
+        "todo": 0,
+        "pending": 0
+      },
+      "expectedTests": [
+        {
+          "identity": [
+            "ee/temporal-workflows/src/__tests__/integration/workflowInvocationPersistence.integration.test.ts",
+            "stores redacted bounded step snapshots with idempotent writes and retention"
+          ],
+          "count": 1
+        },
+        {
+          "identity": [
+            "ee/temporal-workflows/src/__tests__/integration/workflowInvocationPersistence.integration.test.ts",
+            "persists one concurrent invocation per tenant key and isolates lookup and updates"
+          ],
+          "count": 1
+        },
+        {
+          "identity": [
+            "ee/temporal-workflows/src/__tests__/integration/workflowInvocationPersistence.integration.test.ts",
+            "retries a failed activity on its persisted row and replays success without another action"
+          ],
+          "count": 1
+        },
+        {
+          "identity": [
+            "ee/temporal-workflows/src/__tests__/integration/workflowInvocationPersistence.integration.test.ts",
+            "persists one real email comment and ticket response state across activity replay"
+          ],
+          "count": 1
+        },
+        {
+          "identity": [
+            "ee/temporal-workflows/src/__tests__/integration/workflowInvocationPersistence.integration.test.ts",
+            "creates one real ticket and initial comment across activity replay"
+          ],
+          "count": 1
+        },
+        {
+          "identity": [
+            "ee/temporal-workflows/src/__tests__/integration/workflowInvocationPersistence.integration.test.ts",
+            "redacts secret references in persisted action inputs without changing handler arguments"
+          ],
+          "count": 1
+        },
+        {
+          "identity": [
+            "ee/temporal-workflows/src/__tests__/integration/workflowInvocationPersistence.integration.test.ts",
+            "rejects missing or mismatched step completion without modifying either run"
+          ],
+          "count": 1
+        }
+      ],
+      "executedTests": [
+        {
+          "identity": [
+            "ee/temporal-workflows/src/__tests__/integration/workflowInvocationPersistence.integration.test.ts",
+            "stores redacted bounded step snapshots with idempotent writes and retention"
+          ],
+          "count": 1
+        },
+        {
+          "identity": [
+            "ee/temporal-workflows/src/__tests__/integration/workflowInvocationPersistence.integration.test.ts",
+            "persists one concurrent invocation per tenant key and isolates lookup and updates"
+          ],
+          "count": 1
+        },
+        {
+          "identity": [
+            "ee/temporal-workflows/src/__tests__/integration/workflowInvocationPersistence.integration.test.ts",
+            "retries a failed activity on its persisted row and replays success without another action"
+          ],
+          "count": 1
+        },
+        {
+          "identity": [
+            "ee/temporal-workflows/src/__tests__/integration/workflowInvocationPersistence.integration.test.ts",
+            "persists one real email comment and ticket response state across activity replay"
+          ],
+          "count": 1
+        },
+        {
+          "identity": [
+            "ee/temporal-workflows/src/__tests__/integration/workflowInvocationPersistence.integration.test.ts",
+            "creates one real ticket and initial comment across activity replay"
+          ],
+          "count": 1
+        },
+        {
+          "identity": [
+            "ee/temporal-workflows/src/__tests__/integration/workflowInvocationPersistence.integration.test.ts",
+            "redacts secret references in persisted action inputs without changing handler arguments"
+          ],
+          "count": 1
+        },
+        {
+          "identity": [
+            "ee/temporal-workflows/src/__tests__/integration/workflowInvocationPersistence.integration.test.ts",
+            "rejects missing or mismatched step completion without modifying either run"
+          ],
+          "count": 1
+        }
+      ],
+      "failures": [],
+      "log": "/tmp/alga-citus-workflow-gate.log",
+      "durationSeconds": 312.02,
+      "bootstrap": "Fresh combined CE+EE migrations, complete development seeds, actual hash-distribution assertions"
+    },
+    "targeted_types": "passed",
+    "execution_reconciliation_tests": {
+      "passed": 6,
+      "failed": 0,
+      "log": "/tmp/alga-citus-reconciliation-tests.log"
+    },
+    "seed_relation_readback": {
+      "backend": [
+        "postgres",
+        "citus"
+      ],
+      "tables_passed": 9,
+      "log": "/tmp/alga-seed-relations-postgres.log",
+      "scope": "Expected seeded row counts and non-null fixture references for contacts, invoice charges, projects, phases, tasks, ticket links, schedules, team members and invoice annotations.",
+      "logs": [
+        "/tmp/alga-seed-relations-postgres.log",
+        "/tmp/alga-seed-relations-citus.log"
+      ],
+      "tenant": "Oz, explicitly selected to exclude runtime test tenants"
+    }
+  },
+  "limits": [
+    "New Citus CI wiring has passed locally; native CI execution awaits publication.",
+    "This suite verifies workflow runtime behavior on single-node Citus; broader billing, upgrade and release requirements remain incomplete."
+  ]
+}

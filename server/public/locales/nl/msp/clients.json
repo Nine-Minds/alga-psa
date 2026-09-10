@@ -12,7 +12,6 @@
       "downloadCsv": "CSV downloaden",
       "edit": "Bewerken",
       "import": "Importeren",
-      "reactivate": "Opnieuw activeren",
       "remove": "Verwijderen",
       "retry": "Opnieuw proberen",
       "save": "Opslaan",
@@ -181,7 +180,18 @@
     "shareTooltip": "Afdrukken, importeren en exporteren",
     "defaultClientDeleteError": "De standaardklant kan niet worden verwijderd. Stel eerst een andere klant als standaard in bij Algemene instellingen.",
     "clientNotFound": "Klant niet gevonden.",
-    "deletePermissionDenied": "Toestemming geweigerd: klanten kunnen niet worden verwijderd."
+    "deletePermissionDenied": "Toestemming geweigerd: klanten kunnen niet worden verwijderd.",
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} geselecteerd",
+        "markInactive": "Markeer als inactief",
+        "reactivate": "Opnieuw activeren",
+        "delete": "Verwijderen",
+        "print": "Geselecteerde afdrukken",
+        "more": "Meer",
+        "clear": "Selectie wissen"
+      }
+    }
   },
   "clientDetails": {
     "opportunities": "Verkoopkansen",
@@ -1422,6 +1432,9 @@
       "viewTranscript": "Transcriptie bekijken"
     },
     "quickAdd": {
+      "clientRequired": "Selecteer een klant voor deze interactie",
+      "contactPlaceholder": "Contact selecteren",
+      "selectClientFirst": "Selecteer eerst een klant",
       "teams": {
         "attendees": {
           "add": "Toevoegen",
@@ -1450,11 +1463,32 @@
         "createFailed": "Kan Teams-vergadering niet aanmaken",
         "createToggle": "Teams-vergadering aanmaken",
         "endRequired": "Eindtijd is vereist om een Teams-vergadering aan te maken",
+        "invitesDisabled": "E-mailuitnodigingen zijn uitgeschakeld in de instellingen van de Teams-integratie: deelnemers worden niet door Microsoft op de hoogte gebracht.",
+        "invitesSummary": "Microsoft e-mailt agenda-uitnodigingen naar: {{recipients}}.",
+        "invitesSummaryYou": "u (maker)",
+        "reason": {
+          "feature_disabled": "Microsoft Teams is niet ingeschakeld voor deze tenant.",
+          "ee_disabled": "De Teams-integratie vereist de Enterprise Edition.",
+          "no_organizer": "Er is geen standaard vergaderingsorganisator geconfigureerd in de Teams-instellingen.",
+          "not_configured": "De Teams-integratie is niet geconfigureerd."
+        },
+        "scheduleSummary": "Er wordt een planningsinvoer toegevoegd aan uw AlgaPSA-agenda.",
         "startRequired": "Starttijd is vereist om een Teams-vergadering aan te maken",
         "unavailable": "Het aanmaken van Teams-vergaderingen is niet beschikbaar voor deze tenant."
       },
       "loadFailed": "Interactieopties konden niet worden geladen. Probeer het opnieuw.",
-      "saveFailed": "De interactie kon niet worden opgeslagen. Probeer het opnieuw."
+      "saveFailed": "De interactie kon niet worden opgeslagen. Probeer het opnieuw.",
+      "schedule": {
+        "addToggle": "Toevoegen aan planning",
+        "addHelp": "Er wordt een planningsinvoer toegevoegd aan uw AlgaPSA-agenda.",
+        "addHelpOthers": "Er wordt een planningsinvoer toegevoegd aan de AlgaPSA-agenda's van de geselecteerde gebruikers.",
+        "assigneesLabel": "Plannen voor",
+        "assigneesPlaceholder": "Gebruikers selecteren"
+      },
+      "assignedTo": {
+        "label": "Toegewezen aan",
+        "placeholder": "Gebruiker selecteren"
+      }
     },
     "feed": {
       "addInteraction": "Interactie toevoegen",
@@ -1475,6 +1509,13 @@
       "allContacts": "Alle contacten",
       "allStatuses": "Alle statussen",
       "allUsers": "Alle gebruikers",
+      "columns": { "type": "Type", "title": "Titel", "client": "Klant", "contact": "Contact", "user": "Gebruiker", "date": "Datum", "status": "Status" },
+      "empty": "Geen interacties komen overeen met deze filters.",
+      "loading": "Interacties laden…",
+      "openClient": "Klant {{name}} openen",
+      "openContact": "Contact {{name}} openen",
+      "openInteraction": "Interactie {{title}} openen",
+      "openUser": "Gebruiker {{name}} openen",
       "byUser": "Door {{name}}",
       "collapse": "Recente interacties samenvouwen",
       "contactsFromClient": "Contacten van de geselecteerde klant",
@@ -1743,7 +1784,9 @@
       "missingField": "Er ontbreekt een verplicht interactieveld.",
       "missingFieldNamed": "Er ontbreekt een verplicht interactieveld: {{field}}.",
       "referenceMissing": "De geselecteerde interactie, klant, contactpersoon, gebruiker, status of het type bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
-      "duplicate": "Er bestaat al een interactie met deze gegevens."
+      "duplicate": "Er bestaat al een interactie met deze gegevens.",
+      "scheduleAssignDenied": "Toestemming geweigerd: planningsinvoeren kunnen niet aan andere gebruikers worden toegewezen.",
+      "scheduleUsersMissing": "Een of meer toegewezen gebruikers konden niet worden gevonden."
     },
     "interactionType": {
       "notFound": "Interactietype niet gevonden of u hebt er geen toegang toe.",

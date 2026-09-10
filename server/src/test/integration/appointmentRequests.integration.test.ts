@@ -1,7 +1,7 @@
 import { beforeAll, beforeEach, afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
-import { formatInTimeZone } from 'date-fns-tz';
+import { formatInTimeZone, fromZonedTime } from 'date-fns-tz';
 import { tenantDb } from '@alga-psa/db';
 
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
@@ -1233,8 +1233,16 @@ describe('Appointment Request Integration Tests', () => {
     });
 
     it('converts requester-local approval times to UTC before creating the Teams meeting', async () => {
+      // Relative to today: a fixed date silently rots into "requested date cannot
+      // be in the past" once it passes. The expected UTC instants are derived from
+      // the same date so the assertion stays valid across DST.
+      const requesterTimezone = 'America/Los_Angeles';
+      const requestedDate = getFutureDateString(30);
+      const expectedStart = fromZonedTime(`${requestedDate}T14:30:00`, requesterTimezone).toISOString();
+      const expectedEnd = fromZonedTime(`${requestedDate}T15:30:00`, requesterTimezone).toISOString();
+
       const fixture = await createPendingAppointmentFixture(db, tenantId, {
-        requestedDate: '2026-08-25',
+        requestedDate,
         requestedTime: '14:30',
         requestedDuration: 60,
       });
@@ -1245,7 +1253,7 @@ describe('Appointment Request Integration Tests', () => {
           tenant: tenantId,
         })
         .update({
-          requester_timezone: 'America/Los_Angeles',
+          requester_timezone: requesterTimezone,
         });
 
       setStaffSchedulingContext(tenantId);
@@ -1259,20 +1267,20 @@ describe('Appointment Request Integration Tests', () => {
       expect(approveResult.success).toBe(true);
       expect(createTeamsMeetingWithResultMock).toHaveBeenCalledWith(
         expect.objectContaining({
-          startDateTime: '2026-08-25T21:30:00.000Z',
-          endDateTime: '2026-08-25T22:30:00.000Z',
+          startDateTime: expectedStart,
+          endDateTime: expectedEnd,
         })
       );
 
       const createArgs = createTeamsMeetingWithResultMock.mock.calls.at(-1)?.[0];
-      expect(formatInTimeZone(createArgs.startDateTime, 'America/Los_Angeles', 'yyyy-MM-dd HH:mm')).toBe('2026-08-25 14:30');
-      expect(formatInTimeZone(createArgs.endDateTime, 'America/Los_Angeles', 'yyyy-MM-dd HH:mm')).toBe('2026-08-25 15:30');
+      expect(formatInTimeZone(createArgs.startDateTime, requesterTimezone, 'yyyy-MM-dd HH:mm')).toBe(`${requestedDate} 14:30`);
+      expect(formatInTimeZone(createArgs.endDateTime, requesterTimezone, 'yyyy-MM-dd HH:mm')).toBe(`${requestedDate} 15:30`);
     });
   });
 
   describe('Schedule Teams Meeting (MSP)', () => {
-    const startDateTime = '2026-08-25T14:00:00.000Z';
-    const endDateTime = '2026-08-25T14:30:00.000Z';
+    const startDateTime = `${getFutureDateString(30)}T14:00:00.000Z`;
+    const endDateTime = `${getFutureDateString(30)}T14:30:00.000Z`;
 
     async function setupMspMeetingContext() {
       const setup = await setupTestData(db, tenantId, { skipService: true });
@@ -1322,6 +1330,15 @@ describe('Appointment Request Integration Tests', () => {
             emailAddress: {
               address: 'client-attendee@example.com',
               name: 'Client Attendee',
+            },
+            type: 'required',
+          },
+          // The Graph organizer is the tenant's shared resource account, so
+          // ensureCreatorAttendee puts the scheduling user on their own invite.
+          {
+            emailAddress: {
+              address: 'mock.internal@example.com',
+              name: 'Mock Internal',
             },
             type: 'required',
           },

@@ -299,9 +299,6 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const entraClientSyncFlag = useFeatureFlag('entra-integration-client-sync-action', {
     defaultValue: false,
   });
-  const hourBlocksFlag = useFeatureFlag('release-v1-5-feature', {
-    defaultValue: false,
-  });
   const entraSyncPermission = useEntraSyncPermission();
   const showEntraSyncAction = shouldShowEntraSyncAction(
     isEEAvailable ? 'enterprise' : process.env.NEXT_PUBLIC_EDITION,
@@ -312,9 +309,9 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const shouldRenderPsaOnlyClientSurfaces = !isAlgaDeskMode;
   // F070: EE + Hudu connected + this client mapped.
   const huduClientTab = useHuduClientTab(client.client_id);
-  // Credentials vault: EE + release-v1-5-feature + tier. When visible the
-  // unified Passwords tab replaces the Hudu-only one; when off, the legacy tab
-  // registration above is preserved exactly.
+  // Credentials vault: EE + tier. When visible the unified Passwords tab
+  // replaces the Hudu-only one; otherwise the legacy tab registration above
+  // is preserved exactly.
   const credentialsVaultTab = useCredentialsVaultTab();
   // F023: shown only when the current user has inventory:read.
   const clientEquipmentTab = useClientEquipmentTab();
@@ -1457,7 +1454,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       content: (
         <div className="bg-white p-6 rounded-lg shadow-sm space-y-6">
           <ClientContractLineDashboard clientId={client.client_id} />
-          {hourBlocksFlag.enabled && renderHourBlocksSection?.({
+          {renderHourBlocksSection?.({
             clientId: client.client_id,
             currencyCode: client.default_currency_code ?? 'USD',
           })}

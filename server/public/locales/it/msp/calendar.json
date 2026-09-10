@@ -104,6 +104,9 @@
           "confirmLabel": "Elimina provider",
           "cancelLabel": "Mantieni provider"
         }
+      },
+      "errors": {
+        "notAuthorized": "Questo provider di calendario non ha ancora completato l'autorizzazione OAuth. Apri le impostazioni, fai clic su Autorizza e riprova la sincronizzazione."
       }
     },
     "sync": {

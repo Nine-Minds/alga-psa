@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "suite": "temporal-database",
+  "revision": "cc1e6f9f9c03635c8c1ea193e81702c24e9c87dc",
+  "status": "passed",
+  "counts": {
+    "passed": 27,
+    "failed": 0,
+    "skipped": 0,
+    "todo": 0,
+    "pending": 0
+  },
+  "source": {
+    "before": {
+      "revision": "cc1e6f9f9c03635c8c1ea193e81702c24e9c87dc",
+      "dirty": false,
+      "changes": []
+    },
+    "after": {
+      "revision": "cc1e6f9f9c03635c8c1ea193e81702c24e9c87dc",
+      "dirty": false,
+      "changes": []
+    }
+  },
+  "selection": {
+    "mode": "full",
+    "filters": [],
+    "allFiles": [
+      "ee/temporal-workflows/src/__tests__/e2e/tenant-creation-workflow.e2e.test.ts",
+      "ee/temporal-workflows/src/activities/__tests__/tenant-activities.test.ts",
+      "ee/temporal-workflows/src/activities/__tests__/user-activities-simple.test.ts",
+      "ee/temporal-workflows/src/db/__tests__/database-connection.integration.test.ts",
+      "ee/temporal-workflows/src/db/__tests__/product-upgrade-operations.integration.test.ts",
+      "ee/temporal-workflows/src/db/__tests__/tenant-setup-idempotency.integration.test.ts"
+    ],
+    "shard": {
+      "index": 1,
+      "total": 1
+    }
+  },
+  "backend": "Owned migrated single-node Citus at localhost:55433/citus_runtime_82cc",
+  "durationSeconds": 16.2,
+  "discoveryStatus": "passed",
+  "fileCount": 6,
+  "artifacts": [
+    {
+      "path": "test-results/temporal-database/collected.json",
+      "sha256": "d5e65023dadcb27673144e312e82779847be8641fa4313122e47a3da63734eee"
+    },
+    {
+      "path": "test-results/temporal-database/collected-tests.json",
+      "sha256": "a0172b80009f786ca15b012a133fb0dcca9768dc52f13d04e26a50dd854c764d"
+    },
+    {
+      "path": "test-results/temporal-database/results.json",
+      "sha256": "89d0abbbc796c919e24c89a9f5df2d92ef6a864f35e5d267d70565201fba0f58"
+    },
+    {
+      "path": "test-results/temporal-database/evidence.json",
+      "sha256": "5716c313ea88f73524e228377609ed0b0fe26ffaadbae4d08fb5b3d1a015b999"
+    },
+    {
+      "path": "test-results/temporal-database/discovery.json",
+      "sha256": "b01efeb2e78d066a272db55a34298147bf8bf973dc889053af97bb8df5c01ae3"
+    },
+    {
+      "path": "/tmp/alga-temporal-db-citus-cc1e6f.log",
+      "sha256": "6c0b72b3d1f9439a0c47cf851e23b8eb6fac28203ceac6983e299ad61925a0aa"
+    }
+  ],
+  "limitations": [
+    "Local Node 25 execution, not native CI.",
+    "Already migrated single-node database; not a previous-supported-release schema upgrade or multi-node validation.",
+    "The invoice/workflow runtime report is from a different revision, so the complete same-candidate Citus aggregate is not established by this run."
+  ]
+}

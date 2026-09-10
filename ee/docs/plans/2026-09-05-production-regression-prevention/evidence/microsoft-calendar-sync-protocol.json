@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "kind": "microsoft-calendar-sync-protocol",
+  "baseRevision": "a375a88364",
+  "status": "local-passed-native-pending",
+  "coverage": [
+    "Primary-calendar delta snapshots retain the original date window and freeze results across pages",
+    "Real shared/enterprise adapters follow nextLink across101events and consume deltaLink for updates/deletions",
+    "Invalid or reset cursors require fresh synchronization; cursors are client-bound",
+    "Events overlapping date-window boundaries are included; moved-out tracked events yield tombstones",
+    "Calendar create/update/delete notifications respect resource, change type and expiry",
+    "Vendor control changes persist state and return explicit callback delivery results; redirects are not followed",
+    "Mailbox notifications do not reach calendar subscriptions"
+  ],
+  "validation": {
+    "emulatorFilesPassed": 4,
+    "emulatorTestsPassed": 46,
+    "emulatorLogSha256": "860d5e7e08e247bdef2b21026e11b834ca8c91a3595448aeaf3239652a019b63",
+    "adapterTestsPassed": 12,
+    "adapterTestsFailed": 0,
+    "adapterReportSha256": "267af23be1f592aa9c4ba800f7ec4242507762ed3336f662383083db6a84406a",
+    "emulatorBuild": "passed",
+    "emulatorTypecheck": "passed",
+    "targetedAdapterTypecheck": "passed",
+    "hostTimezone": "America/New_York"
+  },
+  "faultEvidence": {
+    "change": "Temporarily restored the previous mailbox subscription filter",
+    "result": "Calendar resource isolation assertion failed: mail notification delivered to calendar, created-only calendar and other-organizer subscriptions",
+    "beforeLogSha256": "dee0e1e06b18f5c20bacb17d8f8e7b9796ceb87bf604948fc1590face4573ab8",
+    "restoredFullSuite": "46passed,zero skipped"
+  },
+  "protocolReference": "https://learn.microsoft.com/en-us/graph/api/event-delta?view=graph-rest-1.0",
+  "limitations": [
+    "One delegated mailbox; client-bound cursors do not establish Entra user/permission isolation",
+    "Single-instance UTC events only; recurrence and non-UTC delta fail explicitly",
+    "Only tombstones for previously tracked events, not optional Graph tombstones for unrelated out-of-window changes",
+    "No automatic callback delivery retry",
+    "Primary-calendar HTTP mutations and calendar-change controls deliver notifications; existing Teams /users event mutations are not covered by this notification test",
+    "HTTPS calendar callback requirement remains intact; full browser/provider setup, callback persistence and worker synchronization still pending",
+    "Provider persistence and EE credential lookup are fixture seams in adapter tests"
+  ],
+  "plan": "F034 remains incomplete. These are protocol prerequisites, not native calendar browser acceptance."
+}

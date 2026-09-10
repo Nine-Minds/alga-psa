@@ -40,6 +40,7 @@ describe('T002: static i18n wiring audit', () => {
     'TaskDependencies.tsx',
     'ProjectMaterialsDrawer.tsx',
     'ProjectTaskExportDialog.tsx',
+    'SendStatusUpdateDialog.tsx',
     'ProjectQuickAdd.tsx',
     'ProjectDetailsEdit.tsx',
     'PrefillFromTicketDialog.tsx',

@@ -411,7 +411,9 @@
         "missingPlanOrServiceInformation": "Fehlende Plan- oder Serviceinformationen"
       },
       "loading": "Dienstkonfiguration wird geladen...",
-      "title": "Bearbeiten Sie die Dienstkonfiguration"
+      "title": "Bearbeiten Sie die Dienstkonfiguration",
+      "effectiveFrom": "Mengen- oder Messänderung wirksam ab",
+      "effectiveHelp": "Änderungen werden an dieser Leistungszeitraumgrenze wirksam. Frühere Zeiträume behalten ihre Preise und Messweise."
     },
     "tierEditor": {
       "actions": {

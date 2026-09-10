@@ -22,7 +22,7 @@ const require = createRequire(import.meta.url);
 const repoRoot = path.resolve(process.cwd(), '..', '..');
 
 // Load the wired-in dev DB connection (server/.env.local) into the test env.
-loadDotEnv({ path: path.join(repoRoot, 'server', '.env.local'), override: true });
+loadDotEnv({ path: path.join(repoRoot, 'server', '.env.local'), override: false });
 
 // Snapshot the prior value BEFORE this suite sets it, so teardown can restore
 // exactly: delete when it was previously unset, otherwise restore the string.
@@ -35,6 +35,7 @@ delete process.env.ALGA_VAULT_ADDR;
 delete process.env.VAULT_ADDR;
 
 function readPostgresPassword(): string {
+  if (process.env.DB_PASSWORD_ADMIN) return process.env.DB_PASSWORD_ADMIN;
   try {
     return fs.readFileSync(path.join(repoRoot, 'secrets', 'postgres_password'), 'utf8').trim();
   } catch {
@@ -679,6 +680,7 @@ describe('credential associations — entity-wide (same-client + CRUD + migratio
       }
       case 'contract': {
         const contractId = randomUUID();
+        await assocDb('contracts').insert({ tenant: assocTenant, contract_id: contractId, contract_name: `Credential Contract ${contractId}` });
         await assocDb('client_contracts').insert({ tenant: assocTenant, contract_id: contractId, client_id: clientForEntity, start_date: new Date() });
         return contractId;
       }
@@ -788,6 +790,7 @@ describe('credential associations — entity-wide (same-client + CRUD + migratio
       await assocDb('projects').where({ tenant: assocTenant }).del();
       await assocDb('statuses').where({ tenant: assocTenant }).del();
       await assocDb('client_contracts').where({ tenant: assocTenant }).del();
+      await assocDb('contracts').where({ tenant: assocTenant }).del();
       await assocDb('quotes').where({ tenant: assocTenant }).del();
       await assocDb('tickets').where({ tenant: assocTenant }).del();
       await assocDb('assets').where({ tenant: assocTenant }).del();
@@ -1107,7 +1110,7 @@ describe('credential associations — entity-wide (same-client + CRUD + migratio
       client: 'pg',
       connection: {
         host: process.env.DB_HOST || '127.0.0.1',
-        port: 5472,
+        port: Number(process.env.DB_PORT_ADMIN || process.env.DB_PORT || '5432'),
         user: process.env.DB_USER_ADMIN || 'postgres',
         password: readPostgresPassword(),
         database: process.env.DB_NAME_SERVER || 'server',
@@ -1209,7 +1212,7 @@ describe('credential associations — entity-wide (same-client + CRUD + migratio
       client: 'pg',
       connection: {
         host: process.env.DB_HOST || '127.0.0.1',
-        port: 5472,
+        port: Number(process.env.DB_PORT_ADMIN || process.env.DB_PORT || '5432'),
         user: process.env.DB_USER_ADMIN || 'postgres',
         password: readPostgresPassword(),
         database: process.env.DB_NAME_SERVER || 'server',

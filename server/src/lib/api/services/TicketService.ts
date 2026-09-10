@@ -1,8 +1,11 @@
+import { publishEvent } from '@alga-psa/event-bus/publishers';
+import { persistCommentPublication } from '@shared/lib/ticketCommentAttachments';
 /**
  * Ticket Service
  * Business logic for ticket-related operations
  */
 
+import { reconcileCommentAttachments, canReadCommentAttachment, filterReadableCommentAttachments, canAccessAttachmentTicket } from '@shared/lib/ticketCommentAttachments';
 import { Knex } from 'knex';
 import {
   BaseService, ServiceContext, ListResult, withTransaction, tenantDb } from '@alga-psa/db';
@@ -32,6 +35,7 @@ import {
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
 import { NotFoundError, ValidationError, ConflictError, ForbiddenError } from '../middleware/apiMiddleware';
+import { hasPermission } from '../../auth/rbac';
 import { TicketModel, CreateTicketInput } from '@shared/models/ticketModel';
 import {
   TICKET_ACTIVITY_ACTOR,
@@ -684,7 +688,7 @@ export class TicketService extends BaseService<ITicket> {
       )
       .orderBy('d.updated_at', 'desc');
 
-    return documents as IDocument[];
+    return filterReadableCommentAttachments(knex, context.tenant, context.userId, documents) as Promise<IDocument[]>;
   }
 
   /**
@@ -1014,7 +1018,7 @@ export class TicketService extends BaseService<ITicket> {
     };
   }
 
-  async uploadTicketDocument(ticketId: string, file: File, context: ServiceContext): Promise<IDocument> {
+  async uploadTicketDocument(ticketId: string, file: File, context: ServiceContext, commentAttachmentDraft = false): Promise<IDocument> {
     const { knex } = await this.getKnex();
     this.assertValidTicketId(ticketId);
 
@@ -1033,6 +1037,7 @@ export class TicketService extends BaseService<ITicket> {
       ]);
     }
 
+    if (commentAttachmentDraft && !await canAccessAttachmentTicket(knex, context.tenant, context.userId, ticketId)) throw new NotFoundError('Ticket not found');
     const mimeType = file.type || 'application/octet-stream';
     try {
       await StorageService.validateFileUpload(context.tenant, mimeType, file.size);
@@ -1052,6 +1057,8 @@ export class TicketService extends BaseService<ITicket> {
       uploaded_by_id: context.userId,
     });
 
+    let documentCommitted = false;
+    try {
     const folderRecord = await tenantScopedTable(knex, 'document_folders', context.tenant)
       .where({
         entity_id: ticketId,
@@ -1077,10 +1084,15 @@ export class TicketService extends BaseService<ITicket> {
       mime_type: mimeType,
       file_size: file.size,
       folder_path: folderRecord?.folder_path,
+      ...(commentAttachmentDraft ? { is_client_visible: true } : {}),
     };
 
     await withTransaction(knex, async (trx) => {
       await tenantScopedTable(trx, 'documents', context.tenant).insert(document);
+      if (commentAttachmentDraft) await tenantDb(trx, context.tenant).table('ticket_comment_attachments').insert({
+        tenant: context.tenant, ticket_id: ticketId, document_id: documentId,
+        created_by: context.userId, state: 'draft', expires_at: new Date(Date.now() + 86400000),
+      });
       await tenantScopedTable(trx, 'document_associations', context.tenant).insert({
         association_id: uuidv4(),
         document_id: documentId,
@@ -1111,12 +1123,19 @@ export class TicketService extends BaseService<ITicket> {
       });
     });
 
+    documentCommitted = true;
     const createdDocument = await this.getDocumentById(documentId, context);
     if (!createdDocument) {
       throw new Error('Uploaded document could not be loaded');
     }
 
     return createdDocument;
+    } finally {
+      if (commentAttachmentDraft && !documentCommitted) {
+        try { await StorageService.deleteFile(uploadResult.file_id, context.userId); }
+        catch (error) { console.error('Unable to remove unclaimed comment attachment storage', error); }
+      }
+    }
   }
 
   async downloadTicketDocument(
@@ -1147,7 +1166,7 @@ export class TicketService extends BaseService<ITicket> {
       .select('d.file_id', 'd.document_name', 'd.mime_type')
       .first();
 
-    if (!doc || !doc.file_id) {
+    if (!doc || !doc.file_id || !await canReadCommentAttachment(knex, context.tenant, context.userId, documentId)) {
       throw new NotFoundError('Document not found');
     }
 
@@ -2145,6 +2164,8 @@ export class TicketService extends BaseService<ITicket> {
 
       const [comment] = await tenantScopedTable(trx, 'comments', context.tenant).insert(commentData).returning('*');
 
+      await reconcileCommentAttachments(trx, context.tenant, comment.comment_id, context.userId);
+
       if (apiIsReply) {
         await tenantScopedTable(trx, 'comment_threads', context.tenant)
           .where({ thread_id: apiThreadId })
@@ -2185,31 +2206,27 @@ export class TicketService extends BaseService<ITicket> {
         author_contact_email: null
       };
 
-      return {
-        response,
-        eventPayload: {
-          ticketId: ticketId,
-          userId: context.userId,
-          comment: {
-            id: comment.comment_id,
-            content: comment.note,
-            author: authorName,
-            isInternal: comment.is_internal
-          },
-          ...notificationSuppression,
-        }
+      const eventPayload = {
+        tenantId: context.tenant, ticketId, commentId: comment.comment_id, userId: context.userId,
+        comment: { id: comment.comment_id, content: comment.note, author: authorName, isInternal: comment.is_internal },
+        ...notificationSuppression,
       };
+      await persistCommentPublication(trx, { eventType: 'TICKET_COMMENT_ADDED', payload: eventPayload }, publishEvent);
+      return { response };
     });
 
-    // Publish after the transaction commits so email and in-app notification
-    // subscribers can load the ticket/comment rows reliably.
-    await this.safePublishEvent('TICKET_COMMENT_ADDED', context, result.eventPayload);
+    // Intent is persisted; after-commit dispatch and recurring recovery deliver it.
 
     return result.response;
   }
 
   /**
-   * Update an existing comment (only the comment author may edit)
+   * Update an existing comment. Only the comment author may edit their own
+   * comment. Comments with no authoring user (user_id null — e.g. inbound
+   * email comments attributed to a contact) have no owner who could ever
+   * edit them, so an operator holding the `ticket:update` RBAC permission
+   * (which covers updating tickets and their comments) may repair them; the
+   * repair is recorded in the comment metadata.
    */
   async updateComment(
     ticketId: string,
@@ -2232,17 +2249,49 @@ export class TicketService extends BaseService<ITicket> {
         throw new ValidationError('System-generated comments cannot be edited');
       }
 
+      let operatorRepair = false;
       if (comment.user_id !== context.userId) {
-        throw new ValidationError('You can only edit your own comments');
+        // Fail closed: the operator path requires a loaded caller user record
+        // (the API controller always provides one) and the RBAC permission.
+        const canOperatorRepair =
+          comment.user_id == null &&
+          context.user != null &&
+          (await hasPermission(context.user, 'ticket', 'update', trx));
+        if (!canOperatorRepair) {
+          throw new ValidationError('You can only edit your own comments');
+        }
+        operatorRepair = true;
+      }
+
+      const update: Record<string, unknown> = {
+        note: data.comment_text,
+        updated_at: knex.raw('now()'),
+      };
+      if (operatorRepair) {
+        // Preserve existing metadata (parser results, email threading data,
+        // attachments references) and append an attributable audit record.
+        const existingMetadata =
+          typeof comment.metadata === 'string'
+            ? JSON.parse(comment.metadata)
+            : comment.metadata ?? {};
+        const operatorEdits = Array.isArray(existingMetadata.operatorEdits)
+          ? existingMetadata.operatorEdits
+          : [];
+        update.metadata = {
+          ...existingMetadata,
+          operatorEdits: [
+            ...operatorEdits,
+            { userId: context.userId, at: new Date().toISOString() },
+          ],
+        };
       }
 
       const [updated] = await tenantScopedTable(trx, 'comments', context.tenant)
         .where({ comment_id: commentId })
-        .update({
-          note: data.comment_text,
-          updated_at: knex.raw('now()'),
-        })
+        .update(update)
         .returning('*');
+
+      await reconcileCommentAttachments(trx, context.tenant, commentId, context.userId);
 
       return {
         ...updated,

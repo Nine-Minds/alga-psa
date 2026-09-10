@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, type ReactNode } from 'react';
-import type { ITicket, IBoard } from '@alga-psa/types';
+import type { ITicket, IBoard, RmmCachedData } from '@alga-psa/types';
 import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 export interface AssetQuickAddTicketRenderProps {
@@ -12,6 +12,9 @@ export interface AssetQuickAddTicketRenderProps {
   assetId?: string;
   /** Display name shown in the dialog so the operator sees which asset will be linked. */
   assetName?: string;
+  prefilledTitle?: string;
+  prefilledDescription?: string;
+  prefilledDueDate?: Date | string | null;
 }
 
 export interface AssetTicketDetailsRenderProps {
@@ -28,11 +31,29 @@ export interface CreateTicketFromAssetData {
   client_id: string;
 }
 
+export interface AssetRmmCommandResult {
+  success: boolean;
+  message: string;
+  jobId?: string;
+}
+
+/**
+ * RMM device actions for the asset page. Implemented by @alga-psa/integrations
+ * (which owns the providers) and injected here, since feature packages may
+ * not import each other.
+ */
+export interface AssetRmmCallbacks {
+  getAssetRmmData: (assetId: string) => Promise<RmmCachedData | null>;
+  refreshAssetRmmData: (assetId: string) => Promise<RmmCachedData | null>;
+  triggerRmmReboot: (assetId: string) => Promise<AssetRmmCommandResult>;
+}
+
 export interface AssetCrossFeatureCallbacks {
   renderQuickAddTicket: (props: AssetQuickAddTicketRenderProps) => ReactNode;
   openTicketDetailsDrawer: (props: AssetTicketDetailsRenderProps) => Promise<void>;
   createTicketFromAsset: (data: CreateTicketFromAssetData) => Promise<ITicket | ActionMessageError | ActionPermissionError>;
   getAllBoards: (includeAll: boolean) => Promise<IBoard[]>;
+  rmm: AssetRmmCallbacks;
 }
 
 const AssetCrossFeatureContext = createContext<AssetCrossFeatureCallbacks | null>(null);

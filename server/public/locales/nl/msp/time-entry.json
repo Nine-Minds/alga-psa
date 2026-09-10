@@ -302,6 +302,12 @@
     "reverseApproval": {
       "reason": "Goedkeuring teruggedraaid door beheerder",
       "error": "Kan goedkeuring niet ongedaan maken: {{error}}"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} geselecteerd",
+        "clear": "Selectie wissen"
+      }
     }
   },
   "workItemDrawer": {

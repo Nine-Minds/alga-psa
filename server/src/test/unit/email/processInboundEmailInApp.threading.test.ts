@@ -28,6 +28,14 @@ function buildEmailData(overrides: Partial<EmailMessageDetails> = {}): EmailMess
     subject: 'Inbound subject',
     body: { text: 'Hello from client', html: undefined },
     attachments: [],
+    // Provider-fetched mail always carries the receiving MTA's
+    // Authentication-Results; contact attribution now needs an aligned pass.
+    // Aligned to the default From domain only, so overrides that forge a
+    // different sender stay unauthenticated.
+    headers: {
+      'Authentication-Results':
+        'mx.google.com; dkim=pass header.d=example.com; spf=pass smtp.mailfrom=client@example.com',
+    },
     ...overrides,
   };
 }

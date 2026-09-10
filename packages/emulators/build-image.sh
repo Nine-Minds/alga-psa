@@ -4,12 +4,13 @@
 # package bundles its billing-owned core at build time), so the image is just
 # the built packages plus their public npm dependencies.
 #
-# Usage: ./build-image.sh [image-tag]     (default: algasim:dev)
+# Usage: ./build-image.sh [image-tag | --stage-only] (default: algasim:dev)
+# --stage-only prepares the same context for a CI Buildx image export.
 set -euo pipefail
 cd "$(dirname "$0")"
 
 TAG="${1:-algasim:dev}"
-PACKAGES=(host msgraph qbo webhook-sink smtp-sink stripe suite)
+PACKAGES=(host msgraph qbo webhook-sink smtp-sink stripe xero suite)
 
 for pkg in "${PACKAGES[@]}"; do
   (cd "$pkg" && npx tsup)
@@ -55,5 +56,9 @@ fs.writeFileSync(`${stage}/package.json`, JSON.stringify({
 }, null, 2) + '\n');
 EOF
 
-docker build -t "$TAG" .
-echo "Built $TAG"
+if [[ "$TAG" == --stage-only ]]; then
+  echo "Prepared algasim image context in $PWD/$STAGE"
+else
+  docker build -t "$TAG" .
+  echo "Built $TAG"
+fi

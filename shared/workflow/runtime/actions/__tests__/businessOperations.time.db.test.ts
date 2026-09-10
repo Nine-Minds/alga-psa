@@ -96,15 +96,15 @@ async function grantWorkflowTimeTestPermissions(db: Knex, tenantId: string, user
   });
 
   const permissions = [
-    ['timeentry', 'create'],
-    ['timeentry', 'read'],
-    ['timeentry', 'update'],
-    ['timeentry', 'delete'],
-    ['timesheet', 'read'],
-    ['timesheet', 'read_all'],
-    ['timesheet', 'submit'],
-    ['timesheet', 'approve'],
-    ['timesheet', 'reverse'],
+    ['time_entry', 'create'],
+    ['time_entry', 'read'],
+    ['time_entry', 'update'],
+    ['time_entry', 'delete'],
+    ['time_sheet', 'read'],
+    ['time_sheet', 'read_all'],
+    ['time_sheet', 'submit'],
+    ['time_sheet', 'approve'],
+    ['time_sheet', 'reverse'],
   ] as const;
 
   for (const [resource, action] of permissions) {
@@ -375,7 +375,6 @@ async function createClient(db: Knex, tenantId: string, name = 'Test Client'): P
     created_at: now,
     updated_at: now,
     is_inactive: false,
-    credit_balance: 0,
   });
 
   return clientId;
@@ -481,7 +480,6 @@ async function createService(db: Knex, tenantId: string): Promise<string> {
       id: serviceTypeId,
       tenant: tenantId,
       name: 'Workflow Time Service Type',
-      billing_method: 'hourly',
       is_active: true,
       order_number: 1,
     });
@@ -496,8 +494,7 @@ async function createService(db: Knex, tenantId: string): Promise<string> {
     custom_service_type_id: serviceTypeId,
     item_kind: 'service',
     default_rate: 10000,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
+    unit_of_measure: 'hour',
   });
 
   return serviceId;
@@ -786,11 +783,22 @@ describe('time workflow runtime DB-backed action handlers', () => {
     });
     expect(updated.time_entry.total_minutes).toBe(90);
     expect(updated.time_entry.billable_minutes).toBe(90);
+    expect(updated.time_entry.notes).toBe('Project task entry');
+    expect(updated.time_entry.time_sheet_id).toBe(created.time_entry.time_sheet_id);
+    expect(updated.time_entry.work_date).toBe('2026-04-03');
 
     const afterUpdate = await tenantTable(db, runtimeState.tenantId, 'project_tasks')
       .where({ tenant: runtimeState.tenantId, task_id: taskId })
       .first('actual_hours');
     expect(Number(afterUpdate.actual_hours ?? 0)).toBe(90);
+
+    const cleared = await invokeAction('time.update_entry', {
+      entry_id: created.time_entry.entry_id,
+      notes: null,
+    });
+    expect(cleared.time_entry.notes).toBeNull();
+    expect(cleared.time_entry.time_sheet_id).toBe(created.time_entry.time_sheet_id);
+    expect(cleared.time_entry.total_minutes).toBe(90);
 
     const deleted = await invokeAction('time.delete_entry', {
       entry_id: created.time_entry.entry_id,
@@ -1294,8 +1302,8 @@ describe('time workflow runtime DB-backed action handlers', () => {
       end_time: '2026-04-07T14:00:00.000Z',
       work_date: '2026-04-07',
       work_timezone: 'America/New_York',
-      billable_duration: 0,
-      notes: 'Invalid duration entry',
+      billable_duration: 15,
+      notes: 'Invalid duration entry with billable time but no work item',
       approval_status: 'DRAFT',
       time_sheet_id: null,
       invoiced: false,
@@ -1390,9 +1398,9 @@ describe('time workflow runtime DB-backed action handlers', () => {
       clientId,
     });
     const serviceId = await createService(db, runtimeState.tenantId);
-    await createTimePeriod(db, runtimeState.tenantId, '2026-04-01', '2026-04-08');
+    await createTimePeriod(db, runtimeState.tenantId, '2026-04-01', '2026-04-09');
 
-    runtimeState.deniedPermissions.add('timeentry:create');
+    runtimeState.deniedPermissions.add('time_entry:create');
     await expect(invokeAction('time.create_entry', {
       user_id: entryUserId,
       start: '2026-04-08T09:00:00.000Z',
@@ -1403,7 +1411,7 @@ describe('time workflow runtime DB-backed action handlers', () => {
     })).rejects.toMatchObject({
       code: 'PERMISSION_DENIED',
     });
-    runtimeState.deniedPermissions.delete('timeentry:create');
+    runtimeState.deniedPermissions.delete('time_entry:create');
 
     const created = await invokeAction('time.create_entry', {
       user_id: entryUserId,
@@ -1414,15 +1422,15 @@ describe('time workflow runtime DB-backed action handlers', () => {
       link: { type: 'ticket', id: ticketId },
     });
 
-    runtimeState.deniedPermissions.add('timeentry:read');
+    runtimeState.deniedPermissions.add('time_entry:read');
     await expect(invokeAction('time.get_entry', {
       entry_id: created.time_entry.entry_id,
     })).rejects.toMatchObject({
       code: 'PERMISSION_DENIED',
     });
-    runtimeState.deniedPermissions.delete('timeentry:read');
+    runtimeState.deniedPermissions.delete('time_entry:read');
 
-    runtimeState.deniedPermissions.add('timesheet:approve');
+    runtimeState.deniedPermissions.add('time_sheet:approve');
     await expect(invokeAction('time.set_entry_approval_status', {
       entry_id: created.time_entry.entry_id,
       approval_status: 'SUBMITTED',
@@ -1445,7 +1453,7 @@ describe('time workflow runtime DB-backed action handlers', () => {
       clientId,
     });
     const serviceId = await createService(db, runtimeState.tenantId);
-    await createTimePeriod(db, runtimeState.tenantId, '2026-04-01', '2026-04-08');
+    await createTimePeriod(db, runtimeState.tenantId, '2026-04-01', '2026-04-09');
 
     const runIdCreate = uuidv4();
     const created = await invokeAction('time.create_entry', {

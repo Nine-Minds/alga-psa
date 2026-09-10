@@ -77,7 +77,6 @@
     "invoiceAmount": "Valor da fatura:",
     "selectCreditToApply": "Selecione crédito para aplicar",
     "amountToApply": "Valor a aplicar",
-    "creditOrderNote": "Os créditos são aplicados em ordem de data de vencimento (os mais antigos primeiro)",
     "creditOrderNoteExpirationFirst": "Os créditos são aplicados em ordem de data de vencimento (vencimento mais próximo primeiro)",
     "creditOrderNoteOldestFirst": "Os créditos são aplicados em ordem de data de criação (crédito mais antigo primeiro)",
     "creditOrderNoteNewestFirst": "Os créditos são aplicados em ordem de data de criação (crédito mais recente primeiro)",
@@ -144,7 +143,9 @@
       "reason": "Por que este crédito está sendo transferido?"
     },
     "hints": {
-      "amount": "Até {{amount}} disponível"
+      "amount": "Até {{amount}} disponível",
+      "currencyMatch": "O cliente selecionado usa a mesma moeda.",
+      "currencyMismatch": "O cliente selecionado usa uma moeda diferente; pode haver conversão."
     },
     "impact": {
       "current": "Restante atual",

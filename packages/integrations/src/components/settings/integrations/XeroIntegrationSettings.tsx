@@ -12,11 +12,13 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { ExternalLink, Link2, RefreshCw } from 'lucide-react';
 import {
   disconnectXero,
+  forceFinalizeXeroDisconnect,
   getXeroConnectionStatus,
   saveXeroCredentials
 } from '../../../actions/integrations/xeroActions';
 import { XeroLiveMappingManager } from '../../xero/XeroLiveMappingManager';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useAccountingCapabilities } from './useAccountingCapabilities';
 
 type XeroStatus = Awaited<ReturnType<typeof getXeroConnectionStatus>>;
 type TranslateFn = (key: string, options?: Record<string, unknown>) => string;
@@ -33,10 +35,22 @@ function describeCallbackError(code: string | null, t: TranslateFn): string | nu
       return t('integrations.xero.settings.callback.oauthFailed', { defaultValue: 'The Xero OAuth callback failed. Try connecting again. If the problem persists, review your redirect URI and scopes.' });
     case 'invalid_state':
       return t('integrations.xero.settings.callback.invalidState', { defaultValue: 'The Xero OAuth state was invalid or expired. Start the connect flow again.' });
+    case 'state_replayed':
+      return t('integrations.xero.settings.callback.stateReplayed', { defaultValue: 'This Xero connection request was already used. Start the connect flow again.' });
+    case 'session_expired':
+      return t('integrations.xero.settings.callback.sessionExpired', { defaultValue: 'Your session is no longer valid. Sign in and start the Xero connection again.' });
+    case 'user_mismatch':
+      return t('integrations.xero.settings.callback.userMismatch', { defaultValue: 'This Xero connection request belongs to another user. Sign in as the user who started it and try again.' });
+    case 'tenant_mismatch':
+      return t('integrations.xero.settings.callback.tenantMismatch', { defaultValue: 'This Xero connection request belongs to another workspace. Sign in to the correct workspace and start again.' });
+    case 'forbidden':
+      return t('integrations.xero.settings.callback.forbidden', { defaultValue: 'You no longer have permission to manage accounting connections. Ask an administrator for access.' });
     case 'missing_params':
       return t('integrations.xero.settings.callback.missingParams', { defaultValue: 'The Xero callback was missing required parameters. Start the connect flow again.' });
     case 'access_denied':
       return t('integrations.xero.settings.callback.accessDenied', { defaultValue: 'Xero access was denied before the connection completed.' });
+    case 'disconnect_in_progress':
+      return t('integrations.xero.settings.callback.disconnectInProgress', { defaultValue: 'Xero is being disconnected. Finish or finalize the disconnect before connecting again.' });
     default:
       return code ? t('integrations.xero.settings.callback.generic', { defaultValue: 'Xero returned an OAuth error: {{code}}', code }) : null;
   }
@@ -54,6 +68,7 @@ function statusBadgeVariant(status?: 'connected' | 'expired'): 'success' | 'seco
 
 export default function XeroIntegrationSettings() {
   const { t } = useTranslation('msp/integrations');
+  const caps = useAccountingCapabilities();
   const searchParams = useSearchParams();
   const [status, setStatus] = React.useState<XeroStatus | null>(null);
   const [loading, setLoading] = React.useState(true);
@@ -131,12 +146,50 @@ export default function XeroIntegrationSettings() {
 
     try {
       const result = await disconnectXero();
-      if (!result.success) {
-        setError(result.error ?? t('integrations.xero.settings.errors.disconnect', { defaultValue: 'Failed to disconnect Xero.' }));
+      if (result.status === 'disconnected') {
+        setSuccessMessage(t('integrations.xero.settings.disconnectSuccess', { defaultValue: 'The stored Xero connection was removed. Tenant-owned Xero app credentials were preserved.' }));
+        await load();
         return;
       }
 
-      setSuccessMessage(t('integrations.xero.settings.disconnectSuccess', { defaultValue: 'The stored Xero connection was removed. Tenant-owned Xero app credentials were preserved.' }));
+      if (result.status === 'pending' || result.status === 'partial') {
+        setSuccessMessage(t('integrations.xero.settings.disconnectPending', { defaultValue: 'Xero is being disconnected. Sync and exports are paused until provider cleanup completes; the disconnect keeps retrying automatically.' }));
+        await load();
+        return;
+      }
+
+      if (result.status === 'failed_permanent') {
+        setError(result.error ?? t('integrations.xero.settings.errors.disconnect', { defaultValue: 'Failed to disconnect Xero.' }));
+        await load();
+        return;
+      }
+
+      setError(result.error ?? t('integrations.xero.settings.errors.disconnect', { defaultValue: 'Failed to disconnect Xero.' }));
+    } finally {
+      setDisconnecting(false);
+    }
+  };
+
+  const handleRetryDisconnect = async () => {
+    await handleDisconnect();
+  };
+
+  const handleForceFinalize = async () => {
+    const reason = window.prompt(
+      t('integrations.xero.settings.disconnect.forceFinalizePrompt', { defaultValue: 'Reason for force-finalizing the Xero disconnect (recorded in the audit log):' })
+    );
+    if (!reason?.trim()) return;
+
+    setDisconnecting(true);
+    setError(null);
+    setSuccessMessage(null);
+    try {
+      const result = await forceFinalizeXeroDisconnect({ reason: reason.trim() });
+      if (!result.success) {
+        setError(result.error ?? t('integrations.xero.settings.errors.disconnect', { defaultValue: 'Failed to finalize the Xero disconnect.' }));
+        return;
+      }
+      setSuccessMessage(t('integrations.xero.settings.disconnectForceFinalized', { defaultValue: 'The Xero disconnect was force-finalized. Provider cleanup could not be confirmed, so the credentials were removed locally with an audit record.' }));
       await load();
     } finally {
       setDisconnecting(false);
@@ -146,6 +199,27 @@ export default function XeroIntegrationSettings() {
   const readyToSave = clientId.trim().length > 0 && clientSecret.trim().length > 0;
   const canConnect = Boolean(status?.credentials.ready);
   const defaultConnection = status?.defaultConnection;
+  const canManageConnections = caps.connectionsManage;
+  const canManageMappings = caps.mappingsManage;
+
+  // Wait for the capability check to resolve before hiding the panel, so a
+  // capable user never sees a brief "no permission" card while it loads.
+  if (caps.loaded && !caps.hasAny) {
+    return (
+      <div className="space-y-6" id="xero-integration-settings">
+        <Card id="xero-integration-no-permission-card">
+          <CardHeader>
+            <CardTitle>{t('integrations.xero.settings.title', { defaultValue: 'Xero' })}</CardTitle>
+            <CardDescription>
+              {t('integrations.xero.settings.noPermissionDescription', { defaultValue: 'You do not have permission to view or configure accounting integrations.' })}
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
+  const disconnectPending = Boolean(status?.disconnect && status.disconnect.status !== 'finalized');
+  const disconnectFailedPermanent = status?.disconnect?.status === 'failed_permanent';
 
   return (
     <div className="space-y-6" id="xero-integration-settings">
@@ -158,6 +232,14 @@ export default function XeroIntegrationSettings() {
       {error ? (
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      ) : null}
+
+      {!canManageConnections ? (
+        <Alert variant="info" id="xero-connection-manage-permission-notice">
+          <AlertDescription>
+            {t('integrations.xero.settings.connectionsPermissionNotice', { defaultValue: 'You can view Xero settings, but saving credentials, connecting, and disconnecting require the manage-connections capability. Ask an administrator to grant it.' })}
+          </AlertDescription>
         </Alert>
       ) : null}
 
@@ -218,7 +300,23 @@ export default function XeroIntegrationSettings() {
                         {scope}
                       </Badge>
                     ))}
+                    {status?.scopeSource === 'override' ? (
+                      <Badge id="xero-scope-override-badge" variant="outline">
+                        {t('integrations.xero.settings.scopeOverride', { defaultValue: 'Deployment override (XERO_OAUTH_SCOPES)' })}
+                      </Badge>
+                    ) : null}
                   </div>
+                  {status?.scopeOverrideInvalid?.length ? (
+                    <p id="xero-scope-override-invalid" className="mt-2 text-xs text-destructive">
+                      {t('integrations.xero.settings.scopeOverrideInvalid', {
+                        defaultValue: 'The XERO_OAUTH_SCOPES override was ignored because it contains invalid entries ({{scopes}}). The default scopes are used instead.',
+                        scopes: status.scopeOverrideInvalid.join(', ')
+                      })}
+                    </p>
+                  ) : null}
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    {t('integrations.xero.settings.scopeReconnectNote', { defaultValue: 'These scopes apply to new authorizations. An existing connection keeps the scopes it was originally granted; to apply the current set, disconnect and reconnect Xero. You can also remove this app from Connected apps in Xero to revoke earlier grants.' })}
+                  </p>
                 </div>
               </div>
 
@@ -228,6 +326,7 @@ export default function XeroIntegrationSettings() {
                   <Input
                     id="xero-client-id"
                     value={clientId}
+                    disabled={!canManageConnections}
                     onChange={(event) => setClientId(event.target.value)}
                     placeholder={t('integrations.xero.settings.clientIdPlaceholder', { defaultValue: 'Paste your tenant-owned Xero client ID' })}
                   />
@@ -248,6 +347,7 @@ export default function XeroIntegrationSettings() {
                     id="xero-client-secret"
                     type="password"
                     value={clientSecret}
+                    disabled={!canManageConnections}
                     onChange={(event) => setClientSecret(event.target.value)}
                     placeholder={t('integrations.xero.settings.clientSecretPlaceholder', { defaultValue: 'Paste your tenant-owned Xero client secret' })}
                   />
@@ -296,7 +396,7 @@ export default function XeroIntegrationSettings() {
                   id="xero-settings-save"
                   type="button"
                   onClick={() => void handleSave()}
-                  disabled={!readyToSave || saving}
+                  disabled={!readyToSave || saving || !canManageConnections}
                 >
                   {saving
                     ? t('integrations.xero.settings.actions.saving', { defaultValue: 'Saving…' })
@@ -316,6 +416,38 @@ export default function XeroIntegrationSettings() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {status?.disconnect && status.disconnect.status !== 'finalized' ? (
+            <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 dark:border-amber-500/40 dark:bg-amber-500/10" id="xero-disconnect-progress">
+              <p className="text-sm font-medium text-foreground">
+                {t('integrations.xero.settings.disconnect.inProgressTitle', { defaultValue: 'Xero disconnect in progress' })}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {t('integrations.xero.settings.disconnect.inProgressDescription', { defaultValue: 'Provider connections are being revoked. Sync and exports stay paused until every connection is confirmed removed.' })}
+              </p>
+              <ul className="mt-3 space-y-1.5 text-xs">
+                {status.disconnect.targets.map((target) => (
+                  <li key={target.targetId} className="flex items-center justify-between gap-2">
+                    <span className="truncate font-mono">{target.targetId === '__xero_oauth_grant__' ? t('integrations.xero.settings.disconnect.grantTarget', { defaultValue: 'OAuth grant revocation' }) : target.targetId}</span>
+                    <Badge variant={target.status === 'revoked' ? 'success' : target.status === 'failed_permanent' ? 'error' : 'secondary'}>
+                      {target.status === 'revoked'
+                        ? t('integrations.xero.settings.disconnect.targetRevoked', { defaultValue: 'revoked' })
+                        : target.status === 'failed_permanent'
+                          ? t('integrations.xero.settings.disconnect.targetFailed', { defaultValue: 'needs attention' })
+                          : t('integrations.xero.settings.disconnect.targetPending', { defaultValue: 'pending' })}
+                    </Badge>
+                  </li>
+                ))}
+              </ul>
+              {status.disconnect.status === 'failed_permanent' ? (
+                <Alert variant="destructive" className="mt-3">
+                  <AlertDescription>
+                    {t('integrations.xero.settings.disconnect.failedPermanentDescription', { defaultValue: 'Provider cleanup hit a permanent error. You can retry, or force-finalize to remove the stored credentials with an audit record.' })}
+                  </AlertDescription>
+                </Alert>
+              ) : null}
+            </div>
+          ) : null}
+
           {defaultConnection ? (
             <div className="rounded-lg border bg-muted/20 p-4 text-sm">
               <div className="flex flex-wrap items-center gap-2">
@@ -350,7 +482,7 @@ export default function XeroIntegrationSettings() {
           <Button
             id="xero-connect-button"
             type="button"
-            disabled={!canConnect}
+            disabled={!canConnect || !canManageConnections || disconnectPending}
             onClick={() => window.location.assign('/api/integrations/xero/connect')}
           >
             {defaultConnection
@@ -359,11 +491,33 @@ export default function XeroIntegrationSettings() {
           </Button>
 
           <div className="flex flex-wrap items-center gap-2">
+            {disconnectPending ? (
+              <Button
+                id="xero-retry-disconnect-button"
+                type="button"
+                variant="outline"
+                disabled={disconnecting || !canManageConnections}
+                onClick={() => void handleRetryDisconnect()}
+              >
+                {t('integrations.xero.settings.actions.retryDisconnect', { defaultValue: 'Retry Disconnect' })}
+              </Button>
+            ) : null}
+            {disconnectFailedPermanent ? (
+              <Button
+                id="xero-force-finalize-disconnect-button"
+                type="button"
+                variant="destructive"
+                disabled={disconnecting || !canManageConnections}
+                onClick={() => void handleForceFinalize()}
+              >
+                {t('integrations.xero.settings.actions.forceFinalizeDisconnect', { defaultValue: 'Force Finalize' })}
+              </Button>
+            ) : null}
             <Button
               id="xero-disconnect-button"
               type="button"
               variant="destructive"
-              disabled={!defaultConnection || disconnecting}
+              disabled={(!defaultConnection && !disconnectPending) || disconnecting || !canManageConnections}
               onClick={() => void handleDisconnect()}
             >
               {disconnecting
@@ -371,12 +525,14 @@ export default function XeroIntegrationSettings() {
                 : t('integrations.xero.settings.actions.disconnect', { defaultValue: 'Disconnect Xero' })}
             </Button>
 
-            <Button id="xero-open-accounting-exports" asChild variant="outline">
-              <Link href="/msp/billing?tab=accounting-exports" className="inline-flex items-center gap-2">
-                {t('integrations.csv.settings.exports.openButton', { defaultValue: 'Open Accounting Exports' })}
-                <ExternalLink className="h-4 w-4 opacity-80" />
-              </Link>
-            </Button>
+            {caps.exportsExecute && (
+              <Button id="xero-open-accounting-exports" asChild variant="outline">
+                <Link href="/msp/billing?tab=accounting-exports" className="inline-flex items-center gap-2">
+                  {t('integrations.csv.settings.exports.openButton', { defaultValue: 'Open Accounting Exports' })}
+                  <ExternalLink className="h-4 w-4 opacity-80" />
+                </Link>
+              </Button>
+            )}
           </div>
         </CardFooter>
       </Card>
@@ -396,7 +552,15 @@ export default function XeroIntegrationSettings() {
                 {t('integrations.xero.settings.mapping.alert', { defaultValue: 'Xero items, revenue accounts, tax rates, and tracking categories are loaded from the default connected organisation so live exports can keep using the first stored Xero connection in v1.' })}
               </AlertDescription>
             </Alert>
-            <XeroLiveMappingManager defaultConnection={defaultConnection} />
+            {canManageMappings ? (
+              <XeroLiveMappingManager defaultConnection={defaultConnection} />
+            ) : (
+              <Alert variant="info" id="xero-mapping-permission-notice">
+                <AlertDescription>
+                  {t('integrations.xero.settings.mapping.permissionNotice', { defaultValue: 'You can view the default connected organisation, but editing mappings requires the manage-mappings capability. Ask an administrator to grant it.' })}
+                </AlertDescription>
+              </Alert>
+            )}
           </CardContent>
         </Card>
       ) : (

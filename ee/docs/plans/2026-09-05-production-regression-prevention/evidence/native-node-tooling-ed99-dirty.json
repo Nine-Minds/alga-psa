@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "suite": "node-tooling",
+  "revision": "ed99d285b6a4cfa7a748564c0f07e4e1931a0edc",
+  "runtime": "v25.5.0",
+  "status": "passed",
+  "counts": {
+    "tests": 1044,
+    "passed": 1044,
+    "failed": 0,
+    "skipped": 0,
+    "todo": 0,
+    "cancelled": 0
+  },
+  "failures": [],
+  "source": {
+    "before": {
+      "revision": "ed99d285b6a4cfa7a748564c0f07e4e1931a0edc",
+      "dirty": false,
+      "changes": []
+    },
+    "after": {
+      "revision": "ed99d285b6a4cfa7a748564c0f07e4e1931a0edc",
+      "dirty": true,
+      "changes": [
+        {
+          "status": " M",
+          "file": "server/public/locales/xx/msp/billing.json"
+        },
+        {
+          "status": " M",
+          "file": "server/public/locales/yy/msp/billing.json"
+        }
+      ]
+    }
+  },
+  "durationMs": 166924.206291,
+  "acceptance": "Behavioral cases passed, but not accepted as a clean-source canonical run: concurrent billing T001 regenerated two pseudo-locale files into English key order.",
+  "requiredFiles": 91
+}

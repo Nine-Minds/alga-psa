@@ -406,11 +406,17 @@
       "refreshing": "Refrescante...",
       "refreshData": "Atualizar dados",
       "rebootDevice": "Reinicializar dispositivo",
+      "rebooting": "Reiniciando...",
       "editAsset": "Editar recurso",
       "deleteAsset": "Excluir recurso"
     },
     "values": {
       "unknownClient": "Cliente desconhecido"
+    },
+    "reboot": {
+      "title": "Reiniciar o dispositivo?",
+      "message": "{{name}} será reiniciado imediatamente por meio do {{provider}}. Qualquer pessoa conectada perderá o trabalho não salvo.",
+      "confirm": "Reiniciar agora"
     }
   },
   "assetDetailTabs": {
@@ -1162,14 +1168,6 @@
       "saveFailed": "Falha ao criar cronograma de manutenção"
     }
   },
-  "documentsPasswordsTab": {
-    "title": "Documentos e Senhas",
-    "description": "Guia combinada para documentos de ativos, credenciais e registros seguros relacionados",
-    "passwords": {
-      "title": "Senhas e segredos",
-      "comingSoon": "Gerenciamento seguro de senhas em breve."
-    }
-  },
   "maintenanceSchedulesTab": {
     "title": "Cronogramas de manutenção",
     "description": "Guia de gerenciamento do cronograma de manutenção para serviços planejados e trabalhos recorrentes",
@@ -1215,6 +1213,7 @@
     },
     "types": {
       "preventive": "Preventivo",
+      "corrective": "Corretivo",
       "inspection": "Inspeção",
       "calibration": "Calibração",
       "replacement": "Substituição"
@@ -1234,6 +1233,17 @@
         "title": "Excluir cronograma de manutenção",
         "message": "Tem certeza de que deseja excluir \"{{name}}\"? Esta ação não pode ser desfeita."
       }
+    }
+  },
+  "maintenanceCommandCenter": {
+    "title": "Central de controle de manutenção",
+    "description": "A próxima data de vencimento é calculada a partir da data de conclusão real.",
+    "assetsLink": "Ativos"
+  },
+  "maintenanceCompletionDialog": {
+    "errors": {
+      "performedDateRequired": "É necessária uma data de execução.",
+      "completeFailed": "Não foi possível concluir a manutenção."
     }
   },
   "relatedAssetsTab": {

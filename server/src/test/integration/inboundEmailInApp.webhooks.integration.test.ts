@@ -85,6 +85,9 @@ vi.mock('@alga-psa/shared/services/email/providers/GmailAdapter', () => {
   };
 });
 
+const MONITORED_FOLDER_ID = vi.hoisted(() => 'monitored-inbox-folder-id');
+const inboundReopenCounters = vi.hoisted(() => new Map<string, number>());
+
 vi.mock('@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter', () => {
   return {
     MicrosoftGraphAdapter: class MicrosoftGraphAdapter {
@@ -95,6 +98,14 @@ vi.mock('@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter', () =>
       async downloadMessageSource(messageId: string) {
         return microsoftDownloadMessageSourceMock(messageId);
       }
+      // fetchMicrosoftMessageForPointer refuses any message that does not live in
+      // a monitored folder; the fixture's messages always do.
+      async getMessageParentFolderId(_messageId: string) {
+        return MONITORED_FOLDER_ID;
+      }
+      async resolveFolderIds(_folderFilters: unknown) {
+        return new Set([MONITORED_FOLDER_ID]);
+      }
     },
   };
 });
@@ -104,6 +115,18 @@ vi.mock('@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter', () =>
 vi.mock('@alga-psa/shared/services/email/unifiedInboundEmailQueue', () => ({
   enqueueUnifiedInboundEmailQueueJob: (...args: any[]) =>
     enqueueUnifiedInboundEmailQueueJobMock(...args),
+  // checkInboundReopenRateLimit fails CLOSED, so a missing export here silently
+  // downgrades every reopen to comment-only. In-memory counters keep the
+  // backstop real without a Redis dependency; reset per test in afterEach.
+  getInboundEmailRedisClient: async () => ({
+    incr: async (key: string) => {
+      const next = (inboundReopenCounters.get(key) ?? 0) + 1;
+      inboundReopenCounters.set(key, next);
+      return next;
+    },
+    expire: async () => 1,
+    ttl: async () => 3600,
+  }),
 }));
 
 vi.mock('@alga-psa/storage', () => ({
@@ -305,6 +328,11 @@ async function setupInboundDefaults(params: { providerId: string; mailbox: strin
   return { defaultsId, subscriptionName };
 }
 
+// handleMicrosoftWebhookPost fails closed: a notification is rejected with 401
+// unless the provider has a stored verification token and the notification's
+// clientState matches it exactly.
+const MS_WEBHOOK_CLIENT_STATE = 'test-microsoft-webhook-client-state';
+
 async function setupMicrosoftProvider(params: {
   providerId: string;
   mailbox: string;
@@ -356,7 +384,7 @@ async function setupMicrosoftProvider(params: {
     token_expires_at: null,
     webhook_subscription_id: params.subscriptionId,
     webhook_expires_at: null,
-    webhook_verification_token: null,
+    webhook_verification_token: MS_WEBHOOK_CLIENT_STATE,
     created_at: db.fn.now(),
     updated_at: db.fn.now(),
   });
@@ -518,6 +546,41 @@ async function ensureSecondaryOpenStatus(boardIdForStatus: string): Promise<stri
 describeDb('Inbound email in-app processing via webhooks (integration)', () => {
   const cleanup: Array<() => Promise<void>> = [];
 
+  // Thread-header correlation is not sender-authenticated, so a reply matched by
+  // In-Reply-To/References is only applied to the ticket when the sender is the
+  // ticket's own client contact, an internal user, or an active watcher —
+  // otherwise it is quarantined as a thread-header hijack. Sender attribution
+  // additionally requires aligned SPF/DKIM (DMARC for internal identities), so a
+  // legitimate-reply fixture needs both a contact row and an auth-results header.
+  async function seedClientContactSender(email: string, fullName = 'Client Sender') {
+    const contactId = uuidv4();
+    await tenantTable('contacts').insert({
+      tenant: tenantId,
+      contact_name_id: contactId,
+      full_name: fullName,
+      email,
+      client_id: clientId,
+      created_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+    // afterEach pops LIFO; unshift so the contact outlives the comments that
+    // reference it (comments_tenant_contact_id_fk).
+    cleanup.unshift(async () => {
+      await tenantTable('contacts').where({ contact_name_id: contactId }).delete();
+    });
+    return contactId;
+  }
+
+  // Aligned DKIM authorizes contact attribution; aligned DMARC is required
+  // before an internal identity is granted (see allowsInternalSenderAttribution).
+  function dkimPassHeaders(email: string) {
+    return { 'authentication-results': `mx.example.com; dkim=pass header.d=${email.split('@')[1]}` };
+  }
+
+  function dmarcPassHeaders(email: string) {
+    return { 'authentication-results': `mx.example.com; dmarc=pass header.from=${email.split('@')[1]}` };
+  }
+
   beforeAll(async () => {
     process.env.NEXTAUTH_URL = 'http://localhost:3000';
     wireLocalTestDbEnv();
@@ -579,6 +642,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     process.env.INBOUND_EMAIL_IN_APP_PROVIDER_IDS = '';
     process.env.INBOUND_EMAIL_IN_APP_PROCESSING_ENABLED = '';
     process.env.IMAP_INBOUND_EMAIL_IN_APP_PROCESSING_ENABLED = '';
+    inboundReopenCounters.clear();
     enqueueUnifiedInboundEmailQueueJobMock.mockClear();
     storageUploadMock.mockReset();
     storageUploadMock.mockImplementation(async (_buffer: Buffer, storagePath: string) => ({
@@ -808,7 +872,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
       value: [
         {
           changeType: 'created',
-          clientState: 'ignored',
+          clientState: MS_WEBHOOK_CLIENT_STATE,
           resource: `/users/${uuidv4()}/messages/${messageId}`,
           resourceData: {
             '@odata.type': '#microsoft.graph.message',
@@ -858,6 +922,177 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     expect(() => JSON.parse(comments[0].note)).not.toThrow();
   });
 
+  // Run one raw multipart MIME message through the real path a live inbound email
+  // takes (webhook pointer -> unified queue job -> simpleParser -> reply parser ->
+  // ticket + comment) and return what landed in the database. The replyParser unit
+  // tests cannot catch a stale bundle or a divergence between fixture HTML and what
+  // mailparser actually emits; this can (alga0002339 shipped exactly that way).
+  async function processMicrosoftRawMime(params: {
+    subject: string;
+    text: string;
+    html: string;
+  }): Promise<{ ticket: any; comment: any; parserMeta: any }> {
+    const providerId = uuidv4();
+    const mailbox = `support-mime-${uuidv4().slice(0, 6)}@example.com`;
+    const subscriptionId = `sub-mime-${uuidv4()}`;
+    const { defaultsId } = await setupMicrosoftProvider({ providerId, mailbox, subscriptionId });
+    const messageId = `ms-mime-${uuidv4()}`;
+    cleanup.push(async () => {
+      await tenantTable('email_processed_messages').where({ provider_id: providerId }).delete();
+      await tenantTable('microsoft_email_provider_config').where({ email_provider_id: providerId }).delete();
+      await tenantTable('email_providers').where({ id: providerId }).delete();
+      await tenantTable('inbound_ticket_defaults').where({ id: defaultsId }).delete();
+    });
+
+    microsoftDownloadMessageSourceMock = vi.fn().mockResolvedValue(
+      buildMicrosoftMime({
+        from: 'sender@example.com',
+        to: mailbox,
+        subject: params.subject,
+        messageId,
+        text: params.text,
+        html: params.html,
+      })
+    );
+
+    const payload = {
+      value: [
+        {
+          changeType: 'created',
+          clientState: MS_WEBHOOK_CLIENT_STATE,
+          resource: `/users/${uuidv4()}/messages/${messageId}`,
+          resourceData: {
+            '@odata.type': '#microsoft.graph.message',
+            '@odata.id': 'ignored',
+            id: messageId,
+            subject: params.subject,
+          },
+          subscriptionExpirationDateTime: new Date(Date.now() + 60_000).toISOString(),
+          subscriptionId,
+          tenantId: 'ignored',
+        },
+      ],
+    };
+
+    const { handleMicrosoftWebhookPost } = await import(
+      '@alga-psa/integrations/webhooks/email/handlers/microsoftWebhookHandler'
+    );
+    const req = new NextRequest('http://localhost:3000/api/email/webhooks/microsoft', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const res = await handleMicrosoftWebhookPost(req);
+    expect(res.status).toBe(200);
+
+    await processEnqueuedUnifiedJobs();
+
+    const tickets = await tenantTable('tickets').where({ title: params.subject });
+    expect(tickets).toHaveLength(1);
+    const ticketId = tickets[0].ticket_id;
+    cleanup.push(async () => {
+      await tenantTable('comments').where({ ticket_id: ticketId }).delete();
+      await deleteTicketRows(ticketId);
+    });
+
+    const comments = await tenantTable('comments').where({ ticket_id: ticketId });
+    expect(comments).toHaveLength(1);
+    const metadata =
+      typeof comments[0].metadata === 'string' ? JSON.parse(comments[0].metadata) : comments[0].metadata;
+    return { ticket: tickets[0], comment: comments[0], parserMeta: metadata?.parser ?? {} };
+  }
+
+  it('Raw MIME: inline Outlook elementToProof blockquote does not truncate the body (alga0002339)', async () => {
+    const { comment, parserMeta } = await processMicrosoftRawMime({
+      subject: `Inline blockquote survives ${uuidv4().slice(0, 6)}`,
+      text: [
+        'Hi support team,',
+        '',
+        'For example, today I told a customer:',
+        '',
+        '> I will follow up with you on Friday morning.',
+        '',
+        'POST BLOCKQUOTE SURVIVES CLEAN BOOT',
+        '',
+        'Follow-up types we need:',
+        '- Call the customer back',
+        '- Send a summary email',
+        '',
+        'Kept promises are the whole ballgame.',
+      ].join('\r\n'),
+      html: [
+        '<html><body>',
+        '<p>Hi support team,</p>',
+        '<p>For example, today I told a customer:</p>',
+        '<blockquote class="elementToProof" style="border-left:3px solid rgb(200,200,200); padding-left:8px">',
+        'I will follow up with you on Friday morning.',
+        '</blockquote>',
+        '<p>POST BLOCKQUOTE SURVIVES CLEAN BOOT</p>',
+        '<p>Follow-up types we need:</p>',
+        '<ul><li>Call the customer back</li><li>Send a summary email</li></ul>',
+        '<p>Kept promises are the whole ballgame.</p>',
+        '</body></html>',
+      ].join(''),
+    });
+
+    // The authored content after the inline quote must reach the stored comment.
+    expect(comment.note).toContain('POST BLOCKQUOTE SURVIVES CLEAN BOOT');
+    expect(comment.note).toContain('Call the customer back');
+    expect(comment.note).toContain('Kept promises are the whole ballgame');
+    // And the parser must not claim a high-confidence blockquote cut it did not earn.
+    expect(parserMeta.heuristics ?? []).not.toContain('html-blockquote-trim');
+    expect(`${parserMeta.strategy}/${parserMeta.confidence}`).not.toBe('custom-boundary/high');
+  });
+
+  it('Raw MIME: inline blockquote followed by quoted history keeps the authored suffix and cuts the history', async () => {
+    const { comment } = await processMicrosoftRawMime({
+      subject: `Inline then history ${uuidv4().slice(0, 6)}`,
+      text: [
+        'The vendor told me:',
+        '',
+        '> The replacement part ships Monday.',
+        '',
+        'Please plan the install for Wednesday.',
+        '',
+        'On Tue, Sep 1, 2026 at 9:00 AM Support <support@example.com> wrote:',
+        '> Vendor has not confirmed a ship date yet.',
+      ].join('\r\n'),
+      html: [
+        '<html><body>',
+        '<p>The vendor told me:</p>',
+        '<blockquote class="elementToProof">The replacement part ships Monday.</blockquote>',
+        '<p>Please plan the install for Wednesday.</p>',
+        '<div class="gmail_quote"><div>On Tue, Sep 1, 2026 at 9:00 AM Support wrote:</div>',
+        '<blockquote class="gmail_quote"><p>Vendor has not confirmed a ship date yet.</p></blockquote></div>',
+        '</body></html>',
+      ].join(''),
+    });
+
+    expect(comment.note).toContain('The replacement part ships Monday');
+    expect(comment.note).toContain('Please plan the install for Wednesday');
+    expect(comment.note).not.toContain('has not confirmed a ship date');
+  });
+
+  it('Raw MIME: bottom-posted reply keeps the answer below the quoted block', async () => {
+    const { comment } = await processMicrosoftRawMime({
+      subject: `Bottom post answer ${uuidv4().slice(0, 6)}`,
+      text: [
+        '> Could you confirm the maintenance window for tonight?',
+        '',
+        'Yes, use 10pm Eastern.',
+      ].join('\r\n'),
+      html: [
+        '<html><body>',
+        '<blockquote type="cite"><p>Could you confirm the maintenance window for tonight?</p></blockquote>',
+        '<p>Yes, use 10pm Eastern.</p>',
+        '</body></html>',
+      ].join(''),
+    });
+
+    expect(comment.note).toContain('10pm Eastern');
+    expect(comment.note).not.toContain('Could you confirm the maintenance window');
+  });
+
   it('Microsoft: in-app path persists regular attachment, embedded image, and original .eml via shared artifact orchestrator', async () => {
     const providerId = uuidv4();
     const mailbox = `support-ms-artifacts-${uuidv4().slice(0, 6)}@example.com`;
@@ -894,7 +1129,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
       value: [
         {
           changeType: 'created',
-          clientState: 'ignored',
+          clientState: MS_WEBHOOK_CLIENT_STATE,
           resource: `/users/${uuidv4()}/messages/${messageId}`,
           resourceData: {
             '@odata.type': '#microsoft.graph.message',
@@ -1308,6 +1543,9 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
       await deleteTicketRows(ticketId);
     });
 
+    const threadSenderEmail = `thread-sender-${uuidv4().slice(0, 6)}@example.com`;
+    await seedClientContactSender(threadSenderEmail, 'Sender');
+
     const result = await processInboundEmailInApp({
       tenantId,
       providerId,
@@ -1317,7 +1555,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
         providerId,
         tenant: tenantId,
         receivedAt: new Date().toISOString(),
-        from: { email: 'sender@example.com', name: 'Sender' },
+        from: { email: threadSenderEmail, name: 'Sender' },
         to: [{ email: mailbox, name: 'Support' }],
         subject: 'Re: Header threaded ticket',
         inReplyTo: originalMessageId,
@@ -1327,6 +1565,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
           html: undefined,
         },
         attachments: [],
+        headers: dkimPassHeaders(threadSenderEmail),
       } as any,
     });
 
@@ -1454,6 +1693,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
           html: undefined,
         },
         attachments: [],
+        headers: dmarcPassHeaders(internalReplyEmail),
       } as any,
     });
 
@@ -1578,6 +1818,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
         references: [originalMessageId],
         body: { text: 'Follow-up requiring reopen', html: undefined },
         attachments: [],
+        headers: dmarcPassHeaders(internalReplyEmail),
       } as any,
     });
 
@@ -1651,6 +1892,9 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
       await deleteTicketRows(ticketId);
     });
 
+    const threadSenderEmail = `client-${uuidv4().slice(0, 6)}@example.com`;
+    await seedClientContactSender(threadSenderEmail);
+
     const result = await processInboundEmailInApp({
       tenantId,
       providerId,
@@ -1660,13 +1904,14 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
         providerId,
         tenant: tenantId,
         receivedAt: new Date().toISOString(),
-        from: { email: `client-${uuidv4().slice(0, 6)}@example.com`, name: 'Client Sender' },
+        from: { email: threadSenderEmail, name: 'Client Sender' },
         to: [{ email: mailbox, name: 'Support' }],
         subject: 'Re: Closed ticket for reopen-disabled test',
         inReplyTo: originalMessageId,
         references: [originalMessageId],
         body: { text: 'Any update?', html: undefined },
         attachments: [],
+        headers: dkimPassHeaders(threadSenderEmail),
       } as any,
     });
 
@@ -1745,6 +1990,9 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     });
 
     const subject = `Re: Closed ticket for cutoff reroute test ${uuidv4().slice(0, 6)}`;
+    const threadSenderEmail = `client-cutoff-${uuidv4().slice(0, 6)}@example.com`;
+    await seedClientContactSender(threadSenderEmail);
+
     const result = await processInboundEmailInApp({
       tenantId,
       providerId,
@@ -1754,18 +2002,29 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
         providerId,
         tenant: tenantId,
         receivedAt: new Date().toISOString(),
-        from: { email: `client-cutoff-${uuidv4().slice(0, 6)}@example.com`, name: 'Client Sender' },
+        from: { email: threadSenderEmail, name: 'Client Sender' },
         to: [{ email: mailbox, name: 'Support' }],
         subject,
         inReplyTo: originalMessageId,
         references: [originalMessageId],
         body: { text: 'Need more work on this issue.', html: undefined },
         attachments: [],
+        headers: dkimPassHeaders(threadSenderEmail),
       } as any,
     });
 
     expect(result.outcome).toBe('created');
     expect(result.outcome === 'created' ? result.ticketId : null).not.toBe(oldTicketId);
+
+    // The reroute creates a ticket the fixture never inserted; it pins the
+    // sender's contact row (tickets_tenant_contact_name_id_foreign).
+    const reroutedTicketId = result.outcome === 'created' ? result.ticketId : null;
+    if (reroutedTicketId) {
+      cleanup.push(async () => {
+        await tenantTable('comments').where({ ticket_id: reroutedTicketId }).delete();
+        await deleteTicketRows(reroutedTicketId);
+      });
+    }
 
     const oldTicketAfter = await tenantTable('tickets').where({ ticket_id: oldTicketId }).first<any>();
     expect(oldTicketAfter.status_id).toBe(closedStatus.status_id);
@@ -1844,6 +2103,9 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
       await deleteTicketRows(ticketId);
     });
 
+    const threadSenderEmail = `client-reopen-${uuidv4().slice(0, 6)}@example.com`;
+    await seedClientContactSender(threadSenderEmail);
+
     const result = await processInboundEmailInApp({
       tenantId,
       providerId,
@@ -1853,13 +2115,14 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
         providerId,
         tenant: tenantId,
         receivedAt: new Date().toISOString(),
-        from: { email: `client-reopen-${uuidv4().slice(0, 6)}@example.com`, name: 'Client Sender' },
+        from: { email: threadSenderEmail, name: 'Client Sender' },
         to: [{ email: mailbox, name: 'Support' }],
         subject: 'Re: Closed ticket for client reopen test',
         inReplyTo: originalMessageId,
         references: [originalMessageId],
         body: { text: 'Can you continue this work?', html: undefined },
         attachments: [],
+        headers: dkimPassHeaders(threadSenderEmail),
       } as any,
     });
 
@@ -1947,6 +2210,9 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
       await deleteTicketRows(ticketId);
     });
 
+    const threadSenderEmail = `client-ack-${uuidv4().slice(0, 6)}@example.com`;
+    await seedClientContactSender(threadSenderEmail);
+
     const result = await processInboundEmailInApp({
       tenantId,
       providerId,
@@ -1956,13 +2222,14 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
         providerId,
         tenant: tenantId,
         receivedAt: new Date().toISOString(),
-        from: { email: `client-ack-${uuidv4().slice(0, 6)}@example.com`, name: 'Client Sender' },
+        from: { email: threadSenderEmail, name: 'Client Sender' },
         to: [{ email: mailbox, name: 'Support' }],
         subject: 'Re: Closed ticket for client ACK suppression test',
         inReplyTo: originalMessageId,
         references: [originalMessageId],
         body: { text: 'Thanks, all set.', html: undefined },
         attachments: [],
+        headers: dkimPassHeaders(threadSenderEmail),
       } as any,
     });
 
@@ -2059,6 +2326,9 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
       await deleteTicketRows(ticketId);
     });
 
+    const threadSenderEmail = `client-not-ack-${uuidv4().slice(0, 6)}@example.com`;
+    await seedClientContactSender(threadSenderEmail);
+
     const result = await processInboundEmailInApp({
       tenantId,
       providerId,
@@ -2068,13 +2338,14 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
         providerId,
         tenant: tenantId,
         receivedAt: new Date().toISOString(),
-        from: { email: `client-not-ack-${uuidv4().slice(0, 6)}@example.com`, name: 'Client Sender' },
+        from: { email: threadSenderEmail, name: 'Client Sender' },
         to: [{ email: mailbox, name: 'Support' }],
         subject: 'Re: Closed ticket for client NOT_ACK suppression test',
         inReplyTo: originalMessageId,
         references: [originalMessageId],
         body: { text: 'Please reopen and continue work on this issue.', html: undefined },
         attachments: [],
+        headers: dkimPassHeaders(threadSenderEmail),
       } as any,
     });
 
@@ -2165,6 +2436,9 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
       await deleteTicketRows(ticketId);
     });
 
+    const threadSenderEmail = `client-addon-missing-${uuidv4().slice(0, 6)}@example.com`;
+    await seedClientContactSender(threadSenderEmail);
+
     const result = await processInboundEmailInApp({
       tenantId,
       providerId,
@@ -2174,13 +2448,14 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
         providerId,
         tenant: tenantId,
         receivedAt: new Date().toISOString(),
-        from: { email: `client-addon-missing-${uuidv4().slice(0, 6)}@example.com`, name: 'Client Sender' },
+        from: { email: threadSenderEmail, name: 'Client Sender' },
         to: [{ email: mailbox, name: 'Support' }],
         subject: 'Re: Closed ticket for missing AI add-on fallback test',
         inReplyTo: originalMessageId,
         references: [originalMessageId],
         body: { text: 'Please proceed with additional work.', html: undefined },
         attachments: [],
+        headers: dkimPassHeaders(threadSenderEmail),
       } as any,
     });
 
@@ -2271,6 +2546,9 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
       await deleteTicketRows(ticketId);
     });
 
+    const threadSenderEmail = `client-ai-fallback-${uuidv4().slice(0, 6)}@example.com`;
+    await seedClientContactSender(threadSenderEmail);
+
     const result = await processInboundEmailInApp({
       tenantId,
       providerId,
@@ -2280,13 +2558,14 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
         providerId,
         tenant: tenantId,
         receivedAt: new Date().toISOString(),
-        from: { email: `client-ai-fallback-${uuidv4().slice(0, 6)}@example.com`, name: 'Client Sender' },
+        from: { email: threadSenderEmail, name: 'Client Sender' },
         to: [{ email: mailbox, name: 'Support' }],
         subject: 'Re: Closed ticket for AI fallback reopen test',
         inReplyTo: originalMessageId,
         references: [originalMessageId],
         body: { text: 'Please continue work despite classification fallback.', html: undefined },
         attachments: [],
+        headers: dkimPassHeaders(threadSenderEmail),
       } as any,
     });
 
@@ -2470,6 +2749,9 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
       await deleteTicketRows(ticketId);
     });
 
+    const threadSenderEmail = `client-meta-${uuidv4().slice(0, 6)}@example.com`;
+    await seedClientContactSender(threadSenderEmail);
+
     const result = await processInboundEmailInApp({
       tenantId,
       providerId,
@@ -2479,13 +2761,14 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
         providerId,
         tenant: tenantId,
         receivedAt: new Date().toISOString(),
-        from: { email: `client-meta-${uuidv4().slice(0, 6)}@example.com`, name: 'Client Sender' },
+        from: { email: threadSenderEmail, name: 'Client Sender' },
         to: [{ email: mailbox, name: 'Support' }],
         subject: 'Re: Closed ticket for metadata test',
         inReplyTo: originalMessageId,
         references: [originalMessageId],
         body: { text: 'Thanks for closing this.', html: undefined },
         attachments: [],
+        headers: dkimPassHeaders(threadSenderEmail),
       } as any,
     });
 
@@ -3551,7 +3834,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
       body: JSON.stringify({
         value: [{
           changeType: 'created',
-          clientState: 'ignored',
+          clientState: MS_WEBHOOK_CLIENT_STATE,
           resource: `/users/${uuidv4()}/messages/${messageId}`,
           resourceData: {
             '@odata.type': '#microsoft.graph.message',

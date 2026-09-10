@@ -52,6 +52,10 @@ function schemaTable(table: string) {
 async function cleanupTenant(tenantId: string): Promise<void> {
   await tenantTable(tenantId, 'invoice_charges').del();
   await tenantTable(tenantId, 'invoices').del();
+  // Billing profiles hold an FK to clients, so they have to go first. The rows
+  // are not created by this fixture — the code under test provisions a default
+  // profile for the client — so the teardown clears them defensively.
+  await tenantTable(tenantId, 'client_billing_profiles').del();
   await tenantTable(tenantId, 'clients').del();
   await tenantRows().where({ tenant: tenantId }).del();
 }

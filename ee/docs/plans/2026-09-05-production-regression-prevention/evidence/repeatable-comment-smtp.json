@@ -1,0 +1,36 @@
+{
+  "status": "Two previously opt-in SMTP cases replaced by required repeatable tests; native acceptance pending",
+  "scope": "Migrated PostgreSQL fixtures, persisted email provider settings, real TenantEmailService, SMTPEmailProvider, GreenMail SMTP delivery and MIME parsing. Storage byte retrieval and test connection routing are supplied by fixtures; attachment selection, delivery ledger, sender and subscriber are not mocked.",
+  "cases": [
+    "Direct send receives the exact PDF once; unrelated draft excluded; durable sent row exists; replay produces no additional message",
+    "Subscriber called without ambient tenant context receives the same attachment and preserves delivery deduplication"
+  ],
+  "environment": {
+    "database": "comment_smtp_repeatable_82cc",
+    "smtpHost": "127.0.0.1",
+    "smtpPort": 33025,
+    "apiPort": 38080,
+    "image": "greenmail/standalone:2.1.8",
+    "container": "alga-regression-comment-smtp",
+    "containerStatusAfter": "stopped",
+    "isolation": "Unique synthetic tenant/recipient per case; DB transaction rollback; no existing browser DB recreation; explicit isolated flag and ports required"
+  },
+  "validation": {
+    "passed": 2,
+    "failed": 0,
+    "skipped": 0,
+    "durationSeconds": 16.91,
+    "logLocal": "/tmp/alga-comment-smtp-repeatable-v3.log",
+    "types": "passed /tmp/alga-comment-smtp-types.log",
+    "workflow": "YAML parsed; CI service uses the same tested image/ports"
+  },
+  "initialFailures": [
+    "Internal Docker network did not expose published ports; attached only the dedicated sink to local bridge",
+    "GreenMail represents a nonexistent recipient with HTTP400 and an exact User not found message; fixture handles that response explicitly"
+  ],
+  "remaining": [
+    "Updated native full-suite execution",
+    "The other 47 assertions from the historical skipped inventory",
+    "Browser upload interactions remain a separate coverage concern; these cases start from persisted fixtures"
+  ]
+}

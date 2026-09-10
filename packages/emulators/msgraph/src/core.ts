@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+import { Temporal } from '@js-temporal/polyfill';
 import type { EmulatorCore, HostEnv } from '@alga-psa/emulator-host';
 
 /** Vendor-shaped error the wire shell turns into an HTTP response. */
@@ -10,6 +12,8 @@ export class GraphApiError extends Error {
 
 export interface GraphMessage {
   id: string;
+  parentFolderId: string;
+  internetMessageHeaders: Array<{ name: string; value: string }>;
   receivedDateTime: string;
   subject: string;
   bodyPreview: string;
@@ -93,6 +97,113 @@ export interface GraphChatMessage {
   body: { contentType: string; content: string };
 }
 
+export interface GraphOnlineMeeting {
+  id: string;
+  subject: string | null;
+  joinWebUrl: string;
+  startDateTime: string | null;
+  endDateTime: string | null;
+  /** Path segment the meeting was created under (organizer UPN or object id). */
+  organizerUserId: string;
+  createdDateTime: string;
+}
+
+export interface GraphCalendarEvent {
+  id: string;
+  subject: string | null;
+  organizerUserId: string;
+  start: unknown;
+  end: unknown;
+  isOnlineMeeting: boolean;
+  onlineMeeting: { joinUrl: string } | null;
+  /** The auto-created online meeting behind an isOnlineMeeting event. */
+  onlineMeetingId: string | null;
+  body: unknown;
+  attendees: unknown[];
+  createdDateTime: string;
+  location?: unknown;
+  showAs?: unknown;
+  sensitivity?: unknown;
+  isAllDay?: unknown;
+  singleValueExtendedProperties?: unknown;
+  lastModifiedDateTime?: string;
+  recurrence?: unknown;
+}
+
+type CalendarDeltaItem = GraphCalendarEvent | { id: string; '@removed': { reason: 'deleted' } };
+type CalendarDeltaSnapshot = {
+  clientId: string;
+  organizerUserId: string;
+  start: number;
+  end: number;
+  fingerprints: Map<string, string>;
+};
+type CalendarDeltaPage = {
+  clientId: string;
+  items: CalendarDeltaItem[];
+  offset: number;
+  pageSize: number;
+  deltaToken: string;
+};
+
+export type MeetingArtifactKind = 'recording' | 'transcript';
+
+export interface GraphMeetingArtifact {
+  id: string;
+  meetingId: string;
+  kind: MeetingArtifactKind;
+  createdDateTime: string;
+  /** VTT text for transcripts; stand-in payload for recordings. */
+  content: string;
+  contentType: string;
+}
+
+/** One Graph callRecords session endpoint (PSTN leg carries identity.phone). */
+export interface GraphCallRecordEndpoint {
+  identity: {
+    phone?: { id: string } | null;
+    user?: { id: string; displayName: string | null } | null;
+  };
+}
+
+export interface GraphCallRecordSession {
+  id: string;
+  caller: GraphCallRecordEndpoint;
+  callee: GraphCallRecordEndpoint;
+  startDateTime: string;
+  endDateTime: string;
+  modalities: string[];
+  failureInfo: { reason: string; stage: string } | null;
+}
+
+/**
+ * A recording/transcript on an ad hoc call — the Teams Phone equivalent of a
+ * meeting artifact, served from /users/{id}/adhocCalls/{callId}.
+ */
+export interface GraphCallArtifact {
+  id: string;
+  callId: string;
+  kind: MeetingArtifactKind;
+  createdDateTime: string;
+  /** VTT text for transcripts; stand-in payload for recordings. */
+  content: string;
+  contentType: string;
+}
+
+/** A Teams Phone call detail record served by /communications/callRecords. */
+export interface GraphCallRecord {
+  id: string;
+  version: number;
+  type: string;
+  modalities: string[];
+  startDateTime: string;
+  endDateTime: string;
+  lastModifiedDateTime: string;
+  organizer: { user: { id: string; displayName: string | null } } | null;
+  participants: unknown[];
+  sessions: GraphCallRecordSession[];
+}
+
 /** A conversation created through the Bot Framework connector (proactive send). */
 export interface BotConversation {
   id: string;
@@ -122,6 +233,19 @@ export interface ActivityNotificationRecord {
   id: string;
   userId: string;
   body: unknown;
+  receivedAt: string;
+}
+
+/**
+ * An outbound mail request captured by the Graph simulator. This records the
+ * wire route as received, rather than claiming that an email was delivered.
+ */
+export interface CapturedSendMail {
+  route: string;
+  mailbox: string | null;
+  encodedMailbox: string | null;
+  payload: unknown;
+  contentType: string | null;
   receivedAt: string;
 }
 
@@ -155,6 +279,28 @@ export interface InboundBotActivityInput {
    * so buildInboundActivity ignores it.
    */
   tokenAgeSeconds?: number;
+}
+
+/**
+ * Identity applied to bot-activity seeds that omit it. Repeating the same
+ * fromAadObjectId/conversationId on every seed was the single most common piece
+ * of boilerplate during the Teams work.
+ */
+export interface DefaultActor {
+  fromAadObjectId?: string;
+  fromId?: string;
+  fromName?: string;
+  conversationId?: string;
+  conversationType?: 'personal' | 'groupChat' | 'channel';
+  tenantId?: string;
+}
+
+/** A named seed payload the console can save and replay. */
+export interface SeedPreset {
+  name: string;
+  seeder: string;
+  payload: Record<string, unknown>;
+  savedAt: string;
 }
 
 export interface OperationFault {
@@ -194,6 +340,7 @@ export interface SeedMessageInput {
   from?: string;
   to?: string;
   receivedDateTime?: string;
+  authenticationResults?: string;
 }
 
 export interface SeedOrganizationInput {
@@ -256,7 +403,7 @@ export class MsGraphCore implements EmulatorCore {
     nonce?: string;
     scope?: string;
   }>();
-  private readonly refreshTokens = new Map<string, { clientId: string; revoked: boolean }>();
+  private readonly refreshTokens = new Map<string, { clientId: string; revoked: boolean; scope: string }>();
   private readonly accessTokens = new Map<string, { clientId: string; expiresAt: number }>();
   readonly messages = new Map<string, GraphMessage>();
   readonly subscriptions = new Map<string, GraphSubscription>();
@@ -267,9 +414,24 @@ export class MsGraphCore implements EmulatorCore {
   readonly teams = new Map<string, GraphTeam>();
   readonly chats = new Map<string, GraphChat>();
   readonly chatMessages = new Map<string, GraphChatMessage[]>();
+  readonly calendarEvents = new Map<string, GraphCalendarEvent>();
+  private readonly calendarDeltaSnapshots = new Map<string, CalendarDeltaSnapshot>();
+  private readonly calendarDeltaPages = new Map<string, CalendarDeltaPage>();
+  readonly onlineMeetings = new Map<string, GraphOnlineMeeting>();
+  /** Keyed by meeting id; holds both recordings and transcripts. */
+  readonly meetingArtifacts = new Map<string, GraphMeetingArtifact[]>();
+  /** Teams Phone call detail records, keyed by call record id. */
+  readonly callRecords = new Map<string, GraphCallRecord>();
+  /** Keyed by call id; holds both call recordings and call transcripts. */
+  readonly callArtifacts = new Map<string, GraphCallArtifact[]>();
+  /** Notification delivery results per call record, for the state view. */
+  readonly callRecordDeliveries = new Map<string, unknown[]>();
+  readonly seedPresets = new Map<string, SeedPreset>();
+  defaultActor: DefaultActor = {};
   readonly botConversations = new Map<string, BotConversation>();
   readonly capturedBotActivities: CapturedBotActivity[] = [];
   readonly activityNotifications: ActivityNotificationRecord[] = [];
+  readonly capturedSendMail: CapturedSendMail[] = [];
   readonly faults = new Map<string, OperationFault>();
   accessTokenTtlSeconds = 3600;
   rotateRefreshTokens = true;
@@ -292,9 +454,20 @@ export class MsGraphCore implements EmulatorCore {
     this.teams.clear();
     this.chats.clear();
     this.chatMessages.clear();
+    this.calendarEvents.clear();
+    this.calendarDeltaSnapshots.clear();
+    this.calendarDeltaPages.clear();
+    this.onlineMeetings.clear();
+    this.meetingArtifacts.clear();
+    this.callRecords.clear();
+    this.callArtifacts.clear();
+    this.callRecordDeliveries.clear();
+    this.seedPresets.clear();
+    this.defaultActor = {};
     this.botConversations.clear();
     this.capturedBotActivities.length = 0;
     this.activityNotifications.length = 0;
+    this.capturedSendMail.length = 0;
     this.faults.clear();
     this.accessTokenTtlSeconds = 3600;
     this.rotateRefreshTokens = true;
@@ -336,7 +509,7 @@ export class MsGraphCore implements EmulatorCore {
 
   grantToken(input: TokenGrantInput): {
     access_token: string;
-    /** Absent for the app-only client_credentials grant, exactly like Entra. */
+    /** Delegated grants require offline_access; app-only grants never include it. */
     refresh_token?: string;
     expires_in: number;
     token_type: 'Bearer';
@@ -361,19 +534,17 @@ export class MsGraphCore implements EmulatorCore {
       if (!refresh || refresh.revoked || refresh.clientId !== input.client_id) {
         throw new GraphApiError(400, { error: 'invalid_grant' });
       }
-      return this.issueTokens(String(input.client_id), String(input.refresh_token));
+      return this.issueTokens(String(input.client_id), String(input.refresh_token), { scope: refresh.scope });
     }
     if (input.grant_type === 'client_credentials') {
       // App-only flow used by the Teams bot connector
       // (scope https://api.botframework.com/.default) and by Graph
       // app tokens. No user, so no refresh token is issued.
-      const { refresh_token: issuedRefreshToken, ...appOnly } = this.issueTokens(
+      return this.issueTokens(
         String(input.client_id),
         undefined,
         { scope: input.scope || 'https://graph.microsoft.com/.default', appOnly: true },
       );
-      this.refreshTokens.delete(issuedRefreshToken);
-      return appOnly;
     }
     throw new GraphApiError(400, { error: 'unsupported_grant_type' });
   }
@@ -390,31 +561,42 @@ export class MsGraphCore implements EmulatorCore {
     claims?: { nonce?: string; scope?: string; appOnly?: boolean }
   ) {
     const tenantId = EMULATED_TENANT_ID;
+    // OAuth requests accept resource-qualified Graph scopes; Graph access
+    // tokens expose permission names in scp, which the application validates.
+    const scope = (claims?.scope || 'Mail.Read Mail.Read.Shared offline_access')
+      .split(/\s+/).filter(Boolean)
+      .map(value => value.replace(/^https:\/\/graph\.microsoft\.com\//i, ''))
+      .join(' ');
     // App-only tokens carry the consented application permissions in `roles`
     // and no `scp`; delegated tokens are the other way round. Setup probes
     // read `roles` straight off the token, exactly as Entra issues it.
     const accessToken = this.encodeJwt({
+      // Expiry has second precision. Distinguish every grant so simultaneous
+      // refreshes and clients cannot overwrite another token's stored identity.
+      jti: this.newId('access'),
       tid: tenantId,
       iss: `https://login.microsoftonline.com/${tenantId}/v2.0`,
       ...(claims?.appOnly
         ? { roles: this.clients.get(clientId)?.appRoles ?? [] }
-        : { scp: claims?.scope || 'Mail.Read Mail.Read.Shared offline_access' }),
+        : { scp: scope }),
       aud: '00000003-0000-0000-c000-000000000000',
       exp: Math.floor((this.nowMs() + this.accessTokenTtlSeconds * 1000) / 1000),
     });
-    const refreshToken =
-      existingRefreshToken && !this.rotateRefreshTokens ? existingRefreshToken : this.newId('refresh');
+    const allowRefresh = !claims?.appOnly && scope.split(/\s+/).includes('offline_access');
+    const refreshToken = allowRefresh
+      ? (existingRefreshToken && !this.rotateRefreshTokens ? existingRefreshToken : this.newId('refresh'))
+      : undefined;
     this.accessTokens.set(accessToken, {
       clientId,
       expiresAt: this.nowMs() + this.accessTokenTtlSeconds * 1000,
     });
-    this.refreshTokens.set(refreshToken, { clientId, revoked: false });
+    if (refreshToken) this.refreshTokens.set(refreshToken, { clientId, revoked: false, scope });
     if (existingRefreshToken && existingRefreshToken !== refreshToken) {
       this.refreshTokens.delete(existingRefreshToken);
     }
     return {
       access_token: accessToken,
-      refresh_token: refreshToken,
+      ...(refreshToken ? { refresh_token: refreshToken } : {}),
       expires_in: this.accessTokenTtlSeconds,
       token_type: 'Bearer' as const,
       ...(claims?.nonce
@@ -560,23 +742,53 @@ export class MsGraphCore implements EmulatorCore {
     this.faults.clear();
   }
 
-  /** Consume one occurrence of an operation-scoped fault, if armed. */
+  /**
+   * Consume one occurrence of an operation-scoped fault, if armed.
+   *
+   * Exact match first, then trailing-wildcard patterns
+   * ("POST /v3/conversations/x/activities/*"): reply paths embed a
+   * server-generated activity id, so there is no literal to arm against.
+   */
   consumeFault(operation: string): OperationFault | null {
-    const fault = this.faults.get(operation);
+    let key: string | undefined = this.faults.has(operation) ? operation : undefined;
+    if (!key) {
+      for (const candidate of this.faults.keys()) {
+        if (candidate.endsWith('*') && operation.startsWith(candidate.slice(0, -1))) {
+          key = candidate;
+          break;
+        }
+      }
+    }
+    if (!key) return null;
+
+    const fault = this.faults.get(key);
     if (!fault) return null;
     if (fault.remaining !== undefined) {
       fault.remaining -= 1;
-      if (fault.remaining <= 0) this.faults.delete(operation);
+      if (fault.remaining <= 0) this.faults.delete(key);
     }
     return fault;
   }
 
   // --- Mail ---
 
+  getMailFolder(id: string): { id: string; displayName: string } {
+    // Only Inbox is modeled. Its opaque ID is also accepted by the folder
+    // routes; unknown folders must never silently read Inbox messages.
+    if (id.toLowerCase() !== 'inbox' && id !== 'emulated-inbox-folder') {
+      throw new GraphApiError(404, { error: { code: 'ErrorItemNotFound', message: 'Mailbox folder not found' } });
+    }
+    return { id: 'emulated-inbox-folder', displayName: 'Inbox' };
+  }
+
   addMessage(input: SeedMessageInput): GraphMessage {
     const id = input.id ?? this.newId('message');
     const message: GraphMessage = {
       id,
+      parentFolderId: this.getMailFolder('inbox').id,
+      internetMessageHeaders: input.authenticationResults
+        ? [{ name: 'Authentication-Results', value: input.authenticationResults }]
+        : [],
       receivedDateTime: input.receivedDateTime ?? this.env.clock.now().toISOString(),
       subject: input.subject ?? 'Emulated support email',
       bodyPreview: input.body ?? 'Hello from the Graph emulator',
@@ -611,6 +823,7 @@ export class MsGraphCore implements EmulatorCore {
       `From: ${message.from.emailAddress.address}`,
       `To: ${message.toRecipients.map((r) => r.emailAddress.address).join(', ')}`,
       `Subject: ${message.subject}`,
+      ...message.internetMessageHeaders.map(header => `${header.name}: ${header.value}`),
       'MIME-Version: 1.0',
       'Content-Type: text/plain; charset=utf-8',
       '',
@@ -621,7 +834,11 @@ export class MsGraphCore implements EmulatorCore {
   // --- Subscriptions ---
 
   createSubscription(clientId: string, input: Omit<GraphSubscription, 'id' | 'clientId'>): GraphSubscription {
-    const subscription: GraphSubscription = { ...input, id: this.newId('subscription'), clientId };
+    // Graph exposes subscription IDs as GUIDs. Derive one from the seeded ID
+    // stream so reset/replay stays deterministic without loosening the wire shape.
+    const hash = createHash('sha256').update(this.newId('subscription')).digest('hex');
+    const id = `${hash.slice(0, 8)}-${hash.slice(8, 12)}-4${hash.slice(13, 16)}-8${hash.slice(17, 20)}-${hash.slice(20, 32)}`;
+    const subscription: GraphSubscription = { ...input, id, clientId };
     this.subscriptions.set(subscription.id, subscription);
     return subscription;
   }
@@ -722,6 +939,384 @@ export class MsGraphCore implements EmulatorCore {
     return this.chatMessages.get(id) ?? [];
   }
 
+  // --- Meetings (calendar events, onlineMeetings, recordings/transcripts) ---
+
+  createOnlineMeeting(
+    organizerUserId: string,
+    input: { subject?: string | null; startDateTime?: string | null; endDateTime?: string | null } = {},
+  ): GraphOnlineMeeting {
+    const id = this.newId('meeting');
+    const meeting: GraphOnlineMeeting = {
+      id,
+      subject: input.subject ?? null,
+      // Shaped like a real Teams join link; the app stores and displays it opaquely.
+      joinWebUrl: `https://teams.microsoft.com/l/meetup-join/19%3ameeting_${id}/0`,
+      startDateTime: input.startDateTime ?? null,
+      endDateTime: input.endDateTime ?? null,
+      organizerUserId,
+      createdDateTime: this.env.clock.now().toISOString(),
+    };
+    this.onlineMeetings.set(id, meeting);
+    return meeting;
+  }
+
+  getOnlineMeeting(meetingId: string): GraphOnlineMeeting {
+    const meeting = this.onlineMeetings.get(meetingId);
+    if (!meeting) {
+      throw new GraphApiError(404, { error: { code: 'ResourceNotFound' } });
+    }
+    return meeting;
+  }
+
+  deleteOnlineMeeting(meetingId: string): void {
+    this.getOnlineMeeting(meetingId);
+    this.onlineMeetings.delete(meetingId);
+    this.meetingArtifacts.delete(meetingId);
+  }
+
+  findOnlineMeetingsByJoinUrl(joinWebUrl: string): GraphOnlineMeeting[] {
+    return [...this.onlineMeetings.values()].filter((meeting) => meeting.joinWebUrl === joinWebUrl);
+  }
+
+  createCalendarEvent(organizerUserId: string, body: Record<string, unknown>): GraphCalendarEvent {
+    this.validateCalendarBoundaries(body);
+    const isOnlineMeeting = body.isOnlineMeeting === true;
+    const subject = typeof body.subject === 'string' ? body.subject : null;
+    const start = (body.start as { dateTime?: string } | undefined) ?? null;
+    const end = (body.end as { dateTime?: string } | undefined) ?? null;
+    const meeting = isOnlineMeeting
+      ? this.createOnlineMeeting(organizerUserId, {
+          subject,
+          startDateTime: start?.dateTime ?? null,
+          endDateTime: end?.dateTime ?? null,
+        })
+      : null;
+    const event: GraphCalendarEvent = {
+      id: this.newId('event'),
+      subject,
+      organizerUserId,
+      start,
+      end,
+      isOnlineMeeting,
+      onlineMeeting: meeting ? { joinUrl: meeting.joinWebUrl } : null,
+      onlineMeetingId: meeting?.id ?? null,
+      body: body.body ?? null,
+      attendees: Array.isArray(body.attendees) ? body.attendees : [],
+      location: body.location,
+      showAs: body.showAs,
+      sensitivity: body.sensitivity,
+      isAllDay: body.isAllDay,
+      singleValueExtendedProperties: body.singleValueExtendedProperties,
+      recurrence: body.recurrence,
+      lastModifiedDateTime: this.env.clock.now().toISOString(),
+      createdDateTime: this.env.clock.now().toISOString(),
+    };
+    this.calendarEvents.set(event.id, event);
+    return event;
+  }
+
+  getCalendarEvent(eventId: string): GraphCalendarEvent {
+    const event = this.calendarEvents.get(eventId);
+    if (!event) {
+      throw new GraphApiError(404, { error: { code: 'ErrorItemNotFound' } });
+    }
+    return event;
+  }
+
+  updateCalendarEvent(eventId: string, patch: Record<string, unknown>): GraphCalendarEvent {
+    const event = this.getCalendarEvent(eventId);
+    this.validateCalendarBoundaries({ ...event, ...patch });
+    if (typeof patch.subject === 'string') event.subject = patch.subject;
+    if (patch.start !== undefined) event.start = patch.start;
+    if (patch.end !== undefined) event.end = patch.end;
+    if (patch.body !== undefined) event.body = patch.body;
+    if (Array.isArray(patch.attendees)) event.attendees = patch.attendees;
+    for (const key of ['location', 'showAs', 'sensitivity', 'isAllDay', 'singleValueExtendedProperties', 'recurrence'] as const) {
+      if (patch[key] !== undefined) event[key] = patch[key];
+    }
+    event.lastModifiedDateTime = this.env.clock.now().toISOString();
+    return event;
+  }
+
+  private validateCalendarBoundaries(body: Record<string, unknown>): void {
+    const boundaries = ['start', 'end'].map(key => {
+      const value = body[key] as { dateTime?: unknown; timeZone?: unknown; date?: unknown } | undefined;
+      if (!value || typeof value.dateTime !== 'string' || typeof value.timeZone !== 'string'
+        || !value.timeZone || value.date !== undefined || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(value.dateTime)) {
+        throw new GraphApiError(400, { error: { code: 'UnableToDeserializePostBody', message: `${key} must be a dateTimeTimeZone value.` } });
+      }
+      return { dateTime: value.dateTime, timeZone: value.timeZone };
+    });
+    if (body.isAllDay === true && (boundaries[0].timeZone !== boundaries[1].timeZone
+      || boundaries.some(value => !/T00:00:00(?:\.0+)?(?:Z|[+-]00:00)?$/.test(value.dateTime)))) {
+      throw new GraphApiError(400, { error: { code: 'ErrorInvalidRequest', message: 'All-day start and end must be midnight in the same time zone.' } });
+    }
+  }
+
+  deleteCalendarEvent(eventId: string): void {
+    const event = this.getCalendarEvent(eventId);
+    this.calendarEvents.delete(eventId);
+    if (event.onlineMeetingId) {
+      this.onlineMeetings.delete(event.onlineMeetingId);
+      this.meetingArtifacts.delete(event.onlineMeetingId);
+    }
+  }
+
+  /** Primary-calendar, single-instance UTC delta model. Tokens are per-run and
+   * client-bound; pages freeze one sync round while later writes await the next.
+   * Recurrence expansion and non-UTC zone conversion are explicitly unsupported.
+   */
+  calendarDelta(clientId: string, organizerUserId: string, input: {
+    start?: string; end?: string; deltaToken?: string; skipToken?: string; pageSize?: number;
+  }): { value: CalendarDeltaItem[]; deltaToken?: string; skipToken?: string } {
+    const invalidToken = () => new GraphApiError(410, { error: { code: 'SyncStateNotFound', message: 'Restart calendar synchronization' } });
+    const page = (state: CalendarDeltaPage) => {
+      const value = structuredClone(state.items.slice(state.offset, state.offset + state.pageSize));
+      const offset = state.offset + state.pageSize;
+      if (offset < state.items.length) {
+        const skipToken = this.newId('calendar-page');
+        this.calendarDeltaPages.set(skipToken, { ...state, offset });
+        return { value, skipToken };
+      }
+      return { value, deltaToken: state.deltaToken };
+    };
+    if (input.skipToken) {
+      const state = this.calendarDeltaPages.get(input.skipToken);
+      if (!state || state.clientId !== clientId) throw invalidToken();
+      return page(state);
+    }
+    const previous = input.deltaToken ? this.calendarDeltaSnapshots.get(input.deltaToken) : undefined;
+    if (input.deltaToken && (!previous || previous.clientId !== clientId || previous.organizerUserId !== organizerUserId)) throw invalidToken();
+    const parseWindow = (value = '') => Date.parse(/(?:Z|[+-]\d{2}:\d{2})$/i.test(value) ? value : `${value}Z`);
+    const start = previous?.start ?? parseWindow(input.start);
+    const end = previous?.end ?? parseWindow(input.end);
+    const pageSize = input.pageSize ?? 100;
+    if (!Number.isFinite(start) || !Number.isFinite(end) || start >= end || !Number.isInteger(pageSize) || pageSize < 1 || pageSize > 1000) {
+      throw new GraphApiError(400, { error: { code: 'InvalidArgument', message: 'Provide an ordered date window and page size from 1 to 1000' } });
+    }
+    const eventTime = (value: unknown) => {
+      const date = value as { dateTime?: string; timeZone?: string } | null;
+      let zone: Temporal.TimeZone;
+      try { zone = Temporal.TimeZone.from(date?.timeZone || 'UTC') as Temporal.TimeZone; }
+      catch {
+        throw new GraphApiError(400, { error: { code: 'Request_UnsupportedQuery', message: 'Calendar delta requires a supported IANA timezone or UTC' } });
+      }
+      try {
+        const text = date?.dateTime ?? '';
+        // Explicit offsets identify an instant. Offset-free dateTime values are
+        // wall clocks in the supplied zone, never in the host machine timezone.
+        return /(?:Z|[+-]\d{2}:\d{2})$/i.test(text)
+          ? Temporal.Instant.from(text).epochMilliseconds
+          : Temporal.PlainDateTime.from(text).toZonedDateTime(zone, { disambiguation: 'reject' }).epochMilliseconds;
+      } catch {
+        throw new GraphApiError(400, { error: { code: 'InvalidArgument', message: 'Invalid or ambiguous calendar event date' } });
+      }
+    };
+    const fingerprints = new Map<string, string>();
+    const items: CalendarDeltaItem[] = [];
+    for (const event of this.calendarEvents.values()) {
+      if (event.organizerUserId !== organizerUserId) continue;
+      if (event.recurrence) throw new GraphApiError(400, { error: { code: 'Request_UnsupportedQuery', message: 'Recurring calendar delta is not modeled' } });
+      // calendarView includes events overlapping its window, not only those
+      // entirely contained in it.
+      const eventStart = eventTime(event.start);
+      const eventEnd = eventTime(event.end);
+      if (eventStart >= end || eventEnd <= start) continue;
+      const fingerprint = JSON.stringify(event);
+      fingerprints.set(event.id, fingerprint);
+      if (previous?.fingerprints.get(event.id) !== fingerprint) items.push({
+        ...structuredClone(event),
+        // Graph calendarView/delta defaults response dates to UTC. Keep stored
+        // vendor state intact so token comparisons track actual source edits.
+        start: { dateTime: new Date(eventStart).toISOString(), timeZone: 'UTC' },
+        end: { dateTime: new Date(eventEnd).toISOString(), timeZone: 'UTC' },
+      });
+    }
+    for (const id of previous?.fingerprints.keys() ?? []) {
+      if (!fingerprints.has(id)) items.push({ id, '@removed': { reason: 'deleted' } });
+    }
+    const deltaToken = this.newId('calendar-delta');
+    this.calendarDeltaSnapshots.set(deltaToken, { clientId, organizerUserId, start, end, fingerprints });
+    return page({ clientId, items, offset: 0, pageSize, deltaToken });
+  }
+
+  addMeetingArtifact(
+    kind: MeetingArtifactKind,
+    meetingId: string,
+    input: { id?: string; content?: string; createdDateTime?: string } = {},
+  ): GraphMeetingArtifact {
+    this.getOnlineMeeting(meetingId);
+    const artifact: GraphMeetingArtifact = {
+      id: input.id ?? this.newId(kind),
+      meetingId,
+      kind,
+      createdDateTime: input.createdDateTime ?? this.env.clock.now().toISOString(),
+      content:
+        input.content ??
+        (kind === 'transcript'
+          ? 'WEBVTT\n\n00:00:00.000 --> 00:00:04.000\n<v Emulated Speaker>Hello from the algasim transcript.'
+          : `algasim-recording-bytes:${meetingId}`),
+      contentType: kind === 'transcript' ? 'text/vtt' : 'video/mp4',
+    };
+    const list = this.meetingArtifacts.get(meetingId) ?? [];
+    list.push(artifact);
+    this.meetingArtifacts.set(meetingId, list);
+    return artifact;
+  }
+
+  listMeetingArtifacts(kind: MeetingArtifactKind, meetingId: string): GraphMeetingArtifact[] {
+    this.getOnlineMeeting(meetingId);
+    return (this.meetingArtifacts.get(meetingId) ?? []).filter((artifact) => artifact.kind === kind);
+  }
+
+  getMeetingArtifact(kind: MeetingArtifactKind, meetingId: string, artifactId: string): GraphMeetingArtifact {
+    const artifact = this.listMeetingArtifacts(kind, meetingId).find((candidate) => candidate.id === artifactId);
+    if (!artifact) {
+      throw new GraphApiError(404, { error: { code: 'ResourceNotFound' } });
+    }
+    return artifact;
+  }
+
+  // --- Teams Phone call records ---
+
+  /**
+   * Build a callRecord the shape real Graph returns: the PSTN leg lives on a
+   * session endpoint's `identity.phone.id`, which is what the adapter reads to
+   * decide direction and extract the counterparty number. An unanswered call
+   * carries `failureInfo` and a zero-length session, exactly as Graph reports
+   * a missed call.
+   */
+  addCallRecord(input: {
+    id?: string;
+    direction?: 'inbound' | 'outbound';
+    callerNumber?: string;
+    calleeNumber?: string;
+    organizerUserId?: string;
+    startedAt?: string;
+    durationSeconds?: number;
+    answered?: boolean;
+    modality?: 'audio' | 'video';
+  } = {}): GraphCallRecord {
+    const id = input.id ?? this.newId('callRecord');
+    const direction = input.direction ?? 'inbound';
+    const answered = input.answered ?? true;
+    const durationSeconds = answered ? input.durationSeconds ?? 120 : 0;
+    const start = input.startedAt ?? this.env.clock.now().toISOString();
+    const end = new Date(new Date(start).getTime() + durationSeconds * 1000).toISOString();
+    const organizerUserId = input.organizerUserId ?? 'emulated-organizer';
+    const modality = input.modality ?? 'audio';
+
+    const phoneEndpoint = (number: string): GraphCallRecordEndpoint => ({ identity: { phone: { id: number } } });
+    const userEndpoint = (): GraphCallRecordEndpoint => ({
+      identity: { user: { id: organizerUserId, displayName: 'Emulated Agent' } },
+    });
+
+    const callerNumber = input.callerNumber ?? '+15551234567';
+    const calleeNumber = input.calleeNumber ?? '+15559990000';
+
+    const session: GraphCallRecordSession = {
+      id: `${id}-session-1`,
+      caller: direction === 'inbound' ? phoneEndpoint(callerNumber) : userEndpoint(),
+      callee: direction === 'inbound' ? userEndpoint() : phoneEndpoint(calleeNumber),
+      startDateTime: start,
+      endDateTime: end,
+      modalities: [modality],
+      failureInfo: answered ? null : { reason: 'The call was not answered.', stage: 'callSetup' },
+    };
+
+    const record: GraphCallRecord = {
+      id,
+      version: 1,
+      type: 'peerToPeer',
+      modalities: [modality],
+      startDateTime: start,
+      endDateTime: end,
+      lastModifiedDateTime: this.env.clock.now().toISOString(),
+      organizer: { user: { id: organizerUserId, displayName: 'Emulated Agent' } },
+      participants: [],
+      sessions: [session],
+    };
+
+    this.callRecords.set(id, record);
+    return record;
+  }
+
+  getCallRecord(callRecordId: string): GraphCallRecord {
+    const record = this.callRecords.get(callRecordId);
+    if (!record) {
+      throw new GraphApiError(404, { error: { code: 'ResourceNotFound' } });
+    }
+    return record;
+  }
+
+  /**
+   * Attach a recording/transcript to a call. Real Graph publishes these on the
+   * ad hoc call minutes after it ends and never notifies about them, so there
+   * are no deliveries here: the app has to poll, and this is what it finds.
+   */
+  addCallArtifact(
+    kind: MeetingArtifactKind,
+    callId: string,
+    input: { id?: string; content?: string; createdDateTime?: string } = {},
+  ): GraphCallArtifact {
+    this.getCallRecord(callId);
+    const artifact: GraphCallArtifact = {
+      id: input.id ?? this.newId(`call-${kind}`),
+      callId,
+      kind,
+      createdDateTime: input.createdDateTime ?? this.env.clock.now().toISOString(),
+      content:
+        input.content ??
+        (kind === 'transcript'
+          ? 'WEBVTT\n\n00:00:00.000 --> 00:00:04.000\n<v Emulated Caller>Hello from the algasim call transcript.'
+          : `algasim-call-recording-bytes:${callId}`),
+      contentType: kind === 'transcript' ? 'text/vtt' : 'video/mp4',
+    };
+    const list = this.callArtifacts.get(callId) ?? [];
+    list.push(artifact);
+    this.callArtifacts.set(callId, list);
+    return artifact;
+  }
+
+  listCallArtifacts(kind: MeetingArtifactKind, callId: string): GraphCallArtifact[] {
+    this.getCallRecord(callId);
+    return (this.callArtifacts.get(callId) ?? []).filter((artifact) => artifact.kind === kind);
+  }
+
+  getCallArtifact(kind: MeetingArtifactKind, callId: string, artifactId: string): GraphCallArtifact {
+    const artifact = this.listCallArtifacts(kind, callId).find((candidate) => candidate.id === artifactId);
+    if (!artifact) {
+      throw new GraphApiError(404, { error: { code: 'ResourceNotFound' } });
+    }
+    return artifact;
+  }
+
+  /**
+   * The documented enumeration surface: getAllRecordings/getAllTranscripts —
+   * every artifact of the given kind across the organizer's calls, optionally
+   * windowed by createdDateTime. Real Graph exposes NO per-call artifact list.
+   */
+  listAdhocArtifactsForOrganizer(
+    kind: MeetingArtifactKind,
+    organizerUserId: string,
+    window: { startDateTime?: string; endDateTime?: string } = {},
+  ): GraphCallArtifact[] {
+    const start = window.startDateTime ? new Date(window.startDateTime).getTime() : null;
+    const end = window.endDateTime ? new Date(window.endDateTime).getTime() : null;
+    const results: GraphCallArtifact[] = [];
+    for (const record of this.callRecords.values()) {
+      if (record.organizer?.user?.id !== organizerUserId) continue;
+      for (const artifact of this.callArtifacts.get(record.id) ?? []) {
+        if (artifact.kind !== kind) continue;
+        const created = new Date(artifact.createdDateTime).getTime();
+        if (start !== null && !Number.isNaN(created) && created < start) continue;
+        if (end !== null && !Number.isNaN(created) && created > end) continue;
+        results.push(artifact);
+      }
+    }
+    return results;
+  }
+
   // --- Bot Framework connector ---
 
   createConversation(input: { isGroup?: boolean; tenantId?: string; members?: unknown[] }): BotConversation {
@@ -777,10 +1372,118 @@ export class MsGraphCore implements EmulatorCore {
     return record;
   }
 
+  recordSendMail(input: Omit<CapturedSendMail, 'receivedAt'>): CapturedSendMail {
+    const record: CapturedSendMail = { ...input, receivedAt: this.env.clock.now().toISOString() };
+    this.capturedSendMail.push(record);
+    return record;
+  }
+
   /**
    * Assemble the Bot Framework Activity that inbound injection delivers to the
    * app's bot endpoint. Pure: the notifier signs it and performs the POST.
    */
+  /**
+   * `--state-file` support. Only durable seeded state is serialized: OAuth
+   * codes, access tokens and armed faults are per-run and deliberately dropped,
+   * and the Bot Framework signing key is NOT part of the snapshot (the app
+   * caches the discovered JWKS, so restoring must not rotate it).
+   *
+   * Registered clients ARE durable: they are configuration, not a session, and
+   * without them a restarted emulator answers every app-only token request with
+   * invalid_client while its seeds sit there looking healthy.
+   */
+  snapshot(): unknown {
+    return {
+      clients: [...this.clients.entries()].map(([clientId, client]) => ({ clientId, ...client })),
+      messages: [...this.messages.values()],
+      subscriptions: [...this.subscriptions.values()],
+      organizations: [...this.organizations.values()],
+      directoryUsers: [...this.directoryUsers.values()],
+      applications: [...this.applications.values()],
+      servicePrincipals: [...this.servicePrincipals.values()],
+      teams: [...this.teams.values()],
+      chats: [...this.chats.values()],
+      chatMessages: [...this.chatMessages.entries()],
+      calendarEvents: [...this.calendarEvents.values()],
+      onlineMeetings: [...this.onlineMeetings.values()],
+      meetingArtifacts: [...this.meetingArtifacts.entries()],
+      callRecords: [...this.callRecords.values()],
+      callArtifacts: [...this.callArtifacts.entries()],
+      seedPresets: [...this.seedPresets.values()],
+      defaultActor: this.defaultActor,
+      accessTokenTtlSeconds: this.accessTokenTtlSeconds,
+      rotateRefreshTokens: this.rotateRefreshTokens,
+      botConfig: this.botConfig,
+      idCounter: this.idCounter,
+    };
+  }
+
+  restore(state: unknown): void {
+    this.calendarDeltaSnapshots.clear();
+    this.calendarDeltaPages.clear();
+    const snapshot = (state ?? {}) as Record<string, any>;
+    const load = <V>(target: Map<string, V>, rows: unknown, key: (row: any) => string) => {
+      target.clear();
+      for (const row of Array.isArray(rows) ? rows : []) {
+        target.set(key(row), row as V);
+      }
+    };
+    const loadEntries = <V>(target: Map<string, V>, entries: unknown) => {
+      target.clear();
+      for (const entry of Array.isArray(entries) ? entries : []) {
+        if (Array.isArray(entry) && typeof entry[0] === 'string') {
+          target.set(entry[0], entry[1] as V);
+        }
+      }
+    };
+
+    this.clients.clear();
+    for (const row of Array.isArray(snapshot.clients) ? snapshot.clients : []) {
+      this.registerClient(String(row.clientId), String(row.secret), Array.isArray(row.appRoles) ? row.appRoles : []);
+    }
+    load(this.messages, snapshot.messages, (row) => row.id);
+    load(this.subscriptions, snapshot.subscriptions, (row) => row.id);
+    load(this.organizations, snapshot.organizations, (row) => row.id);
+    load(this.directoryUsers, snapshot.directoryUsers, (row) => row.id);
+    load(this.applications, snapshot.applications, (row) => row.id);
+    load(this.servicePrincipals, snapshot.servicePrincipals, (row) => row.id);
+    load(this.teams, snapshot.teams, (row) => row.id);
+    load(this.chats, snapshot.chats, (row) => row.id);
+    loadEntries(this.chatMessages, snapshot.chatMessages);
+    load(this.calendarEvents, snapshot.calendarEvents, (row) => row.id);
+    load(this.onlineMeetings, snapshot.onlineMeetings, (row) => row.id);
+    loadEntries(this.meetingArtifacts, snapshot.meetingArtifacts);
+    load(this.callRecords, snapshot.callRecords, (row) => row.id);
+    loadEntries(this.callArtifacts, snapshot.callArtifacts);
+    load(this.seedPresets, snapshot.seedPresets, (row) => row.name);
+
+    this.defaultActor = snapshot.defaultActor ?? {};
+    if (typeof snapshot.accessTokenTtlSeconds === 'number') this.accessTokenTtlSeconds = snapshot.accessTokenTtlSeconds;
+    if (typeof snapshot.rotateRefreshTokens === 'boolean') this.rotateRefreshTokens = snapshot.rotateRefreshTokens;
+    if (snapshot.botConfig) this.botConfig = { ...this.botConfig, ...snapshot.botConfig };
+    // Keep minting ids past the restored high-water mark so a restored run
+    // cannot collide with what the previous run already handed to the app.
+    if (typeof snapshot.idCounter === 'number') this.idCounter = snapshot.idCounter;
+  }
+
+  recordCallDeliveries(callRecordId: string, deliveries: unknown[]): void {
+    this.callRecordDeliveries.set(callRecordId, deliveries);
+  }
+
+  saveSeedPreset(name: string, seeder: string, payload: Record<string, unknown>): SeedPreset {
+    const preset: SeedPreset = { name, seeder, payload, savedAt: this.env.clock.now().toISOString() };
+    this.seedPresets.set(name, preset);
+    return preset;
+  }
+
+  deleteSeedPreset(name: string): boolean {
+    return this.seedPresets.delete(name);
+  }
+
+  listSeedPresets(): SeedPreset[] {
+    return [...this.seedPresets.values()];
+  }
+
   buildInboundActivity(input: InboundBotActivityInput): {
     activity: Record<string, unknown>;
     targetUrl: string;
@@ -790,10 +1493,11 @@ export class MsGraphCore implements EmulatorCore {
     tenantId: string;
   } {
     const serviceUrl = input.serviceUrl ?? this.botConfig.serviceUrl;
-    const tenantId = input.tenantId ?? this.botConfig.tenantId;
+    // Explicit values always win over the configured default actor.
+    const tenantId = input.tenantId ?? this.defaultActor.tenantId ?? this.botConfig.tenantId;
     const audience = input.appId ?? this.botConfig.appId;
-    const aadObjectId = input.fromAadObjectId ?? this.newId('aad-object');
-    const conversationType = input.conversationType ?? 'personal';
+    const aadObjectId = input.fromAadObjectId ?? this.defaultActor.fromAadObjectId ?? this.newId('aad-object');
+    const conversationType = input.conversationType ?? this.defaultActor.conversationType ?? 'personal';
     const activity: Record<string, unknown> = {
       type: input.type ?? 'message',
       id: this.newId('inbound-activity'),
@@ -801,13 +1505,13 @@ export class MsGraphCore implements EmulatorCore {
       channelId: 'msteams',
       serviceUrl,
       from: {
-        id: input.fromId ?? `29:${aadObjectId}`,
+        id: input.fromId ?? this.defaultActor.fromId ?? `29:${aadObjectId}`,
         aadObjectId,
-        name: input.fromName ?? 'Emulated Teams User',
+        name: input.fromName ?? this.defaultActor.fromName ?? 'Emulated Teams User',
       },
       recipient: { id: `28:${audience}`, name: 'AlgaPSA' },
       conversation: {
-        id: input.conversationId ?? this.newId('conversation'),
+        id: input.conversationId ?? this.defaultActor.conversationId ?? this.newId('conversation'),
         conversationType,
         tenantId,
         isGroup: conversationType !== 'personal',
@@ -837,5 +1541,17 @@ export function publicTeam(team: GraphTeam): Omit<GraphTeam, 'channels'> {
 /** Vendor-surface representation: the owning client id stays internal. */
 export function publicSubscription(subscription: GraphSubscription): Omit<GraphSubscription, 'clientId'> {
   const { clientId: _clientId, ...rest } = subscription;
+  return rest;
+}
+
+/** Vendor-surface event: the linked online-meeting id stays internal. */
+export function publicEvent(event: GraphCalendarEvent): Omit<GraphCalendarEvent, 'organizerUserId' | 'onlineMeetingId'> {
+  const { organizerUserId: _organizer, onlineMeetingId: _meetingId, ...rest } = event;
+  return rest;
+}
+
+/** Vendor-surface online meeting: the organizer path segment stays internal. */
+export function publicOnlineMeeting(meeting: GraphOnlineMeeting): Omit<GraphOnlineMeeting, 'organizerUserId'> {
+  const { organizerUserId: _organizer, ...rest } = meeting;
   return rest;
 }

@@ -11,10 +11,13 @@
     "clients": "Klanten",
     "opportunities": "Verkoopkansen",
     "contacts": "Contacten",
+    "interactions": "Interacties",
     "documents": "Documenten",
     "documentsAll": "Alle documenten",
     "knowledgeBase": "Kennisbank",
     "assets": "Assets",
+    "assetsAll": "Alle assets",
+    "assetsMaintenance": "Onderhoud",
     "inventory": {
       "label": "Inventaris",
       "sections": {
@@ -111,7 +114,8 @@
     "collapseSidebar": "Zijbalk inklappen",
     "collapseSection": "{{section}} samenvouwen",
     "expandSection": "{{section}} uitvouwen",
-    "appLogoAlt": "{{appName}}-logo"
+    "appLogoAlt": "{{appName}}-logo",
+    "poweredBy": "Mogelijk gemaakt door"
   },
   "settings": {
     "sections": {
@@ -133,6 +137,7 @@
       "ticketing": "Ticketbeheer",
       "sla": "SLA",
       "projects": "Projecten",
+      "assets": "Assets",
       "interactions": "Interacties",
       "opportunities": "Verkoopkansen",
       "notifications": "Meldingen",
@@ -195,6 +200,12 @@
           "description": "Voeg een nieuw product toe aan uw catalogus"
         }
       }
+    },
+    "resources": {
+      "ariaLabel": "Bronnen en hulp",
+      "title": "Bronnen",
+      "documentation": "Documentatie",
+      "support": "Contact opnemen met support"
     },
     "jobs": {
       "ariaLabel": "Activiteit van achtergrondtaken bekijken",

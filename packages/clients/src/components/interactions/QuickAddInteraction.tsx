@@ -1,7 +1,7 @@
 // server/src/components/interactions/QuickAddInteraction.tsx
 'use client'
 
-import React, { useState, useEffect, useMemo, Suspense } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -26,7 +26,8 @@ import { IInteraction, IInteractionType } from '@alga-psa/types';
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 import { useSession } from 'next-auth/react';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
-import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
+import MultiUserPicker from '@alga-psa/ui/components/MultiUserPicker';
+import { getCurrentUserPermissions, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { getAllUsersBasicAsync } from '../../lib/usersHelpers';
@@ -40,6 +41,7 @@ import { ButtonComponent, FormFieldComponent } from '@alga-psa/ui/ui-reflection/
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useOptionalClientCrossFeature } from '../../context/ClientCrossFeatureContext';
 import QuickAddContact from '../contacts/QuickAddContact';
+import QuickAddClient from '../clients/QuickAddClient';
 import MeetingAttendeesPicker, { type MeetingAttendee, type DefaultMeetingAttendee } from './MeetingAttendeesPicker';
 import {
   getErrorMessage,
@@ -52,10 +54,20 @@ import {
 const isReturnedActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
   isActionMessageError(value) || isActionPermissionError(value);
 
+// Keyed by the capability reason the Teams service returns, so the copy under
+// interactions.quickAdd.teams.reason.* stays greppable despite the dynamic key.
+const TEAMS_UNAVAILABLE_REASON_COPY: Record<string, string> = {
+  ee_disabled: 'Teams integration requires Enterprise Edition.',
+  feature_disabled: 'Microsoft Teams integration is not enabled for this tenant.',
+  not_configured: 'The Teams integration has not been configured.',
+  no_organizer: 'No default meeting organizer is configured in Teams settings.',
+};
+
 interface QuickAddInteractionProps {
   id?: string; // Made optional to maintain backward compatibility
-  entityId: string;
-  entityType: 'contact' | 'client';
+  /** Omit entityId/entityType for a standalone interaction that selects its client/contact in the form. */
+  entityId?: string;
+  entityType?: 'contact' | 'client';
   clientId?: string;
   ticketId?: string; // Links the new interaction to a ticket (create mode only)
   onInteractionAdded: (newInteraction: IInteraction) => void;
@@ -95,6 +107,7 @@ export function QuickAddInteraction({
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const [contacts, setContacts] = useState<IContact[]>([]);
   const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
+  const [isQuickAddClientOpen, setIsQuickAddClientOpen] = useState(false);
   const tenant = useTenant()!;
   const { data: session } = useSession();
   const { t } = useTranslation('msp/clients');
@@ -103,21 +116,42 @@ export function QuickAddInteraction({
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [loadErrors, setLoadErrors] = useState<string[]>([]);
   const [endTimeError, setEndTimeError] = useState('');
-  const [teamsMeetingCapability, setTeamsMeetingCapability] = useState<{ available: boolean; reason?: string } | null>(null);
+  const [teamsMeetingCapability, setTeamsMeetingCapability] = useState<{ available: boolean; reason?: string; sendMeetingInvites?: boolean } | null>(null);
   const [createTeamsMeeting, setCreateTeamsMeeting] = useState(false);
   const [isTeamsCapabilityLoading, setIsTeamsCapabilityLoading] = useState(false);
   const [meetingAttendees, setMeetingAttendees] = useState<MeetingAttendee[]>([]);
   const [clientDefaultEmail, setClientDefaultEmail] = useState<string | null>(null);
   const [clientDefaultName, setClientDefaultName] = useState<string | null>(null);
   const [hasLoadedAttendeeOptions, setHasLoadedAttendeeOptions] = useState(false);
+  const [addToSchedule, setAddToSchedule] = useState(false);
+  const [hasTouchedScheduleToggle, setHasTouchedScheduleToggle] = useState(false);
+  const [canAssignScheduleToOthers, setCanAssignScheduleToOthers] = useState(false);
+  const [scheduleAssignedUserIds, setScheduleAssignedUserIds] = useState<string[]>([]);
+  const [hasTouchedAssignedUser, setHasTouchedAssignedUser] = useState(false);
+  const [hasTouchedScheduleAssignees, setHasTouchedScheduleAssignees] = useState(false);
 
   const isEditMode = !!editingInteraction;
+  const isStandaloneCreate = !isEditMode && !entityId;
+
+  const handleClientSelect = (clientId: string | null) => {
+    const nextClientId = clientId || '';
+    if (nextClientId !== selectedClientId) {
+      setSelectedContactId('');
+    }
+    setSelectedClientId(nextClientId);
+  };
 
   // Resolve the client/contact this new interaction is attached to (create mode only).
   const meetingClientId = !isEditMode
-    ? (entityType === 'client' ? entityId : (clientId ?? null))
+    ? (isStandaloneCreate
+        ? (selectedClientId || null)
+        : (entityType === 'client' ? (entityId ?? null) : (clientId ?? null)))
     : null;
-  const meetingContactId = !isEditMode && entityType === 'contact' ? entityId : null;
+  const meetingContactId = !isEditMode
+    ? (isStandaloneCreate
+        ? (selectedContactId || null)
+        : (entityType === 'contact' ? (entityId ?? null) : null))
+    : null;
   const selectedInteractionType = useMemo(
     () => interactionTypes.find((type) => type.type_id === typeId) ?? null,
     [interactionTypes, typeId]
@@ -127,6 +161,34 @@ export function QuickAddInteraction({
     && isOnlineMeetingType
     && !!clientCrossFeature?.scheduleTeamsMeeting
     && teamsMeetingCapability?.available === true;
+  // The Teams path always books the calendar itself, so the generic toggle would be a
+  // duplicate control there. Every other interaction type gets it as soon as it has a start.
+  const teamsMeetingWillSchedule = createTeamsMeeting && canCreateTeamsMeeting;
+  const canAddToSchedule = !isEditMode && !!startTime && !teamsMeetingWillSchedule;
+  // Whoever books a calendar block gets to choose whose it is — as long as they may update
+  // other people's schedules. Without the permission the dialog stays "my schedule".
+  const willCreateScheduleEntry = teamsMeetingWillSchedule || (canAddToSchedule && addToSchedule);
+  const canPickScheduleAssignees = !isEditMode && willCreateScheduleEntry && canAssignScheduleToOthers;
+  const isSchedulingForOthers = scheduleAssignedUserIds.some((userId) => userId !== session?.user?.id);
+
+  const resetSchedulingState = useCallback(() => {
+    setAddToSchedule(false);
+    setHasTouchedScheduleToggle(false);
+    setCanAssignScheduleToOthers(false);
+    setScheduleAssignedUserIds([]);
+    setHasTouchedAssignedUser(false);
+    setHasTouchedScheduleAssignees(false);
+  }, []);
+
+  const handleClose = () => {
+    resetSchedulingState();
+    setHasAttemptedSubmit(false);
+    setValidationErrors([]);
+    setLoadErrors([]);
+    setEndTimeError('');
+    setIsQuickAddContactOpen(false);
+    onClose();
+  };
 
   // UI Reflection System Integration
   const { automationIdProps: typeSelectProps } = useAutomationIdAndRegister<FormFieldComponent>({
@@ -239,6 +301,8 @@ export function QuickAddInteraction({
   });
 
   useEffect(() => {
+    if (!isOpen) return;
+
     console.log('QuickAddInteraction props:', { isEditMode, editingInteraction, isOpen });
     if (editingInteraction) {
       console.log('Editing interaction ID:', editingInteraction.interaction_id);
@@ -264,11 +328,16 @@ export function QuickAddInteraction({
         }
         setStatuses(statusList);
         
-        // Fetch users, clients, and contacts for edit mode
-        if (isEditMode) {
-          const usersList = await getAllUsersBasicAsync();
-          setUsers(usersList);
-          
+        // Every create path shows the assignee picker, so the user list is always needed.
+        // Edit mode keeps the unfiltered list so an interaction owned by an inactive or
+        // non-internal user still resolves to a name.
+        const usersList = isEditMode
+          ? await getAllUsersBasicAsync()
+          : await getAllUsersBasicAsync(false, 'internal');
+        setUsers(usersList);
+
+        // Edit mode and standalone creation both need entity pickers.
+        if (isEditMode || isStandaloneCreate) {
           const clientsList = await getAllClients();
           setClients(clientsList);
           
@@ -277,9 +346,20 @@ export function QuickAddInteraction({
           setContacts(allContacts);
         }
         
-        // Set default status if available (only for new interactions)
-        if (!isEditMode) {
-          const defaultStatus = statusList.find(s => s.is_default);
+        if (isEditMode && editingInteraction) {
+          // A Radix select silently drops a controlled value whose option has not rendered
+          // yet, so the edited interaction's type/status are applied only once both lists
+          // are loaded — otherwise the dialog opens with empty selects.
+          setTypeId(editingInteraction.type_id || '');
+          setStatusId(editingInteraction.status_id || '');
+        } else {
+          // Set default status if available (only for new interactions). A new interaction
+          // must not open in a closed status, so fall back to the first open one when the
+          // tenant has no default configured.
+          const defaultStatus = statusList.find(s => s.is_default && !s.is_closed)
+            ?? statusList.filter(s => !s.is_closed)
+              .sort((a, b) => (a.order_number || 0) - (b.order_number || 0))[0]
+            ?? statusList.find(s => s.is_default);
           if (defaultStatus) {
             setStatusId(defaultStatus.status_id);
           }
@@ -298,8 +378,7 @@ export function QuickAddInteraction({
     // Populate fields if editing
     if (isEditMode && editingInteraction) {
       setTitle(editingInteraction.title || '');
-      setTypeId(editingInteraction.type_id || '');
-      setStatusId(editingInteraction.status_id || '');
+      // type_id / status_id are set from fetchData, once their options exist.
       // Convert duration from total minutes to hours and minutes
       if (editingInteraction.duration) {
         const totalMinutes = editingInteraction.duration;
@@ -358,9 +437,48 @@ export function QuickAddInteraction({
       setSelectedUserId(session?.user?.id || '');
       setIsNotesContentReady(true); // Mark as ready for new interactions
     }
-  }, [isOpen, isEditMode, editingInteraction]);
+  }, [isOpen, isEditMode, isStandaloneCreate, editingInteraction, session?.user?.id, t]);
 
-  // Note: ContactPicker handles client filtering internally, 
+  // Booking someone else's calendar is an update of *their* schedule, so the picker only
+  // appears for users who hold that permission. Reopening the dialog resets the choice.
+  useEffect(() => {
+    if (!isOpen || isEditMode) {
+      resetSchedulingState();
+      return;
+    }
+
+    setCanAssignScheduleToOthers(false);
+    setScheduleAssignedUserIds(session?.user?.id ? [session.user.id] : []);
+    setSelectedUserId(session?.user?.id || '');
+    setHasTouchedAssignedUser(false);
+    setHasTouchedScheduleAssignees(false);
+    // A toggle flipped in an abandoned draft must not survive into the next one; clearing the
+    // "touched" flag hands the switch back to the start-time rule below.
+    setHasTouchedScheduleToggle(false);
+
+    let cancelled = false;
+    getCurrentUserPermissions()
+      .then((permissions) => {
+        if (!cancelled) setCanAssignScheduleToOthers(permissions.includes('user_schedule:update'));
+      })
+      .catch((error) => {
+        console.error('Failed to load schedule permissions:', error);
+        if (!cancelled) setCanAssignScheduleToOthers(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, isEditMode, session?.user?.id, resetSchedulingState]);
+
+  // Scheduling something ahead should land on the calendar; logging what already happened
+  // should not. Stops steering once the user has flipped the switch themselves.
+  useEffect(() => {
+    if (!isOpen || isEditMode || hasTouchedScheduleToggle) return;
+    setAddToSchedule(!!startTime && startTime.getTime() > Date.now() + 60000);
+  }, [isOpen, startTime, isEditMode, hasTouchedScheduleToggle]);
+
+  // Note: ContactPicker handles client filtering internally,
   // so we don't need to refetch contacts when client changes
 
   useEffect(() => {
@@ -395,10 +513,11 @@ export function QuickAddInteraction({
     };
   }, [isOpen, isOnlineMeetingType, isEditMode, clientCrossFeature]);
 
-  // Load attendee options (internal users + contacts) only once the Teams meeting toggle is
-  // on (i.e. the attendee picker is actually shown) — avoids running the heavy getAllContacts()
-  // query every time the "Online Meeting" type is merely selected. The `hasLoadedAttendeeOptions`
-  // guard keeps it to a single fetch per dialog session.
+  // Load the attendee contacts only once the Teams meeting toggle is on (i.e. the attendee
+  // picker is actually shown) — avoids running the heavy getAllContacts() query every time the
+  // "Online Meeting" type is merely selected. Internal users already arrive with the dialog's
+  // own fetch, so they are not requested again here. The `hasLoadedAttendeeOptions` guard keeps
+  // this to a single fetch per dialog session.
   useEffect(() => {
     if (!isOpen || isEditMode || !isOnlineMeetingType || !createTeamsMeeting || hasLoadedAttendeeOptions) {
       return;
@@ -407,12 +526,8 @@ export function QuickAddInteraction({
     let cancelled = false;
     (async () => {
       try {
-        const [usersList, contactsList] = await Promise.all([
-          getAllUsersBasicAsync(false, 'internal'),
-          getAllContacts(),
-        ]);
+        const contactsList = await getAllContacts();
         if (cancelled) return;
-        setUsers(usersList);
         setContacts(contactsList);
         setHasLoadedAttendeeOptions(true);
       } catch (error) {
@@ -572,6 +687,25 @@ export function QuickAddInteraction({
     }
   };
 
+  // The record and its calendar block should never disagree about whose work this is, so
+  // each picker seeds the other until the user overrides it by hand. Mirroring an owner
+  // into the schedule only happens when this user may book other people's calendars.
+  const handleAssignedUserChange = (userId: string) => {
+    setSelectedUserId(userId);
+    setHasTouchedAssignedUser(true);
+    if (canAssignScheduleToOthers && !hasTouchedScheduleAssignees) {
+      setScheduleAssignedUserIds(userId ? [userId] : []);
+    }
+  };
+
+  const handleScheduleAssigneesChange = (values: string[]) => {
+    setScheduleAssignedUserIds(values);
+    setHasTouchedScheduleAssignees(true);
+    if (!hasTouchedAssignedUser) {
+      setSelectedUserId(values.length === 1 ? values[0] : (session?.user?.id || ''));
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setHasAttemptedSubmit(true);
@@ -588,6 +722,11 @@ export function QuickAddInteraction({
     }
     if (!title.trim()) {
       errors.push('Title is required');
+    }
+    if (isStandaloneCreate && !selectedClientId) {
+      errors.push(t('interactions.quickAdd.clientRequired', {
+        defaultValue: 'Select a client for this interaction',
+      }));
     }
     if (startTime && endTime && endTime.getTime() < startTime.getTime()) {
       errors.push('End time must be on or after the start time');
@@ -622,12 +761,13 @@ export function QuickAddInteraction({
         start_time: startTime,
         end_time: endTime,
         status_id: statusId,
-        user_id: isEditMode ? selectedUserId : session.user.id,
+        // Honour an explicitly chosen owner in both modes; the session user is only the fallback.
+        user_id: selectedUserId || session.user.id,
         tenant: tenant
       };
   
-      if (isEditMode) {
-        // In edit mode, use the selected values from pickers
+      if (isEditMode || isStandaloneCreate) {
+        // Edit mode and standalone creation use the selected entity values.
         interactionData.contact_name_id = selectedContactId === '' ? null : selectedContactId;
         interactionData.client_id = selectedClientId === '' ? null : selectedClientId;
       } else {
@@ -665,6 +805,11 @@ export function QuickAddInteraction({
           client_id: interactionData.client_id ?? null,
           contact_name_id: interactionData.contact_name_id ?? null,
           attendees: meetingAttendees,
+          interactionUserId: interactionData.user_id,
+          // The scheduled meeting must exist on the AlgaPSA calendar too;
+          // the creator is the default assignee server-side.
+          createScheduleEntry: true,
+          scheduleAssignedUserIds,
         });
         if (!scheduleResult.success || !scheduleResult.data?.interaction_id) {
           throw new Error(scheduleResult.error || t('interactions.quickAdd.teams.createFailed', {
@@ -676,7 +821,10 @@ export function QuickAddInteraction({
         // Create new interaction
         console.log('Creating new interaction');
         console.log('Create data:', interactionData);
-        const newInteraction = await addInteraction(interactionData as Omit<IInteraction, 'interaction_date'>);
+        const newInteraction = await addInteraction(
+          interactionData as Omit<IInteraction, 'interaction_date'>,
+          { createScheduleEntry: canAddToSchedule && addToSchedule, scheduleAssignedUserIds },
+        );
         if (isReturnedActionError(newInteraction)) {
           throw new Error(getErrorMessage(newInteraction));
         }
@@ -691,8 +839,7 @@ export function QuickAddInteraction({
       }
       
       onInteractionAdded(fullInteraction);
-      setIsQuickAddContactOpen(false);
-      onClose();
+      handleClose();
       
       // Clear form fields only if not editing
       if (!isEditMode) {
@@ -739,12 +886,34 @@ export function QuickAddInteraction({
   };
 
   const typeOptions = useMemo(
-    () => interactionTypes.map((type) => ({
-      value: type.type_id,
-      label: getTypeLabel(type),
-      textValue: type.type_name
-    })),
-    [interactionTypes]
+    () => {
+      const options = interactionTypes.map((type) => ({
+        value: type.type_id,
+        label: getTypeLabel(type),
+        textValue: type.type_name
+      }));
+
+      // Interactions can also reference a *system* interaction type, which this
+      // tenant-only list omits. Keep the edited interaction's own type selectable so the
+      // dialog does not open on a blank (and unsavable) type.
+      const currentTypeId = editingInteraction?.type_id;
+      if (currentTypeId && !options.some((option) => option.value === currentTypeId)) {
+        const typeName = editingInteraction?.type_name ?? '';
+        options.unshift({
+          value: currentTypeId,
+          label: (
+            <div className="flex items-center gap-2">
+              <InteractionIcon icon={editingInteraction?.icon} typeName={typeName} />
+              <span className="capitalize">{typeName}</span>
+            </div>
+          ),
+          textValue: typeName
+        });
+      }
+
+      return options;
+    },
+    [interactionTypes, editingInteraction]
   );
 
   const footer = (
@@ -754,13 +923,7 @@ export function QuickAddInteraction({
         type="button"
         variant="outline"
         className="flex-1"
-        onClick={() => {
-          setHasAttemptedSubmit(false);
-          setValidationErrors([]);
-          setLoadErrors([]);
-          setEndTimeError('');
-          onClose();
-        }}
+        onClick={handleClose}
       >
         Cancel
       </Button>
@@ -780,14 +943,7 @@ export function QuickAddInteraction({
     <ReflectionContainer id={id} label="Quick Add Interaction">
       <Dialog
         isOpen={isOpen}
-        onClose={() => {
-        setHasAttemptedSubmit(false);
-        setValidationErrors([]);
-        setLoadErrors([]);
-        setEndTimeError('');
-        setIsQuickAddContactOpen(false);
-        onClose();
-      }}
+        onClose={handleClose}
         title={isEditMode ? 'Edit Interaction' : 'Add New Interaction'}
         className="max-w-2xl"
         hideCloseButton={false}
@@ -850,15 +1006,41 @@ export function QuickAddInteraction({
                           })}
                         />
                         {createTeamsMeeting && (
-                          <MeetingAttendeesPicker
-                            id={`${id}-attendees`}
-                            users={users}
-                            contacts={contacts}
-                            clientId={meetingClientId}
-                            defaultAttendees={defaultAttendees}
-                            getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
-                            onAttendeesChange={setMeetingAttendees}
-                          />
+                          <>
+                            <MeetingAttendeesPicker
+                              id={`${id}-attendees`}
+                              users={users}
+                              contacts={contacts}
+                              clientId={meetingClientId}
+                              defaultAttendees={defaultAttendees}
+                              getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                              onAttendeesChange={setMeetingAttendees}
+                            />
+                            <p id={`${id}-meeting-summary`} className="text-xs text-gray-600">
+                              {teamsMeetingCapability?.sendMeetingInvites === false
+                                ? t('interactions.quickAdd.teams.invitesDisabled', {
+                                    defaultValue:
+                                      'Email invites are turned off in Teams integration settings — attendees will not be notified by Microsoft.',
+                                  })
+                                : t('interactions.quickAdd.teams.invitesSummary', {
+                                    defaultValue:
+                                      'Microsoft will email calendar invites to: {{recipients}}.',
+                                    recipients: [
+                                      ...meetingAttendees
+                                        .map((attendee) => attendee.emailAddress)
+                                        .filter(Boolean),
+                                      t('interactions.quickAdd.teams.invitesSummaryYou', { defaultValue: 'you (creator)' }),
+                                    ].join(', '),
+                                  })}{' '}
+                              {isSchedulingForOthers
+                                ? t('interactions.quickAdd.schedule.addHelpOthers', {
+                                    defaultValue: "A schedule entry will be added to the selected users' AlgaPSA calendars.",
+                                  })
+                                : t('interactions.quickAdd.teams.scheduleSummary', {
+                                    defaultValue: 'A schedule entry will be added to your AlgaPSA calendar.',
+                                  })}
+                            </p>
+                          </>
                         )}
                       </>
                     ) : (
@@ -869,9 +1051,53 @@ export function QuickAddInteraction({
                             })
                           : t('interactions.quickAdd.teams.unavailable', {
                               defaultValue: 'Teams meeting creation is not available for this tenant.',
-                            })}
+                            }) + (teamsMeetingCapability?.reason
+                              ? ' ' + t(`interactions.quickAdd.teams.reason.${teamsMeetingCapability.reason}`, {
+                                  defaultValue: TEAMS_UNAVAILABLE_REASON_COPY[teamsMeetingCapability.reason] ?? '',
+                                })
+                              : '')}
                       </p>
                     )}
+                  </div>
+                )}
+
+                {isStandaloneCreate && (
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">
+                        {t('interactions.overall.columns.client', { defaultValue: 'Client' })}
+                      </label>
+                      <ClientPicker
+                        id={`${id}-client-picker`}
+                        clients={clients}
+                        onSelect={handleClientSelect}
+                        selectedClientId={selectedClientId}
+                        filterState={clientFilterState}
+                        onFilterStateChange={setClientFilterState}
+                        clientTypeFilter={clientTypeFilter}
+                        onClientTypeFilterChange={setClientTypeFilter}
+                        fitContent={false}
+                        onAddNew={() => setIsQuickAddClientOpen(true)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">
+                        {t('interactions.overall.columns.contact', { defaultValue: 'Contact' })}
+                      </label>
+                      <ContactPicker
+                        id={`${id}-contact-picker`}
+                        contacts={contacts}
+                        value={selectedContactId}
+                        onValueChange={(value) => setSelectedContactId(value || '')}
+                        clientId={selectedClientId}
+                        placeholder={selectedClientId
+                          ? t('interactions.quickAdd.contactPlaceholder', { defaultValue: 'Select contact' })
+                          : t('interactions.quickAdd.selectClientFirst', { defaultValue: 'Select client first' })}
+                        disabled={!selectedClientId}
+                        buttonWidth="full"
+                        onAddNew={selectedClientId ? () => setIsQuickAddContactOpen(true) : undefined}
+                      />
+                    </div>
                   </div>
                 )}
               
@@ -937,13 +1163,14 @@ export function QuickAddInteraction({
                       <ClientPicker
                         id={`${id}-client-picker`}
                         clients={clients}
-                        onSelect={(clientId) => setSelectedClientId(clientId || '')}
+                        onSelect={handleClientSelect}
                         selectedClientId={selectedClientId}
                         filterState={clientFilterState}
                         onFilterStateChange={setClientFilterState}
                         clientTypeFilter={clientTypeFilter}
                         onClientTypeFilterChange={setClientTypeFilter}
                         fitContent={true}
+                        onAddNew={() => setIsQuickAddClientOpen(true)}
                       />
                     </div>
                     
@@ -984,19 +1211,61 @@ export function QuickAddInteraction({
                 clients={clients}
                 selectedClientId={selectedClientId}
               />
+              <QuickAddClient
+                open={isQuickAddClientOpen}
+                onOpenChange={setIsQuickAddClientOpen}
+                onClientAdded={(newClient) => {
+                  setClients((currentClients) => {
+                    const existingIndex = currentClients.findIndex(
+                      (client) => client.client_id === newClient.client_id,
+                    );
+                    if (existingIndex === -1) return [...currentClients, newClient];
+                    const nextClients = [...currentClients];
+                    nextClients[existingIndex] = newClient;
+                    return nextClients;
+                  });
+                  handleClientSelect(newClient.client_id);
+                }}
+                skipSuccessDialog
+              />
               
-              {/* Status for non-edit mode - shown for create mode */}
+              {/* Status and owner for non-edit mode - shown for create mode */}
               {!isEditMode && (
-                <CustomSelect
-                  options={statuses.map((status) => ({ 
-                    value: status.status_id, 
-                    label: status.name 
-                  }))}
-                  value={statusId}
-                  onValueChange={setStatusId}
-                  placeholder="Select Status"
-                  className="w-fit"
-                />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">
+                      {t('interactions.overall.columns.status', { defaultValue: 'Status' })}
+                    </label>
+                    <CustomSelect
+                      options={statuses.map((status) => ({
+                        value: status.status_id,
+                        label: status.name
+                      }))}
+                      value={statusId}
+                      onValueChange={setStatusId}
+                      placeholder="Select Status"
+                      className="w-fit"
+                    />
+                  </div>
+                  {/* Whose interaction this is, on every create path — a plain field on the
+                      record, so logging a call for a colleague needs no schedule permission. */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">
+                      {t('interactions.quickAdd.assignedTo.label', { defaultValue: 'Assigned To' })}
+                    </label>
+                    <UserPicker
+                      {...userPickerProps}
+                      users={users}
+                      value={selectedUserId}
+                      onValueChange={handleAssignedUserChange}
+                      getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                      placeholder={t('interactions.quickAdd.assignedTo.placeholder', {
+                        defaultValue: 'Select user',
+                      })}
+                      buttonWidth="full"
+                    />
+                  </div>
+                </div>
               )}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
@@ -1074,6 +1343,51 @@ export function QuickAddInteraction({
                   </div>
                 </div>
               </div>
+              {(canAddToSchedule || canPickScheduleAssignees) && (
+                <div className="space-y-2">
+                  {canAddToSchedule && (
+                    <Switch
+                      id={`${id}-add-to-schedule-toggle`}
+                      checked={addToSchedule}
+                      onCheckedChange={(checked) => {
+                        setHasTouchedScheduleToggle(true);
+                        setAddToSchedule(checked);
+                      }}
+                      label={t('interactions.quickAdd.schedule.addToggle', {
+                        defaultValue: 'Add to schedule',
+                      })}
+                    />
+                  )}
+                  {canPickScheduleAssignees && (
+                    <MultiUserPicker
+                      id={`${id}-schedule-assignees`}
+                      label={t('interactions.quickAdd.schedule.assigneesLabel', {
+                        defaultValue: 'Schedule for',
+                      })}
+                      values={scheduleAssignedUserIds}
+                      onValuesChange={handleScheduleAssigneesChange}
+                      users={users}
+                      getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                      placeholder={t('interactions.quickAdd.schedule.assigneesPlaceholder', {
+                        defaultValue: 'Select users',
+                      })}
+                      showSearch
+                    />
+                  )}
+                  {/* Only promise a calendar entry when one is actually going to be created. */}
+                  {willCreateScheduleEntry && (
+                    <p className="text-xs text-gray-600">
+                      {isSchedulingForOthers
+                        ? t('interactions.quickAdd.schedule.addHelpOthers', {
+                            defaultValue: "A schedule entry will be added to the selected users' AlgaPSA calendars.",
+                          })
+                        : t('interactions.quickAdd.schedule.addHelp', {
+                            defaultValue: 'A schedule entry will be added to your AlgaPSA calendar.',
+                          })}
+                    </p>
+                  )}
+                </div>
+              )}
             </form>
         </DialogContent>
       </Dialog>

@@ -271,7 +271,7 @@ describe('invoice credit reversal — real concurrency', () => {
     // in-flight timing assertions below don't measure pool spin-up.
     const warmupClientId = await newTestClient('Warmup Client');
     const warmup = await seedFinalizedInvoice({ clientId: warmupClientId, total: 100 });
-    await applyCreditToInvoiceInternal(tenant, mockedUserId, warmupClientId, warmup.invoiceId, 0);
+    await applyCreditToInvoiceInternal(tenant, currentUserRef.user, warmupClientId, warmup.invoiceId, 0);
   }, 180000);
 
   afterAll(async () => {
@@ -320,7 +320,7 @@ describe('invoice credit reversal — real concurrency', () => {
       beforeCommit: async () => {
         // Launch the real apply path while the reversal still holds the
         // invoice row lock; its first statement is the invoices FOR UPDATE.
-        applyPromise = applyCreditToInvoiceInternal(tenant, mockedUserId, clientId, invoiceId, 2000)
+        applyPromise = applyCreditToInvoiceInternal(tenant, currentUserRef.user, clientId, invoiceId, 2000)
           .then((result) => {
             applyFinished = true;
             return result;
@@ -364,7 +364,7 @@ describe('invoice credit reversal — real concurrency', () => {
     // Overlap: the reversal holds its locks for a while as the apply runs.
     const [, applyResult] = await Promise.all([
       runReversal(actorA, invoiceA.invoiceId, { holdMsAfterReversal: 300 }),
-      applyCreditToInvoiceInternal(tenant, mockedUserId, clientId, invoiceB.invoiceId, 6000),
+      applyCreditToInvoiceInternal(tenant, currentUserRef.user, clientId, invoiceB.invoiceId, 6000),
     ]);
 
     expect(applyResult.appliedAmount).toBe(6000);

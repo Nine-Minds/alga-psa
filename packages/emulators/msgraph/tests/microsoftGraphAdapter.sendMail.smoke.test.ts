@@ -1,0 +1,164 @@
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { EmulatorHost } from '@alga-psa/emulator-host';
+import msgraphEmulator from '../src/index';
+
+/**
+ * Microsoft Graph simulator smoke coverage. It proves the adapter's request
+ * shape only; a real tenant send still requires delegated Mail.Send.Shared,
+ * reauthorization, and Exchange Send As permission.
+ */
+let host: EmulatorHost;
+let graphBaseUrl: string;
+let controlUrl: string;
+let MicrosoftGraphAdapter: typeof import('../../../../shared/services/email/providers/MicrosoftGraphAdapter').MicrosoftGraphAdapter;
+
+async function controlPost(path: string, body: unknown): Promise<any> {
+  const response = await fetch(`${controlUrl}${path}`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  return response.json();
+}
+
+async function mintAccessToken(): Promise<string> {
+  const clientId = `mail-send-smoke-${Math.random().toString(36).slice(2)}`;
+  const clientSecret = 'mail-send-smoke-secret';
+  expect((await controlPost('/control/msgraph/seed/client', { clientId, clientSecret })).ok).toBe(true);
+
+  const redirectUri = 'http://localhost/mail-send-smoke-callback';
+  const authorize = new URL(`${graphBaseUrl.replace('/v1.0', '')}/common/oauth2/v2.0/authorize`);
+  authorize.search = new URLSearchParams({ client_id: clientId, redirect_uri: redirectUri, scope: 'Mail.Read Mail.Send User.Read' }).toString();
+  const authorization = await fetch(authorize, { redirect: 'manual' });
+  const code = new URL(authorization.headers.get('location')!).searchParams.get('code')!;
+  const token = await fetch(`${graphBaseUrl.replace('/v1.0', '')}/common/oauth2/v2.0/token`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      client_id: clientId,
+      client_secret: clientSecret,
+      code,
+      redirect_uri: redirectUri,
+      grant_type: 'authorization_code',
+    }),
+  });
+  return (await token.json()).access_token;
+}
+
+async function adapterFor(mailbox: string) {
+  process.env.MICROSOFT_GRAPH_BASE_URL = graphBaseUrl;
+  const accessToken = await mintAccessToken();
+  return new MicrosoftGraphAdapter({
+    id: `provider-${mailbox}`,
+    tenant: 'tenant-mail-send-smoke',
+    name: 'Microsoft Graph simulator smoke',
+    provider_type: 'microsoft',
+    mailbox,
+    folder_to_monitor: 'Inbox',
+    active: true,
+    webhook_notification_url: '',
+    connection_status: 'connected',
+    created_at: '2026-08-28T00:00:00.000Z',
+    updated_at: '2026-08-28T00:00:00.000Z',
+    provider_config: {
+      access_token: accessToken,
+      refresh_token: 'unused-in-smoke',
+      token_expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+    },
+  });
+}
+
+beforeAll(async () => {
+  host = new EmulatorHost({ emulators: [msgraphEmulator], controlPort: 0, ports: { msgraph: 0 } });
+  const { controlPort, ports } = await host.start();
+  graphBaseUrl = `http://127.0.0.1:${ports.msgraph}/v1.0`;
+  controlUrl = `http://127.0.0.1:${controlPort}`;
+  process.env.MICROSOFT_GRAPH_BASE_URL = graphBaseUrl;
+  // Cold transformation of the real application module is suite setup. Each
+  // HTTP behavior keeps the runner's normal five-second assertion budget.
+  ({ MicrosoftGraphAdapter } = await import('../../../../shared/services/email/providers/MicrosoftGraphAdapter'));
+}, 20_000);
+
+afterAll(async () => {
+  delete process.env.MICROSOFT_GRAPH_BASE_URL;
+  await host.stop();
+});
+
+describe('MicrosoftGraphAdapter Graph simulator sendMail smoke', { shuffle: false }, () => {
+  it('resolves the Inbox and message parent before downloading the source through the real adapter', async () => {
+    const adapter = await adapterFor('support@example.test');
+    await adapter.connect();
+    const seeded = await controlPost('/control/msgraph/seed/message', {
+      subject: 'Monitored folder source', body: 'Preserve these mailbox bytes',
+      authenticationResults: 'graph-emulator; dmarc=pass header.from=example.test',
+    });
+    expect(seeded.ok).toBe(true);
+    const parent = await adapter.getMessageParentFolderId(seeded.result.id);
+    const monitored = await adapter.resolveFolderIds(['Inbox']);
+    expect(typeof parent).toBe('string');
+    expect(monitored.size).toBe(1);
+    expect(monitored.has(parent!)).toBe(true);
+    const source = await adapter.downloadMessageSource(seeded.result.id);
+    expect(source.toString()).toContain('Subject: Monitored folder source\r\n');
+    expect(source.toString()).toContain('Authentication-Results: graph-emulator; dmarc=pass header.from=example.test\r\n');
+    expect(source.toString()).toContain('\r\n\r\nPreserve these mailbox bytes');
+  });
+
+  it('keeps unverified mail unverified and rejects injected authentication header lines', async () => {
+    const adapter = await adapterFor('support@example.test');
+    await adapter.connect();
+    const seeded = await controlPost('/control/msgraph/seed/message', { subject: 'Unverified sender' });
+    expect((await adapter.downloadMessageSource(seeded.result.id)).toString()).not.toContain('Authentication-Results:');
+    const invalid = await controlPost('/control/msgraph/seed/message', {
+      authenticationResults: 'graph-emulator; dmarc=pass\r\nBcc: another@example.test',
+    });
+    expect(invalid.ok).toBe(false);
+  });
+
+  it('returns not-found for unsupported mailbox folders instead of listing Inbox messages', async () => {
+    const headers = { authorization: `Bearer ${await mintAccessToken()}` };
+    for (const root of ['/me', '/users/support%40example.test']) {
+      for (const suffix of ['', '/messages']) {
+        const response = await fetch(`${graphBaseUrl}${root}/mailFolders/nonexistent${suffix}`, { headers });
+        expect(response.status).toBe(404);
+        expect(await response.json()).toMatchObject({ error: { code: 'ErrorItemNotFound' } });
+      }
+    }
+  });
+
+  it('uses /me/sendMail for the authenticated mailbox and records the expected payload', async () => {
+    const adapter = await adapterFor('support@example.test');
+    await adapter.connect();
+    await adapter.sendMail({ kind: 'json', message: { subject: 'Personal mailbox send', toRecipients: [] } });
+
+    const sends = (await (await fetch(`${controlUrl}/control/msgraph/state/send-mails`)).json()).result;
+    expect(sends.at(-1)).toMatchObject({
+      route: '/v1.0/me/sendMail',
+      mailbox: null,
+      payload: { message: { subject: 'Personal mailbox send', toRecipients: [] }, saveToSentItems: true },
+    });
+  });
+
+  it('captures the actual MIME bytes sent through the adapter', async () => {
+    const adapter = await adapterFor('support@example.test');
+    await adapter.connect();
+    const mime = 'To: recipient@example.test\r\nSubject: MIME reply\r\n\r\nReply content';
+    await adapter.sendMail({ kind: 'mime', content: Buffer.from(mime).toString('base64') });
+    const sends = (await (await fetch(`${controlUrl}/control/msgraph/state/send-mails`)).json()).result;
+    expect(sends.at(-1)).toMatchObject({ contentType: 'text/plain', payload: Buffer.from(mime).toString('base64') });
+  });
+
+  it('uses the encoded /users/{mailbox}/sendMail route for a shared mailbox and records the expected payload', async () => {
+    const adapter = await adapterFor('support+desk@example.com');
+    await adapter.connect();
+    await adapter.sendMail({ kind: 'json', message: { subject: 'Shared mailbox send', toRecipients: [] } });
+
+    const sends = (await (await fetch(`${controlUrl}/control/msgraph/state/send-mails`)).json()).result;
+    expect(sends.at(-1)).toMatchObject({
+      route: '/v1.0/users/support%2Bdesk%40example.com/sendMail',
+      mailbox: 'support+desk@example.com',
+      encodedMailbox: 'support%2Bdesk%40example.com',
+      payload: { message: { subject: 'Shared mailbox send', toRecipients: [] }, saveToSentItems: true },
+    });
+  });
+});

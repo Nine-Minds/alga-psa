@@ -1,7 +1,12 @@
 import crypto from 'node:crypto';
 import { Client, Connection } from '@temporalio/client';
 
-export async function runLicenseWorkflow({ workflowType, input, connect = Connection.connect }) {
+export function connectToTemporal(options, ConnectionClass = Connection) {
+  // Temporal's static connect() calls this.lazy(), so it must retain its class receiver.
+  return ConnectionClass.connect(options);
+}
+
+export async function runLicenseWorkflow({ workflowType, input, connect = connectToTemporal }) {
   const connection = await connect({ address: process.env.TEMPORAL_ADDRESS || 'temporal-frontend.msp.svc.cluster.local:7233' });
   try {
     const client = new Client({ connection, namespace: process.env.TEMPORAL_NAMESPACE || 'default' });

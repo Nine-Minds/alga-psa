@@ -26,8 +26,8 @@ export class PersistentE2ETestContext extends E2ETestContext {
           ...options
         };
 
-        const context = new PersistentE2ETestContext();
-        await context.initialize(optimizedOptions);
+        const context = new PersistentE2ETestContext(optimizedOptions);
+        await context.initialize();
         
         // Quick health check to ensure services are available
         await context.verifyServicesRunning();
@@ -63,14 +63,6 @@ export class PersistentE2ETestContext extends E2ETestContext {
         console.log('✅ Persistent E2E test context cleaned up');
       }
     };
-  }
-
-  /**
-   * Initialize context for persistent harness
-   */
-  async initialize(options: E2ETestContextOptions = {}) {
-    // Use parent initialization but skip service startup
-    await super.initialize(options);
   }
 
   /**

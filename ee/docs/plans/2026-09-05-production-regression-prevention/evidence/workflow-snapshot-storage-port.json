@@ -1,0 +1,25 @@
+{
+  "scope": "Port retired workflow snapshot integration assertions to current Temporal storage activity",
+  "baseRevision": "62da022211f0d02feea6764362a6f36192e02c74",
+  "workingTreeDirty": true,
+  "validation": {
+    "passed": 4,
+    "failed": 0,
+    "skipped": 0,
+    "artifact": "/tmp/alga-workflow-snapshot-storage-fresh.log",
+    "sha256": "3919c3b7bbcc4f26cd1cbd628b25d90fd2386bb69179a67954e5c0c99dacee37",
+    "configuration": "server/vitest.config.ts",
+    "database": "Fresh task-owned PostgreSQL database bootstrapped through createTestDbConnection"
+  },
+  "movedAssertions": {
+    "Envelope snapshots stored with redacted secretRef fields": "Real projectWorkflowRuntimeV2StepCompletion writes nested redacted values; verifies input is unchanged, persisted byte count, step linkage and retry idempotency.",
+    "Snapshot size truncation preserves JSON validity": "Actual activity stores bounded valid JSON for a multibyte oversized snapshot.",
+    "Snapshot retention prunes old snapshots": "Actual activity prunes default 30-day and configured 7-day history, clears expired references, preserves other runs and tenants."
+  },
+  "limits": [
+    "Admin connection and read-only retry wrapper are substituted; real activity redaction, persistence models, SQL and transactions execute.",
+    "Fixture tables clone migrated definitions in rollback-only schemas; no Temporal server scheduling claim.",
+    "Two original skipped invocation-storage/run-studio action cases remain. Output replay depends on stored raw values and requires a deliberate persistence design before redaction changes.",
+    "Native integration re-execution remains required."
+  ]
+}

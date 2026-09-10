@@ -141,6 +141,8 @@
   },
   "usage": {
     "bucketHoursOverview": "Visão geral das horas de intervalo",
+    "bucketLoadError": "Não foi possível carregar os saldos dos pacotes de horas. Tente novamente para ver os saldos atuais.",
+    "retryBucketBalances": "Recarregar saldos dos pacotes de horas",
     "usageRecords": "Registros de uso",
     "actions": {
       "addUsage": "Adicionar uso",
@@ -211,6 +213,12 @@
       "updateError": "Falha ao atualizar o registro de uso",
       "deleteSuccess": "Registro de uso excluído com sucesso",
       "deleteError": "Falha ao excluir registro de uso"
+    },
+    "periodReport": "Informação de uso do período",
+    "periodAlreadyInvoiced": "Este período já foi faturado. Corrija-o pelo processo de ajuste de fatura.",
+    "periodFilter": {
+      "notice": "Exibindo o uso do período de serviço de {{start}} a {{end}}",
+      "clear": "Limpar"
     }
   },
   "lineItem": {
@@ -387,7 +395,10 @@
       "loadingBatches": "Carregando lotes...",
       "empty": "Ainda não há lotes de exportação.",
       "loadingDetails": "Carregando detalhes do lote...",
-      "batchNotFound": "Lote não encontrado."
+      "batchNotFound": "Lote não encontrado.",
+      "checkingAccess": "Verificando acesso...",
+      "accessDeniedTitle": "Acesso negado",
+      "accessDeniedDescription": "Você não tem permissão para acessar as exportações contábeis."
     },
     "createDialog": {
       "title": "Nova exportação contábil",
@@ -663,7 +674,9 @@
     },
     "recurringRun": {
       "selectPeriods": "Selecione pelo menos um período de faturamento recorrente para gerar.",
-      "invoicePermission": "Permissão negada: é necessária permissão para criar ou gerar faturas"
+      "invoicePermission": "Permissão negada: é necessária permissão para criar ou gerar faturas",
+      "monthEndCloseNotMaterialized": "Os períodos de serviço recorrentes não foram materializados para esta janela de execução recorrente.",
+      "monthEndCloseNotEligible": "O período {{servicePeriod}} só pode ser fechado no fim do mês em {{finalCalendarDay}}. Somente períodos de serviço em atraso que abrangem um mês de calendário completo podem ser fechados antecipadamente em seu último dia de calendário."
     },
     "recurringServicePeriod": {
       "scheduleKeyRequiredInspect": "É necessária uma chave de agenda para inspecionar os períodos de serviço recorrentes.",
@@ -689,8 +702,10 @@
         "setDefault": "Permissão negada: não é possível definir o modelo de documento padrão",
         "clearOverride": "Permissão negada: não é possível remover a substituição do modelo de documento",
         "delete": "Permissão negada: não é possível excluir os modelos de documento",
-        "preview": "Permissão negada: não é possível pré-visualizar os modelos de documento"
-      }
+        "preview": "Permissão negada: não é possível pré-visualizar os modelos de documento",
+        "readSalesOrders": "Permissão negada: não é possível ler os pedidos de venda"
+      },
+      "existingNotFound": "Documento não encontrado."
     },
     "billingProfile": {
       "periodOrder": "Escolha um período cujo início seja anterior ou igual ao fim.",

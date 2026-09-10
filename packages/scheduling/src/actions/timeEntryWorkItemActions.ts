@@ -33,7 +33,7 @@ export const fetchWorkItemsForTimeSheet = withAuth(async (
   const scopedDb = tenantDb(db, tenant) as any;
 
   // Check permission for time entry reading (reading work items for time entries)
-  if (!await hasPermission(user, 'timeentry', 'read', db)) {
+  if (!await hasPermission(user, 'time_entry', 'read', db)) {
     throw new Error('Permission denied: Cannot read time entry work items');
   }
 
@@ -189,7 +189,7 @@ export const addWorkItem = withAuth(async (
   const scopedDb = tenantDb(db, tenant) as any;
 
   // Check permission for time entry creation (adding work items for time entries)
-  if (!await hasPermission(user, 'timeentry', 'create', db)) {
+  if (!await hasPermission(user, 'time_entry', 'create', db)) {
     throw new Error('Permission denied: Cannot add work items for time entries');
   }
 
@@ -233,7 +233,7 @@ export const deleteWorkItem = withAuth(async (
   const {knex: db} = await createTenantKnex();
 
   // Check permission for time entry deletion (deleting work items affects time entries)
-  if (!await hasPermission(user, 'timeentry', 'delete', db)) {
+  if (!await hasPermission(user, 'time_entry', 'delete', db)) {
     throw new Error('Permission denied: Cannot delete work items for time entries');
   }
 

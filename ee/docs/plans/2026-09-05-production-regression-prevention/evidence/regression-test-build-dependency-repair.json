@@ -1,0 +1,50 @@
+{
+  "cause": "Two regression suites introduced reverse Nx dependencies: surveys -> server and server -> temporal-workflows.",
+  "changes": [
+    "Moved survey response DB suite from surveys package to server/src/services",
+    "Moved workflow snapshot DB/Temporal suite from server to ee/temporal-workflows/src/__tests__/integration"
+  ],
+  "validation": {
+    "surveyTestsPassed": 17,
+    "snapshotTestsPassed": 28,
+    "snapshotDurationSeconds": 24.12,
+    "beforeTasks": 60,
+    "afterTasks": 58,
+    "beforeApplicationTasks": [
+      "server:build",
+      "temporal-workflows:build"
+    ],
+    "afterApplicationTasks": [],
+    "serverRemainingTask": "server:build-deps",
+    "knownCycles": 3,
+    "newCycles": 0,
+    "cycleBaselineChanged": false,
+    "collection": "Both relocated suites discovered by existing DB/integration configs"
+  },
+  "logs": [
+    "/tmp/alga-survey-server-relocation.log",
+    "/tmp/alga-snapshot-relocation.log"
+  ],
+  "graphs": {
+    "before-project": {
+      "path": "test-results/designer-graph/before-project.json",
+      "sha256": "e8674809cdf706963ef1f157e8623751de78d21bb34939922468905f9d42e598"
+    },
+    "before-tasks": {
+      "path": "test-results/designer-graph/before-tasks.json",
+      "sha256": "4055e24acb4dc577ade4bc4ce771a02e4edcac841fa35dd5b962f4aa02ee6a6d"
+    },
+    "after-project": {
+      "path": "test-results/designer-graph/after-project.json",
+      "sha256": "f49137ab6a6ab69d8388f72800b2b0bc8addbc6e1f3b709c9ba763a37d97853a"
+    },
+    "after-tasks": {
+      "path": "test-results/designer-graph/after-tasks.json",
+      "sha256": "74437c0cbce10f016905675a34a1e70ae2fcd722f7724c22bc557cf08b3ee376"
+    }
+  },
+  "limitations": [
+    "Production image must still be rebuilt",
+    "Browser journey and native CI remain unverified"
+  ]
+}

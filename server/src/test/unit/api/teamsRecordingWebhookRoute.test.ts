@@ -4,8 +4,10 @@ import { NextRequest } from 'next/server';
 const scheduleImmediateJobMock = vi.hoisted(() => vi.fn());
 const teamsIntegrationRowMock = vi.hoisted(() => ({ value: null as Record<string, unknown> | null }));
 
-vi.mock('@/lib/jobs', () => ({
-  scheduleImmediateJob: scheduleImmediateJobMock,
+// The route enqueues through the runner seam (Temporal on EE), not the legacy
+// pg-boss scheduleImmediateJob helper.
+vi.mock('@/lib/jobs/JobRunnerFactory', () => ({
+  getJobRunner: async () => ({ scheduleJob: scheduleImmediateJobMock }),
 }));
 
 vi.mock('@alga-psa/db', () => ({

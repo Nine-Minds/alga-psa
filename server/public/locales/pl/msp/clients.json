@@ -12,7 +12,6 @@
       "downloadCsv": "Pobierz CSV",
       "edit": "Edytuj",
       "import": "Importuj",
-      "reactivate": "Ponownie aktywuj",
       "remove": "Usuń",
       "retry": "Ponów",
       "save": "Zapisz",
@@ -207,7 +206,18 @@
     "clientNotFound": "Nie znaleziono klienta.",
     "deletePermissionDenied": "Odmowa uprawnień: nie można usuwać klientów.",
     "singleInactiveWithContactsSuccess_few": "{{name}} i {{count}} kontakty zostały pomyślnie dezaktywowane.",
-    "singleInactiveWithContactsSuccess_many": "{{name}} i {{count}} kontaktów zostało pomyślnie dezaktywowanych."
+    "singleInactiveWithContactsSuccess_many": "{{name}} i {{count}} kontaktów zostało pomyślnie dezaktywowanych.",
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "Zaznaczono {{count}}",
+        "markInactive": "Oznacz jako nieaktywne",
+        "reactivate": "Ponownie aktywuj",
+        "delete": "Usuń",
+        "print": "Drukuj zaznaczone",
+        "more": "Więcej",
+        "clear": "Wyczyść zaznaczenie"
+      }
+    }
   },
   "clientDetails": {
     "opportunities": "Szanse sprzedażowe",
@@ -1474,6 +1484,9 @@
       "viewTranscript": "Zobacz transkrypcję"
     },
     "quickAdd": {
+      "clientRequired": "Wybierz klienta dla tej interakcji",
+      "contactPlaceholder": "Wybierz kontakt",
+      "selectClientFirst": "Najpierw wybierz klienta",
       "teams": {
         "attendees": {
           "add": "Dodaj",
@@ -1502,11 +1515,32 @@
         "createFailed": "Nie udało się utworzyć spotkania Teams",
         "createToggle": "Utwórz spotkanie Teams",
         "endRequired": "Godzina zakończenia jest wymagana do utworzenia spotkania Teams",
+        "invitesDisabled": "Zaproszenia e-mail są wyłączone w ustawieniach integracji Teams — Microsoft nie powiadomi uczestników.",
+        "invitesSummary": "Microsoft wyśle zaproszenia kalendarza pocztą e-mail do: {{recipients}}.",
+        "invitesSummaryYou": "Ciebie (twórcy)",
+        "reason": {
+          "feature_disabled": "Microsoft Teams nie jest włączony dla tej organizacji.",
+          "ee_disabled": "Integracja Teams wymaga wersji Enterprise Edition.",
+          "no_organizer": "W ustawieniach Teams nie skonfigurowano domyślnego organizatora spotkania.",
+          "not_configured": "Integracja Teams nie została skonfigurowana."
+        },
+        "scheduleSummary": "Wpis harmonogramu zostanie dodany do Twojego kalendarza AlgaPSA.",
         "startRequired": "Godzina rozpoczęcia jest wymagana do utworzenia spotkania Teams",
         "unavailable": "Tworzenie spotkań Teams nie jest dostępne dla tego tenanta."
       },
       "loadFailed": "Nie udało się wczytać opcji interakcji. Spróbuj ponownie.",
-      "saveFailed": "Nie udało się zapisać interakcji. Spróbuj ponownie."
+      "saveFailed": "Nie udało się zapisać interakcji. Spróbuj ponownie.",
+      "schedule": {
+        "addToggle": "Dodaj do harmonogramu",
+        "addHelp": "Wpis harmonogramu zostanie dodany do Twojego kalendarza AlgaPSA.",
+        "addHelpOthers": "Wpis harmonogramu zostanie dodany do kalendarzy AlgaPSA wybranych użytkowników.",
+        "assigneesLabel": "Zaplanuj dla",
+        "assigneesPlaceholder": "Wybierz użytkowników"
+      },
+      "assignedTo": {
+        "label": "Przypisane do",
+        "placeholder": "Wybierz użytkownika"
+      }
     },
     "feed": {
       "addInteraction": "Dodaj interakcję",
@@ -1527,6 +1561,13 @@
       "allContacts": "Wszystkie kontakty",
       "allStatuses": "Wszystkie statusy",
       "allUsers": "Wszyscy użytkownicy",
+      "columns": { "type": "Typ", "title": "Tytuł", "client": "Klient", "contact": "Kontakt", "user": "Użytkownik", "date": "Data", "status": "Status" },
+      "empty": "Brak interakcji pasujących do tych filtrów.",
+      "loading": "Ładowanie interakcji…",
+      "openClient": "Otwórz klienta {{name}}",
+      "openContact": "Otwórz kontakt {{name}}",
+      "openInteraction": "Otwórz interakcję {{title}}",
+      "openUser": "Otwórz użytkownika {{name}}",
       "byUser": "Przez {{name}}",
       "collapse": "Zwiń ostatnie interakcje",
       "contactsFromClient": "Kontakty wybranego klienta",
@@ -1795,7 +1836,9 @@
       "missingField": "Brakuje wymaganego pola interakcji.",
       "missingFieldNamed": "Brakuje wymaganego pola interakcji: {{field}}.",
       "referenceMissing": "Wybrana interakcja, klient, kontakt, użytkownik, status lub typ już nie istnieje. Odśwież stronę i spróbuj ponownie.",
-      "duplicate": "Interakcja o takich danych już istnieje."
+      "duplicate": "Interakcja o takich danych już istnieje.",
+      "scheduleAssignDenied": "Odmowa uprawnień: nie można przypisywać wpisów harmonogramu innym użytkownikom.",
+      "scheduleUsersMissing": "Nie można odnaleźć co najmniej jednego przypisanego użytkownika."
     },
     "interactionType": {
       "notFound": "Nie znaleziono typu interakcji lub nie masz do niego dostępu.",

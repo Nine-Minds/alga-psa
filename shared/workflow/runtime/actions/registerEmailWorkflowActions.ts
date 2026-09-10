@@ -66,7 +66,7 @@ const parsedEmailReplySchema = z.object({
   warnings: z.array(z.string()).optional().describe('Parser warnings'),
   tokens: z.object({
     conversationToken: z.string().optional().describe('Extracted conversation reply token')
-  }).optional().describe('Extracted tokens from email')
+  }).nullable().optional().describe('Extracted tokens from email')
 });
 
 const parsedEmailSchema = z.object({

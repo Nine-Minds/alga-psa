@@ -12,7 +12,6 @@
       "downloadCsv": "Descargar CSV",
       "edit": "Editar",
       "import": "Importar",
-      "reactivate": "Reactivar",
       "remove": "Quitar",
       "retry": "Reintentar",
       "save": "Guardar",
@@ -181,7 +180,18 @@
     "shareTooltip": "Imprimir, importar y exportar",
     "defaultClientDeleteError": "No se puede eliminar el cliente predeterminado. Primero establezca otro cliente como predeterminado en Configuración general.",
     "clientNotFound": "Cliente no encontrado.",
-    "deletePermissionDenied": "Permiso denegado: no se pueden eliminar clientes."
+    "deletePermissionDenied": "Permiso denegado: no se pueden eliminar clientes.",
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} seleccionados",
+        "markInactive": "Marcar como inactivo",
+        "reactivate": "Reactivar",
+        "delete": "Eliminar",
+        "print": "Imprimir seleccionados",
+        "more": "Más",
+        "clear": "Limpiar selección"
+      }
+    }
   },
   "clientDetails": {
     "opportunities": "Oportunidades",
@@ -1422,6 +1432,9 @@
       "viewTranscript": "Ver transcripción"
     },
     "quickAdd": {
+      "clientRequired": "Seleccione un cliente para esta interacción",
+      "contactPlaceholder": "Seleccionar contacto",
+      "selectClientFirst": "Seleccione primero un cliente",
       "teams": {
         "attendees": {
           "add": "Agregar",
@@ -1450,11 +1463,32 @@
         "createFailed": "Error al crear la reunión de Teams",
         "createToggle": "Crear reunión de Teams",
         "endRequired": "Se requiere la hora de finalización para crear una reunión de Teams",
+        "invitesDisabled": "Las invitaciones por correo electrónico están desactivadas en la configuración de la integración de Teams: Microsoft no notificará a los asistentes.",
+        "invitesSummary": "Microsoft enviará invitaciones de calendario por correo electrónico a: {{recipients}}.",
+        "invitesSummaryYou": "usted (creador)",
+        "reason": {
+          "feature_disabled": "Microsoft Teams no está habilitado para este inquilino.",
+          "ee_disabled": "La integración con Teams requiere Enterprise Edition.",
+          "no_organizer": "No hay ningún organizador de reunión predeterminado configurado en la configuración de Teams.",
+          "not_configured": "La integración con Teams no se ha configurado."
+        },
+        "scheduleSummary": "Se añadirá una entrada de programación a su calendario de AlgaPSA.",
         "startRequired": "Se requiere la hora de inicio para crear una reunión de Teams",
         "unavailable": "La creación de reuniones de Teams no está disponible para este inquilino."
       },
       "loadFailed": "No se pudieron cargar las opciones de interacción. Inténtelo de nuevo.",
-      "saveFailed": "No se pudo guardar la interacción. Inténtelo de nuevo."
+      "saveFailed": "No se pudo guardar la interacción. Inténtelo de nuevo.",
+      "schedule": {
+        "addToggle": "Agregar al calendario",
+        "addHelp": "Se añadirá una entrada de programación a su calendario de AlgaPSA.",
+        "addHelpOthers": "Se añadirá una entrada de programación a los calendarios de AlgaPSA de los usuarios seleccionados.",
+        "assigneesLabel": "Programar para",
+        "assigneesPlaceholder": "Seleccionar usuarios"
+      },
+      "assignedTo": {
+        "label": "Asignado a",
+        "placeholder": "Seleccionar usuario"
+      }
     },
     "feed": {
       "addInteraction": "Agregar interacción",
@@ -1475,6 +1509,13 @@
       "allContacts": "Todos los contactos",
       "allStatuses": "Todos los estados",
       "allUsers": "Todos los usuarios",
+      "columns": { "type": "Tipo", "title": "Título", "client": "Cliente", "contact": "Contacto", "user": "Usuario", "date": "Fecha", "status": "Estado" },
+      "empty": "Ninguna interacción coincide con estos filtros.",
+      "loading": "Cargando interacciones…",
+      "openClient": "Abrir cliente {{name}}",
+      "openContact": "Abrir contacto {{name}}",
+      "openInteraction": "Abrir interacción {{title}}",
+      "openUser": "Abrir usuario {{name}}",
       "byUser": "Por {{name}}",
       "collapse": "Contraer interacciones recientes",
       "contactsFromClient": "Contactos del cliente seleccionado",
@@ -1743,7 +1784,9 @@
       "missingField": "Falta un campo obligatorio de la interacción.",
       "missingFieldNamed": "Falta un campo obligatorio de la interacción: {{field}}.",
       "referenceMissing": "La interacción, el cliente, el contacto, el usuario, el estado o el tipo seleccionados ya no existen. Actualice la página e inténtelo de nuevo.",
-      "duplicate": "Ya existe una interacción con estos datos."
+      "duplicate": "Ya existe una interacción con estos datos.",
+      "scheduleAssignDenied": "Permiso denegado: no se pueden asignar entradas de programación a otros usuarios.",
+      "scheduleUsersMissing": "No se pudieron encontrar uno o más usuarios asignados."
     },
     "interactionType": {
       "notFound": "Tipo de interacción no encontrado o no tiene acceso a él.",

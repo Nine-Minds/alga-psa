@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { Card, CardHeader, CardTitle, CardContent } from '@alga-psa/ui/components/Card';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Clock, ArrowRight } from 'lucide-react';
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   checkClientPortalPermissions,
@@ -23,25 +22,17 @@ import {
 
 /**
  * "Prepaid hours" dashboard widget: one mini remaining-hours meter per bucket
- * line, plus one row per prepaid hour block. Renders nothing unless the release
- * flag is on, the portal user has billing access, and there is at least one
+ * line, plus one row per prepaid hour block. Renders nothing unless the portal
+ * user has billing access and there is at least one
  * bucket line or hour block. A permission error from the actions also counts
  * as "render nothing".
  */
 export function PrepaidHoursCard() {
   const { t } = useTranslation('features/billing');
-  const { enabled: widgetEnabled } = useFeatureFlag('release-v1-5-feature', {
-    defaultValue: false,
-  });
   const [buckets, setBuckets] = useState<ClientBucketUsageResult[] | null>(null);
   const [hourBlocks, setHourBlocks] = useState<ClientPortalHourBlock[]>([]);
 
   useEffect(() => {
-    if (!widgetEnabled) {
-      setBuckets(null);
-      setHourBlocks([]);
-      return;
-    }
     let cancelled = false;
     (async () => {
       try {
@@ -72,9 +63,9 @@ export function PrepaidHoursCard() {
     return () => {
       cancelled = true;
     };
-  }, [widgetEnabled]);
+  }, []);
 
-  if (!widgetEnabled || !buckets || (buckets.length === 0 && hourBlocks.length === 0)) {
+  if (!buckets || (buckets.length === 0 && hourBlocks.length === 0)) {
     return null;
   }
 

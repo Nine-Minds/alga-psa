@@ -36,6 +36,45 @@ export interface FixedPlanServiceRow {
   service_base_rate: number | string | null;
   enable_proration?: boolean | null;
   quantity?: number | string | null;
+  /**
+   * Explicit pricing basis of the member's fixed configuration:
+   * 'unit' (recurring seat: quantity × base_rate) or 'bundle'/NULL (existing
+   * fixed-bundle semantics where the line total is authoritative).
+   */
+  pricing_basis?: 'unit' | 'bundle' | string | null;
+}
+
+/**
+ * Pricing basis is per SERVICE, never per line: only members explicitly opted
+ * into 'unit' bill quantity × unit rate. A NULL/legacy or 'bundle' sibling on
+ * the same line keeps the fixed-bundle semantics (line total allocated by
+ * FMV) — marking one member as recurring seats never reinterprets the others.
+ */
+export function isUnitPricedFixedService(service: Pick<FixedPlanServiceRow, "pricing_basis">): boolean {
+  return service.pricing_basis === "unit";
+}
+
+/** True when the line has at least one explicitly unit-priced member. */
+export function hasUnitPricedFixedMembers(planServices: FixedPlanServiceRow[]): boolean {
+  return planServices.some((service) => isUnitPricedFixedService(service));
+}
+
+/**
+ * @deprecated Line-level predicate kept only for callers that need "the line
+ * has unit members and nothing bundled". Charge math is per service — see
+ * {@link isUnitPricedFixedService}.
+ */
+export function isUnitPricedFixedLine(planServices: FixedPlanServiceRow[]): boolean {
+  return (
+    planServices.length > 0 &&
+    planServices.every(
+      (service) =>
+        service.pricing_basis === undefined ||
+        service.pricing_basis === null ||
+        service.pricing_basis === "unit",
+    ) &&
+    planServices.some((service) => service.pricing_basis === "unit")
+  );
 }
 
 export interface FixedFallbackServiceRow {
@@ -386,6 +425,140 @@ export function computeFixedCharges(
     (planLevelBaseRateCents === null ||
       Math.round(Number(effectiveCustomRate)) !== planLevelBaseRateCents);
 
+  // --- Explicit unit-priced Fixed members ("recurring seats/units") ---
+  // Pricing basis is per service: only members that explicitly carry
+  // pricing_basis = 'unit' bill quantity × unit rate. The bundle plan-level
+  // base rate (line custom_rate / service_base_rate FMV derivation) has NO
+  // precedence for them, and quantity zero is an explicit zero — never a
+  // fallback to 1. NULL/'bundle' siblings on the same line keep the
+  // fixed-bundle semantics below; opting one member into seats never
+  // reinterprets the others.
+  const unitServices = planServices.filter((service) => isUnitPricedFixedService(service));
+  const bundleServices = planServices.filter((service) => !isUnitPricedFixedService(service));
+  let heldUnitCharges: IFixedPriceCharge[] | null = null;
+
+  if (isFixedFeePlan && unitServices.length > 0) {
+    const unitCharges: IFixedPriceCharge[] = [];
+    const unitExplanations: ChargeExplanation[] = [];
+
+    for (const service of unitServices) {
+      const rawQuantity =
+        service.configuration_quantity ??
+        service.service_quantity ??
+        service.quantity;
+      const quantity = rawQuantity == null ? 0 : Number(rawQuantity);
+      if (!Number.isFinite(quantity) || quantity < 0) {
+        console.error(
+          `[BillingEngine] Unit-priced service ${service.service_id} on contract line ${clientContractLine.contract_line_id} has an invalid quantity; skipping seat charge.`,
+        );
+        continue;
+      }
+      if (quantity === 0) {
+        // Explicit zero: no seats to bill. Never 1.
+        continue;
+      }
+
+      const rawUnitRate =
+        service.service_base_rate ??
+        (service.configuration_custom_rate != null
+          ? Number(service.configuration_custom_rate)
+          : undefined) ??
+        service.default_rate;
+      const unitRate = rawUnitRate == null ? null : Number(rawUnitRate);
+      if (
+        unitRate === null ||
+        !Number.isFinite(unitRate) ||
+        unitRate < 0
+      ) {
+        console.error(
+          `[BillingEngine] Unit-priced service ${service.service_id} on contract line ${clientContractLine.contract_line_id} has no valid unit rate; skipping seat charge.`,
+        );
+        continue;
+      }
+      const rate = Math.ceil(unitRate);
+      const total = Math.ceil(quantity * rate);
+
+      const { taxRegion: serviceTaxRegion, isTaxable } =
+        taxPorts.getTaxInfoFromService(service);
+      const effectiveTaxRegion =
+        serviceTaxRegion ??
+        taxPorts.getLocationTaxRegionCode(clientContractLine.location_id) ??
+        taxPorts.getClientDefaultTaxRegionCode(client.client_id) ??
+        undefined;
+
+      let taxAmount = 0;
+      let taxRate = 0;
+      if (
+        !taxPorts.isTaxExemptForProfile(resolvedProfile?.billingProfileId) &&
+        isTaxable &&
+        effectiveTaxRegion
+      ) {
+        const taxResult = taxPorts.calculateTax(
+          client.client_id,
+          total,
+          servicePeriodEnd,
+          effectiveTaxRegion,
+          true,
+          currencyCode,
+          resolvedProfile?.billingProfileId ?? null,
+        );
+        taxRate = taxResult.taxRate;
+        taxAmount = taxResult.taxAmount;
+      }
+
+      const unitCharge: IFixedPriceCharge = {
+        serviceId: service.service_id,
+        serviceName: service.service_name,
+        quantity,
+        rate,
+        total,
+        type: "fixed",
+        client_contract_line_id: clientContractLine.client_contract_line_id,
+        client_contract_id: clientContractLine.client_contract_id || undefined,
+        contract_name: clientContractLine.contract_name || undefined,
+        location_id: clientContractLine.location_id ?? null,
+        billing_profile_id: resolvedProfile?.billingProfileId ?? null,
+        billing_profile_source: resolvedProfile?.source ?? null,
+        tax_amount: taxAmount,
+        tax_rate: taxRate,
+        tax_region: effectiveTaxRegion,
+        is_taxable: isTaxable,
+        config_id: service.config_id,
+        base_rate: rate,
+      };
+      unitCharges.push(unitCharge);
+
+      unitExplanations.push({
+        chargeKey: fixedChargeKey(unitCharge),
+        serviceName: service.service_name,
+        chargeType: "fixed",
+        inputs: [
+          {
+            label: "Unit rate",
+            value: formatCents(rate, currencyCode),
+          },
+          { label: "Quantity", value: String(quantity) },
+        ],
+        steps: [
+          `${String(quantity)} × ${formatCents(rate, currencyCode)} = ${formatCents(total, currencyCode)}`,
+        ],
+        note:
+          "Recurring seats/units: quantity × unit rate. The fixed bundle total does not apply to this line.",
+        markers: [],
+      });
+    }
+
+    explanations.push(...unitExplanations);
+    if (bundleServices.length === 0) {
+      // Pure seats line: the unit charges are the whole line.
+      generatedCharges = unitCharges;
+    } else {
+      // Mixed line: hold the seat charges and let the bundle allocation run
+      // over the remaining (bundle/legacy) members only.
+      heldUnitCharges = unitCharges;
+    }
+  }
+
   if (planServices.length === 0) {
     if (!isFixedFeePlan || planLevelBaseRateCents === null) {
       return { charges: [], explanations: [], advanceGuard: null };
@@ -480,25 +653,63 @@ export function computeFixedCharges(
   }
 
   if (!generatedCharges && isFixedFeePlan) {
-    // Consolidated fixed fee, internally allocated across services by FMV.
+    // Consolidated fixed fee, internally allocated across the BUNDLE members
+    // by FMV. Unit-priced members already billed as seats above and are
+    // excluded here — from the fee derivation and from the allocation — so a
+    // mixed line never double-bills a seat as a bundle allocation.
+    const normalizedBundleServices = normalizedPlanServices.filter(
+      (service) => !isUnitPricedFixedService(service),
+    );
+    // With unit members present and no explicit line rate, the bundle fee is
+    // derived from the bundle members alone (a seat's unit rate is per seat,
+    // not part of the bundle pool).
+    const bundleLevelBaseRate =
+      unitServices.length > 0
+        ? resolveFixedPlanLevelBaseRate({
+            clientContractLine,
+            contractLineDetails,
+            planServices: bundleServices,
+          })
+        : planLevelBaseRate;
+    if (bundleLevelBaseRate === null || Number.isNaN(bundleLevelBaseRate)) {
+      if (heldUnitCharges) {
+        // The seats are priceable even when the bundle members are not; do
+        // not silently drop them.
+        console.error(
+          `[BillingEngine] Unable to determine bundle base_rate for mixed contract line ${clientContractLine.contract_line_id}; billing unit-priced members only.`,
+        );
+        generatedCharges = heldUnitCharges;
+        heldUnitCharges = null;
+      } else {
+        return { charges: [], explanations: [], advanceGuard: null };
+      }
+    }
     const baseRateInCents = hasCustomRateOverride
       ? Math.round(Number(effectiveCustomRate))
-      : Math.round(planLevelBaseRate! * 100);
+      : Math.round((bundleLevelBaseRate ?? 0) * 100);
 
-    const totalFMVCents = normalizedPlanServices.reduce((sum, service) => {
+    const totalFMVCents = normalizedBundleServices.reduce((sum, service) => {
       const serviceFMV = Number(service.default_rate ?? 0) * service.quantity;
       return sum + serviceFMV;
     }, 0);
 
     // Zero FMV cannot be allocated. Negative FMV is valid (credit services).
-    if (totalFMVCents === 0) {
+    if (!generatedCharges && totalFMVCents === 0) {
       console.log(
         `Total FMV (cents) for services in plan ${clientContractLine.contract_line_id} is zero`,
       );
-      return { charges: [], explanations: [], advanceGuard: null };
+      if (heldUnitCharges) {
+        generatedCharges = heldUnitCharges;
+        heldUnitCharges = null;
+      } else {
+        return { charges: [], explanations: [], advanceGuard: null };
+      }
     }
 
-    const serviceAllocations = normalizedPlanServices.map((service) => {
+    // When a guard above already resolved the charges (seats only), the
+    // allocation below runs over nothing.
+    const bundleAllocationNeeded = !generatedCharges;
+    const serviceAllocations = (bundleAllocationNeeded ? normalizedBundleServices : []).map((service) => {
       // FMV is based on the service's default rate (cents), not plan overrides.
       const rateForFMV = Number(service.default_rate || 0);
       const serviceFMVCents = Math.round(rateForFMV * service.quantity);
@@ -564,7 +775,7 @@ export function computeFixedCharges(
     const detailedCharges: IFixedPriceCharge[] = [];
 
     for (const allocation of serviceAllocations) {
-      const planService = normalizedPlanServices.find(
+      const planService = normalizedBundleServices.find(
         (ps) => ps.service_id === allocation.serviceId,
       );
 
@@ -638,7 +849,7 @@ export function computeFixedCharges(
       if (planLevelEnableProration && allocation.prorationFactor !== 1) {
         markers.push("proration");
       }
-      if (normalizedPlanServices.length > 1) {
+      if (normalizedBundleServices.length > 1) {
         markers.push("fmv_allocation");
       }
       if (customRateSource === "pricing_schedule" && hasCustomRateOverride) {
@@ -651,7 +862,7 @@ export function computeFixedCharges(
         inputs: explanationInputs,
         steps,
         note:
-          normalizedPlanServices.length > 1
+          normalizedBundleServices.length > 1
             ? "The plan's fixed fee is allocated across its services in proportion to their fair market value."
             : planLevelEnableProration && allocation.prorationFactor !== 1
               ? "Prorated — the service period covers part of the billing period."
@@ -660,8 +871,10 @@ export function computeFixedCharges(
       });
     }
 
-    generatedCharges = detailedCharges;
-    generatedChargeAmountsUseCoverage = planLevelEnableProration;
+    if (bundleAllocationNeeded) {
+      generatedCharges = detailedCharges;
+      generatedChargeAmountsUseCoverage = planLevelEnableProration;
+    }
   } else if (!generatedCharges) {
     // Plan type isn't 'Fixed' but a service within it is configured Fixed.
     console.warn(
@@ -789,6 +1002,12 @@ export function computeFixedCharges(
           : "coverage_ratio",
       )
     : generatedCharges;
+
+  if (heldUnitCharges) {
+    chargesAfterSettlement.push(...((fixedProrationEnabled || requiresAdvanceTerminationSettlement)
+      ? applyFixedChargeCoverageSettlement(heldUnitCharges, coverageRatio, requiresAdvanceTerminationSettlement ? "unused_credit_net" : "coverage_ratio")
+      : heldUnitCharges));
+  }
 
   const chargesWithMeta = chargesAfterSettlement.map((charge) => ({
     ...charge,

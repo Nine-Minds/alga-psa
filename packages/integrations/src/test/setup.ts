@@ -16,6 +16,35 @@ process.env.NEXTAUTH_SECRET ??= 'localtest-nextauth-secret';
   disconnect() {}
 };
 
+// Node 25 ships an experimental global localStorage that shadows jsdom's and
+// throws/no-ops without --localstorage-file ("setItem is not a function").
+// CI's Node 20 has no such global; guard local runs with a Map-backed stub.
+if (typeof window !== 'undefined') {
+  let broken = false;
+  try {
+    broken = typeof window.localStorage?.setItem !== 'function';
+    if (!broken) {
+      window.localStorage.setItem('__probe__', '1');
+      window.localStorage.removeItem('__probe__');
+    }
+  } catch {
+    broken = true;
+  }
+  if (broken) {
+    const backing = new Map<string, string>();
+    const storage = {
+      get length() { return backing.size; },
+      clear: () => backing.clear(),
+      getItem: (k: string) => (backing.has(k) ? backing.get(k)! : null),
+      key: (i: number) => [...backing.keys()][i] ?? null,
+      removeItem: (k: string) => { backing.delete(k); },
+      setItem: (k: string, v: string) => { backing.set(k, String(v)); },
+    } as Storage;
+    Object.defineProperty(window, 'localStorage', { value: storage, configurable: true });
+    Object.defineProperty(globalThis, 'localStorage', { value: storage, configurable: true });
+  }
+}
+
 // Mock UI reflection hooks
 vi.mock('@alga-psa/ui/ui-reflection/useAutomationIdAndRegister', () => ({
   useAutomationIdAndRegister: () => ({

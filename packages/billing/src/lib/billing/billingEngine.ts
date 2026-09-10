@@ -1,3 +1,5 @@
+import { applyProjectCapAdjustments } from './domain/projectCapAdjustments';
+import { resolveUsageMeasurementRevision } from './usageMeasurementTransitions';
 import { Knex } from "knex";
 import {
   calculateContractBilling,
@@ -34,6 +36,7 @@ import {
   IClientContractLineCycle,
   IRecurringServicePeriod,
   IRecurringServicePeriodRecord,
+  IUsageServicePeriodStatus,
   BillingCycleType,
   DEFAULT_RECURRING_SERVICE_PERIOD_DUE_SELECTION_STATES,
   RECURRING_RANGE_SEMANTICS,
@@ -61,7 +64,7 @@ import {
   getCurrencySymbol,
 } from "@alga-psa/core";
 import { getClientDefaultTaxRegionCode as getClientDefaultTaxRegionCodeShared } from "@alga-psa/shared/billingClients";
-import { computePoolContributionsByService } from "@alga-psa/shared/billingClients/bucketUsageService";
+import { computePoolContributionsByService, resolveBucketForLine } from "@alga-psa/shared/billingClients/bucketUsageService";
 import {
   calculateServicePeriodCoverage,
   resolveCadenceOwner,
@@ -95,8 +98,10 @@ import service from "../../models/service";
 import { TaxService } from "../../services/taxService";
 import {
   resolveFixedPlanLevelBaseRate,
+  hasUnitPricedFixedMembers,
   filterApplicableDiscounts,
   buildChargeComputeTaxContext,
+  buildTimeEntryWorkItemSnapshot,
   type ChargeComputeClient,
   type ChargeComputeTaxContext,
   type LoadedChargeTaxRate,
@@ -111,6 +116,12 @@ import {
 interface ContractObligationSink {
   obligations: UnpricedContractBillingObligation[];
   taxContexts: Record<string, ChargeComputeTaxContext>;
+  /**
+   * Usage-billed services whose due service period has no eligible
+   * usage_tracking record. Usage billing is record-driven; these statuses let
+   * callers surface "missing usage" instead of a silent empty result.
+   */
+  usageStatuses?: IUsageServicePeriodStatus[];
 }
 import { getClientDefaultBillingProfileId } from "./billingProfileLookup";
 import { listSeparatelyBillingProfiles } from "@alga-psa/shared/billingClients/billingProfileSettings";
@@ -121,10 +132,8 @@ import {
 } from "../contractLineDisambiguation.shared";
 import { ClientContractServiceConfigurationService } from "../../services/clientContractServiceConfigurationService";
 import {
-  computeCapWriteDown,
   computeDepositReconciliation,
   computeEntryAmounts,
-  detectThresholdCrossings,
 } from "../../services/projectBillingService";
 import {
   normalizeProjectBillingCapUsage,
@@ -200,29 +209,13 @@ type ProjectBillingContext = {
   capUsageByConfigId: Map<string, IProjectBillingCapUsage>;
 };
 
-export type ProjectCapThresholdCrossing = {
-  configId: string;
-  projectId: string;
-  threshold: number;
-  previousBilled: number;
-  newBilled: number;
-};
+export type { ProjectCapThresholdCrossing } from './domain/projectCapAdjustments';
+import type { ProjectCapThresholdCrossing } from './domain/projectCapAdjustments';
 
 export type ProjectBillingEngineResult = IBillingResult & {
   error?: string;
   projectCapThresholdCrossings?: ProjectCapThresholdCrossing[];
   warnings?: string[];
-};
-
-type ProjectAnnotatedCharge = IBillingCharge & {
-  project_id: string;
-  project_name: string;
-  project_number: string;
-  project_billing_config_id: string;
-  project_cap_original_amount?: number;
-  project_cap_original_tax_amount?: number;
-  write_down_amount?: number;
-  write_down_reason?: "project_cap";
 };
 
 type ProjectScheduleCharge = (
@@ -355,11 +348,23 @@ const isFixedLineUnpriceable = (
     return false;
   }
 
+  // Pricing basis is per service: unit-priced (recurring-seat) members price
+  // quantity × unit rate, so the bundle plan-level base rate only matters for
+  // the remaining bundle members. A pure-seats line is never unpriceable for
+  // lack of a bundle rate; a mixed line is unpriceable only when its bundle
+  // members cannot resolve a fee.
+  const bundleMembers = planServices.filter(
+    (service: { pricing_basis?: string | null }) => service.pricing_basis !== "unit",
+  );
+  if (hasUnitPricedFixedMembers(planServices) && bundleMembers.length === 0) {
+    return false;
+  }
+
   return (
     resolveFixedPlanLevelBaseRate({
       clientContractLine,
       contractLineDetails,
-      planServices,
+      planServices: bundleMembers.length > 0 ? bundleMembers : planServices,
     }) === null
   );
 };
@@ -1753,6 +1758,7 @@ export class BillingEngine {
 
     const contractObligations: UnpricedContractBillingObligation[] = [];
     const contractTaxContexts: Record<string, ChargeComputeTaxContext> = {};
+    const usageServicePeriodStatuses: IUsageServicePeriodStatus[] = [];
     for (const clientContractLine of clientContractLines) {
       console.log(
         `Processing contract line: ${clientContractLine.contract_line_name}`,
@@ -1825,6 +1831,9 @@ export class BillingEngine {
               billingPeriod,
               clientContractLine,
               familyObligationSinks[3],
+              cycle,
+              recurringTimingSelections[clientContractLine.client_contract_line_id],
+              options.recurringTimingSelectionSource,
             ),
         options.projectTarget
           ? Promise.resolve()
@@ -1856,6 +1865,9 @@ export class BillingEngine {
       for (const sink of familyObligationSinks) {
         contractObligations.push(...sink.obligations);
         Object.assign(contractTaxContexts, sink.taxContexts);
+        if (sink.usageStatuses) {
+          usageServicePeriodStatuses.push(...sink.usageStatuses);
+        }
       }
     }
 
@@ -1933,11 +1945,6 @@ export class BillingEngine {
       }
     }
 
-    const capResult = projectBillingContext
-      ? this.applyProjectCapAdjustments(totalCharges, projectBillingContext)
-      : { charges: totalCharges, thresholdCrossings: [] };
-    totalCharges = capResult.charges;
-
     // Resolve discount rows without pricing the obligations. Service-period
     // facts are enough for the existing effective-window query.
     const obligationWindows: IBillingCharge[] = contractObligations.flatMap(
@@ -1989,6 +1996,7 @@ export class BillingEngine {
       obligations: contractObligations,
       taxContexts: contractTaxContexts,
       supplementalCharges: totalCharges,
+      projectCaps: projectBillingContext ?? undefined,
       discountsAndAdjustments: {
         billingPeriod,
         discountCandidates: discountCandidates.map((discount) => ({
@@ -2015,13 +2023,19 @@ export class BillingEngine {
       canonical,
     );
 
+    const usageStatusField =
+      usageServicePeriodStatuses.length > 0
+        ? { usageServicePeriodStatuses }
+        : {};
+
     return projectBillingContext
       ? {
           ...canonicalFinalCharges,
-          projectCapThresholdCrossings: capResult.thresholdCrossings,
+          ...usageStatusField,
+          projectCapThresholdCrossings: canonical.projectCapThresholdCrossings,
           warnings: projectMaterialWarnings,
         }
-      : canonicalFinalCharges;
+      : { ...canonicalFinalCharges, ...usageStatusField };
   }
 
   /**
@@ -2229,83 +2243,6 @@ export class BillingEngine {
     return charges;
   }
 
-  private applyProjectCapAdjustments(
-    charges: IBillingCharge[],
-    context: ProjectBillingContext,
-  ): {
-    charges: IBillingCharge[];
-    thresholdCrossings: ProjectCapThresholdCrossing[];
-  } {
-    const projectCharges = new Map<string, ProjectAnnotatedCharge[]>();
-    for (const charge of charges) {
-      if (
-        !("project_billing_config_id" in charge) ||
-        typeof charge.project_billing_config_id !== "string"
-      ) {
-        continue;
-      }
-      const projectCharge = charge as ProjectAnnotatedCharge;
-      const grouped =
-        projectCharges.get(projectCharge.project_billing_config_id) ?? [];
-      grouped.push(projectCharge);
-      projectCharges.set(projectCharge.project_billing_config_id, grouped);
-    }
-
-    const thresholdCrossings: ProjectCapThresholdCrossing[] = [];
-    for (const [configId, configCharges] of projectCharges) {
-      const config = context.configsById.get(configId);
-      if (!config || config.cap_amount === null) {
-        continue;
-      }
-
-      const usage = context.capUsageByConfigId.get(configId);
-      const previousBilled = usage?.billed_amount ?? 0;
-      let runningBilled = previousBilled;
-
-      for (const charge of configCharges) {
-        const originalAmount = charge.total;
-        const originalTaxAmount = charge.tax_amount ?? 0;
-        charge.project_cap_original_amount = originalAmount;
-        charge.project_cap_original_tax_amount = originalTaxAmount;
-        const writeDown = computeCapWriteDown(
-          config.cap_amount,
-          runningBilled,
-          originalAmount,
-        );
-        charge.total = writeDown.billable;
-        charge.write_down_amount = writeDown.writtenDown;
-        if (writeDown.writtenDown > 0) {
-          charge.write_down_reason = "project_cap";
-        }
-        if (originalAmount > 0 && originalTaxAmount > 0) {
-          charge.tax_amount = Math.round(
-            originalTaxAmount * (writeDown.billable / originalAmount),
-          );
-        }
-        runningBilled += writeDown.billable;
-      }
-
-      const crossed = detectThresholdCrossings(
-        config.cap_amount,
-        previousBilled,
-        runningBilled,
-        config.cap_notify_thresholds,
-        usage?.notified_thresholds ?? [],
-      );
-      thresholdCrossings.push(
-        ...crossed.map((threshold) => ({
-          configId,
-          projectId: config.project_id,
-          threshold,
-          previousBilled,
-          newBilled: runningBilled,
-        })),
-      );
-    }
-
-    return { charges, thresholdCrossings };
-  }
-
   async calculateUnresolvedNonContractChargesForExecutionWindow(input: {
     clientId: string;
     windowStart: ISO8601String;
@@ -2336,7 +2273,7 @@ export class BillingEngine {
             selection,
           );
       return context
-        ? this.applyProjectCapAdjustments(charges, context).charges
+        ? applyProjectCapAdjustments(charges, context).charges
         : charges;
     });
   }
@@ -2347,6 +2284,7 @@ export class BillingEngine {
    * (F135). Returns candidates, not ids, so the shared disambiguation rule can
    * be applied instead of re-deriving it here.
    */
+
   private async getEligibleContractLinesForServiceAtDate(input: {
     clientId: string;
     serviceId: string;
@@ -2579,6 +2517,14 @@ export class BillingEngine {
       "service_catalog.service_name",
       "service_catalog.default_rate",
       "service_catalog.tax_rate_id",
+      // Same customer-visible work-item fields as the contract-line loader,
+      // so unresolved/catalog-priced time carries an identical snapshot.
+      "tickets.ticket_number as ticket_number",
+      "tickets.title as ticket_title",
+      this.knex.raw(
+        "tickets.attributes->>'description' as ticket_description",
+      ),
+      "project_tasks.task_name as project_task_name",
       "project_phases.phase_id as project_phase_id",
       "projects.project_id as project_id",
       this.knex.raw(
@@ -2766,6 +2712,15 @@ export class BillingEngine {
         quantity: duration,
         rate,
         total,
+        workItemSnapshot: buildTimeEntryWorkItemSnapshot(entry, {
+          billedMinutes: billableMinutes,
+          rateKind: 'uniform',
+          uniformRate: rate,
+          rate,
+          netAmount: total,
+          serviceId: effectiveServiceId ?? null,
+          serviceName: effectiveServiceName ?? null,
+        }),
         tax_amount: taxAmount,
         tax_rate: taxRate,
         tax_region: effectiveTaxRegion,
@@ -3625,6 +3580,7 @@ export class BillingEngine {
         "clsc.custom_rate as configuration_custom_rate",
         "clsc.config_id",
         "clsfc.base_rate as service_base_rate",
+        "clsfc.pricing_basis as pricing_basis",
       );
 
     const planServicesByLineId = new Map<string, any[]>();
@@ -3769,6 +3725,7 @@ export class BillingEngine {
         "clsc.custom_rate as configuration_custom_rate",
         "clsc.config_id",
         "clsfc.base_rate as service_base_rate",
+        "clsfc.pricing_basis as pricing_basis",
         // Note: enable_proration is on contract_lines, not service config
       );
 
@@ -4221,6 +4178,59 @@ export class BillingEngine {
       preloaded ??
       (await this.queryFixedChargeLineServices(clientContractLine));
 
+    // Recurring-seat (unit-priced Fixed) lines may carry prospective
+    // quantity/rate revisions effective at a service-period boundary. The
+    // covered period's start picks the latest revision effective on/before it;
+    // earlier periods keep the configuration columns and are never rewritten.
+    // The base columns are not mutated — the effective copy only feeds this
+    // obligation's charge math.
+    let effectivePlanServices = planServices;
+    if (
+      planServices.length > 0 &&
+      hasUnitPricedFixedMembers(planServices)
+    ) {
+      const revisionRows = (await db
+        .table("contract_line_unit_pricing_revisions")
+        .where({
+          tenant: this.tenant,
+          contract_line_id: clientContractLine.contract_line_id,
+        })
+        .where("effective_period_start", "<=", servicePeriodStart)
+        .orderBy("effective_period_start", "desc")
+        .orderBy("created_at", "desc")) as Array<{
+        service_id: string;
+        config_id: string;
+        quantity: number | string;
+        unit_rate_cents: number | string;
+      }>;
+      if (revisionRows.length > 0) {
+        const latestRevisionByService = new Map<
+          string,
+          { config_id: string; quantity: number; unit_rate_cents: number }
+        >();
+        for (const revision of revisionRows) {
+          if (!latestRevisionByService.has(revision.service_id)) {
+            latestRevisionByService.set(revision.service_id, {
+              config_id: revision.config_id,
+              quantity: Number(revision.quantity),
+              unit_rate_cents: Number(revision.unit_rate_cents),
+            });
+          }
+        }
+        effectivePlanServices = planServices.map((service) => {
+          const revision = latestRevisionByService.get(service.service_id);
+          if (!revision || revision.config_id !== service.config_id) {
+            return service;
+          }
+          return {
+            ...service,
+            configuration_quantity: revision.quantity,
+            service_base_rate: revision.unit_rate_cents,
+          };
+        });
+      }
+    }
+
     const obligation = {
       kind: "fixed",
       executionMode: "live",
@@ -4233,7 +4243,7 @@ export class BillingEngine {
         contractLineDetails,
         effectiveCustomRate,
         customRateSource,
-        planServices,
+        planServices: effectivePlanServices,
         fallbackService,
         billingProfile: await this.loadChargeProfileAssignments(
           clientId,
@@ -4246,8 +4256,8 @@ export class BillingEngine {
           client,
           locationId: clientContractLine.location_id,
           services: fallbackService
-            ? [...planServices, fallbackService]
-            : planServices,
+            ? [...effectivePlanServices, fallbackService]
+            : effectivePlanServices,
           billingProfileIds: [
             clientContractLine.billing_profile_id,
             clientContractLine.contract_billing_profile_id,
@@ -5032,6 +5042,23 @@ export class BillingEngine {
       })
       .where("time_entries.approval_status", "APPROVED");
 
+    if (!projectTarget) {
+      const bucketServices = await Promise.all(configuredServiceIds.map(async (serviceId) => (
+        await resolveBucketForLine(this.knex, tenant, clientContractLine.contract_line_id, serviceId)
+          ? serviceId : null
+      )));
+      const coveredServiceIds = bucketServices.filter((serviceId): serviceId is string => serviceId !== null);
+      if (coveredServiceIds.length > 0) {
+        // Explicitly attributed bucket work is priced once by the pool's
+        // overage obligation. Unassigned rows have not drawn from that pool;
+        // retain their existing attribution path instead of hiding them.
+        query.where(function (this: Knex.QueryBuilder) {
+          this.whereNull("time_entries.contract_line_id")
+            .orWhereNotIn("time_entries.service_id", coveredServiceIds);
+        });
+      }
+    }
+
     if (projectTarget) {
       query.where("projects.project_id", projectTarget.projectId);
     } else {
@@ -5062,6 +5089,15 @@ export class BillingEngine {
       this.knex.raw(
         "COALESCE(project_tasks.task_name, tickets.title) as work_item_name",
       ),
+      // Work-item identity + customer-visible fields for the immutable
+      // invoice snapshot. Same joins as work_item_name; internal comments and
+      // time-entry notes are deliberately excluded.
+      "tickets.ticket_number as ticket_number",
+      "tickets.title as ticket_title",
+      this.knex.raw(
+        "tickets.attributes->>'description' as ticket_description",
+      ),
+      "project_tasks.task_name as project_task_name",
       "project_phases.phase_id as project_phase_id",
       "projects.project_id as project_id",
       // Step 4 of the billing-profile resolution chain. The ticket and project
@@ -5132,6 +5168,36 @@ export class BillingEngine {
       charge: obligation,
     });
     return;
+  }
+
+  /** Resolve entry eligibility with the same timing/coverage rules used to bill it. */
+  public async isCanonicalUsagePeriod(clientId: string, lineId: string, start: string, end: string): Promise<boolean> {
+    await this.initKnex();
+    const db = tenantDb(this.knex, this.tenant!);
+    const periods = await db.table('recurring_service_periods')
+      .where('obligation_id', lineId).whereNotIn('lifecycle_state', ['superseded', 'archived'])
+      .select('*');
+    for (const period of periods) {
+      const billingPeriod = { tenant: this.tenant!, startDate: toISODate(toPlainDate(period.invoice_window_start)), endDate: toISODate(toPlainDate(period.invoice_window_end)) };
+      const lines = await this.getClientContractLinesForBillingPeriod(clientId, billingPeriod);
+      if (!lines.some(line => line.contract_line_id === lineId && line.is_active)) continue;
+      const coveredStart = toISODate(toPlainDate(period.activity_window_start ?? period.service_period_start));
+      const coveredEnd = toISODate(toPlainDate(period.activity_window_end ?? period.service_period_end).subtract({days: 1}));
+      if (start === coveredStart && end === coveredEnd) return true;
+    }
+    // Client-cadence windows may not yet have per-line materializations. Derive
+    // their service coverage (including advance/arrears) from persisted cycles.
+    const cycles = await db.table('client_billing_cycles').where({ client_id: clientId })
+      .whereNotNull('period_start_date').whereNotNull('period_end_date').select('*');
+    for (const cycle of cycles) {
+      const billingPeriod = { tenant: this.tenant!, startDate: toISODate(toPlainDate(cycle.period_start_date)), endDate: toISODate(toPlainDate(cycle.period_end_date)) };
+      const lines = await this.getClientContractLinesForBillingPeriod(clientId, billingPeriod);
+      const line = lines.find(candidate => candidate.contract_line_id === lineId && candidate.is_active);
+      if (!line) continue;
+      const timing = this.resolveServiceDrivenChargeTiming(billingPeriod, line, cycle.billing_cycle);
+      if (timing?.servicePeriodStart === start && timing.servicePeriodEnd === end) return true;
+    }
+    return false;
   }
 
   private async loadUsageBasedObligation(
@@ -5231,15 +5297,23 @@ export class BillingEngine {
         unit_of_measure: usageDetails.unit_of_measure,
         enable_tiered_pricing: Boolean(usageDetails.enable_tiered_pricing),
         minimum_usage: usageDetails.minimum_usage ?? 0,
+        measurement_mode: usageDetails.measurement_mode ?? "additive",
         base_rate:
           usageDetails.base_rate != null
             ? Number(usageDetails.base_rate)
             : null,
       } as IContractLineServiceConfiguration & IContractLineServiceUsageConfig;
 
+      const measurementRevision = await resolveUsageMeasurementRevision(this.knex, tenant, normalizedConfig.config_id, servicePeriodStart);
+      if (measurementRevision) {
+        Object.assign(normalizedConfig, measurementRevision.pricing?.typeConfig ?? {}, {
+          measurement_mode: measurementRevision.measurement_mode,
+          ...(measurementRevision.pricing?.baseConfig ?? {}),
+        });
+      }
       serviceConfigMap.set(configDetails.serviceId, {
         config: normalizedConfig,
-        rateTiers,
+        rateTiers: measurementRevision?.pricing?.rateTiers ?? rateTiers,
       });
     }
     let configuredServiceIds = Array.from(serviceConfigMap.keys());
@@ -5259,6 +5333,115 @@ export class BillingEngine {
         servicePeriodStartExclusive,
         servicePeriodEndExclusive,
       });
+
+    // Which services are genuinely usage-billed for this line. System-managed
+    // default lines are attribution-only catch-alls, not authored usage
+    // commitments; absence of a report there is normal and never surfaced.
+    const usageBilledServiceIds =
+      clientContractLine.is_system_managed_default === true
+        ? []
+        : serviceConfigMap.size > 0
+          ? Array.from(serviceConfigMap.keys())
+          : clientContractLine.contract_line_type === "Usage"
+            ? configuredServiceIds
+            : [];
+
+    // Split usage-billed services by measurement mode. The mode is an explicit
+    // property of each service configuration (legacy rows resolve to
+    // 'additive'); it is never inferred from a service name, unit of measure,
+    // or a legacy configured quantity. Additive services bill dated entries;
+    // period-total services bill exactly one replaceable usage_period_totals
+    // row per canonical service-period boundary.
+    const modeForService = new Map<string, "additive" | "period_total">();
+    for (const serviceId of usageBilledServiceIds) {
+      const configMode = serviceConfigMap.get(serviceId)?.config
+        .measurement_mode;
+      modeForService.set(
+        serviceId,
+        configMode === "period_total" ? "period_total" : "additive",
+      );
+    }
+    const additiveServiceIds = usageBilledServiceIds.filter(
+      (serviceId) => modeForService.get(serviceId) !== "period_total",
+    );
+    const periodTotalServiceIds = usageBilledServiceIds.filter(
+      (serviceId) => modeForService.get(serviceId) === "period_total",
+    );
+
+    const periodTotalRows: Array<
+      Record<string, unknown> & {
+        service_id: string;
+        service_name?: string | null;
+        quantity?: number | string | null;
+        tax_rate_id?: string | null;
+        currency_rate?: number | string | null;
+      }
+    > = [];
+    if (periodTotalServiceIds.length > 0) {
+      // Load the single recorded total for this service period boundary. The
+      // boundary is stored as dates (never a recurring_service_periods record
+      // id), so a regenerated period row cannot fork the total into a second
+      // billable report. Billed totals are consumed state, not a new charge.
+      const totalQuery = db.table<any>("usage_period_totals as upt");
+      db.tenantJoin(
+        totalQuery,
+        "service_catalog",
+        "service_catalog.service_id",
+        "upt.service_id",
+        { type: "left" },
+      );
+      db.tenantJoin(
+        totalQuery,
+        "service_prices as sp",
+        "sp.service_id",
+        "service_catalog.service_id",
+        {
+          type: "left",
+          on(join) {
+            join.andOn(
+              "sp.currency_code",
+              "=",
+              knexRef.raw("?", [contractCurrency]),
+            );
+          },
+        },
+      );
+      const fetchedTotals = await totalQuery
+        .where({
+          "upt.tenant": this.tenant,
+          "upt.client_id": clientId,
+          "upt.client_contract_line_id":
+            clientContractLine.contract_line_id,
+          "upt.lifecycle_state": "recorded",
+        })
+        .whereIn("upt.service_id", periodTotalServiceIds)
+        .where("upt.period_start", "=", servicePeriodStart)
+        .where("upt.period_end", "=", servicePeriodEnd)
+        .select(
+          "upt.*",
+          "service_catalog.service_name",
+          "service_catalog.default_rate",
+          "service_catalog.tax_rate_id",
+          "sp.rate as currency_rate",
+        );
+      periodTotalRows.push(...fetchedTotals);
+    }
+
+    // Present a recorded period total to the shared charge math exactly like a
+    // single usage entry: one charge, minimum/tier pricing applied once to the
+    // effective total. The row carries its own identity + revision so invoice
+    // persistence consumes the total (not usage_tracking) and locks the exact
+    // revision previewed.
+    const periodTotalChargeRows = periodTotalRows.map((total) => ({
+      usage_id: total.period_total_id,
+      period_total_id: total.period_total_id,
+      period_total_revision: Number(total.revision ?? 1),
+      service_id: total.service_id,
+      service_name: total.service_name ?? null,
+      quantity: total.quantity ?? 0,
+      tax_rate_id: total.tax_rate_id ?? null,
+      currency_rate: total.currency_rate ?? null,
+    }));
 
     const usageRecordQuery = db.table<any>("usage_tracking");
     db.tenantJoin(
@@ -5291,7 +5474,7 @@ export class BillingEngine {
         "usage_tracking.tenant": this.tenant,
         "usage_tracking.invoiced": false,
       })
-      .whereIn("usage_tracking.service_id", configuredServiceIds)
+      .whereIn("usage_tracking.service_id", additiveServiceIds)
       .where("usage_tracking.usage_date", ">=", servicePeriodStartExclusive)
       .where("usage_tracking.usage_date", "<", servicePeriodEndExclusive)
       .where(function (this: Knex.QueryBuilder) {
@@ -5318,7 +5501,365 @@ export class BillingEngine {
         "sp.rate as currency_rate",
       ); // Fetch tax_rate_id
 
-    const usageRecords = await usageRecordQuery;
+    const fetchedUsageRecords: any[] = [
+      ...((await usageRecordQuery) as Array<Record<string, unknown>>),
+      ...periodTotalChargeRows,
+    ];
+
+    // Per-service pricing pre-validation, mirroring the shared usage charge
+    // math exactly (contract-line custom rate, else the contract-currency
+    // catalog price, else enabled rate tiers). A recorded report that cannot
+    // be priced is a calculation error — a typed diagnostic, never
+    // "unreported": the loader withholds the unpriceable rows so the rest of
+    // the document still computes and preview can name the broken service,
+    // while invoice generation refuses the window rather than silently
+    // omitting a recorded charge.
+    const calculationErrorServiceIds = new Set<string>();
+    if (clientContractLine.is_system_managed_default !== true) {
+      for (const record of fetchedUsageRecords) {
+        const recordServiceId = record.service_id as string;
+        if (!modeForService.has(recordServiceId)) {
+          continue;
+        }
+        const entry = serviceConfigMap.get(recordServiceId);
+        const hasCustomRate = Boolean(entry?.config.custom_rate);
+        const hasCurrencyRate = record.currency_rate != null;
+        const tiered = Boolean(
+          entry?.config.enable_tiered_pricing &&
+            (entry?.rateTiers.length ?? 0) > 0,
+        );
+        if (!hasCustomRate && !hasCurrencyRate && !tiered) {
+          calculationErrorServiceIds.add(recordServiceId);
+        }
+      }
+    }
+    const usageRecords: any[] =
+      calculationErrorServiceIds.size > 0
+        ? fetchedUsageRecords.filter(
+            (record) => !calculationErrorServiceIds.has(record.service_id),
+          )
+        : fetchedUsageRecords;
+
+    // Usage billing is record-driven: a configured service with no eligible
+    // report in the due period produces no charge. Report those services
+    // explicitly so preview can distinguish "unreported" from a valid explicit
+    // zero and from already-invoiced evidence. In additive mode a positive
+    // minimum_usage is a floor applied only when a dated entry exists; in
+    // period-total mode the same floor applies once to the reported total.
+    // Neither ever turns an absent report into a charge.
+    //
+    // This loader runs for every contract line, and the configuredServiceIds
+    // fallback lists all line services regardless of billing method. Only
+    // services that are genuinely usage-billed — explicit Usage configs, or
+    // any service on a Usage-type line — may be reported at all.
+    const serviceIdsWithChargeableReports = new Set<string>(
+      usageRecords.map(
+        (record: { service_id: string; period_total_id?: string }) =>
+          record.service_id,
+      ),
+    );
+    const servicesWithoutReports = usageBilledServiceIds.filter(
+      (serviceId) =>
+        !serviceIdsWithChargeableReports.has(serviceId) &&
+        !calculationErrorServiceIds.has(serviceId),
+    );
+
+    // LEVERAGE: pattern usage-status-row — six near-identical status literals
+    // (line/service/period identity + typed state) are assembled by hand in
+    // this loader; a small builder seeded with the line/period identity would
+    // leave only the per-state fields at each site.
+    const statusRows: IUsageServicePeriodStatus[] = [];
+
+    // Calculation-error services carry reports the engine withheld from
+    // pricing; report the typed state (with the recorded quantity) so the
+    // failure never masquerades as "unreported" and never advises recording
+    // more usage.
+    for (const serviceId of calculationErrorServiceIds) {
+      const configForService = serviceConfigMap.get(serviceId);
+      const withheldRows = fetchedUsageRecords.filter(
+        (record) => record.service_id === serviceId,
+      );
+      const reportedQuantity = withheldRows.reduce(
+        (sum, record) => sum + Number(record.quantity ?? 0),
+        0,
+      );
+      const periodTotalRow = withheldRows.find(
+        (record) => record.period_total_id,
+      );
+      statusRows.push({
+        client_contract_line_id: clientContractLine.client_contract_line_id,
+        contract_line_name: clientContractLine.contract_line_name,
+        service_id: serviceId,
+        service_name:
+          (withheldRows[0]?.service_name as string | null) ?? null,
+        config_id: configForService?.config.config_id ?? null,
+        service_period_start: servicePeriodStart,
+        service_period_end: servicePeriodEnd,
+        status: "calculation_error",
+        minimum_usage: Number(configForService?.config.minimum_usage ?? 0),
+        measurement_mode:
+          modeForService.get(serviceId) === "period_total"
+            ? "period_total"
+            : "additive",
+        quantity: reportedQuantity,
+        ...(periodTotalRow
+          ? { revision: Number(periodTotalRow.period_total_revision ?? 1) }
+          : {}),
+      });
+    }
+    if (servicesWithoutReports.length > 0) {
+      const reportedNames = (await db
+        .table("service_catalog")
+        .where({ tenant: this.tenant })
+        .whereIn("service_id", servicesWithoutReports)
+        .select("service_id", "service_name")) as Array<{
+        service_id: string;
+        service_name: string | null;
+      }>;
+      const nameByServiceId = new Map(
+        reportedNames.map((row) => [row.service_id, row.service_name]),
+      );
+
+      // Additive services with only invoiced entries still carry evidence of
+      // reporting; they must not be re-presented as "record usage".
+      const additiveNoReportIds = servicesWithoutReports.filter(
+        (serviceId) => modeForService.get(serviceId) !== "period_total",
+      );
+      const periodTotalNoReportIds = servicesWithoutReports.filter(
+        (serviceId) => modeForService.get(serviceId) === "period_total",
+      );
+
+      const additiveInvoicedServiceIds = new Set<string>();
+      if (additiveNoReportIds.length > 0) {
+        const invoicedQuery = db.table<any>("usage_tracking")
+          .where({
+            "usage_tracking.client_id": clientId,
+            "usage_tracking.tenant": this.tenant,
+            "usage_tracking.invoiced": true,
+          })
+          .whereIn("usage_tracking.service_id", additiveNoReportIds)
+          .where(
+            "usage_tracking.usage_date",
+            ">=",
+            servicePeriodStartExclusive,
+          )
+          .where("usage_tracking.usage_date", "<", servicePeriodEndExclusive)
+          .where(function (this: Knex.QueryBuilder) {
+            this.where(
+              "usage_tracking.contract_line_id",
+              clientContractLine.contract_line_id,
+            );
+            if (uniquelyAssignableServiceIds.length > 0) {
+              this.orWhere(function (this: Knex.QueryBuilder) {
+                this.whereNull("usage_tracking.contract_line_id").whereIn(
+                  "usage_tracking.service_id",
+                  uniquelyAssignableServiceIds,
+                );
+              });
+            }
+          });
+        const invoicedRows = await invoicedQuery.select(
+          "usage_tracking.service_id",
+        );
+        for (const row of invoicedRows) {
+          additiveInvoicedServiceIds.add(row.service_id);
+        }
+      }
+
+      // Usage that exists in-period but is excluded from this line's charges
+      // by unresolved attribution: entries with no contract line whose service
+      // more than one line covers cannot be deterministically assigned, so the
+      // engine defers them to the unresolved-charge review instead of charging
+      // them here. Report that state distinctly — the fix is to resolve
+      // attribution, never to record more usage.
+      const attributionExcludedServiceIds = new Set<string>();
+      const ambiguousCandidateIds = additiveNoReportIds.filter(
+        (serviceId) => !uniquelyAssignableServiceIds.includes(serviceId),
+      );
+      if (ambiguousCandidateIds.length > 0) {
+        const excludedRows = await db
+          .table("usage_tracking")
+          .where({
+            client_id: clientId,
+            tenant: this.tenant,
+            invoiced: false,
+          })
+          .whereNull("contract_line_id")
+          .whereIn("service_id", ambiguousCandidateIds)
+          .where("usage_date", ">=", servicePeriodStartExclusive)
+          .where("usage_date", "<", servicePeriodEndExclusive)
+          .select("service_id");
+        for (const row of excludedRows) {
+          attributionExcludedServiceIds.add(row.service_id);
+        }
+      }
+
+      const periodTotalBilledServiceIds = new Set<string>();
+      if (periodTotalNoReportIds.length > 0) {
+        const billedRows = await db
+          .table("usage_period_totals")
+          .where({
+            tenant: this.tenant,
+            client_id: clientId,
+            client_contract_line_id: clientContractLine.contract_line_id,
+            lifecycle_state: "billed",
+          })
+          .whereIn("service_id", periodTotalNoReportIds)
+          .where("period_start", "=", servicePeriodStart)
+          .where("period_end", "=", servicePeriodEnd)
+          .select("service_id", "quantity", "revision");
+        for (const row of billedRows) {
+          periodTotalBilledServiceIds.add(row.service_id);
+        }
+      }
+
+      obligationSink.usageStatuses = obligationSink.usageStatuses ?? [];
+      for (const serviceId of servicesWithoutReports) {
+        const configForService = serviceConfigMap.get(serviceId);
+        const mode =
+          modeForService.get(serviceId) === "period_total"
+            ? ("period_total" as const)
+            : ("additive" as const);
+        const minimumUsage = Number(
+          configForService?.config.minimum_usage ?? 0,
+        );
+        if (mode === "period_total" && periodTotalBilledServiceIds.has(serviceId)) {
+          const billedRow = await db
+            .table("usage_period_totals")
+            .where({
+              tenant: this.tenant,
+              client_id: clientId,
+              client_contract_line_id: clientContractLine.contract_line_id,
+              service_id: serviceId,
+              lifecycle_state: "billed",
+            })
+            .where("period_start", "=", servicePeriodStart)
+            .where("period_end", "=", servicePeriodEnd)
+            .first("quantity", "revision");
+          statusRows.push({
+            client_contract_line_id:
+              clientContractLine.client_contract_line_id,
+            contract_line_name: clientContractLine.contract_line_name,
+            service_id: serviceId,
+            service_name: nameByServiceId.get(serviceId) ?? null,
+            config_id: configForService?.config.config_id ?? null,
+            service_period_start: servicePeriodStart,
+            service_period_end: servicePeriodEnd,
+            status: "already_invoiced",
+            minimum_usage: minimumUsage,
+            measurement_mode: mode,
+            quantity: Number(billedRow?.quantity ?? 0),
+            revision: Number(billedRow?.revision ?? 1),
+          });
+        } else if (
+          mode === "additive" &&
+          attributionExcludedServiceIds.has(serviceId)
+        ) {
+          statusRows.push({
+            client_contract_line_id:
+              clientContractLine.client_contract_line_id,
+            contract_line_name: clientContractLine.contract_line_name,
+            service_id: serviceId,
+            service_name: nameByServiceId.get(serviceId) ?? null,
+            config_id: configForService?.config.config_id ?? null,
+            service_period_start: servicePeriodStart,
+            service_period_end: servicePeriodEnd,
+            status: "attribution_excluded",
+            minimum_usage: minimumUsage,
+            measurement_mode: mode,
+          });
+        } else if (
+          mode === "additive" &&
+          additiveInvoicedServiceIds.has(serviceId)
+        ) {
+          statusRows.push({
+            client_contract_line_id:
+              clientContractLine.client_contract_line_id,
+            contract_line_name: clientContractLine.contract_line_name,
+            service_id: serviceId,
+            service_name: nameByServiceId.get(serviceId) ?? null,
+            config_id: configForService?.config.config_id ?? null,
+            service_period_start: servicePeriodStart,
+            service_period_end: servicePeriodEnd,
+            status: "already_invoiced",
+            minimum_usage: minimumUsage,
+            measurement_mode: mode,
+          });
+        } else {
+          statusRows.push({
+            client_contract_line_id:
+              clientContractLine.client_contract_line_id,
+            contract_line_name: clientContractLine.contract_line_name,
+            service_id: serviceId,
+            service_name: nameByServiceId.get(serviceId) ?? null,
+            config_id: configForService?.config.config_id ?? null,
+            service_period_start: servicePeriodStart,
+            service_period_end: servicePeriodEnd,
+            status:
+              mode === "period_total" ? "unreported" : "missing_usage",
+            minimum_usage: minimumUsage,
+            measurement_mode: mode,
+          });
+        }
+      }
+    }
+
+    // Explicit diagnostics for every recorded period total. A zero report is
+    // an explicit zero (or a report a positive minimum raises to billable); a
+    // positive report is billable. Every status carries the total's stored
+    // revision so preview exposes exactly which report revision it priced —
+    // finalization consumes that same revision or refuses (stale preview).
+    for (const total of periodTotalRows) {
+      if (calculationErrorServiceIds.has(total.service_id as string)) {
+        continue;
+      }
+      const serviceConfig = serviceConfigMap.get(total.service_id);
+      const minimumUsage = Number(
+        serviceConfig?.config.minimum_usage ?? 0,
+      );
+      const reportedQuantity = Number(total.quantity ?? 0);
+      if (reportedQuantity > 0) {
+        statusRows.push({
+          client_contract_line_id: clientContractLine.client_contract_line_id,
+          contract_line_name: clientContractLine.contract_line_name,
+          service_id: total.service_id,
+          service_name: (total.service_name as string | null) ?? null,
+          config_id: serviceConfig?.config.config_id ?? null,
+          service_period_start: servicePeriodStart,
+          service_period_end: servicePeriodEnd,
+          status: "billable",
+          minimum_usage: minimumUsage,
+          measurement_mode: "period_total",
+          quantity: reportedQuantity,
+          billable_quantity: Math.max(reportedQuantity, minimumUsage),
+          revision: Number(total.revision ?? 1),
+          minimum_applied: minimumUsage > reportedQuantity,
+        });
+      } else {
+        statusRows.push({
+          client_contract_line_id: clientContractLine.client_contract_line_id,
+          contract_line_name: clientContractLine.contract_line_name,
+          service_id: total.service_id,
+          service_name:
+            (total.service_name as string | null) ??
+            serviceConfig?.config.service_id ??
+            null,
+          config_id: serviceConfig?.config.config_id ?? null,
+          service_period_start: servicePeriodStart,
+          service_period_end: servicePeriodEnd,
+          status:
+            minimumUsage > 0 ? "minimum_raised_zero" : "explicit_zero",
+          minimum_usage: minimumUsage,
+          measurement_mode: "period_total",
+          quantity: 0,
+          billable_quantity: minimumUsage > 0 ? minimumUsage : 0,
+          revision: Number(total.revision ?? 1),
+          minimum_applied: minimumUsage > 0,
+        });
+      }
+    }
+    obligationSink.usageStatuses = obligationSink.usageStatuses ?? [];
+    obligationSink.usageStatuses.push(...statusRows);
 
     const obligation = {
       kind: "usage",
@@ -5838,6 +6379,9 @@ export class BillingEngine {
     billingPeriod: IBillingPeriod,
     contractLine: IClientContractLine,
     obligationSink: ContractObligationSink,
+    billingCycle?: string,
+    recurringTimingSelection?: ResolvedRecurringChargeTiming,
+    recurringTimingSelectionSource?: CalculateBillingOptions["recurringTimingSelectionSource"],
   ): Promise<void> {
     await this.initKnex();
     if (!this.tenant) {
@@ -5872,6 +6416,14 @@ export class BillingEngine {
       return;
     }
 
+    // Legacy isolated calculator callers have no cadence selection. Live recurring
+    // generation must use the same persisted period as the other charge families.
+    const timing = billingCycle || recurringTimingSelectionSource || recurringTimingSelection
+      ? this.resolveRecurringChargeTiming(billingPeriod, contractLine, billingCycle,
+          recurringTimingSelection, recurringTimingSelectionSource)
+      : undefined;
+    if (timing === null) return;
+
     // Load persisted allowance state here; deterministic aggregation, rollover
     // application, overage pricing, and explanations live in shared compute.
     // One charge per bucket per period, as today one-per-config.
@@ -5884,8 +6436,8 @@ export class BillingEngine {
             client_id: clientId,
             bucket_id: pool.bucket_id,
           })
-          .where("period_start", ">=", billingPeriod.startDate)
-          .where("period_end", "<=", billingPeriod.endDate)
+          .where("period_start", ">=", timing?.servicePeriodStartExclusive ?? billingPeriod.startDate)
+          .where("period_end", "<=", timing?.servicePeriodEnd ?? billingPeriod.endDate)
           .select("*");
 
         if (usageRecords.length === 0) return [];
@@ -6063,6 +6615,7 @@ export class BillingEngine {
           executionMode: "live",
           inputs: {
             billingPeriod,
+            timing,
             clientContractLine: contractLine,
             client,
             config: {

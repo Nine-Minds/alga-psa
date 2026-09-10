@@ -200,7 +200,7 @@ describe('time authorization delegation and approval contracts', () => {
     await expect(assertCanActOnBehalf(actor as any, 'tenant-1', 'u-1', db)).resolves.toBe('self');
 
     hasPermissionMock.mockImplementation(async (_user: unknown, resource: string, action: string) => {
-      if (resource !== 'timesheet') return false;
+      if (resource !== 'time_sheet') return false;
       if (action === 'approve') return true;
       if (action === 'read_all') return false;
       return false;
@@ -209,7 +209,7 @@ describe('time authorization delegation and approval contracts', () => {
     await expect(assertCanActOnBehalf(actor as any, 'tenant-1', 'u-2', db)).resolves.toBe('manager');
 
     hasPermissionMock.mockImplementation(async (_user: unknown, resource: string, action: string) => {
-      if (resource !== 'timesheet') return false;
+      if (resource !== 'time_sheet') return false;
       if (action === 'approve') return true;
       if (action === 'read_all') return true;
       return false;
@@ -227,7 +227,7 @@ describe('time authorization delegation and approval contracts', () => {
     const actor: TestUser = { user_id: 'u-1', user_type: 'internal' };
 
     hasPermissionMock.mockImplementation(async (_user: unknown, resource: string, action: string) => {
-      if (resource !== 'timesheet') return false;
+      if (resource !== 'time_sheet') return false;
       if (action === 'approve') return true;
       if (action === 'read_all') return true;
       return false;
@@ -246,7 +246,7 @@ describe('time authorization delegation and approval contracts', () => {
     );
 
     hasPermissionMock.mockImplementation(async (_user: unknown, resource: string, action: string) => {
-      if (resource !== 'timesheet') return false;
+      if (resource !== 'time_sheet') return false;
       if (action === 'approve') return true;
       if (action === 'read_all') return false;
       return false;
@@ -269,7 +269,7 @@ describe('time authorization delegation and approval contracts', () => {
     const actor: TestUser = { user_id: 'u-1', user_type: 'internal' };
 
     hasPermissionMock.mockImplementation(async (_user: unknown, resource: string, action: string) => {
-      if (resource !== 'timesheet') return false;
+      if (resource !== 'time_sheet') return false;
       if (action === 'approve') return true;
       if (action === 'read_all') return true;
       return false;
@@ -296,7 +296,7 @@ describe('time authorization delegation and approval contracts', () => {
     const actor: TestUser = { user_id: 'u-1', user_type: 'internal' };
 
     hasPermissionMock.mockImplementation(async (_user: unknown, resource: string, action: string) => {
-      if (resource !== 'timesheet') return false;
+      if (resource !== 'time_sheet') return false;
       if (action === 'approve') return true;
       if (action === 'read_all') return true;
       return false;

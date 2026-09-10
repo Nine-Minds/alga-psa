@@ -1,0 +1,218 @@
+[
+  {
+    "id": "T001",
+    "description": "DB-backed recurring-seat journey: 10 units at CAD100, 9 at CAD85, and 1 at CAD125 preview/finalize at CAD1890 before tax in two monthly periods with no usage rows; overview and fixed MRR agree. Existing bundle-total pricing remains unchanged.",
+    "implemented": true,
+    "featureIds": [
+      "F002",
+      "F004",
+      "F017",
+      "F018"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "DB-backed effective-change matrix: change 10 to 12 at the next unbilled boundary, obtain CAD2090 there while earlier periods remain CAD1890; zero units do not become one; already-billed/finalizing target periods reject edits; explicitly configured partial-period coverage remains consistent.",
+    "implemented": true,
+    "featureIds": [
+      "F004",
+      "F005",
+      "F018"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "DB-backed period-total replacement: save 10 then replace with 12; preview is 12 units and does not consume it; minimum and tier pricing run once on the effective total; absent next-period report stays unreported without carry-forward.",
+    "implemented": true,
+    "featureIds": [
+      "F006",
+      "F007",
+      "F008"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "DB-backed concurrency and replay: simultaneous creates yield one logical total, request replay returns the same result, replay with changed content is rejected, and competing revision updates reject the stale writer. Recreating recurring-period row IDs preserves logical total identity.",
+    "implemented": true,
+    "featureIds": [
+      "F006",
+      "F007",
+      "F017"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "DB-backed invoice consistency: modifying/deleting a total or applicable pricing after preview invalidates generation; concurrent generation/retries consume one revision once; finalized totals cannot be edited, deleted, or recreated to bill again. Repeat under period regeneration.",
+    "implemented": true,
+    "featureIds": [
+      "F006",
+      "F009",
+      "F017"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "DB-backed additive compatibility: separate 10 and 12 entries bill 22; per-entry minimums/tiers preserve legacy amounts; editing is replacement of that entry; an identical request retry is one event but distinct request IDs may represent legitimate identical events. Wrong-mode writes and occupied-period conversions fail.",
+    "implemented": true,
+    "featureIds": [
+      "F002",
+      "F010",
+      "F011",
+      "F017"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "DB-backed diagnostic matrix across absent record, explicit zero with/without minimum, billable positive, all-already-invoiced, partly invoiced, unresolved attribution, and pricing error: correct state, quantity, and action are returned; already-invoiced never prompts duplicate recording.",
+    "implemented": true,
+    "featureIds": [
+      "F008",
+      "F015",
+      "F017"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "DB-backed mixed invoice: fixed charges with unreported usage require explicit omission acknowledgement; unacknowledged automated generation creates no partial invoice; acknowledged omission leaves the missing obligation available and later recording bills only the remainder once.",
+    "implemented": true,
+    "featureIds": [
+      "F009",
+      "F015",
+      "F016",
+      "F017"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Behavioral UI route journey: opening August missing usage in September populates client/assignment/line/service and August in the actual form, distinguishes same-named contracts, selects create/edit based on existing total, and returns to the same preview. Multiple services require a chooser; dates survive reload and timezone boundaries.",
+    "implemented": false,
+    "featureIds": [
+      "F012",
+      "F013",
+      "F014",
+      "F025"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "DB-backed scope guards: forged cross-tenant/client/line/period identifiers, stale or out-of-assignment period links, and insufficient billing permissions fail without writes; authorized scoped operations retain intended contract/tax/profile attribution.",
+    "implemented": false,
+    "featureIds": [
+      "F006",
+      "F011",
+      "F013",
+      "F017"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "DB-backed reports: recurring unit and fixed bundle amounts match canonical valuation, monthly/non-monthly cadence normalizes correctly, inactive/future/superseded commitments are excluded, pure/mixed Usage labels are correct, and CAD/USD rows aggregate separately despite a different tenant currency.",
+    "implemented": true,
+    "featureIds": [
+      "F018",
+      "F019",
+      "F020"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "DB-backed migration and transition: legacy quantities stay stored and non-billable; historical additive minimums/tiers and invoices are unchanged; explicit recurring transition at a valid boundary has no overlap/gap; outstanding records or invoices block unsafe boundaries; merely viewing/cancelling forms creates no charge or usage.",
+    "implemented": false,
+    "featureIds": [
+      "F021",
+      "F022",
+      "F024",
+      "F017"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "DB-backed period-total transition: existing additive periods keep their semantics, only a future eligible boundary changes mode, conflicting entries block the change, and no total is created until a separate confirmed report; invalid negative/nonfinite quantity is rejected.",
+    "implemented": true,
+    "featureIds": [
+      "F007",
+      "F011",
+      "F023",
+      "F024"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "Behavioral UI authoring matrix across wizard, templates/presets, editors, and overview: intent choice explains carry-forward/replace/add, unit prices and bundle allocations differ visibly, minimum labels name their scope, and legacy quantity reference offers reviewed transition actions.",
+    "implemented": false,
+    "featureIds": [
+      "F001",
+      "F002",
+      "F003",
+      "F010",
+      "F019",
+      "F021",
+      "F022",
+      "F023"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "Focused live UI smoke on isolated fixtures: configure and invoice recurring seats twice; replace a period count from 10 to 12; add separate consumption; resolve a prior-period missing report; verify variable/fixed currency reports and safe legacy transition. Verify persisted invoice/usage effects and cleanup without customer data.",
+    "implemented": false,
+    "featureIds": [
+      "F001",
+      "F004",
+      "F007",
+      "F009",
+      "F010",
+      "F012",
+      "F014",
+      "F015",
+      "F018",
+      "F019",
+      "F020",
+      "F021",
+      "F022",
+      "F023",
+      "F025"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "Rendered active custom-line dialog: save additive/period-total mode with minimum and tier prices; save recurring unit pricing with positive and zero quantity; isolate multiple service controls; require an explicit recurring rate.",
+    "implemented": true,
+    "featureIds": [
+      "F026"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "Rendered active editor and legacy overview: load effective usage prices, submit mode/minimum/rate at the displayed date, reload on boundary changes, block blank boundaries, surface transition rejection, and describe the manual seat handoff truthfully.",
+    "implemented": true,
+    "featureIds": [
+      "F027",
+      "F028"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "Migrated isolated PostgreSQL: create custom Usage and Fixed lines through production actions, assert persisted measurement/pricing basis and minor units, reject negative seats before mutation, and preserve earlier period pricing through the active editor action.",
+    "implemented": true,
+    "featureIds": [
+      "F026",
+      "F027"
+    ]
+  },
+  {
+    "id": "T019",
+    "description": "Isolated PostgreSQL production creation/discovery/repair actions: September assignment plus billed or draft-linked ledger; new arrears Fixed/unit and Usage/period-total lines start October 1, never return or repair September, detect and repair deliberately removed October periods, and preserve periods/candidates on repeated calls.",
+    "implemented": true,
+    "featureIds": [
+      "F029"
+    ]
+  },
+  {
+    "id": "T020",
+    "description": "Rendered Automatic Invoices interactions and synthetic live wider-date-filter smoke through December 31: no pre-effective September warnings, eligible October repair refreshes the candidate list, individual and bulk repair preserve the October start, and fixtures are removed.",
+    "implemented": true,
+    "featureIds": [
+      "F029"
+    ]
+  }
+]

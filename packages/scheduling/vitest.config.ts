@@ -5,17 +5,50 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    include: ['tests/**/*.test.ts', 'src/**/*.test.ts'],
-    testTimeout: 10000,
+    setupFiles: ['./vitest.setup.ts'],
+    // The older tests/*.test.tsx files predate tsx inclusion here and no
+    // longer collect/pass; they stay dormant until repaired, so the tsx
+    // suites that do pass are listed explicitly instead of globbed.
+    include: [
+      'tests/**/*.test.ts',
+      'src/**/*.test.ts',
+      'tests/AvailabilitySettings.component.test.tsx',
+      'tests/SchedulePage.accessRetry.test.tsx',
+      'tests/SchedulePage.dialogRestore.test.tsx',
+      'tests/SchedulePage.headerStability.test.tsx',
+      'tests/entryPopup.teamsMeetingRefresh.test.tsx',
+      'tests/scheduleCalendar.teamsMeetingRefresh.test.tsx',
+    ],
+    // 20s, matching the other heavy action-layer packages (billing, tickets,
+    // client-portal, integrations). Mock factories here close over module-level
+    // consts, so tests must defer to `await import(...)` inside the test body;
+    // the first test to do so pays the entire cold transform of the
+    // source-aliased graph aliased below (~1.2s idle, 10s+ on a loaded CI
+    // runner) while every later test in the file runs in ~1ms.
+    testTimeout: 20000,
   },
   resolve: {
     alias: [
+      // Lets component tests vi.mock the same specifier the components import.
+      { find: /^@alga-psa\/scheduling\/actions$/, replacement: path.resolve(__dirname, 'src/actions/index.ts') },
+      // EntryPopup/ScheduleCalendar self-import deep component paths the
+      // package's exports map does not publish; resolve those from source.
+      { find: /^@alga-psa\/scheduling\/components\/(.*)$/, replacement: path.resolve(__dirname, 'src/components/$1') },
       // Must precede the @alga-psa/auth alias, whose regex would otherwise
       // swallow "@alga-psa/authorization/..." specifiers.
       { find: /^@alga-psa\/authorization(.*)$/, replacement: path.resolve(__dirname, '../authorization/src$1') },
       { find: /^@alga-psa\/auth(.*)$/, replacement: path.resolve(__dirname, '../auth/src$1') },
       { find: /^@alga-psa\/core$/, replacement: path.resolve(__dirname, '../core/src/index.ts') },
+      // The generic core rule below maps subpaths into src/lib, but the
+      // "./server" export lives at src/server.ts (mirrors the package's
+      // exports map); without this, suites importing scheduleActions fail
+      // to resolve @alga-psa/core/server.
+      { find: /^@alga-psa\/core\/server$/, replacement: path.resolve(__dirname, '../core/src/server.ts') },
       { find: /^@alga-psa\/core\/(.*)$/, replacement: path.resolve(__dirname, '../core/src/lib/$1') },
+      // The generic db rule below maps subpaths straight into src, but the
+      // "./tenant" export lives at src/lib/tenant.ts (mirrors the package's
+      // exports map), so it needs resolving before the catch-all.
+      { find: /^@alga-psa\/db\/tenant$/, replacement: path.resolve(__dirname, '../db/src/lib/tenant.ts') },
       { find: /^@alga-psa\/db(.*)$/, replacement: path.resolve(__dirname, '../db/src$1') },
       { find: /^@alga-psa\/types(.*)$/, replacement: path.resolve(__dirname, '../types/src$1') },
       { find: /^@alga-psa\/ui(.*)$/, replacement: path.resolve(__dirname, '../ui/src$1') },

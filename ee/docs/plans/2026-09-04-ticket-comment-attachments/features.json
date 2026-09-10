@@ -1,0 +1,82 @@
+[
+  {
+    "id": "F001",
+    "description": "Server-owned attachment lifecycle and transactional claim/reconciliation across comment paths",
+    "implemented": true
+  },
+  {
+    "id": "F002",
+    "description": "Supported file composition with preserved images and ticket Documents associations",
+    "implemented": true
+  },
+  {
+    "id": "F003",
+    "description": "Current tenant, client, comment, thread and lifecycle authorization on document surfaces",
+    "implemented": true
+  },
+  {
+    "id": "F004",
+    "description": "Exact-comment email attachments, provider limits, recipient-bound fallback links and durable delivery deduplication",
+    "implemented": true
+  },
+  {
+    "id": "F005",
+    "description": "Committed publication and safe remove/abandon/edit/delete/scheduled lifecycle",
+    "implemented": true
+  },
+  {
+    "id": "F006",
+    "description": "Recipient email-code verification without an account and current document authorization for email bytes",
+    "implemented": true
+  },
+  {
+    "id": "F007",
+    "description": "Durable publication recovery, observable provider outcomes and recoverable retry leases",
+    "implemented": true
+  },
+  {
+    "id": "F008",
+    "description": "Tracked reply/edit cancellation and bounded exclusively owned draft storage cleanup",
+    "implemented": true
+  },
+  {
+    "id": "F009",
+    "description": "Graph HTTP-status rejection classification with preserved retry timing and ambiguous acceptance protection",
+    "implemented": true
+  },
+  {
+    "id": "F010",
+    "description": "Temporal recovery forwarding and periodic discovery for new tenants and failed schedule installations",
+    "implemented": true
+  },
+  {
+    "id": "F011",
+    "description": "Reuse successful and in-flight runner initialization; retry failed initialization without repeating completed worker registrations",
+    "implemented": true
+  },
+  {
+    "id": "F012",
+    "description": "Coordinate concurrent PgBoss registrations per queue, sharing failures and retry while preserving successful workers",
+    "implemented": true
+  },
+  {
+    "id": "F013",
+    "description": "Draft cancellation enforces document:create, ticket:update, current ticket access and actor ownership",
+    "implemented": true
+  },
+  {
+    "id": "F014",
+    "description": "Document card/list badges reflect public comment lifecycle and portal composition waits for identity",
+    "implemented": true
+  },
+  {
+    "id": "F015",
+    "description": "Storage pre-validation awaits rejection and MIME family wildcards respect the subtype boundary",
+    "implemented": true
+  },
+  {
+    "id": "F016",
+    "description": "Bundled child notifications separate source attachment authorization from child reply context without widening document access",
+    "implemented": true
+  }
+]

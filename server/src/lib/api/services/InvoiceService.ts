@@ -1359,13 +1359,24 @@ export class InvoiceService extends BaseService<IInvoice> {
       throw new BadRequestError('Credit amount cannot exceed invoice balance due');
     }
 
-    const { appliedAmount } = await applyCreditToInvoiceInternal(
-      context.tenant,
-      context.userId,
-      invoice.client_id,
-      data.invoice_id,
-      data.credit_amount
-    );
+    let appliedAmount: number;
+    try {
+      ({ appliedAmount } = await applyCreditToInvoiceInternal(
+        context.tenant,
+        context.user,
+        invoice.client_id,
+        data.invoice_id,
+        data.credit_amount
+      ));
+    } catch (error) {
+      // The remote-affecting branch of credit application is gated by
+      // accounting_integrations:remote_mutate inside the apply engine; surface
+      // that denial as a 403 rather than an unhandled 500.
+      if (error instanceof Error && error.message.startsWith('Permission denied')) {
+        throw new ForbiddenError('Permission denied: Cannot apply credits to invoices');
+      }
+      throw error;
+    }
 
     if (appliedAmount > 0) {
       await withTransaction(knex, async (trx) => {

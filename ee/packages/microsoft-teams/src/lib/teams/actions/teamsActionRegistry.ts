@@ -1,4 +1,4 @@
-import { createTenantKnex, runWithTenant, tenantDb, type ServiceContext } from '@alga-psa/db';
+import { createTenantKnex, runWithTenant, tenantDb, withTransaction, type ServiceContext } from '@alga-psa/db';
 import { ServerAnalyticsTracker } from '@alga-psa/analytics';
 import { ServerEventPublisher } from '@alga-psa/event-bus';
 import type { IUserWithRoles } from '@alga-psa/types';
@@ -589,7 +589,7 @@ async function resolveTargetInternal(
   }
 }
 
-async function resolveDefaultPriorityIdForBoard(tenantId: string, boardId: string): Promise<string | null> {
+export async function resolveDefaultPriorityIdForBoard(tenantId: string, boardId: string): Promise<string | null> {
   const { knex } = await createTenantKnex(tenantId);
   const db = tenantDb(knex, tenantId);
   const board = (await db.table('boards')
@@ -1183,7 +1183,7 @@ const actionDefinitions: Record<TeamsActionId, TeamsActionDefinition> = {
     authorize: async (_normalized, context) =>
       ensurePermission(
         context.request.user,
-        'timesheet',
+        'time_sheet',
         'approve',
         'You do not have permission to view approvals from Teams.'
       ),
@@ -1256,7 +1256,7 @@ const actionDefinitions: Record<TeamsActionId, TeamsActionDefinition> = {
         case 'project_task':
           return ensurePermission(context.request.user, 'project', 'read', 'You do not have permission to view project tasks from Teams.');
         case 'approval':
-          return ensurePermission(context.request.user, 'timesheet', 'approve', 'You do not have permission to view approval work from Teams.');
+          return ensurePermission(context.request.user, 'time_sheet', 'approve', 'You do not have permission to view approval work from Teams.');
         case 'time_entry':
           return ensurePermission(context.request.user, 'time_entry', 'read', 'You do not have permission to view time entries from Teams.');
         case 'contact':
@@ -1356,7 +1356,7 @@ const actionDefinitions: Record<TeamsActionId, TeamsActionDefinition> = {
       }
 
       const { knex } = await createTenantKnex(context.request.tenantId);
-      const createdTicket = await knex.transaction((trx: any) =>
+      const createdTicket = await withTransaction(knex, (trx: any) =>
         TicketModel.createTicketWithRetry(
           {
             title: String(normalized.title),
@@ -1377,7 +1377,7 @@ const actionDefinitions: Record<TeamsActionId, TeamsActionDefinition> = {
           context.request.tenantId,
           trx,
           {},
-          new ServerEventPublisher(),
+          new ServerEventPublisher(trx),
           new ServerAnalyticsTracker(),
           context.request.user.user_id,
           3
@@ -1690,7 +1690,7 @@ const actionDefinitions: Record<TeamsActionId, TeamsActionDefinition> = {
     authorize: async (normalized, context) => {
       const timePermission = await ensurePermission(
         context.request.user,
-        'timeentry',
+        'time_entry',
         'create',
         'You do not have permission to create time entries from Teams.'
       );
@@ -1758,7 +1758,7 @@ const actionDefinitions: Record<TeamsActionId, TeamsActionDefinition> = {
         )
       ),
     authorize: async (_normalized, context) =>
-      ensurePermission(context.request.user, 'timesheet', 'approve', 'You do not have permission to respond to approvals from Teams.'),
+      ensurePermission(context.request.user, 'time_sheet', 'approve', 'You do not have permission to respond to approvals from Teams.'),
     execute: async (normalized, context) => {
       const approvalId = String(normalized.approvalId);
       if (normalized.outcome === 'approve') {
@@ -1890,18 +1890,18 @@ async function evaluateActionAvailability(
       ? definition.id === 'open_record' && targetReference?.entityType === 'project_task'
         ? ['project', 'read']
         : definition.id === 'open_record' && targetReference?.entityType === 'approval'
-          ? ['timesheet', 'approve']
+          ? ['time_sheet', 'approve']
           : definition.id === 'open_record' && targetReference?.entityType === 'time_entry'
             ? ['time_entry', 'read']
             : definition.id === 'open_record' && targetReference?.entityType === 'contact'
               ? ['contact', 'read']
               : definition.id === 'my_approvals'
-                ? ['timesheet', 'approve']
+                ? ['time_sheet', 'approve']
                 : ['ticket', 'read']
       : definition.id === 'log_time'
-        ? ['timeentry', 'create']
+        ? ['time_entry', 'create']
         : definition.id === 'approval_response'
-          ? ['timesheet', 'approve']
+          ? ['time_sheet', 'approve']
           : ['ticket', 'update'];
 
   const allowed = await hasPermission(request.user, permissionRequirement[0], permissionRequirement[1]);

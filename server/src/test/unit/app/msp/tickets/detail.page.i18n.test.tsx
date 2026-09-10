@@ -156,6 +156,7 @@ vi.mock('@product/chat/context', () => ({
 
 vi.mock('@/context/TierContext', () => ({
   TierProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useTier: () => ({ hasAddOn: () => false, hasFeature: () => true }),
 }));
 
 vi.mock('@alga-psa/user-composition/actions', () => ({

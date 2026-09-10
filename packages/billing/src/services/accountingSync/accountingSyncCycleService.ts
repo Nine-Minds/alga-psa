@@ -334,7 +334,7 @@ async function drainExportInvoiceOps(deps: DrainDeps): Promise<void> {
       // Re-exported drifted invoices are back in agreement. The deliver step may
       // already have reset the mapping to synced, so resolve unconditionally —
       // resolving without an open task is a no-op.
-      const mapping = await deps.ledger.findByAlgaId('invoice', op.alga_entity_id);
+      const mapping = await deps.ledger.findByAlgaId('invoice', op.alga_entity_id, deps.targetRealm);
       if (
         mapping &&
         (mapping.sync_status === MAPPING_SYNC_STATUS.drift ||
@@ -436,7 +436,7 @@ async function drainExportVendorBillOps(deps: DrainDeps): Promise<void> {
 
   const remaining: AccountingSyncOperation[] = [];
   for (const op of pending) {
-    const mapping = await deps.ledger.findByAlgaId('vendor_bill', op.alga_entity_id);
+    const mapping = await deps.ledger.findByAlgaId('vendor_bill', op.alga_entity_id, deps.targetRealm);
     if (mapping) {
       await deps.ops.markDone(deps.tenantId, op.op_id);
       deps.stats.opsProcessed += 1;

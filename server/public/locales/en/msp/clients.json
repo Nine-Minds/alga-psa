@@ -12,7 +12,6 @@
       "downloadCsv": "Download CSV",
       "edit": "Edit",
       "import": "Import",
-      "reactivate": "Reactivate",
       "remove": "Remove",
       "retry": "Retry",
       "save": "Save",
@@ -181,7 +180,18 @@
     "shareTooltip": "Print, import and export",
     "defaultClientDeleteError": "Cannot delete the default client. Please set another client as default in General Settings first.",
     "clientNotFound": "Client not found.",
-    "deletePermissionDenied": "Permission denied: Cannot delete clients."
+    "deletePermissionDenied": "Permission denied: Cannot delete clients.",
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} selected",
+        "markInactive": "Mark Inactive",
+        "reactivate": "Reactivate",
+        "delete": "Delete",
+        "print": "Print selected",
+        "more": "More",
+        "clear": "Clear"
+      }
+    }
   },
   "clientDetails": {
     "opportunities": "Opportunities",
@@ -1422,6 +1432,9 @@
       "viewTranscript": "View transcript"
     },
     "quickAdd": {
+      "clientRequired": "Select a client for this interaction",
+      "contactPlaceholder": "Select contact",
+      "selectClientFirst": "Select client first",
       "teams": {
         "attendees": {
           "add": "Add",
@@ -1450,14 +1463,35 @@
         "createFailed": "Failed to create Teams meeting",
         "createToggle": "Create Teams meeting",
         "endRequired": "End time is required to create a Teams meeting",
+        "invitesDisabled": "Email invites are turned off in Teams integration settings — attendees will not be notified by Microsoft.",
+        "invitesSummary": "Microsoft will email calendar invites to: {{recipients}}.",
+        "invitesSummaryYou": "you (creator)",
+        "reason": {
+          "feature_disabled": "Microsoft Teams integration is not enabled for this tenant.",
+          "ee_disabled": "Teams integration requires Enterprise Edition.",
+          "no_organizer": "No default meeting organizer is configured in Teams settings.",
+          "not_configured": "The Teams integration has not been configured."
+        },
+        "scheduleSummary": "A schedule entry will be added to your AlgaPSA calendar.",
         "startRequired": "Start time is required to create a Teams meeting",
         "unavailable": "Teams meeting creation is not available for this tenant."
       },
       "loadFailed": "Interaction options could not be loaded. Please try again.",
-      "saveFailed": "The interaction could not be saved. Please try again."
+      "saveFailed": "The interaction could not be saved. Please try again.",
+      "schedule": {
+        "addToggle": "Add to schedule",
+        "addHelp": "A schedule entry will be added to your AlgaPSA calendar.",
+        "addHelpOthers": "A schedule entry will be added to the selected users' AlgaPSA calendars.",
+        "assigneesLabel": "Schedule for",
+        "assigneesPlaceholder": "Select users"
+      },
+      "assignedTo": {
+        "label": "Assigned To",
+        "placeholder": "Select user"
+      }
     },
     "feed": {
-      "addInteraction": "Add interaction",
+      "addInteraction": "Add Interaction",
       "allTypes": "All Types",
       "applyFilters": "Apply Filters",
       "endDate": "End Date",
@@ -1475,6 +1509,13 @@
       "allContacts": "All Contacts",
       "allStatuses": "All Statuses",
       "allUsers": "All Users",
+      "columns": { "type": "Type", "title": "Title", "client": "Client", "contact": "Contact", "user": "User", "date": "Date", "status": "Status" },
+      "empty": "No interactions match these filters.",
+      "loading": "Loading interactions…",
+      "openClient": "Open client {{name}}",
+      "openContact": "Open contact {{name}}",
+      "openInteraction": "Open interaction {{title}}",
+      "openUser": "Open user {{name}}",
       "byUser": "By {{name}}",
       "collapse": "Collapse Recent Interactions",
       "contactsFromClient": "Contacts from selected client",
@@ -1743,7 +1784,9 @@
       "missingField": "Missing required interaction field.",
       "missingFieldNamed": "Missing required interaction field: {{field}}.",
       "referenceMissing": "The selected interaction, client, contact, user, status, or type no longer exists. Please refresh and try again.",
-      "duplicate": "An interaction with these details already exists."
+      "duplicate": "An interaction with these details already exists.",
+      "scheduleAssignDenied": "Permission denied to assign schedule entries to other users.",
+      "scheduleUsersMissing": "One or more assigned users could not be found."
     },
     "interactionType": {
       "notFound": "Interaction type not found or you do not have access to it.",

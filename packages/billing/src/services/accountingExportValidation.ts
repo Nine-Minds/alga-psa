@@ -250,11 +250,12 @@ export class AccountingExportValidation {
           })
           .whereIn('alga_entity_id', Array.from(clientIds))
           .modify((builder) => {
+            // Realm-exact: a mapping in another realm (or a legacy realm-less
+            // row) does not make a customer exportable into this batch's
+            // realm, so it must not pass validation either.
             const targetRealm = batch.target_realm;
             if (targetRealm) {
-              builder.andWhere((realmClause) =>
-                realmClause.where('external_realm_id', targetRealm).orWhereNull('external_realm_id')
-              );
+              builder.andWhere('external_realm_id', targetRealm);
             } else {
               builder.whereNull('external_realm_id');
             }

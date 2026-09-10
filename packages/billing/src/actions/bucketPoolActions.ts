@@ -164,7 +164,7 @@ export const listBucketPoolsForLine = withAuth(async (
   return withBucketPoolActionErrors(async () => {
     const { knex } = await createTenantKnex();
     return withTransaction(knex, async (trx) => {
-      if (!await hasPermission(user, 'billing', 'read')) {
+      if (!await hasPermission(user, 'billing', 'read', trx)) {
         throw new Error('Permission denied: Cannot read bucket pools');
       }
       return loadPoolSnapshot(trx, tenant, contractLineId);
@@ -185,7 +185,7 @@ export const listBucketBusinessHoursSchedules = withAuth(async (
 ): Promise<BucketBusinessHoursScheduleSummary[]> => {
   const { knex } = await createTenantKnex();
   return withTransaction(knex, async (trx) => {
-    if (!await hasPermission(user, 'billing', 'read')) {
+    if (!await hasPermission(user, 'billing', 'read', trx)) {
       throw new Error('Permission denied: Cannot read bucket pool schedules');
     }
 
@@ -243,7 +243,7 @@ export const createBucketPool = withAuth(async (
   return withBucketPoolActionErrors(async () => {
     const { knex } = await createTenantKnex();
     return withTransaction(knex, async (trx) => {
-      if (!await hasPermission(user, 'billing', 'update')) {
+      if (!await hasPermission(user, 'billing', 'update', trx)) {
         throw new Error('Permission denied: Cannot create bucket pools');
       }
 
@@ -332,7 +332,7 @@ export const updateBucketPool = withAuth(async (
   return withBucketPoolActionErrors(async () => {
     const { knex } = await createTenantKnex();
     return withTransaction(knex, async (trx) => {
-      if (!await hasPermission(user, 'billing', 'update')) {
+      if (!await hasPermission(user, 'billing', 'update', trx)) {
         throw new Error('Permission denied: Cannot update bucket pools');
       }
       const db = tenantDb(trx, tenant);
@@ -387,7 +387,7 @@ export const addBucketPoolMember = withAuth(async (
   return withBucketPoolActionErrors(async () => {
     const { knex } = await createTenantKnex();
     return withTransaction(knex, async (trx) => {
-      if (!await hasPermission(user, 'billing', 'update')) {
+      if (!await hasPermission(user, 'billing', 'update', trx)) {
         throw new Error('Permission denied: Cannot update bucket pools');
       }
       const db = tenantDb(trx, tenant);
@@ -417,7 +417,7 @@ export const removeBucketPoolMember = withAuth(async (
   return withBucketPoolActionErrors(async () => {
     const { knex } = await createTenantKnex();
     return withTransaction(knex, async (trx) => {
-      if (!await hasPermission(user, 'billing', 'update')) {
+      if (!await hasPermission(user, 'billing', 'update', trx)) {
         throw new Error('Permission denied: Cannot update bucket pools');
       }
       const db = tenantDb(trx, tenant);
@@ -450,7 +450,7 @@ export const deleteBucketPool = withAuth(async (
   return withBucketPoolActionErrors(async () => {
     const { knex } = await createTenantKnex();
     return withTransaction(knex, async (trx) => {
-      if (!await hasPermission(user, 'billing', 'delete')) {
+      if (!await hasPermission(user, 'billing', 'delete', trx)) {
         throw new Error('Permission denied: Cannot delete bucket pools');
       }
       const db = tenantDb(trx, tenant);
@@ -482,7 +482,7 @@ export const setBucketPoolAfterHoursRule = withAuth(async (
   return withBucketPoolActionErrors(async () => {
     const { knex } = await createTenantKnex();
     return withTransaction(knex, async (trx) => {
-      if (!await hasPermission(user, 'billing', 'update')) {
+      if (!await hasPermission(user, 'billing', 'update', trx)) {
         throw new Error('Permission denied: Cannot update bucket pools');
       }
       const db = tenantDb(trx, tenant);

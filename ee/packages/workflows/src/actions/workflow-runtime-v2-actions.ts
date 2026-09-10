@@ -1241,7 +1241,6 @@ const maskSensitiveKeysByPattern = (value: unknown, patterns: RegExp[]): unknown
 
 const applyRunStudioRedactions = (value: unknown, cfg: TenantRedactionConfig): unknown => {
   const withKeyMask = maskSensitiveKeysByPattern(value, cfg.keyPatterns);
-  if (!cfg.pointerRedactions.length) return withKeyMask;
   return applyRedactions(withKeyMask, cfg.pointerRedactions);
 };
 
@@ -3183,6 +3182,7 @@ export const listWorkflowRunStepsAction = withAuth(async (user, { tenant }, inpu
       }))
     : invocations.map((invocation) => ({
         ...invocation,
+        error_message: null,
         input_json: invocation.input_json ? { redacted: true } : null,
         output_json: invocation.output_json ? { redacted: true } : null,
         error_json: invocation.error_json ? (stripInvocationErrorForRestrictedViewer(invocation.error_json) as any) : null
@@ -3207,13 +3207,7 @@ export const exportWorkflowRunDetailAction = withAuth(async (user, { tenant }, i
   const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'read', knex);
 
-  const run = await WorkflowRunModelV2.getById(knex, parsed.runId, tenant);
-  if (!run) {
-    return throwHttpError(404, 'Not found');
-  }
-  if (tenant && run.tenant && run.tenant !== tenant) {
-    return throwHttpError(404, 'Not found');
-  }
+  const run = await requireRunTenantAccess(knex, parsed.runId, tenant);
 
   const runTenant = run.tenant ?? tenant ?? null;
   const steps = await WorkflowRunStepModelV2.listByRun(knex, parsed.runId, runTenant);
@@ -3224,10 +3218,17 @@ export const exportWorkflowRunDetailAction = withAuth(async (user, { tenant }, i
   const canAdmin = await hasPermission(user, 'workflow', 'admin', knex);
   const canViewSensitive = canManage || canAdmin;
 
+  const cfg = await loadTenantRedactionConfig(knex, runTenant);
   const sanitizedInvocations = canViewSensitive
-    ? invocations
+    ? invocations.map((invocation) => ({
+        ...invocation,
+        input_json: invocation.input_json ? (applyRunStudioRedactions(invocation.input_json, cfg) as any) : null,
+        output_json: invocation.output_json ? (applyRunStudioRedactions(invocation.output_json, cfg) as any) : null,
+        error_json: invocation.error_json ? (applyRunStudioRedactions(invocation.error_json, cfg) as any) : null
+      }))
     : invocations.map((invocation) => ({
         ...invocation,
+        error_message: null,
         input_json: invocation.input_json ? { redacted: true } : null,
         output_json: invocation.output_json ? { redacted: true } : null,
         error_json: invocation.error_json ? (stripInvocationErrorForRestrictedViewer(invocation.error_json) as any) : null
@@ -3235,15 +3236,15 @@ export const exportWorkflowRunDetailAction = withAuth(async (user, { tenant }, i
 
   const sanitizedSnapshots = snapshots.map((snapshot) => ({
     ...snapshot,
-    envelope_json: redactSensitiveValues(snapshot.envelope_json)
+    envelope_json: applyRunStudioRedactions(snapshot.envelope_json, cfg)
   }));
 
   const sanitizedRun = {
     ...run,
-    input_json: redactSensitiveValues(run.input_json),
-    resume_event_payload: redactSensitiveValues(run.resume_event_payload),
-    resume_error: redactSensitiveValues(run.resume_error),
-    error_json: redactSensitiveValues(run.error_json)
+    input_json: applyRunStudioRedactions(run.input_json, cfg),
+    resume_event_payload: applyRunStudioRedactions(run.resume_event_payload, cfg),
+    resume_error: applyRunStudioRedactions(run.resume_error, cfg),
+    error_json: applyRunStudioRedactions(run.error_json, cfg)
   };
 
   return {

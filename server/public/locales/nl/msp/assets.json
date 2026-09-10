@@ -406,11 +406,17 @@
       "refreshing": "Verfrissend...",
       "refreshData": "Gegevens vernieuwen",
       "rebootDevice": "Apparaat opnieuw opstarten",
+      "rebooting": "Opnieuw opstarten...",
       "editAsset": "Asset bewerken",
       "deleteAsset": "Asset verwijderen"
     },
     "values": {
       "unknownClient": "Onbekende klant"
+    },
+    "reboot": {
+      "title": "Apparaat opnieuw opstarten?",
+      "message": "{{name}} wordt direct opnieuw opgestart via {{provider}}. Ingelogde gebruikers verliezen niet-opgeslagen werk.",
+      "confirm": "Nu opnieuw opstarten"
     }
   },
   "assetDetailTabs": {
@@ -1162,14 +1168,6 @@
       "saveFailed": "Kan onderhoudsschema niet maken"
     }
   },
-  "documentsPasswordsTab": {
-    "title": "Documenten en wachtwoorden",
-    "description": "Gecombineerd tabblad voor activadocumenten, inloggegevens en gerelateerde beveiligde records",
-    "passwords": {
-      "title": "Wachtwoorden en geheimen",
-      "comingSoon": "Veilig wachtwoordbeheer binnenkort beschikbaar."
-    }
-  },
   "maintenanceSchedulesTab": {
     "title": "Onderhoudsschema's",
     "description": "Tabblad Onderhoudsschemabeheer voor geplande service en terugkerende werkzaamheden",
@@ -1215,6 +1213,7 @@
     },
     "types": {
       "preventive": "Preventief",
+      "corrective": "Correctief",
       "inspection": "Inspectie",
       "calibration": "Kalibratie",
       "replacement": "Vervanging"
@@ -1234,6 +1233,17 @@
         "title": "Onderhoudsschema verwijderen",
         "message": "Weet u zeker dat u \"{{name}}\" wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt."
       }
+    }
+  },
+  "maintenanceCommandCenter": {
+    "title": "Onderhoudscontrolecentrum",
+    "description": "De volgende vervaldatum wordt berekend vanaf de werkelijke voltooiingsdatum.",
+    "assetsLink": "Assets"
+  },
+  "maintenanceCompletionDialog": {
+    "errors": {
+      "performedDateRequired": "Een uitvoeringsdatum is vereist.",
+      "completeFailed": "Onderhoud kan niet worden voltooid."
     }
   },
   "relatedAssetsTab": {

@@ -88,18 +88,38 @@
     "dialogs": {
       "archive": {
         "title": "Articolo di archivio",
-        "message": "Sei sicuro di voler archiviare \"{{title}}\"? Ciò lo rimuoverà dalla visibilità del client."
+        "message": "Sei sicuro di voler archiviare \"{{title}}\"? Ciò lo rimuoverà dalla visibilità del client.",
+        "titleMultiple": "Archivia {{count}} articolo/i",
+        "messageMultiple": "Vuoi davvero archiviare {{count}} articolo/i? Non saranno più visibili ai clienti."
       },
       "delete": {
         "title": "Elimina articolo",
-        "message": "Sei sicuro di voler eliminare definitivamente \"{{title}}\"? Questo rimuoverà l'articolo e il suo contenuto e non può essere annullato."
+        "message": "Sei sicuro di voler eliminare definitivamente \"{{title}}\"? Questo rimuoverà l'articolo e il suo contenuto e non può essere annullato.",
+        "titleMultiple": "Elimina {{count}} articolo/i",
+        "messageMultiple": "Vuoi davvero eliminare definitivamente {{count}} articolo/i? Gli articoli e i loro contenuti verranno rimossi e l’operazione non è reversibile.",
+        "skippedNotice": "{{count}} articolo/i selezionato/i sono pubblicati o in revisione e verranno ignorati: archiviali prima."
       }
     },
     "feedback": {
       "archiveError": "Impossibile archiviare l'articolo",
       "archiveSuccess": "Articolo archiviato",
       "deleteError": "Impossibile eliminare l'articolo",
-      "deleteSuccess": "Articolo eliminato definitivamente"
+      "deleteSuccess": "Articolo eliminato definitivamente",
+      "bulkArchiveSuccess": "{{count}} articolo/i archiviato/i",
+      "bulkArchiveError": "Impossibile archiviare {{count}} articolo/i",
+      "bulkArchivePartial": "Archiviati {{count}} articolo/i; {{failed}} non archiviati",
+      "bulkDeleteSuccess": "{{count}} articolo/i eliminato/i definitivamente",
+      "bulkDeleteError": "Impossibile eliminare {{count}} articolo/i",
+      "bulkDeletePartial": "Eliminati {{count}} articolo/i; {{failed}} non eliminati",
+      "deleteNotAllowed": "Gli articoli pubblicati o in revisione devono essere archiviati prima di poter essere eliminati"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} selezionati",
+        "archive": "Archivia",
+        "delete": "Elimina",
+        "clear": "Annulla selezione"
+      }
     }
   },
   "editor": {

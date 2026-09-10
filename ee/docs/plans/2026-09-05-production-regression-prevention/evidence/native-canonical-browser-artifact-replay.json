@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "scope": "fresh-install-canonical-artifact-consumer-replay",
+  "releaseValidation": false,
+  "runId": "34330619264",
+  "testedRevision": "a9305d0b43dc0242156b92f3ab189e680ccecb26",
+  "artifactIds": [
+    10097133130,
+    10097275264,
+    10097340173,
+    10097477642
+  ],
+  "nativeBehavioralTests": {
+    "passed": 16,
+    "failed": 0
+  },
+  "rawArtifactReplay": {
+    "status": "passed",
+    "failures": [],
+    "providerEditions": [
+      "community",
+      "enterprise"
+    ],
+    "sha256": "e67a1a2b7516f99db0e5d2cc4417ee74cd3509dedec2168d610e109e8592a59d"
+  },
+  "limitations": [
+    "Consumer replay explicitly supplies success for prerequisite jobs to isolate artifact selection. Actual current CI parent browser job and aggregate failed.",
+    "No artifact report, provider observation or assertion was changed; current-source CI still required."
+  ]
+}

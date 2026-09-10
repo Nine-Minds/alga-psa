@@ -302,6 +302,12 @@
     "reverseApproval": {
       "reason": "〖Ȧƥƥřȯṽȧŀ řḗṽḗřşḗḓ ƀẏ ḿȧƞȧɠḗř ············〗",
       "error": "〖Ƒȧīŀḗḓ ŧȯ řḗṽḗřşḗ ȧƥƥřȯṽȧŀ: {{error}} ···············〗"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "〖{{count}} şḗŀḗƈŧḗḓ ········〗",
+        "clear": "〖Ƈŀḗȧř ··〗"
+      }
     }
   },
   "workItemDrawer": {

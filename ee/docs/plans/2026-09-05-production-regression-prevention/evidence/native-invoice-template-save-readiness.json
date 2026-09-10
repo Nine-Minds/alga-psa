@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "scope": "invoice-template-failed-save-readiness",
+  "baseRevision": "717b616bf96cbb13083f0e3353baff40c08e9040",
+  "workingTreeDirty": true,
+  "sourceSha256": {
+    "packages/billing/src/components/billing-dashboard/InvoiceTemplateEditor.authoritativeFlow.test.tsx": "ba13caf7855ad5b3821f4637e6f50cf45ffcc4eee101d9b515f631bcd49e566a"
+  },
+  "observedRun": "34313560297",
+  "cause": "Preview dispatch can precede separate template loading; the test queried Save Template before it was available.",
+  "change": "Hold template loading explicitly, observe disabled loading state, release load and await enabled Save before preserving existing failed-save recovery assertions.",
+  "red": "Controlled delayed template load reproduces exact missing Save Template failure",
+  "green": {
+    "passed": 3,
+    "failed": 0,
+    "durationSeconds": 2.72
+  },
+  "limits": [
+    "Test-only readiness correction; no product change or retry/timeout increase.",
+    "Full current-source CI remains pending."
+  ]
+}

@@ -16,5 +16,6 @@ export { default as QuickAddContact } from './contacts/QuickAddContact';
 export { default as InteractionsFeed } from './interactions/InteractionsFeed';
 export { default as OverallInteractionsFeed } from './interactions/OverallInteractionsFeed';
 export { default as InteractionDetails } from './interactions/InteractionDetails';
+export { default as InteractionsWorkspace } from './interactions/InteractionsWorkspace';
 
 export { default as QuickAddClient } from './clients/QuickAddClient';

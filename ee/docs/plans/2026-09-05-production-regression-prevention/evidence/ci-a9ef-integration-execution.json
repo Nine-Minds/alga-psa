@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "scope": "ci-integration-aggregate",
+  "runId": "34339167571",
+  "jobId": "102432976012",
+  "artifactId": 10099904718,
+  "publishedRevision": "a9efecce23230ead68afb69ddc85613c6becf1fa",
+  "testedRevision": "16264b7e71ade1ec39a1caf1654e81d860f95ba3",
+  "status": "passed",
+  "counts": {
+    "passed": 2158,
+    "failed": 0,
+    "skipped": 0,
+    "todo": 0,
+    "pending": 0
+  },
+  "failures": [],
+  "expectedFiles": 292,
+  "executedFiles": 292,
+  "fileInventoriesAgree": true,
+  "rawAssertionCounts": {
+    "passed": 2158
+  },
+  "artifactSha256": "ca040c10e7e7ffdf4c61145344b0d30b02b14b045f1926ec6f911f7c0b112504",
+  "limitations": [
+    "Integration aggregate only; the overall regression run remains active.",
+    "This published candidate does not include the queued release assembler or authorization mutation tests."
+  ]
+}

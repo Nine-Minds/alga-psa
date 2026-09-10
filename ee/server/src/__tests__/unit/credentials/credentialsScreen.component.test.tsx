@@ -68,6 +68,10 @@ vi.mock('@enterprise/lib/actions/integrations/huduDataActions', () => ({
 // alias, which in the ee/server test env resolves to the CE stub (render
 // null). Mock it to a recognizable stub so the flag-on wrapper path can be
 // asserted without pulling the real EE component through next/dynamic.
+vi.mock('@enterprise/components/credentials/AssetCredentialsSection', () => ({
+  AssetCredentialsSection: ({ assetId }: { assetId: string }) => <div id="edition-asset-credentials">{assetId}</div>,
+}));
+
 vi.mock('@enterprise/components/credentials/EntityCredentialsSection', () => ({
   EntityCredentialsSection: ({ entityType, entityId }: { entityType: string; entityId: string }) => (
     <div id={`ee-entity-section-${entityType}`}>{entityId}</div>
@@ -246,7 +250,6 @@ vi.mock('@alga-psa/ui/components/ClientPicker', () => ({
   ),
 }));
 
-vi.mock('qrcode/lib/browser', () => ({ default: { toDataURL: vi.fn(async () => 'data:image/png;base64,local-preview') } }));
 
 import { CredentialsScreen } from '@ee/components/credentials/CredentialsScreen';
 import { TotpCountdown } from '@ee/components/credentials/TotpCountdown';
@@ -396,13 +399,10 @@ describe('CredentialsScreen — reveal-state lifecycle', () => {
 });
 
 describe('CredentialsScreen — filters and flags', () => {
-  it('renders nothing when the release flag is off', async () => {
+  it('loads the released vault independently of the retired release flag', async () => {
     useFeatureFlagMock.mockReturnValue({ enabled: false });
-
-    const { container } = render(<CredentialsScreen />);
-
-    expect(container.firstChild).toBeNull();
-    expect(getCredentialsContextMock).not.toHaveBeenCalled();
+    await renderScreen();
+    expect(listCredentialsMock).toHaveBeenCalled();
   });
 
   it('shows the tier upgrade notice when the tier gate is closed', async () => {
@@ -574,11 +574,13 @@ describe('CredentialsScreen — create dialog destination picker', () => {
     await waitFor(() => expect(clipboardWriteMock).toHaveBeenCalledWith(password));
     expect(document.getElementById('credential-form-password-copied')).toBeTruthy();
     fireEvent.change(document.getElementById('credential-form-otp')!, { target: { value: 'GEZDGNBVGY3TQOJQ' } });
-    await waitFor(() => expect(document.getElementById('credential-form-otp-qr')).toBeTruthy());
+    await waitFor(() => expect(document.getElementById('credential-form-otp-code')).toBeTruthy());
     fireEvent.change(document.getElementById('credential-form-otp')!, { target: { value: 'otpauth://totp/Example?secret=GEZDGNBVGY3TQOJQ&issuer=Example' } });
-    await waitFor(() => expect(document.getElementById('credential-form-otp-qr')).toBeTruthy());
+    await waitFor(() => expect(document.getElementById('credential-form-otp-code')).toBeTruthy());
     fireEvent.change(document.getElementById('credential-form-otp')!, { target: { value: 'invalid!' } });
-    await waitFor(() => expect(document.getElementById('credential-form-otp-qr')).toBeNull());
+    await waitFor(() => expect(document.getElementById('credential-form-otp-code')).toBeNull());
+    fireEvent.change(document.getElementById('credential-form-otp')!, { target: { value: 'otpauth://totp/Example?secret=GEZDGNBVGY3TQOJQ&digits=8' } });
+    await waitFor(() => expect(document.getElementById('credential-form-otp-error')?.textContent).toContain('credentials.form.otpUnsupportedParams'));
   });
 
   it('shows a safe server save code and falls back for unknown codes', async () => {
@@ -728,17 +730,16 @@ describe('TotpCountdown — countdown re-request', () => {
   });
 });
 
-describe('AssetCredentialsSection — flag-off regression (no empty vault card)', () => {
-  it('EE section renders nothing when the release flag is off (Card gated, not just the list)', async () => {
+describe('AssetCredentialsSection — released vault and tier access', () => {
+  it('EE section loads the released vault independently of the retired release flag', async () => {
     useFeatureFlagMock.mockReturnValue({ enabled: false });
 
     const { container } = render(
       <EeAssetCredentialsSection assetId="asset-1" clientId={CLIENT_ID} />
     );
 
-    expect(container.firstChild).toBeNull();
-    expect(document.getElementById('asset-credentials-section')).toBeNull();
-    expect(getCredentialsContextMock).not.toHaveBeenCalled();
+    await waitFor(() => expect(document.getElementById('asset-credentials-section')).toBeTruthy());
+    await waitFor(() => expect(listCredentialsMock).toHaveBeenCalled());
   });
 
   it('EE section renders the upgrade teaser (not the vault) below the Pro tier', async () => {
@@ -769,19 +770,15 @@ describe('AssetCredentialsSection — flag-off regression (no empty vault card)'
     });
   });
 
-  it('shared assets wrapper renders the legacy placeholder (and no vault card) when the flag is off', async () => {
+  it('shared assets wrapper loads its edition section without the retired release flag', async () => {
     useFeatureFlagMock.mockReturnValue({ enabled: false });
 
     const { container } = render(
       <AssetsWrapperAssetCredentialsSection assetId="asset-1" clientId={CLIENT_ID} />
     );
 
-    // Legacy pre-vault placeholder is preserved exactly.
-    expect(document.body.textContent).toContain('Passwords & Secrets');
-    expect(document.body.textContent).toContain('Secure password management coming soon.');
-    // No vault card anywhere.
-    expect(document.getElementById('asset-credentials-section')).toBeNull();
-    expect(container.querySelector('code')).toBeNull();
+    await waitFor(() => expect(container.querySelector('#edition-asset-credentials')?.textContent).toBe('asset-1'));
+    expect(document.body.textContent).not.toContain('Secure password management coming soon.');
   });
 });
 
@@ -913,19 +910,30 @@ describe('CredentialFormDialog — read-only associations summary on edit', () =
     // No asset-attach picker anywhere in the edit dialog.
     expect(document.getElementById('credential-form-assets')).toBeNull();
   });
+  it('shows saved TOTP state and submits deliberate removal', async () => {
+    const editing = credential({ id: 'otp-edit', hasOtp: true });
+    const onSubmit = vi.fn().mockResolvedValue({ ok: true });
+    const { CredentialFormDialog } = await import('@ee/components/credentials/CredentialFormDialog');
+    render(<CredentialFormDialog isOpen onClose={() => undefined} onSubmit={onSubmit} editing={editing as never} defaultClientId={CLIENT_ID} context={{ tierOk: true, huduConnected: false, flagIrrelevantHere: true } as never} />);
+    await waitFor(() => expect(document.getElementById('credential-form-otp-saved')).toBeTruthy());
+    fireEvent.click(document.getElementById('credential-form-submit')!);
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ otpSecret: undefined })));
+    fireEvent.click(document.getElementById('credential-form-otp-remove')!);
+    fireEvent.click(document.getElementById('credential-form-submit')!);
+    await waitFor(() => expect(onSubmit).toHaveBeenLastCalledWith(expect.objectContaining({ otpSecret: null })));
+  });
 });
 
 describe('EntityCredentialsSection — generic entity section gating', () => {
-  it('renders nothing when the release flag is off', async () => {
+  it('loads entity credentials independently of the retired release flag', async () => {
     useFeatureFlagMock.mockReturnValue({ enabled: false });
 
     const { container } = render(
       <EeEntityCredentialsSection entityType="ticket" entityId="ticket-1" defaultClientId={CLIENT_ID} />
     );
 
-    expect(container.firstChild).toBeNull();
-    expect(document.getElementById('ticket-credentials-section')).toBeNull();
-    expect(getCredentialsContextMock).not.toHaveBeenCalled();
+    await waitFor(() => expect(document.getElementById('ticket-credentials-section')).toBeTruthy());
+    await waitFor(() => expect(listCredentialsMock).toHaveBeenCalled());
   });
 
   it('renders the tier teaser (not the vault) below Pro', async () => {

@@ -20,9 +20,13 @@ function todayInTimeZone(timeZone?: string | null): string {
 const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
 export const dateStringSchema = z.string().regex(dateRegex, 'Date must be in YYYY-MM-DD format');
 
-// Time validation: HH:MM format (24-hour)
-const timeRegex = /^([0-1][0-9]|2[0-3]):[0-5][0-9]$/;
-export const timeStringSchema = z.string().regex(timeRegex, 'Time must be in HH:MM format (24-hour)');
+// Time validation: HH:MM format (24-hour). Postgres `time` columns read back as
+// HH:MM:SS, so seconds are accepted and trimmed instead of failing a round-trip.
+const timeRegex = /^([0-1][0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9])?$/;
+export const timeStringSchema = z
+  .string()
+  .regex(timeRegex, 'Time must be in HH:MM format (24-hour)')
+  .transform((value) => value.slice(0, 5));
 
 /**
  * Appointment Request Status Schema
@@ -174,6 +178,35 @@ export const availabilitySettingSchema = z.object({
 });
 
 export type AvailabilitySettingInput = z.infer<typeof availabilitySettingSchema>;
+
+export const availabilityUserHoursDaySchema = z.object({
+  day_of_week: z.number().int().min(0).max(6),
+  is_available: z.boolean(),
+  start_time: timeStringSchema,
+  end_time: timeStringSchema,
+}).refine((day) => day.start_time < day.end_time, {
+  message: 'Start time must be before end time',
+  path: ['start_time'],
+});
+
+export const availabilityUserHoursWeekSchema = z.object({
+  user_id: z.string().uuid('User ID must be a valid UUID'),
+  days: z.array(availabilityUserHoursDaySchema).length(7, 'All seven days are required'),
+  buffer_before_minutes: z.number().int().min(0).max(120),
+  buffer_after_minutes: z.number().int().min(0).max(120),
+  config_json: z.record(z.any()),
+}).superRefine((week, ctx) => {
+  const days = new Set(week.days.map((day) => day.day_of_week));
+  if (days.size !== 7 || Array.from({ length: 7 }, (_, day) => day).some((day) => !days.has(day))) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Each weekday from 0 through 6 must appear exactly once',
+      path: ['days'],
+    });
+  }
+});
+
+export type AvailabilityUserHoursWeekInput = z.infer<typeof availabilityUserHoursWeekSchema>;
 
 /**
  * Availability Exception Schema

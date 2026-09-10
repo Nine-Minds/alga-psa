@@ -10,10 +10,9 @@ import {
   type RmmIntegrationStatus,
 } from '../../lib/rmm/rmmIntegrationStatus';
 
-export type { RmmIntegrationStatus };
-
 // The device-sync bounds are NOT re-exported here: a 'use server' module may
-// only export async functions. Import them from lib/rmm/contracts instead.
+// only export async functions. Import shared types from lib/rmm/rmmIntegrationStatus
+// and bounds from lib/rmm/contracts instead.
 
 export const getRmmIntegrationStatuses = withAuth(async (user, { tenant }): Promise<{
   success: boolean;

@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "kind": "native-ci-execution",
+  "revision": "e23148e2865d82c41ec9dc163ddcbfc09d54209a",
+  "job": "https://github.com/Nine-Minds/alga-psa/actions/runs/34056413132/job/101549019970",
+  "conclusion": "success",
+  "completedAt": "2026-09-06T20:46:22Z",
+  "counts": {
+    "filesPassed": 2678,
+    "filesSkipped": 1,
+    "testsPassed": 14452,
+    "testsSkipped": 2,
+    "todo": 22
+  },
+  "logSha256": "6ede07960c4c0949d46015ac7e57adb4fcf5ace97569aadbbb34d9a1d6f7ba8c",
+  "limitations": [
+    "Successful legacy coverage job still contains two skipped tests and twenty-two todo entries; this is not zero-exclusion coverage or a green whole-PR result."
+  ]
+}

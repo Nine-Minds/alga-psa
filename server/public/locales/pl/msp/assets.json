@@ -414,11 +414,17 @@
       "refreshing": "Odświeżanie...",
       "refreshData": "Odśwież dane",
       "rebootDevice": "Uruchom ponownie urządzenie",
+      "rebooting": "Ponowne uruchamianie...",
       "editAsset": "Edytuj zasób",
       "deleteAsset": "Usuń zasób"
     },
     "values": {
       "unknownClient": "Nieznany klient"
+    },
+    "reboot": {
+      "title": "Uruchomić ponownie urządzenie?",
+      "message": "{{name}} zostanie natychmiast uruchomione ponownie przez {{provider}}. Zalogowani użytkownicy utracą niezapisaną pracę.",
+      "confirm": "Uruchom ponownie teraz"
     }
   },
   "assetDetailTabs": {
@@ -1178,14 +1184,6 @@
       "saveFailed": "Nie udało się utworzyć harmonogramu konserwacji"
     }
   },
-  "documentsPasswordsTab": {
-    "title": "Dokumenty i hasła",
-    "description": "Połączona karta zawierająca dokumenty zasobów, dane uwierzytelniające i powiązane bezpieczne zapisy",
-    "passwords": {
-      "title": "Hasła i tajemnice",
-      "comingSoon": "Już wkrótce bezpieczne zarządzanie hasłami."
-    }
-  },
   "maintenanceSchedulesTab": {
     "title": "Harmonogramy konserwacji",
     "description": "Zakładka zarządzania harmonogramem konserwacji dla planowanych usług i prac cyklicznych",
@@ -1243,6 +1241,7 @@
     },
     "types": {
       "preventive": "Zapobiegawczy",
+      "corrective": "Korygujący",
       "inspection": "Kontrola",
       "calibration": "Kalibrowanie",
       "replacement": "Wymiana"
@@ -1262,6 +1261,17 @@
         "title": "Usuń harmonogram konserwacji",
         "message": "Czy na pewno chcesz usunąć „{{name}}”? Tej akcji nie można cofnąć."
       }
+    }
+  },
+  "maintenanceCommandCenter": {
+    "title": "Centrum zarządzania konserwacją",
+    "description": "Następny termin jest obliczany na podstawie rzeczywistej daty ukończenia.",
+    "assetsLink": "Zasoby"
+  },
+  "maintenanceCompletionDialog": {
+    "errors": {
+      "performedDateRequired": "Wymagana jest data wykonania.",
+      "completeFailed": "Nie udało się ukończyć konserwacji."
     }
   },
   "relatedAssetsTab": {

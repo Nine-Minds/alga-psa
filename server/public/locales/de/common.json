@@ -470,7 +470,9 @@
     "replies_other": "{{count}} Antworten",
     "collapse": "Einklappen",
     "expand": "Ausklappen",
-    "showInDrawer": "In Seitenleiste anzeigen"
+    "showInDrawer": "In Seitenleiste anzeigen",
+    "showEarlierReplies_one": "{{count}} frühere Antwort anzeigen",
+    "showEarlierReplies_other": "{{count}} frühere Antworten anzeigen"
   },
   "pagination": {
     "previous": "Zurück",
@@ -799,6 +801,7 @@
     },
     "sso": {
       "signInWithMicrosoft": "Mit Microsoft anmelden",
+      "signInWithKeycloak": "Mit Keycloak anmelden",
       "signInWithGoogle": "Mit Google anmelden",
       "redirecting": "Weiterleitung...",
       "startFailed": "Die SSO-Anmeldung konnte nicht gestartet werden. Bitte prüfen Sie die Anbieterkonfiguration und versuchen Sie es erneut."
@@ -1592,6 +1595,26 @@
     "usedOrders": "Belegte Reihenfolgennummern: {{orders}}",
     "noUsedOrders": "Noch keine Reihenfolgennummern belegt",
     "markClosed": "Als abgeschlossenen Status markieren",
-    "setDefault": "Als Standardstatus für neue Tickets festlegen"
+    "setDefault": "Als Standardstatus für neue Einträge festlegen",
+    "defaultClosedHelp": "Ein abgeschlossener Status kann nicht der Standard für neue Einträge sein."
+  },
+  "callLink": {
+    "teamsCall": "In Microsoft Teams anrufen"
+  },
+  "editor": {
+    "attachFiles": "Dateien anhängen",
+    "uploadingFiles": "Dateien werden hochgeladen…",
+    "fileUploadFailed": "Datei konnte nicht hochgeladen werden."
+  },
+  "emailPreferences": {
+    "loading": "E-Mail-Einstellungen werden geladen…",
+    "saving": "E-Mail-Einstellungen werden gespeichert…",
+    "slow": "Dies dauert länger als üblich. Weitere Änderungen sind nach der Bestätigung möglich.",
+    "loadError": "Gespeicherte E-Mail-Einstellungen konnten nicht geladen werden. Bitte versuchen Sie es erneut.",
+    "saveError": "Speichern nicht bestätigt. Prüfen Sie Ihre gespeicherten Einstellungen und versuchen Sie es erneut.",
+    "retry": "Erneut versuchen",
+    "disabledByAdmin": "Vom Administrator deaktiviert",
+    "mixed": "Teilweise aktiviert",
+    "empty": "Keine E-Mail-Benachrichtigungskategorien verfügbar."
   }
 }

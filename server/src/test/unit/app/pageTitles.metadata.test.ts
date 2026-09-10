@@ -102,6 +102,7 @@ describe('route title metadata coverage', () => {
       ['server/src/app/msp/tickets/page.tsx', 'Tickets'],
       ['server/src/app/msp/clients/page.tsx', 'Clients'],
       ['server/src/app/msp/contacts/page.tsx', 'Contacts'],
+      ['server/src/app/msp/interactions/page.tsx', 'Interactions'],
       ['server/src/app/msp/projects/page.tsx', 'Projects'],
       ['server/src/app/msp/projects/templates/layout.tsx', 'Project Templates'],
       ['server/src/app/msp/assets/page.tsx', 'Assets'],

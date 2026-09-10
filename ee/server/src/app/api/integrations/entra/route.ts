@@ -54,7 +54,10 @@ export async function GET(): Promise<Response> {
   let connectionDetails: {
     cippBaseUrl: string | null;
     directTenantId: string | null;
-    directCredentialSource: 'tenant-secret' | 'env' | 'app-secret' | null;
+    directCredentialSource: 'profile' | null;
+    directProfileId: string | null;
+    directProfileName: string | null;
+    directProfileMissing: boolean;
   } | null = null;
 
   if (connection?.connection_type === 'cipp') {
@@ -63,6 +66,9 @@ export async function GET(): Promise<Response> {
       cippBaseUrl: credentials?.baseUrl || null,
       directTenantId: null,
       directCredentialSource: null,
+      directProfileId: null,
+      directProfileName: null,
+      directProfileMissing: false,
     };
   } else if (connection?.connection_type === 'direct') {
     const credentials = await resolveMicrosoftCredentialsForTenant(accessGate.tenantId).catch(() => null);
@@ -70,6 +76,9 @@ export async function GET(): Promise<Response> {
       cippBaseUrl: null,
       directTenantId: credentials?.tenantId || null,
       directCredentialSource: credentials?.source || null,
+      directProfileId: credentials?.profileId || null,
+      directProfileName: credentials?.profileDisplayName || null,
+      directProfileMissing: !credentials,
     };
   }
 

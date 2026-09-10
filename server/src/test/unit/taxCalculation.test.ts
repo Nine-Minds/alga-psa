@@ -127,7 +127,7 @@ describe('TaxService', () => {
 
   describe('Composite Tax Application', () => {
     it('should correctly apply composite tax rate', async () => {
-      const netAmount = 100;
+      const netAmount = 10000;
       const mockTaxSettings = createMockTaxSettings(tenantId, clientId, false);
       const mockTaxRate = createMockTaxRate(0, true); // Composite tax
       const mockComponents: ITaxComponent[] = [
@@ -142,13 +142,11 @@ describe('TaxService', () => {
 
       const result = await taxService.calculateTax(clientId, netAmount, date);
 
-      // Expected calculation (a compound component's own tax is added to the
-      // taxable base only for components that come after it):
-      // Component 1: 5% of 100 = 5
-      // Component 2: 10% of 100 = 10
-      // Total tax: 5 + 10 = 15
-      expect(result.taxAmount).toBe(15);
-      expect(result.taxRate).toBeCloseTo(15);
+      // Compound components include all preceding taxes in their own base.
+      // Component 1: 5% of 10000 cents = 500
+      // Component 2: 10% of 10500 cents = 1050
+      expect(result.taxAmount).toBe(1550);
+      expect(result.taxRate).toBeCloseTo(15.5);
     });
   });
 
@@ -200,10 +198,12 @@ describe('TaxService', () => {
       expect(result2.taxRate).toBeCloseTo(6.67);
 
       // Test case 3: Above highest threshold (per-threshold Math.ceil rounding)
-      // 0% of 1000 + ceil(10% of 3999) + ceil(15% of 1001) = 0 + 400 + 151 = 551
+      // Each configured minimum is respected, including the untaxed gaps:
+      // 0% of 1000 + ceil(10% of (5000-1001)) + ceil(15% of (6000-5001))
+      // = 0 + 400 + 150 = 550. Do not carry a prior band's remainder over a gap.
       const result3 = await taxService.calculateTax(clientId, 6000, date);
-      expect(result3.taxAmount).toBe(551);
-      expect(result3.taxRate).toBeCloseTo(9.18);
+      expect(result3.taxAmount).toBe(550);
+      expect(result3.taxRate).toBeCloseTo(9.17);
     });
   });
 });

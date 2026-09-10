@@ -9,11 +9,13 @@
  *   - overage accrues on weighted minutes,
  *   - reconcile recomputes the same weighted totals from source records.
  *
- * Opt-in: needs a reachable database, so it is skipped unless RUN_DB_TESTS=1.
+ * Required integration coverage against the isolated migrated test database.
  * Everything runs inside one transaction that is always rolled back.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import knexFactory, { Knex } from 'knex';
+import type { Knex } from 'knex';
+import type { IBucketCharge } from '@alga-psa/types';
+import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { randomUUID } from 'node:crypto';
 import {
   computePoolContributionsByService,
@@ -37,24 +39,13 @@ const NO_TAX_PORTS: ChargeComputeTaxPorts = {
   calculateTax: () => ({ taxAmount: 0, taxRate: 0 }),
 } as unknown as ChargeComputeTaxPorts;
 
-const ENABLED = process.env.RUN_DB_TESTS === '1';
 const TOTAL_MINUTES = 600; // 10 hours included
 
 let db: Knex;
 
-describe.skipIf(!ENABLED)('weighted bucket burn integration (real DB)', () => {
-  beforeAll(() => {
-    db = knexFactory({
-      client: 'pg',
-      connection: {
-        host: process.env.BUCKET_TEST_DB_HOST || process.env.DB_HOST || '127.0.0.1',
-        port: Number(process.env.BUCKET_TEST_DB_PORT || process.env.DB_PORT || 5432),
-        database: process.env.BUCKET_TEST_DB_NAME || process.env.DB_NAME_SERVER || 'server',
-        user: process.env.BUCKET_TEST_DB_USER || process.env.DB_USER_SERVER || 'app_user',
-        password: process.env.BUCKET_TEST_DB_PASSWORD || process.env.DB_PASSWORD_SERVER,
-      },
-      pool: { min: 0, max: 2 },
-    });
+describe('weighted bucket burn integration (real DB)', () => {
+  beforeAll(async () => {
+    db = await createTestDbConnection();
   });
 
   afterAll(async () => {
@@ -264,7 +255,7 @@ describe.skipIf(!ENABLED)('weighted bucket burn integration (real DB)', () => {
   });
 
   it('depletes the pool on weighted minutes: 2x member burns double', async () => {
-    await withSeededPool(async ({ trx, clientId, serviceId1x, serviceId2x, entryDate }) => {
+    await withSeededPool(async ({ trx, clientId, serviceId1x, serviceId2x }) => {
       const oneHourInHours = '2026-03-10T10:00:00Z'; // Tue, in-hours
       const oneHourAfterHours = '2026-03-10T18:00:00Z'; // Tue, after 17:00
 
@@ -402,7 +393,7 @@ describe.skipIf(!ENABLED)('weighted bucket burn integration (real DB)', () => {
       (engine as any).knex = trx;
       (engine as any).tenant = tenant;
 
-      const charges = await (engine as any).calculateBucketPlanCharges(
+      const charges: IBucketCharge[] = await (engine as any).calculateBucketPlanCharges(
         clientId,
         { startDate: '2026-03-01T00:00:00Z', endDate: '2026-04-01T00:00:00Z' },
         {
@@ -492,7 +483,7 @@ describe.skipIf(!ENABLED)('weighted bucket burn integration (real DB)', () => {
       (engine as any).knex = trx;
       (engine as any).tenant = tenant;
 
-      const charges = await (engine as any).calculateBucketPlanCharges(
+      const charges: IBucketCharge[] = await (engine as any).calculateBucketPlanCharges(
         clientId,
         { startDate: '2026-03-01T00:00:00Z', endDate: '2026-04-01T00:00:00Z' },
         {
@@ -571,19 +562,9 @@ function tenantOf(trx: Knex.Transaction): string {
  * the LINE offers (contract_line_service_configuration membership). A service
  * on another line must never be hijacked by it.
  */
-describe.skipIf(!ENABLED)('catch-all scope is line-service membership scoped (real DB)', () => {
-  beforeAll(() => {
-    db = knexFactory({
-      client: 'pg',
-      connection: {
-        host: process.env.BUCKET_TEST_DB_HOST || process.env.DB_HOST || '127.0.0.1',
-        port: Number(process.env.BUCKET_TEST_DB_PORT || process.env.DB_PORT || 5432),
-        database: process.env.BUCKET_TEST_DB_NAME || process.env.DB_NAME_SERVER || 'server',
-        user: process.env.BUCKET_TEST_DB_USER || process.env.DB_USER_SERVER || 'app_user',
-        password: process.env.BUCKET_TEST_DB_PASSWORD || process.env.DB_PASSWORD_SERVER,
-      },
-      pool: { min: 0, max: 2 },
-    });
+describe('catch-all scope is line-service membership scoped (real DB)', () => {
+  beforeAll(async () => {
+    db = await createTestDbConnection();
   });
 
   afterAll(async () => {
@@ -830,19 +811,9 @@ describe.skipIf(!ENABLED)('catch-all scope is line-service membership scoped (re
  * Overage attribution regression: pool overage metadata comes from the services
  * that actually burned the pool, not an arbitrary member.
  */
-describe.skipIf(!ENABLED)('pool overage attributes per-service tax metadata by contribution (real DB)', () => {
-  beforeAll(() => {
-    db = knexFactory({
-      client: 'pg',
-      connection: {
-        host: process.env.BUCKET_TEST_DB_HOST || process.env.DB_HOST || '127.0.0.1',
-        port: Number(process.env.BUCKET_TEST_DB_PORT || process.env.DB_PORT || 5432),
-        database: process.env.BUCKET_TEST_DB_NAME || process.env.DB_NAME_SERVER || 'server',
-        user: process.env.BUCKET_TEST_DB_USER || process.env.DB_USER_SERVER || 'app_user',
-        password: process.env.BUCKET_TEST_DB_PASSWORD || process.env.DB_PASSWORD_SERVER,
-      },
-      pool: { min: 0, max: 2 },
-    });
+describe('pool overage attributes per-service tax metadata by contribution (real DB)', () => {
+  beforeAll(async () => {
+    db = await createTestDbConnection();
   });
 
   afterAll(async () => {
@@ -1015,7 +986,7 @@ describe.skipIf(!ENABLED)('pool overage attributes per-service tax metadata by c
       (engine as any).knex = trx;
       (engine as any).tenant = tenant;
 
-      const charges = await (engine as any).calculateBucketPlanCharges(
+      const charges: IBucketCharge[] = await (engine as any).calculateBucketPlanCharges(
         clientId,
         { startDate: '2026-03-01T00:00:00Z', endDate: '2026-04-01T00:00:00Z' },
         {
@@ -1030,9 +1001,9 @@ describe.skipIf(!ENABLED)('pool overage attributes per-service tax metadata by c
       );
 
       expect(charges).toHaveLength(2);
-      const byService = new Map(charges.map((charge: any) => [charge.serviceId, charge] as const));
-      const chargeA = byService.get(serviceA);
-      const chargeB = byService.get(serviceB);
+      const byService = new Map(charges.map((charge) => [charge.serviceId, charge] as const));
+      const chargeA = byService.get(serviceA)!;
+      const chargeB = byService.get(serviceB)!;
       expect(chargeA).toBeDefined();
       expect(chargeB).toBeDefined();
 
@@ -1134,7 +1105,7 @@ describe.skipIf(!ENABLED)('pool overage attributes per-service tax metadata by c
       (engine as any).knex = trx;
       (engine as any).tenant = tenant;
 
-      const charges = await (engine as any).calculateBucketPlanCharges(
+      const charges: IBucketCharge[] = await (engine as any).calculateBucketPlanCharges(
         clientId,
         { startDate: '2026-03-01T00:00:00Z', endDate: '2026-04-01T00:00:00Z' },
         {
@@ -1184,7 +1155,7 @@ describe.skipIf(!ENABLED)('pool overage attributes per-service tax metadata by c
       (engine as any).knex = trx;
       (engine as any).tenant = tenant;
 
-      const charges = await (engine as any).calculateBucketPlanCharges(
+      const charges: IBucketCharge[] = await (engine as any).calculateBucketPlanCharges(
         clientId,
         { startDate: '2026-03-01T00:00:00Z', endDate: '2026-04-01T00:00:00Z' },
         {

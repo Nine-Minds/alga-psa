@@ -1,5 +1,6 @@
 import logger from '@alga-psa/core/logger';
 import { fetchMicrosoftGraphAppToken } from '../graphAuth';
+import { getMicrosoftGraphBaseUrl } from '../teams/microsoftEndpoints';
 import { resolveTeamsMeetingGraphConfig } from './meetingConfig';
 
 export interface VerifyMeetingOrganizerInput {
@@ -55,7 +56,7 @@ export async function verifyMeetingOrganizer(
     });
 
     const userResponse = await fetch(
-      `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(organizerUpn)}`,
+      `${getMicrosoftGraphBaseUrl()}/users/${encodeURIComponent(organizerUpn)}`,
       {
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -85,7 +86,7 @@ export async function verifyMeetingOrganizer(
     const endDateTime = new Date(startDateTime.getTime() + 15 * 60 * 1000);
 
     const createResponse = await fetch(
-      `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(organizerUpn)}/onlineMeetings`,
+      `${getMicrosoftGraphBaseUrl()}/users/${encodeURIComponent(organizerUpn)}/onlineMeetings`,
       {
         method: 'POST',
         headers: {
@@ -121,7 +122,7 @@ export async function verifyMeetingOrganizer(
     const meetingId = normalizeString(createdMeeting.id);
     if (meetingId) {
       await fetch(
-        `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(organizerUpn)}/onlineMeetings/${encodeURIComponent(meetingId)}`,
+        `${getMicrosoftGraphBaseUrl()}/users/${encodeURIComponent(organizerUpn)}/onlineMeetings/${encodeURIComponent(meetingId)}`,
         {
           method: 'DELETE',
           headers: {

@@ -244,10 +244,18 @@ export async function loadSimulationCalculationInput(
         service.item_kind !== "product" &&
         service.configuration.configuration_type === "Fixed",
     );
+    // A bucket overlay prices the service's assumed hours through included
+    // consumption and overage. BillingEngine excludes the same attributed
+    // work from hourly charges; charging both here inflates the preview.
+    const hourlyBucketServiceIds = new Set(line.services
+      .filter((service) => service.item_kind !== "product" &&
+        service.configuration.configuration_type === "Bucket")
+      .map((service) => service.service_id));
     const hourlyServices = line.services.filter(
       (service) =>
         service.item_kind !== "product" &&
-        service.configuration.configuration_type === "Hourly",
+        service.configuration.configuration_type === "Hourly" &&
+        !hourlyBucketServiceIds.has(service.service_id),
     );
     const usageServices = line.services.filter(
       (service) =>
@@ -666,11 +674,13 @@ async function simulateUsageCharges(
     );
     if (!(assumedQuantity > 0)) continue;
     if (!hasResolvableUsageRate(service)) {
-      diagnostics.push({
-        severity: "warning",
-        line_key: line.key,
-        message: `${service.service_name} has no ${currencyCode} usage rate, so its activity was omitted from invoice ${periodIndex + 1}.`,
-      });
+      if (!diagnostics.some((diagnostic) => diagnostic.line_key === line.key && diagnostic.message.startsWith(`${service.service_name} has no ${currencyCode} usage rate`))) {
+        diagnostics.push({
+          severity: "warning",
+          line_key: line.key,
+          message: `${service.service_name} has no ${currencyCode} usage rate, so its activity is omitted. Add a catalog or service rate to include it.`,
+        });
+      }
       continue;
     }
     usageRecords.push(
@@ -1001,11 +1011,13 @@ async function simulateHourlyCharges(
     }
 
     if (!hasResolvableHourlyRate(service)) {
-      diagnostics.push({
-        severity: "warning",
-        line_key: line.key,
-        message: `${service.service_name} has no ${currencyCode} hourly rate, so its hours were omitted from invoice ${periodIndex + 1}.`,
-      });
+      if (!diagnostics.some((diagnostic) => diagnostic.line_key === line.key && diagnostic.message.startsWith(`${service.service_name} has no ${currencyCode} hourly rate`))) {
+        diagnostics.push({
+          severity: "warning",
+          line_key: line.key,
+          message: `${service.service_name} has no ${currencyCode} hourly rate, so its hours are omitted. Add a catalog or service rate to include it.`,
+        });
+      }
       continue;
     }
 

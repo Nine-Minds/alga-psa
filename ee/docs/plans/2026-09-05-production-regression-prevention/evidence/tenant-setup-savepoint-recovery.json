@@ -1,0 +1,27 @@
+{
+  "temporal-database": {
+    "status": "passed",
+    "counts": {
+      "passed": 11,
+      "failed": 0,
+      "skipped": 0,
+      "todo": 0,
+      "pending": 0
+    },
+    "failures": []
+  },
+  "temporal-readiness": {
+    "status": "passed",
+    "counts": {
+      "passed": 213,
+      "failed": 0,
+      "skipped": 0,
+      "todo": 0,
+      "pending": 0
+    },
+    "failures": []
+  },
+  "limits": [
+    "Native CI verification pending. Test verifies current-schema setup recovery, not previous-release migration."
+  ]
+}

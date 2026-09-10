@@ -2,7 +2,7 @@
   "name": "sebastian-monorepo",
   "private": true,
   "engines": {
-    "node": ">=20 <25"
+    "node": ">=22 <27"
   },
   "workspaces": [
     "server",
@@ -25,6 +25,7 @@
     "migrate": "knex migrate:latest",
     "seed": "knex seed:run",
     "test:local": "cd server && dotenv -e ../.env.localtest -- vitest \"$@\"",
+    "test:mutation:pilot": "stryker run && node tools/mutation/summarize.mjs",
     "test:i18n": "node scripts/generate-pseudo-locales.cjs && node scripts/validate-translations.cjs && node tools/i18n/audit-all.cjs && node tools/i18n/find-untranslated-ui.cjs --fail-on-high && node --test tools/i18n/tests/glossary.test.mjs tools/i18n/tests/audit-tooling.test.mjs tools/i18n/tests/template-parity.test.mjs",
     "i18n:audit": "node tools/i18n/audit-all.cjs",
     "i18n:untranslated-ui": "node tools/i18n/find-untranslated-ui.cjs",
@@ -57,8 +58,9 @@
     "search:backfill": "tsx server/src/scripts/search-backfill.ts",
     "lint": "eslint \"{server,ee/server,ee/packages,shared,services,packages}/**/*.{js,mjs,cjs,ts,jsx,tsx}\"",
     "guard:temporal-packaging-contract": "node scripts/check-temporal-worker-packaging-contract.mjs",
+    "test:temporal-snapshot-runtime": "node scripts/temporal-snapshot-runtime-smoke.cjs",
     "guard:temporal-dist-smoke": "node scripts/temporal-worker-dist-import-smoke.mjs",
-    "test:temporal-readiness:fast": "TEMPORAL_TEST_SKIP_ENV_BOOTSTRAP=1 npx vitest --root ee/temporal-workflows src/workflows/__tests__/generic-job-workflow.temporal.test.ts src/config/__tests__/startupValidation.test.ts",
+    "test:temporal-readiness:fast": "node scripts/run-additional-workspace-tests.mjs temporal-readiness",
     "guard:temporal-readiness:fast": "npm run guard:temporal-packaging-contract && npm run guard:temporal-dist-smoke && npm run test:temporal-readiness:fast",
     "guard:temporal-readiness:docker": "node scripts/temporal-worker-docker-parity.mjs",
     "guard:keyboard-shortcuts-boundary": "node scripts/guard-keyboard-shortcuts-boundary.mjs",
@@ -67,6 +69,8 @@
     "test:workflow-runtime-v2-compose-smoke": "node scripts/workflow-runtime-v2-compose-smoke.mjs",
     "guard:ext-v2": "git grep -nE \"ee/server/src/lib/extensions/ui/(descriptors|pages|tabs|navigation)|ee/server/src/lib/extensions/security/propWhitelist\\.ts|ee/server/src/lib/extensions/schemas/(manifest\\.schema|extension-points\\.schema)\\.ts|ee/server/src/lib/extensions/validator\\.ts|/api/extensions/\" -- 'server/**' 'ee/server/**' 'shared/**' 'services/**' ':!**/*.md' ':!**/node_modules/**' ':!**/dist/**' ':!**/build/**' ':!**/.next/**' ':!**/out/**' ':!**/apiRegistry.generated.ts' ':!**/registry.generated.ts' || true; test $(git grep -nE \"ee/server/src/lib/extensions/ui/(descriptors|pages|tabs|navigation)|ee/server/src/lib/extensions/security/propWhitelist\\.ts|ee/server/src/lib/extensions/schemas/(manifest\\.schema|extension-points\\.schema)\\.ts|ee/server/src/lib/extensions/validator\\.ts|/api/extensions/\" -- 'server/**' 'ee/server/**' 'shared/**' 'services/**' ':!**/*.md' ':!**/node_modules/**' ':!**/dist/**' ':!**/build/**' ':!**/.next/**' ':!**/out/**' ':!**/apiRegistry.generated.ts' ':!**/registry.generated.ts' | wc -l) -eq 0",
     "guard:no-tracked-env-backups": "node scripts/guard-no-tracked-env-backups.mjs",
+    "guard:microsoft-graph-endpoints": "node --test tools/microsoft-graph/validate-endpoints.test.mjs && node tools/microsoft-graph/validate-endpoints.mjs",
+    "guard:microsoft-graph-endpoints:update": "node tools/microsoft-graph/update-metadata.mjs",
     "playwright:bootstrap-db": "node --import tsx/esm scripts/bootstrap-playwright-db.ts",
     "test:nx": "vitest run --config tools/nx-tests/vitest.config.ts",
     "affected:test": "NX_DAEMON=false nx affected -t test --output-style=static",
@@ -229,6 +233,8 @@
     "@nx/vite": "^22.7.2",
     "@nx/vitest": "^22.7.2",
     "@playwright/test": "^1.36.0",
+    "@stryker-mutator/core": "10.0.0",
+    "@stryker-mutator/vitest-runner": "10.0.0",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/user-event": "^14.6.1",

@@ -16,13 +16,16 @@ import type {
   IInvoice,
   IInvoiceCharge,
   IInvoiceChargeRecurringDetailPeriod,
+  IInvoiceChargeTimeEntrySnapshot,
   IInvoiceTemplate,
   ICustomField,
   IConditionalRule,
   IInvoiceAnnotation,
+  InvoiceTimeEntrySnapshot,
   InvoiceViewModel,
 } from '@alga-psa/types';
 import { getClientLogoUrl } from '@alga-psa/formatting/avatarUtils';
+import { isValidInvoiceTimeSnapshot } from '../lib/billing/invoiceTimeSnapshot';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 
 type InvoiceChargeDetailPeriodRow = {
@@ -35,6 +38,15 @@ type InvoiceChargeDetailPeriodRow = {
 
 type InvoiceChargeDisplayRow = IInvoiceCharge & {
   name?: string | null;
+};
+
+type InvoiceTimeEntrySnapshotRow = {
+  invoice_id: string;
+  tenant: string;
+  item_id: string | null;
+  entry_id: string;
+  /** jsonb — parsed object from pg, or a JSON string from some drivers. */
+  work_item_snapshot: unknown;
 };
 
 type InvoiceAnnotationRow = IInvoiceAnnotation & {
@@ -128,6 +140,37 @@ function sortInvoiceChargesForDisplay(charges: IInvoiceCharge[]): IInvoiceCharge
       return left.index - right.index;
     })
     .map(({ charge }) => charge);
+}
+
+/**
+ * Attach immutable billed-time snapshots (invoice_time_entries.work_item_snapshot)
+ * to their invoice charges. Reads only the frozen jsonb column — never the
+ * mutable tickets/time_entries tables — so finalized invoices stay stable.
+ * Unavailable links remain coverage evidence; only valid, owned snapshots enter detail.
+ */
+function attachTimeEntrySnapshots(
+  charges: IInvoiceCharge[],
+  snapshotRows: InvoiceTimeEntrySnapshotRow[]
+): IInvoiceCharge[] {
+  if (snapshotRows.length === 0) {
+    return charges;
+  }
+
+  return charges.map((charge) => {
+    const links = snapshotRows.filter((row) => row.item_id === charge.item_id).map((row) => {
+      let snapshot = row.work_item_snapshot;
+      if (typeof snapshot === 'string') {
+        try { snapshot = JSON.parse(snapshot); } catch { snapshot = null; }
+      }
+      return { itemId: row.item_id!, entryId: row.entry_id, invoiceId: row.invoice_id, tenant: row.tenant, snapshot };
+    });
+    return {
+      ...charge,
+      time_entry_links: links,
+      time_entry_snapshots: links.filter((link) => link.invoiceId === charge.invoice_id && link.tenant === charge.tenant && isValidInvoiceTimeSnapshot(link.snapshot))
+        .map((link) => ({ ...(link.snapshot as InvoiceTimeEntrySnapshot), entryId: link.entryId })),
+    };
+  });
 }
 
 function attachCanonicalRecurringDetailPeriods(
@@ -690,6 +733,8 @@ const Invoice = {
         .select(
           'ic.item_id',
           'ic.invoice_id',
+          'ic.tenant',
+          'ic.billing_charge_type',
           'ic.service_id',
           'sc.item_kind as service_item_kind',
           'sc.sku as service_sku',
@@ -720,7 +765,22 @@ const Invoice = {
             .whereIn('item_id', itemIds)
             .orderBy('service_period_start', 'asc');
 
-      return sortInvoiceChargesForDisplay(attachCanonicalRecurringDetailPeriods(items, detailRows));
+      // Keep every owned link, including missing snapshots, to prove complete
+      // charge coverage. Only valid snapshots enter optional supporting detail.
+      const snapshotRows: InvoiceTimeEntrySnapshotRow[] = itemIds.length === 0
+        ? []
+        : (
+            await tenantScopedTable<InvoiceTimeEntrySnapshotRow>(knexOrTrx, tenant, 'invoice_time_entries')
+              .select('item_id', 'entry_id', 'invoice_id', 'tenant', 'work_item_snapshot')
+              .whereIn('item_id', itemIds)
+          );
+
+      return sortInvoiceChargesForDisplay(
+        attachTimeEntrySnapshots(
+          attachCanonicalRecurringDetailPeriods(items, detailRows),
+          snapshotRows,
+        ),
+      );
     } catch (error) {
       console.error(`Error getting invoice items for invoice ${invoiceId} in tenant ${tenant}:`, error);
       throw new Error(`Failed to get invoice items: ${error instanceof Error ? error.message : 'Unknown error'}`);

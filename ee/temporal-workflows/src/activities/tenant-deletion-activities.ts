@@ -144,6 +144,11 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // Ticket bundle mirrors (must be before comments due to FK on comments)
   'ticket_bundle_mirrors',
 
+  // Ticket comment attachment lifecycle (no FKs; rows reference comments,
+  // documents and tickets by id, so delete them before those tables)
+  'ticket_comment_attachment_challenges', 'ticket_comment_attachments',
+  'ticket_comment_email_deliveries',
+
   // Messages and comments
   // vectors and email_reply_tokens reference comments with NO ACTION, so they
   // must be deleted before comments to avoid FK violations.
@@ -161,6 +166,9 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'microsoft_profile_consumer_bindings',
   'teams_notification_deliveries', 'teams_audit_events', 'teams_conversation_references',
   'teams_integrations', 'microsoft_profiles',
+
+  // Telephony (artifacts hang off call records; providers hold the subscription)
+  'telephony_call_artifacts', 'telephony_call_intents', 'telephony_call_records', 'telephony_providers',
 
   // Authorization bundles
   // assignments/rules must be deleted before revisions and bundles; revisions and
@@ -208,6 +216,18 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // import_job_items / import_jobs reference jobs with NO ACTION, so they
   // must be deleted before jobs.
   'import_job_items', 'import_jobs',
+  // AMP (Alga Migration Package) staging/ledger tables. All FK back to
+  // migration_jobs (or users), so the whole subtree is deleted before jobs and
+  // users. Internal order is dependents-first: record_outcomes references
+  // staged_records; staged_records/job_entities/identity_mappings/reports all
+  // reference migration_jobs; mapping_profiles references users only.
+  'migration_record_outcomes',
+  'migration_staged_records',
+  'migration_job_entities',
+  'migration_identity_mappings',
+  'migration_reports',
+  'migration_mapping_profiles',
+  'migration_jobs',
   'job_details', 'jobs', 'audit_logs', 'notification_logs', 'internal_notifications',
   'platform_notification_recipients',
 
@@ -234,6 +254,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'import_sources',
 
   // Asset details
+  'asset_maintenance_occurrences',
   'asset_maintenance_notifications', 'asset_maintenance_history', 'asset_service_history',
   'asset_ticket_associations', 'asset_document_associations', 'asset_relationships',
   'asset_history', 'asset_associations', 'asset_software', 'asset_facts',
@@ -287,6 +308,11 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'credit_allocations', 'credit_tracking',
   // bucket_usage_unmappable_archive is a pure leaf (no FKs in or out — it has to
   // outlive whatever made a usage row unmappable), so it can drop anywhere.
+  // Usage semantics stores are FK-less leaves (they reference contract lines,
+  // clients, and configs by id only), as are the seat-pricing revision store
+  // and the per-tenant billing-semantics lock row.
+  'usage_period_total_requests', 'usage_period_totals', 'usage_measurement_revisions',
+  'contract_line_unit_pricing_revisions', 'billing_semantics_locks',
   'usage_tracking', 'bucket_usage', 'bucket_usage_unmappable_archive', 'recurring_service_periods', 'transactions',
   'accounting_export_errors', 'accounting_export_lines', 'accounting_export_batches',
   // Accounting sync engine (leaf tables: nothing references them)
@@ -332,6 +358,12 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // but delete it explicitly so cleanup doesn't rely on the cascade). Hudu
   // mappings live in tenant_external_entity_mappings (deleted below).
   'hudu_integrations',
+
+  // Accounting provider disconnect state machine: one row per (tenant, provider)
+  // tracking QBO/Xero revocation progress. A leaf table — its only FK is to
+  // tenants (CASCADE) and nothing references it — so position is free; kept with
+  // the other integration rows for readability.
+  'provider_disconnect_records',
 
   // Project billing: schedule entries and cap usage reference project_billing_configs;
   // configs reference projects; phase rate overrides reference project_phases and
@@ -466,6 +498,10 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
 
   // Permissions and roles (must be deleted before users)
   'permissions', 'roles', 'teams',
+
+  // Tenant secrets metadata references the creating and updating users. Audit
+  // history deliberately has no FK to the secret so delete it explicitly too.
+  'tenant_secrets_audit_log', 'tenant_secrets',
 
   // The correct order to avoid constraint violations:
   // 0. Delete contact child rows first (phones/emails reference contacts)
@@ -1845,7 +1881,7 @@ export async function cancelTenantStripeSubscription(
     log.info('Found active subscription, canceling', { subscriptionExternalId });
 
     // Dynamically import Stripe to avoid issues in environments where it's not available
-    const { default: Stripe } = await import('stripe');
+    const { createWorkerStripeClient } = await import('../config/stripeClient.js');
     const { getSecretProviderInstance } = await import('@alga-psa/core/secrets');
 
     const secretProvider = await getSecretProviderInstance();
@@ -1859,10 +1895,7 @@ export async function cancelTenantStripeSubscription(
       return { canceled: false, error: 'Stripe secret key not configured' };
     }
 
-    const stripe = new Stripe(secretKey, {
-      apiVersion: '2024-12-18.acacia' as any,
-      typescript: true,
-    });
+    const stripe = createWorkerStripeClient(secretKey);
 
     // Cancel the subscription immediately
     const canceledSubscription = await stripe.subscriptions.cancel(subscriptionExternalId);

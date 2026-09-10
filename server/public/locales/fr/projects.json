@@ -82,6 +82,12 @@
       "referenceMissing": "Le projet, le client, le produit ou l’unité de stock sélectionné n’est plus valide. Veuillez actualiser la page et réessayer.",
       "missingField": "Un champ obligatoire du matériel est manquant.",
       "missingFieldNamed": "Un champ obligatoire du matériel est manquant : {{field}}."
+    },
+    "statusUpdate": {
+      "noRecipient": "Aucune adresse e-mail n’est configurée pour le contact client de ce projet.",
+      "emailNotConfigured": "L’e-mail n’est pas configuré. Veuillez configurer les paramètres d’e-mail dans les paramètres avant d’envoyer des points d’avancement.",
+      "templateMissing": "Le modèle d’e-mail de point d’avancement du projet est introuvable.",
+      "sendFailed": "Échec de l’envoi du point d’avancement du projet. Veuillez réessayer."
     }
   }
 }

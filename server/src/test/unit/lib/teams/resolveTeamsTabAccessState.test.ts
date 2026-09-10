@@ -89,7 +89,7 @@ describe('resolveTeamsTabAccessState', () => {
     expect(hasPermissionMock).toHaveBeenNthCalledWith(2, permissionUser, 'project', 'read');
     expect(hasPermissionMock).toHaveBeenNthCalledWith(3, permissionUser, 'contact', 'read');
     expect(hasPermissionMock).toHaveBeenNthCalledWith(4, permissionUser, 'time_entry', 'read');
-    expect(hasPermissionMock).toHaveBeenNthCalledWith(5, permissionUser, 'timesheet', 'approve');
+    expect(hasPermissionMock).toHaveBeenNthCalledWith(5, permissionUser, 'time_sheet', 'approve');
 
     expect(getTeamsTicketByIdMock).toHaveBeenCalledWith('ticket-1', { tenant: 'tenant-1', userId: 'user-1' });
     expect(listTeamsProjectTasksMock).toHaveBeenCalledWith('project-1', { tenant: 'tenant-1', userId: 'user-1' });

@@ -735,7 +735,9 @@
       "notFound": "Angebotsdokumentvorlage nicht gefunden.",
       "previewPipeline": "Vorschau-Pipeline fehlgeschlagen.",
       "saveFailed": "Angebotsvorlage konnte nicht gespeichert werden",
-      "unknownAstExport": "Unbekannter AST-Exportfehler"
+      "unknownAstExport": "Unbekannter AST-Exportfehler",
+      "quoteNotFound": "Angebotsdetails konnten für die Vorschau nicht geladen werden.",
+      "quoteDetailLoad": "Angebotsdetails konnten nicht geladen werden."
     },
     "fields": {
       "layoutDetails": "Layoutdetails",
@@ -759,7 +761,17 @@
       "sampleScenario": "Beispielszenario",
       "selectScenario": "Szenario auswählen...",
       "selectScenarioPrompt": "Wählen Sie ein Beispielszenario aus, um eine verlässliche Vorschau zu erstellen.",
-      "templateGenerationFailed": "Die Vorschauvorlage konnte nicht aus dem aktuellen Arbeitsbereich generiert werden."
+      "templateGenerationFailed": "Die Vorschauvorlage konnte nicht aus dem aktuellen Arbeitsbereich generiert werden.",
+      "source": {
+        "sample": "Beispiel",
+        "existing": "Vorhanden"
+      },
+      "searchQuotes": "Angebote suchen…",
+      "searchQuotesHint": "Nach Nummer oder Kunde suchen…",
+      "noQuotesFound": "Keine Angebote gefunden.",
+      "selectQuote": "Angebot wählen",
+      "selectQuoteHint": "Wählen Sie ein Angebot für die datengebundene Vorschau.",
+      "loadingQuoteDetails": "Angebotsdetails werden geladen…"
     },
     "pipeline": {
       "render": "Rendern",

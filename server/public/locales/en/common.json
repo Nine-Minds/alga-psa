@@ -266,6 +266,7 @@
     "sso": {
       "signInWithGoogle": "Sign in with Google",
       "signInWithMicrosoft": "Sign in with Microsoft",
+      "signInWithKeycloak": "Sign in with Keycloak",
       "redirecting": "Redirecting...",
       "startFailed": "We couldn't start SSO sign-in. Please verify provider setup and try again."
     },
@@ -601,7 +602,9 @@
     "replies_other": "{{count}} replies",
     "collapse": "Collapse",
     "expand": "Expand",
-    "showInDrawer": "Show in drawer"
+    "showInDrawer": "Show in drawer",
+    "showEarlierReplies_one": "Show {{count}} earlier reply",
+    "showEarlierReplies_other": "Show {{count}} earlier replies"
   },
   "pagination": {
     "previous": "Previous",
@@ -1592,6 +1595,26 @@
     "usedOrders": "Used order numbers: {{orders}}",
     "noUsedOrders": "No order numbers used yet",
     "markClosed": "Mark as closed status",
-    "setDefault": "Set as default status for new tickets"
+    "setDefault": "Set as default status for new items",
+    "defaultClosedHelp": "A closed status cannot be the default for new items."
+  },
+  "callLink": {
+    "teamsCall": "Call in Microsoft Teams"
+  },
+  "editor": {
+    "attachFiles": "Attach files",
+    "uploadingFiles": "Uploading files…",
+    "fileUploadFailed": "File upload failed."
+  },
+  "emailPreferences": {
+    "loading": "Loading email preferences…",
+    "saving": "Saving email preferences…",
+    "slow": "This is taking longer than usual. Waiting for confirmation before allowing more changes.",
+    "loadError": "Could not load saved email preferences. Retry to confirm your current settings.",
+    "saveError": "Could not confirm the save. Please check your saved preferences and try again.",
+    "retry": "Retry",
+    "disabledByAdmin": "Disabled by administrator",
+    "mixed": "Partially enabled",
+    "empty": "No email notification categories available."
   }
 }

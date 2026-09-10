@@ -1,7 +1,7 @@
 {
   "catalog": {
     "title": "Service Requests",
-    "description": "Submit a structured request and we'll create a ticket for it automatically.",
+    "description": "Submit a structured request and we'll take care of the rest.",
     "myRequests": "My Requests",
     "empty": "No request services are currently available.",
     "fallbackCategory": "Service",
@@ -56,7 +56,16 @@
     "attachmentsTitle": "Attachments",
     "noAttachments": "No attachments included.",
     "fileIdLabel": "File ID: {{id}}",
-    "fileTypeLabel": "Type: {{mime}}"
+    "fileTypeLabel": "Type: {{mime}}",
+    "versionLabel": "Version {{version}}",
+    "historyTitle": "History",
+    "historyEmpty": "No history recorded yet.",
+    "historyActor": "by {{actor}}",
+    "historyOperations": {
+      "service_request_submission_created": "Request submitted",
+      "service_request_submission_execution_succeeded": "Request processing completed",
+      "service_request_submission_execution_failed": "Request processing failed"
+    }
   },
   "recent": {
     "title": "Your recent requests",

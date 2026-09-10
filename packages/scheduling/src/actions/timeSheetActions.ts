@@ -120,11 +120,11 @@ export const fetchTimeSheetsForApproval = withAuth(async (
     const { knex: db } = await createTenantKnex();
     const scopedDb = tenantDb(db, tenant) as any;
 
-    if (!await hasPermission(user, 'timesheet', 'approve', db)) {
+    if (!await hasPermission(user, 'time_sheet', 'approve', db)) {
       throw new Error('Permission denied: Cannot read timesheets for approval');
     }
 
-    const canReadAll = await hasPermission(user, 'timesheet', 'read_all', db);
+    const canReadAll = await hasPermission(user, 'time_sheet', 'read_all', db);
 
     const statuses = includeApproved
       ? ['SUBMITTED', 'CHANGES_REQUESTED', 'APPROVED']
@@ -204,7 +204,7 @@ export const addCommentToTimeSheet = withAuth(async (
 
     // Allow if user owns the timesheet OR has approve permission
     const isOwner = timeSheet.user_id === user.user_id;
-    const canApprove = await hasPermission(user, 'timesheet', 'approve', db);
+    const canApprove = await hasPermission(user, 'time_sheet', 'approve', db);
 
     if (!isOwner && !canApprove) {
       throw new Error('Permission denied: Cannot add comments to timesheets');
@@ -242,7 +242,7 @@ export const bulkApproveTimeSheets = withAuth(async (user, { tenant }, timeSheet
   try {
     const { knex: db } = await createTenantKnex();
 
-    if (!await hasPermission(user, 'timesheet', 'approve', db)) {
+    if (!await hasPermission(user, 'time_sheet', 'approve', db)) {
       throw new Error('Permission denied: Cannot approve timesheets');
     }
 
@@ -335,7 +335,7 @@ export const fetchTimeSheet = withAuth(async (user, { tenant }, timeSheetId: str
     const { knex: db } = await createTenantKnex();
     const scopedDb = tenantDb(db, tenant) as any;
 
-    if (!await hasPermission(user, 'timesheet', 'read', db)) {
+    if (!await hasPermission(user, 'time_sheet', 'read', db)) {
       throw new Error('Permission denied: Cannot read timesheets');
     }
 
@@ -380,7 +380,7 @@ export const fetchTimeEntriesForTimeSheet = withAuth(async (user, { tenant }, ti
     const { knex: db } = await createTenantKnex();
     const scopedDb = tenantDb(db, tenant) as any;
 
-    if (!await hasPermission(user, 'timesheet', 'read', db)) {
+    if (!await hasPermission(user, 'time_sheet', 'read', db)) {
       throw new Error('Permission denied: Cannot read timesheet entries');
     }
 
@@ -445,7 +445,7 @@ export const fetchTimeSheetComments = withAuth(async (user, { tenant }, timeShee
     const { knex: db } = await createTenantKnex();
     const scopedDb = tenantDb(db, tenant) as any;
 
-    if (!await hasPermission(user, 'timesheet', 'read', db)) {
+    if (!await hasPermission(user, 'time_sheet', 'read', db)) {
       throw new Error('Permission denied: Cannot read timesheet comments');
     }
 
@@ -508,7 +508,7 @@ export const approveTimeSheet = withAuth(async (user, { tenant }, timeSheetId: s
   try {
     const { knex: db } = await createTenantKnex();
 
-    if (!await hasPermission(user, 'timesheet', 'approve', db)) {
+    if (!await hasPermission(user, 'time_sheet', 'approve', db)) {
       throw new Error('Permission denied: Cannot approve timesheets');
     }
 
@@ -599,7 +599,7 @@ export const requestChangesForTimeSheet = withAuth(async (user, { tenant }, time
   try {
     const { knex: db } = await createTenantKnex();
 
-    if (!await hasPermission(user, 'timesheet', 'approve', db)) {
+    if (!await hasPermission(user, 'time_sheet', 'approve', db)) {
       throw new Error('Permission denied: Cannot request changes for timesheets');
     }
 
@@ -660,7 +660,7 @@ export const reverseTimeSheetApproval = withAuth(async (
   try {
     const { knex: db } = await createTenantKnex();
 
-    if (!await hasPermission(user, 'timesheet', 'reverse', db)) {
+    if (!await hasPermission(user, 'time_sheet', 'reverse', db)) {
       throw new Error('Permission denied: Cannot reverse timesheet approvals');
     }
 

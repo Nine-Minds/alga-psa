@@ -22,7 +22,7 @@ describe('E2E Test Utilities', () => {
       expect(env).toBeDefined();
       expect(env.tenant).toBeDefined();
       expect(env.clientId).toBeDefined();
-      expect(env.locationId).toBeDefined();
+      expect(env.addressId).toBeDefined();
       expect(env.userId).toBeDefined();
       expect(env.apiKey).toBeDefined();
       expect(env.apiClient).toBeDefined();
@@ -148,19 +148,22 @@ describe('E2E Test Utilities', () => {
       // The API key is set internally, we just verify the client exists
     });
 
-    it('should be able to make requests', async () => {
-      // This is a basic test to ensure the client can attempt requests
-      // The actual API endpoint testing will be done in the main test file
-      const testUrl = '/api/v1/contacts';
-      
-      // We don't expect this to succeed without a running server
-      // Just verify the client can attempt the request
-      try {
-        await env.apiClient.get(testUrl);
-      } catch (error) {
-        // Expected to fail in test environment without running server
-        expect(error).toBeDefined();
-      }
+    it('reads a persisted contact through the authenticated API client', async () => {
+      const contact = await createTestContact(env.db, env.tenant, {
+        full_name: 'API Fixture Readback',
+        email: 'fixture-readback@example.test',
+        client_id: env.clientId,
+        phone_number: '+12025550123',
+      });
+      const response = await env.apiClient.get(`/api/v1/contacts/${contact.contact_name_id}`);
+      assertSuccess(response);
+      expect(response.data.data).toMatchObject({
+        contact_name_id: contact.contact_name_id,
+        full_name: 'API Fixture Readback',
+        email: 'fixture-readback@example.test',
+        client_id: env.clientId,
+        tenant: env.tenant,
+      });
     });
   });
 });

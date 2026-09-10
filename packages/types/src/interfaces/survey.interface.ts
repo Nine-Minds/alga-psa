@@ -32,7 +32,9 @@ export interface SurveyDistributionBucket {
 
 export interface SurveyIssueSummary {
   responseId: string;
-  ticketId: string;
+  ticketId: string | null;
+  projectId?: string | null;
+  projectNumber?: string | null;
   ticketNumber: string | null;
   clientName: string | null;
   comment: string | null;
@@ -43,7 +45,9 @@ export interface SurveyIssueSummary {
 
 export interface SurveyResponseListItem {
   responseId: string;
-  ticketId: string;
+  ticketId: string | null;
+  projectId?: string | null;
+  projectNumber?: string | null;
   ticketNumber: string | null;
   clientName: string | null;
   contactName: string | null;

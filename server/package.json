@@ -1,6 +1,6 @@
 {
   "name": "server",
-  "version": "1.4.7",
+  "version": "1.5.4",
   "private": true,
   "type": "module",
   "engines": {
@@ -27,11 +27,11 @@
     "start:express": "tsx index.ts",
     "lint": "next lint",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "NODE_OPTIONS=\"${NODE_OPTIONS:---max-old-space-size=4096}\" vitest run src/test/unit --coverage.enabled=false",
+    "test": "NODE_OPTIONS=\"${NODE_OPTIONS:---max-old-space-size=4096}\" SKIP_DB_TESTS=1 vitest run src/test/unit --coverage.enabled=false --poolOptions.forks.singleFork=false --maxWorkers=1",
     "test:watch": "vitest --watch",
     "test:unit": "vitest src/test/unit",
-    "test:integration": "vitest src/test/integration",
-    "test:integration:ci": "vitest run src/test/integration --coverage.enabled=false",
+    "test:integration": "vitest src/test/integration ../ee/temporal-workflows/src/__tests__/integration",
+    "test:integration:ci": "vitest run src/test/integration ../ee/temporal-workflows/src/__tests__/integration --coverage.enabled=false",
     "test:integration:tier1": "node ../scripts/run-tier1-integration.mjs",
     "test:infrastructure": "vitest src/test/infrastructure",
     "test:infrastructure:ci": "vitest run src/test/infrastructure --coverage.enabled=false",

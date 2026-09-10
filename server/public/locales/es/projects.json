@@ -82,6 +82,12 @@
       "referenceMissing": "El proyecto, cliente, producto o unidad de existencias seleccionado ya no es válido. Actualice la página e inténtelo de nuevo.",
       "missingField": "Falta un campo obligatorio del material.",
       "missingFieldNamed": "Falta un campo obligatorio del material: {{field}}."
+    },
+    "statusUpdate": {
+      "noRecipient": "No hay ninguna dirección de correo electrónico configurada para el contacto de cliente de este proyecto.",
+      "emailNotConfigured": "El correo electrónico no está configurado. Configure los ajustes de correo electrónico en Configuración antes de enviar actualizaciones.",
+      "templateMissing": "Falta la plantilla de correo de actualización de estado del proyecto.",
+      "sendFailed": "No se pudo enviar la actualización de estado del proyecto. Inténtelo de nuevo."
     }
   }
 }

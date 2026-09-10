@@ -10,6 +10,7 @@ function makeFakeLedger(existing: any = null) {
   return {
     findByExternalId: vi.fn(async () => existing),
     findByAlgaId: vi.fn(async () => undefined),
+    findByAlgaIdAnyRealm: vi.fn(async () => []),
     insert: vi.fn(async () => ({})),
     update: vi.fn(async () => undefined),
     withKnex: vi.fn().mockReturnThis()

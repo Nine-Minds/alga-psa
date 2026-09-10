@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "observedAt": "2026-09-06",
+  "kind": "local-execution",
+  "lanes": [
+    {
+      "suite": "nx-tooling",
+      "revision": "2edef1760459289ff57b36396ad347b746bfe191",
+      "dirty": true,
+      "status": "passed",
+      "counts": {
+        "passed": 11,
+        "failed": 0,
+        "skipped": 0,
+        "todo": 0,
+        "pending": 0
+      },
+      "files": [
+        "tools/nx-tests/editionSwapping.test.ts",
+        "tools/nx-tests/moduleBoundaries.test.ts",
+        "tools/nx-tests/nxAffected.test.ts",
+        "tools/nx-tests/nxCache.test.ts",
+        "tools/nx-tests/nxWorkspace.test.ts"
+      ],
+      "reportSha256": {
+        "collected.json": "b25de558bf0f6659e233b46448715b22e57fa4078eb00512db2dccc217b580ae",
+        "collected-tests.json": "fa09c7d18e5bd5abf9861e25bc82858bffef36367ac1602f2b337ca72c745b23",
+        "results.json": "1ce6da7e1f2b8aebd2da4b6af1c39431d95568e7c155a9b6505cb8a4a94f285d",
+        "evidence.json": "9c18f9a01f5e6590927287f9cae1ce503617006aadb5ad21a5f1f6e408805d02"
+      }
+    },
+    {
+      "suite": "ui-kit-showcase",
+      "revision": "2edef1760459289ff57b36396ad347b746bfe191",
+      "dirty": true,
+      "status": "passed",
+      "counts": {
+        "passed": 117,
+        "failed": 0,
+        "skipped": 0,
+        "todo": 0,
+        "pending": 0
+      },
+      "files": [
+        "ee/extensions/samples/ui-kit-showcase/test/build.test.ts",
+        "ee/extensions/samples/ui-kit-showcase/test/core-demos.test.tsx",
+        "ee/extensions/samples/ui-kit-showcase/test/data-dialog-feedback.test.tsx",
+        "ee/extensions/samples/ui-kit-showcase/test/form-nav-demos.test.tsx",
+        "ee/extensions/samples/ui-kit-showcase/test/integration.test.tsx",
+        "ee/extensions/samples/ui-kit-showcase/test/layout.test.tsx",
+        "ee/extensions/samples/ui-kit-showcase/test/scaffold.test.ts",
+        "ee/extensions/samples/ui-kit-showcase/test/theme.test.tsx"
+      ],
+      "reportSha256": {
+        "collected.json": "c59957c88bb044dc5760a6507e8a569c38d2b82db1e3e9dda6c67862dce76559",
+        "collected-tests.json": "b39f66aee6c30a5d3f7160060dc46cbb8be1924273d4af55946c4f2ebda8339b",
+        "results.json": "8559358a7f000a1b63015fbbd8e5fcd54ec8b6732a0c271dea4872cb4aa77a94",
+        "evidence.json": "b00c81322555da9254c24fc52d88c3e97f1b21693fee79b4b62d0f48f2cdc0fa"
+      }
+    }
+  ],
+  "limits": [
+    "Local dirty-worktree execution; new CI lanes still require candidate verification.",
+    "Showcase uses jsdom and includes inherited manifest/build checks. It does not prove extension-host installation or production browser behavior.",
+    "Nx tests execute the installed linter, project graph, affected selection and build/cache commands."
+  ]
+}

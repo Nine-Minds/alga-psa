@@ -1,4 +1,5 @@
-FROM node:20-bullseye AS base
+FROM node:22-bookworm AS base
+ARG TARGETARCH
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -7,7 +8,8 @@ RUN apt-get update && apt-get install -y \
     git \
     && rm -rf /var/lib/apt/lists/*
 
-RUN curl -sSL "https://storage.googleapis.com/kubernetes-release/release/$(curl -sSL https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl" -o /usr/local/bin/kubectl \
+RUN case "$TARGETARCH" in amd64|arm64) ;; *) echo "Unsupported kubectl architecture" >&2; exit 1 ;; esac \
+    && curl -fsSL "https://dl.k8s.io/release/$(curl -fsSL https://dl.k8s.io/release/stable.txt)/bin/linux/${TARGETARCH}/kubectl" -o /usr/local/bin/kubectl \
     && chmod +x /usr/local/bin/kubectl
 
 WORKDIR /app
@@ -119,17 +121,29 @@ RUN npm run build
 
 # Copy onboarding seeds after build
 COPY ee/server/seeds/onboarding /app/ee/temporal-workflows/dist/seeds/onboarding
+# The permission seeds require the catalog at runtime through
+# seeds/onboarding/lib/permissionCatalog.cjs, which resolves this packaged path
+# when the source checkout is absent. tenantDb.cjs travels with it: the catalog
+# modules require it as ../tenantDb.cjs.
+COPY server/migrations/utils/permissions /app/ee/temporal-workflows/dist/seeds/permissions
+COPY server/migrations/utils/tenantDb.cjs /app/ee/temporal-workflows/dist/seeds/tenantDb.cjs
 
 # Verify seeds were copied (debug step)
 RUN ls -la /app/ee/temporal-workflows/dist/seeds/onboarding || echo "Seeds directory not found"
+
+RUN cd /app/ee/temporal-workflows && node -e "const { syncPermissionCatalog } = require('./dist/seeds/permissions/syncPermissionCatalog.cjs'); const { ACTIVE_PERMISSIONS } = require('./dist/seeds/permissions/catalog.cjs'); if (typeof syncPermissionCatalog !== 'function' || ACTIVE_PERMISSIONS.length === 0) throw new Error('packaged permission catalog is incomplete')"
 
 # Prebuilt dist stage for parity/runtime validation builds.
 FROM base AS prebuilt
 
 COPY ee/temporal-workflows/dist /app/ee/temporal-workflows/dist
 COPY ee/server/seeds/onboarding /app/ee/temporal-workflows/dist/seeds/onboarding
+COPY server/migrations/utils/permissions /app/ee/temporal-workflows/dist/seeds/permissions
+COPY server/migrations/utils/tenantDb.cjs /app/ee/temporal-workflows/dist/seeds/tenantDb.cjs
 
 RUN ls -la /app/ee/temporal-workflows/dist/seeds/onboarding || echo "Seeds directory not found in prebuilt stage"
+
+RUN cd /app/ee/temporal-workflows && node -e "const { syncPermissionCatalog } = require('./dist/seeds/permissions/syncPermissionCatalog.cjs'); const { ACTIVE_PERMISSIONS } = require('./dist/seeds/permissions/catalog.cjs'); if (typeof syncPermissionCatalog !== 'function' || ACTIVE_PERMISSIONS.length === 0) throw new Error('packaged permission catalog is incomplete')"
 
 # Production image from prebuilt artifacts (skips in-container TypeScript compilation).
 FROM base AS production-prebuilt
@@ -148,6 +162,8 @@ RUN mkdir -p /app/node_modules/@alga-psa \
     && ln -sfn /app/ee/temporal-workflows/node_modules /app/packages/node_modules
 
 RUN ls -la /app/ee/temporal-workflows/dist/seeds/onboarding || echo "Seeds directory not found in prebuilt production stage"
+
+RUN cd /app/ee/temporal-workflows && node -e "const { syncPermissionCatalog } = require('./dist/seeds/permissions/syncPermissionCatalog.cjs'); const { ACTIVE_PERMISSIONS } = require('./dist/seeds/permissions/catalog.cjs'); if (typeof syncPermissionCatalog !== 'function' || ACTIVE_PERMISSIONS.length === 0) throw new Error('packaged permission catalog is incomplete')"
 
 # Same runtime-resolution guard as the production stage: the prebuilt path
 # relies on packages/*/dist arriving via the build context (.dockerignore
@@ -177,7 +193,7 @@ USER temporal
 WORKDIR /app/ee/temporal-workflows
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD node -e "console.log('Health check: OK')" || exit 1
+    CMD node -e "fetch('http://127.0.0.1:' + (process.env.HEALTH_CHECK_PORT || '8080') + '/ready', { redirect: 'error', signal: AbortSignal.timeout(5000) }).then(r => { if (r.status !== 200) process.exitCode = 1; }).catch(() => { process.exitCode = 1; })"
 
 EXPOSE 8080
 
@@ -223,6 +239,8 @@ RUN mkdir -p /app/node_modules/@alga-psa /app/ee/temporal-workflows/node_modules
 # Verify seeds are present in production stage
 RUN ls -la /app/ee/temporal-workflows/dist/seeds/onboarding || echo "Seeds directory not found in production stage"
 
+RUN cd /app/ee/temporal-workflows && node -e "const { syncPermissionCatalog } = require('./dist/seeds/permissions/syncPermissionCatalog.cjs'); const { ACTIVE_PERMISSIONS } = require('./dist/seeds/permissions/catalog.cjs'); if (typeof syncPermissionCatalog !== 'function' || ACTIVE_PERMISSIONS.length === 0) throw new Error('packaged permission catalog is incomplete')"
+
 # Fail the build if the runtime-resolved db package can't load the way the
 # onboarding seeds load it (dynamic import from node_modules). Missing
 # packages/db/dist shipped silently and broke prod tenant provisioning.
@@ -253,7 +271,7 @@ WORKDIR /app/ee/temporal-workflows
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD node -e "console.log('Health check: OK')" || exit 1
+    CMD node -e "fetch('http://127.0.0.1:' + (process.env.HEALTH_CHECK_PORT || '8080') + '/ready', { redirect: 'error', signal: AbortSignal.timeout(5000) }).then(r => { if (r.status !== 200) process.exitCode = 1; }).catch(() => { process.exitCode = 1; })"
 
 # Expose health check port
 EXPOSE 8080

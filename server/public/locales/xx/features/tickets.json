@@ -372,7 +372,9 @@
     "rescheduleComment": "⟦Řḗşƈħḗḓŭŀḗ ƈȯḿḿḗƞŧ⟧",
     "resolvedPublishInstant": "⟦Řḗşȯŀṽḗḓ īƞşŧȧƞŧ⟧",
     "schedule": "⟦Şƈħḗḓŭŀḗ⟧",
-    "scheduled": "⟦Şƈħḗḓŭŀḗḓ⟧"
+    "scheduled": "⟦Şƈħḗḓŭŀḗḓ⟧",
+    "showMore": "⟦Şħȯẇ ḿȯřḗ⟧",
+    "showLess": "⟦Şħȯẇ ŀḗşş⟧"
   },
   "responseState": {
     "awaitingYourResponse": "⟦Ȧẇȧīŧīƞɠ Ẏȯŭř Řḗşƥȯƞşḗ⟧",
@@ -1639,6 +1641,7 @@
       "client": "⟦Ƈŀīḗƞŧ⟧",
       "nextVisit": "⟦Ƞḗẋŧ ṽīşīŧ⟧",
       "callsAndEmails": "⟦Ƈȧŀŀş ȧƞḓ ḗḿȧīŀş⟧",
+      "call": "⟦Ƈȧŀŀ⟧",
       "viewAll": "⟦Ṽīḗẇ ȧŀŀ⟧",
       "viewAllCount": "⟦Ṽīḗẇ ȧŀŀ {{count}}⟧",
       "timeLogged": "⟦Ŧīḿḗ ŀȯɠɠḗḓ⟧",
@@ -1794,7 +1797,10 @@
       "occurrence": "⟦(ȯƈƈŭřřḗƞƈḗ {{count}})⟧",
       "loadError": "⟦Ƈȯŭŀḓ ƞȯŧ ŀȯȧḓ ŧħḗ ŧīḿḗŀīƞḗ⟧",
       "closeStatus": "⟦Ƈŀȯşḗ şŧȧŧŭş⟧",
-      "noStatusChange": "⟦Ḓȯ ƞȯŧ ƈħȧƞɠḗ şŧȧŧŭş⟧"
+      "noStatusChange": "⟦Ḓȯ ƞȯŧ ƈħȧƞɠḗ şŧȧŧŭş⟧",
+      "showAllActivity": "⟦Şħȯẇ ȧŀŀ ȧƈŧīṽīŧẏ⟧",
+      "collapseActivity": "⟦Ƈȯŀŀȧƥşḗ ȯŀḓḗř ȧƈŧīṽīŧẏ⟧",
+      "replyingToComment": "⟦Řḗƥŀẏīƞɠ ŧȯ {{name}}⟧"
     }
   }
 }

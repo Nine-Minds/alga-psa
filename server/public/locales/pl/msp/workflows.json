@@ -60,8 +60,6 @@
       "runNow": "Uruchom teraz",
       "exportCsv": "Eksportuj CSV",
       "refresh": "Odśwież",
-      "cancelSelected": "Anuluj zaznaczone ({{count}})",
-      "clearSelection": "Wyczyść zaznaczenie",
       "details": "Szczegóły",
       "loadMore": "Załaduj więcej",
       "preview": "Podgląd"
@@ -92,7 +90,12 @@
       "cancelMessage": "Anulować {{count}} zaznaczonych uruchomień? Operacji nie można cofnąć.",
       "reasonLabel": "Powód",
       "cancelReasonPlaceholder": "Proszę podać powód anulowania",
-      "cancelConfirm": "Anuluj uruchomienia"
+      "cancelConfirm": "Anuluj uruchomienia",
+      "actionBar": {
+        "selectedCount": "Zaznaczono {{count}}",
+        "cancel": "Anuluj przebiegi",
+        "clear": "Wyczyść zaznaczenie"
+      }
     },
     "toasts": {
       "loadRunsFailed": "Nie udało się wczytać uruchomień workflow",

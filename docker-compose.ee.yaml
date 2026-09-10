@@ -46,6 +46,7 @@ services:
       NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
       NEXTAUTH_SESSION_EXPIRES: ${NEXTAUTH_SESSION_EXPIRES:-86400}
+      TRUST_FORWARDED_HOST: ${TRUST_FORWARDED_HOST:-false}
       COLLAB_PERSIST_API_KEY: ${COLLAB_PERSIST_API_KEY:-alga-collab-persist-dev}
       TEMPORAL_ADDRESS: ${TEMPORAL_ADDRESS:-temporal-dev:7233}
       TEMPORAL_NAMESPACE: ${TEMPORAL_NAMESPACE:-default}
@@ -109,6 +110,7 @@ services:
       - crypto_key
       - token_secret_key
       - nextauth_secret
+      - credential_encryption_key
       - google_oauth_client_id
       - google_oauth_client_secret
       - alga_auth_key
@@ -159,6 +161,7 @@ services:
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
       NEXTAUTH_SESSION_EXPIRES: ${NEXTAUTH_SESSION_EXPIRES:-86400}
+      TRUST_FORWARDED_HOST: ${TRUST_FORWARDED_HOST:-false}
       # Secret provider configuration for setup (EE edition - for local dev, vault is disabled by default)
       # For production with vault, set SECRET_READ_CHAIN=env,filesystem,vault in your environment
       SECRET_READ_CHAIN: ${SECRET_READ_CHAIN:-env,filesystem}
@@ -464,7 +467,8 @@ services:
     command: ["node", "dist/ee/temporal-workflows/src/worker.js"]
     environment:
       - LOG_LEVEL=INFO
-      - SECRET_READ_CHAIN=filesystem,env
+      - SECRET_READ_CHAIN=${SECRET_READ_CHAIN:-filesystem,env}
+      - SECRET_WRITE_PROVIDER=${SECRET_WRITE_PROVIDER:-filesystem}
       - APPLICATION_URL=${APPLICATION_URL:-http://localhost:3000}
       - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
       - NEXT_PUBLIC_BASE_URL=${NEXT_PUBLIC_BASE_URL:-http://localhost:3000}

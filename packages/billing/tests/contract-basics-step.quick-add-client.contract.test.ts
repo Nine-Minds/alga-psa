@@ -18,5 +18,6 @@ describe('contract basics client creation wiring contract', () => {
     expect(source).toContain('setClients(prev => [...prev, newClient]);');
     expect(source).toContain('updateData({ client_id: newClient.client_id });');
     expect(source).toContain('const clientCurrency = selectedClient?.default_currency_code || data.currency_code;');
+    expect(source).toContain('skipSuccessDialog: true,');
   });
 });

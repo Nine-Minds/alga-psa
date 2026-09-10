@@ -8,6 +8,7 @@ import type {
   TemplateI18nRef,
   TemplateI18nText,
   TemplateTableColumn,
+  TemplateTableColumnLine,
   TemplateTotalsRow,
   TemplateValueExpression,
   TemplateValueFormat,
@@ -342,6 +343,7 @@ const resolveCollectionPath = (node: WorkspaceNode, documentKind: DesignerDocume
     asTrimmedString(metadata.bindingKey) ||
     asTrimmedString(metadata.path);
   const normalized = normalizeInvoiceBindingPath(rawPath, documentKind);
+  if (asTrimmedString(metadata.collectionBindingKey) || asTrimmedString(metadata.collectionPath)) return normalized;
   return normalized.length > 0 && normalized !== 'invoiceNumber' ? normalized : 'items';
 };
 
@@ -823,9 +825,78 @@ const coerceNodeStyleFromInlineStyle = (inline: Record<string, unknown> | undefi
   return Object.keys(style).length > 0 ? style : undefined;
 };
 
+/**
+ * Designer table columns may carry stacked per-line content (`lines`) that the
+ * runtime schema understands but the designer's simple column model does not.
+ * Preserve each line's id, value expression, format and style (including token
+ * ids) verbatim so a duplicated/custom template never loses its stacked cell on
+ * save. Both `value` (the runtime key imported from an AST) and
+ * `valueExpression` (the designer's usual expression slot) are accepted.
+ */
+const mapWorkspaceColumnLines = (
+  value: unknown,
+  resolveLineValue?: (entry: Record<string, unknown>, lineId: string) => TemplateValueExpression | null,
+): TemplateTableColumn['lines'] => {
+  if (!Array.isArray(value) || value.length === 0) {
+    return undefined;
+  }
+
+  const mapped: NonNullable<TemplateTableColumn['lines']> = [];
+
+  for (const [index, entry] of value.entries()) {
+    if (!isRecord(entry)) {
+      continue;
+    }
+    const id = sanitizeId(asTrimmedString(entry.id)) || `line-${index + 1}`;
+    const preserved = isTemplateValueExpression(entry.valueExpression)
+      ? entry.valueExpression
+      : isTemplateValueExpression(entry.value)
+        ? entry.value
+        : null;
+    // A designer-authored line carries an editable binding key; a line imported
+    // straight from an AST carries only its expression. Let the caller resolve
+    // the former (so an edited key wins, exactly as it does for the column
+    // itself) and fall back to the preserved expression for the latter.
+    const valueExpression = resolveLineValue?.(entry, id) ?? preserved;
+    if (!valueExpression) {
+      continue;
+    }
+    const line: TemplateTableColumnLine = {
+      id,
+      value: valueExpression,
+    };
+    const format = parseTemplateValueFormat(entry.format ?? entry.type);
+    if (format) {
+      line.format = format;
+    }
+    const style = mapTemplateNodeStyleRef(entry.style);
+    if (style) {
+      line.style = style;
+    }
+    mapped.push(line);
+  }
+
+  return mapped.length > 0 ? mapped : undefined;
+};
+
 const mapTableColumns = (node: WorkspaceNode, documentKind: DesignerDocumentKind): TemplateTableColumn[] => {
   const metadata = getWorkspaceNodeMetadata(node);
   const columns = Array.isArray(metadata.columns) ? metadata.columns : [];
+
+  const resolveColumnValue = (
+    key: string,
+    preservedExpression: TemplateValueExpression | null,
+    fallbackId: string,
+  ): TemplateValueExpression => {
+    const placeholderKey = sanitizeId(fallbackId);
+    if (preservedExpression?.type === 'path') {
+      return { type: 'path' as const, path: key.length > 0 ? key : 'description' };
+    }
+    if (key.length > 0 && key !== placeholderKey) {
+      return { type: 'path' as const, path: key };
+    }
+    return preservedExpression ?? { type: 'path' as const, path: key.length > 0 ? key : 'description' };
+  };
 
   const mappedColumns = columns
     .map((column, index): TemplateTableColumn | null => {
@@ -842,13 +913,7 @@ const mapTableColumns = (node: WorkspaceNode, documentKind: DesignerDocumentKind
         ? column.valueExpression
         : null;
       const parsedFormat = parseTemplateValueFormat(column.format ?? column.type);
-      const placeholderKey = sanitizeId(id);
-      const resolvedValue =
-        preservedExpression?.type === 'path'
-          ? { type: 'path' as const, path: key.length > 0 ? key : 'description' }
-          : key.length > 0 && key !== placeholderKey
-            ? { type: 'path' as const, path: key }
-            : preservedExpression ?? { type: 'path' as const, path: key.length > 0 ? key : 'description' };
+      const resolvedValue = resolveColumnValue(key, preservedExpression, id);
 
       const mapped: TemplateTableColumn = {
         id: sanitizeId(id),
@@ -858,6 +923,23 @@ const mapTableColumns = (node: WorkspaceNode, documentKind: DesignerDocumentKind
       const style = mapTemplateNodeStyleRef(column.style);
       if (style) {
         mapped.style = style;
+      }
+      const lines = mapWorkspaceColumnLines(column.lines, (entry, lineId) => {
+        const lineKey = normalizeInvoiceBindingPath(
+          asTrimmedString(entry.key) || asTrimmedString(entry.path) || asTrimmedString(entry.bindingKey),
+          documentKind
+        );
+        const lineExpression = isTemplateValueExpression(entry.valueExpression)
+          ? entry.valueExpression
+          : isTemplateValueExpression(entry.value)
+            ? entry.value
+            : null;
+        return lineKey.length > 0 || lineExpression
+          ? resolveColumnValue(lineKey, lineExpression, lineId)
+          : null;
+      });
+      if (lines) {
+        mapped.lines = lines;
       }
       if (parsedFormat) {
         mapped.format = parsedFormat;
@@ -872,8 +954,8 @@ const mapTableColumns = (node: WorkspaceNode, documentKind: DesignerDocumentKind
 
   return [
     { id: 'description', header: 'Description', value: { type: 'path', path: 'description' } },
-    { id: 'quantity', header: 'Qty', value: { type: 'path', path: 'quantity' } },
-    { id: 'total', header: 'Amount', value: { type: 'path', path: 'total' } },
+    { id: 'quantity', header: 'Qty', value: { type: 'path', path: 'quantity' }, format: 'number' },
+    { id: 'total', header: 'Amount', value: { type: 'path', path: 'total' }, format: 'currency' },
   ];
 };
 
@@ -1018,8 +1100,8 @@ const mapDesignerNodeToAstNode = (
 	        // repeat its children once per item in a source collection. This
 	        // was added alongside `dynamic-table.repeat` as a compound-block
 	        // primitive for per-location (or other grouped) bands. Imported
-	        // AST nodes stash the original `repeat` on metadata; designer-
-	        // authored stacks simply omit it.
+	        // AST nodes retain the original repeat; visual presets author a
+	        // collection path which is registered like a table source.
 	        const metadata = getWorkspaceNodeMetadata(node);
 	        const importedRepeat = isRecord(metadata.__astStackRepeat)
 	          ? (metadata.__astStackRepeat as Record<string, unknown>)
@@ -1037,7 +1119,11 @@ const mapDesignerNodeToAstNode = (
 	          importedRepeat && typeof importedRepeat.keyPath === 'string' && importedRepeat.keyPath.trim().length > 0
 	            ? importedRepeat.keyPath.trim()
 	            : undefined;
-	        const repeat =
+	        const authoredRepeatSource = asTrimmedString(metadata.repeatCollectionBindingKey);
+	        const repeat = authoredRepeatSource
+	          ? { sourceBinding: { bindingId: resolveCollectionSourceBindingId(authoredRepeatSource, registerCollectionBinding, documentKind, transformOutputBindingId) },
+	              itemBinding: asTrimmedString(metadata.repeatItemBinding) || 'group' }
+	          :
 	          importedSourceBindingId.length > 0 && importedItemBinding.length > 0
 	            ? {
 	                sourceBinding: { bindingId: importedSourceBindingId },
@@ -1150,7 +1236,7 @@ const mapDesignerNodeToAstNode = (
         type: 'dynamic-table',
         repeat: {
           sourceBinding: { bindingId: sourceBindingId },
-          itemBinding: 'item',
+          itemBinding: asTrimmedString(metadata.__astTableItemBinding) || 'item',
         },
         columns: mapTableColumns(node, documentKind),
         headerStyle,
@@ -1863,6 +1949,8 @@ export const importTemplateAstToWorkspace = (
             metadata.placeholder = inputNode.placeholder;
           }
         } else if (inputNode.type === 'dynamic-table' || inputNode.type === 'table') {
+          const rowBinding = inputNode.type === 'dynamic-table' ? inputNode.repeat.itemBinding : inputNode.rowBinding;
+          metadata.__astTableItemBinding = rowBinding;
           const rawBindingId =
             inputNode.type === 'dynamic-table'
               ? inputNode.repeat.sourceBinding.bindingId
@@ -1870,21 +1958,17 @@ export const importTemplateAstToWorkspace = (
           // Preserve the raw source bindingId so scope-resolved bindings
           // (e.g. `group.items` inside a repeating stack) round-trip back
           // without being replaced by a synthesized `collection.*` id.
-          const isResolvableGlobalBinding =
-            Boolean(astInput.bindings?.collections?.[rawBindingId]) ||
-            normalizeInvoiceBindingPath(asTrimmedString(astInput.transforms?.outputBindingId), documentKind) ===
-              normalizeInvoiceBindingPath(rawBindingId, documentKind);
-          if (!isResolvableGlobalBinding) {
-            metadata.__astTableSourceBindingId = rawBindingId;
-          }
+          metadata.__astTableSourceBindingId = rawBindingId;
           const collectionPath = resolveImportedCollectionBindingPath(astInput, rawBindingId, documentKind);
           metadata.collectionBindingKey = denormalizeBindingPath(collectionPath, documentKind);
-          metadata.columns = inputNode.columns.map((column) => {
+            metadata.columns = inputNode.columns.map((column) => {
             const importedHeader = importI18nText(column.header);
             const mappedColumn: Record<string, unknown> = {
               id: column.id,
               header: importedHeader.text,
-              key: column.value.type === 'path' ? `item.${column.value.path}` : column.id,
+              key: column.value.type === 'path'
+                ? column.value.path.startsWith(`${rowBinding}.`) ? column.value.path : `item.${column.value.path}`
+                : column.id,
               valueExpression: column.value,
               ...(importedHeader.ref ? { __astHeaderI18n: importedHeader.ref } : {}),
             };
@@ -1895,6 +1979,29 @@ export const importTemplateAstToWorkspace = (
             }
             if (column.style) {
               mappedColumn.style = { ...column.style } as Record<string, unknown>;
+            }
+            if (Array.isArray(column.lines) && column.lines.length > 0) {
+              // Stacked per-line content has to survive a designer roundtrip
+              // intact: `key` is what the line editor binds to, while
+              // `valueExpression`, `format` and `style` carry the parts the
+              // editor does not model, so re-exporting the template
+              // (duplicate / save-as) neither flattens nor downgrades the cell.
+              mappedColumn.lines = column.lines.map((line) => {
+                const mappedLine: Record<string, unknown> = {
+                  id: line.id,
+                  key: line.value.type === 'path'
+                    ? line.value.path.startsWith(`${rowBinding}.`) ? line.value.path : `item.${line.value.path}`
+                    : line.id,
+                  valueExpression: line.value,
+                };
+                if (line.format) {
+                  mappedLine.format = line.format;
+                }
+                if (line.style) {
+                  mappedLine.style = { ...line.style } as Record<string, unknown>;
+                }
+                return mappedLine;
+              });
             }
 
             return mappedColumn;

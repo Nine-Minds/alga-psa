@@ -8,7 +8,6 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { IContractPricingSchedule } from '@alga-psa/types';
 import {
   createPricingSchedule,
@@ -18,7 +17,6 @@ import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import {
   getErrorMessage,
   isActionMessageError,
@@ -43,11 +41,7 @@ export function PricingScheduleDialog({
 }: PricingScheduleDialogProps) {
   const { t } = useTranslation('msp/contracts');
   const { symbol, fractionDigits } = useCurrencyFormat();
-  const { enabled: contractCurrencyEnabled, loading: flagLoading } = useFeatureFlag('release-v1-5-feature', {
-    defaultValue: false,
-  });
-  // Flag off preserves the legacy ambient-currency behavior: two decimals, /100, ambient symbol.
-  const rateFractionDigits = contractCurrencyEnabled ? fractionDigits(currencyCode) : 2;
+  const rateFractionDigits = fractionDigits(currencyCode);
   const rateMinorUnitFactor = 10 ** rateFractionDigits;
   const [effectiveDate, setEffectiveDate] = useState<Date | undefined>(
     schedule?.effective_date ? new Date(schedule.effective_date) : undefined
@@ -63,16 +57,13 @@ export function PricingScheduleDialog({
   const [durationUnit, setDurationUnit] = useState<'days' | 'weeks' | 'months' | 'years'>(
     schedule?.duration_unit || 'months'
   );
-  // The rate input only ever renders minor units converted with a *resolved*
-  // flag's factor: initialize empty while the flag is still loading and let the
-  // effect below fill it in on resolution.
   const [customRate, setCustomRate] = useState<string>(() =>
-    !flagLoading && schedule?.custom_rate !== undefined && schedule?.custom_rate !== null
+    schedule?.custom_rate !== undefined && schedule?.custom_rate !== null
       ? (schedule.custom_rate / rateMinorUnitFactor).toFixed(rateFractionDigits)
       : ''
   );
-  // Once the user has touched the rate, no flag resolution or schedule re-sync
-  // may overwrite what they typed.
+  // Once the user has touched the rate, no schedule re-sync may overwrite
+  // what they typed.
   const userEditedRateRef = useRef(false);
   const [useDefaultRate, setUseDefaultRate] = useState(
     schedule?.custom_rate === undefined || schedule?.custom_rate === null
@@ -92,12 +83,10 @@ export function PricingScheduleDialog({
     }
   }, [schedule]);
 
-  // Derive the rate input from the stored minor units only once the feature
-  // flag has resolved, so the minor-unit factor is never taken from an
-  // unresolved flag; skip entirely once the user has typed, so a late
-  // resolution can't clobber their input.
+  // Re-derive the rate input when the schedule changes; skip once the user
+  // has typed, so a re-sync can't clobber their input.
   useEffect(() => {
-    if (flagLoading || userEditedRateRef.current) {
+    if (userEditedRateRef.current) {
       return;
     }
     setCustomRate(
@@ -105,7 +94,7 @@ export function PricingScheduleDialog({
         ? (schedule.custom_rate / rateMinorUnitFactor).toFixed(rateFractionDigits)
         : ''
     );
-  }, [schedule, flagLoading, rateMinorUnitFactor, rateFractionDigits]);
+  }, [schedule, rateMinorUnitFactor, rateFractionDigits]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -140,18 +129,6 @@ export function PricingScheduleDialog({
     if (!useDuration && hasEndDate && endDate && endDate <= effectiveDate) {
       setError(t('pricingSchedules.dialog.validation.endDateAfterEffectiveDate', {
         defaultValue: 'End date must be after effective date',
-      }));
-      return;
-    }
-
-    // No submission may run while the flag is unresolved: the minor-unit
-    // factor isn't known yet, and even the default-rate null path must not
-    // clobber the stored rate before the currency interpretation is settled.
-    // The Save button is disabled for the same reason; this guard also covers
-    // Enter-key and programmatic form submission.
-    if (flagLoading) {
-      setError(t('pricingSchedules.dialog.validation.currencySettingsLoading', {
-        defaultValue: 'Currency settings are still loading; try again in a moment',
       }));
       return;
     }
@@ -231,12 +208,7 @@ export function PricingScheduleDialog({
             id="save-pricing-schedule-btn"
             type="button"
             onClick={() => (document.getElementById('pricing-schedule-form') as HTMLFormElement | null)?.requestSubmit()}
-            disabled={isSaving || flagLoading}
-            title={flagLoading
-              ? t('pricingSchedules.dialog.validation.currencySettingsLoading', {
-                defaultValue: 'Currency settings are still loading; try again in a moment',
-              })
-              : undefined}
+            disabled={isSaving}
           >
             {isSaving
               ? t('pricingSchedules.dialog.actions.saving', { defaultValue: 'Saving...' })
@@ -375,30 +347,21 @@ export function PricingScheduleDialog({
                 {t('pricingSchedules.dialog.fields.customRate', { defaultValue: 'Custom Rate' })} *
               </Label>
               <div className="relative">
-                {/* While the flag is unresolved no currency semantics may be
-                    shown — not even the legacy ambient ones. */}
                 <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
-                  {flagLoading
-                    ? <Skeleton className="h-4 w-4" />
-                    : contractCurrencyEnabled ? symbol(currencyCode) : symbol()}
+                  {symbol(currencyCode)}
                 </span>
                 <Input
                   id="custom-rate"
                   type="number"
                   min="0"
-                  step={flagLoading ? 'any' : contractCurrencyEnabled ? String(1 / rateMinorUnitFactor) : '0.01'}
+                  step={String(1 / rateMinorUnitFactor)}
                   value={customRate}
-                  disabled={flagLoading}
                   onChange={(e) => {
                     userEditedRateRef.current = true;
                     setCustomRate(e.target.value);
                   }}
                   className="pl-10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                  placeholder={flagLoading
-                    ? ''
-                    : contractCurrencyEnabled
-                      ? (0).toFixed(rateFractionDigits)
-                      : t('pricingSchedules.dialog.fields.customRatePlaceholder', { defaultValue: '0.00' })}
+                  placeholder={(0).toFixed(rateFractionDigits)}
                 />
               </div>
             </div>

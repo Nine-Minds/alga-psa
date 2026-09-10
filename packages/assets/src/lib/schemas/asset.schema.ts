@@ -185,6 +185,7 @@ export const assetMaintenanceHistorySchema = z.object({
   schedule_id: z.string().uuid(),
   performed_at: z.string(),
   performed_by: z.string().uuid(),
+  performed_by_name: z.string().optional(),
   notes: z.string().optional(),
   maintenance_data: z.record(z.unknown()),
   created_at: z.string()

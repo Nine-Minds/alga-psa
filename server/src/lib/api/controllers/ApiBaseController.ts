@@ -245,7 +245,7 @@ export abstract class ApiBaseController {
           await this.checkPermission(apiRequest, this.options.permissions?.list || 'read');
 
           // Validate query if schema provided
-          let validatedQuery = {};
+          let validatedQuery: Record<string, unknown> = {};
           if (this.options.querySchema) {
             validatedQuery = this.validateQuery(apiRequest, this.options.querySchema);
           }
@@ -254,8 +254,9 @@ export abstract class ApiBaseController {
           const url = new URL(apiRequest.url);
           const page = parseInt(url.searchParams.get('page') || '1');
           const limit = Math.min(parseInt(url.searchParams.get('limit') || '25'), 100);
-          const sort = url.searchParams.get('sort') || 'created_at';
-          const order = (url.searchParams.get('order') || 'desc') as 'asc' | 'desc';
+          const sort = typeof validatedQuery.sort === 'string'
+            ? validatedQuery.sort : url.searchParams.get('sort') || 'created_at';
+          const order = (validatedQuery.order || url.searchParams.get('order') || 'desc') as 'asc' | 'desc';
           const fields = (url.searchParams.get('fields') || '')
             .split(',')
             .map((f) => f.trim())

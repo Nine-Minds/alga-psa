@@ -12,23 +12,37 @@ const fetchInvoicesPaginatedMock = vi.fn();
 const getInvoiceForRenderingMock = vi.fn();
 const mapDbInvoiceToWasmViewModelMock = vi.fn();
 const runAuthoritativeInvoiceTemplatePreviewMock = vi.fn();
+const getTenantBrandingForDocumentPreviewMock = vi.fn();
 const templateRendererMock = vi.fn();
 const paperInvoiceMock = vi.fn();
+
+const releaseFlag = vi.hoisted(() => ({ enabled: true }));
+vi.mock('@alga-psa/ui/hooks/useFeatureFlag', () => ({
+  useFeatureFlag: () => ({ enabled: releaseFlag.enabled, loading: false, error: null }),
+}));
 
 vi.mock('@alga-psa/billing/actions/invoiceQueries', () => ({
   fetchInvoicesPaginated: (...args: unknown[]) => fetchInvoicesPaginatedMock(...args),
   getInvoiceForRendering: (...args: unknown[]) => getInvoiceForRenderingMock(...args),
 }));
 
-vi.mock('@alga-psa/billing/lib/adapters/invoiceAdapters', () => ({
-  mapDbInvoiceToWasmViewModel: (...args: unknown[]) => mapDbInvoiceToWasmViewModelMock(...args),
-  // sampleScenarios.ts calls this at module load; grouping is irrelevant here.
-  enrichWithGroupedItems: (vm: unknown) => vm,
-}));
+vi.mock('@alga-psa/billing/lib/adapters/invoiceAdapters', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/billing/lib/adapters/invoiceAdapters')>();
+  return {
+    ...actual,
+    mapDbInvoiceToWasmViewModel: (...args: unknown[]) => mapDbInvoiceToWasmViewModelMock(...args),
+    // Keep sample collection enrichment real; only the fixture invoice read is stubbed.
+  };
+});
 
 vi.mock('@alga-psa/billing/actions/invoiceTemplatePreview', () => ({
   runAuthoritativeInvoiceTemplatePreview: (...args: unknown[]) =>
     runAuthoritativeInvoiceTemplatePreviewMock(...args),
+}));
+
+vi.mock('@alga-psa/billing/actions/tenantBrandingPreview', () => ({
+  getTenantBrandingForDocumentPreview: (...args: unknown[]) =>
+    getTenantBrandingForDocumentPreviewMock(...args),
 }));
 
 vi.mock('../billing-dashboard/PaperInvoice', () => ({
@@ -159,6 +173,7 @@ const openExistingInvoiceSelect = async () => {
 
 describe('DesignerVisualWorkspace', () => {
   beforeEach(() => {
+    releaseFlag.enabled = true;
     vi.useRealTimers();
     // writable matters: jsdom is reused across files in the shared fork, and
     // a non-writable descriptor here makes every later file's plain
@@ -173,8 +188,10 @@ describe('DesignerVisualWorkspace', () => {
     getInvoiceForRenderingMock.mockReset();
     mapDbInvoiceToWasmViewModelMock.mockReset();
     runAuthoritativeInvoiceTemplatePreviewMock.mockReset();
+    getTenantBrandingForDocumentPreviewMock.mockReset();
     templateRendererMock.mockReset();
     paperInvoiceMock.mockReset();
+    getTenantBrandingForDocumentPreviewMock.mockResolvedValue(null);
     fetchInvoicesPaginatedMock.mockResolvedValue(buildInvoiceListResult());
     getInvoiceForRenderingMock.mockResolvedValue({ invoice_id: 'inv-1' });
     mapDbInvoiceToWasmViewModelMock.mockReturnValue({
@@ -554,13 +571,25 @@ describe('DesignerVisualWorkspace', () => {
     seedBoundField('invoice.number');
     renderWorkspace('preview');
 
-    await waitFor(() => expect(runAuthoritativeInvoiceTemplatePreviewMock).toHaveBeenCalled());
+    // This is the only preview assertion that waits for an *additional* pipeline
+    // call after a user interaction (the Re-run click), so its window is the
+    // tightest in the suite. Under the unit-test gate's parallel CI load the
+    // event loop can be starved past waitFor's 1s default before the forced
+    // recompute registers, so give both waits the same 5s budget the sibling
+    // automaticInvoices load-fragile assertions use.
+    await waitFor(() => expect(runAuthoritativeInvoiceTemplatePreviewMock).toHaveBeenCalled(), { timeout: 5000 });
     const baselineCalls = runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.length;
 
-    fireEvent.click(screen.getByRole('button', { name: 'Re-run' }));
+    const rerunButton = await waitFor(() => {
+      const button = screen.getByRole('button', { name: 'Re-run' });
+      expect(button.hasAttribute('disabled')).toBe(false);
+      return button;
+    });
+    fireEvent.click(rerunButton);
 
-    await waitFor(() =>
-      expect(runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.length).toBeGreaterThan(baselineCalls)
+    await waitFor(
+      () => expect(runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.length).toBeGreaterThan(baselineCalls),
+      { timeout: 5000 }
     );
 
     const latestCall = runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.at(-1)?.[0];
@@ -701,6 +730,69 @@ describe('DesignerVisualWorkspace', () => {
         JSON.stringify(call[0]?.template?.templateAst ?? {}).includes('table-layout-change')
       );
       expect(hasTableNodeCall).toBe(true);
+    });
+  });
+
+  it('renders the tenant real branding on sample previews instead of the synthetic issuer', async () => {
+    getTenantBrandingForDocumentPreviewMock.mockResolvedValue({
+      name: 'Cascade IT Partners',
+      address: '88 Pearl St, Boulder, CO 80302',
+      email: 'billing@cascadeit.example',
+      phone: '+1-303-555-0114',
+      logo_url: 'https://cdn.example/logo.png',
+    });
+
+    renderWorkspace('preview');
+
+    await waitFor(() =>
+      expect(runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.at(-1)?.[0].invoiceData.tenantClient).toEqual({
+        name: 'Cascade IT Partners',
+        address: '88 Pearl St, Boulder, CO 80302',
+        logoUrl: 'https://cdn.example/logo.png',
+      })
+    );
+    // The rest of the sample must survive the overlay untouched.
+    expect(runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.at(-1)?.[0].invoiceData.invoiceNumber).toBe(
+      'INV-2026-0147'
+    );
+  });
+
+  it('keeps the synthetic sample issuer when the tenant has no resolvable branding', async () => {
+    getTenantBrandingForDocumentPreviewMock.mockResolvedValue(null);
+
+    renderWorkspace('preview');
+
+    await waitFor(() => expect(runAuthoritativeInvoiceTemplatePreviewMock).toHaveBeenCalled());
+    expect(runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.at(-1)?.[0].invoiceData.tenantClient).toEqual({
+      name: 'Northwind MSP',
+      address: '400 SW Main St, Portland, OR 97204',
+      logoUrl: null,
+    });
+  });
+
+  it('leaves an existing invoice preview on its own persisted branding', async () => {
+    getTenantBrandingForDocumentPreviewMock.mockResolvedValue({
+      name: 'Cascade IT Partners',
+      address: '88 Pearl St, Boulder, CO 80302',
+      email: null,
+      phone: null,
+      logo_url: 'https://cdn.example/logo.png',
+    });
+
+    renderWorkspace('preview');
+    fireEvent.click(screen.getByRole('button', { name: 'Existing' }));
+    await openExistingInvoiceSelect();
+    fireEvent.click(await screen.findByText('INV-001 · Acme Co.'));
+
+    await waitFor(() =>
+      expect(runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.at(-1)?.[0].invoiceData.invoiceNumber).toBe(
+        'INV-001'
+      )
+    );
+    expect(runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.at(-1)?.[0].invoiceData.tenantClient).toEqual({
+      name: 'Northwind MSP',
+      address: '400 SW Main',
+      logoUrl: null,
     });
   });
 

@@ -186,6 +186,8 @@ describe('teams runtime EE ownership', () => {
     // Teams app manifest composition + package status now live in the shared
     // availability-gated package actions module (no EE delegation).
     expect(sharedPackageActionsSource).toContain('function buildTeamsAppManifest');
+    expect(sharedPackageActionsSource).toContain("scopes: ['personal', 'groupChat', 'team']");
+    expect(eeTeamsPackageActionsSource).toContain("scopes: ['personal', 'groupChat', 'team']");
   });
 
   it('T191/T192/T223/T227/T239/T261: keeps shared Teams settings persistence availability-gated while EE owns live Graph diagnostics', () => {

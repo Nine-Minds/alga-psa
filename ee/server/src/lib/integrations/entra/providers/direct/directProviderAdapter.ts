@@ -1,4 +1,4 @@
-import axios, { AxiosError } from 'axios';
+import axios, { AxiosError, type AxiosResponse } from 'axios';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import {
   getMicrosoftGraphBaseUrl,
@@ -27,9 +27,11 @@ const GRAPH_REQUEST_TIMEOUT_MS = 20_000;
 
 // Resolved per call: MICROSOFT_GRAPH_BASE_URL points the whole adapter at the
 // Graph emulator (test-harness/graph-emulator) so the integration can be walked
-// end to end without a CSP tenant. The managedTenants endpoints live on the
-// beta base (the API is beta-only; v1.0 answers 400), with its own emulator
-// override MICROSOFT_GRAPH_BETA_BASE_URL.
+// end to end without a CSP tenant. The Lighthouse tenant list lives on the
+// beta base (the managedTenants API is beta-only; v1.0 answers 400), with its
+// own emulator override MICROSOFT_GRAPH_BETA_BASE_URL. Per-customer directory
+// reads (/users, /groups) use v1.0 with a token minted against the customer
+// tenant's authority — managedTenants has no user directory.
 const graphBaseUrl = (): string => getMicrosoftGraphBaseUrl();
 const graphBetaBaseUrl = (): string => getMicrosoftGraphBetaBaseUrl();
 
@@ -120,6 +122,33 @@ function toObject(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' && !Array.isArray(value)
     ? (value as Record<string, unknown>)
     : {};
+}
+
+/**
+ * Never let a raw AxiosError escape the adapter: its config/request dump
+ * carries the Authorization header (a live Graph token) into whatever logs the
+ * failure, and its message ("Request failed with status code 400") names
+ * neither the Graph error code nor the message Microsoft actually returned.
+ */
+function sanitizeGraphError(error: unknown): Error {
+  if (isTimeoutError(error)) {
+    return new EntraOperatorError(
+      'timeout',
+      `Microsoft did not answer within ${Math.round(GRAPH_REQUEST_TIMEOUT_MS / 1000)} seconds. Large directories are read in pages — try again in a moment.`
+    );
+  }
+  if (axios.isAxiosError(error)) {
+    if (error.response) {
+      const graphError = toObject(toObject(error.response.data).error);
+      const code = getNullableString(graphError.code);
+      const message = getNullableString(graphError.message);
+      return new Error(
+        `Microsoft Graph request failed (HTTP ${error.response.status}${code ? `, ${code}` : ''})${message ? `: ${message}` : '.'}`
+      );
+    }
+    return new Error(`Microsoft Graph could not be reached${error.code ? ` (${error.code})` : ''}.`);
+  }
+  return error instanceof Error ? error : new Error(String(error));
 }
 
 function getFirstString(value: unknown, fallback = ''): string {
@@ -280,6 +309,37 @@ export class DirectProviderAdapter implements EntraProviderAdapter {
     return accessToken;
   }
 
+  /**
+   * One Graph call against a managed (customer) tenant, authenticated with a
+   * token minted for that tenant's authority. A 401 invalidates the cached
+   * token and retries once with a fresh one.
+   */
+  private async managedTenantGraphRequest(
+    tenant: string,
+    managedTenantId: string,
+    request: (accessToken: string) => Promise<AxiosResponse>
+  ): Promise<Record<string, unknown>> {
+    const accessToken = await this.getManagedTenantAccessToken(tenant, managedTenantId);
+
+    try {
+      const response = await request(accessToken);
+      return toObject(response.data);
+    } catch (error) {
+      const status = (error as AxiosError).response?.status;
+      if (status === 401) {
+        this.managedTenantTokenCache.delete(`${tenant}:${managedTenantId}`);
+        const refreshedToken = await this.getManagedTenantAccessToken(tenant, managedTenantId);
+        try {
+          const retry = await request(refreshedToken);
+          return toObject(retry.data);
+        } catch (retryError) {
+          throw sanitizeGraphError(retryError);
+        }
+      }
+      throw sanitizeGraphError(error);
+    }
+  }
+
   private async graphGet(
     tenant: string,
     url: string
@@ -300,19 +360,14 @@ export class DirectProviderAdapter implements EntraProviderAdapter {
       if (status === 401) {
         const refreshed = await refreshEntraDirectToken(tenant);
         accessToken = refreshed.accessToken;
-        const retry = await request(accessToken);
-        return toObject(retry.data);
+        try {
+          const retry = await request(accessToken);
+          return toObject(retry.data);
+        } catch (retryError) {
+          throw sanitizeGraphError(retryError);
+        }
       }
-      // A timeout is not a refusal. Graph is up and the directory read is
-      // simply taking longer than one request is allowed to; the remedy is to
-      // try again, not to go looking at the connection.
-      if (isTimeoutError(error)) {
-        throw new EntraOperatorError(
-          'timeout',
-          `Microsoft did not answer within ${Math.round(GRAPH_REQUEST_TIMEOUT_MS / 1000)} seconds. Large directories are read in pages — try again in a moment.`
-        );
-      }
-      throw error;
+      throw sanitizeGraphError(error);
     }
   }
 
@@ -366,10 +421,8 @@ export class DirectProviderAdapter implements EntraProviderAdapter {
 
     const users: EntraManagedUserRecord[] = [];
     const seenObjectIds = new Set<string>();
-    const encodedTenant = encodeURIComponent(input.managedTenantId);
     const select = [
       'id',
-      'tenantId',
       'displayName',
       'givenName',
       'surname',
@@ -381,12 +434,24 @@ export class DirectProviderAdapter implements EntraProviderAdapter {
       'businessPhones',
     ].join(',');
 
-    let nextUrl =
-      `${graphBetaBaseUrl()}/tenantRelationships/managedTenants/users` +
-      `?$filter=tenantId eq '${encodedTenant}'&$select=${select}&$top=999`;
+    // The Lighthouse managedTenants API has no user directory (real Graph
+    // answers 400 for /tenantRelationships/managedTenants/users). A managed
+    // tenant's users are read from that tenant's own directory, with a token
+    // minted against its authority — the same GDAP pattern
+    // listSecurityGroupsForTenant already uses.
+    let nextUrl = `${graphBaseUrl()}/users?$select=${select}&$top=999`;
 
     while (nextUrl) {
-      const payload = await this.graphGet(input.tenant, nextUrl);
+      const pageUrl = nextUrl;
+      const payload = await this.managedTenantGraphRequest(
+        input.tenant,
+        input.managedTenantId,
+        (accessToken) =>
+          axios.get(pageUrl, {
+            headers: { Authorization: `Bearer ${accessToken}` },
+            timeout: GRAPH_REQUEST_TIMEOUT_MS,
+          })
+      );
       const rows = Array.isArray(payload.value) ? payload.value : [];
 
       for (const row of rows) {
@@ -579,14 +644,18 @@ export class DirectProviderAdapter implements EntraProviderAdapter {
     const groups: Array<{ id: string; displayName: string | null }> = [];
     const seen = new Set<string>();
     let nextUrl = `${graphBaseUrl()}/groups?$select=id,displayName,securityEnabled&$top=200`;
-    const accessToken = await this.getManagedTenantAccessToken(input.tenant, input.managedTenantId);
 
     while (nextUrl) {
-      const response = await axios.get(nextUrl, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-        timeout: 20_000,
-      });
-      const payload = toObject(response.data);
+      const pageUrl = nextUrl;
+      const payload = await this.managedTenantGraphRequest(
+        input.tenant,
+        input.managedTenantId,
+        (accessToken) =>
+          axios.get(pageUrl, {
+            headers: { Authorization: `Bearer ${accessToken}` },
+            timeout: GRAPH_REQUEST_TIMEOUT_MS,
+          })
+      );
       const rows = Array.isArray(payload.value) ? payload.value : [];
       for (const row of rows) {
         const raw = toObject(row);
@@ -616,16 +685,19 @@ export class DirectProviderAdapter implements EntraProviderAdapter {
   }): Promise<boolean> {
     const encodedUser = encodeURIComponent(input.userEntraObjectId);
     const endpoint = `${graphBaseUrl()}/users/${encodedUser}/checkMemberGroups`;
-    const accessToken = await this.getManagedTenantAccessToken(input.tenant, input.managedTenantId);
-    const response = await axios.post(
-      endpoint,
-      { groupIds: [input.groupId] },
-      {
-        headers: { Authorization: `Bearer ${accessToken}` },
-        timeout: 20_000,
-      }
+    const payload = await this.managedTenantGraphRequest(
+      input.tenant,
+      input.managedTenantId,
+      (accessToken) =>
+        axios.post(
+          endpoint,
+          { groupIds: [input.groupId] },
+          {
+            headers: { Authorization: `Bearer ${accessToken}` },
+            timeout: GRAPH_REQUEST_TIMEOUT_MS,
+          }
+        )
     );
-    const payload = toObject(response.data);
     const values = Array.isArray(payload.value) ? payload.value : [];
     return values.some((value) => getNullableString(value) === input.groupId);
   }

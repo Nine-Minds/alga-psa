@@ -39,6 +39,27 @@ vi.mock('../../../actions/qboActions', () => ({
   setQboAutomatedSalesTaxMode: async (...args: unknown[]) => setQboAutomatedSalesTaxModeMock(...args),
 }));
 
+// The accounting-capability hook is exercised per-test through this mutable
+// state holder; default to a fully-capable user so the panels render their
+// content (an unauthenticated test session would otherwise show the
+// no-permission card).
+const accountingCapsState = vi.hoisted(() => ({
+  current: {
+    catalogRead: true,
+    connectionsManage: true,
+    mappingsManage: true,
+    exportsExecute: true,
+    remoteMutate: true,
+    hasAny: true,
+    loaded: true,
+  },
+}));
+
+vi.mock('./useAccountingCapabilities', () => ({
+  useAccountingCapabilities: () => accountingCapsState.current,
+}));
+
+
 const disconnectedStatus = {
   connected: false,
   connections: [],
@@ -62,6 +83,15 @@ const disconnectedStatus = {
 describe('QboIntegrationSettings contracts', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    accountingCapsState.current = {
+      catalogRead: true,
+      connectionsManage: true,
+      mappingsManage: true,
+      exportsExecute: true,
+      remoteMutate: true,
+      hasAny: true,
+      loaded: true,
+    };
     useSearchParamsMock.mockReturnValue(new URLSearchParams());
     getQboConnectionStatusMock.mockResolvedValue(disconnectedStatus);
     saveQboCredentialsMock.mockResolvedValue({ success: true });
@@ -100,6 +130,26 @@ describe('QboIntegrationSettings contracts', () => {
     await waitFor(() => {
       expect(screen.getByText('Sandbox')).toBeInTheDocument();
     });
+  });
+
+  it('shows the Accounting Exports link only with exports_execute', async () => {
+    const { default: QboIntegrationSettings } = await import('./QboIntegrationSettings');
+
+    render(<QboIntegrationSettings />);
+    expect(await screen.findByRole('link', { name: 'Open Accounting Exports' })).toHaveAttribute(
+      'href',
+      '/msp/billing?tab=accounting-exports',
+    );
+
+    cleanup();
+    accountingCapsState.current = {
+      ...accountingCapsState.current,
+      exportsExecute: false,
+    };
+    render(<QboIntegrationSettings />);
+
+    await waitFor(() => expect(getQboConnectionStatusMock).toHaveBeenCalled());
+    expect(screen.queryByRole('link', { name: 'Open Accounting Exports' })).not.toBeInTheDocument();
   });
 
   it('T052: shows Production environment badge when environment is production', async () => {

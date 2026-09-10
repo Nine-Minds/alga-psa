@@ -141,6 +141,8 @@
   },
   "usage": {
     "bucketHoursOverview": "Overzicht van bucketuren",
+    "bucketLoadError": "De saldi van de urenbundels konden niet worden geladen. Probeer het opnieuw om de huidige saldi te bekijken.",
+    "retryBucketBalances": "Saldi van urenbundels opnieuw laden",
     "usageRecords": "Gebruiksrecords",
     "actions": {
       "addUsage": "Gebruik toevoegen",
@@ -211,6 +213,12 @@
       "updateError": "Kan het gebruiksrecord niet bijwerken",
       "deleteSuccess": "Gebruiksrecord is succesvol verwijderd",
       "deleteError": "Kan gebruiksrecord niet verwijderen"
+    },
+    "periodReport": "Gebruiksrapport per periode",
+    "periodAlreadyInvoiced": "Deze periode is al gefactureerd. Corrigeer dit via het correctieproces voor facturen.",
+    "periodFilter": {
+      "notice": "Toont het gebruik voor de serviceperiode {{start}} tot {{end}}",
+      "clear": "Wissen"
     }
   },
   "lineItem": {
@@ -387,7 +395,10 @@
       "loadingBatches": "Batch laden...",
       "empty": "Nog geen exportbatches.",
       "loadingDetails": "Batchgegevens laden...",
-      "batchNotFound": "Partij niet gevonden."
+      "batchNotFound": "Partij niet gevonden.",
+      "checkingAccess": "Toegang controleren...",
+      "accessDeniedTitle": "Toegang geweigerd",
+      "accessDeniedDescription": "U hebt geen toestemming om toegang te krijgen tot boekhoudexporten."
     },
     "createDialog": {
       "title": "Nieuwe boekhoudkundige export",
@@ -663,7 +674,9 @@
     },
     "recurringRun": {
       "selectPeriods": "Selecteer minstens één terugkerende factuurperiode om te genereren.",
-      "invoicePermission": "Toestemming geweigerd: rechten voor het aanmaken of genereren van facturen vereist"
+      "invoicePermission": "Toestemming geweigerd: rechten voor het aanmaken of genereren van facturen vereist",
+      "monthEndCloseNotMaterialized": "Er zijn geen terugkerende serviceperioden gematerialiseerd voor dit terugkerende uitvoeringsvenster.",
+      "monthEndCloseNotEligible": "De periode {{servicePeriod}} kan alleen aan het einde van de maand worden afgesloten op {{finalCalendarDay}}. Alleen achteraf gefactureerde serviceperioden die een volledige kalendermaand beslaan, kunnen vroegtijdig worden afgesloten op hun laatste kalenderdag."
     },
     "recurringServicePeriod": {
       "scheduleKeyRequiredInspect": "Er is een planningssleutel vereist om terugkerende serviceperioden te bekijken.",
@@ -689,8 +702,10 @@
         "setDefault": "Toestemming geweigerd: het standaarddocumentsjabloon kan niet worden ingesteld",
         "clearOverride": "Toestemming geweigerd: de overschrijving van het documentsjabloon kan niet worden gewist",
         "delete": "Toestemming geweigerd: documentsjablonen kunnen niet worden verwijderd",
-        "preview": "Toestemming geweigerd: documentsjablonen kunnen niet worden voorvertoond"
-      }
+        "preview": "Toestemming geweigerd: documentsjablonen kunnen niet worden voorvertoond",
+        "readSalesOrders": "Toegang geweigerd: verkooporders kunnen niet worden gelezen"
+      },
+      "existingNotFound": "Document niet gevonden."
     },
     "billingProfile": {
       "periodOrder": "Kies een periode waarvan de start op of vóór het einde ligt.",

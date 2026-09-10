@@ -31,6 +31,9 @@ import {
 import { evaluateTemplateAst } from '../lib/invoice-template-ast/evaluator';
 import { INVOICE_TEMPLATE_BINDING_ALIASES } from '../lib/invoice-template-ast/bindingAliases';
 import { renderTemplateAstHtmlDocument } from '../lib/invoice-template-ast/server-render';
+import { fetchTenantParty } from '../lib/adapters/tenantPartyAdapter';
+import { mapDbSalesOrderToViewModel } from '../lib/adapters/salesOrderAdapters';
+import { overlaySalesOrderSampleTenant } from '../components/invoice-designer/preview/tenantBrandingOverlay';
 
 /**
  * Generic, document-type-keyed template management (Approach C). One set of actions serves every
@@ -48,6 +51,10 @@ type DeleteDocumentTemplateResult =
   | { success: false; error: string }
   | DocumentTemplateActionError;
 type PreviewDocumentTemplateResult = { html: string } | DocumentTemplateActionError;
+type ExistingDocumentOption = { value: string; label: string };
+type ExistingDocumentOptionsResult =
+  | { options: ExistingDocumentOption[]; total: number }
+  | DocumentTemplateActionError;
 
 function resolveDocumentType(documentType: string): DocumentType | ActionMessageError {
   if (!isDocumentType(documentType)) {
@@ -183,16 +190,75 @@ export const deleteDocumentTemplate = withAuth(
 );
 
 /**
+ * Existing documents an author can preview a layout against. Every registered type renders from
+ * sales order data (packing slip and pick list reuse the SO model), so one lookup serves them all.
+ */
+export const listExistingDocumentsForPreview = withAuth(
+  async (
+    user,
+    { tenant },
+    documentType: string,
+    params?: { search?: string; page?: number; pageSize?: number },
+  ): Promise<ExistingDocumentOptionsResult> => {
+    if (!(await hasPermission(user as any, 'billing', 'read'))) {
+      return permissionError('Permission denied: cannot preview document templates', 'msp/billing:errors.documentTemplate.permissions.preview');
+    }
+    if (!(await hasPermission(user as any, 'sales_order', 'read'))) {
+      return permissionError('Permission denied: cannot read sales orders', 'msp/billing:errors.documentTemplate.permissions.readSalesOrders');
+    }
+    const type = resolveDocumentType(documentType);
+    if (typeof type !== 'string') {
+      return type;
+    }
+
+    const page = Math.max(1, params?.page ?? 1);
+    const pageSize = Math.min(Math.max(1, params?.pageSize ?? 10), 50);
+    const { knex } = await createTenantKnex();
+    const baseQuery = knex('sales_orders as so')
+      .leftJoin('clients as c', function () {
+        this.on('c.client_id', '=', 'so.client_id').andOn('c.tenant', '=', 'so.tenant');
+      })
+      .where('so.tenant', tenant);
+
+    const search = params?.search?.trim();
+    if (search) {
+      const pattern = `%${search.replace(/[%_\\]/g, (match) => `\\${match}`)}%`;
+      baseQuery.andWhere((builder) => {
+        builder.whereILike('so.so_number', pattern).orWhereILike('c.client_name', pattern);
+      });
+    }
+
+    const totalRow = await baseQuery.clone().count<{ count: string }>('so.so_id as count').first();
+    const rows = await baseQuery
+      .clone()
+      .select('so.so_id', 'so.so_number', 'c.client_name')
+      .orderBy('so.created_at', 'desc')
+      .limit(pageSize)
+      .offset((page - 1) * pageSize);
+
+    return {
+      options: rows.map((row: { so_id: string; so_number: string; client_name?: string | null }) => ({
+        value: row.so_id,
+        label: row.client_name ? `${row.so_number} · ${row.client_name}` : row.so_number,
+      })),
+      total: Number(totalRow?.count ?? 0),
+    };
+  },
+);
+
+/**
  * Render a template AST against the type's representative sample model — the authoritative preview
- * the editor shows (same evaluate + render path as the live document).
+ * the editor shows (same evaluate + render path as the live document). Pass an existing document id
+ * to render the layout against that real document instead of the sample.
  */
 export const runAuthoritativeTemplatePreview = withAuth(
   async (
     user,
-    { tenant: _tenant },
+    { tenant },
     documentType: string,
     templateAst: TemplateAst,
     locale?: string,
+    existingDocumentId?: string | null,
   ): Promise<PreviewDocumentTemplateResult> => {
     if (!(await hasPermission(user as any, 'billing', 'read'))) {
       return permissionError('Permission denied: cannot preview document templates', 'msp/billing:errors.documentTemplate.permissions.preview');
@@ -201,9 +267,28 @@ export const runAuthoritativeTemplatePreview = withAuth(
     if (typeof type !== 'string') {
       return type;
     }
-    const sample = getDocumentTypeRegistryEntry(type).buildSampleViewModel();
     const { knex } = await createTenantKnex();
-    const evaluation = evaluateTemplateAst(templateAst, sample, {
+
+    let previewModel: Record<string, unknown>;
+    if (existingDocumentId) {
+      if (!(await hasPermission(user as any, 'sales_order', 'read'))) {
+        return permissionError('Permission denied: cannot read sales orders', 'msp/billing:errors.documentTemplate.permissions.readSalesOrders');
+      }
+      // A real document already carries the tenant's branding from the render adapter.
+      const existing = await mapDbSalesOrderToViewModel(knex, tenant, existingDocumentId);
+      if (!existing) {
+        return actionError('Document not found.', 'msp/billing:errors.documentTemplate.existingNotFound');
+      }
+      previewModel = existing as unknown as Record<string, unknown>;
+    } else {
+      const sample = getDocumentTypeRegistryEntry(type).buildSampleViewModel();
+      // Show the tenant's real "Your Company" branding on the sample, resolved through the same adapter
+      // the live document uses. Null branding keeps the sample's synthetic issuer.
+      const tenantParty = await fetchTenantParty(knex, tenant).catch(() => null);
+      previewModel = overlaySalesOrderSampleTenant(sample, tenantParty);
+    }
+
+    const evaluation = evaluateTemplateAst(templateAst, previewModel, {
       bindingAliases: INVOICE_TEMPLATE_BINDING_ALIASES,
     });
     const html = await renderTemplateAstHtmlDocument(templateAst, evaluation, {

@@ -1,11 +1,10 @@
 'use client';
 
 /**
- * Project task detail "Passwords" section wrapper (flag-gated).
+ * Project task detail "Passwords" section wrapper.
  *
  * The per-entity credentials section embed for project tasks, mirroring the
- * asset/ticket/contact/document embeds. Flag off renders nothing (the task
- * surface keeps its exact legacy layout); flag on loads the EE/CE
+ * asset/ticket/contact/document embeds. Loads the EE/CE
  * EntityCredentialsSection via `@enterprise` scoped to this task.
  *
  * // LEVERAGE: pattern entity-attachments — the per-entity section embeds
@@ -16,7 +15,6 @@
 
 import React from 'react';
 import dynamic from 'next/dynamic';
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
 
 interface TaskCredentialsSectionProps {
   taskId: string;
@@ -36,13 +34,6 @@ const VaultEntityCredentialsSection = dynamic(
 );
 
 export function TaskCredentialsSection({ taskId, clientId }: TaskCredentialsSectionProps) {
-  const releaseFlag = useFeatureFlag('release-v1-5-feature', { defaultValue: false });
-  const flagEnabled = typeof releaseFlag === 'boolean' ? releaseFlag : releaseFlag?.enabled ?? false;
-
-  if (!flagEnabled) {
-    return null;
-  }
-
   return (
     <VaultEntityCredentialsSection
       entityType="project_task"

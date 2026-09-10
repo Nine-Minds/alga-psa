@@ -299,8 +299,7 @@ test('T032: Invoicing Hub bulk-approves ready entries and hides invoice-now for 
   await expect(page.locator(`[data-automation-id="project-billing-approve-invoice-${firstId}"]`)).toHaveCount(0);
   await page.keyboard.press('Escape');
   await page.locator('[data-automation-id="select-all-project-billing"]').click();
-  await page.locator('[data-automation-id="project-billing-bulk-actions-trigger"]').click();
-  await page.locator('[data-automation-id="project-billing-bulk-approve"]').click();
+  await page.locator('[data-automation-id="project-billing-bulk-action-bar-approve-button"]').click();
 
   await expect(page.locator(`[data-automation-id="project-billing-select-${firstId}"]`)).toHaveCount(0, { timeout: 30_000 });
   await expect(page.locator(`[data-automation-id="project-billing-select-${secondId}"]`)).toHaveCount(0);

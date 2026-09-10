@@ -21,6 +21,46 @@ const getQboAccountsMock = vi.hoisted(() => vi.fn());
 const getQboClassesMock = vi.hoisted(() => vi.fn());
 const getQboDepartmentsMock = vi.hoisted(() => vi.fn());
 
+// The capability hook (imported from the integrations package settings module)
+// is controlled per-test through this mutable state holder.
+const capabilitiesState = vi.hoisted(() => ({
+  current: {
+    catalogRead: true,
+    connectionsManage: true,
+    mappingsManage: true,
+    exportsExecute: true,
+    remoteMutate: true,
+    hasAny: true,
+    loaded: true,
+  },
+}));
+
+vi.mock('@alga-psa/integrations/components/settings/integrations/useAccountingCapabilities', () => ({
+  useAccountingCapabilities: () => capabilitiesState.current,
+}));
+
+const fullCaps = {
+  catalogRead: true,
+  connectionsManage: true,
+  mappingsManage: true,
+  exportsExecute: true,
+  remoteMutate: true,
+  hasAny: true,
+  loaded: true,
+};
+
+// Finance-like: read/export capabilities but no connection administration and
+// no remote destructive access.
+const financeCaps = {
+  catalogRead: true,
+  connectionsManage: false,
+  mappingsManage: true,
+  exportsExecute: true,
+  remoteMutate: false,
+  hasAny: true,
+  loaded: true,
+};
+
 vi.mock('next/navigation', () => ({
   useSearchParams: useSearchParamsMock,
 }));
@@ -122,6 +162,7 @@ describe('QboSyncHealthPanel contracts', () => {
     getQboAccountsMock.mockResolvedValue([]);
     getQboClassesMock.mockResolvedValue([]);
     getQboDepartmentsMock.mockResolvedValue([]);
+    capabilitiesState.current = fullCaps;
   });
 
   afterEach(() => {
@@ -401,5 +442,55 @@ describe('QboSyncHealthPanel contracts', () => {
     await waitFor(() => {
       expect(updateAccountingSyncSettingsActionMock).toHaveBeenCalledWith({ autoProvisionCustomers: true });
     });
+  });
+
+  it('T083: a Finance-like user (catalog_read + exports_execute, no connections_manage) is not shown connection-admin controls', async () => {
+    capabilitiesState.current = financeCaps;
+    const multiRealmHealth = {
+      ...healthConnected,
+      realms: [
+        { realmId: 'realm-1', isDefault: true },
+        { realmId: 'realm-2', isDefault: false }
+      ]
+    };
+    getAccountingSyncHealthMock.mockImplementation(async () => multiRealmHealth);
+
+    const { default: QboSyncHealthPanel } = await import('./QboSyncHealthPanel');
+    render(<QboSyncHealthPanel />);
+
+    await waitFor(() => {
+      expect(document.getElementById('qbo-integration-sync-health-card')).toBeInTheDocument();
+    });
+    await waitFor(() => {
+      expect(document.getElementById('qbo-realm-list')).toBeInTheDocument();
+    });
+
+    // Read-only health surface stays.
+    expect(document.getElementById('qbo-integration-sync-health-card')).toBeInTheDocument();
+    // Connection-administration controls are hidden.
+    expect(document.getElementById('qbo-sync-config-section')).not.toBeInTheDocument();
+    expect(document.getElementById('qbo-sync-auto-sync-toggle')).not.toBeInTheDocument();
+    expect(document.getElementById('qbo-sync-auto-provision-toggle')).not.toBeInTheDocument();
+    // The non-default realm has no "Make default" button for this user.
+    expect(screen.queryByRole('button', { name: 'Make default' })).not.toBeInTheDocument();
+    // Export execution is still available (exports_execute).
+    const syncNowButton = screen.getByRole('button', { name: 'Sync Now' }) as HTMLButtonElement;
+    expect(syncNowButton).not.toBeNull();
+    expect(syncNowButton.disabled).toBe(false);
+  });
+
+  it('T084: Sync Now is disabled for a user without exports_execute', async () => {
+    capabilitiesState.current = { ...fullCaps, exportsExecute: false };
+
+    const { default: QboSyncHealthPanel } = await import('./QboSyncHealthPanel');
+    render(<QboSyncHealthPanel />);
+
+    await waitFor(() => {
+      expect(document.getElementById('qbo-integration-sync-health-card')).toBeInTheDocument();
+    });
+
+    const syncNowButton = screen.getByRole('button', { name: 'Sync Now' }) as HTMLButtonElement;
+    expect(syncNowButton).not.toBeNull();
+    expect(syncNowButton.disabled).toBe(true);
   });
 });

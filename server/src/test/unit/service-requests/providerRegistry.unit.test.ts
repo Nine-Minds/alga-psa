@@ -23,7 +23,7 @@ describe('service request provider registry', () => {
     const visibilityKeys = listServiceRequestVisibilityProviders().map((provider) => provider.key);
     const templateKeys = listServiceRequestTemplateProviders().map((provider) => provider.key);
 
-    expect(executionKeys).toEqual(['ticket-only']);
+    expect(executionKeys).toEqual(['ticket-only', 'store-only']);
     expect(formBehaviorKeys).toEqual(['basic']);
     expect(visibilityKeys).toEqual(['all-authenticated-client-users']);
     expect(templateKeys).toEqual(['ce-starter-pack']);
@@ -31,6 +31,7 @@ describe('service request provider registry', () => {
 
   it('T004: provider lookup by key resolves built-ins', () => {
     expect(getServiceRequestExecutionProvider('ticket-only')).toBeDefined();
+    expect(getServiceRequestExecutionProvider('store-only')).toBeDefined();
     expect(getServiceRequestFormBehaviorProvider('basic')).toBeDefined();
     expect(getServiceRequestVisibilityProvider('all-authenticated-client-users')).toBeDefined();
     expect(getServiceRequestTemplateProvider('ce-starter-pack')).toBeDefined();
@@ -72,6 +73,6 @@ describe('service request provider registry', () => {
     const registrations = await loadEnterpriseServiceRequestProviderRegistrations();
 
     expect(registrations).toBeNull();
-    expect(listServiceRequestExecutionProviders().map((provider) => provider.key)).toEqual(['ticket-only']);
+    expect(listServiceRequestExecutionProviders().map((provider) => provider.key)).toEqual(['ticket-only', 'store-only']);
   });
 });

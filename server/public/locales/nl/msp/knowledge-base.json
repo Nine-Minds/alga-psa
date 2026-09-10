@@ -88,18 +88,38 @@
     "dialogs": {
       "archive": {
         "title": "Artikel archiveren",
-        "message": "Weet u zeker dat u \"{{title}}\" wilt archiveren? Hierdoor wordt het verwijderd uit de zichtbaarheid van de klant."
+        "message": "Weet u zeker dat u \"{{title}}\" wilt archiveren? Hierdoor wordt het verwijderd uit de zichtbaarheid van de klant.",
+        "titleMultiple": "{{count}} artikel(en) archiveren",
+        "messageMultiple": "Weet u zeker dat u {{count}} artikel(en) wilt archiveren? Ze zijn dan niet meer zichtbaar voor klanten."
       },
       "delete": {
         "title": "Artikel verwijderen",
-        "message": "Weet u zeker dat u \"{{title}}\" permanent wilt verwijderen? Dit verwijdert het artikel en de inhoud en kan niet ongedaan worden gemaakt."
+        "message": "Weet u zeker dat u \"{{title}}\" permanent wilt verwijderen? Dit verwijdert het artikel en de inhoud en kan niet ongedaan worden gemaakt.",
+        "titleMultiple": "{{count}} artikel(en) verwijderen",
+        "messageMultiple": "Weet u zeker dat u {{count}} artikel(en) permanent wilt verwijderen? De artikelen en hun inhoud worden verwijderd en dit kan niet ongedaan worden gemaakt.",
+        "skippedNotice": "{{count}} geselecteerde artikel(en) zijn gepubliceerd of in beoordeling en worden overgeslagen — archiveer ze eerst."
       }
     },
     "feedback": {
       "archiveError": "Kan het artikel niet archiveren",
       "archiveSuccess": "Artikel gearchiveerd",
       "deleteError": "Kan artikel niet verwijderen",
-      "deleteSuccess": "Artikel permanent verwijderd"
+      "deleteSuccess": "Artikel permanent verwijderd",
+      "bulkArchiveSuccess": "{{count}} artikel(en) gearchiveerd",
+      "bulkArchiveError": "Archiveren van {{count}} artikel(en) mislukt",
+      "bulkArchivePartial": "{{count}} artikel(en) gearchiveerd; {{failed}} konden niet worden gearchiveerd",
+      "bulkDeleteSuccess": "{{count}} artikel(en) permanent verwijderd",
+      "bulkDeleteError": "Verwijderen van {{count}} artikel(en) mislukt",
+      "bulkDeletePartial": "{{count}} artikel(en) verwijderd; {{failed}} konden niet worden verwijderd",
+      "deleteNotAllowed": "Gepubliceerde artikelen of artikelen in beoordeling moeten eerst worden gearchiveerd voordat ze kunnen worden verwijderd"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} geselecteerd",
+        "archive": "Archiveren",
+        "delete": "Verwijderen",
+        "clear": "Selectie wissen"
+      }
     }
   },
   "editor": {

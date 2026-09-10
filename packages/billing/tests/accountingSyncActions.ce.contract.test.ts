@@ -19,7 +19,7 @@ describe('CE invoice sync-status capability probe', () => {
 
     expect(statusAction).toContain('if (!isEnterpriseEdition())');
     expect(statusAction).toContain('return {};');
-    expect(statusAction.indexOf('return {};')).toBeLessThan(statusAction.indexOf('checkBillingReadAccess'));
+    expect(statusAction.indexOf('return {};')).toBeLessThan(statusAction.indexOf('checkCatalogReadAccess'));
     expect(statusAction).not.toContain('assertEnterpriseEdition();');
   });
 

@@ -1,0 +1,6 @@
+Config_RecID,Company_RecID,Config_Name,Config_Type,Serial_Nbr,Manufacturer_Name,Model_Nbr,Purchase_Date
+601,101,Reception Workstation,Workstation,NW-WS-0001,Dell,OptiPlex 7010,3/15/2023
+602,101,Edge Firewall,Firewall,NW-FW-0001,Fortinet,FortiGate 60F,8/2/2022
+603,102,Office Switch,Switch,BB-SW-0001,Ubiquiti,USW-24-POE,11/20/2023
+604,103,Roastery NAS,Storage,HC-NAS-0001,Synology,DS923+,2024-05-06
+605,103,POS Terminal,Point of Sale,HC-POS-0001,Elo,E2 Series,6/30/2024

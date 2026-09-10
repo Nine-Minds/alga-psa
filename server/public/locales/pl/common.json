@@ -237,6 +237,7 @@
     },
     "sso": {
       "signInWithMicrosoft": "Zaloguj się za pomocą konta Microsoft",
+      "signInWithKeycloak": "Zaloguj się za pomocą Keycloak",
       "signInWithGoogle": "Zaloguj się za pomocą konta Google",
       "redirecting": "Przekierowywanie...",
       "startFailed": "Nie udało się rozpocząć logowania SSO. Sprawdź konfigurację dostawcy i spróbuj ponownie."
@@ -575,7 +576,11 @@
     "expand": "Rozwiń",
     "showInDrawer": "Pokaż w panelu",
     "replies_few": "{{count}} odpowiedzi",
-    "replies_many": "{{count}} odpowiedzi"
+    "replies_many": "{{count}} odpowiedzi",
+    "showEarlierReplies_one": "Pokaż {{count}} wcześniejszą odpowiedź",
+    "showEarlierReplies_other": "Pokaż {{count}} wcześniejszych odpowiedzi",
+    "showEarlierReplies_few": "Pokaż {{count}} wcześniejsze odpowiedzi",
+    "showEarlierReplies_many": "Pokaż {{count}} wcześniejszych odpowiedzi"
   },
   "pagination": {
     "previous": "Poprzednia",
@@ -1624,6 +1629,26 @@
     "usedOrders": "Zajęte numery kolejności: {{orders}}",
     "noUsedOrders": "Żaden numer kolejności nie jest jeszcze zajęty",
     "markClosed": "Oznacz jako status zamknięty",
-    "setDefault": "Ustaw jako domyślny status nowych zgłoszeń"
+    "setDefault": "Ustaw jako domyślny status nowych elementów",
+    "defaultClosedHelp": "Status zamknięty nie może być domyślny dla nowych elementów."
+  },
+  "callLink": {
+    "teamsCall": "Zadzwoń w Microsoft Teams"
+  },
+  "editor": {
+    "attachFiles": "Załącz pliki",
+    "uploadingFiles": "Przesyłanie plików…",
+    "fileUploadFailed": "Nie udało się przesłać pliku."
+  },
+  "emailPreferences": {
+    "loading": "Ładowanie preferencji e-mail…",
+    "saving": "Zapisywanie preferencji e-mail…",
+    "slow": "To trwa dłużej niż zwykle. Poczekaj na potwierdzenie przed wprowadzeniem kolejnych zmian.",
+    "loadError": "Nie udało się wczytać zapisanych preferencji e-mail. Spróbuj ponownie, aby potwierdzić ustawienia.",
+    "saveError": "Nie udało się potwierdzić zapisu. Sprawdź zapisane preferencje i spróbuj ponownie.",
+    "retry": "Spróbuj ponownie",
+    "disabledByAdmin": "Wyłączone przez administratora",
+    "mixed": "Częściowo włączone",
+    "empty": "Brak kategorii powiadomień e-mail."
   }
 }

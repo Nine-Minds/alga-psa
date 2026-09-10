@@ -21,10 +21,13 @@
       "channels": "Channels"
     },
     "contacts": "Contacts",
+    "interactions": "Interactions",
     "documents": "Documents",
     "documentsAll": "All Documents",
     "knowledgeBase": "Knowledge Base",
     "assets": "Assets",
+    "assetsAll": "All Assets",
+    "assetsMaintenance": "Maintenance",
     "passwords": "Passwords",
     "inventory": {
       "label": "Inventory",
@@ -463,7 +466,8 @@
     "collapseSidebar": "Collapse sidebar",
     "collapseSection": "Collapse {{section}}",
     "expandSection": "Expand {{section}}",
-    "appLogoAlt": "{{appName}} Logo"
+    "appLogoAlt": "{{appName}} Logo",
+    "poweredBy": "Powered by"
   },
   "settings": {
     "sections": {
@@ -485,6 +489,7 @@
       "ticketing": "Ticketing",
       "sla": "SLA",
       "projects": "Projects",
+      "assets": "Assets",
       "interactions": "Interactions",
       "opportunities": "Opportunities",
       "notifications": "Notifications",
@@ -552,6 +557,12 @@
           "description": "Add a new product to your catalog"
         }
       }
+    },
+    "resources": {
+      "ariaLabel": "Resources and help",
+      "title": "Resources",
+      "documentation": "Documentation",
+      "support": "Contact Support"
     },
     "jobs": {
       "ariaLabel": "View background job activity",

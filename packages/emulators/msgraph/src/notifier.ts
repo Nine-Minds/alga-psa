@@ -1,6 +1,38 @@
+import { EMULATED_TENANT_ID } from './core';
 import type { HostEnv } from '@alga-psa/emulator-host';
 import { signBotFrameworkJwt } from './botFramework';
-import type { GraphMessage, GraphSubscription, InboundBotActivityInput, MsGraphCore } from './core';
+import type {
+  GraphCallRecord,
+  GraphCalendarEvent,
+  GraphMeetingArtifact,
+  GraphMessage,
+  GraphSubscription,
+  InboundBotActivityInput,
+  MsGraphCore,
+} from './core';
+
+// The emulator's OAuth tokens and notifications use the same single Entra tenant.
+function subscriptionMetadata(subscription: GraphSubscription) {
+  return {
+    subscriptionId: subscription.id,
+    subscriptionExpirationDateTime: subscription.expirationDateTime,
+    tenantId: EMULATED_TENANT_ID,
+    clientState: subscription.clientState,
+  };
+}
+
+const ARTIFACT_SUBSCRIPTION_RESOURCES = {
+  recording: 'communications/onlineMeetings/getAllRecordings',
+  transcript: 'communications/onlineMeetings/getAllTranscripts',
+} as const;
+
+export const CALL_RECORDS_SUBSCRIPTION_RESOURCE = 'communications/callRecords';
+
+/** Every resource that must never receive a plain mailbox notification. */
+const SCOPED_SUBSCRIPTION_RESOURCES = new Set<string>([
+  ...Object.values(ARTIFACT_SUBSCRIPTION_RESOURCES),
+  CALL_RECORDS_SUBSCRIPTION_RESOURCE,
+]);
 
 /**
  * Webhook I/O lives here, outside the pure core: Graph's subscription
@@ -11,33 +43,199 @@ import type { GraphMessage, GraphSubscription, InboundBotActivityInput, MsGraphC
  * redirecting notificationUrl pass here and fail in production.
  */
 export async function validateNotificationUrl(notificationUrl: string, validationToken: string): Promise<boolean> {
-  const url = new URL(notificationUrl);
-  url.searchParams.set('validationToken', validationToken);
   try {
-    const response = await fetch(url, { method: 'POST', redirect: 'manual' });
-    return response.ok && (await response.text()) === validationToken;
+    const url = new URL(notificationUrl);
+    url.searchParams.set('validationToken', validationToken);
+    const response = await fetch(url, {
+      method: 'POST', redirect: 'manual', signal: AbortSignal.timeout(10000),
+      headers: { 'content-type': 'text/plain; charset=utf-8' },
+    });
+    const mediaType = response.headers.get('content-type')?.split(';', 1)[0].trim().toLowerCase();
+    return response.status === 200 && mediaType === 'text/plain' && (await response.text()) === validationToken;
   } catch {
     return false;
   }
 }
 
-export async function deliverNotifications(core: MsGraphCore, message: GraphMessage, env: HostEnv): Promise<void> {
-  await Promise.all(
-    core.activeSubscriptions().map((subscription) => deliverOne(subscription, message, env)),
+export async function deliverNotifications(core: MsGraphCore, message: GraphMessage, env: HostEnv): Promise<ArtifactNotificationDelivery[]> {
+  // Mail notifications must not reach meeting-artifact or call-record
+  // subscriptions: real Graph scopes change notifications to the subscribed
+  // resource.
+  return Promise.all(
+    core.activeSubscriptions()
+      .filter((subscription) => !SCOPED_SUBSCRIPTION_RESOURCES.has(subscription.resource) && /\/messages$/i.test(subscription.resource) &&
+        subscription.changeType.split(',').some(change => change.trim() === 'created'))
+      .map((subscription) => deliverOne(subscription, message, env)),
   );
 }
 
-async function deliverOne(subscription: GraphSubscription, message: GraphMessage, env: HostEnv): Promise<void> {
+export interface ArtifactNotificationDelivery {
+  subscriptionId: string;
+  notificationUrl: string;
+  delivered: boolean;
+  status: number | null;
+  error?: string;
+}
+
+/** Deliver only matching calendar resources/change types, never mailbox events. */
+export async function deliverCalendarNotifications(
+  core: MsGraphCore, event: GraphCalendarEvent, changeType: 'created' | 'updated' | 'deleted', env: HostEnv,
+): Promise<ArtifactNotificationDelivery[]> {
+  const resources = new Set([`users/${event.organizerUserId}/events`, `users/${event.organizerUserId}/calendar/events`]);
+  if (event.organizerUserId === 'emulated-user') {
+    resources.add('me/events');
+    resources.add('me/calendar/events');
+  }
+  const subscriptions = core.activeSubscriptions().filter(subscription =>
+    resources.has(subscription.resource.replace(/^\//, '')) &&
+    subscription.changeType.split(',').map(value => value.trim()).includes(changeType)
+  );
+  return Promise.all(subscriptions.map(async subscription => {
+    const resource = `${subscription.resource.replace(/^\//, '')}/${event.id}`;
+    try {
+      const response = await fetch(subscription.notificationUrl, {
+        method: 'POST', redirect: 'manual', signal: AbortSignal.timeout(10000),
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ value: [{ ...subscriptionMetadata(subscription),
+          changeType, resource, resourceData: { id: event.id, '@odata.type': '#Microsoft.Graph.Event', '@odata.id': resource } }] }),
+      });
+      return { subscriptionId: subscription.id, notificationUrl: subscription.notificationUrl, delivered: response.ok, status: response.status };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      env.log('msgraph calendar notification delivery failed', { subscriptionId: subscription.id, error: message });
+      return { subscriptionId: subscription.id, notificationUrl: subscription.notificationUrl, delivered: false, status: null, error: message };
+    }
+  }));
+}
+
+/**
+ * Push a Graph change notification for a new recording/transcript at every live
+ * getAllRecordings/getAllTranscripts subscription, the way real Graph notifies
+ * the app's /api/teams/webhooks/recordings endpoint. The resource string uses
+ * the onlineMeetings('{id}')/kind('{id}') shape the app's parser expects.
+ */
+export async function deliverMeetingArtifactNotifications(
+  core: MsGraphCore,
+  artifact: GraphMeetingArtifact,
+  env: HostEnv,
+): Promise<ArtifactNotificationDelivery[]> {
+  const resource = ARTIFACT_SUBSCRIPTION_RESOURCES[artifact.kind];
+  const kindSegment = artifact.kind === 'recording' ? 'recordings' : 'transcripts';
+  const subscriptions = core.activeSubscriptions().filter((subscription) => subscription.resource === resource);
+
+  return Promise.all(subscriptions.map(async (subscription): Promise<ArtifactNotificationDelivery> => {
+    const body = {
+      value: [
+        {
+          ...subscriptionMetadata(subscription),
+          changeType: 'created',
+          resource: `communications/onlineMeetings('${artifact.meetingId}')/${kindSegment}('${artifact.id}')`,
+          resourceData: {
+            id: artifact.id,
+            '@odata.id': `communications/onlineMeetings('${artifact.meetingId}')/${kindSegment}('${artifact.id}')`,
+          },
+        },
+      ],
+    };
+    try {
+      const response = await fetch(subscription.notificationUrl, {
+        method: 'POST',
+        redirect: 'manual',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      return {
+        subscriptionId: subscription.id,
+        notificationUrl: subscription.notificationUrl,
+        delivered: response.ok,
+        status: response.status,
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      env.log('msgraph artifact notification delivery failed', {
+        subscriptionId: subscription.id,
+        error: message,
+      });
+      return {
+        subscriptionId: subscription.id,
+        notificationUrl: subscription.notificationUrl,
+        delivered: false,
+        status: null,
+        error: message,
+      };
+    }
+  }));
+}
+
+/**
+ * Push a Graph change notification for a completed call at every live
+ * communications/callRecords subscription, the way real Graph notifies the
+ * app's /api/telephony/webhooks/teams-calls endpoint. The resource string uses
+ * the callRecords('{id}') shape the app's parser expects.
+ */
+export async function deliverCallRecordNotifications(
+  core: MsGraphCore,
+  record: GraphCallRecord,
+  env: HostEnv,
+): Promise<ArtifactNotificationDelivery[]> {
+  const subscriptions = core.activeSubscriptions()
+    .filter((subscription) => subscription.resource === CALL_RECORDS_SUBSCRIPTION_RESOURCE);
+
+  return Promise.all(subscriptions.map(async (subscription): Promise<ArtifactNotificationDelivery> => {
+    const body = {
+      value: [
+        {
+          ...subscriptionMetadata(subscription),
+          changeType: 'created',
+          resource: `communications/callRecords('${record.id}')`,
+          resourceData: {
+            id: record.id,
+            '@odata.id': `communications/callRecords('${record.id}')`,
+          },
+        },
+      ],
+    };
+    try {
+      const response = await fetch(subscription.notificationUrl, {
+        method: 'POST',
+        redirect: 'manual',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      return {
+        subscriptionId: subscription.id,
+        notificationUrl: subscription.notificationUrl,
+        delivered: response.ok,
+        status: response.status,
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      env.log('msgraph call record notification delivery failed', {
+        subscriptionId: subscription.id,
+        error: message,
+      });
+      return {
+        subscriptionId: subscription.id,
+        notificationUrl: subscription.notificationUrl,
+        delivered: false,
+        status: null,
+        error: message,
+      };
+    }
+  }));
+}
+
+async function deliverOne(subscription: GraphSubscription, message: GraphMessage, env: HostEnv): Promise<ArtifactNotificationDelivery> {
   try {
-    await fetch(subscription.notificationUrl, {
+    const response = await fetch(subscription.notificationUrl, {
       method: 'POST',
       redirect: 'manual',
+      signal: AbortSignal.timeout(10000),
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
         value: [
           {
-            subscriptionId: subscription.id,
-            clientState: subscription.clientState,
+            ...subscriptionMetadata(subscription),
             changeType: 'created',
             resource: `${subscription.resource}/${message.id}`,
             resourceData: { id: message.id },
@@ -45,11 +243,14 @@ async function deliverOne(subscription: GraphSubscription, message: GraphMessage
         ],
       }),
     });
+    return { subscriptionId: subscription.id, notificationUrl: subscription.notificationUrl, delivered: response.ok, status: response.status };
   } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
     env.log('msgraph notification delivery failed', {
       subscriptionId: subscription.id,
-      error: error instanceof Error ? error.message : String(error),
+      error: message,
     });
+    return { subscriptionId: subscription.id, notificationUrl: subscription.notificationUrl, delivered: false, status: null, error: message };
   }
 }
 

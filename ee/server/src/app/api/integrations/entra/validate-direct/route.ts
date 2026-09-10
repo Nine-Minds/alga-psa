@@ -26,12 +26,12 @@ export async function POST(): Promise<Response> {
       connectionType: 'direct',
       status: 'validation_failed',
       snapshot: {
-        message: 'Microsoft OAuth credentials are not configured for direct Entra connection.',
-        code: 'missing_credentials',
+        message: 'Select the Microsoft app registration to use for Entra, then reconnect.',
+        code: 'missing_profile_binding',
         checkedAt: new Date().toISOString(),
       },
     });
-    return badRequest('Microsoft OAuth credentials are not configured for direct Entra connection.');
+    return badRequest('Select the Microsoft app registration to use for Entra, then reconnect.');
   }
 
   const secretProvider = await getSecretProviderInstance();

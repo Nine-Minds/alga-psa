@@ -773,14 +773,6 @@ export default function AccountManagement({ selectedAddOn }: AccountManagementPr
       activeBody: t('aiAssistant.activeBody'),
     },
     {
-      addOn: ADD_ONS.TEAMS,
-      description: 'Connect AlgaPSA to Microsoft Teams with the personal tab, bot, message extension, quick actions, and activity notifications.',
-      addTitle: 'Add Microsoft Teams',
-      addBody: 'Purchase the Teams add-on to activate Microsoft Teams integration for this tenant.',
-      activeTitle: 'Teams add-on active',
-      activeBody: 'Microsoft Teams integration is available for this tenant.',
-    },
-    {
       addOn: ADD_ONS.ENTERPRISE,
       description: 'Activate Microsoft Entra Sync for tenant discovery, client mapping, contact synchronization, field sync, and reconciliation workflows.',
       addTitle: 'Add Enterprise',

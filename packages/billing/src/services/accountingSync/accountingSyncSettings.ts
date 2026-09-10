@@ -149,3 +149,19 @@ export async function resolveDefaultRealm(knex: Knex, tenantId: string): Promise
   const { getDefaultQboRealmId } = await import('@alga-psa/integrations/lib/qbo/qboClientService');
   return getDefaultQboRealmId(tenantId).catch(() => null);
 }
+
+/**
+ * Whether the tenant has at least one connected QBO realm. This is
+ * tenant-level configuration (the connected realms are already surfaced to
+ * settings and catalog readers), so conditioning a permission decision on it
+ * reveals nothing about any specific invoice's mapping state. voidInvoiceActions
+ * uses it to refuse remote-affecting voids for actors without
+ * accounting_integrations:remote_mutate on ANY invoice — mapped or not — so a
+ * denial never depends on per-invoice mapping existence.
+ */
+export async function hasConnectedQboRealm(tenantId: string): Promise<boolean> {
+  // eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- billing→integrations is the allowed direction
+  const { getStoredQboCredentialsMap } = await import('@alga-psa/integrations/lib/qbo/qboClientService');
+  const credentialsMap = await getStoredQboCredentialsMap(tenantId).catch(() => ({}));
+  return Object.keys(credentialsMap).length > 0;
+}

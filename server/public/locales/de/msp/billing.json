@@ -141,6 +141,8 @@
   },
   "usage": {
     "bucketHoursOverview": "Übersicht über Stundenkontingente",
+    "bucketLoadError": "Die Reststunden der Stundenkontingente konnten nicht geladen werden. Versuchen Sie es erneut, um die aktuellen Reststunden anzuzeigen.",
+    "retryBucketBalances": "Reststunden erneut laden",
     "usageRecords": "Nutzungsaufzeichnungen",
     "actions": {
       "addUsage": "Nutzung hinzufügen",
@@ -211,6 +213,12 @@
       "updateError": "Der Nutzungsdatensatz konnte nicht aktualisiert werden",
       "deleteSuccess": "Nutzungsdatensatz erfolgreich gelöscht",
       "deleteError": "Nutzungsdatensatz konnte nicht gelöscht werden"
+    },
+    "periodReport": "Nutzungsmeldung für den Zeitraum",
+    "periodAlreadyInvoiced": "Dieser Zeitraum ist bereits in Rechnung gestellt. Korrigieren Sie ihn über den Rechnungsanpassungsprozess.",
+    "periodFilter": {
+      "notice": "Nutzung für den Leistungszeitraum {{start}} bis {{end}} wird angezeigt",
+      "clear": "Zurücksetzen"
     }
   },
   "lineItem": {
@@ -387,7 +395,10 @@
       "loadingBatches": "Stapel werden geladen...",
       "empty": "Noch keine Exportchargen.",
       "loadingDetails": "Chargendetails werden geladen...",
-      "batchNotFound": "Charge nicht gefunden."
+      "batchNotFound": "Charge nicht gefunden.",
+      "checkingAccess": "Zugriff wird geprüft...",
+      "accessDeniedTitle": "Zugriff verweigert",
+      "accessDeniedDescription": "Sie haben keine Berechtigung, auf Buchhaltungsexporte zuzugreifen."
     },
     "createDialog": {
       "title": "Neuer Buchhaltungsexport",
@@ -663,7 +674,9 @@
     },
     "recurringRun": {
       "selectPeriods": "Wählen Sie mindestens einen wiederkehrenden Abrechnungszeitraum zum Generieren aus.",
-      "invoicePermission": "Berechtigung verweigert: Berechtigung zum Erstellen oder Generieren von Rechnungen erforderlich"
+      "invoicePermission": "Berechtigung verweigert: Berechtigung zum Erstellen oder Generieren von Rechnungen erforderlich",
+      "monthEndCloseNotMaterialized": "Für dieses wiederkehrende Ausführungsfenster wurden keine wiederkehrenden Serviceperioden materialisiert.",
+      "monthEndCloseNotEligible": "Der Zeitraum {{servicePeriod}} kann nur zum Monatsende am {{finalCalendarDay}} abgeschlossen werden. Nur im Nachhinein abgerechnete Serviceperioden, die einen vollen Kalendermonat umfassen, können an ihrem letzten Kalendertag vorzeitig abgeschlossen werden."
     },
     "recurringServicePeriod": {
       "scheduleKeyRequiredInspect": "Zum Prüfen wiederkehrender Serviceperioden ist ein Zeitplanschlüssel erforderlich.",
@@ -689,8 +702,10 @@
         "setDefault": "Berechtigung verweigert: Standard-Dokumentvorlage kann nicht festgelegt werden",
         "clearOverride": "Berechtigung verweigert: Überschreibung der Dokumentvorlage kann nicht aufgehoben werden",
         "delete": "Berechtigung verweigert: Dokumentvorlagen können nicht gelöscht werden",
-        "preview": "Berechtigung verweigert: Dokumentvorlagen können nicht in der Vorschau angezeigt werden"
-      }
+        "preview": "Berechtigung verweigert: Dokumentvorlagen können nicht in der Vorschau angezeigt werden",
+        "readSalesOrders": "Zugriff verweigert: Kundenaufträge können nicht gelesen werden"
+      },
+      "existingNotFound": "Dokument nicht gefunden."
     },
     "billingProfile": {
       "periodOrder": "Wählen Sie einen Zeitraum, dessen Beginn nicht nach dem Ende liegt.",

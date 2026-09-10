@@ -20,6 +20,7 @@ import {
   isActionMessageError,
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
+import { useAccountingCapabilities } from './useAccountingCapabilities';
 
 type ImportStep = 'idle' | 'uploading' | 'preview' | 'importing' | 'complete';
 
@@ -43,6 +44,8 @@ const DEFAULT_OPTIONS: ImportOptions = {
  */
 export function XeroCsvClientSyncPanel() {
   const { t } = useTranslation('msp/integrations');
+  const caps = useAccountingCapabilities();
+  const canExecuteExports = caps.exportsExecute;
   const [isExporting, startExport] = useTransition();
   const [exportError, setExportError] = useState<string | null>(null);
   const [exportSuccess, setExportSuccess] = useState<string | null>(null);
@@ -169,6 +172,14 @@ export function XeroCsvClientSyncPanel() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
+        {!canExecuteExports ? (
+          <Alert variant="info" id="xero-csv-client-sync-permission-notice">
+            <AlertDescription>
+              {t('integrations.xero.csv.clientSync.permissionNotice', { defaultValue: 'Exporting and importing clients requires the execute-exports capability. Ask an administrator to grant it.' })}
+            </AlertDescription>
+          </Alert>
+        ) : null}
+
         {/* Export Section */}
         <div className="space-y-3">
           <h4 className="text-sm font-medium text-foreground">{t('integrations.xero.csv.clientSync.exportClients', { defaultValue: 'Export Clients' })}</h4>
@@ -193,7 +204,7 @@ export function XeroCsvClientSyncPanel() {
           <Button
             id="xero-csv-client-sync-export-button"
             onClick={handleExportClients}
-            disabled={isExporting}
+            disabled={isExporting || !canExecuteExports}
             variant="outline"
             className="gap-2"
           >
@@ -285,6 +296,7 @@ export function XeroCsvClientSyncPanel() {
                   onClick={() => fileInputRef.current?.click()}
                   variant="outline"
                   className="gap-2"
+                  disabled={!canExecuteExports}
                 >
                   <Upload className="h-4 w-4" />
                   {t('integrations.xero.csv.clientSync.selectCsvFile', { defaultValue: 'Select CSV File' })}
@@ -392,7 +404,7 @@ export function XeroCsvClientSyncPanel() {
               )}
 
               <div className="flex gap-3">
-                <Button id="xero-csv-client-sync-execute-import-button" onClick={handleExecuteImport} disabled={previewResult.toUpdate + previewResult.toCreate === 0}>
+                <Button id="xero-csv-client-sync-execute-import-button" onClick={handleExecuteImport} disabled={previewResult.toUpdate + previewResult.toCreate === 0 || !canExecuteExports}>
                   {t('integrations.xero.csv.clientSync.importContactsButton', { defaultValue: 'Import {{count}} Contacts', count: previewResult.toUpdate + previewResult.toCreate })}
                 </Button>
                 <Button id="xero-csv-client-sync-cancel-import-button" variant="outline" onClick={handleCancelImport}>

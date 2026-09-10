@@ -1,11 +1,13 @@
 'use server'
 
 import type { DeletionValidationResult, IClient, IClientWithLocation } from '@alga-psa/types';
+import { resolveProductCode } from '@alga-psa/types';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { unparseCSV, isEnterprise } from '@alga-psa/core';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { preCheckDeletion } from '@alga-psa/auth';
-import { createDefaultTaxSettingsAsync } from '../lib/billingHelpers';
+import { createDefaultTaxSettings } from '@alga-psa/shared/billingClients/taxSettings';
+import { parseClientCsvBoolean } from '../lib/clientCsvFields';
 import { revalidatePath } from 'next/cache';
 import { localizeActionError, withAuth } from '@alga-psa/auth';
 import {
@@ -596,15 +598,20 @@ export const createClient = withAuth(async (user, { tenant }, client: Omit<IClie
         clientId: created.client_id,
       });
 
+      // Tax initialization must share the client transaction: a failure (for
+      // example, no active tax rate) must not leave a partially created client.
+      // AlgaDesk has no billing tax setup and keeps its existing exemption.
+      const tenantRow = await tenantDb(trx, tenant).table('tenants').first('product_code');
+      if (resolveProductCode(tenantRow?.product_code).productCode !== 'algadesk') {
+        await createDefaultTaxSettings(trx, tenant, created.client_id);
+      }
+
       return created;
     });
 
     if (!createdClient) {
       throw new Error('Client insert completed without returning the created record.');
     }
-
-    // Create default tax settings for the new client
-    await createDefaultTaxSettingsAsync(createdClient.client_id);
 
     // Email suffix functionality removed for security
 
@@ -1682,8 +1689,7 @@ export const importClientsFromCSV = withAuth(async (
     return country;
   };
 
-  const parseCsvBoolean = (value: unknown): boolean =>
-    value === true || value === 'true' || value === 'Yes';
+  const parseCsvBoolean = parseClientCsvBoolean;
 
   const hasLocationData = (row: Record<string, any>): boolean =>
     Boolean(row.email || row.phone_number || row.address_line1 || row.city || row.location_name);

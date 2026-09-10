@@ -52,7 +52,7 @@ Key architecture artifacts come from:
   - Automatic enrichment of display names. The label of the selected option is also persisted as `metadata.externalDisplayName` and used as the fallback when a later catalog load no longer carries that external id (deactivated entity, different realm, pseudo codes).
   - Adapter/realm-aware CRUD.
   - Playwright overrides through `window.__ALGA_PLAYWRIGHT_ACCOUNTING__`.
-- `AccountingMappingDialog` provides add/edit UI, optional JSON metadata editing, manual entry fallback when catalog data is unavailable, and realm context readout.
+- `AccountingMappingDialog` provides add/edit UI with searchable, filterable pickers for both the Alga entity and the external target. Both pickers use `SearchableSelect` with `dropdownMode="overlay"`, so the dropdown portals into the dialog instead of being clipped by it — especially useful when a connected Xero organisation or QuickBooks realm carries hundreds of items or accounts. Optional JSON metadata editing, manual entry fallback when catalog data is unavailable, and realm context readout are also available.
 - `types.ts` defines configuration contracts: `AccountingMappingModule`, `AccountingMappingContext`, `AccountingMappingOverrides`, and metadata toggles.
 
 ### Module Configuration Pattern
@@ -73,7 +73,7 @@ Each adapter defines a factory that returns `AccountingMappingModule[]`. For CSV
 ### Existing Adapter Modules
 - **QuickBooks CSV**: `createCsvMappingModules()` surfaces Client, Items/Services, Tax Codes, and Payment Terms mappings. The external identifier is entered manually (no OAuth catalog lookup).
 - **QuickBooks Online (OAuth)**: `createQboLiveMappingModules()` surfaces Items/Services, Tax Codes, and Payment Terms. Each tab loads its external options live from the connected realm through the `getQboItems` / `getQboTaxCodes` / `getQboTerms` actions, so the dialog offers catalog-backed selectors. Tax-code options are labelled with their combined rate and disambiguated by QuickBooks id when Automated Sales Tax has generated codes sharing a name; the two AST pseudo codes (`TAX`, `NON`) are appended when the realm is in AST mode.
-- **Xero (OAuth)**: `createXeroLiveMappingModules()` surfaces Items/Services and Tax Codes (Xero `TaxRate`), also catalog-backed.
+- **Xero (OAuth)**: `createXeroLiveMappingModules()` surfaces Items/Services and Tax Codes (Xero `TaxRate`), also catalog-backed. A service mapping targets either a **Xero Item** (line exports with `ItemCode`) or a **Xero Revenue Account** (line exports with `AccountCode` and no `ItemCode` — for organisations that invoice without Products & Services items). The target type is an explicit choice stored as `metadata.xeroTargetKind`; it is never inferred from the code's shape because an Item Code and an Account Code can be identical strings. Account mode offers only active revenue-class accounts (`REVENUE`, `SALES`, `OTHERINCOME`) with a code, from the exact connected organisation. Mappings saved before account mode existed remain item mappings; one whose code no longer resolves to an Item is flagged invalid in the UI and requires an explicit re-selection (valid Item, or deliberate switch to an Account) — it is never converted automatically.
 
 ### Realm Handling
 - `AccountingMappingContext.realmId` is optional. OAuth adapters pass realm/tenant identifiers (QBO realm ID, Xero tenant ID); CSV exports omit it (single-tenant manual flow).
@@ -110,6 +110,7 @@ Each adapter defines a factory that returns `AccountingMappingModule[]`. For CSV
 ### Xero Adapter Highlights (Phase 5)
 - Uses `XeroClientService` for OAuth token refresh and catalog access (`listAccounts`, `listItems`, `listTaxRates`, `listTrackingCategories`).
 - Supports multi-component tax lines, tracking category metadata, and error normalization into export line records.
+- Line construction follows the mapping's explicit target kind (`metadata.xeroTargetKind`): item mode sends `ItemCode` (plus optional metadata `accountCode`), account mode sends `AccountCode` and omits the `ItemCode` property entirely. Tax type, quantities, amounts, tracking, and service periods behave identically in both modes. Each transform snapshots the resolved target (`kind`/`code`/`realm`) into the export line's `mapping_resolution.serviceTarget` as diagnostic evidence; retries re-resolve from the live mapping, so remediating a mapping and retrying the batch picks up the fix.
 - Manual retry trigger UI remains outstanding but service already flags failed lines for rerun.
 
 ---
@@ -129,8 +130,8 @@ Each adapter defines a factory that returns `AccountingMappingModule[]`. For CSV
 2. Select the adapter. The mapping tabs are rendered by `AccountingMappingManager`.
 3. For each tab:
    - Click **Add … Mapping**.
-   - Choose an Alga entity (client/service/tax code/payment term). Locked when editing an existing mapping.
-   - Choose the external entity from the catalog (OAuth adapters) or type the external identifier (CSV adapters).
+   - Choose an Alga entity (client/service/tax code/payment term). The picker is searchable — type to filter the list. Locked when editing an existing mapping.
+   - Choose the external entity. For OAuth adapters, the picker is catalog-backed and searchable — type to narrow a long list (particularly helpful when a Xero organisation or QuickBooks realm contains hundreds of items or accounts). For CSV adapters, type the external identifier directly.
    - Save; dialog displays validation errors from server actions.
 4. To edit or delete:
    - Use the row action menu.

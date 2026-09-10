@@ -108,6 +108,7 @@ export interface MspSsoTenantCredentialStatusResult {
   success: boolean;
   google: boolean;
   microsoft: boolean;
+  keycloak: boolean;
 }
 
 function normalizeDomain(value: string): string {
@@ -955,19 +956,20 @@ export const getMspSsoTenantCredentialStatus = withAuth(async (
 ): Promise<MspSsoTenantCredentialStatusResult> => {
   try {
     if (!(await canManageDomains(user))) {
-      return { success: false, google: false, microsoft: false };
+      return { success: false, google: false, microsoft: false, keycloak: false };
     }
 
-    const [google, microsoft] = await Promise.all([
+    const [google, microsoft, keycloak] = await Promise.all([
       hasTenantProviderCredentials(tenant, 'google'),
       hasTenantProviderCredentials(tenant, 'azure-ad'),
+      hasTenantProviderCredentials(tenant, 'keycloak'),
     ]);
 
-    return { success: true, google, microsoft };
+    return { success: true, google, microsoft, keycloak };
   } catch (error: unknown) {
     logger.warn('Failed to resolve MSP SSO tenant credential status', {
       error: error instanceof Error ? error.message : String(error),
     });
-    return { success: false, google: false, microsoft: false };
+    return { success: false, google: false, microsoft: false, keycloak: false };
   }
 });

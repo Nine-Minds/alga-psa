@@ -735,7 +735,9 @@
       "notFound": "Nie znaleziono szablonu dokumentu wyceny.",
       "previewPipeline": "Potok podglądu nie powiódł się.",
       "saveFailed": "Nie udało się zapisać szablonu wyceny",
-      "unknownAstExport": "Nieznany błąd eksportu AST"
+      "unknownAstExport": "Nieznany błąd eksportu AST",
+      "quoteNotFound": "Nie udało się załadować szczegółów wyceny do podglądu.",
+      "quoteDetailLoad": "Nie udało się załadować szczegółów wyceny."
     },
     "fields": {
       "layoutDetails": "Szczegóły układu",
@@ -759,7 +761,17 @@
       "sampleScenario": "Przykładowy scenariusz",
       "selectScenario": "Wybierz scenariusz...",
       "selectScenarioPrompt": "Wybierz przykładowy scenariusz, aby wygenerować wiarygodny podgląd.",
-      "templateGenerationFailed": "Nie można wygenerować szablonu podglądu z bieżącego obszaru roboczego."
+      "templateGenerationFailed": "Nie można wygenerować szablonu podglądu z bieżącego obszaru roboczego.",
+      "source": {
+        "sample": "Przykład",
+        "existing": "Istniejące"
+      },
+      "searchQuotes": "Szukaj wycen…",
+      "searchQuotesHint": "Szukaj po numerze lub kliencie…",
+      "noQuotesFound": "Brak wycen.",
+      "selectQuote": "Wybierz wycenę",
+      "selectQuoteHint": "Wybierz wycenę, aby zobaczyć podgląd z danymi.",
+      "loadingQuoteDetails": "Ładowanie szczegółów wyceny…"
     },
     "pipeline": {
       "render": "Renderowanie",

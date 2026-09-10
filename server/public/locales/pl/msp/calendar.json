@@ -104,6 +104,9 @@
           "confirmLabel": "Usuń dostawcę",
           "cancelLabel": "Zachowaj dostawcę"
         }
+      },
+      "errors": {
+        "notAuthorized": "Ten dostawca kalendarza nie ukończył jeszcze autoryzacji OAuth. Otwórz jego ustawienia, kliknij Autoryzuj i ponów synchronizację."
       }
     },
     "sync": {

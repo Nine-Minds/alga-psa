@@ -46,7 +46,10 @@ export enum ActivityPriority {
  */
 export interface RelatedEntity {
   id: string;
-  type: 'project' | 'ticket' | 'client' | 'contact' | 'workflow' | 'opportunity';
+  // 'marketing_post' is emitted by fetchMarketingActivities for awaiting-publish
+  // social targets. It was missing here only because that file carried a blanket
+  // @ts-nocheck; consumers already ignore kinds they do not handle.
+  type: 'project' | 'ticket' | 'client' | 'contact' | 'workflow' | 'opportunity' | 'marketing_post';
   name: string;
   url?: string;
 }

@@ -9,8 +9,10 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import CurrencyPicker from '@alga-psa/ui/components/CurrencyPicker';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
+import { useQuickAddClient } from '@alga-psa/ui/context';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import {
   DropdownMenu,
@@ -19,7 +21,6 @@ import {
   DropdownMenuTrigger,
 } from '@alga-psa/ui/components/DropdownMenu';
 import { ArrowLeft, ChevronDown, ChevronRight, MoreVertical } from 'lucide-react';
-import { CURRENCY_OPTIONS } from '@alga-psa/core';
 import type { IClient, IContact, IQuote, IQuoteDocumentTemplate, IQuoteListItem, QuoteConversionPreview, QuoteStatus } from '@alga-psa/types';
 import { isActionMessageError, isActionPermissionError, getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
 import { getDefaultBillingSettings } from '@alga-psa/billing/actions/billingSettingsActions';
@@ -36,7 +37,7 @@ import {
 } from '../locations/locationGrouping';
 import { QuoteSendRecipientsField, type QuoteRecipient } from './QuoteSendRecipientsField';
 import QuoteStatusBadge from './QuoteStatusBadge';
-import { calculateDraftQuoteTotals, createDraftQuoteItemFromQuoteItem, formatDraftQuoteMoney, type DraftQuoteItem } from './quoteLineItemDraft';
+import { calculateDraftMonthlyRecurringNet, calculateDraftQuoteTotals, createDraftQuoteItemFromQuoteItem, formatDraftQuoteMoney, type DraftQuoteItem } from './quoteLineItemDraft';
 
 interface QuoteFormProps {
   quoteId?: string | null;
@@ -111,6 +112,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
 }) => {
   const { t } = useTranslation('msp/quotes');
   const { formatCurrency: formatLocalizedCurrency, formatDate } = useFormatters();
+  const { renderQuickAddClient } = useQuickAddClient();
   const isEditMode = Boolean(quoteId && quoteId !== 'new');
   const [defaultCurrency, setDefaultCurrency] = useState('USD');
   const [form, setForm] = useState<QuoteFormState>(EMPTY_FORM);
@@ -155,6 +157,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
   const [notice, setNotice] = useState<string | null>(null);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [isMoreDetailsOpen, setIsMoreDetailsOpen] = useState(false);
+  const [isQuickAddClientOpen, setIsQuickAddClientOpen] = useState(false);
 
   // Workflow state — sourced from the persisted quote for status-based actions
   const [quote, setQuote] = useState<IQuote | null>(null);
@@ -347,19 +350,15 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
 
   const draftTotals = useMemo(() => calculateDraftQuoteTotals(lineItems), [lineItems]);
 
-  // Derived: recurring per-month subtotal across draft items (expressed in
-  // the quote's minor currency units). Used for the sidebar "$X recurring /
-  // month" hint. Only monthly-recurring items count; mixed frequencies don't
-  // reduce cleanly to a single per-month number without more math.
-  const recurringMonthlySubtotal = useMemo(() => {
-    return lineItems.reduce((sum, item) => {
-      if (!item.is_recurring || item.is_discount) return sum;
-      if (item.is_optional && item.is_selected === false) return sum;
-      const freq = (item.billing_frequency || '').toLowerCase();
-      if (freq && freq !== 'monthly') return sum;
-      return sum + Math.round(item.quantity * item.unit_price);
-    }, 0);
-  }, [lineItems]);
+  // Derived: recurring per-month figure after the shared discount allocation,
+  // expressed in the quote's minor currency units. Used for the sidebar "$X
+  // recurring / month" hint. Discounts aimed at monthly recurring services
+  // reduce the figure; mixed billing frequencies reduce only their own
+  // monthly rows through the allocation.
+  const recurringMonthlySubtotal = useMemo(
+    () => calculateDraftMonthlyRecurringNet(lineItems),
+    [lineItems],
+  );
 
   const selectedClient = useMemo(
     () => clients.find((c) => c.client_id === form.client_id) ?? null,
@@ -1349,6 +1348,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
                       onClientTypeFilterChange={setClientTypeFilter}
                       placeholder={t('quoteForm.essentials.clientPlaceholder', { defaultValue: 'Select client' })}
                       disabled={isReadOnly}
+                      onAddNew={!isReadOnly ? () => setIsQuickAddClientOpen(true) : undefined}
                     />
                   </div>
                 )}
@@ -1371,12 +1371,11 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
 
                 <div className="flex flex-col gap-1 text-sm font-medium">
                   <label htmlFor="quote-currency">{t('quoteForm.essentials.currency', { defaultValue: 'Currency' })}</label>
-                  <CustomSelect
+                  <CurrencyPicker
                     id="quote-currency"
                     value={form.currency_code}
                     onValueChange={(value) => handleChange('currency_code', value)}
                     placeholder={t('quoteForm.essentials.currencyPlaceholder', { defaultValue: 'Select currency' })}
-                    options={CURRENCY_OPTIONS.map((c) => ({ value: c.value, label: c.label }))}
                     disabled={isReadOnly}
                   />
                 </div>
@@ -1838,7 +1837,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
                 // default action.
                 variant={conversionPreview.sales_order_items.length > 0 && !conversionPreview.existing_sales_order ? 'outline' : 'default'}
                 onClick={() => void handleConfirmConversion('invoice')}
-                disabled={isWorking}
+                disabled={isWorking || Boolean(conversionPreview.invoice_error)}
               >
                 {t('quoteConversion.actions.invoice', { defaultValue: 'Create Draft Invoice' })}
               </Button>
@@ -1857,6 +1856,11 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
           </DialogHeader>
           {conversionPreview ? (
             <div className="space-y-4">
+              {conversionPreview.invoice_error && (
+                <Alert variant="destructive">
+                  <AlertDescription>{conversionPreview.invoice_error}</AlertDescription>
+                </Alert>
+              )}
               {conversionPreview.sales_order_items.length > 0 ? (
                 <div className="rounded-lg border border-border bg-muted/40 p-3 text-sm text-muted-foreground">
                   {conversionPreview.existing_sales_order
@@ -1997,6 +2001,27 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
           )}
         </DialogContent>
       </Dialog>
+      {renderQuickAddClient({
+        open: isQuickAddClientOpen,
+        onOpenChange: setIsQuickAddClientOpen,
+        onClientAdded: (newClient) => {
+          setClients((currentClients) => {
+            const existingIndex = currentClients.findIndex(
+              (client) => client.client_id === newClient.client_id,
+            );
+            if (existingIndex === -1) return [...currentClients, newClient];
+            const nextClients = [...currentClients];
+            nextClients[existingIndex] = newClient;
+            return nextClients;
+          });
+          setForm((current) => ({
+            ...current,
+            client_id: newClient.client_id,
+            contact_id: '',
+          }));
+        },
+        skipSuccessDialog: true,
+      })}
     </Card>
   );
 };

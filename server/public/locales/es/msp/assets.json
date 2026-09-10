@@ -406,11 +406,17 @@
       "refreshing": "Actualizando...",
       "refreshData": "Actualizar datos",
       "rebootDevice": "Reiniciar dispositivo",
+      "rebooting": "Reiniciando...",
       "editAsset": "Editar activo",
       "deleteAsset": "Eliminar activo"
     },
     "values": {
       "unknownClient": "Cliente desconocido"
+    },
+    "reboot": {
+      "title": "¿Reiniciar el dispositivo?",
+      "message": "{{name}} se reiniciará de inmediato a través de {{provider}}. Cualquier usuario con sesión iniciada perderá el trabajo no guardado.",
+      "confirm": "Reiniciar ahora"
     }
   },
   "assetDetailTabs": {
@@ -1162,14 +1168,6 @@
       "saveFailed": "No se pudo crear el programa de mantenimiento"
     }
   },
-  "documentsPasswordsTab": {
-    "title": "Documentos y contraseñas",
-    "description": "Ficha combinada para documentos de activos, credenciales y registros seguros relacionados",
-    "passwords": {
-      "title": "Contraseñas y secretos",
-      "comingSoon": "Próximamente gestión segura de contraseñas."
-    }
-  },
   "maintenanceSchedulesTab": {
     "title": "Horarios de mantenimiento",
     "description": "Pestaña de gestión del programa de mantenimiento para servicios planificados y trabajos recurrentes",
@@ -1215,6 +1213,7 @@
     },
     "types": {
       "preventive": "Preventivo",
+      "corrective": "Correctivo",
       "inspection": "Inspección",
       "calibration": "Calibración",
       "replacement": "Reemplazo"
@@ -1234,6 +1233,17 @@
         "title": "Eliminar programa de mantenimiento",
         "message": "¿Está seguro de que desea eliminar \"{{name}}\"? Esta acción no se puede deshacer."
       }
+    }
+  },
+  "maintenanceCommandCenter": {
+    "title": "Centro de control de mantenimiento",
+    "description": "La próxima fecha de vencimiento se calcula a partir de la fecha de finalización real.",
+    "assetsLink": "Activos"
+  },
+  "maintenanceCompletionDialog": {
+    "errors": {
+      "performedDateRequired": "Se requiere una fecha de realización.",
+      "completeFailed": "No se pudo completar el mantenimiento."
     }
   },
   "relatedAssetsTab": {

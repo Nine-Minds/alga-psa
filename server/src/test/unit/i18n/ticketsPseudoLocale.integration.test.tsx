@@ -145,6 +145,7 @@ vi.mock('@alga-psa/tickets/actions/ticketActions', () => ({}));
 
 vi.mock('@/context/TierContext', () => ({
   TierProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useTier: () => ({ hasAddOn: () => false, hasFeature: () => true }),
 }));
 
 vi.mock('@/context/ProductContext', () => ({

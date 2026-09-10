@@ -5,14 +5,14 @@ exports.seed = async function (knex) {
     if (!context) return;
 
     const { tenantId, db } = context;
-    const documentTypeId = (typeName) => db.table('document_types')
+    const documentTypeId = async (typeName) => (await db.table('document_types')
         .where({ type_name: typeName })
         .select('type_id')
-        .first();
-    const glindaUserId = db.table('users')
+        .first())?.type_id ?? null;
+    const glindaUserId = (await db.table('users')
         .where({ username: 'glinda' })
         .select('user_id')
-        .first();
+        .first())?.user_id ?? null;
 
     // Insert documents
     const documents = await db.table('documents')
@@ -20,7 +20,7 @@ exports.seed = async function (knex) {
             {
                 tenant: tenantId,
                 document_name: 'Alice Lost White Rabbit',
-                type_id: documentTypeId('Ticket'),
+                type_id: await documentTypeId('Ticket'),
                 user_id: glindaUserId,
                 created_by: glindaUserId,
                 entered_at: knex.fn.now(),
@@ -29,7 +29,7 @@ exports.seed = async function (knex) {
             {
                 tenant: tenantId,
                 document_name: 'Client Profile',
-                type_id: documentTypeId('Client'),
+                type_id: await documentTypeId('Client'),
                 user_id: glindaUserId,
                 created_by: glindaUserId,
                 entered_at: knex.fn.now(),
@@ -38,7 +38,7 @@ exports.seed = async function (knex) {
             {
                 tenant: tenantId,
                 document_name: 'White Rabbit Search Plan',
-                type_id: documentTypeId('Ticket'),
+                type_id: await documentTypeId('Ticket'),
                 user_id: glindaUserId,
                 created_by: glindaUserId,
                 entered_at: knex.fn.now(),

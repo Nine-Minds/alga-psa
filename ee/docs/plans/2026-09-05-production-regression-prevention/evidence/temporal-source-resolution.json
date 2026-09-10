@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "scope": "Temporal source resolution",
+  "ciFailure": {
+    "run": 34244599182,
+    "job": 102123396283,
+    "error": "Unbuilt @alga-psa/storage during temporal-database collection; eight Citus runtime tests passed"
+  },
+  "audit": "Rejecting cached workspace dist found additional authorization and email imports. Preserve explicit test overrides, then resolve workspace imports using worker tsconfig paths; reject remaining dist dependencies.",
+  "validation": {
+    "citusDatabase": {
+      "passed": 27,
+      "failed": 0,
+      "files": 6
+    },
+    "fastReadiness": {
+      "passed": 263,
+      "failed": 0,
+      "files": 42
+    },
+    "engineCollection": {
+      "cases": 51,
+      "files": 11,
+      "executionVerified": false
+    }
+  },
+  "configurationSha256": "7660e7b76bdb6d74a0e52086d6622024649d5b63ac54a0c75d4abe8aa278e7d9",
+  "limitations": [
+    "Current-source GitHub execution is still required.",
+    "Engine registration does not substitute for engine runtime execution.",
+    "No Docker builds or live production changes."
+  ]
+}

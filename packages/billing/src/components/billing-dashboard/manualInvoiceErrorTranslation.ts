@@ -5,6 +5,10 @@ import type {
 
 const translatedManualInvoiceErrorCodes = new Set<ManualInvoiceErrorCode>([
   'NO_BILLING_EMAIL',
+  'USAGE_RECORDS_MISSING',
+  'USAGE_RECORDS_MISSING_ACK_REQUIRED',
+  'USAGE_PERIOD_TOTAL_STALE',
+  'USAGE_CALCULATION_ERROR',
   'CLIENT_NOT_FOUND',
   'SERVICE_NOT_FOUND',
   'INVALID_QUANTITY',
@@ -25,6 +29,11 @@ export function translateManualInvoiceFailure(
   result: Partial<ManualInvoiceFailure>,
 ): string {
   const message = result.message ?? result.error ?? 'Error generating invoice';
+  if (result.code === 'TIME_APPROVAL_REQUIRED') {
+    return t('automaticInvoices.executionRows.blockedUntilApproval', {
+      count: Number(result.params?.count), defaultValue: message,
+    });
+  }
   if (!result.code || !translatedManualInvoiceErrorCodes.has(result.code)) {
     return message;
   }

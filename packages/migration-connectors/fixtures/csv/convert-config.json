@@ -1,0 +1,31 @@
+{
+  "outputPath": "/tmp/amp-csv-fixture.amp",
+  "namespace": "fixture-csv:2026-08",
+  "sourceSystem": "generic-csv",
+  "files": [
+    {
+      "entityType": "organizations",
+      "path": "organizations.csv",
+      "mapping": {
+        "Account #": "source_record_id",
+        "Company Name": "name",
+        "Web Site": "website",
+        "Main Phone": "phone"
+      }
+    },
+    {
+      "entityType": "locations",
+      "path": "locations.csv",
+      "mapping": {
+        "Location Id": "source_record_id",
+        "Account #": "organization_package_record_id",
+        "Location Name": "name",
+        "Street": "address_line1",
+        "City": "city",
+        "State": "region",
+        "Postal Code": "postal_code"
+      },
+      "referenceBy": "source_record_id"
+    }
+  ]
+}

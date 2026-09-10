@@ -36,6 +36,13 @@ export const StatusDialog: React.FC<StatusDialogProps> = ({
   const [isDefault, setIsDefault] = useState(false);
   const { t } = useTranslation('common');
 
+  // Types whose "new record" flow picks a status automatically and therefore needs one
+  // marked as the default. A closed status can never be that default.
+  const supportsDefault = selectedStatusType === 'ticket' || selectedStatusType === 'interaction';
+  // Legacy seeds left some tenants with a closed default; editing such a status must not
+  // silently clear the tenant's default, so its flag is preserved as-is.
+  const isClosedDefault = !!editingStatus?.is_closed && !!editingStatus?.is_default;
+
   useEffect(() => {
     if (editingStatus) {
       setStatusName(editingStatus.name);
@@ -98,7 +105,7 @@ export const StatusDialog: React.FC<StatusDialogProps> = ({
           name: statusName,
           status_type: selectedStatusType,
           is_closed: isClosed,
-          is_default: selectedStatusType === 'ticket' ? isDefault : false,
+          is_default: supportsDefault ? isDefault : false,
           order_number: statusOrder,
           created_by: userId
         };
@@ -226,16 +233,30 @@ export const StatusDialog: React.FC<StatusDialogProps> = ({
                 id="status-is-closed"
                 label={t('statusDialog.markClosed', 'Mark as closed status')}
                 checked={isClosed}
-                onChange={(e) => setIsClosed((e.target as HTMLInputElement).checked)}
+                onChange={(e) => {
+                  const checked = (e.target as HTMLInputElement).checked;
+                  setIsClosed(checked);
+                  if (checked && !isClosedDefault) {
+                    setIsDefault(false);
+                  }
+                }}
               />
               
-              {selectedStatusType === 'ticket' && (
-                <Checkbox
-                  id="status-is-default"
-                  label={t('statusDialog.setDefault', 'Set as default status for new tickets')}
-                  checked={isDefault}
-                  onChange={(e) => setIsDefault((e.target as HTMLInputElement).checked)}
-                />
+              {supportsDefault && (
+                <div>
+                  <Checkbox
+                    id="status-is-default"
+                    label={t('statusDialog.setDefault', 'Set as default status for new items')}
+                    checked={isDefault}
+                    disabled={isClosed}
+                    onChange={(e) => setIsDefault((e.target as HTMLInputElement).checked)}
+                  />
+                  {isClosed && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      {t('statusDialog.defaultClosedHelp', 'A closed status cannot be the default for new items.')}
+                    </p>
+                  )}
+                </div>
               )}
             </div>
           </div>

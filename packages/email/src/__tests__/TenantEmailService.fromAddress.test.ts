@@ -33,10 +33,12 @@ function resolveMessageFrom(settings: TenantEmailSettings, params: Record<string
 describe('TenantEmailService from address resolution', () => {
   const originalEmailFrom = process.env.EMAIL_FROM;
   const originalEmailFromName = process.env.EMAIL_FROM_NAME;
+  const originalSmtpFrom = process.env.SMTP_FROM;
 
   beforeEach(() => {
     delete process.env.EMAIL_FROM;
     delete process.env.EMAIL_FROM_NAME;
+    delete process.env.SMTP_FROM;
   });
 
   afterEach(() => {
@@ -50,6 +52,12 @@ describe('TenantEmailService from address resolution', () => {
       delete process.env.EMAIL_FROM_NAME;
     } else {
       process.env.EMAIL_FROM_NAME = originalEmailFromName;
+    }
+
+    if (originalSmtpFrom === undefined) {
+      delete process.env.SMTP_FROM;
+    } else {
+      process.env.SMTP_FROM = originalSmtpFrom;
     }
   });
 
@@ -163,5 +171,48 @@ describe('TenantEmailService from address resolution', () => {
       from: { email: 'support@acme.com', name: 'Acme Support' },
       fromName: 'Escalations',
     })).toEqual({ email: 'support@acme.com', name: 'Escalations' });
+  });
+
+  it('forces the verified system sender and tenant reply address for a system fallback', () => {
+    const settings = buildSettings({
+      defaultFromDomain: 'tenant.example',
+      providerConfigs: [{
+        providerId: 'microsoft-provider',
+        providerType: 'microsoft',
+        isEnabled: true,
+        config: { from: 'service@tenant.example' },
+      }],
+    });
+
+    expect(resolveMessageFrom(settings, {
+      from: { email: 'spoofed@unverified.example', name: 'Spoofed' },
+      fromName: 'Spoofed name',
+      resolvedSystemFallbackFromAddress: { email: 'noreply@algapsa.com', name: 'Tenant Services' },
+      resolvedSystemFallbackReplyTo: { email: 'service@tenant.example', name: 'Tenant Services' },
+    })).toEqual({ email: 'noreply@algapsa.com', name: 'Tenant Services' });
+  });
+
+  it.each([
+    [undefined, 'System fallback sender is missing or malformed'],
+    ['not-an-email', 'System fallback sender is missing or malformed'],
+  ])('rejects a %s system fallback sender configuration', (emailFrom, expectedError) => {
+    if (emailFrom) {
+      process.env.EMAIL_FROM = emailFrom;
+    }
+
+    const service = TenantEmailService.getInstance(`tenant-${Math.random().toString(36).slice(2)}`);
+
+    expect(() => (service as any).buildSystemFallbackFromAddress('Tenant Services'))
+      .toThrow(expectedError);
+  });
+
+  it('uses SMTP_FROM when it is the configured system sender', () => {
+    process.env.SMTP_FROM = 'Platform Mail <noreply@algapsa.com>';
+    const service = TenantEmailService.getInstance(`tenant-${Math.random().toString(36).slice(2)}`);
+
+    expect((service as any).buildSystemFallbackFromAddress('Tenant Services')).toEqual({
+      email: 'noreply@algapsa.com',
+      name: 'Tenant Services',
+    });
   });
 });

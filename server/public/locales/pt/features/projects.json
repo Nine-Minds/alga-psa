@@ -1320,6 +1320,12 @@
         "templateNameRequired": "O nome do modelo é obrigatório",
         "createFailed": "Falha ao criar modelo"
       }
+    },
+    "discardConfirmation": {
+      "title": "Descartar o modelo não salvo?",
+      "message": "Seu modelo tem alterações não salvas. Se sair agora, essas alterações serão perdidas.",
+      "keepEditing": "Continuar editando",
+      "discard": "Descartar modelo"
     }
   },
   "documents": {
@@ -1836,5 +1842,34 @@
     "improvement": "Melhoria",
     "epic": "Épico",
     "story": "História"
+  },
+  "statusUpdate": {
+    "button": "Enviar atualização de status",
+    "title": "Enviar atualização de status",
+    "loading": "Carregando informações do destinatário...",
+    "sending": "Enviando atualização de status...",
+    "sent": "Atualização de status enviada para {{email}}",
+    "send": "Enviar atualização",
+    "noRecipient": "Nenhum endereço de email está configurado para o contato do cliente deste projeto.",
+    "whatTheySee": "Seu cliente verá:",
+    "additionalMessage": "Mensagem adicional",
+    "additionalMessagePlaceholder": "Adicione uma observação pessoal para incluir na atualização...",
+    "preview": "A atualização será enviada de {{fromEmail}} em nome de {{companyName}}.",
+    "recipientSource": {
+      "projectContact": "Contato do projeto",
+      "clientEmail": "Email do cliente",
+      "none": "Nenhum email encontrado"
+    },
+    "summary": {
+      "progress": "Progresso geral: {{percent}}% ({{closed}} de {{total}} tarefas concluídas)",
+      "budgetHours": "Horas orçadas: {{spent}} de {{budgeted}} horas utilizadas",
+      "budgetHoursHidden": "As horas orçadas estão ocultas pelas configurações do portal do cliente deste projeto",
+      "recentlyCompleted": "Concluído recentemente: {{items}}",
+      "portalLink": "Um link para o projeto no portal do cliente"
+    },
+    "errors": {
+      "loadRecipient": "Não foi possível carregar as informações do destinatário",
+      "sendFailed": "Não foi possível enviar a atualização de status"
+    }
   }
 }

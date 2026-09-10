@@ -230,13 +230,13 @@ export function TaxComponentEditor({ taxRateId, isReadOnly = false }: TaxCompone
   // Calculate tax preview for a given base amount
   const calculatePreview = useMemo(() => {
     const baseAmount = 100; // $100 example
-    let taxableAmount = baseAmount;
     let totalTax = 0;
     const breakdown: { name: string; rate: number; tax: number; isCompound: boolean }[] = [];
 
     const sortedComponents = [...components].sort((a, b) => a.sequence - b.sequence);
 
     for (const component of sortedComponents) {
+      const taxableAmount = component.is_compound ? baseAmount + totalTax : baseAmount;
       const componentTax = (taxableAmount * component.rate) / 100;
       totalTax += componentTax;
       breakdown.push({
@@ -245,10 +245,6 @@ export function TaxComponentEditor({ taxRateId, isReadOnly = false }: TaxCompone
         tax: componentTax,
         isCompound: component.is_compound,
       });
-
-      if (component.is_compound) {
-        taxableAmount += componentTax;
-      }
     }
 
     const effectiveRate = (totalTax / baseAmount) * 100;

@@ -1,0 +1,9 @@
+SR_Detail_RecID,SR_Service_RecID,Contact_RecID,Detail_Notes,Internal_Flag,Date_Created_UTC
+501,401,301,The PC shows a spinner and then a black screen.,N,1/5/2026 9:35
+502,401,,Swapped the drive and reimaged; awaiting user confirmation.,Y,1/5/2026 13:20
+503,402,302,License renewal quote requested from the vendor.,0,1/7/2026 14:30
+504,403,303,Firewall logs show the tunnel renegotiating at 3pm daily.,1,1/9/2026 16:02
+505,403,,Applied updated IKE lifetime settings.,Y,1/12/2026 8:50
+506,404,304,Laptop imaged and accounts created.,N,1/13/2026 10:05
+507,405,305,Replaced the POS network cable and verified connectivity.,N,1/11/2026 11:58
+508,406,,Patch window proposed for the last Saturday of the month.,Y,1/12/2026 13:05

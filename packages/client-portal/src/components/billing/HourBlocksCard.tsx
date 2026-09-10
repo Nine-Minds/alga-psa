@@ -5,7 +5,6 @@ import { Card } from '@alga-psa/ui/components/Card';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { Clock } from 'lucide-react';
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { formatCalendarDate } from '@alga-psa/core';
 import type {
@@ -26,21 +25,14 @@ function isActionError(value: unknown): boolean {
 /**
  * "Hour blocks" card for the portal billing overview: prepaid-hour-block rows
  * with remaining meters, expiration, and a recent-burn list. Renders nothing
- * unless the release flag is on and the client has at least one active block.
+ * unless the client has at least one active block.
  */
 export default function HourBlocksCard() {
   const { t } = useTranslation('features/billing');
-  const { enabled: widgetEnabled } = useFeatureFlag('release-v1-5-feature', {
-    defaultValue: false,
-  });
   const [blocks, setBlocks] = useState<ClientPortalHourBlock[] | null>(null);
   const [burnHistory, setBurnHistory] = useState<ClientPortalHourBlockBurnEntry[]>([]);
 
   useEffect(() => {
-    if (!widgetEnabled) {
-      setBlocks(null);
-      return;
-    }
     let cancelled = false;
     (async () => {
       try {
@@ -66,9 +58,9 @@ export default function HourBlocksCard() {
     return () => {
       cancelled = true;
     };
-  }, [widgetEnabled]);
+  }, []);
 
-  if (!widgetEnabled || !blocks || blocks.length === 0) {
+  if (!blocks || blocks.length === 0) {
     return null;
   }
 

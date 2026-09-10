@@ -171,9 +171,7 @@ const ClientsList = ({
                           rangeSelect.handleSelect(record.client_id, {
                             shiftKey: event.shiftKey,
                             selected: !isChecked,
-                            preventDefault: () => event.preventDefault(),
                           });
-                          event.preventDefault();
                         }}
                       />
                     </div>

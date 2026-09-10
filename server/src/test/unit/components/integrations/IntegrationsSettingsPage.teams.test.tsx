@@ -3,7 +3,7 @@
  */
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
 const useSearchParamsMock = vi.hoisted(() => vi.fn());
@@ -215,7 +215,7 @@ describe('IntegrationsSettingsPage Teams placement', () => {
     expect(screen.queryByTestId('teams-integration-settings-shell')).not.toBeInTheDocument();
   });
 
-  it('T040/T065/T066/T071/T072/T077/T078/T084/T097/T098/T389/T390/T391/T392/T395/T396/T403/T404/T417/T418/T420: renders Teams only in Communication when EE mode and the tenant flag are enabled', async () => {
+  it('T040/T065/T066/T071/T072/T077/T078/T084/T097/T098/T389/T390/T391/T392/T395/T396/T403/T404/T417/T418/T420: renders Teams only in Communication when EE mode is enabled', async () => {
     process.env.NEXT_PUBLIC_EDITION = 'enterprise';
 
     const { default: IntegrationsSettingsPage } = await import(
@@ -233,33 +233,4 @@ describe('IntegrationsSettingsPage Teams placement', () => {
     expect(screen.queryByText('Microsoft Integration Settings')).not.toBeInTheDocument();
   });
 
-  it('T038/T043/T044/T075/T076/T387/T388/T401/T402/T409/T410/T421: keeps the concrete Teams settings shell out of view when the Teams add-on is not entitled in EE', async () => {
-    // Teams visibility moved from a tenant feature flag to add-on entitlement
-    // (canUseTeams). Without the add-on, the page renders the add-on notice
-    // instead of the Teams settings shell.
-    process.env.NEXT_PUBLIC_EDITION = 'enterprise';
-    useFeatureFlagMock.mockImplementation(() => ({
-      enabled: false,
-      isLoading: false,
-      error: null,
-      value: false,
-    }));
-
-    const { default: IntegrationsSettingsPage } = await import(
-      '@alga-psa/integrations/components/settings/integrations/IntegrationsSettingsPage'
-    );
-
-    render(<IntegrationsSettingsPage canUseTeams={false} />);
-
-    expect(screen.getByText('Communication Integrations')).toBeInTheDocument();
-    expect(screen.getByText('Inbound Email Integration')).toBeInTheDocument();
-    expect(screen.queryByTestId('teams-integration-settings-shell')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('teams-integration-disabled-shell')).not.toBeInTheDocument();
-    expect(screen.queryByText('Microsoft Teams integration disabled')).not.toBeInTheDocument();
-    expect(screen.queryByText('Microsoft Teams integration is disabled for this tenant.')).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Manage add-ons' })).toHaveAttribute(
-      'href',
-      '/msp/add-ons?addon=teams',
-    );
-  });
 });

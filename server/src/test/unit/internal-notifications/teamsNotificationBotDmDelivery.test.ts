@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const hoisted = vi.hoisted(() => {
   const state = {
-    addonActive: true,
     integration: {
       selected_profile_id: 'profile-1',
       install_status: 'active',
@@ -54,9 +53,6 @@ const hoisted = vi.hoisted(() => {
         return this;
       },
       async first() {
-        if (table === 'tenant_addons') {
-          return state.addonActive ? { addon_key: 'teams' } : undefined;
-        }
         if (table === 'teams_integrations') {
           return state.integration ?? undefined;
         }
@@ -170,7 +166,6 @@ function graphResponse(status: number, requestId = 'request-1') {
 
 describe('deliverTeamsNotificationImpl per-category channel routing (F044/F045)', () => {
   beforeEach(() => {
-    hoisted.state.addonActive = true;
     hoisted.state.integration = {
       selected_profile_id: 'profile-1',
       install_status: 'active',

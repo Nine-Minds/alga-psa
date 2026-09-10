@@ -11,6 +11,7 @@ import { getAnalyticsAsync } from '../lib/authHelpers';
 import { BillingEngine, UnresolvedCatalogPricingError } from '../lib/billing/billingEngine';
 import { reconcileWindowAttribution } from '../lib/billing/contractLineAttributionWriter';
 import { getClientDefaultBillingProfileId } from '../lib/billing/billingProfileLookup';
+import { listUnmaterializedClientCadenceWindowLineIds } from '../lib/billing/clientCadenceWindowMaterialization';
 import {
   getCycleBillingProfileId,
   resolveInvoiceProfileScope,
@@ -32,13 +33,15 @@ import {
   IInvoice,
   IRecurringDueSelectionInput,
   PreviewInvoiceResponse,
+  RecurringInvoiceFailureCode,
   InvoiceViewModel,
   DEFAULT_RECURRING_SERVICE_PERIOD_DUE_SELECTION_STATES,
 } from '@alga-psa/types';
 import { WasmInvoiceViewModel } from '@alga-psa/types';
-import { IBillingResult, IBillingCharge, IBucketCharge, IUsageBasedCharge, ITimeBasedCharge, IFixedPriceCharge, IProductCharge, ILicenseCharge, BillingCycleType } from '@alga-psa/types';
+import { IBillingResult, IBillingCharge, IBucketCharge, IUsageBasedCharge, ITimeBasedCharge, IFixedPriceCharge, IProductCharge, ILicenseCharge, IUsageServicePeriodStatus, BillingCycleType } from '@alga-psa/types';
 import { IClient, IClientWithLocation } from '@alga-psa/types';
 import Invoice from '@alga-psa/billing/models/invoice';
+import { attachInvoiceTimeCollections } from '../lib/adapters/invoiceAdapters';
 import { createTenantKnex } from '@alga-psa/db';
 import { Temporal } from '@js-temporal/polyfill';
 import { createPDFGenerationService } from '../services/pdfGenerationService';
@@ -50,7 +53,7 @@ import { ITaxCalculationResult } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 import { auditLog } from '@alga-psa/db';
 import { getClientLogoUrl } from '@alga-psa/formatting/avatarUtils';
-import { calculateAndDistributeTax, getClientDetails, persistInvoiceCharges, updateInvoiceTotalsAndRecordTransaction, validateClientBillingEmail } from '../services/invoiceService';
+import { calculateAndDistributeTax, claimRecurringServicePeriodsForSelectionInputs, getClientDetails, persistInvoiceCharges, updateInvoiceTotalsAndRecordTransaction, validateClientBillingEmail } from '../services/invoiceService';
 
 
 
@@ -76,7 +79,26 @@ import {
   CLIENT_CADENCE_POST_DROP_OBLIGATION_TYPE,
   POST_DROP_RECURRING_OBLIGATION_TYPES,
 } from '@alga-psa/shared/billingClients/postDropRecurringObligationIdentity';
-import { DUPLICATE_RECURRING_INVOICE_CODE, DUPLICATE_RECURRING_INVOICE_MESSAGE_KEY } from './invoiceGeneration.constants';
+import {
+  DUPLICATE_RECURRING_INVOICE_CODE,
+  DUPLICATE_RECURRING_INVOICE_MESSAGE_KEY,
+  NO_BILLING_EMAIL_MESSAGE_KEY,
+  TIME_APPROVAL_REQUIRED_MESSAGE_KEY,
+  USAGE_RECORDS_MISSING_MESSAGE_KEY,
+  USAGE_RECORDS_MISSING_ACK_REQUIRED_MESSAGE_KEY,
+  USAGE_PERIOD_TOTAL_STALE_MESSAGE_KEY,
+  USAGE_CALCULATION_ERROR_MESSAGE_KEY,
+} from './invoiceGeneration.constants';
+import {
+  ManualInvoiceError,
+  type HandledManualInvoiceErrorCode,
+} from '../errors/manualInvoiceErrors';
+import { lockTenantBilling } from '../lib/billing/billingMutationLock';
+import {
+  bindUsagePeriodTotalInputs,
+  type IExpectedUsagePeriodTotal,
+} from '../lib/billing/usagePeriodTotalIdentity';
+import type { HandledRecurringFailureCode } from './recurringBillingRunActions.shared';
 import {
   detectRecurringApprovalBlockers,
   formatApprovalBlockedReason,
@@ -284,6 +306,24 @@ function resolvePreviewRecurringSummary(
   };
 }
 
+/**
+ * Preview items carry the same immutable work-item snapshot the persisted
+ * path writes to invoice_time_entries, so the preview's ticket-level
+ * collections are built by the exact adapter the PDF path uses.
+ */
+function previewTimeEntrySnapshots(
+  charge: IBillingCharge,
+): IInvoiceCharge['time_entry_snapshots'] {
+  if (charge.type !== 'time') {
+    return undefined;
+  }
+  const timeCharge = charge as ITimeBasedCharge;
+  if (!timeCharge.workItemSnapshot) {
+    return undefined;
+  }
+  return [{ ...timeCharge.workItemSnapshot, entryId: timeCharge.entryId }];
+}
+
 function buildPreviewViewModelItem(item: IInvoiceCharge) {
   const recurringSummary = resolvePreviewRecurringSummary(item);
   return {
@@ -382,6 +422,12 @@ async function prepareProjectCapChargesForPersistence(
         originalAmount,
       );
       charge.total = result.billable;
+      if (charge.type === 'time') {
+        const timeCharge = charge as ITimeBasedCharge;
+        if (timeCharge.workItemSnapshot?.version === 2 && timeCharge.workItemSnapshot.rateKind === 'uniform' && timeCharge.workItemSnapshot.netAmount !== charge.total) {
+          timeCharge.workItemSnapshot = { ...timeCharge.workItemSnapshot, rateKind: 'unknown', uniformRate: null };
+        }
+      }
       charge.write_down_amount = result.writtenDown;
       charge.write_down_reason = result.writtenDown > 0 ? 'project_cap' : undefined;
       charge.tax_amount = originalAmount > 0
@@ -585,39 +631,261 @@ function withRecurringWindowErrorContext<T extends Error>(
 function buildPreviewInvoiceFailure(
   selectorInput: IRecurringDueSelectionInput,
   error: string,
+  code?: HandledRecurringFailureCode,
+  params?: Record<string, string>,
+  usageServicePeriodStatuses?: IUsageServicePeriodStatus[],
 ): PreviewInvoiceResponse {
   return {
     success: false,
     error,
+    ...(code ? { code } : {}),
+    ...(params ? { params } : {}),
+    ...(usageServicePeriodStatuses && usageServicePeriodStatuses.length > 0
+      ? { usageServicePeriodStatuses }
+      : {}),
     ...buildRecurringWindowErrorContext(selectorInput),
   };
 }
 
-function previewInvoiceErrorMessage(error: unknown): string {
+/**
+ * Builds the coded `USAGE_RECORDS_MISSING` failure for a preview window whose
+ * usage-billed services have no eligible usage records. Usage billing is
+ * record-driven: no record means missing usage — not zero and not an error —
+ * so the failure names the services and the applicable service period and the
+ * UI routes the user to record usage for that period.
+ */
+function buildMissingUsageRecordsError(
+  statuses: IUsageServicePeriodStatus[],
+): ManualInvoiceError {
+  const serviceNames = Array.from(
+    new Set(
+      statuses.map((status) => status.service_name ?? status.service_id),
+    ),
+  );
+  const serviceIds = Array.from(new Set(statuses.map((status) => status.service_id)));
+  const periodStart = statuses[0].service_period_start;
+  const periodEnd = statuses[0].service_period_end;
+  return new ManualInvoiceError(
+    'USAGE_RECORDS_MISSING',
+    `No eligible usage records for ${serviceNames.join(', ')} in the service period ${periodStart} to ${periodEnd}. Record usage for this period (or a zero-usage entry) to bill these services.`,
+    {
+      services: serviceNames.join(', '),
+      // Not interpolated into copy; lets the UI prefill the Usage Tracking
+      // route so "Record Usage" lands on the affected service directly.
+      serviceIds: serviceIds.join(','),
+      periodStart,
+      periodEnd,
+    },
+    statuses,
+  );
+}
+
+/**
+ * Selects the statuses that mean "due but unreported" — the only states a
+ * mixed-invoice omission acknowledgement may cover. Explicit zeros,
+ * already-invoiced evidence, attribution exclusions, and calculation errors
+ * are distinct typed states and are never collapsed into "unreported".
+ */
+function selectUnreportedUsageStatuses(
+  statuses: IUsageServicePeriodStatus[],
+): IUsageServicePeriodStatus[] {
+  return statuses.filter(
+    (status) => status.status === 'missing_usage' || status.status === 'unreported',
+  );
+}
+
+/**
+ * Builds the coded `USAGE_RECORDS_MISSING_ACK_REQUIRED` failure for a window
+ * that has billable charges but also usage services without a report.
+ * Generating would omit those obligations from the invoice, so interactive
+ * generation requires an explicit acknowledgement (retry with
+ * `acknowledgeUnreportedUsage`) and the automated recurring run surfaces the
+ * coded incomplete-usage failure instead of silently finalizing the window.
+ */
+function buildUsageAcknowledgementRequiredError(
+  statuses: IUsageServicePeriodStatus[],
+): ManualInvoiceError {
+  const serviceNames = Array.from(
+    new Set(statuses.map((status) => status.service_name ?? status.service_id)),
+  );
+  const serviceIds = Array.from(new Set(statuses.map((status) => status.service_id)));
+  const periodStart = statuses[0].service_period_start;
+  const periodEnd = statuses[0].service_period_end;
+  return new ManualInvoiceError(
+    'USAGE_RECORDS_MISSING_ACK_REQUIRED',
+    `This invoice window has billable charges, but ${serviceNames.join(', ')} ${serviceNames.length === 1 ? 'has' : 'have'} no usage reported for the service period ${periodStart} to ${periodEnd}. Record the usage first, or explicitly acknowledge generating without it — the unreported services stay billable later.`,
+    {
+      services: serviceNames.join(', '),
+      serviceIds: serviceIds.join(','),
+      periodStart,
+      periodEnd,
+      // Marker the UI uses to offer "generate anyway" with an explicit
+      // acknowledgement; params cross the action boundary untranslated.
+      acknowledgeRequired: 'true',
+    },
+  );
+}
+
+/**
+ * Builds the coded `USAGE_CALCULATION_ERROR` failure for services whose
+ * recorded usage could not be priced. Generation never silently omits a
+ * recorded charge, and the failure must not read as "record usage".
+ */
+function buildUsageCalculationError(
+  statuses: IUsageServicePeriodStatus[],
+): ManualInvoiceError {
+  const serviceNames = Array.from(
+    new Set(statuses.map((status) => status.service_name ?? status.service_id)),
+  );
+  const serviceIds = Array.from(new Set(statuses.map((status) => status.service_id)));
+  const periodStart = statuses[0].service_period_start;
+  const periodEnd = statuses[0].service_period_end;
+  // Per-service diagnostics stay structured so an all-error window still names
+  // every withheld report (service, period, recorded quantity) instead of
+  // collapsing to one sentence.
+  const details = statuses
+    .map(
+      (status) =>
+        `${status.service_name ?? status.service_id} (${status.service_period_start} to ${status.service_period_end}): recorded quantity ${status.quantity ?? 0} could not be priced`,
+    )
+    .join('; ');
+  return new ManualInvoiceError(
+    'USAGE_CALCULATION_ERROR',
+    `Usage for ${serviceNames.join(', ')} in the service period ${periodStart} to ${periodEnd} is recorded but could not be priced. Fix the service pricing (catalog price in the contract currency, a custom rate, or rate tiers), then try again. Do not record replacement usage.`,
+    {
+      services: serviceNames.join(', '),
+      serviceIds: serviceIds.join(','),
+      periodStart,
+      periodEnd,
+      details,
+    },
+    statuses,
+  );
+}
+
+export type { IExpectedUsagePeriodTotal } from '../lib/billing/usagePeriodTotalIdentity';
+
+/**
+ * Options accepted by every recurring invoice-generation entry point. All
+ * fields are optional and absent for legacy/automated callers, which keep the
+ * existing recompute-from-database behavior.
+ */
+export interface IInvoiceGenerationRequestOptions {
+  allowPoOverage?: boolean;
+  /**
+   * Tenant-local invoice date to stamp instead of "today". Passed by the
+   * calendar month-end close so the invoice is dated to the closed month.
+   */
+  invoiceDate?: string;
+  /**
+   * Explicit operator acknowledgement that usage services without a report may
+   * be omitted from this invoice. The omitted obligations are not consumed and
+   * stay billable later. Without it, a window that mixes billable charges with
+   * unreported usage fails with `USAGE_RECORDS_MISSING_ACK_REQUIRED`.
+   */
+  acknowledgeUnreportedUsage?: boolean;
+  /**
+   * Period-total revisions the caller previewed. Generation refuses with
+   * `USAGE_PERIOD_TOTAL_STALE` when the stored total was edited, deleted, or
+   * already consumed since the preview, instead of silently billing different
+   * numbers than the operator approved.
+   */
+  expectedUsagePeriodTotals?: IExpectedUsagePeriodTotal[];
+}
+
+/**
+ * Enforces preview/generation consistency for period totals: every expected
+ * (previewed) total must still be present in the freshly recomputed charges
+ * with exactly the previewed identity — same stored row, same revision, same
+ * billable quantity, and same priced amount. Revision alone cannot see a
+ * delete + re-report (revisions restart on the new row) or a pricing or
+ * configuration change that reprices an unchanged report; the content fields
+ * close both gaps. Reads the stored totals only to phrase why a mismatch
+ * happened (edited / replaced / deleted / already invoiced / repriced).
+ */
+async function assertExpectedUsagePeriodTotalsCurrent(params: {
+  knex: Knex;
+  tenant: string;
+  clientId: string;
+  charges: IBillingCharge[];
+  expected: IExpectedUsagePeriodTotal[];
+  statuses?: IUsageServicePeriodStatus[];
+}): Promise<void> {
+  const keyOf = (
+    lineId: string | undefined,
+    serviceId: string | undefined,
+    periodStart: string | null | undefined,
+    periodEnd: string | null | undefined,
+  ) => `${lineId ?? ''}|${serviceId ?? ''}|${(periodStart ?? '').slice(0, 10)}|${(periodEnd ?? '').slice(0, 10)}`;
+
+  const identities = await bindUsagePeriodTotalInputs(
+    params.knex, params.tenant, params.clientId, params.charges, params.statuses,
+  );
+  const currentByKey = new Map(identities.map(identity => [keyOf(identity.clientContractLineId, identity.serviceId, identity.periodStart, identity.periodEnd), identity]));
+  const staleDescriptions: string[] = [];
+  const staleServiceIds: string[] = [];
+  for (const expected of params.expected) {
+    const current = currentByKey.get(keyOf(expected.clientContractLineId, expected.serviceId, expected.periodStart, expected.periodEnd));
+    if (current && expected.billingInputsHash && current.billingInputsHash === expected.billingInputsHash
+      && current.periodTotalId === expected.periodTotalId && current.configId === expected.configId
+      && current.revision === Number(expected.revision) && current.quantity === expected.quantity
+      && current.totalCents === expected.totalCents) continue;
+    staleServiceIds.push(expected.serviceId);
+    staleDescriptions.push(`the report or billing inputs for service ${expected.serviceId} (${expected.periodStart} to ${expected.periodEnd}) changed since preview`);
+  }
+
+  for (const current of identities) {
+    if (params.expected.some(expected => keyOf(expected.clientContractLineId, expected.serviceId, expected.periodStart, expected.periodEnd) === keyOf(current.clientContractLineId, current.serviceId, current.periodStart, current.periodEnd))) continue;
+    staleServiceIds.push(current.serviceId);
+    staleDescriptions.push(`service ${current.serviceId} (${current.periodStart} to ${current.periodEnd}) was not in the reviewed usage selection`);
+  }
+  if (staleDescriptions.length > 0) {
+    throw new ManualInvoiceError(
+      'USAGE_PERIOD_TOTAL_STALE',
+      `The preview is out of date: ${staleDescriptions.join('; ')}. Re-run the preview to see the current numbers, then generate again.`,
+      {
+        serviceIds: staleServiceIds.join(','),
+        details: staleDescriptions.join('; '),
+      },
+    );
+  }
+}
+
+/**
+ * Maps a preview failure to the user-safe message plus the structured, known
+ * failure (code/params) the UI needs to render localized, actionable guidance.
+ * Unknown/internal failures carry no code, so the UI keeps the generic string.
+ */
+function previewInvoiceErrorInfo(error: unknown): {
+  message: string;
+  code?: HandledRecurringFailureCode;
+  params?: Record<string, string>;
+  usageServicePeriodStatuses?: IUsageServicePeriodStatus[];
+} {
   const message = error instanceof Error ? error.message : '';
 
   if (message.startsWith('Permission denied:')) {
-    return message;
+    return { message };
   }
 
   if (message.startsWith('Recurring service periods were not materialized')) {
-    return message;
+    return { message };
   }
 
   if (/^Billing cycle .+ not found for client .+$/.test(message)) {
-    return 'Billing cycle not found';
+    return { message: 'Billing cycle not found' };
   }
 
   if (/^Billing cycle .+ has invalid dates/.test(message)) {
-    return 'Billing cycle has invalid dates';
+    return { message: 'Billing cycle has invalid dates' };
   }
 
   if (/^Billing Error: Client .+ has active contracts in multiple currencies \(.+\)\. Mixed currency billing is not supported\.$/.test(message)) {
-    return 'This client has active contracts in multiple currencies. Mixed currency billing is not supported.';
+    return { message: 'This client has active contracts in multiple currencies. Mixed currency billing is not supported.' };
   }
 
   if (/^Client .+ not found in tenant .+$/.test(message)) {
-    return 'Client not found';
+    return { message: 'Client not found' };
   }
 
   const expectedMessages = new Set([
@@ -633,20 +901,41 @@ function previewInvoiceErrorMessage(error: unknown): string {
   ]);
 
   if (expectedMessages.has(message)) {
-    return message;
+    return { message };
+  }
+
+  // A coded billing validation error carries its code/params straight to the UI
+  // so preview surfaces the same localized remediation as its sibling flows.
+  // Only allowlisted codes cross; unsupported codes take the generic fallback
+  // so raw validation detail never reaches the user. USAGE_CALCULATION_ERROR
+  // is allowlisted so an all-error window keeps its structured per-service
+  // diagnostics (serviceIds/details) instead of collapsing to a flat string.
+  if (
+    error instanceof ManualInvoiceError &&
+    (error.code === 'NO_BILLING_EMAIL' ||
+      error.code === 'USAGE_RECORDS_MISSING' ||
+      error.code === 'USAGE_CALCULATION_ERROR')
+  ) {
+    return {
+      message: error.message,
+      code: error.code,
+      params: error.params,
+      ...(error.usageStatuses && error.usageStatuses.length > 0
+        ? { usageServicePeriodStatuses: error.usageStatuses }
+        : {}),
+    };
   }
 
   // Same mapping the generation path uses, so preview surfaces database and
   // validation causes with the same actionable text as its sibling flows.
   const mapped = invoiceGenerationActionErrorFrom(error);
   if (mapped) {
-    return 'permissionError' in mapped ? mapped.permissionError : mapped.actionError;
+    return 'permissionError' in mapped ? { message: mapped.permissionError } : { message: mapped.actionError };
   }
 
-  // Last resort only: never swallow an actionable cause behind the generic string.
-  return message.trim() !== ''
-    ? message
-    : 'An error occurred while previewing the invoice';
+  // Unknown/internal exceptions never leak their raw message to the user; the
+  // full cause stays server-side in logPreviewInvoiceFailure.
+  return { message: 'An error occurred while previewing the invoice' };
 }
 
 function logPreviewInvoiceFailure(
@@ -657,10 +946,49 @@ function logPreviewInvoiceFailure(
   console.error(`[${action}] Invoice preview failed:`, context, error);
 }
 
+/**
+ * Maps a coded billing validation error (`ManualInvoiceError`) to the localized
+ * message key the recurring run uses to recover the structured failure. Codes the
+ * recurring flow does not handle deliberately have no key, so they fall back to the
+ * generic action-error string.
+ */
+function manualInvoiceErrorMessageKey(
+  code: HandledManualInvoiceErrorCode,
+): string | undefined {
+  switch (code) {
+    case 'NO_BILLING_EMAIL':
+      return NO_BILLING_EMAIL_MESSAGE_KEY;
+    case 'TIME_APPROVAL_REQUIRED':
+      return TIME_APPROVAL_REQUIRED_MESSAGE_KEY;
+    case 'USAGE_RECORDS_MISSING':
+      return USAGE_RECORDS_MISSING_MESSAGE_KEY;
+    case 'USAGE_RECORDS_MISSING_ACK_REQUIRED':
+      return USAGE_RECORDS_MISSING_ACK_REQUIRED_MESSAGE_KEY;
+    case 'USAGE_PERIOD_TOTAL_STALE':
+      return USAGE_PERIOD_TOTAL_STALE_MESSAGE_KEY;
+    case 'USAGE_CALCULATION_ERROR':
+      return USAGE_CALCULATION_ERROR_MESSAGE_KEY;
+    default:
+      return undefined;
+  }
+}
+
 function invoiceGenerationActionErrorFrom(error: unknown): InvoiceGenerationActionError | null {
   if (error instanceof Error) {
     if (error.message.startsWith('Permission denied')) {
       return permissionError(error.message);
+    }
+
+    // Coded billing validation error. Only the allowlisted code crosses this
+    // boundary as a keyed action error; unsupported codes are re-thrown so the
+    // recurring run's generic catch owns them (full logging, generic UI string).
+    // Checked before the message matching below, which would otherwise surface a
+    // raw, uncoded sentence for codes whose message happens to match a prefix.
+    if (error instanceof ManualInvoiceError) {
+      const messageKey = manualInvoiceErrorMessageKey(error.code);
+      return messageKey
+        ? actionError(error.message, messageKey, error.params)
+        : null;
     }
 
     // An expected, actionable refusal, not a failure: a contract covers these
@@ -1004,65 +1332,7 @@ async function assertClientCadenceWindowFullyMaterialized(params: {
   windowStart: ISO8601String;
   windowEnd: ISO8601String;
 }): Promise<void> {
-  const activeRecurringLineRows = await withTransaction(
-    params.knex,
-    async (trx: Knex.Transaction) => {
-      const db = tenantDb(trx, params.tenant);
-      const query = db.table('client_contracts as cc');
-      db.tenantJoin(query, 'contracts as ct', 'ct.contract_id', 'cc.contract_id');
-      db.tenantJoin(query, 'contract_lines as cl', 'cl.contract_id', 'ct.contract_id');
-
-      return query
-        .where({
-          'cc.client_id': params.clientId,
-          'cc.is_active': true,
-          'cl.cadence_owner': 'client',
-        })
-        .whereNotNull('cl.billing_frequency')
-        .whereNotNull('cl.billing_timing')
-        .where('cc.start_date', '<', params.windowEnd)
-        .where(function () {
-          this.where('cc.end_date', '>=', params.windowStart)
-            .orWhereNull('cc.end_date');
-        })
-        .select('cl.contract_line_id');
-    },
-  );
-
-  const activeRecurringLineIds = Array.from(
-    new Set(
-      activeRecurringLineRows
-        .map((row) => row.contract_line_id)
-        .filter((value): value is string => Boolean(value)),
-    ),
-  );
-  if (activeRecurringLineIds.length === 0) {
-    return;
-  }
-
-  const materializedRows = await withTransaction(
-    params.knex,
-    async (trx: Knex.Transaction) =>
-      tenantDb(trx, params.tenant).table('recurring_service_periods')
-        .where({
-          cadence_owner: 'client',
-          invoice_window_start: params.windowStart,
-          invoice_window_end: params.windowEnd,
-        })
-        .whereIn('obligation_type', [...POST_DROP_RECURRING_OBLIGATION_TYPES])
-        .whereIn('obligation_id', activeRecurringLineIds)
-        .whereNotIn('lifecycle_state', ['archived', 'superseded'])
-        .select('obligation_id'),
-  );
-
-  const materializedLineIds = new Set(
-    materializedRows
-      .map((row) => row.obligation_id)
-      .filter((value): value is string => Boolean(value)),
-  );
-  const missingLineIds = activeRecurringLineIds.filter(
-    (lineId) => !materializedLineIds.has(lineId),
-  );
+  const missingLineIds = await listUnmaterializedClientCadenceWindowLineIds(params);
 
   if (missingLineIds.length > 0) {
     throw new Error(
@@ -1513,11 +1783,15 @@ async function calculateBillingWithReconciledAttribution(params: {
         windowEnd: canonicalSelection.windowEnd,
       });
 
+      await lockTenantBilling(trx, params.tenant);
       const billingResult = await calculateBillingForSelectionInputs({
         billingEngine: BillingEngine.forTransaction(trx, params.tenant),
         selectorInputs: params.selectorInputs,
       });
 
+      billingResult.expectedUsagePeriodTotals = await bindUsagePeriodTotalInputs(
+        trx, params.tenant, canonicalSelection.clientId, billingResult.charges, billingResult.usageServicePeriodStatuses,
+      );
       if (params.persistReconciliation && billingResult.error) {
         throw new Error(billingResult.error);
       }
@@ -1648,7 +1922,7 @@ export const getPurchaseOrderOverageForBillingCycle = withAuth(async (
   const { knex } = await createTenantKnex();
 
   const billingCycle = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    if (!await hasPermission(user, 'invoice', 'create') && !await hasPermission(user, 'invoice', 'generate')) {
+    if (!await hasPermission(user, 'invoice', 'create', trx) && !await hasPermission(user, 'invoice', 'generate', trx)) {
       throw new Error('Permission denied: Cannot generate invoices');
     }
 
@@ -1804,9 +2078,15 @@ async function adaptToWasmViewModel(
     }
   }
 
+  for (const item of invoiceItems) {
+    if (item.time_entry_links) {
+      item.tenant = tenant;
+      item.time_entry_links = item.time_entry_links.map((link) => ({ ...link, itemId: item.item_id, invoiceId: item.invoice_id, tenant }));
+    }
+  }
   const previewViewModelItems = invoiceItems.map(buildPreviewViewModelItem);
 
-  return {
+  const previewViewModel: WasmInvoiceViewModel = {
     invoiceNumber: 'PREVIEW',
     issueDate: toISODate(Temporal.Now.plainDateISO()),
     dueDate: dueDate,
@@ -1823,13 +2103,37 @@ async function adaptToWasmViewModel(
     total: billingResult.totalAmount + previewTax,
     // notes: undefined, // Add if needed
   };
+
+  // Same collection builder as the persisted-invoice read path, so the
+  // preview's ticket-level detail matches the generated PDF by construction.
+  attachInvoiceTimeCollections(previewViewModel, invoiceItems);
+
+  return previewViewModel;
+}
+
+interface BuiltPreviewInvoice {
+  viewModel: WasmInvoiceViewModel;
+  /**
+   * Usage-billed services in the previewed window whose due service period has
+   * no eligible usage record. Present alongside a successful preview when the
+   * window still has other charges (a window with no charges at all fails with
+   * the coded USAGE_RECORDS_MISSING error instead).
+   */
+  usageServicePeriodStatuses?: IUsageServicePeriodStatus[];
+  /**
+   * Full previewed identity (row, revision, quantity, priced amount) of every
+   * period-total-backed usage charge, for the caller to hand back to
+   * generation so finalization refuses when a report or its pricing changed
+   * after the preview.
+   */
+  expectedUsagePeriodTotals?: IExpectedUsagePeriodTotal[];
 }
 
 async function buildPreviewInvoiceForSelectionInputs(params: {
   knex: Knex;
   tenant: string;
   selectorInputs: IRecurringDueSelectionInput[];
-}): Promise<WasmInvoiceViewModel> {
+}): Promise<BuiltPreviewInvoice> {
   const { knex, tenant, selectorInputs } = params;
   const canonicalSelection = assertSameRecurringSelectionWindow(selectorInputs);
   const client_id = canonicalSelection.clientId;
@@ -1852,7 +2156,14 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
       clientForValidation.client_name,
     );
     if (!emailValidation.valid) {
-      throw withRecurringWindowErrorContext(new Error(emailValidation.error!), canonicalSelection);
+      throw withRecurringWindowErrorContext(
+        new ManualInvoiceError(
+          emailValidation.code ?? 'NO_BILLING_EMAIL',
+          emailValidation.error ?? 'Client billing email is required',
+          emailValidation.params ?? { clientName: clientForValidation.client_name },
+        ),
+        canonicalSelection,
+      );
     }
   }
 
@@ -1868,7 +2179,31 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
   }
 
   if (billingResult.charges.length === 0) {
-    throw withRecurringWindowErrorContext(new Error('Nothing to bill'), canonicalSelection);
+    const usageStatuses = billingResult.usageServicePeriodStatuses ?? [];
+    const calculationErrorStatuses = usageStatuses.filter(
+      (status) => status.status === 'calculation_error',
+    );
+    if (calculationErrorStatuses.length > 0) {
+      // Recorded usage that could not be priced is a calculation error, never
+      // "record usage": fail with the typed pricing state.
+      throw withRecurringWindowErrorContext(
+        buildUsageCalculationError(calculationErrorStatuses),
+        canonicalSelection,
+      );
+    }
+    const missingUsageStatuses = selectUnreportedUsageStatuses(usageStatuses);
+    if (missingUsageStatuses.length > 0) {
+      // Not a generic empty preview: usage-billed services are due but have no
+      // usage records for the period. Fail with the coded, actionable state.
+      // Other typed states (already invoiced, attribution excluded) never
+      // masquerade as missing usage.
+      throw withRecurringWindowErrorContext(
+        buildMissingUsageRecordsError(missingUsageStatuses),
+        canonicalSelection,
+      );
+    }
+    // Explicit zero, already invoiced, and excluded attribution remain visible evidence.
+    if (usageStatuses.length === 0) throw withRecurringWindowErrorContext(new Error('Nothing to bill'), canonicalSelection);
   }
 
   const client = await getClientDetails(knex, tenant, client_id);
@@ -1913,7 +2248,7 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
       tax_amount: charge.tax_amount || 0,
       tax_rate: charge.tax_rate || 0,
       tax_region: charge.tax_region || '',
-      net_amount: charge.total - (charge.tax_amount || 0),
+      net_amount: charge.total,
       is_manual: false,
       rate: charge.rate,
       service_period_start: recurringSummary.servicePeriodStart,
@@ -1924,6 +2259,9 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
         service_period_end: period.servicePeriodEnd ?? null,
         billing_timing: period.billingTiming ?? null,
       })),
+      billing_charge_type: charge.type,
+      time_entry_links: charge.type === 'time' ? [{ itemId: '', entryId: (charge as ITimeBasedCharge).entryId, invoiceId: '', tenant, snapshot: (charge as ITimeBasedCharge).workItemSnapshot ?? null }] : [],
+      time_entry_snapshots: previewTimeEntrySnapshots(charge),
     });
   });
 
@@ -1984,7 +2322,7 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
         tax_amount: charge.tax_amount || 0,
         tax_rate: charge.tax_rate || 0,
         tax_region: charge.tax_region || '',
-        net_amount: charge.total - (charge.tax_amount || 0),
+        net_amount: charge.total,
         is_manual: false,
         client_contract_id: clientContractGroupId,
         contract_name: contractGroupName,
@@ -1998,6 +2336,9 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
           service_period_end: period.servicePeriodEnd ?? null,
           billing_timing: period.billingTiming ?? null,
         })),
+        billing_charge_type: charge.type,
+        time_entry_links: charge.type === 'time' ? [{ itemId: '', entryId: (charge as ITimeBasedCharge).entryId, invoiceId: '', tenant, snapshot: (charge as ITimeBasedCharge).workItemSnapshot ?? null }] : [],
+        time_entry_snapshots: previewTimeEntrySnapshots(charge),
       });
     });
   }
@@ -2035,7 +2376,7 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
         tax_amount: charge.tax_amount || 0,
         tax_rate: charge.tax_rate || 0,
         tax_region: charge.tax_region || '',
-        net_amount: charge.total - (charge.tax_amount || 0),
+        net_amount: charge.total,
         is_manual: false,
         parent_item_id: projectGroupHeaderId,
         rate: charge.rate,
@@ -2047,6 +2388,9 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
           service_period_end: period.servicePeriodEnd ?? null,
           billing_timing: period.billingTiming ?? null,
         })),
+        billing_charge_type: charge.type,
+        time_entry_links: charge.type === 'time' ? [{ itemId: '', entryId: (charge as ITimeBasedCharge).entryId, invoiceId: '', tenant, snapshot: (charge as ITimeBasedCharge).workItemSnapshot ?? null }] : [],
+        time_entry_snapshots: previewTimeEntrySnapshots(charge),
       });
     });
   }
@@ -2058,7 +2402,7 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
     client?.tax_region || '',
   );
 
-  return adaptToWasmViewModel(
+  const viewModel = await adaptToWasmViewModel(
     billingResult,
     client,
     invoiceItems,
@@ -2066,13 +2410,23 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
     previewTax,
     tenant,
   );
+
+  const usageServicePeriodStatuses = billingResult.usageServicePeriodStatuses;
+  const expectedUsagePeriodTotals = billingResult.expectedUsagePeriodTotals ?? [];
+  return {
+    viewModel,
+    ...(usageServicePeriodStatuses && usageServicePeriodStatuses.length > 0
+      ? { usageServicePeriodStatuses }
+      : {}),
+    ...(expectedUsagePeriodTotals.length > 0 ? { expectedUsagePeriodTotals } : {}),
+  };
 }
 
 async function buildPreviewInvoiceForSelectionInput(params: {
   knex: Knex;
   tenant: string;
   selectorInput: IRecurringDueSelectionInput;
-}): Promise<WasmInvoiceViewModel> {
+}): Promise<BuiltPreviewInvoice> {
   return buildPreviewInvoiceForSelectionInputs({
     knex: params.knex,
     tenant: params.tenant,
@@ -2092,11 +2446,31 @@ export type RecurringGroupedPreviewResponse = {
     previewGroupKey: string;
     data: WasmInvoiceViewModel;
     selectorInputs: IRecurringDueSelectionInput[];
+    /**
+     * Usage-billed services in this preview's window whose due service period
+     * has no eligible usage record; the preview UI surfaces them so recorded
+     * charges are never mistaken for "all usage billed".
+     */
+    usageServicePeriodStatuses?: IUsageServicePeriodStatus[];
+    /**
+     * Full previewed identity of every period-total-backed usage charge, to
+     * pass back through generation as expectedUsagePeriodTotals.
+     */
+    expectedUsagePeriodTotals?: IExpectedUsagePeriodTotal[];
   }>;
 } | {
   success: false;
   error: string;
   executionIdentityKey?: string;
+  /** Safe, known failure code so the UI can render localized guidance. */
+  code?: RecurringInvoiceFailureCode;
+  /** Interpolation values for the localized failure copy (e.g. clientName). */
+  params?: Record<string, string>;
+  /**
+   * Structured per-service diagnoses for coded usage failures, so an
+   * all-unreported or all-error window still offers inline remediation.
+   */
+  usageServicePeriodStatuses?: IUsageServicePeriodStatus[];
 };
 
 export const previewGroupedInvoicesForSelectionInputs = withAuth(async (
@@ -2131,15 +2505,24 @@ export const previewGroupedInvoicesForSelectionInputs = withAuth(async (
     );
 
     const previews = await Promise.all(
-      normalizedGroupedSelections.map(async (group) => ({
-        previewGroupKey: group.previewGroupKey,
-        selectorInputs: group.selectorInputs,
-        data: await buildPreviewInvoiceForSelectionInputs({
+      normalizedGroupedSelections.map(async (group) => {
+        const preview = await buildPreviewInvoiceForSelectionInputs({
           knex,
           tenant,
           selectorInputs: group.selectorInputs,
-        }),
-      })),
+        });
+        return {
+          previewGroupKey: group.previewGroupKey,
+          selectorInputs: group.selectorInputs,
+          data: preview.viewModel,
+          ...(preview.usageServicePeriodStatuses
+            ? { usageServicePeriodStatuses: preview.usageServicePeriodStatuses }
+            : {}),
+          ...(preview.expectedUsagePeriodTotals
+            ? { expectedUsagePeriodTotals: preview.expectedUsagePeriodTotals }
+            : {}),
+        };
+      }),
     );
 
     return {
@@ -2161,14 +2544,23 @@ export const previewGroupedInvoicesForSelectionInputs = withAuth(async (
       error,
     );
     const fallbackSelectorInput = normalizedGroupedSelections[0]?.selectorInputs?.[0];
+    const previewInfo = previewInvoiceErrorInfo(error);
     return fallbackSelectorInput
       ? buildPreviewInvoiceFailure(
           fallbackSelectorInput,
-          previewInvoiceErrorMessage(error),
+          previewInfo.message,
+          previewInfo.code,
+          previewInfo.params,
+          previewInfo.usageServicePeriodStatuses,
         )
       : {
           success: false,
-          error: previewInvoiceErrorMessage(error),
+          error: previewInfo.message,
+          ...(previewInfo.code ? { code: previewInfo.code } : {}),
+          ...(previewInfo.params ? { params: previewInfo.params } : {}),
+          ...(previewInfo.usageServicePeriodStatuses
+            ? { usageServicePeriodStatuses: previewInfo.usageServicePeriodStatuses }
+            : {}),
         };
   }
 });
@@ -2190,13 +2582,20 @@ export const previewInvoiceForSelectionInput = withAuth(async (
       tenant,
       selectorInput,
     });
+    const preview = await buildPreviewInvoiceForSelectionInput({
+      knex,
+      tenant,
+      selectorInput: normalizedSelectorInput,
+    });
     return {
       success: true,
-      data: await buildPreviewInvoiceForSelectionInput({
-        knex,
-        tenant,
-        selectorInput: normalizedSelectorInput,
-      }),
+      data: preview.viewModel,
+      ...(preview.usageServicePeriodStatuses
+        ? { usageServicePeriodStatuses: preview.usageServicePeriodStatuses }
+        : {}),
+      ...(preview.expectedUsagePeriodTotals
+        ? { expectedUsagePeriodTotals: preview.expectedUsagePeriodTotals }
+        : {}),
     };
   } catch (error) {
     logPreviewInvoiceFailure(
@@ -2207,9 +2606,13 @@ export const previewInvoiceForSelectionInput = withAuth(async (
       },
       error,
     );
+    const previewInfo = previewInvoiceErrorInfo(error);
     return buildPreviewInvoiceFailure(
       normalizedSelectorInput,
-      previewInvoiceErrorMessage(error),
+      previewInfo.message,
+      previewInfo.code,
+      previewInfo.params,
+      previewInfo.usageServicePeriodStatuses,
     );
   }
 });
@@ -2267,13 +2670,20 @@ export const previewInvoice = withAuth(async (
       windowEnd: cycleEnd,
     });
 
+    const preview = await buildPreviewInvoiceForSelectionInput({
+      knex,
+      tenant,
+      selectorInput,
+    });
     return {
       success: true,
-      data: await buildPreviewInvoiceForSelectionInput({
-        knex,
-        tenant,
-        selectorInput,
-      })
+      data: preview.viewModel,
+      ...(preview.usageServicePeriodStatuses
+        ? { usageServicePeriodStatuses: preview.usageServicePeriodStatuses }
+        : {}),
+      ...(preview.expectedUsagePeriodTotals
+        ? { expectedUsagePeriodTotals: preview.expectedUsagePeriodTotals }
+        : {}),
     };
   } catch (error) {
     logPreviewInvoiceFailure(
@@ -2285,14 +2695,23 @@ export const previewInvoice = withAuth(async (
       },
       error,
     );
+    const previewInfo = previewInvoiceErrorInfo(error);
     return selectorInput
       ? buildPreviewInvoiceFailure(
           selectorInput,
-          previewInvoiceErrorMessage(error),
+          previewInfo.message,
+          previewInfo.code,
+          previewInfo.params,
+          previewInfo.usageServicePeriodStatuses,
         )
       : {
           success: false,
-          error: previewInvoiceErrorMessage(error)
+          error: previewInfo.message,
+          ...(previewInfo.code ? { code: previewInfo.code } : {}),
+          ...(previewInfo.params ? { params: previewInfo.params } : {}),
+          ...(previewInfo.usageServicePeriodStatuses
+            ? { usageServicePeriodStatuses: previewInfo.usageServicePeriodStatuses }
+            : {}),
         };
   }
 });
@@ -2502,7 +2921,7 @@ export const generateInvoice = withAuth(async (
   user,
   { tenant },
   billing_cycle_id: string,
-  options: { allowPoOverage?: boolean } = {}
+  options: IInvoiceGenerationRequestOptions = {}
 ): Promise<InvoiceViewModel | null | InvoiceGenerationActionError> => {
   return withInvoiceGenerationActionErrors(async () => {
   // Get billing cycle details
@@ -2510,7 +2929,7 @@ export const generateInvoice = withAuth(async (
 
   const billingCycle = await withTransaction(knex, async (trx: Knex.Transaction) => {
     // Check permissions within transaction
-    if (!await hasPermission(user, 'invoice', 'create') && !await hasPermission(user, 'invoice', 'generate')) {
+    if (!await hasPermission(user, 'invoice', 'create', trx) && !await hasPermission(user, 'invoice', 'generate', trx)) {
       throw new Error('Permission denied: Cannot generate invoices');
     }
 
@@ -2589,7 +3008,7 @@ export const generateInvoiceForSelectionInput = withAuth(async (
   user,
   { tenant },
   selectorInput: IRecurringDueSelectionInput,
-  options: { allowPoOverage?: boolean } = {},
+  options: IInvoiceGenerationRequestOptions = {},
   bridgeMetadata?: RecurringBridgeMetadata,
 ): Promise<InvoiceViewModel | null | InvoiceGenerationActionError> => {
   return withInvoiceGenerationActionErrors(async () => {
@@ -2636,9 +3055,16 @@ export async function generateInvoiceForNormalizedSelectionInputs(params: {
   tenant: string;
   knex: Knex;
   normalizedSelectorInputs: IRecurringDueSelectionInput[];
-  options?: { allowPoOverage?: boolean };
+  options?: IInvoiceGenerationRequestOptions;
   bridgeMetadata?: RecurringBridgeMetadata;
 }): Promise<InvoiceViewModel | null> {
+  return withTransaction(params.knex, async (trx) => {
+    await lockTenantBilling(trx, params.tenant);
+    return generateInvoiceForLockedSelectionInputs({ ...params, knex: trx });
+  });
+}
+
+async function generateInvoiceForLockedSelectionInputs(params: Parameters<typeof generateInvoiceForNormalizedSelectionInputs>[0]): Promise<InvoiceViewModel | null> {
   const { user, tenant, knex } = params;
   const normalizedSelectorInput = assertSameRecurringSelectionWindow(params.normalizedSelectorInputs);
   const billing_cycle_id = resolveRecurringInvoiceBridgeId(params.bridgeMetadata);
@@ -2653,7 +3079,14 @@ export async function generateInvoiceForNormalizedSelectionInputs(params: {
   if (clientForValidation) {
     const emailValidation = await validateClientBillingEmail(knex, tenant, client_id, clientForValidation.client_name);
     if (!emailValidation.valid) {
-      throw withRecurringWindowErrorContext(new Error(emailValidation.error), normalizedSelectorInput);
+      throw withRecurringWindowErrorContext(
+        new ManualInvoiceError(
+          emailValidation.code ?? 'NO_BILLING_EMAIL',
+          emailValidation.error ?? 'Client billing email is required',
+          emailValidation.params ?? { clientName: clientForValidation.client_name },
+        ),
+        normalizedSelectorInput,
+      );
     }
   }
 
@@ -2687,7 +3120,9 @@ export async function generateInvoiceForNormalizedSelectionInputs(params: {
   );
   if (approvalBlockedEntryCount > 0) {
     throw withRecurringWindowErrorContext(
-      new Error(formatApprovalBlockedReason(approvalBlockedEntryCount)),
+      new ManualInvoiceError('TIME_APPROVAL_REQUIRED', formatApprovalBlockedReason(approvalBlockedEntryCount), {
+        count: String(approvalBlockedEntryCount),
+      }),
       normalizedSelectorInput,
     );
   }
@@ -2700,6 +3135,64 @@ export async function generateInvoiceForNormalizedSelectionInputs(params: {
   });
   if (billingResult.error) {
     throw withRecurringWindowErrorContext(new Error(billingResult.error), normalizedSelectorInput);
+  }
+
+  // Preview/generation consistency for period totals: when the caller passed
+  // the revisions it previewed, the freshly recomputed charges must consume
+  // exactly those revisions or generation refuses (stale preview). Legacy and
+  // automated callers pass nothing and keep the recompute-from-database
+  // behavior unchanged.
+  const expectedUsagePeriodTotals = params.options?.expectedUsagePeriodTotals ?? [];
+  if (params.options?.expectedUsagePeriodTotals !== undefined) {
+    try {
+      await assertExpectedUsagePeriodTotalsCurrent({
+        knex,
+        tenant,
+        clientId: client_id,
+        charges: billingResult.charges,
+        expected: expectedUsagePeriodTotals,
+        statuses: billingResult.usageServicePeriodStatuses,
+      });
+    } catch (error) {
+      throw error instanceof ManualInvoiceError
+        ? withRecurringWindowErrorContext(error, normalizedSelectorInput)
+        : error;
+    }
+  }
+
+  const usageStatusesForWindow = billingResult.usageServicePeriodStatuses ?? [];
+  const calculationErrorStatuses = usageStatusesForWindow.filter(
+    (status) => status.status === 'calculation_error',
+  );
+  if (calculationErrorStatuses.length > 0) {
+    // Recorded usage the engine could not price must never be silently
+    // omitted from a finalized window; there is no acknowledgement for it.
+    throw withRecurringWindowErrorContext(
+      buildUsageCalculationError(calculationErrorStatuses),
+      normalizedSelectorInput,
+    );
+  }
+  const unreportedUsageStatuses = selectUnreportedUsageStatuses(usageStatusesForWindow);
+  if (unreportedUsageStatuses.length > 0) {
+    if (billingResult.charges.length === 0) {
+      // A window whose only due obligations are unreported usage services has
+      // nothing acknowledged-omittable: it is simply unreported, and silently
+      // finalizing (even at $0) would mark the period fulfilled.
+      throw withRecurringWindowErrorContext(
+        buildMissingUsageRecordsError(unreportedUsageStatuses),
+        normalizedSelectorInput,
+      );
+    }
+    if (!params.options?.acknowledgeUnreportedUsage) {
+      // Mixed window: billable charges plus unreported usage. Omitting the
+      // usage is a deliberate operator decision, never a default.
+      throw withRecurringWindowErrorContext(
+        buildUsageAcknowledgementRequiredError(unreportedUsageStatuses),
+        normalizedSelectorInput,
+      );
+    }
+    // Acknowledged: generate without the unreported usage. Their reports were
+    // never created, so nothing is consumed and the obligations stay billable.
   }
 
   const clientContractId = getSingleClientContractIdFromCharges(billingResult.charges);
@@ -2766,6 +3259,11 @@ export async function generateInvoiceForNormalizedSelectionInputs(params: {
       cycleEnd,
       billing_cycle_id,
       user.user_id,
+      {
+        knex,
+        invoiceDate: params.options?.invoiceDate,
+        recurringSelectorInputs: params.normalizedSelectorInputs,
+      },
     );
     if (settings.zero_dollar_invoice_handling === 'finalized') {
       await finalizeInvoiceWithKnex(createdInvoice.invoice_id, knex, tenant, user.user_id);
@@ -2794,6 +3292,11 @@ export async function generateInvoiceForNormalizedSelectionInputs(params: {
     cycleEnd,
     billing_cycle_id,
     user.user_id,
+    {
+      knex,
+      invoiceDate: params.options?.invoiceDate,
+      recurringSelectorInputs: params.normalizedSelectorInputs,
+    },
   );
 
   return Invoice.getFullInvoiceById(knex, tenant, createdInvoice.invoice_id);
@@ -2803,7 +3306,7 @@ export const generateInvoiceForSelectionInputs = withAuth(async (
   user,
   { tenant },
   selectorInputs: IRecurringDueSelectionInput[],
-  options: { allowPoOverage?: boolean } = {},
+  options: IInvoiceGenerationRequestOptions = {},
   bridgeMetadata?: RecurringBridgeMetadata,
 ): Promise<InvoiceViewModel | null | InvoiceGenerationActionError> => {
   return withInvoiceGenerationActionErrors(async () => {
@@ -2963,14 +3466,27 @@ export async function createInvoiceFromBillingResultImpl(
   cycleEnd: ISO8601String,
   billing_cycle_id: string | null,
   userId: string,
-  options: { projectId?: string } = {},
+  options: {
+    projectId?: string;
+    knex?: Knex;
+    invoiceDate?: string;
+    /**
+     * The recurring execution windows this invoice was generated for. When
+     * present, each fulfilled recurring service period those windows represent is
+     * claimed for the invoice atomically with charge persistence — including
+     * periods whose lines produced no charges (zero-dollar usage/bucket) and
+     * would otherwise stay unclaimed, blind to the duplicate detector.
+     * Unreported usage deliberately omitted from the invoice remains due.
+     */
+    recurringSelectorInputs?: IRecurringDueSelectionInput[];
+  } = {},
 ): Promise<IInvoice> {
   // Verify that the userId matches the current user
   if (user.user_id !== userId) {
     throw new Error('Permission denied: User ID mismatch');
   }
 
-  const { knex } = await createTenantKnex();
+  const knex = options.knex ?? (await createTenantKnex()).knex;
 
   const client = await getClientDetails(knex, tenant, clientId);
   let region_code = await getClientDefaultTaxRegionCode(knex, tenant, clientId);
@@ -2990,7 +3506,12 @@ export async function createInvoiceFromBillingResultImpl(
     console.error(`[createInvoiceFromBillingResult] Cannot create invoice for client ${clientId} (${client.client_name}) because it lacks a default tax region (region_code) even after auto-configuration attempt.`);
     throw new Error(`Client '${client.client_name}' does not have a default tax region configured. Please set one before generating invoices.`);
   }
-  const currentDate = Temporal.Now.plainDateISO().toString();
+  // `invoice_date` (and the `getDueDate` input it feeds) is the invoice's "today".
+  // The calendar month-end close passes `options.invoiceDate` — the tenant-local
+  // final calendar day its eligibility gate approved — so the draft is stamped on
+  // the billing calendar. Every other caller omits it and this stays exactly the
+  // server-host calendar date it has always been.
+  const currentDate = options.invoiceDate ?? Temporal.Now.plainDateISO().toString();
   const due_date = unwrapBillingHelperResult(await getDueDate(clientId, currentDate));
   // taxService initialized above
   // let subtotal = 0; // Subtotal will be calculated by persistInvoiceCharges
@@ -3068,7 +3589,7 @@ export async function createInvoiceFromBillingResultImpl(
       invoiceData.invoice_number = invoiceNumber;
       const [insertedInvoice] = await withTransaction(knex, async (trx: Knex.Transaction) => {
         // Check permissions within transaction
-        if (!await hasPermission(user, 'invoice', 'create') && !await hasPermission(user, 'invoice', 'generate')) {
+        if (!await hasPermission(user, 'invoice', 'create', trx) && !await hasPermission(user, 'invoice', 'generate', trx)) {
           throw new Error('Permission denied: Cannot create invoices');
         }
 
@@ -3151,6 +3672,24 @@ export async function createInvoiceFromBillingResultImpl(
       userId,
     );
     const calculatedSubtotal = standardSubtotal + projectScheduleSubtotal;
+
+    // Recurring windows must end this transaction fully claimed: every
+    // fulfilled recurring service period is linked to this invoice (including
+    // zero-dollar leftovers). Deliberately omitted, unreported usage stays due
+    // so a later report can be billed. This still arms the duplicate guard for
+    // grouped zero-dollar windows whose obligations have been fulfilled.
+    if (options.recurringSelectorInputs?.length && !options.projectId) {
+      await claimRecurringServicePeriodsForSelectionInputs({
+        tx: trx,
+        tenant,
+        invoiceId: newInvoice!.invoice_id,
+        // Unresolved time/usage selections identify source records, not
+        // recurring obligations. Their invoice linkage is handled by charges.
+        selectorInputs: options.recurringSelectorInputs.filter((selector) => !isUnresolvedSelectorInput(selector)),
+        linkedAt: Temporal.Now.instant().toString(),
+        omittedUsagePeriods: selectUnreportedUsageStatuses(billingResult.usageServicePeriodStatuses ?? []),
+      });
+    }
 
     // Mark ticket/project materials in this billing window as billed by this invoice.
     // These materials were included by BillingEngine as non-contract charges (like usage/time).

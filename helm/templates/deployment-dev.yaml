@@ -430,6 +430,11 @@ spec:
               secretKeyRef:
                 name: "{{include "sebastian.fullname" .}}-secrets"
                 key: NEXTAUTH_SECRET
+          - name: CREDENTIAL_ENCRYPTION_KEY
+            valueFrom:
+              secretKeyRef:
+                name: "{{include "sebastian.fullname" .}}-secrets"
+                key: CREDENTIAL_ENCRYPTION_KEY
           - name: IMAP_WEBHOOK_SECRET
             valueFrom:
               secretKeyRef:
@@ -448,6 +453,11 @@ spec:
 
           # ----------- GOOGLE AUTH ----------------
           {{- with include "sebastian.googleOAuthEnv" . }}
+{{ . | nindent 10 }}
+          {{- end }}
+
+          # ----------- KEYCLOAK / OIDC AUTH ----------------
+          {{- with include "sebastian.keycloakOAuthEnv" . }}
 {{ . | nindent 10 }}
           {{- end }}
 

@@ -1,0 +1,26 @@
+{
+  "scope": "native-emulator-integration-after-host-startup-fix",
+  "revision": "b2dd7cfa7673780030cd7eda520ab3a255db10ca",
+  "status": "passed",
+  "rebuiltPackages": [
+    "host",
+    "qbo"
+  ],
+  "suites": {
+    "host": 28,
+    "qbo": 29,
+    "xero": 22,
+    "msgraph": 92,
+    "stripe": 26,
+    "webhook-sink": 3,
+    "smtp-sink": 4,
+    "suite": 2
+  },
+  "totalPassed": 206,
+  "retryPolicyChanged": false,
+  "limitations": [
+    "Uses installed native dependencies and existing dist for unchanged provider packages; no clean Linux image build proof.",
+    "Earlier QBO HTTP transients remain unexplained; this round had no failed runs.",
+    "Current-source browser and full CI remain required."
+  ]
+}

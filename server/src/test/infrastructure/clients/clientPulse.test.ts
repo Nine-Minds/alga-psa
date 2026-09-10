@@ -144,6 +144,12 @@ async function seedTicket(
 ) {
   const ticketId = randomUUID();
   const isClosed = input.isClosed ?? false;
+  const statusId = randomUUID();
+  await context.db('statuses').insert({
+    tenant: context.tenantId, status_id: statusId,
+    name: isClosed ? 'Closed' : 'Open', status_type: 'ticket', item_type: 'ticket',
+    order_number: 0, is_closed: isClosed,
+  });
   await context.db('tickets').insert({
     tenant: context.tenantId,
     ticket_id: ticketId,
@@ -154,6 +160,7 @@ async function seedTicket(
     assigned_to: input.assignedTo ?? null,
     entered_at: isoOffset(input.enteredOffsetDays),
     due_date: input.dueOffsetDays == null ? null : isoOffset(input.dueOffsetDays),
+    status_id: statusId,
     is_closed: isClosed,
     closed_at: isClosed ? isoOffset(-1) : null,
     sla_policy_id: input.slaPolicyId ?? null,

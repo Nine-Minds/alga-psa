@@ -1,5 +1,13 @@
 {
   "automaticInvoices": {
+    "monthEndClose": {
+      "action": "Gerar fatura de fim de mês",
+      "title": "Fechar o período {{servicePeriod}} no fim do mês?",
+      "warning": "Isso fatura {{servicePeriod}} em seu último dia de calendário. As entradas de tempo ou uso registradas após este fechamento não serão incluídas. Feche o período somente quando todo o trabalho estiver totalmente registrado.",
+      "confirm": "Gerar no fim do mês",
+      "omissionWarning": "As entradas de tempo ou uso registradas após este fechamento NÃO serão incluídas na fatura.",
+      "generationFailed": "Não foi possível gerar a fatura de fim de mês. Tente novamente."
+    },
     "ready": {
       "title": "Pronto para faturar",
       "description": "Revise o trabalho devido recorrente e gere projetos de faturas para os períodos selecionados.",
@@ -67,7 +75,7 @@
     "incompatibilityReasons": {
       "invoiceWindowDiffers": "A janela da fatura é diferente",
       "clientDiffers": "O cliente é diferente",
-      "poScopeDiffers": "O escopo do pedido difere",
+      "poScopeDiffers": "O escopo do pedido de compra difere",
       "currencyDiffers": "A moeda é diferente",
       "taxTreatmentDiffers": "O tratamento fiscal difere",
       "exportShapeDiffers": "A forma de exportação é diferente"
@@ -100,7 +108,8 @@
       "reverseInvoice": "Fatura reversa",
       "deleteInvoice": "Excluir fatura",
       "closePreview": "Fechar visualização",
-      "generateInvoice": "Gerar fatura"
+      "generateInvoice": "Gerar fatura",
+      "recordUsage": "Registar utilização"
     },
     "dialogs": {
       "reverse": {
@@ -163,21 +172,35 @@
           "total": "Total"
         },
         "generating": "Gerando...",
-        "generateError": "Falha ao gerar fatura da visualização"
+        "generateError": "Falha ao gerar fatura da visualização",
+        "missingUsageHeading": "Nenhuma utilização registada para este período",
+        "missingUsageService": "{{service}}: sem registos de utilização de {{periodStart}} a {{periodEnd}}",
+        "usageAttributionExcluded": "{{service}}: a utilização registada de {{periodStart}} a {{periodEnd}} fica excluída até que a atribuição à linha de contrato seja resolvida — resolva a atribuição em vez de registar mais utilização",
+        "usageCalculationError": "{{service}}: não foi possível calcular o preço da utilização registada de {{periodStart}} a {{periodEnd}} — corrija os preços do serviço em vez de registar mais utilização",
+        "recordScopedUsage": "Registrar uso: {{service}} — {{line}}",
+        "calculationContext": "{{service}}: {{periodStart}} a {{periodEnd}} — não foi possível precificar o uso registrado. Revise a configuração de preços deste serviço.",
+        "reportedPeriodTotalsHeading": "Contagens de período informadas"
       },
       "poOverage": {
         "title": "Excedentes do limite do pedido de compra",
         "description": "O total da fatura selecionada excede {{amount}}.",
-        "batchDescription": "Uma ou mais faturas excederiam o valor autorizado do Pedido de Compra. O que você quer fazer?",
+        "batchDescription": "Uma ou mais faturas excederiam o valor autorizado do pedido de compra. O que você quer fazer?",
         "batchItem": "{{clientName}}: finalizado por {{amount}}",
         "poNumber": "PO {{number}}",
         "allowOverages": "Permitir excedentes (gerar todas as faturas)",
-        "skipInvoices": "Ignorar faturas que ultrapassariam seu pedido",
+        "skipInvoices": "Ignorar faturas que ultrapassariam seu pedido de compra",
         "continue": "Continuar",
-        "singleDescription": "Esta fatura excederia o valor autorizado do Pedido de Compra por {{amount}}.",
+        "singleDescription": "Esta fatura excederia o valor autorizado do pedido de compra em {{amount}}.",
         "proceedAnyway": "Continuar mesmo assim?",
         "proceedConfirm": "Prossiga de qualquer maneira",
         "skippedError": "Ignorado devido ao excesso de PO ({{poLabel}}): ultrapassado por {{amount}}."
+      },
+      "unreportedUsage": {
+        "title": "Utilização não registada para este período",
+        "description": "Esses serviços baseados em uso não têm informação de uso para a janela de faturamento. Gerar agora os deixa fora da fatura; eles continuam faturáveis assim que o uso for informado.",
+        "omittedItem": "{{services}}: sem utilização registada de {{periodStart}} a {{periodEnd}}",
+        "question": "Gerar sem estes serviços?",
+        "confirm": "Gerar sem a utilização não registada"
       }
     },
     "history": {
@@ -344,6 +367,7 @@
       "updateFailed": "Erro ao atualizar fatura",
       "generateFailed": "Erro ao gerar fatura",
       "NO_BILLING_EMAIL": "{{clientName}} não tem um e-mail de faturação. Defina um contato de faturação, um e-mail de faturação do cliente ou um endereço de e-mail na localização de faturação ou predefinida e tente novamente.",
+      "USAGE_RECORDS_MISSING": "Não há registos de utilização elegíveis para {{services}} no período de serviço de {{periodStart}} a {{periodEnd}}. Registe a utilização deste período (ou uma entrada de utilização zero) para faturar estes serviços.",
       "CLIENT_NOT_FOUND": "O cliente selecionado não foi encontrado. Atualize a página e tente novamente.",
       "SERVICE_NOT_FOUND": "O serviço {{serviceId}} não foi encontrado. Atualize a página e tente novamente.",
       "INVALID_QUANTITY": "A quantidade deve ser maior que zero.",
@@ -354,7 +378,10 @@
       "UNEXPECTED": "Ocorreu um erro ao gerar a fatura. Indique a referência {{ref}} ao contactar o suporte.",
       "salesOrderGenerateFailed": "Não foi possível gerar a fatura do pedido de venda.",
       "salesOrderNothingToInvoice": "Não há mais nada para faturar neste pedido de venda.",
-      "salesOrderNotInvoiceable": "Esse pedido de venda não está mais disponível para faturamento."
+      "salesOrderNotInvoiceable": "Esse pedido de venda não está mais disponível para faturamento.",
+      "USAGE_RECORDS_MISSING_ACK_REQUIRED": "Esta janela de faturação tem lançamentos faturáveis, mas {{services}} não tem utilização registada para o período de serviço de {{periodStart}} a {{periodEnd}}. Registe primeiro a utilização ou confirme explicitamente a geração sem ela — os serviços não registados continuam faturáveis mais tarde.",
+      "USAGE_PERIOD_TOTAL_STALE": "A pré-visualização está desatualizada: {{details}}. Volte a executar a pré-visualização para ver os valores atuais e gere novamente.",
+      "USAGE_CALCULATION_ERROR": "A utilização de {{services}} no período de serviço de {{periodStart}} a {{periodEnd}} está registada, mas não foi possível calcular o preço. Corrija os preços do serviço (preço de catálogo na moeda do contrato, uma tarifa personalizada ou escalões de tarifas) e tente novamente. Não registe utilização de substituição."
     },
     "warnings": {
       "noBillingEmail": "Este cliente não tem um e-mail de faturação. Defina um contato de faturação, um e-mail de faturação do cliente ou um endereço de e-mail na localização de faturação ou predefinida antes de gerar a fatura."
@@ -370,8 +397,6 @@
   "draftsTab": {
     "title": "Rascunhos de faturas",
     "searchPlaceholder": "Pesquisar faturas...",
-    "bulkActions_one": "Ações ({{count}})",
-    "bulkActions_other": "Ações ({{count}})",
     "columns": {
       "invoiceNumber": "Número da fatura",
       "client": "Cliente",
@@ -422,13 +447,17 @@
       "message": "Esta fatura está configurada para utilizar imposto calculado por um sistema de contabilidade externo, mas nenhum imposto foi importado ainda, portanto não pode ser finalizado. Exporte-a para o seu sistema contábil (QuickBooks, Xero) e importe o imposto de volta para finalizar com imposto externo — ou mude esta fatura para imposto interno agora para que Alga calcule o imposto e finalize-o.",
       "confirm": "Mudar para imposto interno e finalizar",
       "cancel": "Cancelar"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} selecionado",
+        "clear": "Limpar seleção"
+      }
     }
   },
   "finalizedTab": {
     "title": "Faturas finalizadas",
     "searchPlaceholder": "Pesquisar faturas...",
-    "bulkActions_one": "Ações ({{count}})",
-    "bulkActions_other": "Ações ({{count}})",
     "columns": {
       "invoiceNumber": "Número da fatura",
       "client": "Cliente",
@@ -462,6 +491,12 @@
       "unfinalizeFailed": "Falha ao desfinalizar a fatura. Por favor, tente novamente.",
       "bulkUnfinalizeFailed": "Falha ao desfinalizar faturas. Por favor, tente novamente.",
       "bulkUnfinalizeInvoiceFailed": "Não foi possível reabrir {{invoiceNumber}}: {{reason}}"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} selecionado",
+        "clear": "Limpar seleção"
+      }
     }
   },
   "recurringServicePeriods": {
@@ -969,43 +1004,34 @@
     },
     "messages": {
       "success": "Fatura gerada com sucesso!",
-      "loadFailed": "Falha ao carregar dados"
+      "loadFailed": "Falha ao carregar dados",
+      "salesOrderSourcesUnavailable": "Não foi possível carregar os pedidos de venda de origem. Ainda pode introduzir itens de fatura manuais."
     }
   },
   "prepayment": {
     "titles": {
-      "prepayment": "Gerar fatura de pré-pagamento",
-      "creditMemo": "Gerar nota de crédito"
+      "prepayment": "Gerar fatura de pré-pagamento"
     },
     "descriptions": {
-      "prepayment": "Faturas de pré-pagamento criam crédito do cliente para valor futuro. Eles não criam períodos de serviço recorrentes; faturas recorrentes posteriores mantêm sua própria cobertura de período de serviço.",
-      "creditMemo": "As notas de crédito ajustam os saldos financeiros sem redefinir a cobertura do período de serviço recorrente na fatura de origem."
+      "prepayment": "Faturas de pré-pagamento criam crédito do cliente para valor futuro. Eles não criam períodos de serviço recorrentes; faturas recorrentes posteriores mantêm sua própria cobertura de período de serviço."
     },
     "fields": {
-      "type": "Tipo",
       "client": "Cliente",
       "amount": "Quantia",
-      "description": "Descrição"
-    },
-    "types": {
-      "prepaymentInvoice": "Fatura de pré-pagamento",
-      "creditMemo": "Nota de crédito"
+      "descriptionOptional": "Descrição (optional)"
     },
     "placeholders": {
       "amount": "Insira o valor",
-      "prepaymentDescription": "Pré-pagamento para serviços futuros",
-      "creditMemoDescription": "Motivo da nota de crédito"
+      "prepaymentDescription": "Pré-pagamento para serviços futuros"
     },
     "errors": {
       "allFieldsRequired": "Por favor preencha todos os campos",
       "validAmount": "Insira um valor válido",
-      "creditMemosUnsupported": "As notas de crédito ainda não são suportadas",
       "generateFailed": "Erro ao gerar fatura"
     },
     "actions": {
       "generating": "Gerando...",
-      "generatePrepayment": "Gerar fatura de pré-pagamento",
-      "generateCreditMemo": "Gerar nota de crédito"
+      "generatePrepayment": "Gerar fatura de pré-pagamento"
     }
   },
   "contractItems": {
@@ -1088,8 +1114,8 @@
   "purchaseOrder": {
     "labels": {
       "short": "PO",
-      "number": "Número do pedido",
-      "authorized": "PO Autorizado",
+      "number": "Número do pedido de compra",
+      "authorized": "PO autorizado",
       "consumed": "PO consumido (finalizado)",
       "remaining": "PO restante"
     }
@@ -1240,7 +1266,12 @@
         "emptyState": "Selecione dados de fatura existentes ou de amostra para gerar uma visualização oficial.",
         "loadingPreview": "Visualização de modelagem e renderização...",
         "templateError": "O modelo de visualização não pôde ser gerado no espaço de trabalho atual.",
-        "renderError": "Falha na renderização de visualização."
+        "renderError": "Falha na renderização de visualização.",
+        "searchQuotes": "Pesquisar cotações...",
+        "noQuotesFound": "Nenhuma cotação encontrada.",
+        "selectQuote": "Selecione a cotação",
+        "loadingQuoteDetails": "Carregando detalhes da cotação...",
+        "loadingDocumentDetails": "Carregando detalhes do documento..."
       },
       "tabs": {
         "design": "Projeto",
@@ -1382,6 +1413,14 @@
       "modern-invoice-complete": {
         "label": "Modelo de fatura moderno",
         "description": "Layout completo com Cabeçalho, Informações de Faturamento, Tabela de Itens e Rodapé."
+      },
+      "billed-time-entries": {
+        "label": "Detalhes dos registros de tempo faturado",
+        "description": "Adicionar uma tabela informativa com datas, itens de trabalho, horas, taxas e valores."
+      },
+      "billed-time-by-ticket": {
+        "label": "Detalhes do tempo faturado por chamado",
+        "description": "Repetir um cabeçalho e a tabela de registros correspondente para cada chamado ou tarefa."
       }
     },
     "schema": {
@@ -1564,6 +1603,9 @@
               "label": "Contrato.pdf"
             }
           }
+        },
+        "totals-rows": {
+          "title": "Linhas de totais"
         }
       }
     },
@@ -1585,8 +1627,8 @@
         "description": "A data de vencimento do pagamento."
       },
       "invoice_poNumber": {
-        "label": "Número do pedido",
-        "description": "A referência da ordem de compra para esta fatura."
+        "label": "Número do pedido de compra",
+        "description": "A referência do pedido de compra para esta fatura."
       },
       "invoice_subtotal": {
         "label": "Subtotal",
@@ -1671,7 +1713,6 @@
   },
   "projectBilling": {
     "subtitle": "Metas prontas e depósitos aguardando aprovação em todos os projetos.",
-    "bulkActions": "Ações ({{count}})",
     "loading": "Carregando fila de faturamento de projetos...",
     "empty": "Nada está aguardando revisão. Metas prontas e depósitos aparecerão aqui.",
     "columns": {
@@ -1727,6 +1768,12 @@
       "message": "Cancelar este lançamento agendado o remove do faturamento. Esta ação não pode ser desfeita.",
       "confirm": "Cancelar lançamento",
       "dismiss": "Manter lançamento"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} selecionado",
+        "clear": "Limpar seleção"
+      }
     }
   },
   "invoiceDesigner": {
@@ -1830,7 +1877,10 @@
         "productItems": "Itens de produto",
         "items": "Itens",
         "transformsSource": "{{binding}} (origem das transformações)",
-        "transformsOutput": "{{binding}} (saída das transformações)"
+        "transformsOutput": "{{binding}} (saída das transformações)",
+        "ticketGroups": "Tempo faturado por ticket",
+        "timeEntries": "Lançamentos de horas faturados",
+        "ticketPresentationRows": "Cobranças por ticket"
       },
       "presets": {
         "description": {
@@ -1848,6 +1898,46 @@
         "amount": {
           "label": "Valor",
           "hint": "Total da linha"
+        },
+        "ticket": {
+          "label": "Ticket",
+          "hint": "Número e título do ticket"
+        },
+        "ticketDescription": {
+          "hint": "Descrição do ticket visível para o cliente"
+        },
+        "hours": {
+          "label": "Horas"
+        },
+        "ticketHours": {
+          "hint": "Total de horas faturadas do ticket"
+        },
+        "ticketRate": {
+          "hint": "Taxa horária (\"Tarifas mistas\" quando os lançamentos diferem)"
+        },
+        "ticketAmount": {
+          "hint": "Valor total faturado do ticket"
+        },
+        "date": {
+          "label": "Data"
+        },
+        "entryDate": {
+          "hint": "Data em que o trabalho foi realizado"
+        },
+        "entryTicket": {
+          "hint": "Número do ticket de origem"
+        },
+        "entryTitle": {
+          "hint": "Título do ticket ou nome da tarefa"
+        },
+        "entryHours": {
+          "hint": "Horas faturadas do lançamento"
+        },
+        "entryRate": {
+          "hint": "Taxa horária do lançamento"
+        },
+        "entryAmount": {
+          "hint": "Valor faturado do lançamento"
         }
       },
       "sourceBinding": {
@@ -1868,7 +1958,12 @@
         "headerPlaceholder": "Rótulo do cabeçalho",
         "bindingKey": "Chave de vinculação",
         "type": "Tipo",
-        "width": "Largura"
+        "width": "Largura",
+        "stackedLines": "Linhas empilhadas",
+        "addLine": "+ Linha",
+        "clearLines": "Linha única",
+        "stackedLinesHint": "Cada linha não vazia é exibida em sua própria linha. Quando todas as linhas estão vazias, é exibida a chave de vinculação da coluna indicada acima.",
+        "removeLine": "Remover a linha {{index}}"
       },
       "columnTypes": {
         "text": "Texto",
@@ -1913,6 +2008,15 @@
       "visibleInPortal": "Visível no portal do cliente",
       "dialogTitle": "Selecionar imagem",
       "dialogDescription": "Escolha uma imagem dos seus documentos para usar neste modelo."
+    },
+    "totalsRowsEditor": {
+      "rowBackground": "Fundo da linha",
+      "rowTextColor": "Cor do texto",
+      "resetColors": "Redefinir cores",
+      "clearRowBackground": "Limpar cor de fundo da linha",
+      "clearRowTextColor": "Limpar cor do texto da linha",
+      "labelColorOverrideNote": "Este rótulo mantém a sua própria cor guardada e não herda a cor do texto da linha definida acima. O valor continua a seguir a cor do texto da linha.",
+      "noRows": "Este bloco de totais ainda não tem linhas guardadas. Guarde o modelo e reabra-o para editar as cores das linhas."
     }
   },
   "draftInvoiceDetails": {
@@ -1984,7 +2088,13 @@
       "preview": {
         "sampleNote": "Gerado com dados de exemplo representativos de {{type}}.",
         "frameTitle": "Pré-visualização de {{type}}",
-        "empty": "Abra esta guia para gerar uma pré-visualização confiável."
+        "empty": "Abra esta guia para gerar uma pré-visualização confiável.",
+        "existingNote": "Gerado a partir do pedido de venda selecionado.",
+        "searchDocuments": "Pesquisar pedidos de venda...",
+        "searchDocumentsHint": "Pesquise por número ou cliente...",
+        "noDocumentsFound": "Nenhum pedido de venda encontrado.",
+        "selectDocument": "Selecione o pedido de venda",
+        "selectDocumentHint": "Selecione um pedido de venda para visualizar a saída vinculada a dados."
       },
       "errors": {
         "nameRequired": "O nome do modelo é obrigatório.",
@@ -2053,7 +2163,20 @@
       "referenceMissing": "O modelo de fatura ou o cliente selecionado não existe mais. Atualize a página e tente novamente.",
       "duplicate": "Já existe um modelo de fatura com essas configurações.",
       "missingField": "Falta um campo obrigatório do modelo de fatura.",
-      "missingFieldNamed": "Falta um campo obrigatório do modelo de fatura: {{field}}."
+      "missingFieldNamed": "Falta um campo obrigatório do modelo de fatura: {{field}}.",
+      "evaluationFailed": "Falha na vinculação de dados do modelo: {{details}}"
     }
+  },
+  "periodTotal": {
+    "missingContext": "Configuração de cliente ou serviço ausente para esta informação.",
+    "invalidQuantity": "Insira um número inteiro igual ou maior que 0 para a contagem do período.",
+    "saveError": "Não foi possível salvar a contagem do período.",
+    "retryError": "Não foi possível salvar a contagem do período. Tente enviar novamente.",
+    "correct": "Corrigir a contagem informada de {{quantity}} para {{service}} ({{periodStart}} a {{periodEnd}})",
+    "report": "Informar uma contagem do período para {{service}} ({{periodStart}} a {{periodEnd}})",
+    "quantityLabel": "Contagem do período para {{service}}",
+    "saving": "Salvando…",
+    "saveCorrection": "Salvar correção",
+    "save": "Salvar"
   }
 }

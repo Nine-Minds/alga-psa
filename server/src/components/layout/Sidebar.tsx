@@ -7,6 +7,7 @@ import { getAppVersion } from '@alga-psa/core';
 import { CollapseToggleButton } from '@alga-psa/ui/components/CollapseToggleButton';
 import { DynamicNavigationSlot } from '@alga-psa/ui/components/extensions/DynamicNavigationSlot';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useSurfaceIsLight } from '@alga-psa/ui/hooks/useSurfaceIsLight';
 import {
   menuItems as defaultMenuItems,
   bottomMenuItems as defaultBottomMenuItems,
@@ -19,6 +20,7 @@ import {
   type NavMode,
 } from '@/config/menuConfig';
 import { useMspBranding } from './MspBrandingContext';
+import { pickLogoForSurface } from './mspBranding';
 import SidebarMenuItem from './SidebarMenuItem';
 import SidebarSubMenuItem from './SidebarSubMenuItem';
 import SidebarBottomMenuItem from './SidebarBottomMenuItem';
@@ -65,11 +67,19 @@ const Sidebar: React.FC<SidebarProps> = ({
   const appVersion = getAppVersion();
   const { t } = useTranslation('msp/core');
   const mspBranding = useMspBranding();
-  // The rail is dark in both themes, but a tenant that uploaded a dark-surface
-  // variant means it for exactly this kind of surface.
-  const tenantLogoUrl = mspBranding.logoDarkUrl || mspBranding.logoUrl;
+  const railRef = useRef<HTMLElement | null>(null);
+  // Every shipped theme paints a dark rail, but a custom theme can set a light
+  // `sidebarBg` — so ask the rail what colour it actually is.
+  const railIsLight = useSurfaceIsLight(railRef, '--color-sidebar-bg');
+  const tenantLogoUrl = pickLogoForSurface(mspBranding.logoUrl, mspBranding.logoDarkUrl, railIsLight);
+  // The wide wordmark already contains the tenant name, so it replaces both the
+  // circular mark and the name span — but only where there is room for it.
+  const tenantWideLogoUrl = pickLogoForSurface(mspBranding.logoWideUrl, mspBranding.logoWideDarkUrl, railIsLight);
   const [failedTenantLogoUrl, setFailedTenantLogoUrl] = useState<string | null>(null);
+  const [failedWideLogoUrl, setFailedWideLogoUrl] = useState<string | null>(null);
   const brandDisplayName = mspBranding.displayName || appDisplayName;
+  const isWhiteLabeled = Boolean(tenantLogoUrl || tenantWideLogoUrl);
+  const showWideLogo = sidebarOpen && !!tenantWideLogoUrl && failedWideLogoUrl !== tenantWideLogoUrl;
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -278,6 +288,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <aside
+      ref={railRef}
       data-automation-id={sidebarAutomationId}
       className={`bg-sidebar-bg text-sidebar-text h-screen flex flex-col relative ${
         disableTransition ? '' : 'transition-all duration-300 ease-in-out'
@@ -290,27 +301,41 @@ const Sidebar: React.FC<SidebarProps> = ({
         aria-label={t('sidebar.goToDashboard', { defaultValue: 'Go to dashboard' })}
         id="logo-home-link"
       >
-        {tenantLogoUrl && failedTenantLogoUrl !== tenantLogoUrl ? (
-          <div className="w-8 h-8 bg-white/5 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
-            <img
-              src={tenantLogoUrl}
-              alt={brandDisplayName}
-              className="w-full h-full object-contain"
-              onError={() => setFailedTenantLogoUrl(tenantLogoUrl)}
-            />
-          </div>
+        {showWideLogo && tenantWideLogoUrl ? (
+          // Natural width, no circle: a wordmark cropped into 32x32 is unreadable,
+          // which is the whole reason this slot exists.
+          <img
+            src={tenantWideLogoUrl}
+            alt={brandDisplayName}
+            className="h-8 w-auto max-w-full object-contain object-left"
+            onError={() => setFailedWideLogoUrl(tenantWideLogoUrl)}
+            data-automation-id="sidebar-wide-logo"
+          />
         ) : (
-          <div className="w-8 h-8 bg-[rgb(var(--color-primary-600))] rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
-            <Image
-              src="/images/avatar-purple-background.png"
-              alt={t('sidebar.logoAlt', { defaultValue: appLogoAlt })}
-              width={200}
-              height={200}
-              className="w-full h-full object-cover"
-            />
-          </div>
+          <>
+            {tenantLogoUrl && failedTenantLogoUrl !== tenantLogoUrl ? (
+              <div className="w-8 h-8 bg-sidebar-text/5 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
+                <img
+                  src={tenantLogoUrl}
+                  alt={brandDisplayName}
+                  className="w-full h-full object-contain"
+                  onError={() => setFailedTenantLogoUrl(tenantLogoUrl)}
+                />
+              </div>
+            ) : (
+              <div className="w-8 h-8 bg-[rgb(var(--color-primary-600))] rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
+                <Image
+                  src="/images/avatar-purple-background.png"
+                  alt={t('sidebar.logoAlt', { defaultValue: appLogoAlt })}
+                  width={200}
+                  height={200}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            )}
+            <span className={`text-xl font-semibold truncate ${sidebarOpen ? '' : 'hidden'}`}>{brandDisplayName}</span>
+          </>
         )}
-        <span className={`text-xl font-semibold truncate ${sidebarOpen ? '' : 'hidden'}`}>{brandDisplayName}</span>
       </a>
 
       {/* Back to Main button - shown in settings and billing modes */}
@@ -379,12 +404,12 @@ const Sidebar: React.FC<SidebarProps> = ({
         {sectionsToRender.map((section, sectionIndex) => (
           <div key={section.title || 'nav-section'} className="px-2">
             {sidebarOpen && section.title ? (
-              <p className={`text-xs uppercase tracking-wide text-gray-400 px-2 mb-2 ${sectionIndex === 0 ? 'mt-0' : 'mt-6'}`} aria-label={section.title}>
+              <p className={`text-xs uppercase tracking-wide text-sidebar-text/60 px-2 mb-2 ${sectionIndex === 0 ? 'mt-0' : 'mt-6'}`} aria-label={section.title}>
                 {section.title}
               </p>
             ) : (
               !sidebarOpen && section.title ? (
-                <div className={`h-px bg-gray-700 ${sectionIndex === 0 ? 'mt-0 mb-3' : 'my-3'}`} aria-hidden="true" />
+                <div className={`h-px bg-sidebar-text/20 ${sectionIndex === 0 ? 'mt-0 mb-3' : 'my-3'}`} aria-hidden="true" />
               ) : null
             )}
             <ul className="space-y-1">
@@ -394,7 +419,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         ))}
         {/* Extension navigation items - shown in extensions mode as installed extensions */}
         {isExtensionsMode && (
-          <div className="mt-4 border-t border-gray-700 pt-4 px-2">
+          <div className="mt-4 border-t border-sidebar-text/20 pt-4 px-2">
             <DynamicNavigationSlot collapsed={!sidebarOpen} />
           </div>
         )}
@@ -445,14 +470,14 @@ const Sidebar: React.FC<SidebarProps> = ({
       )}
 
       {/* Version info */}
-      <div className="px-4 py-3 border-t border-gray-700">
+      <div className="px-4 py-3 border-t border-sidebar-text/20">
         <div className="flex items-center justify-between">
           <a
             id="app-version-link"
             href="https://github.com/Nine-Minds/alga-psa/releases"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-xs text-gray-400 hover:text-gray-200 transition-colors flex items-center gap-1"
+            className="text-xs text-sidebar-text/60 hover:text-sidebar-text transition-colors flex items-center gap-1"
             title={sidebarOpen ? undefined : `Version ${appVersion}`}
           >
             {sidebarOpen ? (
@@ -466,6 +491,34 @@ const Sidebar: React.FC<SidebarProps> = ({
           </a>
           {sidebarOpen && <GitHubStarButton />}
         </div>
+        {isWhiteLabeled && (
+          <a
+            id="powered-by-alga-link"
+            href="https://github.com/Nine-Minds/alga-psa/releases"
+            target="_blank"
+            rel="noopener noreferrer"
+            title={`Powered by AlgaPSA v${appVersion}`}
+            className={`mt-1.5 flex items-center gap-1.5 text-[11px] text-sidebar-text/60 hover:text-sidebar-text transition-colors ${
+              sidebarOpen ? '' : 'justify-center'
+            }`}
+          >
+            <Image
+              src="/images/avatar-purple-background.png"
+              alt=""
+              width={200}
+              height={200}
+              aria-hidden="true"
+              className={`rounded-full object-cover ${sidebarOpen ? 'w-3.5 h-3.5' : 'w-4 h-4'}`}
+            />
+            {/* "AlgaPSA" is a product name, so only the lead-in is translated.
+                The version sits in the link above; the tooltip repeats it here. */}
+            {sidebarOpen && (
+              <span className="truncate">
+                {t('sidebar.poweredBy', { defaultValue: 'Powered by' })} AlgaPSA
+              </span>
+            )}
+          </a>
+        )}
       </div>
 
       <CollapseToggleButton

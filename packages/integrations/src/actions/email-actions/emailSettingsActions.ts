@@ -20,7 +20,7 @@ import {
 } from '@alga-psa/ui/lib/errorHandling';
 import { isValidEmail } from '@alga-psa/validation';
 
-type EmailSettingsUpdateInput = Partial<TenantEmailSettings> & {
+type EmailSettingsUpdateInput = Omit<Partial<TenantEmailSettings>, 'defaultFromDomain' | 'ticketingFromEmail' | 'ticketingFromName'> & {
   defaultFromDomain?: string | null;
   ticketingFromEmail?: string | null;
   ticketingFromName?: string | null;

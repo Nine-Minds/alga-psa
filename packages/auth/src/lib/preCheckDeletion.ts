@@ -34,9 +34,6 @@ function permissionEntityFor(entityType: string): string {
   if (entityType === 'interaction_type') return 'settings';
   // Quote deletion is a billing operation (deleteQuote requires billing:delete).
   if (entityType === 'quote') return 'billing';
-  // The permission resource is 'timeentry' (no underscore); the deletion-config
-  // key is 'time_entry'. Map it so the check resolves to the real resource.
-  if (entityType === 'time_entry') return 'timeentry';
   return entityType;
 }
 

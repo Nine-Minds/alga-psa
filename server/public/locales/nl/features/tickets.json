@@ -364,7 +364,9 @@
     "rescheduleComment": "Reactie opnieuw plannen",
     "resolvedPublishInstant": "Omgezet tijdstip",
     "schedule": "Plannen",
-    "scheduled": "Gepland"
+    "scheduled": "Gepland",
+    "showMore": "Meer tonen",
+    "showLess": "Minder tonen"
   },
   "responseState": {
     "awaitingYourResponse": "Wacht op uw reactie",
@@ -1631,6 +1633,7 @@
       "client": "Klant",
       "nextVisit": "Volgend bezoek",
       "callsAndEmails": "Gesprekken en e-mails",
+      "call": "Bellen",
       "viewAll": "Alles weergeven",
       "viewAllCount": "Alle {{count}} weergeven",
       "timeLogged": "Geregistreerde tijd",
@@ -1786,7 +1789,10 @@
         "auto_close_warning_sent": "waarschuwing voor automatisch afsluiten verzonden"
       },
       "closeStatus": "Sluitstatus",
-      "noStatusChange": "Status niet wijzigen"
+      "noStatusChange": "Status niet wijzigen",
+      "showAllActivity": "Alle activiteit tonen",
+      "collapseActivity": "Oudere activiteit inklappen",
+      "replyingToComment": "Reageren op {{name}}"
     }
   },
   "notifications": {

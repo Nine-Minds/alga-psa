@@ -2,10 +2,10 @@ import express from 'express';
 import type { NextFunction, Request, Response, Router } from 'express';
 import { route } from '@alga-psa/emulator-host';
 import type { HostEnv } from '@alga-psa/emulator-host';
-import { GraphApiError, publicSubscription, publicTeam } from './core';
+import { GraphApiError, publicEvent, publicOnlineMeeting, publicSubscription, publicTeam } from './core';
 import type { MsGraphCore } from './core';
 import { BOT_FRAMEWORK_ISSUER, botFrameworkJwks } from './botFramework';
-import { deliverNotifications, validateNotificationUrl } from './notifier';
+import { deliverCalendarNotifications, deliverNotifications, validateNotificationUrl } from './notifier';
 
 interface Authed {
   clientId: string;
@@ -160,6 +160,27 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
   const mailboxUser = { id: 'emulated-user', userPrincipalName: 'support@example.test', mail: 'support@example.test' };
   graph.get('/me', (_req, res) => res.json(mailboxUser));
 
+  // Graph simulator only: capture the send request for adapter smoke tests.
+  // It does not model Entra consent, Exchange Send As, or real mail delivery.
+  const captureSendMail = (req: Request, res: Response, mailbox: string | null) => {
+    const rawPath = req.originalUrl.split('?')[0];
+    const rawMailbox = rawPath.match(/^\/v1\.0\/users\/([^/]+)\/sendMail$/)?.[1] ?? null;
+    core.recordSendMail({
+      route: rawPath,
+      mailbox,
+      encodedMailbox: rawMailbox,
+      payload: req.body ?? {},
+      contentType: req.get('content-type') ?? null,
+    });
+    res.status(202).end();
+  };
+
+  const mimeBody = express.text({ type: 'text/plain', limit: '4mb' });
+  graph.post('/me/sendMail', mimeBody, (req, res) => captureSendMail(req, res, null));
+  graph.post('/users/:mailbox/sendMail', mimeBody, (req, res) =>
+    captureSendMail(req, res, decodePath(String(req.params.mailbox)))
+  );
+
   // Entra self-tenant smoke surface. The production adapter deliberately uses
   // these standard Graph routes when ENTRA_DIRECT_SMOKE_SELF_TENANT_MODE=true,
   // avoiding a dependency on a real CSP/GDAP relationship during local tests.
@@ -173,15 +194,24 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
 
   graph.get('/users/:userId', (req, res) => {
     const userId = String(req.params.userId);
-    if (core.directoryUsers.has(userId)) {
-      res.json(core.getDirectoryUser(userId));
+    const directoryUser = core.directoryUsers.get(userId) ?? [...core.directoryUsers.values()]
+      .find(user => user.userPrincipalName?.toLowerCase() === userId.toLowerCase());
+    if (directoryUser) {
+      res.json(core.getDirectoryUser(directoryUser.id));
       return;
     }
-    res.json(mailboxUser);
+    // Real Graph 404s unknown ids. Only the emulated mailbox identity keeps
+    // resolving un-seeded, for the email module's fixed test principal —
+    // answering every id used to mask lookup-failure handling bugs.
+    if (userId === mailboxUser.id || userId.toLowerCase() === mailboxUser.userPrincipalName.toLowerCase()) {
+      res.json(mailboxUser);
+      return;
+    }
+    throw new GraphApiError(404, { error: { code: 'Request_ResourceNotFound', message: `Resource '${userId}' does not exist.` } });
   });
 
   // Teams surface: activity feed notifications plus the channel/chat lookups
-  // the Teams add-on resolves conversation targets with.
+  // the Teams integration resolves conversation targets with.
   graph.post('/users/:userId/teamwork/sendActivityNotification', (req, res) => {
     core.recordActivityNotification(String(req.params.userId), req.body ?? {});
     res.status(202).end();
@@ -211,6 +241,207 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
     res.json({ value: core.listChatMessages(String(req.params.chatId)) });
   });
 
+  // Delegated primary-calendar surface used by CalendarAdapter. The emulator
+  // currently has one delegated mailbox; this is not Entra user isolation.
+  const primaryCalendar = { id: 'calendar', name: 'Calendar', isDefaultCalendar: true };
+  graph.get('/me/calendar', (_req, res) => res.json(primaryCalendar));
+  graph.get('/me/calendars', (_req, res) => res.json({ value: [primaryCalendar] }));
+  graph.get('/me/calendarView/delta', (req, res) => {
+    const allowed = new Set(['startDateTime', 'endDateTime', '$deltatoken', '$skiptoken']);
+    const token = req.query.$deltatoken || req.query.$skiptoken;
+    if (Object.keys(req.query).some(key => !allowed.has(key)) ||
+        (req.query.$deltatoken && req.query.$skiptoken) ||
+        (token && (req.query.startDateTime || req.query.endDateTime))) {
+      throw new GraphApiError(400, { error: { code: 'Request_UnsupportedQuery' } });
+    }
+    const prefer = req.get('prefer') ?? '';
+    if (prefer && !/^odata\.maxpagesize=\d+$/.test(prefer)) {
+      throw new GraphApiError(400, { error: { code: 'Request_UnsupportedQuery' } });
+    }
+    const result = core.calendarDelta(authed(res).clientId, mailboxUser.id, {
+      start: req.query.startDateTime ? String(req.query.startDateTime) : undefined,
+      end: req.query.endDateTime ? String(req.query.endDateTime) : undefined,
+      deltaToken: req.query.$deltatoken ? String(req.query.$deltatoken) : undefined,
+      skipToken: req.query.$skiptoken ? String(req.query.$skiptoken) : undefined,
+      pageSize: prefer ? Number(prefer.split('=')[1]) : undefined,
+    });
+    const next = new URL(`${req.protocol}://${req.get('host')}/v1.0/me/calendarView/delta`);
+    next.searchParams.set(result.skipToken ? '$skiptoken' : '$deltatoken', result.skipToken ?? result.deltaToken!);
+    res.json({ value: result.value.map(event => '@removed' in event ? event : publicEvent(event)),
+      [result.skipToken ? '@odata.nextLink' : '@odata.deltaLink']: next.toString() });
+  });
+  const ownedEvent = (id: string) => {
+    const event = core.getCalendarEvent(id);
+    if (event.organizerUserId !== mailboxUser.id) {
+      throw new GraphApiError(404, { error: { code: 'ErrorItemNotFound' } });
+    }
+    return event;
+  };
+  graph.get('/me/calendar/events', (req, res) => {
+    let events = [...core.calendarEvents.values()].filter(event => event.organizerUserId === mailboxUser.id);
+    if (req.query.$filter) {
+      const range = String(req.query.$filter).match(/^start\/dateTime ge '([^']+)' and end\/dateTime le '([^']+)'$/);
+      if (!range || !Number.isFinite(Date.parse(range[1])) || !Number.isFinite(Date.parse(range[2]))) {
+        throw new GraphApiError(400, { error: { code: 'Request_UnsupportedQuery', message: 'Only adapter UTC date-range filters are modeled' } });
+      }
+      const utcTime = (value: unknown) => {
+        const date = value as { dateTime?: string; timeZone?: string } | null;
+        if (date?.timeZone && date.timeZone !== 'UTC') {
+          throw new GraphApiError(400, { error: { code: 'Request_UnsupportedQuery', message: 'Non-UTC calendar filtering is not modeled' } });
+        }
+        const dateTime = date?.dateTime ?? '';
+        // Graph dateTimeTimeZone commonly carries a wall-clock value without
+        // an offset. An explicitly UTC event must not use the host timezone.
+        return Date.parse(/(?:Z|[+-]\d{2}:\d{2})$/i.test(dateTime) ? dateTime : `${dateTime}Z`);
+      };
+      events = events.filter(event => utcTime(event.start) >= Date.parse(range[1]) && utcTime(event.end) <= Date.parse(range[2]));
+    }
+    if (req.query.$orderby && req.query.$orderby !== 'start/dateTime') {
+      throw new GraphApiError(400, { error: { code: 'Request_UnsupportedQuery' } });
+    }
+    events.sort((a, b) => String((a.start as any)?.dateTime).localeCompare(String((b.start as any)?.dateTime)));
+    res.json({ value: events.map(publicEvent) });
+  });
+  graph.post('/me/calendar/events', route(async (req, res) => {
+    const event = core.createCalendarEvent(mailboxUser.id, req.body ?? {});
+    await deliverCalendarNotifications(core, event, 'created', env);
+    res.status(201).json(publicEvent(event));
+  }));
+  graph.get('/me/calendar/events/:eventId', (req, res) => res.json(publicEvent(ownedEvent(String(req.params.eventId)))));
+  graph.patch('/me/calendar/events/:eventId', route(async (req, res) => {
+    ownedEvent(String(req.params.eventId));
+    const event = core.updateCalendarEvent(String(req.params.eventId), req.body ?? {});
+    await deliverCalendarNotifications(core, event, 'updated', env);
+    res.json(publicEvent(event));
+  }));
+  graph.delete('/me/calendar/events/:eventId', route(async (req, res) => {
+    const event = ownedEvent(String(req.params.eventId));
+    core.deleteCalendarEvent(String(req.params.eventId));
+    await deliverCalendarNotifications(core, event, 'deleted', env);
+    res.status(204).end();
+  }));
+
+  // Meetings surface: calendar events that carry a Teams meeting, onlineMeetings
+  // (creation probe, join-URL resolution), and recording/transcript artifacts.
+  graph.post('/users/:userId/events', (req, res) => {
+    res.status(201).json(publicEvent(core.createCalendarEvent(String(req.params.userId), req.body ?? {})));
+  });
+
+  graph.patch('/users/:userId/events/:eventId', (req, res) => {
+    res.json(publicEvent(core.updateCalendarEvent(String(req.params.eventId), req.body ?? {})));
+  });
+
+  graph.delete('/users/:userId/events/:eventId', (req, res) => {
+    core.deleteCalendarEvent(String(req.params.eventId));
+    res.status(204).end();
+  });
+
+  graph.get('/users/:userId/onlineMeetings', (req, res) => {
+    const filter = String(req.query.$filter ?? '');
+    const match = filter.match(/JoinWebUrl\s+eq\s+'(.+)'$/i);
+    if (!match) {
+      res.json({ value: [...core.onlineMeetings.values()].map(publicOnlineMeeting) });
+      return;
+    }
+    const joinWebUrl = match[1].replace(/''/g, "'");
+    res.json({ value: core.findOnlineMeetingsByJoinUrl(joinWebUrl).map(publicOnlineMeeting) });
+  });
+
+  graph.post('/users/:userId/onlineMeetings', (req, res) => {
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const meeting = core.createOnlineMeeting(String(req.params.userId), {
+      subject: typeof body.subject === 'string' ? body.subject : null,
+      startDateTime: typeof body.startDateTime === 'string' ? body.startDateTime : null,
+      endDateTime: typeof body.endDateTime === 'string' ? body.endDateTime : null,
+    });
+    res.status(201).json(publicOnlineMeeting(meeting));
+  });
+
+  graph.get('/users/:userId/onlineMeetings/:meetingId', (req, res) => {
+    res.json(publicOnlineMeeting(core.getOnlineMeeting(String(req.params.meetingId))));
+  });
+
+  graph.delete('/users/:userId/onlineMeetings/:meetingId', (req, res) => {
+    core.deleteOnlineMeeting(String(req.params.meetingId));
+    res.status(204).end();
+  });
+
+  for (const kind of ['recording', 'transcript'] as const) {
+    const segment = kind === 'recording' ? 'recordings' : 'transcripts';
+
+    graph.get(`/users/:userId/onlineMeetings/:meetingId/${segment}`, (req, res) => {
+      res.json({
+        value: core.listMeetingArtifacts(kind, String(req.params.meetingId)).map((artifact) => ({
+          id: artifact.id,
+          createdDateTime: artifact.createdDateTime,
+        })),
+      });
+    });
+
+    graph.get(`/users/:userId/onlineMeetings/:meetingId/${segment}/:artifactId/content`, (req, res) => {
+      const artifact = core.getMeetingArtifact(kind, String(req.params.meetingId), String(req.params.artifactId));
+      res.type(artifact.contentType).send(artifact.content);
+    });
+  }
+
+  // Teams Phone call artifacts live on the ad hoc call, not on an online
+  // meeting — a separate Graph surface with its own consent. Faithful to real
+  // Graph v1.0: enumeration ONLY via the getAllRecordings/getAllTranscripts
+  // functions (items carry callId); single-item get + /content by artifact id;
+  // deliberately NO per-call list route — that endpoint is fiction, and
+  // serving it is how the Entra-sync class of bug gets validated locally.
+  for (const kind of ['recording', 'transcript'] as const) {
+    const segment = kind === 'recording' ? 'recordings' : 'transcripts';
+
+    graph.get(`/users/:userId/adhocCalls/:callId/${segment}/:artifactId`, (req, res) => {
+      const artifact = core.getCallArtifact(kind, String(req.params.callId), String(req.params.artifactId));
+      res.json({ id: artifact.id, callId: artifact.callId, createdDateTime: artifact.createdDateTime });
+    });
+
+    graph.get(`/users/:userId/adhocCalls/:callId/${segment}/:artifactId/content`, (req, res) => {
+      const artifact = core.getCallArtifact(kind, String(req.params.callId), String(req.params.artifactId));
+      res.type(artifact.contentType).send(artifact.content);
+    });
+  }
+
+  // getAllRecordings(userId=...,startDateTime=...,endDateTime=...) — the
+  // OData function-call segment arrives literally (parens and commas are
+  // URL-legal), so it lands in :fn and is parsed here.
+  graph.get('/users/:userId/adhocCalls/:fn', (req, res) => {
+    const fn = String(req.params.fn);
+    const match = fn.match(/^(getAllRecordings|getAllTranscripts)\((.*)\)$/);
+    if (!match) {
+      throw new GraphApiError(400, { error: { code: 'BadRequest', message: `Resource not found for the segment '${fn}'.` } });
+    }
+    const kind = match[1] === 'getAllRecordings' ? ('recording' as const) : ('transcript' as const);
+    const args: Record<string, string> = {};
+    for (const pair of match[2].split(',')) {
+      const eq = pair.indexOf('=');
+      if (eq > 0) args[pair.slice(0, eq).trim()] = decodeURIComponent(pair.slice(eq + 1).trim().replace(/^'|'$/g, ''));
+    }
+    const organizer = args.userId || String(req.params.userId);
+    const value = core
+      .listAdhocArtifactsForOrganizer(kind, organizer, {
+        startDateTime: args.startDateTime,
+        endDateTime: args.endDateTime,
+      })
+      .map((artifact) => ({ id: artifact.id, callId: artifact.callId, createdDateTime: artifact.createdDateTime }));
+    res.json({ '@odata.count': value.length, value });
+  });
+
+  // Teams Phone CDR fetch. $expand=sessions is what the adapter asks for; the
+  // unexpanded shape omits sessions the way real Graph does.
+  graph.get('/communications/callRecords/:callRecordId', (req, res) => {
+    const record = core.getCallRecord(String(req.params.callRecordId));
+    const expand = String(req.query.$expand ?? '');
+    if (expand.split(',').map((value) => value.trim()).includes('sessions')) {
+      res.json(record);
+      return;
+    }
+    const { sessions: _sessions, ...withoutSessions } = record;
+    res.json(withoutSessions);
+  });
+
   graph.post('/applications', (req, res) => {
     res.status(201).json(core.createApplication(req.body ?? {}));
   });
@@ -236,10 +467,15 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
   const mailboxRoots = ['/me', '/users/:userId'];
   for (const root of mailboxRoots) {
     graph.get(`${root}/mailFolders`, (_req, res) => {
-      res.json({ value: [{ id: 'inbox', displayName: 'Inbox' }] });
+      res.json({ value: [core.getMailFolder('inbox')] });
+    });
+
+    graph.get(`${root}/mailFolders/:folderId`, (req, res) => {
+      res.json(core.getMailFolder(String(req.params.folderId)));
     });
 
     graph.get(`${root}/mailFolders/:folderId/messages`, (req, res) => {
+      core.getMailFolder(String(req.params.folderId));
       const filter = String(req.query.$filter ?? '');
       const match = filter.match(/receivedDateTime ge (.+)$/);
       const since = match ? new Date(match[1]).getTime() : 0;
@@ -290,9 +526,31 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
     res.status(204).end();
   });
 
+  // A missing route is an emulator capability gap, not a missing Graph item.
+  // Returning 404 here can turn a client's misspelled DELETE URL into a false
+  // idempotent success. Known routes still return their normal resource errors.
+  graph.use((_req, res) => {
+    res.status(501).json({
+      error: {
+        code: 'EmulatorUnsupportedOperation',
+        message: 'This Graph operation is not implemented by the emulator.',
+      },
+    });
+  });
+
   router.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
     if (err instanceof GraphApiError) {
-      res.status(err.status).json(err.body);
+      const body = err.body as { error?: { code?: string; message?: string } } | null;
+      // Graph errors require a developer-facing message alongside the code.
+      // OAuth uses a string error and a different envelope; preserve it.
+      if (body && typeof body.error === 'object' && body.error !== null &&
+          typeof body.error.code === 'string' && typeof body.error.message !== 'string') {
+        res.status(err.status).json({ ...body, error: {
+          ...body.error, message: `The emulated Graph request failed (${body.error.code}).`,
+        } });
+      } else {
+        res.status(err.status).json(err.body);
+      }
       return;
     }
     res.status(500).json({ error: err instanceof Error ? err.message : String(err) });

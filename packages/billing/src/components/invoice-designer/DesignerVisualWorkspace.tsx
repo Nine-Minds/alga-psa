@@ -1,5 +1,8 @@
 'use client';
 
+import { useFeatureFlag } from '@alga-psa/ui/hooks/useFeatureFlag';
+import { CanvasDocumentPreviewContext } from './canvas/DesignCanvas';
+
 import React, { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -9,6 +12,7 @@ import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { fetchInvoicesPaginated, getInvoiceForRendering } from '@alga-psa/billing/actions/invoiceQueries';
 import { runAuthoritativeInvoiceTemplatePreview } from '@alga-psa/billing/actions/invoiceTemplatePreview';
+import { getTenantBrandingForDocumentPreview } from '@alga-psa/billing/actions/tenantBrandingPreview';
 import { mapDbInvoiceToWasmViewModel } from '@alga-psa/billing/lib/adapters/invoiceAdapters';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { IInvoiceTemplate } from '@alga-psa/types';
@@ -36,12 +40,15 @@ import {
   getPreviewSampleScenarioById,
   INVOICE_PREVIEW_SAMPLE_SCENARIOS,
 } from './preview/sampleScenarios';
+import { overlayInvoiceSampleTenant } from './preview/tenantBrandingOverlay';
+import type { TenantParty } from '../../lib/adapters/tenantPartyAdapter';
 
 type VisualWorkspaceTab = 'design' | 'transforms' | 'preview';
 
 type DesignerVisualWorkspaceProps = {
   visualWorkspaceTab: VisualWorkspaceTab;
   onVisualWorkspaceTabChange: (tab: VisualWorkspaceTab) => void;
+  previewPaused?: boolean;
 };
 
 const useDebouncedValue = <T,>(value: T, delayMs: number) => {
@@ -61,8 +68,10 @@ const buildPreviewSourceOptions = (t: (key: string, options?: Record<string, unk
 export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = ({
   visualWorkspaceTab,
   onVisualWorkspaceTabChange,
+  previewPaused = false,
 }) => {
   const { t, i18n } = useTranslation('msp/invoicing');
+  const { enabled: releaseV16Enabled } = useFeatureFlag('release-v1-6-feature');
   const nodes = useInvoiceDesignerStore((state) => state.nodes);
   const canvasScale = useInvoiceDesignerStore((state) => state.canvasScale);
   const showGuides = useInvoiceDesignerStore((state) => state.showGuides);
@@ -83,7 +92,26 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
 
   const activeSampleId = previewState.selectedSampleId ?? DEFAULT_PREVIEW_SAMPLE_ID;
   const activeSample = useMemo(() => getPreviewSampleScenarioById(activeSampleId), [activeSampleId]);
-  const previewData = previewState.sourceKind === 'sample' ? activeSample?.data ?? null : previewState.selectedInvoiceData;
+  // Sample scenarios ship a synthetic issuer; show the tenant's real branding so the preview matches
+  // the document a client receives. Existing invoices already carry real branding.
+  const [tenantBranding, setTenantBranding] = useState<TenantParty | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    getTenantBrandingForDocumentPreview()
+      .then((party) => {
+        if (!cancelled) setTenantBranding(party ?? null);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  const previewData = useMemo(
+    () => (previewState.sourceKind === 'sample'
+      ? (activeSample ? overlayInvoiceSampleTenant(activeSample.data, tenantBranding) : null)
+      : previewState.selectedInvoiceData),
+    [activeSample, previewState.selectedInvoiceData, previewState.sourceKind, tenantBranding],
+  );
   const hasValidSelectionForSource = hasValidPreviewSelectionForSource({
     sourceKind: previewState.sourceKind,
     selectedInvoiceId: previewState.selectedInvoiceId,
@@ -214,10 +242,10 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
   }, [previewState.selectedInvoiceId, previewState.sourceKind]);
 
   useEffect(() => {
-    if (visualWorkspaceTab !== 'preview') {
+    if (previewPaused) {
+      previewRunSequence.current += 1;
       return;
     }
-
     if (!previewData) {
       previewRunSequence.current += 1;
       dispatch({ type: 'pipeline-reset' });
@@ -280,6 +308,7 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
         dispatch({ type: 'pipeline-phase-error', phase: 'shape', error: message });
       });
   }, [
+    previewPaused,
     manualRunNonce,
     previewData,
     previewWorkspace,
@@ -309,7 +338,9 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
       </TabsList>
 
       <TabsContent value="design" className="pt-3">
-        <DesignerShell />
+        <CanvasDocumentPreviewContext.Provider value={{ data: previewData, presentationLabels: authoritativePreview?.presentationLabels, locale: authoritativePreview?.effectiveLocale ?? previewState.selectedLocale }}>
+          <DesignerShell />
+        </CanvasDocumentPreviewContext.Provider>
       </TabsContent>
 
       <TabsContent value="transforms" className="pt-3">
@@ -343,7 +374,7 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
               <div className="w-fit">
                 <CustomSelect
                   id="invoice-designer-preview-sample-select"
-                  options={INVOICE_PREVIEW_SAMPLE_SCENARIOS.map((scenario) => ({
+                  options={INVOICE_PREVIEW_SAMPLE_SCENARIOS.filter(scenario => releaseV16Enabled || scenario.id !== 'sample-ticket-time-detail').map((scenario) => ({
                     value: scenario.id,
                     label: scenario.label,
                   }))}

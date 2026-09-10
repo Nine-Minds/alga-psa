@@ -92,6 +92,28 @@ function applySearch(items: CredentialSummary[], term?: string): CredentialSumma
   });
 }
 
+/**
+ * Field names that changed in a Hudu update — names only, never values.
+ * Secret-bearing fields record only the fact of change (value-free).
+ */
+function changedFieldsForHuduUpdate(
+  input: Partial<CredentialWriteInput>,
+  record: HuduAssetPassword
+): string[] {
+  const changed: string[] = [];
+  if (input.name !== undefined && input.name.trim() !== record.name) changed.push('name');
+  if (input.username !== undefined && (input.username || null) !== (record.username ?? null)) {
+    changed.push('username');
+  }
+  if (input.password !== undefined) changed.push('password');
+  if (input.otpSecret !== undefined) changed.push('otp_secret');
+  if (input.url !== undefined && (input.url || null) !== (record.url ?? null)) changed.push('url');
+  if (input.description !== undefined && (input.description || null) !== (record.description ?? null)) {
+    changed.push('description');
+  }
+  return changed;
+}
+
 function huduErrorKind(error: unknown): HuduErrorKind | undefined {
   return error instanceof HuduRequestError ? error.hudu.kind : undefined;
 }
@@ -473,7 +495,7 @@ export class HuduCredentialSource implements CredentialSource {
     const client = await createHuduClient(ctx.tenant);
     // Confirm the numeric password id actually belongs to the claimed company
     // before PUT (an unverified id could hit another company's record).
-    await requireHuduRecordInCompany(client, passwordId, companyId);
+    const record = await requireHuduRecordInCompany(client, passwordId, companyId);
 
     const payload: Partial<HuduAssetPasswordWriteInput> = {};
     if (input.name !== undefined) payload.name = input.name.trim();
@@ -490,7 +512,7 @@ export class HuduCredentialSource implements CredentialSource {
       userId: ctx.userId,
       credentialId: id,
       clientId,
-    });
+    }, { changed_fields: changedFieldsForHuduUpdate(input, record) });
 
     return toSummary(toHuduAssetPasswordSummary(updated), clientId, null);
   }

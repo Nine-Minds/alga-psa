@@ -77,7 +77,6 @@
     "invoiceAmount": "Montant de la facture :",
     "selectCreditToApply": "Sélectionner un crédit à appliquer",
     "amountToApply": "Montant à appliquer",
-    "creditOrderNote": "Les crédits sont appliqués par date d'expiration (les plus anciens d'abord)",
     "creditOrderNoteExpirationFirst": "Les crédits sont appliqués par date d'expiration (expirant le plus tôt en premier)",
     "creditOrderNoteOldestFirst": "Les crédits sont appliqués par date de création (le plus ancien en premier)",
     "creditOrderNoteNewestFirst": "Les crédits sont appliqués par date de création (le plus récent en premier)",
@@ -144,7 +143,9 @@
       "reason": "Pourquoi ce crédit est-il transféré ?"
     },
     "hints": {
-      "amount": "Jusqu'à {{amount}} disponible"
+      "amount": "Jusqu'à {{amount}} disponible",
+      "currencyMatch": "Le client sélectionné utilise la même devise.",
+      "currencyMismatch": "Le client sélectionné utilise une devise différente ; une conversion peut s’appliquer."
     },
     "impact": {
       "current": "Restant actuel",

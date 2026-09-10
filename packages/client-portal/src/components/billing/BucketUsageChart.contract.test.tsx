@@ -7,16 +7,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import BucketUsageChart from './BucketUsageChart';
 import type { ClientBucketUsageResult } from '@alga-psa/client-portal/actions';
 
-const featureFlagState = vi.hoisted(() => ({
-  enabled: false,
-  loading: false,
-  error: null as Error | null,
-}));
-
-vi.mock('@alga-psa/ui/hooks', () => ({
-  useFeatureFlag: () => featureFlagState,
-}));
-
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useTranslation: () => ({
     t: (key: string, fallback?: string | ({ defaultValue?: string } & Record<string, unknown>)) => {
@@ -54,30 +44,16 @@ function bucket(overrides: Partial<ClientBucketUsageResult> = {}): ClientBucketU
   };
 }
 
-describe('BucketUsageChart remaining-first meter (release-v1-5-feature)', () => {
+describe('BucketUsageChart remaining-first meter', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    featureFlagState.enabled = false;
-    featureFlagState.loading = false;
-    featureFlagState.error = null;
   });
 
   afterEach(() => {
     cleanup();
   });
 
-  it('T159: flag off renders the legacy used-percentage layout with no remaining headline', () => {
-    render(<BucketUsageChart bucketData={bucket()} />);
-
-    expect(screen.getByText('Usage')).toBeInTheDocument();
-    expect(screen.getByText('68%')).toBeInTheDocument();
-    expect(screen.queryByText(/hours left of/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/hours over/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/OVER BUCKET/i)).not.toBeInTheDocument();
-  });
-
-  it('T160: flag on shows remaining-first headline matching the getRemainingBucketUnits formula', () => {
-    featureFlagState.enabled = true;
+  it('T160: shows remaining-first headline matching the getRemainingBucketUnits formula', () => {
     const data = bucket();
     render(<BucketUsageChart bucketData={data} />);
 
@@ -89,8 +65,7 @@ describe('BucketUsageChart remaining-first meter (release-v1-5-feature)', () => 
     expect(screen.getByText('1/1/2026 – 2/1/2026')).toBeInTheDocument();
   });
 
-  it('T161: flag on omits the rollover clause when there is no rollover', () => {
-    featureFlagState.enabled = true;
+  it('T161: omits the rollover clause when there is no rollover', () => {
     const data = bucket({
       rolled_over_minutes: 0,
       total_minutes: 1200,
@@ -104,7 +79,6 @@ describe('BucketUsageChart remaining-first meter (release-v1-5-feature)', () => 
   });
 
   it('T162: overage renders "hours over" plus the OVER BUCKET badge — never a negative number', () => {
-    featureFlagState.enabled = true;
     const data = bucket({ minutes_used: 1500, percentage_used: 113.64 });
     render(<BucketUsageChart bucketData={data} />);
 
@@ -114,7 +88,6 @@ describe('BucketUsageChart remaining-first meter (release-v1-5-feature)', () => 
   });
 
   it('T162a: overage rescales the segments inside the track and clamps widths to [0, 100]', () => {
-    featureFlagState.enabled = true;
     // used = 1500 of 1320 available -> percentage_used = 113.64
     const data = bucket({ minutes_used: 1500, percentage_used: 113.64 });
     const { container } = render(<BucketUsageChart bucketData={data} />);
@@ -145,7 +118,6 @@ describe('BucketUsageChart remaining-first meter (release-v1-5-feature)', () => 
   });
 
   it('T162b: dirty overage data (2513% used) never paints a segment wider than the track', () => {
-    featureFlagState.enabled = true;
     const data = bucket({ minutes_used: 34000, percentage_used: 2513 });
     const { container } = render(<BucketUsageChart bucketData={data} />);
 

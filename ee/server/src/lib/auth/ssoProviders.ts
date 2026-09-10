@@ -68,7 +68,7 @@ async function resolveTenantIdFromVanityHost(host?: string | null): Promise<stri
   return record?.tenant;
 }
 
-export type EnterpriseOAuthProvider = 'google' | 'microsoft';
+export type EnterpriseOAuthProvider = 'google' | 'microsoft' | 'keycloak';
 
 export interface OAuthProfileMappingInput {
   provider: EnterpriseOAuthProvider;

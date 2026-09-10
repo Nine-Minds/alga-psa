@@ -10,7 +10,6 @@ import {
 } from '@alga-psa/workflow-streams';
 import { fetchMicrosoftGraphAppToken } from '../graphAuth';
 import { getMicrosoftGraphBaseUrl } from '../teams/microsoftEndpoints';
-import { tenantHasTeamsAddOn } from '../teams/teamsAddOnGate';
 import { buildTeamsNotificationDeepLinkFromPsaUrl } from '../teams/teamsDeepLinks';
 import { sendBotActivity, type SendBotActivityInput } from '../teams/bot/teamsBotConnector';
 import { getLatestTeamsConversationReferenceImpl } from '../teams/bot/teamsConversationReferences';
@@ -256,8 +255,6 @@ function safePublishNotificationWorkflowEvent(params: Parameters<typeof publishW
 
 export function mapTeamsNotificationSkipReasonToDeliveryErrorCode(reason: string): TeamsDeliveryErrorCode {
   switch (reason) {
-    case 'addon_inactive':
-      return 'addon_inactive';
     case 'integration_inactive':
       return 'integration_inactive';
     case 'missing_user_linkage':
@@ -459,13 +456,6 @@ export async function deliverTeamsNotificationImpl(
   }
 
   const { knex } = await createTenantKnex(notification.tenant);
-  if (!(await tenantHasTeamsAddOn(knex, notification.tenant))) {
-    return recordSkippedTeamsNotification({
-      notification,
-      category,
-      reason: 'addon_inactive',
-    });
-  }
 
   const integration = await getTeamsIntegrationRow(knex, notification.tenant);
 

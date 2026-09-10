@@ -28,7 +28,9 @@ const formatCurrency = (value: number, currencyCode: string, locale?: string) =>
   }
 };
 
-const formatDate = (value: string, locale?: string) => {
+// Shared by field formatting and the AST react-renderer so every surface
+// (designer preview, invoice preview, PDF) formats dates through one code path.
+export const formatTemplateDateValue = (value: string, locale?: string): string => {
   // Pin UTC so rendered dates don't depend on the server process timezone; the
   // locale is the recipient's, so dates read the same language as the labels.
   const dateLocale = locale || FALLBACK_LOCALE;
@@ -158,7 +160,7 @@ const formatPrimitiveValue = (
       return { text: null, multiline: false };
     }
     if (format === 'date') {
-      return { text: formatDate(value, locale), multiline: false };
+      return { text: formatTemplateDateValue(value, locale), multiline: false };
     }
     if (format === 'number') {
       const asNumber = Number(value);
@@ -180,7 +182,7 @@ const formatPrimitiveValue = (
       return { text: formatCurrency(value, currencyCode, locale), multiline: false };
     }
     if (format === 'date') {
-      return { text: formatDate(String(value), locale), multiline: false };
+      return { text: formatTemplateDateValue(String(value), locale), multiline: false };
     }
     return { text: String(value), multiline: false };
   }

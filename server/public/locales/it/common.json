@@ -223,6 +223,7 @@
     },
     "sso": {
       "signInWithMicrosoft": "Accedi con Microsoft",
+      "signInWithKeycloak": "Accedi con Keycloak",
       "signInWithGoogle": "Accedi con Google",
       "redirecting": "Reindirizzamento...",
       "startFailed": "Non è stato possibile avviare l'accesso SSO. Verifica la configurazione del provider e riprova."
@@ -559,7 +560,9 @@
     "replies_other": "{{count}} risposte",
     "collapse": "Comprimi",
     "expand": "Espandi",
-    "showInDrawer": "Mostra nel pannello"
+    "showInDrawer": "Mostra nel pannello",
+    "showEarlierReplies_one": "Mostra {{count}} risposta precedente",
+    "showEarlierReplies_other": "Mostra {{count}} risposte precedenti"
   },
   "pagination": {
     "previous": "Precedente",
@@ -1592,6 +1595,26 @@
     "usedOrders": "Numeri d'ordine già usati: {{orders}}",
     "noUsedOrders": "Nessun numero d'ordine ancora usato",
     "markClosed": "Contrassegna come stato chiuso",
-    "setDefault": "Imposta come stato predefinito per i nuovi ticket"
+    "setDefault": "Imposta come stato predefinito per i nuovi elementi",
+    "defaultClosedHelp": "Uno stato chiuso non può essere quello predefinito per i nuovi elementi."
+  },
+  "callLink": {
+    "teamsCall": "Chiama in Microsoft Teams"
+  },
+  "editor": {
+    "attachFiles": "Allega file",
+    "uploadingFiles": "Caricamento dei file…",
+    "fileUploadFailed": "Caricamento del file non riuscito."
+  },
+  "emailPreferences": {
+    "loading": "Caricamento delle preferenze email…",
+    "saving": "Salvataggio delle preferenze email…",
+    "slow": "L’operazione richiede più tempo del solito. Attendere la conferma prima di apportare altre modifiche.",
+    "loadError": "Impossibile caricare le preferenze email salvate. Riprovare per confermare le impostazioni.",
+    "saveError": "Salvataggio non confermato. Controllare le preferenze salvate e riprovare.",
+    "retry": "Riprova",
+    "disabledByAdmin": "Disattivato dall’amministratore",
+    "mixed": "Parzialmente attivato",
+    "empty": "Nessuna categoria di notifiche email disponibile."
   }
 }

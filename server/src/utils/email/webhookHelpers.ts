@@ -17,7 +17,7 @@ const isDevelopment = process.env.NODE_ENV === 'development' || process.env.APP_
  * Get the webhook base URL dynamically.
  * Priority:
  *   1. Ngrok URL from file (development mode only, for local tunneling)
- *   2. Environment variables (NGROK_URL, NEXT_PUBLIC_BASE_URL, NEXTAUTH_URL, etc.)
+ *   2. Explicit tunnel, APPLICATION_URL, then browser URL fallbacks
  *   3. Default localhost
  * 
  * This function provides the same dynamic URL resolution as ninjaone webhooks,
@@ -43,6 +43,9 @@ export function getWebhookBaseUrl(fallbackEnvVars?: string[]): string {
   // Fall back to environment variables
   const envVars = fallbackEnvVars || [
     'NGROK_URL',
+    // Match background email lifecycle/renewal when browser OAuth is served
+    // from a different origin than the public application callback endpoint.
+    'APPLICATION_URL',
     'NEXT_PUBLIC_BASE_URL',
     'NEXTAUTH_URL',
     'PUBLIC_WEBHOOK_BASE_URL'

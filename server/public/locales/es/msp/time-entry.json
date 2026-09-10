@@ -302,6 +302,12 @@
     "reverseApproval": {
       "reason": "Aprobación revocada por el gerente",
       "error": "No se pudo revertir la aprobación: {{error}}"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} seleccionados",
+        "clear": "Limpiar selección"
+      }
     }
   },
   "workItemDrawer": {

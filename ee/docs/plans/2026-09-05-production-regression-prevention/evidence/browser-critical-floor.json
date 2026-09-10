@@ -1,0 +1,23 @@
+{
+  "scope": "Consumer-owned minimum browser journey coverage",
+  "baseRevision": "9f49791049",
+  "workingTreeDirty": true,
+  "criticalFiles": [
+    "e2e-tests/tests/login.spec.ts",
+    "e2e-tests/tests/usage-invoice-preview.spec.ts",
+    "e2e-tests/tests/portal-ticket-roundtrip.spec.ts",
+    "e2e-tests/tests/invoice-generation.spec.ts"
+  ],
+  "behavior": "Require the minimum files for both editions even if deleted from the tracked inventory and producer reports; continue discovering additional landed journeys.",
+  "verification": {
+    "command": "node --test scripts/tests/fresh-install-execution.test.mjs scripts/tests/candidate-execution-gate.test.mjs",
+    "deletionScenarios": 8,
+    "artifact": "/tmp/alga-browser-critical-floor.log",
+    "sha256": "8344a935efebe770f4b68c6d455eeaa5f7003f72cd14ed408e54f002a54ac291"
+  },
+  "limits": [
+    "Artifact regression exercises gate decisions, not product browser behavior.",
+    "File presence alone does not prove semantic assertion quality.",
+    "Current full CE/EE execution and native aggregate remain outstanding."
+  ]
+}

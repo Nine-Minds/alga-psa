@@ -134,7 +134,7 @@ find "$DEST_ROOT/scripts" -type f -name '*.sh' -exec chmod 0755 {} +
 
 if [[ -f "$CONSOLE_SERVICE" ]]; then
   console_target="$TARGET_SYSTEMD/alga-appliance-console.service"
-  if [[ "$(realpath -m "$CONSOLE_SERVICE")" != "$(realpath -m "$console_target")" ]]; then
+  if [[ ! "$CONSOLE_SERVICE" -ef "$console_target" ]]; then
     install -m 0644 "$CONSOLE_SERVICE" "$console_target"
   fi
 fi

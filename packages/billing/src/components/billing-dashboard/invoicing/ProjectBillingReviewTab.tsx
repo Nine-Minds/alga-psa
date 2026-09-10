@@ -5,6 +5,7 @@ import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
+import { BulkActionBar } from '@alga-psa/ui/components/BulkActionBar';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
@@ -324,9 +325,7 @@ const ProjectBillingReviewTab: React.FC<ProjectBillingReviewTabProps> = ({
               rangeSelect.handleSelect(record.entry.schedule_entry_id, {
                 shiftKey: event.shiftKey,
                 selected: !isChecked,
-                preventDefault: () => event.preventDefault(),
               });
-              event.preventDefault();
             }}
             onChange={() => { /* controlled via onClick for shift-range support */ }}
           />
@@ -447,43 +446,36 @@ const ProjectBillingReviewTab: React.FC<ProjectBillingReviewTabProps> = ({
             defaultValue: 'Ready milestones and deposits awaiting approval across all projects.',
           })}
         </p>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              id="project-billing-bulk-actions-trigger"
-              variant="outline"
-              disabled={selected.size === 0 || isBusy}
-              className="flex items-center gap-2"
-            >
-              {t('projectBilling.bulkActions', {
-                count: selected.size,
-                defaultValue: 'Actions ({{count}})',
-              })}
-              <MoreVertical className="w-4 h-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {canBulkApproveSelection && (
-              <DropdownMenuItem
-                id="project-billing-bulk-approve"
-                onClick={handleBulkApprove}
-                className="flex items-center gap-2"
-              >
-                <CheckCircle className="h-4 w-4" />
-                {t('projectBilling.actions.approveSelected', { defaultValue: 'Approve selected' })}
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuItem
-              id="project-billing-bulk-hold"
-              onClick={() => openHoldDialog(Array.from(selected))}
-              className="flex items-center gap-2"
-            >
-              <PauseCircle className="h-4 w-4" />
-              {t('projectBilling.actions.holdSelected', { defaultValue: 'Hold selected' })}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
       </div>
+
+      <BulkActionBar
+        idPrefix="project-billing-bulk-action-bar"
+        count={selected.size}
+        selectedLabel={t('projectBilling.bulk.actionBar.selectedCount', {
+          defaultValue: '{{count}} selected',
+          count: selected.size,
+        })}
+        actions={[
+          ...(canBulkApproveSelection
+            ? [{
+                id: 'approve',
+                label: t('projectBilling.actions.approveSelected', { defaultValue: 'Approve selected' }),
+                icon: <CheckCircle className="h-4 w-4" />,
+                onClick: () => { void handleBulkApprove(); },
+                disabled: isBusy,
+              }]
+            : []),
+          {
+            id: 'hold',
+            label: t('projectBilling.actions.holdSelected', { defaultValue: 'Hold selected' }),
+            icon: <PauseCircle className="h-4 w-4" />,
+            onClick: () => openHoldDialog(Array.from(selected)),
+            disabled: isBusy,
+          },
+        ]}
+        onClear={() => setSelected(new Set())}
+        clearLabel={t('projectBilling.bulk.actionBar.clear', { defaultValue: 'Clear' })}
+      />
 
       {error && (
         <Alert variant="destructive" className="mb-4">

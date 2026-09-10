@@ -141,6 +141,8 @@
   },
   "usage": {
     "bucketHoursOverview": "Resumen de las bolsas de horas",
+    "bucketLoadError": "No se pudieron cargar los saldos de las bolsas de horas. Vuelva a intentarlo para ver los saldos actuales.",
+    "retryBucketBalances": "Volver a cargar los saldos de horas",
     "usageRecords": "Registros de uso",
     "actions": {
       "addUsage": "Agregar uso",
@@ -211,6 +213,12 @@
       "updateError": "No se pudo actualizar el registro de uso",
       "deleteSuccess": "Registro de uso eliminado correctamente",
       "deleteError": "No se pudo eliminar el registro de uso"
+    },
+    "periodReport": "Informe de uso del período",
+    "periodAlreadyInvoiced": "Este período ya está facturado. Corríjalo mediante el proceso de ajuste de facturas.",
+    "periodFilter": {
+      "notice": "Mostrando el uso del período de servicio del {{start}} al {{end}}",
+      "clear": "Limpiar"
     }
   },
   "lineItem": {
@@ -387,7 +395,10 @@
       "loadingBatches": "Cargando lotes...",
       "empty": "Aún no hay lotes de exportación.",
       "loadingDetails": "Cargando detalles del lote...",
-      "batchNotFound": "Lote no encontrado."
+      "batchNotFound": "Lote no encontrado.",
+      "checkingAccess": "Comprobando acceso...",
+      "accessDeniedTitle": "Acceso denegado",
+      "accessDeniedDescription": "No tiene permiso para acceder a las exportaciones contables."
     },
     "createDialog": {
       "title": "Nueva exportación contable",
@@ -663,7 +674,9 @@
     },
     "recurringRun": {
       "selectPeriods": "Seleccione al menos un período de facturación recurrente para generar.",
-      "invoicePermission": "Permiso denegado: se requiere permiso para crear o generar facturas"
+      "invoicePermission": "Permiso denegado: se requiere permiso para crear o generar facturas",
+      "monthEndCloseNotMaterialized": "No se materializaron períodos de servicio recurrentes para esta ventana de ejecución recurrente.",
+      "monthEndCloseNotEligible": "El período {{servicePeriod}} solo se puede cerrar a fin de mes, el {{finalCalendarDay}}. Solo los períodos de servicio a mes vencido que abarcan un mes natural completo pueden cerrarse de forma anticipada en su último día calendario."
     },
     "recurringServicePeriod": {
       "scheduleKeyRequiredInspect": "Se requiere una clave de calendario para inspeccionar los períodos de servicio recurrentes.",
@@ -689,8 +702,10 @@
         "setDefault": "Permiso denegado: no se puede establecer la plantilla de documento predeterminada",
         "clearOverride": "Permiso denegado: no se puede borrar la anulación de la plantilla de documento",
         "delete": "Permiso denegado: no se pueden eliminar las plantillas de documento",
-        "preview": "Permiso denegado: no se pueden previsualizar las plantillas de documento"
-      }
+        "preview": "Permiso denegado: no se pueden previsualizar las plantillas de documento",
+        "readSalesOrders": "Permiso denegado: no se pueden leer los pedidos de venta"
+      },
+      "existingNotFound": "Documento no encontrado."
     },
     "billingProfile": {
       "periodOrder": "Elija un período cuyo inicio sea anterior o igual a su fin.",
