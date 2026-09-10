@@ -367,7 +367,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const tenant = initialTicket.tenant;
 
     const [ticket, setTicket] = useState(initialTicket);
-    const { enabled: namedConversationsEnabled } = useFeatureFlag('release-v1-6-feature');
+    const { enabled: namedConversationsEnabled } = useFeatureFlag('release-v1-6-feature', { defaultValue: false });
     const namedConversations = useNamedTicketConversations(ticket?.ticket_id && ticket.tenant
       ? { tenant: ticket.tenant, ticketId: ticket.ticket_id } : null, namedConversationsEnabled, `${id}-named-conversations`, {
         onPublished: async () => { await refreshTicketSnapshot(['comments', 'status_id', 'response_state']); },

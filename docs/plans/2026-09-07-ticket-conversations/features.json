@@ -706,7 +706,7 @@
   {
     "id": "F089",
     "description": "Build private AI input from currently permitted own-organization, requester and shared context only.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "9. AI participation and context"
     ]
@@ -714,7 +714,7 @@
   {
     "id": "F090",
     "description": "Build Shared IT AI input only from context allowed for both organizations regardless of the invoking users private access.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "9. AI participation and context"
     ]
@@ -730,7 +730,7 @@
   {
     "id": "F092",
     "description": "Filter source bodies, filenames, snippets, citations and linked-resource retrieval before model inference.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "9. AI participation and context"
     ]
@@ -738,7 +738,7 @@
   {
     "id": "F093",
     "description": "Treat source content as untrusted data and bind any existing retrieval tools to the same audience/resource boundary.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "9. AI participation and context"
     ]
@@ -794,7 +794,7 @@
   {
     "id": "F100",
     "description": "Guard newly introduced UI and side-policy controls with release-v1-6-feature while leaving routes, APIs and backend logic unflagged.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "11. Compatibility, migration and release"
     ]

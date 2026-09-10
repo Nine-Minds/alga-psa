@@ -110,6 +110,13 @@ it('loads after development StrictMode remounts effects', async () => {
   render(<React.StrictMode><CoManagedTicketConversation resource={resource} /></React.StrictMode>);
   await screen.findByText('Shared content');
 });
+it('never shows a shared-source link outside the named requester conversation panel, even if the screen carries one', async () => {
+  const sharedFrom = { conversation: { storeTenant: 'msp', conversationId: 'source', name: 'Private source exchange' }, commentId: 'source-comment', threadId: 'source-thread' };
+  mocks.load.mockResolvedValue({ ...data(), items: [{ ...item(), sharedFrom }] });
+  mount(); await screen.findByText('Shared content');
+  expect(screen.queryByText(/sourceLink/)).toBeNull();
+  expect(screen.queryByRole('link', { name: /Shared from/ })).toBeNull();
+});
 
 it('does not claim another organization’s author with the same user ID and keeps customer-private creation local', async () => {
   mocks.load.mockResolvedValue({ ...data(), items: [{ ...item(), author: { ...item().author, tenant: 'customer' } }] });

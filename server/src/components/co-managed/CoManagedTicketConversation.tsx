@@ -253,7 +253,7 @@ function Conversation({ resource, homeTenant, userId, requester, onDraftState, c
           <p className="text-xs text-muted-foreground"><time dateTime={item.createdAt}>{formatDate(new Date(item.createdAt), { dateStyle: 'medium', timeStyle: 'short' })}</time>
             {item.parentCommentId && <span> · {t('coManaged.conversation.reply')}</span>}</p>
           {!item.deleted && item.email && <ConversationEmailEnvelope email={item.email} />}
-          {!item.deleted && item.sharedFrom && <ConversationShareSourceLink id={id} source={item.sharedFrom} />}
+          {!item.deleted && requester && item.sharedFrom && <ConversationShareSourceLink id={id} source={item.sharedFrom} />}
           {content ? <Document key={`${id}:${item.updatedAt}`} id={`${id}-body`} document={content} />
             : <p className="whitespace-pre-wrap break-words text-sm">{item.deleted ? t('coManaged.conversation.deleted') : conversationText(item.note, item.markdown)}</p>}
           {!item.deleted && <CoManagedCommentAttachments resource={target.current} comment={reference(item)} conversation={requester} />}

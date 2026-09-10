@@ -399,7 +399,7 @@
   {
     "id": "T030",
     "description": "Real migrated PostgreSQL with captured model/tool inputs: compare private and Shared IT invocations from both organizations, source narrowing and linked-resource restrictions; forbidden body/filename/snippet/citation data never reaches inference even when personally readable elsewhere.",
-    "implemented": false,
+    "implemented": true,
     "type": "integration",
     "featureIds": [
       "F008",
@@ -413,7 +413,7 @@
   {
     "id": "T031",
     "description": "AI adapter and real permission reads: prompt injection in source material cannot expand context/tools or trigger email/status/recipient mutations; permission/audience revocation before completion discards output and citations without reintroducing cleared UI data.",
-    "implemented": false,
+    "implemented": true,
     "type": "integration",
     "featureIds": [
       "F012",
