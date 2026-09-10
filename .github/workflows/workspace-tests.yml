@@ -7,6 +7,11 @@ on:
 permissions:
   contents: read
 
+env:
+  # The ffmpeg-static postinstall downloads a binary from GitHub; retry the
+  # bounded, external transport failures instead of failing the whole job.
+  FFMPEG_STATIC_DOWNLOAD_RETRY: 'true'
+
 jobs:
   enterprise-integration:
     name: Enterprise integration execution complete
@@ -52,7 +57,8 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm install -g npm@11
-      - run: npm ci
+      - name: Install dependencies with bounded download recovery
+        run: node scripts/install-api-test-dependencies.mjs
       - name: Collect and execute EE integration tests against combined migrations
         run: node scripts/run-additional-workspace-tests.mjs enterprise-integration
       - uses: actions/upload-artifact@v4
@@ -90,7 +96,8 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm install -g npm@11
-      - run: npm ci
+      - name: Install dependencies with bounded download recovery
+        run: node scripts/install-api-test-dependencies.mjs
       - name: Collect and execute service API, ledger and unit tests
         run: node scripts/run-additional-workspace-tests.mjs ai-gateway
       - uses: actions/upload-artifact@v4
@@ -127,7 +134,8 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm install -g npm@11
-      - run: npm ci
+      - name: Install dependencies with bounded download recovery
+        run: node scripts/install-api-test-dependencies.mjs
       - name: Install locked showcase dependencies and build its iframe
         if: matrix.suite == 'ui-kit-showcase'
         run: |
@@ -184,7 +192,8 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm install -g npm@11
-      - run: npm ci
+      - name: Install dependencies with bounded download recovery
+        run: node scripts/install-api-test-dependencies.mjs
       - name: Collect, execute and reconcile assigned EE unit tests
         run: node scripts/run-additional-workspace-tests.mjs enterprise-unit
       - name: Retain EE unit execution evidence
