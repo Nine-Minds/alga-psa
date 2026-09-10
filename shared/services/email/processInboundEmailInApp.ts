@@ -30,6 +30,7 @@ import {
 } from './inboundReplyAcknowledgementDecider';
 import { evaluateInboundEmailRules } from './inboundEmailRules';
 import { normalizeRfc822MessageId } from './inboundEmailIdentity';
+import { withTenantAdminTransaction } from './tenantAdminTransaction';
 import {
   detectOutboundNotificationLoop,
   type NotificationLoopDetectionResult,
@@ -404,15 +405,6 @@ function toIsoOrNull(value: unknown): string | null {
   if (!value) return null;
   const date = value instanceof Date ? value : new Date(String(value));
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
-}
-
-async function withTenantAdminTransaction<T>(
-  tenantId: string,
-  callback: (trx: any, db: any) => Promise<T>,
-  existingConnection?: any
-): Promise<T> {
-  const { withAdminTransaction, tenantDb } = await import('@alga-psa/db');
-  return withAdminTransaction(async (trx: any) => callback(trx, tenantDb(trx, tenantId)), existingConnection);
 }
 
 function isClosedTicketBeyondReopenCutoff(params: {

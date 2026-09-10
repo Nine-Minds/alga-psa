@@ -8,6 +8,18 @@ function replyTokenHash(token: string): string {
   return createHash('sha256').update(token.trim()).digest('hex');
 }
 
+/**
+ * The exact RFC 3834 headers AUTO_GENERATED_MAIL_HEADERS stamps on every
+ * outbound notification (see shared/lib/email/automatedMessage.ts and the
+ * production incident's inspected headers). Suppression-positive fixtures
+ * carry these so they suppress via the genuine automated-message signal
+ * rather than by accident of a matching subject string.
+ */
+const LOOPED_NOTIFICATION_HEADERS = {
+  'auto-submitted': 'auto-generated',
+  'x-auto-response-suppress': 'OOF, AutoReply, AutoForward',
+};
+
 const withAdminTransactionMock = vi.fn();
 const parseEmailReplyBodyMock = vi.fn();
 const findTicketByReplyTokenMock = vi.fn();
@@ -1073,6 +1085,7 @@ describe('processInboundEmailInApp', () => {
             text: 'This ticket has been assigned to Jamie. Full notification template body text describing the ticket.',
             html: undefined,
           },
+          headers: LOOPED_NOTIFICATION_HEADERS,
         }),
       },
       { collectDiagnostics: true }
@@ -1138,6 +1151,7 @@ describe('processInboundEmailInApp', () => {
             to: [{ email: 'jamie@jayscomputers.com.au' }],
             subject,
             body: { text: bodyText, html: undefined },
+            headers: LOOPED_NOTIFICATION_HEADERS,
           }),
         },
         { collectDiagnostics: true }
@@ -1186,6 +1200,7 @@ describe('processInboundEmailInApp', () => {
         to: [{ email: 'jamie@jayscomputers.com.au' }],
         subject: 'Ticket Updated: TK-200',
         body: { text: 'Full template body describing the update.', html: undefined },
+        headers: LOOPED_NOTIFICATION_HEADERS,
       }),
     };
 
@@ -1196,6 +1211,74 @@ describe('processInboundEmailInApp', () => {
     expect(second).toMatchObject({ outcome: 'skipped', reason: 'notification_loop' });
     expect(createTicketFromEmailMock).not.toHaveBeenCalled();
     expect(createCommentFromEmailMock).not.toHaveBeenCalled();
+  });
+
+  it('REGRESSION (code review finding): a genuine human reply sent FROM the shared outbound mailbox address is not suppressed', async () => {
+    // hello@jayscomputers.com.au is BOTH Alga's outbound From address AND a
+    // real staffed mailbox a human reads and replies from — the incident
+    // tenant's exact shape. Before the Tier-1 tightening, sender==from_address
+    // and recipient-contains-providerMailboxEmail alone were enough to
+    // suppress this, which would have silently dropped a genuine staff reply.
+    const token = 'probe-token-shared-mailbox-reply';
+    emailSendingLogsState.row = {
+      id: 9400,
+      from_address: 'hello@jayscomputers.com.au',
+      to_addresses: ['jamie@jayscomputers.com.au', 'client@example.com'],
+      cc_addresses: null,
+      bcc_addresses: null,
+      entity_type: 'ticket',
+      entity_id: 'ticket-probe',
+      subject: 'Ticket Updated: TK-PROBE',
+      created_at: '2026-02-10T00:00:00.000Z',
+      reply_token_hash: replyTokenHash(token),
+    };
+    findEmailProviderMailboxAddressMock.mockResolvedValue('jamie@jayscomputers.com.au');
+    findTicketByReplyTokenMock.mockResolvedValue({ ticketId: 'ticket-probe' });
+    findContactByEmailMock.mockResolvedValue({
+      user_id: 'internal-user-hello',
+      user_type: 'internal',
+      email: 'hello@jayscomputers.com.au',
+      name: 'Shared Support Mailbox',
+    });
+    parseEmailReplyBodyMock.mockResolvedValue({
+      sanitizedText: 'Hi Jamie, I already called the customer, please close it out.',
+      sanitizedHtml: undefined,
+      confidence: 0.95,
+      strategy: 'plain',
+      appliedHeuristics: [],
+      warnings: [],
+      tokens: { conversationToken: token },
+    });
+
+    const { processInboundEmailInApp } = await import('../processInboundEmailInApp');
+    const result = await processInboundEmailInApp({
+      tenantId: 'tenant-1',
+      providerId: 'provider-mailbox-b',
+      emailData: buildEmailData({
+        id: 'probe-shared-mailbox-reply-1',
+        // A human composed this from the shared mailbox — no automated
+        // headers — and their mail client prepended "Re:", so neither of the
+        // Tier-1 discriminators (automated signal, exact subject match) hold.
+        from: { email: 'hello@jayscomputers.com.au', name: 'Jays Computers' },
+        to: [{ email: 'jamie@jayscomputers.com.au' }],
+        subject: 'Re: Ticket Updated: TK-PROBE',
+        body: { text: 'Hi Jamie, I already called the customer, please close it out.', html: undefined },
+        headers: { 'authentication-results': 'mx.jayscomputers.com.au; dmarc=pass header.from=jayscomputers.com.au' },
+      }),
+    }, { collectDiagnostics: true });
+
+    expect(result).toMatchObject({ outcome: 'replied', matchedBy: 'reply_token', ticketId: 'ticket-probe' });
+    expect(result.diagnostics?.notificationLoop?.evidence).toMatchObject({
+      senderMatchesLoggedFromAddress: true,
+      recipientMatchedLoggedSend: true,
+      subjectMatchedLoggedSend: false,
+    });
+    expect(result.diagnostics?.notificationLoop?.evidence.automated.isAutomated).toBe(false);
+    expect(createCommentFromEmailMock).toHaveBeenCalledTimes(1);
+    expect(createCommentFromEmailMock).toHaveBeenCalledWith(
+      expect.objectContaining({ ticket_id: 'ticket-probe' }),
+      'tenant-1'
+    );
   });
 
   it('negative: internal staff reply from a tenant-domain address, quoting the notification, is not suppressed and creates exactly one comment', async () => {
