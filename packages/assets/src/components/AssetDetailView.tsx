@@ -23,7 +23,9 @@ export const AssetDetailView: React.FC<AssetDetailViewProps> = ({ assetId }) => 
     assetFacts,
     isLoading, 
     refreshRmmData, 
-    isRefreshing 
+    isRefreshing,
+    rebootDevice,
+    isRebooting,
   } = useAssetDetail(assetId);
   // Shared by the header's Edit action and the layout's tiles so there is only
   // ever one drawer open, with one rail.
@@ -61,6 +63,8 @@ export const AssetDetailView: React.FC<AssetDetailViewProps> = ({ assetId }) => 
         asset={asset} 
         onRefresh={refreshRmmData}
         isRefreshing={isRefreshing}
+        onReboot={rebootDevice}
+        isRebooting={isRebooting}
         onEdit={() => setFocusView('edit')}
       />
       

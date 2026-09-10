@@ -15,6 +15,7 @@ import { Alert, AlertDescription } from "@alga-psa/ui/components/Alert";
 import { Badge } from "@alga-psa/ui/components/Badge";
 import clsx from "clsx";
 import { Loader2, ShieldCheck, KeyRound, LogIn } from "lucide-react";
+import { SiKeycloak } from "react-icons/si";
 import { GoogleIcon } from '@alga-psa/ui/components/GoogleIcon';
 import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
 
@@ -60,6 +61,14 @@ const providerBranding: Record<string, ProviderBranding> = {
     buttonClass: "bg-[#0078D4] hover:bg-[#005a9e] text-white",
     buttonVariant: "default",
     cardClass: "hover:shadow-lg hover:shadow-[#0078D4]/10",
+  },
+  keycloak: {
+    icon: <SiKeycloak className="h-16 w-16" style={{ color: "#4D4D4D" }} aria-hidden />,
+    iconBg: "bg-[#F3F2F1]",
+    buttonLabelKey: "connectSso.providers.branding.keycloak",
+    buttonClass: "bg-[#4D4D4D] hover:bg-[#333333] text-white",
+    buttonVariant: "default",
+    cardClass: "hover:shadow-lg hover:shadow-[#4D4D4D]/10",
   },
   default: {
     icon: <LogIn className="h-16 w-16 text-primary" aria-hidden />,
@@ -351,10 +360,12 @@ export default function ConnectSsoClient({
                     borderColor:
                       provider.id === "google" ? "#4285F4" :
                       provider.id === "azure-ad" || provider.id === "microsoft" ? "#6264A7" :
+                      provider.id === "keycloak" ? "#4D4D4D" :
                       "rgb(var(--color-primary-500))",
                     backgroundColor:
                       provider.id === "google" ? "rgba(66, 133, 244, 0.05)" :
                       provider.id === "azure-ad" || provider.id === "microsoft" ? "rgba(98, 100, 167, 0.05)" :
+                      provider.id === "keycloak" ? "rgba(77, 77, 77, 0.05)" :
                       "rgb(var(--color-primary-500) / 0.05)"
                   }}
                 >

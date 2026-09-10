@@ -185,7 +185,7 @@
       "advanced": {
         "title": "Advanced: custom identity provider routing",
         "description": "Route MSP login SSO to your own identity provider using verified login domains. Only needed on custom or on-premise installations.",
-        "inertNotice": "No tenant identity provider credentials are configured, so domain claims currently have no effect. Users sign in with the hosted Google / Microsoft providers. Tenant credentials are provisioned on custom and on-premise installations."
+        "inertNotice": "No tenant identity provider is configured, so domain claims currently have no effect. Configure Keycloak above, or on Enterprise Edition your Google / Microsoft app credentials, then claim your staff login domain here."
       }
     },
     "userRoles": {
@@ -749,6 +749,7 @@
       "branding": {
         "google": "Continue with Google",
         "microsoft": "Continue with Microsoft",
+        "keycloak": "Continue with Keycloak",
         "default": "Continue"
       }
     },

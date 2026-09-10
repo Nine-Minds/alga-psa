@@ -112,7 +112,7 @@
       "advanced": {
         "title": "Zaawansowane: niestandardowe kierowanie do dostawcy tożsamości",
         "description": "Kieruj pojedyncze logowanie MSP do własnego dostawcy tożsamości przy użyciu zweryfikowanych domen logowania. Jest to potrzebne tylko w instalacjach niestandardowych lub lokalnych.",
-        "inertNotice": "Nie skonfigurowano poświadczeń dostawcy tożsamości organizacji, dlatego deklaracje domen nie mają obecnie żadnego skutku. Użytkownicy logują się za pośrednictwem hostowanych dostawców Google / Microsoft. Poświadczenia organizacji są udostępniane w instalacjach niestandardowych i lokalnych."
+        "inertNotice": "Nie skonfigurowano dostawcy tożsamości organizacji, dlatego deklaracje domen nie mają obecnie żadnego skutku. Skonfiguruj powyżej Keycloak lub – w Enterprise Edition – poświadczenia aplikacji Google / Microsoft, a następnie zgłoś tutaj domenę logowania."
       }
     },
     "userRoles": {
@@ -751,6 +751,7 @@
       "branding": {
         "google": "Kontynuuj z Google",
         "microsoft": "Kontynuuj z Microsoft",
+        "keycloak": "Kontynuuj z Keycloak",
         "default": "Kontynuuj"
       }
     },

@@ -9,6 +9,7 @@ export { CalendarEnterpriseIntegrationSettings } from './CalendarEnterpriseInteg
 export { default as CSVIntegrationSettings } from './CSVIntegrationSettings';
 export { GoogleIntegrationSettings } from './GoogleIntegrationSettings';
 export { default as IntegrationsSettingsPage } from './IntegrationsSettingsPage';
+export { KeycloakSsoSettings } from './KeycloakSsoSettings';
 export { MspSsoLoginDomainsSettings } from './MspSsoLoginDomainsSettings';
 export { default as NinjaOneComplianceDashboard } from './NinjaOneComplianceDashboard';
 export { default as RmmIntegrationsSetup } from './RmmIntegrationsSetup';

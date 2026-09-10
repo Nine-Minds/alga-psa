@@ -11,7 +11,7 @@ let mockDueWorkResponse: any;
 let mockRecurringInvoiceHistoryResponse: any;
 const mockGetAvailableRecurringDueWork = vi.fn();
 const mockUpsertUsagePeriodTotal = vi.fn();
-const mockPreviewGroupedInvoicesForSelectionInputs = vi.fn(async (groups: Array<{ previewGroupKey: string; selectorInputs: any[] }>) => ({
+const defaultGroupedPreview = async (groups: Array<{ previewGroupKey: string; selectorInputs: any[] }>) => ({
   success: true,
   invoiceCount: groups.length,
   previews: groups.map((group) => ({
@@ -28,7 +28,8 @@ const mockPreviewGroupedInvoicesForSelectionInputs = vi.fn(async (groups: Array<
       total: 0,
     },
   })),
-}));
+});
+const mockPreviewGroupedInvoicesForSelectionInputs = vi.fn(defaultGroupedPreview);
 const mockGenerateGroupedInvoicesAsRecurringBillingRun = vi.fn(async () => ({ failures: [] }));
 
 // Exercise the existing feature behavior with the release flag enabled.
@@ -209,8 +210,10 @@ describe('AutomaticInvoices grouped parent rows', () => {
     cleanup();
     mockGetAvailableRecurringDueWork.mockReset();
     mockUpsertUsagePeriodTotal.mockReset();
-    mockPreviewGroupedInvoicesForSelectionInputs.mockClear();
-    mockGenerateGroupedInvoicesAsRecurringBillingRun.mockClear();
+    mockPreviewGroupedInvoicesForSelectionInputs.mockReset().mockImplementation(defaultGroupedPreview);
+    mockGenerateGroupedInvoicesAsRecurringBillingRun.mockReset().mockResolvedValue({ failures: [] });
+    mockNavigateToUsage.mockReset();
+    sessionStorage.removeItem('billing-usage-return-selection');
     mockDueWorkResponse = {
       invoiceCandidates: [
         {
@@ -1210,12 +1213,16 @@ describe('AutomaticInvoices grouped parent rows', () => {
   const usageStatus = {client_contract_line_id: 'line-1', service_id: 'service-1', service_name: 'Reported seats', config_id: 'config-1',
     service_period_start: '2026-02-01', service_period_end: '2026-02-28', status: 'unreported', measurement_mode: 'period_total', minimum_usage: 0};
   it('pure-unreported preview accepts inline entry and previews exactly the same selected obligations', async () => {
+    const user = userEvent.setup();
     mockPreviewGroupedInvoicesForSelectionInputs.mockResolvedValueOnce({success: false, code: 'USAGE_RECORDS_MISSING', error: 'Usage is unreported',
       params: {periodStart: '2026-02-01', periodEnd: '2026-02-28'}, usageServicePeriodStatuses: [usageStatus]} as any);
     mockUpsertUsagePeriodTotal.mockResolvedValueOnce({total: {quantity: 12, revision: 1}});
     await openSelectedPreview();
-    fireEvent.change(await screen.findByRole('spinbutton', {name: 'Period count for Reported seats'}), {target: {value: '12'}});
-    fireEvent.click(screen.getByRole('button', {name: 'Save'}));
+    const quantity = await screen.findByRole('spinbutton', {name: 'Period count for Reported seats'});
+    await user.clear(quantity);
+    await user.type(quantity, '12');
+    expect(quantity).toHaveValue(12);
+    await user.click(screen.getByRole('button', {name: 'Save'}));
     await waitFor(() => expect(mockUpsertUsagePeriodTotal).toHaveBeenCalledWith(expect.objectContaining({
       client_id: 'client-1', client_contract_line_id: 'line-1', config_id: 'config-1', quantity: 12, request_id: expect.any(String),
       period_start: '2026-02-01', period_end: '2026-02-28',

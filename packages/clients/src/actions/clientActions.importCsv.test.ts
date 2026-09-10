@@ -144,13 +144,17 @@ const TABLE_COLUMNS: Record<string, Set<string>> = {
   ]),
   default_billing_settings: new Set(['tenant', 'default_currency_code']),
   countries: new Set(['code', 'name', 'is_active', 'created_at', 'updated_at']),
+  tenant_companies: new Set(['tenant', 'client_id', 'is_default', 'deleted_at', 'created_at', 'updated_at']),
 };
+
+type FakeTable = 'clients' | 'client_locations' | 'default_billing_settings' | 'countries' | 'tenant_companies';
 
 interface FakeState {
   clients: Record<string, any>[];
   client_locations: Record<string, any>[];
   default_billing_settings: Record<string, any>[];
   countries: Record<string, any>[];
+  tenant_companies: Record<string, any>[];
   updates: Array<{ table: string; data: Record<string, any> }>;
   failClientInsertNamed: string | null;
 }
@@ -180,15 +184,30 @@ function fakeConn(table: string) {
   if (!TABLE_COLUMNS[table]) {
     throw new Error(`Unexpected table ${table}`);
   }
-  const rows = () => state[table as 'clients' | 'client_locations' | 'default_billing_settings' | 'countries'];
+  const rows = () => state[table as FakeTable];
   const matching = (criteria: Record<string, any>) =>
-    rows().filter(row => Object.entries(criteria).every(([key, value]) => row[key] === value));
+    rows().filter(row => Object.entries(criteria).every(([key, value]) => (row[key] ?? null) === value));
 
   return {
     where(criteria: Record<string, any>) {
-      return {
+      const orderings: Array<{ column: string; direction: 'asc' | 'desc' }> = [];
+      // Every ordered column reached through this fake is a boolean flag.
+      const ordered = () => matching(criteria).sort((left, right) => {
+        for (const { column, direction } of orderings) {
+          const a = Number(Boolean(left[column]));
+          const b = Number(Boolean(right[column]));
+          if (a !== b) return direction === 'desc' ? b - a : a - b;
+        }
+        return 0;
+      });
+
+      const builder = {
+        orderBy(column: string, direction: 'asc' | 'desc' = 'asc') {
+          orderings.push({ column, direction });
+          return builder;
+        },
         first: async () => {
-          const match = matching(criteria)[0];
+          const match = ordered()[0];
           return match ? { ...match } : undefined;
         },
         select: async (...columns: string[]) => matching(criteria).map((row) =>
@@ -207,6 +226,8 @@ function fakeConn(table: string) {
           });
         },
       };
+
+      return builder;
     },
     insert(data: Record<string, any>) {
       assertRealColumns(table, data);
@@ -287,6 +308,7 @@ describe('importClientsFromCSV', () => {
         { code: 'CO', name: 'Colombia', is_active: true },
         { code: 'GB', name: 'United Kingdom', is_active: true },
       ],
+      tenant_companies: [],
       updates: [],
       failClientInsertNamed: null,
     };
@@ -379,6 +401,55 @@ describe('importClientsFromCSV', () => {
     expect(results[0].message).toContain('valid phone number');
     expect(state.clients).toHaveLength(0);
     expect(state.client_locations).toHaveLength(0);
+  });
+
+  it("gives a row with no country the tenant's own country instead of US", async () => {
+    state.tenant_companies = [
+      { tenant: 'tenant-1', client_id: 'msp-client', is_default: true, deleted_at: null },
+    ];
+    state.client_locations.push({
+      client_id: 'msp-client',
+      country_code: 'GB',
+      is_default: true,
+      is_billing_address: true,
+      is_active: true,
+    });
+
+    const results = await importClients([csvRow({
+      client_name: 'Bloomsbury Chambers',
+      country: '',
+      phone_number: '020 7946 0958',
+    })]);
+
+    expect(results[0]).toMatchObject({ success: true });
+    const imported = state.client_locations.find((location) => location.client_id === state.clients[0].client_id);
+    expect(imported).toMatchObject({
+      country_code: 'GB',
+      country_name: 'United Kingdom',
+      phone: '+442079460958',
+    });
+  });
+
+  it("keeps the US fallback when the tenant's own country is still the placeholder", async () => {
+    state.tenant_companies = [
+      { tenant: 'tenant-1', client_id: 'msp-client', is_default: true, deleted_at: null },
+    ];
+    state.client_locations.push({
+      client_id: 'msp-client',
+      country_code: 'XX',
+      is_default: true,
+      is_billing_address: true,
+      is_active: true,
+    });
+
+    const results = await importClients([csvRow({
+      client_name: 'Placeholder Tenant Co',
+      country: '',
+    })]);
+
+    expect(results[0]).toMatchObject({ success: true });
+    const imported = state.client_locations.find((location) => location.client_id === state.clients[0].client_id);
+    expect(imported).toMatchObject({ country_code: 'US', country_name: 'United States' });
   });
 
   it('rejects an unknown nonblank country instead of pairing it with US', async () => {
