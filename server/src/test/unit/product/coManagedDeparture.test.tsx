@@ -63,6 +63,13 @@ it('discards stale reads when the tracked session changes', async () => {
   await act(async () => { resolve(active); });
   expect(screen.queryByRole('button', { name: 'coManaged.departure.review' })).toBeNull();
 });
+it('omits the counterpart name once the relationship has ended', async () => {
+  mocks.load.mockResolvedValue({ ...active, departed: true, counterpartName: null });
+  mount();
+  await screen.findByText('coManaged.departure.completed');
+  expect(screen.queryByText('MSP')).toBeNull();
+  expect(screen.queryByRole('alert')).toBeNull();
+});
 it('clears prior review when current authority can no longer be loaded', async () => {
   mount(); await screen.findByRole('button', { name: 'coManaged.departure.review' });
   mocks.load.mockRejectedValue(new Error('Permission denied'));

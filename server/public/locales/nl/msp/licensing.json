@@ -511,6 +511,7 @@
       "loading": "Laden…",
       "restricted": "Afgeschermd ticket",
       "responsibility": "Verantwoordelijk: {{organization}}",
+      "formerSponsor": "Voormalige MSP",
       "readOnly": "Deze werkruimte is alleen-lezen. Klantbeheerders kunnen nog steeds toegang intrekken.",
       "history": "Gedeelde IT-overdrachtsgeschiedenis",
       "noHistory": "Geen zichtbare overdrachten.",

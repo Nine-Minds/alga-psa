@@ -513,6 +513,7 @@
       "loading": "Cargando…",
       "restricted": "Ticket restringido",
       "responsibility": "Responsable: {{organization}}",
+      "formerSponsor": "MSP anterior",
       "readOnly": "Este espacio es de solo lectura. Los administradores del cliente aún pueden revocar accesos.",
       "history": "Historial compartido de traspasos de TI",
       "noHistory": "No hay traspasos visibles.",

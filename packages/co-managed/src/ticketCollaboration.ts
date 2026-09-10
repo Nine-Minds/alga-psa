@@ -43,11 +43,17 @@ export async function getCoManagedTicketScreen(db: Knex, inputActor: CoManagedSe
     const sla = await readTicket(trx, actor, summary.resource, readCoManagedTicketSlaDisplay);
     const resource = summary.resource, customer = tenantDb(trx, resource.tenant);
     const relationship = await customer.table('co_management_relationships').where('relationship_id', resource.relationshipId).first();
-    const sponsor = tenantDb(trx, relationship.sponsor_tenant);
+    // Retained reads survive termination (see withCoManagedCustomerWork), but keeping
+    // history does not authorize continued live access in either direction. Once the
+    // relationship has ended, every sponsor-derived field is omitted rather than read
+    // from the former sponsor's current state, so a post-departure rename can never
+    // reach the customer. Live collaboration is unaffected.
+    const live = relationship.state === 'active' && !relationship.ended_at;
+    const sponsor = live ? tenantDb(trx, relationship.sponsor_tenant) : null;
     const side = actor.tenant === resource.tenant ? 'customer' as const : 'sponsor' as const;
     const customerName = (await customer.table('tenants').first('client_name')).client_name as string;
-    const sponsorName = (await sponsor.table('tenants').first('client_name')).client_name as string;
-    const destination = await sponsor.table('boards').where({ board_id: relationship.escalation_board_id, is_inactive: false }).first('board_name');
+    const sponsorName = sponsor ? (await sponsor.table('tenants').first('client_name')).client_name as string : null;
+    const destination = sponsor ? await sponsor.table('boards').where({ board_id: relationship.escalation_board_id, is_inactive: false }).first('board_name') : undefined;
     const canWrite = (await getCoManagedOperationalState(trx, resource.tenant)).canWrite;
     const workRevisionVisible = typeof summary.fields.work_revision === 'number';
     const canManage = side === 'customer' && await hasCoManagedLocalPermission(trx, actor, 'co_management', 'manage', true);

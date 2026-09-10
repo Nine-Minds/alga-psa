@@ -65,6 +65,9 @@ function TicketPanel({ target, showSummary }: { target: CoManagedTicketScreenTar
     finally { if (generation.current === current) { setHistoryBusy(false); historyRequest.current = false; } }
   }
   const fields = screen?.summary.fields;
+  // After the relationship ends the screen no longer carries the former sponsor's
+  // name, so the retained read still renders instead of printing an empty organization.
+  const sponsorName = screen?.sponsorName ?? t('coManaged.ticket.formerSponsor');
   const display = (field: unknown) => typeof field === 'string' ? field : undefined;
   const named = (field: unknown) => field && typeof field === 'object' && 'name' in field ? display(field.name) : undefined;
   return <Card className="my-4"><CardHeader><CardTitle>{t('coManaged.ticket.title')}</CardTitle></CardHeader><CardContent className="space-y-4">
@@ -75,8 +78,8 @@ function TicketPanel({ target, showSummary }: { target: CoManagedTicketScreenTar
         <h1 className="break-words text-xl font-semibold">{[display(fields?.ticket_number), display(fields?.title)].filter(Boolean).join(' · ') || t('coManaged.ticket.restricted')}</h1>
         {(named(fields?.status) || named(fields?.priority)) && <p>{[named(fields?.status), named(fields?.priority)].filter(Boolean).join(' · ')}</p>}
       </div>}
-      {(fields?.responsibility === 'customer' || fields?.responsibility === 'msp') && <p>{t('coManaged.ticket.responsibility', { organization: fields.responsibility === 'msp' ? screen.sponsorName : screen.customerName })}</p>}
-      {screen.sla && <CoManagedTicketSla sla={screen.sla} customerName={screen.customerName} sponsorName={screen.sponsorName} />}
+      {(fields?.responsibility === 'customer' || fields?.responsibility === 'msp') && <p>{t('coManaged.ticket.responsibility', { organization: fields.responsibility === 'msp' ? sponsorName : screen.customerName })}</p>}
+      {screen.sla && <CoManagedTicketSla sla={screen.sla} customerName={screen.customerName} sponsorName={sponsorName} />}
       {!screen.canWrite && <p role="status" className="rounded-md border p-3">{t('coManaged.ticket.readOnly')}</p>}
       {action && typeof fields?.work_revision === 'number' ? <CoManagedHandoffComposer key={action} action={action} side={screen.side}
         resource={screen.summary.resource} revision={fields.work_revision} onSaved={reload} onCancel={() => setAction(null)} onReload={reload} />

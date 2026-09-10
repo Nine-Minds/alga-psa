@@ -513,6 +513,7 @@
       "loading": "Carregando…",
       "restricted": "Chamado restrito",
       "responsibility": "Responsável: {{organization}}",
+      "formerSponsor": "MSP anterior",
       "readOnly": "Este espaço está em modo somente leitura. Os administradores do cliente ainda podem revogar acessos.",
       "history": "Histórico compartilhado de transferências de TI",
       "noHistory": "Nenhuma transferência visível.",

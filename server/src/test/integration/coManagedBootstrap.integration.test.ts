@@ -3501,6 +3501,49 @@ it('paginates the qualified shared IT journal without leaking source fields hidd
   expect(await customer.table('co_management_ticket_handoffs').where('ticket_id', resource.id)).toHaveLength(26);
 });
 
+it('discloses the sponsor identity and escalation destination while the relationship is live', async () => {
+  const { customerPrincipal, resource, customer, sponsor } = await ticketHandoffFixture();
+  const { getCoManagedTicketScreen: screen } = await import('../../../../packages/co-managed/src/ticketCollaboration');
+  const { escalateCoManagedTicket: escalate } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  await escalate(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 0, note: 'Live collaboration.' });
+  const relationship = await customer.table('co_management_relationships').where('relationship_id', resource.relationshipId).first();
+  const sponsorName = (await sponsor.table('tenants').first('client_name')).client_name;
+  const boardName = (await sponsor.table('boards').where('board_id', relationship.escalation_board_id).first('board_name')).board_name;
+  expect(relationship).toMatchObject({ state: 'active', ended_at: null });
+  const result = await screen(db, customerPrincipal, resource);
+  expect(result).toMatchObject({ side: 'customer', sponsorName, destinationName: boardName });
+  expect(result.customerName).toBe((await customer.table('tenants').first('client_name')).client_name);
+  expect(result.sla.msp).toMatchObject({ state: 'tracking' });
+});
+
+// A retained read keeps the customer's own history; it does not authorize continued
+// live access to the former sponsor. Sponsor-derived fields are omitted after departure
+// rather than re-read, so a post-termination rename can never reach the customer.
+it('withholds current former-sponsor state from retained customer reads after departure', async () => {
+  const { principal, customerPrincipal, resource, customer, sponsor } = await ticketHandoffFixture();
+  const { getCoManagedTicketScreen: screen } = await import('../../../../packages/co-managed/src/ticketCollaboration');
+  const { escalateCoManagedTicket: escalate } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  await escalate(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 0, note: 'Investigate together.' });
+  const relationship = await customer.table('co_management_relationships').where('relationship_id', resource.relationshipId).first();
+  const customerName = (await customer.table('tenants').first('client_name')).client_name;
+  expect(await screen(db, customerPrincipal, resource)).toMatchObject({ sponsorName: (await sponsor.table('tenants').first('client_name')).client_name });
+  await customer.table('co_management_relationships').where('relationship_id', resource.relationshipId).update({ state: 'terminated', ended_at: new Date() });
+  await sponsor.table('tenants').update({ client_name: 'Renamed after departure' });
+  await sponsor.table('boards').where('board_id', relationship.escalation_board_id).update({ board_name: 'Renamed escalation board' });
+  const retained = await screen(db, customerPrincipal, resource);
+  expect(retained.sponsorName).toBeNull();
+  expect(retained.destinationName).toBeUndefined();
+  for (const current of ['Renamed after departure', 'Renamed escalation board']) expect(JSON.stringify(retained)).not.toContain(current);
+  // The retained read still succeeds and still carries the customer's own record.
+  expect(retained).toMatchObject({ side: 'customer', customerName, canEscalate: false });
+  expect(retained.summary.fields).toMatchObject({ ticket_number: 'SHARED-1', work_revision: 1, responsibility: 'msp' });
+  // The customer keeps its own SLA outcome; the former MSP obligation is no longer read
+  // from the sponsor tenant, so its clock cannot keep advancing after departure.
+  expect(retained.sla).toEqual({ customer: { state: 'not_configured' }, msp: { state: 'unavailable' } });
+  // Withholding the sponsor's name restores no MSP-side authority.
+  await expect(screen(db, principal, resource)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+});
+
 it('inventories only customer-owned active grants, withholds unreadable ticket labels, and allows revocation while paused', async () => {
   const { principal, customerPrincipal, resource, customer, operation } = await ticketHandoffFixture();
   const { getCoManagedExplicitTicketGrants: grants } = await import('../../../../packages/co-managed/src/ticketCollaboration');
@@ -20206,12 +20249,18 @@ it.each(['customer', 'sponsor'])('public departure by %s retains an archive and 
   const provisioning = side === 'sponsor' ? f.operation.operation_id : undefined;
   const screen = await review(db, actor, provisioning);
   expect(screen).toMatchObject({ side, departed: false, relationshipId: f.resource.relationshipId });
+  expect(screen.counterpartName).toBeTruthy();
   const request = { provisioningOperationId: provisioning, operationId: randomUUID(), relationshipId: screen.relationshipId, expectedRevision: screen.revision };
   await expect(depart(db, actor, { ...request, relationshipId: randomUUID() })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
   await expect(depart(db, actor, { ...request, expectedRevision: screen.revision + 1 })).rejects.toMatchObject({ code: 'CLOSURE_CHANGED' });
   const receipt = await depart(db, actor, request);
   expect(await depart(db, actor, request)).toEqual(receipt);
-  expect(await review(db, actor, provisioning)).toMatchObject({ departed: true, closedAt: receipt.closedAt });
+  // Separation runs both ways: after closure neither party keeps reading the other's
+  // current identity, so a rename on the far side can never reach this screen.
+  await (side === 'customer' ? f.sponsor : f.customer).table('tenants').update({ client_name: 'Renamed after closure' });
+  const closed = await review(db, actor, provisioning);
+  expect(closed).toMatchObject({ departed: true, closedAt: receipt.closedAt, counterpartName: null });
+  expect(JSON.stringify(closed)).not.toContain('Renamed after closure');
   expect(await f.sponsor.table('co_managed_allocations').where('customer_tenant', f.actor.tenant).first()).toMatchObject({ state: 'released' });
   expect(await f.sponsor.table('co_managed_archive_manifests').where('relationship_id', screen.relationshipId)).toHaveLength(1);
   expect(await f.customer.table('tenants').first()).toMatchObject({ product_code: 'co_managed' });

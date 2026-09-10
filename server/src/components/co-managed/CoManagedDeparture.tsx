@@ -68,7 +68,7 @@ function DepartureContent({ operationId }: { operationId?: string }) {
         {error && <p role="alert" className="text-destructive">{t(`coManaged.departure.${error}`)}</p>}
         {!screen && !error && <p role="status">{t('coManaged.loading')}</p>}
         {screen && <>
-          <p className="font-medium">{screen.counterpartName}</p>
+          {screen.counterpartName && <p className="font-medium">{screen.counterpartName}</p>}
           {screen.departed ? <p role="status">{t('coManaged.departure.completed')}</p> : <p>{t('coManaged.departure.immediate')}</p>}
           <p>{t('coManaged.departure.preserved')}</p>
           <p>{t('coManaged.departure.archive')}</p>

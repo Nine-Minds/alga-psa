@@ -38,12 +38,16 @@ export async function getCoManagedDepartureScreen(db: Knex, inputActor: CoManage
     if (!relationship || !['active', 'terminated'].includes(relationship.state)) throw new CoManagedSharedWorkError();
     await lockCoManagedSessionIdentity(trx, actor);
     if (!await hasCoManagedLocalPermission(trx, actor, 'co_management', 'manage', true)) throw new CoManagedSharedWorkError();
-    const counterpart = await tenantDb(trx, target.side === 'customer' ? target.sponsorTenant : target.customerTenant)
+    // This screen stays reachable after closure, but separation runs in both
+    // directions: once the relationship has ended neither party may keep reading the
+    // other's current identity, so the counterpart name is omitted rather than refreshed.
+    const departed = relationship.state === 'terminated' || Boolean(relationship.ended_at);
+    const counterpart = departed ? null : await tenantDb(trx, target.side === 'customer' ? target.sponsorTenant : target.customerTenant)
       .table('tenants').first('client_name');
     await assertCoManagedSessionUnexpired(trx, actor);
     return { side: target.side, relationshipId: target.relationshipId, revision: Number(relationship.revision),
-      counterpartName: (counterpart?.client_name ?? '') as string,
-      departed: relationship.state === 'terminated', closedAt: relationship.ended_at ? new Date(relationship.ended_at).toISOString() : null };
+      counterpartName: departed ? null : ((counterpart?.client_name ?? '') as string),
+      departed, closedAt: relationship.ended_at ? new Date(relationship.ended_at).toISOString() : null };
   });
 }
 

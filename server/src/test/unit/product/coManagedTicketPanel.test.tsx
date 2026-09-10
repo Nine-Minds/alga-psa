@@ -177,6 +177,20 @@ it('shows organization-specific SLA outcomes with completion and due dates', asy
   expect(document.querySelector('time[datetime="2026-09-09T10:00:00.000Z"]')).toBeInTheDocument();
 });
 
+it('labels the former MSP without a name or an error when a retained read omits the sponsor identity', async () => {
+  const initial = data();
+  mocks.load.mockResolvedValue({ ...initial, sponsorName: null, destinationName: undefined, canEscalate: false,
+    summary: { ...initial.summary, fields: { ...initial.summary.fields, responsibility: 'msp' } },
+    sla: { customer: { state: 'not_configured' }, msp: { state: 'unavailable' } } });
+  mount();
+  expect(await screen.findByText('coManaged.ticket.responsibility: coManaged.ticket.formerSponsor')).toBeInTheDocument();
+  expect(screen.getByText('coManaged.slaDisplay.organization: coManaged.ticket.formerSponsor')).toBeInTheDocument();
+  // The retained read renders the customer's own ticket instead of degrading to the error state.
+  expect(screen.getByText('A-1 · Customer A issue')).toBeInTheDocument();
+  expect(screen.queryByRole('alert')).toBeNull();
+  expect(document.body.textContent).not.toContain('undefined');
+});
+
 it('omits redacted SLA sections and displays the pre-escalation state', async () => {
   mocks.load.mockResolvedValue({ ...data(), sla: { msp: { state: 'not_started' } } });
   mount(); await screen.findByText('coManaged.slaDisplay.state.not_started');

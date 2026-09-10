@@ -513,6 +513,7 @@
       "loading": "Chargement…",
       "restricted": "Ticket à accès restreint",
       "responsibility": "Responsable : {{organization}}",
+      "formerSponsor": "Ancien MSP",
       "readOnly": "Cet espace est en lecture seule. Les administrateurs du client peuvent toujours révoquer les accès.",
       "history": "Historique des transferts informatiques partagés",
       "noHistory": "Aucun transfert visible.",

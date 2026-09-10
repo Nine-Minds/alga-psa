@@ -511,6 +511,7 @@
       "loading": "Wird geladen…",
       "restricted": "Eingeschränktes Ticket",
       "responsibility": "Verantwortlich: {{organization}}",
+      "formerSponsor": "Ehemaliger MSP",
       "readOnly": "Dieser Arbeitsbereich ist schreibgeschützt. Kundenadministratoren können weiterhin Zugriff entziehen.",
       "history": "Gemeinsamer IT-Übergabeverlauf",
       "noHistory": "Keine sichtbaren Übergaben.",

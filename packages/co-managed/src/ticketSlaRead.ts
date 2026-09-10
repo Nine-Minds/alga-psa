@@ -57,7 +57,12 @@ export async function readCoManagedTicketSlaDisplay(context: CoManagedSharedWork
   if (!mspHidden) {
     const relationship = await customer.table('co_management_relationships').where('relationship_id', resource.relationshipId).first();
     const work = await customer.table('co_management_ticket_work').where({ relationship_id: resource.relationshipId, ticket_id: resource.id }).forShare().first();
+    // Retained reads outlive the relationship, so the sponsor's obligation must not be
+    // read — or re-observed against the current clock — after departure. The customer
+    // keeps its own SLA outcome; the former MSP's becomes unavailable, never live.
+    const live = relationship.state === 'active' && !relationship.ended_at;
     if (!work?.first_escalated_at) result.msp = { state: 'not_started' };
+    else if (!live) result.msp = { state: 'unavailable' };
     else {
       const row = await tenantDb(trx, relationship.sponsor_tenant).table('sla_organization_obligations')
         .where({ source_tenant: resource.tenant, ticket_id: resource.id, work_id: work.work_id }).orderBy('generation', 'desc').first('clock');

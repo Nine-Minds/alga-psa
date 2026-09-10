@@ -511,6 +511,7 @@
       "loading": "Loading…",
       "restricted": "Restricted ticket",
       "responsibility": "Responsible: {{organization}}",
+      "formerSponsor": "Former MSP",
       "readOnly": "This workspace is read-only. Customer administrators can still revoke access.",
       "history": "Shared IT handoff history",
       "noHistory": "No visible handoffs.",
