@@ -50,6 +50,7 @@ import {
   TicketUpdateFooter,
 } from "../features/ticketDetail/components/TicketUpdateFooter";
 import { TagsSection } from "../features/ticketDetail/components/TagsSection";
+import { ClientNotesSection } from "../features/clients/components/ClientNotesSection";
 import { TagPickerModal } from "../features/ticketDetail/components/TagPickerModal";
 import { ChecklistSection } from "../features/ticketDetail/components/ChecklistSection";
 import { TicketTimerChip } from "../features/timer/components/TicketTimerChip";
@@ -275,6 +276,8 @@ export function TicketDetailBody({
   if (!ticket) {
     return <ErrorState title={t("detail.ticketNotFound")} description={t("detail.ticketUnavailable")} />;
   }
+
+  const ticketClientId = (ticket as Record<string, unknown>).client_id as string | null | undefined;
 
   // --- Derived values ---
   const statusLabel = statusHook.pendingStatusId
@@ -654,6 +657,18 @@ export function TicketDetailBody({
           <View style={{ height: spacing.sm }} />
           <KeyValue label={t("detail.closed")} value={formatDateTimeWithRelative(ticket.closed_at)} />
           </TicketDetailsSection>
+          {ticketClientId ? (
+            <>
+              <View style={{ height: spacing.sm }} />
+              <ClientNotesSection
+                client={client}
+                apiKey={session.accessToken}
+                clientId={ticketClientId}
+                titleKey="notes.ticketTitle"
+                collapseWhenEmpty
+              />
+            </>
+          ) : null}
           <View style={{ height: spacing.sm }} />
           <TagsSection
             tags={tagsHook.tags}
@@ -800,7 +815,7 @@ export function TicketDetailBody({
         updateError={contactHook.contactError}
         currentContactId={(ticket as Record<string, unknown>).contact_name_id as string | null | undefined}
         currentContactName={ticket.contact_name}
-        clientId={(ticket as Record<string, unknown>).client_id as string | null | undefined}
+        clientId={ticketClientId}
         onApply={(contactNameId, notificationSuppression) => {
           if (contactNameId) void contactHook.selectContact(contactNameId, notificationSuppression);
           else void contactHook.removeContact(notificationSuppression);

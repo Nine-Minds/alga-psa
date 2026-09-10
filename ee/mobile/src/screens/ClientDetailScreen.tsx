@@ -25,6 +25,7 @@ import {
 import { buildContactAvatarUri, getContactReachLine, type ContactListItem } from "../api/contacts";
 import { getClientMetadataHeaders } from "../device/clientMetadata";
 import { AccountManagerPickerModal } from "../features/clients/components/AccountManagerPickerModal";
+import { ClientNotesSection } from "../features/clients/components/ClientNotesSection";
 import { useTheme } from "../ui/ThemeContext";
 import type { Theme } from "../ui/themes";
 import { logger } from "../logging/logger";
@@ -333,6 +334,16 @@ export function ClientDetailScreen({ navigation, route }: Props) {
           {managerError}
         </Text>
       ) : null}
+
+      <View style={{ marginTop: theme.spacing.lg }}>
+        <ClientNotesSection
+          client={client}
+          apiKey={session.accessToken}
+          clientId={clientId}
+          legacyNotes={detail.notes}
+          canAdd
+        />
+      </View>
 
       {contactsVisible ? (
         <>
