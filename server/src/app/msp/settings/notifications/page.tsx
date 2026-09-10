@@ -54,10 +54,9 @@ function NotificationsSettingsContent() {
 
   const getInitialTab = (view: NotificationView): string => {
     const requestedTab = tabParam?.toLowerCase();
+    const emailTabIds = isAlgaDesk ? ALGA_DESK_EMAIL_TAB_IDS : EMAIL_NOTIFICATION_TAB_IDS;
     const validTabs: readonly string[] = view === 'email'
-      ? (isAlgaDesk
-        ? ALGA_DESK_EMAIL_TAB_IDS
-        : [...EMAIL_NOTIFICATION_TAB_IDS, ...(emailBrandingEnabled ? ['email-branding'] : [])])
+      ? [...emailTabIds, ...(!isAlgaDesk && emailBrandingEnabled ? ['email-branding'] : [])]
       : INTERNAL_NOTIFICATION_TAB_IDS;
     const defaultTab = view === 'email' ? DEFAULT_EMAIL_TAB : DEFAULT_INTERNAL_TAB;
 
