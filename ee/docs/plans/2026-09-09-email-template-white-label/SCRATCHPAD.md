@@ -102,6 +102,23 @@
   (and `{{#if this.*}}`) against the path so the registry's per-item examples resolve — credit-expiring
   previews render CR-1001 rows instead of literal handlebars. Pre-existing gap, surfaced by the panel.
 
+## Operator amendment round (2026-09-10)
+
+- "Email Branding section takes too much space": the panel moved off the Email Templates tab into its own
+  `email-branding` tab in both notification settings hosts (`NotificationsTab.tsx` and
+  `msp/settings/notifications/page.tsx`), mounted through the new `EmailBrandingTab.tsx` wrapper, which
+  loads the system templates the previews need. The tab is gated behind the `release-v1-6-feature` flag
+  (`useFeatureFlag`, same pattern as the other v1.6 gates) and hidden on AlgaDesk like Email Templates.
+- `EmailTemplates` now fetches `getEmailBrandingStatusAction()` itself: the editor "Apply my palette"
+  button and branded Customize clones still need the saved palette without the panel being mounted.
+  The action reports `canEdit` instead of throwing, so the call is safe for read-only users.
+- `ColorField` now wraps the shared `ColorPicker` (`@alga-psa/ui/components/ColorPicker`,
+  `showTextColor={false}`, `colorMode="solid"`, swatch-button trigger like `CustomThemeEditor`) instead of
+  a native `<input type="color">` + hex input. The picker's "Reset to default" hands back `null`:
+  primary/secondary fall back to the suggestion, token overrides are deleted (back to derived).
+- New i18n key `notifications.emailTabs.emailBranding` in all 8 shipped locales + regenerated xx/yy
+  pseudo-locales; F031/T039 descriptions in features/tests.json amended to record the new placement.
+
 ## Open Questions
 
 - Are `settings.branding.logoUrl` / `logoWideUrl` fetchable by a mail client without a session? FR10 writes

@@ -277,7 +277,7 @@
   },
   {
     "id": "F031",
-    "description": "Email branding card renders above the language filter on the Email templates tab with id email-branding-card",
+    "description": "Email branding card renders on its own Email Branding tab (gated behind feature flag release-v1-6-feature) with id email-branding-card, colors picked via the shared ColorPicker (operator amendment 2026-09-10)",
     "implemented": true,
     "commitGroup": "brand-panel-ui",
     "prdRefs": [

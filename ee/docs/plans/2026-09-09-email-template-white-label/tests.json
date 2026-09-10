@@ -350,7 +350,7 @@
   },
   {
     "id": "T039",
-    "description": "card renders with id email-branding-card above email-templates-table",
+    "description": "card renders with id email-branding-card on the flag-gated Email Branding tab, no longer mounted in EmailTemplates (operator amendment 2026-09-10)",
     "implemented": true,
     "commitGroup": "brand-panel-ui",
     "featureIds": [
