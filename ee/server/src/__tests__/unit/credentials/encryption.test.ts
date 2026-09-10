@@ -47,7 +47,15 @@ describe('credential encryption — scheme selection', () => {
   it('selects vault-transit:v1 when Vault Transit is configured', () => {
     process.env.ALGA_VAULT_ADDR = 'https://vault.example.test';
     process.env.ALGA_VAULT_TOKEN = 'token';
+    process.env.ALGA_VAULT_CREDENTIALS_TRANSIT_KEY = 'alga-credentials-test';
     expect(schemeForNewWrites()).toBe(CREDENTIAL_SCHEME_VAULT_TRANSIT);
+  });
+
+  it('does not treat generic Vault KV configuration as Transit configuration', () => {
+    process.env.ALGA_VAULT_ADDR = 'https://vault.example.test';
+    process.env.ALGA_VAULT_TOKEN = 'token';
+    delete process.env.ALGA_VAULT_CREDENTIALS_TRANSIT_KEY;
+    expect(schemeForNewWrites()).toBe(CREDENTIAL_SCHEME_AES_GCM);
   });
 
   it('recognizes exactly the closed scheme roster', () => {
@@ -168,6 +176,7 @@ describe('credential encryption — Vault Transit round-trip (mocked HTTP)', () 
   it('throws on a non-OK transit response', async () => {
     process.env.ALGA_VAULT_ADDR = 'https://vault.example.test';
     process.env.ALGA_VAULT_TOKEN = 'vault-token';
+    process.env.ALGA_VAULT_CREDENTIALS_TRANSIT_KEY = 'alga-credentials-test';
     vi.stubGlobal('fetch', vi.fn(async () => new Response('{}', { status: 500 })));
     await expect(
       encryptCredentialValues({ password: 'x', otpSecret: null })

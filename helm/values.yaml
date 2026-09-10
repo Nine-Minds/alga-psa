@@ -507,6 +507,10 @@ secrets_provider:
     appSecretPath: "kv/data/app/secrets"
     # Path template for tenant secrets
     tenantSecretPathTemplate: "kv/data/tenants/{tenantId}/secrets"
+    # Explicitly enables Vault Transit for the native credentials vault.
+    # Leave empty when this Vault instance only provides KV secrets.
+    credentialsTransitKey: ""
+    transitMount: "transit"
 
 # Shared tenant-secret store on the single-node appliance. When enabled, mounts
 # a hostPath into the server pod and points the filesystem secret provider at it

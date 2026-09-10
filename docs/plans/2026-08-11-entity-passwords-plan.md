@@ -285,8 +285,8 @@ Envelope with per-row scheme tag:
 - **`vault-transit:v1`** — encrypt/decrypt via Vault Transit, following
   `ee/server/src/lib/extensions/installConfig.ts` (`ALGA_VAULT_ADDR`/
   `VAULT_ADDR`, `ALGA_VAULT_TOKEN`/`VAULT_TOKEN`, `ALGA_VAULT_TRANSIT_MOUNT`,
-  and a dedicated key name env `ALGA_VAULT_CREDENTIALS_TRANSIT_KEY`, default
-  `alga-credentials`). Hosted values wiring: add the key name to
+  and a dedicated key name env `ALGA_VAULT_CREDENTIALS_TRANSIT_KEY`, which
+  explicitly enables Transit for credential writes). Hosted values wiring: add the key name to
   `hosted.values.yaml` and create the transit key (ops step, documented in the
   plan's rollout section).
 - **`aes-256-gcm:v1`** — AES-256-GCM with a key derived (SHA-256) from
@@ -459,7 +459,7 @@ New tier feature: add `CREDENTIALS` to `TIER_FEATURES` /
 ### Vault Transit (hosted EE)
 
 - The credentials vault uses a **dedicated** transit key
-  `ALGA_VAULT_CREDENTIALS_TRANSIT_KEY` (default `alga-credentials`), separate
+  `ALGA_VAULT_CREDENTIALS_TRANSIT_KEY` (`alga-credentials` in hosted), separate
   from the extension/installConfig transit usage so vault rows never share a
   key with arbitrary extension secrets.
 - **Hosted values wiring:** add `ALGA_VAULT_CREDENTIALS_TRANSIT_KEY` to
@@ -471,12 +471,14 @@ New tier feature: add `CREDENTIALS` to `TIER_FEATURES` /
   vault write -f transit/keys/alga-credentials \
     deletion_allowed=false \
     allow_plaintext_backup=false \
-    derived=true
+    derived=false
   ```
 
 - The mount (`ALGA_VAULT_TRANSIT_MOUNT`, default `transit`), address
   (`ALGA_VAULT_ADDR`/`VAULT_ADDR`) and token (`ALGA_VAULT_TOKEN`/`VAULT_TOKEN`)
   follow the existing `installConfig.ts` precedent.
+- The current credential envelope does not send a Transit derivation context,
+  so the key must not be configured with `derived=true`.
 - Rows written while transit is configured are tagged `vault-transit:v1`.
   Decryption dispatches on the stored tag, so rows written before transit was
   wired (tagged `aes-256-gcm:v1`) keep decrypting.
