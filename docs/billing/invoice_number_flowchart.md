@@ -14,10 +14,14 @@ flowchart TD
     J -->|Yes| K[Use Candidate]
     J -->|No| H
     I -->|No| K
-    K --> L[Format Number]
+    K --> L{Date Format Set?}
     H --> L
-    L --> M[Release Lock]
-    M --> N[Return Formatted Number]
+    L -->|Yes| M[Expand Date Tokens in Tenant Timezone]
+    L -->|No| N[Format: prefix + padded counter]
+    M --> O[Format: prefix + expanded date + padded counter]
+    N --> P[Release Lock]
+    O --> P
+    P --> Q[Return Formatted Number]
 ```
 
 ## Key Steps Explanation
@@ -28,5 +32,6 @@ flowchart TD
 4. **Number Analysis**: Extracts and analyzes existing numbers
 5. **Conflict Check**: Determines if candidate is safe to use
 6. **Gap Detection**: Finds available gaps in number sequence
-7. **Formatting**: Applies prefix and padding as needed
-8. **Cleanup**: Releases lock and returns result
+7. **Date Token Expansion** *(optional)*: If a `prefix_date_format` is configured on the document type, the tokens `{YYYY}`, `{YY}`, `{MM}`, and `{DD}` are expanded to the issuance date in the tenant's configured timezone (UTC fallback). The expanded string is inserted between the static prefix and the padded counter, producing numbers of the form `<prefix><date><counter>` — for example, prefix `INV-` with date format `{YYYY}-{MM}-` and counter `1` (padding 6) yields `INV-2026-09-000001`. The sequential counter never resets on a date boundary.
+8. **Formatting**: Assembles the final number string from the static prefix, the optional expanded date string, and the zero-padded counter.
+9. **Cleanup**: Releases lock and returns result
