@@ -133,6 +133,20 @@ export const scheduleTeamsMeeting = withAuth(async (
       return { success: false, error: 'A client or contact is required.' };
     }
 
+    // An interaction ultimately requires a client. Resolve this before creating
+    // the Graph event so an orphaned contact cannot cause us to create and then
+    // immediately cancel a Teams meeting during the database transaction.
+    let resolvedClientId = clientId;
+    if (!resolvedClientId && contactNameId) {
+      const contact = await tenantDb(db, tenant).table('contacts')
+        .where({ contact_name_id: contactNameId })
+        .first('client_id');
+      resolvedClientId = contact?.client_id ?? null;
+    }
+    if (!resolvedClientId) {
+      return { success: false, error: 'The selected contact must be linked to a client before scheduling a Teams meeting.' };
+    }
+
     const teamsMeetingService = await resolveTeamsMeetingService();
     const capability = await teamsMeetingService.getTeamsMeetingCapability(tenant);
     if (!capability.available) {
@@ -178,7 +192,7 @@ export const scheduleTeamsMeeting = withAuth(async (
           user,
           interactionData: {
             type_id: onlineMeetingType.type_id,
-            client_id: clientId,
+            client_id: resolvedClientId,
             contact_name_id: contactNameId,
             user_id: user.user_id,
             ticket_id: input.ticket_id ?? input.ticketId ?? null,
