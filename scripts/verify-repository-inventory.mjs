@@ -18,7 +18,7 @@ try {
   } else {
     const read = file => JSON.parse(readFileSync(path.join(root, file), 'utf8'));
     result = verifyRepositoryInventory({ root, revision: source.revision,
-      input: path.join(root, 'test-results/inventory-input'), candidates: repositoryTestFiles(root),
+      input: path.join(root, 'test-results/inventory-input'), candidates: repositoryTestFiles(root), full: selection.full,
       manualRunners: read('scripts/manual-vitest-runners.json'), exclusions: read('scripts/node-test-exclusions.json') });
   }
   const jobs = JSON.parse(process.env.INVENTORY_JOBS || '{}');
