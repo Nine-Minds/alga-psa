@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ChevronDown, ChevronRight, Palette, RefreshCw } from "lucide-react";
 import { Button } from "@alga-psa/ui/components/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@alga-psa/ui/components/Card";
-import { Input } from "@alga-psa/ui/components/Input";
+import ColorPicker from "@alga-psa/ui/components/ColorPicker";
 import { Label } from "@alga-psa/ui/components/Label";
 import { Switch } from "@alga-psa/ui/components/Switch";
 import { useRegisterUnsavedChanges } from "@alga-psa/ui/context";
@@ -41,37 +41,41 @@ const isEnterpriseEdition = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
 
 const HEX = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
 
+/** One palette color, picked through the shared ColorPicker popover. Resetting hands `null` back to the caller. */
 function ColorField({ id, label, value, disabled, onChange }: {
   id: string;
   label: string;
   value: string;
   disabled?: boolean;
-  onChange: (value: string) => void;
+  onChange: (value: string | null) => void;
 }) {
   const safeValue = HEX.test(value) ? value : '#ffffff';
 
   return (
     <div className="space-y-1">
-      <Label htmlFor={`${id}-hex`}>{label}</Label>
-      <div className="flex items-center gap-2">
-        <input
-          id={id}
-          type="color"
-          aria-label={label}
-          value={safeValue}
-          disabled={disabled}
-          onChange={(event) => onChange(event.target.value)}
-          className="h-9 w-10 cursor-pointer rounded border border-[rgb(var(--color-border-400))] bg-white p-1"
-        />
-        <Input
-          id={`${id}-hex`}
-          value={value}
-          disabled={disabled}
-          spellCheck={false}
-          onChange={(event) => onChange(event.target.value)}
-          className="font-mono"
-        />
-      </div>
+      <Label htmlFor={id}>{label}</Label>
+      <ColorPicker
+        currentBackgroundColor={safeValue}
+        onSave={(backgroundColor) => onChange(backgroundColor)}
+        showTextColor={false}
+        previewType="circle"
+        colorMode="solid"
+        trigger={
+          <button
+            type="button"
+            id={id}
+            aria-label={label}
+            disabled={disabled}
+            className="flex w-full items-center gap-2 rounded-md border border-[rgb(var(--color-border-400))] px-3 py-2 transition-colors hover:border-[rgb(var(--color-border-500))] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <span
+              className="h-6 w-6 shrink-0 rounded border border-[rgb(var(--color-border-300))]"
+              style={{ backgroundColor: safeValue }}
+            />
+            <span className="font-mono text-xs">{value}</span>
+          </button>
+        }
+      />
     </div>
   );
 }
@@ -289,7 +293,7 @@ export function EmailBrandingPanel({
               label={t('notifications.emailBranding.fields.primary', 'Primary color')}
               value={draft.primary}
               disabled={!status.canEdit}
-              onChange={(value) => update({ primary: value })}
+              onChange={(value) => update({ primary: value ?? status.suggestion.primary })}
             />
 
             {!draft.singleColor && (
@@ -298,7 +302,7 @@ export function EmailBrandingPanel({
                 label={t('notifications.emailBranding.fields.secondary', 'Secondary color')}
                 value={draft.secondary}
                 disabled={!status.canEdit}
-                onChange={(value) => update({ secondary: value })}
+                onChange={(value) => update({ secondary: value ?? status.suggestion.secondary })}
               />
             )}
 
@@ -416,7 +420,7 @@ export function EmailBrandingPanel({
                       label={t(`notifications.emailBranding.tokens.${token}`, TOKEN_FALLBACKS[token])}
                       value={draft.overrides[token] ?? resolved[token]}
                       disabled={!status.canEdit}
-                      onChange={(value) => updateOverride(token, value)}
+                      onChange={(value) => updateOverride(token, value ?? '')}
                     />
                   ))}
                 </div>
