@@ -264,6 +264,10 @@ jobs:
             echo "No application files were modified; skipping fresh-install tests."
           fi
 
+      - name: Record browser tests not selected
+        if: needs.changes.outputs.run_tests == 'false'
+        run: echo "Browser tests were not selected by the changes filter."
+
       - name: Checkout repository
         if: needs.changes.outputs.run_tests == 'true'
         uses: actions/checkout@v4

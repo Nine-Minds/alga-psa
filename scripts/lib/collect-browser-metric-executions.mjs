@@ -90,7 +90,15 @@ export async function collectBrowserMetricExecutions({ repository, runId, revisi
         && (recorder.status === 'completed'
           ? ['success', 'failure', 'cancelled', 'timed_out', 'skipped', 'neutral'].includes(recorder.conclusion)
           : recorder.conclusion === null));
+      // Only an explicit, successful selection marker excuses absent exports.
+      // A skipped recorder alone can also mean setup failed before tests ran.
+      const selectionMarkers = (job?.steps ?? []).filter(step => step.name === 'Record browser tests not selected');
+      require(selectionMarkers.length <= 1);
+      const notSelected = job?.status === 'completed' && job.conclusion === 'success'
+        && selectionMarkers[0]?.status === 'completed' && selectionMarkers[0]?.conclusion === 'success'
+        && recorder?.status === 'completed' && recorder.conclusion === 'skipped';
       return { repository, ...(artifactRevisions ? artifactRevisions[edition] : { revision }), runId: String(runId), runAttempt: run.run_attempt, edition,
+        ...(notSelected ? { executionRequired: false, selectionEvidence: 'changes-filter' } : {}),
         eventName: run.event, runStatus: job?.status ?? (run.status === 'completed' ? 'completed' : 'pending'),
         conclusion: job ? job.conclusion : (run.conclusion === 'cancelled' ? 'cancelled' : null),
         recorderStatus: recorder?.status ?? null, recorderConclusion: recorder?.conclusion ?? null };
