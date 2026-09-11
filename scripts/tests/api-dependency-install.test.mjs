@@ -54,22 +54,8 @@ const ffmpegDownload = { code: 1, signal: null, stderr: [
   'npm error   statusCode: 500',
   'npm error }',
 ].join('\n') };
-const ffmpegTimeout = { code: 1, signal: null, stderr: [
-  'npm error code 1',
-  'npm error path /home/runner/work/alga-psa/alga-psa/node_modules/ffmpeg-static',
-  'npm error command failed',
-  'npm error command sh -c node install.js',
-  'npm error Error: Request timed out after 30031ms',
-  'npm error     at Timeout.onTimeout (/home/runner/work/alga-psa/alga-psa/node_modules/@derhuerst/http-basic/lib/index.js:361:19)',
-  'npm error   timeout: true,',
-  'npm error   duration: 30031',
-  'npm error }',
-].join('\n') };
 for (const [name, first, enabled, expectedCalls] of [
   ['observed GitHub download failure recovers with explicit opt-in', ffmpegDownload, true, 2],
-  ['observed ffmpeg transport timeout recovers with explicit opt-in', ffmpegTimeout, true, 2],
-  ['ffmpeg timeout without the timeout marker is not retried', { ...ffmpegTimeout,
-    stderr: ffmpegTimeout.stderr.replace('  timeout: true,', '  statusCode: 408') }, true, 1],
   ['API default does not retry ffmpeg lifecycle failure', ffmpegDownload, false, 1],
   ...[401, 404].map(status => [`HTTP ${status} is not retried`, { ...ffmpegDownload, stderr: ffmpegDownload.stderr.replace('statusCode: 500', `statusCode: ${status}`) }, true, 1]),
   ['unrelated install script is not retried', { ...ffmpegDownload, stderr: ffmpegDownload.stderr.replace('node_modules/ffmpeg-static', 'node_modules/other') }, true, 1],

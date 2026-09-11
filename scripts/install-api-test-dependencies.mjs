@@ -8,23 +8,15 @@ export async function installApiTestDependencies({ run = runNpm, wait = delay, s
     const result = await run(['ci', '--prefer-offline'], { signal });
     const npmCodes = [...result.stderr.matchAll(/^npm (?:error|ERR!) code (\S+)\s*$/gm)].map(match => match[1]);
     const reset = npmCodes.length > 0 && npmCodes.every(code => code === 'ECONNRESET');
-    // The ffmpeg-static postinstall downloads a binary from GitHub. Recognize
-    // the two observed external transport failures: an HTTP 5xx from the
-    // release host, and a mid-download request timeout ("Request timed out
-    // after <ms>") that reports no statusCode. Both are safe to retry once;
-    // every other lifecycle error stays terminal and preserves all scripts.
-    const ffmpegInstall = ffmpegDownloadRetry && result.code === 1
+    // This opt-in recognizes the observed external download
+    // failure. Keep other lifecycle errors terminal and preserve all scripts.
+    const ffmpegDownload = ffmpegDownloadRetry && result.code === 1
       && npmCodes.length === 1 && npmCodes[0] === '1'
       && /^npm (?:error|ERR!) path [^\r\n]*\/node_modules\/ffmpeg-static\s*$/m.test(result.stderr)
-      && /^npm (?:error|ERR!) command sh -c node install\.js\s*$/m.test(result.stderr);
-    const ffmpegHttpFailure = ffmpegInstall
+      && /^npm (?:error|ERR!) command sh -c node install\.js\s*$/m.test(result.stderr)
       && /^npm (?:error|ERR!) Error: Failed to download ffmpeg [^\r\n]+\.$/m.test(result.stderr)
       && /^npm (?:error|ERR!) +url: 'https:\/\/github\.com\/eugeneware\/ffmpeg-static\/releases\/download\/[^'\s]+',\s*$/m.test(result.stderr)
       && /^npm (?:error|ERR!) +statusCode: (?:500|502|503|504)\s*$/m.test(result.stderr);
-    const ffmpegTimeout = ffmpegInstall
-      && /^npm (?:error|ERR!) Error: Request timed out after \d+ms\s*$/m.test(result.stderr)
-      && /^npm (?:error|ERR!) +timeout: true,?\s*$/m.test(result.stderr);
-    const ffmpegDownload = ffmpegHttpFailure || ffmpegTimeout;
     if (result.signal || result.code === 0 || attempt === 2 || signal?.aborted
       || (!reset && !ffmpegDownload)) return result;
     await wait(2000, undefined, { signal });
