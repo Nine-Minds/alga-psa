@@ -6,58 +6,19 @@ import { reconcileDiscovery } from './test-discovery.mjs';
 // These are artifact identities from the execution lanes, not test-file globs.
 // Never recollect the large suites here: their raw registrations are already
 // preserved by the jobs that execute them.
-//
-// The integration and infrastructure suites run their full shard matrix on
-// pushes and full dispatches, but a tier-1 pull-request selection only produces
-// shard 1 with a subset of files (see scripts/lib/integration-selection.mjs and
-// scripts/run-infrastructure-tests.mjs). `full: false` describes that run: only
-// the shard-1 artifacts exist, and each partial lane is scoped to the files its
-// ticket actually collected.
-export function vitestInventoryArtifacts(revision, { full = true } = {}) {
-  const integrationShards = full ? [1, 2, 3, 4] : [1];
-  const infrastructureShards = full ? [1, 2, 3] : [1];
+export function vitestInventoryArtifacts(revision) {
   return [
     ['server-unit', 'server-unit-execution/test-results/server-coverage', 'CI and domain maintainers', 'Node/jsdom'],
     ...['workspace-unit', 'workspace-runtime', 'server-colocated', 'nx-tooling', 'ui-kit-showcase', 'enterprise-integration', 'ai-gateway']
       .map(suite => [suite, `${suite}-${revision}`, 'Workspace maintainers', 'Existing workspace CI runtime']),
     ...[1, 2, 3].map(n => [`enterprise-unit-${n}`, `enterprise-unit-shard-${n}`, 'Enterprise maintainers', 'Node/jsdom']),
-    ...integrationShards.map(n => [`integration-${n}`, `server-integration-shard-${n}`, 'CI and domain maintainers', 'PostgreSQL/Redis']),
-    ...infrastructureShards.map(n => [`infrastructure-${n}`, `infrastructure-shard-${n}`, 'Platform maintainers', 'PostgreSQL/Redis']),
+    ...[1, 2, 3, 4].map(n => [`integration-${n}`, `server-integration-shard-${n}`, 'CI and domain maintainers', 'PostgreSQL/Redis']),
+    ...[1, 2, 3].map(n => [`infrastructure-${n}`, `infrastructure-shard-${n}`, 'Platform maintainers', 'PostgreSQL/Redis']),
     ['workspace-db', 'workspace-db-evidence', 'Workspace maintainers', 'PostgreSQL/Redis'],
     ['api-e2e', 'fresh-install-api-community', 'API maintainers', 'Built application/PostgreSQL'],
     ...['readiness', 'engine', 'database'].map(lane => [`temporal-${lane}`, `temporal-${lane}-execution`, 'Platform maintainers', 'Temporal/PostgreSQL/Citus']),
     ['mobile', 'mobile-execution', 'Mobile maintainers', 'Mobile Vitest configuration'],
   ].map(([runner, directory, owner, runtime]) => ({ runner, directory, owner, runtime }));
-}
-
-// Test roots wholly owned by a lane that can run a partial (tier-1) selection.
-// A candidate under one of these roots is only mandatory when the lane that ran
-// actually collected it; the full run on main/nightly still requires every one.
-export const PARTIAL_LANES = {
-  integration: [/^server\/src\/test\/integration\//, /^ee\/temporal-workflows\/src\/__tests__\/integration\//],
-  infrastructure: [/^server\/src\/test\/infrastructure\//],
-};
-
-// Drop candidates owned by a partial lane when that lane's scope could not be
-// read or the file is outside what it collected. A lane with no readable scope
-// keeps every candidate, so a missing artifact still fails loudly instead of
-// silently shrinking the inventory.
-export function scopePartialCandidates(candidates, laneScopes) {
-  const inScope = new Set();
-  for (const files of laneScopes.values()) for (const file of files) inScope.add(file);
-  return candidates.filter(file => {
-    const lane = Object.entries(PARTIAL_LANES).find(([, patterns]) => patterns.some(p => p.test(file)))?.[0];
-    if (!lane || !laneScopes.has(lane)) return true;
-    return inScope.has(file);
-  });
-}
-
-function readPartialScope(directory) {
-  try {
-    const files = JSON.parse(readFileSync(path.join(directory, 'evidence.json'), 'utf8'))?.selection?.allFiles;
-    if (Array.isArray(files) && files.length) return new Set(files);
-  } catch { /* missing or unreadable evidence fails through the artifact read below */ }
-  return null;
 }
 
 export function requireInventorySource(source, revision) {
@@ -81,23 +42,16 @@ export function readVitestInventoryArtifact({ input, root, revision, descriptor 
     collectionFile: path.join(directory, 'collected.json'), casesFile: path.join(directory, 'collected-tests.json') }, directory);
 }
 
-export function verifyRepositoryInventory({ root, revision, input, candidates, manualRunners, exclusions, full = true }) {
-  const collections = [], failures = [], laneScopes = new Map();
+export function verifyRepositoryInventory({ root, revision, input, candidates, manualRunners, exclusions }) {
+  const collections = [], failures = [];
   const attempt = (name, read) => {
     try { collections.push(...read()); }
     catch (error) { failures.push(`${name}: ${error.message}`); }
   };
   const read = file => JSON.parse(readFileSync(file, 'utf8'));
   if (!/^[a-f0-9]{40}$/.test(revision ?? '')) throw new Error('Invalid inventory revision');
-  for (const descriptor of vitestInventoryArtifacts(revision, { full })) {
-    attempt(descriptor.runner, () => {
-      const lane = descriptor.runner.replace(/-\d+$/, '');
-      if (!full && PARTIAL_LANES[lane]) {
-        const scope = readPartialScope(path.join(input, descriptor.directory));
-        if (scope) laneScopes.set(lane, scope);
-      }
-      return [readVitestInventoryArtifact({ input, root, revision, descriptor })];
-    });
+  for (const descriptor of vitestInventoryArtifacts(revision)) {
+    attempt(descriptor.runner, () => [readVitestInventoryArtifact({ input, root, revision, descriptor })]);
   }
   for (const [runner, artifact] of [['node-tooling', 'node-tooling'], ['appliance', 'appliance-node']]) {
     attempt(runner, () => {
@@ -136,8 +90,7 @@ export function verifyRepositoryInventory({ root, revision, input, candidates, m
         casesFile: path.join(directory, runner.runner, 'collected-tests.json') }, directory);
     });
   });
-  const scopedCandidates = full ? candidates : scopePartialCandidates(candidates, laneScopes);
-  const result = reconcileDiscovery({ root, candidates: scopedCandidates, collections, exclusions });
+  const result = reconcileDiscovery({ root, candidates, collections, exclusions });
   result.failures.push(...failures);
   return { ...result, revision, scope: 'repository-inventory', executionVerified: false,
     status: result.failures.length ? 'failed' : 'passed',

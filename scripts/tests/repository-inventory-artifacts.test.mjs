@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
-import { verifyRepositoryInventory, vitestInventoryArtifacts, scopePartialCandidates } from '../lib/repository-inventory-artifacts.mjs';
+import { verifyRepositoryInventory, vitestInventoryArtifacts } from '../lib/repository-inventory-artifacts.mjs';
 
 test('same-revision artifact inventory covers every lane and rejects stale, missing, empty and orphaned inputs', t => {
   const root = realpathSync(mkdtempSync(path.join(tmpdir(), 'repository-inventory-')));
@@ -65,32 +65,4 @@ test('same-revision artifact inventory covers every lane and rejects stale, miss
   assert.ok(check().failures.some(f => f.includes('ENOENT')));
   manualRunners[0].expires = '2000-01-01';
   assert.ok(check().failures.some(f => f.includes('unexpired review')));
-});
-
-test('a tier-1 run only expects shard 1 and scopes partial lanes to the files that ran', () => {
-  const revision = 'a'.repeat(40);
-  const runners = vitestInventoryArtifacts(revision, { full: false }).map(descriptor => descriptor.runner);
-  assert.ok(runners.includes('integration-1') && !runners.includes('integration-2'), 'tier-1 expects a single integration shard');
-  assert.ok(runners.includes('infrastructure-1') && !runners.includes('infrastructure-2'), 'tier-1 expects a single infrastructure shard');
-  assert.ok(vitestInventoryArtifacts(revision).some(descriptor => descriptor.runner === 'integration-4'), 'full mode keeps every shard');
-
-  const candidates = [
-    'server/src/test/integration/in-scope.test.ts',
-    'server/src/test/integration/out-of-scope.test.ts',
-    'ee/temporal-workflows/src/__tests__/integration/out-of-scope.integration.test.ts',
-    'server/src/test/infrastructure/in-scope.test.ts',
-    'server/src/test/infrastructure/out-of-scope.test.ts',
-    'server/src/lib/api/services/colocated.test.ts',
-  ];
-  const scoped = scopePartialCandidates(candidates, new Map([
-    ['integration', new Set(['server/src/test/integration/in-scope.test.ts'])],
-    ['infrastructure', new Set(['server/src/test/infrastructure/in-scope.test.ts'])],
-  ]));
-  assert.deepEqual(scoped, [
-    'server/src/test/integration/in-scope.test.ts',
-    'server/src/test/infrastructure/in-scope.test.ts',
-    'server/src/lib/api/services/colocated.test.ts',
-  ]);
-  // A lane whose scope could not be read keeps its candidates so the missing artifact still fails.
-  assert.deepEqual(scopePartialCandidates(candidates, new Map()), candidates);
 });
