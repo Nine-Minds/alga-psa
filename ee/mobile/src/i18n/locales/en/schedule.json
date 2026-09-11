@@ -67,6 +67,7 @@
   "reminders": {
     "channelName": "Schedule reminders",
     "fallbackTitle": "Upcoming schedule entry",
-    "body": "Starts at {{time}}"
+    "body": "Starts at {{time}}",
+    "bodyWithLead": "Starts at {{time}} ({{minutes}} min)"
   }
 }

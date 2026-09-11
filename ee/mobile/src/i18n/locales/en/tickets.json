@@ -542,5 +542,15 @@
   "assets": {
     "title": "Linked devices",
     "error": "Couldn't load linked devices."
+  },
+  "callsEmails": {
+    "title": "Calls and emails",
+    "log": "Log",
+    "logInteraction": "Log call or email",
+    "empty": "No calls or emails logged",
+    "interaction": "Interaction",
+    "errors": {
+      "load": "Unable to load calls and emails."
+    }
   }
 }

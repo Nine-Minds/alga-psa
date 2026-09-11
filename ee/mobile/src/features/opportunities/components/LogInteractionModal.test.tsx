@@ -261,4 +261,16 @@ describe("LogInteractionModal", () => {
     await act(async () => submitButton(renderer).props.onPress());
     expect(createInteractionMock.mock.calls[0][1].data.schedule_assigned_user_ids).toEqual(["user-self"]);
   });
+
+  it("links the ticket and omits the opportunity when opened from a ticket", async () => {
+    const renderer = await render(makeProps({ opportunityId: undefined, ticketId: "ticket-7" }));
+
+    pressOption(renderer, "type-call");
+    await act(async () => { await submitButton(renderer).props.onPress(); });
+
+    const sent = createInteractionMock.mock.calls[0][1].data as Record<string, unknown>;
+    expect(sent.ticket_id).toBe("ticket-7");
+    expect(sent.opportunity_id).toBeUndefined();
+    expect(sent.create_schedule_entry).toBeUndefined();
+  });
 });

@@ -96,3 +96,15 @@ export function createInteraction(
     body: params.data,
   });
 }
+
+export function getInteraction(
+  client: ApiClient,
+  params: { apiKey: string; interactionId: string; signal?: AbortSignal },
+): Promise<ApiResult<SuccessResponse<InteractionItem>>> {
+  return client.request<SuccessResponse<InteractionItem>>({
+    method: "GET",
+    path: `/api/v1/interactions/${params.interactionId}`,
+    signal: params.signal,
+    headers: { "x-api-key": params.apiKey },
+  });
+}

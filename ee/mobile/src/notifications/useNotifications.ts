@@ -17,36 +17,53 @@ import { getStableDeviceId } from "../device/clientMetadata";
 import { readPushRegistration, shouldRegisterPushToken, writePushRegistration } from "./pushRegistration";
 import { logger } from "../logging/logger";
 import type { RootStackParamList } from "../navigation/types";
-import { listScheduleEntries } from "../api/schedule";
-import { startOfWeek, weekQueryRange } from "../features/schedule/scheduleUtils";
-import { SCHEDULE_REMINDER_KIND, syncScheduleReminders } from "./scheduleReminders";
+import { SCHEDULE_REMINDER_KIND } from "./scheduleReminders";
+import { resyncScheduleReminders } from "./reminderSync";
+import { resolveReminderTarget } from "./reminderTarget";
+import { getInteraction } from "../api/interactions";
+import { asNotificationPriority, ensurePriorityChannels, foregroundBehaviorFor, shouldToastInForeground } from "./priorityDelivery";
+import { getPushPriorityThreshold } from "../settings/notificationPreferences";
 
-type NotificationData = { ticketId?: string; kind?: string; url?: string };
+type NotificationData = {
+  ticketId?: string;
+  kind?: string;
+  url?: string;
+  priority?: string;
+  workItemType?: string | null;
+  workItemId?: string | null;
+};
 
-function navigateFromNotification(
+async function navigateFromNotification(
   data: NotificationData | undefined,
   navigation: NativeStackNavigationProp<RootStackParamList>,
-): void {
+  lookupInteractionTicket: (interactionId: string) => Promise<string | null>,
+): Promise<void> {
   if (data?.ticketId) {
     navigation.navigate("TicketDetail", { ticketId: data.ticketId });
     return;
   }
   if (data?.kind === SCHEDULE_REMINDER_KIND) {
-    // Route through the deep-link layer so the drawer tab resolves the same
-    // way as an external alga://schedule link.
+    // A follow-up booked from a ticket lands back on that ticket; other
+    // entries route through the deep-link layer so the drawer tab resolves
+    // the same way as an external alga://schedule link.
+    const target = await resolveReminderTarget(data, lookupInteractionTicket);
+    if (target.kind === "ticket") {
+      navigation.navigate("TicketDetail", { ticketId: target.ticketId });
+      return;
+    }
     void Linking.openURL("alga://schedule");
   }
 }
 
-// Suppress OS notification when app is in foreground
+// Foreground presentation follows the configured priority: high interrupts,
+// normal is announced by the in-app toast below, low only updates the badge.
+// Local notifications (schedule/timer reminders) carry no priority and are
+// treated as normal, which keeps their existing suppressed behaviour.
 Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: false,
-    shouldPlaySound: false,
-    shouldSetBadge: true,
-    shouldShowBanner: false,
-    shouldShowList: false,
-  }),
+  handleNotification: async (notification) => {
+    const data = notification.request.content.data as NotificationData | undefined;
+    return foregroundBehaviorFor(asNotificationPriority(data?.priority));
+  },
 });
 
 /**
@@ -68,6 +85,7 @@ export function useNotifications(): void {
     try {
       const granted = await requestPushPermission();
       if (!granted) return;
+      await ensurePriorityChannels();
 
       const [token, deviceId] = await Promise.all([
         getExpoPushToken(),
@@ -102,6 +120,7 @@ export function useNotifications(): void {
         deviceId,
         platform: Platform.OS,
         appVersion: Application.nativeApplicationVersion ?? undefined,
+        priorityThreshold: await getPushPriorityThreshold(),
       });
 
       if (result.ok) {
@@ -121,29 +140,12 @@ export function useNotifications(): void {
   // never opened: fetch the current week and (re)schedule reminders.
   const syncUpcomingReminders = useCallback(async () => {
     if (!session?.accessToken) return;
-    const config = getAppConfig();
-    if (!config.ok) return;
-
-    try {
-      const client = createApiClient({
-        baseUrl: config.baseUrl,
-        getTenantId: () => session.tenantId,
-        getUserAgentTag: () => "mobile/schedule-reminders",
-        onAuthError: refreshSession,
-      });
-      const { startIso, endIso } = weekQueryRange(startOfWeek(new Date()));
-      const result = await listScheduleEntries(client, {
-        apiKey: session.accessToken,
-        startDate: startIso,
-        endDate: endIso,
-        userId: session.user?.id ?? undefined,
-      });
-      if (result.ok && Array.isArray(result.data.data)) {
-        await syncScheduleReminders(result.data.data, { startIso, endIso });
-      }
-    } catch (err) {
-      logger.warn("[Notifications] Schedule reminder sync failed", { err });
-    }
+    await resyncScheduleReminders({
+      accessToken: session.accessToken,
+      tenantId: session.tenantId,
+      userId: session.user?.id,
+      refreshSession,
+    });
   }, [session?.accessToken, session?.tenantId, session?.user?.id, refreshSession]);
 
   // Register after login
@@ -163,12 +165,16 @@ export function useNotifications(): void {
     const sub = Notifications.addNotificationReceivedListener((notification) => {
       const { title, body } = notification.request.content;
       const data = notification.request.content.data as NotificationData | undefined;
+      const priority = asNotificationPriority(data?.priority);
 
-      showToast({
-        message: title || body || "New notification",
-        tone: "info",
-        durationMs: 4000,
-      });
+      // High priority already interrupted via the OS banner; low stays quiet.
+      if (priority === "normal" && shouldToastInForeground(priority)) {
+        showToast({
+          message: title || body || "New notification",
+          tone: "info",
+          durationMs: 4000,
+        });
+      }
 
       // Navigate to ticket if data is present. Schedule reminders only toast:
       // pulling the user away from what they're doing would be disruptive.
@@ -179,21 +185,34 @@ export function useNotifications(): void {
     return () => sub.remove();
   }, [navigation, showToast]);
 
+  const lookupInteractionTicket = useCallback(async (interactionId: string): Promise<string | null> => {
+    const config = getAppConfig();
+    if (!config.ok || !session?.accessToken) return null;
+    const client = createApiClient({
+      baseUrl: config.baseUrl,
+      getTenantId: () => session.tenantId,
+      getUserAgentTag: () => "mobile/push",
+      onAuthError: refreshSession,
+    });
+    const result = await getInteraction(client, { apiKey: session.accessToken, interactionId });
+    return result.ok ? result.data.data.ticket_id ?? null : null;
+  }, [refreshSession, session?.accessToken, session?.tenantId]);
+
   // Handle notification tap → navigate to the relevant screen
   useEffect(() => {
     const sub = Notifications.addNotificationResponseReceivedListener((response) => {
       const data = response.notification.request.content.data as NotificationData | undefined;
-      navigateFromNotification(data, navigation);
+      void navigateFromNotification(data, navigation, lookupInteractionTicket);
     });
     return () => sub.remove();
-  }, [navigation]);
+  }, [lookupInteractionTicket, navigation]);
 
   // Handle cold launch from notification
   useEffect(() => {
     void Notifications.getLastNotificationResponseAsync().then((response) => {
       if (!response) return;
       const data = response.notification.request.content.data as NotificationData | undefined;
-      navigateFromNotification(data, navigation);
+      void navigateFromNotification(data, navigation, lookupInteractionTicket);
     });
-  }, [navigation]);
+  }, [lookupInteractionTicket, navigation]);
 }

@@ -38,6 +38,8 @@ import { ActionChip } from "../features/ticketDetail/components/ActionChip";
 import { KeyValue } from "../features/ticketDetail/components/KeyValue";
 import { TicketMetaBar } from "../features/ticketDetail/components/TicketMetaBar";
 import { MoreActionsSheet } from "../features/ticketDetail/components/MoreActionsSheet";
+import { CallsEmailsSection } from "../features/ticketDetail/components/CallsEmailsSection";
+import { resyncScheduleReminders } from "../notifications/reminderSync";
 import { DueDateModal } from "../features/ticketDetail/components/DueDateModal";
 import { TimeEntryModal } from "../features/ticketDetail/components/TimeEntryModal";
 import { PriorityPickerModal } from "../features/ticketDetail/components/PriorityPickerModal";
@@ -680,6 +682,21 @@ export function TicketDetailBody({
             actionError={tagsHook.tagPickerOpen ? null : tagsHook.tagActionError}
             updating={tagsHook.tagUpdating}
             onAddPress={tagsHook.openTagPicker}
+            initiallyCollapsed
+          />
+          <View style={{ height: spacing.sm }} />
+          <CallsEmailsSection
+            client={client}
+            apiKey={session.accessToken}
+            userId={meUserId ?? session.user?.id ?? null}
+            ticketId={ticketId}
+            clientId={ticketClientId}
+            contactNameId={(ticket as Record<string, unknown>).contact_name_id as string | null | undefined}
+            onLogged={() => {
+              // A logged interaction may have booked a calendar entry: arm its
+              // local reminder now instead of waiting for the next launch/resume.
+              void resyncScheduleReminders({ accessToken: session.accessToken, tenantId: session.tenantId, userId: session.user?.id, refreshSession });
+            }}
             initiallyCollapsed
           />
           <View style={{ height: spacing.sm }} />

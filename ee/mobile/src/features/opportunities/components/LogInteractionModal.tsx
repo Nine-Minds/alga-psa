@@ -23,6 +23,7 @@ export function LogInteractionModal({
   apiKey,
   userId,
   opportunityId,
+  ticketId,
   clientId,
   contactNameId,
   initialDuration,
@@ -34,7 +35,9 @@ export function LogInteractionModal({
   client: ApiClient | null;
   apiKey: string | null;
   userId?: string | null;
-  opportunityId: string;
+  opportunityId?: string;
+  /** Link the interaction to a ticket (follow-ups booked from the ticket screen). */
+  ticketId?: string;
   clientId?: string | null;
   contactNameId?: string | null;
   initialDuration?: number;
@@ -157,7 +160,8 @@ export function LogInteractionModal({
         title: title.trim() || undefined,
         notes: notes.trim() || undefined,
         duration: Number.isFinite(parsedDuration) && parsedDuration > 0 ? parsedDuration : undefined,
-        opportunity_id: opportunityId,
+        opportunity_id: opportunityId ?? undefined,
+        ticket_id: ticketId ?? undefined,
         client_id: clientId ?? undefined,
         contact_name_id: contactNameId ?? undefined,
         interaction_date: new Date().toISOString(),
@@ -178,7 +182,7 @@ export function LogInteractionModal({
     showToast({ message: t("logInteraction.success", "Interaction logged"), tone: "success" });
     onLogged();
     onClose();
-  }, [addToSchedule, apiKey, assignees, canAssignOthers, canSubmit, client, clientId, contactNameId, duration, notes, onClose, onLogged, opportunityId, showToast, startIso, t, title, typeId, userId]);
+  }, [addToSchedule, apiKey, assignees, canAssignOthers, canSubmit, client, clientId, contactNameId, duration, notes, onClose, onLogged, opportunityId, showToast, startIso, t, ticketId, title, typeId, userId]);
 
   if (!visible) return null;
 
