@@ -160,9 +160,12 @@ function interpolateLoginUrl(value: string, defaultLoginUrl: string): string {
 }
 
 /**
- * Create welcome email content
+ * Create welcome email content.
+ *
+ * Exported so tests can exercise the portal-access decision branches without
+ * asserting on template source text.
  */
-function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
+export function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
   subject: string;
   htmlBody: string;
   textBody: string;
@@ -177,6 +180,102 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
   const currentYear = new Date().getFullYear();
 
   const subject = copy.subject;
+
+  // Only claim Nine Minds Support Portal access we can stand behind.
+  // - `created`: the temporary password was set on a freshly created portal user.
+  // - `existing`: a portal account exists, but its password is the user's own —
+  //   the temporary password does not necessarily open it.
+  // - `failed`/`skipped`/omitted: no confirmed portal account; conservative copy.
+  const portalProvisioned = input.portalStatus === 'created';
+  const portalExists = input.portalStatus === 'existing';
+  const portalReachable = portalProvisioned || portalExists;
+
+  // LEVERAGE: pattern welcome-email-two-body-drift — the portal-access decision
+  // is branched separately for HTML and plaintext (intro, credentials, portal
+  // card, buttons, need-help). A single structured copy model that both
+  // renderers read would make the two bodies impossible to drift; today every
+  // branch has to be mirrored by hand.
+
+  const introParagraphHtml = `Your <b style="color: #0f172a; font-weight: 600;">${copy.textProductName}</b> account for <b style="color: #0f172a; font-weight: 600;">${tenantName}</b> is ready.${
+    portalProvisioned
+      ? ' Use your workspace to get started, and use the Nine Minds Support Portal whenever you need help from our team.'
+      : portalExists
+        ? ' Use your workspace to get started. A Nine Minds Support Portal account already exists for this email when you need help from our team.'
+        : ' Use your workspace to get started.'
+  }`;
+
+  const credentialsParagraph =
+    portalProvisioned
+      ? 'These credentials work for your workspace and the Nine Minds Support Portal. You’ll be asked to set a new password when you first sign in.'
+      : portalExists
+        ? 'These credentials work for your workspace. A Nine Minds Support Portal account already exists for this email — sign in there with your existing portal password, or reset it from the portal sign-in page. You’ll be asked to set a new password for your workspace when you first sign in.'
+        : 'These credentials work for your workspace. You’ll be asked to set a new password when you first sign in.';
+
+  const portalCardDescription = portalExists
+    ? 'A Nine Minds Support Portal account already exists for this email. Use it when you need help from Nine Minds — submit support requests, track open tickets, and communicate with our team.'
+    : 'Use this portal when you need help from Nine Minds. You can submit support requests, track open tickets, and communicate with our team.';
+
+  const portalCardHtml = portalReachable
+    ? `
+                      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse: separate; margin-bottom: 24px;">
+                        <tr>
+                          <td style="padding: 0;">
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse: separate; border-radius: 8px; overflow: hidden;">
+                              <tr>
+                                <td bgcolor="#f0fbff" style="background-color: #f0fbff; padding: 24px; border: 1px solid #bae6fd; border-left: 4px solid #40cff9; border-radius: 8px;">
+                                  <h4 style="color: #0284c7; font-size: 18px; font-weight: 600; font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0 0 12px 0;">👥 Nine Minds Support Portal</h4>
+                                  <p style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0 0 12px 0; line-height: 1.6; font-size: 14px;">${portalCardDescription}</p>
+                                  <p style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 8px 0; font-size: 14px;"><b style="color: #0f172a; font-weight: 600;">Login URL:</b> <a href="${nineMindsPortalUrl}" style="color: #0284c7; text-decoration: underline;">${nineMindsPortalUrl}</a></p>
+                                </td>
+                              </tr>
+                            </table>
+                          </td>
+                        </tr>
+                      </table>`
+    : '';
+
+  const portalButtonHtml = portalReachable
+    ? `
+                                <td style="padding-left: 12px;">
+                                  <!-- Nine Minds Support Portal Button -->
+                                  <!--[if mso]>
+                                  <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${nineMindsPortalUrl}" style="height:48px;v-text-anchor:middle;width:240px;" arcsize="17%" stroke="f" fillcolor="#40cff9">
+                                    <w:anchorlock/>
+                                    <center>
+                                  <![endif]-->
+                                  <a href="${nineMindsPortalUrl}" class="button-hover button-hover-blue rounded" style="background-color:#40cff9;color:#ffffff;display:inline-block;padding:14px 28px;font-family:'Poppins',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:15px;font-weight:600;text-align:center;text-decoration:none;border-radius:8px;-webkit-text-size-adjust:none;mso-hide:all;"> Nine Minds Support Portal →</a>
+                                  <!--[if mso]>
+                                    </center>
+                                  </v:roundrect>
+                                  <![endif]-->
+                                </td>`
+    : '';
+
+  const needHelpHtml = portalReachable
+    ? `<p style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; font-size: 15px; margin: 0 0 16px 0;">For support, use the <a href="${nineMindsPortalUrl}" style="color: #0284c7; text-decoration: underline;">Nine Minds Support Portal</a>.</p>`
+    : '';
+
+  const portalSectionText = portalReachable
+    ? `\n👥 NINE MINDS SUPPORT PORTAL\n${portalCardDescription}\nLogin URL: ${nineMindsPortalUrl}\n`
+    : '';
+
+  const needHelpText = portalReachable
+    ? `\nFor support, use the Nine Minds Support Portal: ${nineMindsPortalUrl}\n`
+    : '';
+
+  const introText = `Your ${copy.textProductName} account for "${tenantName}" is ready.${
+    portalProvisioned
+      ? ' Use your workspace to get started, and use the Nine Minds Support Portal whenever you need help from our team.'
+      : portalExists
+        ? ' Use your workspace to get started. A Nine Minds Support Portal account already exists for this email when you need help from our team.'
+        : ' Use your workspace to get started.'
+  }`;
+
+  const credentialsParagraphText = portalProvisioned
+    ? "These credentials work for your workspace and the Nine Minds Support Portal. You'll be asked to set a new password when you first sign in."
+    : portalExists
+      ? "These credentials work for your workspace. A Nine Minds Support Portal account already exists for this email — sign in there with your existing portal password, or reset it from the portal sign-in page. You'll be asked to set a new password for your workspace when you first sign in."
+      : "These credentials work for your workspace. You'll be asked to set a new password when you first sign in.";
 
   const nextStepsRowsHtml = copy.nextSteps
     .map(
@@ -289,7 +388,7 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
                     <td bgcolor="#ffffff" style="background-color: #ffffff; padding: 40px 32px;">
                       <h2 style="color: #0f172a; font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 24px; font-weight: 600; margin-bottom: 16px; line-height: 1.3;">Hello ${adminUser.firstName} ${adminUser.lastName},</h2>
 
-                      <p style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; font-size: 16px; margin-bottom: 24px;">Your <b style="color: #0f172a; font-weight: 600;">${copy.textProductName}</b> account for <b style="color: #0f172a; font-weight: 600;">${tenantName}</b> is ready. Use your workspace to get started, and use the Nine Minds Support Portal whenever you need help from our team.</p>
+                      <p style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; font-size: 16px; margin-bottom: 24px;">${introParagraphHtml}</p>
 
                       <!-- Tagline with spacing -->
                       <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse: separate; margin: 24px 0;">
@@ -326,22 +425,7 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
                         </tr>
                       </table>
 
-                      <!-- Nine Minds Support Portal -->
-                      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse: separate; margin-bottom: 24px;">
-                        <tr>
-                          <td style="padding: 0;">
-                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse: separate; border-radius: 8px; overflow: hidden;">
-                              <tr>
-                                <td bgcolor="#f0fbff" style="background-color: #f0fbff; padding: 24px; border: 1px solid #bae6fd; border-left: 4px solid #40cff9; border-radius: 8px;">
-                                  <h4 style="color: #0284c7; font-size: 18px; font-weight: 600; font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0 0 12px 0;">👥 Nine Minds Support Portal</h4>
-                                  <p style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0 0 12px 0; line-height: 1.6; font-size: 14px;">Use this portal when you need help from Nine Minds. You can submit support requests, track open tickets, and communicate with our team.</p>
-                                  <p style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 8px 0; font-size: 14px;"><b style="color: #0f172a; font-weight: 600;">Login URL:</b> <a href="${nineMindsPortalUrl}" style="color: #0284c7; text-decoration: underline;">${nineMindsPortalUrl}</a></p>
-                                </td>
-                              </tr>
-                            </table>
-                          </td>
-                        </tr>
-                      </table>
+                      <!-- Nine Minds Support Portal -->${portalCardHtml}
 
                       <!-- Shared Credentials -->
                       <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse: separate; margin: 24px 0;">
@@ -351,7 +435,7 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
                               <tr>
                                 <td bgcolor="#faf8ff" class="credential-box" style="background-color: #faf8ff; padding: 24px; border: 1px solid #e9e5f5; border-radius: 8px;">
                                   <h3 style="color: #0f172a; font-size: 18px; font-weight: 600; font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0 0 12px 0;">🔐 Your Login Credentials</h3>
-                                  <p style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0 0 16px 0; line-height: 1.6; font-size: 14px;">These credentials work for your workspace and the Nine Minds Support Portal. You’ll be asked to set a new password when you first sign in.</p>
+                                  <p style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0 0 16px 0; line-height: 1.6; font-size: 14px;">${credentialsParagraph}</p>
                                   <p style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 8px 0; font-size: 15px;"><b style="color: #0f172a; font-weight: 600;">Email:</b> ${adminUser.email}</p>
                                   <p style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 8px 0; font-size: 15px;"><b style="color: #0f172a; font-weight: 600;">Temporary Password:</b> <span style="font-family: 'Courier New', monospace; background-color: #e2e8f0; padding: 4px 8px; color: #0f172a; font-size: 14px; font-weight: 600; letter-spacing: 0.5px;">${temporaryPassword}</span></p>
                                 </td>
@@ -398,20 +482,7 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
                                     </center>
                                   </v:roundrect>
                                   <![endif]-->
-                                </td>
-                                <td style="padding-left: 12px;">
-                                  <!-- Nine Minds Support Portal Button -->
-                                  <!--[if mso]>
-                                  <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${nineMindsPortalUrl}" style="height:48px;v-text-anchor:middle;width:240px;" arcsize="17%" stroke="f" fillcolor="#40cff9">
-                                    <w:anchorlock/>
-                                    <center>
-                                  <![endif]-->
-                                  <a href="${nineMindsPortalUrl}" class="button-hover button-hover-blue rounded" style="background-color:#40cff9;color:#ffffff;display:inline-block;padding:14px 28px;font-family:'Poppins',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:15px;font-weight:600;text-align:center;text-decoration:none;border-radius:8px;-webkit-text-size-adjust:none;mso-hide:all;"> Nine Minds Support Portal →</a>
-                                  <!--[if mso]>
-                                    </center>
-                                  </v:roundrect>
-                                  <![endif]-->
-                                </td>
+                                </td>${portalButtonHtml}
                               </tr>
                             </table>
                           </td>
@@ -440,7 +511,7 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
                           <td>
                             <h3 style="color: #0f172a; font-size: 18px; font-weight: 600; font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0 0 12px 0;">Need Help?</h3>
                             <p style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; font-size: 15px; margin: 0 0 16px 0;">If you have any questions or need assistance getting started, please don't hesitate to contact our support team.</p>
-                            <p style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; font-size: 15px; margin: 0 0 16px 0;">For support, use the <a href="${nineMindsPortalUrl}" style="color: #0284c7; text-decoration: underline;">Nine Minds Support Portal</a>.</p>
+                            ${needHelpHtml}
 
                             <p style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; font-size: 15px; margin: 24px 0 0 0;">Welcome aboard!</p>
                           </td>
@@ -474,20 +545,16 @@ ${copy.textHeaderTitle}
 
 Hello ${adminUser.firstName} ${adminUser.lastName},
 
-Your ${copy.textProductName} account for "${tenantName}" is ready. Use your workspace to get started, and use the Nine Minds Support Portal whenever you need help from our team.
+${introText}
 
 YOUR ACCESS:
 
 ${copy.textMspCardTitle}
 ${copy.textMspCardDescription}
 Login URL: ${defaultLoginUrl}
-
-👥 NINE MINDS SUPPORT PORTAL
-Use this portal when you need help from Nine Minds. You can submit support requests, track open tickets, and communicate with our team.
-Login URL: ${nineMindsPortalUrl}
-
+${portalSectionText}
 YOUR LOGIN CREDENTIALS:
-These credentials work for your workspace and the Nine Minds Support Portal. You'll be asked to set a new password when you first sign in.
+${credentialsParagraphText}
 
 Email: ${adminUser.email}
 Temporary Password: ${temporaryPassword}
@@ -501,8 +568,7 @@ ${nextStepsTextLines}
 
 Need help?
 If you have any questions or need assistance getting started, please don't hesitate to contact our support team.
-For support, use the Nine Minds Support Portal: ${nineMindsPortalUrl}
-
+${needHelpText}
 Welcome aboard!
 
 ---

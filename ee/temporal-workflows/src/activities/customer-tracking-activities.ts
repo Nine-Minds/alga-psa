@@ -56,12 +56,122 @@ export async function getManagementTenantId(): Promise<{ tenantId: string }> {
 }
 
 /**
- * Create a customer client in the nineminds tenant
+ * Raised when the management tenant contains more than one client whose exact
+ * name matches the tenant being provisioned. We refuse to guess which client to
+ * link to rather than silently attaching the customer to the wrong company.
+ */
+export class AmbiguousCustomerMatchError extends Error {
+  readonly tenantName: string;
+  readonly candidateClientIds: string[];
+
+  constructor(tenantName: string, candidateClientIds: string[]) {
+    super(
+      `Multiple clients named "${tenantName}" exist in the management tenant ` +
+      `(candidates: ${candidateClientIds.join(', ')}); refusing to link an ambiguous customer.`
+    );
+    this.name = 'AmbiguousCustomerMatchError';
+    this.tenantName = tenantName;
+    this.candidateClientIds = candidateClientIds;
+  }
+}
+
+/**
+ * Raised when a contact with the requested email already exists in the
+ * management tenant but belongs to a different client. `contacts.email` is
+ * unique per tenant, so we surface the collision instead of reusing an
+ * unrelated contact.
+ */
+export class ContactEmailConflictError extends Error {
+  readonly email: string;
+  readonly existingClientId: string;
+
+  constructor(email: string, existingClientId: string) {
+    super(
+      `A contact with email "${email}" already exists in the management tenant ` +
+      `under a different client (${existingClientId}); refusing to reuse an unrelated contact.`
+    );
+    this.name = 'ContactEmailConflictError';
+    this.email = email;
+    this.existingClientId = existingClientId;
+  }
+}
+
+type DbConstraintError = {
+  code?: string;
+  constraint?: string;
+  message?: string;
+};
+
+/**
+ * Detect a Postgres unique-constraint violation. Prefer the SQLSTATE (23505)
+ * plus the constraint identity; only fall back to message inspection when the
+ * driver omits the structured fields.
+ */
+function isUniqueConstraintViolation(error: unknown, constraintNames: string[]): boolean {
+  const dbError = error as DbConstraintError;
+  if (dbError?.code === '23505') {
+    if (!dbError.constraint || constraintNames.length === 0) return true;
+    return constraintNames.includes(dbError.constraint);
+  }
+
+  if (error instanceof Error) {
+    return (
+      error.message.includes('duplicate key') &&
+      constraintNames.some((name) => error.message.includes(name))
+    );
+  }
+
+  return false;
+}
+
+async function findClientIdsByName(
+  knex: Knex,
+  tenant: string,
+  tenantName: string
+): Promise<string[]> {
+  const rows = await tenantDb(knex, tenant).table('clients')
+    .where({ client_name: tenantName })
+    .select('client_id');
+  return rows.map((row: { client_id: string }) => row.client_id);
+}
+
+async function findContactIdByClientAndEmail(
+  knex: Knex,
+  tenant: string,
+  clientId: string,
+  email: string
+): Promise<string | null> {
+  const row = await tenantDb(knex, tenant).table('contacts')
+    .where({ client_id: clientId, email })
+    .select('contact_name_id')
+    .first();
+  return row?.contact_name_id ?? null;
+}
+
+async function findContactOwnerByEmail(
+  knex: Knex,
+  tenant: string,
+  email: string
+): Promise<{ contact_name_id: string; client_id: string | null } | undefined> {
+  return tenantDb(knex, tenant).table('contacts')
+    .where({ email })
+    .select('contact_name_id', 'client_id')
+    .first();
+}
+
+/**
+ * Resolve or create a customer client in the nineminds (management) tenant.
+ *
+ * Resolution is exact-name and tenant-scoped. A single existing match is
+ * reused untouched (createClient is bypassed entirely so its tax/email/notes
+ * side effects never run). Multiple matches are refused. A concurrent insert
+ * that trips the unique `(tenant, client_name)` constraint is re-read rather
+ * than treated as a failure.
  */
 export async function createCustomerClientActivity(input: {
   tenantName: string;
   adminUserEmail: string;
-}): Promise<{ customerId: string }> {
+}): Promise<{ customerId: string; reused: boolean }> {
   const log = Context.current().log;
   
   try {
@@ -70,37 +180,70 @@ export async function createCustomerClientActivity(input: {
     // Get the management tenant ID (will throw if not found)
     const ninemindsTenant = await getManagementTenantIdInternal(adminKnex);
     
-    log.info('Creating customer client in management tenant', {
+    log.info('Resolving customer client in management tenant', {
       tenantName: input.tenantName,
       managementTenantId: ninemindsTenant
     });
-    
-    const result = await adminKnex.transaction(async (trx: Knex.Transaction<any, any[]>) => {
-      return await ClientModel.createClient(
-        {
-          client_name: input.tenantName,
-          client_type: 'company',
-          url: '', // No website for tenant clients initially
-          notes: `PSA Customer - Tenant: ${input.tenantName}`,
-          properties: {
-            tenant_id: input.tenantName,
-            subscription_type: 'psa'
-          }
-        },
-        ninemindsTenant,
-        trx,
-        { skipEmailSuffix: true, skipTaxSettings: true } // Skip email suffix for tenant clients
-      );
-    });
-    
-    log.info('Customer client created successfully', {
-      customerId: result.client_id,
-      tenantName: input.tenantName
-    });
-    
-    return { customerId: result.client_id };
+
+    // Read-after-conflict guard: never trust a pre-check alone under concurrency.
+    const existingClientIds = await findClientIdsByName(adminKnex, ninemindsTenant, input.tenantName);
+    if (existingClientIds.length === 1) {
+      log.info('Reusing existing customer client', {
+        customerId: existingClientIds[0],
+        tenantName: input.tenantName
+      });
+      return { customerId: existingClientIds[0], reused: true };
+    }
+    if (existingClientIds.length > 1) {
+      throw new AmbiguousCustomerMatchError(input.tenantName, existingClientIds);
+    }
+
+    try {
+      const result = await adminKnex.transaction(async (trx: Knex.Transaction<any, any[]>) => {
+        return await ClientModel.createClient(
+          {
+            client_name: input.tenantName,
+            client_type: 'company',
+            url: '', // No website for tenant clients initially
+            notes: `PSA Customer - Tenant: ${input.tenantName}`,
+            properties: {
+              tenant_id: input.tenantName,
+              subscription_type: 'psa'
+            }
+          },
+          ninemindsTenant,
+          trx,
+          { skipEmailSuffix: true, skipTaxSettings: true } // Skip email suffix for tenant clients
+        );
+      });
+      
+      log.info('Customer client created successfully', {
+        customerId: result.client_id,
+        tenantName: input.tenantName
+      });
+      
+      return { customerId: result.client_id, reused: false };
+    } catch (insertError) {
+      if (!isUniqueConstraintViolation(insertError, ['clients_tenant_client_name_unique'])) {
+        throw insertError;
+      }
+
+      // Another run created the client between our lookup and insert.
+      const racedClientIds = await findClientIdsByName(adminKnex, ninemindsTenant, input.tenantName);
+      if (racedClientIds.length === 1) {
+        log.info('Reusing customer client created by a concurrent run', {
+          customerId: racedClientIds[0],
+          tenantName: input.tenantName
+        });
+        return { customerId: racedClientIds[0], reused: true };
+      }
+      if (racedClientIds.length > 1) {
+        throw new AmbiguousCustomerMatchError(input.tenantName, racedClientIds);
+      }
+      throw insertError;
+    }
   } catch (error) {
-    log.error('Failed to create customer client', {
+    log.error('Failed to resolve customer client', {
       error: error instanceof Error ? error.message : 'Unknown error',
       tenantName: input.tenantName
     });
@@ -109,61 +252,102 @@ export async function createCustomerClientActivity(input: {
 }
 
 /**
- * Create a customer contact in the nineminds tenant
+ * Resolve or create a customer contact in the nineminds (management) tenant.
+ *
+ * `contacts.email` is unique per tenant (not per client), so the lookup is
+ * scoped to the resolved client. If the email already belongs to a different
+ * client we surface `ContactEmailConflictError` rather than linking across
+ * companies. A concurrent insert that trips the email constraint is re-read.
  */
 export async function createCustomerContactActivity(input: {
   clientId: string;
   firstName: string;
   lastName: string;
   email: string;
-}): Promise<{ contactId: string }> {
+}): Promise<{ contactId: string; reused: boolean }> {
   const log = Context.current().log;
   
   try {
     const adminKnex = await getAdminConnection();
     // Get the management tenant ID (will throw if not found)
     const ninemindsTenant = await getManagementTenantIdInternal(adminKnex);
-    
-    log.info('Creating customer contact in nineminds tenant', {
-      email: input.email,
+    const normalizedEmail = input.email.trim().toLowerCase();
+
+    log.info('Resolving customer contact in nineminds tenant', {
+      email: normalizedEmail,
       clientId: input.clientId,
       managementTenantId: ninemindsTenant
     });
-    
-    // Debug: Verify the client exists before creating contact
-    const clientCheck = await tenantDb(adminKnex, ninemindsTenant).table('clients')
-      .where({ client_id: input.clientId })
-      .first();
-    
-    log.info('Client check result', {
-      clientExists: !!clientCheck,
-      clientId: input.clientId,
-      tenant: ninemindsTenant,
-      clientName: clientCheck?.client_name
-    });
-    
-    const result = await adminKnex.transaction(async (trx: Knex.Transaction<any, any[]>) => {
-      return await ContactModel.createContact(
-        {
-          full_name: `${input.firstName} ${input.lastName}`,
-          email: input.email,
-          client_id: input.clientId,
-          role: 'Admin',
-          notes: 'Primary admin for PSA tenant'
-        },
+
+    const existingContactId = await findContactIdByClientAndEmail(
+      adminKnex,
+      ninemindsTenant,
+      input.clientId,
+      normalizedEmail
+    );
+    if (existingContactId) {
+      log.info('Reusing existing customer contact', {
+        contactId: existingContactId,
+        email: normalizedEmail
+      });
+      return { contactId: existingContactId, reused: true };
+    }
+
+    try {
+      const result = await adminKnex.transaction(async (trx: Knex.Transaction<any, any[]>) => {
+        return await ContactModel.createContact(
+          {
+            full_name: `${input.firstName} ${input.lastName}`,
+            email: normalizedEmail,
+            client_id: input.clientId,
+            role: 'Admin',
+            notes: 'Primary admin for PSA tenant'
+          },
+          ninemindsTenant,
+          trx
+        );
+      });
+      
+      log.info('Customer contact created successfully', {
+        contactId: result.contact_name_id,
+        email: normalizedEmail
+      });
+      
+      return { contactId: result.contact_name_id, reused: false };
+    } catch (insertError) {
+      const message = insertError instanceof Error ? insertError.message : '';
+      const isEmailConflict =
+        isUniqueConstraintViolation(insertError, [
+          'contacts_tenant_email_unique',
+          'contacts_email_tenant_unique',
+        ]) || message.includes('EMAIL_EXISTS');
+
+      if (!isEmailConflict) {
+        throw insertError;
+      }
+
+      const racedContactId = await findContactIdByClientAndEmail(
+        adminKnex,
         ninemindsTenant,
-        trx
+        input.clientId,
+        normalizedEmail
       );
-    });
-    
-    log.info('Customer contact created successfully', {
-      contactId: result.contact_name_id,
-      email: input.email
-    });
-    
-    return { contactId: result.contact_name_id };
+      if (racedContactId) {
+        log.info('Reusing customer contact created by a concurrent run', {
+          contactId: racedContactId,
+          email: normalizedEmail
+        });
+        return { contactId: racedContactId, reused: true };
+      }
+
+      const otherOwner = await findContactOwnerByEmail(adminKnex, ninemindsTenant, normalizedEmail);
+      if (otherOwner && otherOwner.client_id !== input.clientId) {
+        throw new ContactEmailConflictError(normalizedEmail, otherOwner.client_id ?? 'unknown');
+      }
+      throw insertError;
+    }
   } catch (error) {
-    log.error('Failed to create customer contact', {
+    log.error('Failed to resolve customer contact', {
       error: error instanceof Error ? error.message : 'Unknown error',
       email: input.email
     });
