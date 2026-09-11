@@ -251,9 +251,19 @@ export function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput):
                                 </td>`
     : '';
 
+  const supportParagraphStyle =
+    'color: #334155; font-family: \'Inter\', -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, sans-serif; line-height: 1.6; font-size: 15px; margin: 0 0 16px 0;';
+
+  // Never leave an unactionable "contact our support team" sentence: the portal
+  // link is the only channel when it exists, so every other branch names a
+  // channel we can actually honour (replying to this email reaches Nine Minds).
+  // When provisioning failed, say access is still coming rather than staying
+  // silent about a portal the customer will need.
   const needHelpHtml = portalReachable
-    ? `<p style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; font-size: 15px; margin: 0 0 16px 0;">For support, use the <a href="${nineMindsPortalUrl}" style="color: #0284c7; text-decoration: underline;">Nine Minds Support Portal</a>.</p>`
-    : '';
+    ? `<p style="${supportParagraphStyle}">For support, use the <a href="${nineMindsPortalUrl}" style="color: #0284c7; text-decoration: underline;">Nine Minds Support Portal</a>.</p>`
+    : input.portalStatus === 'failed'
+      ? `<p style="${supportParagraphStyle}">Nine Minds Support Portal access is still being set up for this account. Reply to this email if you need help in the meantime.</p>`
+      : `<p style="${supportParagraphStyle}">If you need help getting started, reply to this email.</p>`;
 
   const portalSectionText = portalReachable
     ? `\n👥 NINE MINDS SUPPORT PORTAL\n${portalCardDescription}\nLogin URL: ${nineMindsPortalUrl}\n`
@@ -261,7 +271,9 @@ export function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput):
 
   const needHelpText = portalReachable
     ? `\nFor support, use the Nine Minds Support Portal: ${nineMindsPortalUrl}\n`
-    : '';
+    : input.portalStatus === 'failed'
+      ? `\nNine Minds Support Portal access is still being set up for this account. Reply to this email if you need help in the meantime.\n`
+      : `\nIf you need help getting started, reply to this email.\n`;
 
   const introText = `Your ${copy.textProductName} account for "${tenantName}" is ready.${
     portalProvisioned

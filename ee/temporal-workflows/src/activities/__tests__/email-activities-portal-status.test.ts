@@ -47,6 +47,22 @@ describe('welcome email portal-access claims', () => {
     expect(textBody).not.toContain('portal.nineminds.com');
   });
 
+  it('keeps a usable support channel and says access is coming when provisioning failed', () => {
+    const { htmlBody, textBody } = build('failed');
+    // The portal link is gone, so the Need Help section must not collapse into
+    // an unactionable "contact our support team" with no way to act on it.
+    expect(htmlBody).toContain('still being set up');
+    expect(textBody).toContain('still being set up');
+    expect(htmlBody.toLowerCase()).toContain('reply to this email');
+    expect(textBody.toLowerCase()).toContain('reply to this email');
+  });
+
+  it('keeps a usable support channel when provisioning was skipped', () => {
+    const { htmlBody, textBody } = build('skipped');
+    expect(htmlBody.toLowerCase()).toContain('reply to this email');
+    expect(textBody.toLowerCase()).toContain('reply to this email');
+  });
+
   it('does not claim portal credentials when provisioning was skipped', () => {
     const { htmlBody, textBody } = build('skipped');
     expect(htmlBody).not.toContain(PORTAL_CONJUNCTION_CLAIM);
