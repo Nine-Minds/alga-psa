@@ -55,7 +55,14 @@ export async function triggerPushForNotification(
     notification.user_id,
   );
 
-  if (tokens.length === 0) return;
+  if (tokens.length === 0) {
+    logger.info('[PushDispatcher] No active push tokens for user; skipping', {
+      template: notification.template_name,
+      userId: notification.user_id,
+      tenant: notification.tenant,
+    });
+    return;
+  }
 
   const messages = tokens.map((t) =>
     buildTicketPushMessage({

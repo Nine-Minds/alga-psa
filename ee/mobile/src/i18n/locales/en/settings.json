@@ -68,7 +68,17 @@
     "pushHint": "Receive alerts when tickets are assigned, commented on, or updated.",
     "permissionDeniedTitle": "Notifications Disabled",
     "permissionDeniedMessage": "Enable notifications in your device settings to receive ticket alerts.",
-    "openSettings": "Open Settings"
+    "openSettings": "Open Settings",
+    "registerFailedTitle": "Couldn't enable push notifications",
+    "testPush": "Send test notification",
+    "testPushTap": "Tap to send one to this account's devices",
+    "testPushSending": "Sending…",
+    "testPushNoDevices": "No device is registered with this server. Turn push off and on again.",
+    "testPushSent": "Sent to {{count}} device(s). Check your notifications.",
+    "testPushPartial": "Sent to some devices; failed for {{detail}}",
+    "testPushFailed": "Server could not deliver: {{detail}}",
+    "testPushRequestFailed": "Request failed: {{error}}",
+    "testPushUnsupported": "This server doesn't support test notifications yet. Update the server to use this."
   },
   "data": {
     "clearCache": "Clear cache",

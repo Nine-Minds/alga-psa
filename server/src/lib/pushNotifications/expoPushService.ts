@@ -35,12 +35,34 @@ export function buildTicketPushMessage(params: TicketPushParams): ExpoPushMessag
   };
 }
 
+export interface PushSendResult {
+  to: string;
+  status: 'ok' | 'error';
+  error?: string | null;
+}
+
+export function buildTestPushMessage(expoPushToken: string, serverHost: string): ExpoPushMessage {
+  return {
+    to: expoPushToken,
+    sound: 'default' as const,
+    title: 'AlgaPSA test notification',
+    body: `Push notifications from ${serverHost} are working.`,
+    data: { kind: 'push-test', priority: 'normal' },
+    priority: 'high' as const,
+  };
+}
+
 export async function sendPushNotifications(
   messages: ExpoPushMessage[],
   tenant: string,
-): Promise<void> {
-  const valid = messages.filter((m) => Expo.isExpoPushToken(m.to as string));
-  if (valid.length === 0) return;
+): Promise<PushSendResult[]> {
+  const results: PushSendResult[] = [];
+  const valid = messages.filter((m) => {
+    const ok = Expo.isExpoPushToken(m.to as string);
+    if (!ok) results.push({ to: String(m.to), status: 'error', error: 'InvalidExpoPushToken' });
+    return ok;
+  });
+  if (valid.length === 0) return results;
 
   const chunks = expo.chunkPushNotifications(valid);
   const invalidTokens: string[] = [];
@@ -57,13 +79,20 @@ export async function sendPushNotifications(
             error: ticket.message,
             details: ticket.details,
           });
+          results.push({ to: chunk[i].to as string, status: 'error', error: ticket.details?.error ?? ticket.message ?? 'error' });
           if (ticket.details?.error === 'DeviceNotRegistered') {
             invalidTokens.push(chunk[i].to as string);
           }
+        } else {
+          results.push({ to: chunk[i].to as string, status: 'ok' });
         }
       }
     } catch (err) {
-      logger.error('[ExpoPush] Failed to send chunk', { err });
+      // Typically the server cannot reach exp.host (egress blocked, proxy,
+      // DNS); the message names it so a support bundle shows the cause.
+      const message = err instanceof Error ? err.message : String(err);
+      logger.error('[ExpoPush] Failed to send chunk', { err, message });
+      for (const m of chunk) results.push({ to: m.to as string, status: 'error', error: `ExpoUnreachable: ${message}` });
     }
   }
 
@@ -72,4 +101,6 @@ export async function sendPushNotifications(
       logger.error('[ExpoPush] Failed to deactivate invalid tokens', { err }),
     );
   }
+
+  return results;
 }

@@ -16,10 +16,10 @@ import { formatAppVersion } from "./settingsDiagnostics";
 import type { Theme } from "../ui/themes";
 import { phase2Features } from "../features/phase2";
 import { requestPushPermission, getExpoPushToken } from "../notifications/pushTokenService";
-import { registerPushToken, unregisterPushToken } from "../api/pushToken";
+import { registerPushToken, sendTestPushNotification, unregisterPushToken, type TestPushResult } from "../api/pushToken";
 import { createApiClient } from "../api";
 import { getStableDeviceId } from "../device/clientMetadata";
-import { secureStorage, getSecureJson, setSecureJson } from "../storage/secureStorage";
+import { clearPushRegistration, isRegisteredFor, readPushRegistration, writePushRegistration } from "../notifications/pushRegistration";
 import { getAppleLinkStatus, linkAppleId, unlinkAppleId } from "../api/appleAuth";
 import {
   AppleSignInCancelledError,
@@ -50,21 +50,31 @@ export function SettingsScreen() {
   const [appleLinked, setAppleLinked] = useState<boolean | null>(null);
   const [appleBusy, setAppleBusy] = useState(false);
   const [appleError, setAppleError] = useState<string | null>(null);
+  const [testPushBusy, setTestPushBusy] = useState(false);
+  const [testPushStatus, setTestPushStatus] = useState<string | null>(null);
 
   useEffect(() => {
     let canceled = false;
     const run = async () => {
-      const [enabled, available, hideSensitive, storedPushToken] = await Promise.all([
+      const [enabled, available, hideSensitive, pushRegistration] = await Promise.all([
         getBiometricGateEnabled(),
         canUseBiometrics(),
         getHideSensitiveNotificationsEnabled(),
-        getSecureJson<string>("alga.mobile.push.registeredToken"),
+        readPushRegistration(),
       ]);
       if (canceled) return;
       setBiometricEnabled(enabled);
       setBiometricAvailable(available);
       setHideSensitiveEnabled(hideSensitive);
-      setPushEnabled(Boolean(storedPushToken));
+      const appConfig = getAppConfig();
+      setPushEnabled(
+        appConfig.ok &&
+          isRegisteredFor(pushRegistration, {
+            baseUrl: appConfig.baseUrl,
+            tenantId: session?.tenantId ?? null,
+            userId: session?.user?.id ?? null,
+          }),
+      );
     };
     void run();
     return () => {
@@ -459,9 +469,9 @@ export function SettingsScreen() {
                         getTenantId: () => session.tenantId,
                         getUserAgentTag: () => "mobile/settings",
                       });
-                      await unregisterPushToken(client, { deviceId });
+                      await unregisterPushToken(client, { apiKey: session.accessToken, deviceId });
                     }
-                    await secureStorage.deleteItem("alga.mobile.push.registeredToken");
+                    await clearPushRegistration();
                     setPushEnabled(false);
                   } else {
                     // Enable: request permission + register
@@ -488,14 +498,26 @@ export function SettingsScreen() {
                         getUserAgentTag: () => "mobile/settings",
                       });
                       const result = await registerPushToken(client, {
+                        apiKey: session.accessToken,
                         expoPushToken: token,
                         deviceId,
                         platform: Platform.OS,
                         appVersion: Application.nativeApplicationVersion ?? undefined,
                       });
                       if (result.ok) {
-                        await setSecureJson("alga.mobile.push.registeredToken", token);
+                        await writePushRegistration({
+                          token,
+                          baseUrl: appConfig.baseUrl,
+                          tenantId: session.tenantId ?? null,
+                          userId: session.user?.id ?? null,
+                        });
                         setPushEnabled(true);
+                      } else {
+                        Alert.alert(
+                          t("notifications.registerFailedTitle", "Couldn't enable push notifications"),
+                          result.error.message,
+                          [{ text: t("common:ok") }],
+                        );
                       }
                     }
                   }
@@ -508,6 +530,32 @@ export function SettingsScreen() {
           <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: theme.spacing.sm }}>
             {t("notifications.pushHint", "Receive alerts when tickets are assigned, commented on, or updated.")}
           </Text>
+          <View style={{ height: theme.spacing.sm }} />
+          <ToggleRow
+            theme={theme}
+            label={t("notifications.testPush", "Send test notification")}
+            value={testPushStatus ?? t("notifications.testPushTap", "Tap to send one to this account's devices")}
+            disabled={testPushBusy || !session}
+            onPress={() => {
+              void (async () => {
+                const appConfig = getAppConfig();
+                if (!appConfig.ok || !session || testPushBusy) return;
+                setTestPushBusy(true);
+                setTestPushStatus(t("notifications.testPushSending", "Sending…"));
+                try {
+                  const client = createApiClient({
+                    baseUrl: appConfig.baseUrl,
+                    getTenantId: () => session.tenantId,
+                    getUserAgentTag: () => "mobile/settings",
+                  });
+                  const result = await sendTestPushNotification(client, { apiKey: session.accessToken });
+                  setTestPushStatus(describeTestPush(result.ok ? result.data : null, result.ok ? null : result.error, t));
+                } finally {
+                  setTestPushBusy(false);
+                }
+              })();
+            }}
+          />
         </View>
       ) : null}
 
@@ -583,6 +631,31 @@ function Row({ theme, label, value }: { theme: Theme; label: string; value: stri
       <Text style={{ ...theme.typography.body, color: theme.colors.text, marginTop: 2 }}>{value}</Text>
     </View>
   );
+}
+
+type Translate = (key: string, defaultValue: string, options?: Record<string, unknown>) => string;
+
+type RequestError = { kind: string; message: string; status?: number } | null;
+
+export function describeTestPush(result: TestPushResult | null, requestError: RequestError, t: Translate): string {
+  if (!result) {
+    // Servers older than this app do not have the test endpoint yet.
+    if (requestError?.status === 404) {
+      return t("notifications.testPushUnsupported", "This server doesn't support test notifications yet. Update the server to use this.");
+    }
+    return t("notifications.testPushRequestFailed", "Request failed: {{error}}", { error: requestError?.message ?? "unknown" });
+  }
+  if (result.reason === "no_active_tokens") {
+    return t("notifications.testPushNoDevices", "No device is registered with this server. Turn push off and on again.");
+  }
+  const failed = result.results.filter((r) => r.status === "error");
+  if (result.ok && failed.length === 0) {
+    return t("notifications.testPushSent", "Sent to {{count}} device(s). Check your notifications.", { count: result.deviceCount });
+  }
+  const detail = failed.map((r) => `${r.platform}: ${r.error ?? "error"}`).join(", ");
+  return result.ok
+    ? t("notifications.testPushPartial", "Sent to some devices; failed for {{detail}}", { detail })
+    : t("notifications.testPushFailed", "Server could not deliver: {{detail}}", { detail });
 }
 
 function ToggleRow({
