@@ -2113,7 +2113,17 @@
         "upload": "Carica pacchetto"
       },
       "errors": {
-        "noImportableRecords": "Questo pacchetto non conteneva record importabili."
+        "noImportableRecords": "Questo pacchetto non conteneva record importabili.",
+        "permissionDenied": "Non hai l'autorizzazione per importare o esportare dati.",
+        "invalidSpreadsheet": "Impossibile leggere questo foglio di calcolo. Verifica che sia un file CSV o XLSX valido e riprova.",
+        "notAmpPackage": "Questo file non è un pacchetto AMP. Carica un file .amp o .sqlite.",
+        "tooLarge": "Questo caricamento supera la dimensione massima consentita.",
+        "sizeMismatch": "Il caricamento non è stato completato. Riprova.",
+        "noRecognizedHeaders": "Nessuna delle colonne di questo foglio di calcolo è stata riconosciuta. Controlla la riga di intestazione e riprova.",
+        "storageRejected": "Il server ha rifiutato questo caricamento. Chiedi all'amministratore di verificare la configurazione dei tipi di file dello storage.",
+        "spreadsheetFailed": "Impossibile importare il foglio di calcolo. Riprova.",
+        "uploadFailed": "Impossibile caricare il pacchetto. Riprova.",
+        "unknown": "Caricamento non riuscito. Riprova."
       },
       "preflight": {
         "title": "Verifica preliminare"

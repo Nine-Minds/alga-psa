@@ -21,6 +21,7 @@ import {
   migrationEntityLabel,
   migrationErrorMessage,
   migrationStateBadge,
+  migrationUploadErrorCopy,
 } from './migrationUi';
 
 const MAX_PACKAGE_MEGABYTES = Math.round(MAX_MIGRATION_PACKAGE_BYTES / (1024 * 1024));
@@ -204,16 +205,32 @@ const UploadPackageDialog = ({ isOpen, onClose, onUploaded }: UploadPackageDialo
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [rejectionDiagnostics, setRejectionDiagnostics] = useState<AmpDiagnostic[] | null>(null);
+  const [stageDiagnostics, setStageDiagnostics] = useState<Array<{ code: string; message: string }> | null>(null);
+  const [stagedJobId, setStagedJobId] = useState<string | null>(null);
+
+  const resetUploadState = useCallback(() => {
+    setFile(null);
+    setUploadError(null);
+    setRejectionDiagnostics(null);
+    setStageDiagnostics(null);
+    setStagedJobId(null);
+  }, []);
 
   const resetAndClose = useCallback(() => {
     if (isUploading) {
       return;
     }
-    setFile(null);
-    setUploadError(null);
-    setRejectionDiagnostics(null);
+    resetUploadState();
     onClose();
-  }, [isUploading, onClose]);
+  }, [isUploading, onClose, resetUploadState]);
+
+  const continueToStagedJob = useCallback(() => {
+    const jobId = stagedJobId;
+    resetUploadState();
+    if (jobId) {
+      onUploaded(jobId, false);
+    }
+  }, [onUploaded, resetUploadState, stagedJobId]);
 
   const handleUpload = useCallback(async () => {
     if (!file) {
@@ -227,6 +244,8 @@ const UploadPackageDialog = ({ isOpen, onClose, onUploaded }: UploadPackageDialo
     setIsUploading(true);
     setUploadError(null);
     setRejectionDiagnostics(null);
+    setStageDiagnostics(null);
+    setStagedJobId(null);
     try {
       const spreadsheet = /\.(csv|xlsx)$/i.test(file.name);
       const response = await fetch(spreadsheet ? '/api/migrations/spreadsheet' : '/api/migrations/upload', {
@@ -240,19 +259,34 @@ const UploadPackageDialog = ({ isOpen, onClose, onUploaded }: UploadPackageDialo
         body: file,
       });
       const result = await response.json();
-      if (!response.ok) throw new Error(result.error || 'Failed to upload the package.');
+      if (!response.ok) {
+        const copy = migrationUploadErrorCopy(typeof result.error === 'string' ? result.error : '');
+        setUploadError(t(copy.key, { defaultValue: copy.defaultValue }));
+        return;
+      }
       if (result.state === 'rejected') {
         setRejectionDiagnostics(result.diagnostics);
         onUploaded(result.migrationJobId, true);
-      } else {
-        setFile(null);
-        onUploaded(result.migrationJobId, false);
+        return;
       }
-    } catch (error) {
-      const message = migrationErrorMessage(error, 'Failed to upload the package.');
-      setUploadError(message === 'AMP_PACKAGE_NO_IMPORTABLE_RECORDS'
-        ? t('importExport.migration.errors.noImportableRecords', { defaultValue: 'This package contained no importable records.' })
-        : message);
+      // Surface conversion diagnostics after a successful stage so an ignored
+      // client or name column is visible before the user reaches apply.
+      const conversionDiagnostics = Array.isArray(result.conversionDiagnostics)
+        ? result.conversionDiagnostics.filter(
+            (diagnostic: { code?: unknown; message?: unknown }) =>
+              typeof diagnostic?.message === 'string' && diagnostic.message.length > 0
+          )
+        : [];
+      if (conversionDiagnostics.length > 0) {
+        setStageDiagnostics(conversionDiagnostics);
+        setStagedJobId(result.migrationJobId);
+        return;
+      }
+      setFile(null);
+      onUploaded(result.migrationJobId, false);
+    } catch {
+      const copy = migrationUploadErrorCopy('AMP_UPLOAD_FAILED');
+      setUploadError(t(copy.key, { defaultValue: copy.defaultValue }));
     } finally {
       setIsUploading(false);
     }
@@ -273,6 +307,8 @@ const UploadPackageDialog = ({ isOpen, onClose, onUploaded }: UploadPackageDialo
                 setFile(event.target.files?.[0] ?? null);
                 setUploadError(null);
                 setRejectionDiagnostics(null);
+                setStageDiagnostics(null);
+                setStagedJobId(null);
               }}
             />
             <p className="text-xs text-muted-foreground">
@@ -286,7 +322,7 @@ const UploadPackageDialog = ({ isOpen, onClose, onUploaded }: UploadPackageDialo
               <CustomSelect id="amp-spreadsheet-entity" value={entityType} onValueChange={(value) => setEntityType(value as AmpEntityType)} disabled={isUploading} options={[
                 { value: 'assets', label: 'Assets (legacy asset import)' }, { value: 'organizations', label: 'Organizations' }, { value: 'locations', label: 'Locations' }, { value: 'contacts', label: 'Contacts' }, { value: 'tickets', label: 'Tickets' }, { value: 'ticket_comments', label: 'Ticket comments' },
               ]} />
-              <p className="text-xs text-muted-foreground">Canonical headers are recognized automatically. Legacy asset names such as Asset Name, Asset Type, Serial Number, and MAC Address are preserved through the AMP flow.</p>
+              <p className="text-xs text-muted-foreground">Canonical headers are recognized automatically. Contacts accept common spellings such as Name, First Name, Last Name, Email, Phone, Title, and Client; legacy asset names such as Asset Name, Asset Type, and Serial Number are preserved through the AMP flow.</p>
             </div>
           )}
 
@@ -320,22 +356,51 @@ const UploadPackageDialog = ({ isOpen, onClose, onUploaded }: UploadPackageDialo
               </AlertDescription>
             </Alert>
           )}
+
+          {stageDiagnostics && (
+            <Alert>
+              <AlertDescription>
+                <span className="font-medium">
+                  The package staged, but some source data needs your attention before you run the
+                  import:
+                </span>
+                <ul className="mt-2 max-h-56 space-y-1 overflow-y-auto pl-1 text-sm">
+                  {stageDiagnostics.map((diagnostic, index) => (
+                    <li key={`${diagnostic.code}-${index}`} className="flex items-start gap-2">
+                      <Badge variant="outline" size="sm" className="mt-0.5 shrink-0 font-mono">
+                        {diagnostic.code}
+                      </Badge>
+                      <span className="break-words">{diagnostic.message}</span>
+                    </li>
+                  ))}
+                </ul>
+              </AlertDescription>
+            </Alert>
+          )}
         </div>
       </DialogContent>
       <DialogFooter>
-        <Button id="amp-upload-cancel-button" variant="outline" onClick={resetAndClose} disabled={isUploading}>
-          {rejectionDiagnostics ? 'Close' : 'Cancel'}
-        </Button>
-        <Button id="amp-upload-submit-button" onClick={() => void handleUpload()} disabled={!file || isUploading}>
-          {isUploading ? (
-            <span className="flex items-center gap-2">
-              <Spinner size="sm" />
-              Uploading…
-            </span>
-          ) : (
-            'Upload'
-          )}
-        </Button>
+        {stagedJobId ? (
+          <Button id="amp-upload-continue-button" onClick={continueToStagedJob}>
+            Continue to configure
+          </Button>
+        ) : (
+          <>
+            <Button id="amp-upload-cancel-button" variant="outline" onClick={resetAndClose} disabled={isUploading}>
+              {rejectionDiagnostics ? 'Close' : 'Cancel'}
+            </Button>
+            <Button id="amp-upload-submit-button" onClick={() => void handleUpload()} disabled={!file || isUploading}>
+              {isUploading ? (
+                <span className="flex items-center gap-2">
+                  <Spinner size="sm" />
+                  Uploading…
+                </span>
+              ) : (
+                'Upload'
+              )}
+            </Button>
+          </>
+        )}
       </DialogFooter>
     </Dialog>
   );

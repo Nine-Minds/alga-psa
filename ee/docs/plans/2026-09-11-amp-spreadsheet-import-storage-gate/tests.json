@@ -1,0 +1,141 @@
+[
+  {
+    "id": "T001",
+    "description": "Storage config: with a restrictive allowlist configured, the system-artifact validator accepts a MIME type absent from the list while the user-upload validator still rejects it. Both still enforce the size limit.",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F002"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "StorageService.uploadStream called without a provenance option still applies the allowlist, pinning the fail-closed default.",
+    "implemented": true,
+    "featureIds": [
+      "F003",
+      "F004"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Regression: POST /api/migrations/spreadsheet with a contacts CSV succeeds while the storage allowlist is set to the restrictive hosted list, returning needs_configuration and never the raw 'File type not allowed' string.",
+    "implemented": true,
+    "featureIds": [
+      "F002",
+      "F003",
+      "F005",
+      "F012"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "POST /api/migrations/upload stores the AMP package with the fixed AMP MIME type regardless of the request content-type header.",
+    "implemented": true,
+    "featureIds": [
+      "F006",
+      "F007"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "An unexpected throw inside either upload route yields the generic failure code, the response body contains no part of the original message, and the original is logged.",
+    "implemented": true,
+    "featureIds": [
+      "F012",
+      "F013",
+      "F015"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "A storage rejection surfaces as the distinct storage code, and the UI helper renders mapped copy for it and for every other emitted code, with the fallback used for an unknown code.",
+    "implemented": true,
+    "featureIds": [
+      "F011",
+      "F014",
+      "F016",
+      "F017",
+      "F018"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "inferSpreadsheetMapping on contacts headers 'Name, Email, Client' maps all three: name to the full-name transform, email to email, client to the carried client column.",
+    "implemented": true,
+    "featureIds": [
+      "F019",
+      "F020",
+      "F021",
+      "F024",
+      "F026"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "Existing asset header inference is unchanged after the alias table becomes entity-scoped.",
+    "implemented": true,
+    "featureIds": [
+      "F019",
+      "F020"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Conversion splits full names in both 'First Last' and 'Last, First' forms, and leaves a single-token name as a usable record.",
+    "implemented": true,
+    "featureIds": [
+      "F023",
+      "F024"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "A contacts row with no email, and a row with no name, are each skipped at conversion with a diagnostic rather than reaching apply.",
+    "implemented": true,
+    "featureIds": [
+      "F025",
+      "F029"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "DB-backed: a staged contacts job applies, creating contacts with first name, last name, and email, linked to the tenant client matched by name; an unmatched client name falls back to the default client and records a diagnostic without failing the job.",
+    "implemented": true,
+    "featureIds": [
+      "F026",
+      "F027",
+      "F028"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "DB-backed guard: a contacts sheet whose headers map to nothing is rejected with the no-recognized-headers code and creates no migration job rows.",
+    "implemented": true,
+    "featureIds": [
+      "F012",
+      "F019"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "Conversion diagnostics name every unmapped header, and the upload dialog displays them after a successful stage.",
+    "implemented": true,
+    "featureIds": [
+      "F029",
+      "F030"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "Manual smoke through Settings then Imports & Exports on a stack running the restrictive allowlist: a contacts CSV and a contacts XLSX each stage, configure, and apply, with screenshot evidence at each step.",
+    "implemented": true,
+    "featureIds": [
+      "F005",
+      "F017",
+      "F024",
+      "F027",
+      "F030"
+    ]
+  }
+]

@@ -2113,7 +2113,17 @@
         "upload": "Paket hochladen"
       },
       "errors": {
-        "noImportableRecords": "Dieses Paket enthielt keine importierbaren Datensätze."
+        "noImportableRecords": "Dieses Paket enthielt keine importierbaren Datensätze.",
+        "permissionDenied": "Sie haben keine Berechtigung, Daten zu importieren oder zu exportieren.",
+        "invalidSpreadsheet": "Diese Tabelle konnte nicht gelesen werden. Prüfen Sie, ob es sich um eine gültige CSV- oder XLSX-Datei handelt, und versuchen Sie es erneut.",
+        "notAmpPackage": "Diese Datei ist kein AMP-Paket. Laden Sie eine .amp- oder .sqlite-Datei hoch.",
+        "tooLarge": "Dieser Upload ist größer als die maximal zulässige Größe.",
+        "sizeMismatch": "Der Upload wurde nicht abgeschlossen. Bitte versuchen Sie es erneut.",
+        "noRecognizedHeaders": "Keine der Spalten in dieser Tabelle wurde erkannt. Prüfen Sie die Kopfzeile und versuchen Sie es erneut.",
+        "storageRejected": "Der Server hat diesen Upload abgelehnt. Bitten Sie Ihren Administrator, die Speicherkonfiguration für Dateitypen zu prüfen.",
+        "spreadsheetFailed": "Die Tabelle konnte nicht importiert werden. Bitte versuchen Sie es erneut.",
+        "uploadFailed": "Das Paket konnte nicht hochgeladen werden. Bitte versuchen Sie es erneut.",
+        "unknown": "Der Upload ist fehlgeschlagen. Bitte versuchen Sie es erneut."
       },
       "preflight": {
         "title": "Vorprüfung"

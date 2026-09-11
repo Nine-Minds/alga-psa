@@ -106,6 +106,7 @@ export async function buildTelephonyCallArtifactDeps(): Promise<CaptureCallArtif
         {
           mime_type: content.contentType,
           uploaded_by_id: actorUserId,
+          origin: 'system-artifact',
           metadata: {
             source: 'teams_phone_call_recording',
             call_record_id: call.call_record_id,

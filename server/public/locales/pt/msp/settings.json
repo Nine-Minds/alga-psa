@@ -2113,7 +2113,17 @@
         "upload": "Enviar pacote"
       },
       "errors": {
-        "noImportableRecords": "Este pacote não continha registros importáveis."
+        "noImportableRecords": "Este pacote não continha registros importáveis.",
+        "permissionDenied": "Você não tem permissão para importar ou exportar dados.",
+        "invalidSpreadsheet": "Não foi possível ler essa planilha. Verifique se é um arquivo CSV ou XLSX válido e tente novamente.",
+        "notAmpPackage": "Esse arquivo não é um pacote AMP. Envie um arquivo .amp ou .sqlite.",
+        "tooLarge": "Este upload é maior que o tamanho máximo permitido.",
+        "sizeMismatch": "O upload não foi concluído. Tente novamente.",
+        "noRecognizedHeaders": "Nenhuma das colunas dessa planilha foi reconhecida. Verifique a linha de cabeçalho e tente novamente.",
+        "storageRejected": "O servidor rejeitou este upload. Peça ao administrador para verificar a configuração de tipos de arquivo do armazenamento.",
+        "spreadsheetFailed": "Não foi possível importar a planilha. Tente novamente.",
+        "uploadFailed": "Não foi possível enviar o pacote. Tente novamente.",
+        "unknown": "O upload falhou. Tente novamente."
       },
       "preflight": {
         "title": "Verificação prévia"

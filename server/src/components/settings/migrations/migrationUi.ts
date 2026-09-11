@@ -1,4 +1,8 @@
 import type { AmpEntityType } from '@alga-psa/migration-spec';
+import {
+  MIGRATION_UPLOAD_ERROR_CODES,
+  type MigrationUploadErrorCode,
+} from '@/lib/migrations/migrationUploadErrors';
 import type { MigrationJobState } from '@/lib/migrations/types';
 
 /** Visual tone + label for every migration job state. */
@@ -137,3 +141,74 @@ export function migrationErrorMessage(error: unknown, fallback: string): string 
   }
   return fallback;
 }
+
+export interface MigrationUploadErrorCopy {
+  /** i18n key in the `msp/settings` namespace. */
+  key: string;
+  /** English default, used when the key is missing. */
+  defaultValue: string;
+}
+
+/**
+ * i18n copy for every code the migration upload routes may return. Kept next to
+ * the closed code set so a new code cannot be added without user-facing copy.
+ */
+const MIGRATION_UPLOAD_ERROR_COPY: Record<MigrationUploadErrorCode, MigrationUploadErrorCopy> = {
+  IMPORT_EXPORT_PERMISSION_DENIED: {
+    key: 'importExport.migration.errors.permissionDenied',
+    defaultValue: 'You do not have permission to import or export data.',
+  },
+  AMP_SPREADSHEET_INVALID: {
+    key: 'importExport.migration.errors.invalidSpreadsheet',
+    defaultValue: 'That spreadsheet could not be read. Check that it is a valid CSV or XLSX file and try again.',
+  },
+  AMP_NOT_SQLITE: {
+    key: 'importExport.migration.errors.notAmpPackage',
+    defaultValue: 'That file is not an AMP package. Upload a .amp or .sqlite file.',
+  },
+  AMP_LIMIT_EXCEEDED: {
+    key: 'importExport.migration.errors.tooLarge',
+    defaultValue: 'This upload is larger than the maximum allowed size.',
+  },
+  AMP_UPLOAD_SIZE_MISMATCH: {
+    key: 'importExport.migration.errors.sizeMismatch',
+    defaultValue: 'The upload did not complete. Please try again.',
+  },
+  AMP_SPREADSHEET_NO_RECOGNIZED_HEADERS: {
+    key: 'importExport.migration.errors.noRecognizedHeaders',
+    defaultValue: 'None of the columns in that spreadsheet were recognized. Check the header row and try again.',
+  },
+  AMP_PACKAGE_NO_IMPORTABLE_RECORDS: {
+    key: 'importExport.migration.errors.noImportableRecords',
+    defaultValue: 'This package contained no importable records.',
+  },
+  AMP_STORAGE_REJECTED: {
+    key: 'importExport.migration.errors.storageRejected',
+    defaultValue: 'The server rejected this upload. Ask your administrator to check the storage file-type configuration.',
+  },
+  AMP_SPREADSHEET_FAILED: {
+    key: 'importExport.migration.errors.spreadsheetFailed',
+    defaultValue: 'The spreadsheet could not be imported. Please try again.',
+  },
+  AMP_UPLOAD_FAILED: {
+    key: 'importExport.migration.errors.uploadFailed',
+    defaultValue: 'The package could not be uploaded. Please try again.',
+  },
+};
+
+const MIGRATION_UPLOAD_ERROR_FALLBACK: MigrationUploadErrorCopy = {
+  key: 'importExport.migration.errors.unknown',
+  defaultValue: 'The upload failed. Please try again.',
+};
+
+/**
+ * Resolve a raw route error payload to i18n copy. An unknown code (or the
+ * storage layer's message) falls back to generic upload copy, so no internal
+ * string is ever rendered verbatim.
+ */
+export function migrationUploadErrorCopy(code: string): MigrationUploadErrorCopy {
+  return MIGRATION_UPLOAD_ERROR_COPY[code as MigrationUploadErrorCode] ?? MIGRATION_UPLOAD_ERROR_FALLBACK;
+}
+
+/** Every code the routes emit, exposed so a test can assert copy coverage. */
+export const MIGRATION_UPLOAD_CODES: readonly MigrationUploadErrorCode[] = MIGRATION_UPLOAD_ERROR_CODES;

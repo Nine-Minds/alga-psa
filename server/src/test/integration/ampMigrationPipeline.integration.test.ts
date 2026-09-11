@@ -8,7 +8,7 @@ import path from 'node:path';
 import { tenantDb } from '@alga-psa/db';
 import { convertSpreadsheets, inferSpreadsheetMapping } from '@alga-psa/migration-connectors/csv';
 import { buildSamplePackage, sampleEntityRows } from '@alga-psa/migration-sdk';
-import type { AmpPackageRows } from '@alga-psa/migration-spec';
+import { AMP_CONTACT_CLIENT_NAME_EXTENSION_KEY, type AmpPackageRows } from '@alga-psa/migration-spec';
 import { createTestDbConnection, wireLocalTestDbEnv } from '../../../test-utils/dbConfig';
 import { MigrationStager } from '../../lib/migrations/MigrationStager';
 import { loadMigrationConfigurationOptions } from '../../lib/migrations/migrationActions';
@@ -599,6 +599,69 @@ describe('AMP migration pipeline integration', () => {
     expect(
       await tenantTable(fixture.tenantId, 'clients').where({ client_name: 'Acme Managed Networks' })
     ).toHaveLength(1);
+  }, HOOK_TIMEOUT);
+
+  it('resolves a carried contact client name by name, falling back to the default with a diagnostic', async () => {
+    const fixture = await createFixture();
+    const fixtureClient = await tenantTable(fixture.tenantId, 'clients')
+      .where({ client_id: fixture.clientId })
+      .first();
+    const matchedName = String(fixtureClient.client_name);
+
+    const rows = sampleEntityRows();
+    rows.organizations = [];
+    rows.locations = [];
+    rows.tickets = [];
+    rows.ticket_comments = [];
+    rows.assets = [];
+    rows.external_identifiers = [];
+    rows.custom_field_values = [];
+    rows.contacts = [
+      {
+        package_record_id: 'contact-jane',
+        source_record_id: 'src-contact-1',
+        external_identifier_namespace: 'fixture:instance-1',
+        first_name: 'Jane',
+        last_name: 'Doe',
+        email: 'jane.doe@acme.example',
+        extension_json: JSON.stringify({ [AMP_CONTACT_CLIENT_NAME_EXTENSION_KEY]: matchedName }),
+      },
+      {
+        package_record_id: 'contact-bob',
+        source_record_id: 'src-contact-2',
+        external_identifier_namespace: 'fixture:instance-1',
+        first_name: 'Bob',
+        last_name: 'Nomatch',
+        email: 'bob.nomatch@acme.example',
+        extension_json: JSON.stringify({
+          [AMP_CONTACT_CLIENT_NAME_EXTENSION_KEY]: 'Nonexistent Client 999',
+        }),
+      },
+    ] as AmpPackageRows['contacts'];
+
+    const packagePath = buildPackage('contacts-client-name', rows);
+    const migrationJobId = await stageAndConfigure(fixture, packagePath);
+    const result = await new MigrationDomainApplier(db, fixture.tenantId).applyJob(
+      migrationJobId,
+      fixture.ownerUserId
+    );
+    expect(result).toEqual({ cancelled: false, created: 2, skipped: 0, failed: 0 });
+
+    const jane = await tenantTable(fixture.tenantId, 'contacts')
+      .where({ email: 'jane.doe@acme.example' })
+      .first();
+    expect(jane.client_id).toBe(fixture.clientId);
+
+    const bob = await tenantTable(fixture.tenantId, 'contacts')
+      .where({ email: 'bob.nomatch@acme.example' })
+      .first();
+    expect(bob.client_id).toBe(fixture.clientId);
+
+    const bobOutcome = await tenantTable(fixture.tenantId, 'migration_record_outcomes')
+      .where({ migration_job_id: migrationJobId })
+      .whereRaw("warnings::text like ?", ['%Nonexistent Client 999%'])
+      .first();
+    expect(bobOutcome).toBeDefined();
   }, HOOK_TIMEOUT);
 
   it('cancellation stops at a checkpoint', async () => {

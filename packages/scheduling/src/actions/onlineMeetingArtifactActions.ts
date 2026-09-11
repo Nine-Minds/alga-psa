@@ -116,6 +116,7 @@ export async function buildTeamsArtifactCaptureDeps(): Promise<CaptureDeps> {
       {
         mime_type: response.headers.get('content-type') || 'video/mp4',
         uploaded_by_id: input.actorUserId,
+        origin: 'system-artifact',
         metadata: {
           source: 'teams_online_meeting_recording',
           meeting_id: input.meeting.meeting_id,
