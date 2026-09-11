@@ -149,8 +149,8 @@ export function validateWorkflowDefinition(
   };
 }
 
-function validateExpr(expr: { $expr: string }, stepPath: string, stepId: string, errors: PublishError[]) {
-  if (!expr.$expr || expr.$expr.trim() === '') {
+function validateExpr(expr: { $expr: string } | undefined | null, stepPath: string, stepId: string, errors: PublishError[]) {
+  if (!expr?.$expr || expr.$expr.trim() === '') {
     errors.push({
       severity: 'error',
       stepPath,

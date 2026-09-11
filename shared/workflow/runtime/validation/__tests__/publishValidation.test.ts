@@ -64,6 +64,12 @@ describe('validateWorkflowDefinition expressions', () => {
     expect(result.errors[0].message).toContain('Expression is empty');
   });
 
+  it('reports a missing control expression instead of throwing', () => {
+    const result = validateWorkflowDefinition(definitionWith([{ id: 'if', type: 'control.if', then: [] }]));
+    expect(result.ok).toBe(false);
+    expect(result.errors.some((error) => error.code === 'INVALID_EXPR')).toBe(true);
+  });
+
   it('includes the parser reason for control expressions', () => {
     const result = validateWorkflowDefinition(
       definitionWith([{ id: 'if', type: 'control.if', condition: { $expr: 'payload..x' }, then: [] }])
