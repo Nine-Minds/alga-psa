@@ -2866,7 +2866,8 @@
         "fieldCount": "Fields",
         "order": "Order",
         "actions": "Actions",
-        "openMenu": "Open menu"
+        "openMenu": "Open menu",
+        "searchPlaceholder": "Search asset types…"
       },
       "actions": {
         "addType": "Add Asset Type",

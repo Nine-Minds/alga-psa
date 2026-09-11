@@ -12,7 +12,17 @@ try {
   const source = testRevision(root);
   if (source.dirty || source.revision !== process.env.GITHUB_SHA) throw new Error('Inventory checkout is dirty or differs from candidate');
   const selection = selectIntegration(readChangedFiles({ cwd: root, base: process.env.TIER1_BASE_SHA, head: source.revision }));
-  if (!selection.shouldRun) {
+  // The inventory proves every tracked test is collectable by a runner in THIS
+  // run. The integration and infrastructure lanes only execute their full
+  // shard matrices when the change selection is `full`; on a Tier-1 selection
+  // (a change inside the reliable import graph) they deliberately run a single
+  // partial shard, so repository-wide discoverability cannot be proven here.
+  // Report an explicit not-applicable verdict with the selection reason rather
+  // than failing on shards this run was never meant to execute, or silently
+  // claiming a partial collection is a complete inventory. Full-coverage runs
+  // (out-of-graph changes, unknown changes, main/nightly) still reconcile every
+  // candidate.
+  if (!selection.full) {
     result = { schemaVersion: 1, revision: source.revision, scope: 'repository-inventory',
       executionVerified: false, status: 'not-applicable', reason: selection.reason, failures: [] };
   } else {

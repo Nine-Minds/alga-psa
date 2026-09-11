@@ -41,6 +41,8 @@ type ManageStatus = {
     perpetual: boolean;
     status: "active" | "expired" | "unknown";
     source?: "live" | "seed-fallback";
+    /** Set when the live read from the app failed; null on a successful read. */
+    liveError?: string | null;
     lastCheckinAt?: string | null;
   };
   appUrl: {
@@ -578,7 +580,13 @@ function LicenseTab({
         </div>
       </dl>
       {lic.source === "seed-fallback" ? (
-        <p className={styles.helpText}>As of last activation — live status unavailable.</p>
+        <p className={styles.helpText}>
+          {lic.liveError
+            ? "Live license status is unavailable right now — showing the last activation record. It refreshes automatically once the app is reachable."
+            : "As of last activation — live status unavailable."}
+        </p>
+      ) : lic.source === "live" && lic.status === "unknown" ? (
+        <p className={styles.helpText}>No license is active on this appliance.</p>
       ) : null}
 
       <div className={styles.manageSeparator} />

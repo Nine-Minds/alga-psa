@@ -44,6 +44,7 @@ import { applyClientListIndexedSearchFilter } from '../lib/listSearchSql';
 import { normalizeClientType } from '../lib/normalizeClientType';
 import { clientCoreFieldsSchema, normalizePhone, parseSubmittedFields } from '@alga-psa/validation';
 import { isStructuralFailure, type StructuralResult } from '../lib/structuralResult';
+import { resolveTenantDefaultCountry } from '../lib/tenantDefaultCountry';
 
 const CLIENT_PORTAL_MUTABLE_CLIENT_PROPERTIES = new Set([
   'website',
@@ -1675,12 +1676,19 @@ export const importClientsFromCSV = withAuth(async (
     countries.map((country) => [country.name.trim().toLowerCase(), country]),
   );
 
+  // A row that names no country adopts the tenant's own country, and only then US.
+  const tenantDefaultCountry = await resolveTenantDefaultCountry(db, tenant);
+  const fallbackCountry = (tenantDefaultCountry
+    ? countriesByCode.get(tenantDefaultCountry.code.toUpperCase())
+    : undefined)
+    ?? countriesByCode.get('US');
+
   const resolveRowCountry = (row: Record<string, any>): ImportCountry => {
     const rawCode = String(row.country_code ?? '').trim();
     const rawName = String(row.country ?? '').trim();
     const country = (rawCode ? countriesByCode.get(rawCode.toUpperCase()) : undefined)
       ?? (rawName ? countriesByName.get(rawName.toLowerCase()) : undefined)
-      ?? (!rawCode && !rawName ? countriesByCode.get('US') : undefined);
+      ?? (!rawCode && !rawName ? fallbackCountry : undefined);
 
     if (!country) {
       throw new Error(`Unknown country: ${rawCode || rawName}`);

@@ -23,6 +23,7 @@ export default defineConfig({
       'src/actions/documentTemplateActions.tenantBranding.test.ts',
       'src/actions/documentTemplateActions.existingDocument.test.ts',
       'src/components/billing-dashboard/documents/DocumentTemplateEditor.existingDocument.test.tsx',
+      'src/components/billing-dashboard/LineItem.test.tsx',
       'src/components/billing-dashboard/quotes/QuoteDocumentTemplateEditor.tenantBranding.test.tsx',
       'src/components/billing-dashboard/quotes/QuoteDocumentTemplateEditor.existingQuote.test.tsx',
       'src/components/invoice-designer/DesignerVisualWorkspace.test.tsx',

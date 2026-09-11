@@ -141,6 +141,21 @@ function makeQueryBuilder(table: string) {
       }
 
       if (table === 'email_sending_logs') {
+        // notificationLoopDetection's Tier 1 lookup: raw row, tenant + reply_token_hash.
+        if (whereCriteria.reply_token_hash) {
+          return (
+            dbState.emailLogs.find(
+              (log) =>
+                log.tenant === whereCriteria.tenant &&
+                log.reply_token_hash === whereCriteria.reply_token_hash,
+            ) ?? null
+          );
+        }
+        // notificationLoopDetection's Tier 2 fallback lookup adds from_address/created_at
+        // filters via andWhereRaw, which this harness does not capture; it is exercised
+        // against precise canned rows in processInboundEmailInApp.test.ts instead, so no
+        // special-case is needed here (it falls through to the generic branch below and
+        // correctly finds nothing).
         const row = dbState.emailLogs.find(
           (log) =>
             log.tenant === whereCriteria.tenant &&
@@ -380,6 +395,226 @@ describe('email thread outbound/inbound round trip', () => {
         }),
       }),
       tenantId,
+    );
+  });
+
+  // --- Notification-loop suppression (cross-mailbox) ---------------------
+  //
+  // These round-trip tests send a REAL outbound notification through
+  // BaseEmailService (producing a real `email_sending_logs` row with a real
+  // SHA-256 reply-token hash — the same code path production traffic uses,
+  // not a hand-rolled fixture), then feed a synthetic redelivery of that same
+  // notification into processInboundEmailInApp and assert on the composite
+  // predicate in notificationLoopDetection.ts. Deliberately no
+  // inReplyTo/references/threadId are set on the inbound side, so a pass here
+  // proves suppression does not depend on thread-header matching at all.
+
+  async function sendRealNotification(params: {
+    tenantId: string;
+    ticketId: string;
+    to: string;
+    conversationToken: string;
+  }) {
+    const service = new TestEmailService({
+      providerId: 'test-provider',
+      providerType: 'test',
+      capabilities,
+      async initialize() {},
+      async sendEmail(_message: EmailMessage, _tenantId: string): Promise<EmailSendResult> {
+        return {
+          success: true,
+          messageId: `provider-message-${params.ticketId}`,
+          providerMessageId: `provider-message-${params.ticketId}`,
+          providerId: 'test-provider',
+          providerType: 'test',
+          sentAt: new Date('2026-05-13T12:20:00.000Z'),
+        };
+      },
+      async healthCheck() {
+        return { healthy: true };
+      },
+    });
+
+    const outbound = await service.sendEmail({
+      tenantId: params.tenantId,
+      to: params.to,
+      subject: 'Ticket Assigned: full template notification body',
+      html: '<p>This ticket has been assigned to you. Full template text describing the assignment, the ticket details, and a link back into the portal.</p>',
+      replyContext: {
+        ticketId: params.ticketId,
+        conversationToken: params.conversationToken,
+      },
+    });
+    expect(outbound.success).toBe(true);
+    return waitForOutboundLog();
+  }
+
+  it('T-loop-1: redelivery of our own outbound notification into a second connected mailbox in the same tenant is suppressed before any mutation', async () => {
+    const tenantId = 'tenant-loop-1';
+    const mailboxA = 'support@example.com'; // TestEmailService's fixed from-address
+    const mailboxB = 'jamie@example.com'; // assignee/watcher whose address is ALSO a connected inbound mailbox
+
+    await sendRealNotification({
+      tenantId,
+      ticketId: 'ticket-loop-1',
+      to: mailboxB,
+      conversationToken: 'loop-token-1',
+    });
+
+    mocks.parseEmailReplyBody.mockResolvedValue({
+      sanitizedText: 'This ticket has been assigned to you. Full template text describing the assignment.',
+      sanitizedHtml: undefined,
+      confidence: 0.95,
+      strategy: 'plain',
+      appliedHeuristics: [],
+      warnings: [],
+      tokens: { conversationToken: 'loop-token-1' },
+    });
+    mocks.findEmailProviderMailboxAddress.mockResolvedValue(mailboxB);
+
+    const { processInboundEmailInApp } = await import(
+      '@alga-psa/shared/services/email/processInboundEmailInApp'
+    );
+    const result = await processInboundEmailInApp(
+      {
+        tenantId,
+        providerId: 'provider-mailbox-b',
+        emailData: buildEmailData({
+          id: 'redelivered-notification-1',
+          tenant: tenantId,
+          from: { email: mailboxA, name: 'Support Mailbox' },
+          to: [{ email: mailboxB }],
+          subject: 'Ticket Assigned: full template notification body',
+          body: {
+            text: 'This ticket has been assigned to you. Full template text describing the assignment.',
+            html: undefined,
+          },
+          // Deliberately no inReplyTo/references/threadId: suppression must not
+          // depend on thread-header matching.
+          inReplyTo: undefined,
+          references: undefined,
+          threadId: undefined,
+        }),
+      },
+      { collectDiagnostics: true }
+    );
+
+    expect(result).toMatchObject({ outcome: 'skipped', reason: 'notification_loop' });
+    expect(result.diagnostics?.threading.failureReason).toBe('notification_loop');
+    expect(result.diagnostics?.notificationLoop?.tier).toBe('reply_token_ledger');
+    expect(result.diagnostics?.notificationLoop?.evidence.senderMatchesLoggedFromAddress).toBe(true);
+    expect(result.diagnostics?.notificationLoop?.evidence.recipientMatchedLoggedSend).toBe(true);
+
+    expect(mocks.findTicketByReplyToken).not.toHaveBeenCalled();
+    expect(mocks.findTicketByEmailThread).not.toHaveBeenCalled();
+    expect(mocks.createTicketFromEmail).not.toHaveBeenCalled();
+    expect(mocks.createCommentFromEmail).not.toHaveBeenCalled();
+    expect(mocks.upsertTicketWatchListRecipients).not.toHaveBeenCalled();
+  });
+
+  it('T-loop-2: a ledger row from one tenant does not suppress an identical-looking message ingested under a different tenant', async () => {
+    const mailboxA = 'support@example.com';
+    const mailboxB = 'jamie@example.com';
+
+    // Tenant A sends the real notification and gets a real ledger row.
+    await sendRealNotification({
+      tenantId: 'tenant-loop-iso-a',
+      ticketId: 'ticket-iso-a',
+      to: mailboxB,
+      conversationToken: 'iso-shared-token',
+    });
+
+    // Tenant B ingests a message carrying the SAME token string, sender, and
+    // recipient — the only difference is the tenant. If the ledger lookup
+    // were not tenant-scoped, this would incorrectly match tenant A's row.
+    mocks.parseEmailReplyBody.mockResolvedValue({
+      sanitizedText: 'Full template text',
+      sanitizedHtml: undefined,
+      confidence: 0.95,
+      strategy: 'plain',
+      appliedHeuristics: [],
+      warnings: [],
+      tokens: { conversationToken: 'iso-shared-token' },
+    });
+    mocks.findEmailProviderMailboxAddress.mockResolvedValue(mailboxB);
+    mocks.findTicketByReplyToken.mockResolvedValueOnce({ ticketId: 'ticket-iso-b' });
+
+    const { processInboundEmailInApp } = await import(
+      '@alga-psa/shared/services/email/processInboundEmailInApp'
+    );
+    const result = await processInboundEmailInApp({
+      tenantId: 'tenant-loop-iso-b',
+      providerId: 'provider-mailbox-b',
+      emailData: buildEmailData({
+        id: 'cross-tenant-message-1',
+        tenant: 'tenant-loop-iso-b',
+        from: { email: mailboxA, name: 'Support Mailbox' },
+        to: [{ email: mailboxB }],
+        subject: 'Ticket Assigned: full template notification body',
+        body: { text: 'Full template text', html: undefined },
+      }),
+    });
+
+    expect(result).toMatchObject({ outcome: 'replied', matchedBy: 'reply_token', ticketId: 'ticket-iso-b' });
+    expect(mocks.createCommentFromEmail).toHaveBeenCalled();
+  });
+
+  it('T-loop-3: a genuine reply from the actual recipient, reusing the same reply token, is NOT suppressed', async () => {
+    const mailboxA = 'support@example.com';
+    const customer = 'client@example.com';
+
+    await sendRealNotification({
+      tenantId: 'tenant-loop-genuine',
+      ticketId: 'ticket-genuine',
+      to: customer,
+      conversationToken: 'genuine-token-1',
+    });
+
+    // The customer hits reply: From is THEIR address, not our outbound
+    // from_address, even though the quoted body still carries our token.
+    mocks.parseEmailReplyBody.mockResolvedValue({
+      sanitizedText: 'Thanks, that resolved it for me.',
+      sanitizedHtml: undefined,
+      confidence: 0.95,
+      strategy: 'plain',
+      appliedHeuristics: [],
+      warnings: [],
+      tokens: { conversationToken: 'genuine-token-1' },
+    });
+    mocks.findEmailProviderMailboxAddress.mockResolvedValue(mailboxA);
+    mocks.findTicketByReplyToken.mockResolvedValueOnce({ ticketId: 'ticket-genuine' });
+    mocks.findContactByEmail.mockResolvedValueOnce({
+      contact_id: 'contact-genuine',
+      user_type: 'client',
+      client_id: 'client-genuine',
+      email: customer,
+    });
+
+    const { processInboundEmailInApp } = await import(
+      '@alga-psa/shared/services/email/processInboundEmailInApp'
+    );
+    const result = await processInboundEmailInApp({
+      tenantId: 'tenant-loop-genuine',
+      providerId: 'provider-mailbox-a',
+      emailData: buildEmailData({
+        id: 'genuine-reply-1',
+        tenant: 'tenant-loop-genuine',
+        from: { email: customer, name: 'Client User' },
+        to: [{ email: mailboxA }],
+        subject: 'Re: Ticket Assigned: full template notification body',
+        body: { text: 'Thanks, that resolved it for me.', html: undefined },
+      }),
+    });
+
+    expect(result).toMatchObject({ outcome: 'replied', matchedBy: 'reply_token', ticketId: 'ticket-genuine' });
+    expect(mocks.createCommentFromEmail).toHaveBeenCalledTimes(1);
+    expect(mocks.createCommentFromEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ticket_id: 'ticket-genuine',
+        author_type: 'contact',
+        contact_id: 'contact-genuine',
+      }),
+      'tenant-loop-genuine',
     );
   });
 });
