@@ -21,9 +21,14 @@ test('actual infrastructure runner partitions, executes and rejects missing or s
   }
   write('.gitignore', 'node_modules/\ntest-results/\n');
   write('server/vitest.config.mjs', `export default ${JSON.stringify({ test: { globals: true, include: ['src/test/infrastructure/**/*.test.ts'], fileParallelism: false, maxWorkers: 1 } })};`);
-  const files = ['billing/invoices/invoiceDueDate.test.ts', 'billing/invoices/manualInvoice.test.ts',
+  // Mirrors infrastructureFloor: the floor is a mandatory-presence check, so
+  // every file it names must exist here. 'extra.test.ts' stands in for a
+  // repository test outside the floor, which only the full mode picks up.
+  const floor = ['billing/invoices/invoiceDueDate.test.ts', 'billing/invoices/manualInvoice.test.ts',
     'billing/invoices/billingInvoiceGeneration_tax.test.ts',
-    'billing/tax/taxRoundingBehavior.test.ts', 'billing/credits/creditApplication.test.ts', 'extra.test.ts'];
+    'billing/tax/taxRoundingBehavior.test.ts', 'billing/credits/creditApplication.test.ts',
+    'billing/quotes/quoteInfrastructure.test.ts', 'billing/quotes/quoteConversion.test.ts'];
+  const files = [...floor, 'extra.test.ts'];
   for (const file of files) write(`server/src/test/infrastructure/${file}`, "test('observes the result', () => expect(2 + 3).toBe(5));\n");
   symlinkSync(path.join(source, 'server/node_modules'), path.join(root, 'server/node_modules'), 'dir');
   const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8' });
@@ -36,18 +41,23 @@ test('actual infrastructure runner partitions, executes and rejects missing or s
       INFRA_SHARD_INDEX: String(index), INFRA_SHARD_TOTAL: String(total), ...environment },
   });
   const read = file => JSON.parse(readFileSync(path.join(root, file), 'utf8'));
+  let partitioned = 0;
   for (const index of [1, 2, 3]) {
     const result = run('run-infrastructure-tests.mjs', index);
     assert.equal(result.status, 0, result.stdout + result.stderr);
     const evidence = read('test-results/infrastructure/evidence.json');
     assert.equal(evidence.status, 'passed');
     assert.equal(evidence.workingTreeDirty, false);
-    assert.equal(evidence.expectedFiles.length, 2);
+    // The file count need not divide evenly across shards; what must hold is
+    // that no shard is empty and the shards together cover the set exactly once.
+    assert.ok(evidence.expectedFiles.length > 0);
+    partitioned += evidence.expectedFiles.length;
     cpSync(path.join(root, 'test-results/infrastructure'), path.join(root, `test-results/infrastructure-shards/shard-${index}`), { recursive: true });
   }
+  assert.equal(partitioned, files.length);
   let combined = run('verify-infrastructure-shards.mjs');
   assert.equal(combined.status, 0, combined.stdout + combined.stderr);
-  assert.equal(read('test-results/infrastructure/aggregate.json').counts.passed, 6);
+  assert.equal(read('test-results/infrastructure/aggregate.json').counts.passed, files.length);
   assert.equal(read('test-results/infrastructure/results.json').executionCompleteness, 'complete');
   assert.equal(run('verify-infrastructure-shards.mjs', 1, 'full', 3,
     { INFRA_EVENT: 'schedule', INFRA_SELECTION_RESULT: 'skipped' }).status, 0);
@@ -77,9 +87,12 @@ test('actual infrastructure runner partitions, executes and rejects missing or s
 
   const tier1 = run('run-infrastructure-tests.mjs', 1, 'tier1', 1);
   assert.equal(tier1.status, 0, tier1.stdout + tier1.stderr);
-  assert.equal(read('test-results/infrastructure/evidence.json').counts.passed, 5);
-  assert.ok(read('test-results/infrastructure/evidence.json').expectedFiles.includes(
-    'server/src/test/infrastructure/billing/invoices/billingInvoiceGeneration_tax.test.ts'));
+  assert.equal(read('test-results/infrastructure/evidence.json').counts.passed, floor.length);
+  for (const file of ['billing/invoices/billingInvoiceGeneration_tax.test.ts',
+    'billing/quotes/quoteInfrastructure.test.ts', 'billing/quotes/quoteConversion.test.ts']) {
+    assert.ok(read('test-results/infrastructure/evidence.json').expectedFiles.includes(
+      `server/src/test/infrastructure/${file}`));
+  }
   // These are genuine passing reports for every Tier-1 file. Relabelling the
   // set as "full" must not let its own manifest hide the extra repository test.
   rmSync(path.join(root, 'test-results/infrastructure-shards'), { recursive: true, force: true });
