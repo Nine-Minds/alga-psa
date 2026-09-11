@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import {
   computeDaysUntilDate,
   computeEvergreenDecisionDueDate,
@@ -9,6 +9,15 @@ import {
 } from '../../../shared/billingClients/clientContracts';
 
 describe('client contract effective renewal settings normalization', () => {
+  beforeAll(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'));
+  });
+
+  afterAll(() => {
+    vi.useRealTimers();
+  });
+
   it('applies tenant defaults when use_tenant_renewal_defaults is true', () => {
     const normalized = normalizeClientContract({
       contract_id: 'contract-1',

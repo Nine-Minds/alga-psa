@@ -1473,6 +1473,9 @@
       "notice": "You are previewing an unsaved theme. Everyone else keeps the saved one until you apply this.",
       "save": "Apply to everyone",
       "discard": "Discard"
+    },
+    "upgrade": {
+      "pitch": "Organization-wide theme pairs, a custom palette editor and MSP white-labeling are part of Enterprise Edition."
     }
   },
   "mspLanguage": {
@@ -1500,6 +1503,7 @@
     "emailTabs": {
       "settings": "Settings",
       "emailTemplates": "Email Templates",
+      "emailBranding": "Email Branding",
       "categories": "Categories",
       "telemetry": "Telemetry"
     },
@@ -1622,6 +1626,96 @@
         "it": "Italian",
         "pl": "Polish",
         "pt": "Portuguese"
+      }
+    },
+    "emailBranding": {
+      "title": "Email branding",
+      "description": "Put your colors on every outbound email. Preview them here, then choose which templates to apply them to.",
+      "unsavedHint": "Save the palette before applying it.",
+      "source": {
+        "saved": "Saved",
+        "custom-theme": "From your custom theme",
+        "theme-pair": "From your theme",
+        "portal-branding": "From your client portal branding",
+        "default": "AlgaPSA default"
+      },
+      "fields": {
+        "primary": "Primary color",
+        "secondary": "Secondary color",
+        "singleColor": "Single color (derive the gradient from the primary color)"
+      },
+      "tokens": {
+        "dark": "Dark accent",
+        "outerBg": "Outer background",
+        "footerBg": "Footer background",
+        "cardBorder": "Card border",
+        "infoBoxBg": "Info box background",
+        "infoBoxBorder": "Info box border"
+      },
+      "preview": {
+        "title": "Preview"
+      },
+      "actions": {
+        "save": "Save palette",
+        "saving": "Saving...",
+        "useSuggested": "Use suggested colors",
+        "adjust": "Adjust derived colors",
+        "apply": "Apply to templates",
+        "applying": "Applying...",
+        "applyCount": "Apply to {{count}} templates",
+        "applyToTemplate": "Apply my palette",
+        "remove": "Remove branding from all templates",
+        "removing": "Removing...",
+        "cancel": "Cancel",
+        "done": "Done"
+      },
+      "apply": {
+        "title": "Apply branding to templates",
+        "languages": "Languages",
+        "selectAll": "Select all",
+        "selectNone": "Select none",
+        "differs": "Differs in {{parts}}",
+        "differsParts": {
+          "colors": "colors",
+          "text": "text",
+          "subject": "subject"
+        },
+        "summary": "{{written}} branded, {{skipped}} skipped, {{failed}} failed",
+        "groups": {
+          "system": {
+            "title": "Not customized",
+            "action": "Create branded copy"
+          },
+          "branded": {
+            "title": "Branded by you",
+            "action": "Update colors"
+          },
+          "customized": {
+            "title": "Customized",
+            "action": "Replace remaining stock colors only"
+          },
+          "no-stock-colors": {
+            "title": "No stock colors",
+            "action": "Nothing to replace"
+          }
+        },
+        "skipReasons": {
+          "customized": "Customized — not selected",
+          "nothing-to-replace": "Nothing to replace",
+          "unchanged": "Already up to date"
+        }
+      },
+      "newTemplates": {
+        "message": "{{count}} templates were added since you last applied your palette.",
+        "action": "Apply palette to new templates",
+        "dismiss": "Dismiss"
+      },
+      "enterprise": {
+        "useLogo": "Use my logo in the email header",
+        "logoWide": "Wide logo",
+        "logoDefault": "Square logo",
+        "noLogo": "Upload a logo in Settings → Client Portal → Branding to use it here.",
+        "showAttribution": "Show \"Powered by AlgaPSA\" in the footer"
       }
     },
     "categoriesUi": {
