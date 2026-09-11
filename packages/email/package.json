@@ -16,6 +16,11 @@
       "types": "./src/providerConfig.ts",
       "import": "./dist/providerConfig.js",
       "require": "./dist/providerConfig.cjs"
+    },
+    "./branding": {
+      "types": "./src/branding/index.ts",
+      "import": "./dist/branding/index.js",
+      "require": "./dist/branding/index.cjs"
     }
   },
   "scripts": {
