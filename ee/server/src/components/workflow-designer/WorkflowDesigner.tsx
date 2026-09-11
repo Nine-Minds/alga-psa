@@ -119,6 +119,7 @@ import {
   normalizeWorkflowSaveAsPath,
   validateWorkflowSaveAsPathShape,
 } from './workflowSaveAsPath';
+import { normalizeWorkflowDefinitionSteps } from './workflowDefinitionNormalization';
 import { WorkflowActionInputSection } from './WorkflowActionInputSection';
 import { WorkflowActionInputFixedPicker } from './WorkflowActionInputFixedPicker';
 import { resolveLocalJsonSchemaRef } from './jsonSchemaRefs';
@@ -158,7 +159,7 @@ import {
   resolveComposeTextOutputSchemaFromConfig,
   resolveWorkflowAiSchemaFromConfig,
 } from '@alga-psa/workflows/authoring';
-import { validateExpressionSource } from '@alga-psa/workflows/authoring';
+import { describeExpressionError, validateExpressionSource } from '@alga-psa/workflows/authoring';
 import { partitionStepExpressionValidations, validateStepExpressions } from './expressionValidation';
 import {
   composeTimeWaitDurationMs,
@@ -375,9 +376,11 @@ const isTimeTrigger = (trigger?: WorkflowTrigger | null): boolean =>
   trigger?.type === 'schedule' || trigger?.type === 'recurring';
 
 const normalizeDesignerDefinition = (definition: WorkflowDefinition): WorkflowDefinition =>
-  isTimeTrigger(definition.trigger)
-    ? { ...definition, trigger: undefined }
-    : definition;
+  normalizeWorkflowDefinitionSteps(
+    isTimeTrigger(definition.trigger)
+      ? { ...definition, trigger: undefined }
+      : definition
+  );
 
 type WorkflowDesignerMode = 'control-panel' | 'editor-list' | 'editor-designer';
 
@@ -7555,7 +7558,8 @@ const ExpressionField: React.FC<{
       }
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Invalid expression');
+      const reason = describeExpressionError(err);
+      setError(reason ? `Invalid expression: ${reason}` : 'Invalid expression');
     }
     onChange(expr);
   }, [onChange]);
