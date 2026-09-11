@@ -35,7 +35,7 @@
     "test:integration:tier1": "node ../scripts/run-tier1-integration.mjs",
     "test:infrastructure": "vitest src/test/infrastructure",
     "test:infrastructure:ci": "vitest run src/test/infrastructure --coverage.enabled=false",
-    "test:infrastructure:tier1": "vitest run src/test/infrastructure/billing/invoices/invoiceDueDate.test.ts src/test/infrastructure/billing/invoices/manualInvoice.test.ts src/test/infrastructure/billing/tax/taxRoundingBehavior.test.ts src/test/infrastructure/billing/credits/creditApplication.test.ts --coverage.enabled=false",
+    "test:infrastructure:tier1": "vitest run src/test/infrastructure/billing/invoices/invoiceDueDate.test.ts src/test/infrastructure/billing/invoices/manualInvoice.test.ts src/test/infrastructure/billing/tax/taxRoundingBehavior.test.ts src/test/infrastructure/billing/credits/creditApplication.test.ts src/test/infrastructure/billing/quotes/quoteInfrastructure.test.ts src/test/infrastructure/billing/quotes/quoteConversion.test.ts --coverage.enabled=false",
     "test:e2e": "vitest src/test/e2e",
     "test:e2e:email": "vitest src/test/e2e/email-processing.test.ts",
     "test:e2e:workflow": "vitest src/test/e2e/workflow-integration.test.ts",
