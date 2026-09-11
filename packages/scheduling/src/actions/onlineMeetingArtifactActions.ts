@@ -114,7 +114,10 @@ export async function buildTeamsArtifactCaptureDeps(): Promise<CaptureDeps> {
       buffer,
       `${input.meeting.subject || 'teams-meeting'}-${input.artifact.providerArtifactId}.mp4`,
       {
-        mime_type: response.headers.get('content-type') || 'video/mp4',
+        // The provider's content-type header is untrusted and, under the
+        // system-artifact bypass, is not checked against the allowlist. State
+        // the type in code; the filename above is always .mp4.
+        mime_type: 'video/mp4',
         uploaded_by_id: input.actorUserId,
         origin: 'system-artifact',
         metadata: {

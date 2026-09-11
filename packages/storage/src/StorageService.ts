@@ -111,6 +111,7 @@ export class StorageService {
         size: number;
         metadata?: Record<string, any>;
         /** Who chose the MIME type. Defaults to `'user-upload'`. */
+        // LEVERAGE: friction storage-artifact-origin — 'system-artifact' skips the allowlist but nothing forces mime_type to be a code-chosen literal; a typed narrowing would make a header-derived MIME a compile error
         origin?: StorageArtifactOrigin;
       }
     ): Promise<FileStore> {
