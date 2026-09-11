@@ -2687,8 +2687,8 @@ describe('Quote infrastructure', () => {
     const preview = await service.renderQuotePreview({ quoteId: quote.quote_id });
 
     expect(preview.html).toContain('Monthly Items');
-    expect(preview.html).toContain('<div style="font-weight:600;line-height:1.3">Managed Support A</div>');
-    expect(preview.html).toContain('<div style="font-weight:600;line-height:1.3">Managed Support B</div>');
+    expect(preview.html).toContain('<div class="ast-table-cell-line" style="font-weight:600;line-height:1.3">Managed Support A</div>');
+    expect(preview.html).toContain('<div class="ast-table-cell-line" style="font-weight:600;line-height:1.3">Managed Support B</div>');
     // Empty-name discount rows fall back to their description, never drop out.
     expect(preview.html).toContain('Discount A');
     expect(preview.html).toContain('Discount B');
@@ -2718,7 +2718,7 @@ describe('Quote infrastructure', () => {
       expect(pdf.toString('utf8')).toContain('%PDF-quote-lines');
       expect(capturedHtml.value).toContain('<!doctype html>');
       expect(capturedHtml.value).toContain('Monthly Items');
-      expect(capturedHtml.value).toContain('<div style="font-weight:600;line-height:1.3">Managed Support A</div>');
+      expect(capturedHtml.value).toContain('<div class="ast-table-cell-line" style="font-weight:600;line-height:1.3">Managed Support A</div>');
       expect(capturedHtml.value).toContain('-$5.00');
       expect(capturedHtml.value).toContain('$50.00');
     } finally {
