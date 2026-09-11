@@ -16,6 +16,7 @@ import { ChevronDown, ChevronRight, CornerDownRight, MoreVertical, Filter, Check
 import { useUserPreference } from "@alga-psa/user-composition/hooks";
 import {
   getTemplatesAction,
+  getEmailBrandingStatusAction,
   updateTenantTemplateAction,
   cloneSystemTemplateAction,
   deactivateTenantTemplateAction,
@@ -26,7 +27,9 @@ import {
   SystemEmailTemplate,
   TenantEmailTemplate
 } from "../../types/notification";
-import { getSampleDataForPreview } from "../../lib/templateSampleData";
+import { applyEmailPalette, STOCK_EMAIL_PALETTE, type EmailPaletteTokens } from "@alga-psa/email/branding";
+import { EmailTemplatePreview } from "./EmailTemplatePreview";
+import type { EmailBrandingStatus } from "../../lib/emailBranding";
 import LoadingIndicator from "@alga-psa/ui/components/LoadingIndicator";
 import {
   DropdownMenu,
@@ -44,6 +47,8 @@ import {
   VariableReferenceDialog,
 } from "./TemplateVariableReference";
 import { measureCaretMenuPosition, type CaretMenuPosition } from "./caretPosition";
+
+export { replaceTemplateVariables } from "./EmailTemplatePreview";
 
 // Language names mapping (shared across component)
 const LANGUAGE_NAMES: Record<string, string> = {
@@ -81,107 +86,6 @@ interface TemplateRow {
 
 type EmailTemplateRow = CategoryRow | TemplateRow;
 
-/**
- * Replace {{variable}} placeholders in content with sample data values.
- * Supports both simple ({{name}}) and dotted ({{user.name}}) variables.
- */
-export function replaceTemplateVariables(
-  content: string,
-  data: Record<string, string>
-): string {
-  // First, process {{#if condition}}...{{/if}} blocks.
-  // For preview, show the block content (with variables replaced) since sample data is available.
-  let result = content.replace(
-    /\{\{#if\s+([^}]+)\}\}([\s\S]*?)\{\{\/if\}\}/g,
-    (_match, _condition, blockContent) => blockContent
-  );
-
-  // Then replace simple {{variable}} and raw-HTML {{{variable}}} placeholders.
-  // In the iframe preview we render HTML either way, so we treat both forms the same.
-  result = result.replace(/\{{2,3}([^{}]+)\}{2,3}/g, (match, key) => {
-    const trimmedKey = key.trim();
-    return trimmedKey in data ? data[trimmedKey] : match;
-  });
-
-  return result;
-}
-
-/**
- * Renders HTML content in a sandboxed iframe for email template preview.
- */
-function EmailTemplatePreview({
-  htmlContent,
-  templateName,
-  subject,
-}: {
-  htmlContent: string;
-  templateName: string;
-  subject?: string;
-}) {
-  const { t } = useTranslation('msp/settings');
-  const iframeRef = useRef<HTMLIFrameElement>(null);
-  const sampleData = useMemo(
-    () => getSampleDataForPreview(templateName, htmlContent, subject),
-    [templateName, htmlContent, subject]
-  );
-
-  const renderedHtml = useMemo(
-    () => replaceTemplateVariables(htmlContent, sampleData),
-    [htmlContent, sampleData]
-  );
-
-  const renderedSubject = useMemo(
-    () => subject ? replaceTemplateVariables(subject, sampleData) : undefined,
-    [subject, sampleData]
-  );
-
-  // Auto-resize iframe to content height
-  useEffect(() => {
-    const iframe = iframeRef.current;
-    if (!iframe) return;
-
-    const handleLoad = () => {
-      try {
-        const doc = iframe.contentDocument;
-        if (doc?.body) {
-          iframe.style.height = `${doc.body.scrollHeight + 20}px`;
-        }
-      } catch {
-        // sandbox may restrict access
-      }
-    };
-
-    iframe.addEventListener('load', handleLoad);
-    return () => iframe.removeEventListener('load', handleLoad);
-  }, [renderedHtml]);
-
-  return (
-    <div className="space-y-2">
-      {renderedSubject && (
-        <div>
-          <Label className="text-xs text-gray-500">{t('notifications.emailTemplatesUi.preview.subjectLabel', 'Subject Preview')}</Label>
-          <div className="p-2 bg-gray-50 rounded border text-sm">
-            {renderedSubject}
-          </div>
-        </div>
-      )}
-      <div className="border rounded overflow-hidden">
-        <iframe
-          ref={iframeRef}
-          srcDoc={renderedHtml}
-          sandbox="allow-same-origin"
-          title={t('notifications.emailTemplatesUi.preview.iframeTitle', 'Email template preview')}
-          className="w-full min-h-[200px] bg-white"
-          style={{ border: 'none' }}
-        />
-      </div>
-      <p className="text-xs text-gray-400">
-        {t('notifications.emailTemplatesUi.preview.sampleDataNote', 'Preview uses sample data. Actual emails will contain real values.')}
-      </p>
-    </div>
-  );
-}
-
 export function EmailTemplates() {
   const { t } = useTranslation('msp/settings');
   const { data: session } = useSession();
@@ -196,6 +100,7 @@ export function EmailTemplates() {
   const [editingTemplate, setEditingTemplate] = useState<TenantEmailTemplate | null>(null);
   const [isVariableReferenceOpen, setIsVariableReferenceOpen] = useState(false);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+  const [brandingStatus, setBrandingStatus] = useState<EmailBrandingStatus | null>(null);
 
   // Language filter state - empty means show all languages
   const [selectedLanguages, setSelectedLanguages] = useState<Set<string>>(new Set());
@@ -261,9 +166,29 @@ export function EmailTemplates() {
         console.error('Failed to load email templates:', err);
         setError(t('notifications.emailTemplatesUi.errors.loadFailed', 'Failed to load templates'));
       }
+
+      // The panel lives on its own tab now; the editor integration and
+      // branded clones still need to know what palette is saved.
+      try {
+        setBrandingStatus(await getEmailBrandingStatusAction());
+      } catch (statusErr) {
+        console.error('Failed to load email branding status:', statusErr);
+      }
     }
     init();
   }, [session]);
+
+  // The token map a "make this mine" action should write: what the last apply
+  // wrote when there is one, otherwise the palette as currently saved.
+  const brandingTarget: EmailPaletteTokens | null = brandingStatus?.palette
+    ? brandingStatus.palette.appliedPalette ?? brandingStatus.resolved
+    : null;
+
+  const refreshTemplates = useCallback(async () => {
+    const currentTenant = tenant ?? ((session?.user as any)?.tenant as string | undefined);
+    if (!currentTenant) return;
+    setTemplates(await getTemplatesAction(currentTenant));
+  }, [tenant, session]);
 
   const handleToggleExpand = useCallback((category: string) => {
     setExpandedCategories(prev => {
@@ -291,9 +216,16 @@ export function EmailTemplates() {
         return;
       }
 
-      // Refresh templates
-      const currentTemplates = await getTemplatesAction(tenant);
-      setTemplates(currentTemplates);
+      // With a palette saved, the copy the tenant starts editing should already
+      // wear their colors instead of the stock purple.
+      if (brandingTarget) {
+        const branded = applyEmailPalette(template.html_content, STOCK_EMAIL_PALETTE, brandingTarget);
+        if (branded !== template.html_content) {
+          await updateTenantTemplateAction(tenant, result.id, { html_content: branded });
+        }
+      }
+
+      await refreshTemplates();
     } catch (error) {
       console.error("Failed to create custom template:", error);
     } finally {
@@ -651,6 +583,8 @@ export function EmailTemplates() {
         template={editingTemplate}
         tenant={tenant}
         onTemplatesChange={setTemplates}
+        brandingPalette={brandingTarget}
+        appliedPalette={brandingStatus?.palette?.appliedPalette ?? null}
       />
 
       <VariableReferenceDialog
@@ -789,12 +723,18 @@ function EditTemplateDialog({
   template,
   tenant,
   onTemplatesChange,
+  brandingPalette,
+  appliedPalette,
 }: {
   isOpen: boolean;
   onClose: () => void;
   template: TenantEmailTemplate | null;
   tenant: string;
   onTemplatesChange: (templates: { systemTemplates: (SystemEmailTemplate & { category: string })[]; tenantTemplates: TenantEmailTemplate[] }) => void;
+  /** Token map to rewrite into the editor, null when no palette is saved. */
+  brandingPalette: EmailPaletteTokens | null;
+  /** What the last apply wrote, so its tokens are recognized too. */
+  appliedPalette: EmailPaletteTokens | null;
 }) {
   type EditableField = 'subject' | 'html_content' | 'text_content';
   const { t } = useTranslation('msp/settings');
@@ -949,6 +889,17 @@ function EditTemplateDialog({
     document.body,
   ) : null;
 
+  // Rewrites the draft in place so the tenant reviews it in the Preview tab and
+  // saves normally: no row is touched until they do.
+  const applyPaletteToEditor = () => {
+    if (!brandingPalette) return;
+    const sources = appliedPalette ? [appliedPalette, STOCK_EMAIL_PALETTE] : [STOCK_EMAIL_PALETTE];
+    setFormData((previous) => ({
+      ...previous,
+      html_content: applyEmailPalette(previous.html_content ?? '', sources, brandingPalette),
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
@@ -1048,7 +999,20 @@ function EditTemplateDialog({
           </div>
 
           <div>
-            <Label htmlFor="html-content">{t('notifications.emailTemplatesUi.fields.htmlContent', 'HTML Content')}</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="html-content">{t('notifications.emailTemplatesUi.fields.htmlContent', 'HTML Content')}</Label>
+              {brandingPalette && (
+                <Button
+                  id="apply-palette-to-template"
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={applyPaletteToEditor}
+                >
+                  {t('notifications.emailBranding.actions.applyToTemplate', 'Apply my palette')}
+                </Button>
+              )}
+            </div>
             <Tabs value={htmlTab} onValueChange={setHtmlTab}>
               <TabsList>
                 <TabsTrigger value="source">{t('notifications.emailTemplatesUi.tabs.source', 'Source')}</TabsTrigger>
