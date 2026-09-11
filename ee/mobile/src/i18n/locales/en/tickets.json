@@ -248,7 +248,27 @@
       "validation": "Comment was rejected by the server.",
       "generic": "Unable to send comment. Please try again.",
       "loadFailed": "Unable to load comments."
-    }
+    },
+    "sendLater": "Send later",
+    "scheduledFor": "Scheduled for {{when}}",
+    "scheduledForShort": "Scheduled",
+    "publishesAt": "Publishes {{when}}",
+    "scheduleTitle": "Schedule this comment",
+    "scheduleHelper": "The comment stays hidden from the client until the chosen time. Only client-visible comments can be scheduled.",
+    "scheduleDate": "Date",
+    "scheduleTime": "Time",
+    "scheduleConfirm": "Schedule",
+    "scheduleClear": "Send now instead",
+    "scheduleInPast": "Choose a time in the future.",
+    "scheduleInternalBlocked": "Internal comments can't be scheduled. Switch to Client to send later.",
+    "scheduled": "Scheduled",
+    "commentScheduled": "Comment scheduled",
+    "cancelScheduled": "Cancel scheduled comment",
+    "cancelScheduledTitle": "Cancel this scheduled comment?",
+    "cancelScheduledBody": "It will not be sent to the client.",
+    "cancelScheduledConfirm": "Cancel comment",
+    "cancelScheduledFailed": "Couldn't cancel the scheduled comment",
+    "scheduledCanceled": "Scheduled comment canceled"
   },
   "documents": {
     "title": "Documents",

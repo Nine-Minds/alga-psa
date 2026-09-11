@@ -1411,6 +1411,40 @@ export class ApiTicketController extends ApiBaseController {
   }
 
   /**
+   * Cancel a scheduled comment before it publishes
+   */
+  cancelScheduledComment() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          await this.checkPermission(apiRequest, this.options.permissions?.update || 'update');
+
+          const ticketId = await this.extractIdFromPath(apiRequest);
+          const knex = await getConnection(apiRequest.context!.tenant);
+          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+
+          const url = new URL(apiRequest.url || req.url);
+          const segments = url.pathname.split('/');
+          const commentsIndex = segments.indexOf('comments');
+          const commentId = commentsIndex >= 0 ? segments[commentsIndex + 1] : undefined;
+          if (!commentId || !uuidSchema.safeParse(commentId).success) {
+            throw new ValidationError('Validation failed', [
+              { path: ['commentId'], message: 'comment ID must be a valid UUID' },
+            ]);
+          }
+
+          const result = await this.ticketService.cancelScheduledComment(ticketId, commentId, apiRequest.context!);
+          return createSuccessResponse(result, 200, undefined, apiRequest);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
    * Update a comment on a ticket
    */
   updateComment() {

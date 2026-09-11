@@ -534,6 +534,8 @@ export function TicketDetailBody({
             }}
             closedStatuses={statusHook.statusOptions.filter((s) => s.is_closed)}
             closeStatusId={commentDraftHook.commentCloseStatusId}
+            scheduleAt={commentDraftHook.commentScheduleAt}
+            onChangeScheduleAt={commentDraftHook.setCommentScheduleAt}
             onChangeCloseStatusId={commentDraftHook.setCommentCloseStatusId}
             onSend={(notificationSuppression) => void commentDraftHook.sendComment(notificationSuppression)}
             sending={commentDraftHook.commentSending}

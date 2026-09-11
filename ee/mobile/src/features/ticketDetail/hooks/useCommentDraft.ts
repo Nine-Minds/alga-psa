@@ -30,6 +30,7 @@ export function useCommentDraft(
   const [commentIsInternal, setCommentIsInternal] = useState(true);
   const [commentIsResolution, setCommentIsResolution] = useState(false);
   const [commentCloseStatusId, setCommentCloseStatusId] = useState<string | null>(null);
+  const [commentScheduleAt, setCommentScheduleAt] = useState<Date | null>(null);
   const [commentSendError, setCommentSendError] = useState<string | null>(null);
   const [commentSending, setCommentSending] = useState(false);
   const [draftLoaded, setDraftLoaded] = useState(false);
@@ -94,6 +95,7 @@ export function useCommentDraft(
       isResolution,
       closeStatusId,
       notificationSuppression,
+      scheduleAt,
     }: {
       serializedDraft: string;
       text: string;
@@ -103,10 +105,12 @@ export function useCommentDraft(
       isResolution?: boolean;
       closeStatusId?: string | null;
       notificationSuppression?: TicketNotificationSuppressionOptions;
+      scheduleAt?: Date | null;
     }): Promise<boolean> => {
       if (!client || !session) return false;
       if (commentSendInFlightRef.current || commentSending) return false;
       commentSendInFlightRef.current = true;
+      const scheduled = scheduleAt && !originalIsInternal ? scheduleAt : null;
 
       const trimmedText = text.trim();
       if (!trimmedText) {
@@ -134,6 +138,7 @@ export function useCommentDraft(
         created_at: new Date().toISOString(),
         created_by_name: session.user?.name ?? session.user?.email ?? "You",
         optimistic: true,
+        ...(scheduled ? { publish_state: "scheduled" as const, scheduled_publish_at: scheduled.toISOString() } : {}),
       };
 
       setComments((prev) => [...prev, optimisticComment]);
@@ -149,6 +154,12 @@ export function useCommentDraft(
           comment_text: serializedDraft,
           is_internal: originalIsInternal,
           is_resolution: isResolution,
+          ...(scheduled
+            ? {
+                scheduled_publish_at: scheduled.toISOString(),
+                scheduled_publish_tz: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
+              }
+            : {}),
           auditHeaders,
         });
         if (!result.ok) {
@@ -206,7 +217,7 @@ export function useCommentDraft(
         await secureStorage.deleteItem(draftKey);
         invalidateTicketsListCache();
         await Promise.all([fetchTicket(), fetchComments()]);
-        showToast({ message: t("comments.commentSent"), tone: "success" });
+        showToast({ message: t(scheduled ? "comments.commentScheduled" : "comments.commentSent"), tone: "success" });
         return true;
       } finally {
         setCommentSending(false);
@@ -327,10 +338,12 @@ export function useCommentDraft(
       isResolution: commentIsResolution,
       closeStatusId: commentCloseStatusId,
       notificationSuppression,
+      scheduleAt: commentScheduleAt,
     });
     if (sent) {
       setCommentIsResolution(false);
       setCommentCloseStatusId(null);
+      setCommentScheduleAt(null);
     }
   };
 
@@ -347,6 +360,8 @@ export function useCommentDraft(
     setCommentIsResolution,
     commentCloseStatusId,
     setCommentCloseStatusId,
+    commentScheduleAt,
+    setCommentScheduleAt,
     commentSendError,
     commentSending,
     draftLoaded,
