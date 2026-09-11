@@ -46,7 +46,12 @@ export function reconcileBrowserMetricExecutions(input) {
       && (entry.recorderStatus === 'completed'
         ? ['success', 'failure', 'cancelled', 'timed_out', 'skipped', 'neutral'].includes(entry.recorderConclusion)
         : entry.recorderConclusion === null), 'Invalid recorder state');
+    if (entry.executionRequired !== undefined) assert.equal(typeof entry.executionRequired, 'boolean', 'Invalid execution requirement');
+    if (entry.executionRequired === false) assert.ok(entry.selectionEvidence === 'changes-filter'
+      && entry.runStatus === 'completed' && entry.conclusion === 'success'
+      && entry.recorderStatus === 'completed' && entry.recorderConclusion === 'skipped', 'Invalid non-selection evidence');
     const selected = { repository: entry.repository.toLowerCase(), revision: entry.revision, runId: entry.runId,
+      ...(entry.executionRequired === false ? { executionRequired: false, selectionEvidence: entry.selectionEvidence } : {}),
       runAttempt: entry.runAttempt, edition: entry.edition, eventName: entry.eventName, runStatus: entry.runStatus, conclusion: entry.conclusion,
       ...(entry.revisionEvidence !== undefined ? { revisionEvidence: entry.revisionEvidence } : {}),
       ...(entry.revisionDiagnostics !== undefined ? { revisionDiagnostics: [...new Set(entry.revisionDiagnostics)].sort() } : {}),
@@ -65,6 +70,15 @@ export function reconcileBrowserMetricExecutions(input) {
     const legacyRunExportCount = related.filter(row => row.row_kind === 'run'
       && (!decimal(String(row.run_id)) || number(row.run_attempt) === null || number(row.run_attempt) < 1)).length;
     const sameAttempt = related.filter(row => number(row.run_attempt) === entry.runAttempt);
+    if (entry.executionRequired === false) {
+      const unexpectedExports = sameAttempt.length > 0;
+      return { key: key(entry), ...entry, status: unexpectedExports ? 'incomplete' : 'not-required',
+        exportStatus: unexpectedExports ? 'conflicting-export' : 'not-required',
+        unverifiedCurrentAttemptRunExportCount: sameAttempt.filter(row => row.row_kind === 'run').length,
+        legacyRunExportCount, runExportCount: 0, journeyExportCount: 0,
+        staleAttempts: [...new Set(related.map(row => number(row.run_attempt)).filter(attempt => attempt !== null && attempt !== entry.runAttempt))].sort((a,b)=>a-b),
+        issues: [unexpectedExports ? 'unexpected-export-for-unselected-tests' : 'browser-tests-not-selected'] };
+    }
     const current = sameAttempt.filter(row => String(row.run_id) === entry.runId && row.tested_sha === entry.revision
       && row.event_name === entry.eventName && number(row.schema_version) === 2);
     const runs = current.filter(row => row.row_kind === 'run');
@@ -113,6 +127,7 @@ export function reconcileBrowserMetricExecutions(input) {
       staleAttempts, issues };
   });
   return { schemaVersion: 1, scope: 'observed-browser-execution-export-reconciliation',
-    status: records.length && records.every(record => record.status === 'observed-pass') ? 'passed' : 'incomplete', records,
+    status: records.length && records.every(record => record.status === 'not-required') ? 'not-required'
+      : records.length && records.every(record => ['observed-pass', 'not-required'].includes(record.status)) ? 'passed' : 'incomplete', records,
     limitations: ['Observed executions only; never-created workflows require explicit expectations.', 'Operator-supplied tested revision may have validated merge relationships; this does not prove the actual checkout.', 'An observed metrics pass is not independent artifact, deployment or release-readiness verification.'] };
 }

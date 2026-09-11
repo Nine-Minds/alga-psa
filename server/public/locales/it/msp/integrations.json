@@ -1698,7 +1698,7 @@
             "label": "Teams"
           }
         },
-        "descriptionCe": "Gestisci profili Microsoft di proprietà del tenant per MSP SSO, accesso Microsoft e discovery dei domini di accesso.",
+        "descriptionCe": "Gestisci le registrazioni app Microsoft della tua azienda per la posta Outlook.",
         "descriptionEe": "Gestisci profili Microsoft di proprietà del tenant per MSP SSO, e-mail Outlook, sincronizzazione del calendario e Microsoft Teams.",
         "dialog": {
           "cancel": "Annulla",
@@ -1724,7 +1724,7 @@
         },
         "empty": {
           "createButton": "Crea profilo Microsoft",
-          "descriptionCe": "Crea prima un profilo con nome, poi collegalo esplicitamente ai flussi MSP SSO e di accesso per dominio.",
+          "descriptionCe": "Crea una registrazione app Microsoft per la posta Outlook.",
           "descriptionEe": "Crea prima un profilo con nome, poi collegalo esplicitamente a MSP SSO, e-mail Outlook, sincronizzazione del calendario e Teams.",
           "title": "Nessun profilo Microsoft ancora"
         },
@@ -2774,6 +2774,52 @@
       }
     },
     "sso": {
+      "keycloak": {
+        "title": "Keycloak / OpenID Connect",
+        "description": "Consenti al personale di accedere tramite il tuo realm Keycloak. Gli utenti vengono associati per e-mail agli account AlgaPSA esistenti; Keycloak non crea mai utenti qui.",
+        "status": {
+          "configured": "Configurato",
+          "notConfigured": "Non configurato"
+        },
+        "actions": {
+          "refresh": "Aggiorna",
+          "save": "Verifica e salva",
+          "saving": "Verifica e salvataggio…",
+          "remove": "Rimuovi"
+        },
+        "setup": {
+          "redirectUri": "Crea un client OpenID Connect confidenziale nel tuo realm e consenti questo URI di reindirizzamento:",
+          "domainsEe": "Poi rivendica e verifica il dominio di accesso del personale in «Avanzate» in modo che le e-mail di quel dominio vengano indirizzate a questo realm.",
+          "domainsCe": "Poi aggiungi il dominio di accesso del personale in «Avanzate» in modo che le e-mail di quel dominio vengano indirizzate a questo realm.",
+          "issuer": "Emittente: {{issuer}}"
+        },
+        "fields": {
+          "url": "URL del server Keycloak",
+          "realm": "Realm",
+          "clientId": "ID client",
+          "clientSecret": "Segreto client",
+          "clientSecretKeep": "Lascia vuoto per mantenere {{masked}}"
+        },
+        "errors": {
+          "loadFailed": "Impossibile caricare le impostazioni Keycloak",
+          "saveFailed": "Impossibile salvare le impostazioni Keycloak",
+          "removeFailed": "Impossibile rimuovere le impostazioni Keycloak"
+        },
+        "toasts": {
+          "savedTitle": "Impostazioni Keycloak salvate",
+          "savedDescription": "Il realm ha risposto alla discovery OpenID e il personale può ora accedere con Keycloak.",
+          "saveFailedTitle": "Impossibile salvare le impostazioni Keycloak",
+          "removedTitle": "Impostazioni Keycloak rimosse",
+          "removedDescription": "L’accesso con Keycloak non è più offerto per questo tenant.",
+          "removeFailedTitle": "Impossibile rimuovere le impostazioni Keycloak"
+        },
+        "removeDialog": {
+          "title": "Rimuovere l’accesso con Keycloak?",
+          "message": "Il personale non vedrà più il pulsante Keycloak. L’accesso con password resta invariato.",
+          "confirm": "Rimuovi",
+          "cancel": "Annulla"
+        }
+      },
       "msp": {
         "actions": {
           "add": "Aggiungi",
@@ -3617,7 +3663,7 @@
         "label": "Google"
       },
       "microsoft": {
-        "descriptionCe": "MSP SSO, Microsoft sign-in, and login-domain discovery.",
+        "descriptionCe": "E-mail in entrata di Outlook per la registrazione app Microsoft della tua azienda.",
         "descriptionEe": "MSP SSO, Outlook email, calendar sync, and Teams.",
         "label": "Microsoft"
       },

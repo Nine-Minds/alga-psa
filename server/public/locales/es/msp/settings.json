@@ -2970,7 +2970,8 @@
         "fieldCount": "Campos",
         "order": "Orden",
         "actions": "Acciones",
-        "openMenu": "Abrir menú"
+        "openMenu": "Abrir menú",
+        "searchPlaceholder": "Buscar tipos de activos…"
       },
       "actions": {
         "addType": "Agregar tipo de activo",

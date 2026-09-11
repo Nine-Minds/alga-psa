@@ -299,3 +299,12 @@ export {
 export {
   getTaxRegions
 } from './taxRegionActions';
+
+export {
+  getAssetRmmData,
+  refreshAssetRmmData,
+  triggerRmmReboot,
+  triggerRmmScript,
+  getAssetRemoteControlUrl,
+  type RmmCommandResult,
+} from './integrations/assetRmmActions';

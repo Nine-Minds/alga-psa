@@ -2970,7 +2970,8 @@
         "fieldCount": "Velden",
         "order": "Volgorde",
         "actions": "Acties",
-        "openMenu": "Menu openen"
+        "openMenu": "Menu openen",
+        "searchPlaceholder": "Assettypen zoeken…"
       },
       "actions": {
         "addType": "Assettype toevoegen",

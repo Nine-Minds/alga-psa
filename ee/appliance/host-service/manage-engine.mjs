@@ -69,8 +69,12 @@ export function decodeLicenseClaims(token) {
 }
 
 export function licenseStatusFromClaims(claims, editionFallback) {
+  // The token's tier is the license edition the portal displays; editionFallback
+  // is only the build/registry edition ('ee'/'ce'/essentials) and must not mask
+  // an active Pro license (remote-support gating reads this value).
+  const tokenEdition = claims && (claims.tier || claims.edition);
   const out = {
-    edition: editionFallback || (claims && (claims.edition || claims.tier)) || null,
+    edition: tokenEdition || editionFallback || null,
     expiresAt: null,
     perpetual: false,
     status: 'unknown'
@@ -102,27 +106,55 @@ function decodeSecretValue(value) {
   }
 }
 
-// Read edition + license expiry from the appliance-license-seed secret.
+// Read the live license_state row from the app, falling back to the
+// appliance-license-seed secret. The secret is only a last-activation snapshot,
+// so any live-read failure is recorded as `liveError` — the caller and the
+// operator must be able to tell "the app was unreachable" apart from "this
+// install has no license".
 export async function readLicenseStatus(deps) {
-  const { kube, namespace = 'msp', secretName = 'appliance-license-seed' } = deps;
-  const live = await kube.run('exec -i deploy/alga-core-sebastian -n msp -c sebastian -- node /app/server/scripts/appliance-license-status.mjs');
-  if (live?.ok) {
-    try {
-      const body = JSON.parse(live.stdout.trim());
-      if (body.ok && body.row) {
-        return { ...licenseStatusFromClaims(decodeLicenseClaims(body.row.license_token), body.row.edition_choice), source: 'live', lastCheckinAt: body.row.last_checkin_at };
+  const {
+    kube,
+    namespace = 'msp',
+    secretName = 'appliance-license-seed',
+    appDeployment = 'alga-core-sebastian',
+    appNamespace = 'msp'
+  } = deps;
+
+  let liveError = null;
+  try {
+    const live = await kube.run(`exec -i deploy/${appDeployment} -n ${appNamespace} -c sebastian -- node /app/server/scripts/appliance-license-status.mjs`);
+    if (!live?.ok) {
+      liveError = 'app_unreachable';
+    } else {
+      let body = null;
+      try { body = JSON.parse(String(live.stdout || '').trim()); } catch { liveError = 'invalid_response'; }
+      if (!liveError) {
+        if (body?.ok && body.row) {
+          return {
+            ...licenseStatusFromClaims(decodeLicenseClaims(body.row.license_token), body.row.edition_choice),
+            source: 'live',
+            liveError: null,
+            lastCheckinAt: body.row.last_checkin_at
+          };
+        }
+        liveError = body?.ok === false ? 'license_read_failed' : 'invalid_response';
       }
-    } catch { /* use seed fallback */ }
+    }
+  } catch {
+    liveError = 'app_unreachable';
   }
+
   const res = await kube.json(`get secret ${secretName} -n ${namespace}`);
   if (!res || !res.ok || !res.value || !res.value.data) {
-    return { edition: null, expiresAt: null, status: 'unknown', source: 'seed-fallback' };
+    return { edition: null, expiresAt: null, perpetual: false, status: 'unknown', source: 'seed-fallback', liveError: liveError || 'secret_unavailable' };
   }
   const data = res.value.data;
   const token = decodeSecretValue(data.LICENSE_TOKEN);
-  const edition = decodeSecretValue(data.EDITION_CHOICE) || null;
+  // INSTALL_EDITION (essentials|pro, from the install-code redeem) is the
+  // registry edition the portal shows; EDITION_CHOICE is only the build edition.
+  const edition = decodeSecretValue(data.INSTALL_EDITION) || decodeSecretValue(data.EDITION_CHOICE) || null;
   const claims = token ? decodeLicenseClaims(token) : null;
-  return { ...licenseStatusFromClaims(claims, edition), source: 'seed-fallback' };
+  return { ...licenseStatusFromClaims(claims, edition), source: 'seed-fallback', liveError };
 }
 
 function parseWorkflowResult(execResult) {
@@ -144,10 +176,10 @@ const REDEEM_ERRORS = {
   tenant_mismatch: 'This code belongs to a different account — reissue a code from your licensing portal.',
 };
 
-export async function redeemClaimCode({ claimCode, kube, namespace = 'msp', secretName = 'appliance-license-seed' }) {
+export async function redeemClaimCode({ claimCode, kube, namespace = 'msp', secretName = 'appliance-license-seed', appDeployment = 'alga-core-sebastian', appNamespace = 'msp' }) {
   const normalized = String(claimCode || '').trim().toUpperCase().replace(/[\s-]/g, '');
   if (!normalized) return { ok: false, status: 400, error: 'A claim code is required.' };
-  const executed = await kube.run('exec -i deploy/alga-core-sebastian -n msp -c sebastian -- node /app/server/scripts/appliance-redeem-claim-code.mjs', { stdin: JSON.stringify({ claimCode: normalized }) });
+  const executed = await kube.run(`exec -i deploy/${appDeployment} -n ${appNamespace} -c sebastian -- node /app/server/scripts/appliance-redeem-claim-code.mjs`, { stdin: JSON.stringify({ claimCode: normalized }) });
   const body = parseWorkflowResult(executed);
   if (!body.ok) return { ok: false, status: body.code === 'app_unavailable' ? 503 : 400, error: REDEEM_ERRORS[body.code] || body.error };
   const literals = licenseSeedFromRedeem(body.result);
@@ -416,7 +448,9 @@ export async function collectManageStatus(deps) {
     updateOwnerIsPidAlive = isPidAlive,
     updateOwnerMaxAgeMs = DEFAULT_UPDATE_OWNER_MAX_AGE_MS,
     licenseNamespace = 'msp',
-    licenseSecretName = 'appliance-license-seed'
+    licenseSecretName = 'appliance-license-seed',
+    licenseAppDeployment = 'alga-core-sebastian',
+    licenseAppNamespace = 'msp'
   } = deps;
 
   const selection = readJsonFile(releaseSelectionFile) || {};
@@ -475,11 +509,18 @@ export async function collectManageStatus(deps) {
     dnsServers: runtime.dnsServers ? String(runtime.dnsServers).split(',').map((s) => s.trim()).filter(Boolean) : []
   };
 
-  // License.
-  let license = { edition: null, expiresAt: null, perpetual: false, status: 'unknown' };
+  // License. readLicenseStatus records its own live-read diagnostic; the default
+  // here only applies if the read itself throws unexpectedly.
+  let license = { edition: null, expiresAt: null, perpetual: false, status: 'unknown', source: 'seed-fallback', liveError: 'status_unavailable' };
   try {
-    license = await readLicenseStatus({ kube, namespace: licenseNamespace, secretName: licenseSecretName });
-  } catch { /* best effort */ }
+    license = await readLicenseStatus({
+      kube,
+      namespace: licenseNamespace,
+      secretName: licenseSecretName,
+      appDeployment: licenseAppDeployment,
+      appNamespace: licenseAppNamespace
+    });
+  } catch { /* best effort — keep the diagnosable default above */ }
 
   // App-update status, reconciled against live reality. install-state persists the
   // *last* update attempt's outcome, which goes stale: a block that has since

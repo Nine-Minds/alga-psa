@@ -2970,7 +2970,8 @@
         "fieldCount": "Campi",
         "order": "Ordine",
         "actions": "Azioni",
-        "openMenu": "Apri menu"
+        "openMenu": "Apri menu",
+        "searchPlaceholder": "Cerca tipi di asset…"
       },
       "actions": {
         "addType": "Aggiungi tipo di asset",

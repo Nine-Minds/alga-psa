@@ -92,6 +92,14 @@ vi.mock('@alga-psa/auth/withAuth', () => ({
       ),
 }));
 
+// Invoice generation imports the auth barrel; the wizard imports /withAuth.
+// Bind both to this fixture instead of inheriting another suite's auth mock.
+vi.mock('@alga-psa/auth', async () => {
+  const { createAuthModuleMock } = await import('../../../../test-utils/authModuleMock');
+  const { withAuth } = await import('@alga-psa/auth/withAuth');
+  return { ...createAuthModuleMock(), withAuth };
+});
+
 vi.mock('@alga-psa/auth/rbac', () => ({
   hasPermission: vi.fn(async () => true),
 }));
@@ -256,6 +264,7 @@ describe('journey: contract wizard → monthly invoice', () => {
     // Seam 3: the January invoice picks the wizard's line up.
     const invoice = await generateInvoice(januaryCycleId);
     expect(invoice).toBeTruthy();
+    expect(invoice).not.toHaveProperty('error');
     expect(invoice?.invoice_id).toBeDefined();
 
     expect(Number(invoice?.subtotal)).toBe(BASE_RATE_CENTS);

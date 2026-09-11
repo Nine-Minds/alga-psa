@@ -266,6 +266,7 @@
     "sso": {
       "signInWithGoogle": "Sign in with Google",
       "signInWithMicrosoft": "Sign in with Microsoft",
+      "signInWithKeycloak": "Sign in with Keycloak",
       "redirecting": "Redirecting...",
       "startFailed": "We couldn't start SSO sign-in. Please verify provider setup and try again."
     },

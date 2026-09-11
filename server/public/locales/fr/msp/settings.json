@@ -2970,7 +2970,8 @@
         "fieldCount": "Champs",
         "order": "Ordre",
         "actions": "Actions",
-        "openMenu": "Ouvrir le menu"
+        "openMenu": "Ouvrir le menu",
+        "searchPlaceholder": "Rechercher des types d'actifs…"
       },
       "actions": {
         "addType": "Ajouter un type d'actif",
