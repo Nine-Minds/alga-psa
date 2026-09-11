@@ -1698,7 +1698,7 @@
             "label": "Teams"
           }
         },
-        "descriptionCe": "Verwalten Sie tenant-eigene Microsoft-Profile für MSP SSO, Microsoft-Anmeldung und die Erkennung von Anmeldedomänen.",
+        "descriptionCe": "Verwalten Sie die Microsoft-App-Registrierungen Ihres Unternehmens für Outlook-E-Mail.",
         "descriptionEe": "Verwalten Sie tenant-eigene Microsoft-Profile für MSP SSO, Outlook-E-Mail, Kalendersynchronisation und Microsoft Teams.",
         "dialog": {
           "cancel": "Abbrechen",
@@ -1724,7 +1724,7 @@
         },
         "empty": {
           "createButton": "Microsoft-Profil erstellen",
-          "descriptionCe": "Erstellen Sie zunächst ein benanntes Profil und binden Sie es anschließend explizit an MSP-SSO und Anmeldungsflüsse mit Anmeldedomänen.",
+          "descriptionCe": "Erstellen Sie eine Microsoft-App-Registrierung für Outlook-E-Mail.",
           "descriptionEe": "Erstellen Sie zunächst ein benanntes Profil und binden Sie es anschließend explizit an MSP SSO, Outlook-E-Mail, Kalendersynchronisation und Teams.",
           "title": "Noch keine Microsoft-Profile"
         },
@@ -2774,6 +2774,52 @@
       }
     },
     "sso": {
+      "keycloak": {
+        "title": "Keycloak / OpenID Connect",
+        "description": "Lassen Sie Mitarbeitende sich über Ihren eigenen Keycloak-Realm anmelden. Benutzer werden per E-Mail bestehenden AlgaPSA-Konten zugeordnet; Keycloak legt hier nie Benutzer an.",
+        "status": {
+          "configured": "Konfiguriert",
+          "notConfigured": "Nicht konfiguriert"
+        },
+        "actions": {
+          "refresh": "Aktualisieren",
+          "save": "Prüfen und speichern",
+          "saving": "Wird geprüft und gespeichert…",
+          "remove": "Entfernen"
+        },
+        "setup": {
+          "redirectUri": "Erstellen Sie in Ihrem Realm einen vertraulichen OpenID-Connect-Client und erlauben Sie diese Redirect-URI:",
+          "domainsEe": "Beanspruchen und verifizieren Sie anschließend unter „Erweitert“ Ihre Anmeldedomäne, damit E-Mails dieser Domäne zu diesem Realm geleitet werden.",
+          "domainsCe": "Fügen Sie anschließend unter „Erweitert“ Ihre Anmeldedomäne hinzu, damit E-Mails dieser Domäne zu diesem Realm geleitet werden.",
+          "issuer": "Aussteller: {{issuer}}"
+        },
+        "fields": {
+          "url": "Keycloak-Server-URL",
+          "realm": "Realm",
+          "clientId": "Client-ID",
+          "clientSecret": "Client-Secret",
+          "clientSecretKeep": "Leer lassen, um {{masked}} beizubehalten"
+        },
+        "errors": {
+          "loadFailed": "Keycloak-Einstellungen konnten nicht geladen werden",
+          "saveFailed": "Keycloak-Einstellungen konnten nicht gespeichert werden",
+          "removeFailed": "Keycloak-Einstellungen konnten nicht entfernt werden"
+        },
+        "toasts": {
+          "savedTitle": "Keycloak-Einstellungen gespeichert",
+          "savedDescription": "Der Realm hat auf die OpenID-Discovery geantwortet; Mitarbeitende können sich jetzt mit Keycloak anmelden.",
+          "saveFailedTitle": "Keycloak-Einstellungen können nicht gespeichert werden",
+          "removedTitle": "Keycloak-Einstellungen entfernt",
+          "removedDescription": "Die Keycloak-Anmeldung wird für diesen Mandanten nicht mehr angeboten.",
+          "removeFailedTitle": "Keycloak-Einstellungen können nicht entfernt werden"
+        },
+        "removeDialog": {
+          "title": "Keycloak-Anmeldung entfernen?",
+          "message": "Mitarbeitende sehen die Keycloak-Schaltfläche nicht mehr. Die Anmeldung mit Passwort bleibt unverändert.",
+          "confirm": "Entfernen",
+          "cancel": "Abbrechen"
+        }
+      },
       "msp": {
         "actions": {
           "add": "Hinzufügen",
@@ -3617,7 +3663,7 @@
         "label": "Google"
       },
       "microsoft": {
-        "descriptionCe": "MSP SSO, Microsoft sign-in, and login-domain discovery.",
+        "descriptionCe": "Outlook-Posteingang über die Microsoft-App-Registrierung Ihres Unternehmens.",
         "descriptionEe": "MSP SSO, Outlook email, calendar sync, and Teams.",
         "label": "Microsoft"
       },

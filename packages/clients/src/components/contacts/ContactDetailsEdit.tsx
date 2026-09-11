@@ -6,7 +6,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Flex, Text, Heading } from '@radix-ui/themes';
-import { updateContact, listInboundTicketDestinationOptions, getAllCountries, type ICountry, listContactPhoneTypeSuggestions, getCustomPhoneTypeUsageCount, deleteOrphanedPhoneTypes } from '@alga-psa/clients/actions';
+import { updateContact, listInboundTicketDestinationOptions, getAllCountries, getTenantDefaultCountry, type ICountry, listContactPhoneTypeSuggestions, getCustomPhoneTypeUsageCount, deleteOrphanedPhoneTypes } from '@alga-psa/clients/actions';
 import { findTagsByEntityIds, isTagActionError } from '@alga-psa/tags/actions';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { TagManager } from '@alga-psa/tags/components';
@@ -79,6 +79,7 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
   const [inboundDestinationOptions, setInboundDestinationOptions] = useState<Array<{ value: string; label: string }>>([]);
   const [isInboundDestinationOptionsLoading, setIsInboundDestinationOptionsLoading] = useState(false);
   const [countries, setCountries] = useState<ICountry[]>([]);
+  const [tenantDefaultCountry, setTenantDefaultCountry] = useState<ICountry | null>(null);
   const [customPhoneTypeSuggestions, setCustomPhoneTypeSuggestions] = useState<string[]>([]);
   const [phoneValidationErrors, setPhoneValidationErrors] = useState<string[]>([]);
   const [emailValidationErrors, setEmailValidationErrors] = useState<string[]>([]);
@@ -145,18 +146,21 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
     let cancelled = false;
     (async () => {
       try {
-        const [countryRows, phoneTypeLabels] = await Promise.all([
+        const [countryRows, phoneTypeLabels, tenantCountry] = await Promise.all([
           getAllCountries(),
           listContactPhoneTypeSuggestions(),
+          getTenantDefaultCountry(),
         ]);
         if (cancelled) return;
         setCountries(countryRows);
         setCustomPhoneTypeSuggestions(phoneTypeLabels);
+        setTenantDefaultCountry(tenantCountry);
       } catch (err) {
         if (!cancelled) {
           console.error('Error loading phone metadata:', err);
           setCountries([]);
           setCustomPhoneTypeSuggestions([]);
+          setTenantDefaultCountry(null);
         }
       }
     })();
@@ -355,6 +359,7 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
                   value={contact.phone_numbers}
                   onChange={(rows) => handleInputChange('phone_numbers', rows)}
                   countries={countries}
+                  defaultCountryCode={tenantDefaultCountry?.code}
                   customTypeSuggestions={customPhoneTypeSuggestions}
                   errorMessages={phoneValidationErrors}
                   onValidationChange={setPhoneValidationErrors}

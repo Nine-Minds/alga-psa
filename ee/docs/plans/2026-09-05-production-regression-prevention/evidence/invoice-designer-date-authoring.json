@@ -1,0 +1,27 @@
+{
+  "scope": "Component integration: authored billed-time date sort survives workspace AST export/import",
+  "suite": "packages/billing/src/components/invoice-designer/transforms/TransformsWorkspace.integration.test.tsx",
+  "suiteSha256": "90d9803688e70b12557aaa81d2642ede992c60bba7ea7c710238cbd123ba41a1",
+  "command": "cd server && /opt/homebrew/opt/node@25/bin/node node_modules/vitest/vitest.mjs run ../packages/billing/src/components/invoice-designer/transforms/TransformsWorkspace.integration.test.tsx --config vitest.config.ts",
+  "result": {
+    "filesPassed": 1,
+    "testsPassed": 17,
+    "testsFailed": 0,
+    "durationSeconds": 2.43
+  },
+  "log": "/tmp/alga-designer-date-authoring.log",
+  "assertions": [
+    "Select billed-time collection with the actual source control",
+    "Add sort and choose date/Descending through actual controls",
+    "Evaluated preview rows are newest, middle, oldest across month and year boundaries",
+    "Exported AST retains date descending sort",
+    "Unmount, reset workspace, import exported AST, remount and verify evaluated row order",
+    "Source billed-time rows remain unchanged"
+  ],
+  "limitations": [
+    "jsdom component integration; feature flag mocked enabled",
+    "No authenticated browser, database save/reload or PDF generation",
+    "Does not replace either remaining invoice production opt-in layout acceptance case",
+    "No native CI evidence for this local change"
+  ]
+}

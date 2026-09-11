@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "observedAt": "2026-09-09T06:32:53.283967+00:00",
+  "scope": "AutomaticInvoices client filter selection race",
+  "source": {
+    "baseRevision": "717b616bf96cbb13083f0e3353baff40c08e9040",
+    "dirty": true,
+    "files": {
+      "packages/billing/src/components/billing-dashboard/AutomaticInvoices.tsx": "247fcbdfb0caa212df26f9b12a7f6d10fece4690a50bbb7977dcfbfb55b3339a",
+      "packages/billing/tests/automaticInvoices.groupedParentRows.test.tsx": "b2f4928469faebda5f071fa15c1c5afd112770411316b09ee9d45b7e2a047475",
+      "e2e-tests/tests/usage-invoice-preview.spec.ts": "76239d90f8132090067c0cb2a872528ca1126c80bc0f2841cd9d90612d45849b"
+    }
+  },
+  "cause": {
+    "behavior": "Client filter input left old rows selectable until its 300ms timer applied the local filter and unconditionally cleared selections, including selections made after typing.",
+    "trace": "/tmp/alga-native-teams-IjhrLl/browser-results/usage-invoice-preview-Add--bc90b-eviews-the-persisted-amount-enterprise-chromium/trace.zip",
+    "timingMs": {
+      "fillEnd": 68075.255,
+      "checkboxClickStart": 68320.588,
+      "checkboxClickEnd": 68350.124,
+      "checkEnd": 68376.27,
+      "previewClickStart": 68410.276
+    },
+    "result": "check succeeded; later unchecked row and absent preview toolbar caused 30s click timeout"
+  },
+  "fix": "Apply local filter and reset previous selection, expansion and page in the input change handler. Debounce URL persistence only.",
+  "regressions": {
+    "before": {
+      "failed": 2,
+      "log": "/tmp/alga-invoice-filter-red.log"
+    },
+    "cases": [
+      "Prior bulk selection clears immediately when filtering, including disappearance of nonmatching rows",
+      "New filtered selection survives 300ms URL persistence and previews exactly both selected obligations; initial URL filter and unrelated query/hash retained"
+    ],
+    "after": {
+      "groupedParentRowsPassed": 39,
+      "duplicateIdentityAndPoOveragePassed": 13,
+      "logs": [
+        "/tmp/alga-invoice-filter-green.log",
+        "/tmp/alga-invoice-filter-adjacent.log"
+      ]
+    },
+    "runner": "cd server && /opt/homebrew/opt/node@25/bin/node ../node_modules/vitest/vitest.mjs run ../packages/billing/tests/automaticInvoices.groupedParentRows.test.tsx ../packages/billing/tests/automaticInvoices.duplicateIdentityDedupe.test.tsx ../packages/billing/tests/automaticInvoices.poOverageDialog.test.tsx"
+  },
+  "typecheck": {
+    "status": "passed",
+    "command": "/opt/homebrew/opt/node@25/bin/node node_modules/typescript/bin/tsc -p /tmp/alga-invoice-filter-tsconfig.json",
+    "scope": "No-emit overlay extends server/tsconfig.json, includes AutomaticInvoices.tsx and its transitive imports, incremental false",
+    "log": "/tmp/alga-invoice-filter-typecheck.log"
+  },
+  "primaryBrowser": {
+    "evidence": "native-bucket-browser-balances.json",
+    "report": "/tmp/alga-native-teams-NKrleE/lifecycle.log",
+    "passed": 1,
+    "durationMs": 77522.16,
+    "retries": 0,
+    "flaky": 0,
+    "sourceHashMatches": true
+  },
+  "limitations": [
+    "Current-source CI verification remains pending.",
+    "One successful native browser rerun does not establish repeatability.",
+    "No browser assertions, retry counts or timeouts were weakened.",
+    "Existing URL behavior initializes from location and persists edits; this fix does not introduce history popstate synchronization."
+  ]
+}

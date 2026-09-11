@@ -95,11 +95,15 @@ vi.mock('@alga-psa/ui/components/Dialog', () => ({
 }));
 
 vi.mock('@alga-psa/ui/components/DataTable', () => ({
-  DataTable: ({ id, data = [], columns = [] }: any) => (
+  DataTable: ({ id, data = [], columns = [], onRowClick, rowClassName }: any) => (
     <table id={id}>
       <tbody>
         {data.map((record: any, rowIndex: number) => (
-          <tr key={rowIndex}>
+          <tr
+            key={rowIndex}
+            className={typeof rowClassName === 'function' ? rowClassName(record) : undefined}
+            onClick={() => onRowClick?.(record)}
+          >
             {columns.map((column: any, colIndex: number) => (
               <td key={colIndex}>
                 {column.render
@@ -242,6 +246,34 @@ describe('AssetTypesManager (T308)', () => {
     expect(byId('assets-types-delete-firewall')).toBeTruthy();
     // Delete is hidden for built-ins.
     expect(byId('assets-types-delete-workstation')).toBeNull();
+  });
+
+  it('opens the edit dialog when a row is clicked', async () => {
+    const user = userEvent.setup();
+    await renderManager();
+
+    await user.click(screen.getByText('Firewall').closest('tr')!);
+
+    expect(byId('assets-types-dialog')).toBeTruthy();
+    expect(inputById('assets-types-name-input').value).toBe('Firewall');
+    // Custom types expose the schema editor in the row-opened dialog.
+    expect(byId('asset-type-field-0-label')).toBeTruthy();
+  });
+
+  it('filters rows by name or identifier, ignoring case and surrounding whitespace', async () => {
+    const user = userEvent.setup();
+    await renderManager();
+
+    await user.type(inputById('assets-types-search'), '  FIRE  ');
+
+    expect(screen.getByText('Firewall')).toBeTruthy();
+    expect(screen.queryByText('Workstation')).toBeNull();
+
+    await user.clear(inputById('assets-types-search'));
+    await user.type(inputById('assets-types-search'), 'workstation');
+
+    expect(screen.getByText('Workstation')).toBeTruthy();
+    expect(screen.queryByText('Firewall')).toBeNull();
   });
 
   it('create flow round-trips a schema with one of each field kind', async () => {

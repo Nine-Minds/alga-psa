@@ -12,6 +12,7 @@ export interface IUsageRecord extends TenantEntity {
   service_id: string;
   usage_date: ISO8601String;
   quantity: number;
+  comments?: string | null;
   tax_region?: string;
   client_name?: string; // Joined from clients table
   service_name?: string; // Joined from service_catalog table

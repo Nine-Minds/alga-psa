@@ -1,11 +1,12 @@
 'use server'
 
 import type { DeletionValidationResult, IClient, IClientWithLocation } from '@alga-psa/types';
+import { resolveProductCode } from '@alga-psa/types';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { unparseCSV, isEnterprise } from '@alga-psa/core';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { preCheckDeletion } from '@alga-psa/auth';
-import { createDefaultTaxSettingsAsync } from '../lib/billingHelpers';
+import { createDefaultTaxSettings } from '@alga-psa/shared/billingClients/taxSettings';
 import { parseClientCsvBoolean } from '../lib/clientCsvFields';
 import { revalidatePath } from 'next/cache';
 import { localizeActionError, withAuth } from '@alga-psa/auth';
@@ -43,6 +44,7 @@ import { applyClientListIndexedSearchFilter } from '../lib/listSearchSql';
 import { normalizeClientType } from '../lib/normalizeClientType';
 import { clientCoreFieldsSchema, normalizePhone, parseSubmittedFields } from '@alga-psa/validation';
 import { isStructuralFailure, type StructuralResult } from '../lib/structuralResult';
+import { resolveTenantDefaultCountry } from '../lib/tenantDefaultCountry';
 
 const CLIENT_PORTAL_MUTABLE_CLIENT_PROPERTIES = new Set([
   'website',
@@ -597,15 +599,20 @@ export const createClient = withAuth(async (user, { tenant }, client: Omit<IClie
         clientId: created.client_id,
       });
 
+      // Tax initialization must share the client transaction: a failure (for
+      // example, no active tax rate) must not leave a partially created client.
+      // AlgaDesk has no billing tax setup and keeps its existing exemption.
+      const tenantRow = await tenantDb(trx, tenant).table('tenants').first('product_code');
+      if (resolveProductCode(tenantRow?.product_code).productCode !== 'algadesk') {
+        await createDefaultTaxSettings(trx, tenant, created.client_id);
+      }
+
       return created;
     });
 
     if (!createdClient) {
       throw new Error('Client insert completed without returning the created record.');
     }
-
-    // Create default tax settings for the new client
-    await createDefaultTaxSettingsAsync(createdClient.client_id);
 
     // Email suffix functionality removed for security
 
@@ -1669,12 +1676,19 @@ export const importClientsFromCSV = withAuth(async (
     countries.map((country) => [country.name.trim().toLowerCase(), country]),
   );
 
+  // A row that names no country adopts the tenant's own country, and only then US.
+  const tenantDefaultCountry = await resolveTenantDefaultCountry(db, tenant);
+  const fallbackCountry = (tenantDefaultCountry
+    ? countriesByCode.get(tenantDefaultCountry.code.toUpperCase())
+    : undefined)
+    ?? countriesByCode.get('US');
+
   const resolveRowCountry = (row: Record<string, any>): ImportCountry => {
     const rawCode = String(row.country_code ?? '').trim();
     const rawName = String(row.country ?? '').trim();
     const country = (rawCode ? countriesByCode.get(rawCode.toUpperCase()) : undefined)
       ?? (rawName ? countriesByName.get(rawName.toLowerCase()) : undefined)
-      ?? (!rawCode && !rawName ? countriesByCode.get('US') : undefined);
+      ?? (!rawCode && !rawName ? fallbackCountry : undefined);
 
     if (!country) {
       throw new Error(`Unknown country: ${rawCode || rawName}`);

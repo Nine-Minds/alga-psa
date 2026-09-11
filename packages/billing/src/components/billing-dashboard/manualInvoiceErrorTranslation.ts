@@ -29,6 +29,11 @@ export function translateManualInvoiceFailure(
   result: Partial<ManualInvoiceFailure>,
 ): string {
   const message = result.message ?? result.error ?? 'Error generating invoice';
+  if (result.code === 'TIME_APPROVAL_REQUIRED') {
+    return t('automaticInvoices.executionRows.blockedUntilApproval', {
+      count: Number(result.params?.count), defaultValue: message,
+    });
+  }
   if (!result.code || !translatedManualInvoiceErrorCodes.has(result.code)) {
     return message;
   }

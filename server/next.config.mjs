@@ -226,7 +226,7 @@ const nextConfig = {
       // SSO provider buttons - swap between CE stub and EE implementation
       '@alga-psa/auth/sso/entry': isEE
         ? '../ee/server/src/components/auth/SsoProviderButtons.tsx'
-        : '../packages/ee/src/components/auth/SsoProviderButtons.tsx',
+        : '../packages/auth/src/components/SsoProviderButtons.tsx',
       // Notifications package
       '@alga-psa/notifications': '../packages/notifications/src',
       '@alga-psa/notifications/': '../packages/notifications/src/',
@@ -276,6 +276,10 @@ const nextConfig = {
       '@alga-psa/teams/': '../packages/teams/src/',
       '@alga-psa/telephony': '../packages/telephony/src',
       '@alga-psa/telephony/': '../packages/telephony/src/',
+      '@alga-psa/marketing': '../packages/marketing/src',
+      '@alga-psa/marketing/': '../packages/marketing/src/',
+      '@alga-psa/opportunities': '../packages/opportunities/src',
+      '@alga-psa/opportunities/': '../packages/opportunities/src/',
       '@alga-psa/tenancy': '../packages/tenancy/src',
       '@alga-psa/tenancy/': '../packages/tenancy/src/',
       '@alga-psa/event-schemas': '../packages/event-schemas/src',
@@ -535,14 +539,26 @@ const nextConfig = {
   // This is required to support PostHog trailing slash API requests
   skipTrailingSlashRedirect: true,
   webpack: (config, { isServer, dev }) => {
+    if (dev && isServer) {
+      // Named action-entry IDs embed the entire loader query. Repeating those
+      // IDs for every action made the dev manifest exceed V8's string limit
+      // when billing compiled. Compact IDs retain all actions and source maps.
+      config.optimization = { ...config.optimization, moduleIds: 'deterministic' };
+    }
     // Filesystem cache: persists across builds (even after `rm -rf .next`)
     // so the second cold build reuses module compilation work. Stored under
     // node_modules/.cache/webpack so it survives `.next` clears.
+    // Keep Next's cache version and dev memory policy. Replacing this object
+    // discarded maxMemoryGenerations: 0 (Next manages its own memory cache)
+    // and the version metadata that invalidates incompatible cached builds.
+    const nextCache = typeof config.cache === 'object' && config.cache !== null ? config.cache : {};
     config.cache = {
+      ...nextCache,
       type: 'filesystem',
       cacheDirectory: path.join(__dirname, 'node_modules/.cache/webpack'),
       buildDependencies: {
-        config: [__filename],
+        ...nextCache.buildDependencies,
+        config: [...new Set([...(nextCache.buildDependencies?.config ?? []), __filename])],
       },
       // Snapshot all node_modules as immutable by mtime — avoids hash-stat on
       // every file (huge in this monorepo).
@@ -613,6 +629,10 @@ const nextConfig = {
       '@alga-psa/tags/': `${prebuiltDirAbs('tags')}/`,
       '@alga-psa/telephony': prebuiltDirAbs('telephony'),
       '@alga-psa/telephony/': `${prebuiltDirAbs('telephony')}/`,
+      '@alga-psa/marketing': prebuiltDirAbs('marketing'),
+      '@alga-psa/marketing/': `${prebuiltDirAbs('marketing')}/`,
+      '@alga-psa/opportunities': prebuiltDirAbs('opportunities'),
+      '@alga-psa/opportunities/': `${prebuiltDirAbs('opportunities')}/`,
       // Source-transpiled packages
       '@alga-psa/scheduling': path.join(__dirname, '../packages/scheduling/src'),
       // @alga-psa/jobs + /search: source-transpiled. jobs' export names do NOT
@@ -689,7 +709,7 @@ const nextConfig = {
       // SSO provider buttons - swap between CE stub and EE implementation
       '@alga-psa/auth/sso/entry': isEE
         ? path.join(__dirname, '../ee/server/src/components/auth/SsoProviderButtons.tsx')
-        : path.join(__dirname, '../packages/ee/src/components/auth/SsoProviderButtons.tsx'),
+        : path.join(__dirname, '../packages/auth/src/components/SsoProviderButtons.tsx'),
       '@alga-psa/ee-stubs': isEE
         ? path.join(__dirname, '../ee/server/src')
         : path.join(__dirname, '../packages/ee/src'),

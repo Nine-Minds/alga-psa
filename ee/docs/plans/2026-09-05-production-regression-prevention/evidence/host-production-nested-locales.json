@@ -1,0 +1,65 @@
+{
+  "applicationSourceRevision": "7274946079",
+  "application": "existing host EE production build; no rebuild",
+  "test": "e2e-tests/tests/invoice-designer-persistence.spec.ts",
+  "session": 12955,
+  "log": "/tmp/alga-host-production-nested-locales.log",
+  "stats": {
+    "startTime": "2026-09-07T23:24:03.685Z",
+    "duration": 9995.374,
+    "expected": 1,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "coverage": [
+    "UI inserts billed-time-by-ticket preset and adds sixth nested column through inspector",
+    "Persisted group binding resolves to ticketGroups; inner table binding resolves to group.entries",
+    "Flat and nested detail tables each have six columns; primary charges and totals retained",
+    "Reopened saved AST and flat inspector verified",
+    "Generated PDF has four flat and four group-scoped entry dates; descending flat subsequence retained",
+    "English, French and unavailable-locale fallback PDFs contain expected mixed-rate label, public tickets, amounts and invoice total",
+    "Private text excluded; invoice snapshots unchanged; client locale restored"
+  ],
+  "pdfArtifacts": [
+    {
+      "file": "e2e-tests/test-results/host-production/invoice-designer-persisten-63b85-ts-persisted-invoice-layout-enterprise-chromium/INV-000001-zz-unavailable.pdf",
+      "bytes": 98608,
+      "sha256": "a911c4b972579ea81dd21ab7aaeb10142c2f7d5c7837e780862533932c9f4781"
+    },
+    {
+      "file": "e2e-tests/test-results/host-production/invoice-designer-persisten-63b85-ts-persisted-invoice-layout-enterprise-chromium/INV-000001-fr.pdf",
+      "bytes": 103069,
+      "sha256": "1e709c3d673ff4b48ef0614da01a6547e6354066684bf5cb3b75936632a64149"
+    },
+    {
+      "file": "e2e-tests/test-results/host-production/invoice-designer-persisten-63b85-ts-persisted-invoice-layout-enterprise-chromium/INV-000001.pdf",
+      "bytes": 98608,
+      "sha256": "9176f916612453509056d158b8dbbfc4270c03a60168f221ba634ef119c06ae9"
+    },
+    {
+      "file": "e2e-tests/test-results/host-production/invoice-designer-persisten-63b85-ts-persisted-invoice-layout-enterprise-chromium/attachments/invoice-pdf-aec8729fba814ec65685e7883a89c26d69eb8c59.pdf",
+      "bytes": 98608,
+      "sha256": "9176f916612453509056d158b8dbbfc4270c03a60168f221ba634ef119c06ae9"
+    },
+    {
+      "file": "e2e-tests/test-results/host-production/invoice-designer-persisten-63b85-ts-persisted-invoice-layout-enterprise-chromium/attachments/invoice-pdf-6fdc85e04a7e1e084983d432e9e363e28e53d822.pdf",
+      "bytes": 103069,
+      "sha256": "1e709c3d673ff4b48ef0614da01a6547e6354066684bf5cb3b75936632a64149"
+    },
+    {
+      "file": "e2e-tests/test-results/host-production/invoice-designer-persisten-63b85-ts-persisted-invoice-layout-enterprise-chromium/attachments/invoice-pdf-6c7cb8b3a5163658f5fc3a77678abc80f0d930e1.pdf",
+      "bytes": 98608,
+      "sha256": "a911c4b972579ea81dd21ab7aaeb10142c2f7d5c7837e780862533932c9f4781"
+    }
+  ],
+  "corrections": [
+    "Scope outline text separately from duplicate breadcrumb",
+    "Resolve generated binding IDs through collection registry instead of assuming ID equals data path"
+  ],
+  "limitations": [
+    "Current native CI and container packaging remain unverified",
+    "Historical v1/missing snapshots, task/ad-hoc identity, hour-block and long multi-tax layout matrix remain incomplete",
+    "PDF text assertions do not prove absence of every visual layout defect"
+  ]
+}

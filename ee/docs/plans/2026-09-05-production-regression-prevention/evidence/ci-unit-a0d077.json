@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "suite": "server-unit",
+  "revision": "3db700f653e28ddd322dfdb652f1689a54f6b65d",
+  "status": "failed",
+  "counts": {
+    "passed": 15010,
+    "failed": 0,
+    "skipped": 0,
+    "todo": 3,
+    "pending": 0
+  },
+  "failures": [
+    "todo: server/src/test/unit/taxService.test.ts > TaxService should apply the correct tax rate for international transactions",
+    "todo: server/src/test/unit/taxService.test.ts > TaxService should apply tax caps correctly when present",
+    "todo: server/src/test/unit/taxService.test.ts > TaxService should handle tax calculation for subscriptions spanning multiple tax periods",
+    "Unexpected executed test: [\"server/src/test/unit/taxService.test.ts\",\"TaxService > should apply the correct tax rate for international transactions\"]",
+    "Unexpected executed test: [\"server/src/test/unit/taxService.test.ts\",\"TaxService > should apply tax caps correctly when present\"]",
+    "Unexpected executed test: [\"server/src/test/unit/taxService.test.ts\",\"TaxService > should handle tax calculation for subscriptions spanning multiple tax periods\"]"
+  ],
+  "runId": "34308610232",
+  "jobId": 102330400075,
+  "artifactId": 10089127536,
+  "executedFileCount": 2749,
+  "source": {
+    "before": {
+      "revision": "3db700f653e28ddd322dfdb652f1689a54f6b65d",
+      "dirty": false,
+      "changes": []
+    },
+    "after": {
+      "revision": "3db700f653e28ddd322dfdb652f1689a54f6b65d",
+      "dirty": false,
+      "changes": []
+    }
+  },
+  "selection": {
+    "mode": "full",
+    "filters": []
+  }
+}

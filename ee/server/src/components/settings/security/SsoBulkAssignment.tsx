@@ -30,7 +30,9 @@ export default function SsoBulkAssignment() {
           getSsoPreferencesAction(),
         ]);
         if (!cancelled) {
-          setProviderOptions(optionsResult.options);
+          // Bulk assignment seeds links by email domain; a Keycloak link keys on the
+          // realm subject id, so it is linked per user at first sign-in instead.
+          setProviderOptions(optionsResult.options.filter((option) => option.id !== "keycloak"));
           setPreferences(prefsResult);
           setError(null);
         }

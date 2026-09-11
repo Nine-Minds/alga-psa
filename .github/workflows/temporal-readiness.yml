@@ -1,35 +1,34 @@
 name: Temporal Readiness
 
 on:
-  pull_request:
-    paths:
-      - 'ee/temporal-workflows/**'
-      - 'packages/integrations/**'
-      - 'scripts/check-temporal-worker-packaging-contract.mjs'
-      - 'scripts/temporal-worker-dist-import-smoke.mjs'
-      - 'scripts/temporal-worker-docker-parity.mjs'
-      - 'package.json'
-      - 'package-lock.json'
-      - '.github/workflows/temporal-readiness.yml'
-  push:
-    branches:
-      - main
-    paths:
-      - 'ee/temporal-workflows/**'
-      - 'packages/integrations/**'
-      - 'scripts/check-temporal-worker-packaging-contract.mjs'
-      - 'scripts/temporal-worker-dist-import-smoke.mjs'
-      - 'scripts/temporal-worker-docker-parity.mjs'
-      - 'package.json'
-      - 'package-lock.json'
-      - '.github/workflows/temporal-readiness.yml'
+  workflow_call:
   workflow_dispatch:
   schedule:
     - cron: '0 6 * * *'
 
 jobs:
+  engine-tests:
+    name: Temporal engine execution complete
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - name: Collect and execute isolated Temporal engine workflows
+        run: node scripts/run-additional-workspace-tests.mjs temporal-engine
+      - name: Preserve Temporal engine execution evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: temporal-engine-execution
+          path: test-results/temporal-engine/
+          if-no-files-found: error
+          retention-days: 30
+
   fast-readiness:
-    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -39,17 +38,30 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Install dependencies
-        run: |
-          if ! npm ci; then
-            echo "npm ci failed; attempting npm install fallback to regenerate lock data"
-            npm install
-          fi
+        run: npm ci
+
+      - name: Install Helm for deployment rendering tests
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.17.3
 
       - name: Temporal readiness fast gate
         run: npm run guard:temporal-readiness:fast
+
+      - name: Execute built snapshot workflow in Temporal test server
+        run: npm run test:temporal-snapshot-runtime
+
+      - name: Upload Temporal readiness execution evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: temporal-readiness-execution
+          path: test-results/temporal-readiness/
+          if-no-files-found: error
+          retention-days: 7
 
   docker-parity:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
@@ -62,14 +74,38 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Install dependencies
-        run: |
-          if ! npm ci; then
-            echo "npm ci failed; attempting npm install fallback to regenerate lock data"
-            npm install
-          fi
+        run: npm ci
 
       - name: Docker parity gate
         run: npm run guard:temporal-readiness:docker
+
+  execution-complete:
+    name: Temporal execution gate
+    needs: [fast-readiness, engine-tests]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      TEMPORAL_GATE_JOB_RESULTS: ${{ toJSON(needs) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        if: always()
+        with:
+          pattern: temporal-*-execution
+          path: test-results/temporal-gate-input
+      - name: Verify required jobs, raw reports and candidate identities
+        if: always()
+        run: node scripts/verify-temporal-execution.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: temporal-execution-gate
+          path: test-results/temporal-gate/aggregate.json
+          if-no-files-found: error

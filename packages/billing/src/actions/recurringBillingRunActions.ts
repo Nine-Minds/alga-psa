@@ -22,6 +22,7 @@ import {
   DUPLICATE_RECURRING_INVOICE_CODE,
   DUPLICATE_RECURRING_INVOICE_MESSAGE_KEY,
   NO_BILLING_EMAIL_MESSAGE_KEY,
+  TIME_APPROVAL_REQUIRED_MESSAGE_KEY,
   USAGE_RECORDS_MISSING_MESSAGE_KEY,
   USAGE_RECORDS_MISSING_ACK_REQUIRED_MESSAGE_KEY,
   USAGE_PERIOD_TOTAL_STALE_MESSAGE_KEY,
@@ -89,6 +90,9 @@ function handledRecurringFailureFromActionError(error: RecurringBillingRunAction
   code?: HandledRecurringFailureCode;
   params?: Record<string, string>;
 } {
+  if (error.messageKey === TIME_APPROVAL_REQUIRED_MESSAGE_KEY) {
+    return { code: 'TIME_APPROVAL_REQUIRED', params: error.messageParams as Record<string, string> | undefined };
+  }
   if (error.messageKey === NO_BILLING_EMAIL_MESSAGE_KEY) {
     return {
       code: 'NO_BILLING_EMAIL',

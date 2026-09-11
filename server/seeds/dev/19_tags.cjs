@@ -9,12 +9,11 @@ exports.seed = async function (knex) {
     const tagDefinitions = await db.table('tag_definitions').insert([
         {
             tenant: tenantId,
-            board_id: db.table('boards')
+            board_id: (await db.table('boards')
                 .where({
                     board_name: 'Urgent Matters'
                 })
-                .select('board_id')
-                .first(),
+                .select('board_id').first())?.board_id ?? null,
             tag_text: 'Urgent',
             tagged_type: 'ticket'
         },

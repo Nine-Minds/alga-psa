@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "suite": "teams-development-browser",
+  "releaseValidation": false,
+  "status": "passed",
+  "baseRevision": "31fe097ccaebce7d83f850ca6e6182f51699ac0d",
+  "workingTreeDirty": true,
+  "stats": {
+    "startTime": "2026-09-08T07:09:55.725Z",
+    "duration": 112224.346,
+    "expected": 1,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "hashes": {
+    "e2e-tests/test-results/local/results.json": "26f1c302ba54eeb771fee468c9980daecadf2339a4184cfcaecf1c4a396e3fc2",
+    "/tmp/alga-teams-product-bot-browser.log": "9e7ccfa89a65f5c4f474f04773e9bee600b9fdd00cf49393c2f28c273e675e2d"
+  },
+  "scope": [
+    "Real calendar UI and meeting persistence",
+    "Signed activity delivered to actual /api/teams/bot/messages",
+    "Real linked-user lookup and ticket-search command",
+    "Provider reply excludes matching foreign-tenant ticket",
+    "Conversation reference persisted",
+    "Foreign-tenant account link receives sign-in card without ticket data"
+  ],
+  "limitations": [
+    "OAuth account links and installed Teams integration are fixture preconditions, not an SSO or external installation test.",
+    "Native development app at12GiB with Node source maps disabled; no production-artifact or Linux CI pass established.",
+    "No current-source GitHub publication or full-plan completion established."
+  ]
+}

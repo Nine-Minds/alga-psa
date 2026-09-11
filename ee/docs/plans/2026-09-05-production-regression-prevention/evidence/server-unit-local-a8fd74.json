@@ -1,0 +1,81 @@
+{
+  "revision": "a8fd74d09fd762930ac792d118d4a3fb1549c847",
+  "status": "failed",
+  "counts": {
+    "passed": 14564,
+    "failed": 0,
+    "skipped": 6,
+    "todo": 15,
+    "pending": 0
+  },
+  "failures": [
+    "todo: server/src/test/unit/billingPlanSelection.test.ts > Contract line choices returned to the UI should handle the case when no client ID is available",
+    "todo: server/src/test/unit/taxService.test.ts > TaxService calculateTax should calculate composite tax correctly",
+    "todo: server/src/test/unit/taxService.test.ts > TaxService should handle overlapping tax holidays correctly",
+    "todo: server/src/test/unit/taxService.test.ts > TaxService should apply the correct tax rate based on the transaction date",
+    "todo: server/src/test/unit/taxService.test.ts > TaxService should handle tax exemptions correctly",
+    "todo: server/src/test/unit/taxService.test.ts > TaxService should calculate taxes correctly for negative amounts (refunds)",
+    "todo: server/src/test/unit/taxService.test.ts > TaxService should handle tax rounding correctly for small amounts",
+    "todo: server/src/test/unit/taxService.test.ts > TaxService should apply the correct tax rate for international transactions",
+    "todo: server/src/test/unit/taxService.test.ts > TaxService should handle tax calculation for multi-item invoices with different tax rates",
+    "todo: server/src/test/unit/taxService.test.ts > TaxService should apply tax caps correctly when present",
+    "todo: server/src/test/unit/taxService.test.ts > TaxService should handle tax calculation for different currencies correctly",
+    "todo: server/src/test/unit/taxService.test.ts > TaxService should apply reverse charge mechanism correctly for B2B transactions",
+    "todo: server/src/test/unit/taxService.test.ts > TaxService should handle tax calculation for subscriptions spanning multiple tax periods",
+    "todo: server/src/test/unit/taxService.test.ts > TaxService should apply progressive tax rates correctly",
+    "todo: server/src/test/unit/taxService.test.ts > TaxService should handle tax calculation for items with mixed taxable and non-taxable components",
+    "skipped: packages/core/src/lib/secrets/__tests__/fsSecretCore.test.ts > fsSecretCore anchored writes under concurrent store mutation prepares the tenant directory through the held anchor when tenants/ is swapped during preparation",
+    "skipped: packages/core/src/lib/secrets/__tests__/fsSecretCore.test.ts > fsSecretCore anchored writes under concurrent store mutation fails closed when the tenant directory is swapped after the temp file is written but before the rename",
+    "skipped: packages/core/src/lib/secrets/__tests__/fsSecretCore.test.ts > fsSecretCore anchored writes under concurrent store mutation fails closed and removes the renamed file when the tenant directory is swapped during the rename itself",
+    "skipped: packages/core/src/lib/secrets/__tests__/fsSecretCore.test.ts > fsSecretCore anchored writes under concurrent store mutation deletes through the anchor when the tenant directory is swapped between validation and unlink",
+    "skipped: packages/core/src/lib/secrets/__tests__/fsSecretCore.test.ts > repair script --apply --uid as root fixes mode and ownership together, including the root itself",
+    "skipped: packages/core/src/lib/secrets/__tests__/fsSecretCore.test.ts > repair script --apply without --uid exits non-zero when ownership is mixed",
+    "Unexpected executed test: [\"server/src/test/unit/billingPlanSelection.test.ts\",\"Contract line choices returned to the UI > should handle the case when no client ID is available\"]",
+    "Unexpected executed test: [\"server/src/test/unit/taxService.test.ts\",\"TaxService > calculateTax > should calculate composite tax correctly\"]",
+    "Unexpected executed test: [\"server/src/test/unit/taxService.test.ts\",\"TaxService > should handle overlapping tax holidays correctly\"]",
+    "Unexpected executed test: [\"server/src/test/unit/taxService.test.ts\",\"TaxService > should apply the correct tax rate based on the transaction date\"]",
+    "Unexpected executed test: [\"server/src/test/unit/taxService.test.ts\",\"TaxService > should handle tax exemptions correctly\"]",
+    "Unexpected executed test: [\"server/src/test/unit/taxService.test.ts\",\"TaxService > should calculate taxes correctly for negative amounts (refunds)\"]",
+    "Unexpected executed test: [\"server/src/test/unit/taxService.test.ts\",\"TaxService > should handle tax rounding correctly for small amounts\"]",
+    "Unexpected executed test: [\"server/src/test/unit/taxService.test.ts\",\"TaxService > should apply the correct tax rate for international transactions\"]",
+    "Unexpected executed test: [\"server/src/test/unit/taxService.test.ts\",\"TaxService > should handle tax calculation for multi-item invoices with different tax rates\"]",
+    "Unexpected executed test: [\"server/src/test/unit/taxService.test.ts\",\"TaxService > should apply tax caps correctly when present\"]",
+    "Unexpected executed test: [\"server/src/test/unit/taxService.test.ts\",\"TaxService > should handle tax calculation for different currencies correctly\"]",
+    "Unexpected executed test: [\"server/src/test/unit/taxService.test.ts\",\"TaxService > should apply reverse charge mechanism correctly for B2B transactions\"]",
+    "Unexpected executed test: [\"server/src/test/unit/taxService.test.ts\",\"TaxService > should handle tax calculation for subscriptions spanning multiple tax periods\"]",
+    "Unexpected executed test: [\"server/src/test/unit/taxService.test.ts\",\"TaxService > should apply progressive tax rates correctly\"]",
+    "Unexpected executed test: [\"server/src/test/unit/taxService.test.ts\",\"TaxService > should handle tax calculation for items with mixed taxable and non-taxable components\"]",
+    "Unexpected executed test: [\"packages/core/src/lib/secrets/__tests__/fsSecretCore.test.ts\",\"fsSecretCore anchored writes under concurrent store mutation > prepares the tenant directory through the held anchor when tenants/ is swapped during preparation\"]",
+    "Unexpected executed test: [\"packages/core/src/lib/secrets/__tests__/fsSecretCore.test.ts\",\"fsSecretCore anchored writes under concurrent store mutation > fails closed when the tenant directory is swapped after the temp file is written but before the rename\"]",
+    "Unexpected executed test: [\"packages/core/src/lib/secrets/__tests__/fsSecretCore.test.ts\",\"fsSecretCore anchored writes under concurrent store mutation > fails closed and removes the renamed file when the tenant directory is swapped during the rename itself\"]",
+    "Unexpected executed test: [\"packages/core/src/lib/secrets/__tests__/fsSecretCore.test.ts\",\"fsSecretCore anchored writes under concurrent store mutation > deletes through the anchor when the tenant directory is swapped between validation and unlink\"]",
+    "Unexpected executed test: [\"packages/core/src/lib/secrets/__tests__/fsSecretCore.test.ts\",\"repair script > --apply --uid as root fixes mode and ownership together, including the root itself\"]",
+    "Unexpected executed test: [\"packages/core/src/lib/secrets/__tests__/fsSecretCore.test.ts\",\"repair script > --apply without --uid exits non-zero when ownership is mixed\"]"
+  ],
+  "source": {
+    "before": {
+      "revision": "a8fd74d09fd762930ac792d118d4a3fb1549c847",
+      "dirty": false,
+      "changes": []
+    },
+    "after": {
+      "revision": "a8fd74d09fd762930ac792d118d4a3fb1549c847",
+      "dirty": false,
+      "changes": []
+    }
+  },
+  "schemaVersion": 1,
+  "suite": "server-unit",
+  "expectedFiles": 2699,
+  "hashes": {
+    "evidence.json": "a00d2895b9dd856bd29c42571b000a7fa1d7b35737b4aad7363b6ff9fcfacc4d",
+    "collected.json": "3ccafef53c7d9ca7709d91120a9a544ec1578a9ebd8abe728fa64cc3c7e3803e",
+    "collected-tests.json": "7ea052edcb5334398ca161ce58aba83242d54ae63f9b51c8bc66dc94d08f20f5",
+    "results.json": "707edb77ca1ec5f3b3576dccff2751dbe44f8042850cc33de076fcf6ad494506"
+  },
+  "log": "/tmp/alga-server-unit-full-a8fd74.log",
+  "limitations": [
+    "Local Node 25 macOS execution; native CI remains unverified.",
+    "21 skipped/todo cases cause readiness rejection; Vitest list omits them while the execution report includes them."
+  ]
+}

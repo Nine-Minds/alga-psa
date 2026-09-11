@@ -2,6 +2,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { TestWorkflowEnvironment } from '@temporalio/testing';
 import { Worker } from '@temporalio/worker';
+import { ApplicationFailure } from '@temporalio/common';
 import { tenantCreationWorkflow } from '../tenant-creation-workflow.js';
 import type { TenantCreationInput } from '../../types/workflow-types.js';
 
@@ -14,17 +15,23 @@ import type { TenantCreationInput } from '../../types/workflow-types.js';
 
 interface RecordedCalls {
   createTenant: any[];
+  onboardingSeeds: any[];
+  order: string[];
+  rollbackTenant: number;
   createAdminUser: any[];
   setupTenantData: any[];
   customerTracking: number;
   welcomeEmail: number;
 }
 
-async function setupWorkflowTest() {
+async function setupWorkflowTest(seedFails = false) {
   const env = await TestWorkflowEnvironment.createTimeSkipping();
   const taskQueue = `test-tenant-creation-${Date.now()}`;
   const calls: RecordedCalls = {
     createTenant: [],
+    onboardingSeeds: [],
+    order: [],
+    rollbackTenant: 0,
     createAdminUser: [],
     setupTenantData: [],
     customerTracking: 0,
@@ -34,11 +41,18 @@ async function setupWorkflowTest() {
   const activities = {
     createTenant: async (input: any) => {
       calls.createTenant.push(input);
+      calls.order.push('createTenant');
       return { tenantId: input.tenantId ?? 'generated-tenant-id', clientId: 'client-1' };
     },
-    run_onboarding_seeds: async () => ({ success: true, seedsApplied: ['01_roles.cjs'] }),
+    run_onboarding_seeds: async (input: any) => {
+      calls.onboardingSeeds.push(input);
+      calls.order.push('onboardingSeeds');
+      if (seedFails) throw ApplicationFailure.nonRetryable('Synthetic seed failure', 'SeedFailure');
+      return { success: true, seedsApplied: ['01_roles.cjs'] };
+    },
     createAdminUser: async (input: any) => {
       calls.createAdminUser.push(input);
+      calls.order.push('createAdminUser');
       return {
         userId: 'user-1',
         roleId: 'role-1',
@@ -68,7 +82,7 @@ async function setupWorkflowTest() {
     getManagementTenantId: async () => ({ tenantId: 'nineminds-tenant' }),
     createPortalUser: async () => ({ userId: 'portal-user-1', roleId: 'portal-role-1' }),
     fetchStripeDetailsFromCheckout: async () => ({ stripeCustomerId: 'cus_x' }),
-    rollbackTenant: async () => {},
+    rollbackTenant: async () => { calls.rollbackTenant += 1; },
     rollbackUser: async () => {},
     rollbackPortalUser: async () => {},
     deleteCustomerClientActivity: async () => {},
@@ -98,7 +112,7 @@ const baseInput: TenantCreationInput = {
 };
 
 describe('tenantCreationWorkflow appliance mode', () => {
-  it('adopts the pre-minted tenant id, uses the supplied password, and skips hosted-only steps', async () => {
+  it.each(['psa', 'algadesk'] as const)('bootstraps %s before admin creation, adopts appliance identity and skips hosted-only steps', async productCode => {
     const { env, worker, taskQueue, calls } = await setupWorkflowTest();
     try {
       const result = await worker.runUntil(
@@ -106,6 +120,7 @@ describe('tenantCreationWorkflow appliance mode', () => {
           args: [
             {
               ...baseInput,
+              productCode,
               tenantId: 'pre-minted-tenant-id',
               adminUser: { ...baseInput.adminUser, password: 'operator-chosen-password' },
               billingSource: 'manual',
@@ -121,7 +136,9 @@ describe('tenantCreationWorkflow appliance mode', () => {
 
       expect(result.success).toBe(true);
       expect(result.tenantId).toBe('pre-minted-tenant-id');
-      expect(calls.createTenant[0].tenantId).toBe('pre-minted-tenant-id');
+      expect(calls.createTenant[0]).toMatchObject({ tenantId: 'pre-minted-tenant-id', productCode });
+      expect(calls.onboardingSeeds).toEqual([{ tenantId: 'pre-minted-tenant-id', productCode }]);
+      expect(calls.order).toEqual(['createTenant', 'onboardingSeeds', 'createAdminUser']);
       expect(calls.createAdminUser[0].password).toBe('operator-chosen-password');
       expect(calls.setupTenantData[0].emailProvider).toBe('smtp');
       expect(calls.customerTracking).toBe(0);
@@ -163,4 +180,23 @@ describe('tenantCreationWorkflow appliance mode', () => {
       await env.teardown();
     }
   });
+  it('stops after seed failure while preserving the created tenant for recovery', async () => {
+    const { env, worker, taskQueue, calls } = await setupWorkflowTest(true);
+    try {
+      await expect(worker.runUntil(env.client.workflow.execute(tenantCreationWorkflow, {
+        args: [{ ...baseInput, productCode: 'algadesk' }], taskQueue,
+        workflowId: `seed-failure-${Date.now()}`,
+      }))).rejects.toThrow();
+      expect(calls.order).toEqual(['createTenant', 'onboardingSeeds']);
+      expect(calls.onboardingSeeds).toEqual([{ tenantId: 'generated-tenant-id', productCode: 'algadesk' }]);
+      expect(calls.createAdminUser).toEqual([]);
+      expect(calls.setupTenantData).toEqual([]);
+      expect(calls.customerTracking).toBe(0);
+      expect(calls.welcomeEmail).toBe(0);
+      expect(calls.rollbackTenant).toBe(0);
+    } finally {
+      await env.teardown();
+    }
+  });
+
 });

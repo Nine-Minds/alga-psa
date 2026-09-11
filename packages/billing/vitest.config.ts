@@ -3,6 +3,8 @@ import path from 'path';
 
 export default defineConfig({
   test: {
+    // Required database suites execute in the workspace DB lane.
+    exclude: ['**/node_modules/**', '**/*.db.test.?(c|m)[jt]s?(x)'],
     globals: true,
     environment: 'node',
     setupFiles: [path.resolve(__dirname, './vitest.setup.ts')],
@@ -21,6 +23,7 @@ export default defineConfig({
       'src/actions/documentTemplateActions.tenantBranding.test.ts',
       'src/actions/documentTemplateActions.existingDocument.test.ts',
       'src/components/billing-dashboard/documents/DocumentTemplateEditor.existingDocument.test.tsx',
+      'src/components/billing-dashboard/LineItem.test.tsx',
       'src/components/billing-dashboard/quotes/QuoteDocumentTemplateEditor.tenantBranding.test.tsx',
       'src/components/billing-dashboard/quotes/QuoteDocumentTemplateEditor.existingQuote.test.tsx',
       'src/components/invoice-designer/DesignerVisualWorkspace.test.tsx',

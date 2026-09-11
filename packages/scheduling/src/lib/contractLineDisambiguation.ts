@@ -136,6 +136,7 @@ export async function getEligibleContractLines(
   serviceId: string,
   effectiveDate?: string | Date
 ): Promise<EligibleContractLine[]> {
+  if (typeof clientId !== 'string' || clientId.trim().length === 0) return [];
   const { rangeStart, rangeEnd } = resolveEffectiveDateRange(effectiveDate);
   const db = tenantDb(knex, tenant);
 

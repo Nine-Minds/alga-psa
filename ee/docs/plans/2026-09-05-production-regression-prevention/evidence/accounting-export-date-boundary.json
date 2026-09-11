@@ -1,0 +1,22 @@
+{
+  "status": "locally_verified_native_pending",
+  "trigger": "Native enterprise API job 101624201410 accountingExports append case returned empty batch for same-day filters",
+  "finding": "Actual migrated local invoice_date is timestamptz; <= date-only end selects midnight only",
+  "change": "Calendar filters use UTC day bounds with exclusive next midnight; explicit timestamps preserve inclusive endpoint",
+  "before": {
+    "log": "/tmp/alga-accounting-date-before-final.log",
+    "failed": 1,
+    "filtered_out": 6
+  },
+  "after": {
+    "log": "/tmp/alga-accounting-date-after.log",
+    "passed": 7,
+    "failed": 0,
+    "skipped": 0
+  },
+  "database": "accounting_date_boundary_82cc",
+  "limitations": [
+    "Full native API rerun pending",
+    "Historical no-op date-column migration unchanged; no schema rewrite performed"
+  ]
+}

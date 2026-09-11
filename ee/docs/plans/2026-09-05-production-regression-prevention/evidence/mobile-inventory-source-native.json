@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "revision": "cb3b2a27e3269d48bfdd60d214f89a8081f7dd25",
+  "suite": "mobile",
+  "status": "passed",
+  "counts": {
+    "passed": 901,
+    "failed": 0,
+    "skipped": 0,
+    "todo": 0,
+    "pending": 0
+  },
+  "source": {
+    "before": {
+      "revision": "cb3b2a27e3269d48bfdd60d214f89a8081f7dd25",
+      "dirty": false,
+      "changes": []
+    },
+    "after": {
+      "revision": "cb3b2a27e3269d48bfdd60d214f89a8081f7dd25",
+      "dirty": false,
+      "changes": []
+    }
+  },
+  "files": 134,
+  "validation": "Full native mobile execution plus the new inventory artifact reader",
+  "reports": {
+    "collected": "247ad611f3c0ff841f6d6db330aaa8911508116ff3a8823adbd7e79e0ab4183e",
+    "collected-tests": "5eac2ccecf8ca715bb8dc6acd28e7c639e5d0729866a4297864eb0f33881e40e",
+    "results": "a0d3dff07a90a8a66b6dcf1ff77c762aff54de267a7255415e3586ab30610982",
+    "source-before": "0c358e128ed03719d2bac6986bfc3206b38927a85c45d13cf33135ca291e364a",
+    "source-after": "0c358e128ed03719d2bac6986bfc3206b38927a85c45d13cf33135ca291e364a"
+  },
+  "limitations": [
+    "Host Node 25 validation; the reusable GitHub workflow runs Node 20 and still requires current-source CI."
+  ]
+}

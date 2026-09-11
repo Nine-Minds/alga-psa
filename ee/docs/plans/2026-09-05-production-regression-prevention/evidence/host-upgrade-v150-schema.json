@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "phase": "baseline-schema-only",
+  "baselineCommit": "f3579f3a317cf51df5f4489e5dcd8f649bb71289",
+  "edition": "ee",
+  "database": "upgrade_v150_82cc_20260907",
+  "migrationCount": 1028,
+  "exitCode": 0,
+  "logSha256": "b8794c9cdbcd1c6a0335f430081c957b58e613094c0dcb61de8bad127a09b5ec",
+  "logPath": "/tmp/alga-upgrade-baseline-retry.log",
+  "limitations": [
+    "Current installed Node dependencies were reused; old release dependency installation is not proven.",
+    "Synthetic business fixture, candidate upgrade, browser checks and Citus upgrade remain pending."
+  ]
+}

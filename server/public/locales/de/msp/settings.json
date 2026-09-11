@@ -2876,7 +2876,8 @@
         "fieldCount": "Felder",
         "order": "Reihenfolge",
         "actions": "Aktionen",
-        "openMenu": "Menü öffnen"
+        "openMenu": "Menü öffnen",
+        "searchPlaceholder": "Asset-Typen suchen…"
       },
       "actions": {
         "addType": "Asset-Typ hinzufügen",

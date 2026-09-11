@@ -1,7 +1,20 @@
 import { QboSimulator } from '@alga-psa/billing/testing/qboSimulator';
 import type { EmulatorCore, HostEnv } from '@alga-psa/emulator-host';
 
+// Preserve the emulator's advertised Intuit SDK sample lifetime. Token validity
+// must follow the response field; this does not model rotation grace periods.
+const REFRESH_TOKEN_TTL_SECONDS = 8_726_400;
+
 /** Intuit fault envelope the wire shell serializes. */
+export class QboOAuthError extends Error {
+  constructor(public readonly status: number,
+    public readonly error: 'invalid_client' | 'invalid_grant' | 'invalid_request' | 'unsupported_grant_type',
+    description: string = error) {
+    super(description);
+    this.name = 'QboOAuthError';
+  }
+}
+
 export class QboWireError extends Error {
   constructor(
     public readonly status: number,
@@ -47,13 +60,13 @@ export class QboEmulatorCore implements EmulatorCore {
   accessTokenTtlSeconds = 3600;
   private readonly sims = new Map<string, QboSimulator>();
   private readonly clients = new Map<string, string>();
-  private readonly authCodes = new Map<string, { clientId: string; redirectUri: string }>();
-  private readonly accessTokens = new Map<string, { clientId: string; expiresAt: number }>();
-  private readonly refreshTokens = new Map<string, { clientId: string; revoked: boolean }>();
+  private readonly authCodes = new Map<string, { clientId: string; redirectUri: string; realmId: string }>();
+  private readonly accessTokens = new Map<string, { clientId: string; realmId: string; grantId: string; expiresAt: number }>();
+  private readonly refreshTokens = new Map<string, { clientId: string; realmId: string; grantId: string; revoked: boolean; expiresAt: number }>();
   private idCounter = 0;
 
   constructor(readonly env: HostEnv) {
-    this.sims.set(this.realmId, new QboSimulator({ realmId: this.realmId }));
+    this.addRealm(this.realmId);
   }
 
   /** The default company file — most scenarios only ever use this one. */
@@ -75,7 +88,7 @@ export class QboEmulatorCore implements EmulatorCore {
 
   /** Add (or reset) a separately-stated company file under its own realm id. */
   addRealm(realmId: string): { realmId: string } {
-    this.sims.set(realmId, new QboSimulator({ realmId }));
+    this.sims.set(realmId, new QboSimulator({ realmId, now: () => this.env.clock.now() }));
     return { realmId };
   }
 
@@ -85,7 +98,7 @@ export class QboEmulatorCore implements EmulatorCore {
 
   reset(): void {
     this.sims.clear();
-    this.sims.set(this.realmId, new QboSimulator({ realmId: this.realmId }));
+    this.addRealm(this.realmId);
     this.clients.clear();
     this.authCodes.clear();
     this.accessTokens.clear();
@@ -135,12 +148,13 @@ export class QboEmulatorCore implements EmulatorCore {
     this.clients.set(clientId, clientSecret);
   }
 
-  authorize(clientId: string, redirectUri: string): string {
+  authorize(clientId: string, redirectUri: string, realmId = this.realmId): string {
+    this.simFor(realmId);
     if (!this.clients.has(clientId)) {
       throw new QboWireError(400, '3200', 'invalid_client');
     }
     const code = this.newId('code');
-    this.authCodes.set(code, { clientId, redirectUri });
+    this.authCodes.set(code, { clientId, redirectUri, realmId });
     return code;
   }
 
@@ -153,25 +167,25 @@ export class QboEmulatorCore implements EmulatorCore {
     token_type: 'bearer';
   } {
     if (this.clients.get(basicClientId) !== basicClientSecret) {
-      throw new QboWireError(401, '3200', 'invalid_client');
+      throw new QboOAuthError(401, 'invalid_client');
     }
     if (params.grant_type === 'authorization_code') {
       const code = this.authCodes.get(String(params.code));
       if (!code || code.clientId !== basicClientId || code.redirectUri !== params.redirect_uri) {
-        throw new QboWireError(400, '3200', 'invalid_grant');
+        throw new QboOAuthError(400, 'invalid_grant');
       }
       this.authCodes.delete(String(params.code));
-      return this.issueTokens(basicClientId);
+      return this.issueTokens(basicClientId, code.realmId);
     }
     if (params.grant_type === 'refresh_token') {
       const refresh = this.refreshTokens.get(String(params.refresh_token));
-      if (!refresh || refresh.revoked || refresh.clientId !== basicClientId) {
-        throw new QboWireError(400, '3200', 'invalid_grant');
+      if (!refresh || refresh.revoked || refresh.expiresAt <= this.nowMs() || refresh.clientId !== basicClientId) {
+        throw new QboOAuthError(400, 'invalid_grant');
       }
       this.refreshTokens.delete(String(params.refresh_token));
-      return this.issueTokens(basicClientId);
+      return this.issueTokens(basicClientId, refresh.realmId, refresh.grantId);
     }
-    throw new QboWireError(400, '3200', 'unsupported_grant_type');
+    throw new QboOAuthError(400, 'unsupported_grant_type');
   }
 
   /** Mint a token set directly, skipping the browser flow — for test wiring. */
@@ -182,21 +196,23 @@ export class QboEmulatorCore implements EmulatorCore {
     return { ...this.issueTokens(clientId), realmId: this.realmId };
   }
 
-  private issueTokens(clientId: string) {
+  private issueTokens(clientId: string, realmId = this.realmId, grantId = this.newId('grant')) {
     const accessToken = this.newId('access');
     const refreshToken = this.newId('refresh');
-    this.accessTokens.set(accessToken, { clientId, expiresAt: this.nowMs() + this.accessTokenTtlSeconds * 1000 });
-    this.refreshTokens.set(refreshToken, { clientId, revoked: false });
+    this.accessTokens.set(accessToken, { clientId, realmId, grantId, expiresAt: this.nowMs() + this.accessTokenTtlSeconds * 1000 });
+    this.refreshTokens.set(refreshToken, {
+      clientId, realmId, grantId, revoked: false, expiresAt: this.nowMs() + REFRESH_TOKEN_TTL_SECONDS * 1000,
+    });
     return {
       access_token: accessToken,
       refresh_token: refreshToken,
       expires_in: this.accessTokenTtlSeconds,
-      x_refresh_token_expires_in: 8_726_400,
+      x_refresh_token_expires_in: REFRESH_TOKEN_TTL_SECONDS,
       token_type: 'bearer' as const,
     };
   }
 
-  authenticate(bearerToken: string): { clientId: string } {
+  authenticate(bearerToken: string): { clientId: string; realmId: string } {
     const record = this.accessTokens.get(bearerToken);
     if (!record || record.expiresAt <= this.nowMs()) {
       throw new QboWireError(401, '3200', 'message=AuthenticationFailed; errorCode=003200');
@@ -209,6 +225,30 @@ export class QboEmulatorCore implements EmulatorCore {
       token.expiresAt = 0;
     }
     return this.accessTokens.size;
+  }
+
+  /**
+   * Intuit SDK wire contract: Basic auth and JSON token, empty 200 success.
+   * RFC 7009 supplies our unknown/repeat success and grant-wide invalidation
+   * policy; those edge semantics are not independently verified Intuit parity.
+   * Keep fresh grants separate and retain the grant through refresh rotation.
+   */
+  revokeToken(clientId: string, clientSecret: string, token: unknown): void {
+    if (!this.clients.has(clientId) || this.clients.get(clientId) !== clientSecret) {
+      throw new QboOAuthError(401, 'invalid_client');
+    }
+    if (typeof token !== 'string' || !token.trim()) {
+      throw new QboOAuthError(400, 'invalid_request');
+    }
+    const record = this.refreshTokens.get(token) ?? this.accessTokens.get(token);
+    if (!record) return;
+    if (record.clientId !== clientId) throw new QboOAuthError(400, 'invalid_grant');
+    for (const [value, access] of this.accessTokens) {
+      if (access.grantId === record.grantId) this.accessTokens.delete(value);
+    }
+    for (const [value, refresh] of this.refreshTokens) {
+      if (refresh.grantId === record.grantId) this.refreshTokens.delete(value);
+    }
   }
 
   revokeRefreshToken(refreshToken: string): boolean {

@@ -20,10 +20,14 @@ export default defineConfig({
   },
   test: {
     globals: true,
+    reporters: process.env.TEST_PROGRESS_PATH
+      ? ['default', path.resolve(__dirname, '../scripts/lib/vitest-progress-reporter.mjs')]
+      : ['default'],
     environment: 'node',
     // This repo keeps a large number of tests under workspace packages (e.g. ../packages/*).
     // Include them explicitly because Vitest's default include globs do not match paths outside the config root.
     include: [
+      '../ee/temporal-workflows/src/__tests__/integration/**/*.test.ts',
       'src/**/*.{test,spec}.?(c|m)[jt]s?(x)',
       'migrations/__tests__/**/*.{test,spec}.?(c|m)[jt]s?(x)',
       '../packages/**/*.{test,spec}.?(c|m)[jt]s?(x)',
@@ -198,7 +202,7 @@ export default defineConfig({
       { find: /^@alga-psa\/licensing\/actions\/(.*)$/, replacement: path.resolve(__dirname, '../packages/licensing/src/actions/$1') },
       { find: /^@alga-psa\/auth$/, replacement: path.resolve(__dirname, '../packages/auth/src/index.ts') },
       { find: /^@alga-psa\/auth\/actions\/(.*)$/, replacement: path.resolve(__dirname, '../packages/auth/src/actions/$1') },
-      { find: /^@alga-psa\/auth\/sso\/entry$/, replacement: path.resolve(__dirname, '../packages/ee/src/components/auth/SsoProviderButtons.tsx') },
+      { find: /^@alga-psa\/auth\/sso\/entry$/, replacement: path.resolve(__dirname, '../packages/auth/src/components/SsoProviderButtons.tsx') },
       { find: /^@alga-psa\/auth\/session$/, replacement: path.resolve(__dirname, '../packages/auth/src/lib/session.ts') },
       { find: /^@alga-psa\/auth\/rbac$/, replacement: path.resolve(__dirname, '../packages/auth/src/lib/rbac.ts') },
       { find: /^@alga-psa\/auth\/withAuth$/, replacement: path.resolve(__dirname, '../packages/auth/src/lib/withAuth.ts') },

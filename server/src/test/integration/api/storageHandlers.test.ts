@@ -137,14 +137,14 @@ describe('Storage Route Handlers', () => {
     };
 
     const putResponse = await putRecordHandler(jsonRequest('PUT', buildRecordUrl(key), payload), {
-      params: { namespace, key },
+      params: Promise.resolve({ namespace, key }),
     });
     expect(putResponse.status).toBe(200);
     const putData: any = await readJson(putResponse);
     expect(putData).toMatchObject({ namespace, key, revision: 1 });
 
     const getResponse = await getRecordHandler(jsonRequest('GET', buildRecordUrl(key)), {
-      params: { namespace, key },
+      params: Promise.resolve({ namespace, key }),
     });
     expect(getResponse.status).toBe(200);
     const getData: any = await readJson(getResponse);
@@ -156,15 +156,15 @@ describe('Storage Route Handlers', () => {
     mockAuth();
 
     await putRecordHandler(jsonRequest('PUT', buildRecordUrl('list-one'), { value: { id: 1 }, metadata: { marker: 'one' } }), {
-      params: { namespace, key: 'list-one' },
+      params: Promise.resolve({ namespace, key: 'list-one' }),
     });
     await putRecordHandler(jsonRequest('PUT', buildRecordUrl('list-two'), { value: { id: 2 }, metadata: { marker: 'two' } }), {
-      params: { namespace, key: 'list-two' },
+      params: Promise.resolve({ namespace, key: 'list-two' }),
     });
 
     const listResponse = await listRecordsHandler(
       jsonRequest('GET', buildRecordsUrl({ includeValues: true, includeMetadata: true, limit: 10 })),
-      { params: { namespace } },
+      { params: Promise.resolve({ namespace }) },
     );
     expect(listResponse.status).toBe(200);
     const listData: any = await readJson(listResponse);
@@ -182,7 +182,7 @@ describe('Storage Route Handlers', () => {
     const key = 'revision-check';
 
     const initial = await putRecordHandler(jsonRequest('PUT', buildRecordUrl(key), { value: { step: 1 } }), {
-      params: { namespace, key },
+      params: Promise.resolve({ namespace, key }),
     });
     expect(initial.status).toBe(200);
     const firstData: any = await readJson(initial);
@@ -191,7 +191,7 @@ describe('Storage Route Handlers', () => {
     const update = await putRecordHandler(
       jsonRequest('PUT', buildRecordUrl(key), { value: { step: 2 }, ifRevision: firstData.revision }),
       {
-        params: { namespace, key },
+        params: Promise.resolve({ namespace, key }),
       },
     );
     expect(update.status).toBe(200);
@@ -199,7 +199,7 @@ describe('Storage Route Handlers', () => {
     expect(secondData.revision).toBe(2);
 
     const stale = await putRecordHandler(jsonRequest('PUT', buildRecordUrl(key), { value: { step: 3 }, ifRevision: 1 }), {
-      params: { namespace, key },
+      params: Promise.resolve({ namespace, key }),
     });
     expect(stale.status).toBe(409);
     const staleBody: any = await readJson(stale);
@@ -211,18 +211,18 @@ describe('Storage Route Handlers', () => {
 
     const key = 'delete-me';
     await putRecordHandler(jsonRequest('PUT', buildRecordUrl(key), { value: { active: true } }), {
-      params: { namespace, key },
+      params: Promise.resolve({ namespace, key }),
     });
 
     const deleteResponse = await deleteRecordHandler(jsonRequest('DELETE', buildRecordUrl(key)), {
-      params: { namespace, key },
+      params: Promise.resolve({ namespace, key }),
     });
     expect(deleteResponse.status).toBe(204);
     const text = await deleteResponse.text();
     expect(text).toBe('');
 
     const missing = await getRecordHandler(jsonRequest('GET', buildRecordUrl(key)), {
-      params: { namespace, key },
+      params: Promise.resolve({ namespace, key }),
     });
     expect(missing.status).toBe(404);
     const missingBody: any = await readJson(missing);
@@ -239,21 +239,21 @@ describe('Storage Route Handlers', () => {
           { key: 'bulk-two', value: { id: 2 }, metadata: { label: 'two' } },
         ],
       }),
-      { params: { namespace } },
+      { params: Promise.resolve({ namespace }) },
     );
     expect(bulkResponse.status).toBe(200);
     const bulkData: any = await readJson(bulkResponse);
     expect(bulkData.items).toHaveLength(2);
 
     const first = await getRecordHandler(jsonRequest('GET', buildRecordUrl('bulk-one')), {
-      params: { namespace, key: 'bulk-one' },
+      params: Promise.resolve({ namespace, key: 'bulk-one' }),
     });
     expect(first.status).toBe(200);
     const firstBody: any = await readJson(first);
     expect(firstBody.value).toEqual({ id: 1 });
 
     const second = await getRecordHandler(jsonRequest('GET', buildRecordUrl('bulk-two')), {
-      params: { namespace, key: 'bulk-two' },
+      params: Promise.resolve({ namespace, key: 'bulk-two' }),
     });
     expect(second.status).toBe(200);
     const secondBody: any = await readJson(second);
@@ -285,13 +285,13 @@ describe('Storage Route Handlers', () => {
     try {
       const seedKey = 'quota-seed';
       const first = await putRecordHandler(jsonRequest('PUT', buildRecordUrl(seedKey), { value: { data: 'x'.repeat(40) } }), {
-        params: { namespace, key: seedKey },
+        params: Promise.resolve({ namespace, key: seedKey }),
       });
       expect(first.status).toBe(200);
 
       const overKey = 'quota-over';
       const over = await putRecordHandler(jsonRequest('PUT', buildRecordUrl(overKey), { value: { data: 'y'.repeat(60) } }), {
-        params: { namespace, key: overKey },
+        params: Promise.resolve({ namespace, key: overKey }),
       });
       expect(over.status).toBe(429);
       const overBody: any = await readJson(over);
@@ -304,7 +304,7 @@ describe('Storage Route Handlers', () => {
   it('should reject requests without tenant credentials', async () => {
     getCurrentUserSpy = vi.spyOn(userActions, 'getCurrentUser').mockResolvedValue(null);
     const response = await listRecordsHandler(jsonRequest('GET', buildRecordsUrl()), {
-      params: { namespace },
+      params: Promise.resolve({ namespace }),
     });
     expect(response.status).toBe(401);
     const body: any = await readJson(response);
@@ -315,12 +315,12 @@ describe('Storage Route Handlers', () => {
     mockAuth();
     const key = 'tenant-isolated';
     await putRecordHandler(jsonRequest('PUT', buildRecordUrl(key), { value: { v: 1 } }), {
-      params: { namespace, key },
+      params: Promise.resolve({ namespace, key }),
     });
     mockAuth(true, '11111111-1111-1111-1111-111111111111');
 
     const response = await getRecordHandler(jsonRequest('GET', buildRecordUrl(key)), {
-      params: { namespace, key },
+      params: Promise.resolve({ namespace, key }),
     });
     expect(response.status).toBe(404);
     const body: any = await readJson(response);
@@ -331,7 +331,7 @@ describe('Storage Route Handlers', () => {
     mockAuth(false);
 
     const response = await listRecordsHandler(jsonRequest('GET', buildRecordsUrl()), {
-      params: { namespace },
+      params: Promise.resolve({ namespace }),
     });
     expect(hasPermissionSpy).toHaveBeenCalled();
     expect(response.status).toBe(401);
@@ -346,7 +346,7 @@ describe('Storage Route Handlers', () => {
 
     const first = await putRecordHandler(
       jsonRequest('PUT', buildRecordUrl(key), { value: { version: 1 } }),
-      { params: { namespace, key } },
+      { params: Promise.resolve({ namespace, key }) },
     );
     expect(first.status).toBe(200);
     const firstBody: any = await readJson(first);
@@ -354,14 +354,14 @@ describe('Storage Route Handlers', () => {
 
     const second = await putRecordHandler(
       jsonRequest('PUT', buildRecordUrl(key), { value: { version: 2 } }),
-      { params: { namespace, key } },
+      { params: Promise.resolve({ namespace, key }) },
     );
     expect(second.status).toBe(200);
     const secondBody: any = await readJson(second);
     expect(secondBody.revision).toBe(2);
 
     const current = await getRecordHandler(jsonRequest('GET', buildRecordUrl(key)), {
-      params: { namespace, key },
+      params: Promise.resolve({ namespace, key }),
     });
     expect(current.status).toBe(200);
     const currentBody: any = await readJson(current);
@@ -370,7 +370,7 @@ describe('Storage Route Handlers', () => {
 
     const staleRead = await getRecordHandler(
       jsonRequest('GET', buildRecordUrl(key), undefined, { headers: { 'if-revision-match': '1' } }),
-      { params: { namespace, key } },
+      { params: Promise.resolve({ namespace, key }) },
     );
     expect(staleRead.status).toBe(409);
     const staleBody: any = await readJson(staleRead);
@@ -378,7 +378,7 @@ describe('Storage Route Handlers', () => {
 
     const guardedRead = await getRecordHandler(
       jsonRequest('GET', buildRecordUrl(key), undefined, { headers: { 'if-revision-match': '2' } }),
-      { params: { namespace, key } },
+      { params: Promise.resolve({ namespace, key }) },
     );
     expect(guardedRead.status).toBe(200);
     const guardedBody: any = await readJson(guardedRead);
@@ -386,7 +386,7 @@ describe('Storage Route Handlers', () => {
 
     const staleDelete = await deleteRecordHandler(
       jsonRequest('DELETE', `${buildRecordUrl(key)}?ifRevision=1`),
-      { params: { namespace, key } },
+      { params: Promise.resolve({ namespace, key }) },
     );
     expect(staleDelete.status).toBe(409);
     const staleDeleteBody: any = await readJson(staleDelete);
@@ -394,12 +394,12 @@ describe('Storage Route Handlers', () => {
 
     const deleteResponse = await deleteRecordHandler(
       jsonRequest('DELETE', `${buildRecordUrl(key)}?ifRevision=2`),
-      { params: { namespace, key } },
+      { params: Promise.resolve({ namespace, key }) },
     );
     expect(deleteResponse.status).toBe(204);
 
     const missing = await getRecordHandler(jsonRequest('GET', buildRecordUrl(key)), {
-      params: { namespace, key },
+      params: Promise.resolve({ namespace, key }),
     });
     expect(missing.status).toBe(404);
     const missingBody: any = await readJson(missing);

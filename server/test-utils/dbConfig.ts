@@ -79,7 +79,9 @@ export async function createTestDbConnection(
   options: CreateTestDbConnectionOptions = {}
 ): Promise<Knex> {
   const databaseName = options.databaseName || TEST_DB_NAME;
-  const migrationsDir = options.migrationsDir || path.join(serverRoot, 'migrations');
+  // The EE integration runner supplies a disposable CE+EE overlay. Every
+  // per-file recreate must use it, not revert the database to CE-only schema.
+  const migrationsDir = options.migrationsDir || process.env.TEST_MIGRATIONS_DIR || path.join(serverRoot, 'migrations');
   const seedsDir = options.seedsDir || path.join(serverRoot, 'seeds', 'dev');
   const runSeeds = options.runSeeds ?? true;
 
@@ -147,7 +149,13 @@ export async function createTestDbConnection(
   // dozens of migrations; on plain Postgres each one ERRORs server-side before
   // its try/catch concludes "not Citus". An empty stand-in catalog makes every
   // probe succeed with is_distributed=false — same behavior, silent logs.
-  await adminKnex.raw('CREATE TABLE IF NOT EXISTS public.pg_dist_partition (logicalrelid regclass)');
+  if (process.env.TEST_DB_BACKEND === 'citus') {
+    await adminKnex.raw('CREATE EXTENSION IF NOT EXISTS citus');
+    await adminKnex.raw('ALTER DATABASE ?? SET citus.shard_count = 4', [databaseName]);
+    await adminKnex.raw('SET citus.shard_count = 4');
+  } else {
+    await adminKnex.raw('CREATE TABLE IF NOT EXISTS public.pg_dist_partition (logicalrelid regclass)');
+  }
 
   await adminKnex.migrate.latest();
   if (runSeeds) {

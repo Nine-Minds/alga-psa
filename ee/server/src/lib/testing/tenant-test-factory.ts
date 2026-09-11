@@ -5,7 +5,7 @@
 
 import { v4 as uuidv4 } from 'uuid';
 import type { Knex } from 'knex';
-import { tenantDb } from '@alga-psa/db';
+import { tenantDb } from '@alga-psa/db/tenantDb';
 import { createTenantComplete, type TenantCreationInput, type TenantCreationResult } from './tenant-creation';
 
 export interface TenantTestData {

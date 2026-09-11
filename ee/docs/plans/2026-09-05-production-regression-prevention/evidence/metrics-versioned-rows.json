@@ -1,0 +1,38 @@
+{
+  "status": "local behavior verified; native and live Sheet verification pending",
+  "schemaVersion": 2,
+  "appendedFields": [
+    "schema_version",
+    "run_kind",
+    "event_name",
+    "coverage_methodology"
+  ],
+  "compatibility": "Original metrics A:T and coverage_by_dir A:M positions preserved; header migration checks existing headings before suffix extension. Historical rows stay unversioned.",
+  "methodology": "v8-loaded-files/source-inventory-v1; documents current restricted source denominator without claiming whole-repository coverage.",
+  "tests": {
+    "before": {
+      "passed": 7,
+      "failed": 2,
+      "log": "/tmp/alga-metrics-version-before.log"
+    },
+    "after": {
+      "passed": 14,
+      "failed": 0,
+      "skipped": 0,
+      "log": "/tmp/alga-metrics-version-after.log"
+    },
+    "scenarios": [
+      "PR, main push, branch push, schedule, manual and unknown event classifications",
+      "Local coverage-only methodology metadata",
+      "Original counts and percentages preserved",
+      "Legacy header extension and mismatch refusal"
+    ]
+  },
+  "remaining": [
+    "Required expected/collected/executed identities, journey/retry/edition/artifact fields",
+    "Actual workbook readiness presentation and live schema readback",
+    "Cancelled/missing-run external reconciliation",
+    "Comprehensive source denominator and versioned configuration inventory"
+  ],
+  "planStatus": "F024 and F025 remain incomplete"
+}

@@ -1,23 +1,13 @@
 name: E2E Fresh Install Tests
 
 on:
+  workflow_call:
   workflow_dispatch:
     inputs:
       no_cache:
         description: Build all images without layer caches
         type: boolean
         default: false
-  pull_request:
-    branches:
-      - '**'
-    # paths filter removed to always trigger
-
-  push:
-    branches:
-      - main
-    # paths filter removed to always trigger
-
-# Stop superseded PR runs from consuming build runners. Keep every main run.
 concurrency:
   group: fresh-install-${{ github.event.pull_request.number || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -30,55 +20,61 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
-      run_tests: ${{ github.event_name == 'workflow_dispatch' || steps.changed_files_check.outputs.any_changed == 'true' }}
+      run_tests: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.should_run == 'true' }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Fetches all history for all branches and tags, required for tj-actions/changed-files
+          fetch-depth: 0
 
-      #--------------------------------------------------------------
-      # Detect whether the proposed changes require running the
-      # (slow) E2E installation tests.  Skip if only non-application
-      # files changed (e.g., Helm charts, docs, scripts).
-      #--------------------------------------------------------------
-      - name: Check for relevant file changes
-        id: changed_files_check
-        uses: tj-actions/changed-files@v46 # Updated from v42 to fix CVE-2025-30066
+      - uses: actions/setup-node@v4
         with:
-          # List of paths that, when modified, SHOULD trigger the heavy
-          # E2E job. Paths NOT listed here (helm/, docs/, scripts/, sdk/)
-          # will not trigger the tests.
-          files: |
-            .github/workflows/e2e-fresh-install-tests.yaml
-            docker-compose.base.yaml
-            docker-compose.ce.yaml
-            docker-compose.prod.yaml
-            docker-compose.setup-ubuntu.override.yaml
-            docker-compose.imap-test.yaml
-            .dockerignore
-            .env.example
-            hocuspocus/**
-            redis/**
-            pgbouncer/**
-            Dockerfile
-            Dockerfile.build
-            server/**
-            setup/**
-            shared/**
-            packages/**
-            services/**
-            ee/**
-            e2e-tests/**
-            package.json
-            package-lock.json
-            tsconfig.base.json
-            tsconfig.json
-            types/**
+          node-version: '22'
+
+      # Share the conservative policy with integration coverage. In particular,
+      # runner/fixture scripts, service builds and unknown paths cannot silently
+      # bypass the production browser job; only known documentation may skip it.
+      - name: Determine production validation requirements
+        id: filter
+        env:
+          TIER1_BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          TIER1_HEAD_SHA: ${{ github.sha }}
+        run: node scripts/select-integration-tests.mjs
+
+  browser-collection:
+    name: Standalone browser collection
+    needs: changes
+    if: needs.changes.outputs.run_tests == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: e2e-tests/package-lock.json
+      - name: Install standalone browser dependencies
+        working-directory: e2e-tests
+        run: npm ci
+      - name: Collect both editions without root workspace dependencies
+        working-directory: e2e-tests
+        run: |
+          mkdir -p ../test-results/browser-collection
+          E2E_EDITION=community PLAYWRIGHT_JSON_OUTPUT_FILE=../test-results/browser-collection/community.json npm run test:list -- --reporter=json
+          E2E_EDITION=enterprise PLAYWRIGHT_JSON_OUTPUT_FILE=../test-results/browser-collection/enterprise.json npm run test:list -- --reporter=json
+      - name: Retain standalone browser collection
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-collection
+          path: test-results/browser-collection/
+          if-no-files-found: error
+          retention-days: 30
 
   build-images:
-    needs: changes
+    needs: [changes, browser-collection]
     if: needs.changes.outputs.run_tests == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
@@ -89,7 +85,18 @@ jobs:
           - service: server
             dockerfile: Dockerfile.build
             image: alga-e2e-test_server_ce_local:latest
+            artifact: fresh-install-server-community
             cache: false
+          - service: server-ee
+            dockerfile: ee/server/Dockerfile.build
+            image: alga-e2e-test_server_ee_local:latest
+            artifact: fresh-install-server-enterprise
+            cache: false
+          - service: algasim
+            context: ./packages/emulators
+            dockerfile: packages/emulators/Dockerfile
+            image: alga-e2e-test-algasim:latest
+            cache: true
           - service: setup
             dockerfile: setup/Dockerfile.ubuntu
             image: alga-setup:ubuntu
@@ -97,6 +104,14 @@ jobs:
           - service: email-service
             dockerfile: services/email-service/Dockerfile
             image: alga-e2e-test-email-service:latest
+            cache: false
+          - service: workflow-worker
+            dockerfile: services/workflow-worker/Dockerfile
+            image: alga-e2e-test-workflow-worker:latest
+            cache: false
+          - service: temporal-worker
+            dockerfile: ee/temporal-workflows/Dockerfile
+            image: alga-e2e-test-temporal-worker:latest
             cache: false
           - service: hocuspocus
             dockerfile: hocuspocus/Dockerfile
@@ -122,17 +137,56 @@ jobs:
           fi
           df -h /
 
+      - name: Set up emulator build runtime
+        if: matrix.service == 'algasim'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Compile candidate emulator packages and verify controls
+        if: matrix.service == 'algasim'
+        run: |
+          npm install -g npm@11
+          npm ci
+          packages/emulators/build-image.sh --stage-only
+          npm test --workspace=@alga-psa/emulator-host
+          npm test --workspace=@alga-psa/emulator-stripe
+          npm test --workspace=@alga-psa/emulator-qbo
+          npm test --workspace=@alga-psa/emulator-xero
+          npm test --workspace=@alga-psa/emulator-msgraph
+          npm test --workspace=@alga-psa/emulator-smtp-sink
+          node --test e2e-tests/harness/emulator-control.test.mjs
+          node --test e2e-tests/harness/calendar-callback-proxy.test.mjs
+
       - uses: docker/setup-buildx-action@v3
 
+      - name: Provide memory headroom for production compilation
+        if: matrix.service == 'server' || matrix.service == 'server-ee'
+        run: |
+          # EE's webpack build exceeded runner RAM and was killed by the OS.
+          # Keep the actual production build and its bounded Node heap; provide
+          # backing space for transient native/webpack allocation peaks.
+          free -h
+          sudo fallocate -l 8G /swapfile-alga-production-build
+          sudo chmod 600 /swapfile-alga-production-build
+          sudo mkswap /swapfile-alga-production-build
+          sudo swapon /swapfile-alga-production-build
+          free -h
+
       - name: Build and export ${{ matrix.service }}
+        id: export_image
         uses: docker/build-push-action@v6
         with:
           context: ${{ matrix.context || '.' }}
           file: ${{ matrix.dockerfile }}
           platforms: linux/amd64
           tags: ${{ matrix.image }}
+          labels: |
+            org.opencontainers.image.revision=${{ github.sha }}
           build-args: |
             NEXT_BUILD_MAX_OLD_SPACE_SIZE=12288
+            NEXT_PUBLIC_FORCE_FEATURE_FLAGS=release-v1-6-feature:true
           outputs: type=docker,dest=${{ runner.temp }}/${{ matrix.service }}.tar
           no-cache: ${{ inputs.no_cache == true }}
           # The server/email workspace layers are huge; exporting them to the
@@ -144,42 +198,81 @@ jobs:
       - name: Compress image for transfer
         env:
           IMAGE_ARCHIVE: ${{ runner.temp }}/${{ matrix.service }}.tar
-        run: gzip -1 "$IMAGE_ARCHIVE"
+        run: |
+          gzip -1 "$IMAGE_ARCHIVE"
+
+      - name: Record actual image archive build identity
+        env:
+          IMAGE_ARCHIVE: ${{ runner.temp }}/${{ matrix.service }}.tar.gz
+          BUILD_RECORD: ${{ runner.temp }}/${{ matrix.service }}-build.json
+          BUILD_SERVICE: ${{ matrix.service }}
+          BUILD_IMAGE: ${{ matrix.image }}
+          BUILD_DOCKERFILE: ${{ matrix.dockerfile }}
+          BUILD_PLATFORM: linux/amd64
+          BUILD_CONFIG_IMAGE_ID: ${{ steps.export_image.outputs.imageid }}
+          BUILD_REPORTED_DIGEST: ${{ steps.export_image.outputs.digest }}
+          BUILD_METADATA: ${{ steps.export_image.outputs.metadata }}
+        run: node scripts/record-docker-archive-build.mjs "$IMAGE_ARCHIVE" "$BUILD_RECORD"
+
+      - name: Upload image build record
+        uses: actions/upload-artifact@v4
+        with:
+          name: fresh-install-build-record-${{ matrix.service }}
+          path: ${{ runner.temp }}/${{ matrix.service }}-build.json
+          retention-days: 7
+          if-no-files-found: error
 
       - uses: actions/upload-artifact@v4
         with:
-          name: fresh-install-image-${{ matrix.service }}
+          name: ${{ matrix.artifact || format('fresh-install-image-{0}', matrix.service) }}
           path: ${{ runner.temp }}/${{ matrix.service }}.tar.gz
           compression-level: 0
           retention-days: 1
           if-no-files-found: error
 
-  # Keep the existing required check name. Failed/cancelled build dependencies
-  # must fail this check rather than silently skip the installation job.
-  fresh-install-e2e:
-    needs: [changes, build-images]
+  production-browser:
+    name: Production browser (${{ matrix.edition }})
+    needs: [changes, browser-collection, build-images]
     if: always()
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - edition: community
+            server_archive: server
+            compose_suffix: ''
+          - edition: enterprise
+            server_archive: server-ee
+            compose_suffix: ':docker-compose.e2e-ee.yaml'
     env:
-      COMPOSE_FILE: docker-compose.base.yaml:docker-compose.ce.yaml:docker-compose.prod.yaml:docker-compose.setup-ubuntu.override.yaml:docker-compose.imap-test.yaml
+      COMPOSE_FILE: docker-compose.base.yaml:docker-compose.ce.yaml:docker-compose.prod.yaml:docker-compose.setup-ubuntu.override.yaml:docker-compose.imap-test.yaml:docker-compose.e2e-emulators.yaml${{ matrix.compose_suffix }}
     steps:
       - name: Check build results
         env:
           CHANGES_RESULT: ${{ needs.changes.result }}
           RUN_TESTS: ${{ needs.changes.outputs.run_tests }}
+          COLLECTION_RESULT: ${{ needs.browser-collection.result }}
           BUILD_RESULT: ${{ needs.build-images.result }}
         run: |
           test "$CHANGES_RESULT" = success
           if [ "$RUN_TESTS" = true ]; then
+            test "$COLLECTION_RESULT" = success
             test "$BUILD_RESULT" = success
           else
             echo "No application files were modified; skipping fresh-install tests."
           fi
 
+      - name: Record browser tests not selected
+        if: needs.changes.outputs.run_tests == 'false'
+        run: echo "Browser tests were not selected by the changes filter."
+
       - name: Checkout repository
         if: needs.changes.outputs.run_tests == 'true'
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up test environment secrets and .env
         if: needs.changes.outputs.run_tests == 'true'
@@ -203,8 +296,10 @@ jobs:
           printf "placeholder-id" > secrets/google_oauth_client_id
           printf "placeholder-secret" > secrets/google_oauth_client_secret
 
-          # Set permissions
-          chmod 600 secrets/*
+          # These files contain only the synthetic values above. Compose mounts
+          # file secrets with host ownership; permit the non-root Temporal image
+          # to read them without changing its production user.
+          chmod 444 secrets/*
 
           # Copy and configure environment file
           cp .env.example .env
@@ -217,7 +312,8 @@ jobs:
           APP_ENV=production
           APP_HOST=0.0.0.0
           APP_PORT=3000
-          APP_EDITION=community
+          APP_EDITION=${{ matrix.edition }}
+          NEXT_PUBLIC_EDITION=${{ matrix.edition }}
 
           # Database Configuration (will be overridden by docker-compose services but good to have)
           DB_TYPE=postgres
@@ -295,35 +391,98 @@ jobs:
 
       - name: Download images from this run
         if: steps.install_docker_compose.outcome == 'success'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8.0.1
         with:
+          digest-mismatch: error
           pattern: fresh-install-image-*
           path: ${{ runner.temp }}/fresh-install-images
           merge-multiple: true
+
+      - name: Download candidate image build records
+        if: steps.install_docker_compose.outcome == 'success'
+        uses: actions/download-artifact@v8.0.1
+        with:
+          digest-mismatch: error
+          pattern: fresh-install-build-record-*
+          path: ${{ runner.temp }}/fresh-install-build-records
+          merge-multiple: true
+
+      - name: Download production server for this edition
+        if: steps.install_docker_compose.outcome == 'success'
+        uses: actions/download-artifact@v8.0.1
+        with:
+          digest-mismatch: error
+          name: fresh-install-server-${{ matrix.edition }}
+          path: ${{ runner.temp }}/fresh-install-images
 
       - name: Load and verify images
         if: steps.install_docker_compose.outcome == 'success'
         env:
           IMAGE_DIRECTORY: ${{ runner.temp }}/fresh-install-images
+          BUILD_RECORD_DIRECTORY: ${{ runner.temp }}/fresh-install-build-records
+          SERVER_ARCHIVE: ${{ matrix.server_archive }}
+          EDITION: ${{ matrix.edition }}
+          E2E_EDITION: ${{ matrix.edition }}
         run: |
-          for service in server setup email-service hocuspocus redis pgbouncer; do
+          node e2e-tests/harness/create-calendar-callback-tls.mjs "$RUNNER_TEMP/calendar-callback-tls"
+          export E2E_CALLBACK_TLS_DIR="$RUNNER_TEMP/calendar-callback-tls"
+          echo "E2E_CALLBACK_TLS_DIR=$E2E_CALLBACK_TLS_DIR" >> "$GITHUB_ENV"
+          worker_images="workflow-worker"
+          if [ "$EDITION" = enterprise ]; then worker_images="$worker_images temporal-worker"; fi
+          for service in "$SERVER_ARCHIVE" setup email-service hocuspocus redis pgbouncer algasim $worker_images; do
             archive="$IMAGE_DIRECTORY/$service.tar.gz"
+            node scripts/browser-artifact-manifest.mjs archive "$archive" "$RUNNER_TEMP/verified-$service.json" "$BUILD_RECORD_DIRECTORY/$service-build.json" "$service"
             docker load --input "$archive"
             rm "$archive"
           done
           # Resolve explicit and Compose-generated tags so a configuration change cannot
           # accidentally run an old/pulled image instead of this run's build.
-          docker-compose -p alga-e2e-test config --format json > "$RUNNER_TEMP/fresh-install-compose.json"
-          for service in server setup email-service hocuspocus redis pgbouncer; do
+          docker-compose -p alga-e2e-test --profile enterprise config --format json > "$RUNNER_TEMP/fresh-install-compose.json"
+          for service in server setup email-service hocuspocus redis pgbouncer algasim worker-test-state $worker_images; do
             image=$(jq -r --arg service "$service" '.services[$service].image // (.name + "-" + $service)' "$RUNNER_TEMP/fresh-install-compose.json")
-            docker image inspect "$image" > /dev/null
+            record_service="$service"
+            if [ "$service" = server ]; then record_service="$SERVER_ARCHIVE"; fi
+            if [ "$service" = worker-test-state ]; then record_service=algasim; fi
+            inspection="$RUNNER_TEMP/loaded-$service.json"
+            docker image inspect "$image" > "$inspection"
+            node scripts/verify-docker-archive-build.mjs loaded "$inspection" "$BUILD_RECORD_DIRECTORY/$record_service-build.json" "$record_service"
           done
+          node --input-type=module <<'NODE'
+          import { writeFileSync } from 'node:fs';
+          import path from 'node:path';
+          const { RUNNER_TEMP: temp, BUILD_RECORD_DIRECTORY: records, SERVER_ARCHIVE: server, EDITION: edition } = process.env;
+          const services = [server, 'setup', 'email-service', 'hocuspocus', 'redis', 'pgbouncer', 'algasim', 'workflow-worker',
+            ...(edition === 'enterprise' ? ['temporal-worker'] : [])];
+          writeFileSync(path.join(temp, 'browser-artifact-input.json'), JSON.stringify(services.map(service => ({
+            record: path.join(records, `${service}-build.json`),
+            receipt: path.join(temp, `verified-${service}.json`),
+            inspection: path.join(temp, `loaded-${service === server ? 'server' : service}.json`),
+          }))));
+          NODE
+          node scripts/browser-artifact-manifest.mjs manifest "$RUNNER_TEMP/browser-artifact-input.json" "$RUNNER_TEMP/browser-artifact-manifest.json"
+
+      - name: Start and verify candidate service emulators
+        if: steps.install_docker_compose.outcome == 'success'
+        run: |
+          echo '127.0.0.1 algasim.test' | sudo tee -a /etc/hosts
+          docker-compose -p alga-e2e-test up --no-build --wait --wait-timeout 90 -d algasim test-ingress
+          docker-compose -p alga-e2e-test exec -T algasim node --input-type=module -e 'const r = await fetch("https://calendar-callback:3443/probe", { signal: AbortSignal.timeout(5000) }); if (r.status !== 404) throw new Error("Calendar callback TLS routing failed")'
+          curl --fail --silent http://127.0.0.1:9500/control/catalog > "$RUNNER_TEMP/algasim-catalog.json"
+          jq -e '[.result.emulators[].id] | sort == ["msgraph", "qbo", "smtp-sink", "stripe", "webhook-sink", "xero"]' "$RUNNER_TEMP/algasim-catalog.json"
+          docker image inspect alga-e2e-test-algasim:latest --format '{{.Id}}' > "$RUNNER_TEMP/algasim-image-id.txt"
+
+      - name: Initialize isolated shared worker state
+        if: steps.install_docker_compose.outcome == 'success'
+        run: |
+          # Only this fresh job's empty named volumes are initialized. All
+          # application secret writers use UID1000; production checks stay on.
+          docker-compose -p alga-e2e-test run --rm --no-deps worker-test-state
 
       - name: Start foundational services (postgres and redis)
         if: steps.install_docker_compose.outcome == 'success'
         run: |
           echo "Starting foundational services: postgres and redis"
-          docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml up --no-build -d postgres redis
+          docker-compose -p alga-e2e-test up --no-build -d postgres redis
         shell: bash
 
       - name: Wait for postgres to be ready
@@ -352,7 +511,7 @@ jobs:
         if: steps.install_docker_compose.outcome == 'success'
         run: |
           echo "Starting pgbouncer service"
-          docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml up --no-build -d pgbouncer
+          docker-compose -p alga-e2e-test up --no-build -d pgbouncer
         shell: bash
 
       - name: Wait for pgbouncer to be ready
@@ -391,10 +550,6 @@ jobs:
           DB_HOST_ADMIN=postgres \
           DB_PORT_ADMIN=5432 \
           docker-compose -p alga-e2e-test \
-            -f docker-compose.base.yaml \
-            -f docker-compose.ce.yaml \
-            -f docker-compose.prod.yaml \
-            -f docker-compose.setup-ubuntu.override.yaml \
             up --no-build -d setup
         shell: bash
 
@@ -407,18 +562,18 @@ jobs:
           ATTEMPT_NUM=1
           
           # Get the container ID before the loop, it might be gone after exit
-          SETUP_CONTAINER_ID=$(docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml -f docker-compose.setup-ubuntu.override.yaml ps -q setup)
+          SETUP_CONTAINER_ID=$(docker-compose -p alga-e2e-test ps -q setup)
           if [ -z "$SETUP_CONTAINER_ID" ]; then
             echo "Critical: Could not get initial container ID for setup service. Assuming it failed to start."
-            docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml -f docker-compose.setup-ubuntu.override.yaml logs setup
-            echo "status=failure" >> $GITHUB_OUTPUT
+            docker-compose -p alga-e2e-test logs setup
+            echo "status=failure" >> "$GITHUB_OUTPUT"
             exit 1
           fi
           echo "Monitoring Setup Container ID: $SETUP_CONTAINER_ID"
 
           while [ $ATTEMPT_NUM -le $MAX_ATTEMPTS ]; do
             # Check if the setup container is still running
-            if ! docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml -f docker-compose.setup-ubuntu.override.yaml ps setup | grep -q "Up"; then
+            if ! docker-compose -p alga-e2e-test ps setup | grep -q "Up"; then
               # Container has exited, check its exit code using the stored ID
               echo "Setup container (ID: $SETUP_CONTAINER_ID) is no longer 'Up'. Checking exit code."
               # Use the stored SETUP_CONTAINER_ID
@@ -440,22 +595,22 @@ jobs:
               echo "Reported Setup Exit Code: $SETUP_EXIT_CODE"
               if [ "$SETUP_EXIT_CODE" -eq 0 ]; then
                 echo "Setup service completed successfully."
-                echo "status=success" >> $GITHUB_OUTPUT
+                echo "status=success" >> "$GITHUB_OUTPUT"
                 exit 0
               else
                 echo "Setup service failed with exit code $SETUP_EXIT_CODE."
-                docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml -f docker-compose.setup-ubuntu.override.yaml logs setup
-                echo "status=failure" >> $GITHUB_OUTPUT
+                docker-compose -p alga-e2e-test logs setup
+                echo "status=failure" >> "$GITHUB_OUTPUT"
                 exit 1
               fi
             fi
 
             # Check logs for completion message as a secondary check (optional, primary is exit code)
-            if docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml -f docker-compose.setup-ubuntu.override.yaml logs setup | grep -q "Setup completed!"; then
+            if docker-compose -p alga-e2e-test logs setup | grep -q "Setup completed!"; then
                echo "Setup completion message found in logs. Waiting a bit for container to exit."
                sleep 5 # Give it a moment to exit gracefully
                # Re-check exit status using the stored ID
-                if ! docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml -f docker-compose.setup-ubuntu.override.yaml ps setup | grep -q "Up"; then
+                if ! docker-compose -p alga-e2e-test ps setup | grep -q "Up"; then
                     # Use the stored SETUP_CONTAINER_ID
                     INSPECT_OUTPUT_LOG_CHECK=$(docker inspect -f '{{.State.ExitCode}}' "$SETUP_CONTAINER_ID" 2>/dev/null)
                     SETUP_EXIT_CODE_LOG_CHECK=$(echo "$INSPECT_OUTPUT_LOG_CHECK" | awk '{print $1}')
@@ -466,12 +621,12 @@ jobs:
 
                     if [ "$SETUP_EXIT_CODE_LOG_CHECK" -eq 0 ]; then
                         echo "Setup service completed successfully after log check (Exit Code: $SETUP_EXIT_CODE_LOG_CHECK)."
-                        echo "status=success" >> $GITHUB_OUTPUT
+                        echo "status=success" >> "$GITHUB_OUTPUT"
                         exit 0 # Successful exit from the script
                     else
                         echo "Setup service showed completion log but exited with code $SETUP_EXIT_CODE_LOG_CHECK."
                         docker-compose -p alga-e2e-test logs setup
-                        echo "status=failure" >> $GITHUB_OUTPUT
+                        echo "status=failure" >> "$GITHUB_OUTPUT"
                         exit 1 # Failed exit from the script
                     fi
                 fi
@@ -483,37 +638,101 @@ jobs:
           done
           echo "Timeout: Setup service did not complete within the allocated time."
           docker-compose -p alga-e2e-test logs
-          echo "status=failure" >> $GITHUB_OUTPUT
+          echo "status=failure" >> "$GITHUB_OUTPUT"
           exit 1
         shell: bash
 
       - name: Start remaining services after setup completion
+        id: services_started
         if: steps.wait_for_setup.outputs.status == 'success' && steps.install_docker_compose.outcome == 'success'
         run: |
           echo "Setup completed successfully. Starting remaining services..."
-          # Start CE services needed for e2e tests (images already built earlier)
+          # Start the selected edition and shared services using this run's images
           # Use --no-recreate to avoid restarting setup which already completed
           # Use --no-deps to avoid waiting on setup dependency again
-          docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml -f docker-compose.imap-test.yaml up -d \
+          docker-compose -p alga-e2e-test up -d \
             --no-build --no-recreate --no-deps \
             server email-service imap-test-server hocuspocus
         shell: bash
+
+      - name: Start and verify background workers
+        if: steps.wait_for_setup.outputs.status == 'success' && steps.install_docker_compose.outcome == 'success'
+        timeout-minutes: 8
+        env:
+          EDITION: ${{ matrix.edition }}
+        run: |
+          docker-compose -p alga-e2e-test up --no-build --no-deps --wait --wait-timeout 180 -d temporal-dev
+          workers="workflow-worker"
+          if [ "$EDITION" = enterprise ]; then workers="$workers temporal-worker"; fi
+          docker-compose -p alga-e2e-test up --no-build --no-deps --wait --wait-timeout 180 -d $workers
+          # Use the strict checker from an existing container on the internal
+          # network. All three authored-runtime loops must report ready.
+          docker-compose -p alga-e2e-test cp e2e-tests/harness/check-background-workers.mjs algasim:/tmp/check-background-workers.mjs
+          docker-compose -p alga-e2e-test exec -T algasim node /tmp/check-background-workers.mjs
+
+      - name: Verify actual cross-process tenant-secret access
+        if: steps.wait_for_setup.outputs.status == 'success' && steps.install_docker_compose.outcome == 'success'
+        timeout-minutes: 2
+        env:
+          EDITION: ${{ matrix.edition }}
+        run: |
+          probe() {
+            docker-compose -p alga-e2e-test exec -T -e SHARED_WORKER_SECRET_PHASE="$2" "$1" node --input-type=module < e2e-tests/harness/check-shared-worker-secrets.mjs
+          }
+          workers="workflow-worker"
+          if [ "$EDITION" = enterprise ]; then workers="$workers temporal-worker"; fi
+          for worker in $workers; do
+            probe server write
+            probe "$worker" rotate
+            probe email-service read
+            probe server delete
+          done
+
+      - name: Execute authored workflow through the candidate worker
+        id: authored_worker_execution
+        if: steps.wait_for_setup.outputs.status == 'success' && steps.install_docker_compose.outcome == 'success'
+        timeout-minutes: 3
+        run: |
+          mkdir -p logs
+          docker-compose -p alga-e2e-test exec -T \
+            -e AUTHORED_WORKFLOW_CI_OWNED=true \
+            -e AUTHORED_WORKFLOW_EXPECTED_DB_HOST=postgres \
+            -e AUTHORED_WORKFLOW_EXPECTED_DB_NAME=server \
+            -e DB_HOST_ADMIN=postgres -e DB_PORT_ADMIN=5432 \
+            workflow-worker node /app/services/workflow-worker/scripts/check-authored-workflow.mjs > logs/authored-workflow-execution.log
+          # The helper prints its structured result after execution and scoped
+          # fixture cleanup. Earlier lines may contain runtime startup logging.
+          tail -n 1 logs/authored-workflow-execution.log > logs/authored-workflow-execution.json
+          jq -e '.status == "passed" and .fixtureCleanup == "passed" and .execution.temporalStatus == "COMPLETED" and .execution.runStatus == "SUCCEEDED"' logs/authored-workflow-execution.json
+
+      - name: Retain authored execution failure diagnostics
+        if: ${{ failure() && steps.authored_worker_execution.outcome == 'failure' }}
+        timeout-minutes: 1
+        run: |
+          mkdir -p logs/authored-workflow-diagnostics
+          container=$(docker-compose -p alga-e2e-test ps -q workflow-worker)
+          test -n "$container"
+          docker-compose -p alga-e2e-test exec -T workflow-worker node --input-type=module -e 'import { readdirSync } from "node:fs"; for (const name of readdirSync("/tmp")) if (/^authored-workflow-failure-[a-f0-9-]{36}\.json$/.test(name)) console.log(name);' > "$RUNNER_TEMP/authored-diagnostic-files"
+          while IFS= read -r name; do
+            docker cp "$container:/tmp/$name" "logs/authored-workflow-diagnostics/$name"
+          done < "$RUNNER_TEMP/authored-diagnostic-files"
 
       - name: Collect initial container logs
         if: steps.wait_for_setup.outputs.status == 'success' && steps.install_docker_compose.outcome == 'success'
         run: |
           echo "=== CONTAINER STATUS ==="
-          docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml ps
+          docker-compose -p alga-e2e-test ps
           
           echo -e "\n=== ALL CONTAINER LOGS ==="
-          docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml logs --tail=100
+          docker-compose -p alga-e2e-test logs --tail=100
           
           echo -e "\n=== SERVER LOGS (detailed) ==="
           docker-compose -p alga-e2e-test logs server --tail=200
         shell: bash
 
       - name: Wait for Server service to be healthy
-        if: steps.wait_for_setup.outputs.status == 'success' && steps.install_docker_compose.outcome == 'success'
+        id: server_ready
+        if: ${{ !cancelled() && steps.services_started.outcome == 'success' }}
         run: |
           echo "Waiting for server service to be healthy..."
           MAX_ATTEMPTS=30 # 5 minutes (30 attempts * 10 seconds)
@@ -524,13 +743,13 @@ jobs:
           # Fallback if /api/health is not standard, try base URL
           # HEALTH_CHECK_URL="http://localhost:${APP_PORT_VALUE}/"
 
-          until curl --output /dev/null --silent --head --fail $HEALTH_CHECK_URL; do
+          until curl --output /dev/null --silent --head --fail "$HEALTH_CHECK_URL"; do
             if [ $ATTEMPT_NUM -ge $MAX_ATTEMPTS ]; then
               echo "Timeout: Server service did not become healthy at $HEALTH_CHECK_URL within the allocated time."
               echo "=== FINAL SERVER LOGS ==="
               docker-compose -p alga-e2e-test logs server --tail=500
               echo "=== ALL CONTAINER STATUS ==="
-              docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml ps
+              docker-compose -p alga-e2e-test ps
               exit 1
             fi
             echo "Attempt $ATTEMPT_NUM/$MAX_ATTEMPTS: Server not yet healthy at $HEALTH_CHECK_URL. Waiting 10 seconds..."
@@ -547,8 +766,20 @@ jobs:
           echo "Server service is healthy at $HEALTH_CHECK_URL."
         shell: bash
 
-      - name: Trigger Login Page to Generate Credentials
+      - name: Verify provider routing from running Alga processes
+        id: provider_topology
         if: steps.wait_for_setup.outputs.status == 'success' && steps.install_docker_compose.outcome == 'success'
+        env:
+          E2E_EDITION: ${{ matrix.edition }}
+        run: |
+          set -euo pipefail
+          test "$(docker network inspect alga-e2e-test_app-network --format '{{.Internal}}')" = true
+          mkdir -p logs
+          node e2e-tests/harness/check-provider-topology.mjs > logs/provider-readiness-topology.json
+
+      - name: Trigger Login Page to Generate Credentials
+        id: login_trigger
+        if: ${{ !cancelled() && steps.server_ready.outcome == 'success' }}
         run: |
           echo "Attempting to trigger login page to generate credentials in server logs..."
           APP_PORT_VALUE=$(grep APP_PORT .env | cut -d '=' -f2 | head -n 1 || echo "3000")
@@ -562,39 +793,12 @@ jobs:
         shell: bash
 
       - name: Capture Credentials from Server Logs
-        if: steps.wait_for_setup.outputs.status == 'success' && steps.install_docker_compose.outcome == 'success'
         id: capture_creds
-        run: |
-          echo "Attempting to capture credentials from server logs..."
-          # Wait a few seconds for logs to flush if needed
-          sleep 5
-          SERVER_LOGS=$(docker-compose -p alga-e2e-test logs server)
-
-          # Extract email (should be glinda@emeraldcity.oz)
-          USER_EMAIL=$(echo "$SERVER_LOGS" | grep -oP 'User Email is -> \[ \K[^ ]+' || echo "")
-          # Extract password
-          USER_PASSWORD=$(echo "$SERVER_LOGS" | grep -oP 'Password is -> \[ \K[^ ]+' || echo "")
-
-          if [ -z "$USER_EMAIL" ] || [ -z "$USER_PASSWORD" ]; then
-            echo "Failed to extract credentials from server logs."
-            echo "Server Logs:"
-            echo "$SERVER_LOGS"
-            exit 1
-          fi
-
-          echo "Successfully extracted credentials."
-          echo "e2e_user_email=$USER_EMAIL" >> $GITHUB_OUTPUT
-          # Use a delimiter to safely pass passwords with special characters
-          EOF_DELIM=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
-          echo "e2e_user_password<<$EOF_DELIM" >> $GITHUB_OUTPUT
-          echo "$USER_PASSWORD" >> $GITHUB_OUTPUT
-          echo "$EOF_DELIM" >> $GITHUB_OUTPUT
-          # Mask the password in logs
-          echo "::add-mask::$USER_PASSWORD"
-        shell: bash
+        if: ${{ !cancelled() && steps.login_trigger.outcome == 'success' }}
+        run: docker-compose -p alga-e2e-test logs --no-color server | node e2e-tests/harness/capture-server-credentials.mjs
 
       - name: Warm up authentication system
-        if: steps.wait_for_setup.outputs.status == 'success' && steps.capture_creds.outputs.e2e_user_email != ''
+        if: ${{ !cancelled() && steps.capture_creds.outcome == 'success' }}
         run: |
           echo "Warming up authentication system to prime database connections..."
           APP_PORT_VALUE=$(grep APP_PORT .env | cut -d '=' -f2 | head -n 1 || echo "3000")
@@ -617,52 +821,31 @@ jobs:
         shell: bash
 
       - name: Set up Node.js
-        if: steps.wait_for_setup.outputs.status == 'success'
+        id: browser_node
+        if: ${{ !cancelled() && steps.wait_for_setup.outputs.status == 'success' }}
         uses: actions/setup-node@v4
         with:
           node-version: '22'
 
-      - name: Create E2E test directory and package.json
-        if: steps.wait_for_setup.outputs.status == 'success'
-        run: |
-          mkdir -p e2e-tests/tests
-          cat << EOF > e2e-tests/package.json
-          {
-            "name": "alga-e2e-tests",
-            "version": "1.0.0",
-            "description": "E2E tests for AlgaPSA",
-            "main": "index.js",
-            "scripts": {
-              "test": "playwright test"
-            },
-            "keywords": [],
-            "author": "",
-            "license": "ISC",
-            "devDependencies": {
-              "@playwright/test": "^1.40.0"
-            }
-          }
-          EOF
-        shell: bash
-
       - name: Install Playwright npm packages
-        if: steps.wait_for_setup.outputs.status == 'success'
+        id: browser_packages
+        if: ${{ !cancelled() && steps.browser_node.outcome == 'success' }}
         working-directory: ./e2e-tests
-        run: npm install
+        run: npm ci
         shell: bash
 
       - name: Get Playwright version
-        if: steps.wait_for_setup.outputs.status == 'success'
+        if: ${{ !cancelled() && steps.browser_packages.outcome == 'success' }}
         id: playwright_version
         working-directory: ./e2e-tests
         run: |
           PLAYWRIGHT_VERSION=$(npx playwright --version | awk '{print $2}')
-          echo "version=$PLAYWRIGHT_VERSION" >> $GITHUB_OUTPUT
+          echo "version=$PLAYWRIGHT_VERSION" >> "$GITHUB_OUTPUT"
           echo "Playwright version: $PLAYWRIGHT_VERSION"
         shell: bash
 
       - name: Cache Playwright browsers
-        if: steps.wait_for_setup.outputs.status == 'success'
+        if: ${{ !cancelled() && steps.playwright_version.outcome == 'success' }}
         id: playwright_cache
         uses: actions/cache@v4
         with:
@@ -670,13 +853,15 @@ jobs:
           key: ${{ runner.os }}-playwright-chromium-${{ steps.playwright_version.outputs.version }}
 
       - name: Install Playwright browsers
-        if: steps.wait_for_setup.outputs.status == 'success' && steps.playwright_cache.outputs.cache-hit != 'true'
+        id: browser_install
+        if: ${{ !cancelled() && steps.playwright_version.outcome == 'success' && steps.playwright_cache.outputs.cache-hit != 'true' }}
         working-directory: ./e2e-tests
         run: npx playwright install chromium
         shell: bash
 
       - name: Install Playwright system dependencies
-        if: steps.wait_for_setup.outputs.status == 'success'
+        id: browser_system
+        if: ${{ !cancelled() && steps.browser_packages.outcome == 'success' }}
         working-directory: ./e2e-tests
         # Hard ceiling so this step can never again consume the whole job budget.
         timeout-minutes: 12
@@ -713,236 +898,542 @@ jobs:
           done
         shell: bash
 
-      - name: Create Playwright config file
-        if: steps.wait_for_setup.outputs.status == 'success'
+      - name: Verify installed browser can launch
+        id: browser_ready
+        if: ${{ !cancelled() && steps.browser_system.outcome == 'success' && (steps.browser_install.outcome == 'success' || steps.playwright_cache.outputs.cache-hit == 'true') }}
+        working-directory: ./e2e-tests
+        timeout-minutes: 2
         run: |
-          cat << EOF > e2e-tests/playwright.config.ts
-          import { defineConfig, devices } from '@playwright/test';
+          node --input-type=module -e 'import { chromium } from "@playwright/test"; const browser = await chromium.launch({ headless: true }); await browser.close();'
 
-          export default defineConfig({
-            testDir: './tests',
-            fullyParallel: true,
-            forbidOnly: !!process.env.CI,
-            retries: process.env.CI ? 2 : 0,
-            workers: process.env.CI ? 1 : undefined,
-            reporter: 'html',
-            timeout: 120000, // 2 minutes global timeout
-            use: {
-              baseURL: process.env.E2E_BASE_URL || 'http://localhost:3000', // Default to localhost:3000
-              trace: 'on-first-retry',
-              actionTimeout: 60000, // 60 seconds for actions
-              navigationTimeout: 90000, // 90 seconds for navigation
-            },
-            projects: [
-              {
-                name: 'chromium',
-                use: { ...devices['Desktop Chrome'] },
-              },
-            ],
-          });
-          EOF
-        shell: bash
-
-      - name: Create E2E login test spec
-        if: steps.wait_for_setup.outputs.status == 'success'
-        run: |
-          # Ensure APP_PORT is available for constructing the baseURL if not set via E2E_BASE_URL
-          APP_PORT_VALUE_FROM_ENV=$(grep '^APP_PORT=' ./.env | cut -d '=' -f2 | head -n 1)
-          APP_PORT_VALUE=${APP_PORT_VALUE_FROM_ENV:-3000}
-          BASE_URL="http://localhost:${APP_PORT_VALUE}"
-          echo "Resolved BASE_URL for Playwright spec: ${BASE_URL}"
-
-          cat << EOF > e2e-tests/tests/login.spec.ts
-          import { test, expect } from '@playwright/test';
-
-          test.describe('Login Functionality', () => {
-            test('should allow a user to log in and redirect to dashboard', async ({ page }) => {
-              const email = process.env.E2E_USER_EMAIL;
-              const password = process.env.E2E_USER_PASSWORD;
-              const baseUrl = process.env.E2E_BASE_URL || '${BASE_URL}'; // Use env var or default
-
-              if (!email || !password) {
-                throw new Error('E2E_USER_EMAIL or E2E_USER_PASSWORD environment variables are not set.');
-              }
-
-              // Navigate to the login page
-              await page.goto(\`\${baseUrl}/auth/signin\`);
-
-              // Fill in the email and password
-              try {
-                console.log('Waiting for email field...');
-                await page.waitForSelector('input[id="msp-email-field"]', { timeout: 15000 });
-                console.log(\`Filling email: \${email}\`);
-                await page.fill('input[id="msp-email-field"]', email);
-                console.log('Waiting for password field...');
-                await page.waitForSelector('input[id="msp-password-field"]', { timeout: 5000 });
-                console.log('Filling password...');
-                await page.fill('input[id="msp-password-field"]', password);
-                console.log('Credentials filled successfully');
-              } catch (e) {
-                console.error('Error filling form fields. Current page HTML:', await page.content());
-                throw e;
-              }
-
-              // Submit the login form
-              // Note: Using keyboard Enter instead of button click because React form
-              // onSubmit handlers are sometimes not triggered by Playwright's click()
-              try {
-                console.log('Waiting for sign-in button...');
-                await page.waitForSelector('button[id="msp-sign-in-button"]', { timeout: 5000 });
-                console.log('Submitting form via Enter key on password field...');
-
-                // Focus the password field and press Enter to submit the form
-                // This is more reliable than clicking the submit button for React forms
-                await page.focus('input[id="msp-password-field"]');
-
-                // Wait for the credentials POST request while pressing Enter
-                // NextAuth credentials login POSTs to /api/auth/callback/credentials
-                const [credentialsResponse] = await Promise.all([
-                  page.waitForResponse(
-                    response => {
-                      const isCredentialsPost = response.url().includes('/api/auth/callback') &&
-                                                response.request().method() === 'POST';
-                      if (isCredentialsPost) {
-                        console.log(\`Auth callback response: \${response.status()} \${response.request().method()} \${response.url()}\`);
-                      }
-                      return isCredentialsPost;
-                    },
-                    { timeout: 30000 }
-                  ).catch(e => {
-                    console.log('No auth callback POST detected - trying button click as fallback');
-                    return null;
-                  }),
-                  page.keyboard.press('Enter')
-                ]);
-
-                // If Enter didn't work, try clicking the button
-                if (!credentialsResponse) {
-                  console.log('Enter key did not trigger form submit, trying button click...');
-                  await Promise.all([
-                    page.waitForResponse(
-                      response => {
-                        const isCredentialsPost = response.url().includes('/api/auth/callback') &&
-                                                  response.request().method() === 'POST';
-                        if (isCredentialsPost) {
-                          console.log(\`Auth callback response (via click): \${response.status()} \${response.request().method()} \${response.url()}\`);
-                        }
-                        return isCredentialsPost;
-                      },
-                      { timeout: 30000 }
-                    ).catch(e => {
-                      console.log('Still no auth callback POST after button click');
-                      return null;
-                    }),
-                    page.click('button[id="msp-sign-in-button"]')
-                  ]);
-                }
-
-                console.log('Form submitted, waiting for page response...');
-              } catch (e) {
-                console.error('Error submitting login form:', e);
-                console.error('Current page HTML:', await page.content());
-                throw e;
-              }
-
-              // Wait for authentication to complete
-              console.log('Waiting for network to become idle after login...');
-              await page.waitForLoadState('networkidle', { timeout: 60000 });
-
-              // Check current state after networkidle
-              const currentUrl = page.url();
-              console.log(\`Current URL after networkidle: \${currentUrl}\`);
-
-              // If still on login page, capture diagnostic info
-              if (currentUrl.includes('/auth/')) {
-                console.log('Still on auth page - checking for errors...');
-
-                // Check for any visible error messages
-                const pageText = await page.textContent('body');
-                if (pageText.toLowerCase().includes('error') || pageText.toLowerCase().includes('invalid')) {
-                  console.error('Error text found on page:', pageText.substring(0, 1000));
-                }
-
-                // Check for alert elements
-                const alertVisible = await page.locator('[role="alert"]').isVisible().catch(() => false);
-                if (alertVisible) {
-                  const alertText = await page.locator('[role="alert"]').textContent();
-                  console.error('Alert message found:', alertText);
-                }
-
-                // Log the visible form state
-                const emailValue = await page.inputValue('input[id="msp-email-field"]').catch(() => 'N/A');
-                const passwordValue = await page.inputValue('input[id="msp-password-field"]').catch(() => 'N/A');
-                console.log(\`Form state - Email field value: \${emailValue}, Password filled: \${passwordValue ? 'yes' : 'no'}\`);
-
-                // Take a screenshot for debugging
-                await page.screenshot({ path: 'login-debug-screenshot.png', fullPage: true });
-                console.log('Debug screenshot saved to login-debug-screenshot.png');
-              }
-
-              // Wait for navigation to the dashboard
-              console.log(\`Waiting for URL: \${baseUrl}/msp/dashboard with 90s timeout.\`);
-              await page.waitForURL(\`\${baseUrl}/msp/dashboard\`, { timeout: 90000 });
-
-              // Assert that the URL is the dashboard URL
-              expect(page.url()).toBe(\`\${baseUrl}/msp/dashboard\`);
-
-              // Optional: Add more assertions, e.g., check for a welcome message or specific element
-              // await expect(page.locator('h1')).toContainText('Dashboard');
-            });
-          });
-          EOF
-        working-directory: ./
-        shell: bash
-
+      - name: Verify browser retry and first-failure diagnostics policy
+        id: browser_policy
+        if: ${{ !cancelled() && steps.browser_ready.outcome == 'success' }}
+        working-directory: ./e2e-tests
+        timeout-minutes: 7
+        run: xvfb-run --auto-servernum npm run test:harness
 
       - name: Run Playwright E2E tests
-        if: steps.wait_for_setup.outputs.status == 'success' && steps.capture_creds.outputs.e2e_user_email != ''
+        # A diagnostic-policy failure must still fail the job, but should not
+        # prevent collecting independent customer-journey evidence.
+        if: ${{ !cancelled() && steps.provider_topology.outcome == 'success' && steps.capture_creds.outcome == 'success' && steps.browser_ready.outcome == 'success' && (steps.browser_policy.outcome == 'success' || steps.browser_policy.outcome == 'failure') }}
         working-directory: ./e2e-tests
         env:
+          E2E_BASE_URL: http://localhost:3000
+          E2E_EDITION: ${{ matrix.edition }}
+          E2E_REVISION: ${{ github.sha }}
+          E2E_ARTIFACT_MANIFEST: ${{ runner.temp }}/browser-artifact-manifest.json
+          E2E_BUILD_FEATURE_FLAGS: release-v1-6-feature:true
           E2E_USER_EMAIL: ${{ steps.capture_creds.outputs.e2e_user_email }}
           E2E_USER_PASSWORD: ${{ steps.capture_creds.outputs.e2e_user_password }}
-        timeout-minutes: 8
-        run: npx playwright test
+          E2E_DATABASE_ISOLATED: 'true'
+          E2E_EMULATORS_ISOLATED: 'true'
+          E2E_EMAIL_TRANSPORT_ISOLATED: 'true'
+          E2E_REDIS_PASSWORD: placeholder-password
+          ALGASIM_CONTROL_URL: http://127.0.0.1:9500
+          ALGASIM_PUBLIC_STRIPE_URL: http://localhost:4050
+          ALGASIM_CALLBACK_BASE_URL: http://server:3000
+          E2E_DB_HOST: 127.0.0.1
+          E2E_DB_PORT: '5432'
+          E2E_DB_NAME: server
+          E2E_DB_USER: postgres
+          E2E_DB_PASSWORD: placeholder-password
+        timeout-minutes: 25
+        run: xvfb-run --auto-servernum npm test
         shell: bash
+
+      # Publish completed browser evidence before the independent API lane.
+      - name: Upload Playwright diagnostics
+        if: always() && steps.wait_for_setup.outputs.status == 'success' && !env.ACT
+        uses: actions/upload-artifact@v4
+        with:
+          name: fresh-install-playwright-${{ matrix.edition }}
+          path: |
+            e2e-tests/playwright-report/
+            e2e-tests/test-results/
+            e2e-tests/harness-results/
+            e2e-tests/execution-evidence/
+            ${{ runner.temp }}/algasim-catalog.json
+            ${{ runner.temp }}/algasim-image-id.txt
+            ${{ runner.temp }}/browser-artifact-manifest.json
+          retention-days: 7
+
+      - name: Record browser journey readiness
+        if: always() && steps.wait_for_setup.outputs.status == 'success' && !env.ACT
+        continue-on-error: true
+        run: node scripts/record-browser-metrics.mjs
+        env:
+          TEST_METRICS_BROWSER: e2e-tests/execution-evidence/metrics.json
+          E2E_EDITION: ${{ matrix.edition }}
+          GOOGLE_SA_KEY: ${{ secrets.TEST_METRICS_GOOGLE_SA_KEY }}
+          TEST_METRICS_SHEET_ID: ${{ vars.TEST_METRICS_SHEET_ID }}
+
+      - name: Stop background consumers before API fixtures and database switches
+        if: ${{ !cancelled() && steps.wait_for_setup.outputs.status == 'success' }}
+        env:
+          EDITION: ${{ matrix.edition }}
+        run: |
+          # API fixtures mutate application data; later upgrade smoke phases
+          # switch only the server database. Do not let workers consume those
+          # events using the original database or shared execution queues.
+          workers="workflow-worker"
+          if [ "$EDITION" = enterprise ]; then workers="$workers temporal-worker"; fi
+          docker-compose -p alga-e2e-test stop $workers
+
+      - name: Install API test dependencies
+        id: api_dependencies
+        if: ${{ !cancelled() && steps.wait_for_setup.outputs.status == 'success' }}
+        timeout-minutes: 10
+        run: node scripts/install-api-test-dependencies.mjs
+
+      - name: Attest ownership of the fresh-install API database
+        id: api_database
+        if: ${{ !cancelled() && steps.api_dependencies.outcome == 'success' }}
+        timeout-minutes: 2
+        shell: bash
+        run: |
+          set -euo pipefail
+          container_id=$(docker-compose -p alga-e2e-test ps -q postgres)
+          test -n "$container_id"
+          test "$(docker inspect --format '{{ index .Config.Labels "com.docker.compose.project" }}' "$container_id")" = alga-e2e-test
+          test "$(docker inspect --format '{{ index .Config.Labels "com.docker.compose.service" }}' "$container_id")" = postgres
+          test "$(docker inspect --format '{{ .State.Running }}' "$container_id")" = true
+          environment_id=$(node -e 'console.log(require("node:crypto").randomUUID())')
+          # Provision through the verified owned container, not an arbitrary DB URL.
+          docker exec -i -e PGPASSWORD=placeholder-password "$container_id" psql --no-password -U postgres -d server -v ON_ERROR_STOP=1 -v environment_id="$environment_id" <<'SQL'
+          CREATE TABLE public.alga_test_environment_ownership (
+            singleton boolean PRIMARY KEY CHECK (singleton),
+            environment_id uuid NOT NULL,
+            database_name text NOT NULL
+          );
+          INSERT INTO public.alga_test_environment_ownership
+            VALUES (true, :'environment_id'::uuid, current_database());
+          SQL
+          echo "E2E_DATABASE_ID=$environment_id" >> "$GITHUB_ENV"
+
+      - name: Run API E2E tests with execution reconciliation
+        if: ${{ !cancelled() && steps.api_database.outcome == 'success' }}
+        timeout-minutes: 15
+        env:
+          E2E_EDITION: ${{ matrix.edition }}
+          TEST_API_BASE_URL: http://127.0.0.1:3000
+          E2E_DATABASE_ISOLATED: 'true'
+          E2E_DB_HOST: 127.0.0.1
+          E2E_DB_PORT: '5432'
+          E2E_DB_NAME: server
+          E2E_DB_USER: postgres
+          E2E_DB_PASSWORD: placeholder-password
+        run: node scripts/run-additional-workspace-tests.mjs api-e2e
+
+      - name: Upload API execution evidence
+        if: ${{ always() && steps.api_dependencies.outcome == 'success' && !env.ACT }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: fresh-install-api-${{ matrix.edition }}
+          path: test-results/api-e2e/
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Prepare populated v1.5.0 upgrade
+        id: upgrade_schema
+        if: ${{ !cancelled() && matrix.edition == 'enterprise' && steps.api_database.outcome == 'success' && steps.capture_creds.outcome == 'success' }}
+        timeout-minutes: 10
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: '5432'
+          DB_USER_ADMIN: postgres
+          DB_PASSWORD_ADMIN: placeholder-password
+          DB_USER_SERVER: app_user
+          UPGRADE_DATABASE_ISOLATED: 'true'
+          UPGRADE_DB_NAME: upgrade_ci
+          E2E_USER_EMAIL: ${{ steps.capture_creds.outputs.e2e_user_email }}
+        run: node scripts/prepare-supported-upgrade-ci.mjs
+
+      - name: Switch candidate server to upgraded database
+        id: upgrade_server
+        if: ${{ !cancelled() && steps.upgrade_schema.outcome == 'success' }}
+        timeout-minutes: 5
+        shell: bash
+        run: |
+          set -euo pipefail
+          image=alga-e2e-test_server_ee_local:latest
+          test "$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "$image")" = "$GITHUB_SHA"
+          expected_image=$(docker image inspect --format '{{.Id}}' "$image")
+          node e2e-tests/harness/create-upgrade-pgbouncer.mjs "$RUNNER_TEMP/fresh-install-compose.json" "$RUNNER_TEMP/upgrade-pooler"
+          export COMPOSE_FILE="$COMPOSE_FILE:$RUNNER_TEMP/upgrade-pooler/upgrade-compose.json"
+          pooler_image=$(jq -r '.services["upgrade-pgbouncer"].image' "$RUNNER_TEMP/upgrade-pooler/upgrade-compose.json")
+          test "$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "$pooler_image")" = "$GITHUB_SHA"
+          expected_pooler_image=$(docker image inspect --format '{{.Id}}' "$pooler_image")
+          docker-compose -p alga-e2e-test up --no-build --no-deps -d upgrade-pgbouncer
+          pooler_container=$(docker-compose -p alga-e2e-test ps -q upgrade-pgbouncer)
+          test "$(docker inspect --format '{{.Image}}' "$pooler_container")" = "$expected_pooler_image"
+          pooler_ready=false
+          for _attempt in $(seq 1 30); do
+            if docker-compose -p alga-e2e-test exec -T server node <<'JS'
+          const { Client } = require('pg');
+          const { readFileSync } = require('node:fs');
+          const client = new Client({ host: 'upgrade-pgbouncer', port: 6432, database: 'upgrade_ci',
+            user: process.env.DB_USER_SERVER || 'app_user', password: readFileSync('/run/secrets/db_password_server', 'utf8').trim(),
+            connectionTimeoutMillis: 2000, query_timeout: 2000 });
+          (async () => {
+            try {
+              await client.connect();
+              const result = await client.query('SELECT current_database() AS database');
+              if (result.rows[0]?.database !== 'upgrade_ci') throw new Error('Unexpected database');
+            } catch { process.exitCode = 1; }
+            finally { await client.end(); }
+          })();
+          JS
+            then pooler_ready=true; break; fi
+            sleep 2
+          done
+          test "$pooler_ready" = true
+          # Browser and API phases are complete. Release their database pools
+          # before starting the upgrade app; the original pooler retains idle
+          # sessions even after its clients disconnect. Keep Temporal available
+          # for the later Teams phase and retain stopped-container diagnostics.
+          docker-compose -p alga-e2e-test stop server email-service pgbouncer
+          docker-compose -p alga-e2e-test up --no-build --no-deps --force-recreate -d server
+          container=$(docker-compose -p alga-e2e-test ps -q server)
+          test "$(docker inspect --format '{{.Image}}' "$container")" = "$expected_image"
+          echo "UPGRADE_APPLICATION_REVISION=$GITHUB_SHA" >> "$GITHUB_ENV"
+          ready=false
+          for _attempt in $(seq 1 60); do
+            if curl --fail --silent http://localhost:3000/api/health >/dev/null; then ready=true; break; fi
+            sleep 2
+          done
+          test "$ready" = true
+
+      - name: Run supported-upgrade browser gate
+        if: ${{ !cancelled() && steps.upgrade_server.outcome == 'success' && steps.browser_ready.outcome == 'success' }}
+        timeout-minutes: 10
+        env:
+          E2E_BASE_URL: http://localhost:3000
+          E2E_EDITION: enterprise
+          E2E_DATABASE_ISOLATED: 'true'
+          E2E_DB_HOST: 127.0.0.1
+          E2E_DB_PORT: '5432'
+          E2E_DB_NAME: upgrade_ci
+          E2E_DB_USER: postgres
+          E2E_DB_PASSWORD: placeholder-password
+          E2E_USER_PASSWORD: ${{ steps.capture_creds.outputs.e2e_user_password }}
+        run: xvfb-run --auto-servernum node e2e-tests/run-upgrade.mjs
+
+      - name: Preserve PostgreSQL upgrade runtime diagnostics before server replacement
+        if: ${{ always() && matrix.edition == 'enterprise' && steps.upgrade_server.outcome == 'success' }}
+        timeout-minutes: 2
+        run: |
+          export COMPOSE_FILE="$COMPOSE_FILE:$RUNNER_TEMP/upgrade-pooler/upgrade-compose.json"
+          mkdir -p e2e-tests/test-results/upgrade-postgres-runtime
+          docker-compose -p alga-e2e-test logs --no-color --timestamps server > e2e-tests/test-results/upgrade-postgres-runtime/server.log
+          docker-compose -p alga-e2e-test logs --no-color --timestamps postgres pgbouncer upgrade-pgbouncer > e2e-tests/test-results/upgrade-postgres-runtime/database.log
+          docker-compose -p alga-e2e-test exec -T -e PGPASSWORD=placeholder-password postgres psql --no-password -v ON_ERROR_STOP=1 -U postgres -d postgres -Atc \
+            "SELECT json_build_object('max_connections', current_setting('max_connections'), 'connections', (SELECT json_agg(s) FROM (SELECT datname, usename, backend_type, state, count(*) FROM pg_stat_activity GROUP BY datname, usename, backend_type, state) s));" \
+            > e2e-tests/test-results/upgrade-postgres-runtime/connection-counts.json
+
+      - name: Upload supported-upgrade evidence
+        if: ${{ always() && matrix.edition == 'enterprise' && steps.upgrade_schema.outcome != 'skipped' && !env.ACT }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: supported-upgrade-execution
+          path: test-results/supported-upgrade/
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload upgrade browser diagnostics
+        if: ${{ always() && matrix.edition == 'enterprise' && steps.upgrade_server.outcome == 'success' && !env.ACT }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: supported-upgrade-diagnostics
+          path: e2e-tests/test-results/
+          retention-days: 7
+
+      - name: Release PostgreSQL upgrade pooler before the next phase
+        if: ${{ always() && matrix.edition == 'enterprise' && steps.upgrade_schema.outcome == 'success' }}
+        timeout-minutes: 2
+        run: |
+          if [ -f "$RUNNER_TEMP/upgrade-pooler/upgrade-compose.json" ]; then
+            export COMPOSE_FILE="$COMPOSE_FILE:$RUNNER_TEMP/upgrade-pooler/upgrade-compose.json"
+            docker-compose -p alga-e2e-test stop upgrade-pgbouncer
+          fi
+
+      - name: Start isolated Citus upgrade service
+        id: citus_upgrade_service
+        if: ${{ !cancelled() && matrix.edition == 'enterprise' && steps.api_database.outcome == 'success' }}
+        timeout-minutes: 5
+        run: |
+          set -euo pipefail
+          cat > "$RUNNER_TEMP/citus-upgrade-compose.json" <<'JSON'
+          {"services":{"upgrade-citus":{"image":"citusdata/citus:12.1","command":["postgres","-c","password_encryption=md5"],"environment":{"POSTGRES_USER":"postgres","POSTGRES_PASSWORD":"placeholder-password","POSTGRES_DB":"postgres","POSTGRES_HOST_AUTH_METHOD":"md5"},"networks":["app-network"]},"server":{"environment":{"DB_HOST":"upgrade-citus","DB_PORT":"5432","DB_NAME_SERVER":"upgrade_citus_ci"}}}}
+          JSON
+          export COMPOSE_FILE="$COMPOSE_FILE:$RUNNER_TEMP/citus-upgrade-compose.json"
+          docker-compose -p alga-e2e-test up --no-build --no-deps -d upgrade-citus
+          ready=false
+          for _attempt in $(seq 1 60); do
+            if node --input-type=module <<'JS'
+          import pg from 'pg';
+          const client = new pg.Client({ host: '127.0.0.1', port: 55433, user: 'postgres', password: 'placeholder-password', database: 'postgres', connectionTimeoutMillis: 2000, query_timeout: 2000 });
+          try { await client.connect(); await client.query('SELECT 1'); }
+          catch { process.exitCode = 1; }
+          finally { await client.end(); }
+          JS
+            then ready=true; break; fi
+            sleep 2
+          done
+          test "$ready" = true
+
+      - name: Prepare populated supported Citus upgrade
+        id: citus_upgrade_schema
+        if: ${{ !cancelled() && steps.citus_upgrade_service.outcome == 'success' && steps.capture_creds.outcome == 'success' }}
+        timeout-minutes: 20
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: '5432'
+          UPGRADE_DB_PORT: '55433'
+          DB_USER_ADMIN: postgres
+          DB_PASSWORD_ADMIN: placeholder-password
+          DB_USER_SERVER: app_user
+          UPGRADE_DB_BACKEND: citus
+          UPGRADE_DATABASE_ISOLATED: 'true'
+          UPGRADE_DB_NAME: upgrade_citus_ci
+          E2E_USER_EMAIL: ${{ steps.capture_creds.outputs.e2e_user_email }}
+        run: node scripts/prepare-supported-upgrade-ci.mjs
+
+      - name: Switch the same candidate image to upgraded Citus
+        id: citus_upgrade_server
+        if: ${{ !cancelled() && steps.citus_upgrade_schema.outcome == 'success' }}
+        timeout-minutes: 5
+        run: |
+          set -euo pipefail
+          image=alga-e2e-test_server_ee_local:latest
+          test "$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "$image")" = "$GITHUB_SHA"
+          expected_image=$(docker image inspect --format '{{.Id}}' "$image")
+          export COMPOSE_FILE="$COMPOSE_FILE:$RUNNER_TEMP/citus-upgrade-compose.json"
+          docker-compose -p alga-e2e-test up --no-build --no-deps --force-recreate -d server
+          container=$(docker-compose -p alga-e2e-test ps -q server)
+          test "$(docker inspect --format '{{.Image}}' "$container")" = "$expected_image"
+          echo "UPGRADE_APPLICATION_REVISION=$GITHUB_SHA" >> "$GITHUB_ENV"
+          ready=false
+          for _attempt in $(seq 1 60); do
+            if curl --fail --silent http://localhost:3000/api/health >/dev/null; then ready=true; break; fi
+            sleep 2
+          done
+          test "$ready" = true
+
+      - name: Run supported Citus upgrade browser gate
+        id: citus_upgrade_browser
+        if: ${{ !cancelled() && steps.citus_upgrade_server.outcome == 'success' && steps.browser_ready.outcome == 'success' }}
+        timeout-minutes: 10
+        env:
+          UPGRADE_DB_BACKEND: citus
+          E2E_BASE_URL: http://localhost:3000
+          E2E_EDITION: enterprise
+          E2E_DATABASE_ISOLATED: 'true'
+          E2E_DB_HOST: 127.0.0.1
+          E2E_DB_PORT: '55433'
+          E2E_DB_NAME: upgrade_citus_ci
+          E2E_DB_USER: postgres
+          E2E_DB_PASSWORD: placeholder-password
+          E2E_USER_PASSWORD: ${{ steps.capture_creds.outputs.e2e_user_password }}
+        run: xvfb-run --auto-servernum node e2e-tests/run-upgrade.mjs
+
+      - name: Preserve Citus upgrade runtime diagnostics before server replacement
+        if: ${{ always() && steps.citus_upgrade_server.outcome == 'success' }}
+        timeout-minutes: 2
+        run: |
+          export COMPOSE_FILE="$COMPOSE_FILE:$RUNNER_TEMP/citus-upgrade-compose.json"
+          mkdir -p e2e-tests/test-results/upgrade-citus-runtime
+          docker-compose -p alga-e2e-test logs --no-color --timestamps server upgrade-citus > e2e-tests/test-results/upgrade-citus-runtime/services.log
+          docker-compose -p alga-e2e-test exec -T -e PGPASSWORD=placeholder-password upgrade-citus psql --no-password -v ON_ERROR_STOP=1 -U postgres -d postgres -Atc \
+            "SELECT json_build_object('max_connections', current_setting('max_connections'), 'connections', (SELECT json_agg(s) FROM (SELECT datname, usename, backend_type, state, count(*) FROM pg_stat_activity GROUP BY datname, usename, backend_type, state) s));" \
+            > e2e-tests/test-results/upgrade-citus-runtime/connection-counts.json
+
+      - name: Upload supported Citus upgrade evidence
+        if: ${{ always() && steps.citus_upgrade_browser.outcome != 'skipped' && matrix.edition == 'enterprise' && !env.ACT }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: supported-citus-upgrade-execution
+          path: test-results/supported-upgrade/
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload supported Citus upgrade diagnostics
+        if: ${{ always() && steps.citus_upgrade_server.outcome == 'success' && !env.ACT }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: supported-citus-upgrade-diagnostics
+          path: e2e-tests/test-results/
+          retention-days: 7
+
+      - name: Start explicit Teams development configuration
+        id: teams_development_server
+        if: ${{ !cancelled() && matrix.edition == 'enterprise' && steps.api_database.outcome == 'success' }}
+        timeout-minutes: 10
+        run: |
+          set -euo pipefail
+          # The image's node_modules is root-owned. Give only the development
+          # compiler cache a writable, disk-backed directory for UID 1000.
+          sudo install -d -o 1000 -g 1000 -m 0700 "$RUNNER_TEMP/teams-webpack-cache"
+          sudo install -d -o 1000 -g 1000 -m 0700 "$RUNNER_TEMP/teams-static-chunks"
+          node --input-type=module <<'JS'
+          import { writeFileSync } from 'node:fs';
+          const workspace = process.env.GITHUB_WORKSPACE;
+          const volumes = ['packages', 'ee'].map(part => ({ type: 'bind', source: `${workspace}/${part}`, target: `/app/${part}`, read_only: true }));
+          // Production images omit CSS compiler configuration. The development
+          // server needs both files to expand Tailwind's directives and scan UI sources.
+          for (const file of ['postcss.config.mjs', 'tailwind.config.ts']) {
+            volumes.push({ type: 'bind', source: `${workspace}/server/${file}`, target: `/app/server/${file}`, read_only: true });
+          }
+          volumes.push({ type: 'bind', source: `${workspace}/e2e-tests/harness/start-teams-development-ci.mjs`, target: '/app/start-teams-development-ci.mjs', read_only: true });
+          volumes.push({ type: 'bind', source: `${workspace}/e2e-tests/harness/check-teams-development-auth.mjs`, target: '/app/check-teams-development-auth.mjs', read_only: true });
+          volumes.push({ type: 'bind', source: `${workspace}/e2e-tests/harness/capture-teams-static-chunks.mjs`, target: '/app/capture-teams-static-chunks.mjs', read_only: true });
+          volumes.push({ type: 'bind', source: `${process.env.RUNNER_TEMP}/teams-static-chunks`, target: '/app/teams-static-chunks' });
+          volumes.push({ type: 'bind', source: `${process.env.RUNNER_TEMP}/teams-webpack-cache`, target: '/app/server/node_modules/.cache/webpack' });
+          const server = { entrypoint: ['node', '/app/start-teams-development-ci.mjs'], command: [], volumes,
+            environment: { NODE_ENV: 'development', TEAMS_EMULATOR_MODE: 'true', NEXT_PUBLIC_FORCE_FEATURE_FLAGS: 'release-v1-6-feature:true', NEXT_DIST_DIR: '.next/teams-development',
+              E2E_TEAMS_DEVELOPMENT: 'true', E2E_DATABASE_ISOLATED: 'true', E2E_STATIC_CHUNK_DIAGNOSTICS_DIR: '/app/teams-static-chunks',
+              DB_HOST: 'postgres', DB_PORT: '5432', DB_NAME_SERVER: 'server', REDIS_PREFIX: 'teams-development:',
+              TEAMS_BOT_APP_ID: 'e2e-teams-bot', TEAMS_BOT_APP_TENANT_ID: 'e2e-bot-tenant', TEAMS_BOT_APP_PASSWORD: 'synthetic-e2e-teams-bot-secret',
+              TEAMS_BOT_OPENID_CONFIG_URL: 'http://algasim:4010/v1/.well-known/openidconfiguration', TEAMS_BOT_SERVICE_URL_ALLOWLIST: 'http://algasim:4010',
+              NEXT_PUBLIC_APP_URL: 'http://localhost:3000', NODE_OPTIONS: '--max-old-space-size=12288 --import=/app/capture-teams-static-chunks.mjs' } };
+          writeFileSync(`${process.env.RUNNER_TEMP}/teams-development-compose.json`, JSON.stringify({ services: { server } }));
+          JS
+          export COMPOSE_FILE="$COMPOSE_FILE:$RUNNER_TEMP/teams-development-compose.json"
+          # Earlier production/provider phases have completed. Retain their logs,
+          # but release worker memory before compiling the development app.
+          # The EE development server still uses Temporal for job initialization.
+          # Keep its frontend available while releasing the consumer processes.
+          docker-compose -p alga-e2e-test stop email-service hocuspocus workflow-worker temporal-worker
+          docker-compose -p alga-e2e-test up --no-build --no-deps --force-recreate -d server
+          docker-compose -p alga-e2e-test exec -T server node -e 'const fs = require("node:fs"); const probe = "/app/server/node_modules/.cache/webpack/.write-probe"; fs.writeFileSync(probe, "cache-writable", { flag: "wx" }); fs.unlinkSync(probe);'
+          ready=false
+          for _attempt in $(seq 1 90); do
+            if curl --max-time 15 --fail --silent http://localhost:3000/auth/msp/signin >/dev/null; then ready=true; break; fi
+            sleep 2
+          done
+          test "$ready" = true
+
+      - name: Capture recreated Teams server credentials
+        id: teams_creds
+        if: ${{ !cancelled() && steps.teams_development_server.outcome == 'success' }}
+        run: docker-compose -p alga-e2e-test logs --no-color server | node e2e-tests/harness/capture-server-credentials.mjs
+
+      - name: Check Teams source authentication configuration
+        id: teams_auth_preflight
+        if: ${{ !cancelled() && steps.teams_creds.outcome == 'success' }}
+        timeout-minutes: 2
+        env:
+          E2E_DATABASE_ISOLATED: 'true'
+          E2E_USER_EMAIL: ${{ steps.teams_creds.outputs.e2e_user_email }}
+          E2E_USER_PASSWORD: ${{ steps.teams_creds.outputs.e2e_user_password }}
+        run: |
+          docker-compose -p alga-e2e-test exec -T \
+            -e E2E_DATABASE_ISOLATED -e E2E_USER_EMAIL -e E2E_USER_PASSWORD server \
+            node --import /app/node_modules/tsx/dist/loader.mjs /app/check-teams-development-auth.mjs
+
+      - name: Warm authenticated Teams dashboard
+        id: teams_dashboard_ready
+        if: ${{ !cancelled() && steps.teams_auth_preflight.outcome == 'success' && steps.browser_ready.outcome == 'success' }}
+        timeout-minutes: 5
+        env:
+          E2E_TEAMS_DEVELOPMENT: 'true'
+          E2E_DATABASE_ISOLATED: 'true'
+          E2E_BASE_URL: http://localhost:3000
+          E2E_USER_EMAIL: ${{ steps.teams_creds.outputs.e2e_user_email }}
+          E2E_USER_PASSWORD: ${{ steps.teams_creds.outputs.e2e_user_password }}
+        run: node e2e-tests/harness/warm-teams-dashboard.mjs
+
+      - name: Run Teams development execution gate
+        id: teams_development_browser
+        if: ${{ !cancelled() && steps.teams_development_server.outcome == 'success' && steps.teams_auth_preflight.outcome == 'success' && steps.browser_ready.outcome == 'success' && steps.teams_dashboard_ready.outcome == 'success' }}
+        # Owned, expiring quarantine (scripts/lib/quarantine.json). The verdict is
+        # still produced, uploaded and reported by the readiness gate; it just does
+        # not veto the job while the entry is valid. Readiness fails once it expires.
+        continue-on-error: true
+        timeout-minutes: 10
+        env:
+          E2E_TEAMS_DEVELOPMENT: 'true'
+          E2E_BASE_URL: http://localhost:3000
+          E2E_EDITION: enterprise
+          E2E_DATABASE_ISOLATED: 'true'
+          E2E_EMULATORS_ISOLATED: 'true'
+          ALGASIM_CONTROL_URL: http://localhost:9500
+          E2E_DB_HOST: 127.0.0.1
+          E2E_DB_PORT: '5432'
+          E2E_DB_NAME: server
+          E2E_DB_USER: postgres
+          E2E_DB_PASSWORD: placeholder-password
+          E2E_USER_EMAIL: ${{ steps.teams_creds.outputs.e2e_user_email }}
+          E2E_USER_PASSWORD: ${{ steps.teams_creds.outputs.e2e_user_password }}
+        run: xvfb-run --auto-servernum node e2e-tests/run-teams-development.mjs
+
+      - name: Upload Teams development execution
+        if: ${{ always() && steps.teams_development_browser.outcome != 'skipped' && matrix.edition == 'enterprise' && !env.ACT }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: teams-development-execution
+          path: test-results/teams-development/
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Collect bounded Teams static chunk diagnostics
+        if: ${{ always() && steps.teams_development_server.outcome == 'success' }}
+        timeout-minutes: 1
+        run: |
+          mkdir -p e2e-tests/test-results/local/static-chunks
+          sudo cp -R "$RUNNER_TEMP/teams-static-chunks/." e2e-tests/test-results/local/static-chunks/
+          sudo chown -R "$(id -u):$(id -g)" e2e-tests/test-results/local/static-chunks
+
+      - name: Upload Teams development diagnostics
+        if: ${{ always() && steps.teams_development_server.outcome == 'success' && !env.ACT }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: teams-development-diagnostics
+          path: e2e-tests/test-results/local/
+          retention-days: 7
+
+      - name: Run actual Microsoft callback against isolated authority
+        id: microsoft_callback
+        if: ${{ !cancelled() && matrix.edition == 'enterprise' && steps.api_database.outcome == 'success' }}
+        timeout-minutes: 9
+        env:
+          NATIVE_MICROSOFT_OIDC_SOURCE_EMAIL: ${{ steps.capture_creds.outputs.e2e_user_email }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/microsoft-callback"
+          sudo install -d -o 1000 -g 1000 -m 0700 "$RUNNER_TEMP/microsoft-callback/dist" "$RUNNER_TEMP/microsoft-callback/webpack"
+          # Both the host verifier and image UID write separate evidence files.
+          sudo install -d -o 1000 -g 1000 -m 0777 "$GITHUB_WORKSPACE/test-results/microsoft-callback"
+          node scripts/run-microsoft-callback-ci.mjs
+
+      - name: Upload Microsoft callback execution
+        if: ${{ always() && steps.microsoft_callback.outcome != 'skipped' && matrix.edition == 'enterprise' && !env.ACT }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: microsoft-callback-execution
+          path: test-results/microsoft-callback/
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Collect all container logs on failure
         if: failure() && steps.install_docker_compose.outcome == 'success'
         timeout-minutes: 5
         run: |
-          echo "=== COLLECTING ALL LOGS DUE TO FAILURE ==="
-
-          echo "=== CONTAINER STATUS ==="
-          timeout 60 docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml ps || echo "Could not get container status"
-
-          echo -e "\n=== DOCKER SYSTEM INFO ==="
-          # `docker system df` can hang for minutes against a disk-full/wedged
-          # daemon (it previously stalled here until the step was SIGTERM'd ->
-          # exit 143), so cap it with `timeout`.
-          timeout 60 docker system df || echo "docker system df timed out or failed"
-          timeout 60 docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}\t{{.CreatedAt}}" || echo "docker images timed out or failed"
-          
-          echo -e "\n=== ALL CONTAINER LOGS ==="
-          docker-compose -p alga-e2e-test logs --tail=1000 || echo "Could not get compose logs"
-          
-          echo -e "\n=== INDIVIDUAL SERVICE LOGS ==="
-          for service in server setup postgres redis pgbouncer hocuspocus workflow-worker; do
-            echo "--- $service logs ---"
-            docker-compose -p alga-e2e-test logs $service --tail=200 2>/dev/null || echo "No logs for $service"
-          done
-          
-          echo -e "\n=== DOCKER INSPECT (running containers) ==="
-          docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" | grep alga-e2e-test || echo "No running containers found"
-          
-          # Try to get logs from any containers that might have the project name
-          echo -e "\n=== DIRECT DOCKER LOGS ==="
-          for container in $(docker ps -a --filter "name=alga-e2e-test" --format "{{.Names}}"); do
-            echo "--- Direct logs for $container ---"
-            docker logs $container --tail=100 2>/dev/null || echo "Could not get logs for $container"
-          done
+          mkdir -p logs
+          timeout --kill-after=2s 5s free -m > logs/host-memory.txt 2>&1 || { capture_exit=$?; echo "Memory capture exit: $capture_exit" >> logs/host-memory.txt; }
+          timeout --kill-after=2s 5s df -h > logs/host-disk.txt 2>&1 || { capture_exit=$?; echo "Disk capture exit: $capture_exit" >> logs/host-disk.txt; }
+          # Preserve the useful logs before inspecting a potentially wedged daemon.
+          # Kill-after also bounds clients that ignore TERM; partial output survives.
+          timeout --kill-after=5s 45s docker-compose -p alga-e2e-test logs --no-color --tail=1000 server > logs/failure-server.log 2>&1 || { capture_exit=$?; echo "Server log collection timed out or failed; exit: $capture_exit" >> logs/failure-server.log; }
+          timeout --kill-after=5s 45s docker-compose -p alga-e2e-test logs --no-color --tail=1000 > logs/failure-all-services.log 2>&1 || { capture_exit=$?; echo "Combined log collection timed out or failed; exit: $capture_exit" >> logs/failure-all-services.log; }
+          timeout --kill-after=5s 15s docker-compose -p alga-e2e-test ps > logs/failure-container-status.txt 2>&1 || { capture_exit=$?; echo "Container status timed out or failed; exit: $capture_exit" >> logs/failure-container-status.txt; }
+          # Avoid redundant per-container reads and expensive system disk scans.
+          tail -n 200 logs/failure-server.log
+          tail -n 200 logs/failure-all-services.log
         shell: bash
 
       - name: Save container logs as artifacts
+        timeout-minutes: 5
         if: always() && steps.install_docker_compose.outcome == 'success'
         run: |
           mkdir -p logs
@@ -951,18 +1442,15 @@ jobs:
           cp e2e-tests/*.png logs/ 2>/dev/null || echo "No Playwright screenshots found"
           cp e2e-tests/test-results/**/*.png logs/ 2>/dev/null || echo "No test-results screenshots found"
 
-          # Save logs for each service
-          for service in server setup postgres redis pgbouncer hocuspocus workflow-worker; do
-            echo "Saving logs for $service..."
-            docker-compose -p alga-e2e-test logs $service --no-color > "logs/${service}.log" 2>/dev/null || echo "No logs for $service" > "logs/${service}.log"
+          # Each request has a hard kill bound, keeping artifact upload reachable.
+          # Append failure markers instead of overwriting partial diagnostic output.
+          timeout --kill-after=5s 45s docker-compose -p alga-e2e-test logs --no-color server > logs/server.log 2>&1 || { capture_exit=$?; echo "Server log collection timed out or failed; exit: $capture_exit" >> logs/server.log; }
+          timeout --kill-after=5s 45s docker-compose -p alga-e2e-test logs --no-color > logs/all-services.log 2>&1 || { capture_exit=$?; echo "Combined log collection timed out or failed; exit: $capture_exit" >> logs/all-services.log; }
+          for service in setup postgres redis pgbouncer hocuspocus workflow-worker temporal-worker temporal-dev; do
+            timeout --kill-after=2s 10s docker-compose -p alga-e2e-test logs --no-color "$service" > "logs/${service}.log" 2>&1 || { capture_exit=$?; echo "Service log collection timed out or failed; exit: $capture_exit" >> "logs/${service}.log"; }
           done
-          
-          # Save combined logs
-          docker-compose -p alga-e2e-test logs --no-color > "logs/all-services.log" 2>/dev/null || echo "Could not save combined logs"
-          
-          # Save container status
-          docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml ps > "logs/container-status.txt" 2>/dev/null || echo "Could not save container status"
-          
+          timeout --kill-after=2s 10s docker-compose -p alga-e2e-test ps > logs/container-status.txt 2>&1 || { capture_exit=$?; echo "Container status timed out or failed; exit: $capture_exit" >> logs/container-status.txt; }
+
           # Save environment info
           echo "Environment variables:" > logs/environment.txt
           env | grep -E "(APP_|NODE_|DB_|REDIS_)" >> logs/environment.txt || echo "Could not save environment"
@@ -974,27 +1462,18 @@ jobs:
         if: always() && steps.install_docker_compose.outcome == 'success' && github.actor != 'nektos/act'
         uses: actions/upload-artifact@v4
         with:
-          name: container-logs
+          name: container-logs-${{ matrix.edition }}
           path: logs/
           retention-days: 7
 
-      - name: Upload Playwright diagnostics
-        if: always() && steps.wait_for_setup.outputs.status == 'success' && !env.ACT
-        uses: actions/upload-artifact@v4
-        with:
-          name: fresh-install-playwright
-          path: |
-            e2e-tests/playwright-report/
-            e2e-tests/test-results/
-          retention-days: 7
-
       - name: Cleanup Docker Compose
+        timeout-minutes: 3
         if: always() && steps.install_docker_compose.outcome == 'success' # Ensure docker-compose was attempted to be installed
         run: |
           echo "Cleaning up Docker Compose environment..."
           # Check if docker-compose command is available before trying to use it
           if command -v docker-compose &> /dev/null; then
-            docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml down -v --remove-orphans || echo "Docker Compose cleanup failed, but continuing."
+            timeout --kill-after=10s 120s docker-compose -p alga-e2e-test down -v --remove-orphans || echo "Docker Compose cleanup failed, but continuing."
           else
             echo "docker-compose command not found, skipping cleanup."
           fi
@@ -1008,3 +1487,43 @@ jobs:
             sudo mv docker-compose.yaml.ignored docker-compose.yaml
           fi
         shell: bash
+
+  # Preserve the required check name while requiring both edition jobs and builds.
+  fresh-install-e2e:
+    needs: [changes, browser-collection, build-images, production-browser]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Download both browser execution artifacts
+        if: always() && needs.changes.outputs.run_tests == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          pattern: fresh-install-playwright-*
+          path: test-results/fresh-install-input
+      - name: Download both API execution artifacts
+        if: always() && needs.changes.outputs.run_tests == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          pattern: fresh-install-api-*
+          path: test-results/fresh-install-input
+      - name: Require complete production execution
+        if: always()
+        env:
+          FRESH_INSTALL_JOB_RESULTS: ${{ toJSON(needs) }}
+          TIER1_BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+        run: node scripts/verify-fresh-install-execution.mjs
+      - name: Preserve aggregate decision
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fresh-install-execution-gate
+          path: test-results/fresh-install-gate/
+          if-no-files-found: error
+          retention-days: 30

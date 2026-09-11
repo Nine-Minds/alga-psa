@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "scope": "native-upgrade-bucket-retention",
+  "baseRevision": "717b616bf96cbb13083f0e3353baff40c08e9040",
+  "workingTreeDirty": true,
+  "sourceSha256": {
+    "scripts/lib/upgrade-retention.mjs": "b75107519ae5c653a8f8120137e500b2ca305bc0762a803451f6c02e8c53689b",
+    "scripts/tests/upgrade-retention.test.mjs": "5be8ee82c0f52238e335285f4b329bdf2871f246e261426f22684dafd8bd48e1"
+  },
+  "red": {
+    "passed": 5,
+    "failed": 8,
+    "method": "Load historical helper module without changing live source files"
+  },
+  "green": {
+    "passed": 13,
+    "failed": 0,
+    "skipped": 0
+  },
+  "behavior": [
+    "Retain tenant-specific pool terms and stable member ordering",
+    "Preserve empty consumption and reject manufactured rows",
+    "Reject capacity, membership and consumption/overage/rollover mutation"
+  ],
+  "nativeDatabaseEvidence": "native-bucket-browser-balances.json",
+  "limitations": [
+    "Unit storage boundary is in memory; actual native v1.5 migration capture is recorded separately.",
+    "Citus execution for the changed helper remains pending CI."
+  ]
+}

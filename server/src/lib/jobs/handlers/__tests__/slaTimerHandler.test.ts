@@ -8,7 +8,8 @@ const publishWorkflowEventMock = vi.fn();
 const loggerInfoMock = vi.fn();
 const loggerErrorMock = vi.fn();
 
-vi.mock('@alga-psa/db', () => ({
+vi.mock('@alga-psa/db', async () => ({
+  ...(await vi.importActual('@alga-psa/db') as typeof import('@alga-psa/db')),
   runWithTenant: runWithTenantMock,
   createTenantKnex: createTenantKnexMock,
   withTransaction: withTransactionMock,
@@ -35,7 +36,10 @@ function createMockTrx(tickets: any[]) {
       where: vi.fn().mockReturnThis(),
       whereNotNull: vi.fn().mockReturnThis(),
       whereNull: vi.fn().mockReturnThis(),
-      select: vi.fn().mockResolvedValue(table === 'tickets' ? tickets : []),
+      select: vi.fn().mockReturnThis(),
+      leftJoin: vi.fn().mockReturnThis(),
+      first: vi.fn().mockResolvedValue(undefined),
+      then: (resolve: any, reject: any) => Promise.resolve(table === 'tickets as t' ? tickets : []).then(resolve, reject),
       update: vi.fn().mockResolvedValue(1),
     };
     return chain;
@@ -54,6 +58,7 @@ describe('slaTimerHandler', () => {
         ticket_id: 'ticket-1',
         ticket_number: 'T-1',
         sla_policy_id: 'policy-1',
+        response_time_minutes: 100,
         sla_started_at: new Date(now - 50 * 60 * 1000),
         sla_response_due_at: new Date(now + 50 * 60 * 1000),
         sla_response_at: null,
@@ -122,6 +127,7 @@ describe('slaTimerHandler', () => {
         ticket_id: 'ticket-2',
         ticket_number: 'T-2',
         sla_policy_id: 'policy-1',
+        response_time_minutes: 100,
         sla_started_at: new Date(now - 10 * 60 * 1000),
         sla_response_due_at: new Date(now + 90 * 60 * 1000),
         sla_response_at: null,

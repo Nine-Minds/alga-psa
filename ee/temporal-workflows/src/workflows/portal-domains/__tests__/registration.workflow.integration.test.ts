@@ -59,7 +59,7 @@ describe('portalDomainRegistrationWorkflow', () => {
     const worker = await Worker.create({
       connection: env.nativeConnection,
       taskQueue,
-      workflowsPath: path.resolve(__dirname, '../..'),
+      workflowsPath: path.resolve(__dirname, '../registration.workflow.ts'),
       activities,
     });
 
@@ -159,7 +159,7 @@ describe('portalDomainRegistrationWorkflow', () => {
     const worker = await Worker.create({
       connection: env.nativeConnection,
       taskQueue,
-      workflowsPath: path.resolve(__dirname, '../..'),
+      workflowsPath: path.resolve(__dirname, '../registration.workflow.ts'),
       activities,
     });
 
@@ -279,7 +279,7 @@ describe('portalDomainRegistrationWorkflow', () => {
     const worker = await Worker.create({
       connection: env.nativeConnection,
       taskQueue,
-      workflowsPath: path.resolve(__dirname, '../..'),
+      workflowsPath: path.resolve(__dirname, '../registration.workflow.ts'),
       activities,
     });
 

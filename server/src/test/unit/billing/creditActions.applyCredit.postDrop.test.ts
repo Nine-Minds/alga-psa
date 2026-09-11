@@ -140,6 +140,15 @@ function createCreditApplicationTrx() {
       return builder;
     }
 
+    if (tableName === 'invoice_payments') {
+      const builder: any = {
+        where: vi.fn(() => builder),
+        sum: vi.fn(() => builder),
+        first: vi.fn(async () => ({ total: 0 })),
+      };
+      return builder;
+    }
+
     if (tableName === 'clients') {
       const builder: any = {
         where: vi.fn((_criteria: any) => builder),

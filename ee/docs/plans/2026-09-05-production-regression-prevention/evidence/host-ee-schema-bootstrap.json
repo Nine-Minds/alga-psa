@@ -1,0 +1,39 @@
+{
+  "sourceRevision": "75c6c7805f",
+  "database": "host_ee_test_82cc",
+  "schema": "CE migrations with EE collision overrides, matching existing enterprise runner ordering",
+  "mergedFiles": 1148,
+  "migrationTreeSha256": "05b09f51693a9565bd58023bb1c49feca961df0d8d399e3d779e70402fc5ccd9",
+  "bootstrapValidation": {
+    "suite": "server/src/test/integration/invoiceTicketImmutable.integration.test.ts",
+    "passed": 1,
+    "failed": 0,
+    "durationSeconds": 33.8,
+    "log": "/tmp/alga-host-ee-bootstrap.log",
+    "scope": "real migrations/seeds, generated invoice immutability, persisted source snapshots, rendered preview/PDF and accounting export"
+  },
+  "verifiedTables": [
+    "teams_integrations",
+    "teams_notification_deliveries",
+    "teams_audit_events",
+    "teams_conversation_references",
+    "microsoft_profiles"
+  ],
+  "hostSession": 7488,
+  "browserSession": 69743,
+  "browserStatus": "passed",
+  "releaseValidation": false,
+  "limitations": [
+    "Fresh PostgreSQL test schema; not supported-release upgrade or Citus evidence",
+    "No new production build or native CI proof"
+  ],
+  "browserValidation": {
+    "passed": 1,
+    "failed": 0,
+    "flaky": 0,
+    "skipped": 0,
+    "durationMs": 127502.78899999999,
+    "log": "/tmp/alga-host-ee-browser.log",
+    "scope": "real login; sort authoring; UI save; tenant-scoped database AST verification; cache clear; reopen/reload; identical persisted AST and sorted output"
+  }
+}

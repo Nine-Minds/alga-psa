@@ -5,6 +5,10 @@ integration and E2E tests without vendor accounts, and to smoke-test
 integration flows by hand. Design decisions and history live in
 [docs/plans/2026-07-26-emulator-suite-design.md](../../docs/plans/2026-07-26-emulator-suite-design.md).
 
+The [protocol coverage inventory](PROTOCOL_PARITY.md) separates documented vendor
+contracts, deliberate emulator choices, native consumer evidence and remaining
+browser/worker/sandbox gaps. Emulator success does not establish full parity.
+
 ## Run everything
 
 ```bash
@@ -47,16 +51,16 @@ dependencies; it never needs the monorepo at runtime.
 
 ## Point Alga at the emulators
 
-Emulators speak the vendors' real wire protocols. Redirect Alga with env
-overrides:
+Emulators implement the vendor protocol subsets listed in this guide and the
+[coverage inventory](PROTOCOL_PARITY.md). Redirect Alga with env overrides:
 
 | Vendor | Env vars |
 | --- | --- |
 | Microsoft | `MICROSOFT_LOGIN_BASE_URL=http://localhost:4010`, `MICROSOFT_GRAPH_BASE_URL=http://localhost:4010/v1.0` |
 | Teams / Bot Framework | `TEAMS_EMULATOR_MODE=true`, the two Microsoft vars above, plus `TEAMS_BOT_OPENID_CONFIG_URL=http://localhost:4010/v1/.well-known/openidconfiguration` and `TEAMS_BOT_SERVICE_URL_ALLOWLIST=http://localhost:4010` |
-| QBO | `QBO_OAUTH_AUTHORIZE_URL=http://localhost:4020/connect/oauth2`, `QBO_OAUTH_TOKEN_URL=http://localhost:4020/oauth2/v1/tokens/bearer`, `QBO_API_BASE_URL=http://localhost:4020/v3/company` |
+| QBO | `QBO_OAUTH_AUTHORIZE_URL=http://localhost:4020/connect/oauth2`, `QBO_OAUTH_TOKEN_URL=http://localhost:4020/oauth2/v1/tokens/bearer`, `QBO_OAUTH_REVOKE_URL=http://localhost:4020/v2/oauth2/tokens/revoke`, `QBO_API_BASE_URL=http://localhost:4020/v3/company` |
 | Stripe | `STRIPE_API_BASE_URL=http://localhost:4050`, `STRIPE_SECRET_KEY=sk_test_algasim`, `STRIPE_PAYMENT_WEBHOOK_SECRET=whsec_algasim`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_algasim` |
-| Xero | `XERO_OAUTH_AUTHORIZE_URL=http://localhost:4060/identity/connect/authorize`, `XERO_OAUTH_TOKEN_URL=http://localhost:4060/connect/token`, `XERO_CONNECTIONS_URL=http://localhost:4060/connections`, `XERO_API_BASE_URL=http://localhost:4060/api.xro/2.0` |
+| Xero | `XERO_OAUTH_AUTHORIZE_URL=http://localhost:4060/identity/connect/authorize`, `XERO_OAUTH_TOKEN_URL=http://localhost:4060/connect/token`, `XERO_OAUTH_REVOKE_URL=http://localhost:4060/connect/revocation`, `XERO_REVOCATION_URL=http://localhost:4060/connect/revocation`, `XERO_CONNECTIONS_URL=http://localhost:4060/connections`, `XERO_API_BASE_URL=http://localhost:4060/api.xro/2.0` |
 | Webhooks | Point the integration's webhook/notification URL at `http://localhost:4030/<any path>` |
 | SMTP | Configure the SMTP provider with host `localhost`, port `4040`, no TLS |
 
@@ -203,6 +207,105 @@ surface), so richer command replies still need a tenant whose users are already
 linked. For local testing, plant the link directly — one row in
 `user_auth_accounts` (`provider='microsoft'`, `provider_account_id=<the
 teams-user id>`, `user_id=<PSA user>`); the bot then runs commands as that user.
+
+### Unsupported Graph operations
+
+Calendar wire-contract validation lives in `msgraph/tests/contracts/calendar.ts`
+and runs against the actual HTTP responses in `calendar.test.ts`. Its independent
+references are Microsoft's [create-event response](https://learn.microsoft.com/en-us/graph/api/user-post-events?view=graph-rest-1.0)
+and [Graph error format](https://learn.microsoft.com/en-us/graph/errors), reviewed
+2026-09-08. It checks the create status and consumed event fields, plus the error
+envelope. Deliberately changing the start field to a string, changing the create
+status, or removing the error envelope fails validation. This exposed missing
+error messages in the emulator, now supplied for Graph error objects. OAuth
+errors retain their separate format. This is partial contract coverage: callback,
+Full OAuth, bot and other provider contracts still require independent parity
+checks; the bounded checks below and in the [inventory](PROTOCOL_PARITY.md) do
+not cover every operation.
+No live Microsoft sandbox drift verification has been performed.
+
+The following Microsoft contract boundaries are independently checked. These
+checks run in the normal msgraph Vitest suite against local HTTP listeners.
+
+| Surface | Contract evidence | Remaining limitation |
+| --- | --- | --- |
+| Calendar create/error responses | `tests/contracts/calendar.ts` and real HTTP checks in `calendar.test.ts`; malformed event/error bodies and wrong create status fail | Consumed fields only; no full event schema or live sandbox comparison |
+| OAuth token responses | `tests/contracts/oauth.ts` applied to code, refresh and client-credential responses in `smoke.test.ts`; wrong expiry type and bearer type fail | Opaque token envelope only; does not establish Entra signatures, consent, PKCE, SSO, or complete scope-dependent token issuance parity |
+| Subscription validation | `calendar.test.ts` verifies request method/content type, accepts only 200/plain-text matching token responses, and verifies rejected callbacks leave no subscription | HTTP loopback transport; real HTTPS trust and tenant registration require application/sandbox coverage |
+| Basic change notifications | `tests/contracts/notifications.ts` validates real mail, calendar, meeting-artifact and call-record callbacks; deleting required fields or corrupting GUIDs, expiry and change type fails. Mail checks compare tenant to the OAuth claim and ID/expiry to the created subscription | Single emulated Entra tenant; resource-specific encrypted payloads, lifecycle notifications and live sandbox drift remain unverified |
+
+OAuth response reference: [Microsoft authorization code flow](https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-auth-code-flow).
+Subscription reference: [Graph webhook validation](https://learn.microsoft.com/en-us/graph/change-notifications-delivery-webhooks#notificationurl-validation).
+Both were reviewed 2026-09-08. Validation requests have a ten-second deadline,
+including reading the response body, and do not follow redirects. Basic callback
+metadata follows the [changeNotification resource contract](https://learn.microsoft.com/en-us/graph/api/resources/changenotification?view=graph-rest-1.0),
+reviewed 2026-09-08: GUID subscription/tenant IDs, subscription expiration,
+change type and resource. Subscription GUIDs are derived from the seeded ID
+stream, preserving deterministic replay. Resource-specific rich notification
+payloads, lifecycle events and remaining provider auth/error surfaces still need
+independent checks; a green emulator suite does not establish those contracts.
+
+Explicit delegated OAuth scope requests now receive a refresh token only when
+they include `offline_access` as a complete scope. App-only grants never create
+or return a refresh token. HTTP contract cases cover a valid offline scope,
+its omission, and a similarly named scope that must not match. This prevents a
+test application from getting persistent access merely because the emulator
+was more permissive than Entra. Legacy requests that omit the scope entirely
+still use the emulator's default mail/offline scope set; PKCE, consent and full
+scope validation remain outside this check.
+
+Unimplemented `/v1.0` Graph routes return HTTP 501 with
+`error.code: EmulatorUnsupportedOperation`. This is an emulator capability
+error, not a claim that Microsoft Graph returns the same response. Implemented
+routes still return 404 when the requested item does not exist. Keeping these
+cases distinct prevents clients from treating a misspelled or unimplemented
+DELETE route as successful idempotent deletion. Named-calendar operations and
+other unsupported paths must not be counted as covered by a passing request.
+
+### Primary calendar synchronization
+
+Shared and enterprise calendar adapters use `MICROSOFT_GRAPH_BASE_URL` and
+`MICROSOFT_LOGIN_BASE_URL`, including token refresh and the enterprise OAuth
+callback. The emulator serves primary-calendar metadata and event CRUD at
+`/me/calendar/events`, plus `/me/calendarView/delta` for incremental sync.
+Delta rounds preserve the initial date window, return opaque next/delta links,
+freeze paginated results, and report event updates, deletions and window exits.
+`Prefer: odata.maxpagesize=N` controls page size (default 100). Resetting or
+restoring the emulator invalidates prior sync tokens with `410 SyncStateNotFound`.
+
+For mailbox replay, `deliver-message` takes an existing `messageId`, sends its
+created notification again, and returns `{ message, deliveries }`. Each delivery
+includes the subscription ID, HTTP status and success flag; connection failures
+also include an error. It preserves the message identity and does not add another
+mailbox message. Only unexpired mail subscriptions requesting `created` receive
+it. Delivery has a ten-second timeout and does not follow redirects. The existing
+`message` seeder still creates a message and sends its initial notification.
+
+Use the `calendar-change` control action to create/update/delete vendor events;
+it returns the event and each matching webhook delivery's HTTP status. Supply
+`changeType`, an `event` object for creation/update, and `eventId` for update/delete.
+The default organizer is `emulated-user`, the single delegated mailbox.
+Primary-calendar HTTP mutations also deliver notifications. Subscription resource,
+change type and expiry determine delivery; mail and calendar notifications are
+separate. Failed callbacks remain visible in control results and redirects are
+not followed. The emulator does not automatically retry failed deliveries.
+
+This delta model handles single-instance UTC and IANA-zone events. Explicit
+ISO offsets identify instants; offset-free event dates use the supplied zone,
+including its winter/summer offset. Delta responses normalize dates to UTC
+without mutating vendor state. Windows timezone names, ambiguous/nonexistent
+local times, recurrence expansion and unsupported query options remain explicit
+model limitations; refusal does not claim Graph rejects those cases. The separate
+legacy event-list filter still models UTC values only.
+It reports deletions for previously tracked events; it does not reproduce Graph's
+optional tombstones for unrelated changes outside the window. Tokens are bound
+to the OAuth client, but the single-mailbox model does not establish Entra user
+or permission parity. Named calendars are not implemented. Alga's calendar
+subscription code still requires HTTPS: provide a trusted test callback endpoint
+instead of disabling that check. Browser configuration, callback persistence and
+worker synchronization require their own full application journey.
+
+Protocol references: [Graph dateTimeTimeZone](https://learn.microsoft.com/en-us/graph/api/resources/datetimetimezone?view=graph-rest-1.0) and [Microsoft calendar-view delta](https://learn.microsoft.com/en-us/graph/api/event-delta?view=graph-rest-1.0).
 
 ### Teams meetings and recordings
 
@@ -366,12 +469,51 @@ POST /control/:emulator/actions/:name        body = params
 POST /control/:emulator/faults/:name/arm     body = params
 POST /control/:emulator/faults/:name/disarm
 GET  /control/:emulator/state/:view
+GET  /control/:emulator/requests
 POST /control/:emulator/seed/:name           body = params
 POST /control/:emulator/reset
 POST /control/clock/advance                  {"duration":"32d"}
 POST /control/scenario                       body = scenario JSON
 POST /control/scenarios/:name/run
 ```
+
+### Request evidence
+
+`GET /control/:emulator/requests` returns `{ ok: true, result: ... }` with
+completed HTTP vendor requests, including injected transport failures. Records
+contain a sequence number assigned on arrival, method, path, start time,
+elapsed milliseconds, HTTP status, and whether the connection aborted. Query
+strings, headers, and bodies are excluded. Use provider state views to verify
+business effects such as created invoices or captured email.
+
+For SMTP, `GET /control/smtp-sink/state/emails` returns received messages in
+`result`, including `messageId`, `inReplyTo`, `references` and `attachments`.
+Each attachment includes `filename`, `contentType`, `contentDisposition`,
+`contentId`, byte `size` and `contentBase64`. Decode the base64 to compare exact
+received bytes; match attachments by identity rather than MIME part order.
+These values come from parsing the received SMTP message. Reset clears the
+captured messages. The sink does not provide inbox/IMAP behavior.
+
+History is in memory, in completion order, and retains the latest 1,000
+completed requests by default (`EmulatorHost.requestHistoryLimit`, 1–10,000).
+`dropped` reports evicted records; `inFlight` reports unfinished requests in
+the current generation. `complete` is false while requests are in flight,
+after truncation, or for non-HTTP protocols such as SMTP (`supported: false`).
+A complete snapshot describes only traffic observed so far: tests must also
+await the expected application outcome and assert the expected requests.
+
+Reset clears history and increments `generation`, alongside resetting provider
+state and faults. Responses from requests started before reset are excluded
+from the new history. Reset does not cancel application jobs or outstanding
+vendor operations; stop or drain those before reusing a provider for another
+scenario. Request history is not restored from persisted provider snapshots.
+
+To exercise duplicate Stripe callback handling, use
+`algasim action stripe redeliver-event -p '{"eventId":"evt_..."}'` with an ID
+from the `events` state view. It sends the stored event again without creating
+another payment intent or event. Each delivery receives a fresh signature
+timestamp, independent of the event's creation time and virtual clock, and its
+per-event/per-target attempt number appears in `webhook-deliveries`.
 
 ### Faults
 
@@ -384,9 +526,20 @@ Three tiers, so most failure modes cost nothing to support:
   `"GET /me"` or `"POST /v3/conversations/{id}/activities"` N times, for
   Graph throttling and bot-connector failures; a trailing `*` matches by
   prefix), QBO stale SyncTokens produced by out-of-band
-  `receive-payment`/`apply-credit` actions.
+  `receive-payment`/`apply-credit` actions. QBO `rename-invoice` models a
+  bookkeeper changing `DocNumber`; pass `realmId`, `invoiceId`, and `docNumber`
+  to create invoice drift without changing the invoice identity or amount.
+  Wire QBO timestamps follow the shared host clock so current-time CDC polls
+  discover these edits. Pure in-process simulator tests retain their default
+  deterministic logical clock.
 
 ### Scenarios
+
+Xero's `select-organisation` action takes `xeroTenantId` for an already seeded
+organisation and places it first in `/connections`, matching Alga's supported
+default-connection selection. It retains the other organisations and their
+records; selecting an unknown organisation fails without changing the order.
+This control models the connection response, not a provider consent screen.
 
 Declarative YAML that seeds, acts, arms, and advances the clock by registry
 name — identical behavior from CI setup code, the CLI, and the console's run
@@ -446,3 +599,84 @@ Rules that keep the suite coherent:
 
 Add the package to `SUITE_EMULATORS` in [suite/src/index.ts](suite/src/index.ts)
 and to the `PACKAGES` list in [build-image.sh](build-image.sh).
+
+### Xero OAuth application fixtures
+
+After each emulator reset, seed `application` before starting OAuth. Confidential
+applications require `type: "confidential"`, `clientId`, `clientSecret`, and an
+array of exact `redirectUris`. Public applications use `type: "pkce"`, `clientId`
+and `redirectUris`; authorization requires an S256 challenge and token exchange
+requires its matching verifier. Token requests support form credentials or HTTP
+Basic authentication. Invalid secrets, client/code identity and callback mismatches
+are rejected without consuming a valid grant. Reset removes registrations and tokens.
+
+The application seeder returns only client ID and type. It does not register a real
+Xero application. After seeding organisations, call `set-connections` with
+`{ clientId, xeroTenantIds }` to set the exact consent list for that application.
+Seeded organisations are invisible to the vendor API until granted; the control
+`organisations` view still lists all seeded organisations. An empty consent list
+revokes access immediately, including for existing tokens. Invalid changes leave
+existing consent intact. Reset clears consent. Live-provider drift checks remain
+outside this emulator's current coverage.
+
+### Stripe callback signature parity
+
+The Stripe smoke suite verifies actual HTTP callback payloads and headers with
+`stripe.webhooks.constructEvent`, using the same declared SDK range as the
+application (`^19.1.0`, currently locked to 19.3.1). The SDK is an explicit
+emulator test dependency. It replaces the test's local HMAC verifier and
+checks delivery-time tolerance as well as signature bytes. The suite also
+rejects payload whitespace changes, a wrong endpoint secret, and a correctly
+signed but hour-old delivery. Historical event creation time remains distinct
+from the fresh signature time when an event is redelivered.
+
+Callback redirects are recorded as delivery failures without following their
+Location. Actual HTTP tests cover 302 and 307 responses, verify that the redirect
+destination receives no request, and confirm that another configured callback
+still receives a correctly signed event. This follows
+[Stripe's webhook HTTP status contract](https://docs.stripe.com/webhooks#fix-http-status-codes).
+
+Reference: [Stripe webhook signature verification](https://docs.stripe.com/webhooks/signature),
+reviewed 2026-09-08. This is callback authentication parity, not live sandbox
+verification or validation of every Stripe event payload/API field.
+
+### QBO token error contracts
+
+The token endpoint `/oauth2/v1/tokens/bearer` returns OAuth `error` and
+`error_description` fields for invalid client credentials, invalid grants,
+and unsupported grant types. Accounting endpoints retain the distinct
+`Fault.Error` envelope. Native HTTP cases verify both contracts so a local
+export test cannot accidentally exercise accounting-error parsing for token
+refresh failures.
+
+Independent reference: [Intuit OAuth Ruby client documentation](https://developers.intuit.com/app/developer/qbo/docs/develop/sdks-and-samples-collections/ruby/oauth-ruby-client),
+which demonstrates HTTP 400 with an `invalid_grant` OAuth error, and the
+[Intuit OAuth JavaScript client](https://github.com/intuit/oauth-jsclient/blob/master/README.md),
+reviewed 2026-09-08. Authorization-page behavior and live Intuit sandbox drift
+remain outside these token-error checks.
+
+### Xero accounting validation errors
+
+Invoice and contact validation failures use the accounting error structure
+from [Xero's published OpenAPI specification](https://github.com/XeroAPI/Xero-OpenAPI/blob/master/xero_accounting.yaml):
+`ErrorNumber`, `Type`, `Message`, and per-element `ValidationErrors`. The wire
+response does not substitute problem-detail fields for that accounting
+contract. Tests exercise invalid item codes, archived accounts and a missing
+contact name through HTTP. OAuth error objects keep their separate shape.
+This checks representative rejection payloads; it does not claim live sandbox
+verification, full batch-error semantics or complete Xero API coverage.
+
+### Xero refresh-token recovery and expiry
+
+The token endpoint retains a rotated refresh token for a fixed 30-minute retry
+window, allowing recovery when the first refresh response is lost. Repeated
+use does not extend that deadline. Unused refresh tokens expire after 60 days;
+newly issued tokens retain their own lifetime and client/scope binding.
+`xero/tests/tokenLifecycle.test.ts` verifies recovery and expiry over HTTP with
+an isolated emulator clock. These rules follow the
+[Xero OAuth FAQ](https://developer.xero.com/faq/oauth2), reviewed 2026-09-08.
+Refresh tokens are issued only when the granted scope includes `offline_access`;
+code exchange no longer inserts implicit default scopes. This follows the
+[Xero authorization flow](https://developer.xero.com/documentation/guides/oauth2/auth-flow/).
+This covers token lifetime and offline-consent behavior, not live sandbox drift,
+JWT signatures, or complete authorization-scope validation.

@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "kind": "financial-model-defect-replay",
+  "baseRevision": "f2209bc1be",
+  "testFile": "packages/billing/tests/financialStateModel.db.test.ts",
+  "before": {
+    "result": "assertion-failed",
+    "invoiceCents": 10000,
+    "paidCents": 6000,
+    "requestedCreditCents": 10000,
+    "expectedAppliedCreditCents": 4000,
+    "actualAppliedCreditCents": 10000,
+    "reportSha256": "fec7d369f5410cdbaf8c9930010a7b98f95c99c5adb709f69d666d9bfc957919"
+  },
+  "generatedDiscovery": {
+    "seed": 20260906,
+    "path": "0:0:2:0:2:3:8:7:7:7:7:7:7:9:7:8:8:8:5:5:5",
+    "shrinks": 20,
+    "counterexample": {
+      "seed": 20260906,
+      "path": "0:0:2:0:2:3:8:7:7:7:7:7:7:9:7:8:8:8:5:5:5",
+      "total": 100,
+      "steps": [
+        {
+          "operation": "pay",
+          "actor": 0,
+          "amount": 1
+        },
+        {
+          "operation": "credit",
+          "actor": 0,
+          "amount": 100
+        },
+        {
+          "operation": "finalize",
+          "actor": 0,
+          "amount": 1
+        }
+      ],
+      "defect": "Credit application ignored prior cash payments; 100 cents credit was applied when 99 cents remained due.",
+      "shrinks": 20
+    },
+    "reportSha256": "fd48d2b574c54f09e3865b43bd270dc8c38b543822fe33d5565f91e5d7282c3a"
+  },
+  "fix": "Cap credit at the minimum of eligible charges and unpaid invoice balance, reading net payment rows while holding the shared invoice lock.",
+  "validation": {
+    "initialModelCasesPassed": 3,
+    "initialPropertyRuns": 20,
+    "concurrencyCasesPassed": 14,
+    "concurrencyReportSha256": "8f89da88b6f074d8f9160c29c781944b40a5731634a6c588e282a68b417d3192",
+    "targetedTypecheck": "passed",
+    "fullWorkspaceLane": {
+      "filesPassed": 59,
+      "assertionsPassed": 425,
+      "skips": 0,
+      "modelCases": 4,
+      "generatedRuns": 100,
+      "evidence": "workspace-db-financial-model.json"
+    },
+    "expandedCreditInfrastructure": {
+      "filesPassed": 17,
+      "assertionsPassed": 78,
+      "skips": 0,
+      "durationSeconds": 302.86,
+      "reportSha256": "923223f5a08a57378388e11b82820f8d273e2f1c21896e8f492a761a48a0fefb",
+      "newRace": "waits for an in-flight cash payment before calculating remaining credit headroom"
+    }
+  },
+  "limitations": [
+    "USD manual invoices with unrestricted eligible charges and direct credit grants; this pilot does not exhaust every billing policy or currency.",
+    "Each model example rolls back a real transaction. The separate concurrency suites exercise competing committed connections.",
+    "Authentication, external event delivery and remote notifications are fixture seams.",
+    "No production incident identifier supplied. Native candidate execution remains required."
+  ]
+}

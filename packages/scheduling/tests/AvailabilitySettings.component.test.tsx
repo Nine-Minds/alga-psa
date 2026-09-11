@@ -1,7 +1,7 @@
 /* @vitest-environment jsdom */
 
 import React from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 
 function deferred<T>() {
@@ -252,6 +252,17 @@ async function openUserHoursTab() {
   fireEvent.click(tab);
 }
 
+const scrollIntoView = vi.fn();
+const originalScrollIntoView = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'scrollIntoView');
+beforeAll(() => {
+  // jsdom has no layout/scrolling implementation; retain the real rAF callback.
+  Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', { configurable: true, value: scrollIntoView });
+});
+afterAll(() => {
+  if (originalScrollIntoView) Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', originalScrollIntoView);
+  else Reflect.deleteProperty(HTMLElement.prototype, 'scrollIntoView');
+});
+
 beforeEach(() => {
   vi.clearAllMocks();
   window.sessionStorage.clear();
@@ -364,6 +375,7 @@ describe('AvailabilitySettings rendered regressions', () => {
     // Switch to the second technician through the configured-users table while
     // the first save is still pending, and let that load settle first.
     fireEvent.click(await screen.findByTestId('edit-user-user-b'));
+    await waitFor(() => expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start' }));
     expect(await screen.findByText('Loading technician hours...')).toBeInTheDocument();
     loads['user-b'].resolve({ success: true, data: weekRows('user-b', '15:00:00') });
     expect(await screen.findByTestId('day-3-end-time')).toHaveValue('15:00');
@@ -477,6 +489,7 @@ describe('AvailabilitySettings rendered regressions', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('user-hours-selector')).toHaveValue('user-b');
+      expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start' });
     });
   });
 

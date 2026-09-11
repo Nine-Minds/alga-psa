@@ -1,0 +1,29 @@
+{
+  "runUrl": "https://github.com/Nine-Minds/alga-psa/actions/runs/34118119027",
+  "jobId": 101729600848,
+  "revision": "3072eefdf9ecd8ccd551e7dfaf8d595eb6b2908f",
+  "status": "incomplete-timeout",
+  "collectedFiles": 2692,
+  "collectedCases": 14550,
+  "moduleStates": {
+    "passed": 2544
+  },
+  "testStates": {
+    "passed": 13826,
+    "skipped": 17
+  },
+  "lastEvent": {
+    "schemaVersion": 1,
+    "runId": "b42bcb83-29ff-4583-a348-5058eea72adb",
+    "sequence": 37864,
+    "timestamp": "2026-09-07T12:44:11.037Z",
+    "event": "module-queued",
+    "file": "../packages/client-portal/src/components/billing/ClientInvoicePreview.servicePeriods.test.tsx"
+  },
+  "artifactHashes": {
+    "progress.jsonl": "95577332d89ee0f674aa1738632df11fd39f1f9ab60e0cb0d9a1e00e7ba2c8f9",
+    "collected.json": "ea3c03a75f7ad08c30da381bfeaff4cc7305d56d526f1bcd6077aaca841a42da",
+    "collected-tests.json": "198fe0990a1f9976a50b090c4dd2fdbc6e7218d3770d7ac449f33cf5a5129a1d"
+  },
+  "limitation": "No complete execution or coverage report; this is not passing evidence."
+}

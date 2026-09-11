@@ -20,6 +20,8 @@ export const priorityResponseSchema = z.object({
 
 // Priority list query schema
 export const priorityListQuerySchema = paginationQuerySchema.extend({
+  sort: z.string().optional().default('order_number'),
+  order: z.enum(['asc', 'desc']).optional().default('asc'),
   item_type: z.enum(['ticket', 'project_task']).optional(),
   search: z.string().optional()
 });

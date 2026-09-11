@@ -25,6 +25,8 @@ vi.mock('@alga-psa/users/actions', () => ({
 }));
 
 vi.mock('@alga-psa/auth', () => ({
+  withAuth: (action: any) => async (...args: any[]) => action({ user_id: 'user-1', user_type: 'internal' }, { tenant: tenantId }, ...args),
+  withOptionalAuth: (action: any) => async (...args: any[]) => action({ user_id: 'user-1', user_type: 'internal' }, { tenant: tenantId }, ...args),
   hasPermission: vi.fn(async () => true),
 }));
 vi.mock('server/src/lib/auth/rbac', () => ({

@@ -1,0 +1,282 @@
+{
+  "status": "partial; candidate rebuild and native rerun required",
+  "sourceHeadBeforeRepairs": "b8677872a0",
+  "applicationImage": "sha256:2d3f0db9b006857afd4b5977a39e39e5c9bf29ec703201cf7d9d12a1abe4e88d",
+  "applicationRevision": "9b12c5; older than source repairs",
+  "fullApiRun": {
+    "files": 18,
+    "passed": 293,
+    "failed": 34,
+    "skipped": 2,
+    "durationSeconds": 61.69,
+    "before": {
+      "passed": 236,
+      "failed": 66,
+      "skipped": 27
+    },
+    "fileResults": [
+      {
+        "file": "server/src/test/e2e/api/accountingExports.e2e.test.ts",
+        "assertions": {
+          "failed": 3
+        },
+        "failures": [
+          "Accounting Exports API E2E creates and lists accounting export batches",
+          "Accounting Exports API E2E appends lines without mappings and surfaces validation errors",
+          "Accounting Exports API E2E prevents duplicate batch creation using the same filter set"
+        ]
+      },
+      {
+        "file": "server/src/test/e2e/api/boards.e2e.test.ts",
+        "assertions": {
+          "failed": 2,
+          "passed": 8
+        },
+        "failures": [
+          "Board API E2E Tests Authentication should require API key",
+          "Board API E2E Tests List Boards (GET /api/v1/boards) should sort by display_order by default"
+        ]
+      },
+      {
+        "file": "server/src/test/e2e/api/clients.e2e.test.ts",
+        "assertions": {
+          "passed": 19,
+          "failed": 4
+        },
+        "failures": [
+          "Clients API E2E Tests CRUD Operations should delete a client",
+          "Clients API E2E Tests Inactive Client Behavior should set all contacts and users to inactive when client is set to inactive",
+          "Clients API E2E Tests Inactive Client Behavior should allow reactivating only the client, leaving contacts inactive",
+          "Clients API E2E Tests Inactive Client Behavior should allow reactivating client and all contacts/users together"
+        ]
+      },
+      {
+        "file": "server/src/test/e2e/api/contacts.e2e.test.ts",
+        "assertions": {
+          "failed": 2,
+          "passed": 27
+        },
+        "failures": [
+          "Contact API E2E Tests Authentication should require API key for all endpoints",
+          "Contact API E2E Tests CRUD Operations Create Contact (POST /api/v1/contacts) should create a new contact"
+        ]
+      },
+      {
+        "file": "server/src/test/e2e/api/extensions.e2e.test.ts",
+        "assertions": {
+          "failed": 1
+        },
+        "failures": [
+          "Extensions API \u2013 Install endpoint installs an extension version and returns accepted response"
+        ]
+      },
+      {
+        "file": "server/src/test/e2e/api/permissions.e2e.test.ts",
+        "assertions": {
+          "passed": 15
+        },
+        "failures": []
+      },
+      {
+        "file": "server/src/test/e2e/api/priorities.e2e.test.ts",
+        "assertions": {
+          "failed": 3,
+          "passed": 9
+        },
+        "failures": [
+          "Priority API E2E Tests Authentication should require API key",
+          "Priority API E2E Tests List Priorities (GET /api/v1/priorities) should support search by name",
+          "Priority API E2E Tests List Priorities (GET /api/v1/priorities) should sort by order_number by default"
+        ]
+      },
+      {
+        "file": "server/src/test/e2e/api/projects.e2e.test.ts",
+        "assertions": {
+          "failed": 3,
+          "passed": 20
+        },
+        "failures": [
+          "Projects API E2E Tests Authentication should reject requests without API key",
+          "Projects API E2E Tests Project Tasks and Tickets should get project tasks",
+          "Projects API E2E Tests Project Tasks and Tickets should keep description_rich_text internal across phase list, task detail, and update endpoints"
+        ]
+      },
+      {
+        "file": "server/src/test/e2e/api/roles.e2e.test.ts",
+        "assertions": {
+          "passed": 16
+        },
+        "failures": []
+      },
+      {
+        "file": "server/src/test/e2e/api/services.e2e.test.ts",
+        "assertions": {
+          "passed": 10
+        },
+        "failures": []
+      },
+      {
+        "file": "server/src/test/e2e/api/statuses.e2e.test.ts",
+        "assertions": {
+          "failed": 2,
+          "passed": 12
+        },
+        "failures": [
+          "Status API E2E Tests Authentication should require API key",
+          "Status API E2E Tests List Statuses (GET /api/v1/statuses) should sort by order_number by default"
+        ]
+      },
+      {
+        "file": "server/src/test/e2e/api/storage.e2e.test.ts",
+        "assertions": {
+          "failed": 6
+        },
+        "failures": [
+          "Storage API E2E Tests (built application) Record operations should create and retrieve a record via PUT/GET",
+          "Storage API E2E Tests (built application) Record operations should list records with optional value and metadata",
+          "Storage API E2E Tests (built application) Record operations should enforce optimistic concurrency",
+          "Storage API E2E Tests (built application) Record operations should delete a record",
+          "Storage API E2E Tests (built application) Bulk operations should insert multiple records with bulkPut",
+          "Storage API E2E Tests (built application) Bulk operations should enforce total storage quota"
+        ]
+      },
+      {
+        "file": "server/src/test/e2e/api/teams.e2e.test.ts",
+        "assertions": {
+          "failed": 1,
+          "passed": 35
+        },
+        "failures": [
+          "Teams API E2E Tests Authentication should require API key for all endpoints"
+        ]
+      },
+      {
+        "file": "server/src/test/e2e/api/ticket-statuses.e2e.test.ts",
+        "assertions": {
+          "failed": 1,
+          "passed": 2
+        },
+        "failures": [
+          "Ticket Status Lookup API E2E Tests should require API key"
+        ]
+      },
+      {
+        "file": "server/src/test/e2e/api/ticketRichTextRoundTrip.e2e.test.ts",
+        "assertions": {
+          "passed": 2
+        },
+        "failures": []
+      },
+      {
+        "file": "server/src/test/e2e/api/tickets.e2e.test.ts",
+        "assertions": {
+          "failed": 2,
+          "passed": 61
+        },
+        "failures": [
+          "Ticket API E2E Tests Authentication should require API key for all endpoints",
+          "Ticket API E2E Tests Ticket Statistics (GET /api/v1/tickets/stats) should return ticket statistics"
+        ]
+      },
+      {
+        "file": "server/src/test/e2e/api/time-entries.e2e.test.ts",
+        "assertions": {
+          "passed": 38,
+          "failed": 1,
+          "skipped": 2
+        },
+        "failures": [
+          "Time Entries API E2E Tests CRUD Operations Create Time Entry (POST /api/v1/time-entries) should compute work_date in user timezone and bucket to the correct period"
+        ]
+      },
+      {
+        "file": "server/src/test/e2e/api/users.e2e.test.ts",
+        "assertions": {
+          "failed": 3,
+          "passed": 19
+        },
+        "failures": [
+          "Users API E2E Tests Authentication should reject requests without API key",
+          "Users API E2E Tests User Search should search users by query",
+          "Users API E2E Tests Password Management should allow users to change their own password"
+        ]
+      }
+    ],
+    "rawReportLocal": "/tmp/alga-api-fixtures-full.json",
+    "logLocal": "/tmp/alga-api-fixtures-full.log"
+  },
+  "focusedAcceptance": {
+    "ticketAuthorization": {
+      "executed": 4,
+      "passed": 4,
+      "note": "Replaces empty bodies with real API keys, explicit grants, positive and negative controls, and persisted cross-tenant invariants",
+      "reportLocal": "/tmp/alga-api-ticket-guards-final.json"
+    },
+    "servicesApi": {
+      "executed": 10,
+      "passed": 10,
+      "reportLocal": "/tmp/alga-api-fixture-repairs.json"
+    },
+    "behaviorSelection": {
+      "executed": 16,
+      "passed": 16,
+      "filtered": 88,
+      "reportLocal": "/tmp/alga-api-behavior-repairs-final.json"
+    },
+    "lookupControllersAndDatabase": {
+      "beforeFailed": 2,
+      "afterPassed": 2,
+      "beforeLocal": "/tmp/alga-api-lookup-before-v2.log",
+      "afterLocal": "/tmp/alga-api-lookup-after.log"
+    },
+    "ticketStatsSchema": {
+      "beforeFailed": 1,
+      "afterPassed": 1,
+      "beforeLocal": "/tmp/alga-api-ticket-stats-before.log",
+      "afterLocal": "/tmp/alga-api-ticket-stats-after.log"
+    },
+    "apiTypes": "pass /tmp/alga-api-fixture-types-v3.log",
+    "browserTypes": "pass /tmp/alga-browser-fixture-repairs-types.log"
+  },
+  "nativeBrowser": {
+    "run": "https://github.com/Nine-Minds/alga-psa/actions/runs/34070160177",
+    "revision": "af96daf0bfe1a905f856249d748241f14bfbe89a",
+    "community": {
+      "job": 101589558859,
+      "passed": 22,
+      "failed": 1,
+      "failure": "Microsoft profile fixture requires enterprise-only disclosure; native saved context shows New app registration directly",
+      "fix": "Wait for add-profile or advanced toggle, opening disclosure only if needed",
+      "validation": "source and native rendered context verified; native rerun pending",
+      "logLocal": "/tmp/alga-ce-browser-af96.log",
+      "artifactLocal": "/tmp/alga-community-browser-af96"
+    },
+    "enterprise": {
+      "job": 101589558811,
+      "passed": 21,
+      "failed": 2,
+      "failures": [
+        "Calendar outbound event delivery (unpublished legacy entry/identity repair 4bbc0c7c4c)",
+        "Portal equality races with scheduled_publish_dispatched_at acknowledgment"
+      ],
+      "portalFix": "Compare all comment fields except two asynchronous dispatch acknowledgment timestamps, retaining full ticket state and foreign-author absence assertions",
+      "validation": "native rerun pending",
+      "mailbox": {
+        "status": "passed",
+        "durationSeconds": 37.7
+      },
+      "logLocal": "/tmp/alga-ee-browser-af96.log"
+    }
+  },
+  "remaining": [
+    "Successful rebuilt and CI-assigned full API suite",
+    "TimeEntry work_date timestamp violates public date-only schema",
+    "Remaining API and teardown failures in per-file inventory",
+    "Two pre-existing skipped approval tests",
+    "Review unimplemented or permissive placeholder cases elsewhere in API inventory",
+    "Verify Microsoft calendar outbound delivery with unpublished legacy bus repair",
+    "Validate CE Microsoft profile path and portal worker-ack snapshot in native browser jobs",
+    "Investigate pending comment publication errors missing payload.userId in native CE logs",
+    "Full plan discovery, enforcement, provider, release and metrics requirements remain tracked"
+  ]
+}

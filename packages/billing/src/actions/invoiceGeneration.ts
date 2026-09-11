@@ -83,6 +83,7 @@ import {
   DUPLICATE_RECURRING_INVOICE_CODE,
   DUPLICATE_RECURRING_INVOICE_MESSAGE_KEY,
   NO_BILLING_EMAIL_MESSAGE_KEY,
+  TIME_APPROVAL_REQUIRED_MESSAGE_KEY,
   USAGE_RECORDS_MISSING_MESSAGE_KEY,
   USAGE_RECORDS_MISSING_ACK_REQUIRED_MESSAGE_KEY,
   USAGE_PERIOD_TOTAL_STALE_MESSAGE_KEY,
@@ -957,6 +958,8 @@ function manualInvoiceErrorMessageKey(
   switch (code) {
     case 'NO_BILLING_EMAIL':
       return NO_BILLING_EMAIL_MESSAGE_KEY;
+    case 'TIME_APPROVAL_REQUIRED':
+      return TIME_APPROVAL_REQUIRED_MESSAGE_KEY;
     case 'USAGE_RECORDS_MISSING':
       return USAGE_RECORDS_MISSING_MESSAGE_KEY;
     case 'USAGE_RECORDS_MISSING_ACK_REQUIRED':
@@ -3117,7 +3120,9 @@ async function generateInvoiceForLockedSelectionInputs(params: Parameters<typeof
   );
   if (approvalBlockedEntryCount > 0) {
     throw withRecurringWindowErrorContext(
-      new Error(formatApprovalBlockedReason(approvalBlockedEntryCount)),
+      new ManualInvoiceError('TIME_APPROVAL_REQUIRED', formatApprovalBlockedReason(approvalBlockedEntryCount), {
+        count: String(approvalBlockedEntryCount),
+      }),
       normalizedSelectorInput,
     );
   }
@@ -3467,10 +3472,11 @@ export async function createInvoiceFromBillingResultImpl(
     invoiceDate?: string;
     /**
      * The recurring execution windows this invoice was generated for. When
-     * present, every recurring service period those windows represent is
+     * present, each fulfilled recurring service period those windows represent is
      * claimed for the invoice atomically with charge persistence — including
      * periods whose lines produced no charges (zero-dollar usage/bucket) and
      * would otherwise stay unclaimed, blind to the duplicate detector.
+     * Unreported usage deliberately omitted from the invoice remains due.
      */
     recurringSelectorInputs?: IRecurringDueSelectionInput[];
   } = {},
@@ -3668,17 +3674,20 @@ export async function createInvoiceFromBillingResultImpl(
     const calculatedSubtotal = standardSubtotal + projectScheduleSubtotal;
 
     // Recurring windows must end this transaction fully claimed: every
-    // recurring service period the selection represents is linked to this
-    // invoice (charge-backed rows already are; zero-dollar leftovers are swept
-    // here) or the whole generation aborts. This is what arms the duplicate
-    // guard for grouped zero-dollar windows.
+    // fulfilled recurring service period is linked to this invoice (including
+    // zero-dollar leftovers). Deliberately omitted, unreported usage stays due
+    // so a later report can be billed. This still arms the duplicate guard for
+    // grouped zero-dollar windows whose obligations have been fulfilled.
     if (options.recurringSelectorInputs?.length && !options.projectId) {
       await claimRecurringServicePeriodsForSelectionInputs({
         tx: trx,
         tenant,
         invoiceId: newInvoice!.invoice_id,
-        selectorInputs: options.recurringSelectorInputs,
+        // Unresolved time/usage selections identify source records, not
+        // recurring obligations. Their invoice linkage is handled by charges.
+        selectorInputs: options.recurringSelectorInputs.filter((selector) => !isUnresolvedSelectorInput(selector)),
         linkedAt: Temporal.Now.instant().toString(),
+        omittedUsagePeriods: selectUnreportedUsageStatuses(billingResult.usageServicePeriodStatuses ?? []),
       });
     }
 

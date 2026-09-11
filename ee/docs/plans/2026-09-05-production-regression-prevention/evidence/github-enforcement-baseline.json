@@ -1,0 +1,262 @@
+{
+  "schemaVersion": 1,
+  "observedAt": "2026-09-06T17:29:54.812781+00:00",
+  "repository": "Nine-Minds/alga-psa",
+  "branch": "main",
+  "sourceEndpoints": [
+    "repos/Nine-Minds/alga-psa/branches/main/protection",
+    "repos/Nine-Minds/alga-psa/rules/branches/main",
+    "repos/Nine-Minds/alga-psa/rulesets?includes_parents=true"
+  ],
+  "classicProtection": {
+    "requiredStatusChecks": {
+      "url": "https://api.github.com/repos/Nine-Minds/alga-psa/branches/main/protection/required_status_checks",
+      "strict": true,
+      "contexts": [],
+      "contexts_url": "https://api.github.com/repos/Nine-Minds/alga-psa/branches/main/protection/required_status_checks/contexts",
+      "checks": []
+    },
+    "enforceAdmins": {
+      "url": "https://api.github.com/repos/Nine-Minds/alga-psa/branches/main/protection/enforce_admins",
+      "enabled": false
+    },
+    "requiredApprovals": 1,
+    "requireLastPushApproval": false,
+    "reviewBypassActorCounts": {
+      "users": 0,
+      "teams": 0,
+      "apps": 1
+    },
+    "allowForcePushes": {
+      "enabled": false
+    },
+    "allowDeletions": {
+      "enabled": false
+    }
+  },
+  "effectiveRules": [
+    {
+      "type": "deletion",
+      "ruleset_source_type": "Repository",
+      "ruleset_source": "Nine-Minds/alga-psa",
+      "ruleset_id": 7438254
+    },
+    {
+      "type": "non_fast_forward",
+      "ruleset_source_type": "Repository",
+      "ruleset_source": "Nine-Minds/alga-psa",
+      "ruleset_id": 7438254
+    },
+    {
+      "type": "required_status_checks",
+      "parameters": {
+        "strict_required_status_checks_policy": false,
+        "do_not_enforce_on_create": false,
+        "required_status_checks": [
+          {
+            "context": "Run ext-v2 guard and ESLint",
+            "integration_id": 15368
+          }
+        ]
+      },
+      "ruleset_source_type": "Repository",
+      "ruleset_source": "Nine-Minds/alga-psa",
+      "ruleset_id": 7438254
+    },
+    {
+      "type": "deletion",
+      "ruleset_source_type": "Repository",
+      "ruleset_source": "Nine-Minds/alga-psa",
+      "ruleset_id": 13189070
+    },
+    {
+      "type": "non_fast_forward",
+      "ruleset_source_type": "Repository",
+      "ruleset_source": "Nine-Minds/alga-psa",
+      "ruleset_id": 13189070
+    },
+    {
+      "type": "required_status_checks",
+      "parameters": {
+        "strict_required_status_checks_policy": false,
+        "do_not_enforce_on_create": false,
+        "required_status_checks": [
+          {
+            "context": "Check for new circular dependencies",
+            "integration_id": 15368
+          }
+        ]
+      },
+      "ruleset_source_type": "Repository",
+      "ruleset_source": "Nine-Minds/alga-psa",
+      "ruleset_id": 13189070
+    }
+  ],
+  "rulesets": [
+    {
+      "id": 7438254,
+      "name": "ext-v2 guard and ESLint",
+      "enforcement": "active",
+      "conditions": {
+        "ref_name": {
+          "exclude": [],
+          "include": [
+            "refs/heads/main",
+            "refs/heads/release/*."
+          ]
+        }
+      },
+      "bypass_actors": [
+        {
+          "actor_id": 2787854,
+          "actor_type": "Integration",
+          "bypass_mode": "always"
+        }
+      ],
+      "rules": [
+        {
+          "type": "deletion"
+        },
+        {
+          "type": "non_fast_forward"
+        },
+        {
+          "type": "required_status_checks",
+          "parameters": {
+            "strict_required_status_checks_policy": false,
+            "do_not_enforce_on_create": false,
+            "required_status_checks": [
+              {
+                "context": "Run ext-v2 guard and ESLint",
+                "integration_id": 15368
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": 13189070,
+      "name": "no new circular dependencies",
+      "enforcement": "active",
+      "conditions": {
+        "ref_name": {
+          "exclude": [],
+          "include": [
+            "refs/heads/main"
+          ]
+        }
+      },
+      "bypass_actors": [
+        {
+          "actor_id": 2787854,
+          "actor_type": "Integration",
+          "bypass_mode": "always"
+        }
+      ],
+      "rules": [
+        {
+          "type": "deletion"
+        },
+        {
+          "type": "non_fast_forward"
+        },
+        {
+          "type": "required_status_checks",
+          "parameters": {
+            "strict_required_status_checks_policy": false,
+            "do_not_enforce_on_create": false,
+            "required_status_checks": [
+              {
+                "context": "Check for new circular dependencies",
+                "integration_id": 15368
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": 5447514,
+      "name": "fresh-install-e2e",
+      "enforcement": "evaluate",
+      "conditions": {
+        "ref_name": {
+          "exclude": [],
+          "include": [
+            "refs/heads/main",
+            "refs/heads/release/*."
+          ]
+        }
+      },
+      "bypass_actors": [],
+      "rules": [
+        {
+          "type": "deletion"
+        },
+        {
+          "type": "non_fast_forward"
+        },
+        {
+          "type": "required_status_checks",
+          "parameters": {
+            "strict_required_status_checks_policy": false,
+            "do_not_enforce_on_create": false,
+            "required_status_checks": [
+              {
+                "context": "fresh-install-e2e",
+                "integration_id": 15368
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": 11980000,
+      "name": "tenant_management",
+      "enforcement": "evaluate",
+      "conditions": {
+        "ref_name": {
+          "exclude": [],
+          "include": [
+            "refs/heads/release/0.16.0"
+          ]
+        }
+      },
+      "bypass_actors": [],
+      "rules": [
+        {
+          "type": "deletion"
+        },
+        {
+          "type": "non_fast_forward"
+        },
+        {
+          "type": "required_status_checks",
+          "parameters": {
+            "strict_required_status_checks_policy": false,
+            "do_not_enforce_on_create": false,
+            "required_status_checks": [
+              {
+                "context": "Validate Tenant Management Schema",
+                "integration_id": 15368
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "assessment": {
+    "requiredTestGates": [],
+    "ownerRole": "Repository administrators and test infrastructure maintainers",
+    "status": "enforcement-incomplete",
+    "nextAction": "Implement and verify stable execution aggregates before adding required checks; retain both existing guards and explicitly evaluate existing bypass policies.",
+    "limits": [
+      "Read-only configuration snapshot; no mergeability experiment or protection mutation performed.",
+      "Evaluation-only rulesets do not enforce a gate.",
+      "This snapshot is revision-independent external state and must be refreshed before enforcement changes."
+    ]
+  }
+}

@@ -286,6 +286,7 @@ export class ApiTicketController extends ApiBaseController {
       tickets_by_priority: ticketsByPriority,
       tickets_by_category: ticketsByCategory,
       tickets_by_board: ticketsByBoard,
+      average_resolution_time: null,
       tickets_created_today: tickets.filter((ticket) => new Date(ticket.entered_at) >= startOfToday).length,
       tickets_created_this_week: tickets.filter((ticket) => new Date(ticket.entered_at) >= startOfWeek).length,
       tickets_created_this_month: tickets.filter((ticket) => new Date(ticket.entered_at) >= startOfMonth).length,
@@ -865,7 +866,10 @@ export class ApiTicketController extends ApiBaseController {
             throw new ValidationError('Validation failed', validation.error.errors);
           }
 
-          const association = await this.ticketService.linkAsset(ticketId, validation.data, apiRequest.context!);
+          const { asset_id, relationship_type, notes } = validation.data;
+          const association = await this.ticketService.linkAsset(
+            ticketId, { asset_id, relationship_type, notes }, apiRequest.context!
+          );
 
           return createSuccessResponse(association, 201, undefined, apiRequest);
         });

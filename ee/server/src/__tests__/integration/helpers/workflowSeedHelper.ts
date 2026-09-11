@@ -3,7 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import type { Knex } from 'knex';
-import { tenantDb } from '@alga-psa/db';
+import { tenantDb } from '@alga-psa/db/tenantDb';
 
 const SYSTEM_WORKFLOW_ID = '00000000-0000-0000-0000-00000000e001';
 const SYSTEM_WORKFLOW_PATH = path.resolve(

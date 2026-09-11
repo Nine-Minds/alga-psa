@@ -1,4 +1,9 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { mkdtemp, mkdir, writeFile, readFile, readdir, rm } from 'node:fs/promises';
+import path from 'node:path';
+import os from 'node:os';
+import { load, loadAll } from 'js-yaml';
+import { __setCommandRunnerForTests } from '../portal-domain-activities';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const virtualServices: any[] = [];
 const certificates: any[] = [];
@@ -86,90 +91,53 @@ vi.mock('@alga-psa/db/admin.js', () => {
 
   return {
     getAdminConnection: vi.fn(async () => knex),
+    retryOnAdminReadOnly: async (operation: () => Promise<unknown>) => operation(),
   };
 });
 
-vi.mock('@kubernetes/client-node', () => {
-  class FakeCustomObjectsApi {
-    existing: Record<string, any[]> = {
-      virtualservices: [
-        {
-          metadata: {
-            name: 'portal-domain-vs-old',
-            namespace: 'msp',
-            labels: {
-              'portal.alga-psa.com/managed': 'true',
-              'portal.alga-psa.com/domain-id': 'domain-old',
-            },
-          },
-          spec: {
-            http: [
-              {
-                route: [
-                  {
-                    destination: {
-                      host: 'legacy-service.msp.svc.cluster.local',
-                    },
-                  },
-                ],
-              },
-            ],
-          },
-        },
-      ],
-      certificates: [],
-    };
-
-    getNamespacedCustomObject = vi.fn().mockRejectedValue({ response: { status: 404 } });
-    replaceNamespacedCustomObject = vi.fn();
-    createNamespacedCustomObject = vi.fn((group: string, version: string, namespace: string, plural: string, body: any) => {
-      if (plural === 'virtualservices') {
-        virtualServices.push(body);
-      }
-      if (plural === 'certificates') {
-        certificates.push(body);
-      }
-      return { body: { metadata: { resourceVersion: '1' } } };
-    });
-    listNamespacedCustomObject = vi.fn(async (_group: string, _version: string, namespace: string, plural: string, _options?: any, _continue?: any, _limit?: any, _timeout?: any, _labelSelector?: string) => {
-      const items = (this.existing[plural] ?? []).map((item) => ({
-        ...item,
-        metadata: {
-          ...(item.metadata ?? {}),
-          namespace: item.metadata?.namespace ?? namespace,
-        },
-      }));
-      return { body: { items } };
-    });
-    deleteNamespacedCustomObject = vi.fn(async (_group: string, _version: string, namespace: string, plural: string, name: string) => {
-      if (plural === 'virtualservices') {
-        deletedVirtualServices.push({ namespace, name });
-      }
-      return {};
-    });
-  }
-
-  const fakeApi = new FakeCustomObjectsApi();
-
-  class FakeKubeConfig {
-    loadFromFile() {}
-    loadFromDefault() {}
-    makeApiClient() {
-      return fakeApi;
-    }
-  }
-
-  return {
-    KubeConfig: FakeKubeConfig,
-    CustomObjectsApi: FakeCustomObjectsApi,
-  };
-});
+let workspace: string;
 
 describe('applyPortalDomainResources', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
+    workspace = await mkdtemp(path.join(os.tmpdir(), 'portal-reconcile-'));
+    vi.stubEnv('PORTAL_DOMAIN_SERVICE_HOST', 'sebastian.msp.svc.cluster.local');
+    vi.stubEnv('PORTAL_DOMAIN_GIT_REPO', 'https://example.invalid/fixtures.git');
+    vi.stubEnv('PORTAL_DOMAIN_GIT_WORKDIR', workspace);
+    vi.stubEnv('PORTAL_DOMAIN_GIT_ROOT', 'portal-domains');
+    vi.stubEnv('PORTAL_DOMAIN_BASE_VIRTUAL_SERVICE', '');
+    vi.stubEnv('GITHUB_ACCESS_TOKEN', 'dummy-test-token');
+    vi.stubEnv('GITHUB_APP_ID', '');
+    vi.stubEnv('PORTAL_DOMAIN_GATEWAY_NAMESPACE', 'msp');
+    vi.stubEnv('PORTAL_DOMAIN_CERT_NAMESPACE', 'msp');
+    __setCommandRunnerForTests(async (command, args) => {
+      if (command === 'git' && args[0] === 'clone') {
+        const root = path.join(args[2], 'portal-domains');
+        await mkdir(root, { recursive: true });
+        await mkdir(path.join(args[2], '.git'), { recursive: true });
+        await writeFile(path.join(root, 'old.yaml'), 'kind: VirtualService\nmetadata:\n  name: portal-domain-vs-old\n  namespace: msp\n');
+      } else if (command === 'kubectl' && args[0] === 'delete') {
+        const old = load(await readFile(args[2], 'utf8')) as any;
+        deletedVirtualServices.push(old.metadata);
+      } else if (command === 'kubectl' && args[0] === 'apply') {
+        for (const file of await readdir(args[2])) {
+          const manifests = loadAll(await readFile(path.join(args[2], file), 'utf8')) as any[];
+          for (const item of manifests) {
+            if (item.kind === 'VirtualService') virtualServices.push(item);
+            if (item.kind === 'Certificate') certificates.push(item);
+          }
+        }
+      }
+      return { stdout: '', stderr: '' };
+    });
     virtualServices.length = 0;
     certificates.length = 0;
     deletedVirtualServices.length = 0;
+  });
+
+  afterEach(async () => {
+    __setCommandRunnerForTests(null);
+    vi.unstubAllEnvs();
+    await rm(workspace, { recursive: true, force: true });
   });
 
   it('routes virtual service traffic to the app once certificate succeeds', async () => {
@@ -177,7 +145,7 @@ describe('applyPortalDomainResources', () => {
 
     const result = await applyPortalDomainResources({ tenantId: 'tenant-success', portalDomainId: 'domain-success' });
 
-    expect(result.success).toBe(true);
+    expect(result.success, JSON.stringify(result.errors)).toBe(true);
     expect(virtualServices).toHaveLength(1);
 
     const [virtualService] = virtualServices;
@@ -193,7 +161,7 @@ describe('applyPortalDomainResources', () => {
 
     const result = await applyPortalDomainResources({ tenantId: 'tenant-success', portalDomainId: 'domain-success' });
 
-    expect(result.success).toBe(true);
+    expect(result.success, JSON.stringify(result.errors)).toBe(true);
 
     expect(virtualServices).toHaveLength(1);
     const newVirtualService = virtualServices[0];

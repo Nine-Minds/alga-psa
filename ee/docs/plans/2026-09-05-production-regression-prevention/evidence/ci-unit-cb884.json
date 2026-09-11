@@ -1,0 +1,24 @@
+{
+  "scope": "current-server-unit-execution-completeness",
+  "runId": "34304828149",
+  "jobId": 102319234708,
+  "artifactId": 10087370760,
+  "testedRevision": "f71e845a2c5d66fb634a01daa39161c82dd3e4ff",
+  "filesPassed": 2748,
+  "testsPassed": 15004,
+  "testsFailed": 0,
+  "todo": 3,
+  "runnerStatus": "passed",
+  "completenessStatus": "failed",
+  "missingPolicyCases": [
+    "international transactions",
+    "tax caps",
+    "subscriptions spanning tax periods"
+  ],
+  "metricsStatus": "partial",
+  "nonRegressionChecksPassed": 18,
+  "limits": [
+    "Three existing tax TODOs prevent complete execution; approved behavior remains a user input.",
+    "Passing executed assertions does not establish full plan or release readiness."
+  ]
+}

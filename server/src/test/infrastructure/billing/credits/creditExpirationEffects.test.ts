@@ -118,7 +118,10 @@ describe('Credit Expiration Effects Tests', () => {
     });
 
     await setupDefaultTax();
-  }, 60000);
+  // This hook rebuilds the database and runs the complete migration/seed set.
+  // Native CI reached the final seeds at the old 60s deadline. Keep startup
+  // bounded separately from the shorter per-test transaction/behavior limits.
+  }, 120000);
 
   beforeEach(async () => {
     context = await resetContext();

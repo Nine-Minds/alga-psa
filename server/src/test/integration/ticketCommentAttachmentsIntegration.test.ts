@@ -16,7 +16,7 @@ vi.mock('@alga-psa/auth/rbac', () => ({
   hasPermission: async (_user: unknown, resource: string) => routeSession.permitted && (resource !== 'document' || routeSession.documentsPermitted),
 }));
 vi.mock('@/lib/auth/rbac', () => ({ hasPermission: async () => routeSession.permitted }));
-import { createTestDbConnection, wireLocalTestDbEnv } from '../../../test-utils/dbConfig';
+import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import {
   canReadCommentAttachment, reconcileCommentAttachments, expireCommentAttachmentDrafts,
   listPublishedCommentAttachments, filterReadableCommentAttachments, dispatchCommentPublication, persistCommentPublication,
@@ -31,17 +31,15 @@ import Comment from '@alga-psa/tickets/models/comment';
 import nodemailer from 'nodemailer';
 import { simpleParser } from 'mailparser';
 
-// Run against an already migrated isolated database. Never bootstrap/drop the dev stack.
-const enabled = Boolean(process.env.TEST_DB_NAME);
-describe.runIf(enabled)('ticket comment attachments (migrated PostgreSQL)', () => {
+// Required migrated-database coverage; each ordinary fixture rolls back.
+describe('ticket comment attachments (migrated PostgreSQL)', () => {
   let conn: Knex;
   let trx: Knex.Transaction;
   let tenant: string, actor: string, clientUser: string, otherUser: string, client: string, ticket: string, comment: string;
   const table = (name: string) => tenantDb(trx, tenant).table(name);
   const recipient = 'attachment-recipient@example.test';
   beforeAll(async () => {
-    wireLocalTestDbEnv();
-    conn = await createTestDbConnection({ databaseName: process.env.TEST_DB_NAME, recreate: false });
+    conn = await createTestDbConnection();
   });
   afterAll(async () => { await conn?.destroy(); });
   beforeEach(async () => {
@@ -155,7 +153,7 @@ describe.runIf(enabled)('ticket comment attachments (migrated PostgreSQL)', () =
     const { discardCommentAttachmentDrafts } = await import('@alga-psa/tickets/actions/comment-actions/commentAttachmentDraftActions');
     const connection = vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: trx, tenant } as any);
     const draft = await upload(), published = await upload(), other = await upload('other.pdf', 'application/pdf', 12, clientUser);
-    const additionalDrafts = [];
+    const additionalDrafts: Array<Awaited<ReturnType<typeof upload>>> = [];
     for (let index = 0; index < 100; index++) additionalDrafts.push(await upload());
     await attach(published.file);
     routeSession.user = { ...await table('users').where({ user_id: actor }).first(), tenant };
@@ -718,8 +716,11 @@ describe.runIf(enabled)('ticket comment attachments (migrated PostgreSQL)', () =
     } finally { await queue.shutdown(); connection.mockRestore();tenantConnection.mockRestore();storage.mockRestore();snapshot.mockRestore(); }
   });
 
-  it.runIf(process.env.COMMENT_RECOVERY_LIVE_SMOKE === '1')('live PgBoss discovery reuses workers and recovers a committed publication to SMTP once', async () => {
+  it('live PgBoss discovery reuses workers and recovers a committed publication to SMTP once', async () => {
     const { default: PgBoss } = await import('pg-boss');
+    const { EmulatorHost } = await import('@alga-psa/emulator-host');
+    const { default: smtpSink } = await import('@alga-psa/emulator-smtp-sink');
+    const mailHost = new EmulatorHost({ emulators: [smtpSink], controlPort: 0, ports: { 'smtp-sink': 0 } });
     const { PgBossJobRunner } = await import('@/lib/jobs/runners/PgBossJobRunner');
     const factory = await import('@/lib/jobs/JobRunnerFactory');
     const { initializeJobRunner } = await import('@/lib/jobs/initializeJobRunner');
@@ -749,6 +750,7 @@ describe.runIf(enabled)('ticket comment attachments (migrated PostgreSQL)', () =
     const spy = (mock: { mockRestore(): void }) => { restores.push(() => mock.mockRestore()); return mock; };
     let committed = false;
     try {
+      const { controlPort, ports } = await mailHost.start();
       await table('contacts').where({ client_id: client }).update({ email: mailbox });
       await table('users').where({ user_id: clientUser }).update({ email: mailbox });
       const pdf = await upload(filename, 'application/pdf', bytes.length); await attach(pdf.file);
@@ -758,7 +760,7 @@ describe.runIf(enabled)('ticket comment attachments (migrated PostgreSQL)', () =
       spy(vi.spyOn(dbModule, 'getConnection').mockResolvedValue(conn));
       spy(vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: conn, tenant } as any));
       spy(vi.spyOn(StorageService, 'downloadFile').mockResolvedValue({ buffer: bytes } as any));
-      await provider.initialize({ host: '127.0.0.1', port: 3025, secure: false, from: 'agent@example.test' });
+      await provider.initialize({ host: '127.0.0.1', port: ports['smtp-sink'], secure: false, from: 'agent@example.test' });
       spy(vi.spyOn(TenantEmailService.getInstance(tenant) as any, 'refreshProviderState').mockResolvedValue({ emailProvider: provider, providerInitError: null, fromAddress: 'agent@example.test' }));
       await boss.start();
       // Use a dedicated real PgBoss transport/schema; the factory boundary is
@@ -792,20 +794,24 @@ describe.runIf(enabled)('ticket comment attachments (migrated PostgreSQL)', () =
       expect(publish).toHaveBeenCalledTimes(2);
       expect(publish.mock.calls.every(call => call[1]?.eventId === eventId)).toBe(true);
       expect(await tenantDb(conn, tenant).table('ticket_comment_email_deliveries').where({ comment_id: comment, recipient: mailbox }).first()).toMatchObject({ state: 'sent', attempts: 1 });
-      const messages = await (await fetch(`http://127.0.0.1:8080/api/user/${encodeURIComponent(mailbox)}/messages`)).json();
+      const receipt = await (await fetch(`http://127.0.0.1:${controlPort}/control/smtp-sink/state/emails`)).json() as {
+        result: Array<{ to: string[]; attachments: Array<{ filename: string; contentType: string; contentBase64: string }> }>;
+      };
+      const messages = receipt.result.filter(message => message.to.includes(mailbox));
       expect(messages).toHaveLength(1);
-      const mime = await simpleParser(messages[0].mimeMessage);
-      expect(mime.attachments).toHaveLength(1); expect(mime.attachments[0].filename).toBe(filename);
-      expect(mime.attachments[0].content.equals(bytes)).toBe(true);
+      expect(messages[0].attachments).toHaveLength(1);
+      expect(messages[0].attachments[0]).toMatchObject({ filename, contentType: 'application/pdf' });
+      expect(Buffer.from(messages[0].attachments[0].contentBase64, 'base64').equals(bytes)).toBe(true);
       expect(errors).toEqual([]);
       console.log(`Live PgBoss: ${registrations.mock.calls.length} handlers registered once over three ticks; failed committed publication recovered with one SMTP PDF delivery.`);
     } finally {
       await boss.stop({ graceful: true });
       (provider as any).transporter?.close();
+      await mailHost.stop();
       for (const restore of restores.reverse()) restore();
       await conn.raw('DROP SCHEMA IF EXISTS ?? CASCADE', [schema]);
       if (committed) {
-        for (const name of ['email_reply_tokens', 'email_sending_logs', 'ticket_comment_email_deliveries', 'tenant_email_templates', 'ticket_comment_attachments', 'comments', 'comment_threads', 'document_associations', 'documents', 'external_files', 'tickets', 'users', 'contacts', 'clients']) {
+        for (const name of ['email_reply_tokens', 'email_sending_logs', 'ticket_comment_email_deliveries', 'tenant_email_templates', 'ticket_comment_attachments', 'comments', 'comment_threads', 'document_associations', 'documents', 'external_files', 'tickets', 'users', 'contacts', 'client_billing_profiles', 'clients']) {
           await tenantDb(conn, tenant).table(name).delete();
         }
         await tenantDb(conn, tenant).unscoped('tenants', 'remove isolated worker smoke tenant').where({ tenant }).delete();

@@ -7,35 +7,23 @@
  * the after-hours rule, and the schedule reference. A pool's identity must be
  * carried as the pool itself (pool_id), never masqueraded as a service id.
  *
- * Defect-4 behavioral coverage lives here (server suite, RUN_DB_TESTS=1)
- * because the EE simulator integration suite seeds only legacy bucket configs
- * and its fixture is otherwise broken on origin/main; this file drives the
- * shipped snapshot with real pool rows end to end.
+ * This server integration case complements the EE simulator invoice-parity
+ * suite with real shared-pool configuration and membership rows.
  *
  * Everything runs inside one transaction that is always rolled back.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import knexFactory, { Knex } from 'knex';
+import type { Knex } from 'knex';
+import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { randomUUID } from 'node:crypto';
 import { snapshotContractToScenario } from '@ee/lib/billing/simulator';
 
-const ENABLED = process.env.RUN_DB_TESTS === '1';
 
 let db: Knex;
 
-describe.skipIf(!ENABLED)('simulator bucket pool snapshot (real DB)', () => {
-  beforeAll(() => {
-    db = knexFactory({
-      client: 'pg',
-      connection: {
-        host: process.env.BUCKET_TEST_DB_HOST || process.env.DB_HOST || '127.0.0.1',
-        port: Number(process.env.BUCKET_TEST_DB_PORT || process.env.DB_PORT || 5432),
-        database: process.env.BUCKET_TEST_DB_NAME || process.env.DB_NAME_SERVER || 'server',
-        user: process.env.BUCKET_TEST_DB_USER || process.env.DB_USER_SERVER || 'app_user',
-        password: process.env.BUCKET_TEST_DB_PASSWORD || process.env.DB_PASSWORD_SERVER,
-      },
-      pool: { min: 0, max: 2 },
-    });
+describe('simulator bucket pool snapshot (real DB)', () => {
+  beforeAll(async () => {
+    db = await createTestDbConnection();
   });
 
   afterAll(async () => {
@@ -169,7 +157,7 @@ describe.skipIf(!ENABLED)('simulator bucket pool snapshot (real DB)', () => {
       const scenario = await snapshotContractToScenario(
         trx,
         tenant,
-        { contractId, forceProfile: true },
+        { contractId, clientContractId: null, forceProfile: true },
       );
 
       const line = scenario.lines.find((l) => l.key === contractLineId);
@@ -453,7 +441,7 @@ describe.skipIf(!ENABLED)('simulator bucket pool snapshot (real DB)', () => {
       const scenario = await snapshotContractToScenario(
         trx,
         tenant,
-        { contractId, forceProfile: true },
+        { contractId, clientContractId: null, forceProfile: true },
       );
 
       const hourlyLine = scenario.lines.find((line) => line.key === hourlyLineId);
@@ -689,7 +677,7 @@ describe.skipIf(!ENABLED)('simulator bucket pool snapshot (real DB)', () => {
         const scenario = await snapshotContractToScenario(
           trx,
           tenant,
-          { contractId, forceProfile: true },
+          { contractId, clientContractId: null, forceProfile: true },
         );
 
         const line = scenario.lines.find((l) => l.key === contractLineId);

@@ -5,12 +5,13 @@ import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
+import userEvent from '@testing-library/user-event';
 
 let mockDueWorkResponse: any;
 let mockRecurringInvoiceHistoryResponse: any;
 const mockGetAvailableRecurringDueWork = vi.fn();
 const mockUpsertUsagePeriodTotal = vi.fn();
-const mockPreviewGroupedInvoicesForSelectionInputs = vi.fn(async (groups: Array<{ previewGroupKey: string; selectorInputs: any[] }>) => ({
+const defaultGroupedPreview = async (groups: Array<{ previewGroupKey: string; selectorInputs: any[] }>) => ({
   success: true,
   invoiceCount: groups.length,
   previews: groups.map((group) => ({
@@ -27,7 +28,8 @@ const mockPreviewGroupedInvoicesForSelectionInputs = vi.fn(async (groups: Array<
       total: 0,
     },
   })),
-}));
+});
+const mockPreviewGroupedInvoicesForSelectionInputs = vi.fn(defaultGroupedPreview);
 const mockGenerateGroupedInvoicesAsRecurringBillingRun = vi.fn(async () => ({ failures: [] }));
 
 // Exercise the existing feature behavior with the release flag enabled.
@@ -149,32 +151,7 @@ vi.mock('@alga-psa/ui/components/Badge', () => ({
 vi.mock('@alga-psa/ui/components/Input', () => ({
   Input: ({ containerClassName: _containerClassName, ...props }: any) => <input {...props} />,
 }));
-vi.mock('@alga-psa/ui/components/Checkbox', () => ({
-  // The component drives parent-row selection through onClick (for shift-range
-  // support) and calls event.preventDefault(). On a native jsdom checkbox that
-  // cancels the click activation and reverts `.checked`, so we hand the
-  // component a no-op preventDefault instead.
-  Checkbox: ({ indeterminate: _indeterminate, onClick, ...props }: any) => (
-    <input
-      type="checkbox"
-      data-indeterminate={_indeterminate ? 'true' : 'false'}
-      {...props}
-      onClick={
-        onClick
-          ? (event: any) => {
-            onClick({
-              shiftKey: event.shiftKey,
-              metaKey: event.metaKey,
-              ctrlKey: event.ctrlKey,
-              stopPropagation: () => event.stopPropagation(),
-              preventDefault: () => {},
-            });
-          }
-          : undefined
-      }
-    />
-  ),
-}));
+
 vi.mock('@alga-psa/ui/components/DateRangePicker', () => ({
   DateRangePicker: () => <div data-testid="date-range-picker" />,
 }));
@@ -232,8 +209,11 @@ describe('AutomaticInvoices grouped parent rows', () => {
   beforeEach(() => {
     cleanup();
     mockGetAvailableRecurringDueWork.mockReset();
-    mockPreviewGroupedInvoicesForSelectionInputs.mockClear();
-    mockGenerateGroupedInvoicesAsRecurringBillingRun.mockClear();
+    mockUpsertUsagePeriodTotal.mockReset();
+    mockPreviewGroupedInvoicesForSelectionInputs.mockReset().mockImplementation(defaultGroupedPreview);
+    mockGenerateGroupedInvoicesAsRecurringBillingRun.mockReset().mockResolvedValue({ failures: [] });
+    mockNavigateToUsage.mockReset();
+    sessionStorage.removeItem('billing-usage-return-selection');
     mockDueWorkResponse = {
       invoiceCandidates: [
         {
@@ -465,6 +445,29 @@ describe('AutomaticInvoices grouped parent rows', () => {
     expect(screen.getByText('Generate Invoices (2)')).toBeInTheDocument();
   });
 
+  it('keeps native checkbox state aligned when selecting and deselecting a parent range', async () => {
+    const template = JSON.stringify(mockDueWorkResponse.invoiceCandidates[0]);
+    for (const index of [2, 3]) {
+      mockDueWorkResponse.invoiceCandidates.push(JSON.parse(template
+        .replaceAll('client-1', `client-${index}`)
+        .replaceAll('exec-', `exec-client-${index}-`)
+        .replaceAll('contract-1', `contract-${index}`)));
+    }
+    render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
+    const parents = await waitFor(() => {
+      const inputs = Array.from(document.querySelectorAll<HTMLInputElement>('input[id^="select-parent-group:"]'));
+      expect(inputs).toHaveLength(3);
+      return inputs;
+    });
+    fireEvent.click(parents[0]);
+    fireEvent.click(parents[2], { shiftKey: true });
+    expect(parents.every(input => input.checked)).toBe(true);
+    expect(screen.getByText('Generate Invoices (6)')).toBeInTheDocument();
+    fireEvent.click(parents[0], { shiftKey: true });
+    expect(parents.every(input => !input.checked)).toBe(true);
+    expect(screen.queryByText('Generate Invoices (6)')).not.toBeInTheDocument();
+  });
+
   it('non-combinable parent stays disabled while child rows remain selectable (T010)', async () => {
     mockDueWorkResponse.invoiceCandidates[0].members[1].currencyCode = 'EUR';
     render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
@@ -498,7 +501,7 @@ describe('AutomaticInvoices grouped parent rows', () => {
       'select-parent-group:client-1:2026-03-01:2026-04-01',
     ) as HTMLInputElement;
     expect(parentCheckbox.checked).toBe(false);
-    expect(parentCheckbox.dataset.indeterminate).toBe('true');
+    expect(parentCheckbox.indeterminate).toBe(true);
   });
 
   it('select all selects combinable groups by parent row (T012)', async () => {
@@ -575,6 +578,60 @@ describe('AutomaticInvoices grouped parent rows', () => {
       expect(blockedChild.checked).toBe(false);
       expect(readyChild.checked).toBe(true);
     }, { timeout: 5000 });
+  });
+
+  it('clears prior bulk selections immediately when the client filter changes', async () => {
+    render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
+    const checkbox = await waitFor(() => {
+      const element = document.getElementById('select-parent-group:client-1:2026-03-01:2026-04-01');
+      expect(element).not.toBeNull();
+      return element as HTMLInputElement;
+    });
+    vi.useFakeTimers();
+    try {
+      fireEvent.click(checkbox);
+      expect(checkbox).toBeChecked();
+      fireEvent.change(screen.getByPlaceholderText('Filter by client'), { target: { value: 'Acme' } });
+      expect(checkbox).not.toBeChecked();
+      expect(screen.queryByRole('button', { name: 'Preview Selected' })).not.toBeInTheDocument();
+      fireEvent.change(screen.getByPlaceholderText('Filter by client'), { target: { value: 'Other client' } });
+      expect(screen.getByTestId('automatic-invoices-table-row-count')).toHaveTextContent('0');
+    } finally {
+      cleanup();
+      vi.useRealTimers();
+    }
+  });
+
+  it('keeps a new filtered selection through URL persistence and previews its exact obligations', async () => {
+    const originalUrl = window.location.href;
+    window.history.replaceState({}, '', '/msp/billing?tab=invoicing&automaticClientFilter=Acme#ready');
+    render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
+    const checkbox = await waitFor(() => {
+      const element = document.getElementById('select-parent-group:client-1:2026-03-01:2026-04-01');
+      expect(element).not.toBeNull();
+      return element as HTMLInputElement;
+    });
+    expect(screen.getByPlaceholderText('Filter by client')).toHaveValue('Acme');
+    vi.useFakeTimers();
+    try {
+      fireEvent.change(screen.getByPlaceholderText('Filter by client'), { target: { value: 'Acme Co' } });
+      fireEvent.click(checkbox);
+      expect(checkbox).toBeChecked();
+      await act(async () => { await vi.advanceTimersByTimeAsync(300); });
+      expect(checkbox).toBeChecked();
+      expect(new URL(window.location.href).searchParams.get('automaticClientFilter')).toBe('Acme Co');
+      expect(new URL(window.location.href).searchParams.get('tab')).toBe('invoicing');
+      expect(window.location.hash).toBe('#ready');
+      await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Preview Selected' })); });
+      expect(mockPreviewGroupedInvoicesForSelectionInputs).toHaveBeenCalledTimes(1);
+      const groups = mockPreviewGroupedInvoicesForSelectionInputs.mock.calls[0][0];
+      expect(groups).toHaveLength(1);
+      expect(groups[0].selectorInputs).toEqual(mockDueWorkResponse.invoiceCandidates[0].members.map((member: any) => member.selectorInput));
+    } finally {
+      cleanup();
+      vi.useRealTimers();
+      window.history.replaceState({}, '', originalUrl);
+    }
   });
 
   it('previewing a selected combinable parent renders one combined invoice preview count (T015)', async () => {
@@ -1156,12 +1213,16 @@ describe('AutomaticInvoices grouped parent rows', () => {
   const usageStatus = {client_contract_line_id: 'line-1', service_id: 'service-1', service_name: 'Reported seats', config_id: 'config-1',
     service_period_start: '2026-02-01', service_period_end: '2026-02-28', status: 'unreported', measurement_mode: 'period_total', minimum_usage: 0};
   it('pure-unreported preview accepts inline entry and previews exactly the same selected obligations', async () => {
+    const user = userEvent.setup();
     mockPreviewGroupedInvoicesForSelectionInputs.mockResolvedValueOnce({success: false, code: 'USAGE_RECORDS_MISSING', error: 'Usage is unreported',
       params: {periodStart: '2026-02-01', periodEnd: '2026-02-28'}, usageServicePeriodStatuses: [usageStatus]} as any);
     mockUpsertUsagePeriodTotal.mockResolvedValueOnce({total: {quantity: 12, revision: 1}});
     await openSelectedPreview();
-    fireEvent.change(await screen.findByRole('spinbutton', {name: 'Period count for Reported seats'}), {target: {value: '12'}});
-    fireEvent.click(screen.getByRole('button', {name: 'Save'}));
+    const quantity = await screen.findByRole('spinbutton', {name: 'Period count for Reported seats'});
+    await user.clear(quantity);
+    await user.type(quantity, '12');
+    expect(quantity).toHaveValue(12);
+    await user.click(screen.getByRole('button', {name: 'Save'}));
     await waitFor(() => expect(mockUpsertUsagePeriodTotal).toHaveBeenCalledWith(expect.objectContaining({
       client_id: 'client-1', client_contract_line_id: 'line-1', config_id: 'config-1', quantity: 12, request_id: expect.any(String),
       period_start: '2026-02-01', period_end: '2026-02-28',
@@ -1178,6 +1239,7 @@ describe('AutomaticInvoices grouped parent rows', () => {
     expect(screen.getByRole('button', {name: 'Generate Invoice'})).toBeDisabled();
   });
   it.each(['billable', 'explicit_zero', 'minimum_raised_zero'])('corrects a reported %s total with the displayed revision and re-previews', async status => {
+    const user = userEvent.setup();
     const original = mockPreviewGroupedInvoicesForSelectionInputs.getMockImplementation()!;
     mockPreviewGroupedInvoicesForSelectionInputs.mockImplementationOnce(async groups => {
       const response = await original(groups);
@@ -1185,9 +1247,13 @@ describe('AutomaticInvoices grouped parent rows', () => {
     });
     mockUpsertUsagePeriodTotal.mockResolvedValueOnce({total: {quantity: 7, revision: 4}});
     await openSelectedPreview();
-    fireEvent.change(await screen.findByRole('spinbutton', {name: 'Period count for Reported seats'}), {target: {value: '7'}});
-    fireEvent.click(screen.getByRole('button', {name: 'Save correction'}));
+    const quantity = await screen.findByRole('spinbutton', {name: 'Period count for Reported seats'});
+    await user.clear(quantity);
+    await user.type(quantity, '7');
+    expect(quantity).toHaveValue(7);
+    await user.click(screen.getByRole('button', {name: 'Save correction'}));
     await waitFor(() => expect(mockUpsertUsagePeriodTotal).toHaveBeenCalledWith(expect.objectContaining({quantity: 7, expected_revision: 3, request_id: expect.any(String)})));
+    expect(mockUpsertUsagePeriodTotal).toHaveBeenCalledTimes(1);
     await waitFor(() => expect(mockPreviewGroupedInvoicesForSelectionInputs).toHaveBeenCalledTimes(2));
   });
   it('navigates with the selected service, line, configuration and full half-open service period', async () => {

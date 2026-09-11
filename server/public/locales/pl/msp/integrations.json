@@ -1698,7 +1698,7 @@
             "label": "Teams"
           }
         },
-        "descriptionCe": "Zarządzaj profilami Microsoft należącymi do tenanta dla MSP SSO, logowania Microsoft i wykrywania domen logowania.",
+        "descriptionCe": "Zarządzaj rejestracjami aplikacji Microsoft swojej firmy na potrzeby poczty Outlook.",
         "descriptionEe": "Zarządzaj profilami Microsoft należącymi do tenanta dla MSP SSO, poczty Outlook, synchronizacji kalendarza i Microsoft Teams.",
         "dialog": {
           "cancel": "Anuluj",
@@ -1724,7 +1724,7 @@
         },
         "empty": {
           "createButton": "Utwórz profil Microsoft",
-          "descriptionCe": "Najpierw utwórz nazwany profil, a następnie jawnie powiąż go z procesami logowania MSP SSO i domen logowania.",
+          "descriptionCe": "Utwórz rejestrację aplikacji Microsoft na potrzeby poczty Outlook.",
           "descriptionEe": "Najpierw utwórz nazwany profil, a następnie jawnie powiąż go z MSP SSO, pocztą Outlook, synchronizacją kalendarza i Teams.",
           "title": "Brak profili Microsoft"
         },
@@ -2774,6 +2774,52 @@
       }
     },
     "sso": {
+      "keycloak": {
+        "title": "Keycloak / OpenID Connect",
+        "description": "Pozwól pracownikom logować się przez własny realm Keycloak. Użytkownicy są dopasowywani po adresie e-mail do istniejących kont AlgaPSA; Keycloak nigdy nie tworzy tu użytkowników.",
+        "status": {
+          "configured": "Skonfigurowano",
+          "notConfigured": "Nie skonfigurowano"
+        },
+        "actions": {
+          "refresh": "Odśwież",
+          "save": "Zweryfikuj i zapisz",
+          "saving": "Weryfikowanie i zapisywanie…",
+          "remove": "Usuń"
+        },
+        "setup": {
+          "redirectUri": "Utwórz w swoim realmie poufnego klienta OpenID Connect i zezwól na ten adres URI przekierowania:",
+          "domainsEe": "Następnie zgłoś i zweryfikuj domenę logowania pracowników w sekcji „Zaawansowane”, aby e-maile z tej domeny były kierowane do tego realmu.",
+          "domainsCe": "Następnie dodaj domenę logowania pracowników w sekcji „Zaawansowane”, aby e-maile z tej domeny były kierowane do tego realmu.",
+          "issuer": "Wystawca: {{issuer}}"
+        },
+        "fields": {
+          "url": "Adres URL serwera Keycloak",
+          "realm": "Realm",
+          "clientId": "Identyfikator klienta",
+          "clientSecret": "Sekret klienta",
+          "clientSecretKeep": "Pozostaw puste, aby zachować {{masked}}"
+        },
+        "errors": {
+          "loadFailed": "Nie udało się wczytać ustawień Keycloak",
+          "saveFailed": "Nie udało się zapisać ustawień Keycloak",
+          "removeFailed": "Nie udało się usunąć ustawień Keycloak"
+        },
+        "toasts": {
+          "savedTitle": "Zapisano ustawienia Keycloak",
+          "savedDescription": "Realm odpowiedział na wykrywanie OpenID; pracownicy mogą teraz logować się przez Keycloak.",
+          "saveFailedTitle": "Nie można zapisać ustawień Keycloak",
+          "removedTitle": "Usunięto ustawienia Keycloak",
+          "removedDescription": "Logowanie przez Keycloak nie jest już dostępne dla tej organizacji.",
+          "removeFailedTitle": "Nie można usunąć ustawień Keycloak"
+        },
+        "removeDialog": {
+          "title": "Usunąć logowanie przez Keycloak?",
+          "message": "Pracownicy nie zobaczą już przycisku Keycloak. Logowanie hasłem pozostaje bez zmian.",
+          "confirm": "Usuń",
+          "cancel": "Anuluj"
+        }
+      },
       "msp": {
         "actions": {
           "add": "Dodaj",
@@ -3617,7 +3663,7 @@
         "label": "Google"
       },
       "microsoft": {
-        "descriptionCe": "MSP SSO, Microsoft sign-in, and login-domain discovery.",
+        "descriptionCe": "Poczta przychodząca Outlook dla rejestracji aplikacji Microsoft Twojej firmy.",
         "descriptionEe": "MSP SSO, Outlook email, calendar sync, and Teams.",
         "label": "Microsoft"
       },

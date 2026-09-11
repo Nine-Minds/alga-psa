@@ -1,5 +1,44 @@
 import { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import { randomUUID } from 'node:crypto';
+
+/** Grant a named capability without making the test user a global administrator. */
+export async function grantTestUserPermission(
+  db: Knex, userId: string, tenantId: string, resource: string, action: string,
+): Promise<void> {
+  const table = (name: string) => tenantDb(db, tenantId).table(name);
+  const role = await table('user_roles').where({ user_id: userId }).first();
+  if (!role) throw new Error('Test permission grant requires an existing tenant user role');
+  let permission = await table('permissions').where({ resource, action }).first();
+  if (!permission) {
+    [permission] = await table('permissions').insert({
+      tenant: tenantId, permission_id: randomUUID(), resource, action,
+    }).returning('*');
+  }
+  await table('role_permissions').insert({
+    tenant: tenantId, role_id: role.role_id, permission_id: permission.permission_id,
+  }).onConflict(['tenant', 'role_id', 'permission_id']).ignore();
+}
+
+/** Temporarily revoke a capability only within an isolated test user's tenant. */
+export async function withoutTestUserPermission(
+  db: Knex, userId: string, tenant: string, resource: string, action: string,
+  verify: () => Promise<void>,
+): Promise<void> {
+  const table = (name: string) => tenantDb(db, tenant).table(name);
+  const roles = await table('user_roles').where({ user_id: userId }).pluck('role_id');
+  const permissions = await table('permissions').where({ resource, action }).pluck('permission_id');
+  const grants = await table('role_permissions').whereIn('role_id', roles)
+    .whereIn('permission_id', permissions);
+  if (grants.length === 0) throw new Error(`Test user has no ${resource}:${action} grants to revoke`);
+  await table('role_permissions').whereIn('role_id', roles)
+    .whereIn('permission_id', permissions).delete();
+  try {
+    await verify();
+  } finally {
+    await table('role_permissions').insert(grants);
+  }
+}
 
 /**
  * Simple role setup for testing - creates a basic user with permissions

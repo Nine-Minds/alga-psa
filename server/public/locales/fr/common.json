@@ -801,6 +801,7 @@
     },
     "sso": {
       "signInWithMicrosoft": "Se connecter avec Microsoft",
+      "signInWithKeycloak": "Se connecter avec Keycloak",
       "signInWithGoogle": "Se connecter avec Google",
       "redirecting": "Redirection...",
       "startFailed": "Impossible de démarrer la connexion SSO. Veuillez vérifier la configuration du fournisseur et réessayer."

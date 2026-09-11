@@ -1,7 +1,12 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import { EventEmitter } from 'node:events';
 
+// The legacy entry point now shares the package bus. Keep secret lookup at the
+// real dependency boundary so filesystem I/O cannot race fake-timer advances.
+vi.mock('@alga-psa/core/secrets', () => ({ getSecret: vi.fn(async () => undefined) }));
+
 type FakeRedisClient = EventEmitter & {
+  executeIsolated: <T>(callback: (reader: FakeRedisClient) => Promise<T>) => Promise<T>;
   connect: () => Promise<void>;
   disconnect: () => void;
   quit: () => Promise<void>;
@@ -34,6 +39,7 @@ describe('EventBus Redis consumer hard-timeout', () => {
       return {
         createClient: () => {
           const client = new EventEmitter() as FakeRedisClient;
+          client.executeIsolated = async callback => callback(client);
 
           client.connect = vi.fn(async () => {
             client.emit('connect');
@@ -77,6 +83,9 @@ describe('EventBus Redis consumer hard-timeout', () => {
     // Default hard timeout: max(blockingTimeout + 10000, 15000) => 15000ms (blockingTimeout=5000).
     // Add 1000ms to allow the loop to detect the first subscription before calling xReadGroup.
     await vi.advanceTimersByTimeAsync(16000);
+    expect(createdClients[0].disconnect).toHaveBeenCalled();
+    // The reset schedules reconnection for the next timer turn.
+    await vi.advanceTimersByTimeAsync(1);
 
     expect(createdClients.length).toBeGreaterThanOrEqual(2);
     expect(createdClients[0].disconnect).toHaveBeenCalled();

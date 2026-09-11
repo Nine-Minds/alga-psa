@@ -4,6 +4,7 @@ import { getSessionCookieName } from './lib/auth/sessionCookies';
 import { i18nMiddleware, shouldSkipI18n } from './middleware/i18n';
 import { resolveDeploymentCapabilities, type DeploymentCapabilities } from './lib/deployment/deploymentProfile';
 import { resolveRequestHost, detectForwardedHostRewrite } from './lib/deployment/requestHost';
+import { MIGRATED_SETTINGS_TAB_IDS } from './components/settings/settingsTabsRegistry';
 
 // Minimal, Edge-safe middleware: API key header presence check for select API routes
 // and auth gate for /msp paths, plus i18n locale resolution. Heavy logic stays in route handlers.
@@ -412,7 +413,9 @@ const _middleware = auth((request) => {
     // full validation happens in API route handlers (Node runtime)
     if (!apiKey) {
       const errorResponse = NextResponse.json(
-        { error: 'Unauthorized: API key missing' },
+        pathname.startsWith('/api/v1/')
+          ? { error: { code: 'UNAUTHORIZED', message: 'API key required' } }
+          : { error: 'Unauthorized: API key missing' },
         { status: 401 }
       );
       return applyCorsHeaders(errorResponse, origin);
@@ -518,6 +521,22 @@ const _middleware = auth((request) => {
       redirectResponse.headers.set('x-pathname', redirectTarget.pathname);
       return redirectResponse;
     }
+  }
+
+  // Resolve legacy settings bookmarks/OAuth returns before rendering the MSP
+  // shell. A streamed page redirect can race its client-side server actions and
+  // leave the App Router in an inconsistent render. Preserve repeated query
+  // values, but never redirect a POST carrying a server action.
+  const legacySettingsTabs = request.nextUrl.searchParams.getAll('tab');
+  if (request.method === 'GET' && pathname === '/msp/settings'
+    && legacySettingsTabs.length === 1
+    && MIGRATED_SETTINGS_TAB_IDS.has(legacySettingsTabs[0].toLowerCase())) {
+    const target = request.nextUrl.clone();
+    target.pathname = `/msp/settings/${legacySettingsTabs[0].toLowerCase()}`;
+    target.searchParams.delete('tab');
+    const redirectResponse = NextResponse.redirect(target);
+    redirectResponse.headers.set('x-pathname', target.pathname);
+    return applyCorsHeaders(redirectResponse, origin);
   }
 
   // Protect Client Portal routes: validate user type (but not auth pages)

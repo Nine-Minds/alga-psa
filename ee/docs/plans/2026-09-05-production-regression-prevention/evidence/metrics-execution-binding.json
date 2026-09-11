@@ -1,0 +1,23 @@
+{
+  "status": "local behavior and workflow validation passed; native execution pending",
+  "change": "Integration Tier-1/full recorder steps require test-results/integration/evidence.json. Missing/unsupported/failed evidence, listed failures, or GITHUB_SHA mismatch downgrades diagnostic status to partial and blanks percentage. Evidence never upgrades a raw partial report.",
+  "validation": {
+    "before": {
+      "passed": 9,
+      "failed": 1,
+      "log": "/tmp/alga-metrics-evidence-before.log"
+    },
+    "after": {
+      "passed": 16,
+      "failed": 0,
+      "skipped": 0,
+      "log": "/tmp/alga-metrics-evidence-final.log"
+    },
+    "workflow": "actionlint .github/workflows/integration-tests.yml passed"
+  },
+  "limits": [
+    "This is a reporting safeguard, not an independent replacement for execution reconciliation.",
+    "Versioned required counts, browser journey/retry/artifact fields, workbook presentation and cancelled-run reconciliation remain open.",
+    "No native results or live Sheet changes claimed."
+  ]
+}

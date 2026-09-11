@@ -1,0 +1,638 @@
+{
+  "schemaVersion": 1,
+  "scope": "CI assertion-to-regression-boundary mapping; not incident closure",
+  "runId": "34308610232",
+  "runUrl": "https://github.com/Nine-Minds/alga-psa/actions/runs/34308610232",
+  "testedRevision": "3db700f653e28ddd322dfdb652f1689a54f6b65d",
+  "calendar": {
+    "artifactId": 10087603722,
+    "workflow": ".github/workflows/unit-tests.yml",
+    "step": "Exercise calendar boundaries in non-UTC timezones",
+    "reports": [
+      {
+        "timezone": "America/Los_Angeles",
+        "artifactMember": "America-Los_Angeles.json",
+        "sha256": "7485b7c16893ca7efad394ec55029a5d0b851d831ec6a5fdec3cbceaa0b46e7c",
+        "counts": {
+          "files": 5,
+          "passed": 51,
+          "failed": 0,
+          "pending": 0,
+          "todo": 0
+        },
+        "assertions": [
+          {
+            "file": "packages/scheduling/tests/calendarDateDisplay.test.ts",
+            "identity": "calendar date semantics keeps exact-midnight timed instants when all-day is false",
+            "status": "passed"
+          },
+          {
+            "file": "packages/scheduling/tests/calendarDateDisplay.test.ts",
+            "identity": "calendar date semantics keeps exact-midnight timed instants when all-day is undefined",
+            "status": "passed"
+          },
+          {
+            "file": "packages/scheduling/tests/calendarDateDisplay.test.ts",
+            "identity": "calendar date semantics shows explicitly all-day dates at local midnight and preserves their exclusive UTC dates",
+            "status": "passed"
+          },
+          {
+            "file": "packages/scheduling/tests/calendarDateDisplay.test.ts",
+            "identity": "calendar date semantics clears all-day semantics when an editor time becomes explicit",
+            "status": "passed"
+          },
+          {
+            "file": "packages/scheduling/tests/calendarDateDisplay.test.ts",
+            "identity": "calendar date semantics does not convert a timed editor range at local midnight into all-day storage",
+            "status": "passed"
+          },
+          {
+            "file": "packages/scheduling/tests/entryPopup.startEndSync.test.tsx",
+            "identity": "EntryPopup start/end synchronisation shows imported all-day boundaries at local midnight and preserves their UTC dates on save",
+            "status": "passed"
+          },
+          {
+            "file": "packages/scheduling/tests/entryPopup.startEndSync.test.tsx",
+            "identity": "EntryPopup start/end synchronisation preserves recurrence date semantics (existing false, all-day true)",
+            "status": "passed"
+          },
+          {
+            "file": "packages/scheduling/tests/entryPopup.startEndSync.test.tsx",
+            "identity": "EntryPopup start/end synchronisation preserves recurrence date semantics (existing true, all-day true)",
+            "status": "passed"
+          },
+          {
+            "file": "packages/scheduling/tests/entryPopup.startEndSync.test.tsx",
+            "identity": "EntryPopup start/end synchronisation preserves recurrence date semantics (existing false, all-day false)",
+            "status": "passed"
+          },
+          {
+            "file": "packages/scheduling/tests/entryPopup.startEndSync.test.tsx",
+            "identity": "EntryPopup start/end synchronisation preserves recurrence date semantics (existing true, all-day false)",
+            "status": "passed"
+          },
+          {
+            "file": "packages/scheduling/tests/entryPopup.startEndSync.test.tsx",
+            "identity": "EntryPopup start/end synchronisation shifts the end forward, keeping the duration, when the start passes it",
+            "status": "passed"
+          },
+          {
+            "file": "packages/scheduling/tests/entryPopup.startEndSync.test.tsx",
+            "identity": "EntryPopup start/end synchronisation warns inline while the end is not after the start, without waiting for submit",
+            "status": "passed"
+          },
+          {
+            "file": "packages/scheduling/tests/entryPopup.startEndSync.test.tsx",
+            "identity": "EntryPopup start/end synchronisation keeps the hour-long duration when the start is built hour, minute, then period",
+            "status": "passed"
+          },
+          {
+            "file": "packages/scheduling/tests/entryPopup.startEndSync.test.tsx",
+            "identity": "EntryPopup start/end synchronisation keeps the hour-long duration when the start is built period, hour, then minute",
+            "status": "passed"
+          },
+          {
+            "file": "packages/scheduling/tests/entryPopup.startEndSync.test.tsx",
+            "identity": "EntryPopup start/end synchronisation adopts a new duration once the end itself is edited",
+            "status": "passed"
+          },
+          {
+            "file": "packages/scheduling/tests/entryPopup.startEndSync.test.tsx",
+            "identity": "EntryPopup start/end synchronisation refuses to save an entry that ends before it starts",
+            "status": "passed"
+          },
+          {
+            "file": "packages/scheduling/tests/scheduleCalendar.teamsMeetingRefresh.test.tsx",
+            "identity": "ScheduleCalendar refreshes its events after a Teams meeting is created supplies local all-day grid dates and persists exclusive UTC dates after resize and drop",
+            "status": "passed"
+          },
+          {
+            "file": "packages/scheduling/tests/scheduleCalendar.teamsMeetingRefresh.test.tsx",
+            "identity": "ScheduleCalendar refreshes its events after a Teams meeting is created standalone entry: creating a meeting refetches events (not via save) so reopen binds the persisted entry",
+            "status": "passed"
+          },
+          {
+            "file": "packages/scheduling/tests/scheduleCalendar.teamsMeetingRefresh.test.tsx",
+            "identity": "ScheduleCalendar refreshes its events after a Teams meeting is created recurring occurrence: the refetch replaces the dead virtual event with the materialized entry and save targets it",
+            "status": "passed"
+          },
+          {
+            "file": "packages/integrations/src/utils/calendar/eventMapping.allDaySemantics.test.ts",
+            "identity": "workspace explicit all-day synchronization semantics exports legacy midnight entries without provenance as timed",
+            "status": "passed"
+          },
+          {
+            "file": "packages/integrations/src/utils/calendar/eventMapping.allDaySemantics.test.ts",
+            "identity": "workspace explicit all-day synchronization semantics google retains a timed event that begins and ends exactly at UTC midnight",
+            "status": "passed"
+          },
+          {
+            "file": "packages/integrations/src/utils/calendar/eventMapping.allDaySemantics.test.ts",
+            "identity": "workspace explicit all-day synchronization semantics microsoft retains a timed event that begins and ends exactly at UTC midnight",
+            "status": "passed"
+          },
+          {
+            "file": "packages/integrations/src/utils/calendar/eventMapping.allDaySemantics.test.ts",
+            "identity": "workspace explicit all-day synchronization semantics google records all-day provenance rather than inferring it from stored timestamps",
+            "status": "passed"
+          },
+          {
+            "file": "packages/integrations/src/utils/calendar/eventMapping.allDaySemantics.test.ts",
+            "identity": "workspace explicit all-day synchronization semantics microsoft records all-day provenance rather than inferring it from stored timestamps",
+            "status": "passed"
+          },
+          {
+            "file": "packages/integrations/src/utils/calendar/eventMapping.allDaySemantics.test.ts",
+            "identity": "enterprise explicit all-day synchronization semantics exports legacy midnight entries without provenance as timed",
+            "status": "passed"
+          },
+          {
+            "file": "packages/integrations/src/utils/calendar/eventMapping.allDaySemantics.test.ts",
+            "identity": "enterprise explicit all-day synchronization semantics google retains a timed event that begins and ends exactly at UTC midnight",
+            "status": "passed"
+          },
+          {
+            "file": "packages/integrations/src/utils/calendar/eventMapping.allDaySemantics.test.ts",
+            "identity": "enterprise explicit all-day synchronization semantics microsoft retains a timed event that begins and ends exactly at UTC midnight",
+            "status": "passed"
+          },
+          {
+            "file": "packages/integrations/src/utils/calendar/eventMapping.allDaySemantics.test.ts",
+            "identity": "enterprise explicit all-day synchronization semantics google records all-day provenance rather than inferring it from stored timestamps",
+            "status": "passed"
+          },
+          {
+            "file": "packages/integrations/src/utils/calendar/eventMapping.allDaySemantics.test.ts",
+            "identity": "enterprise explicit all-day synchronization semantics microsoft records all-day provenance rather than inferring it from stored timestamps",
+            "status": "passed"
+          },
+          {
+            "file": "packages/integrations/src/utils/calendar/eventMapping.timedTimezone.test.ts",
+            "identity": "workspace timed calendar imports preserve the provider instant Graph default UTC response",
+            "status": "passed"
+          },
+          {
+            "file": "packages/integrations/src/utils/calendar/eventMapping.timedTimezone.test.ts",
+            "identity": "workspace timed calendar imports preserve the provider instant IANA zone in summer",
+            "status": "passed"
+          },
+          {
+            "file": "packages/integrations/src/utils/calendar/eventMapping.timedTimezone.test.ts",
+            "identity": "workspace timed calendar imports preserve the provider instant IANA zone in winter",
+            "status": "passed"
+          },
+          {
+            "file": "packages/integrations/src/utils/calendar/eventMapping.timedTimezone.test.ts",
+            "identity": "workspace timed calendar imports preserve the provider instant Graph Windows zone in summer",
+            "status": "passed"
+          },
+          {
+            "file": "packages/integrations/src/utils/calendar/eventMapping.timedTimezone.test.ts",
+            "identity": "workspace timed calendar imports preserve the provider instant Graph Windows zone in winter",
+            "status": "passed"
+          },
+          {
+            "file": "packages/integrations/src/utils/calendar/eventMapping.timedTimezone.test.ts",
+            "identity": "workspace timed calendar imports preserve the provider instant explicit offset",
+            "status": "passed"
+          },
+          {
+            "file": "packages/integrations/src/utils/calendar/eventMapping.timedTimezone.test.ts",
+            "identity": "workspace timed calendar imports preserve the provider instant explicit UTC instant",
+            "status": "passed"
+          },
+          {
+            "file": "packages/integrations/src/utils/calendar/eventMapping.timedTimezone.test.ts",
+            "identity": "enterprise timed calendar imports preserve the provider instant Graph default UTC response",
+            "status": "passed"
+          },
+          {
+            "file": "packages/integrations/src/utils/calendar/eventMapping.timedTimezone.test.ts",
+            "identity": "enterprise timed calendar imports preserve the provider instant IANA zone in summer",
+            "status": "passed"
+          },
+          {
+            "file": "packages/integrations/src/utils/calendar/eventMapping.timedTimezone.test.ts",
+            "identity": "enterprise timed calendar imports preserve the provider instant IANA zone in winter",
+            "status": "passed"
+          },
+          {
+            "file": "packages/integrations/src/utils/calendar/eventMapping.timedTimezone.test.ts",
+            "identity": "enterprise timed calendar imports preserve the provider instant Graph Windows zone in summer",
+            "status": "passed"
+          },
+          {
+            "file": "packages/integrations/src/utils/calendar/eventMapping.timedTimezone.test.ts",
+            "identity": "enterprise timed calendar imports preserve the provider instant Graph Windows zone in winter",
+            "status": "passed"
+          },
+          {
+            "file": "packages/integrations/src/utils/calendar/eventMapping.timedTimezone.test.ts",
+            "identity": "enterprise timed calendar imports preserve the provider instant explicit offset",
+            "status": "passed"
+          },
+          {
+            "file": "packages/integrations/src/utils/calendar/eventMapping.timedTimezone.test.ts",
+            "identity": "enterprise timed calendar imports preserve the provider instant explicit UTC instant",
+            "status": "passed"
+          },
+          {
+            "file": "packages/integrations/src/utils/calendar/eventMapping.timedTimezone.test.ts",
+            "identity": "provider datetime validation preserves Graph fractional seconds to stored Date precision",
+            "status": "passed"
+          },
+          {
+            "file": "packages/integrations/src/utils/calendar/eventMapping.timedTimezone.test.ts",
+            "identity": "provider datetime validation rejects invalid or ambiguous datetime 2026-07-17T09:00:00 in undefined",
+            "status": "passed"
+          },
+          {
+            "file": "packages/integrations/src/utils/calendar/eventMapping.timedTimezone.test.ts",
+            "identity": "provider datetime validation rejects invalid or ambiguous datetime 2026-07-17T09:00:00 in Unknown Time Zone",
+            "status": "passed"
+          },
+          {
+            "file": "packages/integrations/src/utils/calendar/eventMapping.timedTimezone.test.ts",
+            "identity": "provider datetime validation rejects invalid or ambiguous datetime 2026-02-30T09:00:00 in UTC",
+            "status": "passed"
+          },
+          {
+            "file": "packages/integrations/src/utils/calendar/eventMapping.timedTimezone.test.ts",
+            "identity": "provider datetime validation rejects invalid or ambiguous datetime 2026-07-17T09:00:00+99:00 in UTC",
+            "status": "passed"
+          },
+          {
+            "file": "packages/integrations/src/utils/calendar/eventMapping.timedTimezone.test.ts",
+            "identity": "provider datetime validation rejects invalid or ambiguous datetime 2026-03-08T02:30:00 in Pacific Standard Time",
+            "status": "passed"
+          },
+          {
+            "file": "packages/integrations/src/utils/calendar/eventMapping.timedTimezone.test.ts",
+            "identity": "provider datetime validation rejects invalid or ambiguous datetime 2026-11-01T01:30:00 in Pacific Standard Time",
+            "status": "passed"
+          },
+          {
+            "file": "packages/integrations/src/utils/calendar/eventMapping.timedTimezone.test.ts",
+            "identity": "provider datetime validation uses an explicit offset to disambiguate a repeated wall time",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "timezone": "Europe/Berlin",
+        "artifactMember": "Europe-Berlin.json",
+        "sha256": "120082c5a5914cce3f6b4a0993849ae5ec032ba3e8d2ee259d063637feeb183c",
+        "counts": {
+          "files": 5,
+          "passed": 51,
+          "failed": 0,
+          "pending": 0,
+          "todo": 0
+        },
+        "assertions": [
+          {
+            "file": "packages/scheduling/tests/calendarDateDisplay.test.ts",
+            "identity": "calendar date semantics keeps exact-midnight timed instants when all-day is false",
+            "status": "passed"
+          },
+          {
+            "file": "packages/scheduling/tests/calendarDateDisplay.test.ts",
+            "identity": "calendar date semantics keeps exact-midnight timed instants when all-day is undefined",
+            "status": "passed"
+          },
+          {
+            "file": "packages/scheduling/tests/calendarDateDisplay.test.ts",
+            "identity": "calendar date semantics shows explicitly all-day dates at local midnight and preserves their exclusive UTC dates",
+            "status": "passed"
+          },
+          {
+            "file": "packages/scheduling/tests/calendarDateDisplay.test.ts",
+            "identity": "calendar date semantics clears all-day semantics when an editor time becomes explicit",
+            "status": "passed"
+          },
+          {
+            "file": "packages/scheduling/tests/calendarDateDisplay.test.ts",
+            "identity": "calendar date semantics does not convert a timed editor range at local midnight into all-day storage",
+            "status": "passed"
+          },
+          {
+            "file": "packages/scheduling/tests/entryPopup.startEndSync.test.tsx",
+            "identity": "EntryPopup start/end synchronisation shows imported all-day boundaries at local midnight and preserves their UTC dates on save",
+            "status": "passed"
+          },
+          {
+            "file": "packages/scheduling/tests/entryPopup.startEndSync.test.tsx",
+            "identity": "EntryPopup start/end synchronisation preserves recurrence date semantics (existing false, all-day true)",
+            "status": "passed"
+          },
+          {
+            "file": "packages/scheduling/tests/entryPopup.startEndSync.test.tsx",
+            "identity": "EntryPopup start/end synchronisation preserves recurrence date semantics (existing true, all-day true)",
+            "status": "passed"
+          },
+          {
+            "file": "packages/scheduling/tests/entryPopup.startEndSync.test.tsx",
+            "identity": "EntryPopup start/end synchronisation preserves recurrence date semantics (existing false, all-day false)",
+            "status": "passed"
+          },
+          {
+            "file": "packages/scheduling/tests/entryPopup.startEndSync.test.tsx",
+            "identity": "EntryPopup start/end synchronisation preserves recurrence date semantics (existing true, all-day false)",
+            "status": "passed"
+          },
+          {
+            "file": "packages/scheduling/tests/entryPopup.startEndSync.test.tsx",
+            "identity": "EntryPopup start/end synchronisation shifts the end forward, keeping the duration, when the start passes it",
+            "status": "passed"
+          },
+          {
+            "file": "packages/scheduling/tests/entryPopup.startEndSync.test.tsx",
+            "identity": "EntryPopup start/end synchronisation warns inline while the end is not after the start, without waiting for submit",
+            "status": "passed"
+          },
+          {
+            "file": "packages/scheduling/tests/entryPopup.startEndSync.test.tsx",
+            "identity": "EntryPopup start/end synchronisation keeps the hour-long duration when the start is built hour, minute, then period",
+            "status": "passed"
+          },
+          {
+            "file": "packages/scheduling/tests/entryPopup.startEndSync.test.tsx",
+            "identity": "EntryPopup start/end synchronisation keeps the hour-long duration when the start is built period, hour, then minute",
+            "status": "passed"
+          },
+          {
+            "file": "packages/scheduling/tests/entryPopup.startEndSync.test.tsx",
+            "identity": "EntryPopup start/end synchronisation adopts a new duration once the end itself is edited",
+            "status": "passed"
+          },
+          {
+            "file": "packages/scheduling/tests/entryPopup.startEndSync.test.tsx",
+            "identity": "EntryPopup start/end synchronisation refuses to save an entry that ends before it starts",
+            "status": "passed"
+          },
+          {
+            "file": "packages/scheduling/tests/scheduleCalendar.teamsMeetingRefresh.test.tsx",
+            "identity": "ScheduleCalendar refreshes its events after a Teams meeting is created supplies local all-day grid dates and persists exclusive UTC dates after resize and drop",
+            "status": "passed"
+          },
+          {
+            "file": "packages/scheduling/tests/scheduleCalendar.teamsMeetingRefresh.test.tsx",
+            "identity": "ScheduleCalendar refreshes its events after a Teams meeting is created standalone entry: creating a meeting refetches events (not via save) so reopen binds the persisted entry",
+            "status": "passed"
+          },
+          {
+            "file": "packages/scheduling/tests/scheduleCalendar.teamsMeetingRefresh.test.tsx",
+            "identity": "ScheduleCalendar refreshes its events after a Teams meeting is created recurring occurrence: the refetch replaces the dead virtual event with the materialized entry and save targets it",
+            "status": "passed"
+          },
+          {
+            "file": "packages/integrations/src/utils/calendar/eventMapping.allDaySemantics.test.ts",
+            "identity": "workspace explicit all-day synchronization semantics exports legacy midnight entries without provenance as timed",
+            "status": "passed"
+          },
+          {
+            "file": "packages/integrations/src/utils/calendar/eventMapping.allDaySemantics.test.ts",
+            "identity": "workspace explicit all-day synchronization semantics google retains a timed event that begins and ends exactly at UTC midnight",
+            "status": "passed"
+          },
+          {
+            "file": "packages/integrations/src/utils/calendar/eventMapping.allDaySemantics.test.ts",
+            "identity": "workspace explicit all-day synchronization semantics microsoft retains a timed event that begins and ends exactly at UTC midnight",
+            "status": "passed"
+          },
+          {
+            "file": "packages/integrations/src/utils/calendar/eventMapping.allDaySemantics.test.ts",
+            "identity": "workspace explicit all-day synchronization semantics google records all-day provenance rather than inferring it from stored timestamps",
+            "status": "passed"
+          },
+          {
+            "file": "packages/integrations/src/utils/calendar/eventMapping.allDaySemantics.test.ts",
+            "identity": "workspace explicit all-day synchronization semantics microsoft records all-day provenance rather than inferring it from stored timestamps",
+            "status": "passed"
+          },
+          {
+            "file": "packages/integrations/src/utils/calendar/eventMapping.allDaySemantics.test.ts",
+            "identity": "enterprise explicit all-day synchronization semantics exports legacy midnight entries without provenance as timed",
+            "status": "passed"
+          },
+          {
+            "file": "packages/integrations/src/utils/calendar/eventMapping.allDaySemantics.test.ts",
+            "identity": "enterprise explicit all-day synchronization semantics google retains a timed event that begins and ends exactly at UTC midnight",
+            "status": "passed"
+          },
+          {
+            "file": "packages/integrations/src/utils/calendar/eventMapping.allDaySemantics.test.ts",
+            "identity": "enterprise explicit all-day synchronization semantics microsoft retains a timed event that begins and ends exactly at UTC midnight",
+            "status": "passed"
+          },
+          {
+            "file": "packages/integrations/src/utils/calendar/eventMapping.allDaySemantics.test.ts",
+            "identity": "enterprise explicit all-day synchronization semantics google records all-day provenance rather than inferring it from stored timestamps",
+            "status": "passed"
+          },
+          {
+            "file": "packages/integrations/src/utils/calendar/eventMapping.allDaySemantics.test.ts",
+            "identity": "enterprise explicit all-day synchronization semantics microsoft records all-day provenance rather than inferring it from stored timestamps",
+            "status": "passed"
+          },
+          {
+            "file": "packages/integrations/src/utils/calendar/eventMapping.timedTimezone.test.ts",
+            "identity": "workspace timed calendar imports preserve the provider instant Graph default UTC response",
+            "status": "passed"
+          },
+          {
+            "file": "packages/integrations/src/utils/calendar/eventMapping.timedTimezone.test.ts",
+            "identity": "workspace timed calendar imports preserve the provider instant IANA zone in summer",
+            "status": "passed"
+          },
+          {
+            "file": "packages/integrations/src/utils/calendar/eventMapping.timedTimezone.test.ts",
+            "identity": "workspace timed calendar imports preserve the provider instant IANA zone in winter",
+            "status": "passed"
+          },
+          {
+            "file": "packages/integrations/src/utils/calendar/eventMapping.timedTimezone.test.ts",
+            "identity": "workspace timed calendar imports preserve the provider instant Graph Windows zone in summer",
+            "status": "passed"
+          },
+          {
+            "file": "packages/integrations/src/utils/calendar/eventMapping.timedTimezone.test.ts",
+            "identity": "workspace timed calendar imports preserve the provider instant Graph Windows zone in winter",
+            "status": "passed"
+          },
+          {
+            "file": "packages/integrations/src/utils/calendar/eventMapping.timedTimezone.test.ts",
+            "identity": "workspace timed calendar imports preserve the provider instant explicit offset",
+            "status": "passed"
+          },
+          {
+            "file": "packages/integrations/src/utils/calendar/eventMapping.timedTimezone.test.ts",
+            "identity": "workspace timed calendar imports preserve the provider instant explicit UTC instant",
+            "status": "passed"
+          },
+          {
+            "file": "packages/integrations/src/utils/calendar/eventMapping.timedTimezone.test.ts",
+            "identity": "enterprise timed calendar imports preserve the provider instant Graph default UTC response",
+            "status": "passed"
+          },
+          {
+            "file": "packages/integrations/src/utils/calendar/eventMapping.timedTimezone.test.ts",
+            "identity": "enterprise timed calendar imports preserve the provider instant IANA zone in summer",
+            "status": "passed"
+          },
+          {
+            "file": "packages/integrations/src/utils/calendar/eventMapping.timedTimezone.test.ts",
+            "identity": "enterprise timed calendar imports preserve the provider instant IANA zone in winter",
+            "status": "passed"
+          },
+          {
+            "file": "packages/integrations/src/utils/calendar/eventMapping.timedTimezone.test.ts",
+            "identity": "enterprise timed calendar imports preserve the provider instant Graph Windows zone in summer",
+            "status": "passed"
+          },
+          {
+            "file": "packages/integrations/src/utils/calendar/eventMapping.timedTimezone.test.ts",
+            "identity": "enterprise timed calendar imports preserve the provider instant Graph Windows zone in winter",
+            "status": "passed"
+          },
+          {
+            "file": "packages/integrations/src/utils/calendar/eventMapping.timedTimezone.test.ts",
+            "identity": "enterprise timed calendar imports preserve the provider instant explicit offset",
+            "status": "passed"
+          },
+          {
+            "file": "packages/integrations/src/utils/calendar/eventMapping.timedTimezone.test.ts",
+            "identity": "enterprise timed calendar imports preserve the provider instant explicit UTC instant",
+            "status": "passed"
+          },
+          {
+            "file": "packages/integrations/src/utils/calendar/eventMapping.timedTimezone.test.ts",
+            "identity": "provider datetime validation preserves Graph fractional seconds to stored Date precision",
+            "status": "passed"
+          },
+          {
+            "file": "packages/integrations/src/utils/calendar/eventMapping.timedTimezone.test.ts",
+            "identity": "provider datetime validation rejects invalid or ambiguous datetime 2026-07-17T09:00:00 in undefined",
+            "status": "passed"
+          },
+          {
+            "file": "packages/integrations/src/utils/calendar/eventMapping.timedTimezone.test.ts",
+            "identity": "provider datetime validation rejects invalid or ambiguous datetime 2026-07-17T09:00:00 in Unknown Time Zone",
+            "status": "passed"
+          },
+          {
+            "file": "packages/integrations/src/utils/calendar/eventMapping.timedTimezone.test.ts",
+            "identity": "provider datetime validation rejects invalid or ambiguous datetime 2026-02-30T09:00:00 in UTC",
+            "status": "passed"
+          },
+          {
+            "file": "packages/integrations/src/utils/calendar/eventMapping.timedTimezone.test.ts",
+            "identity": "provider datetime validation rejects invalid or ambiguous datetime 2026-07-17T09:00:00+99:00 in UTC",
+            "status": "passed"
+          },
+          {
+            "file": "packages/integrations/src/utils/calendar/eventMapping.timedTimezone.test.ts",
+            "identity": "provider datetime validation rejects invalid or ambiguous datetime 2026-03-08T02:30:00 in Pacific Standard Time",
+            "status": "passed"
+          },
+          {
+            "file": "packages/integrations/src/utils/calendar/eventMapping.timedTimezone.test.ts",
+            "identity": "provider datetime validation rejects invalid or ambiguous datetime 2026-11-01T01:30:00 in Pacific Standard Time",
+            "status": "passed"
+          },
+          {
+            "file": "packages/integrations/src/utils/calendar/eventMapping.timedTimezone.test.ts",
+            "identity": "provider datetime validation uses an explicit offset to disambiguate a repeated wall time",
+            "status": "passed"
+          }
+        ]
+      }
+    ],
+    "sourceEvidence": "Raw timezone reports do not embed revision or before/after cleanliness. Attribution is to the same CI run; Temporal cleanliness below must not be projected onto this job.",
+    "ledgerMapping": {
+      "id": "microsoft-all-day-calendar-3348",
+      "incident": "https://github.com/Nine-Minds/alga-psa/issues/3348",
+      "coverage": "Actual workspace and enterprise mappers preserve explicit all-day provenance and timed instants; scheduling component/display tests execute under both configured non-UTC zones.",
+      "additionalSharedDateCoverage": "calendarDateDisplay and EntryPopup runtime assertions are included verbatim above; no separate shared-date incident record was found.",
+      "limits": [
+        "The ledger-listed packages/emulators/msgraph/tests/calendar.test.ts and eventMapping.test.ts are not members of this dedicated artifact. Related expanded mapper tests are included, not an exact execution match to those listed files.",
+        "React component action boundaries are mocked; these reports do not establish persisted editor saves or deployed browser behavior.",
+        "Incident closure and named operational ownership are not established by passing assertions."
+      ]
+    }
+  },
+  "temporal": {
+    "artifactId": 10087604191,
+    "suite": "temporal-engine",
+    "status": "passed",
+    "counts": {
+      "passed": 61,
+      "failed": 0,
+      "skipped": 0,
+      "todo": 0,
+      "pending": 0
+    },
+    "files": 12,
+    "selection": "full",
+    "source": {
+      "before": {
+        "revision": "3db700f653e28ddd322dfdb652f1689a54f6b65d",
+        "dirty": false,
+        "changes": []
+      },
+      "after": {
+        "revision": "3db700f653e28ddd322dfdb652f1689a54f6b65d",
+        "dirty": false,
+        "changes": []
+      }
+    },
+    "inboundEmailAssertions": [
+      {
+        "file": "ee/temporal-workflows/src/workflows/__tests__/email-definition.engine.test.ts",
+        "identity": "runs inbound email definition through Temporal: reply",
+        "status": "passed"
+      },
+      {
+        "file": "ee/temporal-workflows/src/workflows/__tests__/email-definition.engine.test.ts",
+        "identity": "runs inbound email definition through Temporal: new",
+        "status": "passed"
+      },
+      {
+        "file": "ee/temporal-workflows/src/workflows/__tests__/email-definition.engine.test.ts",
+        "identity": "runs inbound email definition through Temporal: unmatched",
+        "status": "passed"
+      },
+      {
+        "file": "ee/temporal-workflows/src/workflows/__tests__/email-definition.engine.test.ts",
+        "identity": "runs inbound email definition through Temporal: missing-defaults",
+        "status": "passed"
+      },
+      {
+        "file": "ee/temporal-workflows/src/workflows/__tests__/email-definition.engine.test.ts",
+        "identity": "runs inbound email definition through Temporal: attachment-failure",
+        "status": "passed"
+      },
+      {
+        "file": "ee/temporal-workflows/src/workflows/__tests__/email-definition.engine.test.ts",
+        "identity": "runs inbound email definition through Temporal: ack-failure",
+        "status": "passed"
+      },
+      {
+        "file": "ee/temporal-workflows/src/workflows/__tests__/email-definition.engine.test.ts",
+        "identity": "runs inbound email definition through Temporal: parse-failure",
+        "status": "passed"
+      }
+    ],
+    "ledgerRecordId": null,
+    "coverage": "Seven actual Temporal executions of the shipped email-processing-workflow.v2.json and production workflow interpreter exercise reply/new/unmatched/missing-defaults/attachment-failure/ack-failure/parse-failure with real expression mapping.",
+    "limits": [
+      "Node/action effects, persistence/projection, parsing and external delivery are fixture activities in email-definition.engine.test.ts.",
+      "No inbound-email incident record was found in regression-ledger.json; these cases must not be counted as attributed production incident closures.",
+      "The separate email-only.e2e.test.ts explicitly uses a mock email provider; its passing tests do not upgrade this to live SMTP/provider proof."
+    ]
+  },
+  "limits": [
+    "Evidence is an after-fix CI observation, not a new before/after defect replay.",
+    "No complete release-readiness claim; unrelated CI and incident requirements remain independent."
+  ]
+}

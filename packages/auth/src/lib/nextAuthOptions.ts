@@ -31,6 +31,9 @@ import {
     MSP_SSO_RESOLUTION_COOKIE,
     getMspSsoSigningSecret,
     parseAndVerifyMspSsoResolutionCookie,
+    buildKeycloakIssuer,
+    readTenantKeycloakConfig,
+    type MspSsoProviderId,
 } from "./sso/mspSsoResolution";
 import {
     CLIENT_PORTAL_SSO_DISCOVERY_COOKIE,
@@ -249,7 +252,7 @@ const NEXTAUTH_COOKIE_PREFIX = NEXTAUTH_SECURE_COOKIES ? '__Secure-' : '';
 const PLAYWRIGHT_FAKE_GOOGLE_OAUTH_ENABLED = process.env.PLAYWRIGHT_FAKE_GOOGLE_OAUTH === 'true';
 
 async function getClientPortalSsoProfileHints(
-    provider: 'google' | 'azure-ad',
+    provider: MspSsoProviderId,
 ): Promise<{ tenantHint?: string; userTypeHint?: 'client' } | null> {
     try {
         const signingSecret = await getMspSsoSigningSecret();
@@ -653,7 +656,43 @@ const OAUTH_PROVIDER_ALIASES: Record<string, OAuthLinkProvider> = {
     google: 'google',
     'azure-ad': 'microsoft',
     microsoft: 'microsoft',
+    keycloak: 'keycloak',
 };
+
+// Keycloak (or any OIDC realm fronted by it) resolves the AlgaPSA user by email,
+// exactly like Google and Microsoft. Standard realms emit no tenant/user_type
+// claims, so anything beyond email is a hint, never the source of truth.
+async function mapKeycloakProfile(profile: Record<string, any>): Promise<ExtendedUser> {
+    const clientPortalHints = await getClientPortalSsoProfileHints('keycloak');
+    const tenantHint =
+        clientPortalHints?.tenantHint ??
+        (typeof profile.tenant === 'string' ? profile.tenant : undefined);
+    const userTypeHint =
+        clientPortalHints?.userTypeHint ??
+        (typeof profile.user_type === 'string' ? profile.user_type : undefined);
+    return mapOAuthProfileToExtendedUser({
+        provider: 'keycloak',
+        email: typeof profile.email === 'string' ? profile.email : undefined,
+        image: profile.picture ?? undefined,
+        profile,
+        tenantHint,
+        userTypeHint,
+    });
+}
+
+function buildKeycloakProvider(config: {
+    clientId: string;
+    clientSecret: string;
+    url: string;
+    realm: string;
+}) {
+    return KeycloakProvider({
+        clientId: config.clientId,
+        clientSecret: config.clientSecret,
+        issuer: buildKeycloakIssuer(config.url, config.realm),
+        profile: mapKeycloakProfile,
+    });
+}
 
 function normalizeOAuthProvider(providerId?: string | null): OAuthLinkProvider | null {
     if (!providerId) {
@@ -1302,6 +1341,16 @@ async function getOAuthSecrets(context?: BuildAuthOptionsContext) {
                 resolved.microsoftTenantId = tenantMicrosoft.microsoftTenantId || 'common';
             }
         }
+
+        if (resolution.provider === 'keycloak') {
+            const tenantKeycloak = await readTenantKeycloakConfig(resolution.tenantId);
+            if (tenantKeycloak) {
+                resolved.keycloakUrl = tenantKeycloak.url;
+                resolved.keycloakRealm = tenantKeycloak.realm;
+                resolved.keycloakClientId = tenantKeycloak.clientId;
+                resolved.keycloakClientSecret = tenantKeycloak.clientSecret;
+            }
+        }
     } catch (error) {
         console.warn('[oauth] failed to resolve tenant-scoped OAuth credentials', error);
     }
@@ -1627,94 +1676,14 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
         secrets.keycloakUrl &&
         secrets.keycloakRealm
             ? [
-                KeycloakProvider({
+                buildKeycloakProvider({
                     clientId: secrets.keycloakClientId,
                     clientSecret: secrets.keycloakClientSecret,
-                    issuer: `${secrets.keycloakUrl}/realms/${secrets.keycloakRealm}`,
-                    profile: async (profile): Promise<ExtendedUser> => {
-                        const logger = (await import('@alga-psa/core/logger')).default;
-                        logger.info("Starting Keycloak OAuth");
-                        return {
-                            id: profile.sub,
-                            name: profile.name ?? profile.preferred_username,
-                            email: profile.email,
-                            image: profile.picture,
-                            username: profile.preferred_username,
-                            proToken: '',
-                            tenant: profile.tenant,
-                            user_type: profile.user_type,
-                            clientId: profile.clientId,
-                        };
-                    },
+                    url: secrets.keycloakUrl,
+                    realm: secrets.keycloakRealm,
                 }),
             ]
             : []),
-        // CredentialsProvider({
-        //     id: "keycloak-credentials",
-        //     name: "Keycloak-credentials",
-        //     credentials: {
-        //         email: { label: "Email", type: "email" },
-        //         password: { label: "Password", type: "password" },
-        //         twoFactorCode: { label: "2FA Code", type: "text" },
-        //     },
-        //     async authorize(credentials): Promise<ExtendedUser | null> {
-        //         logger.info("Starting Keycloak Credentials OAuth")
-        //         if (!credentials?.email || !credentials.password) {
-        //             throw new Error("Missing username or password");
-        //         }
-        //         const user = await User.findUserByEmail(credentials.email);
-        //         if (!user || !user.user_id) {
-        //             logger.warn("User not found with email", credentials.email);
-        //             throw new Error("User not found");
-        //         }
-        //         if (!user) { return null; }
-        //         if (user.two_factor_enabled) {
-        //             if (!credentials.twoFactorCode) {
-        //                 logger.warn("2FA code required for email", credentials.email);
-        //                 return null;
-        //             }
-        //             if (!user.two_factor_secret) {
-        //                 logger.warn("2FA secret not found for email", credentials.email);
-        //                 return null;
-        //             }
-        //             const isValid2FA = await verifyAuthenticator(credentials.twoFactorCode, user.two_factor_secret);
-        //             if (!isValid2FA) {
-        //                 logger.warn("Invalid 2FA code for email", credentials.email);
-        //                 return null;
-        //             }
-        //         }
-
-        //         try {
-        //             // Get token from Keycloak
-        //             const tokenData = await getKeycloakToken(user.username, credentials.password);
-        //             logger.info("Token Data:", tokenData);
-        //             if (!tokenData || !tokenData.access_token) {
-        //                 return null;
-        //             }
-        //             const tokenInfo = decodeToken(tokenData.access_token);
-        //             if (!tokenInfo) {
-        //                 return null;
-        //             }
-
-        //             if (tokenInfo.email !== credentials.email) {
-        //                 return null;
-        //             }
-        //             return {
-        //                 id: user.user_id.toString(),
-        //                 email: user.email,
-        //                 username: user.username,
-        //                 image: user.icon || '/image/avatar-purple-big.png',
-        //                 name: `${user.first_name} ${user.last_name}`,
-        //                 proToken: tokenData.access_token,
-        //                 tenant: user.tenant,
-        //                 user_type: user.user_type
-        //             };
-        //         } catch (error) {
-        //             logger.error("Failed to authenticate with Keycloak:", error);
-        //             return null;
-        //         }
-        //     },
-        // }),
     ],
     pages: {
         signIn: '/auth/signin', // This will redirect to the appropriate page
@@ -1982,6 +1951,19 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                     // Determine login method - use captured provider from signIn, or default to credentials
                     const loginMethod = extendedUser.loginMethod || (token.login_method as string | undefined) || 'credentials';
 
+                    // sessions.tenant / user_id are NOT NULL FKs: an OAuth profile that never
+                    // resolved to an AlgaPSA user fails here, and the fail-closed check below
+                    // then reports only "missing identity claims". Name the real gap first.
+                    if (typeof token.tenant !== 'string' || typeof token.id !== 'string') {
+                        console.error('[auth] Cannot create session record: OAuth profile did not resolve to an AlgaPSA user', {
+                            loginMethod,
+                            email: token.email,
+                            hasTenant: typeof token.tenant === 'string',
+                            hasUserId: typeof token.id === 'string',
+                            userType: token.user_type,
+                        });
+                    }
+
                     const sessionId = await UserSession.create({
                         tenant: token.tenant as string,
                         user_id: token.id as string,
@@ -2016,7 +1998,13 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                         delete extendedUser.deviceInfo;
                     }
                 } catch (error) {
-                    console.error('[auth] Failed to create session record:', error);
+                    console.error('[auth] Failed to create session record:', {
+                        loginMethod: token.login_method,
+                        email: token.email,
+                        tenant: token.tenant,
+                        userId: token.id,
+                        error,
+                    });
                 }
             }
 
@@ -2499,92 +2487,14 @@ export const options: NextAuthConfig = {
         process.env.KEYCLOAK_URL &&
         process.env.KEYCLOAK_REALM
             ? [
-                KeycloakProvider({
-                    clientId: process.env.KEYCLOAK_CLIENT_ID as string,
-                    clientSecret: process.env.KEYCLOAK_CLIENT_SECRET as string,
-                    issuer: `${process.env.KEYCLOAK_URL}/realms/${process.env.KEYCLOAK_REALM}`,
-                    profile: async (profile): Promise<ExtendedUser> => {
-                        return {
-                            id: (profile as any).sub || (profile as any).email,
-                            name: (profile as any).name || (profile as any).preferred_username,
-                            email: (profile as any).email,
-                            image: (profile as any).picture,
-                            username: (profile as any).preferred_username || '',
-                            proToken: '',
-                            tenant: (profile as any).tenant,
-                            user_type: (profile as any).user_type ?? 'internal',
-                            clientId: (profile as any).clientId,
-                        };
-                    },
+                buildKeycloakProvider({
+                    clientId: process.env.KEYCLOAK_CLIENT_ID,
+                    clientSecret: process.env.KEYCLOAK_CLIENT_SECRET,
+                    url: process.env.KEYCLOAK_URL,
+                    realm: process.env.KEYCLOAK_REALM,
                 }),
             ]
             : []),
-        // CredentialsProvider({
-        //     id: "keycloak-credentials",
-        //     name: "Keycloak-credentials",
-        //     credentials: {
-        //         email: { label: "Email", type: "email" },
-        //         password: { label: "Password", type: "password" },
-        //         twoFactorCode: { label: "2FA Code", type: "text" },
-        //     },
-        //     async authorize(credentials): Promise<ExtendedUser | null> {
-        //         logger.info("Starting Keycloak Credentials OAuth")
-        //         if (!credentials?.email || !credentials.password) {
-        //             throw new Error("Missing username or password");
-        //         }
-        //         const user = await User.findUserByEmail(credentials.email);
-        //         if (!user || !user.user_id) {
-        //             logger.warn("User not found with email", credentials.email);
-        //             throw new Error("User not found");
-        //         }
-        //         if (!user) { return null; }
-        //         if (user.two_factor_enabled) {
-        //             if (!credentials.twoFactorCode) {
-        //                 logger.warn("2FA code required for email", credentials.email);
-        //                 return null;
-        //             }
-        //             if (!user.two_factor_secret) {
-        //                 logger.warn("2FA secret not found for email", credentials.email);
-        //                 return null;
-        //             }
-        //             const isValid2FA = await verifyAuthenticator(credentials.twoFactorCode, user.two_factor_secret);
-        //             if (!isValid2FA) {
-        //                 logger.warn("Invalid 2FA code for email", credentials.email);
-        //                 return null;
-        //             }
-        //         }
-
-        //         try {
-        //             // Get token from Keycloak
-        //             const tokenData = await getKeycloakToken(user.username, credentials.password);
-        //             logger.info("Token Data:", tokenData);
-        //             if (!tokenData || !tokenData.access_token) {
-        //                 return null;
-        //             }
-        //             const tokenInfo = decodeToken(tokenData.access_token);
-        //             if (!tokenInfo) {
-        //                 return null;
-        //             }
-
-        //             if (tokenInfo.email !== credentials.email) {
-        //                 return null;
-        //             }
-        //             return {
-        //                 id: user.user_id.toString(),
-        //                 email: user.email,
-        //                 username: user.username,
-        //                 image: user.icon || '/image/avatar-purple-big.png',
-        //                 name: `${user.first_name} ${user.last_name}`,
-        //                 proToken: tokenData.access_token,
-        //                 tenant: user.tenant,
-        //                 user_type: user.user_type
-        //             };
-        //         } catch (error) {
-        //             logger.error("Failed to authenticate with Keycloak:", error);
-        //             return null;
-        //         }
-        //     },
-        // }),
     ],
     pages: {
         signIn: '/auth/signin', // This will redirect to the appropriate page
@@ -2808,6 +2718,19 @@ export const options: NextAuthConfig = {
                     // Determine login method - use captured provider from signIn, or default to credentials
                     const loginMethod = extendedUser.loginMethod || (token.login_method as string | undefined) || 'credentials';
 
+                    // sessions.tenant / user_id are NOT NULL FKs: an OAuth profile that never
+                    // resolved to an AlgaPSA user fails here, and the fail-closed check below
+                    // then reports only "missing identity claims". Name the real gap first.
+                    if (typeof token.tenant !== 'string' || typeof token.id !== 'string') {
+                        console.error('[auth] Cannot create session record: OAuth profile did not resolve to an AlgaPSA user', {
+                            loginMethod,
+                            email: token.email,
+                            hasTenant: typeof token.tenant === 'string',
+                            hasUserId: typeof token.id === 'string',
+                            userType: token.user_type,
+                        });
+                    }
+
                     const sessionId = await UserSession.create({
                         tenant: token.tenant as string,
                         user_id: token.id as string,
@@ -2842,7 +2765,13 @@ export const options: NextAuthConfig = {
                         delete extendedUser.deviceInfo;
                     }
                 } catch (error) {
-                    console.error('[auth] Failed to create session record:', error);
+                    console.error('[auth] Failed to create session record:', {
+                        loginMethod: token.login_method,
+                        email: token.email,
+                        tenant: token.tenant,
+                        userId: token.id,
+                        error,
+                    });
                 }
             }
 

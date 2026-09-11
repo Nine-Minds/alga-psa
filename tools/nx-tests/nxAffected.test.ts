@@ -1,11 +1,13 @@
-import { execFileSync } from 'node:child_process';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
+const execFileAsync = promisify(execFile);
 const nxBin = path.resolve(process.cwd(), 'node_modules/.bin/nx');
 
-function runNx(args: string[]) {
-  return execFileSync(nxBin, args, {
+async function runNx(args: string[]) {
+  const { stdout } = await execFileAsync(nxBin, args, {
     cwd: process.cwd(),
     env: {
       ...process.env,
@@ -16,8 +18,10 @@ function runNx(args: string[]) {
       PLAYWRIGHT_APP_PORT_LOCKED: 'true',
     },
     encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'pipe'],
+    timeout: 180_000,
+    maxBuffer: 8 * 1024 * 1024,
   });
+  return stdout;
 }
 
 function parseTrailingJsonArray(output: string): string[] {
@@ -33,8 +37,8 @@ function parseTrailingJsonArray(output: string): string[] {
 }
 
 describe('nx affected', () => {
-  it('identifies affected projects from a file list', { timeout: 180_000 }, () => {
-    const output = runNx(['show', 'projects', '--affected', '--files=packages/types/src/index.ts', '--json']);
+  it('identifies affected projects from a file list', { timeout: 180_000 }, async () => {
+    const output = await runNx(['show', 'projects', '--affected', '--files=packages/types/src/index.ts', '--json']);
     const projects = parseTrailingJsonArray(output);
 
     expect(projects).toContain('@alga-psa/types');
@@ -42,8 +46,8 @@ describe('nx affected', () => {
     expect(projects).toContain('server');
   });
 
-  it('includes @alga-psa/clients when client code changes', { timeout: 180_000 }, () => {
-    const output = runNx(['show', 'projects', '--affected', '--files=packages/clients/src/schemas/client.schema.ts', '--json']);
+  it('includes @alga-psa/clients when client code changes', { timeout: 180_000 }, async () => {
+    const output = await runNx(['show', 'projects', '--affected', '--files=packages/clients/src/schemas/client.schema.ts', '--json']);
     const projects = parseTrailingJsonArray(output);
     expect(projects).toContain('@alga-psa/clients');
   });

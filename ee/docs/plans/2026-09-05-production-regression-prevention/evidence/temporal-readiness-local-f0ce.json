@@ -1,0 +1,27 @@
+{
+  "revision": "f0ce18967d6ee9ffb1844f08f15152e867f0857d",
+  "status": "passed",
+  "counts": {
+    "passed": 235,
+    "failed": 0,
+    "skipped": 0,
+    "todo": 0,
+    "pending": 0
+  },
+  "source": {
+    "before": {
+      "revision": "f0ce18967d6ee9ffb1844f08f15152e867f0857d",
+      "dirty": false,
+      "changes": []
+    },
+    "after": {
+      "revision": "f0ce18967d6ee9ffb1844f08f15152e867f0857d",
+      "dirty": false,
+      "changes": []
+    }
+  },
+  "scope": "Complete local Temporal readiness lane, not native CI",
+  "executedFileCount": 33,
+  "sha256": "7f5061bd05a0259a6ac69586d68c47869d872dca04347e0c4fb075ca33c7bf6f",
+  "log": "/tmp/alga-temporal-readiness-f0ce-permitted.log"
+}

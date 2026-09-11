@@ -1,3 +1,4 @@
+import { createWorkerStripeClient } from '../config/stripeClient.js';
 /**
  * Stripe Activities for Temporal Workflows
  *
@@ -35,10 +36,7 @@ function getStripeClient(): Stripe {
 
   log.info('Initializing Stripe client for temporal worker');
 
-  stripeClient = new Stripe(secretKey, {
-    apiVersion: '2024-12-18.acacia' as any,
-    typescript: true,
-  });
+  stripeClient = createWorkerStripeClient(secretKey);
 
   return stripeClient;
 }

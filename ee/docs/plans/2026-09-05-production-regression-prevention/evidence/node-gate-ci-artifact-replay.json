@@ -1,0 +1,77 @@
+{
+  "kind": "local aggregate replay of immutable CI reports",
+  "ciRun": 34226006210,
+  "testedMergeRevision": "c7f6525ec7703ee75a897c58e2facbb5f30bf3dd",
+  "fixCommit": "2df20a4585",
+  "result": {
+    "schemaVersion": 1,
+    "scope": "node-workflow",
+    "revision": "c7f6525ec7703ee75a897c58e2facbb5f30bf3dd",
+    "status": "passed",
+    "results": [
+      {
+        "id": "node-tooling",
+        "status": "passed",
+        "counts": {
+          "tests": 647,
+          "passed": 647,
+          "failed": 0,
+          "skipped": 0,
+          "todo": 0,
+          "cancelled": 0
+        },
+        "executionVerified": true,
+        "failures": []
+      },
+      {
+        "id": "appliance",
+        "status": "passed",
+        "counts": {
+          "tests": 239,
+          "passed": 239,
+          "failed": 0,
+          "skipped": 0,
+          "todo": 0,
+          "cancelled": 0
+        },
+        "executionVerified": true,
+        "failures": []
+      },
+      {
+        "id": "browser-discovery",
+        "status": "passed",
+        "executionVerified": false,
+        "failures": []
+      }
+    ],
+    "failures": []
+  },
+  "artifactFileHashes": {
+    "appliance-node-c7f6525ec7703ee75a897c58e2facbb5f30bf3dd/discovery.json": "30068afa51ba60394536d50f6f8fa259204248e90c9e9b55fe1f58b428a30a24",
+    "appliance-node-c7f6525ec7703ee75a897c58e2facbb5f30bf3dd/events.jsonl": "0696ce96f2a593135237e029ca105a3103188b50f93901ed9a5d295b138d6569",
+    "appliance-node-c7f6525ec7703ee75a897c58e2facbb5f30bf3dd/evidence.json": "ccc74c3590492b3ef3f997812a837c7ba817f647b682abe7fb01456437541e2f",
+    "appliance-node-c7f6525ec7703ee75a897c58e2facbb5f30bf3dd/runner.log": "5e295d92aa12c48076cc21bc025f756820e4f2b34302e6a2210db1c11b1c4f37",
+    "browser-discovery-c7f6525ec7703ee75a897c58e2facbb5f30bf3dd/enterprise-deploy.json": "f994125768c7971b1fa1df5d156ba662cffb51a5b96c9d564b19cce3458f905d",
+    "browser-discovery-c7f6525ec7703ee75a897c58e2facbb5f30bf3dd/enterprise-deploy.log": "183fbf99b9beb44dbd8d62b5f8cf1f5861de3627edba3659e6d07ae8473e9c5c",
+    "browser-discovery-c7f6525ec7703ee75a897c58e2facbb5f30bf3dd/enterprise-legacy.json": "b3ada41efd46ac703d7d13839098d5eebf3275e1b1492b0720a73806b61def1a",
+    "browser-discovery-c7f6525ec7703ee75a897c58e2facbb5f30bf3dd/enterprise-legacy.log": "006b6af1b914b0ac58bf7be72bf1f455ff83112f0e6d78c04076d61bce9ffc28",
+    "browser-discovery-c7f6525ec7703ee75a897c58e2facbb5f30bf3dd/evidence.json": "df2bfc592d32ee006bc8261113318b74f1307e5192bf263857bd4407c4503022",
+    "browser-discovery-c7f6525ec7703ee75a897c58e2facbb5f30bf3dd/production-community.json": "a797ed6f461a2a52d924d1e810770b8db5fc8f146cf061e49fd9a7fa96ea6d7d",
+    "browser-discovery-c7f6525ec7703ee75a897c58e2facbb5f30bf3dd/production-community.log": "6046a368bbb8e3091576bdabf4ae556ea87d7df0b8ba15026e15692b1f3d30c6",
+    "browser-discovery-c7f6525ec7703ee75a897c58e2facbb5f30bf3dd/production-enterprise.json": "304c85c82729b17417e2d459685022e287e90b9e2c565d92107f0ba6c47f89da",
+    "browser-discovery-c7f6525ec7703ee75a897c58e2facbb5f30bf3dd/production-enterprise.log": "534bd4b7bb34b6ac0d826c03334e443d4d9222b105f935866dbc14a09d7463ec",
+    "browser-discovery-c7f6525ec7703ee75a897c58e2facbb5f30bf3dd/server-legacy.json": "11d9011aad3d9476b905306153874ee80ca71de2324dff95d55904e930f49ecf",
+    "browser-discovery-c7f6525ec7703ee75a897c58e2facbb5f30bf3dd/server-legacy.log": "a4f2c1a300793fd7670fa290e9f9bcb96f7176c5759c4077a27c52737c33194c",
+    "browser-discovery-c7f6525ec7703ee75a897c58e2facbb5f30bf3dd/teams-development.json": "fe1ad3bc7fb28219e6239478ca53298c5c4c56e6b23e690f579a8a6cf53862ea",
+    "browser-discovery-c7f6525ec7703ee75a897c58e2facbb5f30bf3dd/teams-development.log": "1e810108761eb885195a0d51969c3828c022fad1bb4f7c790699bfc401e61031",
+    "node-tooling-c7f6525ec7703ee75a897c58e2facbb5f30bf3dd/discovery.json": "e9a8b2d79bf366e0583880ca1f291e6dfb1d30c1e0c022e88efd5ed1e308562c",
+    "node-tooling-c7f6525ec7703ee75a897c58e2facbb5f30bf3dd/events.jsonl": "a6d53c056e5f054c5f0d4d8aed71a91793ace253256ad2550c0e2e3244540738",
+    "node-tooling-c7f6525ec7703ee75a897c58e2facbb5f30bf3dd/evidence.json": "cfc63947b27182729fd841f26f088d120e60044cc17e01a8496dd74c127993f6",
+    "node-tooling-c7f6525ec7703ee75a897c58e2facbb5f30bf3dd/runner.log": "380ee8eb6d088b9be06acfe2197e392e56d2027434867449a1d45b06eb6dcd28"
+  },
+  "limits": [
+    "Original CI aggregate failed because it omitted the Teams collection.",
+    "Local verifier replays actual passing prerequisite job artifacts; this is not a current-head GitHub green check.",
+    "Browser collection does not prove browser execution."
+  ]
+}

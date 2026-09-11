@@ -1,0 +1,21 @@
+{
+  "scope": "Citus runner-derived file collection",
+  "baseRevision": "61b8f25691",
+  "workingTreeDirty": true,
+  "passed": 1,
+  "failed": 0,
+  "behavior": [
+    "Actual installed Vitest file collection replaces reconstructed collection artifact",
+    "Independent two-suite floor rejects configuration omission before execution",
+    "Stale results are cleared on failure",
+    "CLI filters rejected; source/selection metadata recorded"
+  ],
+  "limitations": [
+    "Temporary-checkout runner fixture executes arithmetic assertions, not Citus database behavior.",
+    "Distributed topology and native Citus validation remain open."
+  ],
+  "artifact": {
+    "path": "/tmp/alga-citus-collection-test.log",
+    "sha256": "34597b61bf5ea2e8f9270d41cbe40b2f8af8e0cb3d4c782342793b171291559b"
+  }
+}
