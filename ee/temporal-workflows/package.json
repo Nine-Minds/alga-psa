@@ -52,7 +52,7 @@
     "dotenv": "^16.4.5",
     "express": "^4.21.3",
     "htmlparser2": "^8.0.2",
-    "js-yaml": "^4.1.0",
+    "js-yaml": "^4.3.2",
     "knex": "^3.0.0",
     "mailparser": "^3.9.8",
     "marked": "^15.0.7",
@@ -78,11 +78,11 @@
     "google-auth-library": "^10.5.0",
     "googleapis": "^152.0.0",
     "jsonata": "^2.1.0",
-    "nodemailer": "^9.0.3",
+    "nodemailer": "^9.1.1",
     "openai": "^4.104.0",
     "posthog-node": "^4.18.0",
     "rrule": "^2.8.1",
-    "sharp": "^0.35.3",
+    "sharp": "^0.35.4",
     "zod-to-json-schema": "^3.25.1"
   },
   "devDependencies": {
@@ -102,7 +102,7 @@
   "overrides": {
     "protobufjs": "^7.5.8",
     "@protobufjs/utf8": ">=1.1.1",
-    "fast-uri": ">=3.1.5 <4",
+    "fast-uri": ">=3.1.6 <4",
     "fast-xml-parser": ">=5.7.0",
     "fast-xml-builder": ">=1.1.7",
     "basic-ftp": ">=5.3.1",
@@ -118,7 +118,14 @@
     "brace-expansion": ">=5.0.9",
     "uuid": "^11.1.1",
     "body-parser": ">=1.20.6 <2",
-    "sharp": "^0.35.3",
-    "axios": "^1.18.0"
+    "sharp": "^0.35.4",
+    "axios": "^1.18.0",
+    "@tiptap/core": ">=3.30.5",
+    "baseline-browser-mapping": ">=2.11.0",
+    "browserslist": ">=4.28.7",
+    "deepmerge-ts": ">=8.0.0",
+    "js-yaml": "^4.3.2",
+    "nodemailer": "^9.1.1",
+    "qs": ">=6.16.0"
   }
 }

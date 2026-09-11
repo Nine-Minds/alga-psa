@@ -17,10 +17,15 @@
     "@types/mailparser": "3.4.6",
     "@types/nodemailer": "6.4.23",
     "knex": "3.1.0",
-    "mailparser": "3.9.14",
-    "nodemailer": "9.0.3",
+    "mailparser": ">=3.9.25",
+    "nodemailer": "^9.1.1",
     "pdfjs-dist": "6.3.289",
     "pg": "8.16.3",
     "redis": "4.7.1"
+  },
+  "overrides": {
+    "nodemailer": "^9.1.1",
+    "deepmerge-ts": ">=8.0.0",
+    "mailparser": ">=3.9.25"
   }
 }
