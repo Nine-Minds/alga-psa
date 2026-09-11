@@ -2927,6 +2927,10 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
         });
         toast.success(t('designer.toasts.saved', { defaultValue: 'Workflow saved' }));
       }
+      // Saving re-validates the draft server-side, so the last publish attempt's errors are
+      // stale; drop them or they keep the badge Invalid and Publish disabled until a reload.
+      setPublishErrors([]);
+      setPublishWarnings([]);
       // Refresh list in the background; do not block the UI on it (it can be slow during dev + Playwright).
       void loadDefinitions();
     } catch (error) {
