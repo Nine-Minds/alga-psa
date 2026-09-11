@@ -1,4 +1,4 @@
-import type { InputMapping, Step, WorkflowDefinition } from '@alga-psa/workflows/runtime';
+import type { ForEachBlock, IfBlock, InputMapping, Step, TryCatchBlock, WorkflowDefinition } from '@alga-psa/workflows/runtime';
 
 const isEmptyExpression = (value: unknown): boolean =>
   !!value &&
@@ -18,12 +18,18 @@ const stripEmptyMappingEntries = (mapping: InputMapping): InputMapping =>
 export const stripEmptyActionInputExpressions = (steps: Step[]): Step[] =>
   steps.map((step) => {
     switch (step.type) {
-      case 'control.if':
-        return { ...step, then: stripEmptyActionInputExpressions(step.then), else: step.else ? stripEmptyActionInputExpressions(step.else) : step.else };
-      case 'control.forEach':
-        return { ...step, body: stripEmptyActionInputExpressions(step.body) };
-      case 'control.tryCatch':
-        return { ...step, try: stripEmptyActionInputExpressions(step.try), catch: stripEmptyActionInputExpressions(step.catch) };
+      case 'control.if': {
+        const block = step as IfBlock;
+        return { ...block, then: stripEmptyActionInputExpressions(block.then), else: block.else ? stripEmptyActionInputExpressions(block.else) : block.else };
+      }
+      case 'control.forEach': {
+        const block = step as ForEachBlock;
+        return { ...block, body: stripEmptyActionInputExpressions(block.body) };
+      }
+      case 'control.tryCatch': {
+        const block = step as TryCatchBlock;
+        return { ...block, try: stripEmptyActionInputExpressions(block.try), catch: stripEmptyActionInputExpressions(block.catch) };
+      }
       case 'action.call': {
         const config = step.config as { inputMapping?: InputMapping } | undefined;
         if (!config?.inputMapping) return step;
