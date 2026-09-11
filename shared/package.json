@@ -108,7 +108,7 @@
   "overrides": {
     "protobufjs": "^7.5.8",
     "@protobufjs/utf8": ">=1.1.1",
-    "fast-uri": ">=3.1.5 <4",
+    "fast-uri": ">=3.1.6 <4",
     "fast-xml-parser": ">=5.7.0",
     "fast-xml-builder": ">=1.1.7",
     "basic-ftp": ">=5.3.1",
@@ -124,10 +124,16 @@
     "brace-expansion": ">=5.0.9",
     "uuid": "^11.1.1",
     "esbuild": ">=0.28.1",
-    "next": ">=16.2.11",
+    "next": ">=16.3.3",
     "next-auth": "^5.0.0-beta.32",
     "@auth/core": ">=0.41.3",
-    "sharp": ">=0.35.3",
-    "axios": "^1.18.0"
+    "sharp": "^0.35.4",
+    "axios": "^1.18.0",
+    "@tiptap/core": ">=3.30.5",
+    "baseline-browser-mapping": ">=2.11.0",
+    "deepmerge-ts": ">=8.0.0",
+    "nanoid@3": ">=3.3.18",
+    "nodemailer": "^9.1.1",
+    "qs": ">=6.16.0"
   }
 }

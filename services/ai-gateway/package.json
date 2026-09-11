@@ -34,9 +34,12 @@
     "@types/pg": "^8.15.5",
     "tsx": "^4.20.3",
     "typescript": "^5.7.3",
-    "vitest": "^4.1.9"
+    "vitest": "^4.1.11"
   },
   "overrides": {
-    "postcss": ">=8.5.23"
+    "postcss": ">=8.5.23",
+    "@vitest/mocker": ">=4.1.11 <5",
+    "qs": ">=6.16.0",
+    "vitest": "^4.1.11"
   }
 }
