@@ -43,6 +43,24 @@ describe('stripEmptyActionInputExpressions', () => {
     expect(json).toContain('"$expr":"true"');
   });
 
+  it('keeps the control-block fields the definition schema requires', () => {
+    const steps: Step[] = [
+      {
+        id: 'if',
+        type: 'control.if',
+        condition: { $expr: 'payload.flag' },
+        then: [emailStep({ html: { $expr: '' } })],
+        else: [{ id: 'fe', type: 'control.forEach', items: { $expr: 'payload.items' }, itemVar: 'item', concurrency: 2, body: [] }],
+      },
+      { id: 'tc', type: 'control.tryCatch', try: [], catch: [emailStep({ html: { $expr: '' } })] },
+    ];
+    const [ifBlock, tryCatch] = stripEmptyActionInputExpressions(steps);
+    expect(ifBlock).toMatchObject({ id: 'if', type: 'control.if', condition: { $expr: 'payload.flag' } });
+    expect((ifBlock as { else: Step[] }).else[0]).toMatchObject({ items: { $expr: 'payload.items' }, itemVar: 'item', concurrency: 2 });
+    expect(tryCatch).toMatchObject({ id: 'tc', type: 'control.tryCatch', try: [] });
+    expect(Array.isArray((tryCatch as { catch: Step[] }).catch)).toBe(true);
+  });
+
   it('leaves steps without a mapping untouched and tolerates missing steps', () => {
     const step: Step = { id: 'ret', type: 'control.return' };
     expect(stripEmptyActionInputExpressions([step])[0]).toBe(step);
