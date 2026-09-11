@@ -214,6 +214,49 @@ Confirmed by grep: chart templates read
 `helm/values.yaml:250` (`locations.documents`) and `:257`
 (`locations.avatars`). Dead config; taking no action per the work order.
 
+## Identity-collision fix round (2026-09-11, second pass)
+
+Smoke passed the storage gate but failed on one downstream defect:
+`convertSpreadsheets` was called with `namespace: csv:${tenant}`, shared by
+every spreadsheet upload in the tenant, and a sheet without an id column
+derives `source_record_id = row-<n>`. The second sheet's `row-1`/`row-2`
+therefore matched the first sheet's identity mappings and was skipped onto
+unrelated contacts. Pre-existing on `284f8b0f80`; newly reachable once the
+storage gate was fixed.
+
+**Decision: variant (a), keyed on the source file's content hash.** The
+namespace is now `csv:${tenant}:${sha256(uploadedBytes)}`
+(`server/src/lib/migrations/spreadsheetNamespace.ts`), with the hash computed
+in the route's existing metering `Transform` before conversion. Trade-off
+accepted: re-uploading the identical file keeps the same namespace and stays
+idempotent, while two distinct files can never collide. The alternative —
+content-derived `source_record_id`s (e.g. normalized email) — would give real
+cross-file identity but needs a per-entity identity column and a fallback for
+blank or duplicate values, and changes engine semantics for every entity type;
+rejected as too broad for a mitigation round.
+
+Why not `package_sha256`: the `.amp` is produced by `convertSpreadsheets`, its
+digest depends on the namespace being derived, and it embeds a random
+`package_id` and timestamp, so two conversions of the same source never share
+it. The source bytes are the right anchor.
+
+**Pre-existing `csv:${tenant}` mappings: no backfill.** The feature was broken
+on hosted, and the old per-tenant namespace has no way to tell which sheet a
+mapping came from. Those rows become orphans; re-uploading a previously
+imported file creates duplicates once, then idempotency resumes. Backfilling
+would require guessing provenance that was never recorded, so it is not done.
+
+The `/api/migrations/upload` path (`.amp`) is untouched: it never calls
+`convertSpreadsheets`, and its namespace comes from the source connector.
+
+Defect 2 (misleading copy) is fixed alongside: `MigrationReportService` joins
+`migration_record_outcomes` → staged record → `migration_identity_mappings` →
+claiming `migration_jobs`, and `getMigrationSkipProvenance` reports whether
+every skip was claimed by this package. The results panel says "same package"
+only when that is true, names the prior file otherwise, labels each skipped
+record's origin, and shows a warning badge plus alert when a completed run
+created nothing.
+
 ## Gotchas
 
 - `getStorageConfig` memoizes in module scope (`config/storage.ts:7`). Changing the env

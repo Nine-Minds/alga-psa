@@ -2131,6 +2131,19 @@
       "run": {
         "queued": "Migration in Warteschlange",
         "applying": "Migration läuft"
+      },
+      "badges": {
+        "nothingImported": "Nichts importiert"
+      },
+      "results": {
+        "skippedSamePackage": "Übersprungene Datensätze wurden bereits durch einen früheren Lauf desselben Pakets migriert.",
+        "skippedOtherPackage": "Übersprungene Datensätze wurden Entitäten zugeordnet, die eine frühere Migration eines anderen Pakets erstellt hat: {{packages}}.",
+        "skippedExistingEntity": "Übersprungene Datensätze wurden vorhandenen Entitäten zugeordnet.",
+        "nothingImportedTitle": "Nichts importiert",
+        "nothingImportedBody": "Dieser Lauf hat keine neuen Datensätze erstellt. Jede Zeile entsprach etwas, das bereits vorhanden war, daher wurde nichts geändert.",
+        "claimedBySamePackage": "Bereits durch dieses Paket migriert",
+        "claimedByOtherPackage": "Bereits migriert durch {{file}}",
+        "claimedByExistingEntity": "Einer vorhandenen Entität zugeordnet"
       }
     },
     "jobDetails": {

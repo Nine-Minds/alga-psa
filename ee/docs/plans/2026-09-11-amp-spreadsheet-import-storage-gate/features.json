@@ -255,5 +255,39 @@
       "Rollout / Migration",
       "Open Questions/3"
     ]
+  },
+  {
+    "id": "F032",
+    "description": "A spreadsheet import derives its identity namespace from the SHA-256 of the uploaded source bytes, so two different sheets never share an identity key while re-uploading identical bytes stays idempotent.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements/Functional/Identity collision"
+    ]
+  },
+  {
+    "id": "F033",
+    "description": "The migration report service exposes skip provenance: the prior jobs whose identity mappings claimed this job's skipped records, with their package digest and source file name.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements/Functional/Skip provenance"
+    ]
+  },
+  {
+    "id": "F034",
+    "description": "The results panel makes the 'same package' skip claim only when the claiming mappings came from this package; otherwise it names the prior migration or says the rows matched existing entities, and labels each skipped record's origin.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements/Functional/Skip provenance",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F035",
+    "description": "A completed job that created nothing but skipped rows is surfaced as a warning badge and a warning panel instead of a plain green Completed.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements/Functional/Skip provenance",
+      "UX / UI Notes"
+    ]
   }
 ]

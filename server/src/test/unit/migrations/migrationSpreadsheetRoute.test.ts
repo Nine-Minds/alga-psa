@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { createHash } from 'node:crypto';
 
 const hoisted = vi.hoisted(() => ({
   insert: vi.fn(),
@@ -10,6 +11,13 @@ vi.mock('@alga-psa/core/secrets', () => ({
     getAppSecret: vi.fn(async () => null),
   })),
 }));
+
+// Wraps the real converter so the route still stages, while recording the
+// namespace each conversion was given.
+vi.mock('@alga-psa/migration-connectors/csv', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/migration-connectors/csv')>();
+  return { ...actual, convertSpreadsheets: vi.fn(actual.convertSpreadsheets) };
+});
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(async () => ({ knex: {} })),
@@ -68,7 +76,9 @@ vi.mock('@/lib/migrations/MigrationStager', () => ({
 
 import { clearCachedStorageConfig } from '@alga-psa/storage/config/storage';
 import { FileStoreModel } from '@alga-psa/storage/models/storage';
+import { convertSpreadsheets } from '@alga-psa/migration-connectors/csv';
 import { MigrationStager } from '@/lib/migrations/MigrationStager';
+import { spreadsheetImportNamespace } from '@/lib/migrations/spreadsheetNamespace';
 
 const RESTRICTIVE_ALLOWLIST =
   'image/*,application/pdf,text/plain,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,video/*';
@@ -108,6 +118,7 @@ describe('migration upload routes', () => {
     hoisted.insertReturning.mockReset();
     hoisted.insertReturning.mockResolvedValue([{ migration_job_id: 'job-1' }]);
     vi.mocked(FileStoreModel.create).mockClear();
+    vi.mocked(convertSpreadsheets).mockClear();
     const stager = MigrationStager as unknown as { hasImportableRecords: ReturnType<typeof vi.fn> };
     stager.hasImportableRecords.mockReset();
     stager.hasImportableRecords.mockReturnValue(true);
@@ -129,6 +140,48 @@ describe('migration upload routes', () => {
     expect(body.state).toBe('needs_configuration');
     expect(JSON.stringify(body)).not.toContain('File type not allowed');
     expect(hoisted.insert).toHaveBeenCalledTimes(1);
+  });
+
+  it('namespaces a spreadsheet conversion by the uploaded file bytes, not the tenant alone', async () => {
+    const { POST } = await import('@/app/api/migrations/spreadsheet/route');
+    const csv = 'Name,Email\nJane Doe,jane@example.com\n';
+    const response = await POST(spreadsheetRequest(csv));
+    expect(response.status).toBe(201);
+
+    const expected = spreadsheetImportNamespace(
+      'tenant-1',
+      createHash('sha256').update(csv).digest('hex')
+    );
+    expect(vi.mocked(convertSpreadsheets)).toHaveBeenCalledWith(
+      expect.objectContaining({ namespace: expected }),
+      expect.anything()
+    );
+
+    const otherCsv = 'Name,Email\nJohn Roe,john@example.com\n';
+    await POST(spreadsheetRequest(otherCsv));
+    const otherNamespace = spreadsheetImportNamespace(
+      'tenant-1',
+      createHash('sha256').update(otherCsv).digest('hex')
+    );
+    expect(otherNamespace).not.toBe(expected);
+    const namespaces = vi
+      .mocked(convertSpreadsheets)
+      .mock.calls.map((call) => (call[0] as { namespace: string }).namespace);
+    expect(namespaces).toContain(expected);
+    expect(namespaces).toContain(otherNamespace);
+  });
+
+  it('keeps a namespace stable for identical source bytes and distinct across tenants', () => {
+    const sha = (text: string): string => createHash('sha256').update(text).digest('hex');
+    expect(spreadsheetImportNamespace('tenant-1', sha('a'))).toBe(
+      spreadsheetImportNamespace('tenant-1', sha('a'))
+    );
+    expect(spreadsheetImportNamespace('tenant-1', sha('a'))).not.toBe(
+      spreadsheetImportNamespace('tenant-1', sha('b'))
+    );
+    expect(spreadsheetImportNamespace('tenant-2', sha('a'))).not.toBe(
+      spreadsheetImportNamespace('tenant-1', sha('a'))
+    );
   });
 
   it('returns conversion diagnostics naming unmapped headers on a successful stage', async () => {

@@ -3,7 +3,12 @@ import {
   MIGRATION_UPLOAD_ERROR_CODES,
   type MigrationUploadErrorCode,
 } from '@/lib/migrations/migrationUploadErrors';
-import type { MigrationJobState } from '@/lib/migrations/types';
+import type {
+  MigrationEntityProgress,
+  MigrationJobState,
+  MigrationOutcomeClaim,
+  MigrationSkipProvenance,
+} from '@/lib/migrations/types';
 
 /** Visual tone + label for every migration job state. */
 export interface MigrationStateBadge {
@@ -29,6 +34,120 @@ export const MIGRATION_STATE_BADGES: Record<MigrationJobState, MigrationStateBad
 
 export function migrationStateBadge(state: MigrationJobState): MigrationStateBadge {
   return MIGRATION_STATE_BADGES[state] ?? { label: state, variant: 'default' };
+}
+
+export interface MigrationProgressTotals {
+  planned: number;
+  applied: number;
+  skipped: number;
+  failed: number;
+}
+
+export function migrationProgressTotals(
+  entityCounts: Partial<Record<AmpEntityType, MigrationEntityProgress>>
+): MigrationProgressTotals {
+  const totals: MigrationProgressTotals = { planned: 0, applied: 0, skipped: 0, failed: 0 };
+  for (const progress of Object.values(entityCounts)) {
+    if (!progress) {
+      continue;
+    }
+    totals.planned += progress.plannedCount;
+    totals.applied += progress.appliedCount;
+    totals.skipped += progress.skippedCount;
+    totals.failed += progress.failedCount;
+  }
+  return totals;
+}
+
+/**
+ * A finished job that created nothing but skipped rows — typically a re-import
+ * of an identical package. It must not read as a plain successful completion.
+ */
+export function migrationCreatedNothing(
+  state: MigrationJobState,
+  entityCounts: Partial<Record<AmpEntityType, MigrationEntityProgress>>
+): boolean {
+  const totals = migrationProgressTotals(entityCounts);
+  return state === 'completed' && totals.applied === 0 && totals.skipped > 0;
+}
+
+/** The badge to show for a finished job, downgrading a create-nothing run. */
+export function migrationOutcomeBadge(
+  state: MigrationJobState,
+  entityCounts: Partial<Record<AmpEntityType, MigrationEntityProgress>>,
+  translate: (key: string, options: { defaultValue: string }) => string
+): MigrationStateBadge {
+  if (migrationCreatedNothing(state, entityCounts)) {
+    return {
+      label: translate('importExport.migration.badges.nothingImported', {
+        defaultValue: 'Nothing imported',
+      }),
+      variant: 'warning',
+    };
+  }
+  return migrationStateBadge(state);
+}
+
+type MigrationTranslate = (
+  key: string,
+  options: { defaultValue: string; [name: string]: unknown }
+) => string;
+
+/**
+ * How to describe this job's skipped records. Only claims "same package" when
+ * the claiming mappings actually came from this package; otherwise names the
+ * prior migration (or says the rows matched existing entities). Returns null
+ * when there are no skips or provenance is not yet loaded.
+ */
+export function migrationSkipSentence(
+  provenance: MigrationSkipProvenance | null,
+  translate: MigrationTranslate
+): string | null {
+  if (!provenance || provenance.skippedCount === 0) {
+    return null;
+  }
+  if (provenance.allSamePackage) {
+    return translate('importExport.migration.results.skippedSamePackage', {
+      defaultValue: 'Skipped records were already migrated by an earlier run of the same package.',
+    });
+  }
+  const packageNames = provenance.entries
+    .map((entry) => entry.sourceFileName)
+    .filter((name): name is string => Boolean(name));
+  if (packageNames.length === 0) {
+    return translate('importExport.migration.results.skippedExistingEntity', {
+      defaultValue: 'Skipped records were matched to existing entities.',
+    });
+  }
+  return translate('importExport.migration.results.skippedOtherPackage', {
+    defaultValue:
+      'Skipped records were matched to entities created by an earlier migration of a different package: {{packages}}.',
+    packages: [...new Set(packageNames)].join(', '),
+  });
+}
+
+/** The origin label for one skipped record in the outcome table. */
+export function migrationClaimLabel(
+  claim: MigrationOutcomeClaim | null,
+  translate: MigrationTranslate
+): string | null {
+  if (!claim) {
+    return null;
+  }
+  if (claim.samePackage) {
+    return translate('importExport.migration.results.claimedBySamePackage', {
+      defaultValue: 'Already migrated by this package',
+    });
+  }
+  if (claim.sourceFileName) {
+    return translate('importExport.migration.results.claimedByOtherPackage', {
+      defaultValue: 'Already migrated by {{file}}',
+      file: claim.sourceFileName,
+    });
+  }
+  return translate('importExport.migration.results.claimedByExistingEntity', {
+    defaultValue: 'Matched to an existing entity',
+  });
 }
 
 export const MIGRATION_ENTITY_LABELS: Record<AmpEntityType, string> = {

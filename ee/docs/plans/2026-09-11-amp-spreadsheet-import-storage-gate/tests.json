@@ -137,5 +137,38 @@
       "F027",
       "F030"
     ]
+  },
+  {
+    "id": "T015",
+    "description": "Unit: the namespace is stable for identical tenant and bytes and distinct across tenants and bytes, and POST /api/migrations/spreadsheet passes the source-hash namespace to the converter.",
+    "implemented": true,
+    "featureIds": [
+      "F032"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "DB-backed: two different no-id-column contacts sheets staged and applied into one tenant each create their own contacts and skip nothing from the other; re-applying and re-uploading identical bytes skip instead of duplicating.",
+    "implemented": true,
+    "featureIds": [
+      "F032"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "DB-backed: skip provenance reports allSamePackage for a same-job re-run and names the prior package (not same-package) for a foreign shared-namespace skip.",
+    "implemented": true,
+    "featureIds": [
+      "F033"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "Unit: the results UI helpers flag a create-nothing run as a warning, claim same-package only when justified, and label a skipped record's origin.",
+    "implemented": true,
+    "featureIds": [
+      "F034",
+      "F035"
+    ]
   }
 ]

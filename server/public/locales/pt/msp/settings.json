@@ -2131,6 +2131,19 @@
       "run": {
         "queued": "Migração na fila",
         "applying": "Migração em andamento"
+      },
+      "badges": {
+        "nothingImported": "Nada foi importado"
+      },
+      "results": {
+        "skippedSamePackage": "Os registros ignorados já foram migrados por uma execução anterior do mesmo pacote.",
+        "skippedOtherPackage": "Os registros ignorados corresponderam a entidades criadas por uma migração anterior de um pacote diferente: {{packages}}.",
+        "skippedExistingEntity": "Os registros ignorados corresponderam a entidades existentes.",
+        "nothingImportedTitle": "Nada foi importado",
+        "nothingImportedBody": "Esta execução não criou novos registros. Cada linha correspondeu a algo que já existia, então nada foi alterado.",
+        "claimedBySamePackage": "Já migrado por este pacote",
+        "claimedByOtherPackage": "Já migrado por {{file}}",
+        "claimedByExistingEntity": "Corresponde a uma entidade existente"
       }
     },
     "jobDetails": {

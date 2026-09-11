@@ -2131,6 +2131,19 @@
       "run": {
         "queued": "⟦Ḿīɠřȧŧīȯƞ ʠŭḗŭḗḓ⟧",
         "applying": "⟦Ḿīɠřȧŧīȯƞ īƞ ƥřȯɠřḗşş⟧"
+      },
+      "badges": {
+        "nothingImported": "⟦Nothing imported⟧"
+      },
+      "results": {
+        "skippedSamePackage": "⟦Skipped records were already migrated by an earlier run of the same package.⟧",
+        "skippedOtherPackage": "⟦Skipped records were matched to entities created by an earlier migration of a different package: {{packages}}.⟧",
+        "skippedExistingEntity": "⟦Skipped records were matched to existing entities.⟧",
+        "nothingImportedTitle": "⟦Nothing was imported⟧",
+        "nothingImportedBody": "⟦This run created no new records. Every row matched something that already existed, so nothing was changed.⟧",
+        "claimedBySamePackage": "⟦Already migrated by this package⟧",
+        "claimedByOtherPackage": "⟦Already migrated by {{file}}⟧",
+        "claimedByExistingEntity": "⟦Matched to an existing entity⟧"
       }
     },
     "jobDetails": {

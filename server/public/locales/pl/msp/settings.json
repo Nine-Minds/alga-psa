@@ -2137,6 +2137,19 @@
       "run": {
         "queued": "Migracja w kolejce",
         "applying": "Migracja w toku"
+      },
+      "badges": {
+        "nothingImported": "Nic nie zaimportowano"
+      },
+      "results": {
+        "skippedSamePackage": "Pominięte rekordy zostały już zmigrowane przez poprzednie uruchomienie tego samego pakietu.",
+        "skippedOtherPackage": "Pominięte rekordy dopasowano do encji utworzonych przez wcześniejszą migrację innego pakietu: {{packages}}.",
+        "skippedExistingEntity": "Pominięte rekordy dopasowano do istniejących encji.",
+        "nothingImportedTitle": "Nic nie zaimportowano",
+        "nothingImportedBody": "To uruchomienie nie utworzyło żadnych nowych rekordów. Każdy wiersz odpowiadał czemuś, co już istniało, więc nic nie zmieniono.",
+        "claimedBySamePackage": "Już zmigrowane przez ten pakiet",
+        "claimedByOtherPackage": "Już zmigrowane przez {{file}}",
+        "claimedByExistingEntity": "Dopasowano do istniejącej encji"
       }
     },
     "jobDetails": {

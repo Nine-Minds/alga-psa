@@ -2131,6 +2131,19 @@
       "run": {
         "queued": "Migration en file d'attente",
         "applying": "Migration en cours"
+      },
+      "badges": {
+        "nothingImported": "Rien n'a été importé"
+      },
+      "results": {
+        "skippedSamePackage": "Les enregistrements ignorés avaient déjà été migrés par une exécution précédente du même paquet.",
+        "skippedOtherPackage": "Les enregistrements ignorés ont été associés à des entités créées par une migration antérieure d'un autre paquet : {{packages}}.",
+        "skippedExistingEntity": "Les enregistrements ignorés ont été associés à des entités existantes.",
+        "nothingImportedTitle": "Rien n'a été importé",
+        "nothingImportedBody": "Cette exécution n'a créé aucun nouvel enregistrement. Chaque ligne correspondait à quelque chose qui existait déjà, donc rien n'a été modifié.",
+        "claimedBySamePackage": "Déjà migré par ce paquet",
+        "claimedByOtherPackage": "Déjà migré par {{file}}",
+        "claimedByExistingEntity": "Associé à une entité existante"
       }
     },
     "jobDetails": {

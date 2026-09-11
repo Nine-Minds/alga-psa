@@ -1,6 +1,7 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -14,6 +15,8 @@ import { MigrationStager } from '../../lib/migrations/MigrationStager';
 import { loadMigrationConfigurationOptions } from '../../lib/migrations/migrationActions';
 import { MigrationPlanner } from '../../lib/migrations/MigrationPlanner';
 import { MigrationDomainApplier } from '../../lib/migrations/appliers/MigrationDomainApplier';
+import { MigrationReportService } from '../../lib/migrations/MigrationReportService';
+import { spreadsheetImportNamespace } from '../../lib/migrations/spreadsheetNamespace';
 import type { MigrationJobConfiguration } from '../../lib/migrations/types';
 
 const HOOK_TIMEOUT = 180_000;
@@ -538,6 +541,160 @@ describe('AMP migration pipeline integration', () => {
       await tenantTable(fixture.tenantId, 'migration_identity_mappings')
         .where({ migration_job_id: migrationJobId })
     ).toHaveLength(6);
+  }, HOOK_TIMEOUT);
+
+  it('imports two different no-id contacts sheets into one tenant without identity collision, and stays idempotent on re-upload', async () => {
+    const fixture = await createFixture();
+    const applier = new MigrationDomainApplier(db, fixture.tenantId);
+    const sourceA = 'Name,Email\nAlice Anderson,alice@example.com\nBob Brown,bob@example.com\n';
+    const sourceB = 'Name,Email\nCarol Clark,carol@example.com\nDave Davis,dave@example.com\n';
+    const namespaceFor = (source: string): string =>
+      spreadsheetImportNamespace(
+        fixture.tenantId,
+        createHash('sha256').update(source).digest('hex')
+      );
+
+    const stageContactsSheet = async (source: string, label: string): Promise<string> => {
+      const inputPath = path.join(packageDir, `${label}-${uuidv4()}.csv`);
+      const packagePath = path.join(packageDir, `${label}-${uuidv4()}.amp`);
+      await fs.promises.writeFile(inputPath, source);
+      const mapping = await inferSpreadsheetMapping(inputPath, 'contacts');
+      await convertSpreadsheets(
+        {
+          outputPath: packagePath,
+          namespace: namespaceFor(source),
+          sourceSystem: 'csv-upload',
+          files: [{ entityType: 'contacts', path: inputPath, mapping }],
+        },
+        packageDir
+      );
+      return stageAndConfigure(fixture, packagePath);
+    };
+
+    const jobA = await stageContactsSheet(sourceA, 'contacts-a');
+    const first = await applier.applyJob(jobA, fixture.ownerUserId);
+    expect(first).toEqual({ cancelled: false, created: 2, skipped: 0, failed: 0 });
+
+    // The second sheet's rows use the same derived row-1/row-2 source ids as
+    // the first; a per-tenant namespace would silently skip them onto the
+    // first sheet's contacts.
+    const jobB = await stageContactsSheet(sourceB, 'contacts-b');
+    const second = await applier.applyJob(jobB, fixture.ownerUserId);
+    expect(second).toEqual({ cancelled: false, created: 2, skipped: 0, failed: 0 });
+
+    const contacts = await tenantTable(fixture.tenantId, 'contacts');
+    expect(contacts).toHaveLength(4);
+    expect(contacts.map((contact: any) => contact.email).sort()).toEqual([
+      'alice@example.com',
+      'bob@example.com',
+      'carol@example.com',
+      'dave@example.com',
+    ]);
+
+    // The second sheet's entity counters show it created its own rows and
+    // skipped nothing from the first (the shape the collision used to break).
+    const secondEntityCounts = await tenantTable(fixture.tenantId, 'migration_job_entities')
+      .where({ migration_job_id: jobB, entity_type: 'contacts' })
+      .first();
+    expect(secondEntityCounts).toMatchObject({ planned_count: 2, applied_count: 2, skipped_count: 0 });
+
+    // Each sheet's identity mappings live under its own content namespace.
+    const mappedNamespaces = await tenantTable(fixture.tenantId, 'migration_identity_mappings').distinct('namespace');
+    expect(mappedNamespaces.map((row: any) => row.namespace).sort()).toEqual(
+      [namespaceFor(sourceA), namespaceFor(sourceB)].sort()
+    );
+
+    // Re-applying the same job is still a no-op skip.
+    const rerun = await applier.applyJob(jobB, fixture.ownerUserId);
+    expect(rerun).toEqual({ cancelled: false, created: 0, skipped: 2, failed: 0 });
+
+    // Re-uploading identical bytes as a new job reuses the namespace and skips
+    // rather than duplicating.
+    const jobC = await stageContactsSheet(sourceB, 'contacts-b-copy');
+    const reupload = await applier.applyJob(jobC, fixture.ownerUserId);
+    expect(reupload).toEqual({ cancelled: false, created: 0, skipped: 2, failed: 0 });
+    expect(await tenantTable(fixture.tenantId, 'contacts')).toHaveLength(4);
+  }, HOOK_TIMEOUT);
+
+  it('reports skip provenance: same-job re-runs as same package, a foreign shared-namespace skip names the prior package', async () => {
+    const fixture = await createFixture();
+    const applier = new MigrationDomainApplier(db, fixture.tenantId);
+    const report = new MigrationReportService(db, fixture.tenantId);
+
+    const stageSheet = async (source: string, label: string, namespace: string): Promise<string> => {
+      const inputPath = path.join(packageDir, `${label}-${uuidv4()}.csv`);
+      const packagePath = path.join(packageDir, `${label}-${uuidv4()}.amp`);
+      await fs.promises.writeFile(inputPath, source);
+      const mapping = await inferSpreadsheetMapping(inputPath, 'contacts');
+      await convertSpreadsheets(
+        {
+          outputPath: packagePath,
+          namespace,
+          sourceSystem: 'csv-upload',
+          files: [{ entityType: 'contacts', path: inputPath, mapping }],
+        },
+        packageDir
+      );
+      return stageAndConfigure(fixture, packagePath);
+    };
+
+    // Same-job re-run: the claiming mapping belongs to this job.
+    const jobReRun = await stageSheet(
+      'Name,Email\nAlice Anderson,alice@example.com\n',
+      'prov-rerun',
+      `csv:${fixture.tenantId}:rerun`
+    );
+    await applier.applyJob(jobReRun, fixture.ownerUserId);
+    expect(await applier.applyJob(jobReRun, fixture.ownerUserId)).toEqual({
+      cancelled: false,
+      created: 0,
+      skipped: 1,
+      failed: 0,
+    });
+    expect((await report.getSkipProvenance(jobReRun)).allSamePackage).toBe(true);
+
+    // Foreign claim: two different sheets forced onto one shared namespace and
+    // distinct package digests, the shape the pre-fix code produced.
+    const legacyNamespace = `csv:${fixture.tenantId}`;
+    const jobFirst = await stageSheet(
+      'Name,Email\nCarol Clark,carol@example.com\n',
+      'prov-first',
+      legacyNamespace
+    );
+    await tenantTable(fixture.tenantId, 'migration_jobs')
+      .where({ migration_job_id: jobFirst })
+      .update({ source_file_name: 'first-package.amp', package_sha256: 'sha-first' });
+    expect(await applier.applyJob(jobFirst, fixture.ownerUserId)).toEqual({
+      cancelled: false,
+      created: 1,
+      skipped: 0,
+      failed: 0,
+    });
+
+    const jobSecond = await stageSheet(
+      'Name,Email\nDave Davis,dave@example.com\n',
+      'prov-second',
+      legacyNamespace
+    );
+    await tenantTable(fixture.tenantId, 'migration_jobs')
+      .where({ migration_job_id: jobSecond })
+      .update({ package_sha256: 'sha-second' });
+    expect(await applier.applyJob(jobSecond, fixture.ownerUserId)).toEqual({
+      cancelled: false,
+      created: 0,
+      skipped: 1,
+      failed: 0,
+    });
+
+    const foreign = await report.getSkipProvenance(jobSecond);
+    expect(foreign.allSamePackage).toBe(false);
+    expect(foreign.entries).toEqual([
+      expect.objectContaining({
+        sourceFileName: 'first-package.amp',
+        skippedCount: 1,
+        samePackage: false,
+      }),
+    ]);
   }, HOOK_TIMEOUT);
 
   it('a record failing mid-run leaves a truthful ledger and retry applies only unapplied work', async () => {

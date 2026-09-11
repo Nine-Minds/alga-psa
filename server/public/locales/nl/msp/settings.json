@@ -2131,6 +2131,19 @@
       "run": {
         "queued": "Migratie in wachtrij",
         "applying": "Migratie wordt uitgevoerd"
+      },
+      "badges": {
+        "nothingImported": "Niets geïmporteerd"
+      },
+      "results": {
+        "skippedSamePackage": "Overgeslagen records zijn al gemigreerd door een eerdere uitvoering van hetzelfde pakket.",
+        "skippedOtherPackage": "Overgeslagen records zijn gekoppeld aan entiteiten die door een eerdere migratie van een ander pakket zijn gemaakt: {{packages}}.",
+        "skippedExistingEntity": "Overgeslagen records zijn gekoppeld aan bestaande entiteiten.",
+        "nothingImportedTitle": "Niets geïmporteerd",
+        "nothingImportedBody": "Deze uitvoering heeft geen nieuwe records gemaakt. Elke rij kwam overeen met iets dat al bestond, dus er is niets gewijzigd.",
+        "claimedBySamePackage": "Al gemigreerd door dit pakket",
+        "claimedByOtherPackage": "Al gemigreerd door {{file}}",
+        "claimedByExistingEntity": "Gekoppeld aan een bestaande entiteit"
       }
     },
     "jobDetails": {

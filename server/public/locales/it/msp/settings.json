@@ -2131,6 +2131,19 @@
       "run": {
         "queued": "Migrazione in coda",
         "applying": "Migrazione in corso"
+      },
+      "badges": {
+        "nothingImported": "Niente importato"
+      },
+      "results": {
+        "skippedSamePackage": "I record saltati erano già stati migrati da un'esecuzione precedente dello stesso pacchetto.",
+        "skippedOtherPackage": "I record saltati sono stati associati a entità create da una migrazione precedente di un pacchetto diverso: {{packages}}.",
+        "skippedExistingEntity": "I record saltati sono stati associati a entità esistenti.",
+        "nothingImportedTitle": "Niente importato",
+        "nothingImportedBody": "Questa esecuzione non ha creato nuovi record. Ogni riga corrispondeva a qualcosa che esisteva già, quindi non è stato modificato nulla.",
+        "claimedBySamePackage": "Già migrato da questo pacchetto",
+        "claimedByOtherPackage": "Già migrato da {{file}}",
+        "claimedByExistingEntity": "Associato a un'entità esistente"
       }
     },
     "jobDetails": {

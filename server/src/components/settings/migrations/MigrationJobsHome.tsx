@@ -20,7 +20,7 @@ import {
   formatMigrationTimestamp,
   migrationEntityLabel,
   migrationErrorMessage,
-  migrationStateBadge,
+  migrationOutcomeBadge,
   migrationUploadErrorCopy,
 } from './migrationUi';
 
@@ -110,7 +110,7 @@ const MigrationJobsHome = ({ onSelectJob }: MigrationJobsHomeProps): React.JSX.E
               </TableHeader>
               <TableBody>
                 {jobs.map((job) => {
-                  const badge = migrationStateBadge(job.state);
+                  const badge = migrationOutcomeBadge(job.state, job.entityCounts, t);
                   return (
                     <TableRow
                       key={job.migrationJobId}

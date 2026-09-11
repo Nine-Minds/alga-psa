@@ -2131,6 +2131,19 @@
       "run": {
         "queued": "Migración en cola",
         "applying": "Migración en curso"
+      },
+      "badges": {
+        "nothingImported": "No se importó nada"
+      },
+      "results": {
+        "skippedSamePackage": "Los registros omitidos ya se migraron en una ejecución anterior del mismo paquete.",
+        "skippedOtherPackage": "Los registros omitidos coincidieron con entidades creadas por una migración anterior de un paquete diferente: {{packages}}.",
+        "skippedExistingEntity": "Los registros omitidos coincidieron con entidades existentes.",
+        "nothingImportedTitle": "No se importó nada",
+        "nothingImportedBody": "Esta ejecución no creó registros nuevos. Cada fila coincidió con algo que ya existía, así que no se cambió nada.",
+        "claimedBySamePackage": "Ya migrado por este paquete",
+        "claimedByOtherPackage": "Ya migrado por {{file}}",
+        "claimedByExistingEntity": "Coincide con una entidad existente"
       }
     },
     "jobDetails": {
