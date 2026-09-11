@@ -15,8 +15,9 @@ const stripEmptyMappingEntries = (mapping: InputMapping): InputMapping =>
  * Persisting that would fail validation and runtime compilation, so drop those entries.
  * Required fields then surface as MISSING_REQUIRED_MAPPING, which is the accurate message.
  */
-export const stripEmptyActionInputExpressions = (steps: Step[]): Step[] =>
-  steps.map((step) => {
+export const stripEmptyActionInputExpressions = (steps: Step[]): Step[] => {
+  if (!Array.isArray(steps)) return steps;
+  return steps.map((step) => {
     switch (step.type) {
       case 'control.if': {
         const block = step as IfBlock;
@@ -39,6 +40,7 @@ export const stripEmptyActionInputExpressions = (steps: Step[]): Step[] =>
         return step;
     }
   });
+};
 
 export const normalizeWorkflowDefinitionSteps = (definition: WorkflowDefinition): WorkflowDefinition =>
   Array.isArray(definition.steps)

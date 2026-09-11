@@ -80,7 +80,8 @@ export function validateWorkflowDefinition(
     };
   }
 
-  const visitSteps = (steps: Step[], prefix: string) => {
+  const visitSteps = (steps: Step[] | undefined | null, prefix: string) => {
+    if (!Array.isArray(steps)) return;
     steps.forEach((step, index) => {
       const stepPath = `${prefix}.steps[${index}]`;
 

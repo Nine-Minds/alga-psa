@@ -70,6 +70,17 @@ describe('validateWorkflowDefinition expressions', () => {
     expect(result.errors.some((error) => error.code === 'INVALID_EXPR')).toBe(true);
   });
 
+  it('reports a missing control branch instead of throwing', () => {
+    const steps = [
+      { id: 'if', type: 'control.if', condition: { $expr: 'payload.x' } },
+      { id: 'fe', type: 'control.forEach', items: { $expr: 'payload.items' }, itemVar: 'item' },
+      { id: 'tc', type: 'control.tryCatch' }
+    ] as never;
+    const result = validateWorkflowDefinition(definitionWith(steps));
+    expect(result.ok).toBe(false);
+    expect(result.errors.some((error) => error.code === 'INVALID_WORKFLOW_DEFINITION')).toBe(true);
+  });
+
   it('includes the parser reason for control expressions', () => {
     const result = validateWorkflowDefinition(
       definitionWith([{ id: 'if', type: 'control.if', condition: { $expr: 'payload..x' }, then: [] }])

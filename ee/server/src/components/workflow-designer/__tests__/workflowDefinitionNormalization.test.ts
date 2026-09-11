@@ -61,6 +61,18 @@ describe('stripEmptyActionInputExpressions', () => {
     expect(Array.isArray((tryCatch as { catch: Step[] }).catch)).toBe(true);
   });
 
+  it('tolerates control blocks whose branches are missing', () => {
+    const steps = [
+      { id: 'if', type: 'control.if', condition: { $expr: 'payload.flag' } },
+      { id: 'fe', type: 'control.forEach', items: { $expr: 'payload.items' }, itemVar: 'item' },
+      { id: 'tc', type: 'control.tryCatch' },
+    ] as never as Step[];
+    const [ifBlock, forEach, tryCatch] = stripEmptyActionInputExpressions(steps);
+    expect(ifBlock).toMatchObject({ id: 'if', type: 'control.if', condition: { $expr: 'payload.flag' } });
+    expect(forEach).toMatchObject({ id: 'fe', itemVar: 'item' });
+    expect(tryCatch).toMatchObject({ id: 'tc', type: 'control.tryCatch' });
+  });
+
   it('leaves steps without a mapping untouched and tolerates missing steps', () => {
     const step: Step = { id: 'ret', type: 'control.return' };
     expect(stripEmptyActionInputExpressions([step])[0]).toBe(step);
