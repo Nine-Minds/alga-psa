@@ -14,14 +14,12 @@ import { registerPushToken } from "../api/pushToken";
 import { createApiClient } from "../api";
 import { getAppConfig } from "../config/appConfig";
 import { getStableDeviceId } from "../device/clientMetadata";
-import { getSecureJson, setSecureJson } from "../storage/secureStorage";
+import { readPushRegistration, shouldRegisterPushToken, writePushRegistration } from "./pushRegistration";
 import { logger } from "../logging/logger";
 import type { RootStackParamList } from "../navigation/types";
 import { listScheduleEntries } from "../api/schedule";
 import { startOfWeek, weekQueryRange } from "../features/schedule/scheduleUtils";
 import { SCHEDULE_REMINDER_KIND, syncScheduleReminders } from "./scheduleReminders";
-
-const STORED_TOKEN_KEY = "alga.mobile.push.registeredToken";
 
 type NotificationData = { ticketId?: string; kind?: string; url?: string };
 
@@ -78,12 +76,18 @@ export function useNotifications(): void {
 
       if (!token || !deviceId) return;
 
-      // Skip if already registered with the same token
-      const stored = await getSecureJson<string>(STORED_TOKEN_KEY);
-      if (stored === token) return;
-
       const config = getAppConfig();
       if (!config.ok) return;
+
+      // Registration is per server + account on the backend, so the marker
+      // that lets us skip the round trip has to be scoped the same way.
+      const registration = {
+        token,
+        baseUrl: config.baseUrl,
+        tenantId: session.tenantId ?? null,
+        userId: session.user?.id ?? null,
+      };
+      if (!shouldRegisterPushToken(await readPushRegistration(), registration)) return;
 
       const client = createApiClient({
         baseUrl: config.baseUrl,
@@ -93,6 +97,7 @@ export function useNotifications(): void {
       });
 
       const result = await registerPushToken(client, {
+        apiKey: session.accessToken,
         expoPushToken: token,
         deviceId,
         platform: Platform.OS,
@@ -100,8 +105,8 @@ export function useNotifications(): void {
       });
 
       if (result.ok) {
-        await setSecureJson(STORED_TOKEN_KEY, token);
-        logger.info("[Notifications] Push token registered");
+        await writePushRegistration(registration);
+        logger.info("[Notifications] Push token registered", { baseUrl: config.baseUrl });
       } else {
         logger.warn("[Notifications] Failed to register push token", { error: result.error });
       }
@@ -110,7 +115,7 @@ export function useNotifications(): void {
     } finally {
       registering.current = false;
     }
-  }, [session?.accessToken, session?.tenantId, refreshSession]);
+  }, [session?.accessToken, session?.tenantId, session?.user?.id, refreshSession]);
 
   // Keep local schedule reminders in sync even when the Schedule tab is
   // never opened: fetch the current week and (re)schedule reminders.
