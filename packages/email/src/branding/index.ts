@@ -43,3 +43,9 @@ export {
   type PlannedTemplateSkip,
   type PlannedTemplateUpdate,
 } from './planEmailBrandingApply';
+export {
+  previewEmailBrandingApply,
+  type EmailBrandingPreview,
+  type EmailBrandingPreviewAction,
+  type EmailBrandingPreviewInput,
+} from './previewEmailBrandingApply';
