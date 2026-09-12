@@ -19,6 +19,7 @@ import type { EmailMessageDetails } from '../../interfaces/inbound-email.interfa
 import { buildInboundSourceObjectKey, normalizeInboundMessageIdentity } from './inboundEmailIdentity';
 import { extractMessageIds } from './inboundEmailMimeHelpers';
 import type { InboundProviderType } from '../../interfaces/inbound-email.interfaces';
+import { resolveInboundHeaders } from '../../lib/email/inboundHeaderBag';
 
 export interface StagedInboundSource {
   objectKey: string;
@@ -132,12 +133,27 @@ export async function parseStagedMimeIntoEmailDetails(params: {
     throw new Error('inbound message identity could not be derived from staged source');
   }
 
-  const from = parsed?.from?.value?.[0];
   const to = parsed?.to?.value || [];
   const cc = parsed?.cc?.value || [];
   const references = extractMessageIds(parsed?.references);
   const inReplyTo = extractMessageIds(parsed?.inReplyTo)[0];
   const threadId = references[0] || inReplyTo;
+
+  // Shared with V1 (unifiedInboundEmailQueueJobProcessor.ts) via
+  // resolveInboundHeaders: lower-cased header bag with x-resolved-*/x-list-*
+  // stripped from wire data, repeated headers newline-joined preserving wire
+  // order, and a trusted list-rewrite From recovery. See
+  // shared/lib/email/inboundHeaderBag.ts for the full rationale.
+  const resolved = resolveInboundHeaders(parsed);
+  if (resolved.listRewrite) {
+    console.info('[InboundEmailSourceStager] Recovered original sender from list rewrite', {
+      tenant: params.tenant,
+      providerId: params.providerId,
+      listAddress: resolved.listRewrite.listAddress,
+      originalSender: resolved.listRewrite.sender.email,
+      via: resolved.listRewrite.via,
+    });
+  }
 
   const emailData: EmailMessageDetails = {
     id: identity.rfcMessageId ?? identity.providerMessageId ?? params.fallbackProviderMessageId ?? '',
@@ -153,10 +169,7 @@ export async function parseStagedMimeIntoEmailDetails(params: {
     providerId: params.providerId,
     tenant: params.tenant,
     receivedAt: parsed?.date ? new Date(parsed.date).toISOString() : new Date().toISOString(),
-    from: {
-      email: from?.address || '',
-      name: from?.name || undefined,
-    },
+    from: resolved.from,
     to: to.map((item: any) => ({
       email: item?.address || '',
       name: item?.name || undefined,
@@ -192,6 +205,7 @@ export async function parseStagedMimeIntoEmailDetails(params: {
     references: references.length ? references : undefined,
     inReplyTo: inReplyTo || undefined,
     rawMimeBase64: params.rawMime.toString('base64'),
+    headers: resolved.headers,
   };
 
   return {

@@ -167,8 +167,13 @@ function buildMime(params: {
   text: string;
   inReplyTo?: string;
   references?: string[];
+  /** Raw extra header lines (e.g. 'Authentication-Results: ...'), inserted
+   *  above the standard headers to mimic a receiving MTA prepending its own
+   *  headers ahead of anything already on the wire. */
+  extraHeaders?: string[];
 }): Buffer {
   const lines: string[] = [
+    ...(params.extraHeaders ?? []),
     `From: Sender <${params.from}>`,
     `To: Support <${params.to}>`,
     `Subject: ${params.subject}`,
@@ -1215,6 +1220,68 @@ describeDb('Inbound email durable inbox (integration)', () => {
     } finally {
       process.env.UNIFIED_INBOUND_EMAIL_DURABLE_MODE = 'enforce';
     }
+  });
+
+  it('parseStagedMimeIntoEmailDetails (V2/durable stager) propagates MIME headers, lower-cased, with processor-metadata names stripped from wire data', async () => {
+    const { providerId } = await setupProvider({ mailbox: 'header-propagation@example.com', providerType: 'imap' });
+    const messageId = `header-prop-${randomUUID()}@example.com`;
+
+    // A real receiving MTA prepends Authentication-Results on final delivery,
+    // so it is the topmost occurrence. The attacker-controlled body also
+    // stamps its own Authentication-Results (should be preserved, but
+    // verifySenderAuthentication only trusts blocks[0]) and, more
+    // importantly, an X-Resolved-Original-Sender header -- which must never
+    // survive the parse, since processInboundEmailInApp treats that header
+    // name as proof of a verified mailing-list rewrite.
+    const rawMime = buildMime({
+      from: 'vendor@example-vendor.com',
+      to: 'header-propagation@example.com',
+      subject: 'Header propagation regression',
+      messageId,
+      text: 'body',
+      extraHeaders: [
+        'Authentication-Results: mx.our-real-mta.example; spf=pass smtp.mailfrom=vendor@example-vendor.com; dkim=pass header.d=example-vendor.com; dmarc=pass header.from=example-vendor.com',
+        'Authentication-Results: forged.example; spf=fail',
+        'X-Resolved-Original-Sender: attacker-forged@evil.example',
+      ],
+    });
+
+    const { parseStagedMimeIntoEmailDetails } = await import('@alga-psa/shared/services/email/inboundEmailSourceStager');
+    const parsed = await parseStagedMimeIntoEmailDetails({
+      tenant: tenantId,
+      providerId,
+      providerType: 'imap',
+      rawMime,
+      fallbackProviderMessageId: messageId,
+      mailbox: 'header-propagation@example.com',
+      uidValidity: '1',
+      uid: 1,
+    });
+
+    const headers = (parsed.emailData as any).headers as Record<string, string> | undefined;
+    expect(headers).toBeTruthy();
+    expect(Object.keys(headers ?? {}).length).toBeGreaterThan(0);
+
+    // Real header, lower-cased, both wire blocks preserved in wire order
+    // (joined with \n) so verifySenderAuthentication can take blocks[0].
+    expect(headers?.['authentication-results']).toBeTruthy();
+    const blocks = headers!['authentication-results'].split('\n');
+    expect(blocks[0]).toContain('mx.our-real-mta.example');
+    expect(blocks[1]).toContain('forged.example');
+
+    // SECURITY: the attacker's own X-Resolved-Original-Sender header must not
+    // survive the parse as a trusted header -- it was never produced by our
+    // verified list-rewrite recovery for this direct-mail message (no list
+    // markers present), so resolveInboundHeaders must have stripped it from
+    // the wire data rather than passing it through.
+    expect(headers?.['x-resolved-original-sender']).toBeUndefined();
+
+    // The end-to-end gate this feeds: an aligned Authentication-Results must
+    // actually verify, deriving strictly from the topmost block.
+    const { verifySenderAuthentication, allowsContactSenderAttribution } = await import('@alga-psa/shared/lib/email/senderAuthVerification');
+    const authResults = verifySenderAuthentication(headers?.['authentication-results'], parsed.emailData.from.email);
+    expect(authResults?.aligned.spf).toBe(true);
+    expect(allowsContactSenderAttribution(authResults)).toBe(true);
   });
 
   it('webhook producer falls through to legacy enqueue in shadow mode but diverts in enforce', async () => {

@@ -15330,6 +15330,96 @@ describe('named ticket conversation inbound vendor admission against migrated Po
     expect(await f.sponsor.table('ticket_conversation_inbound_receipts')).toHaveLength(0);
     expect(await f.customer.table('ticket_conversation_inbound_messages')).toHaveLength(0);
   });
+
+  // Regression coverage for the header-propagation repair: every other test in
+  // this describe block builds `EmailMessageDetails` by hand (with `headers`
+  // and `senderAuth` supplied directly) and/or mocks `parseStagedMimeIntoEmailDetails`
+  // to hand back that hand-built object, so none of them exercise the real V2
+  // durable stager's MIME->headers parsing. This test uses the REAL
+  // `parseStagedMimeIntoEmailDetails` against a real raw MIME buffer carrying a
+  // genuine `Authentication-Results` header, and the REAL
+  // `processInboundEmailInApp` (which derives sender authentication from
+  // `emailData.headers`, not from an injected value) so a regression in header
+  // propagation fails this test the same way it broke the real pipeline.
+  it('a token-carrying vendor reply with a real, aligned Authentication-Results header is admitted into the source vendor conversation via the real V2 stager', async () => {
+    const f = await namedInboundFixture();
+    const messageId = `vendor-header-fix-${randomUUID()}@example.test`;
+    const rawMime = Buffer.from([
+      // A real receiving MTA prepends this on final delivery, so it is the
+      // topmost (trusted) occurrence; verifySenderAuthentication only reads
+      // blocks[0].
+      'Authentication-Results: mx.example.test; spf=pass smtp.mailfrom=vendor@example.test; dkim=pass header.d=example.test; dmarc=pass header.from=example.test',
+      'From: Vendor <vendor@example.test>',
+      'To: Support <support@example.test>',
+      'Subject: Re: Circuit diagnosis',
+      `Message-ID: <${messageId}>`,
+      'MIME-Version: 1.0',
+      'Content-Type: text/plain; charset=utf-8',
+      '',
+      `We fixed the circuit issue.\n\n[ALGA-REPLY-TOKEN ${f.token}]`,
+      '',
+    ].join('\r\n'));
+
+    const actualStager = await vi.importActual<typeof import('../../../../shared/services/email/inboundEmailSourceStager')>(
+      '../../../../shared/services/email/inboundEmailSourceStager');
+    const parsed = await actualStager.parseStagedMimeIntoEmailDetails({
+      tenant: f.principal.tenant, providerId: f.mailboxId, providerType: 'imap', rawMime,
+      fallbackProviderMessageId: messageId, mailbox: 'support@example.test', uidValidity: '1', uid: 1,
+    });
+    // The fix under test: the real stager must surface a lower-cased header
+    // bag containing the Authentication-Results the sender-auth gate reads.
+    expect(parsed.emailData.headers?.['authentication-results']).toContain('mx.example.test');
+
+    const inboxId = randomUUID();
+    const { upsertIngress } = await import('../../../../shared/services/email/inboundEmailDurableStore');
+    const ingress = await upsertIngress(db, { tenant: f.principal.tenant, provider_id: f.mailboxId, provider_type: 'imap',
+      ingress_key: inboxId, provider_pointer: { messageId } });
+    await f.sponsor.table('inbound_email_inbox').insert({
+      tenant: f.principal.tenant, inbox_id: inboxId, ingress_id: ingress.ingress_id, provider_id: f.mailboxId,
+      provider_type: 'imap', provider_message_id: parsed.providerMessageId ?? messageId,
+      rfc_message_id: parsed.rfcMessageId, normalized_message_id: parsed.normalizedMessageId,
+      status: 'received', source_sha256: parsed.emailData.sourceSha256, source_object_key: `test/header-fix/${inboxId}`,
+      source_size_bytes: rawMime.length, source_staged_at: new Date(), lease_token: null, lease_version: 1,
+      lease_owner: null, lease_expires_at: null, attempt_count: 0, envelope: '{}',
+    });
+
+    const actualProcess = await vi.importActual<typeof import('../../../../shared/services/email/processInboundEmailInApp')>(
+      '../../../../shared/services/email/processInboundEmailInApp');
+    intake.process.mockReset(); intake.process.mockImplementation(actualProcess.processInboundEmailInApp);
+    intake.read.mockReset(); intake.read.mockResolvedValue(rawMime);
+    // Reuse the already-computed real parse result rather than re-invoking the
+    // real function a second time with subtly different call args -- it is
+    // still the genuine output of `parseStagedMimeIntoEmailDetails` on real
+    // MIME bytes, so the header-derivation code path under test still runs.
+    intake.parse.mockReset(); intake.parse.mockResolvedValue(parsed);
+
+    const { processInboundInbox } = await import('../../../../shared/services/email/inboundEmailCoreProcessor');
+    let result: Awaited<ReturnType<typeof processInboundInbox>>;
+    try {
+      result = await processInboundInbox({ tenantId: f.principal.tenant, inboxId, owner: randomUUID(), leaseTtlMs: 30000,
+        mode: 'enforce', namedConversationReplyAdmission: f.admission.admitNamedConversationEmailReply });
+    } finally {
+      intake.process.mockReset(); intake.read.mockReset(); intake.parse.mockReset();
+    }
+
+    expect(result).toMatchObject({ disposition: 'ack', outcome: 'replied', ticketId: f.ticket.ticketId });
+    if (result.disposition !== 'ack' || !result.commentId) throw new Error('Expected the vendor reply to be admitted, not quarantined');
+
+    // Lands in the SOURCE VENDOR conversation (f.ref, "Carrier exchange") --
+    // not the ticket's requester conversation.
+    const vendorEvent = await f.customer.table('ticket_conversation_message_events')
+      .where({ conversation_id: f.ref.conversationId, comment_id: result.commentId }).first();
+    expect(vendorEvent).toBeTruthy();
+    const requesterConversation = (await f.conversations.listNamedTicketConversations(db, f.principal, f.ticket))
+      .find((c: any) => c.audience === 'requester');
+    expect(requesterConversation).toBeTruthy();
+    const requesterEvent = await f.customer.table('ticket_conversation_message_events')
+      .where({ conversation_id: requesterConversation!.conversationId, comment_id: result.commentId }).first();
+    expect(requesterEvent).toBeUndefined();
+    const row = await f.customer.table('comments').where('comment_id', result.commentId).first();
+    expect(row.note).toContain('We fixed the circuit issue.');
+    expect(row.note).not.toContain('ALGA-REPLY-TOKEN');
+  });
 });
 
 /** T014 (processor-level substitute — see T016's identical convention): proves
