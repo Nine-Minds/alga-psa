@@ -1,0 +1,293 @@
+[
+  {
+    "id": "F001",
+    "description": "packages/storage/src/config/storage.ts exposes a user-upload validator that keeps the current allowlist plus size behavior, extracted from validateFileUpload with no behavior change.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements/Functional/Storage provenance"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "packages/storage/src/config/storage.ts exposes a system-artifact validator that enforces provider size limits and skips the MIME allowlist entirely.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements/Functional/Storage provenance"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "StorageService.uploadStream accepts a named provenance option ('user-upload' | 'system-artifact') that selects the validator; omitting it yields user-upload behavior.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements/Functional/Storage provenance"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "StorageService.uploadFile accepts the same provenance option with the same default, leaving its image-processing branches untouched.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements/Functional/Storage provenance"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "/api/migrations/spreadsheet stores the converted AMP package as a system artifact.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements/Functional/Storage provenance"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "/api/migrations/upload stores the uploaded AMP package as a system artifact.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements/Functional/Storage provenance"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "/api/migrations/upload stores a fixed AMP MIME type instead of echoing the request content-type header.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements/Functional/Storage provenance",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "invoiceZipHandler stores the generated invoice bundle as a system artifact.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements/Functional/Storage provenance",
+      "Open Questions/2"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "documentPreviewGenerator stores thumbnail and preview renditions as system artifacts, in both the server and packages copies.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements/Functional/Storage provenance",
+      "Open Questions/2"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "telephonyCallArtifactHandler and onlineMeetingArtifactActions store fetched provider artifacts as system artifacts.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements/Functional/Storage provenance",
+      "Open Questions/2"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "A closed set of migration upload error codes is defined in one module shared by the routes and the UI.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements/Functional/Error surfacing"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "/api/migrations/spreadsheet returns only codes from that set; an unrecognized throw becomes a generic failure code.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements/Functional/Error surfacing"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "/api/migrations/upload returns only codes from that set, with the same generic fallback.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements/Functional/Error surfacing"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "A storage-layer rejection maps to a distinct code separating deployment misconfiguration from a bad file.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements/Functional/Error surfacing"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Unrecognized throws are logged server-side with tenant and route context before the generic code is returned.",
+    "implemented": true,
+    "prdRefs": [
+      "Observability"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "migrationUi exposes a code-to-copy mapping with i18n keys and default values covering every emitted code, plus a fallback for unknown codes.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements/Functional/Error surfacing",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "UploadPackageDialog renders mapped copy through that helper, replacing the single inline special case and the raw message pass-through.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Locale strings for every migration upload error code are added to the msp/settings namespace.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements/Functional/Error surfacing"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "inferSpreadsheetMapping resolves aliases from an entity-scoped table rather than one shared map, preserving current asset behavior.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements/Functional/Contact header mapping"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Alias lookup normalizes separators consistently, so a header matches whether it is spaced, underscored, or hyphenated.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements/Functional/Contact header mapping"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Contacts aliases cover the common spellings for email, first name, last name, phone, and title.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements/Functional/Contact header mapping"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Organizations aliases cover client, company, and account name spellings.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements/Functional/Contact header mapping"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "The conversion engine supports a derived-column transform, so one source header can populate more than one target column.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements/Functional/Contact header mapping"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "A single full-name contacts column splits into first and last name, handling both 'First Last' and 'Last, First'.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements/Functional/Contact header mapping"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "Contacts carry a required-column set, so a row with no name or no email is skipped at conversion with a diagnostic instead of throwing at apply.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements/Functional/Contact header mapping"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "A client or company column on a contacts sheet is carried through conversion instead of being discarded into extension_json.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements/Functional/Contact header mapping",
+      "Open Questions/1"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "The contacts applier resolves a carried client name against existing tenant clients, falling back to the configured default client.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements/Functional/Contact header mapping",
+      "Open Questions/1"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "An unmatched client name produces a diagnostic rather than rejecting the row or the job.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements/Functional/Contact header mapping",
+      "Open Questions/1"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "Conversion emits a diagnostic naming every header that did not map to a column.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "The upload dialog surfaces conversion diagnostics on a successful stage, so ignored columns are visible before apply.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "The hosted attachment allowlist is reviewed against product behavior and the finding is recorded in the scratchpad with a recommendation and the exact values-file locations.",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration",
+      "Open Questions/3"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "A spreadsheet import derives its identity namespace from the SHA-256 of the uploaded source bytes, so two different sheets never share an identity key while re-uploading identical bytes stays idempotent.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements/Functional/Identity collision"
+    ]
+  },
+  {
+    "id": "F033",
+    "description": "The migration report service exposes skip provenance: the prior jobs whose identity mappings claimed this job's skipped records, with their package digest and source file name.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements/Functional/Skip provenance"
+    ]
+  },
+  {
+    "id": "F034",
+    "description": "The results panel makes the 'same package' skip claim only when the claiming mappings came from this package; otherwise it names the prior migration or says the rows matched existing entities, and labels each skipped record's origin.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements/Functional/Skip provenance",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F035",
+    "description": "A completed job that created nothing but skipped rows is surfaced as a warning badge and a warning panel instead of a plain green Completed.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements/Functional/Skip provenance",
+      "UX / UI Notes"
+    ]
+  }
+]

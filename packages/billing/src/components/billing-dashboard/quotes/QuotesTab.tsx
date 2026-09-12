@@ -318,6 +318,7 @@ const QuotesTab: React.FC = () => {
   const opportunityClientId = searchParams?.get('clientId') ?? undefined;
   const opportunityContactId = searchParams?.get('contactId') ?? undefined;
   const opportunityTitle = searchParams?.get('title') ?? undefined;
+  const sourceTemplateId = searchParams?.get('sourceTemplateId') ?? undefined;
   const activeSubTab = requestedSubtab && QUOTE_SUBTABS.includes(requestedSubtab as QuoteSubTab)
     ? (requestedSubtab as QuoteSubTab)
     : 'active';
@@ -580,6 +581,7 @@ const QuotesTab: React.FC = () => {
           contactId: opportunityContactId,
           opportunityId,
           title: opportunityTitle,
+          sourceTemplateId,
         }}
         onCancel={() => opportunityId
           ? router.push(`/msp/opportunities/${opportunityId}`)

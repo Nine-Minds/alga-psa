@@ -793,7 +793,7 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
 
           <div>
             <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
-              {t('quickAddProduct.fields.label.label', { defaultValue: 'Label' })}
+              {t('quickAddProduct.fields.label.label', { defaultValue: 'Category Label' })}
             </label>
             <Input
               id="quick-add-product-label"

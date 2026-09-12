@@ -608,7 +608,13 @@ export class TimeEntryService extends BaseService<any> {
     const session = await knex.transaction(async (trx) => {
       const [created] = await tenantDb(trx, context.tenant).table('time_entries')
         .insert(timeEntryData)
-        .returning(['*', this.workDateProjection(trx)]);
+        .returning('*');
+      // A DATE is a calendar date, not an instant: pg hydrates the returned column
+      // into a Date in the Node process timezone, which can shift the day. Overwrite
+      // it with the timezone-local 'YYYY-MM-DD' string computed above so the response
+      // and every other consumer see the correct date. (Citus rejects non-IMMUTABLE
+      // functions such as to_char in a distributed table's RETURNING clause.)
+      created.work_date = work_date;
       await recalculateProjectTaskActualHoursForEntryChange(trx, context.tenant, null, created);
       return created;
     });

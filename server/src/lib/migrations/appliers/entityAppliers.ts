@@ -1,13 +1,14 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
-import type {
-  AmpAssetRecord,
-  AmpContactRecord,
-  AmpEntityType,
-  AmpLocationRecord,
-  AmpOrganizationRecord,
-  AmpTicketCommentRecord,
-  AmpTicketRecord,
+import {
+  AMP_CONTACT_CLIENT_NAME_EXTENSION_KEY,
+  type AmpAssetRecord,
+  type AmpContactRecord,
+  type AmpEntityType,
+  type AmpLocationRecord,
+  type AmpOrganizationRecord,
+  type AmpTicketCommentRecord,
+  type AmpTicketRecord,
 } from '@alga-psa/migration-spec';
 import { createLocation } from '@alga-psa/clients/models';
 import { ClientModel } from '@alga-psa/shared/models/clientModel';
@@ -128,6 +129,8 @@ export class ContactMigrationApplier implements EntityApplier {
     payload: Record<string, unknown>
   ): Promise<AppliedTarget> {
     const record = payload as unknown as AmpContactRecord;
+    const warnings: string[] = [];
+    const carriedClientName = readCarriedClientName(record);
 
     let clientId: string | null = null;
     if (record.organization_package_record_id) {
@@ -140,6 +143,25 @@ export class ContactMigrationApplier implements EntityApplier {
         throw new Error(
           `Owning organization ${record.organization_package_record_id} has not been applied; the contact cannot be placed.`
         );
+      }
+    } else if (carriedClientName) {
+      // A single-sheet contacts import has no organizations table to resolve
+      // against, so the carried name is matched against existing tenant clients
+      // and the configured default is the fallback. An unmatched name is a
+      // diagnostic, never a rejection.
+      clientId = await context.resolveClientByName(trx, carriedClientName);
+      if (!clientId) {
+        const fallback = context.configuration.defaultClientId ?? null;
+        if (fallback) {
+          clientId = fallback;
+          warnings.push(
+            `Client "${carriedClientName}" was not matched to an existing client; the configured default client was used.`
+          );
+        } else {
+          warnings.push(
+            `Client "${carriedClientName}" was not matched to an existing client and no default client is configured; the contact was created without a client.`
+          );
+        }
       }
     } else {
       clientId = context.configuration.defaultClientId ?? null;
@@ -163,7 +185,7 @@ export class ContactMigrationApplier implements EntityApplier {
       {
         full_name: fullName,
         email: record.email,
-        client_id: clientId,
+        client_id: clientId ?? undefined,
         role: record.title ?? undefined,
         phone_numbers: record.phone
           ? [{ phone_number: record.phone, is_default: true }]
@@ -173,7 +195,26 @@ export class ContactMigrationApplier implements EntityApplier {
       trx
     );
 
-    return { targetEntityType: this.targetEntityType, targetEntityId: contact.contact_name_id };
+    return {
+      targetEntityType: this.targetEntityType,
+      targetEntityId: contact.contact_name_id,
+      ...(warnings.length > 0 ? { warnings } : {}),
+    };
+  }
+}
+
+/** Read the carried client name stashed by the CSV converter, if any. */
+function readCarriedClientName(record: AmpContactRecord): string | null {
+  const extensionJson = record.extension_json;
+  if (typeof extensionJson !== 'string' || extensionJson.length === 0) {
+    return null;
+  }
+  try {
+    const parsed = JSON.parse(extensionJson) as Record<string, unknown>;
+    const value = parsed[AMP_CONTACT_CLIENT_NAME_EXTENSION_KEY];
+    return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
+  } catch {
+    return null;
   }
 }
 

@@ -500,6 +500,36 @@ describe('quoteActions', () => {
     expect(result).toMatchObject({ quote_id: QUOTE_ID, quote_items: templateQuote.quote_items });
   });
 
+  it('T008: createQuoteFromTemplate carries template-owned fields through to Quote.create', async () => {
+    vi.spyOn(Quote, 'getById')
+      .mockResolvedValueOnce(templateQuote as any)
+      .mockResolvedValueOnce({
+        quote_id: QUOTE_ID,
+        quote_number: 'Q-0100',
+        is_template: false,
+        quote_items: templateQuote.quote_items,
+      } as any);
+
+    const { createQuoteFromTemplate } = await import('../../src/actions/quoteActions');
+    await createQuoteFromTemplate(templateQuote.quote_id, {
+      client_id: baseQuoteInput.client_id,
+      quote_date: baseQuoteInput.quote_date,
+      valid_until: baseQuoteInput.valid_until,
+    } as any);
+
+    expect(Quote.create).toHaveBeenCalledWith(
+      mockTrx,
+      TENANT_ID,
+      expect.objectContaining({
+        title: 'Template quote',
+        description: 'Template description',
+        client_notes: 'Template note',
+        terms_and_conditions: 'Template terms',
+        currency_code: 'USD',
+      })
+    );
+  });
+
   it('T050c: createQuoteFromTemplate returns a newly numbered draft quote', async () => {
     vi.spyOn(Quote, 'getById')
       .mockResolvedValueOnce(templateQuote as any)
