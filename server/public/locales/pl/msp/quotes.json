@@ -315,7 +315,8 @@
       "title": "Tekst widoczny dla klienta",
       "subtitle": "Pojawia się na PDF, pod sumami.",
       "notes": "Uwagi dla klienta (opcjonalnie)",
-      "terms": "Warunki (opcjonalnie)"
+      "terms": "Warunki (opcjonalnie)",
+      "termsPlaceholder": "Dodaj warunki, linki i akapity…"
     },
     "moreDetails": {
       "title": "Więcej szczegółów",
