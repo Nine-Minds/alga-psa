@@ -134,10 +134,20 @@ export function listNamedTicketConversationOverview(db: Knex, actor: CoManagedSe
   return withTicketAuthority(db, actor, ticket, 'read', async context => {
     const conversations = await listAuthorizedConversations(context);
     const { readNamedConversationAttention } = await import('./namedConversationAttention');
-    const rows: Array<NamedTicketConversation & { attention: Awaited<ReturnType<typeof readNamedConversationAttention>> }> = [];
+    // F019: an "unsent draft" indicator has to be visible on every accessible
+    // row, not only the currently-selected one — checked once for read
+    // authority (constant across every candidate), not per row.
+    const draftsVisible = !isCoManagedReadFieldHidden(context.hidden, ['drafts', 'content', 'ticket_conversation_editor_drafts']);
+    const rows: Array<NamedTicketConversation & { attention: Awaited<ReturnType<typeof readNamedConversationAttention>>; hasDraft: boolean }> = [];
     for (const candidate of conversations) {
       const { conversation } = await authorizedConversation(context, candidate);
-      rows.push({ ...conversation, attention: await readNamedConversationAttention({ ...context, conversation }) });
+      let hasDraft = false;
+      if (draftsVisible) {
+        const draft = await readConversationEditorDraft<CoManagedConversationContent>({ trx: context.trx, actor: context.actor, ticket: context.ticket,
+          conversation: { storeTenant: conversation.storeTenant, conversationId: conversation.conversationId }, conversationRevision: conversation.revision });
+        hasDraft = Boolean(draft?.content);
+      }
+      rows.push({ ...conversation, attention: await readNamedConversationAttention({ ...context, conversation }), hasDraft });
     }
     return rows;
   });

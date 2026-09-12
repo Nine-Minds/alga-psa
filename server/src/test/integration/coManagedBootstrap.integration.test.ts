@@ -14163,10 +14163,11 @@ describe('named ticket conversations against migrated PostgreSQL', () => {
     expect(await sponsor.table('ticket_conversations').where('ticket_id', ticket.ticketId)).toHaveLength(1);
   });
 
-  it('replays migration without splitting roots, preserves audience/parent/content and guards mismatched root linkage', async () => {
-    const { ticket, customer, customerPrincipal } = await namedConversationFixture();
+  it('replays migration without splitting roots, preserves audience/parent/content/resolution/file/scheduled state and guards mismatched root linkage', async () => {
+    const { ticket, customer, customerPrincipal, principal, sponsor, resource } = await namedConversationFixture();
     const model = (await import('../../../../packages/tickets/src/models/comment')).default;
     const store = await import('../../../../shared/lib/tickets/namedConversations');
+    const { plainTextContent } = await import('../../../../packages/co-managed/src/conversationContent');
     const first = await model.insert(db, ticket.tenant, { ticket_id: ticket.ticketId, user_id: customerPrincipal.userId,
       author_type: 'internal', note: 'First public root', is_internal: false });
     const reply = await model.insert(db, ticket.tenant, { ticket_id: ticket.ticketId, user_id: customerPrincipal.userId,
@@ -14175,19 +14176,116 @@ describe('named ticket conversations against migrated PostgreSQL', () => {
       author_type: 'internal', note: 'Second public root', is_internal: false });
     const internal = await model.insert(db, ticket.tenant, { ticket_id: ticket.ticketId, user_id: customerPrincipal.userId,
       author_type: 'internal', note: 'Private root', is_internal: true });
+    // F095: a legacy thread whose `collaboration_audience` is set explicitly to
+    // 'shared_it' — the migration's dedicated CASE branch, not derivable from
+    // `is_internal` alone (which would otherwise fall through to the
+    // organization_private ELSE branch, as `internal` above does). `Comment.
+    // insert` now unconditionally calls `attachNativeRootToConversation` on
+    // every insert (live association, not just at migration time), so — like
+    // the private thread below — this has to be a raw insert bypassing the
+    // model to reproduce a genuinely unassociated legacy row for the migration
+    // itself to pick up.
+    const sharedThreadId = randomUUID(), sharedRootId = randomUUID();
+    await customer.table('comment_threads').insert({ tenant: ticket.tenant, thread_id: sharedThreadId, ticket_id: ticket.ticketId,
+      root_comment_id: sharedRootId, is_internal: true, reply_count: 0, last_activity_at: new Date(),
+      created_by: customerPrincipal.userId, collaboration_audience: 'shared_it', conversation_id: null });
+    await customer.table('comments').insert({ tenant: ticket.tenant, comment_id: sharedRootId, ticket_id: ticket.ticketId,
+      user_id: customerPrincipal.userId, note: 'Legacy Shared IT root', is_internal: true, is_resolution: false,
+      author_type: 'internal', markdown_content: 'Legacy Shared IT root', is_system_generated: false,
+      thread_id: sharedThreadId, parent_comment_id: null, publish_state: 'published' });
+    expect((await customer.table('comment_threads').where('thread_id', sharedThreadId).first()).conversation_id).toBeNull();
+    // F096: resolution marker, embedded file and scheduled/unpublished state on
+    // real replies, so their preservation clauses aren't vacuous.
+    await customer.table('comments').where('comment_id', first).update({ is_resolution: true });
+    const fileReplyId = await model.insert(db, ticket.tenant, { ticket_id: ticket.ticketId, user_id: customerPrincipal.userId,
+      author_type: 'internal', note: JSON.stringify([{ type: 'file', props: { url: 'https://legacy.example.test/report.txt', name: 'report.txt' } }]),
+      parent_comment_id: first, is_internal: false });
+    const scheduledReplyId = await model.insert(db, ticket.tenant, { ticket_id: ticket.ticketId, user_id: customerPrincipal.userId,
+      author_type: 'internal', note: 'Not yet published', parent_comment_id: first, is_internal: false });
+    await customer.table('comments').where('comment_id', scheduledReplyId).update({ publish_state: 'scheduled', scheduled_publish_at: new Date('2099-01-01') });
+    // F095: a genuine legacy private (cross-organization) thread. Modern
+    // private-comment creation (`mutateCoManagedPrivateTicketComment`) now
+    // auto-assigns a conversation on write, so it cannot reproduce pre-migration
+    // state; insert directly against the same schema those rows always had
+    // (root_comment_id, no conversation_id) — exactly what the private-store
+    // backfill branch (migration lines 66-73) exists to pick up.
+    const privateThreadId = randomUUID(), privateCommentId = randomUUID();
+    await sponsor.table('co_management_private_threads').insert({ tenant: principal.tenant, thread_id: privateThreadId,
+      customer_tenant: resource.tenant, relationship_id: resource.relationshipId, resource_type: resource.kind,
+      resource_id: resource.id, root_comment_id: privateCommentId });
+    await sponsor.table('co_management_private_comments').insert({ tenant: principal.tenant, comment_id: privateCommentId,
+      thread_id: privateThreadId, parent_comment_id: null, actor_user_id: principal.userId,
+      actor_display_name: 'Legacy Technician', actor_organization_name: 'Legacy Org',
+      ...plainTextContent('Legacy private cross-org thread'), revision: 1 });
+    expect((await sponsor.table('co_management_private_threads').where('thread_id', privateThreadId).first()).conversation_id).toBeNull();
+
     const before = await customer.table('comments').where('ticket_id', ticket.ticketId).orderBy('comment_id');
+    const beforeThreads = await customer.table('comment_threads').where('ticket_id', ticket.ticketId).orderBy('thread_id');
     const migration = require('../../../migrations/20260908013607_create_named_ticket_conversations.cjs');
     await migration.up(db); await migration.up(db);
     const rows = await customer.table('ticket_conversations').where('ticket_id', ticket.ticketId);
-    expect(rows).toHaveLength(2);
+    expect(rows).toHaveLength(3); // requester, organization_private (is_internal fallback), shared_it (explicit audience)
     const roots = await customer.table('comment_threads').where('ticket_id', ticket.ticketId);
     expect(new Set(roots.filter(r => !r.is_internal).map(r => r.conversation_id)).size).toBe(1);
     expect(roots.find(r => r.root_comment_id === internal).conversation_id).toBe(rows.find(r => r.audience === 'organization_private').conversation_id);
+    const sharedItRow = rows.find(r => r.audience === 'shared_it');
+    expect(sharedItRow).toMatchObject({ name: 'Shared IT', transport: 'internal', default_slot: 'shared_it' });
+    expect(roots.find(r => r.root_comment_id === sharedRootId).conversation_id).toBe(sharedItRow.conversation_id);
+    // Idempotent replay: the second `migration.up` created nothing new and moved nothing.
+    expect(await customer.table('ticket_conversations').where('ticket_id', ticket.ticketId)).toHaveLength(3);
+    // Content, parent linkage, resolution markers, embedded files and
+    // scheduled/publish state all survive byte-for-byte — snapshot both the
+    // mutated `comment_threads` (what the migration actually writes to) and
+    // `comments` (what it must never touch).
+    expect(await customer.table('comment_threads').where('ticket_id', ticket.ticketId).orderBy('thread_id'))
+      .toEqual(beforeThreads.map(row => ({ ...row, conversation_id: roots.find(r => r.thread_id === row.thread_id)!.conversation_id })));
     expect(await customer.table('comments').where('ticket_id', ticket.ticketId).orderBy('comment_id')).toEqual(before);
     expect(before.find(r => r.comment_id === reply).parent_comment_id).toBe(first);
+    expect(before.find(r => r.comment_id === first).is_resolution).toBe(true);
+    expect(before.find(r => r.comment_id === scheduledReplyId)).toMatchObject({ publish_state: 'scheduled' });
+    expect(JSON.parse(before.find(r => r.comment_id === fileReplyId)!.note ?? '[]')[0]).toMatchObject({ type: 'file', props: { name: 'report.txt' } });
+    // The private thread is now associated with a NEW organization_private
+    // container in its own (sponsor) store — never merged into the native
+    // store's organization_private container asserted above.
+    const disclosedPrivate = await sponsor.table('co_management_private_threads').where('thread_id', privateThreadId).first();
+    expect(disclosedPrivate.conversation_id).toBeTruthy();
+    const privateConversation = await sponsor.table('ticket_conversations').where('conversation_id', disclosedPrivate.conversation_id).first();
+    expect(privateConversation).toMatchObject({ audience: 'organization_private', ticket_tenant: ticket.tenant, ticket_id: ticket.ticketId, relationship_id: ticket.relationshipId });
+    expect(privateConversation.conversation_id).not.toBe(rows.find(r => r.audience === 'organization_private').conversation_id);
     await expect(db.transaction(trx => store.attachNativeRootToConversation({ trx, ticket, storeTenant: ticket.tenant },
       roots.find(r => r.root_comment_id === internal).thread_id, rows.find(r => r.audience === 'requester').conversation_id))).rejects.toMatchObject({ code: 'CONVERSATION_CONFLICT' });
     await expect(migration.down(db)).rejects.toThrow('Cannot discard retained named ticket conversations');
+  });
+
+  // F098: a genuinely inconsistent migrated row — the DB itself enforces
+  // `comment_threads.is_internal = (collaboration_audience <> 'requester')`
+  // (`comment_threads_collaboration_audience_check`), so the exploitable
+  // inconsistency is between the THREAD's `is_internal` and its ROOT
+  // COMMENT's `is_internal` disagreeing (the migration's `valid` guard's
+  // `NOT EXISTS ... c.is_internal IS DISTINCT FROM t.is_internal` clause) —
+  // messy legacy data no consistency check ever prevented. It must stay
+  // unassigned rather than being guessed into any container.
+  it('leaves an inconsistent legacy thread unassigned rather than broadening its visibility into any conversation', async () => {
+    const { ticket, customer, customerPrincipal } = await namedConversationFixture();
+    const threadId = randomUUID(), commentId = randomUUID();
+    await customer.table('comment_threads').insert({ tenant: ticket.tenant, thread_id: threadId, ticket_id: ticket.ticketId,
+      root_comment_id: commentId, is_internal: false, reply_count: 0, last_activity_at: new Date(),
+      created_by: customerPrincipal.userId, collaboration_audience: null, conversation_id: null });
+    await customer.table('comments').insert({ tenant: ticket.tenant, comment_id: commentId, ticket_id: ticket.ticketId,
+      user_id: customerPrincipal.userId, note: 'Inconsistent legacy root', is_internal: true, is_resolution: false,
+      author_type: 'internal', markdown_content: 'Inconsistent legacy root', is_system_generated: false,
+      thread_id: threadId, parent_comment_id: null, publish_state: 'published' });
+    const migration = require('../../../migrations/20260908013607_create_named_ticket_conversations.cjs');
+    await migration.up(db);
+    const after = await customer.table('comment_threads').where('thread_id', threadId).first();
+    expect(after.conversation_id).toBeNull();
+    const api = await import('../../../../packages/co-managed/src/namedTicketConversations');
+    const conversations = await api.listNamedTicketConversations(db, customerPrincipal, ticket);
+    for (const conversation of conversations) {
+      const messages = await api.getNamedTicketConversationMessages(db, customerPrincipal, ticket,
+        { storeTenant: conversation.storeTenant, conversationId: conversation.conversationId });
+      expect(messages.items.map(item => item.commentId)).not.toContain(commentId);
+    }
   });
 });
 
@@ -14235,6 +14333,36 @@ describe('named ticket conversation editor drafts against migrated PostgreSQL', 
     await expect(api.getNamedConversationEditorDraft(db, principal, ticket, reference)).rejects.toThrow();
     await expect(api.saveNamedConversationEditorDraft(db, principal, ticket, reference,
       { ...request, operationId: randomUUID(), expectedRevision: 2, expectedConversationRevision: 2 })).rejects.toThrow();
+  });
+
+  // F013: the prior test proves the backend fails closed on a permission
+  // change (board scope removed). This proves the same for a resource
+  // *identity* change (the co-managed relationship the private conversation
+  // is qualified by terminating) — both the previously visible published
+  // content AND the author's own private draft state stop being served,
+  // rather than remaining readable through a stale relationship reference.
+  it('clears inaccessible visible content and private draft state once the qualifying relationship terminates', async () => {
+    const { conversations: api, principal, ticket, customer } = await namedConversationFixture();
+    const privateApi = await import('../../../../packages/co-managed/src/privateTicketConversation');
+    const side = await api.createNamedTicketConversation(db, principal, ticket,
+      { operationId: randomUUID(), name: 'Vendor coordination', audience: 'organization_private', transport: 'internal' });
+    const ref = { storeTenant: side.storeTenant, conversationId: side.conversationId };
+    const draft = await api.saveNamedConversationEditorDraft(db, principal, ticket, ref, { operationId: randomUUID(),
+      expectedRevision: 0, expectedConversationRevision: side.revision, content: { text: 'Draft before termination' } });
+    expect(draft.content).toEqual({ text: 'Draft before termination' });
+    await privateApi.mutateCoManagedPrivateTicketComment(db, principal,
+      { kind: 'ticket', tenant: ticket.tenant, id: ticket.ticketId, relationshipId: ticket.relationshipId! },
+      { operationId: randomUUID(), kind: 'create', text: 'Visible before termination' }, { conversationId: side.conversationId });
+    expect((await api.getNamedTicketConversationMessages(db, principal, ticket, ref)).items).toHaveLength(1);
+    await customer.table('co_management_relationships').where('relationship_id', ticket.relationshipId).update({ state: 'terminated', ended_at: new Date() });
+    // Previously visible content no longer reads through the ended relationship...
+    await expect(api.getNamedTicketConversationMessages(db, principal, ticket, ref)).rejects.toThrow();
+    // ...and neither does the author's own private draft state, though nothing was deleted.
+    await expect(api.getNamedConversationEditorDraft(db, principal, ticket, ref)).rejects.toThrow();
+    await expect(api.saveNamedConversationEditorDraft(db, principal, ticket, ref,
+      { operationId: randomUUID(), expectedRevision: draft.revision, expectedConversationRevision: side.revision, content: { text: 'Should never persist' } })).rejects.toThrow();
+    expect(await tenantDb(db, ref.storeTenant).table('ticket_conversation_editor_drafts').where('conversation_id', ref.conversationId).first())
+      .toMatchObject({ content: draft.content });
   });
 });
 
@@ -14423,6 +14551,39 @@ describe('named ticket conversation relationship defaults against migrated Postg
     expect((await ensure(replacement)).conversationId).toBe(current.conversationId);
     await expect(migration.down(db)).rejects.toThrow('Cannot collapse retained relationship-specific conversation defaults');
   });
+
+  // F097: the test above races the low-level storage function directly. This
+  // races the actual LEGACY WRITE path instead — two concurrent `Comment.
+  // insert` calls creating brand-new public roots on a ticket that has no
+  // requester conversation yet — so the live `attachNativeRootToConversation`
+  // default-creation-on-write behaves idempotently under a real write race,
+  // not just concurrent reads of an already-created default.
+  it('serializes concurrent legacy comment writes into exactly one default conversation per audience', async () => {
+    const { ticket, customer, customerPrincipal } = await namedConversationFixture();
+    const model = (await import('../../../../packages/tickets/src/models/comment')).default;
+    const [publicId, sideId] = await Promise.all([
+      model.insert(db, ticket.tenant, { ticket_id: ticket.ticketId, user_id: customerPrincipal.userId,
+        author_type: 'internal', note: 'Concurrent public root A', is_internal: false }),
+      model.insert(db, ticket.tenant, { ticket_id: ticket.ticketId, user_id: customerPrincipal.userId,
+        author_type: 'internal', note: 'Concurrent public root B', is_internal: false }),
+    ]);
+    const [privateFirstId, privateSecondId] = await Promise.all([
+      model.insert(db, ticket.tenant, { ticket_id: ticket.ticketId, user_id: customerPrincipal.userId,
+        author_type: 'internal', note: 'Concurrent private root A', is_internal: true }),
+      model.insert(db, ticket.tenant, { ticket_id: ticket.ticketId, user_id: customerPrincipal.userId,
+        author_type: 'internal', note: 'Concurrent private root B', is_internal: true }),
+    ]);
+    const rows = await customer.table('ticket_conversations').where('ticket_id', ticket.ticketId);
+    expect(rows.filter(row => row.audience === 'requester')).toHaveLength(1);
+    expect(rows.filter(row => row.audience === 'organization_private')).toHaveLength(1);
+    const requesterId = rows.find(row => row.audience === 'requester')!.conversation_id;
+    const privateId = rows.find(row => row.audience === 'organization_private')!.conversation_id;
+    const threads = await customer.table('comment_threads').whereIn('root_comment_id', [publicId, sideId, privateFirstId, privateSecondId]);
+    expect(threads.find(row => row.root_comment_id === publicId)!.conversation_id).toBe(requesterId);
+    expect(threads.find(row => row.root_comment_id === sideId)!.conversation_id).toBe(requesterId);
+    expect(threads.find(row => row.root_comment_id === privateFirstId)!.conversation_id).toBe(privateId);
+    expect(threads.find(row => row.root_comment_id === privateSecondId)!.conversation_id).toBe(privateId);
+  });
 });
 
 describe('named ticket conversation internal publication against migrated PostgreSQL', () => {
@@ -14527,6 +14688,102 @@ describe('named ticket conversation internal publication against migrated Postgr
   });
 });
 
+// F016/F099: no dedicated "archive"/"export" feature exists in this codebase
+// distinct from tenant deletion (`ee/temporal-workflows/src/activities/
+// tenant-deletion-activities.ts`, which has no existing test harness and pulls
+// in the Temporal SDK — out of reach for this integration file). This proves
+// the concrete, checkable claim that registration gives us: real rows in every
+// named-conversation-owning table, created through actual application actions
+// (not hand-crafted), delete cleanly with zero FK violations in the exact
+// relative order that file's ordered table list uses (reproduced verbatim
+// below, comments cite the source lines) — the thing that would actually
+// break tenant deletion if the ordering were wrong. It does not exercise the
+// Temporal activity function itself.
+describe('named ticket conversation ownership-aware deletion ordering against migrated PostgreSQL', () => {
+  it('deletes every named-conversation-owning table for a ticket with zero FK violations in tenant-deletion order', async () => {
+    const { conversations: api, principal, customerPrincipal, ticket, customer, sponsor } = await namedConversationFixture();
+    const mail = await import('../../../../packages/co-managed/src/conversationMailboxes');
+    const { postNamedTicketConversation } = await import('../../../../packages/tickets/src/lib/postNamedTicketConversation');
+
+    // Real rows via real actions: a Shared IT Post (comments/comment_threads/
+    // publications/message_events), a mailbox + sender grant on a vendor
+    // conversation (sender_grants), a leftover draft (editor_drafts), and a
+    // genuine private cross-org thread (co_management_private_threads/comments).
+    const shared = await api.createNamedTicketConversation(db, principal, ticket,
+      { operationId: randomUUID(), name: 'Ownership deletion Shared IT', audience: 'shared_it', transport: 'internal' });
+    const sharedRef = { storeTenant: shared.storeTenant, conversationId: shared.conversationId };
+    await api.saveNamedConversationEditorDraft(db, principal, ticket, sharedRef, { operationId: randomUUID(),
+      expectedRevision: 0, expectedConversationRevision: shared.revision, content: { text: 'Posted content' } });
+    const posted = await postNamedTicketConversation(db, principal, ticket, sharedRef,
+      { operationId: randomUUID(), expectedDraftRevision: 1, expectedConversationRevision: shared.revision });
+    expect(await customer.table('ticket_conversation_publications').where('operation_id', posted.commentId)).toHaveLength(1);
+    expect(await customer.table('ticket_conversation_message_events').where('comment_id', posted.commentId)).toHaveLength(1);
+
+    const vendor = await api.createNamedTicketConversation(db, principal, ticket,
+      { operationId: randomUUID(), name: 'Ownership deletion vendor', audience: 'organization_private', transport: 'email' });
+    const vendorRef = { storeTenant: vendor.storeTenant, conversationId: vendor.conversationId };
+    const mailboxId = randomUUID();
+    await sponsor.table('email_providers').insert({ tenant: principal.tenant, id: mailboxId, provider_type: 'imap',
+      provider_name: 'Ownership deletion mailbox', mailbox: 'ownership-deletion@example.test', status: 'connected', is_active: true });
+    await mail.selectNamedConversationMailbox(db, principal, ticket, vendorRef, 1, mailboxId);
+    await mail.setNamedConversationSenderGrant(db, principal, ticket, vendorRef,
+      { expectedRevision: 2, granteeTenant: customerPrincipal.tenant, granteeUserId: customerPrincipal.userId, enabled: true });
+    expect(await sponsor.table('ticket_conversation_sender_grants').where('conversation_id', vendor.conversationId)).toHaveLength(1);
+
+    const privateThreadId = randomUUID(), privateCommentId = randomUUID();
+    await sponsor.table('co_management_private_threads').insert({ tenant: principal.tenant, thread_id: privateThreadId,
+      customer_tenant: ticket.tenant, relationship_id: ticket.relationshipId, resource_type: 'ticket',
+      resource_id: ticket.ticketId, root_comment_id: privateCommentId });
+    await sponsor.table('co_management_private_comments').insert({ tenant: principal.tenant, comment_id: privateCommentId,
+      thread_id: privateThreadId, parent_comment_id: null, actor_user_id: principal.userId,
+      actor_display_name: 'Ownership Deletion Technician', actor_organization_name: 'Ownership Deletion Org',
+      note: JSON.stringify([{ type: 'paragraph', content: [{ type: 'text', text: 'Private thread', styles: {} }] }]),
+      markdown_content: 'Private thread', revision: 1 });
+
+    // Reproduced verbatim from tenant-deletion-activities.ts (lines ~149, 155,
+    // 399-401). Real tenant deletion scopes by `tenant` alone (a full-tenant
+    // wipe, table by table) — not by ticket_id, which not every one of these
+    // tables even has (e.g. `ticket_conversation_preferences` keys on
+    // conversation_id, not ticket_id). These co-managed tables are owned by
+    // whichever store created the conversation (here: the sponsor, for the
+    // Shared IT/vendor conversations above), so a real deletion pass has to
+    // run per-tenant. Deliberately over-inclusive: tables this test didn't
+    // populate delete as harmless no-ops, so the FULL registered order is
+    // exercised, not just the subset this fixture happens to touch. This is
+    // the last thing this test does, so wiping full tenant data is safe.
+    const coManagedOrder = [
+      'ticket_conversation_notification_receipts', 'ticket_conversation_message_events', 'ticket_conversation_preferences',
+      'ticket_conversation_reply_resolutions', 'ticket_conversation_email_correspondents', 'ticket_conversation_inbound_receipts',
+      'ticket_conversation_inbound_messages', 'ticket_conversation_email_routes', 'ticket_conversation_email_operations',
+      'ticket_conversation_sender_grants', 'ticket_conversation_publications', 'ticket_conversation_shares',
+      'ticket_conversation_ai_runs', 'ticket_conversation_editor_drafts',
+    ];
+    for (const table of coManagedOrder) {
+      await customer.table(table).where('tenant', ticket.tenant).del();
+      await sponsor.table(table).where('tenant', principal.tenant).del();
+      expect(await customer.table(table).where('tenant', ticket.tenant)).toEqual([]);
+      expect(await sponsor.table(table).where('tenant', principal.tenant)).toEqual([]);
+    }
+    // comment_reactions, vectors, email_reply_tokens, comments, comment_threads —
+    // native tables, always in the ticket's own (customer) tenant.
+    for (const table of ['comment_reactions', 'vectors', 'email_reply_tokens', 'comments', 'comment_threads'])
+      await customer.table(table).where('tenant', ticket.tenant).del();
+    expect(await customer.table('comments').where('tenant', ticket.tenant)).toEqual([]);
+    expect(await customer.table('comment_threads').where('tenant', ticket.tenant)).toEqual([]);
+
+    // co_management_private_comments, co_management_private_threads, ticket_conversations
+    // (tenant-deletion-activities.ts lines 399-401) — in that exact order.
+    await sponsor.table('co_management_private_comments').where('tenant', principal.tenant).del();
+    await sponsor.table('co_management_private_threads').where('tenant', principal.tenant).del();
+    await customer.table('ticket_conversations').where('tenant', ticket.tenant).del();
+    await sponsor.table('ticket_conversations').where('tenant', principal.tenant).del();
+
+    expect(await customer.table('ticket_conversations').where('tenant', ticket.tenant)).toEqual([]);
+    expect(await sponsor.table('ticket_conversations').where('tenant', principal.tenant)).toEqual([]);
+    expect(await sponsor.table('co_management_private_threads').where('tenant', principal.tenant)).toEqual([]);
+  });
+});
+
 describe('named ticket conversation mailbox authority against migrated PostgreSQL', () => {
   it('retains the originating mailbox across handoff and requires explicit grants for Shared IT senders', async () => {
     const { conversations: api, principal, customerPrincipal, ticket, customer, sponsor } = await namedConversationFixture();
@@ -14587,6 +14844,50 @@ describe('named ticket conversation mailbox authority against migrated PostgreSQ
     await expect(mail.withNamedConversationMailbox(db, principal, ticket, ref, revoked.revision, called)).rejects.toThrow();
     expect(called).toHaveBeenCalledOnce();
     expect(await customer.table('ticket_conversation_sender_grants')).toHaveLength(0);
+  });
+
+  // T013: the other mailbox-authority tests in this block check revocation
+  // either before confirm or as a standalone `withNamedConversationMailbox`
+  // probe. This drives an actual confirm (producing a genuinely queued
+  // 'pending' send) and revokes the grant afterward, so the gap between
+  // "queued" and "delivered" is covered too.
+  it('revoking a queued sender grant between confirm and deliver blocks delivery without ever sending', async () => {
+    const { conversations: api, principal, customerPrincipal, ticket, sponsor } = await namedConversationFixture();
+    const mail = await import('../../../../packages/co-managed/src/conversationMailboxes');
+    const email = await import('../../../../packages/co-managed/src/conversationEmailOperations');
+    const { applyNamedTicketConversationPost } = await import('../../../../packages/tickets/src/lib/postNamedTicketConversation');
+    const { previewReviewedEmail } = await import('../../../../packages/email/src/reviewedEmail');
+    const mailboxId = randomUUID();
+    await sponsor.table('email_providers').insert({ tenant: principal.tenant, id: mailboxId, provider_type: 'imap',
+      provider_name: 'Support intake', mailbox: 'support@example.test', status: 'connected', is_active: true });
+    const conversation = await api.createNamedTicketConversation(db, principal, ticket,
+      { operationId: randomUUID(), name: 'Carrier support', audience: 'shared_it', transport: 'email' });
+    const ref = { storeTenant: conversation.storeTenant, conversationId: conversation.conversationId };
+    const bound = await mail.selectNamedConversationMailbox(db, principal, ticket, ref, 1, mailboxId);
+    const granted = await mail.setNamedConversationSenderGrant(db, principal, ticket, ref,
+      { expectedRevision: bound.revision, granteeTenant: customerPrincipal.tenant, granteeUserId: customerPrincipal.userId, enabled: true });
+    await api.saveNamedConversationEditorDraft(db, customerPrincipal, ticket, ref, { operationId: randomUUID(), expectedRevision: 0,
+      expectedConversationRevision: granted.revision, content: { text: 'Queued before grant revocation' },
+      email: { subject: 'Carrier update', to: ['vendor@example.test'], cc: [] } });
+    const provider = { providerId: 'test-provider', providerType: 'smtp' };
+    const send = vi.fn(async () => ({ success: true, metadata: { deliveryStatus: 'delivered' } }));
+    const recheck = vi.fn(async (payload: any) => previewReviewedEmail(payload, provider, 'a'.repeat(64)));
+    const transport = { send, recheck, prepare: vi.fn(async ({ mailbox, content, envelope, headers, replyToken }: any) => {
+      const payload = { from: { email: mailbox.email }, replyTo: { email: mailbox.email }, ...envelope, headers,
+        text: `${content.text}\n[ALGA-REPLY-TOKEN ${replyToken}]`, html: `<p>${content.text}</p>` };
+      return { payload, review: await recheck(payload) };
+    }) };
+    const request = { operationId: randomUUID(), expectedDraftRevision: 1, expectedConversationRevision: granted.revision };
+    const review = await email.prepareNamedConversationEmail(db, customerPrincipal, ticket, ref, request, transport);
+    const confirmed = await email.confirmNamedConversationEmail(db, customerPrincipal, ticket, ref, request.operationId, review.review.messageHash, transport, applyNamedTicketConversationPost);
+    expect(confirmed.status).toBe('pending');
+    expect(send).not.toHaveBeenCalled();
+    // Revoke the grant now — the message is queued (confirmed) but not yet delivered.
+    const current = await api.getNamedTicketConversation(db, principal, ticket, ref);
+    await mail.setNamedConversationSenderGrant(db, principal, ticket, ref,
+      { expectedRevision: current.revision, granteeTenant: customerPrincipal.tenant, granteeUserId: customerPrincipal.userId, enabled: false });
+    await expect(email.deliverNamedConversationEmail(db, customerPrincipal, ticket, ref, request.operationId, transport)).rejects.toThrow();
+    expect(send).not.toHaveBeenCalled();
   });
 });
 
@@ -14933,6 +15234,49 @@ describe('named ticket conversation side-reply board reopen policy against migra
     expect(requester.status).toBe('open');
     expect(await api.countOpenExternalConversations(db, principal, ticket)).toBe(0);
   });
+
+  // F065: a cutoff-exceeded side reply routes into an equivalent side
+  // conversation on a fresh follow-up ticket, rather than reopening — or
+  // silently attaching to — the closed original.
+  it.each(['shared_it', 'organization_private'] as const)('routes a cutoff-exceeded side reply into an equivalent side conversation on a follow-up ticket (%s)', async audience => {
+    const f = await namedInboundFixture(audience);
+    const ticketBefore = await f.customer.table('tickets').where('ticket_id', f.ticket.ticketId).first();
+    const boardId = ticketBefore.board_id;
+    const closedStatus = await f.customer.table('statuses').where({ board_id: boardId, item_type: 'ticket', is_closed: true }).first();
+    await f.customer.table('boards').where('board_id', boardId).update({ inbound_reply_reopen_enabled: true,
+      inbound_reply_reopen_cutoff_hours: 1, inbound_reply_ai_ack_suppression_enabled: false, inbound_reply_reopen_side_conversations_enabled: true });
+    await f.customer.table('tickets').where('ticket_id', f.ticket.ticketId).update({ status_id: closedStatus.status_id, is_closed: true,
+      closed_at: new Date(Date.now() - 7200000).toISOString() }); // 2h ago, cutoff is 1h — exceeded.
+    const input = await f.makeInput();
+    const accepted = await db.transaction(trx => f.admission.admitNamedConversationEmailReply(trx, input));
+    expect(accepted).toMatchObject({ outcome: 'replied' });
+    if (!accepted || accepted.outcome !== 'replied') throw new Error('Expected a follow-up reply');
+    // The original ticket is untouched: still closed, no new comment landed there
+    // (the fixture's own setup already published one prior message on `f.ref`,
+    // so this asserts the count is unchanged, not vacuously zero).
+    expect(await f.customer.table('tickets').where('ticket_id', f.ticket.ticketId).first()).toMatchObject({ is_closed: true, status_id: closedStatus.status_id });
+    expect(accepted.ticketId).not.toBe(f.ticket.ticketId);
+    const originalMessages = await f.conversations.getNamedTicketConversationMessages(db, f.principal, f.ticket, f.ref);
+    expect(originalMessages.items.map(item => item.commentId)).not.toContain(accepted.commentId);
+    expect(originalMessages.items).toHaveLength(1);
+    // The follow-up ticket is a real, open, cloned ticket.
+    const followupTicket = await f.customer.table('tickets').where('ticket_id', accepted.ticketId).first();
+    expect(followupTicket).toMatchObject({ board_id: ticketBefore.board_id, client_id: ticketBefore.client_id, is_closed: false });
+    expect(followupTicket.title).toContain(ticketBefore.title);
+    // An equivalent side conversation — same name/audience/mailbox — exists on it.
+    const owner = audience === 'shared_it' ? f.customer : f.sponsor;
+    const followupConversation = await owner.table('ticket_conversations').where('ticket_id', accepted.ticketId).first();
+    const originalConversation = await owner.table('ticket_conversations').where('conversation_id', f.ref.conversationId).first();
+    expect(followupConversation).toMatchObject({ name: originalConversation.name, audience,
+      transport: 'email', mailbox_tenant: f.principal.tenant, mailbox_id: f.mailboxId });
+    const followupRef = { storeTenant: followupConversation.tenant, conversationId: followupConversation.conversation_id };
+    const followupTicketRef = { tenant: f.ticket.tenant, ticketId: accepted.ticketId, relationshipId: f.ticket.relationshipId };
+    const page = await f.conversations.getNamedTicketConversationMessages(db, f.principal, followupTicketRef, followupRef);
+    expect(page.items).toHaveLength(1);
+    expect(page.items[0]).toMatchObject({ commentId: accepted.commentId, parentCommentId: null });
+    // No board-reopen or bundle side effects were triggered by this routing.
+    expect(await f.customer.table('ticket_audit_logs').where({ ticket_id: f.ticket.ticketId, event_type: 'TICKET_REOPENED' })).toHaveLength(0);
+  });
 });
 
 describe('named ticket conversation correspondent reservations against migrated PostgreSQL', () => {
@@ -15129,9 +15473,17 @@ describe('named ticket conversation received files against migrated PostgreSQL',
       const generic = await f.owner.table('external_files');
       const before = await f.conversations.getNamedTicketConversation(db, f.principal, f.ticket, f.ref);
       expect(f.artifacts).toHaveLength(2);
+      // T017: race two workers claiming the SAME artifact key concurrently
+      // (not sequentially) — the fenced claim serializes them (one wins with
+      // 'ack', the other is told 'retry' rather than erroring or duplicating),
+      // and draining the retry still yields exactly one real upload — proving
+      // the dedup holds under actual concurrent import, not just repeated
+      // single-threaded retries.
       for (const artifact of f.artifacts) {
-        expect(await f.process(artifact.artifact_key)).toMatchObject({ disposition: 'ack' });
-        expect(await f.process(artifact.artifact_key)).toMatchObject({ disposition: 'ack' });
+        const concurrent = await Promise.all([f.process(artifact.artifact_key), f.process(artifact.artifact_key)]);
+        for (const result of concurrent) expect(['ack', 'retry']).toContain((result as any).disposition);
+        expect(concurrent.map(r => (r as any).disposition)).toContain('ack');
+        for (const result of concurrent) if ((result as any).disposition === 'retry') expect(await f.process(artifact.artifact_key)).toMatchObject({ disposition: 'ack' });
       }
       expect(artifactStorage.upload).toHaveBeenCalledOnce();
       const { getNamedConversationAttention } = await import('../../../../packages/co-managed/src/namedConversationAttention');
@@ -15390,6 +15742,61 @@ describe('named ticket conversation file publication against migrated PostgreSQL
       expect(send).toHaveBeenCalledTimes(1);
     } finally { instance.mockRestore(); provider.mockRestore(); }
   });
+
+  // F044: the transport renders only the currently reviewed draft. Every other
+  // reviewed-email test either supplies the body via a hand-built `prepare`
+  // mock or sends into a conversation with no prior published messages, so
+  // none of them can catch the real transport accidentally pulling in history.
+  // This drives the actual `namedConversationEmailTransport` twice against a
+  // conversation that genuinely has a prior published message by the time the
+  // second review/send happens, and asserts the first message's exact text
+  // never appears in the second's rendered payload.
+  it.each(['shared_it', 'requester'] as const)('real transport renders only the newest reviewed draft, never a prior published message in the same conversation (%s)', async kind => {
+    const f = await namedPublicationFilesFixture(kind);
+    const { namedConversationEmailTransport: transport } = await import('../../../../packages/tickets/src/lib/namedConversationEmail');
+    const { TenantEmailService } = await import('@alga-psa/email');
+    const { previewReviewedEmail } = await import('../../../../packages/email/src/reviewedEmail');
+    const sent: any[] = [];
+    const send = vi.fn(async (message: any) => { sent.push(message); return { success: true, metadata: { deliveryStatus: 'delivered' } }; });
+    const instance = vi.spyOn(TenantEmailService, 'getInstance').mockReturnValue({
+      prepareReviewedEmail: async (message: any) => previewReviewedEmail(message, { providerId: 'smtp-test', providerType: 'smtp' }, 'a'.repeat(64)), sendEmail: send,
+    } as any);
+    try {
+      const firstMarker = 'PRIOR-CONFIDENTIAL-MARKER the original fault diagnosis details';
+      // The fixture already saved `f.draft` at revision 1; overwrite it with a
+      // fresh operation identity (reusing the same one with different content
+      // would look like a retry of a different request and conflict).
+      await f.conversations.saveNamedConversationEditorDraft(db, f.principal, f.ticket, f.ref, { operationId: randomUUID(),
+        expectedRevision: 1, expectedConversationRevision: f.draft.expectedConversationRevision, content: { text: firstMarker }, email: f.draft.email });
+      const firstRequest = { operationId: randomUUID(), expectedDraftRevision: 2, expectedConversationRevision: f.draft.expectedConversationRevision };
+      const firstReview = await f.email.prepareNamedConversationEmail(db, f.principal, f.ticket, f.ref, firstRequest, transport);
+      await f.email.confirmNamedConversationEmail(db, f.principal, f.ticket, f.ref, firstRequest.operationId, firstReview.review.messageHash, transport, f.publish);
+      await f.email.deliverNamedConversationEmail(db, f.principal, f.ticket, f.ref, firstRequest.operationId, transport);
+      expect(send).toHaveBeenCalledTimes(1);
+      expect(sent[0].text).toContain(firstMarker);
+      // Prove the conversation genuinely now has a prior published message —
+      // otherwise a vacuous "no leak" assertion below would prove nothing.
+      expect((await f.conversations.getNamedTicketConversationMessages(db, f.principal, f.ticket, f.ref)).items).toHaveLength(1);
+
+      const secondMarker = 'SECOND-UNRELATED-MARKER a brand new replacement-part update';
+      const conversation = await f.conversations.getNamedTicketConversation(db, f.principal, f.ticket, f.ref);
+      const priorDraft = await f.conversations.getNamedConversationEditorDraft(db, f.principal, f.ticket, f.ref);
+      await f.conversations.saveNamedConversationEditorDraft(db, f.principal, f.ticket, f.ref, { operationId: randomUUID(),
+        expectedRevision: priorDraft?.revision ?? 0, expectedConversationRevision: conversation.revision,
+        content: { text: secondMarker }, email: f.draft.email });
+      const secondDraft = await f.conversations.getNamedConversationEditorDraft(db, f.principal, f.ticket, f.ref);
+      const secondRequest = { operationId: randomUUID(), expectedDraftRevision: secondDraft!.revision, expectedConversationRevision: conversation.revision };
+      const secondReview = await f.email.prepareNamedConversationEmail(db, f.principal, f.ticket, f.ref, secondRequest, transport);
+      await f.email.confirmNamedConversationEmail(db, f.principal, f.ticket, f.ref, secondRequest.operationId, secondReview.review.messageHash, transport, f.publish);
+      await f.email.deliverNamedConversationEmail(db, f.principal, f.ticket, f.ref, secondRequest.operationId, transport);
+      expect(send).toHaveBeenCalledTimes(2);
+      const secondPayload = sent[1];
+      expect(secondPayload.text).toContain(secondMarker);
+      expect(secondPayload.text).not.toContain(firstMarker);
+      expect(secondPayload.html).not.toContain(firstMarker);
+      expect((await f.conversations.getNamedTicketConversationMessages(db, f.principal, f.ticket, f.ref)).items).toHaveLength(2);
+    } finally { instance.mockRestore(); }
+  });
 });
 
 
@@ -15465,6 +15872,40 @@ it('named requester publication adapter preserves canonical response effects and
   expect(commentEvent.payload.suppressInternalNotifications).not.toBe(true);
   expect(publish.mock.calls.map(([event]: any[]) => event.eventType)).toEqual(['TICKET_RESPONSE_STATE_CHANGED', 'TICKET_COMMENT_ADDED']);
   expect(workflow.mock.calls.map(([event]: any[]) => event.eventType)).toEqual(['TICKET_MESSAGE_ADDED']);
+}));
+
+// F058: joins the two halves of this guarantee. The requester test above
+// (`commentEvent.payload.suppressInternalNotifications).not.toBe(true)`)
+// proves the flag is absent for requester posts; this proves it is actually
+// present — `true`, not merely non-false — on a real, non-hand-built
+// `TICKET_COMMENT_ADDED` event from an actual Shared IT post, so the legacy
+// generic notification fanout (which only this flag suppresses) cannot
+// double-deliver a side-conversation message the named fanout already owns.
+it('named Shared IT post sets suppressInternalNotifications on the real published event, unlike requester (F058)', async () => withSharedTicketMutationFixture(async ({
+  customerPrincipal, resource, customer, publish,
+}) => {
+  const api = await import('../../../../packages/co-managed/src/namedTicketConversations');
+  const { applyNamedTicketConversationPost } = await import('../../../../packages/tickets/src/lib/postNamedTicketConversation');
+  const { assertCoManagedSessionUnexpired } = await import('../../../../packages/co-managed/src/sharedWorkIdentity');
+  const ticket = { tenant: resource.tenant, ticketId: resource.id, relationshipId: resource.relationshipId };
+  const side = await api.createNamedTicketConversation(db, customerPrincipal, ticket,
+    { operationId: randomUUID(), name: 'Internal diagnosis', audience: 'shared_it', transport: 'internal' });
+  const ref = { storeTenant: side.storeTenant, conversationId: side.conversationId };
+  const before = await customer.table('tickets').where('ticket_id', resource.id).first('response_state');
+  const id = randomUUID();
+  await api.withNamedTicketConversation(db, customerPrincipal, ticket, ref, 'update', context =>
+    applyNamedTicketConversationPost({ ...context, canUpdateResponseState: true,
+      assertWriteAuthority: async trx => { expect(trx).toBe(context.trx); await assertCoManagedSessionUnexpired(trx, customerPrincipal); } },
+    { comment_id: id, ticket_id: ticket.ticketId, thread_id: id, parent_comment_id: null, note: 'Internal-only diagnostic update',
+      markdown_content: 'Internal-only diagnostic update', is_internal: true, is_resolution: false, author_type: 'internal', user_id: customerPrincipal.userId, publish_state: 'published' }));
+  expect(await customer.table('comment_threads').where('thread_id', id).first()).toMatchObject({ conversation_id: side.conversationId });
+  const commentEvent = publish.mock.calls.map(([event]: any[]) => event).find((event: any) => event.eventType === 'TICKET_COMMENT_ADDED');
+  expect(commentEvent).toMatchObject({ payload: { suppressInternalNotifications: true, comment: { audience: 'shared_it', isInternal: true } } });
+  // F057/F066: side activity never touches the requester response-state/SLA
+  // tracking it rode alongside — nor does it write a generic customer-visible
+  // activity row (only the requester path above wrote TICKET_MESSAGE_ADDED).
+  expect(await customer.table('tickets').where('ticket_id', resource.id).first('response_state')).toEqual(before);
+  expect(await customer.table('ticket_audit_logs').where('entity_id', id)).toEqual([]);
 }));
 
 
@@ -17783,19 +18224,31 @@ describe('ticket conversation AI participation against migrated PostgreSQL', () 
     expect(await f.conversations.getNamedConversationEditorDraft(db, f.actor, f.ticket, f.target)).toEqual(edited);
   });
 
-  it.each(['source', 'audience', 'identity'] as const)('publishes neither prompt nor output when %s changes during inference', async change => {
+  // F094: output/citations are reauthorized against current source, audience,
+  // identity AND grant on completion — a mid-inference change in any one of
+  // the four must still refuse to publish. 'grant' exercises the PRD's
+  // explicitly-named collaboration authority, not just session/user identity.
+  it.each(['source', 'audience', 'identity', 'grant'] as const)('publishes neither prompt nor output when %s changes during inference', async change => {
     const f = await namedAiParticipationFixture('private');
     const count = (await f.history()).items.length;
     f.provider.generate.mockImplementationOnce(async () => {
       if (change === 'source') await f.home.table('co_management_private_comments').where('comment_id', f.message.commentId).update({ note: 'Changed source' });
       if (change === 'audience') await f.home.table('ticket_conversations').where('conversation_id', f.target.conversationId).increment('revision', 1);
       if (change === 'identity') await f.home.table('users').where('user_id', f.actor.userId).update({ is_inactive: true });
+      if (change === 'grant') {
+        await f.customer.table('co_management_ticket_work').where('ticket_id', f.ticket.ticketId).update({ grant_revoked_at: new Date(), can_collaborate: false });
+        await f.customer.table('co_management_board_scopes').where('relationship_id', f.ticket.relationshipId).update({ can_collaborate: false });
+      }
       return 'Unpublishable output';
     });
     await expect(f.run()).rejects.toThrow();
     expect(await f.record()).toMatchObject({ status: 'failed', generated_text: null, published_comment_id: null });
     const rows = await f.home.table('co_management_private_comments').where('comment_id', f.request.operationId);
     expect(rows).toEqual([]);
+    // Revoking identity makes the follow-up history read (as the same
+    // now-inactive user) throw rather than return. Revoking the cross-org
+    // collaboration grant does not — the actor still reads their OWN private
+    // store natively — but the run still failed to publish either way.
     if (change !== 'identity') expect((await f.history()).items).toHaveLength(count);
   });
 });

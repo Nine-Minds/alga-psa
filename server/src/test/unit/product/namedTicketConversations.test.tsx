@@ -352,6 +352,23 @@ it('checks an uncertain Send with its original identity and restores its warning
   fireEvent.click(screen.getByRole('button', { name: 'Check delivery' }));
   await waitFor(() => expect(mocks.emailStatus).toHaveBeenCalledTimes(2)); expect(mocks.sendEmail).toHaveBeenCalledTimes(1);
 });
+// F033: a genuine stale-conversation conflict (the audience/mailbox/draft
+// changed between "Review email" and "Send") gets its own specific message —
+// distinct from an ambiguous transport failure — and returns the user to an
+// intact, still-reviewable draft rather than a dead end.
+it('reports a stale conversation conflict at Send distinctly from an ambiguous send failure', async () => {
+  emailFixture();
+  mocks.sendEmail.mockRejectedValueOnce(new Error('The conversation changed. Reload it before trying again.'));
+  render(<Harness />); await writeEmail();
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Review email' })).toBeEnabled());
+  fireEvent.click(screen.getByRole('button', { name: 'Review email' })); await screen.findByText('resolved@example.test');
+  fireEvent.click(screen.getByRole('button', { name: 'Send email' }));
+  await screen.findAllByText(/This conversation changed since you opened this review/);
+  expect(screen.queryByText('Could not confirm the result. Check this send before editing or sending again.')).toBeNull();
+  // The review dialog is still open with a still-intact draft to retry from.
+  expect(screen.getByRole('button', { name: 'Send email' })).toBeEnabled();
+  expect(screen.getByRole('button', { name: 'Back to draft' })).toBeEnabled();
+});
 it('saves the email draft before selecting a mailbox and uses its new revision at review', async () => {
   const f = emailFixture(false); render(<Harness />); await writeEmail();
   await waitFor(() => expect(screen.getByLabelText('Sending mailbox')).toBeEnabled());
@@ -1210,4 +1227,26 @@ it('offers no Ask AI action for email conversations or unavailable AI', async ()
   mocks.load.mockResolvedValue({ conversations: [requester, { ...side, transport: 'email' }], writeAudiences: ['requester', 'organization_private'] });
   render(<Harness />); await screen.findByRole('button', { name: 'Summarize with AI' });
   expect(screen.queryByRole('button', { name: 'Ask AI' })).toBeNull();
+});
+
+// F019: an unsent-draft indicator must be visible on every accessible row,
+// not only the currently-selected one.
+it('shows the draft indicator on an inaccessible-selection row that has its own saved draft, not only the active row', async () => {
+  mocks.load.mockResolvedValue({ conversations: [{ ...requester, hasDraft: true }, side], writeAudiences: ['requester', 'organization_private'], actor: { tenant: 'home', userId: 'author' } });
+  render(<Harness />); await screen.findByRole('textbox', { name: 'Message' });
+  const requesterRow = screen.getByRole('button', { name: /Requester/ });
+  expect(requesterRow).toHaveTextContent('Draft');
+  const diagnosticsRow = screen.getByRole('button', { name: /Diagnostics/ });
+  expect(diagnosticsRow).not.toHaveTextContent('Draft');
+});
+
+// F025: interactive navigator rows carry the repo's stable
+// `data-automation-id` convention, not just a DOM `id`.
+it('gives navigator rows and the All activity control stable data-automation-id attributes', async () => {
+  render(<Harness />); await screen.findByRole('textbox', { name: 'Message' });
+  const requesterRow = screen.getByRole('button', { name: /Requester/ });
+  expect(requesterRow.getAttribute('data-automation-id')).toBe(requesterRow.getAttribute('id'));
+  expect(requesterRow.getAttribute('data-automation-id')).toBeTruthy();
+  const allActivity = screen.getByRole('button', { name: 'All activity' });
+  expect(allActivity.getAttribute('data-automation-id')).toBe(allActivity.getAttribute('id'));
 });

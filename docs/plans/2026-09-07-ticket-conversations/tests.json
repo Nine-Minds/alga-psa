@@ -272,7 +272,7 @@
   {
     "id": "T021",
     "description": "Real migrated PostgreSQL board-policy matrix: master disabled, side disabled, both enabled; inside cutoff including exact boundary, explicit/default status, and beyond cutoff; assert legacy requester/internal-technician behavior and side results including qualified follow-up audience/files/envelope.",
-    "implemented": false,
+    "implemented": true,
     "type": "integration",
     "featureIds": [
       "F051",
@@ -440,7 +440,7 @@
   {
     "id": "T033",
     "description": "Real migrated PostgreSQL: migrate representative legacy public/internal/Shared IT roots and scheduled content with reply tokens/files/resolution markers; repeat migration and concurrent legacy writes; preserve all relationships/audiences without one named conversation per root or default broadening.",
-    "implemented": false,
+    "implemented": true,
     "type": "integration",
     "featureIds": [
       "F001",
@@ -469,7 +469,7 @@
   {
     "id": "T035",
     "description": "Real migrated PostgreSQL failure/guard: retained data blocks destructive rollback, malformed/mixed audience metadata cannot be promoted to requester/shared visibility, and new draft/file cleanup honors existing ownership and unpublished-file boundaries.",
-    "implemented": false,
+    "implemented": true,
     "type": "integration",
     "featureIds": [
       "F006",

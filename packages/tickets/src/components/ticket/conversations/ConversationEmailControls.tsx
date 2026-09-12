@@ -14,6 +14,15 @@ type Review = Awaited<ReturnType<typeof actions.prepareNamedTicketEmailAction>>;
 type Send = NonNullable<Awaited<ReturnType<typeof actions.getLatestNamedTicketEmailSendAction>>>;
 type Request = Parameters<typeof actions.prepareNamedTicketEmailAction>[2];
 
+/** F033: `TicketConversationError('CONVERSATION_CONFLICT')`'s message survives
+ * server-action serialization even though its `.code` property does not —
+ * match on that stable text rather than guessing at a transport-specific
+ * error shape. */
+function isStaleConversationConflict(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : typeof error === 'string' ? error : '';
+  return message.includes('changed') && message.toLowerCase().includes('reload');
+}
+
 /** This control owns only the review/Send interaction. Draft persistence remains
  * in the same serial writer used by internal Post and conversation navigation. */
 export function ConversationEmailControls({ id, ticket, conversation, ready, saveDraft, onLock, onMailbox, onSent, closeStatuses = [], refreshVersion = 0 }: {
@@ -78,7 +87,16 @@ export function ConversationEmailControls({ id, ticket, conversation, ready, sav
       await onSent();
       if (!live.current) return;
       request.current = null; setReview(null); confirmed.current = false; retain = false;
-    } catch { if (live.current) setError('sendFailed'); }
+    } catch (thrown) {
+      // F033: the audience/envelope/mailbox or draft changed under this review
+      // between "Review email" and "Send" — surface that specifically (and
+      // send the user back to a still-intact draft) rather than a generic
+      // failure that reads like a transient error worth simply retrying.
+      if (live.current) {
+        if (isStaleConversationConflict(thrown)) { setError('sendStale'); confirmed.current = false; }
+        else setError('sendFailed');
+      }
+    }
     finally { finish(retain); }
   };
   const check = async () => {
@@ -114,6 +132,7 @@ export function ConversationEmailControls({ id, ticket, conversation, ready, sav
     mailboxFailed: 'Could not select the mailbox. Refresh the conversation and check your sending access.',
     reviewFailed: 'Could not prepare the review. Check the recipients, subject, draft and selected mailbox.',
     sendFailed: 'Could not confirm the result. Check this send before editing or sending again.',
+    sendStale: 'This conversation changed since you opened this review (audience, mailbox or draft). Nothing was sent. Go back to your draft, which is unchanged, and review again.',
     statusFailed: 'Could not check delivery. The original send is retained; try checking again.',
   };
   const closeRuleLabels: Record<string, string> = { resolution_comment: 'Add a resolution comment.', time_entry: 'Log a time entry.',

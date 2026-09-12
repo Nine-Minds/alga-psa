@@ -98,7 +98,7 @@
   {
     "id": "F013",
     "description": "Clear inaccessible visible content and private draft state after resource, identity or permission changes.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "4. Conversation and access model"
     ]
@@ -122,7 +122,7 @@
   {
     "id": "F016",
     "description": "Preserve private conversation ownership through handoffs, relationship termination and existing archive/export/deletion operations.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "4. Conversation and access model"
     ]
@@ -146,7 +146,7 @@
   {
     "id": "F019",
     "description": "Show active selection, unread/attention, Open/Done and the current author draft indicator on accessible rows.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "5. UX \u2014 option C"
     ]
@@ -194,7 +194,7 @@
   {
     "id": "F025",
     "description": "Use existing theme, localization, focus/keyboard conventions and stable interaction IDs for new controls.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "5. UX \u2014 option C"
     ]
@@ -250,7 +250,7 @@
   {
     "id": "F032",
     "description": "Preview exact From, To/CC, body and selected files before external sending.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "5. UX \u2014 option C"
     ]
@@ -258,7 +258,7 @@
   {
     "id": "F033",
     "description": "Reject stale audience/envelope/draft intent at publication and preserve the draft for refreshed review.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "5. UX \u2014 option C"
     ]
@@ -514,7 +514,7 @@
   {
     "id": "F065",
     "description": "Create policy-required late-reply follow-ups with equivalent qualified side-conversation audience, ownership and envelope.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "7. Conversation state and existing reopen policy"
     ]
@@ -770,7 +770,7 @@
   {
     "id": "F097",
     "description": "Initialize defaults and route legacy writes idempotently under concurrent creation and retries.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "11. Compatibility, migration and release"
     ]
@@ -778,7 +778,7 @@
   {
     "id": "F098",
     "description": "Keep strict handling of inconsistent legacy audience data instead of broadening its visibility.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "11. Compatibility, migration and release"
     ]
@@ -786,7 +786,7 @@
   {
     "id": "F099",
     "description": "Update tenant-owned persistence, qualified/distributed keys, file cleanup and ownership-aware archive/export/deletion selectors for new records.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "11. Compatibility, migration and release"
     ]

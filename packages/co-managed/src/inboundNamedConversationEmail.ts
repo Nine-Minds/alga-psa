@@ -236,6 +236,28 @@ async function admitReply(outer: Knex.Transaction, input: Parameters<NamedConver
       const text = (parsed.sanitizedText ?? (email.body.text?.trim() ? '' : htmlToVisibleText(parsed.sanitizedHtml ?? ''))).trim();
       if (!text) return { outcome: 'skipped' as const, reason: 'self_notification' as const };
       if (text.length > 100000 || text.includes('\0') || typeof email.subject !== 'string' || email.subject.length > 998 || /[\r\n\0]/.test(email.subject)) return reject();
+      // F065: a substantive side reply on a closed ticket past the board's
+      // reopen cutoff (with both the master and side-conversation switches on)
+      // routes into an equivalent side conversation on a fresh follow-up
+      // ticket instead of reopening — or attaching invisibly to — the closed
+      // one. Decided BEFORE any write so the message lands as a new root on
+      // the follow-up, never split across two destinations.
+      let redirectedToFollowup = false;
+      if (conversation.audience !== 'requester') {
+        const { isSideConversationCutoffExceeded, createSideConversationFollowup } = await import('./namedConversationReopenPolicy');
+        if (await isSideConversationCutoffExceeded(trx, { tenantId: conversation.ticket.tenant, ticketId: conversation.ticket.ticketId, email })) {
+          const followup = await createSideConversationFollowup(trx, { originalTicket: conversation.ticket, conversationName: conversation.name,
+            audience: conversation.audience as 'shared_it' | 'organization_private', storeTenant: conversation.storeTenant,
+            relationshipId: route.relationship_id ?? null,
+            mailboxTenant: input.tenant, mailboxId: input.providerId });
+          conversation = await readStoredTicketConversation({ trx, storeTenant: conversation.storeTenant,
+            ticket: { tenant: conversation.ticket.tenant, ticketId: followup.ticketId,
+              ...(conversation.ticket.relationshipId ? { relationshipId: conversation.ticket.relationshipId } : {}) } },
+            followup.conversationId, 'update');
+          source = { ...source, thread_id: followup.threadId };
+          redirectedToFollowup = true;
+        }
+      }
       const to = email.to.map(address), cc = (email.cc ?? []).map(address);
       const rfcId = inbox.rfc_message_id?.trim();
       const messageId = rfcId && /^<[^<>\s@]+@[^<>\s@]+>$/.test(rfcId) ? rfcId : null;
@@ -277,17 +299,33 @@ async function admitReply(outer: Knex.Transaction, input: Parameters<NamedConver
         source = { ...source, thread_id: written.thread_id };
       } else if (privateStore) {
         commentId = randomUUID();
+        const parentCommentId = redirectedToFollowup ? null : source.comment_id;
+        if (redirectedToFollowup) {
+          // A follow-up conversation has no existing thread to reply into yet.
+          await store.table('co_management_private_threads').insert({ tenant: conversation.storeTenant, thread_id: source.thread_id,
+            customer_tenant: conversation.ticket.tenant, relationship_id: conversation.ticket.relationshipId ?? null,
+            resource_type: 'ticket', resource_id: conversation.ticket.ticketId, root_comment_id: commentId,
+            conversation_id: conversation.conversationId });
+        }
         await store.table('co_management_private_comments').insert({ tenant: conversation.storeTenant, comment_id: commentId, thread_id: source.thread_id,
-          parent_comment_id: source.comment_id, actor_kind: 'external', actor_user_id: null, external_author_email: from.email,
+          parent_comment_id: parentCommentId, actor_kind: 'external', actor_user_id: null, external_author_email: from.email,
           actor_display_name: from.name || from.email, actor_organization_name: 'External correspondent', ...plainTextContent(text), revision: 1 });
-        await store.table('co_management_private_threads').where('thread_id', source.thread_id).update({ last_activity_at: trx.fn.now() });
+        if (!redirectedToFollowup) await store.table('co_management_private_threads').where('thread_id', source.thread_id).update({ last_activity_at: trx.fn.now() });
       } else {
         // The canonical model retains reply-root, publication and internal
         // visibility invariants. No requester lifecycle or ticket-wide email runs.
-        const saved = await TicketModel.createComment({ ticket_id: conversation.ticket.ticketId, parent_comment_id: source.comment_id, content: plainTextContent(text).note,
+        // A redirected follow-up has no existing parent to reply into — a null
+        // parent makes `Comment.insert` start a fresh root thread of its own,
+        // and an explicit `conversation_id` targets that exact follow-up
+        // conversation rather than the ticket's ordinary default container.
+        const saved = await TicketModel.createComment({ ticket_id: conversation.ticket.ticketId, ...(redirectedToFollowup ? { conversation_id: conversation.conversationId } : { parent_comment_id: source.comment_id }), content: plainTextContent(text).note,
           is_internal: true, is_resolution: false, collaboration_audience: conversation.audience,
           metadata: { source: 'named_conversation_email' } }, route.ticket_tenant, trx);
         commentId = saved.comment_id;
+        if (redirectedToFollowup) {
+          const savedThread = await store.table('comments').where('comment_id', commentId).first('thread_id');
+          source = { ...source, thread_id: savedThread.thread_id };
+        }
       }
       await store.table(MESSAGES).insert({ tenant: conversation.storeTenant, comment_id: commentId, thread_id: source.thread_id,
         conversation_id: conversation.conversationId, ticket_tenant: conversation.ticket.tenant, ticket_id: conversation.ticket.ticketId,

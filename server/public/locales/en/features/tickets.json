@@ -1876,6 +1876,7 @@
     "mailboxFailed": "Could not select the mailbox. Refresh the conversation and check your sending access.",
     "reviewFailed": "Could not prepare the review. Check the recipients, subject, draft and selected mailbox.",
     "sendFailed": "Could not confirm the result. Check this send before editing or sending again.",
+    "sendStale": "This conversation changed since you opened this review (audience, mailbox or draft). Nothing was sent. Go back to your draft, which is unchanged, and review again.",
     "statusFailed": "Could not check delivery. The original send is retained; try checking again.",
     "delivery": {
       "delivered": "Email sent.",
