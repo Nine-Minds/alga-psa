@@ -83,7 +83,16 @@ async function initializeTenantPool(): Promise<KnexType> {
     destroyTimeoutMillis: 5000,
     afterCreate: (conn, done) => {
       conn.on('error', (err: Error) => {
-        logger.error('[db/tenant] DB Connection Error:', err);
+        // A pool client can emit 'error' during shutdown (e.g. the test
+        // database container stopping) after a test suite has swapped the
+        // logger module. Logging is diagnostic here; never let it — or a
+        // malformed logger binding — become an unhandled exception that
+        // aborts the process.
+        try {
+          logger.error('[db/tenant] DB Connection Error:', err);
+        } catch {
+          // Connection errors are already surfaced by the pool's caller.
+        }
       });
       done(null, conn);
     },

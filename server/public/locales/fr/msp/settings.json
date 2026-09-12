@@ -2113,7 +2113,17 @@
         "upload": "Téléverser le paquet"
       },
       "errors": {
-        "noImportableRecords": "Ce paquet ne contenait aucun enregistrement importable."
+        "noImportableRecords": "Ce paquet ne contenait aucun enregistrement importable.",
+        "permissionDenied": "Vous n'avez pas la permission d'importer ou d'exporter des données.",
+        "invalidSpreadsheet": "Cette feuille de calcul n'a pas pu être lue. Vérifiez qu'il s'agit d'un fichier CSV ou XLSX valide et réessayez.",
+        "notAmpPackage": "Ce fichier n'est pas un paquet AMP. Téléversez un fichier .amp ou .sqlite.",
+        "tooLarge": "Ce téléversement dépasse la taille maximale autorisée.",
+        "sizeMismatch": "Le téléversement ne s'est pas terminé. Veuillez réessayer.",
+        "noRecognizedHeaders": "Aucune des colonnes de cette feuille de calcul n'a été reconnue. Vérifiez la ligne d'en-tête et réessayez.",
+        "storageRejected": "Le serveur a rejeté ce téléversement. Demandez à votre administrateur de vérifier la configuration des types de fichiers du stockage.",
+        "spreadsheetFailed": "La feuille de calcul n'a pas pu être importée. Veuillez réessayer.",
+        "uploadFailed": "Le paquet n'a pas pu être téléversé. Veuillez réessayer.",
+        "unknown": "Le téléversement a échoué. Veuillez réessayer."
       },
       "preflight": {
         "title": "Vérification préalable"
@@ -2121,6 +2131,19 @@
       "run": {
         "queued": "Migration en file d'attente",
         "applying": "Migration en cours"
+      },
+      "badges": {
+        "nothingImported": "Rien n'a été importé"
+      },
+      "results": {
+        "skippedSamePackage": "Les enregistrements ignorés avaient déjà été migrés par une exécution précédente du même paquet.",
+        "skippedOtherPackage": "Les enregistrements ignorés ont été associés à des entités créées par une migration antérieure d'un autre paquet : {{packages}}.",
+        "skippedExistingEntity": "Les enregistrements ignorés ont été associés à des entités existantes.",
+        "nothingImportedTitle": "Rien n'a été importé",
+        "nothingImportedBody": "Cette exécution n'a créé aucun nouvel enregistrement. Chaque ligne correspondait à quelque chose qui existait déjà, donc rien n'a été modifié.",
+        "claimedBySamePackage": "Déjà migré par ce paquet",
+        "claimedByOtherPackage": "Déjà migré par {{file}}",
+        "claimedByExistingEntity": "Associé à une entité existante"
       }
     },
     "jobDetails": {

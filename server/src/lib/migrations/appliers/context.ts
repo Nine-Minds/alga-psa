@@ -60,4 +60,24 @@ export class ApplierContext {
     this.referenceCache.set(cacheKey, targetId);
     return targetId;
   }
+
+  /**
+   * Resolve a source client name against this tenant's existing clients. Used
+   * by a single-sheet contacts import, which carries a client name rather than
+   * an in-package reference. Returns null when no client matches; the caller
+   * falls back to the configured default and records a diagnostic.
+   */
+  async resolveClientByName(trx: Knex.Transaction, name: string): Promise<string | null> {
+    const normalized = name.trim().toLowerCase();
+    if (!normalized) {
+      return null;
+    }
+    const db = tenantDb(trx, this.tenant);
+    const row = await db
+      .table('clients')
+      .whereRaw('LOWER(client_name) = ?', [normalized])
+      .select('client_id')
+      .first();
+    return row?.client_id ?? null;
+  }
 }
