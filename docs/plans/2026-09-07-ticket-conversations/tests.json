@@ -204,7 +204,7 @@
   {
     "id": "T016",
     "description": "Test email infrastructure guard: conflicting headers, wrong mailbox, forged/invalid token and ticket-number-only side replies enter protected review with no requester insertion; authorized resolution admits one chosen destination without bypassing audience or sender admission.",
-    "implemented": false,
+    "implemented": true,
     "type": "email",
     "featureIds": [
       "F009",
