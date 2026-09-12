@@ -50,14 +50,42 @@
 //     and a real ticket with Shared IT + organization-private named
 //     conversations already on it.
 
+// Required secrets (not committed; read from the environment — export
+// these in your shell before running):
+//   DB_PASSWORD_ADMIN  - local stack's postgres superuser password.
+//                        Verified present at secrets/postgres_password in
+//                        this worktree, and mirrored into server/.env.local.
+//   DB_PASSWORD_SERVER - app_user password for the scratch DB.
+//                        Verified present at secrets/db_password_server in
+//                        this worktree, and mirrored into server/.env.local.
+//   NEXTAUTH_SECRET    - must match whatever the dev server in step 2 below
+//                        is actually run with, so hashPassword() below
+//                        produces hashes the running app's verifyPassword
+//                        accepts. Verified present in server/.env.local
+//                        (gitignored) in this worktree; there is no
+//                        secrets/ file for it.
+// e.g.:
+//   export DB_PASSWORD_ADMIN=$(cat secrets/postgres_password)
+//   export DB_PASSWORD_SERVER=$(cat secrets/db_password_server)
+//   export NEXTAUTH_SECRET=$(grep ^NEXTAUTH_SECRET= server/.env.local | cut -d= -f2-)
+function requireEnv(name: string, hint: string): string {
+  const value = process.env[name];
+  if (!value) {
+    console.error(`Missing required env var ${name} — ${hint}`);
+    process.exit(1);
+  }
+  return value;
+}
+
 process.env.DB_HOST = 'localhost';
 process.env.DB_PORT = '5472';
 process.env.DB_USER_ADMIN = 'postgres';
-process.env.DB_PASSWORD_ADMIN = 'f1p9Q@oPv2HK0vjb@@FY3GXXwsyxF^B2';
+const DB_PASSWORD_ADMIN = requireEnv('DB_PASSWORD_ADMIN', 'see secrets/postgres_password or server/.env.local');
+process.env.DB_PASSWORD_ADMIN = DB_PASSWORD_ADMIN;
 process.env.DB_NAME_SERVER = 'ticket_conversations_browser_20260912';
 process.env.DB_USER_SERVER = 'app_user';
-process.env.DB_PASSWORD_SERVER = 'hRw%DzoyD&s1q3sW%k9atRL^5YgtzZV8';
-process.env.NEXTAUTH_SECRET = '59a9814ffba5a82d04d4d066162d4713e59026ddec5289aa05c3f979bb49e977';
+process.env.DB_PASSWORD_SERVER = requireEnv('DB_PASSWORD_SERVER', 'see secrets/db_password_server or server/.env.local');
+process.env.NEXTAUTH_SECRET = requireEnv('NEXTAUTH_SECRET', 'see server/.env.local (gitignored) — must match the value the dev server is run with');
 
 import knexFactory from 'knex';
 import { randomUUID, webcrypto } from 'node:crypto';
@@ -115,7 +143,7 @@ async function seedTenant(knex: any, { name, email }: { name: string; email: str
 
 async function main() {
   const db = knexFactory({ client: 'pg', connection: { host: 'localhost', port: 5472, user: 'postgres',
-    password: 'f1p9Q@oPv2HK0vjb@@FY3GXXwsyxF^B2', database: DB_NAME }, pool: { min: 0, max: 10 } });
+    password: DB_PASSWORD_ADMIN, database: DB_NAME }, pool: { min: 0, max: 10 } });
 
   console.log('=== Seeding MSP sponsor tenant ===');
   const sponsor = await seedTenant(db, { name: 'Browser Test MSP', email: 'browsertest-msp@example.test' });

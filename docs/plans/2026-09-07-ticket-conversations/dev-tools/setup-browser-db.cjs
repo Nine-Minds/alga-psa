@@ -25,13 +25,31 @@
 // Follow with dev-tools/seed-browser-env.mts to populate a real,
 // browser-loginable tenant (or two, with a real co-managed relationship)
 // into the database this script creates.
+//
+// Required secret (not committed; read from the environment — export it in
+// your shell before running):
+//   DB_PASSWORD_ADMIN - local stack's postgres superuser password. Verified
+//                       present at secrets/postgres_password in this
+//                       worktree, and mirrored into server/.env.local.
+// e.g.:
+//   export DB_PASSWORD_ADMIN=$(cat secrets/postgres_password)
 const knex = require('/home/robert/alga-copies/feature-ticket-conversations-vendor-email-threads-ai-par/node_modules/knex');
 const { execFileSync } = require('node:child_process');
+
+function requireEnv(name, hint) {
+  const value = process.env[name];
+  if (!value) {
+    console.error(`Missing required env var ${name} — ${hint}`);
+    process.exit(1);
+  }
+  return value;
+}
 
 const DB_NAME = 'ticket_conversations_browser_20260912';
 const MIGRATIONS_DIR = '/home/robert/alga-copies/feature-ticket-conversations-vendor-email-threads-ai-par/server/migrations/';
 
-const connection = { host: 'localhost', port: 5472, user: 'postgres', password: 'f1p9Q@oPv2HK0vjb@@FY3GXXwsyxF^B2' };
+const connection = { host: 'localhost', port: 5472, user: 'postgres',
+  password: requireEnv('DB_PASSWORD_ADMIN', 'see secrets/postgres_password or server/.env.local') };
 const sourceDatabase = 'server';
 
 // Exactly this branch's co-managed/ticket-conversation migrations, in
