@@ -149,7 +149,7 @@ export function useNamedTicketConversations(input: ConversationTicketReference |
     <Button id={`${id}-retry`} variant="ghost" onClick={refresh}>{t('namedConversations.retry', 'Retry')}</Button>
   </div>;
   const loading = <div role="status" className="rounded-lg border border-[rgb(var(--color-border-200))] p-4 text-sm text-muted-foreground">{t('namedConversations.loading', 'Loading conversations…')}</div>;
-  const navigator = <section aria-label={t('namedConversations.title', 'Conversations')} className="overflow-hidden rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))]">
+  const navigator = <section aria-label={t('namedConversations.title', 'Conversations')} className="@container overflow-hidden rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))]">
     <div className="flex items-center justify-between border-b border-[rgb(var(--color-border-200))] px-3 py-2">
       <h2 className="text-sm font-semibold">{t('namedConversations.title', 'Conversations')}</h2>
       {Boolean(screen?.writeAudiences.length) && <Button id={`${id}-create`} size="sm" variant="ghost" aria-label={t('namedConversations.new', 'New conversation')}
@@ -558,6 +558,27 @@ export function NamedConversationComposer({ id, ticket, conversation, flush, onD
     onDirty(Boolean(next || state.current.attachments.length || state.current.email || state.current.parent || state.current.content.text || state.current.content.document));
     void save();
   };
+  // F041: lowercased addresses currently on this conversation's mailbox that
+  // are NOT yet known correspondents, per the real server data contract
+  // (`getNamedConversationNewCorrespondentsAction`) -- not a client-side
+  // guess. Debounced so every keystroke doesn't round-trip; a stale response
+  // for an identity/conversation this instance has moved on from is dropped.
+  const [newCorrespondents, setNewCorrespondents] = useState<Set<string>>(new Set());
+  const correspondentCheck = useRef<{ timer: ReturnType<typeof setTimeout> | null; generation: number }>({ timer: null, generation: 0 });
+  useEffect(() => {
+    if (!isEmail) return;
+    const addresses = [...email.to, ...email.cc];
+    if (correspondentCheck.current.timer) clearTimeout(correspondentCheck.current.timer);
+    const generation = ++correspondentCheck.current.generation;
+    correspondentCheck.current.timer = setTimeout(() => {
+      actions.getNamedConversationNewCorrespondentsAction(ticket, reference(conversation), addresses).then(results => {
+        if (!state.current.alive || generation !== correspondentCheck.current.generation) return;
+        setNewCorrespondents(new Set(results.filter(row => row.isNew).map(row => row.email)));
+      }).catch(() => {});
+    }, 400);
+    return () => { if (correspondentCheck.current.timer) clearTimeout(correspondentCheck.current.timer); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEmail, email.to.join(';'), email.cc.join(';'), ticket, conversation.conversationId]);
   const changeEmail = (next: ConversationEmailDraft) => {
     if (disabled || !loaded || emailLock.current || fileLock.current) return;
     setEmail(next);
@@ -588,10 +609,22 @@ export function NamedConversationComposer({ id, ticket, conversation, flush, onD
   const parentMessage = parent ? replyItems.find(item => item.commentId === parent.commentId && item.threadId === parent.threadId) : undefined;
   let nonempty = false;
   try { snapshotConversationDocument(document); nonempty = true; } catch { /* An empty editor is a draft, not a message. */ }
-  return <div className="space-y-3 border-t border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-background))] p-4">
+  // F024: `@container` so this composer adapts to its own available width --
+  // the embedded-drawer/entry-layout case an ambient viewport breakpoint
+  // (`sm:`/`lg:`) cannot see, since a drawer can be narrow on a wide screen.
+  return <div className="@container space-y-3 border-t border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-background))] p-4">
     {loaded && canSchedule && showScheduledReplies && <NamedScheduledReplies id={id} ticket={ticket} conversation={conversation} revision={epoch} onChanged={() => setDeliveryRevision(value => value + 1)} disabled={disabled || posting || emailLocked || fileLocked} />}
     {replyLinkError && <p role="alert" className="text-sm text-destructive">{t('namedConversations.replyUnavailable', 'This reply target is unavailable. Your saved draft is unchanged.')}</p>}
-    <div className="flex justify-between gap-2"><h3 className="text-sm font-medium">{isEmail ? conversation.audience === 'requester' ? t('namedConversations.requesterEmail', 'Requester email') : t('namedConversations.vendorEmail', 'Vendor email') : t('namedConversations.internalMessage', 'Internal message')}</h3>
+    {/* F027: audience and transport, both explicit and together -- not just
+        implied by a single heading string (the panel header above only
+        repeats the conversation name/audience, not transport). */}
+    <div className="flex flex-col gap-1 @sm:flex-row @sm:items-center @sm:justify-between @sm:gap-2">
+      <h3 className="flex flex-wrap items-center gap-1.5 text-sm font-medium">
+        {isEmail ? <Mail className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" /> : <MessageSquare className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />}
+        <span>{isEmail ? conversation.audience === 'requester' ? t('namedConversations.requesterEmail', 'Requester email') : t('namedConversations.vendorEmail', 'Vendor email') : t('namedConversations.internalMessage', 'Internal message')}</span>
+        <span className="text-muted-foreground" aria-hidden="true">·</span>
+        <span className="text-xs font-normal text-muted-foreground">{t(`namedConversations.audiences.${conversation.audience}`, audienceLabels[conversation.audience])}</span>
+      </h3>
       <span role="status" className="text-xs text-muted-foreground">{saving ? t('namedConversations.saving', 'Saving draft…') : loaded ? t('namedConversations.privateDraft', 'Draft visible only to you') : t('namedConversations.loading', 'Loading conversations…')}</span></div>
     {canMarkResolution && <div className="flex items-center gap-2">
       <Switch id={`${id}-resolution`} checked={Boolean(publicationOptions?.isResolution)} disabled={disabled || !loaded || posting || emailLocked || fileLocked}
@@ -632,9 +665,11 @@ export function NamedConversationComposer({ id, ticket, conversation, flush, onD
           close: { statusId: publicationOptions.close!.statusId, overrideReason: event.target.value } })} />}
     </div>}
     {isEmail && <div className="space-y-3">
-      <Input id={`${id}-email-to`} label={t('namedConversations.to', 'To')} value={email.to.join(';')} disabled={disabled || !loaded || emailLocked || fileLocked} maxLength={50000} onChange={event => changeEmail({ ...email, to: event.target.value.split(';') })} />
-      <Input id={`${id}-email-cc`} label={t('namedConversations.cc', 'CC')} value={email.cc.join(';')} disabled={disabled || !loaded || emailLocked || fileLocked} maxLength={50000} onChange={event => changeEmail({ ...email, cc: event.target.value.split(';') })} />
-      <p className="text-xs text-muted-foreground">{t('namedConversations.addressHelp', 'Separate email addresses with semicolons.')}</p>
+      <RecipientChips id={`${id}-email-to`} label={t('namedConversations.to', 'To')} value={email.to} newAddresses={newCorrespondents}
+        disabled={disabled || !loaded || emailLocked || fileLocked} onChange={next => changeEmail({ ...email, to: next })} />
+      <RecipientChips id={`${id}-email-cc`} label={t('namedConversations.cc', 'CC')} value={email.cc} newAddresses={newCorrespondents}
+        disabled={disabled || !loaded || emailLocked || fileLocked} onChange={next => changeEmail({ ...email, cc: next })} />
+      <p className="text-xs text-muted-foreground">{t('namedConversations.addressHelp', 'Press Enter, comma or semicolon to add a recipient.')}</p>
       <Input id={`${id}-email-subject`} label={t('namedConversations.subject', 'Subject')} value={email.subject} disabled={disabled || !loaded || emailLocked || fileLocked} maxLength={255} onChange={event => changeEmail({ ...email, subject: event.target.value })} />
     </div>}
     {parent && <div className="flex items-center justify-between gap-2 rounded-md border border-[rgb(var(--color-border-200))] px-3 py-2 text-sm">
@@ -654,8 +689,55 @@ export function NamedConversationComposer({ id, ticket, conversation, flush, onD
     {error && <p role="alert" className="text-sm text-destructive">{t(`namedConversations.${error}`, error === 'saveFailed' ? 'Could not save. Retry before switching conversations.' : error === 'postFailed' ? 'Could not confirm the post. Retry to check the same message.' : error === 'scheduleInvalid' ? 'Choose a future publication time before reviewing this email.' : error === 'invalid' ? 'This draft contains unsupported content. Edit it before saving.' : 'This conversation is unavailable.')}</p>}
     {isEmail && loaded && <ConversationEmailControls id={id} refreshVersion={deliveryRefreshVersion + deliveryRevision} ticket={ticket} conversation={conversation} closeStatuses={closeStatuses} ready={!disabled && !fileLocked && !invalidSchedule.current && (!publicationOptions?.schedule || Date.parse(publicationOptions.schedule.at) > Date.now()) && nonempty && Boolean(email.subject.trim()) && email.to.some(value => value.trim())}
       saveDraft={reviewDraft} onLock={lockEmail} onMailbox={value => { state.current.conversationRevision = value.revision; if (state.current.content) { state.current.dirty = true; state.current.generation++; } onRefresh?.(); }} onSent={async () => { await read(); await onPosted(); }} />}
-    <div className="flex items-center gap-2">{!isEmail && <Button id={`${id}-post`} disabled={disabled || !loaded || !nonempty || posting || fileLocked} onClick={() => void submit()}>{postRequest.current ? t('namedConversations.retryPost', 'Retry post') : t('namedConversations.post', 'Post')}</Button>}
+    <div className="flex flex-wrap items-center gap-2">{!isEmail && <Button id={`${id}-post`} disabled={disabled || !loaded || !nonempty || posting || fileLocked} onClick={() => void submit()}>{postRequest.current ? t('namedConversations.retryPost', 'Retry post') : t('namedConversations.post', 'Post')}</Button>}
       {error === 'saveFailed' && <Button id={`${id}-save-retry`} variant="outline" disabled={saving} onClick={() => void save()}>{t('namedConversations.retry', 'Retry')}</Button>}
       <span className="text-xs text-muted-foreground">{t(`namedConversations.audiences.${conversation.audience}`, audienceLabels[conversation.audience])}</span></div>
+  </div>;
+}
+
+// F041: chip/token recipient editor replacing the old semicolon-joined text
+// input. Each committed address is its own removable chip; addresses the
+// server (`newAddresses`, from `getNamedConversationNewCorrespondentsAction`)
+// hasn't seen accepted on this conversation's mailbox before are highlighted
+// so a sender notices them before Send, without blocking entry -- editing an
+// individual address is just removing its chip and retyping it.
+function RecipientChips({ id, label, value, onChange, disabled, newAddresses }: { id: string; label: string; value: string[];
+  onChange: (next: string[]) => void; disabled: boolean; newAddresses: Set<string> }) {
+  const { t } = useTranslation('features/tickets');
+  const [draft, setDraft] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+  const commit = (raw: string) => {
+    const text = raw.trim();
+    if (!text) { setDraft(''); return; }
+    onChange([...value, text]);
+    setDraft('');
+  };
+  const remove = (index: number) => onChange(value.filter((_, item) => item !== index));
+  return <div>
+    <Label htmlFor={`${id}-input`}>{label}</Label>
+    <div id={id} className={`mt-1 flex min-h-9 flex-wrap items-center gap-1 rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-background))] px-2 py-1 ${disabled ? 'opacity-60' : 'cursor-text'}`}
+      onClick={() => inputRef.current?.focus()}>
+      {value.map((address, index) => {
+        const trimmed = address.trim();
+        const isNew = trimmed.length > 0 && newAddresses.has(trimmed.toLowerCase());
+        return <span key={`${trimmed || 'empty'}-${index}`} className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs ${isNew
+          ? 'bg-amber-100 text-amber-900 dark:bg-amber-500/20 dark:text-amber-200' : 'bg-[rgb(var(--color-border-100))] text-[rgb(var(--color-text-700))]'}`}>
+          {isNew && <span aria-hidden="true" title={t('namedConversations.newCorrespondent', 'New correspondent')}>●</span>}
+          <span>{trimmed || address}</span>
+          {isNew && <span className="sr-only">{t('namedConversations.newCorrespondent', 'New correspondent')}</span>}
+          {!disabled && <button type="button" id={`${id}-remove-${index}`} aria-label={t('namedConversations.removeRecipient', { defaultValue: 'Remove {{address}}', address: trimmed || address })}
+            onClick={event => { event.stopPropagation(); remove(index); }} className="rounded-full text-current/70 hover:text-current">×</button>}
+        </span>;
+      })}
+      <input ref={inputRef} id={`${id}-input`} disabled={disabled} value={draft} autoComplete="off"
+        onChange={event => setDraft(event.target.value)}
+        onKeyDown={event => {
+          if (event.key === 'Enter' || event.key === ',' || event.key === ';') { event.preventDefault(); commit(draft); }
+          else if (event.key === 'Backspace' && !draft && value.length) { event.preventDefault(); remove(value.length - 1); }
+        }}
+        onBlur={() => commit(draft)}
+        className="min-w-[10rem] flex-1 border-0 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+        placeholder={value.length ? '' : t('namedConversations.recipientsPlaceholder', 'name@example.com, name2@example.com')} />
+    </div>
   </div>;
 }

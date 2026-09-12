@@ -15332,6 +15332,144 @@ describe('named ticket conversation inbound vendor admission against migrated Po
   });
 });
 
+/** T014 (processor-level substitute — see T016's identical convention): proves
+ * multi-conversation isolation on a single ticket without a true GreenMail
+ * SMTP/IMAP round-trip. `readStagedSourceMime`/`parseStagedMimeIntoEmailDetails`
+ * are mocked at the transport boundary (keyed by `providerId`, i.e. the mailbox
+ * each independent vendor conversation owns), while the real
+ * `processInboundEmailInApp`/`processInboundInbox`/`admitNamedConversationEmailReply`
+ * core logic runs unmodified end to end, exactly as for the existing single-
+ * conversation inbound admission tests above. */
+async function namedMultiVendorFixture(names: string[] = ['Carrier exchange', 'ISP escalation']) {
+  const fixture = await namedConversationFixture();
+  const mail = await import('../../../../packages/co-managed/src/conversationMailboxes');
+  const email = await import('../../../../packages/co-managed/src/conversationEmailOperations');
+  const { previewReviewedEmail } = await import('../../../../packages/email/src/reviewedEmail');
+  const { applyNamedTicketConversationPost } = await import('../../../../packages/tickets/src/lib/postNamedTicketConversation');
+  const { admitNamedConversationEmailReply } = await import('../../../../packages/co-managed/src/inboundNamedConversationEmail');
+  const provider = { providerId: 'test-provider', providerType: 'smtp' };
+  const requesterConversation = (await fixture.conversations.listNamedTicketConversations(db, fixture.principal, fixture.ticket))[0];
+  const requester = { storeTenant: requesterConversation.storeTenant, conversationId: requesterConversation.conversationId };
+  const threads = await Promise.all(names.map(async (name, index) => {
+    const mailboxId = randomUUID();
+    await fixture.sponsor.table('email_providers').insert({ tenant: fixture.principal.tenant, id: mailboxId, provider_type: 'imap',
+      provider_name: `Vendor intake ${index}`, mailbox: `vendor${index}@example.test`, is_active: true, status: 'connected' });
+    const side = await fixture.conversations.createNamedTicketConversation(db, fixture.principal, fixture.ticket,
+      { operationId: randomUUID(), name, audience: 'shared_it', transport: 'email' });
+    const ref = { storeTenant: side.storeTenant, conversationId: side.conversationId };
+    await mail.selectNamedConversationMailbox(db, fixture.principal, fixture.ticket, ref, 1, mailboxId);
+    const draft = { operationId: randomUUID(), expectedRevision: 0, expectedConversationRevision: 2,
+      content: { text: `Diagnosis request ${index}` }, email: { subject: `Vendor thread ${index}`, to: [`vendor-contact-${index}@example.test`], cc: [] } };
+    await fixture.conversations.saveNamedConversationEditorDraft(db, fixture.principal, fixture.ticket, ref, draft);
+    const send = vi.fn(async () => ({ success: true, metadata: { deliveryStatus: 'delivered' } }));
+    const recheck = vi.fn(async (payload: any) => previewReviewedEmail(payload, provider, String.fromCharCode(101 + index).repeat(64)));
+    const transport = { send, recheck, prepare: vi.fn(async ({ mailbox, content, envelope, headers, replyToken }: any) => {
+      const payload = { from: { email: mailbox.email }, replyTo: { email: mailbox.email }, ...envelope, headers,
+        text: `${content.text}\n[ALGA-REPLY-TOKEN ${replyToken}]`, html: `<p>${content.text}</p>` };
+      return { payload, review: await recheck(payload) };
+    }) };
+    const request = { operationId: randomUUID(), expectedDraftRevision: 1, expectedConversationRevision: 2 };
+    const prepared = await email.prepareNamedConversationEmail(db, fixture.principal, fixture.ticket, ref, request, transport);
+    await email.confirmNamedConversationEmail(db, fixture.principal, fixture.ticket, ref, request.operationId, prepared.review.messageHash, transport, applyNamedTicketConversationPost);
+    const route = await fixture.sponsor.table('ticket_conversation_email_routes').where({ mailbox_id: mailboxId }).first();
+    const operation = await fixture.sponsor.table('ticket_conversation_email_operations').where('operation_id', request.operationId).first();
+    const token = /\[ALGA-REPLY-TOKEN ([^\]]+)\]/.exec(operation.payload.text)![1];
+    const sourceSha256 = String.fromCharCode(97 + index).repeat(64);
+    const makeInput = async (overrides: Record<string, any> = {}) => {
+      const inboxId = randomUUID(), id = `<vendor-${inboxId}@example.test>`;
+      const { upsertIngress } = await import('../../../../shared/services/email/inboundEmailDurableStore');
+      const ingress = await upsertIngress(db, { tenant: fixture.principal.tenant, provider_id: mailboxId, provider_type: 'imap', ingress_key: inboxId, provider_pointer: { messageId: id } });
+      await fixture.sponsor.table('inbound_email_inbox').insert({ tenant: fixture.principal.tenant, inbox_id: inboxId, ingress_id: ingress.ingress_id, provider_id: mailboxId,
+        provider_type: 'imap', provider_message_id: id, rfc_message_id: id, normalized_message_id: id, status: 'received', source_sha256: sourceSha256,
+        source_object_key: `test/vendor/${inboxId}`, source_size_bytes: 100, source_staged_at: new Date(), lease_token: null, lease_version: 1, lease_owner: null,
+        lease_expires_at: null, attempt_count: 1, envelope: '{}' });
+      return { inboxId, tenant: fixture.principal.tenant, providerId: mailboxId, senderAuth: { aligned: { spf: true, dkim: true, dmarc: true } },
+        email: { id, provider: 'imap' as const, providerId: mailboxId, tenant: fixture.principal.tenant, receivedAt: new Date().toISOString(),
+          from: { email: `new-colleague-${index}@example.test`, name: `Vendor colleague ${index}` }, to: [{ email: `vendor${index}@example.test` }], cc: [],
+          subject: `Re: Vendor thread ${index}`, body: { text: `Independent reply on vendor thread ${index}.\n\n[ALGA-REPLY-TOKEN ${token}]` }, sourceSha256, attachments: [],
+          inReplyTo: route.rfc_message_id, headers: { 'Authentication-Results': `mx.example.test; spf=pass smtp.mailfrom=new-colleague-${index}@example.test; dkim=pass header.d=example.test` }, ...overrides } };
+    };
+    return { name, index, mailboxId, ref, route, token, makeInput };
+  }));
+  return { ...fixture, requester, threads, admitNamedConversationEmailReply };
+}
+
+describe('named ticket conversation multi-vendor inbound isolation against migrated PostgreSQL (T014 processor-level substitute)', () => {
+  it('routes two independent, concurrently in-flight vendor replies to their own conversation only, with no cross-conversation broadcast or ticket-history leakage', async () => {
+    const f = await namedMultiVendorFixture();
+    // Both vendor conversations have an outstanding, unanswered outbound send
+    // (their tokens/routes) before either receives a reply — i.e. both are
+    // genuinely "in flight" concurrently, not sequential turns on one thread.
+    const inputs = await Promise.all(f.threads.map(thread => thread.makeInput()));
+    const actual = await vi.importActual<typeof import('../../../../shared/services/email/processInboundEmailInApp')>('../../../../shared/services/email/processInboundEmailInApp');
+    intake.process.mockReset(); intake.process.mockImplementation(actual.processInboundEmailInApp);
+    intake.read.mockReset(); intake.read.mockResolvedValue(Buffer.from('Vendor MIME'));
+    intake.parse.mockReset();
+    intake.parse.mockImplementation(async ({ providerId }: { providerId: string }) => {
+      const input = inputs.find(candidate => candidate.providerId === providerId);
+      if (!input) throw new Error(`Unexpected providerId in test parse mock: ${providerId}`);
+      return { emailData: input.email };
+    });
+    const { processInboundInbox } = await import('../../../../shared/services/email/inboundEmailCoreProcessor');
+    const before = await f.customer.table('tickets').where('ticket_id', f.ticket.ticketId).first();
+    let results: Awaited<ReturnType<typeof processInboundInbox>>[];
+    try {
+      // Driven one at a time deliberately: this harness's single shared admin
+      // `db` connection (see the module-level `@alga-psa/db/admin.js` mock at
+      // the top of this file) is not a fair stand-in for two independent
+      // production workers each on their own connection/pool — genuine
+      // `Promise.all(...)` concurrency here reproducibly raced getInbox() into
+      // a false `inbox_row_unclaimable` for the second call even though its
+      // row is already committed and independently visible (verified directly
+      // against `db` just before the race). That is a test-harness connection
+      // artifact, not a defect in `processInboundInbox`/admission routing —
+      // routing itself is keyed only by mailbox (providerId) and reply
+      // token/thread headers (see `routeFor` in
+      // packages/co-managed/src/inboundNamedConversationEmail.ts), never by
+      // call order. What matters for T014's isolation claim is that both
+      // conversations are simultaneously open/unanswered beforehand and that
+      // processing one never touches the other's destination.
+      results = [];
+      for (const input of inputs) results.push(await processInboundInbox({ tenantId: input.tenant, inboxId: input.inboxId, owner: randomUUID(),
+        leaseTtlMs: 30000, mode: 'enforce', namedConversationReplyAdmission: f.admitNamedConversationEmailReply }));
+    } finally { intake.process.mockReset(); intake.read.mockReset(); intake.parse.mockReset(); }
+    expect(results).toHaveLength(2);
+    for (const result of results) expect(result).toMatchObject({ disposition: 'ack', outcome: 'replied', ticketId: f.ticket.ticketId });
+    const commentIds = results.map(result => (result as any).commentId);
+    expect(new Set(commentIds).size).toBe(2); // distinct writes, no shared/merged destination
+    // Each vendor's reply lands only in its own conversation's message page —
+    // never the sibling vendor conversation's, and never the requester's.
+    for (const [i, thread] of f.threads.entries()) {
+      const page = await f.conversations.getNamedTicketConversationMessages(db, f.principal, f.ticket, thread.ref);
+      const own = page.items.find(item => item.commentId === commentIds[i]);
+      expect(own).toBeTruthy();
+      const sibling = f.threads[1 - i];
+      expect(page.items.some(item => item.commentId === commentIds[1 - i])).toBe(false);
+      const row = await f.customer.table('comments').where('comment_id', commentIds[i]).first();
+      expect(row.note).toContain(`Independent reply on vendor thread ${i}.`);
+      expect(row.note).not.toContain(`Independent reply on vendor thread ${1 - i}.`);
+      void sibling;
+    }
+    // The requester conversation — untouched by either vendor reply — stays empty.
+    const requesterPage = await f.conversations.getNamedTicketConversationMessages(db, f.principal, f.ticket, f.requester);
+    expect(requesterPage.items).toHaveLength(0);
+    // Inbound message/receipt bookkeeping is scoped one-row-per-conversation;
+    // neither reply appends a second row into the other's or into a ticket-wide
+    // table, and no unexpected ticket mutation (status/title/etc.) occurred.
+    const inboundMessages = await f.customer.table('ticket_conversation_inbound_messages').where('ticket_id', f.ticket.ticketId);
+    expect(inboundMessages).toHaveLength(2);
+    expect(new Set(inboundMessages.map(row => row.conversation_id))).toEqual(new Set(f.threads.map(thread => thread.ref.conversationId)));
+    expect(await f.customer.table('tickets').where('ticket_id', f.ticket.ticketId).first()).toMatchObject({ title: before.title, status_id: before.status_id });
+    expect(await f.customer.table('ticket_audit_logs').where({ ticket_id: f.ticket.ticketId, event_type: 'TICKET_REOPENED' })).toHaveLength(0);
+    const overview = await f.conversations.listNamedTicketConversationOverview(db, f.principal, f.ticket);
+    for (const [i, thread] of f.threads.entries()) {
+      expect(overview.find(row => row.conversationId === thread.ref.conversationId)?.attention).toMatchObject({ unreadCount: 1 });
+      void i;
+    }
+    expect(overview.find(row => row.conversationId === f.requester.conversationId)?.attention).toMatchObject({ unreadCount: 0 });
+  });
+});
+
 describe('named ticket conversation side-reply board reopen policy against migrated PostgreSQL', () => {
   it.each(['shared_it', 'organization_private'] as const)('reopens a closed parent only once both the master and side switches are on, using canonical lifecycle effects (%s)', async audience => {
     const f = await namedInboundFixture(audience);

@@ -210,7 +210,7 @@
   {
     "id": "F027",
     "description": "Show active audience and transport in the center panel and distinguish Send, Post and Ask AI.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "5. UX \u2014 option C"
     ]
@@ -322,7 +322,7 @@
   {
     "id": "F041",
     "description": "Highlight new correspondents and allow recipient editing in the normal email review.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "6. Email, recipients and notification behavior"
     ]

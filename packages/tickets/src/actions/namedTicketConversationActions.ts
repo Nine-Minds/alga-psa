@@ -133,6 +133,15 @@ export const getNamedConversationEmailDefaultsAction = withAuth(async (user, { t
   return getNamedConversationEmailDefaults(knex, actor, ticket, conversation);
 });
 
+// F041: which To/CC addresses aren't yet known correspondents on this
+// conversation's mailbox, so the composer can highlight them before Send.
+export const getNamedConversationNewCorrespondentsAction = withAuth(async (user, { tenant }, ticket: ConversationTicketReference,
+  conversation: TicketConversationReference, addresses: string[]) => {
+  const actor = await coManagedBrowserActor(user, tenant), { knex } = await createTenantKnex(tenant);
+  const { getNamedConversationNewCorrespondents } = await import('@alga-psa/co-managed');
+  return getNamedConversationNewCorrespondents(knex, actor, ticket, conversation, addresses);
+});
+
 
 export const getNamedConversationUploadOptionsAction = withAuth(async (user, { tenant }, ticket: ConversationTicketReference, conversation: TicketConversationReference) => {
   const actor = await coManagedBrowserActor(user, tenant), { knex } = await createTenantKnex(tenant);

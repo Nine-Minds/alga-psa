@@ -8,7 +8,7 @@ import CoManagedNamedTicketConversation from '../../../components/co-managed/CoM
 import { NativeRequesterConversation } from '../../../../../packages/tickets/src/components/ticket/conversations/NativeRequesterConversation';
 import { useNamedTicketConversations } from '../../../../../packages/tickets/src/components/ticket/conversations/useNamedTicketConversations';
 import { TicketConversationError } from '../../../../../shared/lib/tickets/namedConversations';
-const mocks = vi.hoisted(() => ({ aiSources: vi.fn(), askAi: vi.fn(), aiStatus: vi.fn(), aiCancel: vi.fn(), aiCapability: vi.fn(), synthesis: vi.fn(), synthesisStatus: vi.fn(), synthesisCancel: vi.fn(), synthesisDraft: vi.fn(), share: vi.fn(), getConversation: vi.fn(), acknowledge: vi.fn(), preference: vi.fn(), details: vi.fn(), schedules: vi.fn(), reschedule: vi.fn(), cancelSchedule: vi.fn(), flag: true, onPublished: vi.fn(), requesterProps: vi.fn(), uploadOptions: vi.fn(), uploadFile: vi.fn(), load: vi.fn(), page: vi.fn(), activity: vi.fn(), capabilities: vi.fn(), replyTarget: vi.fn(), replace: vi.fn(), readDraft: vi.fn(), saveDraft: vi.fn(), post: vi.fn(), create: vi.fn(), status: vi.fn(), push: vi.fn(), mailboxes: vi.fn(), selectMailbox: vi.fn(), latestSend: vi.fn(), prepareEmail: vi.fn(), sendEmail: vi.fn(), emailStatus: vi.fn(), emailDefaults: vi.fn(),
+const mocks = vi.hoisted(() => ({ aiSources: vi.fn(), askAi: vi.fn(), aiStatus: vi.fn(), aiCancel: vi.fn(), aiCapability: vi.fn(), synthesis: vi.fn(), synthesisStatus: vi.fn(), synthesisCancel: vi.fn(), synthesisDraft: vi.fn(), share: vi.fn(), getConversation: vi.fn(), acknowledge: vi.fn(), preference: vi.fn(), details: vi.fn(), schedules: vi.fn(), reschedule: vi.fn(), cancelSchedule: vi.fn(), flag: true, onPublished: vi.fn(), requesterProps: vi.fn(), uploadOptions: vi.fn(), uploadFile: vi.fn(), load: vi.fn(), page: vi.fn(), activity: vi.fn(), capabilities: vi.fn(), replyTarget: vi.fn(), replace: vi.fn(), readDraft: vi.fn(), saveDraft: vi.fn(), post: vi.fn(), create: vi.fn(), status: vi.fn(), push: vi.fn(), mailboxes: vi.fn(), selectMailbox: vi.fn(), latestSend: vi.fn(), prepareEmail: vi.fn(), sendEmail: vi.fn(), emailStatus: vi.fn(), emailDefaults: vi.fn(), newCorrespondents: vi.fn(),
   query: '', session: { session_id: 'session', user: { tenant: 'home', id: 'author' } } }));
 vi.mock('../../../../../packages/tickets/src/components/ticket/conversations/conversationAiRequest', () => ({ requestConversationAi: mocks.askAi }));
 vi.mock('../../../../../packages/tickets/src/components/ticket/conversations/conversationSynthesisRequest', () => ({ requestConversationSynthesis: mocks.synthesis }));
@@ -30,6 +30,7 @@ vi.mock('../../../../../packages/tickets/src/actions/namedTicketConversationActi
   listNamedConversationMailboxesAction: mocks.mailboxes, selectNamedConversationMailboxAction: mocks.selectMailbox, getLatestNamedTicketEmailSendAction: mocks.latestSend,
   prepareNamedTicketEmailAction: mocks.prepareEmail, sendNamedTicketEmailAction: mocks.sendEmail, getNamedTicketEmailOperationAction: mocks.emailStatus,
   getNamedConversationEmailDefaultsAction: mocks.emailDefaults,
+  getNamedConversationNewCorrespondentsAction: mocks.newCorrespondents,
   getNamedTicketConversationScreenAction: mocks.load, getNamedTicketConversationMessagesAction: mocks.page,
   getNamedConversationEditorDraftAction: mocks.readDraft, saveNamedConversationEditorDraftAction: mocks.saveDraft,
   postNamedTicketConversationAction: mocks.post, createNamedTicketConversationAction: mocks.create, setNamedTicketConversationStatusAction: mocks.status,
@@ -54,7 +55,11 @@ vi.mock('@alga-psa/ui/components/Label', () => ({ Label: ({ children, ...props }
 vi.mock('@alga-psa/ui/components/Input', () => ({ Input: ({ label, ...props }: any) => <label>{label}<input {...props} /></label> }));
 vi.mock('@alga-psa/ui/components/Dialog', () => ({ Dialog: ({ isOpen, children, footer }: any) => isOpen ? <div role="dialog">{children}{footer}</div> : null, DialogContent: ({ children }: any) => <div>{children}</div> }));
 vi.mock('@alga-psa/ui/components/CustomSelect', () => ({ default: ({ options, value, onValueChange, label, ...props }: any) => <label>{label}<select {...props} value={value} onChange={event => onValueChange(event.target.value)}>{options.map((o: any) => <option key={o.value} value={o.value}>{o.label}</option>)}</select></label> }));
-vi.mock('@alga-psa/ui/lib/i18n/client', () => ({ useTranslation: () => ({ t: (_key: string, fallback: any) => typeof fallback === 'string' ? fallback : fallback?.defaultValue?.replace('{{name}}', fallback.name) }), useFormatters: () => ({ formatDate: (value: string) => value }) }));
+vi.mock('@alga-psa/ui/lib/i18n/client', () => ({ useTranslation: () => ({ t: (_key: string, fallback: any) => {
+  if (typeof fallback === 'string') return fallback;
+  const template = fallback?.defaultValue ?? '';
+  return template.replace(/\{\{(\w+)\}\}/g, (_match: string, name: string) => fallback?.[name] ?? '');
+} }), useFormatters: () => ({ formatDate: (value: string) => value }) }));
 const ticket = { tenant: 'owner', ticketId: 'ticket' };
 const requester = { storeTenant: 'owner', conversationId: 'requester', ticket, name: 'Requester', audience: 'requester', transport: 'email', defaultSlot: 'requester', status: 'open', revision: 1, messageVersion: '0', mailbox: null, createdAt: '2026-01-01T00:00:00Z' };
 const side = { ...requester, storeTenant: 'home', conversationId: 'private', name: 'Diagnostics', audience: 'organization_private', transport: 'internal', defaultSlot: null };
@@ -97,6 +102,7 @@ beforeEach(() => {
   mocks.post.mockResolvedValue({ commentId: 'posted' });
   mocks.mailboxes.mockResolvedValue([{ id: 'mailbox', tenant: 'home', email: 'support@example.test', name: 'Support' }]);
   mocks.latestSend.mockResolvedValue(null); mocks.emailDefaults.mockResolvedValue(null);
+  mocks.newCorrespondents.mockResolvedValue([]);
 });
 afterEach(cleanup);
 
@@ -304,9 +310,46 @@ function emailFixture(selected = true) {
 async function writeEmail() {
   fireEvent.change(await screen.findByLabelText('Message'), { target: { value: 'Selected vendor question' } });
   fireEvent.change(screen.getByLabelText('To'), { target: { value: 'vendor@example.test' } });
+  fireEvent.blur(screen.getByLabelText('To'));
   fireEvent.change(screen.getByLabelText('CC'), { target: { value: 'colleague@example.test' } });
+  fireEvent.blur(screen.getByLabelText('CC'));
   fireEvent.change(screen.getByLabelText('Subject'), { target: { value: 'Connection failure' } });
 }
+
+// F041: the chip recipient editor highlights an address the server reports
+// as not yet a known correspondent on this conversation's mailbox, and
+// clears the highlight once that chip is removed -- real behavior driven by
+// the actual data contract (getNamedConversationNewCorrespondentsAction),
+// not a client-side guess.
+it('highlights a recipient the server reports as new and clears it once the chip is removed', async () => {
+  emailFixture();
+  mocks.newCorrespondents.mockImplementation(async (_ticket, _ref, addresses: string[]) =>
+    addresses.map(email => ({ email, isNew: email === 'unknown-vendor@example.test' })));
+  render(<Harness />);
+  fireEvent.change(await screen.findByLabelText('To'), { target: { value: 'unknown-vendor@example.test' } });
+  fireEvent.blur(screen.getByLabelText('To'));
+  await waitFor(() => expect(mocks.newCorrespondents).toHaveBeenCalled());
+  expect(mocks.newCorrespondents.mock.calls.at(-1)?.[2]).toEqual(['unknown-vendor@example.test']);
+  await waitFor(() => expect(screen.getByText('New correspondent')).toBeInTheDocument(), { timeout: 2000 });
+  expect(screen.getByText('unknown-vendor@example.test')).toBeInTheDocument();
+  fireEvent.click(screen.getByLabelText('Remove unknown-vendor@example.test'));
+  expect(screen.queryByText('unknown-vendor@example.test')).toBeNull();
+  expect(screen.queryByText('New correspondent')).toBeNull();
+});
+// F027: the composer heading shows transport AND audience together, not
+// just a single heading string that only implies transport (the panel
+// header above it repeats name/audience but never transport).
+it('shows transport and audience together in the composer heading for an internal side conversation', async () => {
+  render(<Harness />);
+  await screen.findByLabelText('Message');
+  expect(screen.getByRole('heading', { name: 'Internal message Your organization only' })).toBeInTheDocument();
+});
+it('shows transport and audience together in the composer heading for a vendor email conversation', async () => {
+  emailFixture();
+  render(<Harness />);
+  await screen.findByLabelText('To');
+  expect(screen.getByRole('heading', { name: 'Vendor email Your organization only' })).toBeInTheDocument();
+});
 it('restores the email envelope and reviews the resolved sender without sending until confirmation', async () => {
   const f = emailFixture(); f.preview.files = [{ filename: 'Reviewed report.txt', contentType: 'text/plain', size: 1536 }];
   const first = render(<Harness />); await writeEmail();
@@ -315,7 +358,7 @@ it('restores the email envelope and reviews the resolved sender without sending 
   expect(f.draft().email).toEqual({ to: ['vendor@example.test'], cc: ['colleague@example.test'], subject: 'Connection failure' });
   first.unmount(); render(<Harness />);
   expect(await screen.findByLabelText('Message')).toHaveValue('Selected vendor question');
-  expect(screen.getByLabelText('To')).toHaveValue('vendor@example.test');
+  expect(screen.getByText('vendor@example.test')).toBeInTheDocument();
   await waitFor(() => expect(screen.getByRole('button', { name: 'Review email' })).toBeEnabled());
   fireEvent.click(screen.getByRole('button', { name: 'Review email' }));
   await screen.findByText('resolved@example.test'); expect(mocks.sendEmail).not.toHaveBeenCalled();
@@ -399,16 +442,19 @@ it('uses accepted recipient defaults without replacing an edited envelope on ref
   mocks.emailDefaults.mockResolvedValue({ to: ['new-vendor@example.test'], cc: ['colleague@example.test'], subject: 'Latest accepted subject' });
   const first = render(<Harness />);
   await screen.findByLabelText('Message');
-  expect(screen.getByLabelText('To')).toHaveValue('new-vendor@example.test');
+  expect(screen.getByText('new-vendor@example.test')).toBeInTheDocument();
+  fireEvent.click(screen.getByLabelText('Remove new-vendor@example.test'));
   fireEvent.change(screen.getByLabelText('To'), { target: { value: 'intentional-recipient@example.test' } });
+  fireEvent.blur(screen.getByLabelText('To'));
   await waitFor(() => expect(f.draft()?.email.to).toEqual(['intentional-recipient@example.test']));
   mocks.emailDefaults.mockResolvedValue({ to: ['another-new-vendor@example.test'], cc: [], subject: 'Newer arrival' });
   fireEvent.focus(window);
   await waitFor(() => expect(mocks.load).toHaveBeenCalledTimes(2));
-  expect(screen.getByLabelText('To')).toHaveValue('intentional-recipient@example.test');
+  expect(screen.getByText('intentional-recipient@example.test')).toBeInTheDocument();
+  expect(screen.queryByText('another-new-vendor@example.test')).toBeNull();
   first.unmount(); render(<Harness />);
   await screen.findByLabelText('Message');
-  expect(screen.getByLabelText('To')).toHaveValue('intentional-recipient@example.test');
+  expect(screen.getByText('intentional-recipient@example.test')).toBeInTheDocument();
   expect(screen.getByLabelText('Subject')).toHaveValue('Latest accepted subject');
   expect(mocks.emailDefaults).toHaveBeenCalledTimes(1);
 });
@@ -506,7 +552,7 @@ it('co-managed Requester saves its own draft across navigation and reload withou
   const f = requesterEmailFixture();
   const view = render(<CoManagedNamedTicketConversation resource={f.resource} />);
   const editor = await screen.findByLabelText('Message');
-  expect(screen.getByLabelText('To')).toHaveValue('requester@example.test');
+  expect(screen.getByText('requester@example.test')).toBeInTheDocument();
   expect(mocks.saveDraft).not.toHaveBeenCalled();
   expect(screen.getByRole('navigation').querySelector('button')).not.toHaveTextContent('Draft');
   fireEvent.change(editor, { target: { value: 'Requester-only draft' } });
