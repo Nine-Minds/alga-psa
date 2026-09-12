@@ -629,7 +629,8 @@
           "loading": "Loading board ticket statuses…",
           "statusName": "Status name",
           "closed": "Closed",
-          "default": "Default"
+          "default": "Default",
+          "portalSelectable": "Client portal users can select this status"
         },
         "inboundReplyReopen": {
           "enabledLabel": "Reopen closed tickets on inbound replies",
@@ -2108,10 +2109,43 @@
       "comingSoon": "Mapping templates and scheduled imports will live here. Save column mappings, share them across the team, and configure recurring jobs."
     },
     "migration": {
-      "actions": { "back": "Back to migrations", "upload": "Upload package" },
-      "errors": { "noImportableRecords": "This package contained no importable records." },
-      "preflight": { "title": "Preflight" },
-      "run": { "queued": "Migration queued", "applying": "Migration in progress" }
+      "actions": {
+        "back": "Back to migrations",
+        "upload": "Upload package"
+      },
+      "errors": {
+        "noImportableRecords": "This package contained no importable records.",
+        "permissionDenied": "You do not have permission to import or export data.",
+        "invalidSpreadsheet": "That spreadsheet could not be read. Check that it is a valid CSV or XLSX file and try again.",
+        "notAmpPackage": "That file is not an AMP package. Upload a .amp or .sqlite file.",
+        "tooLarge": "This upload is larger than the maximum allowed size.",
+        "sizeMismatch": "The upload did not complete. Please try again.",
+        "noRecognizedHeaders": "None of the columns in that spreadsheet were recognized. Check the header row and try again.",
+        "storageRejected": "The server rejected this upload. Ask your administrator to check the storage file-type configuration.",
+        "spreadsheetFailed": "The spreadsheet could not be imported. Please try again.",
+        "uploadFailed": "The package could not be uploaded. Please try again.",
+        "unknown": "The upload failed. Please try again."
+      },
+      "preflight": {
+        "title": "Preflight"
+      },
+      "run": {
+        "queued": "Migration queued",
+        "applying": "Migration in progress"
+      },
+      "badges": {
+        "nothingImported": "Nothing imported"
+      },
+      "results": {
+        "skippedSamePackage": "Skipped records were already migrated by an earlier run of the same package.",
+        "skippedOtherPackage": "Skipped records were matched to entities created by an earlier migration of a different package: {{packages}}.",
+        "skippedExistingEntity": "Skipped records were matched to existing entities.",
+        "nothingImportedTitle": "Nothing was imported",
+        "nothingImportedBody": "This run created no new records. Every row matched something that already existed, so nothing was changed.",
+        "claimedBySamePackage": "Already migrated by this package",
+        "claimedByOtherPackage": "Already migrated by {{file}}",
+        "claimedByExistingEntity": "Matched to an existing entity"
+      }
     },
     "jobDetails": {
       "title": "Import Job Details",

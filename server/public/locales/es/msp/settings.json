@@ -629,7 +629,8 @@
           "loading": "Cargando estados de tickets del tablero…",
           "statusName": "Nombre del estado",
           "closed": "Cerrado",
-          "default": "Predeterminado"
+          "default": "Predeterminado",
+          "portalSelectable": "Los usuarios del portal de clientes pueden seleccionar este estado"
         },
         "inboundReplyReopen": {
           "enabledLabel": "Reabrir tickets cerrados con respuestas entrantes",
@@ -2113,7 +2114,17 @@
         "upload": "Subir paquete"
       },
       "errors": {
-        "noImportableRecords": "Este paquete no contenía registros importables."
+        "noImportableRecords": "Este paquete no contenía registros importables.",
+        "permissionDenied": "No tiene permiso para importar o exportar datos.",
+        "invalidSpreadsheet": "No se pudo leer esa hoja de cálculo. Compruebe que sea un archivo CSV o XLSX válido e inténtelo de nuevo.",
+        "notAmpPackage": "Ese archivo no es un paquete AMP. Suba un archivo .amp o .sqlite.",
+        "tooLarge": "Esta carga supera el tamaño máximo permitido.",
+        "sizeMismatch": "La carga no se completó. Inténtelo de nuevo.",
+        "noRecognizedHeaders": "No se reconoció ninguna de las columnas de esa hoja de cálculo. Compruebe la fila de encabezados e inténtelo de nuevo.",
+        "storageRejected": "El servidor rechazó esta carga. Pida a su administrador que revise la configuración de tipos de archivo del almacenamiento.",
+        "spreadsheetFailed": "No se pudo importar la hoja de cálculo. Inténtelo de nuevo.",
+        "uploadFailed": "No se pudo subir el paquete. Inténtelo de nuevo.",
+        "unknown": "La carga falló. Inténtelo de nuevo."
       },
       "preflight": {
         "title": "Verificación previa"
@@ -2121,6 +2132,19 @@
       "run": {
         "queued": "Migración en cola",
         "applying": "Migración en curso"
+      },
+      "badges": {
+        "nothingImported": "No se importó nada"
+      },
+      "results": {
+        "skippedSamePackage": "Los registros omitidos ya se migraron en una ejecución anterior del mismo paquete.",
+        "skippedOtherPackage": "Los registros omitidos coincidieron con entidades creadas por una migración anterior de un paquete diferente: {{packages}}.",
+        "skippedExistingEntity": "Los registros omitidos coincidieron con entidades existentes.",
+        "nothingImportedTitle": "No se importó nada",
+        "nothingImportedBody": "Esta ejecución no creó registros nuevos. Cada fila coincidió con algo que ya existía, así que no se cambió nada.",
+        "claimedBySamePackage": "Ya migrado por este paquete",
+        "claimedByOtherPackage": "Ya migrado por {{file}}",
+        "claimedByExistingEntity": "Coincide con una entidad existente"
       }
     },
     "jobDetails": {

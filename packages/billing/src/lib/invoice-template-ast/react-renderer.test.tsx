@@ -1041,6 +1041,67 @@ describe('renderEvaluatedTemplateAst', () => {
   });
 });
 
+describe('renderEvaluatedTemplateAst text nodes', () => {
+  it('T009a: preserves newlines in a text node by default', async () => {
+    const ast: TemplateAst = {
+      kind: 'invoice-template-ast',
+      version: TEMPLATE_AST_VERSION,
+      layout: {
+        id: 'root',
+        type: 'document',
+        children: [
+          {
+            id: 'terms',
+            type: 'text',
+            content: { type: 'literal', value: 'First paragraph\n\nSecond paragraph' },
+          },
+        ],
+      },
+    };
+
+    const evaluation = evaluateTemplateAst(ast, invoiceFixture);
+    const rendered = await renderEvaluatedTemplateAst(ast, evaluation);
+
+    expect(rendered.html).toContain('First paragraph\n\nSecond paragraph');
+    expect(rendered.html).toContain('white-space:pre-line');
+  });
+
+  it('T009b: an explicit whiteSpace in the text node style overrides the default', async () => {
+    // The renderer contract is tested directly: a text node whose own style
+    // declares whiteSpace must win over the preserve-newlines default.
+    const ast = {
+      kind: 'invoice-template-ast',
+      version: TEMPLATE_AST_VERSION,
+      layout: {
+        id: 'root',
+        type: 'document',
+        children: [
+          {
+            id: 'terms',
+            type: 'text',
+            style: { inline: { whiteSpace: 'nowrap' } },
+            content: { type: 'literal', value: 'First\nSecond' },
+          },
+        ],
+      },
+    } as any;
+
+    const evaluation: TemplateEvaluationResult = {
+      sourceCollection: [],
+      output: [],
+      groups: null,
+      aggregates: {},
+      totals: {},
+      bindings: {},
+    };
+
+    const rendered = await renderEvaluatedTemplateAst(ast, evaluation);
+
+    expect(rendered.html).toContain('white-space:nowrap');
+    expect(rendered.html).not.toContain('white-space:pre-line');
+  });
+});
+
 describe('renderEvaluatedTemplateAst stacked table-cell lines', () => {
   const renderAst = async (
     columns: Array<Record<string, unknown>>,

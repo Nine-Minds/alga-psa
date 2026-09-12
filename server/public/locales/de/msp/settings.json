@@ -629,7 +629,8 @@
           "loading": "Board-Ticket-Status werden geladen…",
           "statusName": "Statusname",
           "closed": "Geschlossen",
-          "default": "Standard"
+          "default": "Standard",
+          "portalSelectable": "Kundenportal-Benutzer können diesen Status auswählen"
         },
         "inboundReplyReopen": {
           "enabledLabel": "Geschlossene Tickets bei eingehenden Antworten wieder öffnen",
@@ -2113,7 +2114,17 @@
         "upload": "Paket hochladen"
       },
       "errors": {
-        "noImportableRecords": "Dieses Paket enthielt keine importierbaren Datensätze."
+        "noImportableRecords": "Dieses Paket enthielt keine importierbaren Datensätze.",
+        "permissionDenied": "Sie haben keine Berechtigung, Daten zu importieren oder zu exportieren.",
+        "invalidSpreadsheet": "Diese Tabelle konnte nicht gelesen werden. Prüfen Sie, ob es sich um eine gültige CSV- oder XLSX-Datei handelt, und versuchen Sie es erneut.",
+        "notAmpPackage": "Diese Datei ist kein AMP-Paket. Laden Sie eine .amp- oder .sqlite-Datei hoch.",
+        "tooLarge": "Dieser Upload ist größer als die maximal zulässige Größe.",
+        "sizeMismatch": "Der Upload wurde nicht abgeschlossen. Bitte versuchen Sie es erneut.",
+        "noRecognizedHeaders": "Keine der Spalten in dieser Tabelle wurde erkannt. Prüfen Sie die Kopfzeile und versuchen Sie es erneut.",
+        "storageRejected": "Der Server hat diesen Upload abgelehnt. Bitten Sie Ihren Administrator, die Speicherkonfiguration für Dateitypen zu prüfen.",
+        "spreadsheetFailed": "Die Tabelle konnte nicht importiert werden. Bitte versuchen Sie es erneut.",
+        "uploadFailed": "Das Paket konnte nicht hochgeladen werden. Bitte versuchen Sie es erneut.",
+        "unknown": "Der Upload ist fehlgeschlagen. Bitte versuchen Sie es erneut."
       },
       "preflight": {
         "title": "Vorprüfung"
@@ -2121,6 +2132,19 @@
       "run": {
         "queued": "Migration in Warteschlange",
         "applying": "Migration läuft"
+      },
+      "badges": {
+        "nothingImported": "Nichts importiert"
+      },
+      "results": {
+        "skippedSamePackage": "Übersprungene Datensätze wurden bereits durch einen früheren Lauf desselben Pakets migriert.",
+        "skippedOtherPackage": "Übersprungene Datensätze wurden Entitäten zugeordnet, die eine frühere Migration eines anderen Pakets erstellt hat: {{packages}}.",
+        "skippedExistingEntity": "Übersprungene Datensätze wurden vorhandenen Entitäten zugeordnet.",
+        "nothingImportedTitle": "Nichts importiert",
+        "nothingImportedBody": "Dieser Lauf hat keine neuen Datensätze erstellt. Jede Zeile entsprach etwas, das bereits vorhanden war, daher wurde nichts geändert.",
+        "claimedBySamePackage": "Bereits durch dieses Paket migriert",
+        "claimedByOtherPackage": "Bereits migriert durch {{file}}",
+        "claimedByExistingEntity": "Einer vorhandenen Entität zugeordnet"
       }
     },
     "jobDetails": {

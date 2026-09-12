@@ -3,7 +3,7 @@ import type { WorkflowDefinition, PublishError, Step, NodeStep, InputMapping } f
 import { workflowDefinitionSchema } from '../types';
 import { getNodeTypeRegistry } from '../registries/nodeTypeRegistry';
 import { getActionRegistryV2 } from '../registries/actionRegistry';
-import { validateExpressionSource } from '../expressionEngine';
+import { validateExpressionSource, describeExpressionError } from '../expressionEngine';
 import { WORKFLOW_RUNTIME_ALLOWED_FUNCTIONS } from '../expressionFunctions';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import { didYouMean } from './didYouMean';
@@ -80,7 +80,8 @@ export function validateWorkflowDefinition(
     };
   }
 
-  const visitSteps = (steps: Step[], prefix: string) => {
+  const visitSteps = (steps: Step[] | undefined | null, prefix: string) => {
+    if (!Array.isArray(steps)) return;
     steps.forEach((step, index) => {
       const stepPath = `${prefix}.steps[${index}]`;
 
@@ -149,11 +150,22 @@ export function validateWorkflowDefinition(
   };
 }
 
-function validateExpr(expr: { $expr: string }, stepPath: string, stepId: string, errors: PublishError[]) {
+function validateExpr(expr: { $expr: string } | undefined | null, stepPath: string, stepId: string, errors: PublishError[]) {
+  if (!expr?.$expr || expr.$expr.trim() === '') {
+    errors.push({
+      severity: 'error',
+      stepPath,
+      stepId,
+      code: 'INVALID_EXPR',
+      message: 'Expression is empty. Pick a source field or enter an expression.'
+    });
+    return;
+  }
   try {
     validateExpressionSource(expr.$expr);
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Invalid expression';
+    const reason = describeExpressionError(error);
+    const message = error instanceof Error ? reason! : reason ? `Invalid expression: ${reason}` : 'Invalid expression';
     const disallowedFn = /disallowed function: (\S+)/.exec(message)?.[1];
     const suggestion = disallowedFn ? didYouMean(disallowedFn, WORKFLOW_RUNTIME_ALLOWED_FUNCTIONS) : null;
     errors.push({
@@ -204,7 +216,9 @@ function validateNodeStep(
       });
     }
 
-    collectExprs(step.config).forEach((expr) => validateExpr(expr, stepPath, step.id, errors));
+    // action.call inputMapping is validated by validateInputMapping below; skip it here so one bad value is reported once.
+    const { inputMapping: _inputMapping, ...configWithoutMapping } = step.config as Record<string, unknown>;
+    collectExprs(step.type === 'action.call' ? configWithoutMapping : step.config).forEach((expr) => validateExpr(expr, stepPath, step.id, errors));
 
     if (step.type === 'action.call') {
       const config = step.config as { actionId?: string; version?: number; inputMapping?: InputMapping };

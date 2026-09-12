@@ -257,6 +257,7 @@ export class InvoiceZipJobHandler {
       const storedFile = await StorageService.uploadFile(tenantId, zipBuffer, fileName, {
         mime_type: 'application/zip',
         uploaded_by_id: data.requesterId,
+        origin: 'system-artifact',
       });
 
       const zipDocumentType = await this.resolveZipDocumentType(knex, tenantId);

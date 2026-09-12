@@ -1,6 +1,6 @@
 services:
   minio-test:
-    image: minio/minio:latest
+    image: quay.io/minio/minio:latest
     container_name: alga-psa-minio-test
     command: server /data --console-address ":9003"
     ports:

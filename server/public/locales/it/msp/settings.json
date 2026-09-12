@@ -629,7 +629,8 @@
           "loading": "Caricamento stati ticket della bacheca…",
           "statusName": "Nome stato",
           "closed": "Chiuso",
-          "default": "Predefinito"
+          "default": "Predefinito",
+          "portalSelectable": "Gli utenti del portale clienti possono selezionare questo stato"
         },
         "inboundReplyReopen": {
           "enabledLabel": "Riapri ticket chiusi in caso di risposte in arrivo",
@@ -2113,7 +2114,17 @@
         "upload": "Carica pacchetto"
       },
       "errors": {
-        "noImportableRecords": "Questo pacchetto non conteneva record importabili."
+        "noImportableRecords": "Questo pacchetto non conteneva record importabili.",
+        "permissionDenied": "Non hai l'autorizzazione per importare o esportare dati.",
+        "invalidSpreadsheet": "Impossibile leggere questo foglio di calcolo. Verifica che sia un file CSV o XLSX valido e riprova.",
+        "notAmpPackage": "Questo file non è un pacchetto AMP. Carica un file .amp o .sqlite.",
+        "tooLarge": "Questo caricamento supera la dimensione massima consentita.",
+        "sizeMismatch": "Il caricamento non è stato completato. Riprova.",
+        "noRecognizedHeaders": "Nessuna delle colonne di questo foglio di calcolo è stata riconosciuta. Controlla la riga di intestazione e riprova.",
+        "storageRejected": "Il server ha rifiutato questo caricamento. Chiedi all'amministratore di verificare la configurazione dei tipi di file dello storage.",
+        "spreadsheetFailed": "Impossibile importare il foglio di calcolo. Riprova.",
+        "uploadFailed": "Impossibile caricare il pacchetto. Riprova.",
+        "unknown": "Caricamento non riuscito. Riprova."
       },
       "preflight": {
         "title": "Verifica preliminare"
@@ -2121,6 +2132,19 @@
       "run": {
         "queued": "Migrazione in coda",
         "applying": "Migrazione in corso"
+      },
+      "badges": {
+        "nothingImported": "Niente importato"
+      },
+      "results": {
+        "skippedSamePackage": "I record saltati erano già stati migrati da un'esecuzione precedente dello stesso pacchetto.",
+        "skippedOtherPackage": "I record saltati sono stati associati a entità create da una migrazione precedente di un pacchetto diverso: {{packages}}.",
+        "skippedExistingEntity": "I record saltati sono stati associati a entità esistenti.",
+        "nothingImportedTitle": "Niente importato",
+        "nothingImportedBody": "Questa esecuzione non ha creato nuovi record. Ogni riga corrispondeva a qualcosa che esisteva già, quindi non è stato modificato nulla.",
+        "claimedBySamePackage": "Già migrato da questo pacchetto",
+        "claimedByOtherPackage": "Già migrato da {{file}}",
+        "claimedByExistingEntity": "Associato a un'entità esistente"
       }
     },
     "jobDetails": {

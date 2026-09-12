@@ -1,6 +1,6 @@
 services:
   minio:
-    image: minio/minio:latest
+    image: quay.io/minio/minio:latest
     profiles:
       - test
     environment:
@@ -21,7 +21,7 @@ services:
       - app-network
 
   minio-init:
-    image: minio/mc:latest
+    image: quay.io/minio/mc:latest
     profiles:
       - test
     depends_on:

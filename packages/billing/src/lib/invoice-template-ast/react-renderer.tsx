@@ -570,7 +570,12 @@ const renderNode = (
     case 'text': {
       const content = resolveExpressionValue(node.content, evaluation, scope, ctx);
       return (
-        <p key={node.id} id={node.id} className={elementClassName || undefined} style={style}>
+        <p
+          key={node.id}
+          id={node.id}
+          className={elementClassName || undefined}
+          style={{ whiteSpace: 'pre-line', ...style }}
+        >
           {String(content ?? '')}
         </p>
       );
