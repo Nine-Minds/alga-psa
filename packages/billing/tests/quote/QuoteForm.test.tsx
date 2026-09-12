@@ -257,10 +257,23 @@ describe('QuoteForm template instantiation', () => {
 
   it('T002: deep link prefills terms, notes, description, PO number, currency and line items', async () => {
     actions.getQuote.mockResolvedValue(template);
-    renderForm({ initialContext: { clientId: 'client-1', sourceTemplateId: 'tmpl-1' } });
+    const view = renderForm({ initialContext: { clientId: 'client-1', sourceTemplateId: 'tmpl-1' } });
 
     await waitFor(() => expect(lineItemsEditorMock.current?.items).toHaveLength(2));
     expect(actions.getQuote).toHaveBeenCalledWith('tmpl-1');
+
+    // Seed once (F007): a re-render with fresh prop identities must not
+    // re-apply the template. This fails loudly if the loadFormData effect
+    // dependency list is ever broadened (and the once-guard is not there).
+    view.rerender(
+      <QuoteForm
+        quoteId="new"
+        onCancel={vi.fn()}
+        onSaved={vi.fn()}
+        initialContext={{ clientId: 'client-1', sourceTemplateId: 'tmpl-1' }}
+      />,
+    );
+    await waitFor(() => expect(actions.getQuote).toHaveBeenCalledTimes(1));
 
     fireEvent.click(document.getElementById('quote-form-save') as HTMLButtonElement);
     await waitFor(() => expect(actions.createQuoteFromTemplate).toHaveBeenCalledTimes(1));
@@ -279,9 +292,21 @@ describe('QuoteForm template instantiation', () => {
 
   it('T003: deep-linked create routes through createQuoteFromTemplate without re-persisting line items', async () => {
     actions.getQuote.mockResolvedValue(template);
-    renderForm({ initialContext: { clientId: 'client-1', sourceTemplateId: 'tmpl-1' } });
+    const view = renderForm({ initialContext: { clientId: 'client-1', sourceTemplateId: 'tmpl-1' } });
 
     await waitFor(() => expect(lineItemsEditorMock.current?.items).toHaveLength(2));
+
+    // Seed once (F007): re-rendering must not fetch/apply the source template a
+    // second time, so the server-created line items are not re-seeded.
+    view.rerender(
+      <QuoteForm
+        quoteId="new"
+        onCancel={vi.fn()}
+        onSaved={vi.fn()}
+        initialContext={{ clientId: 'client-1', sourceTemplateId: 'tmpl-1' }}
+      />,
+    );
+    await waitFor(() => expect(actions.getQuote).toHaveBeenCalledTimes(1));
 
     fireEvent.click(document.getElementById('quote-form-save') as HTMLButtonElement);
     await waitFor(() => expect(actions.createQuoteFromTemplate).toHaveBeenCalledTimes(1));
