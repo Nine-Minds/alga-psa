@@ -14364,6 +14364,37 @@ describe('named ticket conversation editor drafts against migrated PostgreSQL', 
     expect(await tenantDb(db, ref.storeTenant).table('ticket_conversation_editor_drafts').where('conversation_id', ref.conversationId).first())
       .toMatchObject({ content: draft.content });
   });
+
+  // F019: `listNamedTicketConversationOverview`'s `hasDraft` field
+  // (namedTicketConversations.ts:141-150) has no coverage anywhere else —
+  // the component test only catches the old `active && dirty` UI gating, not
+  // this server-side computation. Prove it flips true the moment a real draft
+  // exists, flips back false once the draft is discarded (content: null,
+  // which persists an empty-content row rather than deleting it), and stays
+  // false for an untouched sibling conversation throughout.
+  it('reports hasDraft on the overview only for conversations with a real, non-empty draft', async () => {
+    const { conversations: api, principal, ticket } = await namedConversationFixture();
+    const side = await api.createNamedTicketConversation(db, principal, ticket,
+      { operationId: randomUUID(), name: 'Vendor coordination', audience: 'organization_private', transport: 'internal' });
+    const ref = { storeTenant: side.storeTenant, conversationId: side.conversationId };
+    const untouched = (await api.listNamedTicketConversations(db, principal, ticket)).find(row => row.defaultSlot === 'requester')!;
+    const overviewBefore = await api.listNamedTicketConversationOverview(db, principal, ticket);
+    expect(overviewBefore.find(row => row.conversationId === side.conversationId)?.hasDraft).toBe(false);
+    expect(overviewBefore.find(row => row.conversationId === untouched.conversationId)?.hasDraft).toBe(false);
+    const draft = await api.saveNamedConversationEditorDraft(db, principal, ticket, ref, { operationId: randomUUID(),
+      expectedRevision: 0, expectedConversationRevision: side.revision, content: { text: 'Draft in progress' } });
+    const overviewWithDraft = await api.listNamedTicketConversationOverview(db, principal, ticket);
+    expect(overviewWithDraft.find(row => row.conversationId === side.conversationId)?.hasDraft).toBe(true);
+    // The sibling requester conversation is unaffected by another conversation's draft.
+    expect(overviewWithDraft.find(row => row.conversationId === untouched.conversationId)?.hasDraft).toBe(false);
+    await api.saveNamedConversationEditorDraft(db, principal, ticket, ref,
+      { operationId: randomUUID(), expectedRevision: draft.revision, expectedConversationRevision: side.revision, content: null });
+    const overviewAfterDiscard = await api.listNamedTicketConversationOverview(db, principal, ticket);
+    expect(overviewAfterDiscard.find(row => row.conversationId === side.conversationId)?.hasDraft).toBe(false);
+    // The discarded draft row still exists (empty content), it just no longer counts.
+    expect(await tenantDb(db, ref.storeTenant).table('ticket_conversation_editor_drafts').where('conversation_id', ref.conversationId).first())
+      .toMatchObject({ content: null });
+  });
 });
 
 describe('named ticket conversation message pages against migrated PostgreSQL', () => {
@@ -14851,7 +14882,21 @@ describe('named ticket conversation mailbox authority against migrated PostgreSQ
   // probe. This drives an actual confirm (producing a genuinely queued
   // 'pending' send) and revokes the grant afterward, so the gap between
   // "queued" and "delivered" is covered too.
-  it('revoking a queued sender grant between confirm and deliver blocks delivery without ever sending', async () => {
+  //
+  // `setNamedConversationSenderGrant` ALWAYS bumps `ticket_conversations.
+  // revision` — for both enable and disable — and `deliverNamedConversationEmail`
+  // re-checks `authorizeNamedConversationMailbox` against the revision recorded
+  // on the operation row at confirm time (`conversationMailboxes.ts:47-48`),
+  // BEFORE it ever consults the sender-grant table. So calling
+  // `setNamedConversationSenderGrant({ enabled: false })` between confirm and
+  // deliver fails delivery via CONVERSATION_CONFLICT (a stale revision), not
+  // because the grant itself was consulted and found missing. A bare
+  // `rejects.toThrow()` can't tell these apart — assert the concrete code, and
+  // prove the two paths really are distinct with a second variant that revokes
+  // the grant WITHOUT bumping the revision (a direct row delete, bypassing
+  // `setNamedConversationSenderGrant`), which must fail with CONVERSATION_FORBIDDEN
+  // instead.
+  it('revoking a queued sender grant between confirm and deliver blocks delivery via a stale revision, not a grant lookup', async () => {
     const { conversations: api, principal, customerPrincipal, ticket, sponsor } = await namedConversationFixture();
     const mail = await import('../../../../packages/co-managed/src/conversationMailboxes');
     const email = await import('../../../../packages/co-managed/src/conversationEmailOperations');
@@ -14886,7 +14931,59 @@ describe('named ticket conversation mailbox authority against migrated PostgreSQ
     const current = await api.getNamedTicketConversation(db, principal, ticket, ref);
     await mail.setNamedConversationSenderGrant(db, principal, ticket, ref,
       { expectedRevision: current.revision, granteeTenant: customerPrincipal.tenant, granteeUserId: customerPrincipal.userId, enabled: false });
-    await expect(email.deliverNamedConversationEmail(db, customerPrincipal, ticket, ref, request.operationId, transport)).rejects.toThrow();
+    await expect(email.deliverNamedConversationEmail(db, customerPrincipal, ticket, ref, request.operationId, transport))
+      .rejects.toMatchObject({ code: 'CONVERSATION_CONFLICT' });
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  // T013 (continued): the actual sender-grant-consulted path, isolated from the
+  // revision bump above by deleting the grant row directly instead of going
+  // through `setNamedConversationSenderGrant` (which always advances the
+  // conversation revision as a side effect of either enabling or disabling).
+  // With the revision left untouched, `deliverNamedConversationEmail` passes
+  // the revision check and reaches `authorizeMailbox`'s grant lookup
+  // (`conversationMailboxes.ts:36-39`), which now finds nothing and fails
+  // with CONVERSATION_FORBIDDEN — a genuinely different code from the stale-
+  // revision case above, proving the two failure modes are distinguishable.
+  it('revoking the underlying sender-grant row without touching the revision blocks delivery via the grant lookup itself', async () => {
+    const { conversations: api, principal, customerPrincipal, ticket, sponsor } = await namedConversationFixture();
+    const mail = await import('../../../../packages/co-managed/src/conversationMailboxes');
+    const email = await import('../../../../packages/co-managed/src/conversationEmailOperations');
+    const { applyNamedTicketConversationPost } = await import('../../../../packages/tickets/src/lib/postNamedTicketConversation');
+    const { previewReviewedEmail } = await import('../../../../packages/email/src/reviewedEmail');
+    const mailboxId = randomUUID();
+    await sponsor.table('email_providers').insert({ tenant: principal.tenant, id: mailboxId, provider_type: 'imap',
+      provider_name: 'Support intake', mailbox: 'support@example.test', status: 'connected', is_active: true });
+    const conversation = await api.createNamedTicketConversation(db, principal, ticket,
+      { operationId: randomUUID(), name: 'Carrier support', audience: 'shared_it', transport: 'email' });
+    const ref = { storeTenant: conversation.storeTenant, conversationId: conversation.conversationId };
+    const bound = await mail.selectNamedConversationMailbox(db, principal, ticket, ref, 1, mailboxId);
+    const granted = await mail.setNamedConversationSenderGrant(db, principal, ticket, ref,
+      { expectedRevision: bound.revision, granteeTenant: customerPrincipal.tenant, granteeUserId: customerPrincipal.userId, enabled: true });
+    await api.saveNamedConversationEditorDraft(db, customerPrincipal, ticket, ref, { operationId: randomUUID(), expectedRevision: 0,
+      expectedConversationRevision: granted.revision, content: { text: 'Queued, grant deleted out from under it' },
+      email: { subject: 'Carrier update', to: ['vendor@example.test'], cc: [] } });
+    const provider = { providerId: 'test-provider', providerType: 'smtp' };
+    const send = vi.fn(async () => ({ success: true, metadata: { deliveryStatus: 'delivered' } }));
+    const recheck = vi.fn(async (payload: any) => previewReviewedEmail(payload, provider, 'a'.repeat(64)));
+    const transport = { send, recheck, prepare: vi.fn(async ({ mailbox, content, envelope, headers, replyToken }: any) => {
+      const payload = { from: { email: mailbox.email }, replyTo: { email: mailbox.email }, ...envelope, headers,
+        text: `${content.text}\n[ALGA-REPLY-TOKEN ${replyToken}]`, html: `<p>${content.text}</p>` };
+      return { payload, review: await recheck(payload) };
+    }) };
+    const request = { operationId: randomUUID(), expectedDraftRevision: 1, expectedConversationRevision: granted.revision };
+    const review = await email.prepareNamedConversationEmail(db, customerPrincipal, ticket, ref, request, transport);
+    const confirmed = await email.confirmNamedConversationEmail(db, customerPrincipal, ticket, ref, request.operationId, review.review.messageHash, transport, applyNamedTicketConversationPost);
+    expect(confirmed.status).toBe('pending');
+    // Delete the sender-grant row directly — no `setNamedConversationSenderGrant`
+    // call, so `ticket_conversations.revision` is untouched by this line.
+    const revisionBefore = (await api.getNamedTicketConversation(db, principal, ticket, ref)).revision;
+    await sponsor.table('ticket_conversation_sender_grants').where({ conversation_store_tenant: ref.storeTenant,
+      conversation_id: ref.conversationId, ticket_tenant: ticket.tenant, ticket_id: ticket.ticketId, relationship_id: ticket.relationshipId,
+      grantee_tenant: customerPrincipal.tenant, grantee_user_id: customerPrincipal.userId }).del();
+    expect((await api.getNamedTicketConversation(db, principal, ticket, ref)).revision).toBe(revisionBefore);
+    await expect(email.deliverNamedConversationEmail(db, customerPrincipal, ticket, ref, request.operationId, transport))
+      .rejects.toMatchObject({ code: 'CONVERSATION_FORBIDDEN' });
     expect(send).not.toHaveBeenCalled();
   });
 });
@@ -15243,8 +15340,10 @@ describe('named ticket conversation side-reply board reopen policy against migra
     const ticketBefore = await f.customer.table('tickets').where('ticket_id', f.ticket.ticketId).first();
     const boardId = ticketBefore.board_id;
     const closedStatus = await f.customer.table('statuses').where({ board_id: boardId, item_type: 'ticket', is_closed: true }).first();
+    const defaultAssignee = await f.customer.table('users').where({ tenant: f.ticket.tenant, user_type: 'internal', is_inactive: false }).first('user_id');
     await f.customer.table('boards').where('board_id', boardId).update({ inbound_reply_reopen_enabled: true,
-      inbound_reply_reopen_cutoff_hours: 1, inbound_reply_ai_ack_suppression_enabled: false, inbound_reply_reopen_side_conversations_enabled: true });
+      inbound_reply_reopen_cutoff_hours: 1, inbound_reply_ai_ack_suppression_enabled: false, inbound_reply_reopen_side_conversations_enabled: true,
+      default_assigned_to: defaultAssignee?.user_id ?? null });
     await f.customer.table('tickets').where('ticket_id', f.ticket.ticketId).update({ status_id: closedStatus.status_id, is_closed: true,
       closed_at: new Date(Date.now() - 7200000).toISOString() }); // 2h ago, cutoff is 1h — exceeded.
     const input = await f.makeInput();
@@ -15276,6 +15375,50 @@ describe('named ticket conversation side-reply board reopen policy against migra
     expect(page.items[0]).toMatchObject({ commentId: accepted.commentId, parentCommentId: null });
     // No board-reopen or bundle side effects were triggered by this routing.
     expect(await f.customer.table('ticket_audit_logs').where({ ticket_id: f.ticket.ticketId, event_type: 'TICKET_REOPENED' })).toHaveLength(0);
+    // The follow-up ticket goes through the canonical creation path — board
+    // default assignment is a synchronous, observable effect of wiring
+    // TicketModel.createTicketWithRetry's eventPublisher/assignment logic —
+    // not a silent side effect (notification/SLA start key off this too).
+    expect(followupTicket.assigned_to).toBe(defaultAssignee?.user_id ?? null);
+    expect(followupTicket.assigned_to).not.toBeNull();
+
+    // A SECOND distinct late reply to the SAME original route must land on
+    // the SAME follow-up ticket, not spawn a second one.
+    const second = await f.makeInput({ body: { text: 'A second late reply after the same reopen window.' } });
+    const acceptedSecond = await db.transaction(trx => f.admission.admitNamedConversationEmailReply(trx, second));
+    expect(acceptedSecond).toMatchObject({ outcome: 'replied', ticketId: accepted.ticketId });
+    if (!acceptedSecond || acceptedSecond.outcome !== 'replied') throw new Error('Expected a second follow-up reply');
+    expect(await owner.table('ticket_conversations').where('ticket_id', accepted.ticketId)).toHaveLength(1);
+    const followupTickets = await f.customer.table('tickets').where('board_id', ticketBefore.board_id).whereNot('ticket_id', f.ticket.ticketId);
+    expect(followupTickets.map(row => row.ticket_id)).toEqual([accepted.ticketId]);
+    const secondPage = await f.conversations.getNamedTicketConversationMessages(db, f.principal, followupTicketRef, followupRef);
+    expect(secondPage.items.map(item => item.commentId).sort()).toEqual([accepted.commentId, acceptedSecond.commentId].sort());
+  });
+
+  // F065 robustness: a hard failure creating the follow-up ticket (here: the
+  // closed original has no priority, which TicketModel.createTicket refuses
+  // to default) must degrade to the existing closed-ticket attachment
+  // behavior, not wedge the whole inbound admission in an uncaught throw.
+  it.each(['shared_it', 'organization_private'] as const)('degrades to attaching on the closed ticket when follow-up ticket creation fails (%s)', async audience => {
+    const f = await namedInboundFixture(audience);
+    const ticketBefore = await f.customer.table('tickets').where('ticket_id', f.ticket.ticketId).first();
+    const boardId = ticketBefore.board_id;
+    const closedStatus = await f.customer.table('statuses').where({ board_id: boardId, item_type: 'ticket', is_closed: true }).first();
+    await f.customer.table('boards').where('board_id', boardId).update({ inbound_reply_reopen_enabled: true,
+      inbound_reply_reopen_cutoff_hours: 1, inbound_reply_ai_ack_suppression_enabled: false, inbound_reply_reopen_side_conversations_enabled: true });
+    await f.customer.table('tickets').where('ticket_id', f.ticket.ticketId).update({ status_id: closedStatus.status_id, is_closed: true,
+      closed_at: new Date(Date.now() - 7200000).toISOString(), priority_id: null }); // No priority: TicketModel.createTicket refuses this.
+    const input = await f.makeInput();
+    const accepted = await db.transaction(trx => f.admission.admitNamedConversationEmailReply(trx, input));
+    expect(accepted).toMatchObject({ outcome: 'replied', ticketId: f.ticket.ticketId });
+    if (!accepted || accepted.outcome !== 'replied') throw new Error('Expected the reply to attach to the existing closed ticket');
+    // Still closed — the reopen path was never reached; only the fallback
+    // attach-to-existing-ticket behavior ran.
+    expect(await f.customer.table('tickets').where('ticket_id', f.ticket.ticketId).first()).toMatchObject({ is_closed: true, status_id: closedStatus.status_id });
+    const page = await f.conversations.getNamedTicketConversationMessages(db, f.principal, f.ticket, f.ref);
+    expect(page.items.map(item => item.commentId)).toContain(accepted.commentId);
+    // No stray follow-up ticket was created despite the failed attempt.
+    expect(await f.customer.table('tickets').where('board_id', boardId).whereNot('ticket_id', f.ticket.ticketId)).toEqual([]);
   });
 });
 

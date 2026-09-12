@@ -242,20 +242,32 @@ async function admitReply(outer: Knex.Transaction, input: Parameters<NamedConver
       // ticket instead of reopening — or attaching invisibly to — the closed
       // one. Decided BEFORE any write so the message lands as a new root on
       // the follow-up, never split across two destinations.
+      //
+      // A hard failure creating the follow-up (e.g. the original ticket has
+      // no priced/priority default the ticket model requires, or no board
+      // default status) must never wedge inbound processing in an endless
+      // retry loop — it degrades to the existing closed-ticket attachment
+      // behavior (the same as if the side-conversation reopen policy weren't
+      // enabled at all) rather than rethrow.
       let redirectedToFollowup = false;
       if (conversation.audience !== 'requester') {
         const { isSideConversationCutoffExceeded, createSideConversationFollowup } = await import('./namedConversationReopenPolicy');
-        if (await isSideConversationCutoffExceeded(trx, { tenantId: conversation.ticket.tenant, ticketId: conversation.ticket.ticketId, email })) {
-          const followup = await createSideConversationFollowup(trx, { originalTicket: conversation.ticket, conversationName: conversation.name,
-            audience: conversation.audience as 'shared_it' | 'organization_private', storeTenant: conversation.storeTenant,
-            relationshipId: route.relationship_id ?? null,
-            mailboxTenant: input.tenant, mailboxId: input.providerId });
-          conversation = await readStoredTicketConversation({ trx, storeTenant: conversation.storeTenant,
-            ticket: { tenant: conversation.ticket.tenant, ticketId: followup.ticketId,
-              ...(conversation.ticket.relationshipId ? { relationshipId: conversation.ticket.relationshipId } : {}) } },
-            followup.conversationId, 'update');
-          source = { ...source, thread_id: followup.threadId };
-          redirectedToFollowup = true;
+        try {
+          if (await isSideConversationCutoffExceeded(trx, { tenantId: conversation.ticket.tenant, ticketId: conversation.ticket.ticketId, email })) {
+            const followup = await createSideConversationFollowup(trx, { originalTicket: conversation.ticket, originalConversationId: conversation.conversationId,
+              conversationName: conversation.name, audience: conversation.audience as 'shared_it' | 'organization_private', storeTenant: conversation.storeTenant,
+              relationshipId: route.relationship_id ?? null, mailboxTenant: input.tenant, mailboxId: input.providerId,
+              route: { tenant: route.tenant, mailboxId: route.mailbox_id, operationTenant: route.operation_tenant, operationId: route.operation_id } });
+            conversation = await readStoredTicketConversation({ trx, storeTenant: conversation.storeTenant,
+              ticket: { tenant: conversation.ticket.tenant, ticketId: followup.ticketId,
+                ...(conversation.ticket.relationshipId ? { relationshipId: conversation.ticket.relationshipId } : {}) } },
+              followup.conversationId, 'update');
+            source = { ...source, thread_id: followup.threadId };
+            redirectedToFollowup = true;
+          }
+        } catch (error) {
+          if (error instanceof ReplyRejected || error instanceof CoManagedSharedWorkError || (error instanceof TicketConversationError && error.code === 'CONVERSATION_FORBIDDEN')) throw error;
+          console.error('Could not create side-conversation follow-up ticket; attaching the reply to the existing closed ticket instead:', error);
         }
       }
       const to = email.to.map(address), cc = (email.cc ?? []).map(address);

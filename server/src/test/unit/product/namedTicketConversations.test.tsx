@@ -7,6 +7,7 @@ import { ConversationShareDialog } from '../../../../../packages/tickets/src/com
 import CoManagedNamedTicketConversation from '../../../components/co-managed/CoManagedNamedTicketConversation';
 import { NativeRequesterConversation } from '../../../../../packages/tickets/src/components/ticket/conversations/NativeRequesterConversation';
 import { useNamedTicketConversations } from '../../../../../packages/tickets/src/components/ticket/conversations/useNamedTicketConversations';
+import { TicketConversationError } from '../../../../../shared/lib/tickets/namedConversations';
 const mocks = vi.hoisted(() => ({ aiSources: vi.fn(), askAi: vi.fn(), aiStatus: vi.fn(), aiCancel: vi.fn(), aiCapability: vi.fn(), synthesis: vi.fn(), synthesisStatus: vi.fn(), synthesisCancel: vi.fn(), synthesisDraft: vi.fn(), share: vi.fn(), getConversation: vi.fn(), acknowledge: vi.fn(), preference: vi.fn(), details: vi.fn(), schedules: vi.fn(), reschedule: vi.fn(), cancelSchedule: vi.fn(), flag: true, onPublished: vi.fn(), requesterProps: vi.fn(), uploadOptions: vi.fn(), uploadFile: vi.fn(), load: vi.fn(), page: vi.fn(), activity: vi.fn(), capabilities: vi.fn(), replyTarget: vi.fn(), replace: vi.fn(), readDraft: vi.fn(), saveDraft: vi.fn(), post: vi.fn(), create: vi.fn(), status: vi.fn(), push: vi.fn(), mailboxes: vi.fn(), selectMailbox: vi.fn(), latestSend: vi.fn(), prepareEmail: vi.fn(), sendEmail: vi.fn(), emailStatus: vi.fn(), emailDefaults: vi.fn(),
   query: '', session: { session_id: 'session', user: { tenant: 'home', id: 'author' } } }));
 vi.mock('../../../../../packages/tickets/src/components/ticket/conversations/conversationAiRequest', () => ({ requestConversationAi: mocks.askAi }));
@@ -356,9 +357,17 @@ it('checks an uncertain Send with its original identity and restores its warning
 // changed between "Review email" and "Send") gets its own specific message —
 // distinct from an ambiguous transport failure — and returns the user to an
 // intact, still-reviewable draft rather than a dead end.
+//
+// Next.js Server Actions strip a thrown error down to a plain `Error` with
+// only `.message` surviving the client/server boundary — `.code` is lost.
+// The mock reproduces exactly that shape (a bare `Error`, no `.code`), but
+// the message text comes from constructing the REAL `TicketConversationError`
+// and reading its `.message`, not from a hand-copied string literal. If the
+// production message ever changes, this test's expectation moves with it
+// instead of silently decoupling from what the product actually throws.
 it('reports a stale conversation conflict at Send distinctly from an ambiguous send failure', async () => {
   emailFixture();
-  mocks.sendEmail.mockRejectedValueOnce(new Error('The conversation changed. Reload it before trying again.'));
+  mocks.sendEmail.mockRejectedValueOnce(new Error(new TicketConversationError('CONVERSATION_CONFLICT').message));
   render(<Harness />); await writeEmail();
   await waitFor(() => expect(screen.getByRole('button', { name: 'Review email' })).toBeEnabled());
   fireEvent.click(screen.getByRole('button', { name: 'Review email' })); await screen.findByText('resolved@example.test');
