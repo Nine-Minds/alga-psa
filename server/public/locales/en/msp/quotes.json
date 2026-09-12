@@ -315,7 +315,8 @@
       "title": "Client-facing text",
       "subtitle": "Appears on the PDF, below the totals.",
       "notes": "Notes to client (Optional)",
-      "terms": "Terms & conditions (Optional)"
+      "terms": "Terms & conditions (Optional)",
+      "termsPlaceholder": "Add terms, links and paragraphs…"
     },
     "moreDetails": {
       "title": "More details",

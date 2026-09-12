@@ -38,6 +38,8 @@ build
 !packages/event-schemas/dist/**
 !packages/event-bus/dist/**
 !packages/types/dist/**
+!packages/formatting/dist
+!packages/formatting/dist/**
 
 # Environment variables
 .env

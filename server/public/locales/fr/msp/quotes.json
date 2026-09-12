@@ -315,7 +315,8 @@
       "title": "Texte visible par le client",
       "subtitle": "Apparaît sur le PDF, sous les totaux.",
       "notes": "Notes au client (facultatif)",
-      "terms": "Conditions générales (facultatif)"
+      "terms": "Conditions générales (facultatif)",
+      "termsPlaceholder": "Ajouter des conditions, des liens et des paragraphes…"
     },
     "moreDetails": {
       "title": "Plus de détails",

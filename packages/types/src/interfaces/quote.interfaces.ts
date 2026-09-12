@@ -78,6 +78,13 @@ export interface IQuoteActivity extends TenantEntity {
   created_at?: ISO8601String;
 }
 
+/**
+ * Authored BlockNote block array backing rich Terms & Conditions.
+ * `quotes.terms_and_conditions` remains the flattened plain-text projection
+ * rendered when this is NULL.
+ */
+export type QuoteTermsBlockContent = Array<Record<string, unknown>>;
+
 export interface IQuote extends TenantEntity {
   quote_id: string;
   quote_number?: string | null;
@@ -100,6 +107,7 @@ export interface IQuote extends TenantEntity {
   internal_notes?: string | null;
   client_notes?: string | null;
   terms_and_conditions?: string | null;
+  terms_and_conditions_block?: QuoteTermsBlockContent | null;
   is_template: boolean;
   template_id?: string | null;
   converted_contract_id?: string | null;
@@ -265,6 +273,9 @@ export interface QuoteViewModel {
   tax: number;
   total_amount: number;
   terms_and_conditions?: string | null;
+  terms_and_conditions_block?: QuoteTermsBlockContent | null;
+  /** Structured block when authored, otherwise the plain-text projection. */
+  terms_and_conditions_rich?: string | QuoteTermsBlockContent | null;
   client_notes?: string | null;
   client_id?: string | null;
   contact_id?: string | null;

@@ -550,6 +550,92 @@ describe('quoteActions', () => {
     expect(result).toMatchObject({ quote_number: 'Q-0042', is_template: false });
   });
 
+  const TEMPLATE_TERMS_BLOCK = [
+    {
+      type: 'paragraph',
+      content: [
+        { type: 'text', text: 'Template terms' },
+        { type: 'link', href: 'https://example.com/template', content: [{ type: 'text', text: 'here' }] },
+      ],
+    },
+  ];
+  const TEMPLATE_TERMS_TEXT = 'Template terms here';
+
+  const createTemplateWithTerms = (overrides: Record<string, unknown> = {}) => ({
+    ...templateQuote,
+    terms_and_conditions: TEMPLATE_TERMS_TEXT,
+    terms_and_conditions_block: TEMPLATE_TERMS_BLOCK,
+    quote_items: [],
+    ...overrides,
+  });
+
+  const invokeCreateFromTemplate = async (input: Record<string, unknown>) => {
+    vi.spyOn(Quote, 'getById')
+      .mockResolvedValueOnce(createTemplateWithTerms() as any)
+      .mockResolvedValueOnce({ quote_id: QUOTE_ID, quote_number: 'Q-0099', is_template: false, quote_items: [] } as any);
+
+    const { createQuoteFromTemplate } = await import('../../src/actions/quoteActions');
+    await createQuoteFromTemplate(templateQuote.quote_id, {
+      client_id: baseQuoteInput.client_id,
+      quote_date: baseQuoteInput.quote_date,
+      valid_until: baseQuoteInput.valid_until,
+      ...input,
+    } as any);
+  };
+
+  it('T022: createQuoteFromTemplate inherits template terms only when neither field is supplied', async () => {
+    await invokeCreateFromTemplate({});
+
+    expect(Quote.create).toHaveBeenCalledWith(
+      expect.anything(),
+      TENANT_ID,
+      expect.objectContaining({
+        terms_and_conditions: TEMPLATE_TERMS_TEXT,
+        terms_and_conditions_block: TEMPLATE_TERMS_BLOCK,
+      })
+    );
+  });
+
+  it('T022: a rich override replaces the template terms without inheriting its text', async () => {
+    const overrideBlock = [{ type: 'paragraph', content: [{ type: 'text', text: 'Override' }] }];
+    await invokeCreateFromTemplate({ terms_and_conditions_block: overrideBlock });
+
+    expect(Quote.create).toHaveBeenCalledWith(
+      expect.anything(),
+      TENANT_ID,
+      expect.objectContaining({
+        terms_and_conditions_block: overrideBlock,
+        terms_and_conditions: null,
+      })
+    );
+  });
+
+  it('T022: a plain-text override replaces the template terms without inheriting its block', async () => {
+    await invokeCreateFromTemplate({ terms_and_conditions: 'Plain override' });
+
+    expect(Quote.create).toHaveBeenCalledWith(
+      expect.anything(),
+      TENANT_ID,
+      expect.objectContaining({
+        terms_and_conditions: 'Plain override',
+        terms_and_conditions_block: null,
+      })
+    );
+  });
+
+  it('T022: explicitly clearing terms does not restore the template terms', async () => {
+    await invokeCreateFromTemplate({ terms_and_conditions: null, terms_and_conditions_block: null });
+
+    expect(Quote.create).toHaveBeenCalledWith(
+      expect.anything(),
+      TENANT_ID,
+      expect.objectContaining({
+        terms_and_conditions: null,
+        terms_and_conditions_block: null,
+      })
+    );
+  });
+
   it('T050d: listQuotes separates template and non-template views with is_template filtering', async () => {
     const { listQuotes } = await import('../../src/actions/quoteActions');
 

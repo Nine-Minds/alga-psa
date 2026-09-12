@@ -30,6 +30,7 @@ export type DesignerComponentType =
   | 'section'
   | 'column'
   | 'text'
+  | 'richText'
   | 'totals'
   | 'table'
   | 'field'

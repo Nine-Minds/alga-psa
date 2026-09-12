@@ -1,6 +1,8 @@
 export { default as RichTextViewer } from './RichTextViewer';
 export type { RichTextViewerProps } from './RichTextViewer';
 export { default as TextEditor, DEFAULT_BLOCK } from './TextEditor';
+export { default as QuoteTermsContent, hasQuoteTermsContent } from './QuoteTermsContent';
+export type { QuoteTermsContentProps } from './QuoteTermsContent';
 export { Emoticon } from './EmoticonExtension';
 export type { EmoticonOptions } from './EmoticonExtension';
 export { createYjsProvider } from './yjs-config';

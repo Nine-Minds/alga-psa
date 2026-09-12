@@ -581,6 +581,8 @@ export async function mapLoadedQuoteToViewModel(
     tax: derivedTax,
     total_amount: derivedTotal,
     terms_and_conditions: quote.terms_and_conditions ?? null,
+    terms_and_conditions_block: quote.terms_and_conditions_block ?? null,
+    terms_and_conditions_rich: quote.terms_and_conditions_block ?? quote.terms_and_conditions ?? null,
     client_notes: quote.client_notes ?? null,
     client_id: quote.client_id ?? null,
     contact_id: quote.contact_id ?? null,
