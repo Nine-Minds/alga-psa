@@ -318,3 +318,63 @@ discovered while wiring the PDF:
   (T019/T020) and DB-integration copies (T008/T010/T011). The behaviors were
   exercised by the projection unit tests and the live smoke, but the plan's
   DB-integration suites were not added here.
+
+## Review repairs (second pass)
+
+Five defects from the first review, all fixed and covered by real tests.
+
+1. **jsonb array serialization.** `normalizeQuoteTermsFields` kept the block as
+   a JS array, and node-postgres serializes an array parameter as a PostgreSQL
+   array literal (`{...}`), not JSON. Added
+   `serializeQuoteTermsBlockForDb` / `prepareQuoteTermsForDb` in
+   `quoteTermsContent.ts` and applied it at every Knex write of a `quotes` row:
+   the billing `Quote.create`/`Quote.update`/`createRevision`, and the separate
+   workflow `Quote` in `crmWorkerDal.ts` (which `crm.ts` uses and which
+   previously bypassed normalization). Arrays stay arrays in application state
+   and in records returned from the DB.
+2. **QuoteForm editor never consumed external content.** The mounted
+   `TextEditor` builds its document once; template selection updated
+   `termsBlock` but not the editor. QuoteForm now bumps a `termsEditorKey` only
+   on quote load / template selection and passes it as `TextEditor key`, so the
+   document is replaced on external replacement while ordinary typing keeps the
+   same instance (cursor/undo preserved).
+3. **Dual-field inheritance.** `createQuoteFromTemplate` applied `?? `
+   independently to the two terms fields, so clearing restored the template's
+   terms and a plain-text override inherited the template block. The two fields
+   are now resolved together: supplied (`undefined` vs `null` distinguished)
+   wins, inherit only when neither is supplied.
+4. **Legacy PDF compatibility (sibling prerequisite).** The AST `text` node now
+   renders with `whiteSpace: 'pre-line'` (the sibling card's change), and the
+   `richText` plain-value fallback mirrors the text node exactly — including an
+   empty paragraph for empty/null — so a migrated stock layout reproduces the
+   legacy output instead of omitting the paragraph. `F033`/`T014` wording was
+   corrected to match; a before/after regression compares the two node types for
+   multiline and empty legacy terms.
+5. **Coverage.** Added real-Postgres tests
+   (`server/src/test/infrastructure/billing/quotes/quoteTermsRichText.test.ts`):
+   create/update/reload, plain-write-clears-block, clear-both, `createRevision`
+   copy, and REST `QuoteService` create/update. Extended the mocked
+   `quoteActions.test.ts` for inherit / rich override / plain override /
+   explicit clear through `createQuoteFromTemplate`. Extended the workflow
+   `businessOperations.crm.db.test.ts` for template duplication with rich
+   terms. Added `QuoteForm.terms.test.tsx` for select-template-after-mount,
+   edit, save and reopen. T008/T010/T011/T019/T020 now marked implemented.
+
+### Smoke (dev :3412, dedicated disposable fixtures)
+
+Authored two paragraphs in the MSP BlockNote editor, saved, reopened (editor and
+DB both show the structured block), then rendered the same quote on the MSP
+detail, in the client portal, and in the downloaded PDF — all show both
+paragraphs. Separately opened a tenant quote layout containing a `richText`
+terms node in the visual designer, renamed the layout (unrelated change), saved,
+and confirmed the persisted AST still carries the `richText` node and
+`termsAndConditionsRich` binding. The disposable client/contact/user/quote and
+layout were deleted afterwards.
+
+### Known residue
+
+The earlier smoke changed the client of quote `dc68315e` ("Smoke EUR Template
+20260912-0511"). Its original `client_id` could not be recovered from reliable
+evidence — no audit/activity record, no document association, and the sibling
+template has `client_id: null` — so recovery is reported blocked rather than
+guessed. The other smoke quotes were restored.

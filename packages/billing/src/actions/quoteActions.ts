@@ -1103,6 +1103,21 @@ export const createQuoteFromTemplate = withAuth(async (
     }
 
     const actorUserId = getActorUserId(user);
+
+    // Resolve the two terms fields together. `undefined` means "not supplied"
+    // (inherit from the template); `null` means an explicit clear. Resolving
+    // them independently would let a plain-text override silently inherit the
+    // template's block (which then wins during normalization), and would turn
+    // an explicit clear back into the template's terms.
+    const termsSupplied =
+      input.terms_and_conditions !== undefined || input.terms_and_conditions_block !== undefined;
+    const resolvedTermsAndConditions = termsSupplied
+      ? (input.terms_and_conditions !== undefined ? (input.terms_and_conditions ?? null) : null)
+      : (template.terms_and_conditions ?? null);
+    const resolvedTermsAndConditionsBlock = termsSupplied
+      ? (input.terms_and_conditions_block !== undefined ? (input.terms_and_conditions_block ?? null) : null)
+      : (template.terms_and_conditions_block ?? null);
+
     const parsedQuote = normalizeQuoteDates(createQuoteSchema.parse({
       client_id: input.client_id,
       contact_id: input.contact_id ?? null,
@@ -1114,8 +1129,8 @@ export const createQuoteFromTemplate = withAuth(async (
       opportunity_id: input.opportunity_id ?? null,
       internal_notes: input.internal_notes ?? template.internal_notes ?? null,
       client_notes: input.client_notes ?? template.client_notes ?? null,
-      terms_and_conditions: input.terms_and_conditions ?? template.terms_and_conditions ?? null,
-      terms_and_conditions_block: input.terms_and_conditions_block ?? template.terms_and_conditions_block ?? null,
+      terms_and_conditions: resolvedTermsAndConditions,
+      terms_and_conditions_block: resolvedTermsAndConditionsBlock,
       currency_code: input.currency_code ?? template.currency_code,
       is_template: false,
       created_by: input.created_by ?? actorUserId,

@@ -193,7 +193,7 @@
   },
   {
     "id": "F033",
-    "description": "A richText node whose resolved content is null, undefined or empty renders nothing rather than the converter's '[No content]' placeholder.",
+    "description": "A richText node whose resolved content is null, undefined or empty falls back to the legacy text node's empty pre-line paragraph (never the converter's '[No content]' placeholder), so migrated stock layouts reproduce the pre-change PDF output byte-for-byte.",
     "implemented": true,
     "prdRefs": ["FR13"]
   },

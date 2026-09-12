@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   isEmptyTermsBlock,
   normalizeQuoteTermsFields,
+  prepareQuoteTermsForDb,
+  serializeQuoteTermsBlockForDb,
 } from './quoteTermsContent';
 
 const twoParagraphs = [
@@ -43,6 +45,36 @@ describe('normalizeQuoteTermsFields', () => {
   it('leaves both columns untouched when neither key is supplied', () => {
     const input = { title: 'Just a title' };
     expect(normalizeQuoteTermsFields(input)).toBe(input);
+  });
+});
+
+describe('prepareQuoteTermsForDb', () => {
+  it('JSON-encodes the block for the jsonb boundary while keeping the text projection', () => {
+    const input: Record<string, unknown> = { terms_and_conditions_block: twoParagraphs };
+    const result = prepareQuoteTermsForDb(input);
+    const serialized = result.terms_and_conditions_block as unknown as string;
+
+    expect(typeof serialized).toBe('string');
+    expect(JSON.parse(serialized)).toEqual(twoParagraphs);
+    expect(result.terms_and_conditions).toBe('First paragraph\nSecond paragraph');
+  });
+
+  it('leaves an already-encoded string alone, null stays null, and a plain write clears the block', () => {
+    const encoded = JSON.stringify(twoParagraphs);
+    expect(serializeQuoteTermsBlockForDb(encoded)).toBe(encoded);
+    expect(serializeQuoteTermsBlockForDb(null)).toBeNull();
+
+    const plain = prepareQuoteTermsForDb({
+      terms_and_conditions: 'plain',
+      terms_and_conditions_block: null,
+    });
+    expect(plain.terms_and_conditions_block).toBeNull();
+    expect(plain.terms_and_conditions).toBe('plain');
+  });
+
+  it('does not add terms keys when neither was supplied', () => {
+    const input = { title: 'No terms here' };
+    expect(prepareQuoteTermsForDb(input)).toBe(input);
   });
 });
 

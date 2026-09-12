@@ -580,18 +580,21 @@ const renderNode = (
     }
     case 'text': {
       const content = resolveExpressionValue(node.content, evaluation, scope, ctx);
+      // Preserve authored line breaks for legacy multiline terms. The layout
+      // author's own style still wins via the spread.
       return (
-        <p key={node.id} id={node.id} className={elementClassName || undefined} style={style}>
+        <p
+          key={node.id}
+          id={node.id}
+          className={elementClassName || undefined}
+          style={{ whiteSpace: 'pre-line', ...(style ?? {}) }}
+        >
           {String(content ?? '')}
         </p>
       );
     }
     case 'richText': {
       const content = resolveExpressionValue(node.content, evaluation, scope, ctx);
-
-      if (content === null || content === undefined) {
-        return null;
-      }
 
       if (isStructuredBlockContent(content)) {
         const html = convertBlockContentToHTML(content);
@@ -606,10 +609,11 @@ const renderNode = (
         );
       }
 
-      const text = String(content);
-      if (text.trim() === '') {
-        return null;
-      }
+      // Plain string — including an empty one — falls back to exactly what the
+      // legacy `text` node emits (pre-line whitespace, empty paragraph
+      // preserved). A migrated stock layout therefore reproduces the pre-change
+      // PDF byte-for-byte; the converter's "[No content]" placeholder is never
+      // reached.
       return (
         <p
           key={node.id}
@@ -617,7 +621,7 @@ const renderNode = (
           className={elementClassName || undefined}
           style={{ whiteSpace: 'pre-line', ...(style ?? {}) }}
         >
-          {text}
+          {String(content ?? '')}
         </p>
       );
     }

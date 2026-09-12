@@ -146,6 +146,11 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
   const [defaultCurrency, setDefaultCurrency] = useState('USD');
   const [form, setForm] = useState<QuoteFormState>(EMPTY_FORM);
   const [termsBlock, setTermsBlock] = useState<PartialBlock[]>(() => termsBlocksFromLegacyText(''));
+  // Bumped only when the editor's content is replaced from outside (quote load,
+  // template selection). TextEditor builds its document once from
+  // `initialContent`, so a remount is how an external replacement becomes
+  // visible; ordinary typing leaves the key alone and keeps cursor/undo.
+  const [termsEditorKey, setTermsEditorKey] = useState(0);
   const [clientLocations, setClientLocations] = useState<BillingLocationSummary[]>([]);
   /**
    * True once the user has explicitly clicked "+ Add location" OR loaded a quote
@@ -336,6 +341,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
           currency_code: quote.currency_code || defaultCurrency,
         });
         setTermsBlock(seedTermsBlocks(quote.terms_and_conditions_block, quote.terms_and_conditions));
+        setTermsEditorKey((key) => key + 1);
         setLineItems((quote.quote_items || []).map(createDraftQuoteItemFromQuoteItem));
         setPersistedQuoteItemIds((quote.quote_items || []).map((item) => item.quote_item_id));
         setLastSavedAt(quote.updated_at || quote.created_at || null);
@@ -438,6 +444,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
           ? currentBlock
           : seedTermsBlocks(template.terms_and_conditions_block, template.terms_and_conditions),
       );
+      setTermsEditorKey((key) => key + 1);
 
       if (template.quote_items?.length) {
         setLineItems(template.quote_items.map((item) => ({
@@ -1542,6 +1549,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
                   ) : (
                     <div id="quote-terms-editor" className="rounded-md border border-border bg-background">
                       <TextEditor
+                        key={`quote-terms-editor-${termsEditorKey}`}
                         id="quote-terms-editor-input"
                         initialContent={termsBlock}
                         onContentChange={(blocks) => {

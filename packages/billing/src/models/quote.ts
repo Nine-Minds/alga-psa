@@ -7,7 +7,7 @@ import QuoteItem from './quoteItem';
 import QuoteActivity from './quoteActivity';
 import { canTransitionQuoteStatus } from '../schemas/quoteSchemas';
 import { recalculateQuoteFinancials } from '../services/quoteCalculationService';
-import { normalizeQuoteTermsFields } from '../lib/quoteTermsContent';
+import { prepareQuoteTermsForDb } from '../lib/quoteTermsContent';
 
 function formatDisplayQuoteNumber(quote: Pick<IQuote, 'quote_number' | 'quote_id' | 'version'>): string {
   const baseNumber = quote.quote_number ?? `Draft ${quote.quote_id}`;
@@ -259,7 +259,7 @@ const Quote = {
     const [createdQuote] = await quoteTable<IQuote>(knexOrTrx, tenant, 'quotes')
       .insert({
         tenant,
-        ...normalizeQuoteTermsFields(quote as Record<string, unknown>),
+        ...prepareQuoteTermsForDb(quote as Record<string, unknown>),
         quote_number: quoteNumber,
         status: quote.is_template ? null : (quote.status ?? 'draft'),
         version: quote.version ?? 1,
@@ -305,7 +305,7 @@ const Quote = {
 
     const [updatedQuote] = await quoteTable<IQuote>(knexOrTrx, tenant, 'quotes')
       .where({ quote_id: quoteId })
-      .update({ ...normalizeQuoteTermsFields(updateData as Record<string, unknown>), updated_at: knexOrTrx.fn.now() })
+      .update({ ...prepareQuoteTermsForDb(updateData as Record<string, unknown>), updated_at: knexOrTrx.fn.now() })
       .returning('*');
 
     await QuoteActivity.create(knexOrTrx, tenant, {
@@ -385,7 +385,7 @@ const Quote = {
     const nextVersion = Math.max(sourceQuote.version, ...versionRows.map((row) => Number(row.version ?? 0))) + 1;
 
     const [revisedQuote] = await quoteTable<IQuote>(knexOrTrx, tenant, 'quotes')
-      .insert({
+      .insert(prepareQuoteTermsForDb({
         tenant,
         client_id: sourceQuote.client_id ?? null,
         contact_id: sourceQuote.contact_id ?? null,
@@ -412,7 +412,7 @@ const Quote = {
         quote_number: sourceQuote.quote_number,
         created_by: performedBy ?? sourceQuote.updated_by ?? sourceQuote.created_by ?? null,
         updated_by: performedBy ?? sourceQuote.updated_by ?? sourceQuote.created_by ?? null,
-      })
+      }) as any)
       .returning('*');
 
     const sourceItems = sourceQuote.quote_items ?? [];

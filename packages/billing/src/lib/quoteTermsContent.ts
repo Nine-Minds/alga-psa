@@ -23,6 +23,20 @@ export function isEmptyTermsBlock(value: unknown): boolean {
   return false;
 }
 
+/**
+ * Encode structured content for the database boundary.
+ *
+ * node-postgres serializes a JavaScript array parameter as a PostgreSQL array
+ * literal (`{...}`), which is not valid JSON for a `jsonb` column, so the block
+ * must be JSON-encoded before it reaches Knex. Application state and records
+ * returned from the database keep the parsed array.
+ */
+export function serializeQuoteTermsBlockForDb(block: unknown): unknown {
+  if (block === null || block === undefined) return null;
+  if (typeof block === 'string') return block;
+  return JSON.stringify(block);
+}
+
 export function normalizeQuoteTermsFields<T extends Record<string, unknown>>(input: T): T {
   const hasBlockKey =
     Object.prototype.hasOwnProperty.call(input, 'terms_and_conditions_block') &&
@@ -46,4 +60,24 @@ export function normalizeQuoteTermsFields<T extends Record<string, unknown>>(inp
   }
 
   return next as T;
+}
+
+/**
+ * Normalize the dual Terms & Conditions columns and serialize the structured
+ * value for the database boundary. Use this for every Knex insert/update of a
+ * `quotes` row.
+ */
+export function prepareQuoteTermsForDb<T extends Record<string, unknown>>(input: T): T {
+  const normalized = normalizeQuoteTermsFields(input);
+  if (
+    !Object.prototype.hasOwnProperty.call(normalized, 'terms_and_conditions_block') ||
+    normalized.terms_and_conditions_block === undefined
+  ) {
+    return normalized;
+  }
+
+  return {
+    ...normalized,
+    terms_and_conditions_block: serializeQuoteTermsBlockForDb(normalized.terms_and_conditions_block),
+  } as T;
 }

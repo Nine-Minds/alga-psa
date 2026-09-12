@@ -44,7 +44,7 @@
   {
     "id": "T008",
     "description": "DB integration: a quote saved with rich terms persists terms_and_conditions_block as jsonb and terms_and_conditions as its flattened plain-text projection, and reloading returns both.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F016", "F017", "F019", "F020", "F021"]
   },
   {
@@ -56,13 +56,13 @@
   {
     "id": "T010",
     "description": "DB integration: rich terms survive create-from-template, duplicate, save-as-template and create-revision, with both columns arriving together on the new row.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F022", "F023", "F024", "F025", "F026"]
   },
   {
     "id": "T011",
     "description": "DB integration: a plain-string write through the REST API create/update schema sets the text column and clears a previously-populated block column.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F027", "F028"]
   },
   {
@@ -79,7 +79,7 @@
   },
   {
     "id": "T014",
-    "description": "react-renderer: a richText node resolving to a plain string renders it escaped with whiteSpace 'pre-line', and resolving to null renders nothing rather than a placeholder.",
+    "description": "react-renderer: a richText node resolving to a plain/empty/null value mirrors the legacy text node (escaped, whiteSpace 'pre-line', empty paragraph preserved) rather than emitting the converter placeholder; a before/after regression compares the text node and a migrated richText node for multiline and empty legacy terms.",
     "implemented": true,
     "featureIds": ["F032", "F033"]
   },
@@ -110,13 +110,13 @@
   {
     "id": "T019",
     "description": "QuoteForm: the Terms & Conditions editor seeds from block content when present and from a paragraph built from the text column when the block column is null, and submitting sends both values.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F048", "F049", "F050"]
   },
   {
     "id": "T020",
     "description": "QuoteForm: the editor renders for a business template and the template-selection prefill carries block content into a new quote.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F051"]
   },
   {
