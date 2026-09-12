@@ -13,7 +13,7 @@ import type {
   TaggedEntityType,
 } from '@alga-psa/types';
 import { tenantDb } from '@alga-psa/db';
-import { prepareQuoteTermsForDb } from '@alga-psa/billing/lib/quoteTermsContent';
+import { prepareQuoteTermsForDb } from '../../../../lib/quoteTerms';
 import { SharedNumberingService } from '../../../../services/numberingService';
 
 export const quoteStatusSchema = z.enum([

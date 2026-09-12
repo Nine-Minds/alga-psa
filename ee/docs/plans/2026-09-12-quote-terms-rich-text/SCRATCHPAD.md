@@ -378,3 +378,47 @@ The earlier smoke changed the client of quote `dc68315e` ("Smoke EUR Template
 evidence — no audit/activity record, no document association, and the sibling
 template has `client_id: null` — so recovery is reported blocked rather than
 guessed. The other smoke quotes were restored.
+
+## Review repair — runtime import chain (third pass)
+
+The second pass moved the worker import to `@alga-psa/billing/lib/quoteTermsContent`,
+but `packages/billing/package.json` does not export `./lib/*`, and
+`shared/tsup.config.ts` externalizes `@alga-psa/*`. The built shared
+`workflow/runtime/index.js` therefore kept an eager import of a non-exported
+subpath, and native Node failed with `ERR_PACKAGE_PATH_NOT_EXPORTED`.
+
+Fix — one implementation, runtime-safe home:
+
+- The canonical `isEmptyTermsBlock` / `serializeQuoteTermsBlockForDb` /
+  `normalizeQuoteTermsFields` / `prepareQuoteTermsForDb` now live in
+  `shared/lib/quoteTerms.ts` (`@alga-psa/shared`), which imports
+  `flattenBlockContentToPlainText` from `@alga-psa/formatting/blocknoteUtils`.
+- `shared/package.json` gains `"./lib/quoteTerms"` → `./dist/lib/quoteTerms.js`
+  (plus the `.js` alias), and declares `@alga-psa/formatting` as a dependency.
+  `shared/tsup.config.ts` gains the `lib/quoteTerms` entry, and
+  `shared/project.json` now builds `@alga-psa/formatting` first.
+- `packages/billing/src/lib/quoteTermsContent.ts` re-exports from
+  `@alga-psa/shared/lib/quoteTerms`, so billing keeps its internal import path
+  and there is no shared→billing edge.
+- `crmWorkerDal.ts` imports the shared module relatively
+  (`../../../../lib/quoteTerms`), which the shared build bundles.
+- `packages/formatting/package.json` exports now point `import`/`require` at the
+  built `dist/*.js` (types still from `src`), and its tsup config emits `.js`
+  extensions (`addJsExtensions`) so native Node can load the built package. The
+  shared module's transitive formatting dependency therefore resolves in
+  deployed artifacts instead of relying on Node TS stripping.
+
+Verification:
+
+- `shared/__tests__/quoteTermsRuntimeExports.test.ts` (native Node, built
+  artifacts): the built workflow runtime loads with no package-path errors,
+  `@alga-psa/shared/lib/quoteTerms`, `@alga-psa/formatting/blocknoteUtils` and
+  `@alga-psa/formatting` all import under native Node, no built shared file
+  references `@alga-psa/billing/lib/quoteTermsContent`, and the worker source
+  imports the shared module.
+- Rebuilt `@alga-psa/formatting`, `@alga-psa/event-bus` and `@alga-psa/shared`;
+  `npm run build` in `ee/temporal-workflows` succeeds and its dist has no
+  billing-subpath import.
+- Rerun: billing 1322, formatting 39, ui 4, targeted server 49, workflow crm db
+  13; typechecks clean for billing, shared, formatting, ui. Dev server on 3412
+  still renders quote terms after the refactor.
