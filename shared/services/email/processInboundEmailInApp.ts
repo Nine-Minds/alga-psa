@@ -223,7 +223,7 @@ function getReplyTokenFingerprint(token?: string): {
   };
 }
 
-type InboundReplyReopenPolicyContext = {
+export type InboundReplyReopenPolicyContext = {
   ticketId: string;
   boardId: string;
   statusId: string | null;
@@ -423,7 +423,7 @@ async function withTenantAdminTransaction<T>(
   return withAdminTransaction(async (trx: any) => callback(trx, tenantDb(trx, tenantId)), existingConnection);
 }
 
-function isClosedTicketBeyondReopenCutoff(params: {
+export function isClosedTicketBeyondReopenCutoff(params: {
   closedAt: string | null;
   receivedAt?: string;
   cutoffHours: number;
@@ -442,7 +442,7 @@ function isClosedTicketBeyondReopenCutoff(params: {
   return (receivedAtMs - closedAtMs) > cutoffMs;
 }
 
-async function loadInboundReplyPolicyContext(params: {
+export async function loadInboundReplyPolicyContext(params: {
   tenantId: string;
   ticketId: string;
   existingConnection?: any;
@@ -508,7 +508,7 @@ async function loadInboundReplyPolicyContext(params: {
   }, params.existingConnection);
 }
 
-async function resolveBoardReopenStatusTarget(params: {
+export async function resolveBoardReopenStatusTarget(params: {
   tenantId: string;
   boardId: string;
   explicitStatusId: string | null;
@@ -547,7 +547,7 @@ async function resolveBoardReopenStatusTarget(params: {
   }, params.existingConnection);
 }
 
-async function applyInboundReplyReopenTransition(params: {
+export async function applyInboundReplyReopenTransition(params: {
   tenantId: string;
   ticketId: string;
   statusId: string;

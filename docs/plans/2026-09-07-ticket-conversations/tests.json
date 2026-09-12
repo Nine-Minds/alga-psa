@@ -19,7 +19,7 @@
   {
     "id": "T002",
     "description": "Real migrated PostgreSQL guard: attempt foreign ticket/store IDs, unapproved relationship scope, redacted content and expired/lapsed writes; assert denial with no rows, files or outbox side effects and no leaked private metadata.",
-    "implemented": false,
+    "implemented": true,
     "type": "integration",
     "featureIds": [
       "F006",
@@ -32,7 +32,7 @@
   {
     "id": "T003",
     "description": "Real migrated PostgreSQL audience matrix: native technician, both co-managed organizations, requester and unrelated principal list/read requester, Shared IT and both organizations private conversations; assert exact row/count/title/file filtering and no co-managed license requirement for native operations.",
-    "implemented": false,
+    "implemented": true,
     "type": "integration",
     "featureIds": [
       "F006",
@@ -47,7 +47,7 @@
   {
     "id": "T004",
     "description": "Real migrated PostgreSQL: widen a private conversation through authorized disclosure; reject unauthorized/stale confirmation; verify transfer/ownership of history and files, source protection, and that a mere edit or follow does not disclose content.",
-    "implemented": false,
+    "implemented": true,
     "type": "integration",
     "featureIds": [
       "F014",
@@ -124,7 +124,7 @@
   {
     "id": "T010",
     "description": "Real migrated PostgreSQL: save text-only and file drafts, restore only for the qualified author/destination, deny another author and stale revision, and prove autosave never mutates an immutable publication reservation or creates email/outbox delivery.",
-    "implemented": false,
+    "implemented": true,
     "type": "integration",
     "featureIds": [
       "F012",
@@ -165,7 +165,7 @@
   {
     "id": "T013",
     "description": "Real migrated PostgreSQL and captured email transport: requester uses owner mailbox and vendor uses originating mailbox through assignment/handoff; Shared IT read/post alone cannot send; explicit delegation allows it; revoked/disabled sender and queued grant revocation prevent delivery.",
-    "implemented": false,
+    "implemented": true,
     "type": "integration",
     "featureIds": [
       "F012",
@@ -217,7 +217,7 @@
   {
     "id": "T017",
     "description": "Real migrated PostgreSQL: replay the same provider delivery and concurrent import after partial attachment failure; verify one accepted message, one attachment set and deduplicated allowed notification effects.",
-    "implemented": false,
+    "implemented": true,
     "type": "integration",
     "featureIds": [
       "F031",
@@ -230,7 +230,7 @@
   {
     "id": "T018",
     "description": "Real migrated PostgreSQL with captured notifications: follow/unfollow, reassign, revoke access and receive a private vendor reply; resolve subscribers/assignee at delivery time, omit unauthorized users/public counters, link exact conversation and keep read cursors viewer-local.",
-    "implemented": false,
+    "implemented": true,
     "type": "integration",
     "featureIds": [
       "F009",
@@ -244,7 +244,7 @@
   {
     "id": "T019",
     "description": "Capture external/internal delivery across draft save, share preparation, AI invocation/output, internal Post and human reviewed destination Send; assert only intended human destination actions produce external delivery and AI does not spam followers.",
-    "implemented": false,
+    "implemented": true,
     "type": "integration",
     "featureIds": [
       "F055",
@@ -286,7 +286,7 @@
   {
     "id": "T022",
     "description": "Real migrated PostgreSQL email policy regression: automated/bounce/ack suppression and rate limiting preserve existing ordering (cutoff before suppression); suppressed side traffic cannot reopen through bundle child reply or mark requester response fulfilled.",
-    "implemented": false,
+    "implemented": true,
     "type": "integration",
     "featureIds": [
       "F057",
@@ -299,7 +299,7 @@
   {
     "id": "T023",
     "description": "Real migrated PostgreSQL co-managed obligations: vendor/internal/AI work never starts/satisfies/resets unrelated requester/customer/MSP SLA; a genuine board-authorized reopen uses canonical lifecycle events and correct organization clocks.",
-    "implemented": false,
+    "implemented": true,
     "type": "integration",
     "featureIds": [
       "F057",

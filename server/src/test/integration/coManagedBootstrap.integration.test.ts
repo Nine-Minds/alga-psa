@@ -42,7 +42,14 @@ vi.mock('../../../../shared/services/email/inboundEmailSourceStager', () => ({
   readStagedSourceMime: intake.read, parseStagedMimeIntoEmailDetails: intake.parse,
   stageInboundSourceMime: intake.stage,
 }));
-vi.mock('../../../../shared/services/email/processInboundEmailInApp', () => ({ processInboundEmailInApp: intake.process }));
+// The named-conversation side-reply board reopen policy reuses this module's
+// real (unmocked) loadInboundReplyPolicyContext/resolveBoardReopenStatusTarget/
+// applyInboundReplyReopenTransition/isClosedTicketBeyondReopenCutoff helpers;
+// only the top-level entry point is routed through the per-test intake mock.
+vi.mock('../../../../shared/services/email/processInboundEmailInApp', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../../shared/services/email/processInboundEmailInApp')>();
+  return { ...actual, processInboundEmailInApp: intake.process };
+});
 vi.mock('@alga-psa/email', () => ({
   TenantEmailService: { getInstance: vi.fn() },
   sendTeamInvitationEmail: delivery.send,
@@ -95,7 +102,7 @@ beforeAll(async () => {
     '20260906080000_create_co_management_relationship_events.cjs',
     '20260906100000_add_external_file_metadata.cjs',
     '20260906110000_add_kb_import_batch_identity.cjs',
-    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs', '20260908013607_create_named_ticket_conversations.cjs', '20260908015652_create_ticket_conversation_editor_drafts.cjs', '20260908022249_scope_ticket_conversation_defaults_to_relationship.cjs', '20260908024119_create_ticket_conversation_publications.cjs', '20260908030840_retain_ticket_conversation_draft_reply_target.cjs', '20260908033011_create_ticket_conversation_sender_grants.cjs', '20260908034701_create_ticket_conversation_email_operations.cjs', '20260908042702_create_ticket_conversation_inbound_receipts.cjs', '20260908045632_track_named_conversation_correspondents.cjs', '20260908051006_retain_named_reply_review_resolutions.cjs', '20260908052731_extend_conversation_files_to_native_vendor_replies.cjs', '20260908054601_retain_named_editor_file_bindings.cjs', '20260908060651_retain_named_file_publication_operations.cjs', '20260908091259_retain_named_requester_publication_options.cjs', '20260908094308_retain_named_requester_close_intent.cjs', '20260908101532_retain_named_email_recovery_due.cjs', '20260908102605_retain_named_requester_schedule_intent.cjs', '20260908115747_create_ticket_conversation_attention.cjs', '20260908122807_retain_named_conversation_notification_receipts.cjs', '20260908125648_retain_named_conversation_email_notifications.cjs', '20260908133439_retain_native_ticket_email_recipient_policy.cjs', '20260908152720_retain_ticket_conversation_share_lineage.cjs', '20260908165830_retain_ticket_conversation_ai_runs.cjs', '20260908191034_retain_ticket_conversation_ai_participation.cjs']) {
+    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs', '20260908013607_create_named_ticket_conversations.cjs', '20260908015652_create_ticket_conversation_editor_drafts.cjs', '20260908022249_scope_ticket_conversation_defaults_to_relationship.cjs', '20260908024119_create_ticket_conversation_publications.cjs', '20260908030840_retain_ticket_conversation_draft_reply_target.cjs', '20260908033011_create_ticket_conversation_sender_grants.cjs', '20260908034701_create_ticket_conversation_email_operations.cjs', '20260908042702_create_ticket_conversation_inbound_receipts.cjs', '20260908045632_track_named_conversation_correspondents.cjs', '20260908051006_retain_named_reply_review_resolutions.cjs', '20260908052731_extend_conversation_files_to_native_vendor_replies.cjs', '20260908054601_retain_named_editor_file_bindings.cjs', '20260908060651_retain_named_file_publication_operations.cjs', '20260908091259_retain_named_requester_publication_options.cjs', '20260908094308_retain_named_requester_close_intent.cjs', '20260908101532_retain_named_email_recovery_due.cjs', '20260908102605_retain_named_requester_schedule_intent.cjs', '20260908115747_create_ticket_conversation_attention.cjs', '20260908122807_retain_named_conversation_notification_receipts.cjs', '20260908125648_retain_named_conversation_email_notifications.cjs', '20260908133439_retain_native_ticket_email_recipient_policy.cjs', '20260908152720_retain_ticket_conversation_share_lineage.cjs', '20260908165830_retain_ticket_conversation_ai_runs.cjs', '20260908191034_retain_ticket_conversation_ai_participation.cjs', '20260909100000_add_inbound_reply_reopen_side_conversations_to_boards.cjs']) {
     await require('../../../migrations/' + file).up(db);
   }
   for (const table of ['standard_statuses', 'standard_priorities', 'countries', 'notification_categories',
@@ -14801,6 +14808,133 @@ describe('named ticket conversation inbound vendor admission against migrated Po
   });
 });
 
+describe('named ticket conversation side-reply board reopen policy against migrated PostgreSQL', () => {
+  it.each(['shared_it', 'organization_private'] as const)('reopens a closed parent only once both the master and side switches are on, using canonical lifecycle effects (%s)', async audience => {
+    const f = await namedInboundFixture(audience);
+    const ticketBefore = await f.customer.table('tickets').where('ticket_id', f.ticket.ticketId).first();
+    const boardId = ticketBefore.board_id;
+    const closedStatus = await f.customer.table('statuses').where({ board_id: boardId, item_type: 'ticket', is_closed: true }).first();
+    expect(closedStatus).toBeTruthy();
+    await f.customer.table('boards').where('board_id', boardId).update({ inbound_reply_reopen_enabled: true,
+      inbound_reply_reopen_cutoff_hours: 168, inbound_reply_ai_ack_suppression_enabled: false, inbound_reply_reopen_side_conversations_enabled: false });
+    await f.customer.table('tickets').where('ticket_id', f.ticket.ticketId).update({ status_id: closedStatus.status_id, is_closed: true, closed_at: new Date(Date.now() - 3600000).toISOString() });
+
+    // F062: the master switch alone (side option defaults off) never reopens the parent.
+    const first = await f.makeInput();
+    expect(await db.transaction(trx => f.admission.admitNamedConversationEmailReply(trx, first))).toMatchObject({ outcome: 'replied' });
+    expect(await f.customer.table('tickets').where('ticket_id', f.ticket.ticketId).first()).toMatchObject({ is_closed: true, status_id: closedStatus.status_id });
+    expect(await f.customer.table('ticket_audit_logs').where({ ticket_id: f.ticket.ticketId, event_type: 'TICKET_REOPENED' })).toHaveLength(0);
+    // F060: the conversation itself still reopens/marks attention independently of the parent.
+    expect(await f.conversations.getNamedTicketConversation(db, f.principal, f.ticket, f.ref)).toMatchObject({ status: 'open' });
+
+    // F063/F067: once both switches are on, a further substantive reply reuses the
+    // existing board-default status resolution and the canonical reopen transition.
+    await f.customer.table('boards').where('board_id', boardId).update({ inbound_reply_reopen_side_conversations_enabled: true });
+    const second = await f.makeInput({ body: { text: 'Following up: the carrier fault is now confirmed resolved.' } });
+    const limiter = await import('../../../../shared/services/email/inboundReopenRateLimiter');
+    const rateLimit = vi.spyOn(limiter, 'checkInboundReopenRateLimit').mockResolvedValue({ allowed: true, count: 1, limit: 3, windowSeconds: 3600 });
+    let admitted: unknown;
+    try { admitted = await db.transaction(trx => f.admission.admitNamedConversationEmailReply(trx, second)); }
+    finally { rateLimit.mockRestore(); }
+    expect(admitted).toMatchObject({ outcome: 'replied' });
+    const reopened = await f.customer.table('tickets').where('ticket_id', f.ticket.ticketId).first();
+    expect(reopened).toMatchObject({ is_closed: false, closed_at: null });
+    expect(reopened.status_id).not.toBe(closedStatus.status_id);
+    expect((await f.customer.table('statuses').where('status_id', reopened.status_id).first()).is_closed).toBe(false);
+    expect(await f.customer.table('ticket_audit_logs').where({ ticket_id: f.ticket.ticketId, event_type: 'TICKET_REOPENED' }))
+      .toMatchObject([{ source: 'inbound_email', actor_type: 'system' }]);
+    // F057/F066: side traffic never satisfies the requester response/SLA obligation
+    // it rode in on, even though it just reopened the ticket.
+    expect(reopened.response_state ?? null).not.toBe('awaiting_client');
+  });
+
+  it('never reopens the closed bundle master a side reply lands on, even when reopen_on_child_reply is enabled (F066)', async () => {
+    const f = await namedInboundFixture('shared_it');
+    const ticket = { tenant: f.ticket.tenant, ticketId: f.ticket.ticketId };
+    const source = await f.customer.table('tickets').where('ticket_id', ticket.ticketId).first();
+    const { title_index: _generated, ...copy } = source;
+    const masterId = randomUUID();
+    const closedStatus = await f.customer.table('statuses').where({ board_id: source.board_id, item_type: 'ticket', is_closed: true }).first();
+    await f.customer.table('tickets').insert({ ...copy, ticket_id: masterId, ticket_number: 'SIDE-REPLY-MASTER',
+      status_id: closedStatus.status_id, is_closed: true, closed_at: new Date().toISOString() });
+    await f.customer.table('tickets').where('ticket_id', ticket.ticketId).update({ master_ticket_id: masterId });
+    await f.customer.table('ticket_bundle_settings').insert({ tenant: ticket.tenant, master_ticket_id: masterId, mode: 'sync_updates', reopen_on_child_reply: true });
+    // Also enable the (unrelated) side-reply board reopen policy on the child's own
+    // board so this test proves bundle-reopen and board-reopen are never conflated.
+    await f.customer.table('boards').where('board_id', source.board_id).update({ inbound_reply_reopen_enabled: true, inbound_reply_reopen_side_conversations_enabled: true });
+    const input = await f.makeInput();
+    const limiter = await import('../../../../shared/services/email/inboundReopenRateLimiter');
+    const rateLimit = vi.spyOn(limiter, 'checkInboundReopenRateLimit').mockResolvedValue({ allowed: true, count: 1, limit: 3, windowSeconds: 3600 });
+    let admitted: unknown;
+    try { admitted = await db.transaction(trx => f.admission.admitNamedConversationEmailReply(trx, input)); }
+    finally { rateLimit.mockRestore(); }
+    expect(admitted).toMatchObject({ outcome: 'replied' });
+    // The reply's OWN ticket is free to reopen under the board policy (asserted
+    // elsewhere); what this test guards is that the closed BUNDLE MASTER never
+    // reopens and never gets misclassified as satisfying a qualifying child reply.
+    expect(await f.customer.table('tickets').where('ticket_id', masterId).first()).toMatchObject({ is_closed: true, status_id: closedStatus.status_id });
+    expect(await f.customer.table('ticket_audit_logs').where({ ticket_id: masterId, event_type: 'TICKET_BUNDLE_REOPENED' })).toHaveLength(0);
+    expect(await f.customer.table('ticket_bundle_mirrors').where('tenant', ticket.tenant)).toEqual([]);
+  });
+
+  it('applies cutoff-before-suppression precedence and reuses the existing ack/rate-limit policy directly (F063/F064)', async () => {
+    const f = await namedInboundFixture('shared_it');
+    const policy = await import('../../../../packages/co-managed/src/namedConversationReopenPolicy');
+    const ticket = f.ticket, boardId = (await f.customer.table('tickets').where('ticket_id', ticket.ticketId).first('board_id')).board_id;
+    const closedStatus = await f.customer.table('statuses').where({ board_id: boardId, item_type: 'ticket', is_closed: true }).first();
+    await f.customer.table('boards').where('board_id', boardId).update({ inbound_reply_reopen_enabled: true, inbound_reply_reopen_cutoff_hours: 1,
+      inbound_reply_ai_ack_suppression_enabled: false, inbound_reply_reopen_side_conversations_enabled: true });
+    await f.customer.table('tickets').where('ticket_id', ticket.ticketId).update({ status_id: closedStatus.status_id, is_closed: true,
+      closed_at: new Date(Date.now() - 7200000).toISOString() }); // 2h ago, cutoff is 1h.
+    const email = (await f.makeInput()).email;
+    const automatedEmail = { ...email, headers: { ...email.headers, 'X-Autoreply': 'yes' } }; // also automated — cutoff must still win.
+    const beforeCutoff = await db.transaction(trx => policy.evaluateSideConversationReopenPolicy(trx, { tenantId: ticket.tenant, ticketId: ticket.ticketId, email: automatedEmail, text: 'late reply' }));
+    expect(beforeCutoff).toEqual({ action: 'comment_only', reason: 'cutoff_exceeded' });
+    expect(await f.customer.table('tickets').where('ticket_id', ticket.ticketId).first()).toMatchObject({ is_closed: true });
+
+    await f.customer.table('boards').where('board_id', boardId).update({ inbound_reply_reopen_cutoff_hours: 168 });
+    const automated = await db.transaction(trx => policy.evaluateSideConversationReopenPolicy(trx, { tenantId: ticket.tenant, ticketId: ticket.ticketId, email: automatedEmail, text: 'auto' }));
+    expect(automated).toEqual({ action: 'comment_only', reason: 'automated_message' });
+
+    await f.customer.table('boards').where('board_id', boardId).update({ inbound_reply_ai_ack_suppression_enabled: true });
+    const decider = await import('../../../../shared/services/email/inboundReplyAcknowledgementDecider');
+    const ackSpy = vi.spyOn(decider, 'resolveInboundReplyAcknowledgementDecider').mockResolvedValue({ decide: async () => ({ attempted: true, decision: 'ACK', source: 'default', reason: 'thanks', model: null }) } as any);
+    try {
+      const ackResult = await db.transaction(trx => policy.evaluateSideConversationReopenPolicy(trx, { tenantId: ticket.tenant, ticketId: ticket.ticketId, email, text: 'thanks!' }));
+      expect(ackResult).toEqual({ action: 'comment_only', reason: 'ai_ack' });
+    } finally { ackSpy.mockRestore(); }
+    await f.customer.table('boards').where('board_id', boardId).update({ inbound_reply_ai_ack_suppression_enabled: false });
+
+    const limiter = await import('../../../../shared/services/email/inboundReopenRateLimiter');
+    const rateLimit = vi.spyOn(limiter, 'checkInboundReopenRateLimit').mockResolvedValue({ allowed: false, count: 4, limit: 3, windowSeconds: 3600 });
+    try {
+      const limited = await db.transaction(trx => policy.evaluateSideConversationReopenPolicy(trx, { tenantId: ticket.tenant, ticketId: ticket.ticketId, email, text: 'genuine reply' }));
+      expect(limited).toEqual({ action: 'comment_only', reason: 'rate_limited' });
+    } finally { rateLimit.mockRestore(); }
+
+    const rateLimitAllow = vi.spyOn(limiter, 'checkInboundReopenRateLimit').mockResolvedValue({ allowed: true, count: 1, limit: 3, windowSeconds: 3600 });
+    let allowed: unknown;
+    try { allowed = await db.transaction(trx => policy.evaluateSideConversationReopenPolicy(trx, { tenantId: ticket.tenant, ticketId: ticket.ticketId, email, text: 'genuine reply' })); }
+    finally { rateLimitAllow.mockRestore(); }
+    expect(allowed).toMatchObject({ action: 'reopened', source: 'board_default' });
+    expect(await f.customer.table('tickets').where('ticket_id', ticket.ticketId).first()).toMatchObject({ is_closed: false, closed_at: null });
+  });
+
+  it('a nonblocking open-external-conversation count is available without gating resolution (F061)', async () => {
+    const { conversations: api, principal, ticket } = await namedConversationFixture();
+    expect(await api.countOpenExternalConversations(db, principal, ticket)).toBe(0);
+    const side = await api.createNamedTicketConversation(db, principal, ticket, { operationId: randomUUID(), name: 'Carrier exchange', audience: 'shared_it', transport: 'internal' });
+    const ref = { storeTenant: side.storeTenant, conversationId: side.conversationId };
+    expect(await api.countOpenExternalConversations(db, principal, ticket)).toBe(1);
+    await api.setNamedTicketConversationStatus(db, principal, ticket, ref, side.revision, 'done');
+    expect(await api.countOpenExternalConversations(db, principal, ticket)).toBe(0);
+    // Requester's own default conversation never counts as "external".
+    const [requester] = (await api.listNamedTicketConversations(db, principal, ticket)).filter(row => row.defaultSlot === 'requester');
+    expect(requester.status).toBe('open');
+    expect(await api.countOpenExternalConversations(db, principal, ticket)).toBe(0);
+  });
+});
+
 describe('named ticket conversation correspondent reservations against migrated PostgreSQL', () => {
   it('holds uncorrelated vendor mail in the owning inbox with and without an admission adapter', async () => {
     const f = await namedInboundFixture('organization_private');
@@ -17232,6 +17366,58 @@ it('selective conversation share lineage records final deselection without requi
   expect((await f.conversations.getNamedTicketConversationMessages(db, f.actor, f.ticket, ref)).items[0].attachments).toEqual([]);
   expect(await f.home.table('ticket_conversation_shares').where('operation_id', request.operationId).first())
     .toMatchObject({ published_editor_attachment_ids: [] });
+});
+
+describe('named ticket conversation draft/share/synthesis produce no delivery effects against migrated PostgreSQL', () => {
+  it('draft save, share preparation and full-source synthesis generation change no fanout, email or notification state (F055/F056)', async () => {
+    const f = await namedShareFixture();
+    const countsFor = async (tenant: string) => {
+      const store = tenantDb(db, tenant);
+      const count = async (table: string) => Number((await store.table(table).count('* as count').first()).count);
+      return {
+        events: await count('ticket_conversation_message_events'),
+        emailDeliveries: await count('co_management_email_deliveries'),
+        inAppReceipts: await count('ticket_conversation_notification_receipts'),
+        notifications: await count('internal_notifications'),
+      };
+    };
+    // The fixture's own source message lives in a different (private/sponsor)
+    // store than this destination conversation, so this baseline is legitimately
+    // zero; what matters is that it stays exactly unchanged through every step.
+    // The SOURCE store, by contrast, already has exactly one real event from the
+    // fixture's initial post — reading it for share/synthesis must not add more.
+    const before = await countsFor(f.ref.storeTenant);
+    const sourceBefore = await countsFor(f.sourceRef.storeTenant);
+    expect(sourceBefore.events).toBe(1);
+
+    // F055: an explicit share preparation stages a private draft only.
+    const shared = await f.share(db, f.actor, f.ticket, f.ref, f.request);
+    expect(await countsFor(f.ref.storeTenant)).toEqual(before);
+    expect(await countsFor(f.sourceRef.storeTenant)).toEqual(sourceBefore);
+
+    // F055: a further plain draft save (no send/post) is likewise silent.
+    const conversationAfterShare = await f.conversations.getNamedTicketConversation(db, f.actor, f.ticket, f.ref);
+    await f.conversations.saveNamedConversationEditorDraft(db, f.actor, f.ticket, f.ref, { operationId: randomUUID(),
+      expectedRevision: shared.revision, expectedConversationRevision: conversationAfterShare.revision,
+      content: { text: 'Manually edited before send, never published.' } });
+    expect(await countsFor(f.ref.storeTenant)).toEqual(before);
+
+    // F055/F056: synthesis generation reads the already-published source (counted
+    // in `before`) and calls the AI provider, but writes only a private draft and
+    // AI-run record — no delivery, no notification, no email, even though a human
+    // AI invocation is explicit and the provider actually ran.
+    const synthesisDestination = await f.conversations.createNamedTicketConversation(db, f.actor, f.ticket,
+      { operationId: randomUUID(), name: 'Synthesis destination', audience: 'shared_it', transport: 'internal' });
+    const synthesisRef = { storeTenant: synthesisDestination.storeTenant, conversationId: synthesisDestination.conversationId };
+    const { prepareNamedConversationSynthesis } = await import('../../../../packages/tickets/src/lib/prepareNamedConversationSynthesis');
+    const provider = { assertAvailable: vi.fn(async () => {}), generate: vi.fn(async () => 'Generated private synthesis summary') };
+    await prepareNamedConversationSynthesis(db, f.actor, f.ticket, synthesisRef, { operationId: randomUUID(), source: f.sourceRef,
+      expectedDraftRevision: 0, expectedConversationRevision: synthesisDestination.revision, replaceExisting: false,
+      prompt: 'Summarize for the requester.' }, provider);
+    expect(provider.generate).toHaveBeenCalledOnce();
+    expect(await countsFor(f.ref.storeTenant)).toEqual(before);
+    expect(await countsFor(f.sourceRef.storeTenant)).toEqual(sourceBefore);
+  });
 });
 
 describe('ticket conversation AI input against migrated PostgreSQL', () => {

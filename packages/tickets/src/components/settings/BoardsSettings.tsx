@@ -423,6 +423,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
     inbound_reply_reopen_cutoff_hours: 168,
     inbound_reply_reopen_status_id: '',
     inbound_reply_ai_ack_suppression_enabled: false,
+    inbound_reply_reopen_side_conversations_enabled: false,
     enable_live_ticket_timer: true,
     is_pinned: true,
     status_seed_mode: 'copy_existing' as TicketStatusSeedMode,
@@ -726,6 +727,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
       inbound_reply_reopen_cutoff_hours: board.inbound_reply_reopen_cutoff_hours ?? 168,
       inbound_reply_reopen_status_id: board.inbound_reply_reopen_status_id || '',
       inbound_reply_ai_ack_suppression_enabled: board.inbound_reply_ai_ack_suppression_enabled ?? false,
+      inbound_reply_reopen_side_conversations_enabled: board.inbound_reply_reopen_side_conversations_enabled ?? false,
       enable_live_ticket_timer: board.enable_live_ticket_timer ?? true,
       is_pinned: board.is_pinned ?? false,
       ticket_statuses: [],
@@ -993,6 +995,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
           inbound_reply_reopen_cutoff_hours: Math.max(1, Number(formData.inbound_reply_reopen_cutoff_hours) || 168),
           inbound_reply_reopen_status_id: formData.inbound_reply_reopen_status_id || null,
           inbound_reply_ai_ack_suppression_enabled: formData.inbound_reply_ai_ack_suppression_enabled,
+          inbound_reply_reopen_side_conversations_enabled: formData.inbound_reply_reopen_side_conversations_enabled,
           enable_live_ticket_timer: formData.enable_live_ticket_timer,
           is_pinned: formData.is_pinned,
           ticket_statuses: normalizedTicketStatuses,
@@ -1071,6 +1074,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
           // default open status; the specific status can be set after the board exists.
           inbound_reply_reopen_status_id: null,
           inbound_reply_ai_ack_suppression_enabled: formData.inbound_reply_ai_ack_suppression_enabled,
+          inbound_reply_reopen_side_conversations_enabled: formData.inbound_reply_reopen_side_conversations_enabled,
           enable_live_ticket_timer: formData.enable_live_ticket_timer,
           // The pin toggle renders during creation too, so it has to be sent:
           // createBoard defaults is_pinned to true, which would silently ignore
@@ -1966,6 +1970,23 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
                   checked={formData.inbound_reply_ai_ack_suppression_enabled}
                   onCheckedChange={(checked) =>
                     setFormData({ ...formData, inbound_reply_ai_ack_suppression_enabled: checked })
+                  }
+                  disabled={!formData.inbound_reply_reopen_enabled}
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label htmlFor="inbound_reply_reopen_side_conversations_enabled">{t('ticketing.boards.fields.inboundReplyReopen.sideConversationsLabel', 'Apply this policy to side-conversation email replies')}</Label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {t('ticketing.boards.fields.inboundReplyReopen.sideConversationsHelp', 'Vendor and Shared IT conversation replies reuse the same cutoff, status and suppression policy above. Off by default and has no effect unless the policy above is also enabled.')}
+                  </p>
+                </div>
+                <Switch
+                  id="inbound_reply_reopen_side_conversations_enabled"
+                  checked={formData.inbound_reply_reopen_side_conversations_enabled}
+                  onCheckedChange={(checked) =>
+                    setFormData({ ...formData, inbound_reply_reopen_side_conversations_enabled: checked })
                   }
                   disabled={!formData.inbound_reply_reopen_enabled}
                 />

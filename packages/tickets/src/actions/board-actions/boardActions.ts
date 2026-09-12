@@ -359,6 +359,7 @@ export const createBoard = withAuth(async (user, { tenant }, boardData: CreateBo
           inbound_reply_reopen_cutoff_hours: boardData.inbound_reply_reopen_cutoff_hours ?? 168,
           inbound_reply_reopen_status_id: boardData.inbound_reply_reopen_status_id || null,
           inbound_reply_ai_ack_suppression_enabled: boardData.inbound_reply_ai_ack_suppression_enabled ?? false,
+          inbound_reply_reopen_side_conversations_enabled: boardData.inbound_reply_reopen_side_conversations_enabled ?? false,
           enable_live_ticket_timer: boardData.enable_live_ticket_timer ?? true,
           // A new board is pinned by default: it was just created deliberately,
           // so it earns a tab until an admin decides otherwise. list_view_settings
@@ -843,6 +844,11 @@ export const updateBoard = withAuth(async (user, { tenant }, boardId: string, bo
       if ('inbound_reply_ai_ack_suppression_enabled' in sanitizedData) {
         sanitizedData.inbound_reply_ai_ack_suppression_enabled = Boolean(
           sanitizedData.inbound_reply_ai_ack_suppression_enabled
+        );
+      }
+      if ('inbound_reply_reopen_side_conversations_enabled' in sanitizedData) {
+        sanitizedData.inbound_reply_reopen_side_conversations_enabled = Boolean(
+          sanitizedData.inbound_reply_reopen_side_conversations_enabled
         );
       }
       if ('enable_live_ticket_timer' in sanitizedData) {

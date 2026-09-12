@@ -26,7 +26,7 @@
   {
     "id": "F004",
     "description": "Represent audience, content ownership, transport, mailbox ownership and participant capability as independent attributes.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "4. Conversation and access model"
     ]
@@ -34,7 +34,7 @@
   {
     "id": "F005",
     "description": "Preserve existing qualified message authors, root/parent relationships and explicit AI attribution inside a named conversation.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "4. Conversation and access model"
     ]
@@ -42,7 +42,7 @@
   {
     "id": "F006",
     "description": "Keep organization-private conversation metadata and messages in the private owning store.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "4. Conversation and access model"
     ]
@@ -66,7 +66,7 @@
   {
     "id": "F009",
     "description": "Filter conversation names, snippets, counts and read results by both ticket permission and conversation audience.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "4. Conversation and access model"
     ]
@@ -82,7 +82,7 @@
   {
     "id": "F011",
     "description": "Exclude requester/portal users from vendor, Shared IT, private internal and AI conversations.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "4. Conversation and access model"
     ]
@@ -90,7 +90,7 @@
   {
     "id": "F012",
     "description": "Reauthorize writes, downloads, asynchronous completions and delivery against current grants and session.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "4. Conversation and access model"
     ]
@@ -106,7 +106,7 @@
   {
     "id": "F014",
     "description": "Require explicit authorized disclosure of existing history/files when widening an organizational audience.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "4. Conversation and access model"
     ]
@@ -114,7 +114,7 @@
   {
     "id": "F015",
     "description": "Reuse cross-store disclosure transfer semantics without treating a private store flag change as a transfer.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "4. Conversation and access model"
     ]
@@ -266,7 +266,7 @@
   {
     "id": "F034",
     "description": "Keep failed or uncertain publications recoverable using a stable operation identity without duplicate messages or sends.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "5. UX \u2014 option C"
     ]
@@ -282,7 +282,7 @@
   {
     "id": "F036",
     "description": "Use the ticket-owning workspace mailbox for requester email and the originating organization mailbox for vendor email.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "6. Email, recipients and notification behavior"
     ]
@@ -306,7 +306,7 @@
   {
     "id": "F039",
     "description": "Allow intentional authorized mailbox selection/change and block unavailable or revoked senders while preserving drafts.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "6. Email, recipients and notification behavior"
     ]
@@ -346,7 +346,7 @@
   {
     "id": "F044",
     "description": "Send only the explicitly reviewed body, quotes and selected attachments without automatically appending conversation or ticket history.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "6. Email, recipients and notification behavior"
     ]
@@ -378,7 +378,7 @@
   {
     "id": "F048",
     "description": "Allow an authorized reviewer to choose the intended destination for an unresolved reply without bypassing admission.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "6. Email, recipients and notification behavior"
     ]
@@ -386,7 +386,7 @@
   {
     "id": "F049",
     "description": "Deduplicate provider/message retries and attachment imports so accepted delivery produces one message and effect set.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "6. Email, recipients and notification behavior"
     ]
@@ -426,7 +426,7 @@
   {
     "id": "F054",
     "description": "Notify currently authorized followers and assignee of relevant human messages with exact conversation links and existing preferences.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "6. Email, recipients and notification behavior"
     ]
@@ -434,7 +434,7 @@
   {
     "id": "F055",
     "description": "Produce no external delivery or follower notification from draft saves, share preparation or synthesis generation.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "6. Email, recipients and notification behavior"
     ]
@@ -442,7 +442,7 @@
   {
     "id": "F056",
     "description": "Prevent AI token/answer fanout to external recipients or automatic follower email.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "6. Email, recipients and notification behavior"
     ]
@@ -450,7 +450,7 @@
   {
     "id": "F057",
     "description": "Classify side/internal/AI activity distinctly from qualifying requester replies and customer-visible responses.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "6. Email, recipients and notification behavior"
     ]
@@ -458,7 +458,7 @@
   {
     "id": "F058",
     "description": "Prevent private activity from leaking through generic events, public counters/timestamps, snippets or notification payloads.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "6. Email, recipients and notification behavior"
     ]
@@ -474,7 +474,7 @@
   {
     "id": "F060",
     "description": "Reopen and mark attention on an accepted substantive external conversation reply while preserving existing noise protections.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "7. Conversation state and existing reopen policy"
     ]
@@ -482,7 +482,7 @@
   {
     "id": "F061",
     "description": "Allow ticket resolution with an informative nonblocking warning about open external conversations.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "7. Conversation state and existing reopen policy"
     ]
@@ -490,7 +490,7 @@
   {
     "id": "F062",
     "description": "Add the board side-conversation reply opt-in defaulting off without enabling the master reopen policy.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "7. Conversation state and existing reopen policy"
     ]
@@ -498,7 +498,7 @@
   {
     "id": "F063",
     "description": "Reuse existing enabled, cutoff, status fallback, acknowledgment, auto-reply and rate-limit policy when the side option is on.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "7. Conversation state and existing reopen policy"
     ]
@@ -506,7 +506,7 @@
   {
     "id": "F064",
     "description": "Preserve legacy requester and internal-technician reply behavior and cutoff-before-suppression precedence.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "7. Conversation state and existing reopen policy"
     ]
@@ -522,7 +522,7 @@
   {
     "id": "F066",
     "description": "Prevent side traffic from implicitly reopening bundles or starting/satisfying/resetting unrelated response and SLA obligations.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "7. Conversation state and existing reopen policy"
     ]
@@ -530,7 +530,7 @@
   {
     "id": "F067",
     "description": "Use canonical lifecycle effects for a parent reopen explicitly authorized by the existing board policy.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "7. Conversation state and existing reopen policy"
     ]
@@ -586,7 +586,7 @@
   {
     "id": "F074",
     "description": "Exclude protected provenance from external email, requester portal and unauthorized destination metadata.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "8. Selective sharing and whole-conversation synthesis"
     ]
@@ -690,7 +690,7 @@
   {
     "id": "F087",
     "description": "Allow explicit optional AI invocation and record qualified human prompts and attributed AI replies in internal history.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "9. AI participation and context"
     ]
@@ -698,7 +698,7 @@
   {
     "id": "F088",
     "description": "Support mixed human/AI internal discussion without granting autonomous external-send or ticket-mutation capability.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "9. AI participation and context"
     ]
@@ -722,7 +722,7 @@
   {
     "id": "F091",
     "description": "Display the actual permitted source conversation list and allow the user to narrow it.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "9. AI participation and context"
     ]
@@ -746,7 +746,7 @@
   {
     "id": "F094",
     "description": "Reauthorize output/citation visibility on completion and discard output invalidated by grants, audience or identity changes.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "9. AI participation and context"
     ]
@@ -754,7 +754,7 @@
   {
     "id": "F095",
     "description": "Map legacy public, internal and Shared IT history to corresponding named containers without one sidebar row per reply root.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "11. Compatibility, migration and release"
     ]
@@ -762,7 +762,7 @@
   {
     "id": "F096",
     "description": "Preserve reply roots/parents, author attribution, resolution markers, files and scheduled/publication state during migration.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "11. Compatibility, migration and release"
     ]

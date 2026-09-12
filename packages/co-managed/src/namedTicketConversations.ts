@@ -142,6 +142,14 @@ export function listNamedTicketConversationOverview(db: Knex, actor: CoManagedSe
     return rows;
   });
 }
+/** F061: a nonblocking count for a resolve-ticket warning. Ticket resolution
+ * itself never consults this — it is an additive, read-only signal so a caller
+ * can inform the resolving user without gating or auto-marking any conversation
+ * done. "External" here means non-Requester (vendor/Shared IT) audiences. */
+export async function countOpenExternalConversations(db: Knex, actor: CoManagedSessionActor, ticket: ConversationTicketReference): Promise<number> {
+  const conversations = await listNamedTicketConversations(db, actor, ticket);
+  return conversations.filter(conversation => conversation.audience !== 'requester' && conversation.status === 'open').length;
+}
 export function getNamedTicketConversation(db: Knex, actor: CoManagedSessionActor, ticket: ConversationTicketReference, input: TicketConversationReference) {
   const reference = snapshotConversationReference(input);
   return withTicketAuthority(db, actor, ticket, 'read', async context => (await authorizedConversation(context, reference)).conversation);

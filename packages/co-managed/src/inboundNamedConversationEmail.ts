@@ -302,6 +302,15 @@ async function admitReply(outer: Knex.Transaction, input: Parameters<NamedConver
       const attention = await recordNamedConversationAttention({ trx, ticket: conversation.ticket, conversation, hidden: [] }, { commentId, threadId: source.thread_id });
       await store.table('ticket_conversations').where('conversation_id', conversation.conversationId).update({ status: attention === null ? conversation.status : 'open',
         revision: conversation.revision + (attention !== null && conversation.status === 'done' ? 1 : 0), message_version: trx.raw('message_version + 1'), updated_at: trx.fn.now() });
+      // F060/F062-F067: a substantive side (non-requester) reply may reopen a
+      // closed parent ticket under the board's existing reopen policy, extended
+      // by its side-conversation opt-in. Never runs for requester replies (they
+      // already use the canonical engine above) or for suppressed/automated
+      // attention (attention === null already excluded AI/system/automated).
+      if (attention !== null && conversation.audience !== 'requester') {
+        const { evaluateSideConversationReopenPolicy } = await import('./namedConversationReopenPolicy');
+        await evaluateSideConversationReopenPolicy(trx, { tenantId: conversation.ticket.tenant, ticketId: conversation.ticket.ticketId, email, text, updatedByUserId: null });
+      }
       // Time-based lifecycle admission can expire during policy evaluation or
       // the canonical writer even though the identity rows remain locked.
       if (requesterResult) await assertCoManagedOperationalWrite(trx, conversation.ticket.tenant);
