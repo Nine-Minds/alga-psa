@@ -6,6 +6,8 @@ import {
   countSelectedRows,
   defaultSelection,
   groupTemplatesByState,
+  previewKey,
+  previewLanguagesFor,
   summarizeApplyResult,
 } from './applyEmailBrandingState';
 import type { EmailBrandingTemplateStatus } from '../../lib/emailBranding';
@@ -116,6 +118,21 @@ describe('summarizeApplyResult', () => {
   });
 });
 
+describe('preview language tabs', () => {
+  it('offers the ticked languages the template actually ships in', () => {
+    expect(previewLanguagesFor(templates, 'ticket-created', ['en', 'fr'])).toEqual(['en', 'fr']);
+    expect(previewLanguagesFor(templates, 'ticket-created', ['fr'])).toEqual(['fr']);
+  });
+
+  it('never leaves the eye without a language to show', () => {
+    expect(previewLanguagesFor(templates, 'portal-invitation', ['fr'])).toEqual(['en']);
+  });
+
+  it('keys the cache per name and language', () => {
+    expect(previewKey('ticket-created', 'en')).not.toBe(previewKey('ticket-created', 'fr'));
+  });
+});
+
 describe('apply dialog markup', () => {
   it('renders as apply-email-branding-dialog with language checkboxes', () => {
     expect(dialogSource).toContain('<Dialog id="apply-email-branding"');
@@ -143,5 +160,45 @@ describe('apply dialog markup', () => {
 
   it('refreshes the templates list after applying', () => {
     expect(dialogSource).toContain('await onApplied()');
+  });
+});
+
+describe('per-template preview', () => {
+  it('puts an eye on every row, disabled checkbox or not', () => {
+    const button = dialogSource.slice(dialogSource.indexOf('id={`preview-branding-template-${entry.name}`}'));
+    const props = button.slice(0, button.indexOf('</Button>'));
+
+    expect(props).toContain('<Eye className="h-4 w-4" />');
+    expect(props).toContain('onClick={() => openPreview(entry.name)}');
+    // `disabled` is the no-stock-colors checkbox's business, never the eye's.
+    expect(props).not.toContain('disabled');
+  });
+
+  it('renders the planned HTML and subject through EmailTemplatePreview', () => {
+    expect(dialogSource).toContain('<Dialog\n        id="preview-branding-template"');
+    expect(dialogSource).toContain('htmlContent={entry.preview.plannedHtml}');
+    expect(dialogSource).toContain('subject={entry.preview.subject}');
+  });
+
+  it('explains the customized and skipped cases in words', () => {
+    expect(dialogSource).toContain('apply.preview.captions.customized');
+    expect(dialogSource).toContain('apply.preview.captions.skipped');
+    expect(dialogSource).toContain('reason: skipReason(preview.skipReason');
+  });
+
+  it('fetches lazily, once per name and language', () => {
+    expect(dialogSource).toContain('previewEmailBrandingApplyAction({ name, language })');
+    expect(dialogSource).toContain('if (requestedPreviews.current.has(key)) return;');
+    expect(dialogSource).toContain("previewLanguagesFor(status.templates, name, languages)[0]");
+  });
+
+  it('shows a loading and an error state instead of an empty frame', () => {
+    expect(dialogSource).toContain('id="preview-branding-template-loading"');
+    expect(dialogSource).toContain('id="preview-branding-template-error"');
+  });
+
+  it('drops the cache when the dialog reopens on a changed palette', () => {
+    expect(dialogSource).toContain('setPreviewCache({});');
+    expect(dialogSource).toContain('requestedPreviews.current = new Set();');
   });
 });

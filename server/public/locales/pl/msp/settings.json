@@ -1687,6 +1687,17 @@
           "text": "tekst",
           "subject": "temat"
         },
+        "preview": {
+          "open": "Zobacz podgląd wyniku",
+          "title": "Podgląd: {{name}}",
+          "loading": "Tworzenie podglądu...",
+          "captions": {
+            "create": "Ze standardowego szablonu powstanie kopia w Państwa kolorystyce.",
+            "update": "Państwa kopia zostanie zbudowana na nowo ze standardowego szablonu z zapisaną paletą.",
+            "customized": "Państwa zmiany pozostają słowo w słowo. Zamieniane są tylko kolory standardowe, które jeszcze zostały w tym szablonie.",
+            "skipped": "Nic nie zostanie zapisane — {{reason}}. Tak wygląda ten szablon dzisiaj."
+          }
+        },
         "summary": "{{written}} z brandingiem, {{skipped}} pominiętych, {{failed}} nieudanych",
         "groups": {
           "system": {

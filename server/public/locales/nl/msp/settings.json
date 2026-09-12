@@ -1681,6 +1681,17 @@
           "text": "tekst",
           "subject": "onderwerp"
         },
+        "preview": {
+          "open": "Resultaat bekijken",
+          "title": "Voorbeeld: {{name}}",
+          "loading": "Voorbeeld wordt opgebouwd...",
+          "captions": {
+            "create": "Er wordt een kopie met uw huisstijl gemaakt van het standaardsjabloon.",
+            "update": "Uw kopie met huisstijl wordt opnieuw opgebouwd uit het standaardsjabloon met het opgeslagen palet.",
+            "customized": "Uw bewerkingen blijven woord voor woord behouden. Alleen de standaardkleuren die nog in dit sjabloon staan, worden vervangen.",
+            "skipped": "Er wordt niets weggeschreven — {{reason}}. Dit is het sjabloon zoals het er nu uitziet."
+          }
+        },
         "summary": "{{written}} van huisstijl voorzien, {{skipped}} overgeslagen, {{failed}} mislukt",
         "groups": {
           "system": {

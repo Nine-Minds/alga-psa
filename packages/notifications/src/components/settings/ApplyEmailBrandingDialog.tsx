@@ -1,22 +1,33 @@
 'use client';
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Eye } from "lucide-react";
 import { Button } from "@alga-psa/ui/components/Button";
 import { Checkbox } from "@alga-psa/ui/components/Checkbox";
 import { Dialog, DialogContent, DialogTitle } from "@alga-psa/ui/components/Dialog";
 import { Label } from "@alga-psa/ui/components/Label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@alga-psa/ui/components/Tabs";
 import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
 import { getErrorMessage } from "@alga-psa/ui/lib/errorHandling";
 import type { TenantTemplateState } from "@alga-psa/email/branding";
-import { applyEmailBrandingAction } from "../../actions";
-import type { EmailBrandingApplyResult, EmailBrandingStatus } from "../../lib/emailBranding";
+import { applyEmailBrandingAction, previewEmailBrandingApplyAction } from "../../actions";
+import type {
+  EmailBrandingApplyResult,
+  EmailBrandingPreviewResult,
+  EmailBrandingStatus,
+} from "../../lib/emailBranding";
+import { EmailTemplatePreview } from "./EmailTemplatePreview";
 import {
   TEMPLATE_GROUP_ORDER,
   buildApplyScope,
   countSelectedRows,
   defaultSelection,
   groupTemplatesByState,
+  previewKey,
+  previewLanguagesFor,
   summarizeApplyResult,
+  type PreviewCache,
+  type PreviewCacheEntry,
 } from "./applyEmailBrandingState";
 
 const DIFFERS_FALLBACKS: Record<string, string> = {
@@ -76,6 +87,11 @@ export function ApplyEmailBrandingDialog({
   const [applying, setApplying] = useState(false);
   const [result, setResult] = useState<EmailBrandingApplyResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [previewName, setPreviewName] = useState<string | null>(null);
+  const [previewLanguage, setPreviewLanguage] = useState<string>('');
+  const [previewCache, setPreviewCache] = useState<PreviewCache>({});
+  /** Keys already requested, so re-rendering never fires a second round trip. */
+  const requestedPreviews = useRef<Set<string>>(new Set());
 
   const groups = useMemo(() => groupTemplatesByState(status.templates, languages), [status.templates, languages]);
 
@@ -84,7 +100,43 @@ export function ApplyEmailBrandingDialog({
     setResult(null);
     setError(null);
     setLanguages(status.languages.length > 0 ? status.languages : ['en']);
+    setPreviewName(null);
+    // The palette may have changed since the last time this opened.
+    setPreviewCache({});
+    requestedPreviews.current = new Set();
   }, [isOpen, status.languages]);
+
+  const loadPreview = useCallback(async (name: string, language: string) => {
+    const key = previewKey(name, language);
+    if (requestedPreviews.current.has(key)) return;
+    requestedPreviews.current.add(key);
+    setPreviewCache((current) => ({ ...current, [key]: { status: 'loading' } }));
+
+    try {
+      const preview = await previewEmailBrandingApplyAction({ name, language });
+      setPreviewCache((current) => ({ ...current, [key]: { status: 'ready', preview } }));
+    } catch (previewError) {
+      // Dropped from the requested set so reopening the eye retries.
+      requestedPreviews.current.delete(key);
+      setPreviewCache((current) => ({
+        ...current,
+        [key]: { status: 'error', error: getErrorMessage(previewError) },
+      }));
+    }
+  }, []);
+
+  const openPreview = (name: string) => {
+    const language = previewLanguagesFor(status.templates, name, languages)[0];
+    if (!language) return;
+    setPreviewName(name);
+    setPreviewLanguage(language);
+    loadPreview(name, language);
+  };
+
+  const selectPreviewLanguage = (language: string) => {
+    setPreviewLanguage(language);
+    if (previewName) loadPreview(previewName, language);
+  };
 
   useEffect(() => {
     if (!isOpen) return;
@@ -135,6 +187,70 @@ export function ApplyEmailBrandingDialog({
   };
 
   const summary = result ? summarizeApplyResult(result) : null;
+
+  const previewTabs = previewName ? previewLanguagesFor(status.templates, previewName, languages) : [];
+  const previewEntry = previewName ? previewCache[previewKey(previewName, previewLanguage)] : undefined;
+
+  /** Says, in words, what the rendered HTML below it is: a clone, a recolor, or nothing. */
+  const previewCaption = (preview: EmailBrandingPreviewResult) => {
+    if (preview.action === 'skip') {
+      return t('notifications.emailBranding.apply.preview.captions.skipped', {
+        defaultValue: 'Nothing will be written — {{reason}}. This is the template as it stands today.',
+        reason: skipReason(preview.skipReason ?? 'unchanged'),
+      });
+    }
+    if (preview.state === 'customized') {
+      return t(
+        'notifications.emailBranding.apply.preview.captions.customized',
+        'Your edits are kept word for word. Only the stock colors still left in this template are replaced.',
+      );
+    }
+    if (preview.action === 'create') {
+      return t(
+        'notifications.emailBranding.apply.preview.captions.create',
+        'A branded copy of the standard template will be created for you.',
+      );
+    }
+    return t(
+      'notifications.emailBranding.apply.preview.captions.update',
+      'Your branded copy will be rebuilt from the standard template with the saved palette.',
+    );
+  };
+
+  const previewBody = (entry: PreviewCacheEntry | undefined) => {
+    if (!entry || entry.status === 'loading') {
+      return (
+        <p id="preview-branding-template-loading" className="text-sm text-gray-500">
+          {t('notifications.emailBranding.apply.preview.loading', 'Building the preview...')}
+        </p>
+      );
+    }
+
+    if (entry.status === 'error') {
+      return (
+        <div
+          id="preview-branding-template-error"
+          className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700"
+        >
+          {entry.error}
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-3">
+        <p id="preview-branding-template-caption" className="text-sm text-gray-600">
+          {previewCaption(entry.preview)}
+        </p>
+        <EmailTemplatePreview
+          id="preview-branding-template-frame"
+          htmlContent={entry.preview.plannedHtml}
+          templateName={entry.preview.name}
+          subject={entry.preview.subject}
+        />
+      </div>
+    );
+  };
 
   const footer = (
     <div className="flex justify-end gap-2">
@@ -258,7 +374,7 @@ export function ApplyEmailBrandingDialog({
 
                     <ul className="max-h-52 divide-y overflow-y-auto">
                       {entries.map((entry) => (
-                        <li key={entry.name} className="flex items-center justify-between px-3 py-2">
+                        <li key={entry.name} className="flex items-center justify-between gap-2 px-3 py-2">
                           <Checkbox
                             id={`apply-branding-template-${entry.name}`}
                             label={entry.name}
@@ -266,17 +382,31 @@ export function ApplyEmailBrandingDialog({
                             disabled={disabled}
                             onChange={() => toggleTemplate(entry.name)}
                           />
-                          <span className="text-xs text-gray-500">
-                            {disabled
-                              ? groupAction('no-stock-colors')
-                              : entry.differs.length > 0
-                                ? t('notifications.emailBranding.apply.differs', {
-                                  defaultValue: 'Differs in {{parts}}',
-                                  parts: entry.differs
-                                    .map((part) => t(`notifications.emailBranding.apply.differsParts.${part}`, DIFFERS_FALLBACKS[part]))
-                                    .join(', '),
-                                })
-                                : entry.category}
+                          <span className="flex shrink-0 items-center gap-1">
+                            <span className="text-xs text-gray-500">
+                              {disabled
+                                ? groupAction('no-stock-colors')
+                                : entry.differs.length > 0
+                                  ? t('notifications.emailBranding.apply.differs', {
+                                    defaultValue: 'Differs in {{parts}}',
+                                    parts: entry.differs
+                                      .map((part) => t(`notifications.emailBranding.apply.differsParts.${part}`, DIFFERS_FALLBACKS[part]))
+                                      .join(', '),
+                                  })
+                                  : entry.category}
+                            </span>
+                            {/* Previewable even when the checkbox is not: seeing why a
+                                template will be left alone is the point. */}
+                            <Button
+                              id={`preview-branding-template-${entry.name}`}
+                              variant="ghost"
+                              size="sm"
+                              title={t('notifications.emailBranding.apply.preview.open', 'Preview the result')}
+                              aria-label={t('notifications.emailBranding.apply.preview.open', 'Preview the result')}
+                              onClick={() => openPreview(entry.name)}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
                           </span>
                         </li>
                       ))}
@@ -288,6 +418,47 @@ export function ApplyEmailBrandingDialog({
           </>
         )}
       </DialogContent>
+
+      {/* Nested inside the apply dialog, so InsideDialogContext renders it
+          portal-less and the focus trap stays with the parent. */}
+      <Dialog
+        id="preview-branding-template"
+        isOpen={!!previewName}
+        onClose={() => setPreviewName(null)}
+        className="max-w-3xl"
+        // The title lives in the prop, not a DialogTitle: a nested dialog renders
+        // inside the parent's Radix root, which already owns the accessible title.
+        title={t('notifications.emailBranding.apply.preview.title', {
+          defaultValue: 'Preview: {{name}}',
+          name: previewName ?? '',
+        })}
+        footer={(
+          <div className="flex justify-end">
+            <Button id="close-preview-branding-template" type="button" variant="outline" onClick={() => setPreviewName(null)}>
+              {t('notifications.emailBranding.actions.done', 'Done')}
+            </Button>
+          </div>
+        )}
+      >
+        <DialogContent className="space-y-3">
+          {previewTabs.length > 1 ? (
+            <Tabs value={previewLanguage} onValueChange={selectPreviewLanguage}>
+              <TabsList>
+                {previewTabs.map((code) => (
+                  <TabsTrigger key={code} id={`preview-branding-language-${code}`} value={code}>
+                    {t(`notifications.emailTemplatesUi.languages.${code}`, code.toUpperCase())}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+              <TabsContent value={previewLanguage} className="pt-3">
+                {previewBody(previewEntry)}
+              </TabsContent>
+            </Tabs>
+          ) : (
+            previewBody(previewEntry)
+          )}
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }

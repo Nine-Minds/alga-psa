@@ -1681,6 +1681,17 @@
           "text": "Text",
           "subject": "Betreff"
         },
+        "preview": {
+          "open": "Ergebnis in der Vorschau ansehen",
+          "title": "Vorschau: {{name}}",
+          "loading": "Vorschau wird erstellt ...",
+          "captions": {
+            "create": "Eine gebrandete Kopie der Standardvorlage wird für Sie erstellt.",
+            "update": "Ihre gebrandete Kopie wird mit der gespeicherten Palette aus der Standardvorlage neu erstellt.",
+            "customized": "Ihre Bearbeitungen bleiben Wort für Wort erhalten. Nur die in dieser Vorlage verbliebenen Standardfarben werden ersetzt.",
+            "skipped": "Es wird nichts geschrieben – {{reason}}. So sieht die Vorlage heute aus."
+          }
+        },
         "summary": "{{written}} gebrandet, {{skipped}} übersprungen, {{failed}} fehlgeschlagen",
         "groups": {
           "system": {

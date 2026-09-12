@@ -1681,6 +1681,17 @@
           "text": "testo",
           "subject": "oggetto"
         },
+        "preview": {
+          "open": "Vedi il risultato in anteprima",
+          "title": "Anteprima: {{name}}",
+          "loading": "Creazione dell’anteprima...",
+          "captions": {
+            "create": "Verrà creata una copia con il suo marchio a partire dal modello standard.",
+            "update": "La sua copia con il marchio verrà ricreata dal modello standard con la palette salvata.",
+            "customized": "Le sue modifiche restano parola per parola. Vengono sostituiti solo i colori originali rimasti in questo modello.",
+            "skipped": "Non verrà scritto nulla: {{reason}}. Questo è il modello così com’è oggi."
+          }
+        },
         "summary": "{{written}} con il tuo branding, {{skipped}} ignorati, {{failed}} non riusciti",
         "groups": {
           "system": {

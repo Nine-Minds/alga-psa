@@ -1681,6 +1681,17 @@
           "text": "texto",
           "subject": "asunto"
         },
+        "preview": {
+          "open": "Ver el resultado",
+          "title": "Vista previa: {{name}}",
+          "loading": "Generando la vista previa...",
+          "captions": {
+            "create": "Se creará una copia con su marca a partir de la plantilla estándar.",
+            "update": "Su copia con la marca se volverá a crear desde la plantilla estándar con la paleta guardada.",
+            "customized": "Sus cambios se conservan palabra por palabra. Solo se reemplazan los colores originales que quedan en esta plantilla.",
+            "skipped": "No se escribirá nada: {{reason}}. Esta es la plantilla tal como está hoy."
+          }
+        },
         "summary": "{{written}} con su marca, {{skipped}} omitidas, {{failed}} con errores",
         "groups": {
           "system": {

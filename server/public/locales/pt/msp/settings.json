@@ -1681,6 +1681,17 @@
           "text": "texto",
           "subject": "assunto"
         },
+        "preview": {
+          "open": "Ver o resultado",
+          "title": "Pré-visualização: {{name}}",
+          "loading": "Gerando a pré-visualização...",
+          "captions": {
+            "create": "Será criada uma cópia com a sua marca a partir do modelo padrão.",
+            "update": "A sua cópia com a marca será refeita a partir do modelo padrão com a paleta salva.",
+            "customized": "As suas edições são mantidas palavra por palavra. Só são substituídas as cores originais que ainda restam neste modelo.",
+            "skipped": "Nada será gravado — {{reason}}. Este é o modelo como ele está hoje."
+          }
+        },
         "summary": "{{written}} com sua marca, {{skipped}} ignorados, {{failed}} com falha",
         "groups": {
           "system": {

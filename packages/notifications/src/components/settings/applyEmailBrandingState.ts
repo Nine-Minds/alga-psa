@@ -4,7 +4,11 @@
  */
 
 import type { EmailBrandingApplyScope, TenantTemplateDifference, TenantTemplateState } from '@alga-psa/email/branding';
-import type { EmailBrandingApplyResult, EmailBrandingTemplateStatus } from '../../lib/emailBranding';
+import type {
+  EmailBrandingApplyResult,
+  EmailBrandingPreviewResult,
+  EmailBrandingTemplateStatus,
+} from '../../lib/emailBranding';
 
 export const TEMPLATE_GROUP_ORDER: TenantTemplateState[] = ['system', 'branded', 'customized', 'no-stock-colors'];
 
@@ -109,4 +113,30 @@ export function summarizeApplyResult(result: EmailBrandingApplyResult): ApplySum
     skipped: result.skipped.length,
     failed: result.failed.length,
   };
+}
+
+/** One preview per (name, language): the eye reopens without a second round trip. */
+export const previewKey = (name: string, language: string) => `${name}::${language}`;
+
+export type PreviewCacheEntry =
+  | { status: 'loading' }
+  | { status: 'ready'; preview: EmailBrandingPreviewResult }
+  | { status: 'error'; error: string };
+
+export type PreviewCache = Record<string, PreviewCacheEntry>;
+
+/**
+ * The language tabs the preview offers: the ticked languages this template
+ * actually ships in, falling back to every language it ships in so the eye is
+ * never a dead end.
+ */
+export function previewLanguagesFor(
+  templates: EmailBrandingTemplateStatus[],
+  name: string,
+  languages: string[],
+): string[] {
+  const available = new Set(templates.filter((template) => template.name === name).map((template) => template.language));
+  const ticked = languages.filter((language) => available.has(language));
+
+  return ticked.length > 0 ? ticked : [...available].sort();
 }
