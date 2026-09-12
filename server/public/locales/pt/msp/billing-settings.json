@@ -506,7 +506,7 @@
   },
   "serviceCategories": {
     "title": "Categorias de serviço",
-    "description": "Agrupamentos opcionais dos seus produtos. As categorias controlam a coluna e o filtro Categoria no separador Produtos e são distintas dos Tipos de serviço, que são obrigatórios e usados em relatórios e registo de tempo.",
+    "description": "Agrupamentos opcionais dos seus produtos. As categorias controlam a coluna e o filtro Categoria no separador Produtos e são distintas dos Tipos de serviço, que são obrigatórios e usados em relatórios e registro de tempo.",
     "dialog": {
       "addTitle": "Adicionar categoria de serviço",
       "editTitle": "Editar categoria de serviço",
