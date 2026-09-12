@@ -506,6 +506,7 @@
   },
   "serviceCategories": {
     "title": "Categorias de serviço",
+    "description": "Agrupamentos opcionais dos seus produtos. As categorias controlam a coluna e o filtro Categoria no separador Produtos e são distintas dos Tipos de serviço, que são obrigatórios e usados em relatórios e registro de tempo.",
     "dialog": {
       "addTitle": "Adicionar categoria de serviço",
       "editTitle": "Editar categoria de serviço",
@@ -531,6 +532,11 @@
       "importFromStandard": "Importar de categorias padrão",
       "create": "Criar",
       "update": "Atualizar"
+    },
+    "empty": {
+      "title": "Ainda não há categorias de serviço",
+      "description": "Importe a lista padrão para começar, ou adicione as suas. As categorias são opcionais e só são necessárias se quiser agrupar produtos.",
+      "importPrimary": "Importar categorias de serviço padrão"
     },
     "delete": {
       "message": "Tem certeza de que deseja excluir \"{{name}}\"? Esta ação não pode ser desfeita."
@@ -902,8 +908,8 @@
         "loading": "Carregando..."
       },
       "label": {
-        "label": "Rótulo",
-        "placeholder": "Etiqueta de formato livre opcional"
+        "label": "Rótulo da categoria",
+        "placeholder": "Rótulo livre opcional"
       },
       "vendor": {
         "label": "Fornecedor"

@@ -506,6 +506,7 @@
   },
   "serviceCategories": {
     "title": "Catégories de services",
+    "description": "Regroupements facultatifs de vos produits. Les catégories alimentent la colonne et le filtre Catégorie de l'onglet Produits, et sont distinctes des Types de service, obligatoires et utilisés dans les rapports et la saisie du temps.",
     "dialog": {
       "addTitle": "Ajouter une catégorie de service",
       "editTitle": "Modifier la catégorie de service",
@@ -531,6 +532,11 @@
       "importFromStandard": "Importer à partir de catégories standard",
       "create": "Créer",
       "update": "Mise à jour"
+    },
+    "empty": {
+      "title": "Aucune catégorie de service pour l'instant",
+      "description": "Importez la liste standard pour commencer, ou ajoutez les vôtres. Les catégories sont facultatives et ne sont utiles que si vous souhaitez regrouper des produits.",
+      "importPrimary": "Importer les catégories de service standard"
     },
     "delete": {
       "message": "Êtes-vous sûr de vouloir supprimer « {{name}} » ? Cette action ne peut pas être annulée."
@@ -902,8 +908,8 @@
         "loading": "Chargement..."
       },
       "label": {
-        "label": "Étiquette",
-        "placeholder": "Étiquette de forme libre facultative"
+        "label": "Libellé de catégorie",
+        "placeholder": "Libellé libre facultatif"
       },
       "vendor": {
         "label": "Fournisseur"

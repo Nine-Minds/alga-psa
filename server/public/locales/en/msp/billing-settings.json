@@ -506,6 +506,7 @@
   },
   "serviceCategories": {
     "title": "Service Categories",
+    "description": "Optional groups for your products. Categories drive the Category column and filter on the Products tab, and are separate from Service Types, which are required and used in reporting and time entry.",
     "dialog": {
       "addTitle": "Add Service Category",
       "editTitle": "Edit Service Category",
@@ -531,6 +532,11 @@
       "importFromStandard": "Import from Standard Categories",
       "create": "Create",
       "update": "Update"
+    },
+    "empty": {
+      "title": "No service categories yet",
+      "description": "Import the standard list to get started, or add your own. Categories are optional and only needed if you want to group products.",
+      "importPrimary": "Import Standard Service Categories"
     },
     "delete": {
       "message": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone."
@@ -902,7 +908,7 @@
         "loading": "Loading..."
       },
       "label": {
-        "label": "Label",
+        "label": "Category Label",
         "placeholder": "Optional freeform label"
       },
       "vendor": {

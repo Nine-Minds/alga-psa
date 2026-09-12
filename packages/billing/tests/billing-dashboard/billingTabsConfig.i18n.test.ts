@@ -36,6 +36,8 @@ const expectedLabelKeys: Array<{ value: string; labelKey: string }> = [
   { value: 'service-periods', labelKey: 'dashboard.tabs.servicePeriods' },
   { value: 'usage-tracking', labelKey: 'dashboard.tabs.usageTracking' },
   { value: 'reports', labelKey: 'dashboard.tabs.reports' },
+  { value: 'service-types', labelKey: 'dashboard.tabs.serviceTypes' },
+  { value: 'service-categories', labelKey: 'dashboard.tabs.serviceCategories' },
   { value: 'service-catalog', labelKey: 'dashboard.tabs.serviceCatalog' },
   { value: 'products', labelKey: 'dashboard.tabs.products' },
 ];
@@ -55,7 +57,7 @@ describe('billingTabsConfig i18n wiring contract', () => {
     expect(dashboardSource).toContain('label: t(tab.labelKey, { defaultValue: tab.label })');
   });
 
-  it('T032: all 16 tab labels are present in the de locale (dashboard.tabs.*)', () => {
+  it('T032: all 18 tab labels are present in the de locale (dashboard.tabs.*)', () => {
     const deLocale = readJson<Record<string, unknown>>(
       '../../../../server/public/locales/de/msp/billing.json'
     );

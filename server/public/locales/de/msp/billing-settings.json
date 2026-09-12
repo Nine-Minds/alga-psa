@@ -506,6 +506,7 @@
   },
   "serviceCategories": {
     "title": "Servicekategorien",
+    "description": "Optionale Gruppierungen für Ihre Produkte. Kategorien steuern die Spalte und den Filter „Kategorie“ auf der Registerkarte Produkte und sind von den Servicetypen zu unterscheiden, die erforderlich sind und in Berichten und Zeiterfassung verwendet werden.",
     "dialog": {
       "addTitle": "Servicekategorie hinzufügen",
       "editTitle": "Servicekategorie bearbeiten",
@@ -531,6 +532,11 @@
       "importFromStandard": "Import aus Standardkategorien",
       "create": "Erstellen",
       "update": "Aktualisieren"
+    },
+    "empty": {
+      "title": "Noch keine Servicekategorien",
+      "description": "Importieren Sie die Standardliste, um zu beginnen, oder fügen Sie eigene hinzu. Kategorien sind optional und nur nötig, wenn Sie Produkte gruppieren möchten.",
+      "importPrimary": "Standard-Servicekategorien importieren"
     },
     "delete": {
       "message": "Sind Sie sicher, dass Sie „{{name}}“ löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden."
@@ -902,8 +908,8 @@
         "loading": "Laden..."
       },
       "label": {
-        "label": "Etikett",
-        "placeholder": "Optionales Freiformetikett"
+        "label": "Kategoriebezeichnung",
+        "placeholder": "Optionale freie Bezeichnung"
       },
       "vendor": {
         "label": "Verkäufer"
