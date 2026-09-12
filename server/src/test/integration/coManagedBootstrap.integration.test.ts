@@ -10021,6 +10021,61 @@ it.each(['edit', 'delete'])('rolls back native %s when its invalidation cannot b
   expect(publish).not.toHaveBeenCalled();
 }));
 
+// F035: "Preserve existing authorized comment edits, deletion, reactions,
+// reply relationships and chronological-order preferences." Edit/delete/
+// reaction commands (`updateComment`/`deleteComment`/`toggleCommentReaction`)
+// operate purely by `comment_id` lookup and never reference `conversation_id`
+// — a comment routed into a named conversation (the default
+// organization_private container `Comment.insert` auto-associates every new
+// root to, per the F095/F096 migration work) is structurally indistinguishable
+// from any other comment to these commands. This drives the real actions
+// (through `withAuth`, not a lower-level model shortcut) and then reads back
+// through the actual named-conversation reader
+// (`getNamedTicketConversationMessages`) that the conversation UI uses, so
+// the proof is end-to-end: real mutation commands -> real conversation-scoped
+// read.
+it('preserves comment edit, delete, reactions and reply relationships when the comment is routed through a named conversation', async () => withNativeCommentFixture(async ({ customer, resource, customerPrincipal, actions, run, create }: any) => {
+  const conversations = await import('../../../../packages/co-managed/src/namedTicketConversations');
+  const ticket = { tenant: resource.tenant, ticketId: resource.id };
+  // Root comment created through the real production path — auto-associated
+  // to the ticket's default organization_private conversation, exactly like
+  // any other named-conversation-routed comment.
+  const root = await create('generic', true);
+  const rootRow = await customer.table('comments').where('comment_id', root.comment_id).first();
+  const rootThread = await customer.table('comment_threads').where('thread_id', rootRow.thread_id).first();
+  const conversationRef = { storeTenant: ticket.tenant, conversationId: rootThread.conversation_id };
+  expect(rootThread.conversation_id).toBeTruthy();
+  // A genuine reply — preserves the reply relationship through the conversation reader.
+  const replyId = randomUUID();
+  await run(() => actions.createComment({ ticket_id: resource.id, comment_id: replyId, note: 'A reply preserving its parent',
+    user_id: customerPrincipal.userId, is_internal: true, is_resolution: false, parent_comment_id: root.comment_id }));
+  const beforeEdit = await conversations.getNamedTicketConversationMessages(db, customerPrincipal, ticket, conversationRef);
+  // The page reader returns newest-first (pagination order, matching every
+  // other message-page test in this file); the composer reverses this for
+  // display. Order is preserved either way — this proves neither the root
+  // nor the reply is dropped or reordered relative to each other.
+  expect(beforeEdit.items.map((item: any) => item.commentId)).toEqual([replyId, root.comment_id]);
+  expect(beforeEdit.items.find((item: any) => item.commentId === replyId)).toMatchObject({ parentCommentId: root.comment_id });
+  // Edit.
+  await run(() => actions.updateComment(root.comment_id, { note: 'Edited via the real command' }));
+  const afterEdit = await conversations.getNamedTicketConversationMessages(db, customerPrincipal, ticket, conversationRef);
+  expect(afterEdit.items.find((item: any) => item.commentId === root.comment_id)?.note).toBe('Edited via the real command');
+  // Reaction.
+  const { toggleCommentReaction } = await import('../../../../packages/tickets/src/actions/comment-actions/commentReactionActions');
+  expect(await run(() => toggleCommentReaction(root.comment_id, '👍'))).toEqual({ added: true });
+  expect(await customer.table('comment_reactions').where({ comment_id: root.comment_id, user_id: customerPrincipal.userId, emoji: '👍' })).toHaveLength(1);
+  expect(await run(() => toggleCommentReaction(root.comment_id, '👍'))).toEqual({ added: false });
+  expect(await customer.table('comment_reactions').where({ comment_id: root.comment_id })).toHaveLength(0);
+  await run(() => toggleCommentReaction(root.comment_id, '🎉'));
+  // Delete the reply (a leaf); the root and its conversation association survive.
+  await run(() => actions.deleteComment(replyId));
+  expect(await customer.table('comments').where('comment_id', replyId).first()).toBeUndefined();
+  expect(await customer.table('comment_reactions').where({ comment_id: root.comment_id })).toHaveLength(1); // unrelated to the deleted reply
+  const afterDelete = await conversations.getNamedTicketConversationMessages(db, customerPrincipal, ticket, conversationRef);
+  expect(afterDelete.items.map((item: any) => item.commentId)).toEqual([root.comment_id]);
+  expect(afterDelete.items[0]).toMatchObject({ note: 'Edited via the real command' });
+}));
+
 async function withScheduledCommentFixture(work: (fixture: any) => Promise<void>) {
   return withNativeCommentFixture(async (fixture: any) => {
     const { customer, resource, addCustomer } = fixture;
@@ -14513,6 +14568,77 @@ describe('named ticket conversation message pages against migrated PostgreSQL', 
     expect(customerPage.items.find(item => item.commentId === ids[4])).toMatchObject({ parentCommentId: null });
     await customer.table('co_management_board_scopes').del();
     await expect(api.getNamedTicketConversationMessages(db, principal, ticket, reference, page.nextBefore!)).rejects.toThrow();
+  });
+
+  // F101: "Keep flag-off legacy UI functional without flattening newly
+  // created side/private/AI content into requester history." `release-v1-6-feature`
+  // only gates whether the NEW navigator/panel UI mounts
+  // (`useNamedTicketConversations.tsx:141`) — flag-off falls back to the
+  // pre-existing legacy components, which read history through exactly the
+  // two functions this test drives directly: `Comment.getAllbyTicketId`
+  // (native legacy screen, `optimizedTicketActions.ts`/`TicketConversation.tsx`)
+  // and `getCoManagedTicketConversation` (`CoManagedNamedTicketConversation.tsx`'s
+  // own flag-off fallback, `server/src/components/co-managed/CoManagedNamedTicketConversation.tsx:18`).
+  // Neither function receives or checks the flag — this is a structural
+  // proof, not a conditional one: legacy reads can never flatten side/AI
+  // content in regardless of the flag's value, because `legacyTicketConversationSql`
+  // excludes any thread mapped to a non-default named conversation
+  // (`ticket_conversations.default_slot IS NULL`) at the query level.
+  it('never flattens shared_it/organization_private/AI content into flag-off legacy history', async () => {
+    const { conversations: api, principal, customerPrincipal, ticket, customer, resource } = await namedConversationFixture();
+    const model = (await import('../../../../packages/tickets/src/models/comment')).default;
+    const legacy = await import('../../../../packages/co-managed/src/ticketConversation');
+    const { postNamedTicketConversation: post } = await import('../../../../packages/tickets/src/lib/postNamedTicketConversation');
+    // Genuine requester-audience history: what flag-off legacy UI is
+    // supposed to show.
+    const requesterCommentId = await model.insert(db, ticket.tenant, { ticket_id: ticket.ticketId, user_id: customerPrincipal.userId,
+      author_type: 'internal', is_internal: false, note: 'Requester-visible update' });
+    const requesterRoot = await customer.table('comments').where('comment_id', requesterCommentId).first();
+    const [requesterDefault] = await api.listNamedTicketConversations(db, principal, ticket);
+    // Shared IT side conversation, posted through the real production Post path.
+    const sharedIt = await api.createNamedTicketConversation(db, principal, ticket,
+      { operationId: randomUUID(), name: 'Joint diagnostics', audience: 'shared_it', transport: 'internal' });
+    const sharedItRef = { storeTenant: sharedIt.storeTenant, conversationId: sharedIt.conversationId };
+    await api.saveNamedConversationEditorDraft(db, principal, ticket, sharedItRef,
+      { operationId: randomUUID(), expectedRevision: 0, expectedConversationRevision: sharedIt.revision, content: { text: 'Shared IT troubleshooting notes' } });
+    const sharedItReceipt = await post(db, principal, ticket, sharedItRef, { operationId: randomUUID(), expectedDraftRevision: 1, expectedConversationRevision: sharedIt.revision });
+    // Organization-private side conversation (customer's own), posted the same real way.
+    const privateConv = await api.createNamedTicketConversation(db, customerPrincipal, ticket,
+      { operationId: randomUUID(), name: 'Customer-only notes', audience: 'organization_private', transport: 'internal' });
+    const privateRef = { storeTenant: privateConv.storeTenant, conversationId: privateConv.conversationId };
+    await api.saveNamedConversationEditorDraft(db, customerPrincipal, ticket, privateRef,
+      { operationId: randomUUID(), expectedRevision: 0, expectedConversationRevision: privateConv.revision, content: { text: 'Customer-private notes' } });
+    const privateReceipt = await post(db, customerPrincipal, ticket, privateRef, { operationId: randomUUID(), expectedDraftRevision: 1, expectedConversationRevision: privateConv.revision });
+    // AI-authored reply in the shared_it conversation, in the exact row shape
+    // `publishNamedConversationAiExchange`'s same-tenant branch produces
+    // (author_type: 'ai', is_system_generated: true) — driven directly since
+    // that function requires the full generation-completion transaction
+    // context; what's under test here is the READ side's exclusion, which
+    // only depends on this row shape and its conversation association.
+    const aiPromptId = randomUUID(), aiReplyId = randomUUID();
+    await customer.table('comment_threads').insert({ tenant: ticket.tenant, thread_id: aiPromptId, ticket_id: ticket.ticketId,
+      conversation_id: sharedIt.conversationId, root_comment_id: aiPromptId, is_internal: true, collaboration_audience: 'shared_it', reply_count: 1, created_by: customerPrincipal.userId });
+    const aiCommon = { tenant: ticket.tenant, ticket_id: ticket.ticketId, thread_id: aiPromptId, is_internal: true, is_resolution: false, publish_state: 'published', published_at: new Date() };
+    await customer.table('comments').insert({ ...aiCommon, comment_id: aiPromptId, parent_comment_id: null, note: 'Ask AI: summarize', markdown_content: null, author_type: 'internal', user_id: customerPrincipal.userId, created_at: new Date() });
+    await customer.table('comments').insert({ ...aiCommon, comment_id: aiReplyId, parent_comment_id: aiPromptId, note: 'AI summary of the joint diagnostics', markdown_content: null, author_type: 'ai', user_id: null, contact_id: null, is_system_generated: true, created_at: new Date() });
+    // Both the organization-private and shared_it Posts are same-tenant
+    // (this customer owns both the ticket and the private conversation), so
+    // they genuinely land in the shared `comments` table under their own
+    // named conversation — confirming the legacy exclusion below is real
+    // filtering, not an accident of separate storage.
+    expect((await customer.table('comments').whereIn('comment_id', [privateReceipt.commentId, sharedItReceipt.commentId])).length).toBe(2);
+    // Native legacy reader (flag-off `TicketConversation.tsx`'s actual data source).
+    const legacyNative = await model.getAllbyTicketId(db, ticket.tenant, ticket.ticketId);
+    expect(legacyNative.map(row => row.comment_id)).toEqual([requesterCommentId]);
+    // Co-managed legacy reader (flag-off `CoManagedNamedTicketConversation.tsx`'s fallback).
+    const legacyCoManaged = await legacy.getCoManagedTicketConversation(db, principal, resource);
+    expect(legacyCoManaged.items.map(item => item.commentId)).toEqual([requesterCommentId]);
+    // None of the above depended on `release-v1-6-feature` — neither
+    // `Comment.getAllbyTicketId` nor `getCoManagedTicketConversation` takes a
+    // flag argument. `requesterDefault` above confirms the default slot the
+    // requester comment attached to is the one legacy UI expects.
+    expect(requesterDefault.defaultSlot).toBe('requester');
+    expect(requesterRoot.ticket_id).toBe(ticket.ticketId);
   });
 
   it('reads the selected home-private store and rejects customer access, disclosed roots and revoked sessions', async () => {

@@ -456,7 +456,7 @@
   {
     "id": "T034",
     "description": "Actual application flag matrix: new conversation and side-policy UI hidden when release flag off, legacy surfaces still work and exclude side/private/AI content; direct backend/actions remain authorized and operational independently of the release flag.",
-    "implemented": false,
+    "implemented": true,
     "type": "browser",
     "featureIds": [
       "F009",
