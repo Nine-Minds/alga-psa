@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { execFileSync, spawnSync } from 'node:child_process';
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 /**
@@ -48,6 +48,53 @@ function collectJsFiles(dir: string): string[] {
 }
 
 describe('quote terms shared runtime exports', () => {
+  it.runIf(process.env.RUN_QUOTE_TERMS_IMAGE_TEST === '1')('loads worker quote terms using only artifacts admitted by the Docker context', () => {
+    // Keep the context under the checkout: snap-packaged Docker clients have
+    // a private /tmp and cannot read the host Node process's temporary files.
+    const context = mkdtempSync(path.join(repoRoot, 'quote-terms-image-'));
+    const image = `quote-terms-packaging:${path.basename(context).toLowerCase()}`;
+    try {
+      // A small image uses the real ignore rules, package exports, compiled
+      // worker helper and production RUN guard. No checkout/node_modules mount
+      // can accidentally supply formatting/dist as it does in a local import.
+      for (const relative of [
+        'packages/formatting/package.json',
+        'packages/formatting/dist',
+        'ee/temporal-workflows/dist/shared/lib/quoteTerms.js',
+      ]) {
+        const destination = path.join(context, relative);
+        mkdirSync(path.dirname(destination), { recursive: true });
+        cpSync(path.join(repoRoot, relative), destination, { recursive: true });
+      }
+      const ignoreRules = readFileSync(path.join(repoRoot, '.dockerignore'), 'utf8');
+      const guard = readFileSync(path.join(repoRoot, 'ee/temporal-workflows/Dockerfile'), 'utf8')
+        .split('\n').find((line) => line.startsWith('RUN ') && line.includes('quote terms runtime serialization failed'));
+      expect(guard).toBeTruthy();
+      const dockerfile = [
+        'FROM node:22-alpine',
+        'COPY packages/formatting /app/node_modules/@alga-psa/formatting',
+        'COPY ee/temporal-workflows/dist /app/ee/temporal-workflows/dist',
+        guard,
+      ].join('\n');
+      const build = () => execFileSync('docker', ['build', '--network=none', '-t', image, '-f', '-', context], {
+        input: dockerfile,
+        encoding: 'utf8',
+        stdio: ['pipe', 'pipe', 'pipe'],
+        timeout: 90000,
+      });
+
+      // Prove this check catches the original missing-artifact failure.
+      writeFileSync(path.join(context, '.dockerignore'), `${ignoreRules}\npackages/formatting/dist\n`);
+      expect(build).toThrow(/ERR_MODULE_NOT_FOUND/);
+
+      writeFileSync(path.join(context, '.dockerignore'), ignoreRules);
+      expect(build).not.toThrow();
+    } finally {
+      rmSync(context, { recursive: true, force: true });
+      spawnSync('docker', ['image', 'rm', '-f', image], { stdio: 'ignore' });
+    }
+  }, 180000);
+
   it('builds the workflow runtime with no eager import into a non-exported billing path', () => {
     const runtimeEntry = path.join(sharedDist, 'workflow/runtime/index.js');
     expect(existsSync(runtimeEntry), `Expected ${runtimeEntry}; build @alga-psa/shared first.`).toBe(true);

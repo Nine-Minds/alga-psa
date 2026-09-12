@@ -422,3 +422,45 @@ Verification:
 - Rerun: billing 1322, formatting 39, ui 4, targeted server 49, workflow crm db
   13; typechecks clean for billing, shared, formatting, ui. Dev server on 3412
   still renders quote terms after the refactor.
+
+
+## Takeover — Temporal image artifacts
+
+The native import repair was correct in a built checkout, but formatting now
+resolves through `dist` and the Docker context excluded that directory. The
+Temporal Dockerfile runs npm directly, so the shared Nx build dependency did
+not build formatting inside the image. The normal image also did not copy its
+built files, and the prebuilt parity script did not build them.
+
+Completed the existing repair without changing quote behavior:
+
+- Whitelisted `packages/formatting/dist` in the root `.dockerignore`.
+- Built formatting explicitly in the Temporal development stage and copied its
+  dist into the normal production stage.
+- Added formatting to the prebuilt parity build list.
+- Added the same native import/projection/serialization guard to both final
+  image stages, importing the compiled worker's `shared/lib/quoteTerms.js`.
+- Added an opt-in Docker regression to `quoteTermsRuntimeExports.test.ts`. It
+  stages only the actual compiled helper and formatting package artifacts,
+  applies the real ignore file, and executes the production RUN guard. Its
+  negative control excludes formatting dist and reproduces
+  `ERR_MODULE_NOT_FOUND`; the corrected context passes. Contexts and image tags
+  are removed afterwards. Snap Docker has a private `/tmp`, so test contexts
+  must be created under the checkout.
+
+Verification performed during takeover:
+
+- Builds: formatting, shared and Temporal (`tsc` plus `tsc-alias`) passed.
+- Targeted billing form/action/projection/renderer tests: 87 passed.
+- Formatting tests: 39 passed.
+- Native runtime tests including the Docker negative/positive control: 5 passed.
+- Billing and shared typechecks passed; worker packaging contract check passed.
+
+Reproduce the packaging test after building formatting/shared/Temporal:
+`RUN_QUOTE_TERMS_IMAGE_TEST=1 npm exec --workspace @alga-psa/shared -- vitest run __tests__/quoteTermsRuntimeExports.test.ts`.
+It requires Docker and the `node:22-alpine` test image. This is a focused
+container check of the production guard, not a full worker image build or a
+Temporal workflow roundtrip. Those broader image/deployment checks and the
+prior browser/DB smoke were not repeated for this packaging-only repair.
+The previously documented unrecovered smoke-client change remains unresolved;
+no additional shared dev database records were changed during takeover.

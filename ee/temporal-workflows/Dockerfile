@@ -85,6 +85,11 @@ RUN npx tsup
 WORKDIR /app/packages/event-bus
 RUN npx tsup
 
+# Quote terms normalization in shared/worker dist resolves formatting through
+# its package exports. npm builds here do not run Nx dependency targets.
+WORKDIR /app/packages/formatting
+RUN npm run build
+
 # Build @alga-psa/workflows (dist/lib/*.mjs required at runtime)
 WORKDIR /app/ee/packages/workflows
 RUN npx tsup
@@ -178,6 +183,10 @@ RUN cd /app/ee/temporal-workflows && node --input-type=module -e "const posts = 
 # must resolve from the worker image rather than shared/node_modules.
 RUN cd /app/ee/temporal-workflows && node --input-type=module -e "const m = await import('./dist/shared/services/email/inboundEmailSourceStager.js'); if (typeof m.parseStagedMimeIntoEmailDetails !== 'function') throw new Error('inbound email source stager runtime export is missing')"
 
+# Quote terms must resolve their formatting dependency from the final image,
+# including the prebuilt path where .dockerignore controls which dist files ship.
+RUN cd /app/ee/temporal-workflows && node --input-type=module -e "const { prepareQuoteTermsForDb } = await import('./dist/shared/lib/quoteTerms.js'); const blocks = [{ type: 'paragraph', content: [{ type: 'text', text: 'Terms' }] }]; const result = prepareQuoteTermsForDb({ terms_and_conditions_block: blocks }); if (result.terms_and_conditions !== 'Terms' || JSON.parse(result.terms_and_conditions_block)[0].type !== 'paragraph') throw new Error('quote terms runtime serialization failed')"
+
 # packages/licensing source is compiled INTO this dist tree, so every import
 # reachable from its root must be resolvable from here at runtime. file: deps
 # install as symlinks WITHOUT their own dependencies, so a bare third-party
@@ -219,6 +228,7 @@ COPY --from=development /app/packages/event-schemas/dist /app/packages/event-sch
 # Copy the runtime package exports loaded by @alga-psa/email.
 COPY --from=development /app/packages/types/dist /app/packages/types/dist
 COPY --from=development /app/packages/event-bus/dist /app/packages/event-bus/dist
+COPY --from=development /app/packages/formatting/dist /app/packages/formatting/dist
 # Copy the runtime-resolved @alga-psa package dists built above (base-stage
 # packages/ came from the build context, where .dockerignore strips **/dist)
 COPY --from=development /app/packages/core/dist /app/packages/core/dist
@@ -253,6 +263,10 @@ RUN cd /app/ee/temporal-workflows && node --input-type=module -e "const posts = 
 # Catch missing bare dependencies imported by shared code compiled into the
 # worker's dist tree before the image can be deployed.
 RUN cd /app/ee/temporal-workflows && node --input-type=module -e "const m = await import('./dist/shared/services/email/inboundEmailSourceStager.js'); if (typeof m.parseStagedMimeIntoEmailDetails !== 'function') throw new Error('inbound email source stager runtime export is missing')"
+
+# Quote terms must resolve their formatting dependency from the final image,
+# including the prebuilt path where .dockerignore controls which dist files ship.
+RUN cd /app/ee/temporal-workflows && node --input-type=module -e "const { prepareQuoteTermsForDb } = await import('./dist/shared/lib/quoteTerms.js'); const blocks = [{ type: 'paragraph', content: [{ type: 'text', text: 'Terms' }] }]; const result = prepareQuoteTermsForDb({ terms_and_conditions_block: blocks }); if (result.terms_and_conditions !== 'Terms' || JSON.parse(result.terms_and_conditions_block)[0].type !== 'paragraph') throw new Error('quote terms runtime serialization failed')"
 
 # packages/licensing source is compiled INTO this dist tree, so every import
 # reachable from its root must be resolvable from here at runtime. file: deps

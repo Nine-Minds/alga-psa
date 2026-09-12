@@ -124,5 +124,11 @@
     "description": "QuoteDetail and the client portal QuoteDetailPage render the same converted HTML for one rich value, and preserve their existing empty-state behaviour (em-dash on the MSP detail, section hidden on the portal).",
     "implemented": true,
     "featureIds": ["F047", "F053", "F054"]
+  },
+  {
+    "id": "T022",
+    "description": "Opt-in Docker regression uses the real ignore rules and compiled worker helper: excluding formatting dist reproduces ERR_MODULE_NOT_FOUND; including it passes the production runtime serialization guard without host node_modules.",
+    "implemented": true,
+    "featureIds": ["F056"]
   }
 ]

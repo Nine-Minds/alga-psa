@@ -239,6 +239,10 @@ entirely.
   behaviour for every currently-emitted construct is preserved except where this
   plan states otherwise.
 
+- NFR3. Shared quote terms require the built formatting package at native Node
+  runtime. Both normal and prebuilt Temporal images must include that package's
+  dist files and check the compiled worker helper during image construction.
+
 ## Data / API / Integrations
 
 New column:

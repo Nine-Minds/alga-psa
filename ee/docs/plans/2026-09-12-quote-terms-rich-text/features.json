@@ -328,5 +328,11 @@
     "description": "Interactive elements added to QuoteForm carry unique id attributes per the repo's component ID guidelines, and the editor renders correctly in both light and dark themes.",
     "implemented": true,
     "prdRefs": ["UX / UI Notes"]
+  },
+  {
+    "id": "F056",
+    "description": "Normal and prebuilt Temporal worker images include formatting dist required by shared quote terms and fail their build if the compiled helper cannot load or serialize rich terms.",
+    "implemented": true,
+    "prdRefs": ["NFR3"]
   }
 ]
