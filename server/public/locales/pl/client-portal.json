@@ -980,7 +980,8 @@
     },
     "tickets": {
       "notFoundOrDenied": "Nie znaleziono zgłoszenia lub odmowa dostępu",
-      "invalidData": "Nieprawidłowe dane zgłoszenia"
+      "invalidData": "Nieprawidłowe dane zgłoszenia",
+      "statusNotPortalSelectable": "Tego statusu nie można wybrać w portalu klienta"
     },
     "visibilityGroups": {
       "checkDetails": "Sprawdź dane grupy widoczności i spróbuj ponownie.",

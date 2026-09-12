@@ -629,7 +629,8 @@
           "loading": "Board-Ticket-Status werden geladen…",
           "statusName": "Statusname",
           "closed": "Geschlossen",
-          "default": "Standard"
+          "default": "Standard",
+          "portalSelectable": "Kundenportal-Benutzer können diesen Status auswählen"
         },
         "inboundReplyReopen": {
           "enabledLabel": "Geschlossene Tickets bei eingehenden Antworten wieder öffnen",

@@ -141,6 +141,7 @@ export async function copyBoardTicketStatuses(
     ...(hasStatusColumn('is_custom') ? { is_custom: status.is_custom } : {}),
     ...(hasStatusColumn('color') ? { color: status.color || null } : {}),
     ...(hasStatusColumn('icon') ? { icon: status.icon || null } : {}),
+    ...(hasStatusColumn('portal_selectable') ? { portal_selectable: status.portal_selectable ?? true } : {}),
     ...(hasStatusColumn('created_at') ? { created_at: status.created_at || now } : {}),
     ...(hasStatusColumn('updated_at') ? { updated_at: now } : {}),
   }));

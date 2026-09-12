@@ -629,7 +629,8 @@
           "loading": "Carregando status de tickets de bordo…",
           "statusName": "Nome do status",
           "closed": "Fechado",
-          "default": "Padrão"
+          "default": "Padrão",
+          "portalSelectable": "Os usuários do portal do cliente podem selecionar este status"
         },
         "inboundReplyReopen": {
           "enabledLabel": "Reabrir tickets fechados em respostas recebidas",

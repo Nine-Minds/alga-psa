@@ -54,6 +54,7 @@ export interface BoardTicketStatusInput {
   order_number?: number;
   color?: string | null;
   icon?: string | null;
+  portal_selectable?: boolean;
 }
 
 type NormalizedBoardTicketStatus = {
@@ -64,6 +65,7 @@ type NormalizedBoardTicketStatus = {
   order_number: number;
   color: string | null;
   icon: string | null;
+  portal_selectable: boolean;
 };
 
 function formatBoardTicketStatusValidationError(message: string): Error {
@@ -106,6 +108,8 @@ function normalizeBoardTicketStatuses(
       order_number: status.order_number ?? ((normalized.length + 1) * 10),
       color: status.color ?? null,
       icon: status.icon ?? null,
+      // New statuses are selectable by default; an explicit false is preserved.
+      portal_selectable: status.portal_selectable ?? true,
     });
   });
 
@@ -208,6 +212,7 @@ function buildStatusInsertRow(
     ...(hasStatusColumn(columns, 'is_custom') ? { is_custom: true } : {}),
     ...(hasStatusColumn(columns, 'color') ? { color: status.color } : {}),
     ...(hasStatusColumn(columns, 'icon') ? { icon: status.icon } : {}),
+    ...(hasStatusColumn(columns, 'portal_selectable') ? { portal_selectable: status.portal_selectable } : {}),
     ...(hasStatusColumn(columns, 'created_at') ? { created_at: now } : {}),
     ...(hasStatusColumn(columns, 'updated_at') ? { updated_at: now } : {}),
   };
@@ -291,6 +296,7 @@ async function persistBoardTicketStatuses(
         order_number: status.order_number,
         ...(hasStatusColumn(columns, 'color') ? { color: status.color } : {}),
         ...(hasStatusColumn(columns, 'icon') ? { icon: status.icon } : {}),
+        ...(hasStatusColumn(columns, 'portal_selectable') ? { portal_selectable: status.portal_selectable } : {}),
         ...(hasStatusColumn(columns, 'updated_at') ? { updated_at: now } : {}),
       });
   }
@@ -370,6 +376,7 @@ export const createBoardTicketStatus = withAuth(async (
         order_number: status.order_number,
         color: status.color ?? null,
         icon: status.icon ?? null,
+        portal_selectable: status.portal_selectable ?? true,
       }));
 
       nextStatuses.push({
@@ -440,6 +447,7 @@ export const updateBoardTicketStatus = withAuth(async (
             order_number: statusData.order_number ?? status.order_number,
             color: statusData.color ?? status.color ?? null,
             icon: statusData.icon ?? status.icon ?? null,
+            portal_selectable: statusData.portal_selectable ?? status.portal_selectable ?? true,
           };
         }
 
@@ -451,6 +459,7 @@ export const updateBoardTicketStatus = withAuth(async (
           order_number: status.order_number,
           color: status.color ?? null,
           icon: status.icon ?? null,
+          portal_selectable: status.portal_selectable ?? true,
         };
       });
 
@@ -499,6 +508,7 @@ export const deleteBoardTicketStatus = withAuth(async (
           order_number: status.order_number,
           color: status.color ?? null,
           icon: status.icon ?? null,
+          portal_selectable: status.portal_selectable ?? true,
         }));
 
       return persistBoardTicketStatuses(trx, tenant, boardId, user.user_id, nextStatuses);
