@@ -7,6 +7,7 @@ import QuoteItem from './quoteItem';
 import QuoteActivity from './quoteActivity';
 import { canTransitionQuoteStatus } from '../schemas/quoteSchemas';
 import { recalculateQuoteFinancials } from '../services/quoteCalculationService';
+import { normalizeQuoteTermsFields } from '../lib/quoteTermsContent';
 
 function formatDisplayQuoteNumber(quote: Pick<IQuote, 'quote_number' | 'quote_id' | 'version'>): string {
   const baseNumber = quote.quote_number ?? `Draft ${quote.quote_id}`;
@@ -258,7 +259,7 @@ const Quote = {
     const [createdQuote] = await quoteTable<IQuote>(knexOrTrx, tenant, 'quotes')
       .insert({
         tenant,
-        ...quote,
+        ...normalizeQuoteTermsFields(quote as Record<string, unknown>),
         quote_number: quoteNumber,
         status: quote.is_template ? null : (quote.status ?? 'draft'),
         version: quote.version ?? 1,
@@ -304,7 +305,7 @@ const Quote = {
 
     const [updatedQuote] = await quoteTable<IQuote>(knexOrTrx, tenant, 'quotes')
       .where({ quote_id: quoteId })
-      .update({ ...updateData, updated_at: knexOrTrx.fn.now() })
+      .update({ ...normalizeQuoteTermsFields(updateData as Record<string, unknown>), updated_at: knexOrTrx.fn.now() })
       .returning('*');
 
     await QuoteActivity.create(knexOrTrx, tenant, {
@@ -405,6 +406,7 @@ const Quote = {
         internal_notes: sourceQuote.internal_notes ?? null,
         client_notes: sourceQuote.client_notes ?? null,
         terms_and_conditions: sourceQuote.terms_and_conditions ?? null,
+        terms_and_conditions_block: sourceQuote.terms_and_conditions_block ?? null,
         is_template: false,
         template_id: sourceQuote.template_id ?? null,
         quote_number: sourceQuote.quote_number,

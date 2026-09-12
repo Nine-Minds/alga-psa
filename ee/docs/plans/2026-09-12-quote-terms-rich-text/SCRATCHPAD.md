@@ -258,3 +258,63 @@ Existing converter tests: `packages/formatting/src/blocknoteUtils.prosemirror.te
 (287 lines — covers link marks with an `https` href, but no malicious-scheme
 case) and `blocknoteUtils.image.test.ts`. Neither covers the broken escapes, the
 style/class injection, or any scheme rejection.
+
+## Implementation status (Draft Implementation)
+
+All 55 features are implemented. Landing notes and the one migration trap
+discovered while wiring the PDF:
+
+- **Converter (F001–F015).** `sanitizeHref` / `sanitizeImageSrc` export from
+  `blocknoteUtils.ts`; applied at every BlockNote and ProseMirror href site,
+  the image `src`, the code-block/unknown-content escapes, the `language`
+  class and the colour/alignment style sites. 39 formatting tests pass,
+  including the new `blocknoteUtils.security.test.ts`.
+- **Storage/projection (F016–F028).** `quotes.terms_and_conditions_block`
+  jsonb migration plus `quoteTermsContent.ts` (`normalizeQuoteTermsFields`),
+  used by `Quote.create`/`Quote.update` and all five copy sites. A plain-string
+  write clears the block column; a structured write projects to text.
+- **AST/PDF (F029–F041).** `richText` node in the types union, zod schema,
+  `i18nLabels`, `react-renderer` and the four stock layouts. `react-renderer`
+  emits converter HTML for structured values and `white-space: pre-line` for
+  the plain-string fallback. Migration
+  `20260912121000_rewrite_quote_terms_copy_to_rich_text.cjs` rewrites the
+  stock `terms-copy` node in the global and tenant-owned layouts under the
+  stock-shape guard.
+
+  **Trap:** rewriting the node alone is not sufficient. The AST's
+  `bindings.values` must also declare `termsAndConditionsRich`
+  (`path: terms_and_conditions_rich`) or the evaluator resolves nothing and the
+  PDF terms section renders empty (the MSP/portal UI reads the view model
+  directly, so it looked correct). The migration now syncs the binding
+  alongside the node; the contract test asserts it.
+- **Designer (F042–F046).** `richText` is a first-class `DesignerComponentType`
+  with schema, palette, canvas preview and both `workspaceAst` directions.
+  `workspaceAst` now throws on an unrecognized node type instead of dropping
+  it.
+- **Editor/display (F047–F055).** `QuoteTermsContent` in
+  `packages/ui/src/editor` is the one display pipeline for MSP detail and the
+  client portal; `QuoteForm` uses `TextEditor` with structured
+  `PartialBlock[]` state seeded from the block column (split per legacy line)
+  or the plain-text column, and renders `QuoteTermsContent` read-only.
+
+### Verification
+
+- `packages/formatting`: 39 passed. `packages/ui` QuoteTermsContent: 4 passed.
+- Targeted `packages/billing` + server: 67 passed (renderer, schema,
+  projection, designer round-trip, migration contract).
+- Full `packages/billing` suite: 1311 passed; all `workspaceAst.*`: 126 passed.
+- Dev stack (port 3412, compose `alga-psa-local-test`), Playwright on Chrome:
+  - MSP (`/msp/quote-approvals?quoteId=…`) rich terms → `<strong>` + anchor
+    `https://example.com/terms` + two `<p>`; `javascript:` link → no anchor,
+    text kept; plain-text quote → `<p>` with `white-space: pre-wrap`.
+  - Client portal (`/client-portal/billing/quotes/…`) — same three outcomes.
+  - Downloaded PDF (`pdf-lib`) contains a `/Link` annotation whose URI is
+    `https://example.com/terms`, and the terms text is present.
+- The dev DB migration runner (`migrate:ee`) aborts because the shared DB
+  carries migrations from other worktrees; the two feature migrations were
+  applied by invoking their `up()` directly. They stay idempotent and are safe
+  to re-run once the DB's migration list is reconciled.
+- Not covered by an automated test: the full `QuoteForm` component
+  (T019/T020) and DB-integration copies (T008/T010/T011). The behaviors were
+  exercised by the projection unit tests and the live smoke, but the plan's
+  DB-integration suites were not added here.

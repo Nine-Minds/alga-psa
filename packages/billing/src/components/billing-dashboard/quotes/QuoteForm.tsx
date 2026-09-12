@@ -38,6 +38,9 @@ import {
 import { QuoteSendRecipientsField, type QuoteRecipient } from './QuoteSendRecipientsField';
 import QuoteStatusBadge from './QuoteStatusBadge';
 import { calculateDraftMonthlyRecurringNet, calculateDraftQuoteTotals, createDraftQuoteItemFromQuoteItem, formatDraftQuoteMoney, type DraftQuoteItem } from './quoteLineItemDraft';
+import { QuoteTermsContent, TextEditor } from '@alga-psa/ui/editor';
+import type { PartialBlock } from '@blocknote/core';
+import { flattenBlockContentToPlainText } from '@alga-psa/formatting/blocknoteUtils';
 
 interface QuoteFormProps {
   quoteId?: string | null;
@@ -80,6 +83,32 @@ const EMPTY_FORM: QuoteFormState = {
   currency_code: 'USD',
 };
 
+/**
+ * Legacy Terms & Conditions are plain text with newlines as paragraph breaks.
+ * Seed the editor with one paragraph per line so line breaks survive the
+ * structured round-trip (a single paragraph carrying "\n" would collapse in the
+ * HTML converter).
+ */
+const termsBlocksFromLegacyText = (text?: string | null): PartialBlock[] => {
+  const value = typeof text === 'string' ? text : '';
+  const lines = value.length > 0 ? value.split('\n') : [''];
+  return lines.map((line) => ({
+    type: 'paragraph',
+    props: { textAlignment: 'left', backgroundColor: 'default', textColor: 'default' },
+    content: line.length > 0 ? [{ type: 'text', text: line, styles: {} }] : [],
+  })) as PartialBlock[];
+};
+
+const seedTermsBlocks = (block: unknown, text?: string | null): PartialBlock[] => {
+  if (Array.isArray(block) && block.length > 0) {
+    return block as PartialBlock[];
+  }
+  return termsBlocksFromLegacyText(text);
+};
+
+const hasTermsContent = (blocks: PartialBlock[]): boolean =>
+  flattenBlockContentToPlainText(blocks).trim().length > 0;
+
 const toDateInputValue = (value?: string | Date | null): string => {
   if (!value) return '';
   if (value instanceof Date) return value.toISOString().slice(0, 10);
@@ -116,6 +145,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
   const isEditMode = Boolean(quoteId && quoteId !== 'new');
   const [defaultCurrency, setDefaultCurrency] = useState('USD');
   const [form, setForm] = useState<QuoteFormState>(EMPTY_FORM);
+  const [termsBlock, setTermsBlock] = useState<PartialBlock[]>(() => termsBlocksFromLegacyText(''));
   const [clientLocations, setClientLocations] = useState<BillingLocationSummary[]>([]);
   /**
    * True once the user has explicitly clicked "+ Add location" OR loaded a quote
@@ -305,6 +335,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
           terms_and_conditions: quote.terms_and_conditions || '',
           currency_code: quote.currency_code || defaultCurrency,
         });
+        setTermsBlock(seedTermsBlocks(quote.terms_and_conditions_block, quote.terms_and_conditions));
         setLineItems((quote.quote_items || []).map(createDraftQuoteItemFromQuoteItem));
         setPersistedQuoteItemIds((quote.quote_items || []).map((item) => item.quote_item_id));
         setLastSavedAt(quote.updated_at || quote.created_at || null);
@@ -322,6 +353,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
           quote_date: today.toISOString().slice(0, 10),
           valid_until: validUntil.toISOString().slice(0, 10),
         });
+        setTermsBlock(termsBlocksFromLegacyText(''));
         setLineItems([]);
         setPersistedQuoteItemIds([]);
         setLastSavedAt(null);
@@ -401,6 +433,12 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
         po_number: current.po_number || template.po_number || '',
       }));
 
+      setTermsBlock((currentBlock) =>
+        hasTermsContent(currentBlock)
+          ? currentBlock
+          : seedTermsBlocks(template.terms_and_conditions_block, template.terms_and_conditions),
+      );
+
       if (template.quote_items?.length) {
         setLineItems(template.quote_items.map((item) => ({
           ...createDraftQuoteItemFromQuoteItem(item),
@@ -447,6 +485,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
         po_number: form.po_number || null,
         client_notes: form.client_notes || null,
         terms_and_conditions: form.terms_and_conditions || null,
+        terms_and_conditions_block: hasTermsContent(termsBlock) ? termsBlock : null,
         subtotal: 0,
         discount_total: 0,
         tax: 0,
@@ -1489,10 +1528,36 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
                   <TextArea value={form.client_notes} onChange={(event) => handleChange('client_notes', event.target.value)} rows={3} disabled={isReadOnly} />
                 </label>
 
-                <label className="flex flex-col gap-1 text-sm font-medium">
-                  {t('quoteForm.clientFacing.terms', { defaultValue: 'Terms & conditions (Optional)' })}
-                  <TextArea value={form.terms_and_conditions} onChange={(event) => handleChange('terms_and_conditions', event.target.value)} rows={4} disabled={isReadOnly} />
-                </label>
+                <div className="flex flex-col gap-1 text-sm font-medium">
+                  <label htmlFor="quote-terms-editor">{t('quoteForm.clientFacing.terms', { defaultValue: 'Terms & conditions (Optional)' })}</label>
+                  {isReadOnly ? (
+                    <QuoteTermsContent
+                      id="quote-terms-readonly"
+                      block={hasTermsContent(termsBlock) ? termsBlock : null}
+                      text={form.terms_and_conditions}
+                      textClassName="text-sm text-foreground"
+                      richClassName="text-sm text-foreground"
+                      emptyFallback="—"
+                    />
+                  ) : (
+                    <div id="quote-terms-editor" className="rounded-md border border-border bg-background">
+                      <TextEditor
+                        id="quote-terms-editor-input"
+                        initialContent={termsBlock}
+                        onContentChange={(blocks) => {
+                          setTermsBlock(blocks);
+                          setForm((current) => ({
+                            ...current,
+                            terms_and_conditions: flattenBlockContentToPlainText(blocks),
+                          }));
+                        }}
+                        placeholder={t('quoteForm.clientFacing.termsPlaceholder', {
+                          defaultValue: 'Add terms, links and paragraphs…',
+                        })}
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
             </section>
 

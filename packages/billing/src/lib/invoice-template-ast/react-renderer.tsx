@@ -24,6 +24,7 @@ import type { TemplateEvaluationResult } from './evaluator';
 import { decodeTemplatePathExpression } from './templateInterpolationFilters';
 import { normalizeTemplateAstFieldBorderDefaults } from './normalize';
 import { resolveTemplatePrintSettingsFromAst } from './printSettings';
+import { convertBlockContentToHTML } from '@alga-psa/formatting/blocknoteUtils';
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -50,6 +51,16 @@ type RenderContext = {
 
 const isRecord = (value: unknown): value is UnknownRecord =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
+
+/**
+ * True when a resolved value is authored structured content (a non-empty
+ * BlockNote block array or a ProseMirror doc). A plain string — the legacy
+ * terms projection — is not structured and renders as pre-line text.
+ */
+const isStructuredBlockContent = (value: unknown): boolean => {
+  if (Array.isArray(value)) return value.length > 0;
+  return isRecord(value) && value.type === 'doc';
+};
 
 /**
  * A display string as it should appear. Key references are normally resolved
@@ -572,6 +583,41 @@ const renderNode = (
       return (
         <p key={node.id} id={node.id} className={elementClassName || undefined} style={style}>
           {String(content ?? '')}
+        </p>
+      );
+    }
+    case 'richText': {
+      const content = resolveExpressionValue(node.content, evaluation, scope, ctx);
+
+      if (content === null || content === undefined) {
+        return null;
+      }
+
+      if (isStructuredBlockContent(content)) {
+        const html = convertBlockContentToHTML(content);
+        return (
+          <div
+            key={node.id}
+            id={node.id}
+            className={elementClassName || undefined}
+            style={style}
+            dangerouslySetInnerHTML={{ __html: html }}
+          />
+        );
+      }
+
+      const text = String(content);
+      if (text.trim() === '') {
+        return null;
+      }
+      return (
+        <p
+          key={node.id}
+          id={node.id}
+          className={elementClassName || undefined}
+          style={{ whiteSpace: 'pre-line', ...(style ?? {}) }}
+        >
+          {text}
         </p>
       );
     }

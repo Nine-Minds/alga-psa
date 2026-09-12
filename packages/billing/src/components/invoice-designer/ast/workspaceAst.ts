@@ -1147,6 +1147,13 @@ const mapDesignerNodeToAstNode = (
         content: resolveTextNodeContentExpression(node, documentKind),
       };
     }
+    case 'richText': {
+      return {
+        ...createBaseNode(node),
+        type: 'richText',
+        content: resolveTextNodeContentExpression(node, documentKind),
+      };
+    }
     case 'field':
     case 'subtotal':
     case 'tax':
@@ -1881,6 +1888,7 @@ export const importTemplateAstToWorkspace = (
           section: 'section',
           stack: 'container',
           text: 'text',
+          richText: 'richText',
           field: 'field',
           image: 'image',
           divider: 'divider',
@@ -1890,7 +1898,13 @@ export const importTemplateAstToWorkspace = (
         };
 
         const designerType = typeMap[inputNode.type];
-        if (!designerType) return;
+        if (!designerType) {
+          // Fail loudly: silently dropping an unrecognized node would delete
+          // content when a layout is opened and saved in the designer.
+          throw new Error(
+            `Unsupported template node type "${String(inputNode.type)}" (node id "${String((inputNode as { id?: unknown }).id ?? 'unknown')}")`,
+          );
+        }
 
         const nextNode = buildWorkspaceNode(inputNode, designerType, depthIndex, depth);
 
@@ -1906,7 +1920,7 @@ export const importTemplateAstToWorkspace = (
           ? inputNode.style.tokenIds.filter((tokenId): tokenId is string => typeof tokenId === 'string' && tokenId.trim().length > 0)
           : undefined;
 
-        if (inputNode.type === 'text') {
+        if (inputNode.type === 'text' || inputNode.type === 'richText') {
           metadata.astContentExpression = inputNode.content;
           const resolvedText = resolveExpressionPreviewText(inputNode.content, astInput, documentKind);
           metadata.text = resolvedText;

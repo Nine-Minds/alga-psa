@@ -1262,3 +1262,77 @@ describe('renderEvaluatedTemplateAst stacked table-cell lines', () => {
     expect(rendered.html).toContain('-$5.00');
   });
 });
+
+describe('renderEvaluatedTemplateAst richText node', () => {
+  const renderTerms = async (value: unknown) => {
+    const ast: TemplateAst = {
+      kind: 'invoice-template-ast',
+      version: TEMPLATE_AST_VERSION,
+      bindings: {
+        values: {
+          terms: { id: 'terms', kind: 'value', path: 'terms_and_conditions_rich' },
+        },
+        collections: {},
+      },
+      layout: {
+        id: 'root',
+        type: 'document',
+        children: [
+          {
+            id: 'terms-copy',
+            type: 'richText',
+            content: { type: 'binding', bindingId: 'terms' },
+          },
+        ],
+      },
+    };
+    const evaluation = evaluateTemplateAst(ast, { terms_and_conditions_rich: value });
+    return renderEvaluatedTemplateAst(ast, evaluation);
+  };
+
+  it('emits structured content as HTML with a live link', async () => {
+    const rendered = await renderTerms([
+      {
+        type: 'paragraph',
+        content: [
+          { type: 'text', text: 'Read our ' },
+          {
+            type: 'link',
+            href: 'https://example.com/terms',
+            content: [{ type: 'text', text: 'terms' }],
+          },
+        ],
+      },
+    ]);
+
+    expect(rendered.html).toContain('href="https://example.com/terms"');
+    expect(rendered.html).toContain('>terms</a>');
+  });
+
+  it('neutralizes a javascript: link while keeping its text', async () => {
+    const rendered = await renderTerms([
+      {
+        type: 'paragraph',
+        content: [
+          {
+            type: 'link',
+            href: 'javascript:alert(1)',
+            content: [{ type: 'text', text: 'click me' }],
+          },
+        ],
+      },
+    ]);
+
+    expect(rendered.html).not.toContain('<a');
+    expect(rendered.html).toContain('click me');
+  });
+
+  it('renders a plain string with pre-line and renders null as nothing', async () => {
+    const stringRendered = await renderTerms('Line one\nLine two');
+    expect(stringRendered.html).toContain('Line one');
+    expect(stringRendered.html).toContain('white-space:pre-line');
+
+    const nullRendered = await renderTerms(null);
+    expect(nullRendered.html).not.toContain('[No content]');
+  });
+});

@@ -9,6 +9,57 @@ function escapeHtml(value: string): string {
     .replace(/'/g, '&#39;');
 }
 
+const ALLOWED_URL_SCHEMES = new Set(['http', 'https', 'mailto']);
+// Strip C0/C1 control characters (including tab, newline and NUL) before
+// evaluating a URL so `java\tscript:` and `JaVaScRiPt:` are normalized.
+const URL_CONTROL_CHARACTERS = /[\u0000-\u001F\u007F-\u009F]/g;
+const URL_SCHEME_PATTERN = /^([a-zA-Z][a-zA-Z0-9+.-]*):/;
+
+function sanitizeUrl(raw: unknown, options: { allowData?: boolean } = {}): string | null {
+  if (raw === null || raw === undefined) return null;
+  const normalized = String(raw).replace(URL_CONTROL_CHARACTERS, '').trim();
+  if (!normalized) return null;
+
+  // Protocol-relative URLs resolve against the page's scheme and are rejected.
+  if (normalized.startsWith('//')) return null;
+
+  const schemeMatch = normalized.match(URL_SCHEME_PATTERN);
+  // No scheme: a relative path, root-relative path or fragment. Preserve it.
+  if (!schemeMatch) return normalized;
+
+  const scheme = schemeMatch[1].toLowerCase();
+  if (ALLOWED_URL_SCHEMES.has(scheme)) return normalized;
+  if (options.allowData && scheme === 'data') return normalized;
+  return null;
+}
+
+/**
+ * Returns a safe href (http, https, mailto, or a scheme-less relative/fragment
+ * reference) or `null` when the value uses an unsupported scheme.
+ *
+ * This helper (and the converter hardening around it) is shared: tickets,
+ * documents and quote PDFs all render BlockNote through this module, so a
+ * scheme rejected here is neutralized everywhere, not only in quotes.
+ */
+export function sanitizeHref(raw: unknown): string | null {
+  return sanitizeUrl(raw);
+}
+
+/**
+ * Returns a safe image src. Extends {@link sanitizeHref} to permit `data:` URIs.
+ */
+export function sanitizeImageSrc(raw: unknown): string | null {
+  return sanitizeUrl(raw, { allowData: true });
+}
+
+const TEXT_ALIGNMENTS = new Set(['left', 'center', 'right', 'justify']);
+
+function sanitizeTextAlignment(raw: unknown): string | null {
+  if (typeof raw !== 'string') return null;
+  const normalized = raw.trim().toLowerCase();
+  return TEXT_ALIGNMENTS.has(normalized) ? normalized : null;
+}
+
 // Debug sentinel strings returned by the conversion helpers when they can't
 // extract anything meaningful from the input. We never want these surfaced to
 // end users (e.g. in email bodies) — treat their presence as "effectively
@@ -260,7 +311,8 @@ function extractStyledTextFromContent(content: any[]): string {
               .map((c: any) => c.text || '')
               .join('')
           : '';
-        return `[${linkText}](${href})`;
+        const safeHref = sanitizeHref(href);
+        return safeHref ? `[${linkText}](${safeHref})` : linkText;
       }
 
       // Handle mention inline content
@@ -300,12 +352,12 @@ function extractStyledTextFromContent(content: any[]): string {
 
         // Text color
         if (item.styles.textColor && item.styles.textColor !== 'default') {
-          result = `<span style="color:${item.styles.textColor}">${result}</span>`;
+          result = `<span style="color:${escapeHtml(String(item.styles.textColor))}">${result}</span>`;
         }
 
         // Background color
         if (item.styles.backgroundColor && item.styles.backgroundColor !== 'default') {
-          result = `<span style="background-color:${item.styles.backgroundColor}">${result}</span>`;
+          result = `<span style="background-color:${escapeHtml(String(item.styles.backgroundColor))}">${result}</span>`;
         }
       }
 
@@ -334,17 +386,15 @@ function customBlocksToMarkdown(blocks: Block[] | PartialBlock[]): string {
       // Handle block background color
       if (props.backgroundColor && props.backgroundColor !== 'default') {
         blockWrapper = (content: string) =>
-          `<div style="background-color:${props.backgroundColor}">${content}</div>`;
+          `<div style="background-color:${escapeHtml(String(props.backgroundColor))}">${content}</div>`;
       }
 
       // Handle text alignment
-      if (props.textAlignment && props.textAlignment !== 'left') {
-        const alignStyle = props.textAlignment === 'center' ? 'center' :
-                          (props.textAlignment === 'right' ? 'right' : 'justify');
-
+      const alignment = sanitizeTextAlignment(props.textAlignment);
+      if (alignment && alignment !== 'left') {
         const prevWrapper = blockWrapper;
         blockWrapper = (content: string) =>
-          prevWrapper(`<div style="text-align:${alignStyle}">${content}</div>`);
+          prevWrapper(`<div style="text-align:${alignment}">${content}</div>`);
       }
     }
 
@@ -497,7 +547,7 @@ function convertTableToMarkdown(block: Block | PartialBlock): string {
 
       // Handle block background color
       if (props.backgroundColor && props.backgroundColor !== 'default') {
-        markdown = `<div style="background-color:${props.backgroundColor}">\n${markdown}\n</div>`;
+        markdown = `<div style="background-color:${escapeHtml(String(props.backgroundColor))}">\n${markdown}\n</div>`;
       }
     }
 
@@ -523,12 +573,11 @@ function extractStyledTextToHTML(content: any[]): string {
     .map((item: any) => {
       // Handle link inline content
       if (item.type === 'link') {
-        const href = (item.href || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;');
         const linkText = Array.isArray(item.content)
           ? item.content
               .filter((c: any) => c.type === 'text')
               .map((c: any) => {
-                let text = (c.text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                let text = escapeHtml(c.text || '');
                 if (c.styles) {
                   if (c.styles.code) text = `<code>${text}</code>`;
                   if (c.styles.strike) text = `<s>${text}</s>`;
@@ -540,14 +589,18 @@ function extractStyledTextToHTML(content: any[]): string {
               })
               .join('')
           : '';
-        return `<a href="${href}" target="_blank" rel="noopener noreferrer">${linkText}</a>`;
+        const safeHref = sanitizeHref(item.href);
+        if (!safeHref) {
+          return linkText;
+        }
+        return `<a href="${escapeHtml(safeHref)}" target="_blank" rel="noopener noreferrer">${linkText}</a>`;
       }
 
       // Handle mention inline content
       if (item.type === 'mention') {
         const { userId, username, displayName } = item.props || {};
         const displayText = username ? `@${username}` : `@[${displayName || 'Unknown'}]`;
-        const escapedText = displayText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const escapedText = escapeHtml(displayText);
         return `<span style="display:inline-flex;align-items:center;padding:1px 4px;border-radius:3px;background-color:#dbeafe;color:#1e40af;font-weight:500;">${escapedText}</span>`;
       }
 
@@ -560,7 +613,7 @@ function extractStyledTextToHTML(content: any[]): string {
         return '';
       }
 
-      let result = item.text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      let result = escapeHtml(item.text);
 
       if (item.styles) {
         if (item.styles.code) result = `<code>${result}</code>`;
@@ -571,10 +624,10 @@ function extractStyledTextToHTML(content: any[]): string {
 
         let stylesArray: string[] = [];
         if (item.styles.textColor && item.styles.textColor !== 'default') {
-          stylesArray.push(`color:${item.styles.textColor}`);
+          stylesArray.push(`color:${escapeHtml(String(item.styles.textColor))}`);
         }
         if (item.styles.backgroundColor && item.styles.backgroundColor !== 'default') {
-          stylesArray.push(`background-color:${item.styles.backgroundColor}`);
+          stylesArray.push(`background-color:${escapeHtml(String(item.styles.backgroundColor))}`);
         }
         if (stylesArray.length > 0) {
           result = `<span style="${stylesArray.join(';')}">${result}</span>`;
@@ -639,10 +692,11 @@ export function convertBlockNoteToHTML(blocks: any): string {
       if (block.props) {
         const props = block.props as any;
         if (props.backgroundColor && props.backgroundColor !== 'default') {
-          blockStylesArray.push(`background-color:${props.backgroundColor}`);
+          blockStylesArray.push(`background-color:${escapeHtml(String(props.backgroundColor))}`);
         }
-        if (props.textAlignment && props.textAlignment !== 'left') {
-          blockStylesArray.push(`text-align:${props.textAlignment}`);
+        const alignment = sanitizeTextAlignment(props.textAlignment);
+        if (alignment && alignment !== 'left') {
+          blockStylesArray.push(`text-align:${alignment}`);
         }
       }
 
@@ -666,7 +720,8 @@ export function convertBlockNoteToHTML(blocks: any): string {
           break;
         case 'heading':
           flushListBuffer();
-          const level = (block.props as any)?.level || 1;
+          const rawLevel = Number((block.props as any)?.level) || 1;
+          const level = Math.min(Math.max(rawLevel, 1), 6);
           content = extractStyledTextToHTML(block.content as any[]);
           output.push(`<h${level}${styleAttribute}>${content}</h${level}>`);
           if (block.children && (block.children as any[]).length > 0) {
@@ -748,18 +803,20 @@ export function convertBlockNoteToHTML(blocks: any): string {
         case 'codeBlock':
           flushListBuffer();
           const language = (block.props as any)?.language || '';
-          const codeText = (block.content as any[])
+          const codeText = escapeHtml(
+            (block.content as any[])
               .map(item => item.text || '')
               .join('\n')
-              .replace(/&/g, '&').replace(/</g, '<').replace(/>/g, '>');
-          content = `<code class="language-${language}">${codeText}</code>`;
+          );
+          content = `<code class="language-${escapeHtml(String(language))}">${codeText}</code>`;
           output.push(`<pre${styleAttribute}>${content}</pre>`);
           break;
         case 'image': {
           flushListBuffer();
           const props = (block.props as any) || {};
           const imageUrl = typeof props.url === 'string' ? props.url.trim() : '';
-          if (!imageUrl) {
+          const safeImageUrl = sanitizeImageSrc(imageUrl);
+          if (!safeImageUrl) {
             break;
           }
 
@@ -771,7 +828,7 @@ export function convertBlockNoteToHTML(blocks: any): string {
             : '';
 
           output.push(
-            `<figure${styleAttribute}><img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(altText)}" style="max-width:100%;height:auto;" />${captionHtml}</figure>`
+            `<figure${styleAttribute}><img src="${escapeHtml(safeImageUrl)}" alt="${escapeHtml(altText)}" style="max-width:100%;height:auto;" />${captionHtml}</figure>`
           );
           break;
         }
@@ -783,10 +840,10 @@ export function convertBlockNoteToHTML(blocks: any): string {
              content = extractStyledTextToHTML(anyBlock.content as any[]);
              output.push(`<div${styleAttribute}>${content}</div>`);
           } else if (anyBlock?.content && typeof anyBlock.content === 'string') {
-             const escapedContent = anyBlock.content.replace(/&/g, '&').replace(/</g, '<').replace(/>/g, '>');
+             const escapedContent = escapeHtml(anyBlock.content);
              output.push(`<div${styleAttribute}>${escapedContent}</div>`);
           } else {
-             output.push(`<!-- Unsupported block type: ${String(anyBlock?.type)} -->`);
+             output.push(`<!-- Unsupported block type: ${escapeHtml(String(anyBlock?.type))} -->`);
           }
           if (anyBlock?.children && (anyBlock.children as any[]).length > 0) {
             processBlocksRecursive(anyBlock.children as Block[], currentLevel + 1);
@@ -837,8 +894,10 @@ function renderPMMarks(text: string, marks: PMNode['marks']): string {
         result = `<code>${result}</code>`;
         break;
       case 'link': {
-        const href = escapeHtml(String(mark.attrs?.href ?? ''));
-        result = `<a href="${href}" target="_blank" rel="noopener noreferrer">${result}</a>`;
+        const safeHref = sanitizeHref(mark.attrs?.href);
+        if (safeHref) {
+          result = `<a href="${escapeHtml(safeHref)}" target="_blank" rel="noopener noreferrer">${result}</a>`;
+        }
         break;
       }
     }
@@ -1011,8 +1070,10 @@ function renderPMMarksMarkdown(text: string, marks: PMNode['marks']): string {
         core = `\`${core}\``;
         break;
       case 'link': {
-        const href = String(mark.attrs?.href ?? '');
-        core = `[${core}](${href})`;
+        const safeHref = sanitizeHref(mark.attrs?.href);
+        if (safeHref) {
+          core = `[${core}](${safeHref})`;
+        }
         break;
       }
     }
@@ -1222,4 +1283,129 @@ export function convertBlockContentToHTML(blockData: unknown): string {
 
   // BlockNote format: [{type: '...', props: {...}, content: [...]}]
   return convertBlockNoteToHTML(blockData);
+}
+
+// ── Structured content → plain text projection ─────────────────────
+
+function inlineContentToPlainText(content: unknown): string {
+  if (!Array.isArray(content)) return '';
+  return content
+    .map((item: any) => {
+      if (!item || typeof item !== 'object') return '';
+      if (item.type === 'link') return inlineContentToPlainText(item.content);
+      if (item.type === 'mention') {
+        const props = item.props ?? item.attrs ?? {};
+        const username = props.username;
+        const displayName = props.displayName;
+        return username ? `@${username}` : `@[${displayName || 'Unknown'}]`;
+      }
+      if (typeof item.text === 'string') return item.text;
+      if (Array.isArray(item.content)) return inlineContentToPlainText(item.content);
+      return '';
+    })
+    .join('');
+}
+
+function blockTextContent(block: any): string {
+  if (!block || typeof block !== 'object') return '';
+  if (block.type === 'table') {
+    const rows = Array.isArray(block.content?.rows) ? block.content.rows : [];
+    return rows
+      .map((row: any) =>
+        (Array.isArray(row?.cells) ? row.cells : [])
+          .map((cell: any) => inlineContentToPlainText(cell))
+          .join(' | ')
+      )
+      .join('\n');
+  }
+  if (Array.isArray(block.content)) return inlineContentToPlainText(block.content);
+  if (typeof block.content === 'string') return block.content;
+  return '';
+}
+
+function collectBlockNoteLines(block: any, lines: string[]): void {
+  if (!block || typeof block !== 'object') return;
+  lines.push(blockTextContent(block));
+  if (Array.isArray(block.children)) {
+    for (const child of block.children) {
+      collectBlockNoteLines(child, lines);
+    }
+  }
+}
+
+function proseMirrorInlineToPlainText(content: unknown): string {
+  if (!Array.isArray(content)) return '';
+  return content
+    .map((node: any) => {
+      if (!node || typeof node !== 'object') return '';
+      if (node.type === 'text') return node.text ?? '';
+      if (node.type === 'hard_break' || node.type === 'hardBreak') return '\n';
+      return proseMirrorNodeToPlainText(node);
+    })
+    .join('');
+}
+
+function proseMirrorNodeToPlainText(node: any): string {
+  if (!node || typeof node !== 'object') return '';
+  switch (node.type) {
+    case 'text':
+      return node.text ?? '';
+    case 'hard_break':
+    case 'hardBreak':
+      return '\n';
+    case 'paragraph':
+    case 'heading':
+      return proseMirrorInlineToPlainText(node.content);
+    case 'code_block':
+    case 'codeBlock':
+      return (Array.isArray(node.content) ? node.content : []).map((n: any) => n?.text ?? '').join('');
+    case 'bullet_list':
+    case 'ordered_list':
+    case 'bulletList':
+    case 'orderedList':
+    case 'list_item':
+    case 'listItem':
+    case 'blockquote':
+    case 'doc':
+      return (Array.isArray(node.content) ? node.content : []).map(proseMirrorNodeToPlainText).join('\n');
+    default:
+      if (Array.isArray(node.content)) return proseMirrorInlineToPlainText(node.content);
+      if (typeof node.text === 'string') return node.text;
+      return '';
+  }
+}
+
+/**
+ * Flattens BlockNote (or ProseMirror) structured content to the plain-text
+ * projection stored in `quotes.terms_and_conditions`. Block-level nodes become
+ * lines so multiple paragraphs survive a text-only consumer; links flatten to
+ * their text.
+ */
+export function flattenBlockContentToPlainText(blockData: unknown): string {
+  if (blockData === null || blockData === undefined) return '';
+
+  let parsed: unknown = blockData;
+  if (typeof blockData === 'string') {
+    try {
+      parsed = JSON.parse(blockData);
+    } catch {
+      return blockData;
+    }
+  }
+
+  if (!parsed || typeof parsed !== 'object') return String(parsed ?? '');
+
+  if (!Array.isArray(parsed) && (parsed as { type?: string }).type === 'doc') {
+    return proseMirrorNodeToPlainText(parsed);
+  }
+
+  if (Array.isArray(parsed)) {
+    const lines: string[] = [];
+    for (const block of parsed) {
+      collectBlockNoteLines(block, lines);
+    }
+    return lines.join('\n');
+  }
+
+  return String(parsed);
 }

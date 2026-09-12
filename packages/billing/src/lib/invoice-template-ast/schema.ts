@@ -334,6 +334,12 @@ type NodeInput =
     }
   | {
       id: string;
+      type: 'richText';
+      style?: z.infer<typeof nodeStyleRefSchema>;
+      content: ValueExpressionInput;
+    }
+  | {
+      id: string;
       type: 'field';
       style?: z.infer<typeof nodeStyleRefSchema>;
       binding: z.infer<typeof bindingRefSchema>;
@@ -423,6 +429,12 @@ const nodeSchema: z.ZodTypeAny = z.lazy(() =>
     z.object({
       id: z.string().min(1),
       type: z.literal('text'),
+      style: nodeStyleRefSchema.optional(),
+      content: valueExpressionSchema,
+    }).strict(),
+    z.object({
+      id: z.string().min(1),
+      type: z.literal('richText'),
       style: nodeStyleRefSchema.optional(),
       content: valueExpressionSchema,
     }).strict(),

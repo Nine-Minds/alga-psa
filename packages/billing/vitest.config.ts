@@ -36,6 +36,11 @@ export default defineConfig({
       'src/lib/adapters/invoiceAdapters.test.ts',
       'src/lib/invoice-template-ast/standardTemplates.test.ts',
       'src/lib/invoice-template-ast/standardTemplates.byTicket.test.ts',
+      // Rich Terms & Conditions: write-path projection + designer richText
+      // round-trip. Listed so this package's own `npm test` target covers them
+      // alongside the server-wide glob.
+      'src/lib/quoteTermsContent.test.ts',
+      'src/components/invoice-designer/ast/workspaceAst.richText.test.ts',
       // Timezone-safe date-only rendering: the renderer and field formatting
       // share one UTC-pinned formatter — listed for the same reason as above.
       'src/lib/invoice-template-ast/fieldFormatting.test.ts',

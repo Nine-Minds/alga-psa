@@ -48,6 +48,45 @@ describe('templateAstSchema', () => {
     );
   });
 
+  it('accepts a richText node bound to structured content', () => {
+    const result = validateTemplateAst({
+      ...createMinimalAst(),
+      layout: {
+        id: 'root',
+        type: 'document',
+        children: [
+          {
+            id: 'terms-copy',
+            type: 'richText',
+            content: { type: 'binding', bindingId: 'termsAndConditionsRich' },
+          },
+        ],
+      },
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects a richText node carrying an unknown property', () => {
+    const result = validateTemplateAst({
+      ...createMinimalAst(),
+      layout: {
+        id: 'root',
+        type: 'document',
+        children: [
+          {
+            id: 'terms-copy',
+            type: 'richText',
+            content: { type: 'binding', bindingId: 'termsAndConditionsRich' },
+            dangerouslySetInnerHTML: '<script>alert(1)</script>',
+          },
+        ],
+      },
+    });
+
+    expect(result.success).toBe(false);
+  });
+
   it('accepts field and totals labelStyle declarations', () => {
     const validResult = validateTemplateAst({
       kind: 'invoice-template-ast',
