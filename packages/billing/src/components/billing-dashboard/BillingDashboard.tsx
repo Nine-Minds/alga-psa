@@ -189,7 +189,7 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
               </h2>
               <QuoteTemplatesList
                 onEdit={(id) => router.push(`/msp/billing?tab=quotes&quoteId=${id}&mode=edit`)}
-                onCreateFromTemplate={(id) => router.push(`/msp/billing?tab=quotes&quoteId=new&templateId=${id}`)}
+                onCreateFromTemplate={(id) => router.push(`/msp/billing?tab=quotes&quoteId=new&sourceTemplateId=${id}`)}
                 onNewTemplate={() => router.push('/msp/billing?tab=quotes&quoteId=new&isTemplate=true')}
               />
             </div>
