@@ -10,6 +10,7 @@ import {
   isHexColor,
   normalizeHex,
   type EmailBrandingPalette,
+  type EmailBrandingPreview,
   type EmailBrandingSuggestion,
   type EmailPaletteOverrides,
   type EmailPaletteTokens,
@@ -72,6 +73,14 @@ export interface EmailBrandingRemoveResult {
   removed: number;
   kept: number;
 }
+
+/** One (name, language) the apply dialog asks to see before committing. */
+export interface EmailBrandingPreviewRequest {
+  name: string;
+  language: string;
+}
+
+export type EmailBrandingPreviewResult = EmailBrandingPreview;
 
 export interface EmailBrandingPaletteInput {
   primary: string;
