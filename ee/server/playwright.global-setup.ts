@@ -135,7 +135,7 @@ async function globalSetup() {
         'docker run --rm',
         '--network alga-psa-playwright-test',
         `-v "${mcConfigDir}:/root/.mc"`,
-        'minio/mc:latest',
+        'quay.io/minio/mc:latest',
         'alias set local http://minio-test:9000 minioadmin minioadmin',
       ].join(' '),
       { cwd: projectRoot, stdio: 'inherit' }
@@ -145,7 +145,7 @@ async function globalSetup() {
         'docker run --rm',
         '--network alga-psa-playwright-test',
         `-v "${mcConfigDir}:/root/.mc"`,
-        'minio/mc:latest',
+        'quay.io/minio/mc:latest',
         'mb local/alga-test --ignore-existing',
       ].join(' '),
       { cwd: projectRoot, stdio: 'inherit' }
