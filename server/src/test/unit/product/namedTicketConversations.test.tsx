@@ -586,6 +586,49 @@ it('ignores a prior session’s late conversation creation response', async () =
   expect(screen.queryByRole('dialog')).toBeNull();
 });
 
+// F023: PRD §5.2 — "Creation asks for a name, email or internal conversation,
+// organizational audience and, for email, explicit recipients and an
+// available authorized mailbox." Requester-audience email (tested above) is
+// the pre-existing legacy path where the recipient is implicit; a genuine
+// vendor/external email conversation must collect and validate recipients at
+// creation, and those addresses carry into the new conversation's very first
+// draft (not sent — creating a conversation sends nothing).
+it('requires validated recipients to create a vendor email conversation and seeds them into the first draft', async () => {
+  mocks.query = '';
+  const vendor = { ...side, conversationId: 'vendor-new', name: 'Carrier escalation', transport: 'email', mailbox: null };
+  // The navigator's list reflects the post-creation server state (as it
+  // would after the real reload `onCreated` triggers) so selection can find it.
+  mocks.load.mockResolvedValue({ conversations: [requester, vendor], writeAudiences: ['organization_private'], actor: { tenant: 'home', userId: 'author' } });
+  mocks.create.mockResolvedValue(vendor);
+  mocks.page.mockImplementation(async (_ticket, ref) => ({ conversation: ref.conversationId === vendor.conversationId ? vendor : requester, items: [], nextBefore: null }));
+  const view = render(<Harness />);
+  fireEvent.click(await screen.findByRole('button', { name: 'New conversation' }));
+  fireEvent.change(await screen.findByLabelText('Conversation type'), { target: { value: 'email' } });
+  fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Carrier escalation' } });
+  // No recipients yet: creation stays blocked, no field-level error until something is typed.
+  expect(screen.getByRole('button', { name: 'Create conversation' })).toBeDisabled();
+  expect(screen.queryByText('Enter at least one valid email address, separated by commas.')).toBeNull();
+  fireEvent.change(screen.getByLabelText('Recipients'), { target: { value: 'not-an-address' } });
+  expect(screen.getByRole('button', { name: 'Create conversation' })).toBeDisabled();
+  await screen.findByText('Enter at least one valid email address, separated by commas.');
+  fireEvent.change(screen.getByLabelText('Recipients'), { target: { value: 'vendor@example.test, second@example.test' } });
+  expect(screen.queryByText('Enter at least one valid email address, separated by commas.')).toBeNull();
+  expect(screen.getByRole('button', { name: 'Create conversation' })).toBeEnabled();
+  fireEvent.click(screen.getByRole('button', { name: 'Create conversation' }));
+  await waitFor(() => expect(mocks.create).toHaveBeenCalledOnce());
+  // Recipients are not part of the creation command itself (draft data, not conversation identity).
+  expect(mocks.create.mock.calls[0][1]).toEqual({ operationId: expect.any(String), name: 'Carrier escalation', audience: 'organization_private', transport: 'email' });
+  await waitFor(() => expect(mocks.push).toHaveBeenCalledWith(expect.stringContaining('conversation=vendor-new'), { scroll: false }));
+  // The mocked router doesn't actually drive `useSearchParams`; simulate the
+  // navigation it requested completing, exactly like the file's other
+  // creation tests (e.g. "creates a requester-directed sharing destination...").
+  mocks.query = 'conversation=vendor-new&conversationStore=home';
+  view.rerender(<Harness />);
+  await waitFor(() => expect(mocks.saveDraft).toHaveBeenCalled());
+  expect(mocks.saveDraft.mock.calls[0][2]).toMatchObject({ email: { subject: '', to: ['vendor@example.test', 'second@example.test'], cc: [] } });
+  expect(mocks.sendEmail).not.toHaveBeenCalled(); expect(mocks.post).not.toHaveBeenCalled();
+});
+
 it('shows labelled All activity with resolution markers and routes replies to their source instead of broadcasting', async () => {
   mocks.query = 'conversationView=all';
   mocks.activity.mockResolvedValue({ items: [{ conversation: side, storeTenant: 'home', commentId: 'message', threadId: 'thread',

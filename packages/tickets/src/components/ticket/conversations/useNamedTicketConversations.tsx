@@ -60,6 +60,11 @@ export function useNamedTicketConversations(input: ConversationTicketReference |
   const [dirty, setDirty] = useState(false);
   const [sharing, setSharing] = useState<{ identity: string; selection: ConversationShareSelection | ConversationSynthesisSelection | AiSelection } | null>(null);
   const [panelEpoch, setPanelEpoch] = useState(0);
+  // F023: recipients entered at creation ride along to the new conversation's
+  // first composer mount only (see `NamedConversationComposer`'s
+  // `initialRecipients` prop below); consumed once the composer seeds and
+  // saves them into a real draft, never reapplied afterward.
+  const [pendingRecipients, setPendingRecipients] = useState<{ identity: string; key: string; to: string[] } | null>(null);
   const currentIdentity = useRef(identity); currentIdentity.current = identity;
   const openingShare = useRef(false);
   const preparedDestination = useRef<{ identity: string; previousQuery: string; key: string } | null>(null);
@@ -170,11 +175,15 @@ export function useNamedTicketConversations(input: ConversationTicketReference |
     {activeShare?.kind === 'ai' && <ConversationAiDialog key={`${identity}:ai:${keyOf(activeShare.conversation)}`} id={id} ticket={ticket} conversation={activeShare.conversation} onClose={closeShare} />}
     {activeShare && activeShare.kind !== 'ai' && <ConversationShareDialog key={`${identity}:${'commentId' in activeShare ? activeShare.commentId : 'synthesis'}`} id={id} ticket={ticket} selection={activeShare} onClose={closeShare} onOpen={openSharedDraft} />}
     {screen && <CreateConversation key={identity} id={id} ticket={ticket} open={creating} audiences={screen.writeAudiences}
-      onClose={() => setCreating(false)} onCreated={async value => { setCreating(false); refresh(); await select(value); }} />}
+      onClose={() => setCreating(false)} onCreated={async (value, initialRecipients) => { setCreating(false);
+        setPendingRecipients(initialRecipients?.length ? { identity, key: keyOf(value), to: initialRecipients } : null);
+        refresh(); await select(value); }} />}
   </section>;
   const panel = !screen ? (error ? unavailable : loading) : allActivity ? <NamedConversationActivity key={`${identity}:all`} id={id} ticket={ticket} refreshVersion={reload} audiences={screen.writeAudiences} onReply={select} /> : !selected ? unavailable : selected.defaultSlot === 'requester' ? options.requesterPanel ? <Fragment key={`${identity}:${keyOf(selected)}`}>{options.requesterPanel?.({ conversation: selected, flush, onDirty: setDirty, canWrite: screen.writeAudiences.includes(selected.audience), onRefresh: refresh, refreshVersion: reload })}</Fragment> : undefined
     : <NamedConversationPanel key={`${identity}:${keyOf(selected)}`} id={id} ticket={ticket} conversation={selected}
-      canWrite={screen.writeAudiences.includes(selected.audience)} flush={flush} onDirty={setDirty} onRefresh={refresh} onPublished={options.onPublished} />;
+      canWrite={screen.writeAudiences.includes(selected.audience)} flush={flush} onDirty={setDirty} onRefresh={refresh} onPublished={options.onPublished}
+      initialRecipients={pendingRecipients?.identity === identity && pendingRecipients.key === keyOf(selected) ? pendingRecipients.to : undefined}
+      onInitialRecipientsConsumed={() => setPendingRecipients(null)} />;
   return { navigator, panel: panel === undefined ? undefined : <ConversationSharingContext.Provider value={{ canShare: Boolean(screen?.writeAudiences.length), paused: Boolean(activeShare), share,
     openSource: async source => {
       if (activeShare || !await flush.current() || currentIdentity.current !== identity) return;
@@ -190,32 +199,60 @@ export function useNamedTicketConversations(input: ConversationTicketReference |
   </ConversationSharingContext.Provider> };
 }
 
+// F023: PRD §5.2 reads "Creation asks for a name, email or internal
+// conversation, organizational audience and, for email, explicit recipients
+// and an available authorized mailbox" as one continuous flow — the same
+// literal wording F023's own checklist description ("validated email
+// recipients") targets. Recipients are collected here, validated with the
+// same loose-while-editing/syntax-checked rule the composer's own email
+// draft uses, and carried into the newly created conversation's first draft
+// (see `initialRecipients` below) rather than sent to the creation command
+// itself — `CreateTicketConversation`'s snapshot rejects unknown fields, and
+// mailbox/recipient values are draft data, not conversation identity.
+// Mailbox selection remains a separate, already-built step in the composer
+// (F037/F038): a mailbox chosen here would still need to be reconfirmed
+// there once real send authority/grants are checked, so collecting it twice
+// would not shorten the actual authorized path — only recipients move.
+const EMAIL_ADDRESS_PATTERN = /^[^\s<>@,;]+@[^\s<>@,;]+\.[^\s<>@,;]+$/;
+function parseRecipientInput(value: string): { addresses: string[]; invalid: boolean } {
+  const parts = value.split(/[,;]/).map(part => part.trim()).filter(Boolean);
+  const addresses = parts.filter(part => EMAIL_ADDRESS_PATTERN.test(part));
+  return { addresses, invalid: addresses.length !== parts.length };
+}
 function CreateConversation({ id, ticket, open, audiences, onClose, onCreated }: { id: string; ticket: ConversationTicketReference; open: boolean;
-  audiences: Screen['writeAudiences']; onClose: () => void; onCreated: (value: NamedTicketConversation) => Promise<void> }) {
+  audiences: Screen['writeAudiences']; onClose: () => void; onCreated: (value: NamedTicketConversation, initialRecipients?: string[]) => Promise<void> }) {
   const { t } = useTranslation('features/tickets');
   const [name, setName] = useState(''), [audience, setAudience] = useState<Screen['writeAudiences'][number]>('organization_private');
   const [busy, setBusy] = useState(false), [error, setError] = useState(false);
   const [transport, setTransport] = useState<'internal' | 'email'>('internal');
+  const [recipientsText, setRecipientsText] = useState('');
   const mounted = useRef(false);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   const operation = useRef<{ operationId: string; name: string; audience: typeof audience; transport: 'internal' | 'email' } | null>(null);
   useEffect(() => { if (open) {
     const initial = audiences.includes('organization_private') ? 'organization_private' : audiences.includes('shared_it') ? 'shared_it' : 'requester';
-    setName(''); setTransport(initial === 'requester' ? 'email' : 'internal'); setAudience(initial); setError(false); operation.current = null;
+    setName(''); setTransport(initial === 'requester' ? 'email' : 'internal'); setAudience(initial); setError(false); setRecipientsText(''); operation.current = null;
   } }, [open]);
+  // Requester-audience email is the pre-existing legacy composition path —
+  // its recipient (the ticket's own requester) is implicit, not chosen here;
+  // only vendor/external email conversations need explicit recipients at
+  // creation (PRD §5.2, persona #2 — "choose explicit recipients").
+  const isVendorEmail = transport === 'email' && audience !== 'requester';
+  const { addresses: recipients, invalid: recipientsInvalid } = parseRecipientInput(recipientsText);
+  const recipientsReady = !isVendorEmail || (recipients.length > 0 && !recipientsInvalid);
   const submit = async () => {
-    if (busy || !name.trim() || !audiences.includes(audience)) return;
+    if (busy || !name.trim() || !audiences.includes(audience) || !recipientsReady) return;
     setBusy(true); setError(false);
     try {
       operation.current ??= { operationId: crypto.randomUUID(), name: name.trim(), audience, transport };
       const created = await actions.createNamedTicketConversationAction(ticket, operation.current);
-      if (mounted.current) await onCreated(created);
+      if (mounted.current) await onCreated(created, isVendorEmail && recipients.length ? recipients : undefined);
     } catch { if (mounted.current) setError(true); }
     finally { if (mounted.current) setBusy(false); }
   };
   return <Dialog isOpen={open} onClose={() => { if (!busy) onClose(); }} title={t('namedConversations.new', 'New conversation')}
     footer={<><Button id={`${id}-create-cancel`} variant="outline" disabled={busy} onClick={onClose}>{t('namedConversations.cancel', 'Cancel')}</Button>
-      <Button id={`${id}-create-confirm`} disabled={busy || !name.trim() || !audiences.includes(audience)} onClick={() => void submit()}>{t('namedConversations.create', 'Create conversation')}</Button></>}>
+      <Button id={`${id}-create-confirm`} disabled={busy || !name.trim() || !audiences.includes(audience) || !recipientsReady} onClick={() => void submit()}>{t('namedConversations.create', 'Create conversation')}</Button></>}>
     <DialogContent><div className="space-y-4">
       <CustomSelect id={`${id}-transport`} label={t('namedConversations.kind', 'Conversation type')} value={transport} disabled={busy || Boolean(error) || audience === 'requester'}
         options={[{ value: 'internal', label: t('namedConversations.internalMessage', 'Internal message') }, { value: 'email', label: t('namedConversations.externalEmail', 'External email') }]} onValueChange={value => setTransport(value as typeof transport)} />
@@ -223,7 +260,11 @@ function CreateConversation({ id, ticket, open, audiences, onClose, onCreated }:
       <CustomSelect id={`${id}-audience`} label={t('namedConversations.audience', 'Visible to')} value={audience} disabled={busy || Boolean(error)}
         options={audiences.map(value => ({ value, label: t(`namedConversations.audiences.${value}`, audienceLabels[value]) }))}
         onValueChange={value => { setAudience(value as typeof audience); if (value === 'requester') setTransport('email'); }} />
-      <p className="text-sm text-muted-foreground">{transport === 'email' ? t('namedConversations.vendorHelp', 'Choose a sending mailbox and recipients in the conversation. Every email is reviewed before sending.') : t('namedConversations.internalHelp', 'Internal messages stay with the selected IT audience. They are not emailed to the requester.')}</p>
+      {isVendorEmail && <Input id={`${id}-recipients`} label={t('namedConversations.recipients', 'Recipients')} placeholder={t('namedConversations.recipientsPlaceholder', 'name@example.com, name2@example.com')}
+        value={recipientsText} disabled={busy || Boolean(error)} onChange={e => setRecipientsText(e.target.value)}
+        aria-invalid={recipientsText.trim().length > 0 && !recipientsReady} />}
+      {isVendorEmail && recipientsText.trim().length > 0 && !recipientsReady && <p role="alert" className="text-sm text-destructive">{t('namedConversations.recipientsInvalid', 'Enter at least one valid email address, separated by commas.')}</p>}
+      <p className="text-sm text-muted-foreground">{transport === 'email' ? t('namedConversations.vendorHelp', 'Choose a sending mailbox in the conversation. Every email is reviewed before sending.') : t('namedConversations.internalHelp', 'Internal messages stay with the selected IT audience. They are not emailed to the requester.')}</p>
       {error && <p role="alert" className="text-sm text-destructive">{t('namedConversations.createFailed', 'Could not confirm creation. Retry to check the same request.')}</p>}
     </div></DialogContent>
   </Dialog>;
@@ -300,8 +341,9 @@ function NamedConversationActivity({ id, ticket, refreshVersion, audiences, onRe
   </section>;
 }
 
-function NamedConversationPanel({ id, ticket, conversation, canWrite, flush, onDirty, onRefresh, onPublished }: { id: string; ticket: ConversationTicketReference;
-  conversation: NamedTicketConversation; canWrite: boolean; flush: Flush; onDirty: (dirty: boolean) => void; onRefresh: () => void; onPublished?: () => void | Promise<void> }) {
+function NamedConversationPanel({ id, ticket, conversation, canWrite, flush, onDirty, onRefresh, onPublished, initialRecipients, onInitialRecipientsConsumed }: { id: string; ticket: ConversationTicketReference;
+  conversation: NamedTicketConversation; canWrite: boolean; flush: Flush; onDirty: (dirty: boolean) => void; onRefresh: () => void; onPublished?: () => void | Promise<void>;
+  initialRecipients?: string[]; onInitialRecipientsConsumed?: () => void }) {
   const { t } = useTranslation('features/tickets');
   const messageId = useConversationMessageTarget(ticket.tenant, conversation), router = useRouter(), params = useSearchParams();
   const [page, setPage] = useState<Page | null>(null), [error, setError] = useState(false), [busy, setBusy] = useState(false), [version, setVersion] = useState(0);
@@ -356,12 +398,19 @@ function NamedConversationPanel({ id, ticket, conversation, canWrite, flush, onD
         id={id} index={index} item={item} ticket={ticket} conversation={conversation} replyReady={!canWrite || replyReady}
         onReply={canWrite ? parent => reply.current?.(parent) : undefined} />)}
     </div>{canWrite && <NamedConversationComposer id={id} ticket={ticket} conversation={conversation} flush={flush} onDirty={onDirty} reply={reply} onReplyReady={setReplyReady} replyItems={page.items}
-      onRefresh={onRefresh} onPosted={async () => { setVersion(n => n + 1); onRefresh(); await onPublished?.(); }} />}</>}
+      onRefresh={onRefresh} onPosted={async () => { setVersion(n => n + 1); onRefresh(); await onPublished?.(); }}
+      initialRecipients={initialRecipients} onInitialRecipientsConsumed={onInitialRecipientsConsumed} />}</>}
   </section>;
 }
 
-export function NamedConversationComposer({ id, ticket, conversation, flush, onDirty, onPosted, onRefresh, reply, onReplyReady, replyItems = [], disabled: externallyDisabled = false, showScheduledReplies = true, deliveryRefreshVersion = 0 }: { id: string; ticket: ConversationTicketReference;
-  conversation: NamedTicketConversation; flush: Flush; onDirty: (dirty: boolean) => void; onPosted: () => void | Promise<void>; onRefresh?: () => void; reply?: MutableRefObject<((parent: ConversationDraftParent) => Promise<boolean>) | null>; onReplyReady?: (ready: boolean) => void; replyItems?: Page['items']; disabled?: boolean; showScheduledReplies?: boolean; deliveryRefreshVersion?: number }) {
+export function NamedConversationComposer({ id, ticket, conversation, flush, onDirty, onPosted, onRefresh, reply, onReplyReady, replyItems = [], disabled: externallyDisabled = false, showScheduledReplies = true, deliveryRefreshVersion = 0, initialRecipients, onInitialRecipientsConsumed }: { id: string; ticket: ConversationTicketReference;
+  conversation: NamedTicketConversation; flush: Flush; onDirty: (dirty: boolean) => void; onPosted: () => void | Promise<void>; onRefresh?: () => void; reply?: MutableRefObject<((parent: ConversationDraftParent) => Promise<boolean>) | null>; onReplyReady?: (ready: boolean) => void; replyItems?: Page['items']; disabled?: boolean; showScheduledReplies?: boolean; deliveryRefreshVersion?: number;
+  // F023: addresses collected in the creation dialog for a brand-new email
+  // conversation. Consumed exactly once — only on the first `read()` when no
+  // draft/email exists yet — then immediately saved as a real draft and
+  // reported back via `onInitialRecipientsConsumed` so the parent clears it
+  // and a later remount/reselect never reapplies a stale value.
+  initialRecipients?: string[]; onInitialRecipientsConsumed?: () => void }) {
   const { t } = useTranslation('features/tickets');
   const [document, setDocument] = useState<CoManagedRichTextDocument>([]), [loaded, setLoaded] = useState(false), [epoch, setEpoch] = useState(0);
   const sharing = useConversationSharing();
@@ -407,12 +456,22 @@ export function NamedConversationComposer({ id, ticket, conversation, flush, onD
     state.current.dirty = Boolean(content && draft?.conversationRevision !== currentConversation.current.revision);
     state.current.generation++;
     state.current.parent = draft?.parent ?? null; setParent(state.current.parent);
-    state.current.email = draft?.email ?? defaults;
+    // F023: recipients chosen at creation seed the very first draft only —
+    // once a real draft (or reply-all defaults) exists, neither this nor a
+    // later remount ever overwrites it.
+    const seededFromCreation = !draft?.email && Boolean(initialRecipients?.length);
+    state.current.email = draft?.email ?? defaults ?? (seededFromCreation ? { subject: '', to: [...initialRecipients!], cc: [] } : null);
     setEmail(state.current.email ?? { subject: '', to: [], cc: [] });
     state.current.conversationRevision = currentConversation.current.revision;
     state.current.invalid = false; invalidEmail.current = false;
     setDocument(content?.document ?? (content?.text ? conversationDocument(content.text) ?? [] : []));
     setEpoch(n => n + 1); setLoaded(true); onDirty(Boolean(state.current.publicationOptions || state.current.attachments.length || draft?.email || state.current.parent || (content && (content.document || content.text))));
+    if (seededFromCreation && state.current.alive) {
+      state.current.content ??= { text: '' };
+      state.current.dirty = true; state.current.generation++;
+      onInitialRecipientsConsumed?.();
+      void save();
+    }
   }, [ticket, conversation.conversationId]);
   useEffect(() => {
     state.current.alive = true;
