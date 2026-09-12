@@ -160,6 +160,11 @@ export interface SetupTenantDataActivityResult {
   setupSteps: string[];
 }
 
+// Outcome of provisioning the customer's Nine Minds Support Portal account.
+// `existing` means a portal account for the email was already present and was
+// reused without touching its password or roles.
+export type PortalProvisioningStatus = 'created' | 'existing' | 'failed' | 'skipped';
+
 export interface SendWelcomeEmailActivityInput {
   tenantId: string;
   tenantName: string;
@@ -173,6 +178,10 @@ export interface SendWelcomeEmailActivityInput {
   clientName?: string;
   companyName?: string;
   productCode?: 'psa' | 'algadesk';
+  // Optional so existing callers (e.g. tenant-administration resend flow) keep
+  // working. When omitted the email is deliberately conservative: the
+  // temporary password is only claimed for the workspace, never the portal.
+  portalStatus?: PortalProvisioningStatus;
 }
 
 export interface SendWelcomeEmailActivityResult {
@@ -182,6 +191,17 @@ export interface SendWelcomeEmailActivityResult {
 }
 
 // Workflow execution state for queries
+export interface CustomerTrackingState {
+  clientReused?: boolean;
+  clientId?: string;
+  clientError?: string;
+  contactReused?: boolean;
+  contactId?: string;
+  contactError?: string;
+  portalStatus?: PortalProvisioningStatus;
+  portalError?: string;
+}
+
 export interface TenantCreationWorkflowState {
   step: 'initializing' | 'fetching_stripe_details' | 'creating_tenant' | 'creating_admin_user' | 'creating_customer_tracking' | 'setting_up_data' | 'running_onboarding_seeds' | 'sending_welcome_email' | 'completed' | 'failed';
   tenantId?: string;
@@ -191,6 +211,7 @@ export interface TenantCreationWorkflowState {
   trialReminderScheduled?: boolean;
   error?: string;
   progress: number; // 0-100
+  customerTracking?: CustomerTrackingState;
 }
 
 // Signals for workflow control
@@ -286,4 +307,7 @@ export interface CreatePortalUserActivityResult {
   userId: string;
   roleId: string;
   temporaryPassword?: string; // Only set if password was generated
+  // `existing` means a client portal user for this email already existed in the
+  // tenant and was returned untouched (no password re-hash, no role change).
+  status: 'created' | 'existing';
 }

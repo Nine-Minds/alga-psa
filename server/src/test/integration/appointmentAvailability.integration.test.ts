@@ -28,6 +28,15 @@ function tenantTableFor(connection: Knex, tenant: string, table: string) {
   return tenantDb(connection, tenant).table(table);
 }
 
+// This suite runs serially in its own test database. Allocate after seeded and
+// previously created types instead of risking collisions in the unique order.
+async function nextServiceTypeOrder(connection: Knex, tenant: string): Promise<number> {
+  const maximum = await tenantTableFor(connection, tenant, 'service_types')
+    .max('order_number as value')
+    .first();
+  return Number(maximum?.value ?? 0) + 1;
+}
+
 function tenantRows(connection: Knex) {
   return tenantDb(connection, '__test_tenant_fixture__')
     .unscoped('tenants', 'test fixture creates and removes tenant rows');
@@ -716,7 +725,7 @@ describe('Appointment Availability Integration Tests', () => {
         id: serviceTypeId,
         tenant: tenantId,
         name: `Service Type ${serviceTypeId.slice(0, 8)}`,
-        order_number: Math.floor(Math.random() * 1000000),
+        order_number: await nextServiceTypeOrder(db, tenantId),
         created_at: db.fn.now(),
         updated_at: db.fn.now()
       });
@@ -1205,7 +1214,7 @@ describe('Appointment Availability Integration Tests', () => {
         id: serviceTypeId,
         tenant: tenantId,
         name: `Service Type ${serviceTypeId.slice(0, 8)}`,
-        order_number: Math.floor(Math.random() * 1000000),
+        order_number: await nextServiceTypeOrder(db, tenantId),
         created_at: db.fn.now(),
         updated_at: db.fn.now()
       });
@@ -1431,7 +1440,7 @@ async function setupTestData(
     id: serviceTypeId,
     tenant: tenantId,
     name: `Service Type ${serviceTypeId.slice(0, 8)}`,
-    order_number: Math.floor(Math.random() * 1000000),
+    order_number: await nextServiceTypeOrder(db, tenantId),
     created_at: db.fn.now(),
     updated_at: db.fn.now()
   });
@@ -1521,7 +1530,7 @@ async function setupTestDataMultipleUsers(
     id: serviceTypeId,
     tenant: tenantId,
     name: `Service Type ${serviceTypeId.slice(0, 8)}`,
-    order_number: Math.floor(Math.random() * 1000000),
+    order_number: await nextServiceTypeOrder(db, tenantId),
     created_at: db.fn.now(),
     updated_at: db.fn.now()
   });
