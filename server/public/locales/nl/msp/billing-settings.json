@@ -506,6 +506,7 @@
   },
   "serviceCategories": {
     "title": "Servicecategorieën",
+    "description": "Optionele groepen voor je producten. Categorieën bepalen de kolom en het filter Categorie op het tabblad Producten en staan los van Servicetypen, die verplicht zijn en worden gebruikt in rapportages en tijdregistratie.",
     "dialog": {
       "addTitle": "Servicecategorie toevoegen",
       "editTitle": "Servicecategorie bewerken",
@@ -531,6 +532,11 @@
       "importFromStandard": "Importeren uit standaardcategorieën",
       "create": "Creëren",
       "update": "Bijwerken"
+    },
+    "empty": {
+      "title": "Nog geen servicecategorieën",
+      "description": "Importeer de standaardlijst om te beginnen, of voeg je eigen toe. Categorieën zijn optioneel en alleen nodig als je producten wilt groeperen.",
+      "importPrimary": "Standaard servicecategorieën importeren"
     },
     "delete": {
       "message": "Weet u zeker dat u \"{{name}}\" wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt."
@@ -902,8 +908,8 @@
         "loading": "Laden..."
       },
       "label": {
-        "label": "Label",
-        "placeholder": "Optioneel vrije-vormlabel"
+        "label": "Categorielabel",
+        "placeholder": "Optioneel vrij label"
       },
       "vendor": {
         "label": "Leverancier"

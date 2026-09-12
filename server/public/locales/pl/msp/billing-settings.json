@@ -506,6 +506,7 @@
   },
   "serviceCategories": {
     "title": "Kategorie usług",
+    "description": "Opcjonalne grupy produktów. Kategorie odpowiadają za kolumnę i filtr Kategoria na karcie Produkty i różnią się od Typów usług, które są wymagane i używane w raportach i ewidencji czasu pracy.",
     "dialog": {
       "addTitle": "Dodaj kategorię usługi",
       "editTitle": "Edytuj kategorię usługi",
@@ -531,6 +532,11 @@
       "importFromStandard": "Importuj z kategorii standardowych",
       "create": "Tworzyć",
       "update": "Aktualizacja"
+    },
+    "empty": {
+      "title": "Brak kategorii usług",
+      "description": "Zaimportuj listę standardową, aby rozpocząć, lub dodaj własne. Kategorie są opcjonalne i potrzebne tylko wtedy, gdy chcesz grupować produkty.",
+      "importPrimary": "Importuj standardowe kategorie usług"
     },
     "delete": {
       "message": "Czy na pewno chcesz usunąć „{{name}}”? Tej akcji nie można cofnąć."
@@ -904,8 +910,8 @@
         "loading": "Załadunek..."
       },
       "label": {
-        "label": "Etykieta",
-        "placeholder": "Opcjonalna etykieta o dowolnym kształcie"
+        "label": "Etykieta kategorii",
+        "placeholder": "Opcjonalna dowolna etykieta"
       },
       "vendor": {
         "label": "Sprzedawca"

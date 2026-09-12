@@ -506,6 +506,7 @@
   },
   "serviceCategories": {
     "title": "Categorie di servizi",
+    "description": "Raggruppamenti opzionali per i tuoi prodotti. Le categorie gestiscono la colonna e il filtro Categoria nella scheda Prodotti e sono distinte dai Tipi di servizio, obbligatori e usati in report e inserimento ore.",
     "dialog": {
       "addTitle": "Aggiungi categoria di servizio",
       "editTitle": "Modifica categoria di servizio",
@@ -531,6 +532,11 @@
       "importFromStandard": "Importa da categorie standard",
       "create": "Creare",
       "update": "Aggiornamento"
+    },
+    "empty": {
+      "title": "Nessuna categoria di servizio",
+      "description": "Importa l'elenco standard per iniziare, oppure aggiungi le tue. Le categorie sono opzionali e servono solo se vuoi raggruppare i prodotti.",
+      "importPrimary": "Importa categorie di servizio standard"
     },
     "delete": {
       "message": "Sei sicuro di voler eliminare \"{{name}}\"? Questa azione non può essere annullata."
@@ -902,8 +908,8 @@
         "loading": "Caricamento..."
       },
       "label": {
-        "label": "Etichetta",
-        "placeholder": "Etichetta a forma libera opzionale"
+        "label": "Etichetta categoria",
+        "placeholder": "Etichetta libera opzionale"
       },
       "vendor": {
         "label": "Venditore"
