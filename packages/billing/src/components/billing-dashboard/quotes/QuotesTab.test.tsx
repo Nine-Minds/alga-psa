@@ -15,10 +15,12 @@ const actionMocks = vi.hoisted(() => ({
   sendQuoteReminder: vi.fn(),
 }));
 const getQuoteDocumentTemplatesMock = vi.hoisted(() => vi.fn());
+const navigationMocks = vi.hoisted(() => ({ searchParams: 'subtab=sent' }));
+const quoteFormPropsMock = vi.hoisted(() => ({ current: null as null | Record<string, unknown> }));
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn() }),
-  useSearchParams: () => new URLSearchParams('subtab=sent'),
+  useSearchParams: () => new URLSearchParams(navigationMocks.searchParams),
 }));
 
 vi.mock('../../../actions/quoteActions', () => ({
@@ -93,7 +95,12 @@ vi.mock('@alga-psa/ui/components/ClientNameCell', () => ({
 }));
 
 vi.mock('./QuoteApprovalDashboard', () => ({ default: () => null }));
-vi.mock('./QuoteForm', () => ({ default: () => null }));
+vi.mock('./QuoteForm', () => ({
+  default: (props: Record<string, unknown>) => {
+    quoteFormPropsMock.current = props;
+    return null;
+  },
+}));
 vi.mock('./QuotePreviewPanel', () => ({ default: () => null }));
 vi.mock('./QuoteStatusBadge', () => ({ default: () => null }));
 
@@ -114,6 +121,8 @@ const sentQuote = {
 describe('QuotesTab sent quote actions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    navigationMocks.searchParams = 'subtab=sent';
+    quoteFormPropsMock.current = null;
     actionMocks.listQuotes.mockResolvedValue({ data: [sentQuote] });
     getQuoteDocumentTemplatesMock.mockResolvedValue([]);
     actionMocks.resendQuote.mockResolvedValue({});
@@ -140,5 +149,17 @@ describe('QuotesTab sent quote actions', () => {
 
     await waitFor(() => expect(actionMocks.sendQuoteReminder).toHaveBeenCalledWith(sentQuote.quote_id));
     expect(actionMocks.sendQuote).not.toHaveBeenCalled();
+  });
+
+  it('T001: a deep link carrying a source template id reaches QuoteForm through initialContext', async () => {
+    navigationMocks.searchParams = 'tab=quotes&quoteId=new&sourceTemplateId=tmpl-123';
+
+    render(<QuotesTab />);
+
+    await waitFor(() => expect(quoteFormPropsMock.current).not.toBeNull());
+    expect(quoteFormPropsMock.current).toMatchObject({
+      quoteId: 'new',
+      initialContext: { sourceTemplateId: 'tmpl-123' },
+    });
   });
 });
