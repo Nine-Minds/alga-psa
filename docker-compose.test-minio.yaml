@@ -8,7 +8,7 @@ version: '3.8'
 services:
   # MinIO - S3-compatible object storage for testing
   minio:
-    image: minio/minio:latest
+    image: quay.io/minio/minio:latest
     container_name: ${APP_NAME:-alga}_minio_test
     ports:
       - "9000:9000"  # MinIO API
@@ -30,7 +30,7 @@ services:
 
   # MinIO Client - for bucket initialization
   minio-init:
-    image: minio/mc:latest
+    image: quay.io/minio/mc:latest
     container_name: ${APP_NAME:-alga}_minio_init
     depends_on:
       minio:
