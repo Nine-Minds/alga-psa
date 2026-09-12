@@ -1479,6 +1479,9 @@
       "notice": "Oglądasz podgląd niezapisanego motywu. Pozostali widzą zapisany motyw, dopóki go nie zastosujesz.",
       "save": "Zastosuj dla wszystkich",
       "discard": "Odrzuć"
+    },
+    "upgrade": {
+      "pitch": "Pary motywów dla całej organizacji, edytor własnej palety kolorów oraz white-labeling aplikacji MSP są częścią edycji Enterprise."
     }
   },
   "mspLanguage": {
@@ -1506,6 +1509,7 @@
     "emailTabs": {
       "settings": "Ustawienia",
       "emailTemplates": "Szablony e-mail",
+      "emailBranding": "Branding e-maili",
       "categories": "Kategorie",
       "telemetry": "Telemetria"
     },
@@ -1628,6 +1632,96 @@
         "it": "Włoski",
         "pl": "Polski",
         "pt": "Portugalski"
+      }
+    },
+    "emailBranding": {
+      "title": "Branding e-maili",
+      "description": "Nadaj wszystkim wychodzącym e-mailom swoje kolory. Zobacz tutaj podgląd, a następnie wybierz szablony, do których je zastosować.",
+      "unsavedHint": "Zapisz paletę przed jej zastosowaniem.",
+      "source": {
+        "saved": "Zapisana",
+        "custom-theme": "Z motywu niestandardowego",
+        "theme-pair": "Z wybranego motywu",
+        "portal-branding": "Z brandingu portalu klienta",
+        "default": "Domyślne AlgaPSA"
+      },
+      "fields": {
+        "primary": "Kolor podstawowy",
+        "secondary": "Kolor dodatkowy",
+        "singleColor": "Jeden kolor (gradient wyprowadzony z koloru podstawowego)"
+      },
+      "tokens": {
+        "dark": "Ciemny akcent",
+        "outerBg": "Tło zewnętrzne",
+        "footerBg": "Tło stopki",
+        "cardBorder": "Obramowanie karty",
+        "infoBoxBg": "Tło ramki informacyjnej",
+        "infoBoxBorder": "Obramowanie ramki informacyjnej"
+      },
+      "preview": {
+        "title": "Podgląd"
+      },
+      "actions": {
+        "save": "Zapisz paletę",
+        "saving": "Zapisywanie...",
+        "useSuggested": "Użyj sugerowanych kolorów",
+        "adjust": "Dostosuj kolory pochodne",
+        "apply": "Zastosuj do szablonów",
+        "applying": "Stosowanie...",
+        "applyCount": "Zastosuj do {{count}} szablonów",
+        "applyToTemplate": "Zastosuj moją paletę",
+        "remove": "Usuń branding ze wszystkich szablonów",
+        "removing": "Usuwanie...",
+        "cancel": "Anuluj",
+        "done": "Gotowe"
+      },
+      "apply": {
+        "title": "Zastosuj branding do szablonów",
+        "languages": "Języki",
+        "selectAll": "Zaznacz wszystkie",
+        "selectNone": "Odznacz wszystkie",
+        "differs": "Różni się: {{parts}}",
+        "differsParts": {
+          "colors": "kolory",
+          "text": "tekst",
+          "subject": "temat"
+        },
+        "summary": "{{written}} z brandingiem, {{skipped}} pominiętych, {{failed}} nieudanych",
+        "groups": {
+          "system": {
+            "title": "Niedostosowane",
+            "action": "Utwórz kopię z brandingiem"
+          },
+          "branded": {
+            "title": "Z Twoim brandingiem",
+            "action": "Zaktualizuj kolory"
+          },
+          "customized": {
+            "title": "Dostosowane",
+            "action": "Zamień tylko pozostałe kolory standardowe"
+          },
+          "no-stock-colors": {
+            "title": "Brak kolorów standardowych",
+            "action": "Nie ma czego zamienić"
+          }
+        },
+        "skipReasons": {
+          "customized": "Dostosowany — niezaznaczony",
+          "nothing-to-replace": "Nie ma czego zamienić",
+          "unchanged": "Już aktualny"
+        }
+      },
+      "newTemplates": {
+        "message": "Od ostatniego zastosowania palety dodano {{count}} szablonów.",
+        "action": "Zastosuj paletę do nowych szablonów",
+        "dismiss": "Odrzuć"
+      },
+      "enterprise": {
+        "useLogo": "Używaj mojego logo w nagłówku e-maili",
+        "logoWide": "Szerokie logo",
+        "logoDefault": "Kwadratowe logo",
+        "noLogo": "Prześlij logo w Ustawienia → Portal klienta → Branding, aby użyć go tutaj.",
+        "showAttribution": "Pokazuj „Powered by AlgaPSA” w stopce"
       }
     },
     "categoriesUi": {
@@ -2904,7 +2998,8 @@
         "fieldCount": "Pola",
         "order": "Kolejność",
         "actions": "Akcje",
-        "openMenu": "Otwórz menu"
+        "openMenu": "Otwórz menu",
+        "searchPlaceholder": "Szukaj typów zasobów…"
       },
       "actions": {
         "addType": "Dodaj typ zasobu",

@@ -1473,6 +1473,9 @@
       "notice": "U bekijkt een voorbeeld van een niet-opgeslagen thema. De rest houdt het opgeslagen thema tot u dit toepast.",
       "save": "Voor iedereen toepassen",
       "discard": "Verwerpen"
+    },
+    "upgrade": {
+      "pitch": "Organisatiebrede themaparen, een editor voor een eigen kleurenpalet en white-labeling van de MSP-app maken deel uit van de Enterprise Edition."
     }
   },
   "mspLanguage": {
@@ -1500,6 +1503,7 @@
     "emailTabs": {
       "settings": "Instellingen",
       "emailTemplates": "E-mailsjablonen",
+      "emailBranding": "E-mailhuisstijl",
       "categories": "Categorieën",
       "telemetry": "Telemetrie"
     },
@@ -1622,6 +1626,96 @@
         "it": "Italiaans",
         "pl": "Pools",
         "pt": "Portugees"
+      }
+    },
+    "emailBranding": {
+      "title": "E-mailhuisstijl",
+      "description": "Geef elke uitgaande e-mail uw eigen kleuren. Bekijk hier een voorbeeld en kies daarna op welke sjablonen u ze toepast.",
+      "unsavedHint": "Sla het palet op voordat u het toepast.",
+      "source": {
+        "saved": "Opgeslagen",
+        "custom-theme": "Uit uw aangepaste thema",
+        "theme-pair": "Uit uw thema",
+        "portal-branding": "Uit de huisstijl van uw klantenportaal",
+        "default": "AlgaPSA-standaard"
+      },
+      "fields": {
+        "primary": "Primaire kleur",
+        "secondary": "Secundaire kleur",
+        "singleColor": "Eén kleur (verloop afgeleid van de primaire kleur)"
+      },
+      "tokens": {
+        "dark": "Donker accent",
+        "outerBg": "Buitenste achtergrond",
+        "footerBg": "Achtergrond van de voettekst",
+        "cardBorder": "Kaartrand",
+        "infoBoxBg": "Achtergrond van het informatievak",
+        "infoBoxBorder": "Rand van het informatievak"
+      },
+      "preview": {
+        "title": "Voorbeeld"
+      },
+      "actions": {
+        "save": "Palet opslaan",
+        "saving": "Opslaan...",
+        "useSuggested": "Voorgestelde kleuren gebruiken",
+        "adjust": "Afgeleide kleuren aanpassen",
+        "apply": "Toepassen op sjablonen",
+        "applying": "Bezig met toepassen...",
+        "applyCount": "Toepassen op {{count}} sjablonen",
+        "applyToTemplate": "Mijn palet toepassen",
+        "remove": "Huisstijl uit alle sjablonen verwijderen",
+        "removing": "Bezig met verwijderen...",
+        "cancel": "Annuleren",
+        "done": "Klaar"
+      },
+      "apply": {
+        "title": "Huisstijl op sjablonen toepassen",
+        "languages": "Talen",
+        "selectAll": "Alles selecteren",
+        "selectNone": "Niets selecteren",
+        "differs": "Verschilt in {{parts}}",
+        "differsParts": {
+          "colors": "kleuren",
+          "text": "tekst",
+          "subject": "onderwerp"
+        },
+        "summary": "{{written}} van huisstijl voorzien, {{skipped}} overgeslagen, {{failed}} mislukt",
+        "groups": {
+          "system": {
+            "title": "Niet aangepast",
+            "action": "Kopie met huisstijl maken"
+          },
+          "branded": {
+            "title": "Door u van huisstijl voorzien",
+            "action": "Kleuren bijwerken"
+          },
+          "customized": {
+            "title": "Aangepast",
+            "action": "Alleen resterende standaardkleuren vervangen"
+          },
+          "no-stock-colors": {
+            "title": "Geen standaardkleuren",
+            "action": "Niets te vervangen"
+          }
+        },
+        "skipReasons": {
+          "customized": "Aangepast — niet geselecteerd",
+          "nothing-to-replace": "Niets te vervangen",
+          "unchanged": "Al bijgewerkt"
+        }
+      },
+      "newTemplates": {
+        "message": "Er zijn {{count}} sjablonen toegevoegd sinds u uw palet voor het laatst hebt toegepast.",
+        "action": "Palet op nieuwe sjablonen toepassen",
+        "dismiss": "Sluiten"
+      },
+      "enterprise": {
+        "useLogo": "Mijn logo in de e-mailkop gebruiken",
+        "logoWide": "Breed logo",
+        "logoDefault": "Vierkant logo",
+        "noLogo": "Upload een logo via Instellingen → Klantenportaal → Huisstijl om het hier te gebruiken.",
+        "showAttribution": "'Powered by AlgaPSA' in de voettekst tonen"
       }
     },
     "categoriesUi": {
@@ -2876,7 +2970,8 @@
         "fieldCount": "Velden",
         "order": "Volgorde",
         "actions": "Acties",
-        "openMenu": "Menu openen"
+        "openMenu": "Menu openen",
+        "searchPlaceholder": "Assettypen zoeken…"
       },
       "actions": {
         "addType": "Assettype toevoegen",

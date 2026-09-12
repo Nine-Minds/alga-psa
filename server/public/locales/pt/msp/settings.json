@@ -1473,6 +1473,9 @@
       "notice": "Está a pré-visualizar um tema não guardado. Os restantes mantêm o tema guardado até o aplicar.",
       "save": "Aplicar a todos",
       "discard": "Descartar"
+    },
+    "upgrade": {
+      "pitch": "Pares de temas para toda a organização, um editor de paleta personalizada e o white-label do aplicativo MSP fazem parte da edição Enterprise."
     }
   },
   "mspLanguage": {
@@ -1500,6 +1503,7 @@
     "emailTabs": {
       "settings": "Configurações",
       "emailTemplates": "Modelos de e-mail",
+      "emailBranding": "Marca dos e-mails",
       "categories": "Categorias",
       "telemetry": "Telemetria"
     },
@@ -1622,6 +1626,96 @@
         "it": "Italiano",
         "pl": "Polonês",
         "pt": "Português"
+      }
+    },
+    "emailBranding": {
+      "title": "Marca dos e-mails",
+      "description": "Aplique suas cores a todos os e-mails enviados. Veja a pré-visualização aqui e escolha em quais modelos aplicá-las.",
+      "unsavedHint": "Salve a paleta antes de aplicá-la.",
+      "source": {
+        "saved": "Salva",
+        "custom-theme": "Do seu tema personalizado",
+        "theme-pair": "Do seu tema",
+        "portal-branding": "Da marca do seu portal do cliente",
+        "default": "Padrão da AlgaPSA"
+      },
+      "fields": {
+        "primary": "Cor principal",
+        "secondary": "Cor secundária",
+        "singleColor": "Cor única (o gradiente é derivado da cor principal)"
+      },
+      "tokens": {
+        "dark": "Destaque escuro",
+        "outerBg": "Plano de fundo externo",
+        "footerBg": "Plano de fundo do rodapé",
+        "cardBorder": "Borda do cartão",
+        "infoBoxBg": "Plano de fundo da caixa de informações",
+        "infoBoxBorder": "Borda da caixa de informações"
+      },
+      "preview": {
+        "title": "Pré-visualização"
+      },
+      "actions": {
+        "save": "Salvar paleta",
+        "saving": "Salvando...",
+        "useSuggested": "Usar as cores sugeridas",
+        "adjust": "Ajustar as cores derivadas",
+        "apply": "Aplicar aos modelos",
+        "applying": "Aplicando...",
+        "applyCount": "Aplicar a {{count}} modelos",
+        "applyToTemplate": "Aplicar minha paleta",
+        "remove": "Remover a marca de todos os modelos",
+        "removing": "Removendo...",
+        "cancel": "Cancelar",
+        "done": "Concluído"
+      },
+      "apply": {
+        "title": "Aplicar a marca aos modelos",
+        "languages": "Idiomas",
+        "selectAll": "Selecionar tudo",
+        "selectNone": "Desmarcar tudo",
+        "differs": "Difere em {{parts}}",
+        "differsParts": {
+          "colors": "cores",
+          "text": "texto",
+          "subject": "assunto"
+        },
+        "summary": "{{written}} com sua marca, {{skipped}} ignorados, {{failed}} com falha",
+        "groups": {
+          "system": {
+            "title": "Sem personalização",
+            "action": "Criar cópia com sua marca"
+          },
+          "branded": {
+            "title": "Com sua marca",
+            "action": "Atualizar as cores"
+          },
+          "customized": {
+            "title": "Personalizados",
+            "action": "Substituir apenas as cores originais restantes"
+          },
+          "no-stock-colors": {
+            "title": "Sem cores originais",
+            "action": "Nada a substituir"
+          }
+        },
+        "skipReasons": {
+          "customized": "Personalizado — não selecionado",
+          "nothing-to-replace": "Nada a substituir",
+          "unchanged": "Já está atualizado"
+        }
+      },
+      "newTemplates": {
+        "message": "{{count}} modelos foram adicionados desde a última vez que você aplicou sua paleta.",
+        "action": "Aplicar a paleta aos novos modelos",
+        "dismiss": "Dispensar"
+      },
+      "enterprise": {
+        "useLogo": "Usar meu logo no cabeçalho do e-mail",
+        "logoWide": "Logo largo",
+        "logoDefault": "Logo quadrado",
+        "noLogo": "Envie um logo em Configurações → Portal do cliente → Marca para usá-lo aqui.",
+        "showAttribution": "Mostrar “Powered by AlgaPSA” no rodapé"
       }
     },
     "categoriesUi": {
@@ -2876,7 +2970,8 @@
         "fieldCount": "Campos",
         "order": "Ordem",
         "actions": "Ações",
-        "openMenu": "Abrir menu"
+        "openMenu": "Abrir menu",
+        "searchPlaceholder": "Pesquisar tipos de ativos…"
       },
       "actions": {
         "addType": "Adicionar tipo de ativo",

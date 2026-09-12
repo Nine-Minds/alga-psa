@@ -478,7 +478,7 @@ describe('workflow runtime v2 publish + registry + run integration tests', () =>
       ]
     });
     expect(result.ok).toBe(false);
-    expect(result.errors?.some((err: any) => err.code === 'INVALID_EXPR')).toBe(true);
+    expect(result.errors?.some((err: any) => err.code === 'INVALID_EXPRESSION')).toBe(true);
   });
 
   it('Publish fails when required action inputs are not mapped. Mocks: non-target dependencies.', async () => {

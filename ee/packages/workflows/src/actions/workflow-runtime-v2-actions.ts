@@ -860,7 +860,9 @@ const computeValidation = async (params: {
 
       let actual: Set<string>;
       if (value && typeof value === 'object' && '$expr' in (value as any)) {
-        actual = exprPathToSchemaTypes(String((value as any).$expr ?? ''), ctx);
+        const exprSource = String((value as any).$expr ?? '');
+        if (!exprSource.trim()) continue;
+        actual = exprPathToSchemaTypes(exprSource, ctx);
       } else if (value && typeof value === 'object' && '$secret' in (value as any)) {
         actual = new Set(['string']);
       } else {

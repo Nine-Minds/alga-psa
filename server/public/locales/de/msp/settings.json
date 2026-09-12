@@ -1473,6 +1473,9 @@
       "notice": "Sie sehen eine Vorschau eines nicht gespeicherten Themes. Alle anderen behalten das gespeicherte, bis Sie es anwenden.",
       "save": "Für alle übernehmen",
       "discard": "Verwerfen"
+    },
+    "upgrade": {
+      "pitch": "Organisationsweite Themenpaare, ein Editor für eigene Farbpaletten und das White-Labeling der MSP-App gehören zur Enterprise Edition."
     }
   },
   "mspLanguage": {
@@ -1500,6 +1503,7 @@
     "emailTabs": {
       "settings": "Einstellungen",
       "emailTemplates": "E-Mail-Vorlagen",
+      "emailBranding": "E-Mail-Branding",
       "categories": "Kategorien",
       "telemetry": "Telemetrie"
     },
@@ -1622,6 +1626,96 @@
         "it": "Italienisch",
         "pl": "Polnisch",
         "pt": "Portugiesisch"
+      }
+    },
+    "emailBranding": {
+      "title": "E-Mail-Branding",
+      "description": "Versehen Sie jede ausgehende E-Mail mit Ihren Farben. Sehen Sie sich hier die Vorschau an und wählen Sie dann die Vorlagen aus, auf die sie angewendet werden.",
+      "unsavedHint": "Speichern Sie die Palette, bevor Sie sie anwenden.",
+      "source": {
+        "saved": "Gespeichert",
+        "custom-theme": "Aus Ihrem benutzerdefinierten Design",
+        "theme-pair": "Aus Ihrem Design",
+        "portal-branding": "Aus dem Branding Ihres Kundenportals",
+        "default": "AlgaPSA-Standard"
+      },
+      "fields": {
+        "primary": "Primärfarbe",
+        "secondary": "Sekundärfarbe",
+        "singleColor": "Einzelne Farbe (Verlauf wird aus der Primärfarbe abgeleitet)"
+      },
+      "tokens": {
+        "dark": "Dunkler Akzent",
+        "outerBg": "Äußerer Hintergrund",
+        "footerBg": "Hintergrund der Fußzeile",
+        "cardBorder": "Kartenrahmen",
+        "infoBoxBg": "Hintergrund des Infofelds",
+        "infoBoxBorder": "Rahmen des Infofelds"
+      },
+      "preview": {
+        "title": "Vorschau"
+      },
+      "actions": {
+        "save": "Palette speichern",
+        "saving": "Wird gespeichert...",
+        "useSuggested": "Vorgeschlagene Farben übernehmen",
+        "adjust": "Abgeleitete Farben anpassen",
+        "apply": "Auf Vorlagen anwenden",
+        "applying": "Wird angewendet...",
+        "applyCount": "Auf {{count}} Vorlagen anwenden",
+        "applyToTemplate": "Meine Palette anwenden",
+        "remove": "Branding aus allen Vorlagen entfernen",
+        "removing": "Wird entfernt...",
+        "cancel": "Abbrechen",
+        "done": "Fertig"
+      },
+      "apply": {
+        "title": "Branding auf Vorlagen anwenden",
+        "languages": "Sprachen",
+        "selectAll": "Alle auswählen",
+        "selectNone": "Keine auswählen",
+        "differs": "Unterschied bei {{parts}}",
+        "differsParts": {
+          "colors": "Farben",
+          "text": "Text",
+          "subject": "Betreff"
+        },
+        "summary": "{{written}} gebrandet, {{skipped}} übersprungen, {{failed}} fehlgeschlagen",
+        "groups": {
+          "system": {
+            "title": "Nicht angepasst",
+            "action": "Gebrandete Kopie erstellen"
+          },
+          "branded": {
+            "title": "Von Ihnen gebrandet",
+            "action": "Farben aktualisieren"
+          },
+          "customized": {
+            "title": "Angepasst",
+            "action": "Nur verbleibende Standardfarben ersetzen"
+          },
+          "no-stock-colors": {
+            "title": "Keine Standardfarben",
+            "action": "Nichts zu ersetzen"
+          }
+        },
+        "skipReasons": {
+          "customized": "Angepasst – nicht ausgewählt",
+          "nothing-to-replace": "Nichts zu ersetzen",
+          "unchanged": "Bereits aktuell"
+        }
+      },
+      "newTemplates": {
+        "message": "Seit der letzten Anwendung Ihrer Palette wurden {{count}} Vorlagen hinzugefügt.",
+        "action": "Palette auf neue Vorlagen anwenden",
+        "dismiss": "Ausblenden"
+      },
+      "enterprise": {
+        "useLogo": "Mein Logo in der E-Mail-Kopfzeile verwenden",
+        "logoWide": "Breites Logo",
+        "logoDefault": "Quadratisches Logo",
+        "noLogo": "Laden Sie unter Einstellungen → Kundenportal → Branding ein Logo hoch, um es hier zu verwenden.",
+        "showAttribution": "„Powered by AlgaPSA“ in der Fußzeile anzeigen"
       }
     },
     "categoriesUi": {
@@ -2876,7 +2970,8 @@
         "fieldCount": "Felder",
         "order": "Reihenfolge",
         "actions": "Aktionen",
-        "openMenu": "Menü öffnen"
+        "openMenu": "Menü öffnen",
+        "searchPlaceholder": "Asset-Typen suchen…"
       },
       "actions": {
         "addType": "Asset-Typ hinzufügen",

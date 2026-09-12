@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import {
   computeDaysUntilDate,
   computeEvergreenDecisionDueDate,
@@ -9,7 +9,12 @@ import {
 } from '../../../shared/billingClients/clientContracts';
 
 describe('client contract effective renewal settings normalization', () => {
-  afterEach(() => {
+  beforeAll(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'));
+  });
+
+  afterAll(() => {
     vi.useRealTimers();
   });
 
@@ -379,14 +384,6 @@ describe('client contract effective renewal settings normalization', () => {
   it('respects evergreen-specific notice period overrides when tenant defaults are disabled', () => {
     const now = '2026-01-01';
     const startDate = '2024-09-10';
-
-    // normalizeClientContract derives the evergreen decision_due_date from the
-    // live system clock (see computeNextEvergreenReviewAnchorDate), while this
-    // test's expected values are computed with a fixed `now`. Freeze the clock
-    // so the assertion is deterministic regardless of the calendar date the
-    // suite runs on (previously failed once the 09-10 anniversary passed).
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date(`${now}T00:00:00.000Z`));
 
     const withTenantDefaults = normalizeClientContract({
       contract_id: 'contract-4k',
