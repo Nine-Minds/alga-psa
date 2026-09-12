@@ -2,73 +2,73 @@
   {
     "id": "T001",
     "description": "REGRESSION GUARD — with every status left at the default `portal_selectable = true`, `updateTicketStatus` behaves exactly as it does today: a valid board status is accepted and the ticket is updated. Extends `client-tickets.boardStatusValidation.test.ts`.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F001", "F015"]
   },
   {
     "id": "T002",
     "description": "PRIMARY ENFORCEMENT TEST — `updateTicketStatus` called DIRECTLY rejects a status with `portal_selectable = false`, even though that status is valid for the ticket's board and the user can see the ticket. Asserts no ticket row update and no event published, and that the error carries `client-portal:errors.tickets.statusNotPortalSelectable` (distinct from the wrong-board error).",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F015", "F016"]
   },
   {
     "id": "T003",
     "description": "`getClientPortalTicketStatuses(boardId)` omits non-selectable statuses and returns the selectable ones in `order_number` order.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F009", "F010"]
   },
   {
     "id": "T004",
     "description": "`getClientPortalTicketStatuses(boardId, currentStatusId)` still returns the ticket's current status when that status is non-selectable, so the picker does not render blank.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F010"]
   },
   {
     "id": "T005",
     "description": "MSP-side reads are unaffected — the shared `getTicketStatuses(boardId)` returns every status for a board including non-selectable ones. Guards against the filter leaking into the shared action.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F011"]
   },
   {
     "id": "T006",
     "description": "CLOSE BEHAVIOUR — a non-selectable closed status is rejected for a portal user, while a selectable closed status still closes the ticket with full closure semantics (is_closed, closed_at, closed_by, response_state cleared, TICKET_CLOSED published) and with the `enforceTicketCloseRules` bypass intact.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F015", "F018"]
   },
   {
     "id": "T007",
     "description": "BYPASS CLOSURE — a caller with `user_type: 'client'` is rejected by `updateTicket`, `bulkUpdateTicketStatus`, and `updateTicketWithCache` before any permission check or ticket write, while an `internal` caller is unaffected. Without this the direct-call enforcement in T002 is trivially routed around.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F019", "F020", "F021"]
   },
   {
     "id": "T008",
     "description": "DB-BACKED MIGRATION SANITY — against a real migrated schema, `statuses.portal_selectable` exists, is NOT NULL with default true, and rows inserted before the migration read back as `true`. Follows the harness in `boardSpecificTicketStatusesMigration.integration.test.ts` (`createTestDbConnection`, direct `require` of the migration file).",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F001", "F002"]
   },
   {
     "id": "T009",
     "description": "DB-BACKED ROUND TRIP — saving a board with `ticket_statuses` carrying `portal_selectable: false` persists it, and `getBoardTicketStatuses` reads it back. Catches the silent-drop failure mode in the normalize/insert/update chain, which unit mocks cannot.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F005", "F006", "F024", "F025"]
   },
   {
     "id": "T010",
     "description": "A board ticket status created without an explicit value defaults to `portal_selectable = true`, so enabling the feature never silently locks down new statuses.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F007", "F026"]
   },
   {
     "id": "T011",
     "description": "The portal list status FILTER dropdown still receives all statuses including non-selectable ones, while the per-row inline picker receives only selectable ones. Locks in the read-vs-write distinction that is easy to 'tidy up' into a bug later.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F013", "F014"]
   },
   {
     "id": "T012",
     "description": "`npm run test:i18n` passes — new keys present with parity across all 10 locale packs and pseudo-locales regenerated.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F027", "F028", "F029"]
   }
 ]

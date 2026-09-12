@@ -3,9 +3,10 @@
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
-import { withAuth } from '@alga-psa/auth';
+import { withAuth, hasPermission } from '@alga-psa/auth';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
+import { permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { IStatus } from '@alga-psa/types';
 
 import Status from '../../models/status';
@@ -344,6 +345,11 @@ export const saveBoardTicketStatuses = withAuth(async (
   statuses: BoardTicketStatusInput[]
 ): Promise<IStatus[] | BoardActionError> => {
   const { knex: db } = await createTenantKnex();
+
+  if (!await hasPermission(user, 'ticket_settings', 'update', db)) {
+    return permissionError('Permission denied: Cannot update ticket settings', 'features/tickets:errors.settings.updateDenied');
+  }
+
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => (
       persistBoardTicketStatuses(trx, tenant, boardId, user.user_id, statuses)
@@ -364,6 +370,11 @@ export const createBoardTicketStatus = withAuth(async (
   statusData: BoardTicketStatusInput
 ): Promise<IStatus | BoardActionError> => {
   const { knex: db } = await createTenantKnex();
+
+  if (!await hasPermission(user, 'ticket_settings', 'update', db)) {
+    return permissionError('Permission denied: Cannot update ticket settings', 'features/tickets:errors.settings.updateDenied');
+  }
+
   try {
     const createdStatus = await withTransaction(db, async (trx: Knex.Transaction) => {
       const existingStatuses = await Status.getTicketStatusesByBoard(trx, tenant, boardId);
@@ -414,6 +425,11 @@ export const updateBoardTicketStatus = withAuth(async (
   statusData: Partial<BoardTicketStatusInput>
 ): Promise<IStatus | BoardActionError> => {
   const { knex: db } = await createTenantKnex();
+
+  if (!await hasPermission(user, 'ticket_settings', 'update', db)) {
+    return permissionError('Permission denied: Cannot update ticket settings', 'features/tickets:errors.settings.updateDenied');
+  }
+
   try {
     if (statusData.status_id && statusData.status_id !== statusId) {
       throw new Error('Ticket statuses cannot be moved or replaced implicitly.');
@@ -491,6 +507,11 @@ export const deleteBoardTicketStatus = withAuth(async (
   statusId: string
 ): Promise<IStatus[] | BoardActionError> => {
   const { knex: db } = await createTenantKnex();
+
+  if (!await hasPermission(user, 'ticket_settings', 'update', db)) {
+    return permissionError('Permission denied: Cannot update ticket settings', 'features/tickets:errors.settings.updateDenied');
+  }
+
   try {
     const remainingStatuses = await withTransaction(db, async (trx: Knex.Transaction) => {
       const existingStatuses = await Status.getTicketStatusesByBoard(trx, tenant, boardId);

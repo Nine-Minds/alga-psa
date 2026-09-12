@@ -5,7 +5,17 @@ Branch `feature/client-portal-restrict-which-ticket-statuses-por`, dev port 3258
 
 ## Status
 
-Plan drafted 2026-09-12 from investigation against this worktree. No code written yet.
+Implemented on branch `feature/client-portal-restrict-which-ticket-statuses-por`.
+`features.json` marks every feature implemented except **F017** (keying the two
+adjacent unkeyed `updateTicketStatus` errors), which was deliberately dropped as
+the plan permitted. `tests.json` marks T001–T012 implemented.
+
+Review round 1 additions: `updateBoard` and all `boardTicketStatusActions` write
+entry points now enforce `ticket_settings:update` before mutating status
+configuration; the portal detail picker re-derives its options from the current
+status so a restricted status drops out after the ticket leaves it; DB-backed
+T008–T010 run against an isolated `portal_selectable_test_db`; T011 is covered by
+a TicketList source contract.
 
 ---
 

@@ -472,7 +472,11 @@ describe('client portal board-scoped ticket status validation', () => {
       status_id: 'board-1-closed',
       is_closed: true,
       response_state: null,
+      closed_by: 'client-user-1',
     });
+    expect(allowedUpdates[0].updateData).toEqual(
+      expect.objectContaining({ closed_at: expect.any(String) })
+    );
     expect(publishWorkflowEventMock).toHaveBeenCalledWith(
       expect.objectContaining({ eventType: 'TICKET_CLOSED' })
     );

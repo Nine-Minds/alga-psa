@@ -40,6 +40,7 @@ import { PartialBlock } from '@blocknote/core';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
 import { IStatus } from '@alga-psa/types';
+import { derivePortalStatusOptions } from './portalStatusOptions';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import toast from 'react-hot-toast';
 import {
@@ -94,6 +95,13 @@ export function TicketDetails({
   // Local overrides for comments to ensure immediate UI reflection
   const [commentOverrides, setCommentOverrides] = useState<Record<string, { note?: string; updated_at?: string }>>({});
   const [statusOptions] = useState<IStatus[]>(initialStatusOptions);
+  // Re-derive on every current-status change: the server seeds the initial list
+  // with the ticket's current restricted status, but once the ticket moves the
+  // restricted status must stop being offered as a target without a reload.
+  const portalStatusOptions = useMemo(
+    () => derivePortalStatusOptions(statusOptions, ticket.status_id),
+    [statusOptions, ticket.status_id]
+  );
   const [responseStateTrackingEnabled, setResponseStateTrackingEnabled] = useState<boolean>(true);
   const [ticketToUpdateStatus, setTicketToUpdateStatus] = useState<{ ticketId: string; newStatusId: string; currentStatusName: string; newStatusName: string; } | null>(null);
   const [linkedAssetPreview, setLinkedAssetPreview] = useState<{
@@ -597,13 +605,13 @@ export function TicketDetails({
               <div className="flex items-center gap-3">
                 <CustomSelect
                   value={ticket.status_id || ''}
-                  options={statusOptions.map((status) => ({
+                  options={portalStatusOptions.map((status) => ({
                     value: status.status_id || '',
                     label: status.name || ''
                   }))}
                   onValueChange={(value) => {
                     if (ticket.status_id !== value) {
-                      const selectedStatus = statusOptions.find(s => s.status_id === value);
+                      const selectedStatus = portalStatusOptions.find(s => s.status_id === value);
                       if (selectedStatus) {
                         setTicketToUpdateStatus({
                           ticketId: ticket.ticket_id!,
