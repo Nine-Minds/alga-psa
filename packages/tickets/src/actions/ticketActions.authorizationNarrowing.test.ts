@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 // collection phase instead of counting against the 5s timeout of whichever
 // test happens to run first. vi.mock factories below are hoisted above this
 // import by vitest.
-import { getTicketById, getTicketsForList, updateTicket } from './ticketActions';
+import { getTicketById, getTicketsForList, updateTicket, bulkUpdateTicketStatus } from './ticketActions';
 
 let currentUser: any;
 let currentBundleRules: Array<Record<string, unknown>> = [];
@@ -526,5 +526,26 @@ describe('ticket authorization narrowing for migrated list/detail paths', () => 
     ).rejects.toThrow('suppressInternalNotifications requires suppressContactNotifications');
 
     expect(createTenantKnexMock).not.toHaveBeenCalled();
+  });
+
+  it('T007: rejects a client-portal caller on MSP status writes before permission or ticket access', async () => {
+    currentUser = {
+      user_id: 'client-user-1',
+      user_type: 'client',
+      tenant: 'tenant-1',
+      roles: [],
+    };
+
+    const updateResult = await updateTicket('ticket-1', { status_id: 'status-2' } as any);
+    expect(updateResult).toEqual({
+      permissionError: 'Permission denied: operation not available in client portal',
+    });
+
+    const bulkResult = await bulkUpdateTicketStatus(['ticket-1', 'ticket-2'], 'status-2');
+    expect(bulkResult.updatedIds).toEqual([]);
+    expect(bulkResult.failed.map((failure) => failure.ticketId).sort()).toEqual(['ticket-1', 'ticket-2']);
+
+    expect(createTenantKnexMock).not.toHaveBeenCalled();
+    expect(hasPermissionMock).not.toHaveBeenCalled();
   });
 });

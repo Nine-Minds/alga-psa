@@ -629,7 +629,8 @@
           "loading": "Cargando estados de tickets del tablero…",
           "statusName": "Nombre del estado",
           "closed": "Cerrado",
-          "default": "Predeterminado"
+          "default": "Predeterminado",
+          "portalSelectable": "Los usuarios del portal de clientes pueden seleccionar este estado"
         },
         "inboundReplyReopen": {
           "enabledLabel": "Reabrir tickets cerrados con respuestas entrantes",

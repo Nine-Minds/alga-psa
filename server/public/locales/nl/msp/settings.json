@@ -629,7 +629,8 @@
           "loading": "Ticketstatussen van bord laden…",
           "statusName": "Statusnaam",
           "closed": "Gesloten",
-          "default": "Standaard"
+          "default": "Standaard",
+          "portalSelectable": "Gebruikers van het klantenportaal kunnen deze status selecteren"
         },
         "inboundReplyReopen": {
           "enabledLabel": "Gesloten tickets heropenen bij inkomende antwoorden",

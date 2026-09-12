@@ -401,6 +401,19 @@ describe('updateTicketWithCache live updates', () => {
     expect(publishRedisMock).not.toHaveBeenCalled();
   });
 
+  it('T007: rejects a client-portal caller before any permission check or ticket access', async () => {
+    currentUser = { ...currentUser, user_id: 'client-user-1', user_type: 'client' };
+
+    const { updateTicketWithCache } = await import('./optimizedTicketActions');
+    const result = await updateTicketWithCache('ticket-1', { status_id: 'status-2' });
+
+    expect(result).toEqual(
+      expect.objectContaining({ permissionError: 'Permission denied: operation not available in client portal' })
+    );
+    expect(hasPermissionMock).not.toHaveBeenCalled();
+    expect(createTenantKnexMock).not.toHaveBeenCalled();
+  });
+
   it('T006: bundled child sync publishes one live update per affected child', async () => {
     withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) =>
       callback(

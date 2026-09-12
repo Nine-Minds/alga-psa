@@ -633,7 +633,8 @@
           "loading": "Ładowanie statusów zgłoszeń tablicy…",
           "statusName": "Nazwa statusu",
           "closed": "Zamknięte",
-          "default": "Domyślne"
+          "default": "Domyślne",
+          "portalSelectable": "Użytkownicy portalu klienta mogą wybrać ten status"
         },
         "inboundReplyReopen": {
           "enabledLabel": "Otwórz ponownie zamknięte zgłoszenia przy przychodzących odpowiedziach",

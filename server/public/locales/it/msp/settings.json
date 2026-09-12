@@ -629,7 +629,8 @@
           "loading": "Caricamento stati ticket della bacheca…",
           "statusName": "Nome stato",
           "closed": "Chiuso",
-          "default": "Predefinito"
+          "default": "Predefinito",
+          "portalSelectable": "Gli utenti del portale clienti possono selezionare questo stato"
         },
         "inboundReplyReopen": {
           "enabledLabel": "Riapri ticket chiusi in caso di risposte in arrivo",

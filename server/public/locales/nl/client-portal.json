@@ -976,7 +976,8 @@
     },
     "tickets": {
       "notFoundOrDenied": "Ticket niet gevonden of toegang geweigerd",
-      "invalidData": "Ongeldige ticketgegevens"
+      "invalidData": "Ongeldige ticketgegevens",
+      "statusNotPortalSelectable": "Deze status kan niet worden geselecteerd in het klantenportaal"
     },
     "visibilityGroups": {
       "checkDetails": "Controleer de gegevens van de zichtbaarheidsgroep en probeer het opnieuw.",

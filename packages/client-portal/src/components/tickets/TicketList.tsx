@@ -15,7 +15,7 @@ import Link from 'next/link';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { format } from 'date-fns';
-import { getClientTickets, updateTicketStatus } from '@alga-psa/client-portal/actions';
+import { getClientTickets, updateTicketStatus, getClientPortalTicketStatuses } from '@alga-psa/client-portal/actions';
 import { getTicketStatuses } from '@alga-psa/reference-data/actions';
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
 import { getTicketCategories } from '@alga-psa/tickets/actions/ticketCategoryActions';
@@ -232,7 +232,10 @@ export function TicketList() {
       try {
         const boardStatusEntries = await Promise.all(
           uniqueBoardIds.map(async (boardId) => {
-            const statuses: IStatus[] = await getTicketStatuses(boardId);
+            const statuses = await getClientPortalTicketStatuses(boardId);
+            if (isActionMessageError(statuses) || isActionPermissionError(statuses)) {
+              throw new Error(getErrorMessage(statuses));
+            }
             return [
               boardId,
               statuses.map((status: IStatus): SelectOption => ({

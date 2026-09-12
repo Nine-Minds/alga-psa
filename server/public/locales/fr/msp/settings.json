@@ -629,7 +629,8 @@
           "loading": "Chargement des statuts de tickets du tableau…",
           "statusName": "Nom du statut",
           "closed": "Fermé",
-          "default": "Par défaut"
+          "default": "Par défaut",
+          "portalSelectable": "Les utilisateurs du portail client peuvent sélectionner ce statut"
         },
         "inboundReplyReopen": {
           "enabledLabel": "Rouvrir les tickets fermés lors des réponses entrantes",

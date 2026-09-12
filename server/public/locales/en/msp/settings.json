@@ -629,7 +629,8 @@
           "loading": "Loading board ticket statuses…",
           "statusName": "Status name",
           "closed": "Closed",
-          "default": "Default"
+          "default": "Default",
+          "portalSelectable": "Client portal users can select this status"
         },
         "inboundReplyReopen": {
           "enabledLabel": "Reopen closed tickets on inbound replies",
