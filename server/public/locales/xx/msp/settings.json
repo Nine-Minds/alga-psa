@@ -2114,16 +2114,16 @@
       },
       "errors": {
         "noImportableRecords": "⟦Ŧħīş ƥȧƈķȧɠḗ ƈȯƞŧȧīƞḗḓ ƞȯ īḿƥȯřŧȧƀŀḗ řḗƈȯřḓş.⟧",
-        "permissionDenied": "⟦You do not have permission to import or export data.⟧",
-        "invalidSpreadsheet": "⟦That spreadsheet could not be read. Check that it is a valid CSV or XLSX file and try again.⟧",
-        "notAmpPackage": "⟦That file is not an AMP package. Upload a .amp or .sqlite file.⟧",
-        "tooLarge": "⟦This upload is larger than the maximum allowed size.⟧",
-        "sizeMismatch": "⟦The upload did not complete. Please try again.⟧",
-        "noRecognizedHeaders": "⟦None of the columns in that spreadsheet were recognized. Check the header row and try again.⟧",
-        "storageRejected": "⟦The server rejected this upload. Ask your administrator to check the storage file-type configuration.⟧",
-        "spreadsheetFailed": "⟦The spreadsheet could not be imported. Please try again.⟧",
-        "uploadFailed": "⟦The package could not be uploaded. Please try again.⟧",
-        "unknown": "⟦The upload failed. Please try again.⟧"
+        "permissionDenied": "⟦Ẏȯŭ ḓȯ ƞȯŧ ħȧṽḗ ƥḗřḿīşşīȯƞ ŧȯ īḿƥȯřŧ ȯř ḗẋƥȯřŧ ḓȧŧȧ.⟧",
+        "invalidSpreadsheet": "⟦Ŧħȧŧ şƥřḗȧḓşħḗḗŧ ƈȯŭŀḓ ƞȯŧ ƀḗ řḗȧḓ. Ƈħḗƈķ ŧħȧŧ īŧ īş ȧ ṽȧŀīḓ ƇŞṼ ȯř ẊĿŞẊ ƒīŀḗ ȧƞḓ ŧřẏ ȧɠȧīƞ.⟧",
+        "notAmpPackage": "⟦Ŧħȧŧ ƒīŀḗ īş ƞȯŧ ȧƞ ȦḾƤ ƥȧƈķȧɠḗ. Ŭƥŀȯȧḓ ȧ .ȧḿƥ ȯř .şʠŀīŧḗ ƒīŀḗ.⟧",
+        "tooLarge": "⟦Ŧħīş ŭƥŀȯȧḓ īş ŀȧřɠḗř ŧħȧƞ ŧħḗ ḿȧẋīḿŭḿ ȧŀŀȯẇḗḓ şīẑḗ.⟧",
+        "sizeMismatch": "⟦Ŧħḗ ŭƥŀȯȧḓ ḓīḓ ƞȯŧ ƈȯḿƥŀḗŧḗ. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ.⟧",
+        "noRecognizedHeaders": "⟦Ƞȯƞḗ ȯƒ ŧħḗ ƈȯŀŭḿƞş īƞ ŧħȧŧ şƥřḗȧḓşħḗḗŧ ẇḗřḗ řḗƈȯɠƞīẑḗḓ. Ƈħḗƈķ ŧħḗ ħḗȧḓḗř řȯẇ ȧƞḓ ŧřẏ ȧɠȧīƞ.⟧",
+        "storageRejected": "⟦Ŧħḗ şḗřṽḗř řḗĵḗƈŧḗḓ ŧħīş ŭƥŀȯȧḓ. Ȧşķ ẏȯŭř ȧḓḿīƞīşŧřȧŧȯř ŧȯ ƈħḗƈķ ŧħḗ şŧȯřȧɠḗ ƒīŀḗ-ŧẏƥḗ ƈȯƞƒīɠŭřȧŧīȯƞ.⟧",
+        "spreadsheetFailed": "⟦Ŧħḗ şƥřḗȧḓşħḗḗŧ ƈȯŭŀḓ ƞȯŧ ƀḗ īḿƥȯřŧḗḓ. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ.⟧",
+        "uploadFailed": "⟦Ŧħḗ ƥȧƈķȧɠḗ ƈȯŭŀḓ ƞȯŧ ƀḗ ŭƥŀȯȧḓḗḓ. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ.⟧",
+        "unknown": "⟦Ŧħḗ ŭƥŀȯȧḓ ƒȧīŀḗḓ. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ.⟧"
       },
       "preflight": {
         "title": "⟦Ƥřḗƒŀīɠħŧ⟧"
@@ -2133,17 +2133,17 @@
         "applying": "⟦Ḿīɠřȧŧīȯƞ īƞ ƥřȯɠřḗşş⟧"
       },
       "badges": {
-        "nothingImported": "⟦Nothing imported⟧"
+        "nothingImported": "⟦Ƞȯŧħīƞɠ īḿƥȯřŧḗḓ⟧"
       },
       "results": {
-        "skippedSamePackage": "⟦Skipped records were already migrated by an earlier run of the same package.⟧",
-        "skippedOtherPackage": "⟦Skipped records were matched to entities created by an earlier migration of a different package: {{packages}}.⟧",
-        "skippedExistingEntity": "⟦Skipped records were matched to existing entities.⟧",
-        "nothingImportedTitle": "⟦Nothing was imported⟧",
-        "nothingImportedBody": "⟦This run created no new records. Every row matched something that already existed, so nothing was changed.⟧",
-        "claimedBySamePackage": "⟦Already migrated by this package⟧",
-        "claimedByOtherPackage": "⟦Already migrated by {{file}}⟧",
-        "claimedByExistingEntity": "⟦Matched to an existing entity⟧"
+        "skippedSamePackage": "⟦Şķīƥƥḗḓ řḗƈȯřḓş ẇḗřḗ ȧŀřḗȧḓẏ ḿīɠřȧŧḗḓ ƀẏ ȧƞ ḗȧřŀīḗř řŭƞ ȯƒ ŧħḗ şȧḿḗ ƥȧƈķȧɠḗ.⟧",
+        "skippedOtherPackage": "⟦Şķīƥƥḗḓ řḗƈȯřḓş ẇḗřḗ ḿȧŧƈħḗḓ ŧȯ ḗƞŧīŧīḗş ƈřḗȧŧḗḓ ƀẏ ȧƞ ḗȧřŀīḗř ḿīɠřȧŧīȯƞ ȯƒ ȧ ḓīƒƒḗřḗƞŧ ƥȧƈķȧɠḗ: {{packages}}.⟧",
+        "skippedExistingEntity": "⟦Şķīƥƥḗḓ řḗƈȯřḓş ẇḗřḗ ḿȧŧƈħḗḓ ŧȯ ḗẋīşŧīƞɠ ḗƞŧīŧīḗş.⟧",
+        "nothingImportedTitle": "⟦Ƞȯŧħīƞɠ ẇȧş īḿƥȯřŧḗḓ⟧",
+        "nothingImportedBody": "⟦Ŧħīş řŭƞ ƈřḗȧŧḗḓ ƞȯ ƞḗẇ řḗƈȯřḓş. Ḗṽḗřẏ řȯẇ ḿȧŧƈħḗḓ şȯḿḗŧħīƞɠ ŧħȧŧ ȧŀřḗȧḓẏ ḗẋīşŧḗḓ, şȯ ƞȯŧħīƞɠ ẇȧş ƈħȧƞɠḗḓ.⟧",
+        "claimedBySamePackage": "⟦Ȧŀřḗȧḓẏ ḿīɠřȧŧḗḓ ƀẏ ŧħīş ƥȧƈķȧɠḗ⟧",
+        "claimedByOtherPackage": "⟦Ȧŀřḗȧḓẏ ḿīɠřȧŧḗḓ ƀẏ {{file}}⟧",
+        "claimedByExistingEntity": "⟦Ḿȧŧƈħḗḓ ŧȯ ȧƞ ḗẋīşŧīƞɠ ḗƞŧīŧẏ⟧"
       }
     },
     "jobDetails": {
