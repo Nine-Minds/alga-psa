@@ -9,7 +9,7 @@ import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { DeleteEntityDialog } from '@alga-psa/ui';
 // Import new action and types
 import { getServices, updateService, updateServicePricing, deleteService, getServiceTypesForSelection, PaginatedServicesResponse, createServiceTypeInline, updateServiceTypeInline, deleteServiceTypeInline } from '../../../actions/serviceActions';
-import { getServiceContractUsage, applyServicePriceChange } from '../../../actions/servicePriceRolloutActions';
+import { getServiceContractUsage, applyServicePriceChange, type ServiceContractUsage } from '../../../actions/servicePriceRolloutActions';
 import PriceChangeRolloutDialog from './PriceChangeRolloutDialog';
 import RateReviewDialog from './RateReviewDialog';
 import { getDefaultBillingSettings } from '../../../actions/billingSettingsActions';
@@ -95,6 +95,10 @@ const ServiceCatalogManager: React.FC = () => {
     prices: Array<{ currency_code: string; rate: number }>;
   } | null>(null);
   const [isRateReviewOpen, setIsRateReviewOpen] = useState(false);
+  // Entry point B (plan §3.2): "used on N contracts" per catalog service, and
+  // the read-only dialog it opens with no pending price change.
+  const [usageByService, setUsageByService] = useState<Record<string, ServiceContractUsage>>({});
+  const [reviewingService, setReviewingService] = useState<IService | null>(null);
   const filteredServices = services.filter(service => {
     // Filter by Service Type
     const serviceTypeMatch = selectedServiceType === 'all' || service.custom_service_type_id === selectedServiceType;
@@ -221,6 +225,38 @@ const ServiceCatalogManager: React.FC = () => {
   // Keep track of whether we're in the middle of an update operation
   const [isUpdatingService, setIsUpdatingService] = useState(false);
   
+  /**
+   * One indexed aggregate per visible service (plan §3.2). Counts are fetched
+   * for the current page only; a failed count degrades to no badge, never to a
+   * broken table.
+   */
+  const loadUsageCounts = useCallback(async (pageServices: IService[]) => {
+    const ids = pageServices
+      .map((service) => service.service_id)
+      .filter((id): id is string => Boolean(id));
+    if (ids.length === 0) return;
+
+    const results = await Promise.all(
+      ids.map(async (serviceId) => {
+        try {
+          const usage = await getServiceContractUsage(serviceId);
+          return [serviceId, 'contractCount' in usage ? usage : null] as const;
+        } catch (usageError) {
+          console.error(`Error loading contract usage for service ${serviceId}:`, usageError);
+          return [serviceId, null] as const;
+        }
+      }),
+    );
+
+    setUsageByService((prev) => {
+      const next = { ...prev };
+      for (const [serviceId, usage] of results) {
+        if (usage) next[serviceId] = usage;
+      }
+      return next;
+    });
+  }, []);
+
   const fetchServices = async (preservePage = false) => {
     setIsLoading(true);
     try {
@@ -280,6 +316,20 @@ const ServiceCatalogManager: React.FC = () => {
       setIsLoading(false);
     }
   };
+
+  // Load the "used on N contracts" count for the services actually on screen.
+  // Server-side pagination already hands us the page; client-side filtering
+  // paginates `filteredServices` locally, so slice the visible page there.
+  useEffect(() => {
+    const isFiltering = selectedServiceType !== 'all' || selectedBillingMethod !== 'all';
+    const pageServices = isFiltering
+      ? filteredServices.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+      : services;
+    void loadUsageCounts(pageServices);
+    // `filteredServices` is derived from the listed inputs;
+    // `loadUsageCounts` is stable (useCallback with no deps).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [services, currentPage, pageSize, selectedServiceType, selectedBillingMethod, loadUsageCounts]);
 
   const fetchCategories = async () => {
     try {
@@ -616,6 +666,48 @@ const ServiceCatalogManager: React.FC = () => {
               : Number(rate?.tax_percentage);
           const percentagePart = !isNaN(percentageValue) ? percentageValue.toFixed(2) : '0.00';
           return rate ? `${descriptionPart} - ${percentagePart}%` : tax_rate_id; // Fallback to ID
+        },
+      },
+      // Entry point B (plan §3.2): reopen the rollout/usage flow later. The id
+      // is entity-free (rule 4); the service id rides in data-service-id.
+      {
+        title: t('serviceCatalog.table.contractUsage', { defaultValue: 'Contracts' }),
+        dataIndex: 'service_id',
+        render: (_value, record) => {
+          const serviceId = record.service_id;
+          const count = serviceId ? usageByService[serviceId]?.contractCount : undefined;
+          if (!serviceId || count === undefined) {
+            return (
+              <span className="text-muted-foreground">
+                {t('common.notAvailable', { defaultValue: 'N/A' })}
+              </span>
+            );
+          }
+          if (count === 0) {
+            return (
+              <span className="text-muted-foreground">
+                {t('serviceCatalog.table.contractUsageNone', { defaultValue: 'Not used' })}
+              </span>
+            );
+          }
+          return (
+            <Button
+              id="service-contract-usage"
+              data-service-id={serviceId}
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={(event) => {
+                event.stopPropagation();
+                setReviewingService(record);
+              }}
+            >
+              {t('serviceCatalog.table.contractUsageCount', {
+                contracts: count,
+                defaultValue: 'Used on {{contracts}}',
+              })}
+            </Button>
+          );
         },
       },
     ];
@@ -1224,6 +1316,19 @@ const ServiceCatalogManager: React.FC = () => {
             setPendingPriceChange(null);
             setIsRateReviewOpen(true);
           }}
+        />
+      )}
+      {reviewingService && (
+        <PriceChangeRolloutDialog
+          isOpen
+          mode="review"
+          onClose={() => setReviewingService(null)}
+          serviceId={reviewingService.service_id ?? ''}
+          serviceName={reviewingService.service_name}
+          newRateCents={Math.round(
+            Number(reviewingService.prices?.[0]?.rate ?? reviewingService.default_rate ?? 0),
+          )}
+          currency={reviewingService.prices?.[0]?.currency_code ?? defaultCurrency}
         />
       )}
       <RateReviewDialog

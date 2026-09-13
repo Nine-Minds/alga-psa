@@ -3,13 +3,12 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Button } from '@alga-psa/ui/components/Button';
-import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
-import { BulkActionBar } from '@alga-psa/ui/components/BulkActionBar';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { ColumnDefinition } from '@alga-psa/types';
 import {
   previewServicePriceChange,
@@ -24,8 +23,13 @@ export interface PriceChangeRolloutDialogProps {
   serviceName: string;
   newRateCents: number;
   currency: string;
-  onSkip: (effectiveDate?: string) => Promise<void> | void;
-  onApply: (effectiveDate: string) => Promise<void> | void;
+  /**
+   * `rollout` applies a pending price change; `review` is the read-only
+   * "who is on this price?" entry point (plan §3.2) with no pending change.
+   */
+  mode?: 'rollout' | 'review';
+  onSkip?: (effectiveDate?: string) => Promise<void> | void;
+  onApply?: (effectiveDate: string) => Promise<void> | void;
   onReviewRates?: () => void;
 }
 
@@ -38,12 +42,6 @@ function isoDate(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
-const bucketLabel = (count: number, label: string) => (
-  <p className="text-sm font-medium text-foreground">
-    {label} <span className="text-muted-foreground">({count})</span>
-  </p>
-);
-
 export default function PriceChangeRolloutDialog({
   isOpen,
   onClose,
@@ -51,17 +49,19 @@ export default function PriceChangeRolloutDialog({
   serviceName,
   newRateCents,
   currency,
+  mode = 'rollout',
   onSkip,
   onApply,
   onReviewRates,
 }: PriceChangeRolloutDialogProps) {
   const { money, moneySigned } = useCurrencyFormat();
+  const { t } = useTranslation('msp/billing-settings');
+  const isReview = mode === 'review';
   const [effectiveDate, setEffectiveDate] = useState<Date>(() => defaultEffectiveDate());
   const [preview, setPreview] = useState<ServicePriceChangePreview | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const loadPreview = useCallback(
     async (date: Date) => {
@@ -76,18 +76,25 @@ export default function PriceChangeRolloutDialog({
         );
         if ('willChange' in result) {
           setPreview(result);
-          setSelected(new Set(result.willChange.map((row) => row.contractLineId)));
         } else {
-          setError('Could not load the price-change preview.');
+          setError(
+            t('priceChangeRollout.previewFailed', {
+              defaultValue: 'Could not load the price-change preview.',
+            }),
+          );
         }
       } catch (previewError) {
         console.error('Failed to preview price change:', previewError);
-        setError('Could not load the price-change preview.');
+        setError(
+          t('priceChangeRollout.previewFailed', {
+            defaultValue: 'Could not load the price-change preview.',
+          }),
+        );
       } finally {
         setIsLoading(false);
       }
     },
-    [serviceId, newRateCents, currency],
+    [serviceId, newRateCents, currency, t],
   );
 
   useEffect(() => {
@@ -97,38 +104,27 @@ export default function PriceChangeRolloutDialog({
     }
   }, [isOpen, loadPreview]);
 
-  const toggleSelected = useCallback((lineId: string, checked: boolean) => {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (checked) next.add(lineId);
-      else next.delete(lineId);
-      return next;
-    });
-  }, []);
-
+  // The rollout is catalog-level by design: one effective-dated price row
+  // changes every inherited line. There is no per-line selection because there
+  // is no per-contract write to select — a control here would ignore its input.
   const columns = useMemo<ColumnDefinition<ServicePriceChangePreviewRow>[]>(
     () => [
       {
-        title: '',
-        dataIndex: 'contractLineId',
-        width: '40px',
-        render: (_value: unknown, record: ServicePriceChangePreviewRow, index: number) => (
-          <Checkbox
-            id={`price-change-row-select-${index}`}
-            data-contract-line-id={record.contractLineId}
-            checked={selected.has(record.contractLineId)}
-            onChange={(event) =>
-              toggleSelected(record.contractLineId, event.target.checked)
-            }
-            skipRegistration
-          />
-        ),
+        title: t('priceChangeRollout.columns.client', { defaultValue: 'Client' }),
+        dataIndex: 'clientName',
       },
-      { title: 'Client', dataIndex: 'clientName' },
-      { title: 'Contract', dataIndex: 'contractName' },
-      { title: 'Line', dataIndex: 'contractLineId' },
       {
-        title: 'Current',
+        title: t('priceChangeRollout.columns.contract', { defaultValue: 'Contract' }),
+        dataIndex: 'contractName',
+      },
+      {
+        title: t('priceChangeRollout.columns.line', { defaultValue: 'Line' }),
+        dataIndex: 'contractLineName',
+        render: (_value: unknown, record: ServicePriceChangePreviewRow) =>
+          record.contractLineName ?? serviceName,
+      },
+      {
+        title: t('priceChangeRollout.columns.current', { defaultValue: 'Current' }),
         dataIndex: 'currentRateCents',
         render: (_value: unknown, record: ServicePriceChangePreviewRow) =>
           record.currentRateCents === null
@@ -136,7 +132,7 @@ export default function PriceChangeRolloutDialog({
             : money(record.currentRateCents, record.currency),
       },
       {
-        title: 'New',
+        title: t('priceChangeRollout.columns.new', { defaultValue: 'New' }),
         dataIndex: 'newRateCents',
         render: (_value: unknown, record: ServicePriceChangePreviewRow) =>
           record.newRateCents === null
@@ -144,16 +140,17 @@ export default function PriceChangeRolloutDialog({
             : money(record.newRateCents, record.currency),
       },
       {
-        title: 'Delta',
+        title: t('priceChangeRollout.columns.delta', { defaultValue: 'Delta' }),
         dataIndex: 'deltaCents',
         render: (_value: unknown, record: ServicePriceChangePreviewRow) =>
           moneySigned(record.deltaCents, record.currency),
       },
     ],
-    [money, moneySigned, selected, toggleSelected],
+    [money, moneySigned, serviceName, t],
   );
 
   const handleApply = async () => {
+    if (!onApply) return;
     setIsSaving(true);
     setError(null);
     try {
@@ -161,13 +158,18 @@ export default function PriceChangeRolloutDialog({
       onClose();
     } catch (applyError) {
       console.error('Failed to apply price change:', applyError);
-      setError('Could not apply the rollout. No changes were made.');
+      setError(
+        t('priceChangeRollout.applyFailed', {
+          defaultValue: 'Could not apply the rollout. No changes were made.',
+        }),
+      );
     } finally {
       setIsSaving(false);
     }
   };
 
   const handleSkip = async () => {
+    if (!onSkip) return;
     setIsSaving(true);
     setError(null);
     try {
@@ -175,13 +177,23 @@ export default function PriceChangeRolloutDialog({
       onClose();
     } catch (skipError) {
       console.error('Failed to save price:', skipError);
-      setError('Could not save the price change.');
+      setError(
+        t('priceChangeRollout.skipFailed', {
+          defaultValue: 'Could not save the price change.',
+        }),
+      );
     } finally {
       setIsSaving(false);
     }
   };
 
-  const footer = (
+  const footer = isReview ? (
+    <div className="flex items-center justify-end gap-2">
+      <Button id="price-change-close" type="button" variant="outline" onClick={onClose}>
+        {t('priceChangeRollout.close', { defaultValue: 'Close' })}
+      </Button>
+    </div>
+  ) : (
     <div className="flex items-center justify-end gap-2">
       <Button
         id="price-change-skip"
@@ -190,7 +202,7 @@ export default function PriceChangeRolloutDialog({
         onClick={handleSkip}
         disabled={isSaving}
       >
-        Just save the price
+        {t('priceChangeRollout.skip', { defaultValue: 'Just save the price' })}
       </Button>
       <Button
         id="price-change-apply"
@@ -198,7 +210,9 @@ export default function PriceChangeRolloutDialog({
         onClick={handleApply}
         disabled={isSaving || isLoading}
       >
-        {isSaving ? 'Saving…' : 'Apply to inherited lines'}
+        {isSaving
+          ? t('priceChangeRollout.applying', { defaultValue: 'Saving…' })
+          : t('priceChangeRollout.apply', { defaultValue: 'Apply to inherited lines' })}
       </Button>
     </div>
   );
@@ -208,7 +222,11 @@ export default function PriceChangeRolloutDialog({
       isOpen={isOpen}
       onClose={onClose}
       id="price-change-rollout-dialog"
-      title="Price change rollout"
+      title={
+        isReview
+          ? t('priceChangeRollout.usageTitle', { defaultValue: 'Service usage' })
+          : t('priceChangeRollout.title', { defaultValue: 'Price change rollout' })
+      }
       footer={footer}
       className="max-w-4xl"
     >
@@ -216,8 +234,15 @@ export default function PriceChangeRolloutDialog({
         <div className="space-y-4">
           <div>
             <p className="text-sm text-muted-foreground">
-              {serviceName}: {money(preview?.oldRateCents ?? 0, currency)} →{' '}
-              {money(newRateCents, currency)} {currency}
+              {serviceName}: {money(preview?.oldRateCents ?? newRateCents, currency)}
+              {isReview ? (
+                <> {currency}</>
+              ) : (
+                <>
+                  {' '}
+                  &rarr; {money(newRateCents, currency)} {currency}
+                </>
+              )}
             </p>
           </div>
 
@@ -226,7 +251,7 @@ export default function PriceChangeRolloutDialog({
               htmlFor="price-change-effective-date"
               className="text-sm font-medium text-foreground"
             >
-              Effective date
+              {t('priceChangeRollout.effectiveDate', { defaultValue: 'Effective date' })}
             </label>
             <DatePicker
               id="price-change-effective-date"
@@ -237,7 +262,9 @@ export default function PriceChangeRolloutDialog({
               }}
             />
             <p className="text-xs text-muted-foreground">
-              Defaults to the next billing period boundary.
+              {t('priceChangeRollout.effectiveDateHint', {
+                defaultValue: 'Defaults to the next billing period boundary.',
+              })}
             </p>
           </div>
 
@@ -254,7 +281,14 @@ export default function PriceChangeRolloutDialog({
           ) : preview ? (
             <div className="space-y-6">
               <div className="space-y-2">
-                {bucketLabel(preview.willChange.length, 'Will change')}
+                <p className="text-sm font-medium text-foreground">
+                  {isReview
+                    ? t('priceChangeRollout.followsCatalog', {
+                        defaultValue: 'Follows the catalog',
+                      })
+                    : t('priceChangeRollout.willChange', { defaultValue: 'Will change' })}{' '}
+                  <span className="text-muted-foreground">({preview.willChange.length})</span>
+                </p>
                 {preview.willChange.length > 0 ? (
                   <DataTable
                     id="price-change-affected-grid"
@@ -264,39 +298,22 @@ export default function PriceChangeRolloutDialog({
                   />
                 ) : (
                   <p className="text-sm text-muted-foreground">
-                    No inherited lines change at this date.
+                    {t('priceChangeRollout.noInheritedLines', {
+                      defaultValue: 'No inherited lines change at this date.',
+                    })}
                   </p>
-                )}
-                {preview.willChange.length > 0 && (
-                  <div className="flex items-center gap-2">
-                    <Button
-                      id="price-change-select-all"
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() =>
-                        setSelected(new Set(preview.willChange.map((row) => row.contractLineId)))
-                      }
-                    >
-                      Select all
-                    </Button>
-                    <Button
-                      id="price-change-select-none"
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setSelected(new Set())}
-                    >
-                      Select none
-                    </Button>
-                  </div>
                 )}
               </div>
 
               <div className="space-y-2">
-                {bucketLabel(preview.custom.length, "Won't change — custom")}
+                <p className="text-sm font-medium text-foreground">
+                  {t('priceChangeRollout.custom', { defaultValue: "Won't change — custom" })}{' '}
+                  <span className="text-muted-foreground">({preview.custom.length})</span>
+                </p>
                 {preview.custom.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">None.</p>
+                  <p className="text-sm text-muted-foreground">
+                    {t('priceChangeRollout.none', { defaultValue: 'None.' })}
+                  </p>
                 ) : (
                   <ul className="space-y-1 text-sm">
                     {preview.custom.map((row) => (
@@ -316,11 +333,18 @@ export default function PriceChangeRolloutDialog({
               </div>
 
               <div className="space-y-2">
-                {bucketLabel(preview.unreviewed.length, "Won't change — not yet classified")}
+                <p className="text-sm font-medium text-foreground">
+                  {t('priceChangeRollout.unreviewed', {
+                    defaultValue: "Won't change — not yet classified",
+                  })}{' '}
+                  <span className="text-muted-foreground">({preview.unreviewed.length})</span>
+                </p>
                 {preview.unreviewed.length > 0 && (
                   <Alert variant="info">
                     <AlertDescription>
-                      These lines bill unchanged until you review them.{' '}
+                      {t('priceChangeRollout.unreviewedAlert', {
+                        defaultValue: 'These lines bill unchanged until you review them.',
+                      })}{' '}
                       {onReviewRates && (
                         <button
                           type="button"
@@ -328,21 +352,28 @@ export default function PriceChangeRolloutDialog({
                           className="underline"
                           onClick={onReviewRates}
                         >
-                          Review rates
+                          {t('priceChangeRollout.reviewRates', { defaultValue: 'Review rates' })}
                         </button>
                       )}
                     </AlertDescription>
                   </Alert>
                 )}
                 {preview.unreviewed.length === 0 && (
-                  <p className="text-sm text-muted-foreground">None.</p>
+                  <p className="text-sm text-muted-foreground">
+                    {t('priceChangeRollout.none', { defaultValue: 'None.' })}
+                  </p>
                 )}
               </div>
 
               <div className="space-y-2">
-                {bucketLabel(preview.excluded.length, 'Excluded — already invoiced')}
+                <p className="text-sm font-medium text-foreground">
+                  {t('priceChangeRollout.excluded', { defaultValue: 'Excluded — already invoiced' })}{' '}
+                  <span className="text-muted-foreground">({preview.excluded.length})</span>
+                </p>
                 {preview.excluded.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">None.</p>
+                  <p className="text-sm text-muted-foreground">
+                    {t('priceChangeRollout.none', { defaultValue: 'None.' })}
+                  </p>
                 ) : (
                   <ul className="space-y-1 text-sm text-muted-foreground">
                     {preview.excluded.map((row) => (
@@ -354,28 +385,30 @@ export default function PriceChangeRolloutDialog({
                 )}
               </div>
 
-              <div className="rounded-md border p-3 text-sm">
-                <div className="flex justify-between">
-                  <span>Total monthly revenue delta</span>
-                  <span className="font-medium">
-                    {moneySigned(preview.totalMonthlyDeltaCents, preview.currency)}
-                  </span>
+              {!isReview && (
+                <div className="rounded-md border p-3 text-sm">
+                  <div className="flex justify-between">
+                    <span>
+                      {t('priceChangeRollout.totalMonthlyDelta', {
+                        defaultValue: 'Total monthly revenue delta',
+                      })}
+                    </span>
+                    <span className="font-medium">
+                      {moneySigned(preview.totalMonthlyDeltaCents, preview.currency)}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {t('priceChangeRollout.acrossAllInherited', {
+                      lines: preview.willChange.length,
+                      defaultValue: 'Across all {{lines}} inherited line(s).',
+                    })}
+                  </p>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Across the {preview.willChange.length} inherited line(s) selected.
-                </p>
-              </div>
+              )}
             </div>
           ) : null}
         </div>
       </DialogContent>
-
-      <BulkActionBar
-        count={selected.size}
-        selectedLabel={`${selected.size} selected`}
-        idPrefix="price-change-bulk-actions"
-        onClear={() => setSelected(new Set())}
-      />
     </Dialog>
   );
 }
