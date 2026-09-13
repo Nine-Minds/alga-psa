@@ -18,5 +18,11 @@
     "id": "T4",
     "description": "Affected package typechecks and lint",
     "passed": true
+  },
+  {
+    "id": "T5",
+    "description": "Composed stored-connection selection and batch creation cover unset, other-provider, stale, explicit, historical, ambiguous and disconnected defaults",
+    "implemented": true,
+    "passed": true
   }
 ]

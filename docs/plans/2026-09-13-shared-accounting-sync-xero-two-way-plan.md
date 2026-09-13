@@ -4,6 +4,32 @@ Card: Complete shared accounting sync and Xero two-way reconciliation
 Worktree branch: `feature/complete-shared-accounting-sync-and-xero-two-way` (stacked on `feature/co-managed-it`)
 Date: 2026-09-13
 
+## Final mitigation takeover: manual export default
+
+The three final-round repairs are present at `642ca29d60`. Independent review
+passed the ambiguity guards, mapping relink/conflict tests, and the real
+mapping-action → invoice export → inbound payment/replay DB journey. A new
+regression remains: an unset saved default gives the export selector an
+`absent` outcome and it creates a batch with no target realm.
+
+Repair plan:
+
+- Make the shared I/O selection helper resolve the first connected Xero
+  connection for absent or unmatched defaults, preserving the existing
+  provider-scoped fallback (including a saved QBO default). Retain the pure
+  helper's distinct raw outcomes and never fall back for ambiguity.
+- Delegate the connection-ID-only helper to that same usable selection.
+  Settings, catalogs and manual exports then receive the same connection.
+- Reject manual export creation before persistence when no connection can be
+  selected, and keep explicit batch targets authoritative.
+- Add composed behavioral coverage through actual credential/settings
+  selection and batch creation for absent, QBO, stale, canonical, historical,
+  ambiguous and disconnected cases. Re-run focused QBO/Xero tests, the isolated
+  DB acceptance/guard suites, affected typechecks and the billing build.
+
+The branch stays on Co-Managed IT at `0af97e5c61`. No schema, authorization,
+financial-write, publication, or unrelated environment changes are required.
+
 ## Planning note (missing committed design plan)
 
 The Design Session step recorded its plan as a durable card fact and a review
@@ -407,3 +433,12 @@ pre-existing teamsPackageActions), billing curated 1268 passed (3 pre-existing
 unrelated), catalog/status component rendering, typechecks, changed-file ESLint
 0 errors, billing tsup build, locale parity/quality audits. No live vendor call;
 no full Next.js build.
+
+## Final mitigation takeover validation
+
+- Shared selection now resolves absent/unmatched saved defaults to the connected Xero default consistently. The ID-only helper delegates to it; ambiguous selections remain unavailable, and disconnected manual exports fail before preview or batch creation.
+- New composed selection-to-batch suite: six cases failed before the repair; all ten now pass, covering first use, QBO/stale defaults, selected and historical identities, ambiguity with an explicit override, missing/cross-tenant connections, and QBO routing.
+- Current-turn checks: 368 non-DB behavioral tests pass (24 selector tests, 284 accounting/QBO regressions, 49 Xero scope/settings tests, 11 adapter polling tests). Serial isolated DB suites pass 20/20 (8 mapping guards and 12 real export/payment/credit/replay scenarios).
+- Integrations, billing and types typechecks pass with a 12 GB Node heap. Billing tsup build passes. Changed-file ESLint has zero errors; existing warnings remain. No live vendor call, full production Next.js build, or new browser smoke run is claimed.
+- Existing smoke artifacts and the port-3004 environment are preserved. The temporary `test_xero_final_takeover` database is removed after validation. Parent merge base remains `0af97e5c61` and the board dependency is unchanged. Keep the commit local; do not push or open a PR.
+- Review first: the shared `getXeroDefaultSelection` fallback and its composed manual-export regression suite; previous mapping conflict/ambiguity and real financial-write acceptance repairs remain intact.
