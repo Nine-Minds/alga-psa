@@ -1203,6 +1203,7 @@ export const createClientContractFromWizard = withAuth(async (
         contract_id: contractId,
         display_order: nextDisplayOrder,
         custom_rate: null,
+        rate_provenance: 'inherited',
         billing_timing: recurringAuthoringPolicy.billingTiming,
         cadence_owner: recurringAuthoringPolicy.cadenceOwner,
         is_template: false,
@@ -1225,8 +1226,13 @@ export const createClientContractFromWizard = withAuth(async (
           service_id: service.service_id,
         });
 
-        let serviceBaseRate = 0;
+        // The operator's explicit rate is a snapshot (`custom`); absent one the
+        // member is left rate-less (`inherited`) so a later catalog change
+        // reaches it. Snapshotting the catalog here would shadow it forever.
+        let serviceBaseRate: number | null = null;
+        let serviceBaseProvenance: 'custom' | 'inherited' = 'inherited';
         if (submission.fixed_base_rate) {
+          serviceBaseProvenance = 'custom';
           const share = quantity / totalQuantity;
           const provisionalValue = submission.fixed_base_rate * share;
           if (index === filteredFixedServices.length - 1) {
@@ -1235,12 +1241,6 @@ export const createClientContractFromWizard = withAuth(async (
             serviceBaseRate = Math.round(provisionalValue);
             allocated = Math.round(allocated + serviceBaseRate);
           }
-        } else {
-          serviceBaseRate =
-            firstPositiveRateInCents(
-              fixedModeDefaultsByServiceId.get(service.service_id),
-              serviceCatalogById.get(service.service_id)?.default_rate
-            ) ?? 0;
         }
 
         await planServiceConfigService.createConfiguration(
@@ -1252,7 +1252,7 @@ export const createClientContractFromWizard = withAuth(async (
             tenant,
             custom_rate: undefined,
           },
-          { base_rate: serviceBaseRate ?? 0 }  // Already in cents from frontend
+          { base_rate: serviceBaseRate, rate_provenance: serviceBaseProvenance }
         );
       }
 
