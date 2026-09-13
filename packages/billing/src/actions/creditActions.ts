@@ -22,7 +22,8 @@ import {
     buildCreditNoteCreatedPayload,
 } from '@alga-psa/workflow-streams';
 import { enqueueCreditApplication } from '../services/accountingSync/syncProducers';
-import { getAccountingSyncSettings, resolveDefaultRealm } from '../services/accountingSync/accountingSyncSettings';
+import { getAccountingSyncSettings } from '../services/accountingSync/accountingSyncSettings';
+import { resolveConnectedAccountingIntegration } from '../services/accountingSync/connectedAccountingIntegration';
 import { notifyInvoiceTerminalStatus } from '../services/accountingSync/invoiceTerminalStatusHandlers';
 import {
     actionError,
@@ -102,26 +103,29 @@ async function resolveCreditSyncEnqueueDecision(
     tenant: string,
     user: IUser,
     collectedOps: boolean
-): Promise<{ shouldEnqueue: boolean; realm: string | null }> {
+): Promise<{ shouldEnqueue: boolean; realm: string | null; adapterType: string | null }> {
     if (!collectedOps) {
-        return { shouldEnqueue: false, realm: null };
+        return { shouldEnqueue: false, realm: null, adapterType: null };
     }
     if (!isEnterpriseEdition()) {
-        return { shouldEnqueue: false, realm: null };
+        return { shouldEnqueue: false, realm: null, adapterType: null };
     }
     const settings = await getAccountingSyncSettings(trx, tenant);
     if (!settings.autoSyncEnabled) {
-        return { shouldEnqueue: false, realm: null };
+        return { shouldEnqueue: false, realm: null, adapterType: null };
     }
-    const realm = await resolveDefaultRealm(trx, tenant);
-    if (!realm) {
-        return { shouldEnqueue: false, realm: null };
+    // Resolve the connected provider + organisation rather than assuming QBO,
+    // so a Xero tenant's credit applications reach the same capability gate as
+    // any other outbound operation.
+    const integration = await resolveConnectedAccountingIntegration(trx, tenant);
+    if (!integration) {
+        return { shouldEnqueue: false, realm: null, adapterType: null };
     }
     if (!(await hasPermission(user, 'accounting_integrations', 'remote_mutate', trx))) {
         // Generic denial: never hint whether the integration exists.
         throw new Error('Permission denied: applying credits that sync to the accounting integration requires the accounting remote-mutate permission.');
     }
-    return { shouldEnqueue: true, realm };
+    return { shouldEnqueue: true, realm: integration.targetRealm, adapterType: integration.adapterType };
 }
 
 function creditActionErrorFrom(error: unknown): CreditActionError | null {
@@ -916,9 +920,10 @@ export async function applyCreditToInvoiceInternal(
     // Authoritative decision, computed inside the transaction below, that the
     // post-commit enqueue derives from strictly. Unset until the transaction
     // body runs; reading it outside the transaction is the creditSyncOps guard.
-    let creditSyncDecision: { shouldEnqueue: boolean; realm: string | null } = {
+    let creditSyncDecision: { shouldEnqueue: boolean; realm: string | null; adapterType: string | null } = {
         shouldEnqueue: false,
         realm: null,
+        adapterType: null,
     };
 
     await withTransaction(knex, async (trx: Knex.Transaction) => {

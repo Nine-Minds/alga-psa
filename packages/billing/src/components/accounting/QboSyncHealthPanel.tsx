@@ -69,8 +69,10 @@ export default function QboSyncHealthPanel() {
   React.useEffect(() => {
     // The sync-configuration pickers are connection administration
     // (connections_manage), so only load the QBO catalogs they need when the
-    // user can actually change those settings.
-    if (!health?.connected || catalogLoaded || !canManageConnections) return;
+    // user can actually change those settings. Xero has no QBO catalog, so
+    // never issue QBO requests for a Xero connection.
+    const providerIsXero = health?.adapterType === 'xero';
+    if (!health?.connected || providerIsXero || catalogLoaded || !canManageConnections) return;
     setCatalogError(null);
     Promise.all([
       getQboAccounts(),
@@ -90,7 +92,7 @@ export default function QboSyncHealthPanel() {
       setCatalogError(t('integrations.qbo.sync.catalogLoadError', { defaultValue: 'Failed to load QuickBooks sync configuration options.' }));
       setCatalogLoaded(true);
     });
-  }, [health?.connected, catalogLoaded, canManageConnections, t]);
+  }, [health?.connected, health?.adapterType, catalogLoaded, canManageConnections, t]);
 
   if (healthHidden || !health) {
     return null;
@@ -98,13 +100,15 @@ export default function QboSyncHealthPanel() {
 
   const defaultRealm = health.realms.find((r) => r.isDefault)?.realmId ?? null;
   const multiRealm = health.realms.length > 1;
+  const isXero = health.adapterType === 'xero';
+  const providerLabel = isXero ? 'Xero' : 'QuickBooks';
 
   return (
     <Card id="qbo-integration-sync-health-card">
       <CardHeader>
-        <CardTitle>{t('integrations.qbo.sync.healthCardTitle', { defaultValue: 'Sync Health' })}</CardTitle>
+        <CardTitle>{t('integrations.qbo.sync.healthCardTitle', { defaultValue: `${providerLabel} Sync Health` })}</CardTitle>
         <CardDescription>
-          {t('integrations.qbo.sync.healthCardDescription', { defaultValue: 'QuickBooks accounting sync status and controls. Runs every 15 minutes.' })}
+          {t('integrations.qbo.sync.healthCardDescription', { defaultValue: `${providerLabel} accounting sync status and controls. Runs every 15 minutes.` })}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -221,7 +225,7 @@ export default function QboSyncHealthPanel() {
             </Alert>
           )}
 
-          {/* Refresh token expiry */}
+          {/* Refresh token expiry / reconnect-required */}
           {health.refreshTokenExpiresAt && (() => {
             const expiresMs = new Date(health.refreshTokenExpiresAt!).getTime() - Date.now();
             const expired = expiresMs <= 0;
@@ -230,18 +234,21 @@ export default function QboSyncHealthPanel() {
               <Alert variant={expired ? 'destructive' : 'info'}>
                 <AlertDescription>
                   {expired
-                    ? t('integrations.qbo.sync.refreshTokenExpired', { defaultValue: 'QuickBooks token expired — reconnect to resume syncing.' })
-                    : t('integrations.qbo.sync.refreshTokenExpiry', { date: expiresDate, defaultValue: `QuickBooks token expires ${expiresDate}` })}
+                    ? t('integrations.qbo.sync.refreshTokenExpired', { defaultValue: `${providerLabel} token expired — reconnect to resume syncing.` })
+                    : t('integrations.qbo.sync.refreshTokenExpiry', { date: expiresDate, defaultValue: `${providerLabel} token expires ${expiresDate}` })}
                 </AlertDescription>
               </Alert>
             );
           })()}
 
-          {/* Multi-realm: realm list with Make default */}
+          {/* Multi-organisation: organisation list with Make default (QBO only —
+              the default-organisation action validates QBO credentials). */}
           {multiRealm && (
             <div id="qbo-realm-list" className="rounded-lg border p-4 space-y-2 text-sm">
               <p className="font-medium text-foreground">
-                {t('integrations.qbo.sync.connectedCompanies', { defaultValue: 'Connected Companies' })}
+                {isXero
+                  ? t('integrations.qbo.sync.connectedOrganisations', { defaultValue: 'Connected Organisations' })
+                  : t('integrations.qbo.sync.connectedCompanies', { defaultValue: 'Connected Companies' })}
               </p>
               <div className="space-y-2">
                 {health.realms.map((realm) => (
@@ -251,7 +258,7 @@ export default function QboSyncHealthPanel() {
                       <Badge variant="secondary">
                         {t('integrations.qbo.sync.defaultRealm', { defaultValue: 'Default' })}
                       </Badge>
-                    ) : canManageConnections ? (
+                    ) : canManageConnections && !isXero ? (
                       <Button
                         id={`qbo-make-default-${realm.realmId}`}
                         variant="outline"
@@ -279,9 +286,9 @@ export default function QboSyncHealthPanel() {
           )}
 
           {/* Sync configuration: deposit / class / department pickers. These
-              write the connection settings, so they are connection
+              write QBO connection settings, so they are QBO-only and connection
               administration (connections_manage). */}
-          {health.connected && canManageConnections && (
+          {health.connected && canManageConnections && !isXero && (
             <div id="qbo-sync-config-section" className="rounded-lg border p-4 space-y-4 text-sm">
               <p className="font-medium text-foreground">
                 {t('integrations.qbo.sync.configTitle', { defaultValue: 'Sync Configuration' })}
@@ -383,7 +390,7 @@ export default function QboSyncHealthPanel() {
               <div className="pr-4">
                 <span className="text-sm font-medium">
                   {t('integrations.qbo.sync.autoProvisionCustomersLabel', {
-                    defaultValue: 'Create QuickBooks customers automatically'
+                    defaultValue: `Create ${providerLabel} customers automatically`
                   })}
                 </span>
                 <p className="text-xs text-muted-foreground">

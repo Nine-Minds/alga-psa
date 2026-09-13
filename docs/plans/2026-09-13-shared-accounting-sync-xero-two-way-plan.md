@@ -133,3 +133,37 @@ not reversed until its next change event.
 DB-backed happy/guard paths are exercised by the existing
 `*.db.test.ts` suites and the QBO simulator; a Xero DB-backed reconciliation
 test is added where the harness allows, otherwise the limitation is recorded.
+
+## Follow-up hardening (review round 1)
+
+- Fixed `XeroAdapter.findRemovedCreditAllocations`: the JSON extraction is a
+  bound raw predicate (`(metadata->>'xero_credit_note_id') = ANY(?)`), asserted
+  against the real database including organisation isolation.
+- Xero `deliver` now persists the same delivery snapshot QBO does
+  (`exported_total`, `doc_number`, `sync_token`); the drift detector explicitly
+  adopts the first observed document as the baseline for legacy mappings
+  instead of silently ignoring later changes.
+- Cursor recovery: adapters capture a conservative pre-poll watermark, expose
+  `changeSet.nextCursor` on truncation, and the cycle resumes from it. The
+  cycle repository falls back to the most recent `cursor_before` when no cycle
+  has succeeded, so a failed first poll does not skip its window.
+- Xero dates are parsed from `/Date(ms+offset)/`; credit allocations use
+  AllocationID identity (or explicit per-invoice aggregation) so duplicate
+  allocations survive replay and removal.
+- Xero auth failures (expired refresh, 401, missing connection) are classified
+  as reconnect-required and abort the cycle with a connection exception and no
+  cursor advance; polling request errors are normalized.
+- Organisation selection: `resolveConnectedAccountingIntegration` accepts a
+  preferred target and honours the settings-selected realm; the scheduled
+  handler fans out to every connected Xero organisation; invoice status and
+  health counts are organisation-scoped and tombstones excluded.
+- UI: `InvoiceSyncStatus` carries provider identity; the badge/preview gate
+  QuickBooks links and copy on the provider; the health panel is
+  provider-labelled and never loads QBO catalogs for a Xero connection.
+- Producers route through the connected provider with an echo guard for any
+  accounting-originated payment; non-QBO adapters can no longer fall back to a
+  QBO client.
+- Validation adds `server/src/test/integration/accounting/xeroInboundReconciliation.integration.test.ts`
+  (real export → poll → apply, AR rows, balances, cursor, real allocation
+  query) and QBO provider-operation regressions against the simulator.
+

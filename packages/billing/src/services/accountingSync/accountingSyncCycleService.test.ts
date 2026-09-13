@@ -310,14 +310,15 @@ describe('runAccountingSyncCycle', () => {
     expect(finishCycleCall.cursorAfter).toBe(fetchedAt);
   });
 
-  it('truncated change set preserves the pre-poll cursor (no skipping)', async () => {
-    const fixedNow = new Date('2026-01-15T12:00:00.000Z');
-    const expectedCursor = new Date(fixedNow.getTime() - CURSOR_OVERLAP_MS).toISOString();
+  it('truncated change set advances to the adapter nextCursor (forward progress)', async () => {
+    const fetchedAt = '2026-01-15T13:00:00.000Z';
+    const nextCursor = '2026-01-15T12:30:00.000Z';
     const adapter = makeFakeAdapter({
       fetchChanges: vi.fn(async () => ({
         changes: [],
         truncated: true,
-        fetchedAt: '2026-01-15T13:00:00.000Z'
+        fetchedAt,
+        nextCursor
       }))
     });
 
@@ -338,16 +339,50 @@ describe('runAccountingSyncCycle', () => {
       adapter,
       exceptions: makeFakeExceptions(),
       notifications: makeFakeNotifications(),
-      now: () => fixedNow
+      now: () => new Date('2026-01-15T12:00:00.000Z')
     });
 
     expect(finishCycleCall.status).toBe('succeeded');
-    // A full page could contain changes the poll did not reach, so the cursor
-    // must not jump forward to fetchedAt.
-    expect(finishCycleCall.cursorAfter).toBe(expectedCursor);
+    // Resuming from the adapter's forward boundary avoids the backward crawl
+    // that storing `since` caused on successive capped cycles.
+    expect(finishCycleCall.cursorAfter).toBe(nextCursor);
   });
 
-  it('inbound failure → status failed, no cursorAfter', async () => {    const adapter = makeFakeAdapter({
+  it('truncated change set without nextCursor keeps the pre-poll watermark', async () => {
+    const fetchedAt = '2026-01-15T13:00:00.000Z';
+    const adapter = makeFakeAdapter({
+      fetchChanges: vi.fn(async () => ({
+        changes: [],
+        truncated: true,
+        fetchedAt
+      }))
+    });
+
+    let finishCycleCall: any = null;
+    vi.mocked(SyncCycleRepository).mockImplementationOnce(function () { return ({
+      getLastSuccessfulCursor: vi.fn(async () => null),
+      startCycle: vi.fn(async () => 'cycle-truncated-2'),
+      finishCycle: vi.fn(async (_tenant: string, _cycleId: string, result: any) => {
+        finishCycleCall = result;
+      })
+    } as any); });
+
+    await runAccountingSyncCycle({
+      knex: {} as any,
+      tenantId: TENANT,
+      adapterType: ADAPTER_TYPE,
+      targetRealm: REALM,
+      adapter,
+      exceptions: makeFakeExceptions(),
+      notifications: makeFakeNotifications(),
+      now: () => new Date('2026-01-15T12:00:00.000Z')
+    });
+
+    expect(finishCycleCall.cursorAfter).toBe(fetchedAt);
+  });
+
+  it('inbound failure → status failed, no cursorAfter', async () => {
+    const adapter = makeFakeAdapter({
       fetchChanges: vi.fn(async () => {
         throw new Error('network error');
       })
@@ -416,6 +451,49 @@ describe('runAccountingSyncCycle', () => {
     );
     expect(notifications.notifyConnectionExpired).toHaveBeenCalled();
   });
+
+  it.each(['XERO_REFRESH_EXPIRED', 'XERO_UNAUTHORIZED'])(
+    '%s aborts the cycle as reconnect-required with no cursor advance',
+    async (code) => {
+      const adapter = makeFakeAdapter({
+        fetchChanges: vi.fn(async () => {
+          throw new AppError(code, 'xero auth failed');
+        })
+      });
+
+      const exceptions = makeFakeExceptions();
+      const notifications = makeFakeNotifications();
+
+      let finishCall: any = null;
+      vi.mocked(SyncCycleRepository).mockImplementationOnce(function () { return ({
+        getLastSuccessfulCursor: vi.fn(async () => '2026-01-14T10:00:00.000Z'),
+        startCycle: vi.fn(async () => `cycle-xero-${code}`),
+        finishCycle: vi.fn(async (_t: string, _c: string, result: any) => {
+          finishCall = result;
+        })
+      } as any); });
+
+      const result = await runAccountingSyncCycle({
+        knex: {} as any,
+        tenantId: TENANT,
+        adapterType: 'xero',
+        targetRealm: 'xero-conn-1',
+        adapter,
+        exceptions,
+        notifications
+      });
+
+      expect(result.status).toBe('aborted');
+      expect(finishCall.cursorAfter).toBeUndefined();
+      expect(exceptions.createOrUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'accounting_connection_expired',
+          context: expect.objectContaining({ adapter_type: 'xero' })
+        })
+      );
+      expect(notifications.notifyConnectionExpired).toHaveBeenCalledWith('xero-conn-1', expect.any(String));
+    }
+  );
 
   it('applies changes in order: Customer → Payment → Invoice/CreditMemo, counts RefundReceipt', async () => {
     const applyCustomer = vi.mocked(applyExternalCustomerChange);

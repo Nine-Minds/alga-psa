@@ -3,10 +3,11 @@ import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { createTestDbConnection, wireLocalTestDbEnv } from '../../actions/_dbTestUtils';
 
-// AR row materialization is exercised elsewhere; here we drive the shared
-// reconciliation applier with a real ledger so the DB-backed idempotency,
-// reversal and realm-isolation contracts are asserted for normalized Xero
-// payloads specifically.
+// Ledger-level suite: normalized Xero payment idempotency, reversal and
+// realm-isolation against the real mapping ledger. The end-to-end
+// export → poll → apply flow (real invoice_payments/transactions, balances,
+// cursor persistence, real allocation query) is covered by
+// server/src/test/integration/accounting/xeroInboundReconciliation.integration.test.ts.
 const recordExternalPaymentMock = vi.hoisted(() => vi.fn());
 const reverseExternalPaymentMock = vi.hoisted(() => vi.fn());
 

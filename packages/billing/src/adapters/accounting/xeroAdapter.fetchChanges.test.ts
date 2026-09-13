@@ -22,7 +22,7 @@ vi.mock('@alga-psa/integrations/lib/xero/xeroClientService', () => ({
 
 function makeTenantQueryBuilder(rows: unknown[] = []) {
   const builder: any = {};
-  for (const method of ['select', 'where', 'whereNull', 'whereIn', 'andWhere', 'orderBy', 'limit']) {
+  for (const method of ['select', 'where', 'whereNull', 'whereIn', 'whereRaw', 'andWhere', 'orderBy', 'limit']) {
     builder[method] = () => builder;
   }
   builder.then = (resolve: (value: unknown[]) => unknown) => Promise.resolve(rows).then(resolve);
@@ -87,7 +87,14 @@ describe('XeroAdapter.fetchChanges', () => {
           Status: 'AUTHORISED',
           Total: 25,
           UpdatedDateUTC: '/Date(1700000002000+0000)/',
-          Allocations: [{ Amount: 25, Invoice: { InvoiceID: 'inv-1' }, Date: '2026-01-11T00:00:00Z' }]
+          Allocations: [
+            {
+              AllocationID: 'alloc-1',
+              Amount: 25,
+              Invoice: { InvoiceID: 'inv-1' },
+              Date: '/Date(1700000003000+0000)/'
+            }
+          ]
         }
       ],
       hasMore: false
@@ -103,6 +110,7 @@ describe('XeroAdapter.fetchChanges', () => {
       docNumber: 'INV-0001',
       isVoided: false
     });
+    expect(invoice?.updatedAt).toBe('2023-11-14T22:13:20.000Z');
 
     const payment = result.changes.find((c) => c.entityType === 'Payment' && c.externalId === 'pay-1');
     expect(payment?.normalized).toMatchObject({
@@ -114,13 +122,74 @@ describe('XeroAdapter.fetchChanges', () => {
     const creditDocument = result.changes.find((c) => c.entityType === 'CreditMemo');
     expect(creditDocument?.externalId).toBe('cn-1');
 
-    const allocation = result.changes.find((c) => c.externalId === 'creditnote:cn-1:inv-1');
+    const allocation = result.changes.find((c) => c.externalId === 'creditnote:cn-1:alloc:alloc-1');
     expect(allocation).toBeDefined();
     expect(allocation?.normalized).toMatchObject({
       isCreditApplication: true,
+      txnDate: '2023-11-14T22:13:23.000Z',
       allocations: [{ externalInvoiceId: 'inv-1', amountCents: 2500 }]
     });
     expect(result.truncated).toBe(false);
+  });
+
+  it('keeps two allocations to one invoice distinct when AllocationID is present', async () => {
+    xeroListChangedCreditNotes.mockResolvedValueOnce({
+      records: [
+        {
+          CreditNoteID: 'cn-dup',
+          CreditNoteNumber: 'CN-0002',
+          Status: 'AUTHORISED',
+          Total: 30,
+          UpdatedDateUTC: '2026-02-01T00:00:00Z',
+          Allocations: [
+            { AllocationID: 'a-1', Amount: 10, Invoice: { InvoiceID: 'inv-1' } },
+            { AllocationID: 'a-2', Amount: 20, Invoice: { InvoiceID: 'inv-1' } }
+          ]
+        }
+      ],
+      hasMore: false
+    });
+
+    const adapter = await XeroAdapter.create();
+    const result = await adapter.fetchChanges('tenant-x', '2026-01-01T00:00:00Z', 'conn-1');
+
+    const allocations = result.changes.filter((c) => c.externalId.startsWith('creditnote:cn-dup:alloc:'));
+    expect(allocations.map((c) => c.externalId).sort()).toEqual([
+      'creditnote:cn-dup:alloc:a-1',
+      'creditnote:cn-dup:alloc:a-2'
+    ]);
+    const amounts = allocations
+      .map((c) => (c.normalized as any).allocations[0].amountCents)
+      .sort((a: number, b: number) => a - b);
+    expect(amounts).toEqual([1000, 2000]);
+  });
+
+  it('aggregates per invoice when Xero omits AllocationID', async () => {
+    xeroListChangedCreditNotes.mockResolvedValueOnce({
+      records: [
+        {
+          CreditNoteID: 'cn-agg',
+          CreditNoteNumber: 'CN-0003',
+          Status: 'AUTHORISED',
+          Total: 30,
+          UpdatedDateUTC: '2026-02-01T00:00:00Z',
+          Allocations: [
+            { Amount: 10, Invoice: { InvoiceID: 'inv-1' } },
+            { Amount: 20, Invoice: { InvoiceID: 'inv-1' } }
+          ]
+        }
+      ],
+      hasMore: false
+    });
+
+    const adapter = await XeroAdapter.create();
+    const result = await adapter.fetchChanges('tenant-x', '2026-01-01T00:00:00Z', 'conn-1');
+
+    const aggregated = result.changes.find((c) => c.externalId === 'creditnote:cn-agg:inv:inv-1');
+    expect(aggregated).toBeDefined();
+    expect((aggregated?.normalized as any).allocations).toEqual([
+      { externalInvoiceId: 'inv-1', amountCents: 3000 }
+    ]);
   });
 
   it('paginates a full page before returning', async () => {
@@ -142,6 +211,37 @@ describe('XeroAdapter.fetchChanges', () => {
     expect(xeroListChangedInvoices).toHaveBeenNthCalledWith(1, '2026-01-01T00:00:00Z', 1);
     expect(xeroListChangedInvoices).toHaveBeenNthCalledWith(2, '2026-01-01T00:00:00Z', 2);
     expect(result.changes.filter((c) => c.entityType === 'Invoice')).toHaveLength(101);
+  });
+
+  it('exposes a forward nextCursor when the safety page cap is hit', async () => {
+    const fullPage = Array.from({ length: 100 }, (_, index) => ({
+      InvoiceID: `cap-${index}`,
+      InvoiceNumber: `CAP-${index}`,
+      Status: 'AUTHORISED',
+      Total: 1,
+      UpdatedDateUTC: `/Date(${1700000000000 + index * 1000}+0000)/`
+    }));
+    xeroListChangedInvoices.mockResolvedValue({ records: fullPage, hasMore: true });
+
+    const adapter = await XeroAdapter.create();
+    const result = await adapter.fetchChanges('tenant-x', '2026-01-01T00:00:00Z', 'conn-1');
+
+    expect(result.truncated).toBe(true);
+    // Resume boundary is the newest record already fetched, so the next poll
+    // advances instead of re-reading the same pages.
+    expect(result.nextCursor).toBe(new Date(1700000000000 + 99 * 1000).toISOString());
+    expect(new Date(result.fetchedAt).getTime()).toBeLessThanOrEqual(Date.now());
+  });
+
+  it('propagates a mid-pagination failure so the cycle keeps its cursor', async () => {
+    xeroListChangedInvoices
+      .mockResolvedValueOnce({ records: [{ InvoiceID: 'inv-p1', Status: 'AUTHORISED', Total: 1 }], hasMore: true })
+      .mockRejectedValueOnce(new Error('Xero API error on page 2'));
+
+    const adapter = await XeroAdapter.create();
+    await expect(adapter.fetchChanges('tenant-x', '2026-01-01T00:00:00Z', 'conn-1')).rejects.toThrow(
+      /page 2/
+    );
   });
 
   it('marks voided/deleted documents and emits a deletion for a removed allocation', async () => {

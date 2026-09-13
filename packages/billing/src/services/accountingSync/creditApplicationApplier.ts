@@ -103,6 +103,15 @@ export async function drainApplyCreditOps(deps: DrainDeps): Promise<void> {
     : null;
   const providerLabel = deps.adapterType === 'xero' ? 'Xero' : 'QuickBooks';
 
+  if (!providerOps && deps.adapterType !== 'quickbooks_online') {
+    await failUnsupportedOperations(deps, pending, {
+      entityType: 'credit_allocation',
+      operationLabel: 'credit application',
+      providerLabel
+    });
+    return;
+  }
+
   let qboClient: QboClientService | null = null;
   if (!providerOps) {
     try {

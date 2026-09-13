@@ -65,6 +65,17 @@ export async function drainVoidInvoiceOps(deps: DrainDeps): Promise<void> {
   const auditProvider: 'xero' | 'quickbooks_online' =
     deps.adapterType === 'xero' ? 'xero' : 'quickbooks_online';
 
+  // Only the QBO adapter may use the legacy direct-client path. A non-QBO
+  // adapter without providerOperations must never fall back to QboClientService.
+  if (!providerOps && deps.adapterType !== 'quickbooks_online') {
+    await failUnsupportedOperations(deps, pending, {
+      entityType: 'invoice',
+      operationLabel: 'invoice void',
+      providerLabel
+    });
+    return;
+  }
+
   let qboClient: QboClientService | null = null;
   if (!providerOps) {
     try {

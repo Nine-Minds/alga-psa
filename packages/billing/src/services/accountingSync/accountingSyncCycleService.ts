@@ -56,7 +56,19 @@ import { ADAPTER_EXPORT_CAPABILITIES } from '../../adapters/accounting/registry'
 /** Overlap subtracted from the stored cursor to absorb clock skew. */
 export const CURSOR_OVERLAP_MS = 5 * 60 * 1000;
 
-const AUTH_ERROR_CODES = new Set(['QBO_AUTH_ERROR', 'QBO_REFRESH_FAILED', 'QBO_SETUP_INCOMPLETE']);
+const AUTH_ERROR_CODES = new Set([
+  'QBO_AUTH_ERROR',
+  'QBO_REFRESH_FAILED',
+  'QBO_SETUP_INCOMPLETE',
+  // Xero: expired refresh token (terminal re-auth required), 401s, and a
+  // missing/removed connection all mean "reconnect required", not a generic
+  // cycle failure.
+  'XERO_REFRESH_EXPIRED',
+  'XERO_REFRESH_FAILED',
+  'XERO_UNAUTHORIZED',
+  'XERO_CONNECTION_NOT_FOUND',
+  'XERO_NOT_CONFIGURED'
+]);
 
 function adapterSupportsExportType(adapterType: string, exportType: string): boolean {
   const capabilities = ADAPTER_EXPORT_CAPABILITIES as Record<string, readonly string[] | undefined>;
@@ -217,7 +229,14 @@ export async function runAccountingSyncCycle(params: RunCycleParams): Promise<Ru
       return { ran: true, status: 'failed', cycleId, stats, error: message };
     }
 
-    cursorAfter = changeSet.truncated ? since : changeSet.fetchedAt;
+    // Advance only after every fetched change was durably handled. A truncated
+    // poll resumes from the adapter's forward boundary (`nextCursor`) or, when
+    // the source cannot supply one, from the conservative pre-poll watermark —
+    // never from `since` (which already subtracts the overlap and would crawl
+    // backward on successive capped cycles).
+    cursorAfter = changeSet.truncated
+      ? changeSet.nextCursor ?? changeSet.fetchedAt
+      : changeSet.fetchedAt;
   }
 
   // ── Outbound ───────────────────────────────────────────────────────────

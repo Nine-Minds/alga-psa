@@ -493,4 +493,31 @@ describe('QboSyncHealthPanel contracts', () => {
     expect(syncNowButton).not.toBeNull();
     expect(syncNowButton.disabled).toBe(true);
   });
+
+  it('T085: a Xero connection is labelled as Xero and never loads QBO catalogs', async () => {
+    getAccountingSyncHealthMock.mockResolvedValue({
+      ...healthConnected,
+      adapterType: 'xero',
+      organisationName: 'Acme Xero Org',
+      autoApplyCreditsEnabled: null,
+      refreshTokenExpiresAt: new Date(Date.now() - 60_000).toISOString(),
+      realms: [{ realmId: 'conn-1', isDefault: true }],
+    });
+
+    const { default: QboSyncHealthPanel } = await import('./QboSyncHealthPanel');
+    render(<QboSyncHealthPanel />);
+
+    await waitFor(() => {
+      expect(document.getElementById('qbo-integration-sync-health-card')).toBeInTheDocument();
+    });
+
+    // Xero-labelled card and reconnect information.
+    expect(screen.getByText(/Xero Sync Health/)).toBeInTheDocument();
+    expect(screen.getByText(/Xero token expired — reconnect/)).toBeInTheDocument();
+    // No QBO-only sync configuration, and no QBO catalog requests.
+    expect(document.getElementById('qbo-sync-config-section')).not.toBeInTheDocument();
+    expect(getQboAccountsMock).not.toHaveBeenCalled();
+    expect(getQboClassesMock).not.toHaveBeenCalled();
+    expect(getQboDepartmentsMock).not.toHaveBeenCalled();
+  });
 });

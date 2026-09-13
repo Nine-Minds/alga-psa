@@ -78,6 +78,9 @@ export async function accountingSyncCycleHandler(data: AccountingSyncCycleJobDat
     return;
   }
 
+  // Scheduled cycles process every connected target explicitly: all QBO realms
+  // or all Xero connections. The selected organisation is only a default for
+  // interactive actions; the scheduler must converge every connected book.
   const targets =
     integration.adapterType === 'quickbooks_online'
       ? Object.entries(await getStoredQboCredentialsMap(tenantId).catch(() => ({} as Record<string, any>))).map(
@@ -86,12 +89,12 @@ export async function accountingSyncCycleHandler(data: AccountingSyncCycleJobDat
             refreshTokenExpiresAt: (credentials as any)?.refreshTokenExpiresAt ?? null
           })
         )
-      : [{
-          targetRealm: integration.targetRealm,
-          refreshTokenExpiresAt:
-            (await getStoredXeroConnections(tenantId).catch(() => ({} as Record<string, any>)))[integration.targetRealm]
-              ?.refreshTokenExpiresAt ?? null
-        }];
+      : Object.entries(
+          await getStoredXeroConnections(tenantId).catch(() => ({} as Record<string, any>))
+        ).map(([targetRealm, connection]) => ({
+          targetRealm,
+          refreshTokenExpiresAt: (connection as any)?.refreshTokenExpiresAt ?? null
+        }));
 
   if (targets.length === 0) {
     return;
