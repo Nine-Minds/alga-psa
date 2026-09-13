@@ -43,9 +43,16 @@ const base = {
 };
 
 /**
- * T15 — resolver equivalence harness. These expectations are the values the
- * pre-change engine produced for the same shape matrix; the resolver must
- * return them byte-for-byte.
+ * Resolver matrix tests.
+ *
+ * These expectations are hand-authored against the resolver's documented
+ * precedence chain. They are NOT a golden-file equivalence proof against the
+ * pre-change engine: the engine still carries its own
+ * `selectActivePricingSchedule` (`billingEngine.ts`) and its inline rate chain,
+ * and no fixture under `server/src/test/integration/billing/goldenOutput/` was
+ * produced from both implementations. Equivalence therefore holds by
+ * duplication, not by construction. Wiring this matrix to a golden baseline is
+ * a known gap; do not read the `T15` label below as evidence of engine parity.
  */
 describe("resolveFixedLineRate (T15 equivalence matrix)", () => {
   it("bundle/inherited: derives the line total from per-service catalog prices", () => {

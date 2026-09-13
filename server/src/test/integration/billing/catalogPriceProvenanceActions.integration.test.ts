@@ -56,11 +56,12 @@ const {
   afterAll: cleanupContext
 } = TestContext.createHelpers();
 
-import { addContractLine } from '@alga-psa/billing/repositories/contractLineRepository';
+import { addContractLine, fetchDetailedContractLines } from '@alga-psa/billing/repositories/contractLineRepository';
+import { getDetailedContractLines } from '@alga-psa/billing/actions/contractLineMappingActions';
 import { createClientContractFromWizard } from '@alga-psa/billing/actions/contractWizardActions';
 import { createPricingSchedule } from '@alga-psa/billing/actions/contractPricingScheduleActions';
 import { previewServicePriceChange } from '@alga-psa/billing/actions/servicePriceRolloutActions';
-import { updateCatalogPrice } from '../../../../test-utils/billingTestHelpers';
+import { updateCatalogPrice, setLineProvenance } from '../../../../test-utils/billingTestHelpers';
 
 describe('Catalog price provenance — clone, wizard, constraints and schedule overlap', () => {
   let context: TestContext;
@@ -389,6 +390,59 @@ describe('Catalog price provenance — clone, wizard, constraints and schedule o
         .update({ rate_provenance: 'custom', base_rate: null }),
     ).rejects.toThrow(/check/i);
     await context.db.raw('ROLLBACK TO SAVEPOINT t14_member_custom_without_rate');
+  });
+
+  it('T22: rate_provenance survives the detailed contract-line repository round-trip', async () => {
+    const serviceId = await createTestService(context, {
+      service_name: 'T22 Service',
+      billing_method: 'fixed',
+      default_rate: 10000
+    });
+    const { templateLineId, contractId } = await seedTemplateAndContract({
+      serviceId,
+      templateCustomRate: 5000
+    });
+
+    const mapping = await addContractLine(
+      context.transaction!,
+      context.tenantId,
+      contractId,
+      templateLineId,
+    );
+    const liveLineId = mapping.contract_line_id;
+
+    // The Standard/Custom/Unreviewed badge in ContractLines.tsx reads
+    // `line.rate_provenance`. It is dead unless the action's model select
+    // projects it, so assert the path the running app actually calls.
+    const actionRows = await getDetailedContractLines(contractId);
+    if ('actionError' in (actionRows as object)) {
+      throw new Error(`getDetailedContractLines failed: ${JSON.stringify(actionRows)}`);
+    }
+    const actionLine = (actionRows as Array<{ contract_line_id: string; rate_provenance?: string | null; custom_rate?: number | null }>)
+      .find((row) => row.contract_line_id === liveLineId);
+    expect(actionLine).toBeDefined();
+    expect(actionLine!.rate_provenance).toBe('custom');
+    expect(Number(actionLine!.custom_rate)).toBe(5000);
+
+    const detailed = await fetchDetailedContractLines(
+      context.transaction!,
+      context.tenantId,
+      contractId,
+    );
+    const line = detailed.find((row) => row.contract_line_id === liveLineId);
+    expect(line).toBeDefined();
+    expect(line!.rate_provenance).toBe('custom');
+    expect(Number(line!.custom_rate)).toBe(5000);
+
+    // The Standard badge is the same projection for an inherited row.
+    await setLineProvenance(context, liveLineId, 'inherited');
+    const inheritedRows = await getDetailedContractLines(contractId);
+    if ('actionError' in (inheritedRows as object)) {
+      throw new Error(`getDetailedContractLines failed: ${JSON.stringify(inheritedRows)}`);
+    }
+    const inheritedLine = (inheritedRows as Array<{ contract_line_id: string; rate_provenance?: string | null }>)
+      .find((row) => row.contract_line_id === liveLineId);
+    expect(inheritedLine?.rate_provenance).toBe('inherited');
   });
 
   it('T18: overlapping schedules are rejected by the action and by the DB constraint', async () => {
