@@ -16,7 +16,11 @@ import {
   setupClientTaxConfiguration,
   assignServiceTaxRate
 } from '../../../../../test-utils/billingTestHelpers';
-import { previewServicePriceChange } from '@alga-psa/billing/actions/servicePriceRolloutActions';
+import {
+  previewServicePriceChange,
+  applyServicePriceChange,
+} from '@alga-psa/billing/actions/servicePriceRolloutActions';
+import { updateServicePricing } from '@alga-psa/billing/actions/serviceActions';
 import { resetContractLineRateToStandard } from '@alga-psa/billing/actions/rateReviewActions';
 import { createClient } from '../../../../../test-utils/testDataFactory';
 import {
@@ -442,6 +446,21 @@ describe('Catalog price resolution – fixed path', () => {
   const JAN_START = createTestDateISO({ year: 2023, month: 1, day: 1 });
   const FEB_START = createTestDateISO({ year: 2023, month: 2, day: 1 });
   const MAR_START = createTestDateISO({ year: 2023, month: 3, day: 1 });
+  // `previewServicePriceChange` / `applyServicePriceChange` take a calendar date
+  // (`YYYY-MM-DD`); `createTestDateISO` returns a full instant string.
+  const FEB_PERIOD = FEB_START.slice(0, 10);
+
+  /**
+   * First day of the month `offset` months from the real current month (UTC).
+   * The apply action's "future" is the real clock, so tests of the scheduled
+   * branch must anchor on now, not on the 2023 fixture dates.
+   */
+  function monthStart(offset: number): string {
+    const now = new Date();
+    return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + offset, 1))
+      .toISOString()
+      .slice(0, 10);
+  }
 
   it('T1: an inherited line follows a catalog price change on the next period', async () => {
     const { serviceId, contractLineId } = await seedInheritedLine('T1 Service', 10000, JAN_START);
@@ -855,9 +874,6 @@ describe('Catalog price resolution – fixed path', () => {
     ];
 
     const NEW_RATE = 12000;
-    // `previewServicePriceChange` takes a calendar date (`YYYY-MM-DD`): the
-    // fixture's `createTestDateISO` returns a full instant string.
-    const FEB_PERIOD = FEB_START.slice(0, 10);
 
     for (const shape of shapes) {
       const clientId = await createClient(
@@ -979,4 +995,135 @@ describe('Catalog price resolution – fixed path', () => {
       expect(february.subtotal, `${shape.name}: invoice subtotal`).toBe(billed);
     }
   }, 120000);
+
+  it('applyServicePriceChange schedules a future price without moving default_rate, and an ordinary save keeps it', async () => {
+    // Reviewer items 1/3. Anchor the periods on the real current month: the
+    // action decides "future" against the real clock, so 2023 fixture dates
+    // would exercise the immediate branch.
+    const currentStart = monthStart(0);
+    const nextStart = monthStart(1);
+    const nextEnd = monthStart(2);
+
+    const { serviceId, contractLineId } = await seedInheritedLine(
+      'Scheduled rollout service',
+      10000,
+      currentStart,
+    );
+
+    const applied = await applyServicePriceChange({
+      serviceId,
+      // The UI passes the whole service, virtual fields and all.
+      servicePatch: {
+        service_name: 'Scheduled rollout service',
+        default_rate: 12000,
+        service_type_name: 'Fixed',
+        prices: [],
+        scheduled_prices: [],
+      },
+      prices: [{ currency_code: 'USD', rate: 12000 }],
+      effectiveDate: nextStart,
+    });
+    expect(applied).toEqual({ success: true });
+
+    const scheduledRows = await context.db('service_prices')
+      .where({
+        tenant: context.tenantId,
+        service_id: serviceId,
+        currency_code: 'USD',
+        effective_date: nextStart,
+      });
+    expect(scheduledRows).toHaveLength(1);
+    expect(Number(scheduledRows[0].rate)).toBe(12000);
+
+    // The catalog still advertises the currently-effective price, not the
+    // scheduled one, so the list and the edit dialog agree.
+    const catalogAfterSchedule = await context.db('service_catalog')
+      .where({ tenant: context.tenantId, service_id: serviceId })
+      .first('default_rate');
+    expect(Number(catalogAfterSchedule.default_rate)).toBe(10000);
+
+    // Current period bills the old rate.
+    const current = await invoiceCycle(currentStart, nextStart);
+    expect(current.subtotal).toBe(10000);
+
+    // An unrelated ordinary save (fixing the description) must not cancel the
+    // scheduled row. This is the regression test for item 1.
+    const saved = await updateServicePricing(
+      serviceId,
+      { description: 'Fixed a typo' },
+      [{ currency_code: 'USD', rate: 10000 }],
+    );
+    if (!('prices' in saved)) {
+      throw new Error(`ordinary save failed: ${JSON.stringify(saved)}`);
+    }
+    const scheduledAfterSave = await context.db('service_prices')
+      .where({
+        tenant: context.tenantId,
+        service_id: serviceId,
+        currency_code: 'USD',
+        effective_date: nextStart,
+      });
+    expect(scheduledAfterSave).toHaveLength(1);
+    expect(Number(scheduledAfterSave[0].rate)).toBe(12000);
+
+    // Next period bills the scheduled rate.
+    await materializeRecurringServicePeriods(context, contractLineId);
+    const next = await invoiceCycle(nextStart, nextEnd);
+    expect(next.subtotal).toBe(12000);
+  }, 120000);
+
+  it('applyServicePriceChange without an effective date replaces the current row and leaves future rows', async () => {
+    const futureStart = monthStart(1);
+    const { serviceId } = await seedInheritedLine('Immediate write service', 10000, monthStart(0));
+    await context.db('service_prices').insert({
+      tenant: context.tenantId,
+      service_id: serviceId,
+      currency_code: 'USD',
+      rate: 12000,
+      effective_date: futureStart,
+    });
+
+    const result = await applyServicePriceChange({
+      serviceId,
+      prices: [{ currency_code: 'USD', rate: 11000 }],
+    });
+    expect(result).toEqual({ success: true });
+
+    const epoch = await context.db('service_prices')
+      .where({
+        tenant: context.tenantId,
+        service_id: serviceId,
+        currency_code: 'USD',
+        effective_date: '1970-01-01',
+      })
+      .first('rate');
+    expect(Number(epoch.rate)).toBe(11000);
+
+    const scheduled = await context.db('service_prices')
+      .where({
+        tenant: context.tenantId,
+        service_id: serviceId,
+        currency_code: 'USD',
+        effective_date: futureStart,
+      });
+    expect(scheduled).toHaveLength(1);
+
+    // An immediate write does mirror default_rate.
+    const catalog = await context.db('service_catalog')
+      .where({ tenant: context.tenantId, service_id: serviceId })
+      .first('default_rate');
+    expect(Number(catalog.default_rate)).toBe(11000);
+  }, 120000);
+
+  it('applyServicePriceChange requires service:update', async () => {
+    const { hasPermission } = await import('@alga-psa/auth/rbac');
+    vi.mocked(hasPermission).mockResolvedValueOnce(false);
+
+    const result = await applyServicePriceChange({
+      serviceId: uuidv4(),
+      prices: [{ currency_code: 'USD', rate: 100 }],
+      effectiveDate: FEB_PERIOD,
+    });
+    expect('permissionError' in result).toBe(true);
+  }, 30000);
 });

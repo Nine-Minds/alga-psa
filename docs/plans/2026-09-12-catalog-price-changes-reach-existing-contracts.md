@@ -604,3 +604,49 @@ is a known, bounded gap, not a silent one.
 - **3d** — the six-case `automatic submission refuses stale …` matrix in
   `contractQuantityUsageSemantics.test.ts` carries a per-test 120 s timeout
   (test-only); the suite's global `testTimeout` is unchanged.
+
+### What an ordinary save now means for a scheduled price (review round 2)
+
+The effective-dated write (`applyServicePriceChange`) and the ordinary save
+(`Service.setPrices`, reached by `updateServicePricing` / `setServicePrices` /
+`setPrices` from Quick Add and the product API) now have deliberately different
+scopes:
+
+- **Ordinary save = as-of-now.** It replaces only the row(s) effective on or
+  before today for the service, writes the submitted rates at the epoch, and
+  **leaves future-dated rows untouched.** So fixing a typo in a description, or
+  saving the current price again, does not revoke a scheduled increase. It also
+  does not apply it early: the scheduled row keeps its date.
+- **Scheduled write = future-dated only.** `applyServicePriceChange` with a
+  future `effective_date` inserts the future row and **does not move
+  `service_catalog.default_rate`.** The catalog's displayed/comparison price
+  stays the currently-effective one, so the list and the edit dialog agree on
+  what bills today and a later price change still opens the rollout dialog.
+  An immediate write (no `effective_date`, or a date on/before today) mirrors
+  `default_rate` and replaces only the current row.
+
+Because the operator cannot see the scheduled row in the price field, the
+catalog read returns it separately as `IService.scheduled_prices` (currently
+effective rows are `IService.prices`, one per currency). The service list shows
+a **“Next change {date}”** badge and the edit dialog shows an inline notice that
+saving updates the current price without cancelling the scheduled change. That
+is the signal that resolves the ambiguity: an ordinary save **keeps** the
+scheduled increase, and the UI says so.
+
+Two defects fell out of the missing coverage and the round-2 test:
+
+1. `applyServicePriceChange` wrote a `service_catalog.updated_at` column the
+   table does not have (and spread virtual service fields into a raw update), so
+   **every Apply attempt failed** before it touched `service_prices`. It now
+   routes through `Service.update`, which strips virtual fields.
+2. `quoteItem.ts` read `service_prices` with no effective-date filter, so a
+   quote created after scheduling could take the future price. It now selects
+   the latest row effective today. `ManualInvoices.tsx` already reads
+   `service.prices` / `default_rate`, both of which are now current-effective.
+
+The tier-1 floor covers the real action end to end:
+`applyServicePriceChange` schedules a future row, keeps `default_rate` current,
+bills the old rate for the current period, survives an intervening
+`updateServicePricing`, then bills the new rate for the next period; a second
+test covers the no-effective-date branch; a third asserts the `service:update`
+gate.
