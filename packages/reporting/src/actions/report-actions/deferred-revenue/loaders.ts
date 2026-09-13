@@ -9,7 +9,8 @@ import { tenantDb } from '@alga-psa/db';
 // The schedule-selection semantics live in one place now (plan §0.5 / §2.3):
 // the deferred-revenue report and the billing engine cannot disagree about
 // which pricing schedule is active, including the null-rate-latest case.
-import { selectActivePricingSchedule } from '@alga-psa/billing/lib/billing/pricing/resolveFixedLineRate';
+import { selectActivePricingSchedule, selectEffectiveServicePrice } from '@alga-psa/billing/lib/billing/pricing/resolveFixedLineRate';
+import type { ServicePriceRateRow } from '@alga-psa/billing/lib/billing/pricing/resolveFixedLineRate';
 
 import { resolvePeriodFee, type BilledFeeCandidate } from './fee';
 import { classifyCreditSource, type CreditSourceInvoice } from './creditSource';
@@ -69,6 +70,12 @@ export interface RawBucketPeriodRow {
   currencyCode: string;
   /** contract_lines.custom_rate in cents, when set. */
   lineCustomRate: number | null;
+  /**
+   * Effective `service_prices` rate for the contract's currency at the period
+   * start, when a row exists. Billing prefers this over the legacy
+   * currency-untagged `default_rate`; the report must too (correction #5).
+   */
+  catalogCurrencyRate?: number | null;
   /** service_catalog.default_rate in cents, when set. */
   catalogDefaultRate: number | null;
 }
@@ -248,27 +255,47 @@ export async function loadBucketPeriods(
     'sc.default_rate',
   );
 
-  return rows.map((row) => ({
-    usageId: row.usage_id,
-    contractLineId: row.contract_line_id,
-    contractId: row.contract_id,
-    contractLineName: row.contract_line_name ?? 'Unnamed contract line',
-    clientId: row.client_id,
-    serviceId: row.service_catalog_id,
-    serviceName: row.service_name ?? 'Unnamed service',
-    periodStart: toStringValue(row.period_start).slice(0, 10),
-    periodEnd: toStringValue(row.period_end).slice(0, 10),
-    minutesUsed: toNumber(row.minutes_used),
-    rolledOverMinutes: toNumber(row.rolled_over_minutes),
-    totalMinutes: toNumber(row.total_minutes),
-    allowRollover: Boolean(row.allow_rollover),
-    currencyCode: row.currency_code || 'USD',
-    lineCustomRate: row.custom_rate !== null && row.custom_rate !== undefined ? toNumber(row.custom_rate) : null,
-    // Legacy currency-untagged mirror. Billing prefers the effective
-    // `service_prices` row in the contract currency (plan §0.3); the deferred
-    // report keeps this value until its catalog tier reads the resolver too.
-    catalogDefaultRate: row.default_rate !== null && row.default_rate !== undefined ? toNumber(row.default_rate) : null,
-  }));
+  const serviceIds = Array.from(
+    new Set(rows.map((row) => String(row.service_catalog_id)).filter(Boolean)),
+  );
+  const priceRows = serviceIds.length > 0
+    ? await db
+        .table('service_prices')
+        .whereIn('service_id', serviceIds)
+        .select('price_id', 'service_id', 'currency_code', 'rate', 'effective_date')
+    : [];
+
+  return rows.map((row) => {
+    const periodStart = toStringValue(row.period_start).slice(0, 10);
+    const currencyCode = row.currency_code || 'USD';
+    const effectivePrice = selectEffectiveServicePrice(
+      priceRows as ServicePriceRateRow[],
+      String(row.service_catalog_id),
+      currencyCode,
+      periodStart,
+    );
+    return {
+      usageId: row.usage_id,
+      contractLineId: row.contract_line_id,
+      contractId: row.contract_id,
+      contractLineName: row.contract_line_name ?? 'Unnamed contract line',
+      clientId: row.client_id,
+      serviceId: row.service_catalog_id,
+      serviceName: row.service_name ?? 'Unnamed service',
+      periodStart,
+      periodEnd: toStringValue(row.period_end).slice(0, 10),
+      minutesUsed: toNumber(row.minutes_used),
+      rolledOverMinutes: toNumber(row.rolled_over_minutes),
+      totalMinutes: toNumber(row.total_minutes),
+      allowRollover: Boolean(row.allow_rollover),
+      currencyCode,
+      lineCustomRate: row.custom_rate !== null && row.custom_rate !== undefined ? toNumber(row.custom_rate) : null,
+      catalogCurrencyRate: effectivePrice?.rateCents ?? null,
+      // Legacy currency-untagged mirror. Kept only as the fallback for the
+      // tenant default currency when no `service_prices` row exists.
+      catalogDefaultRate: row.default_rate !== null && row.default_rate !== undefined ? toNumber(row.default_rate) : null,
+    };
+  });
 }
 
 /**
@@ -474,7 +501,7 @@ export async function loadDeferredRevenueData(
  * Resolve the fallback (not-yet-billed) period fee for a bucket line×service
  * in the billing engine's rate-resolution order: pricing-schedule custom rate
  * → contract-line custom rate → fixed-config base rate × quantity →
- * service-catalog default rate.
+ * effective service-price in the contract currency → legacy catalog default.
  */
 export function resolveConfiguredFee(
   period: RawBucketPeriodRow,
@@ -484,6 +511,7 @@ export function resolveConfiguredFee(
   if (pricingScheduleRate !== null) return pricingScheduleRate;
   if (period.lineCustomRate !== null) return period.lineCustomRate;
   if (baseRateCents !== null) return baseRateCents;
+  if (period.catalogCurrencyRate != null) return period.catalogCurrencyRate;
   if (period.catalogDefaultRate !== null) return period.catalogDefaultRate;
   return null;
 }
