@@ -34,9 +34,19 @@ vi.mock('../../src/services/accountingExportService', () => ({
 }));
 
 const getXeroDefaultSelectionMock = vi.hoisted(() => vi.fn());
+const getStoredXeroConnectionsMock = vi.hoisted(() => vi.fn(async () => ({})));
 
 vi.mock('@alga-psa/integrations/lib/xero/xeroClientService', () => ({
   getXeroDefaultSelection: getXeroDefaultSelectionMock,
+  getStoredXeroConnections: getStoredXeroConnectionsMock,
+}));
+
+vi.mock('@alga-psa/integrations/lib/qbo/qboClientService', () => ({
+  getDefaultQboRealmId: async () => 'realm-1',
+  // The explicit realm-1 target used by the empty-batch case must be a
+  // connected QBO company so target validation passes and the empty-batch
+  // guard is what surfaces.
+  getStoredQboCredentialsMap: async () => ({ 'realm-1': { realmId: 'realm-1' } })
 }));
 
 import { AccountingExportInvoiceSelector } from '../../src/services/accountingExportInvoiceSelector';

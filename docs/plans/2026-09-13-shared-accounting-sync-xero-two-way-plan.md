@@ -442,3 +442,83 @@ no full Next.js build.
 - Integrations, billing and types typechecks pass with a 12 GB Node heap. Billing tsup build passes. Changed-file ESLint has zero errors; existing warnings remain. No live vendor call, full production Next.js build, or new browser smoke run is claimed.
 - Existing smoke artifacts and the port-3004 environment are preserved. The temporary `test_xero_final_takeover` database is removed after validation. Parent merge base remains `0af97e5c61` and the board dependency is unchanged. Keep the commit local; do not push or open a PR.
 - Review first: the shared `getXeroDefaultSelection` fallback and its composed manual-export regression suite; previous mapping conflict/ambiguity and real financial-write acceptance repairs remain intact.
+
+## P1 mitigation round 2026-09-13 (manual export carries another provider's realm)
+
+The retained cross-provider smoke (`/tmp/alga-smoke-evidence/shared-accounting-xero-r2-20260913-2315`,
+HEAD `1fab424783`) reproduced one release-blocking regression: with Xero A/B
+connected and B default plus QBO connected, the New Export dialog loaded realms
+once on mount from the *globally default* provider and never reloaded them when
+the adapter changed. Selecting QuickBooks Online therefore kept Xero A/B in the
+company picker and persisted `adapter_type=quickbooks_online,
+target_realm=smoke-conn-b`, which could then never resolve QBO realm mappings.
+
+### UI connection lifecycle
+
+`AccountingExportsTab` now loads connections scoped to the selected live
+adapter and reloads whenever the adapter changes or the dialog opens:
+
+- On every adapter change the previous provider's `availableRealms` and
+  `targetRealm` are cleared before the new request starts.
+- `getAccountingSyncHealth({ preferredAdapterType })` uses the selected
+  provider's own default-selection rules (the resolved `isDefault` realm),
+  preserving Xero connection-id, historical-alias, absent-fallback and
+  ambiguity handling because it reuses the shared server resolver — no second
+  implementation.
+- A monotonically increasing request token drops any response from a provider
+  the user has since left, so a late QBO response cannot repopulate the picker,
+  change the target, or clear/raise the loading state after switching to Xero.
+- File adapters (CSV/desktop) clear the realm and submit no `target_realm`.
+- Create Batch is disabled while a live provider's connections are loading or
+  unresolved, and `onCreate` re-checks before submitting.
+
+### Server target validation
+
+`createBatchFromFilters` (the shared boundary behind both the
+`createAccountingExportBatch` action and the runtime helper) now validates an
+explicit target before preview or persistence:
+
+- Live adapters route the explicit target through the same
+  `resolveConnectedAccountingIntegration` used by sync routing and health. The
+  target must be a connected integration for the authenticated tenant and match
+  the selected provider; unknown, disconnected, cross-provider and cross-tenant
+  targets throw `ACCOUNTING_EXPORT_TARGET_UNAVAILABLE`. There is no silent
+  fallback to a default connection for an explicit invalid target.
+- Provider-specific defaults are unchanged when no target is supplied: QBO
+  keeps `getDefaultQboRealmId`, Xero keeps `getXeroDefaultSelection` with its
+  `ACCOUNTING_EXPORT_XERO_SELECTION_AMBIGUOUS` / `..._CONNECTION_REQUIRED`
+  failures.
+- File adapters discard any stale realm instead of failing, so CSV exports stay
+  usable without an accounting realm.
+
+### Validation
+
+- Composed UI coverage (`packages/billing/tests/accounting/accountingExportsTab.adapterSelection.test.tsx`):
+  selecting QBO shows and submits only `smoke-realm-a`; switching to Xero
+  replaces the options/default with `smoke-conn-b`; a late QBO response cannot
+  overwrite the chosen Xero connection; CSV hides the picker and submits
+  without a realm; Create is disabled until connections resolve.
+- Action/selector coverage (`accountingExportTargetValidation.test.ts`) drives
+  the real action and selector against the real provider resolver: cross-
+  provider, unknown and cross-tenant targets all reject before `createBatch` /
+  `appendLines`; valid QBO and Xero pairs persist the correct adapter/target;
+  CSV ignores a stale realm.
+- DB-backed coverage added to
+  `server/src/test/integration/accounting/invoiceSelection.integration.test.ts`:
+  three invalid explicit pairs throw `ACCOUNTING_EXPORT_TARGET_UNAVAILABLE` and
+  leave `accounting_export_batches` / `accounting_export_lines` counts
+  unchanged. The same file's Xero no-target and QBO realm-100 fixtures were
+  made deterministic with connection mocks (they previously depended on
+  machine-local tenant secrets), so the suite is 7/7 green.
+- Non-DB regressions: billing accounting unit/component set 87 passed;
+  382 accounting/QBO/Xero behavioral tests passed via the server config;
+  `invoiceSelection`, `exportDashboard` and `auditTrail` DB suites pass in
+  isolated `TEST_DB_NAME` databases. Billing and server typechecks pass with a
+  12 GB heap; billing tsup build passes; changed-file ESLint reports 0 errors
+  (warnings only). No live vendor call, full production Next.js build, or new
+  browser smoke run is claimed in this round.
+- Out of scope and untouched: catalog pricing, recurring-contract repricing,
+  searchable mapping dropdowns, and the pre-existing index that rejects mapping
+  a second service to the same Xero revenue account.
+- Keep the commit local; do not push or open a PR. Parent merge base remains
+  `0af97e5c61`.

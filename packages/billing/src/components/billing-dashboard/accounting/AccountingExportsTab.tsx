@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
@@ -98,6 +98,16 @@ const DEFAULT_ADAPTERS = [
   { id: 'quickbooks_desktop', label: 'QuickBooks Desktop' }
 ] as const;
 
+type LiveAccountingProvider = 'quickbooks_online' | 'xero';
+
+/**
+ * Live adapters route through a connected accounting organisation and need a
+ * provider-scoped realm/connection; file adapters (CSV/desktop) do not.
+ */
+function getLiveProviderForAdapter(adapterId: string): LiveAccountingProvider | null {
+  return adapterId === 'quickbooks_online' || adapterId === 'xero' ? adapterId : null;
+}
+
 function getAccountingExportStatusKey(status: AccountingExportStatus): string {
   switch (status) {
     case 'pending':
@@ -160,6 +170,8 @@ export default function AccountingExportsTab(): React.JSX.Element {
   const [notes, setNotes] = useState<string>('');
   const [targetRealm, setTargetRealm] = useState<string>('');
   const [availableRealms, setAvailableRealms] = useState<Array<{ realmId: string; isDefault: boolean }>>([]);
+  const [realmLoading, setRealmLoading] = useState(false);
+  const realmRequestRef = useRef(0);
 
   const denyAccess = useCallback(() => {
     setAccessDenied(true);
@@ -211,28 +223,58 @@ export default function AccountingExportsTab(): React.JSX.Element {
     }
   }, [denyAccess, t]);
 
-  // Load available realms once on mount for multi-realm picker in the create dialog
+  // Load the connected organisations for the currently selected live adapter.
+  // Switching adapters resets the previous provider's options and target
+  // immediately; a request token drops any in-flight response so an earlier
+  // provider can never repopulate the picker or reselect a stale target after
+  // the user has moved on. File adapters (CSV/desktop) have no accounting
+  // realm, so their selection is cleared and the export proceeds without one.
   useEffect(() => {
-    if (!accountingCapabilities.loaded || !accountingCapabilities.exportsExecute || accessDenied) return;
-    let cancelled = false;
-    getAccountingSyncHealth()
+    const requestId = ++realmRequestRef.current;
+    setAvailableRealms([]);
+    setTargetRealm('');
+
+    if (
+      !createOpen ||
+      !accountingCapabilities.loaded ||
+      !accountingCapabilities.exportsExecute ||
+      accessDenied
+    ) {
+      setRealmLoading(false);
+      return;
+    }
+
+    const provider = getLiveProviderForAdapter(adapterType);
+    if (!provider) {
+      setRealmLoading(false);
+      return;
+    }
+
+    setRealmLoading(true);
+    getAccountingSyncHealth({ preferredAdapterType: provider })
       .then((health) => {
-        if (cancelled) return;
-        if (health.realms.length > 1) {
-          setAvailableRealms(health.realms);
-          const defaultRealm = health.realms.find((r) => r.isDefault);
-          if (defaultRealm) {
-            setTargetRealm(defaultRealm.realmId);
-          }
-        }
+        if (requestId !== realmRequestRef.current) return;
+        const realms = Array.isArray(health.realms) ? health.realms : [];
+        setAvailableRealms(realms);
+        const defaultRealm = realms.find((realm) => realm.isDefault) ?? realms[0];
+        setTargetRealm(defaultRealm ? defaultRealm.realmId : '');
       })
       .catch(() => {
-        // Not EE or no permission — realm picker stays hidden
+        if (requestId !== realmRequestRef.current) return;
+        setAvailableRealms([]);
+        setTargetRealm('');
+      })
+      .finally(() => {
+        if (requestId !== realmRequestRef.current) return;
+        setRealmLoading(false);
       });
-    return () => {
-      cancelled = true;
-    };
-  }, [accessDenied, accountingCapabilities.exportsExecute, accountingCapabilities.loaded]);
+  }, [
+    accessDenied,
+    accountingCapabilities.exportsExecute,
+    accountingCapabilities.loaded,
+    adapterType,
+    createOpen,
+  ]);
 
   useEffect(() => {
     if (!accountingCapabilities.loaded || !accountingCapabilities.exportsExecute || accessDenied) {
@@ -254,7 +296,20 @@ export default function AccountingExportsTab(): React.JSX.Element {
   const getStatusLabel = (status: AccountingExportStatus) =>
     t(`accountingExports.status.${getAccountingExportStatusKey(status)}`, { defaultValue: status });
 
+  const liveProvider = getLiveProviderForAdapter(adapterType);
+  const realmSelectionRequired = liveProvider !== null;
+  // A live export cannot be submitted until its provider's connections have
+  // loaded and a target is selected for that provider.
+  const realmSelectionReady = !realmSelectionRequired || Boolean(targetRealm);
+  const canSubmit = !creating && !realmLoading && realmSelectionReady;
+
   const onCreate = async () => {
+    if (realmSelectionRequired && (realmLoading || !targetRealm)) {
+      handleError(t('accountingExports.toast.realmRequired', {
+        defaultValue: 'Choose a connected accounting company before creating the export.',
+      }));
+      return;
+    }
     setCreating(true);
     try {
       const filters: Record<string, unknown> = {
@@ -270,12 +325,13 @@ export default function AccountingExportsTab(): React.JSX.Element {
           .filter(Boolean);
       }
 
+      const submittedTargetRealm = realmSelectionRequired ? targetRealm : '';
       const batchResult = await createAccountingExportBatch({
         adapter_type: adapterType,
         export_type: 'invoice',
         filters,
         notes: notes.trim() || null,
-        ...(targetRealm ? { target_realm: targetRealm } : {})
+        ...(submittedTargetRealm ? { target_realm: submittedTargetRealm } : {})
       });
       if (isActionPermissionError(batchResult)) {
         denyAccess();
@@ -468,7 +524,7 @@ export default function AccountingExportsTab(): React.JSX.Element {
             >
               {t('common.cancel', { defaultValue: 'Cancel' })}
             </Button>
-            <Button onClick={() => void onCreate()} disabled={creating} id="accounting-export-create-submit">
+            <Button onClick={() => void onCreate()} disabled={!canSubmit} id="accounting-export-create-submit">
               {creating
                 ? t('accountingExports.actions.creating', { defaultValue: 'Creating...' })
                 : t('accountingExports.actions.createBatch', { defaultValue: 'Create Batch' })}
