@@ -148,8 +148,10 @@ configured; neither replaces the other.
 and MSP-side group editors, and is carried by both action modules' create, update,
 and read paths.
 
-**FR7 — Null-contact policy.** See Open Questions. Whatever is chosen is
-implemented in one place (the shared predicate), documented, and asserted by a test.
+**FR7 — Null-contact policy.** Tickets with no contact are hidden from ordinary
+members of a contact-scoped group, and remain visible to client admins within
+their board scope (decided 2026-09-13; see OQ1). Implemented in one place (the
+shared predicate), documented, and asserted by a test.
 
 ### Non-functional Requirements
 
@@ -267,7 +269,7 @@ with references in `client-portal-user-guide.md:124` and
 
 ## Open Questions
 
-### OQ1 — Null-contact ticket policy (BLOCKING, product decision)
+### OQ1 — Null-contact ticket policy — **RESOLVED 2026-09-13: hide them**
 
 `tickets.contact_name_id` is nullable and often null. A naive `WHERE
 contact_name_id = :me` hides every ticket that has no contact from every
@@ -316,7 +318,18 @@ Note the dev seeds are 100% contact-populated, so local testing will **not**
 reproduce production null rates. Any manual smoke test must create null-contact
 tickets deliberately.
 
-#### Recommendation: hide them
+#### Decision (2026-09-13, Robert): hide them
+
+The recommendation below was accepted as written. Ordinary members of a
+contact-scoped group see only tickets they are named on; tickets with no contact
+are hidden from them and stay visible to client admins within the group's board
+scope. This is what the draft implements, so no code change follows from the
+decision. The accompanying obligations are met: the NULL case is asserted
+directly in `ticketClientPortalAbac.integration.test.ts` (both the SQL paths and
+the kernel JS/SQL parity check), stated in `docs/client-ticket-visibility.md`,
+and carried in the admin radio description in all ten locales.
+
+#### Rationale as accepted
 
 Two reasons the sparse-portal risk is smaller than it first looks:
 
@@ -386,6 +399,36 @@ rejection to the live-token route handler, matching `apiMiddleware.ts:235`. That
 route should not be relying on a downstream action's narrowing for its access
 control. This is cheap, independently correct, and reduces how much this
 feature's safety rests on kernel plumbing.
+
+### OQ3 — Authorization review of the draft — **RESOLVED 2026-09-13: approved as built**
+
+The implementer held the draft for a captain review of the authorization work
+before landing. Reviewed and approved unchanged. What was checked:
+
+- **Rule shape is correct.** Built-in relationship rules are OR-combined
+  (`relationships.ts:26`), so client, board, and contact restrictions had to
+  become one intersecting `contact_visibility` template rather than three rules.
+  They did.
+- **Fail-closed in the right direction.** A client principal whose portal
+  context cannot be resolved yields `null`, which still installs the rule and
+  denies; only an internal principal yields `undefined` and no rule. A ticket
+  projection that forgets `contact_name_id` therefore *over-denies* rather than
+  leaking — which is exactly the class of bug `c317515361` fixed, and it failed
+  safe while it existed.
+- **SQL and JS facets agree**, including on NULL contacts, and the adapter
+  denies rather than skipping the predicate when `contactColumn` is absent.
+- **Client-admin source of truth matches the rest of the portal**
+  (`contacts.is_client_admin`, as used by `clientUserActions.ts` and
+  `policyActions.ts`), so FR3 cannot drift from how admin is decided elsewhere.
+- **The one reachable leak is closed**: `GET /api/tickets/[id]/live-token` now
+  rejects non-internal principals before it looks the ticket up.
+
+**Decided: no blanket `user_type` gate on the MSP ticket actions in this card.**
+The kernel narrowing is the enforcement layer, and the route that could mint a
+credential is gated directly. Adding a second layer to those actions would mean
+a 21st hand-written copy of the `user_type !== 'internal'` idiom that already
+appears in ~20 action modules — the repetition is the signal that this wants to
+be one shared guard, not another copy. That belongs in its own card, not here.
 
 ## Acceptance Criteria (Definition of Done)
 

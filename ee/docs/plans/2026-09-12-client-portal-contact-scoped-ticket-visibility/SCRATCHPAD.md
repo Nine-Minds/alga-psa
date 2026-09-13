@@ -379,14 +379,18 @@ product flow. Same intent applies to contact scope.
 
 ## Open Questions
 
-- **OQ1 — Null-contact ticket policy.** BLOCKING, needs Robert. Decides what a
-  contact-scoped user sees for tickets with `contact_name_id IS NULL`. The
-  card's options (a) and (c) collapse into one another once the client-admin
-  override exists, so the choice is binary: hide nulls, or show them to
-  everyone. Recommendation (hide) and evidence are in the PRD; this needs a
-  decision, not more research.
+- **OQ1 — Null-contact ticket policy.** RESOLVED 2026-09-13 (Robert): **hide
+  them.** Ordinary members of a contact-scoped group do not see tickets with
+  `contact_name_id IS NULL`; client admins still do, within their board scope.
+  The recommendation was accepted as written, which is what the draft already
+  implements — no code change followed.
 - **OQ2 — Kernel scope.** RESOLVED: required, because of the live-token route.
   See the reachability notes above.
+- **OQ3 — Authorization review.** RESOLVED 2026-09-13 (Robert): approved as
+  built. No blanket `user_type` gate on the MSP ticket actions in this card —
+  kernel narrowing is the enforcement layer and the live-token route is gated
+  directly. A shared internal-only guard (the idiom is hand-copied in ~20 action
+  modules) is follow-up work, not this card. Review notes in the PRD.
 - Not blocking, but decide during implementation: whether the new
   `(tenant, contact_name_id)` index should be partial on `IS NOT NULL`.
 
@@ -399,10 +403,10 @@ kernel; the live-token handler also rejects non-internal principals before looku
 Both admin editors and action modules carry scope, both group lists show it, and
 old callers omitting scope on update preserve the saved value.
 
-OQ1 remains **unapproved**. The unpublished draft explicitly implements the
-recommendation (NULL contacts hidden from ordinary contact-scoped members, visible
-to client admins within their board scope). The decision packet was surfaced to
-Robert; no answer has been recorded. This must not be treated as approval to land.
+OQ1 is **approved as drafted** (2026-09-13): NULL contacts are hidden from ordinary
+contact-scoped members and visible to client admins within their board scope. The
+authorization work was reviewed in the same pass and approved unchanged (OQ3). Both
+decisions matched the draft, so no code changed when they landed.
 
 ### Corrections to design-session assumptions
 
