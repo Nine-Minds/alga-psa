@@ -802,4 +802,181 @@ describe('Catalog price resolution – fixed path', () => {
     );
     expect(configured).toBe(january.subtotal);
   });
+
+  it('parity: the rate the rollout preview shows equals the rate the engine bills on the next invoice', async () => {
+    // Item 3b. The rollout preview prices a line with `resolveFixedLineRate`;
+    // the invoice prices it through the billing engine's inline chain. Neither
+    // calls the other, so this is the test that catches them drifting apart.
+    // For each line shape: read the rate the preview shows for the *next*
+    // period, write the catalog change it described, then assert the engine
+    // charges exactly that number for the same line on the next invoice.
+    async function lineNetAmount(
+      invoiceId: string,
+      contractLineId: string,
+    ): Promise<number | null> {
+      const row = await context.db('invoice_charges as ic')
+        .join('invoice_charge_details as iid', function joinDetail() {
+          this.on('iid.item_id', '=', 'ic.item_id').andOn(
+            'iid.tenant',
+            '=',
+            'ic.tenant',
+          );
+        })
+        .join('contract_line_service_configuration as clsc', function joinConfig() {
+          this.on('clsc.config_id', '=', 'iid.config_id').andOn(
+            'clsc.tenant',
+            '=',
+            'iid.tenant',
+          );
+        })
+        .where('ic.tenant', context.tenantId)
+        .where('ic.invoice_id', invoiceId)
+        .where('clsc.contract_line_id', contractLineId)
+        .first('ic.net_amount');
+      return row ? parseInt(row.net_amount) : null;
+    }
+
+    // Every shape needs its own client: the engine will not re-bill the same
+    // period for a client that already has an invoice for it.
+    const shapes: Array<{
+      name: string;
+      provenance: 'inherited' | 'custom' | 'unreviewed';
+      storedRateCents?: number;
+      scheduleRateCents?: number;
+      /** Unit-priced member: quantity > 1, priced from the catalog per seat. */
+      quantity?: number;
+      unitPriced?: boolean;
+    }> = [
+      { name: 'inherited follows the catalog', provenance: 'inherited' },
+      { name: 'custom keeps its stored rate', provenance: 'custom', storedRateCents: 10000 },
+      { name: 'unreviewed keeps its stored rate', provenance: 'unreviewed', storedRateCents: 10000 },
+      { name: 'active schedule wins over the catalog', provenance: 'inherited', scheduleRateCents: 20000 },
+      { name: 'unit-priced seats derive from the catalog', provenance: 'inherited', quantity: 3, unitPriced: true },
+    ];
+
+    const NEW_RATE = 12000;
+    // `previewServicePriceChange` takes a calendar date (`YYYY-MM-DD`): the
+    // fixture's `createTestDateISO` returns a full instant string.
+    const FEB_PERIOD = FEB_START.slice(0, 10);
+
+    for (const shape of shapes) {
+      const clientId = await createClient(
+        context.db,
+        context.tenantId,
+        `Parity ${shape.name}`,
+      );
+      await setupClientTaxConfiguration(context, {
+        clientId,
+        regionCode: 'US-NY',
+        regionName: 'New York',
+        description: 'NY State Tax',
+        startDate: '2020-01-01T00:00:00.000Z',
+        taxPercentage: 0,
+      });
+
+      const serviceId = await createTestService(context, {
+        service_name: `Parity ${shape.name}`,
+        billing_method: 'fixed',
+        default_rate: 10000,
+      });
+      const { contractLineId, contractId } = await createFixedPlanAssignment(
+        context,
+        serviceId,
+        {
+          planName: `Parity ${shape.name} plan`,
+          billingFrequency: 'monthly',
+          baseRateCents: 10000,
+          quantity: shape.quantity ?? 1,
+          startDate: JAN_START,
+          billingTiming: 'advance',
+          clientId,
+        },
+      );
+      await linkMemberToCatalog(contractLineId);
+      if (shape.unitPriced) {
+        // `linkMemberToCatalog` only clears the snapshot; mark the member
+        // unit-priced so the engine bills quantity × rate instead of a bundle.
+        await context.db.raw(
+          `UPDATE contract_line_service_fixed_config AS clsfc
+           SET pricing_basis = 'unit'
+           FROM contract_line_service_configuration AS clsc
+           WHERE clsc.config_id = clsfc.config_id
+             AND clsc.tenant = clsfc.tenant
+             AND clsc.tenant = ?
+             AND clsc.contract_line_id = ?`,
+          [context.tenantId, contractLineId],
+        );
+      }
+      if (shape.provenance === 'inherited') {
+        // `createFixedPlanAssignment` writes the fixture rate into
+        // `contract_lines.custom_rate`; an inherited line must have none, or it
+        // is really an unreviewed line and this shape proves nothing.
+        await setLineProvenance(context, contractLineId, 'inherited');
+      } else {
+        await setLineProvenance(
+          context,
+          contractLineId,
+          shape.provenance,
+          shape.storedRateCents,
+        );
+      }
+      if (shape.scheduleRateCents !== undefined) {
+        await context.db('contract_pricing_schedules').insert({
+          schedule_id: uuidv4(),
+          contract_id: contractId,
+          tenant: context.tenantId,
+          effective_date: JAN_START,
+          end_date: null,
+          custom_rate: shape.scheduleRateCents,
+          notes: `Parity ${shape.name}`,
+        });
+      }
+      await materializeRecurringServicePeriods(context, contractLineId);
+
+      const preview = await previewServicePriceChange(
+        serviceId,
+        NEW_RATE,
+        FEB_PERIOD,
+      );
+      if (!('willChange' in preview)) {
+        throw new Error(`preview failed for ${shape.name}: ${JSON.stringify(preview)}`);
+      }
+      const previewRow = [
+        ...preview.willChange,
+        ...preview.custom,
+        ...preview.unreviewed,
+      ].find((row) => row.contractLineId === contractLineId);
+      expect(previewRow, `no preview row for ${shape.name}`).toBeDefined();
+
+      // Write exactly the catalog change the preview described, then bill it.
+      await updateCatalogPrice(context, serviceId, {
+        rateCents: NEW_RATE,
+        effectiveDate: FEB_PERIOD,
+      });
+      await materializeRecurringServicePeriods(context, contractLineId);
+
+      const billingCycleId = await context.createEntity(
+        'client_billing_cycles',
+        {
+          client_id: clientId,
+          billing_cycle: 'monthly',
+          effective_date: FEB_START,
+          period_start_date: FEB_START,
+          period_end_date: MAR_START,
+        },
+        'billing_cycle_id',
+      );
+      const february = await generateInvoice(billingCycleId);
+      if (!february) {
+        throw new Error(`invoice generation failed for ${shape.name}`);
+      }
+
+      const billed = await lineNetAmount(february.invoice_id, contractLineId);
+      expect(
+        billed,
+        `${shape.name}: preview showed ${previewRow!.newRateCents} but the engine billed ${billed}`,
+      ).toBe(previewRow!.newRateCents);
+      expect(february.subtotal, `${shape.name}: invoice subtotal`).toBe(billed);
+    }
+  }, 120000);
 });
