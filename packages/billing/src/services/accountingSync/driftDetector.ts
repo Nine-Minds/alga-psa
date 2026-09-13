@@ -3,6 +3,7 @@ import type { AccountingExternalChange } from '@alga-psa/types';
 import { SyncMappingLedger } from './syncMappingLedger';
 import { MAPPING_SYNC_STATUS, type AccountingSyncCycleStats } from './accountingSync.types';
 import type { SyncExceptionService } from './syncExceptions.types';
+import { isNormalizedDocumentPayload, providerForAdapterType } from './normalizedChange';
 
 /**
  * Drift detection for exported documents (Invoices now; CreditMemos ride the
@@ -22,6 +23,8 @@ export interface DriftDetectorDeps {
   ledger: SyncMappingLedger;
   exceptions: SyncExceptionService;
   stats: AccountingSyncCycleStats;
+  /** Adapter that reported the change; drives provider-neutral copy. */
+  adapterType?: string;
 }
 
 function toAmount(value: unknown): number | null {
@@ -42,14 +45,20 @@ export async function applyExternalDocumentChange(
 
   const metadata = mapping.metadata ?? {};
 
+  const normalized = isNormalizedDocumentPayload(change.normalized) ? change.normalized : null;
+  const providerLabel = providerForAdapterType(deps.adapterType ?? 'quickbooks_online') === 'xero'
+    ? 'Xero'
+    : 'QuickBooks';
+
   // QBO voids arrive as plain updates (TotalAmt 0 + PrivateNote "Voided"),
   // not as CDC-deleted entities — treat them as external voids, not drift.
   const payload = change.payload as { TotalAmt?: unknown; PrivateNote?: unknown } | undefined;
-  const looksVoided =
-    payload != null &&
-    Number(payload.TotalAmt) === 0 &&
-    typeof payload.PrivateNote === 'string' &&
-    /voided/i.test(payload.PrivateNote);
+  const looksVoided = normalized
+    ? normalized.isVoided
+    : payload != null &&
+      Number(payload.TotalAmt) === 0 &&
+      typeof payload.PrivateNote === 'string' &&
+      /voided/i.test(payload.PrivateNote);
 
   if (change.deleted || looksVoided) {
     if (
@@ -69,7 +78,7 @@ export async function applyExternalDocumentChange(
       type: 'accounting_sync_drift',
       entityType: 'invoice',
       entityId: mapping.alga_entity_id,
-      title: 'Exported invoice was voided or deleted in QuickBooks',
+      title: `Exported invoice was voided or deleted in ${providerLabel}`,
       context: {
         alga_invoice_id: mapping.alga_entity_id,
         external_invoice_id: change.externalId,
@@ -92,8 +101,10 @@ export async function applyExternalDocumentChange(
     return;
   }
 
-  const externalTotal = toAmount((change.payload as any)?.TotalAmt);
-  const externalDocNumber = (change.payload as any)?.DocNumber ?? null;
+  const externalTotal = normalized ? normalized.totalAmount : toAmount((change.payload as any)?.TotalAmt);
+  const externalDocNumber = normalized
+    ? normalized.docNumber
+    : ((change.payload as any)?.DocNumber ?? null);
   const snapshotTotal = toAmount(metadata.exported_total);
   const snapshotDocNumber = metadata.doc_number ?? null;
 
@@ -129,7 +140,7 @@ export async function applyExternalDocumentChange(
     type: 'accounting_sync_drift',
     entityType: 'invoice',
     entityId: mapping.alga_entity_id,
-    title: 'Exported invoice was changed in QuickBooks',
+    title: `Exported invoice was changed in ${providerLabel}`,
     context: {
       alga_invoice_id: mapping.alga_entity_id,
       external_invoice_id: change.externalId,

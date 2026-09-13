@@ -15,10 +15,54 @@ export interface AccountingExportAdapterCapabilities {
   supportsChangePolling?: boolean;
   /** Whether this adapter can record payments in the external system */
   supportsPaymentRecording?: boolean;
+  /** Whether this adapter can push a received payment to the external system */
+  supportsOutboundPayment?: boolean;
+  /** Whether this adapter can apply an issued credit to an invoice in the external system */
+  supportsOutboundCredit?: boolean;
+  /** Whether this adapter can void/delete an exported document in the external system */
+  supportsOutboundVoid?: boolean;
 }
 
 /** Entity kinds reported by change polling */
 export type AccountingExternalChangeEntity = 'Customer' | 'Payment' | 'Invoice' | 'CreditMemo' | 'RefundReceipt';
+
+/** Provider-neutral allocation of an external payment/credit to an invoice. */
+export interface NormalizedExternalPaymentAllocation {
+  externalInvoiceId: string;
+  amountCents: number;
+}
+
+/**
+ * Provider-neutral payment / credit-application payload. Adapters translate
+ * their own payload shape into this contract so shared reconciliation logic
+ * never branches on provider field names.
+ */
+export interface NormalizedExternalPaymentPayload {
+  reference: string;
+  currency?: string;
+  /** Bookkeeping date recorded by the provider (ISO 8601). */
+  txnDate?: string;
+  totalCents?: number;
+  unappliedCents?: number;
+  allocations: NormalizedExternalPaymentAllocation[];
+  /** True when the provider records this as a credit application rather than cash. */
+  isCreditApplication: boolean;
+  /** Opaque provider fields preserved for diagnostics and historical metadata. */
+  providerMetadata?: Record<string, unknown>;
+}
+
+/** Provider-neutral document payload used for drift/void reconciliation. */
+export interface NormalizedExternalDocumentPayload {
+  totalAmount: number | null;
+  docNumber: string | null;
+  /** True when the provider reports the document as voided/deleted in place. */
+  isVoided: boolean;
+  providerMetadata?: Record<string, unknown>;
+}
+
+export type NormalizedExternalChangePayload =
+  | NormalizedExternalPaymentPayload
+  | NormalizedExternalDocumentPayload;
 
 /** One changed entity in the external accounting system */
 export interface AccountingExternalChange {
@@ -29,6 +73,69 @@ export interface AccountingExternalChange {
   updatedAt?: string;
   /** Raw entity payload as returned by the external system (absent for deletions) */
   payload?: Record<string, unknown>;
+  /**
+   * Provider-neutral view of the same change. Present for adapters that
+   * normalize at the boundary; shared appliers prefer it and only fall back to
+   * the legacy QBO payload shape when it is absent.
+   */
+  normalized?: NormalizedExternalChangePayload;
+}
+
+/** Provider-neutral snapshot of an external document used before a remote write. */
+export interface ProviderDocumentSnapshot {
+  externalId: string;
+  externalEntityType?: string;
+  syncToken?: string | null;
+  totalAmount?: number | null;
+  docNumber?: string | null;
+  customerExternalId?: string | null;
+}
+
+export interface ProviderPaymentRequest {
+  externalInvoiceId: string;
+  externalCustomerId?: string | null;
+  amountCents: number;
+  reference: string;
+  currency?: string;
+  depositAccountRef?: { value: string; name?: string } | null;
+}
+
+export interface ProviderPaymentResult {
+  externalPaymentId: string;
+  syncToken?: string;
+  /** Amount the provider booked as unapplied customer credit, when reported. */
+  unappliedCents?: number;
+}
+
+export interface ProviderCreditApplicationRequest {
+  externalCreditNoteId: string;
+  externalInvoiceId: string;
+  externalCustomerId?: string | null;
+  amountCents: number;
+}
+
+export interface ProviderCreditApplicationResult {
+  externalPaymentId: string;
+  syncToken?: string;
+}
+
+export interface ProviderVoidDocumentRequest {
+  externalId: string;
+  externalEntityType?: string;
+}
+
+/**
+ * Remote accounting operations exposed by an adapter once it has resolved a
+ * tenant + organisation. Capability flags gate whether a given operation may
+ * be attempted; the appliers never construct a provider client directly.
+ */
+export interface AccountingProviderOperations {
+  readDocument(entityType: string, externalId: string): Promise<ProviderDocumentSnapshot | null>;
+  /** Remaining credit on an external credit note, or null when it is gone. */
+  getCreditRemainingCents(externalCreditNoteId: string): Promise<number | null>;
+  recordPayment(request: ProviderPaymentRequest): Promise<ProviderPaymentResult>;
+  applyCredit(request: ProviderCreditApplicationRequest): Promise<ProviderCreditApplicationResult>;
+  voidDocument(request: ProviderVoidDocumentRequest): Promise<void>;
 }
 
 export interface AccountingChangeSet {
@@ -167,6 +274,16 @@ export interface AccountingExportAdapter {
     since: string,
     targetRealm?: string | null
   ): Promise<AccountingChangeSet>;
+
+  /**
+   * Resolve remote operations for a tenant + organisation. Only present for
+   * adapters that expose at least one outbound operation; callers gate on the
+   * matching capability flag first.
+   */
+  providerOperations?(
+    tenantId: string,
+    targetRealm: string
+  ): Promise<AccountingProviderOperations>;
 
   /**
    * Called after export when tax delegation is enabled.

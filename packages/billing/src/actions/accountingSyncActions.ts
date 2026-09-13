@@ -7,13 +7,12 @@ import { createTenantKnex, tenantDb, writeAccountingAudit } from '@alga-psa/db';
 import type { IUserWithRoles } from '@alga-psa/types';
 import logger from '@alga-psa/core/logger';
 import { getStoredQboCredentialsMap, QboClientService } from '@alga-psa/integrations/lib/qbo/qboClientService';
-import { isProviderDisconnectActive, PROVIDER_QBO } from '@alga-psa/integrations/lib/providerDisconnect';
+import { getStoredXeroConnections } from '@alga-psa/integrations/lib/xero/xeroClientService';
+import { isProviderDisconnectActive, PROVIDER_QBO, PROVIDER_XERO } from '@alga-psa/integrations/lib/providerDisconnect';
 import {
   getAccountingSyncSettings,
   updateAccountingSyncSettings,
-  resolveDefaultRealm,
-  type AccountingSyncSettings,
-  type QboRef
+  type AccountingSyncSettings
 } from '../services/accountingSync/accountingSyncSettings';
 import { runAccountingSyncCycle, type RunCycleResult } from '../services/accountingSync/accountingSyncCycleService';
 import { SyncOperationsRepository } from '../services/accountingSync/syncOperationsRepository';
@@ -21,9 +20,6 @@ import { SyncCycleRepository } from '../services/accountingSync/syncCycleReposit
 import { SyncMappingLedger } from '../services/accountingSync/syncMappingLedger';
 import { WorkflowTaskSyncExceptionService } from '../services/accountingSync/syncExceptionService';
 import { MAPPING_SYNC_STATUS, type AccountingSyncCycleRecord } from '../services/accountingSync/accountingSync.types';
-import { AccountingAdapterRegistry } from '../adapters/accounting/registry';
-
-const SYNC_ADAPTER_TYPE = 'quickbooks_online';
 
 function isEnterpriseEdition(): boolean {
   return (
@@ -75,11 +71,22 @@ async function checkMappingsManageAccess(user: IUserWithRoles): Promise<void> {
  */
 async function assertNoActiveProviderDisconnect(tenantId: string): Promise<void> {
   const { knex } = await createTenantKnex();
-  const active = await isProviderDisconnectActive(knex, tenantId, PROVIDER_QBO).catch(() => false);
-  if (active) {
+  const [qboActive, xeroActive] = await Promise.all([
+    isProviderDisconnectActive(knex, tenantId, PROVIDER_QBO).catch(() => false),
+    isProviderDisconnectActive(knex, tenantId, PROVIDER_XERO).catch(() => false)
+  ]);
+  if (qboActive) {
     throw new Error('QuickBooks is being disconnected. Sync and exports are paused until the disconnect completes.');
   }
+  if (xeroActive) {
+    throw new Error('Xero is being disconnected. Sync and exports are paused until the disconnect completes.');
+  }
 }
+
+import { resolveSyncTarget } from '../services/accountingSync/syncTarget';
+export { resolveSyncTarget };
+export type { ResolvedSyncTarget } from '../services/accountingSync/syncTarget';
+
 
 export const getAccountingSyncSettingsAction = withAuth(async (
   user,
@@ -129,7 +136,7 @@ export const updateAccountingSyncSettingsAction = withAuth(async (
   return updated;
 });
 
-/** Run an immediate sync cycle for the tenant's default realm (Sync Now). */
+/** Run an immediate sync cycle for the tenant's connected provider (Sync Now). */
 export const runAccountingSyncNow = withAuth(async (
   user,
   { tenant }
@@ -139,33 +146,27 @@ export const runAccountingSyncNow = withAuth(async (
   await assertNoActiveProviderDisconnect(tenant);
   const { knex } = await createTenantKnex();
 
-  const realm = await resolveDefaultRealm(knex, tenant);
-  if (!realm) {
-    return { ran: false, status: 'skipped', error: 'No QuickBooks company is connected.' };
+  const target = await resolveSyncTarget(knex, tenant);
+  if (!target) {
+    return { ran: false, status: 'skipped', error: 'No accounting provider is connected.' };
   }
 
-  const registry = await AccountingAdapterRegistry.createDefault();
-  const adapter = registry.get(SYNC_ADAPTER_TYPE);
-  if (!adapter) {
-    return { ran: false, status: 'skipped', error: 'QuickBooks adapter unavailable.' };
-  }
-
-  const credentials = await getStoredQboCredentialsMap(tenant);
+  const { integration, adapter, refreshTokenExpiresAt } = target;
 
   const result = await runAccountingSyncCycle({
     knex,
     tenantId: tenant,
-    adapterType: SYNC_ADAPTER_TYPE,
-    targetRealm: realm,
+    adapterType: integration.adapterType,
+    targetRealm: integration.targetRealm,
     adapter,
-    refreshTokenExpiresAt: credentials[realm]?.refreshTokenExpiresAt ?? null,
+    refreshTokenExpiresAt,
     force: true
   });
 
   await writeAccountingAudit(knex, tenant, 'accounting_sync_cycle_run', {
     userId: user.user_id,
-    provider: 'quickbooks_online',
-    recordId: realm,
+    provider: integration.adapterType === 'xero' ? 'xero' : 'quickbooks_online',
+    recordId: integration.targetRealm,
     details: {
       ran: result.ran,
       status: result.status,
@@ -189,15 +190,15 @@ export const queueInvoiceSync = withAuth(async (
   await assertNoActiveProviderDisconnect(tenant);
   const { knex } = await createTenantKnex();
 
-  const realm = await resolveDefaultRealm(knex, tenant);
-  if (!realm) {
-    return { queued: false, error: 'No QuickBooks company is connected.' };
+  const target = await resolveSyncTarget(knex, tenant);
+  if (!target) {
+    return { queued: false, error: 'No accounting provider is connected.' };
   }
 
   await new SyncOperationsRepository(knex).enqueue({
     tenant,
-    adapterType: SYNC_ADAPTER_TYPE,
-    targetRealm: realm,
+    adapterType: target.integration.adapterType,
+    targetRealm: target.integration.targetRealm,
     operation: 'export_invoice',
     algaEntityType: 'invoice',
     algaEntityId: invoiceId
@@ -206,7 +207,7 @@ export const queueInvoiceSync = withAuth(async (
   return { queued: true };
 });
 
-/** Drift resolution: push Alga's version back to QBO (queues a re-export). */
+/** Drift resolution: push Alga's version back to the provider (queues a re-export). */
 export const resolveAccountingDriftReExport = withAuth(async (
   user,
   { tenant },
@@ -217,15 +218,15 @@ export const resolveAccountingDriftReExport = withAuth(async (
   await assertNoActiveProviderDisconnect(tenant);
   const { knex } = await createTenantKnex();
 
-  const realm = await resolveDefaultRealm(knex, tenant);
-  if (!realm) {
-    return { queued: false, error: 'No QuickBooks company is connected.' };
+  const target = await resolveSyncTarget(knex, tenant);
+  if (!target) {
+    return { queued: false, error: 'No accounting provider is connected.' };
   }
 
   await new SyncOperationsRepository(knex).enqueue({
     tenant,
-    adapterType: SYNC_ADAPTER_TYPE,
-    targetRealm: realm,
+    adapterType: target.integration.adapterType,
+    targetRealm: target.integration.targetRealm,
     operation: 'export_invoice',
     algaEntityType: 'invoice',
     algaEntityId: invoiceId,
@@ -247,15 +248,16 @@ export const resolveAccountingDriftAccept = withAuth(async (
   await checkMappingsManageAccess(user);
   const { knex } = await createTenantKnex();
 
-  const realm = await resolveDefaultRealm(knex, tenant);
-  if (!realm) {
-    return { resolved: false, error: 'No QuickBooks company is connected.' };
+  const target = await resolveSyncTarget(knex, tenant);
+  if (!target) {
+    return { resolved: false, error: 'No accounting provider is connected.' };
   }
+  const { integration } = target;
 
-  const ledger = new SyncMappingLedger(knex, tenant, SYNC_ADAPTER_TYPE);
-  const mapping = await ledger.findByAlgaId('invoice', invoiceId, realm);
+  const ledger = new SyncMappingLedger(knex, tenant, integration.adapterType);
+  const mapping = await ledger.findByAlgaId('invoice', invoiceId, integration.targetRealm);
   if (!mapping) {
-    return { resolved: false, error: 'Invoice has no QuickBooks mapping for the connected company.' };
+    return { resolved: false, error: 'Invoice has no mapping for the connected company.' };
   }
 
   const metadata = mapping.metadata ?? {};
@@ -314,18 +316,20 @@ export const getInvoiceSyncStatuses = withAuth(async (
     return {};
   }
 
-  const realm = await resolveDefaultRealm(knex, tenant).catch(() => null);
-  if (!realm) {
+  const target = await resolveSyncTarget(knex, tenant).catch(() => null);
+  if (!target) {
     return {};
   }
+  const { integration } = target;
+  const integrationType = integration.adapterType;
 
   const [mappings, ops] = await Promise.all([
     tenantDb(knex, tenant).table('tenant_external_entity_mappings')
-      .where({ integration_type: SYNC_ADAPTER_TYPE, alga_entity_type: 'invoice' })
+      .where({ integration_type: integrationType, alga_entity_type: 'invoice' })
       .whereIn('alga_entity_id', ids)
       .select('alga_entity_id', 'external_entity_id', 'sync_status', 'last_synced_at', 'metadata'),
     tenantDb(knex, tenant).table('accounting_sync_operations')
-      .where({ adapter_type: SYNC_ADAPTER_TYPE, operation: 'export_invoice', alga_entity_type: 'invoice' })
+      .where({ adapter_type: integrationType, operation: 'export_invoice', alga_entity_type: 'invoice' })
       .whereIn('alga_entity_id', ids)
       .whereIn('status', ['pending', 'in_progress', 'skipped'])
       .select('alga_entity_id', 'status', 'last_error')
@@ -341,8 +345,12 @@ export const getInvoiceSyncStatuses = withAuth(async (
     }
   }
 
-  const { getQboEnvironment } = await import('@alga-psa/integrations/lib/qbo/qboClientService');
-  const environment = getQboEnvironment();
+  // The Intuit environment only applies to the QBO deep link; Xero has none.
+  let environment: 'sandbox' | 'production' | undefined;
+  if (integrationType === 'quickbooks_online') {
+    const { getQboEnvironment } = await import('@alga-psa/integrations/lib/qbo/qboClientService');
+    environment = getQboEnvironment();
+  }
 
   const result: Record<string, InvoiceSyncStatus> = {};
   for (const invoiceId of ids) {
@@ -405,6 +413,10 @@ export interface AccountingSyncHealth {
    * null = could not be read (disconnected, API error).
    */
   autoApplyCreditsEnabled: boolean | null;
+  /** Connected accounting provider selected for this tenant. */
+  adapterType?: string | null;
+  /** Human-readable organisation name when the provider exposes one. */
+  organisationName?: string | null;
 }
 
 /** Health panel data for the integration settings page. */
@@ -417,20 +429,29 @@ export const getAccountingSyncHealth = withAuth(async (
   const { knex } = await createTenantKnex();
 
   const settings = await getAccountingSyncSettings(knex, tenant);
-  const realm = await resolveDefaultRealm(knex, tenant).catch(() => null);
-  const credentials = await getStoredQboCredentialsMap(tenant).catch(() => ({} as Record<string, any>));
+  const qboCredentials = await getStoredQboCredentialsMap(tenant).catch(() => ({} as Record<string, any>));
+  const xeroConnections = await getStoredXeroConnections(tenant).catch(() => ({} as Record<string, any>));
+  const target = await resolveSyncTarget(knex, tenant).catch(() => null);
 
-  const realmIds = Object.keys(credentials);
-  const defaultRealm = settings.defaultRealm && realmIds.includes(settings.defaultRealm)
-    ? settings.defaultRealm
-    : (realm ?? realmIds[0] ?? null);
+  const adapterType = target?.integration.adapterType ?? null;
+  const realm = target?.integration.targetRealm ?? null;
 
-  const realms: AccountingSyncRealmInfo[] = realmIds.map((r) => ({
-    realmId: r,
-    isDefault: r === defaultRealm
-  }));
+  let realms: AccountingSyncRealmInfo[];
+  let organisationName: string | null = null;
+  if (adapterType === 'xero') {
+    realms = Object.keys(xeroConnections).map((r) => ({ realmId: r, isDefault: r === realm }));
+    organisationName = realm ? xeroConnections[realm]?.tenantName ?? null : null;
+  } else {
+    const realmIds = Object.keys(qboCredentials);
+    const defaultRealm =
+      settings.defaultRealm && realmIds.includes(settings.defaultRealm)
+        ? settings.defaultRealm
+        : (realm ?? realmIds[0] ?? null);
+    realms = realmIds.map((r) => ({ realmId: r, isDefault: r === defaultRealm }));
+    organisationName = realm ?? null;
+  }
 
-  if (!realm) {
+  if (!target || !realm || !adapterType) {
     return {
       connected: false,
       settings,
@@ -441,17 +462,19 @@ export const getAccountingSyncHealth = withAuth(async (
       openExceptions: 0,
       refreshTokenExpiresAt: null,
       realms,
-      autoApplyCreditsEnabled: null
+      autoApplyCreditsEnabled: null,
+      adapterType,
+      organisationName
     };
   }
 
-  const ledger = new SyncMappingLedger(knex, tenant, SYNC_ADAPTER_TYPE);
+  const ledger = new SyncMappingLedger(knex, tenant, adapterType);
   const [lastCycle, opCounts, statusCounts, openExceptions, autoApplyCreditsEnabled] = await Promise.all([
-    new SyncCycleRepository(knex).getLatestCycle(tenant, SYNC_ADAPTER_TYPE, realm),
-    new SyncOperationsRepository(knex).countByStatus(tenant, SYNC_ADAPTER_TYPE),
+    new SyncCycleRepository(knex).getLatestCycle(tenant, adapterType, realm),
+    new SyncOperationsRepository(knex).countByStatus(tenant, adapterType),
     ledger.countByStatus(),
     new WorkflowTaskSyncExceptionService(knex, tenant).countOpen(),
-    readAutoApplyCreditsPreference(tenant, realm)
+    adapterType === 'quickbooks_online' ? readAutoApplyCreditsPreference(tenant, realm) : Promise.resolve(null)
   ]);
 
   return {
@@ -463,9 +486,14 @@ export const getAccountingSyncHealth = withAuth(async (
     driftCount:
       (statusCounts[MAPPING_SYNC_STATUS.drift] ?? 0) + (statusCounts[MAPPING_SYNC_STATUS.externalVoided] ?? 0),
     openExceptions,
-    refreshTokenExpiresAt: credentials[realm]?.refreshTokenExpiresAt ?? null,
+    refreshTokenExpiresAt:
+      adapterType === 'xero'
+        ? xeroConnections[realm]?.refreshTokenExpiresAt ?? null
+        : qboCredentials[realm]?.refreshTokenExpiresAt ?? null,
     realms,
-    autoApplyCreditsEnabled
+    autoApplyCreditsEnabled,
+    adapterType,
+    organisationName
   };
 });
 
