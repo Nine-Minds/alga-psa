@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } from 'vitest';
+import { createRequire } from 'node:module';
 import '../../../../../test-utils/nextApiMock';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 import { v4 as uuidv4 } from 'uuid';
@@ -17,6 +18,7 @@ import {
 } from '../../../../../test-utils/billingTestHelpers';
 import { previewServicePriceChange } from '@alga-psa/billing/actions/servicePriceRolloutActions';
 import { resetContractLineRateToStandard } from '@alga-psa/billing/actions/rateReviewActions';
+import { createClient } from '../../../../../test-utils/testDataFactory';
 import {
   loadFixedConfigBaseRates,
   loadPricingScheduleRates,
@@ -249,70 +251,145 @@ describe('Catalog price resolution – fixed path', () => {
     expect(parseInt(invoiceItems[0].net_amount)).toBe(12000);
   });
 
-  it('T16: the unreviewed backfill is money-neutral for an existing line', async () => {
+  it('T16: the real provenance migration is money-neutral for the same period, per line', async () => {
     const serviceId = await createTestService(context, {
       service_name: 'Backfill Service',
       billing_method: 'fixed',
       default_rate: 10000
     });
 
-    const { contractLineId } = await createFixedPlanAssignment(context, serviceId, {
-      planName: 'Backfill Plan',
-      billingFrequency: 'monthly',
-      baseRateCents: 10000,
-      quantity: 1,
-      startDate: createTestDateISO({ year: 2023, month: 1, day: 1 }),
-      billingTiming: 'advance'
+    const secondClientId = await createClient(
+      context.db,
+      context.tenantId,
+      'Backfill Second Client',
+    );
+    await setupClientTaxConfiguration(context, {
+      clientId: secondClientId,
+      regionCode: 'US-NY',
+      regionName: 'New York',
+      description: 'NY State Tax',
+      startDate: '2020-01-01T00:00:00.000Z',
+      taxPercentage: 0
     });
 
-    // Legacy pre-migration state: a stored rate with no provenance label at
-    // either rate level, which is exactly what the backfill finds.
-    await context.db('contract_lines')
-      .where({ tenant: context.tenantId, contract_line_id: contractLineId })
-      .update({ custom_rate: 10000, rate_provenance: null });
+    // One legacy line shape, seeded on two independent clients so the *same*
+    // calendar period can be invoiced once before and once after the migration
+    // (the engine will not re-bill an already-invoiced period for one client).
+    async function seedLegacyLine(clientId: string): Promise<string> {
+      const { contractLineId } = await createFixedPlanAssignment(context, serviceId, {
+        planName: `Backfill ${clientId.slice(0, 6)}`,
+        billingFrequency: 'monthly',
+        baseRateCents: 10000,
+        quantity: 1,
+        startDate: JAN_START,
+        billingTiming: 'advance',
+        clientId,
+      });
+      // Legacy pre-migration state: stored rates, no label at either level.
+      await context.db('contract_lines')
+        .where({ tenant: context.tenantId, contract_line_id: contractLineId })
+        .update({ custom_rate: 10000, rate_provenance: null });
+      await context.db.raw(
+        `UPDATE contract_line_service_fixed_config AS clsfc
+         SET base_rate = 10000, rate_provenance = NULL
+         FROM contract_line_service_configuration AS clsc
+         WHERE clsc.config_id = clsfc.config_id
+           AND clsc.tenant = clsfc.tenant
+           AND clsc.tenant = ?
+           AND clsc.contract_line_id = ?`,
+        [context.tenantId, contractLineId],
+      );
+      await materializeRecurringServicePeriods(context, contractLineId);
+      return contractLineId;
+    }
 
-    await materializeRecurringServicePeriods(context, contractLineId);
+    const firstLineId = await seedLegacyLine(context.clientId);
+    const secondLineId = await seedLegacyLine(secondClientId);
 
-    const januaryCycleId = await context.createEntity('client_billing_cycles', {
-      client_id: context.clientId,
-      billing_cycle: 'monthly',
-      effective_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
-      period_start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
-      period_end_date: createTestDateISO({ year: 2023, month: 2, day: 1 })
-    }, 'billing_cycle_id');
+    async function invoiceJanuary(clientId: string) {
+      const billingCycleId = await context.createEntity('client_billing_cycles', {
+        client_id: clientId,
+        billing_cycle: 'monthly',
+        effective_date: JAN_START,
+        period_start_date: JAN_START,
+        period_end_date: FEB_START
+      }, 'billing_cycle_id');
+      const result = await generateInvoice(billingCycleId);
+      if (!result || !(result as { invoice_id?: string }).invoice_id) {
+        throw new Error(`invoice generation failed for ${clientId}: ${JSON.stringify(result)}`);
+      }
+      return result!;
+    }
 
-    const before = await generateInvoice(januaryCycleId);
-    expect(before).not.toBeNull();
+    async function lineNet(invoiceId: string, contractLineId: string): Promise<number | null> {
+      const row = await context.db('invoice_charges as ic')
+        .join('invoice_charge_details as iid', function joinDetail() {
+          this.on('iid.item_id', '=', 'ic.item_id').andOn('iid.tenant', '=', 'ic.tenant');
+        })
+        .join('contract_line_service_configuration as clsc', function joinConfig() {
+          this.on('clsc.config_id', '=', 'iid.config_id').andOn(
+            'clsc.tenant',
+            '=',
+            'iid.tenant',
+          );
+        })
+        .where('ic.tenant', context.tenantId)
+        .where('ic.invoice_id', invoiceId)
+        .where('clsc.contract_line_id', contractLineId)
+        .first('ic.net_amount');
+      return row ? parseInt(row.net_amount) : null;
+    }
 
-    // Apply the migration's mechanical backfill: non-null rate => unreviewed,
-    // at the line and fixed-config levels.
-    await setLineProvenance(context, contractLineId, 'unreviewed', 10000);
-    await context.db.raw(
-      `UPDATE contract_line_service_fixed_config AS clsfc
-       SET rate_provenance = 'unreviewed'
-       FROM contract_line_service_configuration AS clsc
-       WHERE clsc.config_id = clsfc.config_id
-         AND clsc.tenant = clsfc.tenant
-         AND clsc.tenant = ?
-         AND clsc.contract_line_id = ?`,
-      [context.tenantId, contractLineId],
-    );
+    // Before the migration: the legacy row bills its stored number.
+    const before = await invoiceJanuary(context.clientId);
+    const beforeNet = await lineNet(before.invoice_id, firstLineId);
+    expect(beforeNet).toBe(10000);
 
-    await materializeRecurringServicePeriods(context, contractLineId);
+    // Exercise the real migrations, both directions, so the actual backfill SQL
+    // runs rather than a hand-written imitation of it.
+    const require = createRequire(import.meta.url);
+    const provenanceMigrations = [
+      require('../../../../../migrations/20260912110000_add_rate_provenance_to_contract_lines.cjs'),
+      require('../../../../../migrations/20260912120000_add_rate_provenance_to_service_fixed_config.cjs'),
+    ];
+    for (const migration of provenanceMigrations) {
+      await migration.down(context.db);
+    }
+    for (const migration of provenanceMigrations) {
+      await migration.up(context.db);
+    }
 
-    const februaryCycleId = await context.createEntity('client_billing_cycles', {
-      client_id: context.clientId,
-      billing_cycle: 'monthly',
-      effective_date: createTestDateISO({ year: 2023, month: 2, day: 1 }),
-      period_start_date: createTestDateISO({ year: 2023, month: 2, day: 1 }),
-      period_end_date: createTestDateISO({ year: 2023, month: 3, day: 1 })
-    }, 'billing_cycle_id');
+    // The backfill classified both legacy lines without touching the rates.
+    const backfilledLines = await context.db('contract_lines')
+      .whereIn('contract_line_id', [firstLineId, secondLineId])
+      .select('contract_line_id', 'custom_rate', 'rate_provenance');
+    expect(backfilledLines).toHaveLength(2);
+    for (const row of backfilledLines) {
+      expect(Number(row.custom_rate)).toBe(10000);
+      expect(row.rate_provenance).toBe('unreviewed');
+    }
+    const backfilledMembers = await context.db('contract_line_service_fixed_config as clsfc')
+      .join('contract_line_service_configuration as clsc', function joinConfig() {
+        this.on('clsc.config_id', '=', 'clsfc.config_id').andOn(
+          'clsc.tenant',
+          '=',
+          'clsfc.tenant',
+        );
+      })
+      .where('clsc.tenant', context.tenantId)
+      .whereIn('clsc.contract_line_id', [firstLineId, secondLineId])
+      .select('clsc.contract_line_id', 'clsfc.base_rate', 'clsfc.rate_provenance');
+    expect(backfilledMembers).toHaveLength(2);
+    for (const row of backfilledMembers) {
+      expect(Number(row.base_rate)).toBe(10000);
+      expect(row.rate_provenance).toBe('unreviewed');
+    }
 
-    const after = await generateInvoice(februaryCycleId);
-    expect(after).not.toBeNull();
-
-    expect(after!.subtotal).toBe(before!.subtotal);
-    expect(after!.subtotal).toBe(10000);
+    // After the migration the same January period bills the same per-line amount.
+    const after = await invoiceJanuary(secondClientId);
+    const afterNet = await lineNet(after.invoice_id, secondLineId);
+    expect(afterNet).toBe(10000);
+    expect(afterNet).toBe(beforeNet);
   });
 
   /**
@@ -449,9 +526,44 @@ describe('Catalog price resolution – fixed path', () => {
     expect(parseInt(items[0].net_amount)).toBe(10000);
   });
 
-  it('T5: reset-to-standard re-links the line to the catalog for the next period', async () => {
+  it('T4b: the already-invoiced guard survives without the recurring-period signal', async () => {
+    const { serviceId, contractLineId } = await seedInheritedLine('T4b Service', 10000, JAN_START);
+    await invoiceCycle(JAN_START, FEB_START);
+
+    // The pre-materialization shape: charges exist but the recurring-period
+    // rows are absent, so only invoice_charge_details / the client cycle can
+    // report the period as billed.
+    await context.db('recurring_service_periods')
+      .where({ tenant: context.tenantId })
+      .del();
+
+    const preview = await previewServicePriceChange(serviceId, 12000, '2023-01-01');
+    if (!('willChange' in preview)) {
+      throw new Error(`preview failed: ${JSON.stringify(preview)}`);
+    }
+    expect(preview.willChange).toHaveLength(0);
+    const excluded = preview.excluded.find((row) => row.contractLineId === contractLineId);
+    expect(excluded).toBeDefined();
+    expect(excluded!.reason).toMatch(/invoiced/i);
+  });
+
+  it('T5: reset-to-standard clears the member snapshot and re-links the line to the catalog', async () => {
     const { serviceId, contractLineId } = await seedInheritedLine('T5 Service', 10000, JAN_START);
     await setLineProvenance(context, contractLineId, 'custom', 4500);
+
+    // A wizard-built line snapshots the rate into the member config. Reset must
+    // clear that too, or the member keeps shadowing the catalog after the line
+    // is cleared and the line reports Standard while billing the old number.
+    await context.db.raw(
+      `UPDATE contract_line_service_fixed_config AS clsfc
+       SET base_rate = 4500, rate_provenance = 'custom'
+       FROM contract_line_service_configuration AS clsc
+       WHERE clsc.config_id = clsfc.config_id
+         AND clsc.tenant = clsfc.tenant
+         AND clsc.tenant = ?
+         AND clsc.contract_line_id = ?`,
+      [context.tenantId, contractLineId],
+    );
 
     const january = await invoiceCycle(JAN_START, FEB_START);
     expect(january.subtotal).toBe(4500);
@@ -471,9 +583,57 @@ describe('Catalog price resolution – fixed path', () => {
     expect(line.custom_rate).toBeNull();
     expect(line.rate_provenance).toBe('inherited');
 
+    const memberResult = await context.db.raw(
+      `SELECT clsfc.base_rate, clsfc.rate_provenance
+       FROM contract_line_service_fixed_config AS clsfc
+       JOIN contract_line_service_configuration AS clsc
+         ON clsc.config_id = clsfc.config_id AND clsc.tenant = clsfc.tenant
+       WHERE clsc.tenant = ? AND clsc.contract_line_id = ?`,
+      [context.tenantId, contractLineId],
+    );
+    expect(memberResult.rows[0].base_rate).toBeNull();
+    expect(memberResult.rows[0].rate_provenance).toBe('inherited');
+
     await materializeRecurringServicePeriods(context, contractLineId);
     const february = await invoiceCycle(FEB_START, MAR_START);
     expect(february.subtotal).toBe(10000);
+  });
+
+  it('T5b: reset-to-standard refuses a line whose members resolve to no catalog rate', async () => {
+    const serviceId = await createTestService(context, {
+      service_name: 'T5b Service',
+      billing_method: 'fixed',
+      default_rate: 10000,
+      seedServicePrice: false,
+    });
+    const { contractLineId } = await createFixedPlanAssignment(context, serviceId, {
+      planName: 'T5b Plan',
+      billingFrequency: 'monthly',
+      baseRateCents: 10000,
+      quantity: 1,
+      startDate: JAN_START,
+      billingTiming: 'advance',
+    });
+    await linkMemberToCatalog(contractLineId);
+    // Remove the legacy catalog rate too, so no member resolves to a number.
+    await context.db('service_catalog')
+      .where({ tenant: context.tenantId, service_id: serviceId })
+      .update({ default_rate: null });
+    await setLineProvenance(context, contractLineId, 'custom', 4500);
+
+    const reset = await resetContractLineRateToStandard(contractLineId);
+    if (!('refused' in reset)) {
+      throw new Error(`reset unexpectedly applied: ${JSON.stringify(reset)}`);
+    }
+    expect(reset.applied).toHaveLength(0);
+    expect(reset.refused).toHaveLength(1);
+    expect(reset.refused[0].reason).toMatch(/no catalog rate/i);
+
+    const line = await context.db('contract_lines')
+      .where({ tenant: context.tenantId, contract_line_id: contractLineId })
+      .first('custom_rate', 'rate_provenance');
+    expect(Number(line.custom_rate)).toBe(4500);
+    expect(line.rate_provenance).toBe('custom');
   });
 
   async function assertReportAgreesWithInvoice(
