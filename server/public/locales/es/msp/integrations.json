@@ -3779,6 +3779,7 @@
       "enterpriseOnly": "La integración con Xero solo está disponible en Enterprise Edition.",
       "viewPermission": "Prohibido: no tiene permiso para ver los ajustes de la integración con Xero.",
       "organisationDisconnected": "La organización de Xero seleccionada ya no está conectada. Vuelva a conectar Xero e inténtelo de nuevo.",
+      "organisationAmbiguous": "La organización Xero predeterminada guardada pertenece a más de una conexión. Elija qué conexión es la predeterminada en la configuración de contabilidad.",
       "accounts": {
         "notConnected": "Conecte Xero antes de cargar las cuentas de Xero.",
         "reconnect": "Vuelva a conectar Xero antes de cargar las cuentas de Xero.",

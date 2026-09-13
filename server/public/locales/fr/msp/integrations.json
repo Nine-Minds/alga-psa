@@ -3779,6 +3779,7 @@
       "enterpriseOnly": "L’intégration Xero n’est disponible que dans l’édition Enterprise.",
       "viewPermission": "Interdit : vous n’avez pas l’autorisation de consulter les paramètres de l’intégration Xero.",
       "organisationDisconnected": "L’organisation Xero sélectionnée n’est plus connectée. Reconnectez Xero et réessayez.",
+      "organisationAmbiguous": "L'organisation Xero par défaut enregistrée appartient à plusieurs connexions. Choisissez la connexion à utiliser par défaut dans les paramètres de comptabilité.",
       "accounts": {
         "notConnected": "Connectez Xero avant de charger les comptes Xero.",
         "reconnect": "Reconnectez Xero avant de charger les comptes Xero.",

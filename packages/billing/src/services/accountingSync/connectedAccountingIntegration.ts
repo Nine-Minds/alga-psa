@@ -45,7 +45,7 @@ export async function resolveConnectedAccountingIntegration(
   // eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- billing→integrations is the allowed direction
   const { getStoredXeroConnections } = await import('@alga-psa/integrations/lib/xero/xeroClientService');
   // eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- billing→integrations is the allowed direction
-  const { normalizeXeroConnectionSelection } = await import('@alga-psa/integrations/lib/xero/xeroRealmIdentity');
+  const { resolveXeroDefaultSelection } = await import('@alga-psa/integrations/lib/xero/xeroRealmIdentity');
 
   const [qboCredentials, xeroConnections, qboDefaultRealm] = await Promise.all([
     getStoredQboCredentialsMap(tenantId).catch(() => ({} as Record<string, unknown>)),
@@ -57,14 +57,17 @@ export async function resolveConnectedAccountingIntegration(
   const xeroConnectionIds = Object.keys(xeroConnections);
 
   // A persisted Xero selection may name a historical organisation id. Normalize
-  // it to the owning connection id with the exact same helper the settings and
-  // catalog selectors use, so `settings.accountingSync.defaultRealm` cannot
-  // make sync routing disagree with the mapping screen. Ambiguous ownership
-  // normalizes to null and falls through to the first connected connection.
-  const persistedXeroConnectionId = normalizeXeroConnectionSelection(
+  // it with the exact same helper the settings and catalog selectors use, so
+  // `settings.accountingSync.defaultRealm` cannot make sync routing disagree
+  // with the mapping screen. Ambiguity (an organisation owned by more than one
+  // connection) fails closed: no other connection is silently selected.
+  const xeroSelection = resolveXeroDefaultSelection(
     xeroConnections as Record<string, { connectionId: string; xeroTenantId: string }>,
     settings?.defaultRealm ?? null
   );
+  const xeroSelectionAmbiguous = xeroSelection.status === 'ambiguous';
+  const persistedXeroConnectionId =
+    xeroSelection.status === 'resolved' ? xeroSelection.connectionId : null;
 
   // Explicit provider request. An explicit ORGANISATION that is no longer
   // connected fails closed: it must never silently resolve to a different
@@ -74,6 +77,9 @@ export async function resolveConnectedAccountingIntegration(
       return xeroConnections[selection.preferredTargetRealm]
         ? { adapterType: 'xero', targetRealm: selection.preferredTargetRealm }
         : null;
+    }
+    if (xeroSelectionAmbiguous) {
+      return null;
     }
     const connectionId = persistedXeroConnectionId ?? xeroConnectionIds[0];
     return connectionId ? { adapterType: 'xero', targetRealm: connectionId } : null;
@@ -100,13 +106,18 @@ export async function resolveConnectedAccountingIntegration(
     return null;
   }
 
-  // Settings-selected default organisation (best effort: a removed default
-  // falls back to another connected target). A QBO realm id is matched
-  // verbatim; a Xero selection is normalized to the connection id above.
+  // Settings-selected default organisation. A QBO realm id is matched
+  // verbatim; a Xero selection is normalized above. An ambiguous Xero
+  // selection fails closed so routing never falls through to QBO or another
+  // connection; an absent/unknown value keeps the existing best-effort
+  // fallback to a connected target.
   const settingsRealm = settings?.defaultRealm ?? null;
   if (settingsRealm) {
     if (qboRealms.has(settingsRealm)) {
       return { adapterType: 'quickbooks_online', targetRealm: settingsRealm };
+    }
+    if (xeroSelectionAmbiguous) {
+      return null;
     }
     if (persistedXeroConnectionId) {
       return { adapterType: 'xero', targetRealm: persistedXeroConnectionId };

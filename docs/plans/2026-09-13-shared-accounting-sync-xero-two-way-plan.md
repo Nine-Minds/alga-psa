@@ -372,3 +372,38 @@ above, server Xero inbound/export integration 16, internal Xero integration 12,
 types/integrations/billing typechecks, emulator tests, changed-file ESLint 0
 errors, locale parity and quality audits pass. No live vendor call; no full
 Next.js build.
+
+## Final builder round 2026-09-13 (three remaining review issues)
+
+1. Ambiguity is its own selection state. `resolveXeroDefaultSelection` returns
+   `resolved | absent | ambiguous | unknown`; an organisation owned by more
+   than one connection is `ambiguous` and never falls back to another
+   connection. It propagates as: `getXeroConnectionStatus`
+   (`errorCode: 'SELECTION_AMBIGUOUS'`, actionable copy, no default
+   connection), catalog actions (`errors.xero.organisationAmbiguous`),
+   `createBatchFromFilters` (`ACCOUNTING_EXPORT_XERO_SELECTION_AMBIGUOUS`), and
+   `resolveConnectedAccountingIntegration` (returns null for both
+   preferred-provider and generic routing). An absent default still falls back
+   to the first connection; settings, catalogs, export and sync share one
+   helper.
+2. The create-mapping conflict check now runs before the tombstone-relink
+   branch and the tombstone lookup is scoped to the requested connection's
+   validated alias set. A canonical tombstone plus a live historical
+   organisation-keyed row therefore rejects the second representation instead
+   of producing two live mappings, while other organisations' tombstones are
+   preserved and delete-then-recreate still relinks.
+3. The acceptance test now drives the real flow: the service mapping is created
+   through `createExternalEntityMapping`, the invoice is delivered through the
+   real export service, and the inbound payment goes through the real
+   `runAccountingSyncCycle`/`recordExternalPayment`, writing real
+   `invoice_payments`/`transactions` rows and moving the invoice to `paid`, with
+   replay remaining idempotent. Only the Xero HTTP/client boundary is mocked.
+
+Validation: the reviewer's three reproductions now pass (the intentionally
+stale old selector test asserting fallback is superseded by the new fail-closed
+assertions in the permanent suite). xeroHistoricalMapping DB 8/8, selector
+preview 14/14, server Xero integration 12/12, integrations 823 passed (2
+pre-existing teamsPackageActions), billing curated 1268 passed (3 pre-existing
+unrelated), catalog/status component rendering, typechecks, changed-file ESLint
+0 errors, billing tsup build, locale parity/quality audits. No live vendor call;
+no full Next.js build.

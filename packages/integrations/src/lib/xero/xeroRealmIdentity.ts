@@ -60,14 +60,46 @@ export function normalizeXeroConnectionSelection(
   connections: Record<string, XeroConnectionIdentity>,
   persistedRealm: string | null | undefined
 ): string | null {
+  const selection = resolveXeroDefaultSelection(connections, persistedRealm);
+  return selection.status === 'resolved' ? selection.connectionId : null;
+}
+
+/**
+ * The full outcome of resolving a persisted default. It distinguishes an
+ * absent default (no selection was ever made) from an ambiguous one (the
+ * organisation is owned by more than one connection, so no single connection
+ * can be chosen) and from a stale/unknown value (e.g. a QBO realm id read by
+ * the Xero surface).
+ */
+export type XeroDefaultSelection =
+  | { status: 'resolved'; connectionId: string }
+  | { status: 'absent' }
+  | { status: 'ambiguous'; organisationId: string }
+  | { status: 'unknown'; persistedRealm: string };
+
+/**
+ * Resolve a persisted selection without I/O. Ambiguity is its own state so
+ * callers can fail closed with an actionable message instead of silently
+ * falling back to another connection.
+ */
+export function resolveXeroDefaultSelection(
+  connections: Record<string, XeroConnectionIdentity>,
+  persistedRealm: string | null | undefined
+): XeroDefaultSelection {
   if (!persistedRealm) {
-    return null;
+    return { status: 'absent' };
   }
   if (connections?.[persistedRealm]) {
-    return persistedRealm;
+    return { status: 'resolved', connectionId: persistedRealm };
   }
   const owners = Object.values(connections ?? {}).filter(
     (connection) => connection.xeroTenantId === persistedRealm
   );
-  return owners.length === 1 ? owners[0].connectionId : null;
+  if (owners.length === 1) {
+    return { status: 'resolved', connectionId: owners[0].connectionId };
+  }
+  if (owners.length > 1) {
+    return { status: 'ambiguous', organisationId: persistedRealm };
+  }
+  return { status: 'unknown', persistedRealm };
 }

@@ -54,11 +54,12 @@ describe('resolveDefaultXeroConnectionId (persisted provider-scoped selection)',
     await expect(resolveDefaultXeroConnectionId('tenant-1')).resolves.toBe('xero-conn-1');
   });
 
-  it('does not resolve an ambiguously-owned organisation id', async () => {
+  it('fails closed (null) instead of selecting another connection for an ambiguously-owned organisation', async () => {
     getSecretProviderInstanceMock.mockResolvedValue({
       getTenantSecret: vi.fn(async (_tenant: string, name: string) =>
         name === XERO_CREDENTIALS_SECRET_NAME
           ? JSON.stringify({
+              'conn-unrelated': { connectionId: 'conn-unrelated', xeroTenantId: 'org-unrelated' },
               a: { connectionId: 'a', xeroTenantId: 'org-shared' },
               b: { connectionId: 'b', xeroTenantId: 'org-shared' }
             })
@@ -67,9 +68,9 @@ describe('resolveDefaultXeroConnectionId (persisted provider-scoped selection)',
     });
     firstMock.mockResolvedValue({ settings: { accountingSync: { defaultRealm: 'org-shared' } } });
 
-    // Ambiguous ownership falls back to the first stored connection, never to
-    // an arbitrary owner of the shared organisation.
-    await expect(resolveDefaultXeroConnectionId('tenant-1')).resolves.toBe('a');
+    // Ambiguous ownership must not fall back to the unrelated first
+    // connection; callers surface an actionable unavailable result instead.
+    await expect(resolveDefaultXeroConnectionId('tenant-1')).resolves.toBeNull();
   });
 
   it('falls back to the first connection when no selection is stored and returns null with none connected', async () => {

@@ -8,7 +8,10 @@ import {
   withProviderCredentialLock,
 } from '../providerDisconnect/lock';
 import { PROVIDER_XERO } from '../providerDisconnect/types';
-import { normalizeXeroConnectionSelection } from './xeroRealmIdentity';
+import {
+  resolveXeroDefaultSelection,
+  type XeroDefaultSelection
+} from './xeroRealmIdentity';
 import { AppError, sanitizeProviderMessage, toSafeProviderError } from '@alga-psa/core';
 import type {
   ExternalCompanyRecord,
@@ -1148,15 +1151,35 @@ export async function getXeroConnectionSummaries(tenantId: string): Promise<Xero
 }
 
 /**
- * Resolve the connection id the tenant has selected as the live Xero default.
- *
- * The persisted `tenant_settings.accountingSync.defaultRealm` is the single
- * selection that outbound sync already honours, so settings/catalog/mapping
- * must read the same value. It may name the connection id directly or, for a
- * connection created before the canonical identity moved to the connection id,
- * the organisation id owned by exactly one connection. When the persisted
- * value is absent, stale, or ambiguously owned, fall back to the first stored
- * connection — never to another provider's selection.
+ * Read `tenant_settings.accountingSync.defaultRealm` for the tenant, or null
+ * when unset/unreadable. Kept in one place so the status, catalog, export and
+ * sync selectors all read the same persisted value.
+ */
+async function readPersistedXeroDefaultRealm(tenantId: string): Promise<string | null> {
+  try {
+    const { knex } = await createTenantKnex(tenantId);
+    const row = await tenantDb(knex, tenantId).table('tenant_settings')
+      .select('settings')
+      .first();
+    const candidate = row?.settings?.accountingSync?.defaultRealm;
+    if (typeof candidate === 'string' && candidate.trim().length > 0) {
+      return candidate.trim();
+    }
+  } catch (error) {
+    logger.warn('[XeroClientService] failed to read persisted Xero default', {
+      tenantId,
+      errorName: error instanceof Error ? error.name : 'unknown'
+    });
+    return null;
+  }
+  return null;
+}
+
+/**
+ * Resolve the persisted selection to a connection id for the live Xero
+ * default. Ambiguity (an organisation owned by more than one connection)
+ * yields null so callers fail closed instead of routing to a different
+ * connection; an absent default falls back to the first stored connection.
  */
 export async function resolveDefaultXeroConnectionId(tenantId: string): Promise<string | null> {
   const connections = await getTenantConnections(tenantId);
@@ -1165,32 +1188,31 @@ export async function resolveDefaultXeroConnectionId(tenantId: string): Promise<
     return null;
   }
 
-  let persisted: string | null = null;
-  try {
-    const { knex } = await createTenantKnex(tenantId);
-    const row = await tenantDb(knex, tenantId).table('tenant_settings')
-      .select('settings')
-      .first();
-    const candidate = row?.settings?.accountingSync?.defaultRealm;
-    if (typeof candidate === 'string' && candidate.trim().length > 0) {
-      persisted = candidate.trim();
-    }
-  } catch (error) {
-    logger.warn('[XeroClientService] failed to read persisted Xero default; using first connection', {
-      tenantId,
-      errorName: error instanceof Error ? error.name : 'unknown'
-    });
-    return connectionIds[0];
+  const persisted = await readPersistedXeroDefaultRealm(tenantId);
+  const selection = resolveXeroDefaultSelection(connections, persisted);
+  if (selection.status === 'resolved') {
+    return selection.connectionId;
   }
-
-  if (persisted) {
-    const normalized = normalizeXeroConnectionSelection(connections, persisted);
-    if (normalized) {
-      return normalized;
-    }
+  if (selection.status === 'ambiguous') {
+    return null;
   }
-
   return connectionIds[0];
+}
+
+/**
+ * Full persisted-selection outcome for the settings/catalog surfaces, which
+ * must distinguish an ambiguous organisation (actionable error) from an
+ * absent default (first-connection fallback).
+ */
+export type XeroDefaultSelectionStatus = XeroDefaultSelection | { status: 'no_connections' };
+
+export async function getXeroDefaultSelection(tenantId: string): Promise<XeroDefaultSelectionStatus> {
+  const connections = await getTenantConnections(tenantId);
+  if (Object.keys(connections).length === 0) {
+    return { status: 'no_connections' };
+  }
+  const persisted = await readPersistedXeroDefaultRealm(tenantId);
+  return resolveXeroDefaultSelection(connections, persisted);
 }
 
 export async function getDefaultXeroTenantId(tenantId: string): Promise<string | null> {

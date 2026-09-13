@@ -477,7 +477,7 @@ export default function XeroIntegrationSettings(
                 <span>{t('integrations.xero.settings.connection.connectionId', { defaultValue: 'Connection ID: {{id}}', id: defaultConnection.connectionId })}</span>
               </div>
             </div>
-          ) : (
+          ) : status?.errorCode === 'SELECTION_AMBIGUOUS' ? null : (
             <Alert variant="info">
               <AlertDescription>
                 {t('integrations.xero.settings.connection.notConnected', { defaultValue: 'No live Xero organisation is connected yet. Save credentials, then click Connect Xero.' })}
@@ -485,7 +485,7 @@ export default function XeroIntegrationSettings(
             </Alert>
           )}
 
-          {status?.error && defaultConnection ? (
+          {status?.error && (defaultConnection || status?.errorCode === 'SELECTION_AMBIGUOUS') ? (
             <Alert variant={status.connected ? 'info' : 'destructive'}>
               <AlertDescription>{status.error}</AlertDescription>
             </Alert>
