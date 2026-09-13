@@ -333,9 +333,12 @@ export class ProductCatalogService extends BaseService<IService> {
     tenant: string,
     prices: Array<{ currency_code: string; rate: number }>
   ): Promise<void> {
-    // Delete existing prices and insert new ones
+    // Replace the currently-effective window only; leave scheduled future rows
+    // in place so an ordinary product save cannot revoke a scheduled increase.
+    const today = new Date().toISOString().slice(0, 10);
     await tenantDb(knex, tenant).table('service_prices')
       .where('service_id', serviceId)
+      .where('effective_date', '<=', today)
       .delete();
 
     if (prices.length > 0) {
@@ -344,7 +347,8 @@ export class ProductCatalogService extends BaseService<IService> {
           service_id: serviceId,
           tenant,
           currency_code: p.currency_code,
-          rate: p.rate
+          rate: p.rate,
+          effective_date: '1970-01-01'
         }))
       );
     }
