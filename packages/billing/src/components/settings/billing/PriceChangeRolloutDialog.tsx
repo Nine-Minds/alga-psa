@@ -112,9 +112,10 @@ export default function PriceChangeRolloutDialog({
         title: '',
         dataIndex: 'contractLineId',
         width: '40px',
-        render: (_value: unknown, record: ServicePriceChangePreviewRow) => (
+        render: (_value: unknown, record: ServicePriceChangePreviewRow, index: number) => (
           <Checkbox
-            id={`price-change-row-${record.contractLineId}`}
+            id={`price-change-row-select-${index}`}
+            data-contract-line-id={record.contractLineId}
             checked={selected.has(record.contractLineId)}
             onChange={(event) =>
               toggleSelected(record.contractLineId, event.target.checked)
