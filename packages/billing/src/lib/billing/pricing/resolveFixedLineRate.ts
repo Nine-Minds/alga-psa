@@ -80,6 +80,8 @@ export interface ServicePriceRateRow {
   currency_code: string;
   rate: number | string;
   effective_date?: string | Date | null;
+  /** `service_prices.created_at`; used only to break same-date ties. */
+  created_at?: string | Date | null;
 }
 
 export interface ResolveFixedLineRateInput {
@@ -136,7 +138,14 @@ function toCents(value: number | string | null | undefined): number | null {
   return Number.isFinite(parsed) ? Math.round(parsed) : null;
 }
 
-function toCalendarDate(value: string | Date): string | null {
+/**
+ * Normalise a pg `date` (materialised by node-postgres as a JS `Date`), a
+ * timestamp, or an already-`YYYY-MM-DD` string to a calendar date. This is the
+ * one date-normalisation used by the pricing chain; callers that compare an
+ * effective date must use it rather than `String(value).slice(0, 10)`, which
+ * turns a `Date` into e.g. `"Thu Oct 01"` and never matches a calendar date.
+ */
+export function toCalendarDate(value: string | Date): string | null {
   if (value instanceof Date) {
     if (Number.isNaN(value.getTime())) return null;
     return value.toISOString().slice(0, 10);
@@ -280,6 +289,44 @@ export interface EffectiveServicePrice {
 }
 
 /**
+ * Order two candidate catalog-price rows for the same service + currency.
+ * Newest effective date first; ties are broken explicitly so the winner never
+ * depends on the input array order:
+ *
+ *  1. A row with no persisted `price_id` is an injected preview candidate — the
+ *     rollout preview appends the proposed price without writing it. It is the
+ *     caller's stated intent and must beat a persisted row at the same date, or
+ *     the retained stale row can win the tie and the preview disagrees with
+ *     what apply writes.
+ *  2. Then the later `created_at`.
+ *  3. Then the `price_id` string, a total, order-independent fallback.
+ */
+function compareServicePriceCandidates(
+  a: ServicePriceRateRow,
+  b: ServicePriceRateRow,
+): number {
+  const byDate = compareCalendarDates(
+    toCalendarDate(b.effective_date ?? "1970-01-01"),
+    toCalendarDate(a.effective_date ?? "1970-01-01"),
+  );
+  if (byDate !== 0) return byDate;
+
+  const aInjected = (a.price_id ?? null) === null;
+  const bInjected = (b.price_id ?? null) === null;
+  if (aInjected !== bInjected) return aInjected ? -1 : 1;
+
+  const byCreated = compareCalendarDates(
+    toCalendarDate(b.created_at ?? ""),
+    toCalendarDate(a.created_at ?? ""),
+  );
+  if (byCreated !== 0) return byCreated;
+
+  const aId = a.price_id ?? "";
+  const bId = b.price_id ?? "";
+  return aId < bId ? -1 : aId > bId ? 1 : 0;
+}
+
+/**
  * Latest `service_prices` row effective at `asOf` for one service + currency.
  * Shared with the SQL join helper so the resolver and the engine cannot pick
  * different rows once a service carries more than one effective-dated price.
@@ -297,12 +344,7 @@ export function selectEffectiveServicePrice(
       const effectiveDate = toCalendarDate(price.effective_date ?? "1970-01-01");
       return compareCalendarDates(effectiveDate, asOf) <= 0;
     })
-    .sort((a, b) =>
-      compareCalendarDates(
-        toCalendarDate(b.effective_date ?? "1970-01-01"),
-        toCalendarDate(a.effective_date ?? "1970-01-01"),
-      ),
-    );
+    .sort(compareServicePriceCandidates);
   if (admitted.length === 0) {
     return null;
   }

@@ -32,6 +32,7 @@ import {
 import {
   normalizeProvenance,
   resolveFixedLineRate,
+  toCalendarDate,
   type RateProvenance,
 } from '../lib/billing/pricing/resolveFixedLineRate';
 import {
@@ -118,14 +119,17 @@ function withNewPrice(
   newRateCents: number,
   effectiveDate: string,
 ): FixedLineRateInputBundle['catalogPrices'] {
+  // pg materialises the `date` column as a JS `Date`, so this must go through
+  // `toCalendarDate`; `String(date).slice(0, 10)` yields e.g. "Thu Oct 01" and
+  // never matches the calendar date, leaving the stale scheduled row in place.
+  const target = toCalendarDate(effectiveDate);
   const retained = prices.filter(
     (price) =>
       !(
         price.service_id === serviceId &&
         price.currency_code === currency &&
-        (price.effective_date
-          ? String(price.effective_date).slice(0, 10)
-          : '1970-01-01') === effectiveDate
+        (toCalendarDate(price.effective_date ?? '1970-01-01') ?? '1970-01-01') ===
+          target
       ),
   );
   return [

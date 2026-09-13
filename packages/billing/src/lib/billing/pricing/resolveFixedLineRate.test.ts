@@ -3,6 +3,7 @@ import {
   resolveClonedRate,
   resolveFixedLineRate,
   selectActivePricingSchedule,
+  selectEffectiveServicePrice,
   type PlanServiceRateRow,
   type ServicePriceRateRow,
 } from "./resolveFixedLineRate";
@@ -383,6 +384,70 @@ describe("resolveFixedLineRate (T15 equivalence matrix)", () => {
       provenance: "unreviewed",
       source: "line_override",
     });
+  });
+});
+
+describe("selectEffectiveServicePrice same-date tie-break", () => {
+  const AT = "2026-11-01";
+
+  const candidate = (
+    overrides: Partial<ServicePriceRateRow> = {},
+  ): ServicePriceRateRow => ({
+    service_id: "svc-a",
+    currency_code: USD,
+    rate: 1000,
+    effective_date: AT,
+    ...overrides,
+  });
+
+  it("prefers the injected preview candidate over a persisted row at the same date, in either order", () => {
+    // The rollout preview appends its proposed price as a row with no
+    // `price_id`; when a persisted row already sits at that effective date the
+    // injected candidate must win regardless of array order.
+    const persisted = candidate({ price_id: "persisted-1", rate: 640000 });
+    const injected = candidate({ price_id: null, rate: 700000 });
+
+    for (const prices of [
+      [persisted, injected],
+      [injected, persisted],
+    ]) {
+      const winner = selectEffectiveServicePrice(prices, "svc-a", USD, AT);
+      expect(winner).toMatchObject({ price_id: null, rateCents: 700000 });
+    }
+  });
+
+  it("prefers the later created_at at the same date and is array-order independent", () => {
+    const older = candidate({
+      price_id: "older",
+      rate: 1000,
+      created_at: "2026-10-01T00:00:00.000Z",
+    });
+    const newer = candidate({
+      price_id: "newer",
+      rate: 2000,
+      created_at: "2026-10-15T00:00:00.000Z",
+    });
+
+    for (const prices of [
+      [older, newer],
+      [newer, older],
+    ]) {
+      const winner = selectEffectiveServicePrice(prices, "svc-a", USD, AT);
+      expect(winner).toMatchObject({ price_id: "newer", rateCents: 2000 });
+    }
+  });
+
+  it("falls back to a stable id order when date and created_at both tie", () => {
+    const a = candidate({ price_id: "aaa", rate: 1000 });
+    const b = candidate({ price_id: "bbb", rate: 2000 });
+
+    for (const prices of [
+      [a, b],
+      [b, a],
+    ]) {
+      const winner = selectEffectiveServicePrice(prices, "svc-a", USD, AT);
+      expect(winner).toMatchObject({ price_id: "aaa", rateCents: 1000 });
+    }
   });
 });
 

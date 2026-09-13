@@ -236,7 +236,7 @@ export async function loadFixedLineRateInputs(
       ? await db
           .table("service_prices")
           .whereIn("service_id", allServiceIds)
-          .select("price_id", "service_id", "currency_code", "rate", "effective_date")
+          .select("price_id", "service_id", "currency_code", "rate", "effective_date", "created_at")
       : [];
 
   const tenantSettings = await db

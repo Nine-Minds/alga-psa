@@ -1142,6 +1142,82 @@ describe('Catalog price resolution – fixed path', () => {
     expect(preview.oldRateCents).not.toBe(15000);
   }, 120000);
 
+  it('rollout preview and apply agree when a price already exists at the effective date', async () => {
+    // Smoke round 3 blocker. `withNewPrice` compared the pg `date` column with
+    // `String(...).slice(0, 10)`, which yields "Thu Oct 01" for the JS Date
+    // node-postgres returns and never matches "2026-10-01". The stale scheduled
+    // row was then retained next to the injected one; the resolver's same-date
+    // tie broke on input array order and the retained row won, so the preview
+    // reported New == Current with a $0 delta while apply wrote the new rate.
+    // This walks schedule-via-apply -> preview-at-the-same-date -> apply -> bill.
+    const effective = monthStart(1);
+    const nextEnd = monthStart(2);
+    const epochRateCents = 550000;
+    const scheduledRateCents = 640000;
+    const newRateCents = 700000;
+
+    const { serviceId, contractLineId } = await seedInheritedLine(
+      'Rollout same-date service',
+      epochRateCents,
+      monthStart(0),
+    );
+
+    // Schedule the first future price through the real action, so the preview
+    // sees the exact persisted `service_prices` shape production writes.
+    const scheduled = await applyServicePriceChange({
+      serviceId,
+      prices: [{ currency_code: 'USD', rate: scheduledRateCents }],
+      effectiveDate: effective,
+    });
+    expect(scheduled).toEqual({ success: true });
+
+    const preview = await previewServicePriceChange(
+      serviceId,
+      newRateCents,
+      effective,
+    );
+    if (!('willChange' in preview)) {
+      throw new Error(`preview failed: ${JSON.stringify(preview)}`);
+    }
+
+    const row = preview.willChange.find(
+      (candidate) => candidate.contractLineId === contractLineId,
+    );
+    expect(row, 'line missing from willChange').toBeDefined();
+    expect(row!.currentRateCents).toBe(scheduledRateCents);
+    expect(row!.newRateCents).toBe(newRateCents);
+    expect(row!.deltaCents).toBe(newRateCents - scheduledRateCents);
+    expect(preview.totalMonthlyDeltaCents).toBe(newRateCents - scheduledRateCents);
+
+    // Apply exactly what the preview promised and confirm the engine bills it.
+    const applied = await applyServicePriceChange({
+      serviceId,
+      prices: [{ currency_code: 'USD', rate: newRateCents }],
+      effectiveDate: effective,
+    });
+    expect(applied).toEqual({ success: true });
+
+    const persisted = await context.db('service_prices')
+      .where({
+        tenant: context.tenantId,
+        service_id: serviceId,
+        currency_code: 'USD',
+        effective_date: effective,
+      });
+    expect(persisted).toHaveLength(1);
+    expect(Number(persisted[0].rate)).toBe(newRateCents);
+
+    await materializeRecurringServicePeriods(context, contractLineId);
+    const invoice = await invoiceCycle(effective, nextEnd);
+    expect(invoice.subtotal).toBe(newRateCents);
+
+    const items = await context.db('invoice_charges')
+      .where('invoice_id', invoice.invoice_id)
+      .select('*');
+    expect(items).toHaveLength(1);
+    expect(parseInt(items[0].net_amount)).toBe(newRateCents);
+  }, 120000);
+
   it('applyServicePriceChange requires service:update', async () => {
     const { hasPermission } = await import('@alga-psa/auth/rbac');
     vi.mocked(hasPermission).mockResolvedValueOnce(false);
