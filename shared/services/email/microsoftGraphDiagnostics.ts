@@ -27,6 +27,41 @@ export function extractGraphIds(headers: any): { requestId?: string; clientReque
   };
 }
 
+// Correlation ids are opaque provider tokens, not free-form user data. Trim,
+// reject empties/non-strings, and cap the length so a hostile/large body cannot
+// bloat a report.
+const MAX_CORRELATION_ID_LENGTH = 256;
+
+function safeCorrelationId(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  return trimmed.length > MAX_CORRELATION_ID_LENGTH
+    ? trimmed.slice(0, MAX_CORRELATION_ID_LENGTH)
+    : trimmed;
+}
+
+/**
+ * Read only the two Graph correlation ids from `error.innerError` of a native
+ * (`response.data`) or already-sanitized (`responseBody`) Graph error.
+ *
+ * Microsoft returns request-id / client-request-id here (and sometimes nowhere
+ * else) for body-only failures such as a 403 ErrorSendAsDenied that carries no
+ * correlation response headers. This is a last-resort fallback: nothing else
+ * from the body is read, so raw bodies still never reach a report or export.
+ */
+export function extractGraphBodyCorrelationIds(body: unknown): {
+  requestId?: string;
+  clientRequestId?: string;
+} {
+  const graphError = (body as any)?.error;
+  const innerError = graphError?.innerError ?? (body as any)?.innerError;
+  return {
+    requestId: safeCorrelationId(innerError?.['request-id']),
+    clientRequestId: safeCorrelationId(innerError?.['client-request-id']),
+  };
+}
+
 export function classifyGraphFailure(error: any): GraphFailure {
   const res = error?.response;
   // Already-sanitized errors (e.g. from token refresh inside the request
@@ -77,6 +112,9 @@ export function normalizeOutboundGraphFailure(error: any): GraphFailure {
   const metaClientRequestId = typeof metadata?.clientRequestId === 'string' ? metadata.clientRequestId : undefined;
   const metaStatus = Number.isFinite(Number(metadata?.status)) ? Number(metadata?.status) : undefined;
   const metaCode = typeof metadata?.code === 'string' ? metadata.code : undefined;
+  // Last-resort fallback for a body-only Graph failure. The body may be the raw
+  // `response.data` or the sanitized `responseBody`; both expose `error.innerError`.
+  const bodyIds = extractGraphBodyCorrelationIds(base.responseBody);
 
   // classifyGraphFailure synthesizes `code` from the HTTP status. Prefer a real
   // provider/graph code over that synthesized value.
@@ -89,8 +127,9 @@ export function normalizeOutboundGraphFailure(error: any): GraphFailure {
     status,
     code,
     message: base.message,
-    requestId: base.requestId ?? topRequestId ?? metaRequestId,
-    clientRequestId: base.clientRequestId ?? topClientRequestId ?? metaClientRequestId,
+    requestId: base.requestId ?? topRequestId ?? metaRequestId ?? bodyIds.requestId,
+    clientRequestId:
+      base.clientRequestId ?? topClientRequestId ?? metaClientRequestId ?? bodyIds.clientRequestId,
     responseBody: base.responseBody,
   };
 }

@@ -14,6 +14,7 @@ import {
 } from '../../diagnostics/diagnosticsRunner';
 import {
   classifyGraphFailure as classifyGraphFailureShared,
+  extractGraphBodyCorrelationIds,
   extractGraphIds as extractGraphIdsShared,
   mapInboundRecommendations,
   toDiagnosticsErrorMeta,
@@ -1199,6 +1200,15 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
 
   private toSanitizedGraphError(error: unknown, context: string): Error {
     const failure = this.classifyGraphFailure(error);
+    // Header ids win (classifyGraphFailure already read them); fall back to the
+    // body's error.innerError for a body-only failure so correlation survives the
+    // sanitization boundary. Only the two safe id fields are copied, never the
+    // raw body.
+    const bodyIds = extractGraphBodyCorrelationIds(
+      (error as any)?.response?.data ?? (error as any)?.responseBody,
+    );
+    const requestId = failure.requestId ?? bodyIds.requestId;
+    const clientRequestId = failure.clientRequestId ?? bodyIds.clientRequestId;
     const details = failure.code || failure.requestId
       ? ` (${[
           failure.code ? `code: ${failure.code}` : undefined,
@@ -1209,8 +1219,8 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
     Object.assign(wrapped, {
       status: failure.status,
       code: failure.code,
-      requestId: failure.requestId,
-      clientRequestId: failure.clientRequestId,
+      requestId,
+      clientRequestId,
       responseBody: failure.responseBody,
       // Keep only the retry header across the sanitization boundary, never the
       // Axios request/config (which can contain the mailbox access token).

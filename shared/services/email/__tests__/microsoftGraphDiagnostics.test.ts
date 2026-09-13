@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   classifyGraphFailure,
   classifySendPermissionDenial,
+  extractGraphBodyCorrelationIds,
   extractGraphIds,
   mapInboundRecommendations,
   mapOutboundRecommendations,
@@ -17,6 +18,56 @@ describe('extractGraphIds', () => {
     });
     expect(extractGraphIds({ 'request-id': 'r2' })).toEqual({ requestId: 'r2', clientRequestId: undefined });
     expect(extractGraphIds(undefined)).toEqual({ requestId: undefined, clientRequestId: undefined });
+  });
+});
+
+describe('extractGraphBodyCorrelationIds', () => {
+  it('reads both ids from a native Graph error body', () => {
+    expect(
+      extractGraphBodyCorrelationIds({
+        error: {
+          code: 'ErrorSendAsDenied',
+          message: 'Denied',
+          innerError: {
+            'request-id': 'body-req-1',
+            'client-request-id': 'body-cli-1',
+          },
+        },
+      }),
+    ).toEqual({ requestId: 'body-req-1', clientRequestId: 'body-cli-1' });
+  });
+
+  it('handles a top-level innerError and trims values', () => {
+    expect(
+      extractGraphBodyCorrelationIds({ innerError: { 'request-id': '  body-req-2  ' } }),
+    ).toEqual({ requestId: 'body-req-2', clientRequestId: undefined });
+  });
+
+  it('is safe for missing, malformed, or non-string innerError values', () => {
+    expect(extractGraphBodyCorrelationIds(undefined)).toEqual({
+      requestId: undefined,
+      clientRequestId: undefined,
+    });
+    expect(extractGraphBodyCorrelationIds({})).toEqual({
+      requestId: undefined,
+      clientRequestId: undefined,
+    });
+    expect(extractGraphBodyCorrelationIds({ error: { innerError: null } })).toEqual({
+      requestId: undefined,
+      clientRequestId: undefined,
+    });
+    expect(
+      extractGraphBodyCorrelationIds({
+        error: { innerError: { 'request-id': 123, 'client-request-id': '   ' } },
+      }),
+    ).toEqual({ requestId: undefined, clientRequestId: undefined });
+  });
+
+  it('caps pathological id length', () => {
+    const long = 'x'.repeat(1000);
+    expect(
+      extractGraphBodyCorrelationIds({ error: { innerError: { 'request-id': long } } }).requestId,
+    ).toHaveLength(256);
   });
 });
 
@@ -102,6 +153,105 @@ describe('normalizeOutboundGraphFailure', () => {
       },
     });
     expect(failure).toMatchObject({ status: 401, code: 'InvalidAuthenticationToken', requestId: 'req-401' });
+  });
+
+  it('falls back to a body-only native response.data.error.innerError correlation id', () => {
+    const failure = normalizeOutboundGraphFailure({
+      response: {
+        status: 403,
+        headers: {},
+        data: {
+          error: {
+            code: 'ErrorSendAsDenied',
+            message: 'Denied',
+            innerError: { 'request-id': 'body-req', 'client-request-id': 'body-cli' },
+          },
+        },
+      },
+    });
+    expect(failure).toMatchObject({
+      status: 403,
+      code: 'ErrorSendAsDenied',
+      requestId: 'body-req',
+      clientRequestId: 'body-cli',
+    });
+  });
+
+  it('falls back to a sanitized responseBody.error.innerError correlation id', () => {
+    const failure = normalizeOutboundGraphFailure({
+      message: 'Microsoft rejected the send.',
+      status: 403,
+      errorCode: 'ErrorSendAsDenied',
+      responseBody: {
+        error: {
+          code: 'ErrorSendAsDenied',
+          innerError: { 'request-id': 'sanitized-req', 'client-request-id': 'sanitized-cli' },
+        },
+      },
+    });
+    expect(failure).toMatchObject({
+      status: 403,
+      code: 'ErrorSendAsDenied',
+      requestId: 'sanitized-req',
+      clientRequestId: 'sanitized-cli',
+    });
+  });
+
+  it('keeps header, top-level, and metadata ids ahead of body ids when they conflict', () => {
+    const conflictingBody = {
+      error: {
+        code: 'ErrorSendAsDenied',
+        innerError: { 'request-id': 'body-req', 'client-request-id': 'body-cli' },
+      },
+    };
+    const headerWins = normalizeOutboundGraphFailure({
+      response: { status: 403, headers: { 'request-id': 'header-req' }, data: conflictingBody },
+      requestId: 'top-req',
+      metadata: { clientRequestId: 'meta-cli' },
+    });
+    // Header wins over top-level/metadata/body for requestId; metadata wins over
+    // body for clientRequestId because no header/top-level client id is present.
+    expect(headerWins).toMatchObject({ requestId: 'header-req', clientRequestId: 'meta-cli' });
+
+    const topLevelWins = normalizeOutboundGraphFailure({
+      response: { status: 403, headers: {}, data: conflictingBody },
+      requestId: 'top-req',
+      clientRequestId: 'top-cli',
+      metadata: { requestId: 'meta-req', clientRequestId: 'meta-cli' },
+    });
+    expect(topLevelWins).toMatchObject({ requestId: 'top-req', clientRequestId: 'top-cli' });
+
+    const metadataWins = normalizeOutboundGraphFailure({
+      response: { status: 403, headers: {}, data: conflictingBody },
+      metadata: { requestId: 'meta-req', clientRequestId: 'meta-cli' },
+    });
+    expect(metadataWins).toMatchObject({ requestId: 'meta-req', clientRequestId: 'meta-cli' });
+  });
+
+  it('leaves inbound classifyGraphFailure body-only ids untouched (inbound behavior unchanged)', () => {
+    const bodyOnly = {
+      response: {
+        status: 403,
+        headers: {},
+        data: {
+          error: {
+            code: 'ErrorSendAsDenied',
+            message: 'Denied',
+            innerError: { 'request-id': 'inbound-body-req', 'client-request-id': 'inbound-body-cli' },
+          },
+        },
+      },
+    };
+    // Inbound still uses classifyGraphFailure: header-only extraction, so the
+    // body ids are intentionally not surfaced there. Only outbound normalization
+    // gains the body fallback.
+    const meta = toDiagnosticsErrorMeta(classifyGraphFailure(bodyOnly));
+    expect(meta.requestId).toBeUndefined();
+    expect(meta.clientRequestId).toBeUndefined();
+    expect(normalizeOutboundGraphFailure(bodyOnly)).toMatchObject({
+      requestId: 'inbound-body-req',
+      clientRequestId: 'inbound-body-cli',
+    });
   });
 });
 

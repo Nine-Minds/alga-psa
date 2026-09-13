@@ -337,6 +337,113 @@ describe('MicrosoftGraphEmailProvider', () => {
     });
   });
 
+  it('falls back to a sanitized responseBody.error.innerError for body-only correlation ids', async () => {
+    const provider = new MicrosoftGraphEmailProvider('microsoft-provider-1');
+    await provider.initialize(providerConfig());
+    // Shape produced by the real adapter's toSanitizedGraphError: no top-level
+    // ids, no correlation headers, only the sanitized Graph body.
+    sendMailMock.mockRejectedValue(Object.assign(new Error('Error in sendMail: Denied'), {
+      status: 403,
+      code: 'ErrorSendAsDenied',
+      responseBody: {
+        error: {
+          code: 'ErrorSendAsDenied',
+          message: 'The user account does not have the right to send mail on behalf of the specified sending account.',
+          innerError: {
+            'request-id': 'body-request-403',
+            'client-request-id': 'body-client-403',
+          },
+        },
+      },
+      response: { status: 403, headers: {} },
+    }));
+
+    await expect(provider.sendEmail(message(), 'tenant-1')).rejects.toMatchObject({
+      name: 'EmailProviderError',
+      isRetryable: false,
+      errorCode: 'ErrorSendAsDenied',
+      metadata: {
+        status: 403,
+        requestId: 'body-request-403',
+        clientRequestId: 'body-client-403',
+      },
+    });
+  });
+
+  it('uses a raw native response.data.error.innerError when present and no higher source wins', async () => {
+    const provider = new MicrosoftGraphEmailProvider('microsoft-provider-1');
+    await provider.initialize(providerConfig());
+    sendMailMock.mockRejectedValue({
+      message: 'Forbidden',
+      response: {
+        status: 403,
+        headers: {},
+        data: {
+          error: {
+            code: 'ErrorSendAsDenied',
+            innerError: { 'request-id': 'native-req', 'client-request-id': 'native-cli' },
+          },
+        },
+      },
+    });
+
+    await expect(provider.sendEmail(message(), 'tenant-1')).rejects.toMatchObject({
+      errorCode: 'ErrorSendAsDenied',
+      metadata: { status: 403, requestId: 'native-req', clientRequestId: 'native-cli' },
+    });
+  });
+
+  it('keeps explicit top-level and header ids ahead of body innerError ids', async () => {
+    const provider = new MicrosoftGraphEmailProvider('microsoft-provider-1');
+    await provider.initialize(providerConfig());
+    sendMailMock.mockRejectedValue(Object.assign(new Error('Forbidden'), {
+      status: 403,
+      code: 'ErrorSendAsDenied',
+      requestId: 'top-request',
+      clientRequestId: 'top-client',
+      responseBody: {
+        error: { innerError: { 'request-id': 'body-request', 'client-request-id': 'body-client' } },
+      },
+    }));
+
+    await expect(provider.sendEmail(message(), 'tenant-1')).rejects.toMatchObject({
+      metadata: { requestId: 'top-request', clientRequestId: 'top-client' },
+    });
+
+    sendMailMock.mockRejectedValue({
+      message: 'Forbidden',
+      response: {
+        status: 403,
+        headers: { 'request-id': 'header-request', 'client-request-id': 'header-client' },
+        data: {
+          error: { innerError: { 'request-id': 'body-request', 'client-request-id': 'body-client' } },
+        },
+      },
+    });
+
+    await expect(provider.sendEmail(message(), 'tenant-1')).rejects.toMatchObject({
+      metadata: { requestId: 'header-request', clientRequestId: 'header-client' },
+    });
+  });
+
+  it('is safe when innerError is missing or malformed', async () => {
+    const provider = new MicrosoftGraphEmailProvider('microsoft-provider-1');
+    await provider.initialize(providerConfig());
+    sendMailMock.mockRejectedValue({
+      message: 'Forbidden',
+      response: {
+        status: 403,
+        headers: {},
+        data: { error: { code: 'ErrorSendAsDenied', innerError: { 'request-id': 42 } } },
+      },
+    });
+
+    await expect(provider.sendEmail(message(), 'tenant-1')).rejects.toMatchObject({
+      errorCode: 'ErrorSendAsDenied',
+      metadata: { status: 403, requestId: undefined, clientRequestId: undefined },
+    });
+  });
+
   it('classifies named Graph throttling by HTTP status and preserves sanitized retry timing', async () => {
     const provider = new MicrosoftGraphEmailProvider('microsoft-provider-1');
     await provider.initialize(providerConfig());
