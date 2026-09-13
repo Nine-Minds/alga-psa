@@ -911,9 +911,14 @@ const Service = {
       throw new Error('rate must be a non-negative number');
     }
 
-    // Check if price already exists
+    // Target the currently-effective row only: with effective-dated prices an
+    // unordered `.first()` could return a future row and silently overwrite a
+    // scheduled increase. (The `setServicePrice` action that reaches this has
+    // no in-repo callers, but the writer is kept safe regardless.)
     const existingPrice = await tenantScopedTable<IServicePrice>(knexOrTrx, tenant, 'service_prices')
       .where({ service_id, currency_code })
+      .where('effective_date', '<=', todayCalendarDate())
+      .orderBy('effective_date', 'desc')
       .first();
 
     if (existingPrice) {
@@ -929,14 +934,15 @@ const Service = {
       log.info(`[Service.setPrice] Updated price for service ${service_id} in ${currency_code}: ${normalizedRate}`);
       return updatedPrice;
     } else {
-      // Insert new price
+      // Insert new price effective now
       const [newPrice] = await tenantScopedTable<IServicePrice>(knexOrTrx, tenant, 'service_prices')
         .insert({
           price_id: uuidv4(),
           tenant,
           service_id,
           currency_code,
-          rate: normalizedRate
+          rate: normalizedRate,
+          effective_date: '1970-01-01'
         })
         .returning('*');
 
@@ -1001,7 +1007,13 @@ const Service = {
   },
 
   /**
-   * Remove a specific price for a service
+   * Remove a currency's price for a service.
+   *
+   * Deliberately deletes every effective-dated row for the currency, including
+   * any scheduled future row: this is a full currency removal, not an as-of-now
+   * price edit. The only caller is the `removeServicePrice` action, which has no
+   * in-repo references; left as-is rather than scoped, because a scoped delete
+   * would leave a scheduled row for a currency the operator asked to remove.
    */
   removePrice: async (
     knexOrTrx: Knex | Knex.Transaction,

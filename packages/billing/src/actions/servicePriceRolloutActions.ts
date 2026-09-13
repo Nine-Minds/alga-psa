@@ -484,7 +484,11 @@ export const applyServicePriceChange = withAuth(
         if (!isFutureEffective && primaryRate !== null) {
           servicePatch.default_rate = primaryRate;
         }
-        await Service.update(trx, input.serviceId, servicePatch);
+        // An empty patch (future write with no servicePatch) would make knex
+        // reject an empty .update(); skip it rather than throw.
+        if (Object.values(servicePatch).some((value) => value !== undefined)) {
+          await Service.update(trx, input.serviceId, servicePatch);
+        }
 
         for (const price of normalizedPrices) {
           if (input.effectiveDate) {

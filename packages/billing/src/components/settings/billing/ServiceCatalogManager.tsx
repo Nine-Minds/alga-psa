@@ -41,7 +41,7 @@ import {
   DropdownMenuItem,
 } from '@alga-psa/ui/components/DropdownMenu';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
 
 // Removed old SERVICE_TYPE_OPTIONS
@@ -55,6 +55,7 @@ const LICENSE_TERM_OPTION_VALUES = ['monthly', 'annual', 'perpetual'] as const;
 const ServiceCatalogManager: React.FC = () => {
   const { t } = useTranslation('msp/billing-settings');
   const { money } = useCurrencyFormat();
+  const { formatDate } = useFormatters();
   const [defaultCurrency, setDefaultCurrency] = useState('USD');
   const [services, setServices] = useState<IService[]>([]);
   // Note: Categories are currently hidden in favor of using Service Types for organization
@@ -652,7 +653,9 @@ const ServiceCatalogManager: React.FC = () => {
               {primaryDisplay}
               <Badge variant="info">
                 {t('serviceCatalog.scheduledPriceBadge', {
-                  date: scheduled[0].effective_date ?? '',
+                  date: scheduled[0].effective_date
+                    ? formatDate(scheduled[0].effective_date)
+                    : '',
                   defaultValue: 'Next change {{date}}',
                 })}
               </Badge>
@@ -1073,7 +1076,9 @@ const ServiceCatalogManager: React.FC = () => {
                 <Alert variant="info" id="scheduled-price-notice" className="mb-3">
                   <AlertDescription>
                     {t('serviceCatalog.scheduledPriceNotice', {
-                      date: editingService.scheduled_prices[0].effective_date ?? '',
+                      date: editingService.scheduled_prices[0].effective_date
+                        ? formatDate(editingService.scheduled_prices[0].effective_date)
+                        : '',
                       defaultValue:
                         'A price change is scheduled for {{date}}. Saving here updates the current price and does not cancel the scheduled change.',
                     })}
