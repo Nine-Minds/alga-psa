@@ -21,6 +21,7 @@ import {
   mapOutboundRecommendations,
   normalizeOutboundGraphFailure,
   toDiagnosticsErrorMeta,
+  type GraphFailure,
 } from '@alga-psa/shared/services/email/microsoftGraphDiagnostics';
 import {
   assembleDiagnosticsReport,
@@ -249,10 +250,23 @@ function buildDependentSkipStep(reason: string): OutboundStepDefinition {
 /**
  * Provider-specific remediation for a failed live send. Graph advice must not be
  * shown for SMTP or Resend failures.
+ *
+ * SMTP classification uses only native protocol evidence — errorCode, command,
+ * responseCode and the sanitized server response — never the provider's generic
+ * remediation message (which always mentions "credentials" and would otherwise
+ * mislabel every failure as an AUTH problem).
  */
 function liveSendRecommendations(
   providerType: OutboundProviderType,
-  input: { status?: number; errorCode?: string; message?: string; sharedMailbox?: boolean },
+  input: {
+    status?: number;
+    errorCode?: string;
+    message?: string;
+    responseCode?: number;
+    command?: string;
+    response?: string;
+    sharedMailbox?: boolean;
+  },
 ): string[] {
   switch (providerType) {
     case 'microsoft':
@@ -264,18 +278,35 @@ function liveSendRecommendations(
       });
     case 'smtp': {
       const code = (input.errorCode || '').toUpperCase();
-      const responseCode = input.status;
-      if (responseCode === 535 || code === 'EAUTH' || /\bauth|credential|password\b/i.test(input.message || '')) {
-        return ['SMTP authentication was rejected. Verify the username/password and that the relay permits AUTH.'];
-      }
-      if (code === 'ETLS' || /certificate|self[- ]signed|\btls\b|\bssl\b/i.test(input.message || '')) {
+      const command = (input.command || '').toUpperCase();
+      const responseCode = input.responseCode ?? input.status;
+      const response = input.response || '';
+
+      if (code === 'ETLS' || /certificate|self[- ]signed|\btls\b|\bssl\b/i.test(response)) {
         return ['The SMTP TLS handshake failed. Verify the certificate chain and TLS settings (including verify-certificate).'];
       }
       if (
-        ['ECONNECTION', 'ECONNREFUSED', 'ENOTFOUND', 'ETIMEDOUT', 'ESOCKET', 'EHOSTUNREACH', 'EAI_AGAIN'].includes(code) ||
-        /connect|refused|timeout|getaddrinfo/i.test(input.message || '')
+        command === 'AUTH' ||
+        code === 'EAUTH' ||
+        responseCode === 535 ||
+        /^\s*535\b/.test(response) ||
+        /\bauthentication\b/i.test(response)
+      ) {
+        return ['SMTP authentication was rejected. Verify the username/password and that the relay permits AUTH.'];
+      }
+      if (
+        ['ECONNECTION', 'ECONNREFUSED', 'ENOTFOUND', 'ETIMEDOUT', 'ESOCKET', 'EHOSTUNREACH', 'EAI_AGAIN'].includes(code)
       ) {
         return ['The SMTP server could not be reached. Verify host, port, DNS, and firewall rules.'];
+      }
+      if (
+        code === 'EENVELOPE' ||
+        ['MAIL', 'RCPT', 'DATA', 'VRFY'].includes(command) ||
+        (typeof responseCode === 'number' && responseCode >= 500 && responseCode < 600)
+      ) {
+        return [
+          'The SMTP server rejected the recipient or message after connecting. Verify the recipient address and the sending account permissions, then retry.',
+        ];
       }
       return ['The SMTP provider rejected the message. Review the native code/response above and retry after correcting the cause.'];
     }
@@ -297,7 +328,13 @@ function liveSendRecommendations(
  * the shared Graph classifier; other providers read `EmailProviderError`'s
  * errorCode/metadata and native protocol fields.
  */
-function normalizeOutboundFailure(error: unknown, providerType: OutboundProviderType) {
+interface OutboundFailure extends GraphFailure {
+  responseCode?: number;
+  command?: string;
+  response?: string;
+}
+
+function normalizeOutboundFailure(error: unknown, providerType: OutboundProviderType): OutboundFailure {
   if (providerType === 'microsoft') {
     return normalizeOutboundGraphFailure(error);
   }
@@ -317,7 +354,15 @@ function normalizeOutboundFailure(error: unknown, providerType: OutboundProvider
   const clientRequestId =
     (typeof e?.clientRequestId === 'string' ? e.clientRequestId : undefined) ??
     (typeof metadata.clientRequestId === 'string' ? metadata.clientRequestId : undefined);
-  return { status, code, message, requestId, clientRequestId };
+  const rawResponseCode = e?.responseCode ?? metadata.responseCode;
+  const responseCode = Number.isFinite(Number(rawResponseCode)) ? Number(rawResponseCode) : undefined;
+  const command =
+    (typeof e?.command === 'string' ? e.command : undefined) ??
+    (typeof metadata.command === 'string' ? metadata.command : undefined);
+  const response =
+    (typeof e?.response === 'string' ? e.response : undefined) ??
+    (typeof metadata.response === 'string' ? metadata.response : undefined);
+  return { status, code, message, requestId, clientRequestId, responseCode, command, response };
 }
 
 function buildLiveSendStep(): OutboundStepDefinition {
@@ -382,6 +427,9 @@ function buildLiveSendStep(): OutboundStepDefinition {
         status: result.status,
         errorCode: result.errorCode,
         message: result.error,
+        responseCode: result.responseCode,
+        command: result.command,
+        response: result.response,
       });
 
       return {
@@ -541,6 +589,9 @@ export async function runOutboundEmailDiagnosticsWithSettings(
           status: failure.status,
           errorCode: failure.code,
           message: failure.message,
+          responseCode: failure.responseCode,
+          command: failure.command,
+          response: failure.response,
         }),
       };
     },

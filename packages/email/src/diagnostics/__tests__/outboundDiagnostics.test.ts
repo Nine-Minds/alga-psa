@@ -95,6 +95,49 @@ async function runWith(
   });
 }
 
+/**
+ * Run a real SMTPEmailProvider rejection (mocked transporter only) through the
+ * production-result mapper and the report, so the classification is exercised
+ * against native provider metadata rather than a hand-built sendLive result.
+ */
+async function runSmtpProviderFailure(nativeError: unknown) {
+  const transporter = {
+    verify: vi.fn(async () => true),
+    close: vi.fn(),
+    sendMail: vi.fn(async () => {
+      throw nativeError;
+    }),
+  };
+  smtpCreateTransport.mockReturnValue(transporter);
+
+  const provider = new SMTPEmailProvider('smtp-1');
+  await provider.initialize({
+    host: 'smtp.example.com',
+    port: 587,
+    username: 'u',
+    password: 'p',
+    from: 'sender@example.com',
+  });
+
+  const sendLive = async () =>
+    liveSendResultFromEmailSendResult(
+      await provider.sendEmail(
+        { from: { email: 'sender@example.com' }, to: [{ email: 'admin@example.com' }], subject: 'diag', text: 'body' },
+        'tenant-1',
+      ),
+    );
+
+  return runWith(
+    {
+      providerId: 'smtp-1',
+      providerType: 'smtp',
+      rawConfig: { host: 'smtp.example.com', port: 587, username: 'u', password: 'p', from: 'sender@example.com' },
+    },
+    { liveSendTest: true, recipient: 'admin@example.com' },
+    sendLive as any,
+  );
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
 });
@@ -343,61 +386,67 @@ describe('runOutboundEmailDiagnosticsWithSettings', () => {
     expect(report.steps.find((s) => s.id === 'smtp_connection')?.status).toBe('skip');
   });
 
-  it('carries a real SMTP provider rejection through the live-send boundary with SMTP advice', async () => {
-    const transporter = {
-      verify: vi.fn(async () => true),
-      close: vi.fn(),
-      sendMail: vi.fn(async () => {
-        throw Object.assign(new Error('auth failed'), {
-          code: 'EAUTH',
-          responseCode: 535,
-          command: 'AUTH',
-          response: '535 5.7.8 Authentication credentials invalid',
-        });
+  it.each([
+    {
+      name: 'AUTH failure',
+      error: Object.assign(new Error('auth failed'), {
+        code: 'EAUTH',
+        responseCode: 535,
+        command: 'AUTH',
+        response: '535 5.7.8 Authentication credentials invalid',
       }),
-    };
-    smtpCreateTransport.mockReturnValue(transporter);
+      expected: /SMTP authentication was rejected/i,
+      forbidden: /rejected the recipient or message|could not be reached|TLS handshake failed/i,
+      data: { errorCode: 'EAUTH', responseCode: 535, command: 'AUTH' },
+    },
+    {
+      name: 'recipient rejection',
+      error: Object.assign(new Error('550 5.1.1 User unknown'), {
+        code: 'EENVELOPE',
+        command: 'RCPT',
+        responseCode: 550,
+        response: '550 5.1.1 User unknown',
+      }),
+      expected: /rejected the recipient or message/i,
+      forbidden: /authentication was rejected|could not be reached|TLS handshake failed/i,
+      data: { errorCode: 'EENVELOPE', responseCode: 550, command: 'RCPT' },
+    },
+    {
+      name: 'connection failure',
+      error: Object.assign(new Error('connect ECONNREFUSED 127.0.0.1:25'), {
+        code: 'ECONNREFUSED',
+        command: 'CONN',
+      }),
+      expected: /could not be reached/i,
+      forbidden: /authentication was rejected|rejected the recipient or message|TLS handshake failed/i,
+      data: { errorCode: 'ECONNREFUSED', command: 'CONN' },
+    },
+    {
+      name: 'TLS failure',
+      error: Object.assign(new Error('self-signed certificate in certificate chain'), {
+        code: 'ETLS',
+      }),
+      expected: /TLS handshake failed/i,
+      forbidden: /authentication was rejected|rejected the recipient or message|could not be reached/i,
+      data: { errorCode: 'ETLS' },
+    },
+  ])(
+    'classifies a real SMTP $name from native protocol evidence',
+    async ({ error, expected, forbidden, data }) => {
+      // The provider's generic message names host/port/credentials/TLS for every
+      // failure; classification must ignore it and use only native evidence.
+      const report = await runSmtpProviderFailure(error);
 
-    const provider = new SMTPEmailProvider('smtp-1');
-    await provider.initialize({
-      host: 'smtp.example.com',
-      port: 587,
-      username: 'u',
-      password: 'p',
-      from: 'sender@example.com',
-    });
+      const live = report.steps.find((s) => s.id === 'live_send_test');
+      expect(live?.status).toBe('fail');
+      expect(live?.data).toMatchObject(data);
 
-    const sendLive = async () =>
-      liveSendResultFromEmailSendResult(
-        await provider.sendEmail(
-          { from: { email: 'sender@example.com' }, to: [{ email: 'admin@example.com' }], subject: 'diag', text: 'body' },
-          'tenant-1',
-        ),
-      );
-
-    const report = await runWith(
-      {
-        providerId: 'smtp-1',
-        providerType: 'smtp',
-        rawConfig: { host: 'smtp.example.com', port: 587, username: 'u', password: 'p', from: 'sender@example.com' },
-      },
-      { liveSendTest: true, recipient: 'admin@example.com' },
-      sendLive as any,
-    );
-
-    const live = report.steps.find((s) => s.id === 'live_send_test');
-    expect(live?.status).toBe('fail');
-    expect(live?.data).toMatchObject({
-      errorCode: 'EAUTH',
-      responseCode: 535,
-      command: 'AUTH',
-      response: '535 5.7.8 Authentication credentials invalid',
-    });
-    expect(live?.error).toMatchObject({ status: 535, code: 'EAUTH' });
-    const text = report.recommendations.join(' ');
-    expect(text).toMatch(/SMTP authentication was rejected/i);
-    expect(text).not.toMatch(/Microsoft Graph|Exchange Send As|Mail\.Read/i);
-  });
+      const text = report.recommendations.join(' ');
+      expect(text).toMatch(expected);
+      expect(text).not.toMatch(forbidden);
+      expect(text).not.toMatch(/Microsoft Graph|Exchange Send As|Mail\.Read/i);
+    },
+  );
 
   it('uses Resend-specific live-send advice rather than Graph advice', async () => {
     const sendLive = vi.fn(async () => ({
