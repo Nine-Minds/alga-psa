@@ -669,10 +669,13 @@ const ServiceCatalogManager: React.FC = () => {
         },
       },
       // Entry point B (plan §3.2): reopen the rollout/usage flow later. The id
-      // is entity-free (rule 4); the service id rides in data-service-id.
+      // is entity-free (rule 4); the service id rides in data-service-id. The
+      // dataIndex must be unique — DataTable derives column identity from it,
+      // so reusing 'service_id' would collide with the Actions column and knock
+      // the row menu (Edit/Delete) out of the table.
       {
         title: t('serviceCatalog.table.contractUsage', { defaultValue: 'Contracts' }),
-        dataIndex: 'service_id',
+        dataIndex: 'contract_usage',
         render: (_value, record) => {
           const serviceId = record.service_id;
           const count = serviceId ? usageByService[serviceId]?.contractCount : undefined;
@@ -702,10 +705,15 @@ const ServiceCatalogManager: React.FC = () => {
                 setReviewingService(record);
               }}
             >
-              {t('serviceCatalog.table.contractUsageCount', {
-                contracts: count,
-                defaultValue: 'Used on {{contracts}}',
-              })}
+              {count === 1
+                ? t('serviceCatalog.table.contractUsageOne', {
+                    contracts: count,
+                    defaultValue: 'Used on {{contracts}} contract',
+                  })
+                : t('serviceCatalog.table.contractUsageMany', {
+                    contracts: count,
+                    defaultValue: 'Used on {{contracts}} contracts',
+                  })}
             </Button>
           );
         },

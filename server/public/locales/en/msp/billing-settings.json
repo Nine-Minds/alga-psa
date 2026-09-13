@@ -724,7 +724,8 @@
       "thisService": "this service",
       "contractUsage": "Contracts",
       "contractUsageNone": "Not used",
-      "contractUsageCount": "Used on {{contracts}}"
+      "contractUsageOne": "Used on {{contracts}} contract",
+      "contractUsageMany": "Used on {{contracts}} contracts"
     },
     "errors": {
       "fetchServices": "Failed to fetch services",
@@ -1463,7 +1464,8 @@
       "line": "Line",
       "current": "Current",
       "new": "New",
-      "delta": "Delta"
+      "delta": "Delta",
+      "rateAtDate": "Rate at date"
     },
     "followsCatalog": "Follows the catalog",
     "close": "Close",

@@ -724,7 +724,8 @@
       "thisService": "⟦ŧħīş şḗřṽīƈḗ⟧",
       "contractUsage": "⟦Ƈȯƞŧřȧƈŧş⟧",
       "contractUsageNone": "⟦Ƞȯŧ ŭşḗḓ⟧",
-      "contractUsageCount": "⟦Ŭşḗḓ ȯƞ {{contracts}}⟧"
+      "contractUsageOne": "⟦Ŭşḗḓ ȯƞ {{contracts}} ƈȯƞŧřȧƈŧ⟧",
+      "contractUsageMany": "⟦Ŭşḗḓ ȯƞ {{contracts}} ƈȯƞŧřȧƈŧş⟧"
     },
     "errors": {
       "fetchServices": "⟦Ƒȧīŀḗḓ ŧȯ ƒḗŧƈħ şḗřṽīƈḗş⟧",
@@ -1463,7 +1464,8 @@
       "line": "⟦Ŀīƞḗ⟧",
       "current": "⟦Ƈŭřřḗƞŧ⟧",
       "new": "⟦Ƞḗẇ⟧",
-      "delta": "⟦Ḓḗŀŧȧ⟧"
+      "delta": "⟦Ḓḗŀŧȧ⟧",
+      "rateAtDate": "⟦Řȧŧḗ ȧŧ ḓȧŧḗ⟧"
     },
     "followsCatalog": "⟦Ƒȯŀŀȯẇş ŧħḗ ƈȧŧȧŀȯɠ⟧",
     "close": "⟦Ƈŀȯşḗ⟧",

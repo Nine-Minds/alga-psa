@@ -724,7 +724,8 @@
       "thisService": "este servicio",
       "contractUsage": "Contratos",
       "contractUsageNone": "Sin usar",
-      "contractUsageCount": "Usado en {{contracts}}"
+      "contractUsageOne": "Usado en {{contracts}} contrato",
+      "contractUsageMany": "Usado en {{contracts}} contratos"
     },
     "errors": {
       "fetchServices": "No se pudieron recuperar los servicios",
@@ -1463,7 +1464,8 @@
       "line": "Línea",
       "current": "Actual",
       "new": "Nuevo",
-      "delta": "Variación"
+      "delta": "Variación",
+      "rateAtDate": "Tarifa en la fecha"
     },
     "followsCatalog": "Sigue el catálogo",
     "close": "Cerrar",

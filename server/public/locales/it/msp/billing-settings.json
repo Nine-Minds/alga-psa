@@ -724,7 +724,8 @@
       "thisService": "questo servizio",
       "contractUsage": "Contratti",
       "contractUsageNone": "Non utilizzato",
-      "contractUsageCount": "Usato in {{contracts}}"
+      "contractUsageOne": "Usato in {{contracts}} contratto",
+      "contractUsageMany": "Usato in {{contracts}} contratti"
     },
     "errors": {
       "fetchServices": "Impossibile recuperare i servizi",
@@ -1463,7 +1464,8 @@
       "line": "Riga",
       "current": "Attuale",
       "new": "Nuovo",
-      "delta": "Variazione"
+      "delta": "Variazione",
+      "rateAtDate": "Tariffa alla data"
     },
     "followsCatalog": "Segue il catalogo",
     "close": "Chiudi",

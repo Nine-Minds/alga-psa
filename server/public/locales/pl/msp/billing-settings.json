@@ -726,7 +726,8 @@
       "thisService": "tę usługę",
       "contractUsage": "Umowy",
       "contractUsageNone": "Nieużywana",
-      "contractUsageCount": "Używana w {{contracts}}"
+      "contractUsageOne": "Używana w {{contracts}} umowie",
+      "contractUsageMany": "Używana w {{contracts}} umowach"
     },
     "errors": {
       "fetchServices": "Nie udało się pobrać usług",
@@ -1465,7 +1466,8 @@
       "line": "Linia",
       "current": "Obecna",
       "new": "Nowa",
-      "delta": "Różnica"
+      "delta": "Różnica",
+      "rateAtDate": "Cena na dzień"
     },
     "followsCatalog": "Podąża za katalogiem",
     "close": "Zamknij",

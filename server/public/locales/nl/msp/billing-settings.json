@@ -724,7 +724,8 @@
       "thisService": "deze dienst",
       "contractUsage": "Contracten",
       "contractUsageNone": "Niet gebruikt",
-      "contractUsageCount": "Gebruikt op {{contracts}}"
+      "contractUsageOne": "Gebruikt op {{contracts}} contract",
+      "contractUsageMany": "Gebruikt op {{contracts}} contracten"
     },
     "errors": {
       "fetchServices": "Kan services niet ophalen",
@@ -1463,7 +1464,8 @@
       "line": "Regel",
       "current": "Huidig",
       "new": "Nieuw",
-      "delta": "Verschil"
+      "delta": "Verschil",
+      "rateAtDate": "Tarief op datum"
     },
     "followsCatalog": "Volgt de catalogus",
     "close": "Sluiten",

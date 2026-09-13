@@ -107,8 +107,10 @@ export default function PriceChangeRolloutDialog({
   // The rollout is catalog-level by design: one effective-dated price row
   // changes every inherited line. There is no per-line selection because there
   // is no per-contract write to select — a control here would ignore its input.
-  const columns = useMemo<ColumnDefinition<ServicePriceChangePreviewRow>[]>(
-    () => [
+  // Review mode has no pending "new" rate, so Current and New would always be
+  // identical; drop New/Delta there rather than imply a change.
+  const columns = useMemo<ColumnDefinition<ServicePriceChangePreviewRow>[]>(() => {
+    const baseColumns: ColumnDefinition<ServicePriceChangePreviewRow>[] = [
       {
         title: t('priceChangeRollout.columns.client', { defaultValue: 'Client' }),
         dataIndex: 'clientName',
@@ -124,30 +126,38 @@ export default function PriceChangeRolloutDialog({
           record.contractLineName ?? serviceName,
       },
       {
-        title: t('priceChangeRollout.columns.current', { defaultValue: 'Current' }),
+        title: isReview
+          ? t('priceChangeRollout.columns.rateAtDate', { defaultValue: 'Rate at date' })
+          : t('priceChangeRollout.columns.current', { defaultValue: 'Current' }),
         dataIndex: 'currentRateCents',
         render: (_value: unknown, record: ServicePriceChangePreviewRow) =>
           record.currentRateCents === null
             ? '—'
             : money(record.currentRateCents, record.currency),
       },
-      {
-        title: t('priceChangeRollout.columns.new', { defaultValue: 'New' }),
-        dataIndex: 'newRateCents',
-        render: (_value: unknown, record: ServicePriceChangePreviewRow) =>
-          record.newRateCents === null
-            ? '—'
-            : money(record.newRateCents, record.currency),
-      },
-      {
-        title: t('priceChangeRollout.columns.delta', { defaultValue: 'Delta' }),
-        dataIndex: 'deltaCents',
-        render: (_value: unknown, record: ServicePriceChangePreviewRow) =>
-          moneySigned(record.deltaCents, record.currency),
-      },
-    ],
-    [money, moneySigned, serviceName, t],
-  );
+    ];
+
+    if (!isReview) {
+      baseColumns.push(
+        {
+          title: t('priceChangeRollout.columns.new', { defaultValue: 'New' }),
+          dataIndex: 'newRateCents',
+          render: (_value: unknown, record: ServicePriceChangePreviewRow) =>
+            record.newRateCents === null
+              ? '—'
+              : money(record.newRateCents, record.currency),
+        },
+        {
+          title: t('priceChangeRollout.columns.delta', { defaultValue: 'Delta' }),
+          dataIndex: 'deltaCents',
+          render: (_value: unknown, record: ServicePriceChangePreviewRow) =>
+            moneySigned(record.deltaCents, record.currency),
+        },
+      );
+    }
+
+    return baseColumns;
+  }, [isReview, money, moneySigned, serviceName, t]);
 
   const handleApply = async () => {
     if (!onApply) return;
@@ -235,12 +245,10 @@ export default function PriceChangeRolloutDialog({
           <div>
             <p className="text-sm text-muted-foreground">
               {serviceName}: {money(preview?.oldRateCents ?? newRateCents, currency)}
-              {isReview ? (
-                <> {currency}</>
-              ) : (
+              {!isReview && (
                 <>
                   {' '}
-                  &rarr; {money(newRateCents, currency)} {currency}
+                  &rarr; {money(newRateCents, currency)}
                 </>
               )}
             </p>

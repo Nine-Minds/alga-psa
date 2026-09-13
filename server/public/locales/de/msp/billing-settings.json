@@ -724,7 +724,8 @@
       "thisService": "diesen Dienst",
       "contractUsage": "Verträge",
       "contractUsageNone": "Nicht verwendet",
-      "contractUsageCount": "Verwendet in {{contracts}}"
+      "contractUsageOne": "In {{contracts}} Vertrag verwendet",
+      "contractUsageMany": "In {{contracts}} Verträgen verwendet"
     },
     "errors": {
       "fetchServices": "Dienste konnten nicht abgerufen werden",
@@ -1463,7 +1464,8 @@
       "line": "Position",
       "current": "Aktuell",
       "new": "Neu",
-      "delta": "Differenz"
+      "delta": "Differenz",
+      "rateAtDate": "Preis am Datum"
     },
     "followsCatalog": "Folgt dem Katalog",
     "close": "Schließen",
