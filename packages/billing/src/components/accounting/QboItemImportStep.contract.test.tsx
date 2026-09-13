@@ -13,7 +13,7 @@ const previewQboItemImportMock = vi.hoisted(() => vi.fn());
 const executeQboItemImportMock = vi.hoisted(() => vi.fn());
 const getServiceTypesForSelectionMock = vi.hoisted(() => vi.fn());
 const useFeatureFlagMock = vi.hoisted(() => vi.fn(() => true));
-const getQboCustomersMock = vi.hoisted(() => vi.fn(async () => [] as unknown[]));
+const getQboCustomersMock = vi.hoisted(() => vi.fn(async (..._args: unknown[]) => [] as unknown[]));
 
 vi.mock('../../actions/qboItemImportActions', () => ({
   previewQboItemImport: async (...args: unknown[]) => previewQboItemImportMock(...args),
