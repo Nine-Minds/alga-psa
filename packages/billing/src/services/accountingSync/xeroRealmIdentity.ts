@@ -9,25 +9,28 @@
  * only when the organisation is verifiably owned by the requested connection
  * inside the same tenant. Ambiguous or foreign ownership aliases nothing, so a
  * lookup can never cross an organisation or tenant boundary.
+ *
+ * The pure alias/normalization logic lives beside the stored connections in
+ * @alga-psa/integrations so settings, catalogs, manual exports, sync routing
+ * and the mapping screen all share one implementation.
  */
 
-export interface XeroConnectionIdentity {
-  connectionId: string;
-  xeroTenantId: string;
-}
+export type {
+  XeroConnectionIdentity
+} from '@alga-psa/integrations/lib/xero/xeroRealmIdentity';
+
+// eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- billing consumes the shared Xero connection-identity helpers
+import type { XeroConnectionIdentity } from '@alga-psa/integrations/lib/xero/xeroRealmIdentity';
+// eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- billing consumes the shared Xero connection-identity helpers
+import { resolveXeroRealmAliasIds } from '@alga-psa/integrations/lib/xero/xeroRealmIdentity';
 
 export type XeroConnectionsById = Record<string, XeroConnectionIdentity>;
 
 /**
- * Ordered realm ids to accept when resolving `targetRealm`:
- *   - the exact target first (the canonical connection id),
- *   - then the organisation id it uniquely owns, when targetRealm is a known
- *     connection key,
- *   - or, when targetRealm is itself an organisation id owned by exactly one
- *     connection (a legacy caller), that connection id and the organisation id.
- *
- * Unknown targets and organisations owned by more than one connection return
- * the exact target only: fail closed rather than guess.
+ * Ordered realm ids to accept when resolving `targetRealm`. Delegates to the
+ * shared integrations resolver, which fails closed for unknown targets and for
+ * organisations owned by more than one connection. `connectionsOverride` is a
+ * test/DI seam; production callers let it load the tenant's stored connections.
  */
 export async function resolveXeroRealmAliases(
   tenantId: string,
@@ -53,22 +56,5 @@ export async function resolveXeroRealmAliases(
     }
   }
 
-  const entries = Object.values(connections ?? {});
-  const canonical = connections?.[targetRealm];
-
-  if (canonical) {
-    const organisation = canonical.xeroTenantId;
-    if (!organisation || organisation === targetRealm) {
-      return [targetRealm];
-    }
-    const owners = entries.filter((connection) => connection.xeroTenantId === organisation);
-    return owners.length === 1 ? [targetRealm, organisation] : [targetRealm];
-  }
-
-  const owners = entries.filter((connection) => connection.xeroTenantId === targetRealm);
-  if (owners.length === 1) {
-    return [owners[0].connectionId, targetRealm];
-  }
-
-  return [targetRealm];
+  return resolveXeroRealmAliasIds(connections, targetRealm);
 }

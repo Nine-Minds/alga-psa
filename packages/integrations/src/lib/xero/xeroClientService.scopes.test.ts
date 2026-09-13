@@ -133,6 +133,25 @@ describe('Xero OAuth scope configuration', () => {
       expect(computeMissingXeroScopes('accounting.payments', [XERO_PAYMENT_READ_SCOPE])).toEqual([]);
     });
 
+    it('does not let a read-only legacy grant satisfy the invoice write scope', () => {
+      // accounting.transactions.read can poll Payments but cannot POST
+      // /Invoices; only the read+write broad scope covers invoice export.
+      expect(
+        computeMissingXeroScopes(
+          'offline_access accounting.settings.read accounting.transactions.read accounting.contacts'
+        )
+      ).toContain('accounting.invoices');
+      expect(
+        computeMissingXeroScopes('accounting.transactions.read', ['accounting.invoices'])
+      ).toEqual(['accounting.invoices']);
+      expect(
+        computeMissingXeroScopes('accounting.transactions', ['accounting.invoices'])
+      ).toEqual([]);
+      expect(
+        computeMissingXeroScopes('accounting.invoices', ['accounting.invoices'])
+      ).toEqual([]);
+    });
+
     it('does not flag an unknown or absent stored grant', () => {
       expect(computeMissingXeroScopes(undefined, required)).toEqual([]);
       expect(computeMissingXeroScopes('', required)).toEqual([]);

@@ -44,6 +44,8 @@ export async function resolveConnectedAccountingIntegration(
   const { getStoredQboCredentialsMap } = await import('@alga-psa/integrations/lib/qbo/qboClientService');
   // eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- billing→integrations is the allowed direction
   const { getStoredXeroConnections } = await import('@alga-psa/integrations/lib/xero/xeroClientService');
+  // eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- billing→integrations is the allowed direction
+  const { normalizeXeroConnectionSelection } = await import('@alga-psa/integrations/lib/xero/xeroRealmIdentity');
 
   const [qboCredentials, xeroConnections, qboDefaultRealm] = await Promise.all([
     getStoredQboCredentialsMap(tenantId).catch(() => ({} as Record<string, unknown>)),
@@ -54,6 +56,16 @@ export async function resolveConnectedAccountingIntegration(
   const qboRealms = new Set(Object.keys(qboCredentials));
   const xeroConnectionIds = Object.keys(xeroConnections);
 
+  // A persisted Xero selection may name a historical organisation id. Normalize
+  // it to the owning connection id with the exact same helper the settings and
+  // catalog selectors use, so `settings.accountingSync.defaultRealm` cannot
+  // make sync routing disagree with the mapping screen. Ambiguous ownership
+  // normalizes to null and falls through to the first connected connection.
+  const persistedXeroConnectionId = normalizeXeroConnectionSelection(
+    xeroConnections as Record<string, { connectionId: string; xeroTenantId: string }>,
+    settings?.defaultRealm ?? null
+  );
+
   // Explicit provider request. An explicit ORGANISATION that is no longer
   // connected fails closed: it must never silently resolve to a different
   // provider or organisation.
@@ -63,9 +75,7 @@ export async function resolveConnectedAccountingIntegration(
         ? { adapterType: 'xero', targetRealm: selection.preferredTargetRealm }
         : null;
     }
-    const connectionId = settings?.defaultRealm && xeroConnections[settings.defaultRealm]
-      ? settings.defaultRealm
-      : xeroConnectionIds[0];
+    const connectionId = persistedXeroConnectionId ?? xeroConnectionIds[0];
     return connectionId ? { adapterType: 'xero', targetRealm: connectionId } : null;
   }
 
@@ -91,14 +101,15 @@ export async function resolveConnectedAccountingIntegration(
   }
 
   // Settings-selected default organisation (best effort: a removed default
-  // falls back to another connected target).
+  // falls back to another connected target). A QBO realm id is matched
+  // verbatim; a Xero selection is normalized to the connection id above.
   const settingsRealm = settings?.defaultRealm ?? null;
   if (settingsRealm) {
     if (qboRealms.has(settingsRealm)) {
       return { adapterType: 'quickbooks_online', targetRealm: settingsRealm };
     }
-    if (xeroConnections[settingsRealm]) {
-      return { adapterType: 'xero', targetRealm: settingsRealm };
+    if (persistedXeroConnectionId) {
+      return { adapterType: 'xero', targetRealm: persistedXeroConnectionId };
     }
   }
 

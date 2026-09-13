@@ -326,3 +326,49 @@ call and no full Next.js build (billing `tsup` build ran):
 Validation used a local HTTP simulator and DB fixtures only — no live Xero or
 QBO account. Billing `npm run build` (tsup) passed; no full production Next.js
 build was run.
+
+## Review round 2026-09-13 (four reviewer issues on the mitigation commit)
+
+1. Historical mappings were visible to export resolution but not to the
+   mapping screen. `getExternalEntityMappings` now accepts the same
+   ownership-validated alias set (canonical connection id plus the uniquely
+   owned organisation id, exact-first) as resolution. Delete tombstones the
+   whole identity group for the entity, so a hidden organisation-keyed sibling
+   cannot resurface as the export fallback; create rejects a second live
+   representation under the alias; update rewrites a historical row's realm to
+   the owning connection id. Covered by
+   `packages/billing/src/services/accountingSync/xeroHistoricalMapping.db.test.ts`
+   (UI create → resolver/export → inbound payment, alias read, cross-org/tenant
+   isolation, delete-fallback, create conflict).
+2. The persisted selection was normalized for settings but not for sync
+   routing. `resolveConnectedAccountingIntegration` now normalizes
+   `settings.accountingSync.defaultRealm` with the same helper as
+   `resolveDefaultXeroConnectionId`, so a historical organisation id routes
+   both to the owning connection (and wins over a connected QBO default).
+   Ambiguous ownership is rejected, not guessed. Shared pure helpers live in
+   `packages/integrations/src/lib/xero/xeroRealmIdentity.ts` so no test mock of
+   the client transport can desynchronise them. Covered by
+   `connectedAccountingIntegration.xeroSelection.test.ts`.
+3. `accounting.transactions.read` no longer satisfies `accounting.invoices`.
+   Only the read+write broad scope covers invoice export; a read-only legacy
+   grant can still poll Payments but connection status reports the missing
+   invoice-write permission and `XeroClientService.createInvoices` refuses the
+   write with `XERO_SCOPE_INSUFFICIENT` before any HTTP call. Covered in
+   `xeroClientService.scopes.test.ts`, `xeroClientService.scopeEnforcement.test.ts`
+   and `xeroActions.test.ts`.
+4. Locale resources, not just `defaultValue`, were updated: the Xero
+   connection-success, how-it-works, mapping and reauthorization copy in `en`,
+   the seven real locales and the regenerated pseudo-locales; the missing
+   `qbo.sync` provider keys were also translated so
+   `validate-translations.cjs` and `audit-all.cjs` pass. A new
+   `XeroIntegrationSettings.localeResources.test.tsx` renders the panel
+   against the real English resource and fails on stale "first organisation"
+   copy.
+
+Validation: integrations 821 passed (2 pre-existing `teamsPackageActions`),
+billing curated 1268 passed / 3 pre-existing unrelated failures (contract-line
+renewal, usage config, a ContractLines source-string assertion), the DB suites
+above, server Xero inbound/export integration 16, internal Xero integration 12,
+types/integrations/billing typechecks, emulator tests, changed-file ESLint 0
+errors, locale parity and quality audits pass. No live vendor call; no full
+Next.js build.

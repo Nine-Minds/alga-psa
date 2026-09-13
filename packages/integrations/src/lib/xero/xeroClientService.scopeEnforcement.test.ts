@@ -110,4 +110,37 @@ describe('Xero Payments scope enforcement (real HTTP boundary)', () => {
     const page = await client.listChangedPayments('2026-01-01T00:00:00.000Z', 1);
     expect(page.records).toHaveLength(1);
   });
+
+  it('refuses invoice export when the known grant is read-only, before any write', async () => {
+    const client = makeClient(
+      'conn-readonly',
+      'tenant-readonly',
+      'offline_access accounting.settings.read accounting.transactions.read accounting.contacts'
+    );
+
+    await expect(
+      client.createInvoices([
+        { invoiceId: 'inv-1', contactId: 'contact-1', amountCents: 100, lines: [] } as any
+      ])
+    ).rejects.toMatchObject({
+      code: 'XERO_SCOPE_INSUFFICIENT',
+      details: { missingScopes: ['accounting.invoices'] }
+    });
+  });
+
+  it('does not scope-block invoice export for a read+write legacy transactions grant', async () => {
+    const client = makeClient(
+      'conn-write',
+      'tenant-write',
+      'offline_access accounting.settings accounting.transactions accounting.contacts'
+    );
+
+    // The local boundary has no POST /Invoices route, so it 404s; that proves
+    // the scope guard let the write through rather than refusing it.
+    await expect(
+      client.createInvoices([
+        { invoiceId: 'inv-1', contactId: 'contact-1', amountCents: 100, lines: [] } as any
+      ])
+    ).rejects.not.toMatchObject({ code: 'XERO_SCOPE_INSUFFICIENT' });
+  });
 });

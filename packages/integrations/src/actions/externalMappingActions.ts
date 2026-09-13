@@ -31,6 +31,10 @@ import {
 import { getStoredQboCredentialsMap, QboClientService } from '../lib/qbo/qboClientService';
 import { getStoredXeroConnections, XeroClientService } from '../lib/xero/xeroClientService';
 import {
+  normalizeXeroConnectionSelection,
+  resolveXeroRealmAliasIds,
+} from '../lib/xero/xeroRealmIdentity';
+import {
   readXeroServiceTargetKind,
   XERO_SALES_ACCOUNT_TYPES,
 } from '../lib/xero/xeroServiceMappingTarget';
@@ -708,6 +712,18 @@ export const getExternalEntityMappings = withAuth(async (
           query.andWhere(function () {
             this.whereNull('external_realm_id').orWhere('external_realm_id', '');
           });
+        } else if (integrationType === 'xero') {
+          // The UI addresses the canonical connection id, but pre-unification
+          // rows persist the organisation id. Accept the organisation id the
+          // connection uniquely owns so historical mappings stay visible and
+          // editable — never another organisation's rows. Exact key first.
+          const connections = await getStoredXeroConnections(tenant);
+          const aliasIds = resolveXeroRealmAliasIds(connections, externalRealmId);
+          const accepted = aliasIds.length > 0 ? aliasIds : [externalRealmId];
+          query.andWhere((builder) => builder.whereIn('external_realm_id', accepted));
+          if (accepted.length > 1) {
+            query.orderByRaw('CASE WHEN external_realm_id = ? THEN 0 ELSE 1 END', [externalRealmId]);
+          }
         } else {
           query.andWhere({ external_realm_id: externalRealmId });
         }
@@ -853,6 +869,27 @@ export const createExternalEntityMapping = withAuth(async (
         });
 
         return { newMapping: relinked, relinkedFrom: tombstoned };
+      }
+
+      // Conflict handling: a live mapping for this entity may already exist
+      // under the connection's historical organisation identity (the UI now
+      // shows it). Inserting a second representation would leave two live rows
+      // whose delete could expose the other. Reject and direct the user to edit
+      // the existing row instead.
+      if (integration_type === 'xero') {
+        const connections = await getStoredXeroConnections(tenant);
+        const aliasIds = resolveXeroRealmAliasIds(connections, normalizedRealm);
+        const liveConflict = await tenantDb(trx, tenant)
+          .table<ExternalEntityMapping>('tenant_external_entity_mappings')
+          .where({ tenant, integration_type, alga_entity_type, alga_entity_id })
+          .whereNull('deleted_at')
+          .whereIn('external_realm_id', aliasIds.length > 0 ? aliasIds : [normalizedRealm])
+          .first();
+        if (liveConflict) {
+          throw new ExpectedExternalMappingError(
+            'A mapping for this entity already exists for the connected Xero organisation. Edit the existing mapping instead.'
+          );
+        }
       }
 
       const [newMapping] = await tenantDb(trx, tenant)
@@ -1074,6 +1111,19 @@ export const updateExternalEntityMapping = withAuth(async (
         }
         await assertLocalEntityOwnership(trx, tenant, before.alga_entity_type, updatePayload.alga_entity_id);
       }
+
+      // Progressive identity migration: editing a pre-unification
+      // organisation-keyed mapping rewrites its realm to the owning connection
+      // id, so the canonical identity converges. A collision with an existing
+      // canonical row surfaces as the duplicate error below.
+      if (before.integration_type === 'xero' && before.external_realm_id) {
+        const connections = await getStoredXeroConnections(tenant);
+        const canonicalRealm = normalizeXeroConnectionSelection(connections, before.external_realm_id);
+        if (canonicalRealm && canonicalRealm !== before.external_realm_id) {
+          updatePayload.external_realm_id = canonicalRealm;
+        }
+      }
+
       updatePayload.updated_at = new Date().toISOString();
 
       const [after] = await db
@@ -1223,15 +1273,44 @@ export const deleteExternalEntityMapping = withAuth(async (
       }
 
       const now = new Date().toISOString();
-      const [after] = await db
+
+      // Unlink the whole canonical identity group for this entity, not just the
+      // selected row. A Xero entity can have a canonical connection-keyed row
+      // and a pre-unification organisation-keyed row at once; tombstoning only
+      // one would let the other resurface as a hidden export fallback.
+      let realmIds: string[] | null = before.external_realm_id
+        ? [before.external_realm_id]
+        : null;
+      if (before.integration_type === 'xero' && before.external_realm_id) {
+        const connections = await getStoredXeroConnections(tenant);
+        const resolved = resolveXeroRealmAliasIds(connections, before.external_realm_id);
+        realmIds = resolved.length > 0 ? resolved : [before.external_realm_id];
+      }
+
+      const tombstoneQuery = db
         .table<ExternalEntityMapping>('tenant_external_entity_mappings')
-        .where({ id: mappingId })
+        .where({
+          tenant,
+          integration_type: before.integration_type,
+          alga_entity_type: before.alga_entity_type,
+          alga_entity_id: before.alga_entity_id,
+        })
+        .whereNull('deleted_at');
+      if (realmIds && realmIds.length > 0) {
+        tombstoneQuery.whereIn('external_realm_id', realmIds);
+      } else {
+        tombstoneQuery.whereNull('external_realm_id');
+      }
+
+      const rows = await tombstoneQuery
         .update({
           deleted_at: now,
           sync_status: 'unlinked',
           updated_at: now,
         })
         .returning('*');
+
+      const after = rows.find((row) => row.id === mappingId) ?? rows[0];
 
       if (!after) {
         throw new ExpectedExternalMappingError('Unable to unlink mapping. Please try again.');
