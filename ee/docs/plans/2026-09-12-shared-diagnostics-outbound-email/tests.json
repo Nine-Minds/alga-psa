@@ -1,0 +1,177 @@
+[
+  {
+    "id": "T001",
+    "description": "Kernel unit suite: ordered outcomes, thrown errors, safe structured metadata, controllable timing, recommendations dedup/order, fail/warn/pass including empty/all-skip, early stop and projections.",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F002",
+      "F003",
+      "F004"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Run shared/services/email/providers/__tests__/MicrosoftGraphAdapter.diagnostics.test.ts and normalized before/after report fixtures for healthy, missing-token, Graph failure, both identifier options and live subscription cleanup; preserve key omission and recommendation text/order.",
+    "implemented": true,
+    "featureIds": [
+      "F005",
+      "F006",
+      "F008"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Run server/src/test/unit/lib/teams/actions/teamsDiagnosticsActions.test.ts and packages/integrations/src/components/settings/integrations/TeamsIntegrationSettings.diagnostics.test.tsx; compare normalized legacy reports including thrown errors and completion-time createdAt.",
+    "implemented": true,
+    "featureIds": [
+      "F004",
+      "F007"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Graph error matrix: HTTP/header IDs, already-sanitized failure and EmailProviderError metadata survive outbound; inbound legacy mapping remains stable and outbound never inherits Mail.Read/folder consent advice.",
+    "implemented": true,
+    "featureIds": [
+      "F005",
+      "F018",
+      "F027"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "DB-backed integration happy path against migrated schema: saved enabled provider/binding resolves for session tenant using real queries; report default/ticketing/effective From and selected dispatch correctly.",
+    "implemented": false,
+    "featureIds": [
+      "F009",
+      "F010",
+      "F011"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "DB-backed guard suite: missing settings, disabled provider and foreign-tenant binding cannot initialize/send; unauthorized and client-portal callers fail before reads/network, and no caller-supplied tenant is trusted.",
+    "implemented": false,
+    "featureIds": [
+      "F009",
+      "F010",
+      "F011"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "Microsoft matrix: missing credentials, refresh failure/token replacement, valid self scopes, delegated missing Mail.Send.Shared, missing Mail.Send, opaque/malformed/missing-scp token and unknown /me identity produce accurate outcomes without duplicate identity requests.",
+    "implemented": true,
+    "featureIds": [
+      "F008",
+      "F012",
+      "F013",
+      "F014"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "Permission evidence matrix: explicit ErrorSendAsDenied on live send names Exchange permission with status/request-id; generic 403 remains inconclusive; draft success and readable Sent Items never imply Send As or writable Sent Items; no additional OAuth scopes.",
+    "implemented": false,
+    "featureIds": [
+      "F015",
+      "F017",
+      "F018"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Manual empirical gate in authorized real Microsoft tenant: compare same-token/route draft and send outcomes across documented grant/scope matrix; record redacted evidence and retain advisory if unavailable or unreliable. If draft experiment runs, verify cleanup of only its own ID including delete failure. Mocks cannot satisfy the authoritative gate.",
+    "implemented": false,
+    "featureIds": [
+      "F015",
+      "F016",
+      "F017"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "SMTP representative transport suite: successful verify with evidence, connection refusal, TLS certificate/handshake failure, AUTH 535 and unknown-phase error preserve native code/responseCode/command, truthful skips and no credentials; one verification attempt and no invented stage timings.",
+    "implemented": true,
+    "featureIds": [
+      "F019",
+      "F020",
+      "F018"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "Resend tests: actual domains success, restricted-key denial, network failure and cached verification preserve evidence/freshness without claiming domains permission proves send permission.",
+    "implemented": true,
+    "featureIds": [
+      "F021",
+      "F018"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "Live-send matrix across providers: default and invalid-recipient paths send zero messages; opted-in valid recipient uses effective production sender/provider once; Graph accepted versus delivered and uncertain outcome are represented without diagnostic resend.",
+    "implemented": true,
+    "featureIds": [
+      "F010",
+      "F022",
+      "F024"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "Shared-dialog component and CE/EE entry tests: saved configuration notice, both entry points, unknown/warn/fail rows, identities, protocol IDs, live-send opt-in, validation, pending/error/retry and bundle export.",
+    "implemented": false,
+    "featureIds": [
+      "F023",
+      "F024",
+      "F025",
+      "F026"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "Nested redaction tests with seeded OAuth/SMTP/Resend secrets, Axios config, body, paths and recommendation identifiers: no secret appears in action report or export; default export redacts identifiers while status/request IDs survive; includeIdentifiers never enables secrets.",
+    "implemented": true,
+    "featureIds": [
+      "F018",
+      "F023",
+      "F027"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "Notification logger test: EmailProviderError emits explicit errorCode/status/requestId; ordinary/non-Error throws remain safe; disabled-service path and original rethrow semantics are unchanged.",
+    "implemented": true,
+    "featureIds": [
+      "F028"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "Compile relevant shared/email/integrations and CE/EE consumers, run existing Teams related regression suites, and search both runStep declaration forms/status folds to verify all three consumers use one kernel.",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F006",
+      "F007",
+      "F023",
+      "F025",
+      "F026",
+      "F029"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "Manual UI smoke on CE and hosted EE outbound tabs: keyboard operation, light/dark status readability, saved provider selection, inconclusive advice, optional controlled live send and redacted copied/downloaded support bundle.",
+    "implemented": false,
+    "featureIds": [
+      "F023",
+      "F024",
+      "F025",
+      "F026",
+      "F027"
+    ]
+  }
+]

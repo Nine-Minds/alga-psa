@@ -60,6 +60,19 @@ export { SystemEmailProviderFactory } from './system/SystemEmailProviderFactory'
 // Tenant email provider manager
 export { EmailProviderManager } from './providers/EmailProviderManager';
 
+// Outbound email diagnostics (provider-dispatched, shared kernel)
+export {
+  runOutboundEmailDiagnostics,
+  runOutboundEmailDiagnosticsWithSettings,
+} from './diagnostics/outboundDiagnostics';
+export type {
+  OutboundDiagnosticsSummary,
+  OutboundEmailDiagnosticsOptions,
+  OutboundEmailDiagnosticsReport,
+  OutboundProviderType,
+  OutboundStep,
+} from './diagnostics/outboundTypes';
+
 export {
   applyFromNameOverride,
   parseEmailAddress,

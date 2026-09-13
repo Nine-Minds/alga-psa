@@ -5,6 +5,11 @@ import crypto from 'node:crypto';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { withAuth } from '@alga-psa/auth/withAuth';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import {
+  runDiagnosticsSteps,
+  type DiagnosticsStep,
+  type DiagnosticsStepDefinition,
+} from '@alga-psa/shared/services/diagnostics/diagnosticsRunner';
 
 import {
   resolveTeamsRecipientLink,
@@ -330,6 +335,22 @@ function skippedResult(
   };
 }
 
+/**
+ * Project a kernel step back to the Teams report shape: string errors, a
+ * required detail line, and no startedAt (historically omitted).
+ */
+function projectTeamsStep(step: DiagnosticsStep<Record<string, unknown>>): TeamsDiagnosticsStep {
+  return {
+    id: step.id,
+    title: step.title,
+    status: step.status,
+    detail: step.detail ?? step.error?.message ?? '',
+    durationMs: step.durationMs,
+    ...(step.data ? { data: step.data } : {}),
+    ...(step.error ? { error: step.error.message } : {}),
+  };
+}
+
 export async function sendTeamsTestMessageImpl(
   user: unknown,
   { tenant }: { tenant: string },
@@ -466,43 +487,30 @@ export async function runTeamsDiagnosticsImpl(
   await assertCanManageTeamsSettings(user as any);
 
   const userId = normalizeString((user as any)?.user_id);
-  const steps: TeamsDiagnosticsStep[] = [];
-  const recommendations = new Set<string>();
+  const stepDefinitions: Array<DiagnosticsStepDefinition<null, Record<string, unknown>>> = [];
   let integration: TeamsIntegrationRow | null = null;
   let microsoftUserId: string | null = null;
   let conversationReferenceFound = false;
   const { knex } = await createTenantKnex(tenant);
 
-  async function runStep(id: string, title: string, fn: () => Promise<StepOutcome>): Promise<void> {
-    const startedAt = Date.now();
-    try {
-      const outcome = await fn();
-      for (const recommendation of outcome.recommendations || []) {
-        if (recommendation) recommendations.add(recommendation);
-      }
-      steps.push({
-        id,
-        title,
-        status: outcome.status,
-        detail: outcome.detail,
-        durationMs: Math.max(0, Date.now() - startedAt),
-        ...(outcome.data ? { data: outcome.data } : {}),
-        ...(outcome.error ? { error: outcome.error } : {}),
-      });
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error || 'Unknown error');
-      steps.push({
-        id,
-        title,
-        status: 'fail',
-        detail: errorMessage,
-        durationMs: Math.max(0, Date.now() - startedAt),
-        error: errorMessage,
-      });
-    }
-  }
+  const defineStep = (id: string, title: string, fn: () => Promise<StepOutcome>): void => {
+    stepDefinitions.push({
+      id,
+      title,
+      run: async () => {
+        const outcome = await fn();
+        return {
+          status: outcome.status,
+          detail: outcome.detail,
+          data: outcome.data,
+          error: outcome.error ? { message: outcome.error } : undefined,
+          recommendations: outcome.recommendations,
+        };
+      },
+    });
+  };
 
-  await runStep('integration_status', 'Teams integration status', async () => {
+  defineStep('integration_status', 'Teams integration status', async () => {
     integration = await getTeamsIntegrationRow(knex, tenant);
     if (!integration) {
       return {
@@ -526,7 +534,7 @@ export async function runTeamsDiagnosticsImpl(
     };
   });
 
-  await runStep('capabilities', 'Teams capabilities', async () => {
+  defineStep('capabilities', 'Teams capabilities', async () => {
     if (!integration) {
       return { status: 'skip', detail: 'Teams integration settings are required before capabilities can be checked.' };
     }
@@ -547,7 +555,7 @@ export async function runTeamsDiagnosticsImpl(
     };
   });
 
-  await runStep('microsoft_profile', 'Microsoft profile readiness', async () => {
+  defineStep('microsoft_profile', 'Microsoft profile readiness', async () => {
     if (!integration) {
       return { status: 'skip', detail: 'Teams integration settings are required before profile readiness can be checked.' };
     }
@@ -591,7 +599,7 @@ export async function runTeamsDiagnosticsImpl(
     };
   });
 
-  await runStep('recording_permissions', 'Teams recording and transcript permissions', async () => {
+  defineStep('recording_permissions', 'Teams recording and transcript permissions', async () => {
     if (!integration) {
       return { status: 'skip', detail: 'Teams integration settings are required before recording permissions can be checked.' };
     }
@@ -633,7 +641,7 @@ export async function runTeamsDiagnosticsImpl(
     };
   });
 
-  await runStep('package_metadata', 'Teams package metadata', async () => {
+  defineStep('package_metadata', 'Teams package metadata', async () => {
     if (!integration) {
       return { status: 'skip', detail: 'Teams integration settings are required before package metadata can be checked.' };
     }
@@ -662,7 +670,7 @@ export async function runTeamsDiagnosticsImpl(
     };
   });
 
-  await runStep('bot_connector', 'Bot connector credentials', async () => {
+  defineStep('bot_connector', 'Bot connector credentials', async () => {
     if (!isBotConnectorConfigured()) {
       return {
         status: 'fail',
@@ -673,7 +681,7 @@ export async function runTeamsDiagnosticsImpl(
     return { status: 'pass', detail: 'Teams bot connector credentials are configured.' };
   });
 
-  await runStep('bot_id_consistency', 'Manifest bot id matches runtime credentials', async () => {
+  defineStep('bot_id_consistency', 'Manifest bot id matches runtime credentials', async () => {
     if (!integration || !integration.package_metadata) {
       return {
         status: 'skip',
@@ -721,7 +729,7 @@ export async function runTeamsDiagnosticsImpl(
     };
   });
 
-  await runStep('artifact_subscriptions', 'Meeting artifact subscriptions', async () => {
+  defineStep('artifact_subscriptions', 'Meeting artifact subscriptions', async () => {
     if (!integration || normalizeString(integration.install_status) !== 'active') {
       return {
         status: 'skip',
@@ -780,7 +788,7 @@ export async function runTeamsDiagnosticsImpl(
     };
   });
 
-  await runStep('webhook_reachability', 'Recording webhook base URL', async () => {
+  defineStep('webhook_reachability', 'Recording webhook base URL', async () => {
     let webhookUrl: string;
     try {
       webhookUrl = resolveTeamsRecordingsWebhookUrl();
@@ -815,7 +823,7 @@ export async function runTeamsDiagnosticsImpl(
     }
   });
 
-  await runStep('user_linkage', 'Admin Microsoft account linkage', async () => {
+  defineStep('user_linkage', 'Admin Microsoft account linkage', async () => {
     const recipientLink = await resolveTeamsRecipientLink(tenant, userId);
     if (!recipientLink) {
       return {
@@ -832,7 +840,7 @@ export async function runTeamsDiagnosticsImpl(
     };
   });
 
-  await runStep('conversation_reference', 'Admin Teams conversation reference', async () => {
+  defineStep('conversation_reference', 'Admin Teams conversation reference', async () => {
     if (!microsoftUserId) {
       return {
         status: 'warn',
@@ -862,7 +870,7 @@ export async function runTeamsDiagnosticsImpl(
     };
   });
 
-  await runStep('recent_delivery_health', 'Recent Teams delivery health', async () => {
+  defineStep('recent_delivery_health', 'Recent Teams delivery health', async () => {
     const [lastSuccess, lastFailure, lastAttempt] = await Promise.all([
       getLatestDelivery(knex, tenant, ['sent', 'delivered']),
       getLatestDelivery(knex, tenant, ['failed']),
@@ -895,17 +903,20 @@ export async function runTeamsDiagnosticsImpl(
     };
   });
 
-  const overallStatus: TeamsDiagnosticsReport['overallStatus'] = steps.some((step) => step.status === 'fail')
-    ? 'fail'
-    : steps.some((step) => step.status === 'warn')
-      ? 'warn'
-      : 'pass';
+  const outcome = await runDiagnosticsSteps<null, Record<string, unknown>>({
+    context: null,
+    steps: stepDefinitions,
+    onError: (error) => ({
+      error: { message: error instanceof Error ? error.message : String(error || 'Unknown error') },
+    }),
+  });
 
   return {
+    // Teams historically stamps completion time, not start time.
     createdAt: new Date().toISOString(),
-    overallStatus,
-    steps,
-    recommendations: Array.from(recommendations),
+    overallStatus: outcome.overallStatus as TeamsDiagnosticsReport['overallStatus'],
+    steps: outcome.steps.map(projectTeamsStep),
+    recommendations: outcome.recommendations,
   };
 }
 

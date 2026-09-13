@@ -3,3 +3,4 @@ export * from './EmailSenderIdentityCards';
 export * from './InboundTicketDefaultsManager';
 export * from './Microsoft365DiagnosticsDialog';
 export * from './GmailDiagnosticsDialog';
+export * from './OutboundEmailDiagnosticsDialog';

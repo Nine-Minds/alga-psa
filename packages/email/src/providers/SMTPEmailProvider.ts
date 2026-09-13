@@ -27,6 +27,41 @@ interface SMTPConfig {
   requireTLS?: boolean;
 }
 
+/**
+ * Build the nodemailer transport options from a raw SMTP provider config.
+ * Exported so diagnostics can reuse the exact transport settings (including
+ * TLS/AUTH decisions) rather than re-deriving them.
+ */
+export function buildSmtpTransportOptions(config: Record<string, any>): {
+  options: any;
+  secure: boolean;
+  requireTLS: boolean;
+  authConfigured: boolean;
+} {
+  const secure = config.secure ?? (parseInt(config.port?.toString() || '587', 10) === 465);
+  const requireTLS = config.requireTLS ?? false;
+  const authConfigured = Boolean(config.username && config.password);
+
+  const options: any = {
+    host: config.host,
+    port: parseInt(config.port?.toString() || '587', 10),
+    secure,
+    tls: {
+      rejectUnauthorized: config.rejectUnauthorized ?? true,
+    },
+  };
+
+  if (authConfigured) {
+    options.auth = { user: config.username, pass: config.password };
+  }
+  if (requireTLS) {
+    options.requireTLS = true;
+  }
+
+  return { options, secure, requireTLS, authConfigured };
+}
+
+
 export class SMTPEmailProvider implements IEmailProvider {
   public readonly providerId: string;
   public readonly providerType = 'smtp';
@@ -207,27 +242,7 @@ export class SMTPEmailProvider implements IEmailProvider {
       throw new Error('No configuration available');
     }
 
-    const transportOptions: any = {
-      host: this.config.host,
-      port: this.config.port,
-      secure: this.config.secure,
-      tls: {
-        rejectUnauthorized: this.config.rejectUnauthorized
-      }
-    };
-
-    // Only send AUTH when credentials are configured. Relays that expect
-    // unauthenticated mail reject an AUTH handshake outright.
-    if (this.config.username && this.config.password) {
-      transportOptions.auth = {
-        user: this.config.username,
-        pass: this.config.password
-      };
-    }
-
-    if (this.config.requireTLS) {
-      transportOptions.requireTLS = true;
-    }
+    const { options: transportOptions } = buildSmtpTransportOptions(this.config as unknown as Record<string, any>);
 
     this.transporter = nodemailer.createTransport(transportOptions);
 

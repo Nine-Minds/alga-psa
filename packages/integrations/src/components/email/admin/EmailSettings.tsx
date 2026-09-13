@@ -5,7 +5,7 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -21,13 +21,13 @@ import {
   getEmailSettings,
   getMicrosoftOutboundMailboxes,
   updateEmailSettings,
-  testOutboundEmail,
   type EmailSettingsView,
   type MicrosoftOutboundMailboxOption,
 } from '../../../actions/email-actions/emailSettingsActions';
 import { getEmailProviders } from '../../../actions/email-actions/emailProviderActions';
 import type { EmailProvider } from '../types';
 import { EmailSenderIdentityCards } from './EmailSenderIdentityCards';
+import { OutboundEmailDiagnosticsDialog } from './OutboundEmailDiagnosticsDialog';
 import {
   getEmailDomains,
   addEmailDomain,
@@ -74,9 +74,8 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
   const [activeTab, setActiveTab] = useState('inbound');
-  const [testRecipient, setTestRecipient] = useState('');
-  const [testing, setTesting] = useState(false);
-  const [testResult, setTestResult] = useState<{ success: boolean; message?: string; error?: string } | null>(null);
+  const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
+  const savedSettingsRef = useRef<string>('');
 
   useEffect(() => {
     loadEmailSettings();
@@ -100,6 +99,7 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
         return;
       }
       setSettings(data);
+      savedSettingsRef.current = data ? JSON.stringify(data) : '';
     } catch (err: any) {
       setError(t('email.errors.loadEmailSettings', { defaultValue: 'Failed to load email settings' }));
     } finally {
@@ -155,6 +155,7 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
         return;
       }
       setSettings(result);
+      savedSettingsRef.current = JSON.stringify(result);
       setError(null);
       // Show success message
     } catch (err: any) {
@@ -165,35 +166,9 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
     }
   };
 
-  const runOutboundTest = async () => {
-    if (!settings) return;
-
-    setTesting(true);
-    setTestResult(null);
-    try {
-      // Persist current edits first so the test reflects what's on screen.
-      // The masked password ('***') is resolved to the stored secret server-side.
-      const saveResult = await updateEmailSettings(settings);
-      if (isActionMessageError(saveResult)) {
-        setTestResult({
-          success: false,
-          error: getErrorMessage(saveResult)
-        });
-        return;
-      }
-      setSettings(saveResult);
-      const result = await testOutboundEmail(testRecipient.trim() || undefined);
-      setTestResult(result);
-    } catch (err: any) {
-      console.error('Failed to test outbound email:', err);
-      setTestResult({
-        success: false,
-        error: t('email.errors.testOutbound', { defaultValue: 'Failed to test outbound email' })
-      });
-    } finally {
-      setTesting(false);
-    }
-  };
+  const hasUnsavedChanges = Boolean(
+    settings && savedSettingsRef.current && JSON.stringify(settings) !== savedSettingsRef.current
+  );
 
   const addDomain = async () => {
     if (!newDomain.trim()) return;
@@ -783,7 +758,7 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
 
 
 
-            {/* Connection Test */}
+            {/* Outbound diagnostics */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -794,43 +769,26 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
               <CardContent className="space-y-4">
                 <p className="text-sm text-muted-foreground">
                   {t('email.test.description', {
-                    defaultValue: 'Saves the current settings, then verifies the provider connection. Enter an address to also send a test message.'
+                    defaultValue: 'Runs the saved provider through a structured diagnostics checklist. A test message is only sent when you explicitly enable it in the dialog.'
                   })}
                 </p>
-                <div className="flex items-end gap-2">
-                  <div className="flex-1">
-                    <Label htmlFor="test-recipient">
-                      {t('email.test.recipientLabel', { defaultValue: 'Send test to (optional)' })}
-                    </Label>
-                    <Input
-                      id="test-recipient"
-                      type="email"
-                      value={testRecipient}
-                      placeholder={t('email.test.recipientPlaceholder', { defaultValue: 'you@example.com' })}
-                      onChange={(e) => setTestRecipient(e.target.value)}
-                    />
-                  </div>
-                  <Button
-                    id="test-outbound-email"
-                    variant="outline"
-                    onClick={runOutboundTest}
-                    disabled={testing || !settings}
-                  >
-                    {testing
-                      ? t('email.test.testing', { defaultValue: 'Testing...' })
-                      : t('email.test.run', { defaultValue: 'Test Connection' })}
-                  </Button>
-                </div>
-                {testResult && (
-                  <div className={`flex items-start gap-2 text-sm ${testResult.success ? 'text-green-600' : 'text-red-600'}`}>
-                    {testResult.success
-                      ? <CheckCircle className="h-4 w-4 mt-0.5 shrink-0" />
-                      : <XCircle className="h-4 w-4 mt-0.5 shrink-0" />}
-                    <span>{testResult.success ? testResult.message : testResult.error}</span>
-                  </div>
-                )}
+                <Button
+                  id="outbound-diagnostics-open"
+                  variant="outline"
+                  onClick={() => setDiagnosticsOpen(true)}
+                  disabled={!settings}
+                >
+                  <Send className="h-4 w-4 mr-2" />
+                  {t('email.test.run', { defaultValue: 'Test Connection' })}
+                </Button>
               </CardContent>
             </Card>
+
+            <OutboundEmailDiagnosticsDialog
+              isOpen={diagnosticsOpen}
+              onClose={() => setDiagnosticsOpen(false)}
+              hasUnsavedChanges={hasUnsavedChanges}
+            />
 
             {/* Save Button */}
             <div className="flex justify-end">

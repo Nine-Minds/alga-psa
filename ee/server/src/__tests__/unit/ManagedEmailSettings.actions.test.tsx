@@ -76,6 +76,8 @@ vi.mock('react-hot-toast', () => ({
 
 vi.mock('@alga-psa/integrations/components', () => ({
   EmailProviderConfiguration: () => <div id="email-provider-configuration-stub" />,
+  OutboundEmailDiagnosticsDialog: ({ isOpen }: { isOpen: boolean }) =>
+    isOpen ? <div data-testid="outbound-diagnostics-dialog" /> : null,
   EmailSenderIdentityCards: ({
     copy,
     ticketAddress,
@@ -404,51 +406,39 @@ describe('ManagedEmailSettings outbound SMTP test and TLS controls', () => {
     getEmailProvidersMock.mockResolvedValue({ providers: [] });
   });
 
-  it('persists current edits and reports success from the connection test', async () => {
-    testOutboundEmailMock.mockResolvedValue({ success: true, message: 'SMTP connection verified.' });
-
+  it('persists current edits before opening the shared diagnostics dialog', async () => {
     render(<ManagedEmailSettings />);
 
-    const testButton = await screen.findByRole('button', { name: /test connection/i });
-    fireEvent.click(testButton);
+    const diagnosticsButton = await screen.findByRole('button', { name: /run outbound diagnostics/i });
+    fireEvent.click(diagnosticsButton);
 
     await waitFor(() => {
       expect(updateEmailSettingsMock).toHaveBeenCalledWith(
         expect.objectContaining({ emailProvider: 'smtp' })
       );
-      expect(testOutboundEmailMock).toHaveBeenCalledWith(undefined);
     });
-    expect(await screen.findByText('SMTP connection verified.')).toBeInTheDocument();
+    expect(await screen.findByTestId('outbound-diagnostics-dialog')).toBeInTheDocument();
   });
 
-  it('surfaces the real provider error when the connection test fails', async () => {
-    testOutboundEmailMock.mockResolvedValue({
-      success: false,
-      error: 'self-signed certificate in certificate chain',
-    });
-
+  it('opens the shared dialog without invoking the legacy outbound test action', async () => {
     render(<ManagedEmailSettings />);
 
-    const testButton = await screen.findByRole('button', { name: /test connection/i });
-    fireEvent.click(testButton);
+    fireEvent.click(await screen.findByRole('button', { name: /run outbound diagnostics/i }));
 
-    expect(
-      await screen.findByText('self-signed certificate in certificate chain')
-    ).toBeInTheDocument();
+    expect(await screen.findByTestId('outbound-diagnostics-dialog')).toBeInTheDocument();
+    expect(testOutboundEmailMock).not.toHaveBeenCalled();
   });
 
-  it('sends the test message to the entered recipient', async () => {
-    testOutboundEmailMock.mockResolvedValue({ success: true, message: 'Test email sent.' });
+  it('keeps the dialog closed and reports an error when SMTP settings cannot be persisted', async () => {
+    updateEmailSettingsMock.mockRejectedValueOnce(new Error('persist failed'));
 
     render(<ManagedEmailSettings />);
-
-    const recipientInput = await screen.findByLabelText(/send test to/i);
-    fireEvent.change(recipientInput, { target: { value: 'admin@acme.com' } });
-    fireEvent.click(screen.getByRole('button', { name: /test connection/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /run outbound diagnostics/i }));
 
     await waitFor(() => {
-      expect(testOutboundEmailMock).toHaveBeenCalledWith('admin@acme.com');
+      expect(toastErrorMock).toHaveBeenCalled();
     });
+    expect(screen.queryByTestId('outbound-diagnostics-dialog')).not.toBeInTheDocument();
   });
 
   it('persists the TLS security toggles with the SMTP config', async () => {

@@ -6,11 +6,17 @@
 
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
+import { hasPermission } from '@alga-psa/auth/rbac';
 import type { EmailAddress, EmailProviderConfig, TenantEmailSettings } from '@alga-psa/types';
 import {
   resolveDefaultFromAddress,
   resolveTenantCompanyName,
+  runOutboundEmailDiagnostics as runOutboundEmailDiagnosticsImpl,
   TenantEmailService,
+} from '@alga-psa/email';
+import type {
+  OutboundEmailDiagnosticsOptions,
+  OutboundEmailDiagnosticsReport,
 } from '@alga-psa/email';
 import { createDefaultProviderConfig } from '@alga-psa/email/providerConfig';
 import {
@@ -422,5 +428,56 @@ export const testOutboundEmail = withAuth(async (
   } catch (error: any) {
     console.error('Error testing outbound email:', error);
     return { success: false, error: 'Failed to test outbound email' };
+  }
+});
+
+/**
+ * Run the shared outbound email diagnostics checklist for the tenant's saved
+ * and enabled provider. Tenant is derived from the authenticated session only;
+ * callers cannot supply credentials, tenant ids, or endpoints. Live send is off
+ * by default and requires an explicit, valid recipient.
+ */
+export const runOutboundEmailDiagnostics = withAuth(async (
+  user,
+  { tenant },
+  options: OutboundEmailDiagnosticsOptions = {}
+): Promise<{ success: boolean; report?: OutboundEmailDiagnosticsReport; error?: string }> => {
+  try {
+    if ((user as any)?.user_type === 'client') {
+      return { success: false, error: 'Permission denied' };
+    }
+
+    const { knex } = await createTenantKnex();
+    const permitted = await hasPermission(user, 'ticket_settings', 'update', knex);
+    if (!permitted) {
+      return { success: false, error: 'Permission denied: Cannot run outbound email diagnostics' };
+    }
+
+    const liveSendTest = options?.liveSendTest === true;
+    const recipient = options?.recipient?.trim();
+    if (liveSendTest && (!recipient || !isValidEmail(recipient))) {
+      return {
+        success: false,
+        error: 'A valid recipient is required when live send is enabled.',
+      };
+    }
+
+    const report = await runOutboundEmailDiagnosticsImpl({
+      tenant: tenant || '',
+      knex,
+      options: {
+        liveSendTest,
+        recipient,
+        includeIdentifiers: options?.includeIdentifiers === true,
+      },
+    });
+
+    return { success: true, report };
+  } catch (error: any) {
+    console.error('Error running outbound email diagnostics:', error);
+    return {
+      success: false,
+      error: error?.message ? String(error.message) : 'Failed to run outbound email diagnostics',
+    };
   }
 });
