@@ -96,7 +96,7 @@ export async function loadFixedLineRateInputs(
 
   const contractIds = [
     ...new Set(
-      lineRows
+      (lineRows as Array<{ contract_id: string | null }>)
         .map((row) => row.contract_id)
         .filter((id): id is string => Boolean(id)),
     ),
