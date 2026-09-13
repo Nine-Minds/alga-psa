@@ -19,6 +19,9 @@ const deleteTenantSecretMock = vi.hoisted(() => vi.fn(async (tenant: string, key
 const hasPermissionMock = vi.hoisted(() => vi.fn(async () => true));
 const getXeroConnectionSummariesMock = vi.hoisted(() => vi.fn(async () => []));
 const resolveDefaultXeroConnectionIdMock = vi.hoisted(() => vi.fn(async () => null as string | null));
+const getXeroDefaultSelectionMock = vi.hoisted(() =>
+  vi.fn(async (): Promise<{ status: string; connectionId?: string; organisationId?: string; persistedRealm?: string }> => ({ status: 'absent' }))
+);
 const getXeroRedirectUriMock = vi.hoisted(() => vi.fn(async () => 'https://example.com/api/integrations/xero/callback'));
 const getXeroOAuthScopeConfigMock = vi.hoisted(() => vi.fn(() => ({
   scopes: [
@@ -92,6 +95,7 @@ vi.mock('../../lib/xero/xeroClientService', () => ({
   XERO_CLIENT_ID_SECRET_NAME: 'xero_client_id',
   XERO_CLIENT_SECRET_SECRET_NAME: 'xero_client_secret',
   getXeroConnectionSummaries: getXeroConnectionSummariesMock,
+  getXeroDefaultSelection: getXeroDefaultSelectionMock,
   resolveDefaultXeroConnectionId: resolveDefaultXeroConnectionIdMock,
   getXeroRedirectUri: getXeroRedirectUriMock,
   getXeroOAuthScopeConfig: getXeroOAuthScopeConfigMock,
@@ -123,6 +127,7 @@ describe('Xero integration actions', () => {
     hasPermissionMock.mockResolvedValue(true);
     getXeroConnectionSummariesMock.mockResolvedValue([]);
     resolveDefaultXeroConnectionIdMock.mockResolvedValue(null);
+    getXeroDefaultSelectionMock.mockResolvedValue({ status: 'absent' });
     getXeroRedirectUriMock.mockResolvedValue('https://example.com/api/integrations/xero/callback');
     getXeroOAuthScopeConfigMock.mockReturnValue({
       scopes: [
@@ -388,7 +393,7 @@ describe('Xero integration actions', () => {
       { connectionId: 'connection-1', xeroTenantId: 'tenant-guid-1', tenantName: 'Acme Holdings', status: 'connected' },
       { connectionId: 'connection-2', xeroTenantId: 'tenant-guid-2', tenantName: 'Backup Org', status: 'connected' }
     ] as any);
-    resolveDefaultXeroConnectionIdMock.mockResolvedValue('connection-2');
+    getXeroDefaultSelectionMock.mockResolvedValue({ status: 'resolved', connectionId: 'connection-2' });
     xeroCreateMock.mockResolvedValue({
       listItems: vi.fn(async () => []),
       listAccounts: vi.fn(async () => [])
@@ -447,6 +452,31 @@ describe('Xero integration actions', () => {
     expect(status.connected).toBe(false);
     expect(status.errorCode).toBe('SCOPE_INSUFFICIENT');
     expect(status.error).toContain('accounting.invoices');
+    expect(xeroCreateMock).not.toHaveBeenCalled();
+  });
+
+  it('T016e: an ambiguous persisted organisation fails closed in status and catalogs', async () => {
+    tenantSecrets.set('tenant-1:xero_client_id', 'client-id');
+    tenantSecrets.set('tenant-1:xero_client_secret', 'client-secret');
+    getXeroConnectionSummariesMock.mockResolvedValue([
+      { connectionId: 'connection-unrelated', xeroTenantId: 'tenant-guid-u', tenantName: 'Unrelated', status: 'connected' },
+      { connectionId: 'connection-1', xeroTenantId: 'org-shared', tenantName: 'Shared One', status: 'connected' },
+      { connectionId: 'connection-2', xeroTenantId: 'org-shared', tenantName: 'Shared Two', status: 'connected' }
+    ] as any);
+    getXeroDefaultSelectionMock.mockResolvedValue({ status: 'ambiguous', organisationId: 'org-shared' });
+
+    const status = await getXeroConnectionStatus();
+    expect(status.connected).toBe(false);
+    expect(status.errorCode).toBe('SELECTION_AMBIGUOUS');
+    expect(status.error).toContain('org-shared');
+    // Never silently falls back to the unrelated first connection.
+    expect(status.defaultConnectionId).toBeUndefined();
+
+    const result = await getXeroAccounts();
+    expect(result).toMatchObject({
+      actionError: expect.stringContaining('more than one connection'),
+      messageKey: 'msp/integrations:errors.xero.organisationAmbiguous'
+    });
     expect(xeroCreateMock).not.toHaveBeenCalled();
   });
 

@@ -3825,6 +3825,7 @@
       "enterpriseOnly": "De Xero-integratie is alleen beschikbaar in de Enterprise Edition.",
       "viewPermission": "Verboden: u hebt geen rechten om de instellingen van de Xero-integratie te bekijken.",
       "organisationDisconnected": "De geselecteerde Xero-organisatie is niet meer verbonden. Verbind Xero opnieuw en probeer het nogmaals.",
+      "organisationAmbiguous": "De opgeslagen standaard Xero-organisatie is eigendom van meer dan één verbinding. Kies welke verbinding de standaard is in de boekhoudinstellingen.",
       "accounts": {
         "notConnected": "Verbind Xero voordat u Xero-grootboekrekeningen laadt.",
         "reconnect": "Verbind Xero opnieuw voordat u Xero-grootboekrekeningen laadt.",

@@ -64,7 +64,7 @@ describe('persisted Xero selection normalization (settings vs sync routing)', ()
     expect(syncTarget).toEqual({ adapterType: 'xero', targetRealm: 'conn-2' });
   });
 
-  it('rejects ambiguous organisation ownership consistently in both selectors', async () => {
+  it('fails closed for ambiguous organisation ownership in both selectors', async () => {
     connectionsState.value = {
       'conn-1': { connectionId: 'conn-1', xeroTenantId: 'org-shared' },
       'conn-2': { connectionId: 'conn-2', xeroTenantId: 'org-shared' }
@@ -72,14 +72,32 @@ describe('persisted Xero selection normalization (settings vs sync routing)', ()
     selected.realm = 'org-shared';
 
     const settingsTarget = await resolveDefaultXeroConnectionId('tenant-1');
-    // Ambiguous ownership is not guessed: both fall back to the first
-    // connection rather than assigning the shared organisation to one of them.
-    expect(settingsTarget).toBe('conn-1');
+    // Ambiguous ownership is not guessed: settings reports unavailable.
+    expect(settingsTarget).toBeNull();
 
     const syncTarget = await resolveConnectedAccountingIntegration({} as any, 'tenant-1', {
       preferredAdapterType: 'xero'
     });
-    expect(syncTarget).toEqual({ adapterType: 'xero', targetRealm: settingsTarget });
+    expect(syncTarget).toBeNull();
+  });
+
+  it('does not route an ambiguous persisted organisation to an unrelated first connection', async () => {
+    connectionsState.value = {
+      'conn-unrelated': { connectionId: 'conn-unrelated', xeroTenantId: 'org-unrelated' },
+      'conn-1': { connectionId: 'conn-1', xeroTenantId: 'org-shared' },
+      'conn-2': { connectionId: 'conn-2', xeroTenantId: 'org-shared' }
+    };
+    selected.realm = 'org-shared';
+
+    await expect(resolveDefaultXeroConnectionId('tenant-1')).resolves.toBeNull();
+    await expect(
+      resolveConnectedAccountingIntegration({} as any, 'tenant-1', { preferredAdapterType: 'xero' })
+    ).resolves.toBeNull();
+    // Generic routing (no preferred provider) must not fall through to QBO or
+    // the first Xero connection either.
+    await expect(
+      resolveConnectedAccountingIntegration({} as any, 'tenant-1', {})
+    ).resolves.toBeNull();
   });
 
   it('keeps an explicit unavailable target failing closed without normalization', async () => {

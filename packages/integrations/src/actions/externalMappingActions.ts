@@ -823,9 +823,36 @@ export const createExternalEntityMapping = withAuth(async (
         );
       }
 
+      // A Xero mapping's identity group is the canonical connection id plus the
+      // organisation id it uniquely owns. Both the live-conflict check and the
+      // tombstone relink must consider the whole group: a canonical tombstone
+      // must never be relinked alongside a live historical sibling, and another
+      // organisation's tombstones must be left untouched.
+      let xeroAliasIds: string[] | null = null;
+      if (integration_type === 'xero' && normalizedRealm) {
+        const connections = await getStoredXeroConnections(tenant);
+        const resolved = resolveXeroRealmAliasIds(connections, normalizedRealm);
+        xeroAliasIds = resolved.length > 0 ? resolved : [normalizedRealm];
+      }
+
+      if (xeroAliasIds) {
+        const liveConflict = await tenantDb(trx, tenant)
+          .table<ExternalEntityMapping>('tenant_external_entity_mappings')
+          .where({ tenant, integration_type, alga_entity_type, alga_entity_id })
+          .whereNull('deleted_at')
+          .whereIn('external_realm_id', xeroAliasIds)
+          .first();
+        if (liveConflict) {
+          throw new ExpectedExternalMappingError(
+            'A mapping for this entity already exists for the connected Xero organisation. Edit the existing mapping instead.'
+          );
+        }
+      }
+
       // Relink: an earlier unlink tombstones the row; creating the same mapping
-      // again is the explicit relink choice, so restore the row in place.
-      const tombstoned = await tenantDb(trx, tenant)
+      // again is the explicit relink choice, so restore the row in place. The
+      // tombstone must belong to the requested organisation's identity group.
+      const tombstoneQuery = tenantDb(trx, tenant)
         .table<ExternalEntityMapping>('tenant_external_entity_mappings')
         .where({
           tenant,
@@ -833,8 +860,11 @@ export const createExternalEntityMapping = withAuth(async (
           alga_entity_type,
           alga_entity_id,
         })
-        .whereNotNull('deleted_at')
-        .first();
+        .whereNotNull('deleted_at');
+      if (xeroAliasIds) {
+        tombstoneQuery.whereIn('external_realm_id', xeroAliasIds);
+      }
+      const tombstoned = await tombstoneQuery.first();
 
       if (tombstoned) {
         const patch: Partial<ExternalEntityMapping> = {
@@ -869,27 +899,6 @@ export const createExternalEntityMapping = withAuth(async (
         });
 
         return { newMapping: relinked, relinkedFrom: tombstoned };
-      }
-
-      // Conflict handling: a live mapping for this entity may already exist
-      // under the connection's historical organisation identity (the UI now
-      // shows it). Inserting a second representation would leave two live rows
-      // whose delete could expose the other. Reject and direct the user to edit
-      // the existing row instead.
-      if (integration_type === 'xero') {
-        const connections = await getStoredXeroConnections(tenant);
-        const aliasIds = resolveXeroRealmAliasIds(connections, normalizedRealm);
-        const liveConflict = await tenantDb(trx, tenant)
-          .table<ExternalEntityMapping>('tenant_external_entity_mappings')
-          .where({ tenant, integration_type, alga_entity_type, alga_entity_id })
-          .whereNull('deleted_at')
-          .whereIn('external_realm_id', aliasIds.length > 0 ? aliasIds : [normalizedRealm])
-          .first();
-        if (liveConflict) {
-          throw new ExpectedExternalMappingError(
-            'A mapping for this entity already exists for the connected Xero organisation. Edit the existing mapping instead.'
-          );
-        }
       }
 
       const [newMapping] = await tenantDb(trx, tenant)

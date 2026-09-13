@@ -4,11 +4,13 @@ import { v4 as uuidv4 } from 'uuid';
 // Controlled provider client boundary: the adapter's single client entry point is
 // mocked while everything else (DB, ledger, reconciliation appliers) is real.
 const xeroCreateMock = vi.hoisted(() => vi.fn());
+const xeroConnectionsMock = vi.hoisted(() => vi.fn(async () => ({})));
 
 vi.mock('@alga-psa/integrations/lib/xero/xeroClientService', () => ({
   XeroClientService: {
     create: xeroCreateMock
-  }
+  },
+  getStoredXeroConnections: xeroConnectionsMock
 }));
 
 import {
@@ -56,6 +58,9 @@ describe('Xero inbound reconciliation (DB + controlled provider boundary)', () =
   beforeEach(async () => {
     ctx = await helpers.beforeEach();
     vi.clearAllMocks();
+    xeroConnectionsMock.mockResolvedValue({
+      [REALM]: { connectionId: REALM, xeroTenantId: 'xero-tenant-1' }
+    });
 
     await ctx.db('accounting_export_errors').where({ tenant: ctx.tenantId }).del();
     await ctx.db('accounting_export_lines').where({ tenant: ctx.tenantId }).del();
@@ -172,6 +177,143 @@ describe('Xero inbound reconciliation (DB + controlled provider boundary)', () =
       updated_at: now
     });
 
+    await ctx.db('invoice_charges').insert({
+      item_id: chargeId,
+      tenant: ctx.tenantId,
+      invoice_id: invoiceId,
+      service_id: serviceId,
+      description: 'Endpoint subscription',
+      quantity: 1,
+      unit_price: 5000,
+      net_amount: 5000,
+      total_price: 5000,
+      tax_amount: 0,
+      is_manual: false,
+      created_at: now,
+      updated_at: now
+    });
+
+    const batch = await service.createBatch({
+      adapter_type: 'xero',
+      export_type: 'invoice',
+      target_realm: REALM,
+      filters: { start_date: '2025-01-01', end_date: '2025-01-31' },
+      created_by: ctx.user.user_id
+    });
+    await service.appendLines(batch.batch_id, {
+      lines: [
+        {
+          batch_id: batch.batch_id,
+          document_id: invoiceId,
+          document_line_id: chargeId,
+          client_id: ctx.clientId,
+          amount_cents: 5000,
+          currency_code: 'USD',
+          service_period_start: '2025-01-01T00:00:00.000Z',
+          service_period_end: '2025-01-31T00:00:00.000Z',
+          payload: { service_period_source: 'invoice_header_fallback' }
+        }
+      ]
+    });
+
+    xeroCreateMock.mockResolvedValueOnce({
+      createInvoices: vi.fn(async (payloads: Array<Record<string, any>>) => [
+        {
+          status: 'success',
+          invoiceId: 'xero-invoice-1',
+          documentId: payloads[0].invoiceId,
+          invoiceNumber: 'XERO-INV-1',
+          raw: {
+            InvoiceID: 'xero-invoice-1',
+            InvoiceNumber: 'XERO-INV-1',
+            Total: 50,
+            UpdatedDateUTC: '2026-03-01T00:00:00.000Z',
+            LineItems: [{ LineItemID: 'xero-line-1' }]
+          }
+        }
+      ])
+    });
+
+    await service.executeBatch(batch.batch_id);
+    return invoiceId;
+  }
+
+  /**
+   * Same export flow as seedInvoiceAndExport, but the service mapping is
+   * created through the real UI mapping action (`createExternalEntityMapping`)
+   * rather than seeded directly. The client mapping stays provider-sync owned.
+   */
+  async function seedInvoiceAndExportWithUiMappings(): Promise<string> {
+    const serviceId = await createTestService(ctx, {
+      service_name: 'Managed Endpoint',
+      billing_method: 'fixed',
+      default_rate: 5000,
+      unit_of_measure: 'device',
+      description: 'Endpoint management service'
+    });
+
+    const now = new Date().toISOString();
+    await ctx.db('clients').insert({
+      tenant: ctx.tenantId,
+      client_id: ctx.clientId,
+      client_name: 'Acme Holdings',
+      created_at: now,
+      updated_at: now,
+      is_inactive: false
+    });
+
+    // The mapping action proves the remote item against the mocked Xero catalog.
+    xeroCreateMock.mockResolvedValueOnce({
+      listItems: vi.fn(async () => [
+        { itemId: 'item-ui-1', code: 'ITEM-001', name: 'Endpoint', status: 'ACTIVE' }
+      ])
+    });
+    // Loaded dynamically so the test's auth/rbac mocks are registered before
+    // the integrations action module binds its `hasPermission` import.
+    const { createExternalEntityMapping } = await import('@alga-psa/integrations/actions');
+    const serviceMapping = await (createExternalEntityMapping as any)({
+      integration_type: 'xero',
+      alga_entity_type: 'service',
+      alga_entity_id: serviceId,
+      external_entity_id: 'ITEM-001',
+      external_realm_id: REALM,
+      metadata: { xeroTargetKind: 'item' }
+    });
+    if ((serviceMapping as any).actionError || (serviceMapping as any).permissionError) {
+      throw new Error(`UI service mapping failed: ${JSON.stringify(serviceMapping)}`);
+    }
+    expect(serviceMapping.external_realm_id).toBe(REALM);
+
+    await ctx.db('tenant_external_entity_mappings').insert({
+      id: uuidv4(),
+      tenant: ctx.tenantId,
+      integration_type: 'xero',
+      alga_entity_type: 'client',
+      alga_entity_id: ctx.clientId,
+      external_entity_id: 'CONTACT-001',
+      external_realm_id: REALM,
+      sync_status: 'synced',
+      created_at: now,
+      updated_at: now
+    });
+
+    const invoiceId = uuidv4();
+    const chargeId = uuidv4();
+    await ctx.db('invoices').insert({
+      invoice_id: invoiceId,
+      tenant: ctx.tenantId,
+      client_id: ctx.clientId,
+      invoice_number: `INV-${uuidv4().slice(0, 8)}`,
+      invoice_date: now,
+      due_date: now,
+      subtotal: 5000,
+      tax: 0,
+      total_amount: 5000,
+      currency_code: 'USD',
+      status: 'sent',
+      created_at: now,
+      updated_at: now
+    });
     await ctx.db('invoice_charges').insert({
       item_id: chargeId,
       tenant: ctx.tenantId,
@@ -397,6 +539,91 @@ describe('Xero inbound reconciliation (DB + controlled provider boundary)', () =
     });
     const paymentsAfterReplay = await ctx.db('invoice_payments').where({ tenant: ctx.tenantId }).select('*');
     expect(paymentsAfterReplay).toHaveLength(1);
+  }, HOOK_TIMEOUT);
+
+  it('exports a UI-created service mapping and reconciles a real inbound payment with replay (balances verified)', async () => {
+    const invoiceId = await seedInvoiceAndExportWithUiMappings();
+
+    // The real export wrote the invoice mapping against the connection realm.
+    const invoiceMapping = await ctx.db('tenant_external_entity_mappings')
+      .where({
+        tenant: ctx.tenantId,
+        integration_type: 'xero',
+        alga_entity_type: 'invoice',
+        alga_entity_id: invoiceId
+      })
+      .first();
+    expect(invoiceMapping.external_realm_id).toBe(REALM);
+    expect(invoiceMapping.external_entity_id).toBe('xero-invoice-1');
+
+    const paymentRecord = {
+      PaymentID: 'xero-pay-ui',
+      Status: 'AUTHORISED',
+      Amount: 50,
+      Reference: 'UI-MAP',
+      Date: '2026-03-03T00:00:00.000Z',
+      Invoice: { InvoiceID: 'xero-invoice-1' },
+      UpdatedDateUTC: '2026-03-03T00:00:00.000Z'
+    };
+
+    xeroCreateMock.mockResolvedValueOnce(
+      xeroClient({ listChangedPayments: vi.fn(async () => ({ records: [paymentRecord], hasMore: false })) })
+    );
+    const first = await runAccountingSyncCycle({
+      knex: ctx.db,
+      tenantId: ctx.tenantId,
+      adapterType: 'xero',
+      targetRealm: REALM,
+      adapter,
+      force: true,
+      exceptions: makeFakeExceptions() as any,
+      notifications: makeFakeNotifications() as any
+    });
+    expect(first.stats?.paymentsApplied).toBe(1);
+
+    // Real financial writes: AR payment row, payment transaction, and the
+    // invoice balance moved to paid.
+    const payments = await ctx.db('invoice_payments').where({ tenant: ctx.tenantId }).select('*');
+    expect(payments).toHaveLength(1);
+    expect(payments[0].payment_method).toBe('xero');
+    expect(Number(payments[0].amount)).toBe(5000);
+
+    const paymentTransactions = await ctx.db('transactions')
+      .where({ tenant: ctx.tenantId, invoice_id: invoiceId, type: 'payment' })
+      .select('*');
+    expect(paymentTransactions).toHaveLength(1);
+    expect(Number(paymentTransactions[0].amount)).toBe(5000);
+
+    const paidInvoice = await ctx.db('invoices')
+      .where({ tenant: ctx.tenantId, invoice_id: invoiceId })
+      .first();
+    expect(paidInvoice.status).toBe('paid');
+
+    // Replay the same change: idempotent, no duplicate financial effect.
+    xeroCreateMock.mockResolvedValueOnce(
+      xeroClient({ listChangedPayments: vi.fn(async () => ({ records: [paymentRecord], hasMore: false })) })
+    );
+    await runAccountingSyncCycle({
+      knex: ctx.db,
+      tenantId: ctx.tenantId,
+      adapterType: 'xero',
+      targetRealm: REALM,
+      adapter,
+      force: true,
+      exceptions: makeFakeExceptions() as any,
+      notifications: makeFakeNotifications() as any
+    });
+
+    const paymentsAfterReplay = await ctx.db('invoice_payments').where({ tenant: ctx.tenantId }).select('*');
+    expect(paymentsAfterReplay).toHaveLength(1);
+    const transactionsAfterReplay = await ctx.db('transactions')
+      .where({ tenant: ctx.tenantId, invoice_id: invoiceId, type: 'payment' })
+      .select('*');
+    expect(transactionsAfterReplay).toHaveLength(1);
+    const invoiceAfterReplay = await ctx.db('invoices')
+      .where({ tenant: ctx.tenantId, invoice_id: invoiceId })
+      .first();
+    expect(invoiceAfterReplay.status).toBe('paid');
   }, HOOK_TIMEOUT);
 
   it('reverses a deleted external payment', async () => {

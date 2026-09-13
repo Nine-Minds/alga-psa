@@ -33,6 +33,12 @@ vi.mock('../../src/services/accountingExportService', () => ({
   },
 }));
 
+const getXeroDefaultSelectionMock = vi.hoisted(() => vi.fn());
+
+vi.mock('@alga-psa/integrations/lib/xero/xeroClientService', () => ({
+  getXeroDefaultSelection: getXeroDefaultSelectionMock,
+}));
+
 import { AccountingExportInvoiceSelector } from '../../src/services/accountingExportInvoiceSelector';
 import { AppError } from '@alga-psa/core';
 
@@ -348,5 +354,21 @@ describe('AccountingExportInvoiceSelector.createBatchFromFilters', () => {
       constructor: AppError,
       code: 'ACCOUNTING_EXPORT_EMPTY_BATCH',
     });
+  });
+
+  it('fails closed with an actionable error when the persisted Xero organisation is ambiguous', async () => {
+    getXeroDefaultSelectionMock.mockResolvedValueOnce({ status: 'ambiguous', organisationId: 'org-shared' });
+    const { selector } = makeSelector({});
+
+    await expect(
+      selector.createBatchFromFilters({
+        adapterType: 'xero',
+        filters: { invoiceStatuses: ['sent'] },
+      })
+    ).rejects.toMatchObject({
+      constructor: AppError,
+      code: 'ACCOUNTING_EXPORT_XERO_SELECTION_AMBIGUOUS',
+    });
+    expect(getXeroDefaultSelectionMock).toHaveBeenCalled();
   });
 });

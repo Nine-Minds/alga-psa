@@ -7,7 +7,7 @@ import { AppError } from '@alga-psa/core';
 // eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- batch creation stamps live-accounting realms so realm-scoped mappings resolve
 import { getDefaultQboRealmId } from '@alga-psa/integrations/lib/qbo/qboClientService';
 // eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- batch creation stamps live-accounting realms so realm-scoped mappings resolve
-import { resolveDefaultXeroConnectionId } from '@alga-psa/integrations/lib/xero/xeroClientService';
+import { getXeroDefaultSelection } from '@alga-psa/integrations/lib/xero/xeroClientService';
 import { satisfyExportOpsForManualBatch } from './accountingSync/syncProducers';
 import { normalizeAccountingExportCalendarDate } from './accountingExportDateUtils';
 
@@ -360,8 +360,20 @@ export class AccountingExportInvoiceSelector {
       targetRealm = await getDefaultQboRealmId(this.tenantId).catch(() => null);
     } else if (!targetRealm && options.adapterType === 'xero') {
       // Live Xero mappings are keyed by the connection id (the persisted
-      // provider-scoped selection), not the organisation tenant id.
-      targetRealm = await resolveDefaultXeroConnectionId(this.tenantId).catch(() => null);
+      // provider-scoped selection), not the organisation tenant id. An
+      // ambiguous persisted organisation fails closed with an actionable
+      // error instead of stamping another connection's realm on the batch.
+      const selection = await getXeroDefaultSelection(this.tenantId).catch(
+        () => ({ status: 'unknown' as const, persistedRealm: '' })
+      );
+      if (selection.status === 'ambiguous') {
+        throw new AppError(
+          'ACCOUNTING_EXPORT_XERO_SELECTION_AMBIGUOUS',
+          'The saved default Xero organisation is owned by more than one connection. Choose which connection is the default in the accounting settings before exporting.',
+          { adapterType: 'xero', organisationId: selection.organisationId }
+        );
+      }
+      targetRealm = selection.status === 'resolved' ? selection.connectionId : null;
     }
 
     const preview = await this.previewInvoiceLines({

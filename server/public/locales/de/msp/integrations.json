@@ -3825,6 +3825,7 @@
       "enterpriseOnly": "Die Xero-Integration ist nur in der Enterprise Edition verfügbar.",
       "viewPermission": "Verboten: Sie haben keine Berechtigung, die Einstellungen der Xero-Integration anzuzeigen.",
       "organisationDisconnected": "Die ausgewählte Xero-Organisation ist nicht mehr verbunden. Verbinden Sie Xero neu und versuchen Sie es erneut.",
+      "organisationAmbiguous": "Die gespeicherte Standard-Xero-Organisation gehört zu mehr als einer Verbindung. Wählen Sie in den Buchhaltungseinstellungen aus, welche Verbindung als Standard verwendet werden soll.",
       "accounts": {
         "notConnected": "Verbinden Sie Xero, bevor Sie Xero-Konten laden.",
         "reconnect": "Verbinden Sie Xero neu, bevor Sie Xero-Konten laden.",

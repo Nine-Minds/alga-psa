@@ -126,4 +126,28 @@ describe('XeroIntegrationSettings loaded-locale copy', () => {
     expect(await screen.findByText(settings.connectSuccess)).toBeInTheDocument();
     expect(settings.connectSuccess).not.toContain('first connected');
   });
+
+  it('surfaces an ambiguous default organisation instead of claiming none is connected', async () => {
+    getXeroConnectionStatusMock.mockResolvedValueOnce({
+      connections: [],
+      connected: false,
+      defaultConnectionId: undefined,
+      defaultConnection: undefined,
+      redirectUri: 'https://example.com/api/integrations/xero/callback',
+      scopes: ['offline_access'],
+      scopeSource: 'default',
+      credentials: { clientIdConfigured: true, clientSecretConfigured: true, ready: true },
+      error:
+        'The saved default Xero organisation (org-shared) is owned by more than one connection. Choose which connection is the default in the accounting settings before syncing or configuring mappings.',
+      errorCode: 'SELECTION_AMBIGUOUS'
+    });
+    const { default: XeroIntegrationSettings } = await import('./XeroIntegrationSettings');
+
+    render(<XeroIntegrationSettings />);
+
+    expect(await screen.findByText(/owned by more than one connection/)).toBeInTheDocument();
+    expect(
+      screen.queryByText('No live Xero organisation is connected yet. Save credentials, then click Connect Xero.')
+    ).not.toBeInTheDocument();
+  });
 });

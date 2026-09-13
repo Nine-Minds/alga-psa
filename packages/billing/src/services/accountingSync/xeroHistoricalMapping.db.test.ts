@@ -346,4 +346,104 @@ describe('Xero historical mapping identity (DB-backed)', () => {
       .whereNull('deleted_at');
     expect(live).toHaveLength(1);
   });
+
+  it('does not bypass alias conflict detection when a canonical tombstone exists', async () => {
+    const serviceId = await seedService(tenantA);
+    // Canonical representation unlinked earlier...
+    await seedMapping({
+      alga_entity_id: serviceId,
+      external_realm_id: 'conn-review',
+      deleted_at: db.fn.now(),
+      sync_status: 'unlinked'
+    });
+    // ...while a live historical organisation-keyed representation remains.
+    await seedMapping({
+      alga_entity_id: serviceId,
+      external_realm_id: 'org-review',
+      external_entity_id: 'OLD'
+    });
+
+    const created = await (createExternalEntityMapping as any)(
+      { user_id: 'u1' },
+      { tenant: tenantA },
+      {
+        integration_type: 'xero',
+        alga_entity_type: 'service',
+        alga_entity_id: serviceId,
+        external_entity_id: 'REVENUE',
+        external_realm_id: 'conn-review',
+        metadata: { xeroTargetKind: 'item' }
+      }
+    );
+
+    // The whole identity group is checked before relink/insert: two live
+    // representations must never coexist.
+    expect(created.actionError).toContain('already exists');
+    const live = await db('tenant_external_entity_mappings')
+      .where({ tenant: tenantA, alga_entity_type: 'service', alga_entity_id: serviceId })
+      .whereNull('deleted_at');
+    expect(live).toHaveLength(1);
+    expect(live[0].external_realm_id).toBe('org-review');
+  });
+
+  it('recreates a mapping after both historical and canonical representations were deleted', async () => {
+    const serviceId = await seedService(tenantA);
+    await seedMapping({ alga_entity_id: serviceId, external_realm_id: 'org-review', external_entity_id: 'OLD' });
+    const canonicalId = await seedMapping({ alga_entity_id: serviceId, external_realm_id: 'conn-review' });
+
+    await (deleteExternalEntityMapping as any)({ user_id: 'u1' }, { tenant: tenantA }, canonicalId);
+
+    const recreated = await (createExternalEntityMapping as any)(
+      { user_id: 'u1' },
+      { tenant: tenantA },
+      {
+        integration_type: 'xero',
+        alga_entity_type: 'service',
+        alga_entity_id: serviceId,
+        external_entity_id: 'REVENUE',
+        external_realm_id: 'conn-review',
+        metadata: { xeroTargetKind: 'item' }
+      }
+    );
+
+    expect(recreated.actionError).toBeUndefined();
+    expect(recreated.external_realm_id).toBe('conn-review');
+    const live = await db('tenant_external_entity_mappings')
+      .where({ tenant: tenantA, alga_entity_type: 'service', alga_entity_id: serviceId })
+      .whereNull('deleted_at');
+    expect(live).toHaveLength(1);
+  });
+
+  it("preserves another organisation's tombstones when creating for this organisation", async () => {
+    const serviceId = await seedService(tenantA);
+    const otherTombstoneId = await seedMapping({
+      alga_entity_id: serviceId,
+      external_realm_id: 'org-other',
+      external_entity_id: 'OTHER',
+      deleted_at: db.fn.now(),
+      sync_status: 'unlinked'
+    });
+
+    const created = await (createExternalEntityMapping as any)(
+      { user_id: 'u1' },
+      { tenant: tenantA },
+      {
+        integration_type: 'xero',
+        alga_entity_type: 'service',
+        alga_entity_id: serviceId,
+        external_entity_id: 'REVENUE',
+        external_realm_id: 'conn-review',
+        metadata: { xeroTargetKind: 'item' }
+      }
+    );
+
+    expect(created.actionError).toBeUndefined();
+    expect(created.external_realm_id).toBe('conn-review');
+
+    // The other organisation's tombstone is untouched, not relinked.
+    const other = await db('tenant_external_entity_mappings').where({ id: otherTombstoneId }).first();
+    expect(other.deleted_at).not.toBeNull();
+    expect(other.external_realm_id).toBe('org-other');
+    expect(other.external_entity_id).toBe('OTHER');
+  });
 });
