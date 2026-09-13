@@ -635,6 +635,8 @@
     }
   },
   "serviceCatalog": {
+    "scheduledPriceBadge": "Prochain changement {{date}}",
+    "scheduledPriceNotice": "Un changement de prix est prévu pour le {{date}}. Enregistrer ici met à jour le prix actuel et n'annule pas le changement planifié.",
     "title": "Gestion du catalogue de services",
     "loading": "Services de chargement",
     "dialog": {

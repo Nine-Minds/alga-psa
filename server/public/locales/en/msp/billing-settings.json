@@ -635,6 +635,8 @@
     }
   },
   "serviceCatalog": {
+    "scheduledPriceBadge": "Next change {{date}}",
+    "scheduledPriceNotice": "A price change is scheduled for {{date}}. Saving here updates the current price and does not cancel the scheduled change.",
     "title": "Service Catalog Management",
     "loading": "Loading services",
     "dialog": {

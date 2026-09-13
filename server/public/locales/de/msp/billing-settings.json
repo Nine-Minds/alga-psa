@@ -635,6 +635,8 @@
     }
   },
   "serviceCatalog": {
+    "scheduledPriceBadge": "Nächste Änderung {{date}}",
+    "scheduledPriceNotice": "Für {{date}} ist eine Preisänderung geplant. Speichern aktualisiert hier den aktuellen Preis und hebt die geplante Änderung nicht auf.",
     "title": "Servicekatalogverwaltung",
     "loading": "Ladedienste",
     "dialog": {

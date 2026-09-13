@@ -28,6 +28,8 @@ import {
 import { ITaxRate } from '@alga-psa/types'; // Corrected import path if needed
 import { Card, CardContent, CardHeader } from '@alga-psa/ui/components/Card';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
+import { Badge } from '@alga-psa/ui/components/Badge';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { ColumnDefinition } from '@alga-psa/types';
 import { QuickAddService } from './QuickAddService';
 import { EditableServiceTypeSelect } from '@alga-psa/ui/components/EditableServiceTypeSelect';
@@ -619,22 +621,43 @@ const ServiceCatalogManager: React.FC = () => {
         title: t('serviceCatalog.table.pricing', { defaultValue: 'Pricing' }),
         dataIndex: 'prices',
         render: (prices: IServicePrice[] | undefined, record) => {
+          const scheduled = record.scheduled_prices ?? [];
+          let primaryDisplay: React.ReactNode;
           if (!prices || prices.length === 0) {
             // Fall back to default_rate if no prices exist
-            return money(Number(record.default_rate));
+            primaryDisplay = money(Number(record.default_rate));
+          } else {
+            // Show primary price (first one, typically USD)
+            const primaryPrice = prices[0];
+            const primaryRate = `${getCurrencySymbol(primaryPrice.currency_code)}${(primaryPrice.rate / 100).toFixed(2)}`;
+            // Show indicator if there are additional currencies
+            primaryDisplay = prices.length > 1
+              ? (
+                <span title={prices.map(p => `${p.currency_code}: ${getCurrencySymbol(p.currency_code)}${(p.rate / 100).toFixed(2)}`).join('\n')}>
+                  {primaryRate} <span className="text-xs text-muted-foreground">+{prices.length - 1}</span>
+                </span>
+              )
+              : primaryRate;
           }
-          // Show primary price (first one, typically USD)
-          const primaryPrice = prices[0];
-          const primaryDisplay = `${getCurrencySymbol(primaryPrice.currency_code)}${(primaryPrice.rate / 100).toFixed(2)}`;
-          // Show indicator if there are additional currencies
-          if (prices.length > 1) {
-            return (
-              <span title={prices.map(p => `${p.currency_code}: ${getCurrencySymbol(p.currency_code)}${(p.rate / 100).toFixed(2)}`).join('\n')}>
-                {primaryDisplay} <span className="text-xs text-muted-foreground">+{prices.length - 1}</span>
-              </span>
-            );
+
+          if (scheduled.length === 0) {
+            return primaryDisplay;
           }
-          return primaryDisplay;
+
+          // Item 1/3: surface a scheduled future price so an ordinary save is
+          // not mistaken for cancelling (or applying) it. The list shows the
+          // current price; the badge names the next change's date.
+          return (
+            <span className="inline-flex items-center gap-2">
+              {primaryDisplay}
+              <Badge variant="info">
+                {t('serviceCatalog.scheduledPriceBadge', {
+                  date: scheduled[0].effective_date ?? '',
+                  defaultValue: 'Next change {{date}}',
+                })}
+              </Badge>
+            </span>
+          );
         },
       },
       // Category column hidden - using Service Types for organization
@@ -1045,6 +1068,18 @@ const ServiceCatalogManager: React.FC = () => {
                   {t('serviceCatalog.actions.addCurrency', { defaultValue: '+ Add Currency' })}
                 </Button>
               </div>
+
+              {editingService?.scheduled_prices && editingService.scheduled_prices.length > 0 && (
+                <Alert variant="info" id="scheduled-price-notice" className="mb-3">
+                  <AlertDescription>
+                    {t('serviceCatalog.scheduledPriceNotice', {
+                      date: editingService.scheduled_prices[0].effective_date ?? '',
+                      defaultValue:
+                        'A price change is scheduled for {{date}}. Saving here updates the current price and does not cancel the scheduled change.',
+                    })}
+                  </AlertDescription>
+                </Alert>
+              )}
 
               <div className="space-y-3">
                 {editingPrices.map((price, index) => (

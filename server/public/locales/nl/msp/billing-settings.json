@@ -635,6 +635,8 @@
     }
   },
   "serviceCatalog": {
+    "scheduledPriceBadge": "Volgende wijziging {{date}}",
+    "scheduledPriceNotice": "Er is een prijswijziging gepland voor {{date}}. Opslaan hier werkt de huidige prijs bij en annuleert de geplande wijziging niet.",
     "title": "Servicecatalogusbeheer",
     "loading": "Laaddiensten",
     "dialog": {

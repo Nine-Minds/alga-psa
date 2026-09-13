@@ -637,6 +637,8 @@
     }
   },
   "serviceCatalog": {
+    "scheduledPriceBadge": "Następna zmiana {{date}}",
+    "scheduledPriceNotice": "Zmiana ceny jest zaplanowana na {{date}}. Zapisanie tutaj zaktualizuje bieżącą cenę i nie anuluje zaplanowanej zmiany.",
     "title": "Zarządzanie katalogiem usług",
     "loading": "Usługi ładowania",
     "dialog": {

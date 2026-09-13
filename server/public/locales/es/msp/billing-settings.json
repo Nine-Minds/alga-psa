@@ -635,6 +635,8 @@
     }
   },
   "serviceCatalog": {
+    "scheduledPriceBadge": "Próximo cambio {{date}}",
+    "scheduledPriceNotice": "Hay un cambio de precio programado para el {{date}}. Guardar aquí actualiza el precio actual y no cancela el cambio programado.",
     "title": "Gestión del catálogo de servicios",
     "loading": "Servicios de carga",
     "dialog": {

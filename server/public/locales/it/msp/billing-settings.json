@@ -635,6 +635,8 @@
     }
   },
   "serviceCatalog": {
+    "scheduledPriceBadge": "Prossima modifica {{date}}",
+    "scheduledPriceNotice": "È prevista una modifica del prezzo per il {{date}}. Salvare qui aggiorna il prezzo corrente e non annulla la modifica pianificata.",
     "title": "Gestione del catalogo dei servizi",
     "loading": "Caricamento servizi",
     "dialog": {
