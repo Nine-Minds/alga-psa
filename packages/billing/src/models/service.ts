@@ -60,6 +60,9 @@ const servicePriceSchema = z.object({
   rate: z.union([z.string(), z.number()]).transform(val =>
     typeof val === 'string' ? parseFloat(val) || 0 : val
   ),
+  effective_date: z.union([z.string(), z.date()]).transform(val =>
+    val instanceof Date ? val.toISOString().slice(0, 10) : String(val).slice(0, 10)
+  ).nullable().optional(),
   created_at: z.union([z.string(), z.date()]).transform(val =>
     val instanceof Date ? val.toISOString() : val
   ).optional(),
@@ -105,7 +108,8 @@ const baseServiceSchema = z.object({
   tax_rate_id: z.union([z.string().uuid(), z.null()]).optional(), // Accept string, null, or undefined
   description: z.string().nullable(), // Added: Description field from the database
   service_type_name: z.string().optional(), // Add service_type_name to the schema
-  prices: z.array(servicePriceSchema).optional(), // Multi-currency prices
+  prices: z.array(servicePriceSchema).optional(), // Current multi-currency prices
+  scheduled_prices: z.array(servicePriceSchema).optional(), // Future-dated prices
   created_at: z.string().optional(),
   updated_at: z.string().optional()
 });
@@ -146,6 +150,62 @@ type ServiceReadRow = { service_id: string; billing_method?: string | null };
  */
 const UNREPRESENTABLE_BILLING_METHOD = 'per_unit';
 
+function calendarDateOf(value: string | Date | null | undefined): string {
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? '1970-01-01' : value.toISOString().slice(0, 10);
+  }
+  const match = /^(\d{4}-\d{2}-\d{2})/.exec(String(value ?? ''));
+  return match ? match[1] : '1970-01-01';
+}
+
+function todayCalendarDate(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+/**
+ * Split a service's `service_prices` rows into the price effective now (one per
+ * currency: the latest row effective on or before today) and the future-dated
+ * rows.
+ *
+ * An ordinary catalog read shows the current price. Scheduled rows are returned
+ * separately so the UI can tell the operator a change is pending without
+ * treating the future price as the current one. This is what stops an ordinary
+ * save (which edits the current price) from silently revoking a scheduled
+ * increase.
+ */
+export function splitServicePricesByEffectiveDate(
+  prices: IServicePrice[],
+  asOf: string = todayCalendarDate()
+): { current: IServicePrice[]; scheduled: IServicePrice[] } {
+  const currentByCurrency = new Map<string, IServicePrice>();
+  const currencyOrder: string[] = [];
+  const scheduled: IServicePrice[] = [];
+
+  for (const price of prices) {
+    const effective = calendarDateOf(price.effective_date);
+    if (effective > asOf) {
+      scheduled.push(price);
+      continue;
+    }
+    if (!currentByCurrency.has(price.currency_code)) {
+      currencyOrder.push(price.currency_code);
+    }
+    const existing = currentByCurrency.get(price.currency_code);
+    if (!existing || calendarDateOf(existing.effective_date) <= effective) {
+      currentByCurrency.set(price.currency_code, price);
+    }
+  }
+
+  scheduled.sort((a, b) =>
+    calendarDateOf(a.effective_date).localeCompare(calendarDateOf(b.effective_date))
+  );
+
+  return {
+    current: currencyOrder.map((currency) => currentByCurrency.get(currency)!),
+    scheduled
+  };
+}
+
 /**
  * Validate service_catalog rows for the read/list path.
  *
@@ -172,11 +232,16 @@ export function parseServiceReadRows(
       continue;
     }
 
+    const { current, scheduled } = splitServicePricesByEffectiveDate(
+      pricesByService[service.service_id] || []
+    );
+
     // Anything else that fails validation is a genuine defect: let it throw.
     validatedServices.push(
       serviceSchema.parse({
         ...service,
-        prices: pricesByService[service.service_id] || []
+        prices: current,
+        scheduled_prices: scheduled
       }) as IService
     );
   }
@@ -331,10 +396,12 @@ const Service = {
         .select('*');
 
       log.info(`[Service.getById] Found service: ${serviceData.service_name} with ${prices.length} price(s)`);
+      const { current, scheduled } = splitServicePricesByEffectiveDate(prices);
       // Validate and transform using the final schema's parse method
       const validatedService = serviceSchema.parse({
         ...serviceData,
-        prices
+        prices: current,
+        scheduled_prices: scheduled
       }) as IService;
       log.info(`[Service.getById] Service data validated successfully`);
 
@@ -499,10 +566,17 @@ const Service = {
     const tenant = await requireTenantId(knexOrTrx);
 
     try {
-      // Remove tenant, service_type_name, and prices from update data to prevent modification
-      // service_type_name is a virtual field from JOIN and doesn't exist in the table
-      // prices is stored in a separate service_prices table
-      const { tenant: _, service_type_name, prices: _prices, ...updateData } = serviceData;
+      // Remove tenant, service_type_name, prices and scheduled_prices from update
+      // data to prevent modification. service_type_name is a virtual field from
+      // JOIN and doesn't exist in the table; prices/scheduled_prices are read
+      // projections of the separate service_prices table.
+      const {
+        tenant: _,
+        service_type_name,
+        prices: _prices,
+        scheduled_prices: _scheduledPrices,
+        ...updateData
+      } = serviceData;
 
       // No need to handle type ID changes anymore
       const finalUpdateData: Partial<IService> = { ...updateData };
@@ -601,8 +675,9 @@ const Service = {
         .where({ service_id })
         .select('*');
 
+      const { current, scheduled } = splitServicePricesByEffectiveDate(prices);
       // Validate and transform the DB result using the final schema's parse method
-      return serviceSchema.parse({ ...completeService, prices }) as IService;
+      return serviceSchema.parse({ ...completeService, prices: current, scheduled_prices: scheduled }) as IService;
     } catch (error) {
       log.error(`[Service.update] Error updating service ${service_id}:`, error);
       throw error;
@@ -871,7 +946,17 @@ const Service = {
   },
 
   /**
-   * Set multiple prices for a service at once (replaces all existing prices)
+   * Set multiple prices for a service at once, as of now.
+   *
+   * This is the ordinary "save the price" write (used by `updateServicePricing`
+   * and `setServicePrices`), and it is deliberately scoped to the currently
+   * effective window: it replaces the row(s) effective on or before today and
+   * writes the submitted rates at the epoch. **Future-dated rows are left in
+   * place.** A scheduled catalog increase (`applyServicePriceChange` with a
+   * future `effective_date`) is therefore not silently revoked by an unrelated
+   * edit such as fixing a typo in the description. The scheduled rows stay
+   * visible to the catalog read as `scheduled_prices` so the operator can see
+   * them; documenting this is deliberate, not incidental.
    */
   setPrices: async (
     knexOrTrx: Knex | Knex.Transaction,
@@ -879,17 +964,19 @@ const Service = {
     prices: Array<{ currency_code: string; rate: number }>
   ): Promise<IServicePrice[]> => {
     const tenant = await requireTenantId(knexOrTrx);
+    const today = todayCalendarDate();
 
-    // Delete existing prices
+    // Replace only the currently-effective window; keep scheduled future rows.
     await tenantScopedTable(knexOrTrx, tenant, 'service_prices')
       .where({ service_id })
+      .where('effective_date', '<=', today)
       .del();
 
     if (prices.length === 0) {
       return [];
     }
 
-    // Insert new prices
+    // Insert new prices effective now (the epoch row).
     const pricesToInsert = prices.map(p => ({
       price_id: uuidv4(),
       tenant,
@@ -901,7 +988,8 @@ const Service = {
           throw new Error('rate must be a non-negative number');
         }
         return normalizedRate;
-      })()
+      })(),
+      effective_date: '1970-01-01'
     }));
 
     const insertedPrices = await tenantScopedTable<IServicePrice>(knexOrTrx, tenant, 'service_prices')
