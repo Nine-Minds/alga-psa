@@ -49,6 +49,7 @@ export interface ServiceContractUsage {
 
 export interface ServicePriceChangePreviewRow {
   contractLineId: string;
+  contractLineName: string | null;
   contractId: string | null;
   contractName: string | null;
   clientId: string | null;
@@ -317,6 +318,7 @@ export const previewServicePriceChange = withAuth(
             'currentRateCents' | 'newRateCents' | 'deltaCents' | 'reason'
           > = {
             contractLineId: bundle.contractLineId,
+            contractLineName: bundle.contractLineName,
             contractId: bundle.contractId,
             contractName: bundle.contractName,
             clientId: bundle.clientId,
@@ -437,10 +439,13 @@ export const applyServicePriceChange = withAuth(
     { tenant },
     input: ApplyServicePriceChangeInput,
   ): Promise<{ success: true } | ServicePriceRolloutActionError> => {
-    if (!(await hasPermission(user, 'billing', 'update'))) {
+    // This is the effective-dated variant of the ordinary service-price save
+    // (`updateServicePricing`), which gates on `service:update`. Gating it on
+    // `billing:update` would authorize two paths to the same write differently.
+    if (!(await hasPermission(user, 'service', 'update'))) {
       return permissionError(
         'Permission denied: Cannot change service pricing',
-        'msp/service-catalog:errors.permissions.updatePricing',
+        'msp/service-catalog:errors.permissions.updateServices',
       );
     }
 

@@ -13,6 +13,8 @@
  * than falling through to them. We keep that deliberately (see plan §2.3).
  */
 
+import logger from "@alga-psa/core/logger";
+
 export type RateProvenance = "custom" | "inherited" | "unreviewed";
 
 export type RateSource =
@@ -254,6 +256,11 @@ export function resolveMemberRate(
   if (isDefaultCurrency && !hasAnyServicePrice(input.catalogPrices, service.service_id, input.currency)) {
     const legacyRateCents = toCents(service.default_rate);
     if (legacyRateCents !== null) {
+      // Transitional fallback made measurable: every hit is residue the
+      // "retire service_catalog.default_rate" follow-up can shrink to zero.
+      logger.warn(
+        `[resolveFixedLineRate] catalog_legacy fallback used for service ${service.service_id} in ${input.currency}; migrate it to service_prices.`,
+      );
       return {
         rateCents: legacyRateCents,
         source: "catalog_legacy",

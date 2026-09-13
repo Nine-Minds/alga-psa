@@ -20,6 +20,7 @@ import type {
 
 export interface FixedLineRateInputBundle {
   contractLineId: string;
+  contractLineName: string | null;
   contractId: string | null;
   contractName: string | null;
   clientId: string | null;
@@ -76,7 +77,7 @@ export async function loadFixedLineRateInputs(
   const db = tenantDb(trx, tenant);
 
   const lineRows = await db
-    .table<ContractLineRateRow & { contract_id: string | null; is_active: boolean | null }>(
+    .table<ContractLineRateRow & { contract_id: string | null; is_active: boolean | null; contract_line_name: string | null }>(
       "contract_lines",
     )
     .whereIn("contract_line_id", uniqueIds)
@@ -88,7 +89,7 @@ export async function loadFixedLineRateInputs(
         query.where("rate_provenance", options.provenance);
       }
     })
-    .select("contract_line_id", "custom_rate", "rate_provenance", "contract_id", "is_active");
+    .select("contract_line_id", "contract_line_name", "custom_rate", "rate_provenance", "contract_id", "is_active");
 
   if (lineRows.length === 0) {
     return result;
@@ -168,6 +169,7 @@ export async function loadFixedLineRateInputs(
       "clsc.config_id",
       "clsfc.base_rate as service_base_rate",
       "clsfc.rate_provenance as base_rate_provenance",
+      "clsfc.pricing_basis as pricing_basis",
     );
 
   const planServicesByLine = new Map<string, PlanServiceRateRow[]>();
@@ -266,6 +268,7 @@ export async function loadFixedLineRateInputs(
 
     result.set(lineId, {
       contractLineId: lineId,
+      contractLineName: line.contract_line_name ?? null,
       contractId: line.contract_id ? String(line.contract_id) : null,
       contractName: contract?.contract_name ?? null,
       clientId: assignment?.client_id ? String(assignment.client_id) : null,
