@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } from 'vitest';
 import '../../../../../test-utils/nextApiMock';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
+import { v4 as uuidv4 } from 'uuid';
 import { generateInvoice } from '@alga-psa/billing/actions/invoiceGeneration';
 import { TextEncoder as NodeTextEncoder } from 'util';
 import { TestContext } from '../../../../../test-utils/testContext';
@@ -10,9 +11,19 @@ import {
   createFixedPlanAssignment,
   materializeRecurringServicePeriods,
   setLineProvenance,
+  updateCatalogPrice,
   setupClientTaxConfiguration,
   assignServiceTaxRate
 } from '../../../../../test-utils/billingTestHelpers';
+import { previewServicePriceChange } from '@alga-psa/billing/actions/servicePriceRolloutActions';
+import { resetContractLineRateToStandard } from '@alga-psa/billing/actions/rateReviewActions';
+import {
+  loadFixedConfigBaseRates,
+  loadPricingScheduleRates,
+  resolveConfiguredFee,
+  resolvePricingScheduleRate,
+  type RawBucketPeriodRow,
+} from '@alga-psa/reporting/actions/report-actions/deferred-revenue/loaders';
 
 process.env.DB_PORT = process.env.DB_PORT === '6432' ? '5432' : process.env.DB_PORT;
 process.env.DB_HOST = process.env.DB_HOST === 'pgbouncer' ? 'localhost' : process.env.DB_HOST;
@@ -302,5 +313,256 @@ describe('Catalog price resolution – fixed path', () => {
 
     expect(after!.subtotal).toBe(before!.subtotal);
     expect(after!.subtotal).toBe(10000);
+  });
+
+  /**
+   * Create a monthly billing cycle and invoice it. The period is
+   * `[startDate, endDate)` and the engine reads the catalog rate effective at
+   * the period start.
+   */
+  async function invoiceCycle(startDate: string, endDate: string) {
+    const billingCycleId = await context.createEntity('client_billing_cycles', {
+      client_id: context.clientId,
+      billing_cycle: 'monthly',
+      effective_date: startDate,
+      period_start_date: startDate,
+      period_end_date: endDate
+    }, 'billing_cycle_id');
+
+    const result = await generateInvoice(billingCycleId);
+    expect(result).not.toBeNull();
+    return result!;
+  }
+
+  /**
+   * A fixed line whose stored rate is cleared and whose member is linked to the
+   * catalog: `inherited`. Returns the service and line ids.
+   */
+  async function seedInheritedLine(
+    serviceName: string,
+    rateCents: number,
+    startDate: string,
+  ) {
+    const serviceId = await createTestService(context, {
+      service_name: serviceName,
+      billing_method: 'fixed',
+      default_rate: rateCents
+    });
+    const { contractLineId, contractId } = await createFixedPlanAssignment(context, serviceId, {
+      planName: `${serviceName} plan`,
+      billingFrequency: 'monthly',
+      baseRateCents: rateCents,
+      quantity: 1,
+      startDate,
+      billingTiming: 'advance'
+    });
+    await linkMemberToCatalog(contractLineId);
+    await setLineProvenance(context, contractLineId, 'inherited');
+    await materializeRecurringServicePeriods(context, contractLineId);
+    return { serviceId, contractLineId, contractId };
+  }
+
+  const JAN_START = createTestDateISO({ year: 2023, month: 1, day: 1 });
+  const FEB_START = createTestDateISO({ year: 2023, month: 2, day: 1 });
+  const MAR_START = createTestDateISO({ year: 2023, month: 3, day: 1 });
+
+  it('T1: an inherited line follows a catalog price change on the next period', async () => {
+    const { serviceId, contractLineId } = await seedInheritedLine('T1 Service', 10000, JAN_START);
+
+    const january = await invoiceCycle(JAN_START, FEB_START);
+    expect(january.subtotal).toBe(10000);
+
+    await updateCatalogPrice(context, serviceId, { rateCents: 12000, effectiveDate: FEB_START });
+    await materializeRecurringServicePeriods(context, contractLineId);
+
+    const february = await invoiceCycle(FEB_START, MAR_START);
+    expect(february.subtotal).toBe(12000);
+
+    const items = await context.db('invoice_charges')
+      .where('invoice_id', february.invoice_id)
+      .select('*');
+    expect(items).toHaveLength(1);
+    expect(parseInt(items[0].net_amount)).toBe(12000);
+  });
+
+  it('T2: a custom line does not follow a catalog price change', async () => {
+    const { serviceId, contractLineId } = await seedInheritedLine('T2 Service', 10000, JAN_START);
+    await setLineProvenance(context, contractLineId, 'custom', 10000);
+
+    const january = await invoiceCycle(JAN_START, FEB_START);
+    expect(january.subtotal).toBe(10000);
+
+    await updateCatalogPrice(context, serviceId, { rateCents: 12000, effectiveDate: FEB_START });
+    await materializeRecurringServicePeriods(context, contractLineId);
+
+    const february = await invoiceCycle(FEB_START, MAR_START);
+    expect(february.subtotal).toBe(10000);
+  });
+
+  it('T7: an unreviewed line does not follow a catalog price change (legacy safety)', async () => {
+    const { serviceId, contractLineId } = await seedInheritedLine('T7 Service', 10000, JAN_START);
+    await setLineProvenance(context, contractLineId, 'unreviewed', 10000);
+
+    const january = await invoiceCycle(JAN_START, FEB_START);
+    expect(january.subtotal).toBe(10000);
+
+    await updateCatalogPrice(context, serviceId, { rateCents: 12000, effectiveDate: FEB_START });
+    await materializeRecurringServicePeriods(context, contractLineId);
+
+    const february = await invoiceCycle(FEB_START, MAR_START);
+    expect(february.subtotal).toBe(10000);
+  });
+
+  it('T3: a mid-period effective date leaves the current period alone and prices the next', async () => {
+    const { serviceId, contractLineId } = await seedInheritedLine('T3 Service', 10000, JAN_START);
+
+    // Effective Jan 15: after the Jan period start, before the Feb period start.
+    await updateCatalogPrice(context, serviceId, { rateCents: 12000, effectiveDate: '2023-01-15' });
+    await materializeRecurringServicePeriods(context, contractLineId);
+
+    const january = await invoiceCycle(JAN_START, FEB_START);
+    expect(january.subtotal).toBe(10000);
+
+    const february = await invoiceCycle(FEB_START, MAR_START);
+    expect(february.subtotal).toBe(12000);
+  });
+
+  it('T4: an already-invoiced period is untouched and the preview excludes it with a reason', async () => {
+    const { serviceId, contractLineId } = await seedInheritedLine('T4 Service', 10000, JAN_START);
+
+    const january = await invoiceCycle(JAN_START, FEB_START);
+    expect(january.subtotal).toBe(10000);
+
+    const preview = await previewServicePriceChange(serviceId, 12000, '2023-01-01');
+    if (!('willChange' in preview)) {
+      throw new Error(`preview failed: ${JSON.stringify(preview)}`);
+    }
+    expect(preview.willChange).toHaveLength(0);
+    const excluded = preview.excluded.find((row) => row.contractLineId === contractLineId);
+    expect(excluded).toBeDefined();
+    expect(excluded!.reason).toMatch(/invoiced/i);
+
+    // The generated invoice keeps its original amount.
+    const items = await context.db('invoice_charges')
+      .where('invoice_id', january.invoice_id)
+      .select('*');
+    expect(parseInt(items[0].net_amount)).toBe(10000);
+  });
+
+  it('T5: reset-to-standard re-links the line to the catalog for the next period', async () => {
+    const { serviceId, contractLineId } = await seedInheritedLine('T5 Service', 10000, JAN_START);
+    await setLineProvenance(context, contractLineId, 'custom', 4500);
+
+    const january = await invoiceCycle(JAN_START, FEB_START);
+    expect(january.subtotal).toBe(4500);
+
+    const reset = await resetContractLineRateToStandard(contractLineId);
+    if (!('applied' in reset)) {
+      throw new Error(`reset failed: ${JSON.stringify(reset)}`);
+    }
+    if (reset.applied.length === 0) {
+      throw new Error(`reset refused: ${JSON.stringify(reset.refused)}`);
+    }
+    expect(reset.applied).toHaveLength(1);
+
+    const line = await context.db('contract_lines')
+      .where({ tenant: context.tenantId, contract_line_id: contractLineId })
+      .first('custom_rate', 'rate_provenance');
+    expect(line.custom_rate).toBeNull();
+    expect(line.rate_provenance).toBe('inherited');
+
+    await materializeRecurringServicePeriods(context, contractLineId);
+    const february = await invoiceCycle(FEB_START, MAR_START);
+    expect(february.subtotal).toBe(10000);
+  });
+
+  async function assertReportAgreesWithInvoice(
+    provenance: 'inherited' | 'custom' | 'unreviewed',
+    withSchedule: boolean,
+  ) {
+    // Correction #1: the engine does read contract_pricing_schedules. When a
+    // schedule is active it wins for every provenance; the report's own loader
+    // and precedence chain must land on the same number.
+    const { serviceId, contractLineId, contractId } = await seedInheritedLine(
+      `T6 ${provenance} ${withSchedule ? 'schedule' : 'plain'}`,
+      10000,
+      JAN_START,
+    );
+    if (provenance !== 'inherited') {
+      await setLineProvenance(context, contractLineId, provenance, provenance === 'custom' ? 4500 : 10000);
+    }
+
+    const scheduleRateCents = 20000;
+    if (withSchedule) {
+      await context.db('contract_pricing_schedules').insert({
+        schedule_id: uuidv4(),
+        contract_id: contractId,
+        tenant: context.tenantId,
+        effective_date: JAN_START,
+        end_date: null,
+        custom_rate: scheduleRateCents,
+        notes: `T6 ${provenance} schedule`
+      });
+      await materializeRecurringServicePeriods(context, contractLineId);
+    }
+
+    const january = await invoiceCycle(JAN_START, FEB_START);
+
+    const schedules = await loadPricingScheduleRates(context.db, context.tenantId, [contractId]);
+    const scheduleRate = resolvePricingScheduleRate(
+      JAN_START,
+      '2023-01-31',
+      contractId,
+      schedules,
+      contractLineId,
+    );
+    const baseRates = await loadFixedConfigBaseRates(context.db, context.tenantId);
+    const line = await context.db('contract_lines')
+      .where({ tenant: context.tenantId, contract_line_id: contractLineId })
+      .first('custom_rate');
+    const periodRow: RawBucketPeriodRow = {
+      usageId: `t6-${provenance}-${withSchedule}`,
+      contractLineId,
+      contractId,
+      contractLineName: `T6 ${provenance}`,
+      clientId: context.clientId,
+      serviceId,
+      serviceName: `T6 ${provenance}`,
+      periodStart: JAN_START,
+      periodEnd: '2023-01-31',
+      minutesUsed: 0,
+      rolledOverMinutes: 0,
+      totalMinutes: 0,
+      allowRollover: false,
+      currencyCode: 'USD',
+      lineCustomRate: line?.custom_rate != null ? Number(line.custom_rate) : null,
+      catalogDefaultRate: 10000,
+    };
+    const configured = resolveConfiguredFee(
+      periodRow,
+      baseRates.get(`${contractLineId}\u0000${serviceId}`) ?? null,
+      scheduleRate,
+    );
+    expect(configured).toBe(january.subtotal);
+  }
+
+  it('T6 (inherited): an active pricing schedule reaches the invoice and the report agrees', async () => {
+    await assertReportAgreesWithInvoice('inherited', true);
+  });
+
+  it('T6 (custom): an active pricing schedule reaches the invoice and the report agrees', async () => {
+    await assertReportAgreesWithInvoice('custom', true);
+  });
+
+  it('T6 (unreviewed): an active pricing schedule reaches the invoice and the report agrees', async () => {
+    await assertReportAgreesWithInvoice('unreviewed', true);
+  });
+
+  it('T6b (inherited): with no schedule, inherited follows the catalog and the report agrees', async () => {
+    await assertReportAgreesWithInvoice('inherited', false);
+  });
+
+  it('T6b (custom): with no schedule, custom keeps its rate and the report agrees', async () => {
+    await assertReportAgreesWithInvoice('custom', false);
   });
 });
