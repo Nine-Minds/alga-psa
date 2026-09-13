@@ -469,3 +469,17 @@ and authenticated browser review remain release tasks.
 
 The existing unrelated `package-lock.json` changes were preserved and excluded
 from the implementation commit. No branch push or PR creation is authorized.
+
+### Final projection audit
+
+The optimized action paths have five partial projections that feed the JS kernel:
+bundle children/master (`ct`/`mt`) and fallback matching IDs, board IDs, and adjacent
+IDs (`t`). Added `contact_name_id` to each; without it the kernel correctly denies
+an incomplete record but hides even the caller's own tickets. The database suite
+now forces the JS fallback with a redaction-only bundle rule and checks matching
+IDs, board IDs, and adjacent positions for the contact-scoped user. This is in
+addition to the SQL and portal enforcement matrix above.
+
+The existing DB suite leaves a public document on its shared fixture in one test.
+The new own-document assertion therefore checks successful, client-visible results
+rather than assuming an empty list, preserving randomized test-order independence.

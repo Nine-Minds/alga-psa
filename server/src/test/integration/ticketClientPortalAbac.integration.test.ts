@@ -405,7 +405,9 @@ describeDb('ticket client-portal ABAC (TicketService)', () => {
         expect((tickets as any[]).map((ticket) => ticket.ticket_id)).toEqual([fixture.ticketVisibleId]);
         expect(await portal.getClientTicketDetails(added[0])).toMatchObject({ actionError: 'Ticket not found or access denied' });
         expect(await portal.getClientTicketDocuments(added[0])).toMatchObject({ actionError: 'Ticket not found or access denied' });
-        expect(await portal.getClientTicketDocuments(fixture.ticketVisibleId)).toEqual([]);
+        const ownDocuments = await portal.getClientTicketDocuments(fixture.ticketVisibleId);
+        expect(Array.isArray(ownDocuments)).toBe(true);
+        expect((ownDocuments as any[]).every((document) => document.is_client_visible === true)).toBe(true);
         expect(await dashboard.getDashboardMetrics()).toMatchObject({ openTickets: 1 });
         const activity = await dashboard.getRecentActivity();
         expect(Array.isArray(activity)).toBe(true);
@@ -413,6 +415,22 @@ describeDb('ticket client-portal ABAC (TicketService)', () => {
         expect(JSON.stringify(activity)).not.toContain('Unassigned Ticket');
         expect(await portal.addClientTicketComment(added[0], 'denied')).toMatchObject({ actionError: 'Ticket not found or access denied' });
         expect(await portal.updateTicketStatus(added[0], fixture.statusId)).toMatchObject({ actionError: 'Ticket not found or access denied' });
+        const optimized = await import('@alga-psa/tickets/actions/optimizedTicketActions');
+        const bundles = await import('@alga-psa/authorization/bundles/service');
+        // A redaction rule without an SQL facet forces the supported JS fallback.
+        // Partial selects must carry contact_name_id or even the caller's own row disappears.
+        const rulesSpy = vi.spyOn(bundles, 'resolveBundleNarrowingRulesForEvaluation').mockResolvedValue([
+          { id: 'redact', resource: 'ticket', action: 'read', constraintKey: 'hide_sensitive_fields', redactedFields: [] },
+        ]);
+        try {
+          const filters = { boardFilterState: 'all', statusId: '__status_filter__:all' } as any;
+          expect(await optimized.getAllMatchingTicketIds(filters)).toEqual([fixture.ticketVisibleId]);
+          expect(await optimized.getTicketBoardIds([fixture.ticketVisibleId, ...added])).toEqual([{ ticket_id: fixture.ticketVisibleId, board_id: fixture.boardVisibleId }]);
+          expect(await optimized.getAdjacentTicketIds(fixture.ticketVisibleId, filters)).toMatchObject({ currentPosition: 1, totalCount: 1, prevTicketId: null, nextTicketId: null });
+        } finally {
+          rulesSpy.mockRestore();
+        }
+
       });
       await tenantRows('contacts', fixture.tenantId).where({ contact_name_id: fixture.contactAId }).update({ is_client_admin: true });
       await runWithTenant(fixture.tenantId, async () => {

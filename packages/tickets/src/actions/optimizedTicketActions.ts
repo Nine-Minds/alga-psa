@@ -975,6 +975,7 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
         'ct.ticket_number',
         'ct.title',
         'ct.client_id',
+        'ct.contact_name_id',
         'comp.client_name',
         'ct.status_id',
         'ct.entered_at',
@@ -997,6 +998,7 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
           'mt.ticket_number',
           'mt.title',
           'mt.client_id',
+          'mt.contact_name_id',
           'comp.client_name',
           'mt.status_id',
           'mt.entered_at',
@@ -2208,7 +2210,7 @@ export const getAllMatchingTicketIds = withAuth(async (
               .clone()
               .clearSelect()
               .clearOrder()
-              .select('t.ticket_id', 't.entered_by', 't.assigned_to', 't.client_id', 't.board_id', 't.assigned_team_id')
+              .select('t.ticket_id', 't.entered_by', 't.assigned_to', 't.client_id', 't.contact_name_id', 't.board_id', 't.assigned_team_id')
           );
 
       const ticketIds: Array<string | null | undefined> = rows.map((row: { ticket_id?: string | null }) => row.ticket_id);
@@ -2270,7 +2272,7 @@ export const getTicketBoardIds = withAuth(async (
             authorizationContext,
             await tenantScopedTable(trx, 'tickets as t', tenant)
               .whereIn('t.ticket_id', uniqueIds)
-              .select('t.ticket_id', 't.entered_by', 't.assigned_to', 't.client_id', 't.board_id', 't.assigned_team_id')
+              .select('t.ticket_id', 't.entered_by', 't.assigned_to', 't.client_id', 't.contact_name_id', 't.board_id', 't.assigned_team_id')
           );
 
       return rows
@@ -3896,7 +3898,7 @@ export const getAdjacentTicketIds = withAuth(async (
     }
 
     const orderedRows = await applyTicketListSort(
-      baseQuery.clone().clearSelect().select('t.ticket_id', 't.ticket_number', 't.entered_by', 't.assigned_to', 't.client_id', 't.board_id', 't.assigned_team_id'),
+      baseQuery.clone().clearSelect().select('t.ticket_id', 't.ticket_number', 't.entered_by', 't.assigned_to', 't.client_id', 't.contact_name_id', 't.board_id', 't.assigned_team_id'),
       validatedFilters
     );
     const authorizedRows = await filterAuthorizedTickets(trx, authorizationContext, orderedRows);
