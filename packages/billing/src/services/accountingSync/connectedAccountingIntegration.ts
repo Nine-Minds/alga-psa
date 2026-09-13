@@ -54,41 +54,54 @@ export async function resolveConnectedAccountingIntegration(
   const qboRealms = new Set(Object.keys(qboCredentials));
   const xeroConnectionIds = Object.keys(xeroConnections);
 
+  // Explicit provider request. An explicit ORGANISATION that is no longer
+  // connected fails closed: it must never silently resolve to a different
+  // provider or organisation.
   if (selection.preferredAdapterType === 'xero') {
-    const connectionId =
-      selection.preferredTargetRealm && xeroConnections[selection.preferredTargetRealm]
-        ? selection.preferredTargetRealm
-        : xeroConnectionIds[0];
-    if (connectionId) {
-      return { adapterType: 'xero', targetRealm: connectionId };
+    if (selection.preferredTargetRealm) {
+      return xeroConnections[selection.preferredTargetRealm]
+        ? { adapterType: 'xero', targetRealm: selection.preferredTargetRealm }
+        : null;
     }
+    const connectionId = xeroConnectionIds[0];
+    return connectionId ? { adapterType: 'xero', targetRealm: connectionId } : null;
   }
 
   if (selection.preferredAdapterType === 'quickbooks_online') {
-    const realm =
-      selection.preferredTargetRealm && qboRealms.has(selection.preferredTargetRealm)
-        ? selection.preferredTargetRealm
-        : qboDefaultRealm;
-    if (realm) {
-      return { adapterType: 'quickbooks_online', targetRealm: realm };
+    if (selection.preferredTargetRealm) {
+      return qboRealms.has(selection.preferredTargetRealm)
+        ? { adapterType: 'quickbooks_online', targetRealm: selection.preferredTargetRealm }
+        : null;
     }
+    return qboDefaultRealm ? { adapterType: 'quickbooks_online', targetRealm: qboDefaultRealm } : null;
   }
 
-  const preferredRealm = selection.preferredTargetRealm ?? settings?.defaultRealm ?? null;
-  if (preferredRealm) {
-    if (qboRealms.has(preferredRealm)) {
-      return { adapterType: 'quickbooks_online', targetRealm: preferredRealm };
+  // Explicit organisation request without a provider: match it to the owning
+  // provider, or fail closed if it is gone.
+  if (selection.preferredTargetRealm) {
+    if (qboRealms.has(selection.preferredTargetRealm)) {
+      return { adapterType: 'quickbooks_online', targetRealm: selection.preferredTargetRealm };
     }
-    if (xeroConnections[preferredRealm]) {
-      return { adapterType: 'xero', targetRealm: preferredRealm };
+    if (xeroConnections[selection.preferredTargetRealm]) {
+      return { adapterType: 'xero', targetRealm: selection.preferredTargetRealm };
+    }
+    return null;
+  }
+
+  // Settings-selected default organisation (best effort: a removed default
+  // falls back to another connected target).
+  const settingsRealm = settings?.defaultRealm ?? null;
+  if (settingsRealm) {
+    if (qboRealms.has(settingsRealm)) {
+      return { adapterType: 'quickbooks_online', targetRealm: settingsRealm };
+    }
+    if (xeroConnections[settingsRealm]) {
+      return { adapterType: 'xero', targetRealm: settingsRealm };
     }
   }
 
   if (qboDefaultRealm) {
-    return {
-      adapterType: 'quickbooks_online',
-      targetRealm: qboDefaultRealm
-    };
+    return { adapterType: 'quickbooks_online', targetRealm: qboDefaultRealm };
   }
 
   const [connectionId] = xeroConnectionIds;
@@ -96,8 +109,5 @@ export async function resolveConnectedAccountingIntegration(
     return null;
   }
 
-  return {
-    adapterType: 'xero',
-    targetRealm: connectionId
-  };
+  return { adapterType: 'xero', targetRealm: connectionId };
 }

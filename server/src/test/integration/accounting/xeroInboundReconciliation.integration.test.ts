@@ -487,4 +487,190 @@ describe('Xero inbound reconciliation (DB + controlled provider boundary)', () =
     // The other organisation's row is untouched.
     expect(removed.some((change) => change.externalId === 'creditnote:cn-1:alloc:other-realm')).toBe(false);
   }, HOOK_TIMEOUT);
+
+  function creditNoteWithAllocations(allocations: any[], updatedAt = '2026-03-03T00:00:00.000Z') {
+    return {
+      CreditNoteID: 'replacement-cn',
+      CreditNoteNumber: 'CN-REPLACE',
+      Status: 'AUTHORISED',
+      Total: 50,
+      UpdatedDateUTC: updatedAt,
+      Allocations: allocations
+    };
+  }
+
+  async function runCreditNotePoll(record: any) {
+    xeroCreateMock.mockResolvedValueOnce(
+      xeroClient({
+        listChangedCreditNotes: vi.fn(async () => ({ records: [record], hasMore: false }))
+      })
+    );
+    return runAccountingSyncCycle({
+      knex: ctx.db,
+      tenantId: ctx.tenantId,
+      adapterType: 'xero',
+      targetRealm: REALM,
+      adapter,
+      force: true,
+      exceptions: makeFakeExceptions() as any,
+      notifications: makeFakeNotifications() as any
+    });
+  }
+
+  async function invoicePaymentsTotal(invoiceId: string): Promise<number> {
+    const rows = await ctx.db('invoice_payments').where({ tenant: ctx.tenantId, invoice_id: invoiceId });
+    return rows.reduce((sum, row) => sum + Number(row.amount), 0);
+  }
+
+  it('replacing a fully settling credit allocation preserves the paid balance', async () => {
+    const invoiceId = await seedInvoiceAndExport();
+
+    const settled = await runCreditNotePoll(
+      creditNoteWithAllocations(
+        [{ AllocationID: 'old-allocation', Amount: 50, Date: '/Date(1772496000000+0000)/', Invoice: { InvoiceID: 'xero-invoice-1' } }],
+        '2026-03-03T00:00:00.000Z'
+      )
+    );
+    expect(settled.status).toBe('succeeded');
+    expect(await invoicePaymentsTotal(invoiceId)).toBe(5000);
+
+    const replaced = await runCreditNotePoll(
+      creditNoteWithAllocations(
+        [{ AllocationID: 'new-allocation', Amount: 50, Date: '/Date(1772496000000+0000)/', Invoice: { InvoiceID: 'xero-invoice-1' } }],
+        '2026-03-04T00:00:00.000Z'
+      )
+    );
+    expect(replaced.status).toBe('succeeded');
+
+    // Net financial effect is unchanged: the replacement freed the balance by
+    // reversing the old allocation BEFORE applying the new one.
+    expect(await invoicePaymentsTotal(invoiceId)).toBe(5000);
+    const invoice = await ctx.db('invoices').where({ tenant: ctx.tenantId, invoice_id: invoiceId }).first();
+    expect(invoice.status).toBe('paid');
+
+    const ledger = new SyncMappingLedger(ctx.db, ctx.tenantId, 'xero');
+    expect(
+      (await ledger.findByExternalId('invoice_payment', 'creditnote:replacement-cn:alloc:old-allocation', REALM))
+        ?.sync_status
+    ).toBe('reversed');
+    expect(
+      (await ledger.findByExternalId('invoice_payment', 'creditnote:replacement-cn:alloc:new-allocation', REALM))
+        ?.sync_status
+    ).toBe('synced');
+
+    const transactions = await ctx.db('transactions').where({ tenant: ctx.tenantId, invoice_id: invoiceId });
+    const types = transactions.map((row) => row.type);
+    expect(types).toContain('payment');
+    expect(types).toContain('payment_reversal');
+  }, HOOK_TIMEOUT);
+
+  it('replays a replacement without duplicate financial effect', async () => {
+    const invoiceId = await seedInvoiceAndExport();
+    await runCreditNotePoll(
+      creditNoteWithAllocations(
+        [{ AllocationID: 'old-allocation', Amount: 50, Invoice: { InvoiceID: 'xero-invoice-1' } }],
+        '2026-03-03T00:00:00.000Z'
+      )
+    );
+    const replacement = creditNoteWithAllocations(
+      [{ AllocationID: 'new-allocation', Amount: 50, Invoice: { InvoiceID: 'xero-invoice-1' } }],
+      '2026-03-04T00:00:00.000Z'
+    );
+
+    await runCreditNotePoll(replacement);
+    await runCreditNotePoll(replacement);
+
+    expect(await invoicePaymentsTotal(invoiceId)).toBe(5000);
+    const invoice = await ctx.db('invoices').where({ tenant: ctx.tenantId, invoice_id: invoiceId }).first();
+    expect(invoice.status).toBe('paid');
+  }, HOOK_TIMEOUT);
+
+  it('replaces multiple allocations on one invoice without netting the balance away', async () => {
+    const invoiceId = await seedInvoiceAndExport();
+    await runCreditNotePoll(
+      creditNoteWithAllocations(
+        [
+          { AllocationID: 'old-1', Amount: 25, Invoice: { InvoiceID: 'xero-invoice-1' } },
+          { AllocationID: 'old-2', Amount: 25, Invoice: { InvoiceID: 'xero-invoice-1' } }
+        ],
+        '2026-03-03T00:00:00.000Z'
+      )
+    );
+    expect(await invoicePaymentsTotal(invoiceId)).toBe(5000);
+
+    await runCreditNotePoll(
+      creditNoteWithAllocations(
+        [
+          { AllocationID: 'new-1', Amount: 30, Invoice: { InvoiceID: 'xero-invoice-1' } },
+          { AllocationID: 'new-2', Amount: 20, Invoice: { InvoiceID: 'xero-invoice-1' } }
+        ],
+        '2026-03-04T00:00:00.000Z'
+      )
+    );
+
+    expect(await invoicePaymentsTotal(invoiceId)).toBe(5000);
+    const invoice = await ctx.db('invoices').where({ tenant: ctx.tenantId, invoice_id: invoiceId }).first();
+    expect(invoice.status).toBe('paid');
+  }, HOOK_TIMEOUT);
+
+  it('migrates a legacy aggregate allocation id to per-AllocationID identity without losing the balance', async () => {
+    const invoiceId = await seedInvoiceAndExport();
+    // Legacy: two allocations with no AllocationID → one aggregate change.
+    await runCreditNotePoll({
+      CreditNoteID: 'replacement-cn',
+      CreditNoteNumber: 'CN-REPLACE',
+      Status: 'AUTHORISED',
+      Total: 50,
+      UpdatedDateUTC: '2026-03-03T00:00:00.000Z',
+      Allocations: [
+        { Amount: 25, Invoice: { InvoiceID: 'xero-invoice-1' } },
+        { Amount: 25, Invoice: { InvoiceID: 'xero-invoice-1' } }
+      ]
+    });
+    expect(await invoicePaymentsTotal(invoiceId)).toBe(5000);
+    const legacyId = 'creditnote:replacement-cn:inv:xero-invoice-1';
+
+    // Xero now returns AllocationIDs. The aggregate is removed, the new
+    // per-allocation change is applied.
+    await runCreditNotePoll(
+      creditNoteWithAllocations(
+        [{ AllocationID: 'new-allocation', Amount: 50, Invoice: { InvoiceID: 'xero-invoice-1' } }],
+        '2026-03-04T00:00:00.000Z'
+      )
+    );
+
+    expect(await invoicePaymentsTotal(invoiceId)).toBe(5000);
+    const ledger = new SyncMappingLedger(ctx.db, ctx.tenantId, 'xero');
+    expect((await ledger.findByExternalId('invoice_payment', legacyId, REALM))?.sync_status).toBe('reversed');
+    const invoice = await ctx.db('invoices').where({ tenant: ctx.tenantId, invoice_id: invoiceId }).first();
+    expect(invoice.status).toBe('paid');
+  }, HOOK_TIMEOUT);
+
+  it('recovers when the replacement is split across polls (reversal then application)', async () => {
+    const invoiceId = await seedInvoiceAndExport();
+    await runCreditNotePoll(
+      creditNoteWithAllocations(
+        [{ AllocationID: 'old-allocation', Amount: 50, Invoice: { InvoiceID: 'xero-invoice-1' } }],
+        '2026-03-03T00:00:00.000Z'
+      )
+    );
+
+    // Poll 2: the allocation disappears entirely (reversal only).
+    const reversedOnly = await runCreditNotePoll(creditNoteWithAllocations([], '2026-03-04T00:00:00.000Z'));
+    expect(reversedOnly.status).toBe('succeeded');
+    expect(await invoicePaymentsTotal(invoiceId)).toBe(0);
+    const afterReversal = await ctx.db('invoices').where({ tenant: ctx.tenantId, invoice_id: invoiceId }).first();
+    expect(afterReversal.status).not.toBe('paid');
+
+    // Poll 3: the replacement arrives and settles the invoice.
+    await runCreditNotePoll(
+      creditNoteWithAllocations(
+        [{ AllocationID: 'new-allocation', Amount: 50, Invoice: { InvoiceID: 'xero-invoice-1' } }],
+        '2026-03-05T00:00:00.000Z'
+      )
+    );
+    expect(await invoicePaymentsTotal(invoiceId)).toBe(5000);
+    const finalInvoice = await ctx.db('invoices').where({ tenant: ctx.tenantId, invoice_id: invoiceId }).first();
+    expect(finalInvoice.status).toBe('paid');
+  }, HOOK_TIMEOUT);
 });

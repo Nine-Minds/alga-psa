@@ -235,29 +235,30 @@ export class XeroAdapter implements AccountingExportAdapter {
 
     // Reconcile credit notes whose allocations were removed: emit a deletion
     // for any previously recorded synthetic allocation that is no longer in
-    // Xero's current allocation set.
+    // Xero's current allocation set. Deletions are emitted before the document
+    // changes that may have created them so a replacement is reversible even
+    // if a consumer does not reorder; the shared cycle still sorts deletions
+    // ahead of applications.
     if (currentCreditAllocations.size > 0) {
       const removed = await this.findRemovedCreditAllocations(
         tenantId,
         targetRealm,
         currentCreditAllocations
       );
-      changes.push(...removed);
+      changes.unshift(...removed);
     }
 
-    // When a safety page cap was hit, resume from the newest record already
-    // fetched so successive capped polls move forward instead of re-reading
-    // the same first pages forever.
-    const maxUpdated = [invoices.maxUpdated, payments.maxUpdated, creditNotes.maxUpdated]
-      .filter((value): value is string => Boolean(value))
-      .sort()
-      .pop();
-
+    // No nextCursor is emitted: with a single stored timestamp there is no safe
+    // resume boundary when a feed truncates. Xero pages are not guaranteed to
+    // be ordered by UpdatedDateUTC, and a set larger than the page cap can share
+    // one timestamp across pages, so advancing to the newest fetched record (or
+    // to a newer completed feed's timestamp) can skip unread history. The cycle
+    // leaves the cursor untouched on a truncated poll and re-polls the same
+    // window until the source stops truncating.
     return {
       changes,
       truncated,
-      fetchedAt: watermark,
-      nextCursor: truncated ? maxUpdated ?? watermark : undefined
+      fetchedAt: watermark
     };
   }
 
@@ -265,10 +266,9 @@ export class XeroAdapter implements AccountingExportAdapter {
     client: XeroClientService,
     kind: 'invoice' | 'payment' | 'creditNote',
     since: string
-  ): Promise<{ records: Array<Record<string, any>>; truncated: boolean; maxUpdated: string | null }> {
+  ): Promise<{ records: Array<Record<string, any>>; truncated: boolean }> {
     const records: Array<Record<string, any>> = [];
-    let maxUpdated: string | null = null;
-    const MAX_PAGES = 100;
+    const MAX_PAGES = 1000;
 
     for (let page = 1; page <= MAX_PAGES; page += 1) {
       const result =
@@ -279,19 +279,13 @@ export class XeroAdapter implements AccountingExportAdapter {
             : await client.listChangedCreditNotes(since, page);
 
       records.push(...result.records);
-      for (const record of result.records) {
-        const updated = xeroDateToIso(record?.UpdatedDateUTC);
-        if (updated && (!maxUpdated || updated > maxUpdated)) {
-          maxUpdated = updated;
-        }
-      }
 
       if (!result.hasMore) {
-        return { records, truncated: false, maxUpdated };
+        return { records, truncated: false };
       }
     }
 
-    return { records, truncated: true, maxUpdated };
+    return { records, truncated: true };
   }
 
   private async findRemovedCreditAllocations(

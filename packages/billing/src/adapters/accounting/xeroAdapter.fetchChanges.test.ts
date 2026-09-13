@@ -213,24 +213,73 @@ describe('XeroAdapter.fetchChanges', () => {
     expect(result.changes.filter((c) => c.entityType === 'Invoice')).toHaveLength(101);
   });
 
-  it('exposes a forward nextCursor when the safety page cap is hit', async () => {
-    const fullPage = Array.from({ length: 100 }, (_, index) => ({
-      InvoiceID: `cap-${index}`,
-      InvoiceNumber: `CAP-${index}`,
-      Status: 'AUTHORISED',
-      Total: 1,
-      UpdatedDateUTC: `/Date(${1700000000000 + index * 1000}+0000)/`
+  it('does not emit a resume boundary when any feed is truncated (mixed feeds)', async () => {
+    // The invoice feed never completes and its records stop at January 2...
+    xeroListChangedInvoices.mockImplementation(async (_since: string, page: number) => ({
+      records: [
+        {
+          InvoiceID: `invoice-${page}`,
+          Status: 'AUTHORISED',
+          Total: 1,
+          UpdatedDateUTC: '2026-01-02T00:00:00.000Z'
+        }
+      ],
+      hasMore: true
     }));
-    xeroListChangedInvoices.mockResolvedValue({ records: fullPage, hasMore: true });
+    // ...while the payment feed completes with a much newer January 20 record.
+    xeroListChangedPayments.mockResolvedValue({
+      records: [
+        {
+          PaymentID: 'recent-payment',
+          Amount: 1,
+          Invoice: { InvoiceID: 'other-invoice' },
+          UpdatedDateUTC: '2026-01-20T00:00:00.000Z'
+        }
+      ],
+      hasMore: false
+    });
 
     const adapter = await XeroAdapter.create();
     const result = await adapter.fetchChanges('tenant-x', '2026-01-01T00:00:00Z', 'conn-1');
 
     expect(result.truncated).toBe(true);
-    // Resume boundary is the newest record already fetched, so the next poll
-    // advances instead of re-reading the same pages.
-    expect(result.nextCursor).toBe(new Date(1700000000000 + 99 * 1000).toISOString());
-    expect(new Date(result.fetchedAt).getTime()).toBeLessThanOrEqual(Date.now());
+    // The newer completed feed must NOT provide a resume boundary: January 3+
+    // invoice pages are still unread. No boundary means the cycle keeps its
+    // cursor and re-polls the same window.
+    expect(result.nextCursor).toBeUndefined();
+  });
+
+  it('does not advance past a block of identical timestamps that exceeds the cap', async () => {
+    xeroListChangedInvoices.mockImplementation(async (_since: string, page: number) => ({
+      records: [
+        {
+          InvoiceID: `same-timestamp-${page}`,
+          Status: 'AUTHORISED',
+          Total: 1,
+          UpdatedDateUTC: '2026-01-05T00:00:00.000Z'
+        }
+      ],
+      hasMore: true
+    }));
+
+    const adapter = await XeroAdapter.create();
+    const result = await adapter.fetchChanges('tenant-x', '2026-01-01T00:00:00Z', 'conn-1');
+
+    expect(result.truncated).toBe(true);
+    expect(result.nextCursor).toBeUndefined();
+  });
+
+  it('tolerates records with missing timestamps without throwing', async () => {
+    xeroListChangedInvoices.mockResolvedValueOnce({
+      records: [{ InvoiceID: 'no-date', Status: 'AUTHORISED', Total: 3 }],
+      hasMore: false
+    });
+
+    const adapter = await XeroAdapter.create();
+    const result = await adapter.fetchChanges('tenant-x', '2026-01-01T00:00:00Z', 'conn-1');
+    const change = result.changes.find((c) => c.externalId === 'no-date');
+    expect(change).toBeDefined();
+    expect(change?.updatedAt).toBeUndefined();
   });
 
   it('propagates a mid-pagination failure so the cycle keeps its cursor', async () => {

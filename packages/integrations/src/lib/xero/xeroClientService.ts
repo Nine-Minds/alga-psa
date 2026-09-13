@@ -907,6 +907,20 @@ export class XeroClientService {
         [this.connection.connectionId]: this.connection
       });
     } catch (error) {
+      // Terminal token failures (revoked/expired refresh token, rejected
+      // client) require re-authentication and must be classified as such at
+      // the client boundary — the sync cycle turns them into a
+      // connection-expired exception. Transient failures (network, 5xx) stay
+      // retryable.
+      if (isTerminalXeroTokenFailure(error)) {
+        const status = axios.isAxiosError(error) ? error.response?.status : undefined;
+        const oauthError = getXeroOAuthError(error);
+        throw new AppError(
+          'XERO_REFRESH_FAILED',
+          'Xero refresh token was rejected; re-authentication is required',
+          { status, oauthError }
+        );
+      }
       const normalized = this.normalizeError(error);
       if (normalized.code === 'XERO_API_ERROR') {
         normalized.message = 'Failed to refresh Xero access token';
@@ -984,6 +998,41 @@ export class XeroClientService {
       originalError: toSafeProviderError('xero', error)
     });
   }
+}
+
+const TERMINAL_XERO_OAUTH_ERRORS = new Set([
+  'invalid_grant',
+  'invalid_client',
+  'unauthorized_client'
+]);
+
+function getXeroOAuthError(error: unknown): string | undefined {
+  if (!axios.isAxiosError(error)) {
+    return undefined;
+  }
+  const data = error.response?.data as Record<string, unknown> | undefined;
+  return typeof data?.error === 'string' ? data.error : undefined;
+}
+
+/**
+ * Whether a failed refresh can never succeed without re-authentication.
+ * Revoked/expired refresh tokens and rejected clients surface as OAuth errors
+ * or a 400/401 from the token endpoint; everything else (network, 5xx) stays
+ * retryable.
+ */
+function isTerminalXeroTokenFailure(error: unknown): boolean {
+  if (error instanceof AppError) {
+    return ['XERO_REFRESH_EXPIRED', 'XERO_UNAUTHORIZED', 'XERO_REFRESH_FAILED'].includes(error.code);
+  }
+  if (!axios.isAxiosError(error)) {
+    return false;
+  }
+  const oauthError = getXeroOAuthError(error);
+  if (oauthError && TERMINAL_XERO_OAUTH_ERRORS.has(oauthError)) {
+    return true;
+  }
+  const status = error.response?.status;
+  return status === 400 || status === 401;
 }
 
 export async function getXeroConnectionSummaries(tenantId: string): Promise<XeroConnectionSummary[]> {

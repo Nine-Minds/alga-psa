@@ -18,7 +18,7 @@ import {
   getAccountingSyncHealth,
   updateAccountingSyncSettingsAction,
   runAccountingSyncNow,
-  setDefaultQboRealm,
+  setDefaultAccountingRealm,
 } from '../../actions/accountingSyncActions';
 import type { AccountingSyncHealth } from '../../actions/accountingSyncActions';
 // eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- billing-owned panel is slot-injected into the integrations settings page and reads the QBO catalogs directly (same bridge as the accounting export adapter)
@@ -106,9 +106,12 @@ export default function QboSyncHealthPanel() {
   return (
     <Card id="qbo-integration-sync-health-card">
       <CardHeader>
-        <CardTitle>{t('integrations.qbo.sync.healthCardTitle', { defaultValue: `${providerLabel} Sync Health` })}</CardTitle>
+        <CardTitle>{t('integrations.qbo.sync.healthCardTitleProvider', { provider: providerLabel, defaultValue: '{{provider}} Sync Health' })}</CardTitle>
         <CardDescription>
-          {t('integrations.qbo.sync.healthCardDescription', { defaultValue: `${providerLabel} accounting sync status and controls. Runs every 15 minutes.` })}
+          {t('integrations.qbo.sync.healthCardDescriptionProvider', {
+            provider: providerLabel,
+            defaultValue: '{{provider}} accounting sync status and controls. Runs every 15 minutes.'
+          })}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -234,8 +237,8 @@ export default function QboSyncHealthPanel() {
               <Alert variant={expired ? 'destructive' : 'info'}>
                 <AlertDescription>
                   {expired
-                    ? t('integrations.qbo.sync.refreshTokenExpired', { defaultValue: `${providerLabel} token expired — reconnect to resume syncing.` })
-                    : t('integrations.qbo.sync.refreshTokenExpiry', { date: expiresDate, defaultValue: `${providerLabel} token expires ${expiresDate}` })}
+                    ? t('integrations.qbo.sync.refreshTokenExpiredProvider', { provider: providerLabel, defaultValue: '{{provider}} token expired — reconnect to resume syncing.' })
+                    : t('integrations.qbo.sync.refreshTokenExpiryProvider', { provider: providerLabel, date: expiresDate, defaultValue: '{{provider}} token expires {{date}}' })}
                 </AlertDescription>
               </Alert>
             );
@@ -258,7 +261,7 @@ export default function QboSyncHealthPanel() {
                       <Badge variant="secondary">
                         {t('integrations.qbo.sync.defaultRealm', { defaultValue: 'Default' })}
                       </Badge>
-                    ) : canManageConnections && !isXero ? (
+                    ) : canManageConnections ? (
                       <Button
                         id={`qbo-make-default-${realm.realmId}`}
                         variant="outline"
@@ -267,7 +270,8 @@ export default function QboSyncHealthPanel() {
                         onClick={async () => {
                           setSavingRef(realm.realmId);
                           try {
-                            await setDefaultQboRealm(realm.realmId);
+                            const providerType = health.adapterType === 'xero' ? 'xero' : 'quickbooks_online';
+                            await setDefaultAccountingRealm(providerType, realm.realmId);
                             await loadHealth();
                           } finally {
                             setSavingRef(null);
@@ -389,8 +393,9 @@ export default function QboSyncHealthPanel() {
             <div className="flex items-center justify-between">
               <div className="pr-4">
                 <span className="text-sm font-medium">
-                  {t('integrations.qbo.sync.autoProvisionCustomersLabel', {
-                    defaultValue: `Create ${providerLabel} customers automatically`
+                  {t('integrations.qbo.sync.autoProvisionCustomersLabelProvider', {
+                    provider: providerLabel,
+                    defaultValue: 'Create {{provider}} customers automatically'
                   })}
                 </span>
                 <p className="text-xs text-muted-foreground">
@@ -431,7 +436,10 @@ export default function QboSyncHealthPanel() {
             setSyncNowRunning(true);
             setSyncNowFeedback(null);
             try {
-              const result = await runAccountingSyncNow();
+              const result = await runAccountingSyncNow({
+                preferredAdapterType: health.adapterType === 'xero' ? 'xero' : 'quickbooks_online',
+                preferredTargetRealm: defaultRealm ?? undefined
+              });
               if (result.ran) {
                 setSyncNowFeedback({ type: 'success', message: t('integrations.qbo.sync.syncNowSuccess', { defaultValue: 'Sync completed successfully.' }) });
               } else {

@@ -20,8 +20,9 @@ vi.mock('@alga-psa/billing/services', () => ({
   },
   resolveConnectedAccountingIntegration: (...a: unknown[]) => resolveConnectedAccountingIntegrationMock(...a),
 }));
+const qboCredentialsMock = vi.fn(async () => ({} as Record<string, any>));
 vi.mock('@alga-psa/integrations/lib/qbo/qboClientService', () => ({
-  getStoredQboCredentialsMap: vi.fn(),
+  getStoredQboCredentialsMap: (...a: unknown[]) => qboCredentialsMock(...a),
 }));
 vi.mock('@alga-psa/integrations/lib/xero/xeroClientService', () => ({
   getStoredXeroConnections: (...a: unknown[]) => xeroConnectionsMock(...a),
@@ -64,6 +65,8 @@ describe('accountingSyncCycleHandler scheduled targets', () => {
     isProviderDisconnectActiveMock.mockResolvedValue(false);
     getConnectionMock.mockReset();
     getConnectionMock.mockResolvedValue({});
+    qboCredentialsMock.mockReset();
+    qboCredentialsMock.mockResolvedValue({});
     runWithTenantMock.mockReset();
     runWithTenantMock.mockImplementation(async (_tenant: string, cb: () => Promise<void>) => cb());
   });
@@ -83,6 +86,21 @@ describe('accountingSyncCycleHandler scheduled targets', () => {
     expect(runCycleMock).toHaveBeenCalledTimes(2);
     const realms = runCycleMock.mock.calls.map((call) => call[0].targetRealm).sort();
     expect(realms).toEqual(['conn-1', 'conn-2']);
+  });
+
+  it('processes both connected providers, not only the resolver-selected one', async () => {
+    resolveConnectedAccountingIntegrationMock.mockResolvedValue({
+      adapterType: 'quickbooks_online',
+      targetRealm: 'realm-1'
+    });
+    qboCredentialsMock.mockResolvedValue({ 'realm-1': {} });
+    xeroConnectionsMock.mockResolvedValue({ 'conn-9': {} });
+
+    await accountingSyncCycleHandler({ tenantId: 't1' } as any);
+
+    expect(runCycleMock).toHaveBeenCalledTimes(2);
+    const adapters = runCycleMock.mock.calls.map((call) => call[0].adapterType).sort();
+    expect(adapters).toEqual(['quickbooks_online', 'xero']);
   });
 });
 

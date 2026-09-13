@@ -167,3 +167,34 @@ test is added where the harness allows, otherwise the limitation is recorded.
   (real export → poll → apply, AR rows, balances, cursor, real allocation
   query) and QBO provider-operation regressions against the simulator.
 
+## Follow-up hardening (review round 2)
+
+- Cursor safety: a truncated poll no longer advances to any timestamp. A
+  single stored cursor cannot describe an unfinished feed, and a newer
+  completed feed must not supply the boundary. Adapters no longer emit a
+  `nextCursor`; the cycle leaves the cursor untouched and re-polls the same
+  window until the source stops truncating. Paging caps were raised
+  (Xero 1000 pages). The cycle records the un-overlapped resume base as
+  `cursor_before` so failed-first-cycle fallbacks no longer subtract the
+  overlap repeatedly.
+- Credit replacement: the cycle orders deletions before applications, so an
+  allocation that fully settled an invoice is reversed before its replacement
+  is applied. DB-backed tests cover single and multiple replacements, legacy
+  aggregate→AllocationID migration, split reversal/application recovery, and
+  replay, asserting real invoice balances, statuses and transactions.
+- Organisation selection fails closed: an explicitly requested provider or
+  organisation that is gone returns null (never another target). Authenticated
+  actions accept the selection and surface an actionable unavailable error;
+  the health panel exposes Make default for Xero and passes the selected
+  organisation to Sync Now; the scheduler enumerates every connected target
+  across both providers.
+- UI/translations: the health/Sync Now slot is mounted in the Xero settings
+  flow, and provider-aware `{{provider}}` translation keys are added to the
+  real locale resources with tests asserting interpolation against the English
+  resources.
+- Token classification: revoked refresh credentials (400 invalid_grant, 401)
+  are classified reconnect-required at the client boundary while transient
+  failures stay retryable; HTTP-boundary tests cover polling headers,
+  organisation selection, paging and token-refresh classification.
+
+
