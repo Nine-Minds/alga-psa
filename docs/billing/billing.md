@@ -169,7 +169,7 @@ The billing engine lives in `server/src/lib/billing/billingEngine.ts`. It operat
 3. **Guard rails** – `validateBillingPeriod` ensures the requested range does not span cycle changes. Existing invoices are detected via `hasExistingInvoiceForCycle`.
 4. **Collect client contract lines** – `getClientContractLinesAndCycle` joins `client_contract_lines`, `contract_lines`, `client_contract_line_pricing`, `client_contract_line_terms`, and the parent contract to build a normalized in-memory model. Template references are resolved so both template-sourced and bespoke lines participate.
 5. **Charge calculation** – for each client contract line the engine executes:
-   - `calculateFixedPriceCharges` – handles fixed-fee lines. Custom rates from `client_contract_line_pricing` or active `contract_pricing_schedules` short-circuit to a single consolidated charge. Otherwise the function gathers services from `client_contract_services` + configuration tables, derives FMV allocations, prorates when required, and calculates per-service tax using `TaxService`.
+   - `calculateFixedPriceCharges` – handles fixed-fee lines. A `contract_lines.custom_rate` (`rate_provenance` `custom`/`unreviewed`) or an active `contract_pricing_schedules` override short-circuits to a single consolidated charge. Otherwise the function gathers services from the line's configuration tables, derives FMV allocations, prorates when required, and calculates per-service tax using `TaxService`.
    - `calculateTimeBasedCharges` – pulls approved `time_entries` tied to the line, respecting overtime rules, user type overrides, and rounding settings from `client_contract_line_terms` and `client_contract_service_hourly_config`.
    - `calculateUsageBasedCharges` – consumes `usage_tracking`, applies tiered pricing via `client_contract_service_rate_tiers`, and produces `IUsageBasedCharge` entries.
    - `calculateBucketPlanCharges` – reconciles `bucket_usage` rollovers and overages for retainer-style offerings.
@@ -182,7 +182,7 @@ The billing engine lives in `server/src/lib/billing/billingEngine.ts`. It operat
 ### Discount & Pricing Inputs
 
 - `discounts` and `contract_line_discounts` define percentage or fixed discounts with effective windows.
-- Pricing hierarchy: template defaults → contract-level overrides (`contract_lines.custom_rate`) → active pricing schedule (`contract_pricing_schedules`) → client-specific overrides (`client_contract_line_pricing.custom_rate`). The first non-null value in that chain wins.
+- Pricing hierarchy (fixed/recurring): active `contract_pricing_schedules` override (line-scoped rows before contract-wide, newest `effective_date` wins, and a latest row with a NULL rate blocks older rows) → `contract_lines.custom_rate` (only while `rate_provenance` is `custom` or `unreviewed`) → effective `service_prices` catalog rate in the contract's currency → legacy `service_catalog.default_rate`, and only for the tenant default currency when no `service_prices` row exists. The first non-null value in that chain wins. A line with `rate_provenance = 'inherited'` stores no rate and follows the catalog. This chain is implemented once in `packages/billing/src/lib/billing/pricing/resolveFixedLineRate.ts`; billing, the deferred-revenue report and the simulator all resolve through it.
 
 ### Data Quality & Validation
 
