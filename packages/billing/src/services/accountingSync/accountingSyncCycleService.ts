@@ -126,16 +126,20 @@ export async function runAccountingSyncCycle(params: RunCycleParams): Promise<Ru
 
   // First run starts at "now": connecting must never import history — the
   // onboarding wizard (slice 3) is the deliberate path for that.
+  //
+  // The resume base is the un-overlapped boundary. It is what `cursor_before`
+  // records, so a failed first cycle's fallback reuses the SAME base instead of
+  // subtracting the overlap again on every retry (which walked the cursor
+  // backward).
   const lastCursor = await cycles.getLastSuccessfulCursor(tenantId, adapterType, targetRealm);
-  const since = lastCursor
-    ? new Date(new Date(lastCursor).getTime() - CURSOR_OVERLAP_MS).toISOString()
-    : new Date(now().getTime() - CURSOR_OVERLAP_MS).toISOString();
+  const resumeBase = lastCursor ? new Date(lastCursor).toISOString() : now().toISOString();
+  const since = new Date(new Date(resumeBase).getTime() - CURSOR_OVERLAP_MS).toISOString();
 
   const cycleId = await cycles.startCycle({
     tenant: tenantId,
     adapterType,
     targetRealm,
-    cursorBefore: since
+    cursorBefore: resumeBase
   });
 
   // Token expiry countdown (14/7/2 days, each announced once).
@@ -205,7 +209,19 @@ export async function runAccountingSyncCycle(params: RunCycleParams): Promise<Ru
         await applyExternalCustomerChange({ tenantId, targetRealm, ledger, exceptions, stats }, change);
       }
 
-      for (const change of byType('Payment')) {
+      // Reversals must run before applications. A credit/ payment replacement
+      // arrives as a deletion plus a new allocation in the same poll: applying
+      // the replacement first would be refused by the already-settled guard
+      // (the invoice is still settled by the old allocation), and then the old
+      // allocation would be reversed — netting the invoice back to unpaid. With
+      // deletions first, the balance is freed before the replacement lands.
+      const paymentChanges = byType('Payment');
+      const orderedPaymentChanges = [
+        ...paymentChanges.filter((change) => change.deleted),
+        ...paymentChanges.filter((change) => !change.deleted)
+      ];
+
+      for (const change of orderedPaymentChanges) {
         await applyExternalPaymentChange(
           { knex, tenantId, adapterType, targetRealm, ledger, exceptions, stats, adapter: params.adapter },
           change
@@ -229,14 +245,15 @@ export async function runAccountingSyncCycle(params: RunCycleParams): Promise<Ru
       return { ran: true, status: 'failed', cycleId, stats, error: message };
     }
 
-    // Advance only after every fetched change was durably handled. A truncated
-    // poll resumes from the adapter's forward boundary (`nextCursor`) or, when
-    // the source cannot supply one, from the conservative pre-poll watermark —
-    // never from `since` (which already subtracts the overlap and would crawl
-    // backward on successive capped cycles).
-    cursorAfter = changeSet.truncated
-      ? changeSet.nextCursor ?? changeSet.fetchedAt
-      : changeSet.fetchedAt;
+    // Advance only after the poll durably covered everything. A truncated poll
+    // has NO safe single-timestamp resume boundary: the unread records can be
+    // anywhere in the window, and a newer timestamp from a different, completed
+    // feed would skip them. So a truncated poll leaves the cursor untouched —
+    // the next cycle re-polls the same window (idempotent appliers make the
+    // reprocessing safe), and once the source stops truncating it advances.
+    if (!changeSet.truncated) {
+      cursorAfter = changeSet.fetchedAt;
+    }
   }
 
   // ── Outbound ───────────────────────────────────────────────────────────

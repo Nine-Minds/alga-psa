@@ -310,15 +310,15 @@ describe('runAccountingSyncCycle', () => {
     expect(finishCycleCall.cursorAfter).toBe(fetchedAt);
   });
 
-  it('truncated change set advances to the adapter nextCursor (forward progress)', async () => {
-    const fetchedAt = '2026-01-15T13:00:00.000Z';
-    const nextCursor = '2026-01-15T12:30:00.000Z';
+  it('truncated change set does not advance the cursor', async () => {
     const adapter = makeFakeAdapter({
       fetchChanges: vi.fn(async () => ({
         changes: [],
         truncated: true,
-        fetchedAt,
-        nextCursor
+        fetchedAt: '2026-01-15T13:00:00.000Z',
+        // Even an adapter-provided boundary must not be used: a single
+        // timestamp cannot describe an unfinished feed.
+        nextCursor: '2026-01-15T12:30:00.000Z'
       }))
     });
 
@@ -343,28 +343,18 @@ describe('runAccountingSyncCycle', () => {
     });
 
     expect(finishCycleCall.status).toBe('succeeded');
-    // Resuming from the adapter's forward boundary avoids the backward crawl
-    // that storing `since` caused on successive capped cycles.
-    expect(finishCycleCall.cursorAfter).toBe(nextCursor);
+    expect(finishCycleCall.cursorAfter).toBeUndefined();
   });
 
-  it('truncated change set without nextCursor keeps the pre-poll watermark', async () => {
-    const fetchedAt = '2026-01-15T13:00:00.000Z';
-    const adapter = makeFakeAdapter({
-      fetchChanges: vi.fn(async () => ({
-        changes: [],
-        truncated: true,
-        fetchedAt
-      }))
-    });
-
-    let finishCycleCall: any = null;
+  it('resumes from the raw cursor_before without re-subtracting the overlap after a failed first cycle', async () => {
+    // A prior failed cycle recorded cursor_before = the resume base. The next
+    // run must use that base (minus ONE overlap), not base minus two overlaps.
+    const resumeBase = '2026-01-15T12:00:00.000Z';
+    const adapter = makeFakeAdapter();
     vi.mocked(SyncCycleRepository).mockImplementationOnce(function () { return ({
-      getLastSuccessfulCursor: vi.fn(async () => null),
-      startCycle: vi.fn(async () => 'cycle-truncated-2'),
-      finishCycle: vi.fn(async (_tenant: string, _cycleId: string, result: any) => {
-        finishCycleCall = result;
-      })
+      getLastSuccessfulCursor: vi.fn(async () => resumeBase),
+      startCycle: vi.fn(async () => 'cycle-resume'),
+      finishCycle: vi.fn(async () => undefined)
     } as any); });
 
     await runAccountingSyncCycle({
@@ -375,10 +365,11 @@ describe('runAccountingSyncCycle', () => {
       adapter,
       exceptions: makeFakeExceptions(),
       notifications: makeFakeNotifications(),
-      now: () => new Date('2026-01-15T12:00:00.000Z')
+      now: () => new Date('2026-01-15T13:00:00.000Z')
     });
 
-    expect(finishCycleCall.cursorAfter).toBe(fetchedAt);
+    const expectedSince = new Date(new Date(resumeBase).getTime() - CURSOR_OVERLAP_MS).toISOString();
+    expect(adapter.fetchChanges).toHaveBeenCalledWith(TENANT, expectedSince, REALM);
   });
 
   it('inbound failure → status failed, no cursorAfter', async () => {
@@ -452,7 +443,7 @@ describe('runAccountingSyncCycle', () => {
     expect(notifications.notifyConnectionExpired).toHaveBeenCalled();
   });
 
-  it.each(['XERO_REFRESH_EXPIRED', 'XERO_UNAUTHORIZED'])(
+  it.each(['XERO_REFRESH_EXPIRED', 'XERO_REFRESH_FAILED', 'XERO_UNAUTHORIZED'])(
     '%s aborts the cycle as reconnect-required with no cursor advance',
     async (code) => {
       const adapter = makeFakeAdapter({

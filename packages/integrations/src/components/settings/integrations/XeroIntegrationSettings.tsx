@@ -66,7 +66,9 @@ function statusBadgeVariant(status?: 'connected' | 'expired'): 'success' | 'seco
   return 'secondary';
 }
 
-export default function XeroIntegrationSettings() {
+export default function XeroIntegrationSettings(
+  { syncHealthSlot }: { syncHealthSlot?: React.ReactNode } = {}
+) {
   const { t } = useTranslation('msp/integrations');
   const caps = useAccountingCapabilities();
   const searchParams = useSearchParams();
@@ -580,6 +582,8 @@ export default function XeroIntegrationSettings() {
           </CardContent>
         </Card>
       )}
+
+      {defaultConnection ? syncHealthSlot : null}
     </div>
   );
 }

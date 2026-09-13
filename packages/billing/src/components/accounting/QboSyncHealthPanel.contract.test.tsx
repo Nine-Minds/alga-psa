@@ -17,6 +17,7 @@ const getAccountingSyncHealthMock = vi.hoisted(() => vi.fn());
 const updateAccountingSyncSettingsActionMock = vi.hoisted(() => vi.fn());
 const runAccountingSyncNowMock = vi.hoisted(() => vi.fn());
 const setDefaultQboRealmMock = vi.hoisted(() => vi.fn());
+const setDefaultAccountingRealmMock = vi.hoisted(() => vi.fn());
 const getQboAccountsMock = vi.hoisted(() => vi.fn());
 const getQboClassesMock = vi.hoisted(() => vi.fn());
 const getQboDepartmentsMock = vi.hoisted(() => vi.fn());
@@ -76,6 +77,7 @@ vi.mock('../../actions/accountingSyncActions', () => ({
   updateAccountingSyncSettingsAction: async (...args: unknown[]) => updateAccountingSyncSettingsActionMock(...args),
   runAccountingSyncNow: async (...args: unknown[]) => runAccountingSyncNowMock(...args),
   setDefaultQboRealm: async (...args: unknown[]) => setDefaultQboRealmMock(...args),
+  setDefaultAccountingRealm: async (...args: unknown[]) => setDefaultAccountingRealmMock(...args),
 }));
 
 vi.mock('@alga-psa/integrations/actions', () => ({
@@ -519,5 +521,43 @@ describe('QboSyncHealthPanel contracts', () => {
     expect(getQboAccountsMock).not.toHaveBeenCalled();
     expect(getQboClassesMock).not.toHaveBeenCalled();
     expect(getQboDepartmentsMock).not.toHaveBeenCalled();
+  });
+
+  it('T086: a Xero connection offers organisation selection and passes the Xero target to Sync Now', async () => {
+    setDefaultAccountingRealmMock.mockResolvedValue({ success: true });
+    runAccountingSyncNowMock.mockResolvedValue({ ran: true, status: 'succeeded' });
+    getAccountingSyncHealthMock.mockResolvedValue({
+      ...healthConnected,
+      adapterType: 'xero',
+      organisationName: 'Acme Xero Org',
+      autoApplyCreditsEnabled: null,
+      realms: [
+        { realmId: 'conn-1', isDefault: true },
+        { realmId: 'conn-2', isDefault: false }
+      ]
+    });
+
+    const { default: QboSyncHealthPanel } = await import('./QboSyncHealthPanel');
+    render(<QboSyncHealthPanel />);
+
+    await waitFor(() => {
+      expect(document.getElementById('qbo-integration-sync-health-card')).toBeInTheDocument();
+    });
+    await waitFor(() => {
+      expect(document.getElementById('qbo-realm-list')).toBeInTheDocument();
+    });
+
+    // Xero's second organisation is selectable (previously hidden).
+    fireEvent.click(screen.getByRole('button', { name: 'Make default' }));
+    await waitFor(() => {
+      expect(setDefaultAccountingRealmMock).toHaveBeenCalledWith('xero', 'conn-2');
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Sync Now' }));
+    await waitFor(() => {
+      expect(runAccountingSyncNowMock).toHaveBeenCalledWith(
+        expect.objectContaining({ preferredAdapterType: 'xero', preferredTargetRealm: 'conn-1' })
+      );
+    });
   });
 });

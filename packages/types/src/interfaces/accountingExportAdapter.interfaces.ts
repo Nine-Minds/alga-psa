@@ -145,9 +145,11 @@ export interface AccountingChangeSet {
   /** Timestamp the changes were fetched (next cycle's cursor basis) */
   fetchedAt: string;
   /**
-   * Forward boundary to persist when the source was truncated, so successive
-   * capped polls make progress instead of re-reading the same pages. When
-   * absent the caller must fall back to a conservative pre-poll watermark.
+   * @deprecated Not populated by the shipping adapters and not used to advance
+   * the cursor. A single stored timestamp cannot safely describe an unfinished
+   * feed (mixed truncated/complete feeds, identical timestamps spanning pages),
+   * so a truncated poll leaves the cursor untouched and re-polls the same
+   * window. Retained only for interface compatibility.
    */
   nextCursor?: string;
 }

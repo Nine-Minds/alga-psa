@@ -292,7 +292,7 @@ export default function AccountingIntegrationsSetup({ qboSyncHealthSlot, qboOnbo
         ) : selected === 'quickbooks_online' ? (
           <QboIntegrationSettings syncHealthSlot={qboSyncHealthSlot} onboardingSlot={qboOnboardingSlot} />
         ) : selected === 'xero' ? (
-          <XeroIntegrationSettings />
+          <XeroIntegrationSettings syncHealthSlot={qboSyncHealthSlot} />
         ) : selected === 'xero_csv' ? (
           <XeroCsvIntegrationSettings />
         ) : (

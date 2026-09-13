@@ -1986,7 +1986,12 @@
         "noDefault": "Sem padrão",
         "saving": "Salvando…",
         "undepositedFunds": "Fundos não depositados (padrão)",
-        "catalogLoadError": "Falha ao carregar as opções de configuração da sincronização com o QuickBooks."
+        "catalogLoadError": "Falha ao carregar as opções de configuração da sincronização com o QuickBooks.",
+        "healthCardTitleProvider": "{{provider}} Sync Health",
+        "healthCardDescriptionProvider": "{{provider}} accounting sync status and controls. Runs every 15 minutes.",
+        "refreshTokenExpiredProvider": "{{provider}} token expired — reconnect to resume syncing.",
+        "refreshTokenExpiryProvider": "{{provider}} token expires {{date}}",
+        "autoProvisionCustomersLabelProvider": "Create {{provider}} customers automatically"
       },
       "itemImport": {
         "description": "Importe seus produtos e serviços do QuickBooks para o catálogo de serviços do Alga para a empresa conectada do QuickBooks. O QuickBooks continua sendo a fonte oficial para nomes, preços, SKUs, descrições e custos; o método de faturamento, a unidade de medida e o tipo de serviço são definidos aqui e depois passam a ser gerenciados no Alga. Esta etapa é opcional — pule-a com Avançar.",

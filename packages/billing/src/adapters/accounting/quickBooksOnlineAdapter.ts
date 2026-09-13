@@ -243,17 +243,13 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
     const changeSet = await qboClient.fetchChanges(since);
     const changes = changeSet.changes.map((change) => normalizeQboChange(change));
 
-    const maxUpdated = changes
-      .map((change) => change.updatedAt)
-      .filter((value): value is string => Boolean(value))
-      .sort()
-      .pop();
-
+    // No nextCursor: QBO's CDC cap is per-entity and the shared timestamp
+    // cannot describe which entity feed is unfinished. A truncated poll keeps
+    // the cursor so no unread change is skipped.
     return {
       changes,
       truncated: changeSet.truncated,
-      fetchedAt: watermark,
-      nextCursor: changeSet.truncated ? maxUpdated ?? watermark : undefined
+      fetchedAt: watermark
     };
   }
 

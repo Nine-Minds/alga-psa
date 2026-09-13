@@ -1986,7 +1986,12 @@
         "noDefault": "Geen standaard",
         "saving": "Opslaan…",
         "undepositedFunds": "Niet-gestorte middelen (standaard)",
-        "catalogLoadError": "Configuratieopties voor QuickBooks-synchronisatie laden mislukt."
+        "catalogLoadError": "Configuratieopties voor QuickBooks-synchronisatie laden mislukt.",
+        "healthCardTitleProvider": "{{provider}} Sync Health",
+        "healthCardDescriptionProvider": "{{provider}} accounting sync status and controls. Runs every 15 minutes.",
+        "refreshTokenExpiredProvider": "{{provider}} token expired — reconnect to resume syncing.",
+        "refreshTokenExpiryProvider": "{{provider}} token expires {{date}}",
+        "autoProvisionCustomersLabelProvider": "Create {{provider}} customers automatically"
       },
       "itemImport": {
         "description": "Importeer uw QuickBooks-producten en -services in de Alga-servicecatalogus voor het verbonden QuickBooks-bedrijf. QuickBooks blijft de gezaghebbende bron voor namen, tarieven, SKU’s, beschrijvingen en kosten; de facturatiemethode, maateenheid en het servicetype worden hier ingesteld en daarna door Alga beheerd. Deze stap is optioneel — sla deze over met Volgende.",
