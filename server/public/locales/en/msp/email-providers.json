@@ -786,7 +786,8 @@
         "authHint": "Leave username and password blank if your relay accepts mail without authentication.",
         "fromLabel": "From Address",
         "fromPlaceholder": "noreply@example.com",
-        "fromHelp": "Default sender for all outbound email. Ticket email can use its own identity below.",
+        "ticketIdentityRequired": "Choose a ticket email identity below to set the sending domain.",
+        "fromHelp": "Enter the mailbox name. The domain comes from the ticket email identity below.",
         "security": {
           "title": "Connection Security",
           "secure": "Use implicit TLS (SSL on connect, typically port 465)",
@@ -853,6 +854,7 @@
           "addressLabel": "From address",
           "addressPlaceholder": "support@example.com",
           "addressHelp": "This address controls reply routing for ticket email only.",
+          "smtpAddressHelp": "This address sets the domain for the SMTP sender above. Replies must reach a connected inbox to appear on tickets.",
           "microsoftAddressHelp": "Microsoft 365 requires ticket email to use the selected sending mailbox ({{mailbox}}).",
           "nameLabel": "Sender display name",
           "namePlaceholder": "Support",
@@ -876,16 +878,26 @@
         "savingButton": "Saving...",
         "saveButton": "Save sender identities"
       },
-      "diagnosticsButton": "Run Outbound Diagnostics"
+      "diagnosticsButton": "Run Outbound Diagnostics",
+      "saveSettings": "Save outbound settings",
+      "discardChanges": "Discard changes",
+      "unsaved": "Unsaved changes",
+      "noPendingChanges": "No unsaved changes",
+      "saving": "Saving outbound settings…",
+      "saved": "Outbound settings saved.",
+      "saveFailed": "Could not save outbound settings. Your changes are still here. Try again.",
+      "diagnosticsSaveHelp": "Save or discard your changes before checking the outbound settings.",
+      "saveBeforeDomainRemoval": "Save or discard your outbound changes before removing a domain.",
+      "senderAddressAfterSave": "Shown after saving."
     },
     "inbound": {
       "intro": "Configure inbound email routing and provider-specific automation."
     },
     "dialogs": {
       "clearTicketingFrom": {
-        "title": "Clear Ticketing From Address",
-        "message": "Clear the saved ticketing From address? Ticket notifications will stop using a custom From address until you save a new one.",
-        "confirm": "Clear From Address"
+        "title": "Clear ticket email identity",
+        "message": "Clear this ticket email identity from the form? This takes effect when you save outbound settings.",
+        "confirm": "Clear identity"
       },
       "removeDomain": {
         "title": "Remove Managed Domain",

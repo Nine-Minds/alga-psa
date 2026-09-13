@@ -4,7 +4,7 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import toast from 'react-hot-toast';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@alga-psa/ui/components/Card';
@@ -127,27 +127,41 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
   const [busyDomain, setBusyDomain] = useState<string | null>(null);
   const [overrides] = useState<ManagedEmailOverrides | undefined>(() => getManagedEmailOverrides());
   const [emailSettings, setEmailSettings] = useState<EmailSettingsView | null>(null);
+  const [savedEmailSettings, setSavedEmailSettings] = useState<EmailSettingsView | null>(null);
+  const saveInFlight = useRef(false);
   const [inboundProviders, setInboundProviders] = useState<EmailProvider[]>([]);
   const [ticketingFromCustom, setTicketingFromCustom] = useState('');
   const [ticketingFromName, setTicketingFromName] = useState('');
   const [ticketingFromError, setTicketingFromError] = useState<string | null>(null);
   const [ticketingFromWarning, setTicketingFromWarning] = useState<string | null>(null);
-  const [savingTicketingFrom, setSavingTicketingFrom] = useState(false);
+  const [savingOutbound, setSavingOutbound] = useState(false);
   const [showClearTicketingFromDialog, setShowClearTicketingFromDialog] = useState(false);
   const [loadingOutbound, setLoadingOutbound] = useState(true);
-  const [savingProvider, setSavingProvider] = useState(false);
   const [outboundProvider, setOutboundProvider] = useState<OutboundProvider>(
     canUseManagedEmail ? 'resend' : 'smtp'
   );
   const [microsoftMailboxes, setMicrosoftMailboxes] = useState<MicrosoftOutboundMailboxOption[]>([]);
   const [microsoftMailboxError, setMicrosoftMailboxError] = useState<string | null>(null);
   const [showSmtpPassword, setShowSmtpPassword] = useState(false);
-  const [savingSmtp, setSavingSmtp] = useState(false);
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
   const [pendingDomainRemoval, setPendingDomainRemoval] = useState<string | null>(null);
-  // Provider changes return the configuration required by dependent saves.
-  // Keep those operations serialized so the UI cannot submit an older config.
-  const outboundBusy = loadingOutbound || savingProvider || savingTicketingFrom || savingSmtp;
+  const outboundBusy = loadingOutbound || savingOutbound || busyDomain !== null;
+  const hasUnsavedChanges = Boolean(emailSettings && savedEmailSettings && (
+    outboundProvider !== resolveOutboundProvider(savedEmailSettings.emailProvider)
+    || JSON.stringify(emailSettings.providerConfigs) !== JSON.stringify(savedEmailSettings.providerConfigs)
+    || ticketingFromCustom.trim() !== (savedEmailSettings.ticketingFromEmail?.trim() || '')
+    || ticketingFromName.trim() !== (savedEmailSettings.ticketingFromName?.trim() || '')
+  ));
+
+  useEffect(() => {
+    if (!hasUnsavedChanges) return;
+    const warnBeforeLeaving = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', warnBeforeLeaving);
+    return () => window.removeEventListener('beforeunload', warnBeforeLeaving);
+  }, [hasUnsavedChanges]);
 
   const resolveEmailSettingsResult = (
     result: EmailSettingsActionResult,
@@ -202,7 +216,7 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
 
   // Self-hosted tenants have no managed (Resend) option, so an unrecognised
   // stored provider falls back to SMTP rather than something unselectable.
-  const resolveOutboundProvider = (stored: string | null | undefined): OutboundProvider => {
+  function resolveOutboundProvider(stored: string | null | undefined): OutboundProvider {
     if (stored === 'microsoft') return 'microsoft';
     if (stored === 'smtp') return 'smtp';
     return canUseManagedEmail ? 'resend' : 'smtp';
@@ -227,6 +241,7 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
 
       if (settings) {
         setEmailSettings(settings);
+        setSavedEmailSettings(settings);
         setOutboundProvider(resolveOutboundProvider(settings.emailProvider));
       }
 
@@ -242,6 +257,9 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
   };
 
   const getOutboundDomain = (settings?: TenantEmailSettings | null): string | null => {
+    if (settings?.emailProvider === 'microsoft') {
+      return extractEmailDomain(settings.providerConfigs.find(config => config.providerType === 'microsoft')?.config.mailbox);
+    }
     if (settings?.defaultFromDomain) return settings.defaultFromDomain;
 
     // For SMTP, derive from the SMTP from address
@@ -257,7 +275,7 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
     return verifiedDomain;
   };
 
-  const validateTicketingFrom = (value: string, outboundDomain?: string | null): string | null => {
+  const validateTicketingFrom = (value: string, outboundDomain?: string | null, provider = outboundProvider, selectedMailbox = getMicrosoftConfig()?.config.mailbox?.trim()): string | null => {
     // The ticketing From address is optional: an empty value means "use the
     // default sender address" and only the display name (if configured) is
     // applied. Address-format checks below only run when a value is present.
@@ -265,10 +283,10 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
       return null;
     }
 
+    if (provider === 'smtp') return isValidEmail(value.trim()) ? null : t('managed.validation.invalidEmail');
+
     if (!outboundDomain) {
-      return outboundProvider === 'smtp'
-        ? t('managed.validation.saveSmtpFirst')
-        : t('managed.validation.addOutboundFirst');
+      return t('managed.validation.addOutboundFirst');
     }
 
     const trimmed = value.trim();
@@ -276,20 +294,15 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
       return t('managed.validation.invalidEmail');
     }
 
-    if (outboundProvider === 'microsoft') {
-      const selectedMailbox = getMicrosoftConfig()?.config.mailbox?.trim();
+    if (provider === 'microsoft') {
       if (selectedMailbox && trimmed.toLowerCase() !== selectedMailbox.toLowerCase()) {
         return t('managed.validation.microsoftMustMatchMailbox', { mailbox: selectedMailbox });
       }
     }
 
-    // For managed/resend, the domain must match exactly.
-    // For SMTP, domain mismatch is a warning (handled separately), not a hard error.
-    if (outboundProvider !== 'smtp') {
-      const domain = trimmed.split('@').pop()?.toLowerCase();
-      if (!domain || domain !== outboundDomain.toLowerCase()) {
-        return t('managed.validation.mustMatchDomain', { domain: outboundDomain });
-      }
+    const domain = trimmed.split('@').pop()?.toLowerCase();
+    if (!domain || domain !== outboundDomain.toLowerCase()) {
+      return t('managed.validation.mustMatchDomain', { domain: outboundDomain });
     }
 
     return null;
@@ -315,7 +328,7 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
 
     setTicketingFromName(settings?.ticketingFromName?.trim() || '');
 
-    setTicketingFromError(current ? validateTicketingFrom(current, outboundDomain) : null);
+    setTicketingFromError(current ? validateTicketingFrom(current, outboundDomain, resolveOutboundProvider(settings?.emailProvider), settings?.providerConfigs.find(config => config.providerType === 'microsoft')?.config.mailbox) : null);
 
     if (mailboxes.length > 0 && current && !hasMatch) {
       setTicketingFromWarning(t('managed.validation.customAddressThreadWarning'));
@@ -335,84 +348,79 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
       .map((m) => m!.toLowerCase());
 
     const trimmedValue = value.trim().toLowerCase();
-    const enteredDomain = trimmedValue.split('@').pop();
-
-    if (outboundProvider === 'smtp' && outboundDomain && enteredDomain && enteredDomain !== outboundDomain.toLowerCase()) {
-      setTicketingFromWarning(t('managed.validation.smtpDomainMismatchWarning', { domain: outboundDomain }));
-    } else if (mailboxes.length > 0 && value && !mailboxes.includes(trimmedValue)) {
+    if (mailboxes.length > 0 && value && !mailboxes.includes(trimmedValue)) {
       setTicketingFromWarning(t('managed.validation.notConnectedWarning'));
     } else {
       setTicketingFromWarning(null);
     }
   };
 
-  const handleSaveSenderIdentities = async () => {
-    const outboundDomain = getOutboundDomain(emailSettings);
+  const handleSaveOutbound = async () => {
+    if (!emailSettings || outboundBusy || saveInFlight.current || !hasUnsavedChanges) return;
     const candidate = ticketingFromCustom.trim();
-
-    // The From address is optional: a tenant may configure only a display name
-    // and keep the default sender address. Validate the address only when set.
-    const error = candidate ? validateTicketingFrom(candidate, outboundDomain) : null;
+    const senderDomain = outboundProvider === 'smtp' ? extractEmailDomain(candidate) : getOutboundDomain(emailSettings);
+    const error = outboundProvider === 'smtp' && !isValidEmail(candidate)
+      ? t('managed.outbound.smtp.ticketIdentityRequired', { defaultValue: 'Choose a ticket email identity below to set the sending domain.' })
+      : validateTicketingFrom(candidate, senderDomain);
     setTicketingFromError(error);
+    if (error) return;
 
-    if (error) {
-      return;
-    }
-
-    setSavingTicketingFrom(true);
-    try {
-      const updates: EmailSettingsUpdateInput = {
-        providerConfigs: emailSettings?.providerConfigs,
-        ticketingFromEmail: candidate || null,
-        ticketingFromName: ticketingFromName.trim() || null,
-      };
-      if (candidate || outboundProvider === 'smtp') {
-        updates.defaultFromDomain = outboundDomain || emailSettings?.defaultFromDomain;
-      }
-
-      const updatedResult = await updateEmailSettings(updates);
-      const updated = resolveEmailSettingsResult(updatedResult, t('managed.messages.ticketingFromSaveFailed'));
-      if (!updated) {
+    let providerConfigs = emailSettings.providerConfigs;
+    if (outboundProvider === 'smtp') {
+      const smtp = getSmtpConfig();
+      const mailbox = smtp?.config.from?.split('@')[0].trim();
+      const from = mailbox && senderDomain ? `${mailbox}@${senderDomain}` : '';
+      if (!smtp?.config.host?.trim()) {
+        toast.error(t('managed.messages.smtpHostRequired'));
         return;
       }
-
+      if (!isValidEmail(from)) {
+        toast.error(from ? t('managed.validation.invalidEmail') : t('managed.messages.fromAddressRequired'));
+        return;
+      }
+      providerConfigs = providerConfigs.map(config => config.providerType === 'smtp'
+        ? { ...config, config: { ...config.config, from } } : config);
+    }
+    saveInFlight.current = true;
+    setSavingOutbound(true);
+    try {
+      const updates: EmailSettingsUpdateInput = {
+        emailProvider: outboundProvider,
+        providerConfigs: providerConfigs.map(config => ({ ...config, isEnabled: config.providerType === outboundProvider })),
+        ticketingFromEmail: candidate || null,
+        ticketingFromName: ticketingFromName.trim() || null,
+        defaultFromDomain: senderDomain || emailSettings.defaultFromDomain,
+      };
+      const result = await updateEmailSettings(updates);
+      const updated = resolveEmailSettingsResult(result, t('managed.outbound.saveFailed', { defaultValue: 'Could not save outbound settings. Your changes are still here. Try again.' }));
+      if (!updated) return;
       setEmailSettings(updated);
+      setSavedEmailSettings(updated);
+      setOutboundProvider(resolveOutboundProvider(updated.emailProvider));
       initializeTicketingFromSelection(updated, inboundProviders);
-      toast.success(t('managed.messages.senderIdentitiesUpdated'));
-    } catch (err: any) {
-      console.error('[ManagedEmailSettings] Failed to update ticketing from address', err);
-      toast.error(t('managed.messages.ticketingFromSaveFailed'));
+      toast.success(t('managed.outbound.saved', { defaultValue: 'Outbound settings saved.' }));
+    } catch (err) {
+      console.error('[ManagedEmailSettings] Failed to save outbound settings', err);
+      toast.error(t('managed.outbound.saveFailed', { defaultValue: 'Could not save outbound settings. Your changes are still here. Try again.' }));
     } finally {
-      setSavingTicketingFrom(false);
+      saveInFlight.current = false;
+      setSavingOutbound(false);
     }
   };
 
-  const handleClearTicketingFrom = async () => {
-    if (!emailSettings?.ticketingFromEmail) {
-      return;
-    }
+  const handleDiscardOutbound = () => {
+    if (!savedEmailSettings || outboundBusy) return;
+    setEmailSettings(savedEmailSettings);
+    setOutboundProvider(resolveOutboundProvider(savedEmailSettings.emailProvider));
+    initializeTicketingFromSelection(savedEmailSettings, inboundProviders);
+  };
 
-    setSavingTicketingFrom(true);
-    try {
-      const updatedResult = await updateEmailSettings({
-        ticketingFromEmail: null,
-        ticketingFromName: null,
-      } satisfies EmailSettingsUpdateInput);
-      const updated = resolveEmailSettingsResult(updatedResult, t('managed.messages.ticketingFromClearFailed'));
-      if (!updated) {
-        return;
-      }
-
-      setEmailSettings(updated);
-      initializeTicketingFromSelection(updated, inboundProviders);
-      setShowClearTicketingFromDialog(false);
-      toast.success(t('managed.messages.ticketingFromCleared'));
-    } catch (err: any) {
-      console.error('[ManagedEmailSettings] Failed to clear ticketing from address', err);
-      toast.error(t('managed.messages.ticketingFromClearFailed'));
-    } finally {
-      setSavingTicketingFrom(false);
-    }
+  const handleClearTicketingFrom = () => {
+    setTicketingFromCustom('');
+    setTicketingFromName('');
+    setTicketingFromError(null);
+    setTicketingFromWarning(null);
+    setShowClearTicketingFromDialog(false);
   };
 
   const getDomainRemovalImpact = (domain: string | null) => {
@@ -442,86 +450,42 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
       : getMicrosoftConfig()?.config.fromName,
   });
 
-  const handleMicrosoftMailboxSelect = async (providerId: string) => {
+  const handleMicrosoftMailboxSelect = (providerId: string) => {
     if (!emailSettings || outboundBusy) return;
     const mailbox = microsoftMailboxes.find(option => option.providerId === providerId);
     if (!mailbox) return;
-
-    const providerConfigs = emailSettings.providerConfigs.map(config =>
+    setEmailSettings({ ...emailSettings, providerConfigs: emailSettings.providerConfigs.map(config =>
       config.providerType === 'microsoft'
         ? { ...config, providerId: mailbox.providerId, config: microsoftConfigFor(mailbox) }
         : config
-    );
-
-    setSavingProvider(true);
-    try {
-      const result = await updateEmailSettings({ emailProvider: 'microsoft', providerConfigs });
-      const updated = resolveEmailSettingsResult(result, t('managed.messages.switchProviderFailed'));
-      if (!updated) return;
-      setEmailSettings(updated);
-      toast.success(t('managed.outbound.microsoft.saved', 'Outbound sending mailbox updated.'));
-    } catch (err: any) {
-      console.error('[ManagedEmailSettings] Failed to select Microsoft mailbox', err);
-      toast.error(t('managed.messages.switchProviderFailed'));
-    } finally {
-      setSavingProvider(false);
-    }
+    ) });
+    setTicketingFromCustom(mailbox.mailbox);
+    setTicketingFromError(null);
+    setTicketingFromWarning(null);
   };
 
-  const handleProviderSwitch = async (provider: OutboundProvider) => {
-    if (!emailSettings || outboundBusy) return;
-    setOutboundProvider(provider);
-
-    const updatedSettings: Partial<TenantEmailSettings> = {
-      emailProvider: provider,
-      providerConfigs: emailSettings.providerConfigs.map(config => ({
-        ...config,
-        isEnabled: config.providerType === provider
-      }))
-    };
-
-    // Ensure a config entry exists for the selected provider
-    const hasProvider = emailSettings.providerConfigs.some(c => c.providerType === provider);
-    if (!hasProvider) {
-      const newConfig = createDefaultProviderConfig(provider, { isEnabled: true });
-      updatedSettings.providerConfigs = [...(updatedSettings.providerConfigs || []), newConfig];
+  const handleProviderSwitch = (provider: OutboundProvider) => {
+    if (!emailSettings || outboundBusy || provider === outboundProvider) return;
+    let providerConfigs = emailSettings.providerConfigs;
+    if (!providerConfigs.some(config => config.providerType === provider)) {
+      providerConfigs = [...providerConfigs, createDefaultProviderConfig(provider, { isEnabled: true })];
     }
-
-    // updateEmailSettings rejects a Microsoft selection that names no mailbox,
-    // so carry the current choice (or the first connected one) into the switch.
     if (provider === 'microsoft') {
-      const existing = updatedSettings.providerConfigs?.find(c => c.providerType === 'microsoft');
-      const mailbox = microsoftMailboxes.find(m => m.providerId === existing?.config?.inboundProviderId)
+      const existing = providerConfigs.find(config => config.providerType === 'microsoft');
+      const mailbox = microsoftMailboxes.find(m => m.providerId === existing?.config.inboundProviderId && m.status === 'connected')
         || microsoftMailboxes.find(m => m.status === 'connected');
       if (!mailbox) {
         toast.error(t('managed.outbound.microsoft.noneConnected', 'Authorize a Microsoft 365 mailbox on the Inbound Email tab first.'));
-        setOutboundProvider(resolveOutboundProvider(emailSettings.emailProvider));
         return;
       }
-      updatedSettings.providerConfigs = (updatedSettings.providerConfigs || []).map(config =>
-        config.providerType === 'microsoft'
-          ? { ...config, providerId: mailbox.providerId, config: microsoftConfigFor(mailbox) }
-          : config
-      );
+      providerConfigs = providerConfigs.map(config => config.providerType === 'microsoft'
+        ? { ...config, providerId: mailbox.providerId, config: microsoftConfigFor(mailbox) } : config);
+      setTicketingFromCustom(mailbox.mailbox);
     }
-
-    setSavingProvider(true);
-    try {
-      const updatedResult = await updateEmailSettings(updatedSettings);
-      const updated = resolveEmailSettingsResult(updatedResult, t('managed.messages.switchProviderFailed'));
-      if (!updated) {
-        setOutboundProvider(resolveOutboundProvider(emailSettings.emailProvider));
-        return;
-      }
-      setEmailSettings(updated);
-    } catch (err: any) {
-      console.error('[ManagedEmailSettings] Failed to switch provider', err);
-      toast.error(t('managed.messages.switchProviderFailed'));
-      // Revert UI selection
-      setOutboundProvider(resolveOutboundProvider(emailSettings.emailProvider));
-    } finally {
-      setSavingProvider(false);
-    }
+    setOutboundProvider(provider);
+    setEmailSettings({ ...emailSettings, emailProvider: provider, providerConfigs });
+    setTicketingFromError(null);
+    setTicketingFromWarning(null);
   };
 
   const getSmtpConfig = () => {
@@ -553,78 +517,8 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
     setEmailSettings({ ...emailSettings, providerConfigs });
   };
 
-  const persistSmtpSettings = async (): Promise<TenantEmailSettings | null> => {
-    if (!emailSettings) return null;
-    const existingSmtpConfig = getSmtpConfig();
-    const smtpConfig = existingSmtpConfig
-      ?? createDefaultProviderConfig('smtp', { isEnabled: true });
-
-    const { host, from } = smtpConfig.config;
-    if (!host?.trim()) {
-      toast.error(t('managed.messages.smtpHostRequired'));
-      return null;
-    }
-    if (!from?.trim()) {
-      toast.error(t('managed.messages.fromAddressRequired'));
-      return null;
-    }
-    // A junk address here poisons defaultFromDomain (derived below by splitting
-    // on '@'), which then leaks into every synthesized fallback sender.
-    if (!isValidEmail(from)) {
-      toast.error(t('managed.validation.invalidEmail'));
-      return null;
-    }
-
-    const providerConfigs = (existingSmtpConfig
-      ? emailSettings.providerConfigs
-      : [...emailSettings.providerConfigs, smtpConfig]
-    ).map(config => ({
-      ...config,
-      isEnabled: config.providerType === 'smtp',
-    }));
-
-    const updatedResult = await updateEmailSettings({
-      emailProvider: 'smtp',
-      providerConfigs,
-      defaultFromDomain: from.trim().split('@').pop() || emailSettings.defaultFromDomain
-    });
-    const updated = resolveEmailSettingsResult(updatedResult, t('managed.messages.smtpSaveFailed'));
-    if (!updated) {
-      return null;
-    }
-
-    setEmailSettings(updated);
-    return updated;
-  };
-
-  const handleSaveSmtp = async () => {
-    setSavingSmtp(true);
-    try {
-      const updated = await persistSmtpSettings();
-      if (updated) {
-        toast.success(t('managed.messages.smtpSaved'));
-      }
-    } catch (err: any) {
-      console.error('[ManagedEmailSettings] Failed to save SMTP settings', err);
-      toast.error(t('managed.messages.smtpSaveFailed'));
-    } finally {
-      setSavingSmtp(false);
-    }
-  };
-
-  const handleOpenDiagnostics = async () => {
-    if (outboundProvider === 'smtp') {
-      try {
-        // Persist current edits first so diagnostics reflect what's on screen.
-        // The masked password ('***') is resolved to the stored secret server-side.
-        const updated = await persistSmtpSettings();
-        if (!updated) return;
-      } catch (err: any) {
-        console.error('[ManagedEmailSettings] Failed to save SMTP settings before diagnostics', err);
-        toast.error(t('managed.messages.smtpSaveFailed'));
-        return;
-      }
-    }
+  const handleOpenDiagnostics = () => {
+    if (outboundBusy || hasUnsavedChanges || !savedEmailSettings) return;
     setDiagnosticsOpen(true);
   };
 
@@ -673,6 +567,11 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
   };
 
   const handleDeleteDomain = async () => {
+    if (outboundBusy || saveInFlight.current) return;
+    if (hasUnsavedChanges) {
+      toast.error(t('managed.outbound.saveBeforeDomainRemoval', { defaultValue: 'Save or discard your outbound changes before removing a domain.' }));
+      return;
+    }
     if (!pendingDomainRemoval) {
       return;
     }
@@ -703,6 +602,7 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
         }
 
         setEmailSettings(updatedSettings);
+        setSavedEmailSettings(updatedSettings);
         initializeTicketingFromSelection(updatedSettings, inboundProviders);
       }
 
@@ -722,6 +622,7 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
   };
 
   const outboundDomain = getOutboundDomain(emailSettings);
+  const smtpSenderDomain = isValidEmail(ticketingFromCustom.trim()) ? extractEmailDomain(ticketingFromCustom) : null;
   const inboundMailboxOptions = inboundProviders
     .map((provider) => provider.mailbox?.trim())
     .filter(Boolean) as string[];
@@ -791,11 +692,17 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
                 id="open-outbound-diagnostics"
                 variant="outline"
                 onClick={handleOpenDiagnostics}
-                disabled={outboundBusy || !emailSettings}
+                disabled={outboundBusy || !emailSettings || hasUnsavedChanges}
+                aria-describedby="outbound-diagnostics-save-help"
               >
                 <Send className="h-4 w-4 mr-2" />
                 {t('managed.outbound.diagnosticsButton', 'Run Outbound Diagnostics')}
               </Button>
+              {hasUnsavedChanges && (
+                <p id="outbound-diagnostics-save-help" className="text-sm text-muted-foreground mt-2">
+                  {t('managed.outbound.diagnosticsSaveHelp', { defaultValue: 'Save or discard your changes before checking the outbound settings.' })}
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -803,7 +710,7 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
         <OutboundEmailDiagnosticsDialog
           isOpen={diagnosticsOpen}
           onClose={() => setDiagnosticsOpen(false)}
-          hasUnsavedChanges={false}
+          hasUnsavedChanges={hasUnsavedChanges}
         />
 
         {outboundProvider === 'resend' && canUseManagedEmail && (
@@ -905,6 +812,7 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-5">
+              <fieldset disabled={outboundBusy} className="min-w-0">
               {(() => {
                 const smtpConfig = getSmtpConfig();
                 return (
@@ -969,15 +877,33 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label htmlFor="smtp-from">{t('managed.outbound.smtp.fromLabel')}</Label>
-                        <Input
-                          id="smtp-from"
-                          type="email"
-                          value={smtpConfig?.config.from || ''}
-                          placeholder={t('managed.outbound.smtp.fromPlaceholder')}
-                          onChange={(e) => updateSmtpField('from', e.target.value)}
-                        />
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {t('managed.outbound.smtp.fromHelp')}
+                        <div className="flex items-stretch">
+                          <Input
+                            id="smtp-from"
+                            type="text"
+                            value={(smtpConfig?.config.from || '').split('@')[0]}
+                            placeholder={t('managed.outbound.smtp.fromPlaceholder').split('@')[0]}
+                            disabled={!smtpSenderDomain}
+                            containerClassName="min-w-0 flex-1"
+                            className="rounded-r-none"
+                            aria-describedby="smtp-from-domain smtp-from-help"
+                            onChange={(e) => {
+                              const mailbox = e.target.value.split('@')[0].trim();
+                              updateSmtpField('from', mailbox && smtpSenderDomain ? `${mailbox}@${smtpSenderDomain}` : '');
+                            }}
+                          />
+                          {smtpSenderDomain && (
+                            <span id="smtp-from-domain" className="flex items-center rounded-r-md border border-l-0 border-border bg-muted px-3 text-sm text-muted-foreground break-all">
+                              @{smtpSenderDomain}
+                            </span>
+                          )}
+                        </div>
+                        <p id="smtp-from-help" className="text-sm text-muted-foreground mt-1">
+                          {smtpSenderDomain
+                            ? t('managed.outbound.smtp.fromHelp')
+                            : t('managed.outbound.smtp.ticketIdentityRequired', {
+                                defaultValue: 'Choose a ticket email identity below to set the sending domain.',
+                              })}
                         </p>
                       </div>
                       <div>
@@ -1041,18 +967,10 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
                       </p>
                     </div>
 
-                    <div className="flex justify-end">
-                      <Button
-                        id="save-smtp-settings"
-                        onClick={handleSaveSmtp}
-                        disabled={outboundBusy}
-                      >
-                        {savingSmtp ? t('managed.outbound.smtp.savingButton') : t('managed.outbound.smtp.saveButton')}
-                      </Button>
-                    </div>
                   </div>
                 );
               })()}
+              </fieldset>
             </CardContent>
           </Card>
         )}
@@ -1069,7 +987,11 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
               ticketAddressPlaceholder: t('managed.outbound.senderIdentities.ticket.addressPlaceholder'),
               ticketAddressHelp: outboundProvider === 'microsoft'
                 ? t('managed.outbound.senderIdentities.ticket.microsoftAddressHelp', { mailbox: microsoftMailbox })
-                : t('managed.outbound.senderIdentities.ticket.addressHelp'),
+                : outboundProvider === 'smtp'
+                  ? t('managed.outbound.senderIdentities.ticket.smtpAddressHelp', {
+                      defaultValue: 'This address sets the domain for the SMTP sender above. Replies must reach a connected inbox to appear on tickets.',
+                    })
+                  : t('managed.outbound.senderIdentities.ticket.addressHelp'),
               ticketNameLabel: t('managed.outbound.senderIdentities.ticket.nameLabel'),
               ticketNamePlaceholder: t('managed.outbound.senderIdentities.ticket.namePlaceholder'),
               ticketNameHelp: t('managed.outbound.senderIdentities.ticket.nameHelp'),
@@ -1080,7 +1002,9 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
               notificationAddressLabel: t('managed.outbound.senderIdentities.notification.addressLabel'),
               // Effective fallback sender goes in the placeholder, never the value:
               // rendering it as the value makes an unsaved field look configured.
-              notificationAddressPlaceholder: emailSettings.effectiveNotificationFrom.email,
+              notificationAddressPlaceholder: outboundProvider === resolveOutboundProvider(savedEmailSettings?.emailProvider)
+                ? savedEmailSettings?.effectiveNotificationFrom.email || ''
+                : t('managed.outbound.senderAddressAfterSave', { defaultValue: 'Shown after saving.' }),
               notificationAddressHelp: outboundProvider === 'smtp'
                 ? t('managed.outbound.senderIdentities.notification.smtpAddressHelp')
                 : t('managed.outbound.senderIdentities.notification.lockedAddressHelp'),
@@ -1093,12 +1017,10 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
             ticketAddress={ticketingFromCustom}
             ticketName={ticketingFromName}
             connectedInboxes={ticketMailboxOptions}
-            ticketFieldsDisabled={outboundBusy || !outboundDomain}
+            ticketFieldsDisabled={outboundBusy || (outboundProvider !== 'smtp' && !outboundDomain)}
             ticketWarning={
-              !loadingOutbound && !outboundDomain
-                ? (outboundProvider === 'smtp'
-                    ? t('managed.validation.saveSmtpFirst')
-                    : t('managed.validation.addOutboundFirst'))
+              !loadingOutbound && outboundProvider !== 'smtp' && !outboundDomain
+                ? t('managed.validation.addOutboundFirst')
                 : ticketingFromWarning
             }
             ticketError={ticketingFromError}
@@ -1113,30 +1035,32 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
             onTicketNameChange={setTicketingFromName}
             onNotificationAddressChange={(value) => updateNotificationIdentityField('from', value)}
             onNotificationNameChange={(value) => updateNotificationIdentityField('fromName', value)}
-            actions={(
-              <div className="flex justify-end gap-2">
-                {emailSettings.ticketingFromEmail ? (
-                  <Button
-                    id="clear-ticketing-from"
-                    variant="outline"
-                    onClick={() => setShowClearTicketingFromDialog(true)}
-                    disabled={outboundBusy}
-                  >
-                    {t('managed.outbound.senderIdentities.clearButton')}
-                  </Button>
-                ) : null}
-                <Button
-                  id="save-sender-identities"
-                  onClick={handleSaveSenderIdentities}
-                  disabled={outboundBusy || !!ticketingFromError || !outboundDomain}
-                >
-                  {savingTicketingFrom
-                    ? t('managed.outbound.senderIdentities.savingButton')
-                    : t('managed.outbound.senderIdentities.saveButton')}
-                </Button>
-              </div>
-            )}
+            actions={ticketingFromCustom && outboundProvider !== 'smtp' ? (
+              <Button id="clear-ticketing-from" variant="outline"
+                onClick={() => setShowClearTicketingFromDialog(true)} disabled={outboundBusy}>
+                {t('managed.outbound.senderIdentities.clearButton')}
+              </Button>
+            ) : undefined}
           />
+        )}
+        {emailSettings && (
+          <div className="sticky bottom-0 z-10 flex flex-wrap items-center justify-between gap-3 border-t border-border bg-card py-4">
+            <p id="outbound-save-status" role="status" className="text-sm text-muted-foreground">
+              {savingOutbound
+                ? t('managed.outbound.saving', { defaultValue: 'Saving outbound settings…' })
+                : hasUnsavedChanges
+                  ? t('managed.outbound.unsaved', { defaultValue: 'Unsaved changes' })
+                  : t('managed.outbound.noPendingChanges', { defaultValue: 'No unsaved changes' })}
+            </p>
+            <div className="flex gap-2">
+              <Button id="discard-outbound-changes" variant="outline" onClick={handleDiscardOutbound} disabled={outboundBusy || !hasUnsavedChanges}>
+                {t('managed.outbound.discardChanges', { defaultValue: 'Discard changes' })}
+              </Button>
+              <Button id="save-outbound-settings" onClick={handleSaveOutbound} disabled={outboundBusy || !hasUnsavedChanges}>
+                {t('managed.outbound.saveSettings', { defaultValue: 'Save outbound settings' })}
+              </Button>
+            </div>
+          </div>
         )}
       </TabsContent>
 
@@ -1151,10 +1075,10 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
         onClose={() => setShowClearTicketingFromDialog(false)}
         onConfirm={handleClearTicketingFrom}
         title={t('managed.dialogs.clearTicketingFrom.title')}
-        message={t('managed.dialogs.clearTicketingFrom.message')}
+        message={t('managed.dialogs.clearTicketingFrom.message', { defaultValue: 'Clear this ticket email identity from the form? This takes effect when you save outbound settings.' })}
         confirmLabel={t('managed.dialogs.clearTicketingFrom.confirm')}
         cancelLabel={t('managed.dialogs.cancel')}
-        isConfirming={savingTicketingFrom}
+        isConfirming={savingOutbound}
         id="managed-email-clear-ticketing-from"
       />
       <ConfirmationDialog
