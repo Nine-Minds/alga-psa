@@ -830,4 +830,122 @@ describe('ticket close rules', () => {
     expect(returned.closed_at).not.toBeNull();
     expect(returned.closed_by).toBe(fixture.userId);
   });
+
+  async function insertStatus(overrides: Record<string, unknown>): Promise<string> {
+    const statusId = uuidv4();
+    await scopedDb().table('statuses').insert({
+      tenant: fixture.tenantId,
+      status_id: statusId,
+      board_id: fixture.boardId,
+      name: `Status ${statusId.slice(0, 6)}`,
+      status_type: 'ticket',
+      is_closed: false,
+      is_default: false,
+      order_number: 90,
+      created_by: fixture.userId,
+      ...overrides,
+    });
+    return statusId;
+  }
+
+  it('T051: moving between two closed statuses preserves closure metadata', async () => {
+    const secondClosedStatusId = await insertStatus({
+      name: 'Cancelled',
+      is_closed: true,
+      order_number: 40,
+    });
+    const ticketId = await insertTicket(db, fixture);
+    const service = new TicketService();
+
+    const closed = await service.update(
+      ticketId,
+      { status_id: fixture.closedStatusId },
+      serviceContext()
+    );
+    const moved = await service.update(
+      ticketId,
+      { status_id: secondClosedStatusId },
+      serviceContext()
+    );
+
+    expect(moved.status_id).toBe(secondClosedStatusId);
+    expect(moved.is_closed).toBe(true);
+    expect(new Date(moved.closed_at as unknown as string).toISOString()).toBe(
+      new Date(closed.closed_at as unknown as string).toISOString()
+    );
+    expect(moved.closed_by).toBe(closed.closed_by);
+  });
+
+  it('T052: repeating the same closed status preserves closure metadata', async () => {
+    const ticketId = await insertTicket(db, fixture);
+    const service = new TicketService();
+
+    const closed = await service.update(
+      ticketId,
+      { status_id: fixture.closedStatusId },
+      serviceContext()
+    );
+    const repeated = await service.update(
+      ticketId,
+      { status_id: fixture.closedStatusId },
+      serviceContext()
+    );
+
+    expect(repeated.is_closed).toBe(true);
+    expect(new Date(repeated.closed_at as unknown as string).toISOString()).toBe(
+      new Date(closed.closed_at as unknown as string).toISOString()
+    );
+    expect(repeated.closed_by).toBe(closed.closed_by);
+  });
+
+  it('T053: an update with no status_id preserves closure state and metadata', async () => {
+    const ticketId = await insertTicket(db, fixture);
+    const service = new TicketService();
+
+    const closed = await service.update(
+      ticketId,
+      { status_id: fixture.closedStatusId },
+      serviceContext()
+    );
+    const renamed = await service.update(ticketId, { title: 'Still closed' }, serviceContext());
+
+    expect(renamed.title).toBe('Still closed');
+    expect(renamed.is_closed).toBe(true);
+    expect(new Date(renamed.closed_at as unknown as string).toISOString()).toBe(
+      new Date(closed.closed_at as unknown as string).toISOString()
+    );
+    expect(renamed.closed_by).toBe(closed.closed_by);
+  });
+
+  it('T054: open-to-open status change keeps is_closed false and closure metadata null', async () => {
+    const ticketId = await insertTicket(db, fixture);
+    const service = new TicketService();
+
+    const moved = await service.update(
+      ticketId,
+      { status_id: fixture.waitingStatusId },
+      serviceContext()
+    );
+
+    expect(moved.status_id).toBe(fixture.waitingStatusId);
+    expect(moved.is_closed).toBe(false);
+    expect(moved.closed_at).toBeNull();
+    expect(moved.closed_by).toBeNull();
+  });
+
+  it('T055: a close-rule-rejected status change leaves the ticket wholly unchanged', async () => {
+    const ticketId = await insertTicket(db, fixture);
+    await setBoardCloseRules(db, fixture, { require_time_entry: true });
+    const service = new TicketService();
+
+    await expect(
+      service.update(ticketId, { status_id: fixture.closedStatusId }, serviceContext())
+    ).rejects.toThrow(/close rules/i);
+
+    const persisted = await scopedDb().table('tickets').where({ ticket_id: ticketId }).first();
+    expect(persisted.status_id).toBe(fixture.openStatusId);
+    expect(persisted.is_closed).toBe(false);
+    expect(persisted.closed_at).toBeNull();
+    expect(persisted.closed_by).toBeNull();
+  });
 });
