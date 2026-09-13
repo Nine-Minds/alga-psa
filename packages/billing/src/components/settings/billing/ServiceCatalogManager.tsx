@@ -9,6 +9,8 @@ import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { DeleteEntityDialog } from '@alga-psa/ui';
 // Import new action and types
 import { getServices, updateService, updateServicePricing, deleteService, getServiceTypesForSelection, PaginatedServicesResponse, createServiceTypeInline, updateServiceTypeInline, deleteServiceTypeInline } from '../../../actions/serviceActions';
+import { getServiceContractUsage, applyServicePriceChange } from '../../../actions/servicePriceRolloutActions';
+import PriceChangeRolloutDialog from './PriceChangeRolloutDialog';
 import { getDefaultBillingSettings } from '../../../actions/billingSettingsActions';
 import { CURRENCY_OPTIONS, getCurrencySymbol } from '@alga-psa/core';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
@@ -81,6 +83,16 @@ const ServiceCatalogManager: React.FC = () => {
   const [rateInput, setRateInput] = useState<string>('');
   // State for editing prices (multi-currency support)
   const [editingPrices, setEditingPrices] = useState<Array<{ currency_code: string; rate: number }>>([]);
+  // Price-change rollout: when the effective rate changed and the service is on
+  // a contract, saving opens the rollout dialog instead of writing immediately.
+  const [pendingPriceChange, setPendingPriceChange] = useState<{
+    serviceId: string;
+    serviceName: string;
+    newRateCents: number;
+    currency: string;
+    service: IService;
+    prices: Array<{ currency_code: string; rate: number }>;
+  } | null>(null);
   const filteredServices = services.filter(service => {
     // Filter by Service Type
     const serviceTypeMatch = selectedServiceType === 'all' || service.custom_service_type_id === selectedServiceType;
@@ -308,33 +320,84 @@ const ServiceCatalogManager: React.FC = () => {
       return;
     }
 
+    // Ensure editingService is not null and has an ID
+    if (!editingService?.service_id) {
+      setError(t('serviceCatalog.errors.missingId', {
+        defaultValue: 'Cannot update service without an ID.'
+      }));
+      return;
+    }
+
+    const service = editingService;
+    const prices = editingPrices;
+    const newRateCents = Math.round(Number(prices[0]?.rate ?? 0));
+    const oldRateCents = Math.round(Number(service.default_rate ?? 0));
+
+    // A changed rate on a service that is on at least one contract opens the
+    // rollout dialog so the operator can choose when it takes effect.
+    if (prices.length > 0 && newRateCents !== oldRateCents) {
+      try {
+        const usage = await getServiceContractUsage(service.service_id);
+        if (!('contractCount' in usage)) {
+          setError(t('serviceCatalog.errors.update', { defaultValue: 'Failed to update service' }));
+          return;
+        }
+        if (usage.contractCount > 0) {
+          setPendingPriceChange({
+            serviceId: service.service_id,
+            serviceName: service.service_name,
+            newRateCents,
+            currency: prices[0].currency_code,
+            service,
+            prices,
+          });
+          return;
+        }
+      } catch (usageError) {
+        console.error('Error checking service usage for rollout:', usageError);
+      }
+    }
+
+    await saveService(service, prices);
+  };
+
+  const saveService = async (
+    service: IService & { inventory_count?: number; seat_limit?: number },
+    prices: Array<{ currency_code: string; rate: number }>,
+    effectiveDate?: string,
+  ) => {
     // Store the current page before updating service and fetching new data
     const pageBeforeUpdate = currentPage;
-    console.log(`Saving service changes from page: ${pageBeforeUpdate}`);
 
     try {
-      // Ensure editingService is not null and has an ID
-      if (!editingService?.service_id) {
-        setError(t('serviceCatalog.errors.missingId', {
-          defaultValue: 'Cannot update service without an ID.'
-        }));
-        return;
-      }
-
       // First close the dialog to avoid UI jumps
       setIsEditDialogOpen(false);
       setEditingService(null);
       setEditingPrices([]);
+      setPendingPriceChange(null);
 
-      // Update the service fields and its price rows atomically, deriving
-      // default_rate from the primary row at save time.
-      await updateServicePricing(editingService.service_id, editingService, editingPrices);
+      if (effectiveDate) {
+        // Effective-dated catalog write: history is preserved, inherited lines
+        // follow the new price on its date.
+        const { service_id: _serviceId, tenant: _tenant, ...patch } = service as IService & {
+          tenant?: string;
+        };
+        await applyServicePriceChange({
+          serviceId: service.service_id,
+          servicePatch: patch,
+          prices,
+          effectiveDate,
+        });
+      } else {
+        // Update the service fields and its price rows atomically, deriving
+        // default_rate from the primary row at save time.
+        await updateServicePricing(service.service_id, service, prices);
+      }
 
       // Fetch updated services with flag to preserve page
       await fetchServices(true);
 
       // Force the page to stay at the previous value
-      console.log(`Forcing page back to: ${pageBeforeUpdate}`);
       setTimeout(() => {
         setCurrentPage(pageBeforeUpdate);
       }, 50);
@@ -343,6 +406,7 @@ const ServiceCatalogManager: React.FC = () => {
     } catch (error) {
       console.error('Error updating service:', error);
       setError(t('serviceCatalog.errors.update', { defaultValue: 'Failed to update service' }));
+      throw error;
     }
   };
 
@@ -1142,6 +1206,20 @@ const ServiceCatalogManager: React.FC = () => {
         isValidating={isDeleteValidating}
         isDeleting={isDeleteProcessing}
       />
+      {pendingPriceChange && (
+        <PriceChangeRolloutDialog
+          isOpen={Boolean(pendingPriceChange)}
+          onClose={() => setPendingPriceChange(null)}
+          serviceId={pendingPriceChange.serviceId}
+          serviceName={pendingPriceChange.serviceName}
+          newRateCents={pendingPriceChange.newRateCents}
+          currency={pendingPriceChange.currency}
+          onSkip={() => saveService(pendingPriceChange.service, pendingPriceChange.prices)}
+          onApply={(effectiveDate) =>
+            saveService(pendingPriceChange.service, pendingPriceChange.prices, effectiveDate)
+          }
+        />
+      )}
     </>
   );
 };

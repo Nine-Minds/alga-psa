@@ -1157,11 +1157,39 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                             </span>
                           </>
                         )}
+                        {(() => {
+                          const provenance = (line as { rate_provenance?: string | null })
+                            .rate_provenance;
+                          if (provenance === 'inherited') {
+                            return (
+                              <>
+                                <span>•</span>
+                                <Badge variant="default-muted">
+                                  {t('contractLines.rateProvenance.standard', { defaultValue: 'Standard' })}
+                                </Badge>
+                              </>
+                            );
+                          }
+                          if (provenance === 'unreviewed') {
+                            return (
+                              <>
+                                <span>•</span>
+                                <Badge variant="warning">
+                                  {t('contractLines.rateProvenance.unreviewed', { defaultValue: 'Unreviewed' })}
+                                </Badge>
+                              </>
+                            );
+                          }
+                          return null;
+                        })()}
                         {line.custom_rate !== null && line.custom_rate !== undefined && (
                           <>
                             <span>•</span>
-                            <span className="text-blue-600 font-medium">
-                              {t('contractLines.customRate', { defaultValue: 'Custom' })}: {formatRate(line.custom_rate)}
+                            <span className="inline-flex items-center gap-1 font-medium text-[rgb(var(--color-primary-700))]">
+                              <Badge variant="secondary">
+                                {t('contractLines.rateProvenance.custom', { defaultValue: 'Custom' })}
+                              </Badge>
+                              {formatRate(line.custom_rate)}
                             </span>
                           </>
                         )}

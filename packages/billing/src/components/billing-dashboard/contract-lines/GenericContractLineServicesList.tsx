@@ -353,8 +353,20 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contr
       dataIndex: 'custom_rate',
       render: (value, record) => {
         const rate = value !== undefined ? value : record.default_rate;
+        const hasCustomRate = value !== undefined && value !== null;
         // Display rate directly as decimal
-        return rate !== undefined ? money(Math.round(Number(rate) * 100)) : t('common.notAvailable', { defaultValue: 'N/A' });
+        return (
+          <span className="inline-flex items-center gap-2">
+            <Badge variant={hasCustomRate ? 'secondary' : 'default-muted'}>
+              {hasCustomRate
+                ? t('services.generic.badges.custom', { defaultValue: 'Custom' })
+                : t('services.generic.badges.standard', { defaultValue: 'Standard' })}
+            </Badge>
+            {rate !== undefined && rate !== null
+              ? money(Math.round(Number(rate) * 100))
+              : t('common.notAvailable', { defaultValue: 'N/A' })}
+          </span>
+        );
       },
     },
     {

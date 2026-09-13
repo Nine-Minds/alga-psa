@@ -264,6 +264,9 @@ export async function loadBucketPeriods(
     allowRollover: Boolean(row.allow_rollover),
     currencyCode: row.currency_code || 'USD',
     lineCustomRate: row.custom_rate !== null && row.custom_rate !== undefined ? toNumber(row.custom_rate) : null,
+    // Legacy currency-untagged mirror. Billing prefers the effective
+    // `service_prices` row in the contract currency (plan §0.3); the deferred
+    // report keeps this value until its catalog tier reads the resolver too.
     catalogDefaultRate: row.default_rate !== null && row.default_rate !== undefined ? toNumber(row.default_rate) : null,
   }));
 }
