@@ -635,7 +635,11 @@ describe('Contract quantity & usage semantics — period totals and recurring se
       expect(result.failures?.[0]?.code).toBe('USAGE_PERIOD_TOTAL_STALE');
       expect(await context.db('invoices').where({tenant: context.tenantId})).toHaveLength(0);
       expect((await totalsTable().where({tenant: context.tenantId}).first()).lifecycle_state).toBe('recorded');
-    });
+      // The first phrasing of this six-case matrix pays the suite's cold import
+      // cost (~21s measured) and trips the suite's 20s global testTimeout
+      // non-deterministically. Give just this matrix room; the other cases run
+      // in a few seconds. Test-only, no product code involved.
+    }, 120000);
     it('a newly reported previously absent service invalidates a mixed preview', async () => {
       const setup = await setupUsageLine({measurementMode: 'period_total'});
       await upsertUsagePeriodTotal(reportInput(setup));
