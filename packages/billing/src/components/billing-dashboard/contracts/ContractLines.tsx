@@ -6,7 +6,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { Plus, ChevronDown, ChevronUp, Trash2, Package, Edit, Check, X, Loader2, MapPin } from 'lucide-react';
+import { Plus, ChevronDown, ChevronUp, Trash2, Package, Edit, Check, X, Loader2, MapPin, RotateCcw } from 'lucide-react';
 import { IContract, IContractLineServiceRateTier } from '@alga-psa/types';
 import { UsageServiceConfigPanel } from '../service-configurations/UsageServiceConfigPanel';
 import { getNextContractServiceBoundary } from '@alga-psa/billing/actions/contractLineSemanticsActions';
@@ -17,6 +17,7 @@ import {
   updateContractLineAssociation,
 } from '@alga-psa/billing/actions/contractLineMappingActions';
 import { checkContractHasInvoices } from '@alga-psa/billing/actions/contractActions';
+import { resetContractLineRateToStandard } from '@alga-psa/billing/actions/rateReviewActions';
 import {
   applyContractLineServiceMembershipChanges,
   getContractLineServicesWithConfigurations,
@@ -532,6 +533,32 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
       setError(err instanceof Error
         ? err.message
         : t('contractLines.errors.failedToRemove', { defaultValue: 'Failed to remove contract line' }));
+    }
+  };
+
+  const handleResetLineRateToStandard = async (line: DetailedContractLineMapping) => {
+    const confirmed = window.confirm(t('contractLines.dialogs.confirmResetRate', {
+      defaultValue: 'Reset this line to the standard catalog rate? The stored custom rate will be removed.',
+    }));
+    if (!confirmed) return;
+
+    try {
+      const result = await resetContractLineRateToStandard(line.contract_line_id);
+      if ('refused' in result && result.refused.length > 0) {
+        setError(result.refused[0].reason);
+        return;
+      }
+      if (!('applied' in result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
+      await fetchData();
+      onContractLinesChanged?.();
+    } catch (err) {
+      console.error('Error resetting line rate:', err);
+      setError(err instanceof Error
+        ? err.message
+        : t('contractLines.errors.failedToResetRate', { defaultValue: 'Failed to reset the line rate' }));
     }
   };
 
@@ -1225,6 +1252,23 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                         <Edit className="h-4 w-4 mr-1" />
                         {t('common.actions.edit', { defaultValue: 'Edit' })}
                       </Button>
+                      {line.custom_rate !== null && line.custom_rate !== undefined && (
+                        <Button
+                          id="reset-line-rate-to-standard"
+                          data-line-id={line.contract_line_id}
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            void handleResetLineRateToStandard(line);
+                          }}
+                          className="h-8 text-muted-foreground hover:text-[rgb(var(--color-text-700))] hover:bg-muted"
+                          disabled={isReadOnly}
+                        >
+                          <RotateCcw className="h-4 w-4 mr-1" />
+                          {t('contractLines.actions.resetToStandard', { defaultValue: 'Reset to standard' })}
+                        </Button>
+                      )}
                       <Button
                         id={`remove-${line.contract_line_id}`}
                         variant="ghost"
