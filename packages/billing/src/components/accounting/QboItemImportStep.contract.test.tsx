@@ -13,6 +13,7 @@ const previewQboItemImportMock = vi.hoisted(() => vi.fn());
 const executeQboItemImportMock = vi.hoisted(() => vi.fn());
 const getServiceTypesForSelectionMock = vi.hoisted(() => vi.fn());
 const useFeatureFlagMock = vi.hoisted(() => vi.fn(() => true));
+const getQboCustomersMock = vi.hoisted(() => vi.fn(async () => [] as unknown[]));
 
 vi.mock('../../actions/qboItemImportActions', () => ({
   previewQboItemImport: async (...args: unknown[]) => previewQboItemImportMock(...args),
@@ -28,6 +29,7 @@ vi.mock('../../actions/qboOnboardingActions', () => ({
   linkClientToQboCustomer: async () => ({ linked: true }),
   bulkLinkExactCustomerMatches: async () => ({ linked: 0 }),
   createQboCustomerForClient: async () => ({ created: true }),
+  createQboSubCustomerForProfile: async () => ({ created: true }),
   getHistoricalInvoiceMatches: async () => ({ confident: [], review: [] }),
   bulkLinkHistoricalInvoices: async () => ({ linked: 0 }),
   backfillPaymentsForLinkedInvoices: async () => ({ processed: 0 }),
@@ -35,8 +37,19 @@ vi.mock('../../actions/qboOnboardingActions', () => ({
   completeOnboardingWizard: async () => ({ done: true }),
 }));
 
+// The wizard's default Customers step renders QboCustomerMappingPanel, which
+// imports getQboCustomers from the qboActions subpath. That resolves to a
+// different module than the actions barrel, so mocking only the barrel let the
+// real withAuth server action run inside jsdom; its late-resolving promise then
+// updated React state after the environment was torn down, surfacing as an
+// unhandled "window is not defined" rejection. Mock the exact path the panel
+// imports (barrel kept too, so any barrel consumer stays stubbed).
 vi.mock('@alga-psa/integrations/actions', () => ({
-  getQboCustomers: async () => [],
+  getQboCustomers: (...args: unknown[]) => getQboCustomersMock(...args),
+}));
+
+vi.mock('@alga-psa/integrations/actions/qboActions', () => ({
+  getQboCustomers: (...args: unknown[]) => getQboCustomersMock(...args),
 }));
 
 vi.mock('@alga-psa/ui/hooks', async (importOriginal) => ({
@@ -209,23 +222,40 @@ describe('QboOnboardingWizard flag gating', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     getServiceTypesForSelectionMock.mockResolvedValue(serviceTypes);
+    getQboCustomersMock.mockResolvedValue([]);
   });
 
   afterEach(() => {
     cleanup();
   });
 
-  it('renders the Products & Services step when qbo-item-import is on', () => {
+  // The default Customers step mounts QboCustomerMappingPanel, which loads on
+  // mount. Each test awaits that load settling so the panel's state update
+  // lands inside the live jsdom environment instead of leaking past teardown.
+  it('renders the Products & Services step when qbo-item-import is on', async () => {
     useFeatureFlagMock.mockReturnValue(true);
     render(<QboOnboardingWizard />);
     expect(useFeatureFlagMock).toHaveBeenCalledWith('qbo-item-import');
     expect(screen.getByText('Products & Services')).toBeInTheDocument();
+    await screen.findByText('No clients found.');
   });
 
-  it('omits the step when the flag is off', () => {
+  it('omits the step when the flag is off', async () => {
     useFeatureFlagMock.mockReturnValue(false);
     render(<QboOnboardingWizard />);
     expect(screen.queryByText('Products & Services')).not.toBeInTheDocument();
     expect(screen.getByText('Go-live')).toBeInTheDocument();
+    await screen.findByText('No clients found.');
+  });
+
+  // Regression: the Customers step must load its catalog through the mocked
+  // getQboCustomers action. When the mock targeted the wrong module specifier,
+  // the real withAuth server action ran and its post-teardown state update threw
+  // "window is not defined", failing the whole suite despite green assertions.
+  it('loads the customer catalog through the mocked action without leaking past teardown', async () => {
+    useFeatureFlagMock.mockReturnValue(true);
+    render(<QboOnboardingWizard />);
+    await screen.findByText('No clients found.');
+    expect(getQboCustomersMock).toHaveBeenCalledTimes(1);
   });
 });
