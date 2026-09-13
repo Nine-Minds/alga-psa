@@ -54,6 +54,7 @@ export function isAdditionalWorkspaceTest(file, lane) {
     if ([
       'ee/temporal-workflows/src/__tests__/marketing-worker-registration.test.ts',
       'ee/temporal-workflows/src/__tests__/worker-registration.test.ts',
+      'ee/temporal-workflows/src/__tests__/quote-terms-formatting-source-mapping.contract.test.ts',
       'ee/temporal-workflows/src/activities/__tests__/portalDomainActivitiesTenantScoped.contract.test.ts',
       'ee/temporal-workflows/src/activities/__tests__/slaActivitiesTenantScoped.contract.test.ts',
       'ee/temporal-workflows/src/workflows/__tests__/kb-article-import-wiring.contract.test.ts',
