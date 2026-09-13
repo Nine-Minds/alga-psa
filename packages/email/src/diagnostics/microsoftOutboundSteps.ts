@@ -9,7 +9,8 @@
 import type { DiagnosticsStepOutcome } from '@alga-psa/shared/services/diagnostics/diagnosticsRunner';
 import {
   classifyGraphFailure,
-  mapOutboundRecommendations,
+  classifySendPermissionDenial,
+  type OutboundGraphRecommendationInput,
   toDiagnosticsErrorMeta,
 } from '@alga-psa/shared/services/email/microsoftGraphDiagnostics';
 import type {
@@ -49,17 +50,48 @@ function requiredSendScopes(ctx: OutboundDiagnosticsContext): string[] {
   return scopes;
 }
 
+/** Administrator-facing advice for outbound failures; raw provider evidence stays in the report. */
+export function microsoftOutboundRecommendations(args: OutboundGraphRecommendationInput): string[] {
+  const recommendations: string[] = [];
+  if (args.missingScopes?.length) {
+    recommendations.push('Reconnect the Microsoft 365 mailbox and approve the requested email permissions. Your Microsoft 365 administrator may need to approve them.');
+  }
+  if (args.status === 401) {
+    recommendations.push('Microsoft 365 could not sign in. Reconnect the mailbox in email settings.');
+  }
+  if (args.status === 403) {
+    const denial = classifySendPermissionDenial(args.code);
+    if (denial === 'send-as-denied') {
+      recommendations.push('This Microsoft account does not have permission to send as the selected mailbox. Ask your Microsoft 365 administrator to grant it Send As permission for that mailbox in Exchange admin center.');
+    } else if (denial === 'send-on-behalf-denied') {
+      recommendations.push('This Microsoft account does not have permission to send on behalf of the selected mailbox. Ask your Microsoft 365 administrator to grant it Send on Behalf permission for that mailbox in Exchange admin center.');
+    } else {
+      recommendations.push('Microsoft 365 denied access but did not identify the missing permission. Ask your Microsoft 365 administrator to check this account’s email permissions and its access to the selected mailbox.');
+    }
+  }
+  if (args.status === 404) {
+    recommendations.push('Microsoft 365 could not find the sending mailbox. Check its address and confirm it can be opened in Outlook.');
+  }
+  if (args.status === 429) {
+    recommendations.push('Microsoft 365 is receiving too many requests. Wait a few minutes before trying again.');
+  }
+  if (args.identityUnknown) {
+    recommendations.push('The connected Microsoft account could not be identified. Reconnect the mailbox and run checks again.');
+  }
+  return recommendations;
+}
+
 export function buildMicrosoftOutboundSteps(): OutboundStepDefinition[] {
   return [
     {
       id: 'tokens_present',
-      title: 'Microsoft Graph OAuth tokens present',
+      title: 'Saved Microsoft 365 connection',
       run: async (ctx): Promise<DiagnosticsStepOutcome<OutboundStepData>> => {
         const adapter = ctx.provider.adapter;
         if (!adapter) {
           return {
             status: 'fail',
-            error: { message: 'Microsoft Graph adapter was not constructed' },
+            error: { message: 'The Microsoft 365 connection is unavailable. Reconnect the mailbox.' },
             recommendations: ['Reconnect the Microsoft 365 mailbox.'],
           };
         }
@@ -72,9 +104,10 @@ export function buildMicrosoftOutboundSteps(): OutboundStepDefinition[] {
               accessTokenPresent: false,
               refreshTokenPresent: credentials.refreshTokenPresent,
             },
-            error: { message: 'No Microsoft OAuth access token is available for this provider.' },
+            detail: 'The Microsoft 365 mailbox is not connected.',
+            error: { message: 'The Microsoft 365 mailbox is not connected.' },
             recommendations: [
-              'No usable Microsoft OAuth tokens are available. Reconnect the Microsoft 365 mailbox to generate tokens.',
+              'Reconnect the Microsoft 365 mailbox in email settings.',
             ],
           };
         }
@@ -92,13 +125,13 @@ export function buildMicrosoftOutboundSteps(): OutboundStepDefinition[] {
     },
     {
       id: 'token_claims',
-      title: 'Decode delegated token scopes',
+      title: 'Microsoft 365 app permissions',
       run: async (ctx): Promise<DiagnosticsStepOutcome<OutboundStepData>> => {
         const adapter = ctx.provider.adapter;
         if (!adapter) {
           return {
             status: 'fail',
-            error: { message: 'Microsoft Graph adapter was not constructed' },
+            error: { message: 'The Microsoft 365 connection is unavailable. Reconnect the mailbox.' },
           };
         }
         const claims = await adapter.decodeCurrentAccessTokenClaims();
@@ -109,6 +142,7 @@ export function buildMicrosoftOutboundSteps(): OutboundStepDefinition[] {
         if (!claims.decoded) {
           return {
             status: 'warn',
+            detail: 'Email permissions could not be checked. Send a test email to check whether this account can send.',
             data: {
               decoded: false,
               scopesAvailable: false,
@@ -117,15 +151,14 @@ export function buildMicrosoftOutboundSteps(): OutboundStepDefinition[] {
               isSharedMailbox: shared,
               mailboxRelation: relation,
             },
-            recommendations: [
-              'The access token could not be decoded to inspect delegated scopes, so Mail.Send consent cannot be confirmed. Reconnect the Microsoft 365 mailbox.',
-            ],
+
           };
         }
 
         if (!claims.scopesAvailable) {
           return {
             status: 'warn',
+            detail: 'Email permissions could not be checked. Send a test email to check whether this account can send.',
             data: {
               decoded: true,
               scopesAvailable: false,
@@ -135,9 +168,7 @@ export function buildMicrosoftOutboundSteps(): OutboundStepDefinition[] {
               isSharedMailbox: shared,
               mailboxRelation: relation,
             },
-            recommendations: [
-              'The access token decoded but carries no usable scp claim, so delegated scopes are unavailable and Mail.Send consent cannot be confirmed. Reconnect the Microsoft 365 mailbox and confirm the delegated scopes.',
-            ],
+
           };
         }
 
@@ -158,8 +189,9 @@ export function buildMicrosoftOutboundSteps(): OutboundStepDefinition[] {
           return {
             status: 'fail',
             data,
-            error: { message: `Missing required delegated scopes: ${missing.join(', ')}` },
-            recommendations: mapOutboundRecommendations({
+            detail: 'The Microsoft 365 connection is missing permission to send email.',
+            error: { message: 'The Microsoft 365 connection is missing permission to send email.' },
+            recommendations: microsoftOutboundRecommendations({
               missingScopes: missing,
               message: '',
               sharedMailbox: shared,
@@ -178,9 +210,7 @@ export function buildMicrosoftOutboundSteps(): OutboundStepDefinition[] {
               ...data,
               note: 'Authenticated identity is unknown, so the Mail.Send.Shared requirement for a different mailbox was not evaluated.',
             },
-            recommendations: [
-              'The authenticated identity could not be confirmed, so the requirement for Mail.Send.Shared when sending as a shared mailbox was not evaluated.',
-            ],
+            detail: 'Permission to send from a different mailbox could not be checked because the connected account could not be identified.',
           };
         }
 
@@ -189,12 +219,13 @@ export function buildMicrosoftOutboundSteps(): OutboundStepDefinition[] {
     },
     {
       id: 'graph_me',
-      title: 'Authenticated Microsoft identity',
+      title: 'Connected Microsoft account',
       run: async (ctx): Promise<DiagnosticsStepOutcome<OutboundStepData>> => {
         const preflight = ctx.identityPreflight;
         if (!preflight) {
           return {
             status: 'warn',
+            detail: 'The connected Microsoft account could not be checked.',
             data: { reason: 'Identity preflight was not performed.' },
           };
         }
@@ -210,13 +241,13 @@ export function buildMicrosoftOutboundSteps(): OutboundStepDefinition[] {
     },
     {
       id: 'mailbox_base_path',
-      title: 'Mailbox routing decision (/me vs /users/{mailbox})',
+      title: 'Sending mailbox',
       run: async (ctx): Promise<DiagnosticsStepOutcome<OutboundStepData>> => {
         const adapter = ctx.provider.adapter;
         if (!adapter) {
           return {
             status: 'fail',
-            error: { message: 'Microsoft Graph adapter was not constructed' },
+            error: { message: 'The Microsoft 365 connection is unavailable. Reconnect the mailbox.' },
           };
         }
         const route = adapter.getMailboxRoute();
@@ -235,7 +266,7 @@ export function buildMicrosoftOutboundSteps(): OutboundStepDefinition[] {
             status: 'warn',
             data,
             recommendations: [
-              'The authenticated identity could not be confirmed, so self-send cannot be assumed and the Mail.Send.Shared/Send As requirement for the configured mailbox is unknown. Confirm the /me identity and re-run diagnostics.',
+              'The connected Microsoft account could not be identified. Reconnect the mailbox and run checks again.',
             ],
           };
         }
@@ -243,71 +274,18 @@ export function buildMicrosoftOutboundSteps(): OutboundStepDefinition[] {
         return {
           status: 'pass',
           data,
-          recommendations: route.isSharedOrDelegated
-            ? [
-                'Sending as a mailbox other than the authenticated user additionally requires Exchange Send As (or Send on Behalf) on the target mailbox; Graph Mail.Send consent alone is not sufficient. Send on Behalf appears as "<sender> on behalf of <mailbox>", which is not the same as Send As.',
-              ]
-            : undefined,
-        };
-      },
-    },
-    {
-      id: 'send_as_probe',
-      title: 'Exchange Send As verification',
-      run: async (ctx): Promise<DiagnosticsStepOutcome<OutboundStepData>> => {
-        const relation = mailboxRelation(ctx);
-        if (relation === 'self') {
-          return {
-            status: 'skip',
-            detail: 'Not applicable: sending as the authenticated user (/me).',
-            data: { isSharedMailbox: false, mailboxRelation: 'self', requiresSendAs: false },
-          };
-        }
-        if (relation === 'unknown') {
-          return {
-            status: 'warn',
-            detail: 'Authenticated identity is unknown, so Exchange Send As applicability cannot be determined.',
-            data: {
-              isSharedMailbox: false,
-              mailboxRelation: 'unknown',
-              requiresSendAs: null,
-              authoritative: false,
-              draftProbePerformed: false,
-              limitation:
-                'The configured mailbox could not be compared to the authenticated user, so self-send is not confirmed and neither is a shared/delegated send. A draft-create probe requires Mail.ReadWrite, which this delegated scope set does not request.',
-            },
-            recommendations: [
-              'Confirm the authenticated Microsoft identity before concluding whether Exchange Send As (or Send on Behalf) is required, then re-run diagnostics.',
-            ],
-          };
-        }
-        return {
-          status: 'warn',
-          detail: 'Exchange Send As has not been verified.',
-          data: {
-            isSharedMailbox: true,
-            mailboxRelation: 'shared',
-            requiresSendAs: true,
-            authoritative: false,
-            draftProbePerformed: false,
-            requiredExchangePermission: 'Send As (or Send on Behalf)',
-            limitation:
-              'A draft-create probe requires Mail.ReadWrite, which this delegated scope set does not request; a draft 403 would not isolate Exchange Send As from a Graph write-scope denial. No authoritative verdict is available without real-tenant validation.',
-          },
-          recommendations: [
-            'Grant the sending identity Exchange Send As (or Send on Behalf) on the shared mailbox, then confirm with an explicit live send test. Send on Behalf appears as "<sender> on behalf of <mailbox>", which is not the same as Send As.',
-          ],
         };
       },
     },
     {
       id: 'sent_items_writable',
-      title: 'Sent Items accessibility',
+      title: 'Sent Items folder',
       run: async (ctx): Promise<DiagnosticsStepOutcome<OutboundStepData>> => {
         const adapter = ctx.provider.adapter;
         if (!adapter) {
           return {
             status: 'warn',
+            detail: 'Sent Items could not be checked because the Microsoft 365 connection is unavailable.',
             data: { writabilityVerified: false, saveToSentItems: true },
           };
         }
@@ -315,8 +293,8 @@ export function buildMicrosoftOutboundSteps(): OutboundStepDefinition[] {
         try {
           const folder = await adapter.fetchSentItemsFolder();
           return {
-            status: 'warn',
-            detail: 'Sent Items folder is addressable, but writability is not independently proven.',
+            status: 'pass',
+            detail: 'The Sent Items folder is accessible.',
             http: folder.http,
             data: {
               mailboxBasePath: route.basePath,
@@ -325,29 +303,19 @@ export function buildMicrosoftOutboundSteps(): OutboundStepDefinition[] {
               writabilityVerified: false,
               saveToSentItems: true,
             },
-            recommendations: [
-              'Microsoft Graph sendMail saves to Sent Items when saveToSentItems is true; folder readability does not prove that write succeeds. Confirm with a live send.',
-            ],
           };
         } catch (error) {
           const failure = classifyGraphFailure(error);
-          const forbidden = failure.status === 403;
-          return {
+            return {
             status: 'warn',
-            detail: forbidden
-              ? 'Sent Items folder lookup was denied; this does not prove sendMail cannot save to Sent Items.'
-              : 'Sent Items folder could not be inspected; writability remains unverified.',
+            detail: 'Sent Items could not be checked. After sending a test email, check the mailbox’s Sent Items folder for a copy.',
             data: {
               writabilityVerified: false,
               saveToSentItems: true,
               accessCheckStatus: failure.status ?? null,
             },
             error: toDiagnosticsErrorMeta(failure),
-            recommendations: [
-              forbidden
-                ? 'Sent Items folder read was forbidden, which is an access-check result and not evidence about sendMail persistence. Confirm with a live send.'
-                : 'Sent Items inventory could not be inspected; treat writability as unverified.',
-            ],
+
           };
         }
       },

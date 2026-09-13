@@ -96,7 +96,7 @@ describe('token_claims', () => {
     const outcome = await stepById('token_claims', buildMicrosoftOutboundSteps()).run(ctx);
     expect(outcome.status).toBe('fail');
     expect(outcome.data).toMatchObject({ missing: ['Mail.Send'] });
-    expect(outcome.recommendations?.join(' ')).toContain('Mail.Send');
+    expect(outcome.recommendations?.join(' ')).toMatch(/Reconnect.*approve the requested email permissions/);
     expect(outcome.recommendations?.join(' ')).not.toMatch(/Mail\.Read and Mail\.Read\.Shared/);
   });
 
@@ -120,7 +120,8 @@ describe('token_claims', () => {
     const outcome = await stepById('token_claims', buildMicrosoftOutboundSteps()).run(ctx);
     expect(outcome.status).toBe('warn');
     expect(outcome.data).toMatchObject({ decoded: false });
-    expect(outcome.recommendations?.join(' ')).toMatch(/could not be decoded/i);
+    expect(outcome.recommendations).toBeUndefined();
+    expect(outcome.detail).toMatch(/Email permissions could not be checked/i);
   });
 
   it('does not require Mail.Send.Shared when the authenticated identity is unknown', async () => {
@@ -130,7 +131,8 @@ describe('token_claims', () => {
     const outcome = await stepById('token_claims', buildMicrosoftOutboundSteps()).run(ctx);
     expect(outcome.status).toBe('pass');
     expect(outcome.data).toMatchObject({ missing: [], mailboxRelation: 'unknown' });
-    expect(outcome.recommendations?.join(' ')).toMatch(/identity could not be confirmed/i);
+    expect(outcome.recommendations).toBeUndefined();
+    expect(outcome.detail).toMatch(/connected account could not be identified/i);
   });
 
   it('warns, never passes, when a decoded token carries no usable scope claim', async () => {
@@ -140,44 +142,20 @@ describe('token_claims', () => {
     const outcome = await stepById('token_claims', buildMicrosoftOutboundSteps()).run(ctx);
     expect(outcome.status).toBe('warn');
     expect(outcome.data).toMatchObject({ decoded: true, scopesAvailable: false });
-    expect(outcome.recommendations?.join(' ')).toMatch(/no usable scp claim/i);
-  });
-});
-
-describe('send_as_probe', () => {
-  it('is an advisory warn for shared/delegated sending and never claims verification', async () => {
-    const ctx = makeContext({
-      adapter: baseAdapter(),
-      configuredMailbox: 'shared@example.com',
-      authenticatedUserEmail: 'auth@example.com',
-    });
-    const outcome = await stepById('send_as_probe', buildMicrosoftOutboundSteps()).run(ctx);
-    expect(outcome.status).toBe('warn');
-    expect(outcome.data).toMatchObject({ authoritative: false, draftProbePerformed: false, requiresSendAs: true });
-    expect(outcome.recommendations?.join(' ')).toContain('Exchange Send As');
-  });
-
-  it('skips as not applicable for confirmed self-send', async () => {
-    const ctx = makeContext({
-      adapter: baseAdapter(),
-      configuredMailbox: 'sender@example.com',
-      authenticatedUserEmail: 'sender@example.com',
-    });
-    const outcome = await stepById('send_as_probe', buildMicrosoftOutboundSteps()).run(ctx);
-    expect(outcome.status).toBe('skip');
-    expect(outcome.data).toMatchObject({ requiresSendAs: false });
+    expect(outcome.recommendations).toBeUndefined();
+    expect(outcome.detail).toMatch(/Email permissions could not be checked/i);
   });
 });
 
 describe('sent_items_writable', () => {
-  it('stays warn with writability unverified even when the folder is readable', async () => {
+  it('passes the accessibility check when the folder is readable without claiming writability', async () => {
     const ctx = makeContext({
       adapter: baseAdapter(),
       configuredMailbox: 'sender@example.com',
       authenticatedUserEmail: 'sender@example.com',
     });
     const outcome = await stepById('sent_items_writable', buildMicrosoftOutboundSteps()).run(ctx);
-    expect(outcome.status).toBe('warn');
+    expect(outcome.status).toBe('pass');
     expect(outcome.data).toMatchObject({ writabilityVerified: false, saveToSentItems: true });
     expect(outcome.http).toMatchObject({ status: 200 });
   });
@@ -201,12 +179,13 @@ describe('sent_items_writable', () => {
     const outcome = await stepById('sent_items_writable', buildMicrosoftOutboundSteps()).run(ctx);
     expect(outcome.status).toBe('warn');
     expect(outcome.error).toMatchObject({ status: 403, code: 'ErrorAccessDenied', requestId: 'req-403' });
-    expect(outcome.detail).toMatch(/does not prove sendMail cannot save/i);
+    expect(outcome.detail).toMatch(/After sending a test email, check the mailbox’s Sent Items folder/);
+    expect(outcome.recommendations).toBeUndefined();
   });
 });
 
 describe('mailbox_base_path', () => {
-  it('explains Exchange Send As for shared/delegated routing with request evidence', async () => {
+  it('reports shared/delegated routing without an untested permission recommendation', async () => {
     const adapter = baseAdapter();
     adapter.getMailboxRoute = vi.fn(() => ({
       basePath: '/users/shared@example.com',
@@ -223,7 +202,7 @@ describe('mailbox_base_path', () => {
     const outcome = await stepById('mailbox_base_path', buildMicrosoftOutboundSteps()).run(ctx);
     expect(outcome.status).toBe('pass');
     expect(outcome.data).toMatchObject({ mailboxBasePath: '/users/shared@example.com', isSharedOrDelegated: true });
-    expect(outcome.recommendations?.join(' ')).toMatch(/Exchange Send As/);
+    expect(outcome.recommendations).toBeUndefined();
     expect(ctx.mailboxBasePath).toBe('/users/shared@example.com');
   });
 });

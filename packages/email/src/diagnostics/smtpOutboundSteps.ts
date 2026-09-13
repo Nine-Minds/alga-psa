@@ -82,7 +82,7 @@ function smtpConfigProblems(config: Record<string, any>): string[] {
 }
 
 function notAttemptedDetail(reason: string): string {
-  return `Skipped: verify() was not attempted because ${reason}.`;
+  return `Not checked because ${reason}.`;
 }
 
 export function buildSmtpOutboundSteps(): OutboundStepDefinition[] {
@@ -91,7 +91,7 @@ export function buildSmtpOutboundSteps(): OutboundStepDefinition[] {
   return [
     {
       id: 'smtp_configuration',
-      title: 'SMTP configuration',
+      title: 'SMTP settings',
       run: async (ctx): Promise<DiagnosticsStepOutcome<OutboundStepData>> => {
         const config = ctx.provider.rawConfig;
         const transport = buildSmtpTransportOptions(config);
@@ -102,8 +102,13 @@ export function buildSmtpOutboundSteps(): OutboundStepDefinition[] {
           return {
             status: 'fail',
             data: { missingOrInvalid: problems },
-            error: { message: `Invalid SMTP configuration: ${problems.join(', ')}` },
-            recommendations: ['Complete the required SMTP fields (host, port, and From address) before testing.'],
+            error: { message: 'The SMTP settings are incomplete.' },
+            recommendations: problems.map((problem) => {
+              if (problem === 'host') return 'Enter SMTP Host in email settings.';
+              if (problem === 'port') return 'Enter SMTP Port in email settings.';
+              if (problem === 'from') return 'Set the From Address in email settings.';
+              return 'Enter both a username and password, or leave both blank if your mail server allows sending without signing in.';
+            }),
           };
         }
         return {
@@ -120,14 +125,14 @@ export function buildSmtpOutboundSteps(): OutboundStepDefinition[] {
     },
     {
       id: 'smtp_connection',
-      title: 'SMTP verify() (connection / TLS / AUTH attempt)',
+      title: 'Mail server connection',
       run: async (ctx): Promise<DiagnosticsStepOutcome<OutboundStepData>> => {
         const config = ctx.provider.rawConfig;
         if (smtpConfigProblems(config).length > 0) {
           verifyState = { kind: 'not-attempted' };
           return {
             status: 'skip',
-            detail: 'Skipped because the SMTP configuration is incomplete.',
+            detail: 'Complete the SMTP settings before checking the connection.',
             data: { attempted: false },
           };
         }
@@ -140,6 +145,7 @@ export function buildSmtpOutboundSteps(): OutboundStepDefinition[] {
           verifyState = { kind: 'succeeded', durationMs };
           return {
             status: 'pass',
+            detail: 'AlgaPSA connected to the mail server successfully.',
             data: {
               attempted: true,
               verified: true,
@@ -155,6 +161,11 @@ export function buildSmtpOutboundSteps(): OutboundStepDefinition[] {
           verifyState = { kind: 'failed', failure, durationMs };
           return {
             status: 'fail',
+            detail: failure.phase === 'auth'
+              ? 'The mail server rejected the sign-in.'
+              : failure.phase === 'tls'
+                ? 'A secure connection to the mail server could not be established.'
+                : 'The mail server connection failed.',
             data: {
               attempted: true,
               verified: false,
@@ -172,12 +183,12 @@ export function buildSmtpOutboundSteps(): OutboundStepDefinition[] {
             },
             recommendations: [
               failure.phase === 'connection'
-                ? 'The SMTP server could not be reached from AlgaPSA. Verify host, port, DNS, and firewall rules.'
+                ? 'AlgaPSA could not reach the mail server. Check SMTP Host and Port. If they are correct, ask your network administrator to check access to the server.'
                 : failure.phase === 'tls'
-                  ? 'The TLS handshake failed. Verify the certificate chain and TLS settings (including verify-certificate).'
+                  ? 'AlgaPSA could not establish a secure connection to the mail server. Check the encryption settings and ask your mail administrator to check the server certificate.'
                   : failure.phase === 'auth'
-                    ? 'SMTP authentication failed. Verify the username/password and that AUTH is permitted.'
-                    : 'The SMTP verification failed in a phase that could not be isolated; review the native error details (command/response).',
+                    ? 'The mail server rejected the sign-in. Check the username and password, and confirm this account is allowed to send through this server.'
+                    : 'The mail server connection failed. Ask your mail administrator to review the technical details, or share the support report with AlgaPSA support.',
             ],
           };
         } finally {
@@ -187,7 +198,7 @@ export function buildSmtpOutboundSteps(): OutboundStepDefinition[] {
     },
     {
       id: 'smtp_tls',
-      title: 'SMTP TLS negotiation',
+      title: 'Encrypted connection',
       run: async (ctx): Promise<DiagnosticsStepOutcome<OutboundStepData>> => {
         const config = ctx.provider.rawConfig;
         const transport = buildSmtpTransportOptions(config);
@@ -195,13 +206,14 @@ export function buildSmtpOutboundSteps(): OutboundStepDefinition[] {
         if (!tlsRequested) {
           return {
             status: 'skip',
-            detail: 'TLS was not explicitly required, so TLS negotiation was not established by this verification.',
+            detail: 'Encryption is not required by the saved settings, so this check cannot confirm whether the connection was encrypted.',
             data: { tlsRequested: false, attempted: false },
           };
         }
         if (verifyState.kind === 'failed' && verifyState.failure.phase === 'tls') {
           return {
             status: 'fail',
+            detail: 'A secure connection to the mail server could not be established.',
             data: { durationMs: verifyState.durationMs, code: verifyState.failure.code ?? null },
             error: { message: verifyState.failure.message, code: verifyState.failure.code },
           };
@@ -225,14 +237,14 @@ export function buildSmtpOutboundSteps(): OutboundStepDefinition[] {
         if (verifyState.kind === 'failed') {
           return {
             status: 'skip',
-            detail: 'TLS negotiation was not established by the failed verification.',
+            detail: 'Encryption could not be checked because the connection failed.',
             data: { attempted: false, durationMs: verifyState.durationMs },
           };
         }
         if (verifyState.kind === 'not-attempted') {
           return {
             status: 'skip',
-            detail: notAttemptedDetail('the SMTP configuration is incomplete'),
+            detail: notAttemptedDetail('the SMTP settings are incomplete'),
             data: { attempted: false },
           };
         }
@@ -250,20 +262,21 @@ export function buildSmtpOutboundSteps(): OutboundStepDefinition[] {
     },
     {
       id: 'smtp_auth',
-      title: 'SMTP authentication',
+      title: 'Mail server sign-in',
       run: async (ctx): Promise<DiagnosticsStepOutcome<OutboundStepData>> => {
         const config = ctx.provider.rawConfig;
         const transport = buildSmtpTransportOptions(config);
         if (!transport.authConfigured) {
           return {
             status: 'skip',
-            detail: 'No SMTP credentials are configured; AUTH was not attempted.',
+            detail: 'No username or password is configured. The mail server was checked without signing in.',
             data: { authConfigured: false, attempted: false },
           };
         }
         if (verifyState.kind === 'failed' && verifyState.failure.phase === 'auth') {
           return {
             status: 'fail',
+            detail: 'The mail server rejected the sign-in.',
             data: { durationMs: verifyState.durationMs, code: verifyState.failure.code ?? null },
             error: {
               message: verifyState.failure.message,
@@ -276,10 +289,10 @@ export function buildSmtpOutboundSteps(): OutboundStepDefinition[] {
           const phase = verifyState.failure.phase;
           const detail =
             phase === 'connection'
-              ? 'Skipped: authentication was not reached because the connection failed earlier.'
+              ? 'Sign-in was not checked because the server could not be reached.'
               : phase === 'tls'
-                ? 'Skipped: authentication was not reached because TLS failed earlier.'
-                : 'Skipped: authentication could not be reached or verified because the failed phase could not be isolated.';
+                ? 'Sign-in was not checked because a secure connection could not be established.'
+                : 'Sign-in could not be checked because the mail server connection failed.';
           return {
             status: 'skip',
             detail,
@@ -289,7 +302,7 @@ export function buildSmtpOutboundSteps(): OutboundStepDefinition[] {
         if (verifyState.kind === 'not-attempted') {
           return {
             status: 'skip',
-            detail: notAttemptedDetail('the SMTP configuration is incomplete'),
+            detail: notAttemptedDetail('the SMTP settings are incomplete'),
             data: { attempted: false },
           };
         }

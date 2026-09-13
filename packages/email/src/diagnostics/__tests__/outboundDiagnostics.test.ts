@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import axios from 'axios';
 import { liveSendResultFromEmailSendResult, runOutboundEmailDiagnosticsWithSettings } from '../outboundDiagnostics';
 import type { ResolvedOutboundProvider, OutboundLiveSend } from '../outboundTypes';
 import { SMTPEmailProvider } from '../../providers/SMTPEmailProvider';
@@ -174,7 +175,6 @@ describe('runOutboundEmailDiagnosticsWithSettings', () => {
       'token_claims',
       'graph_me',
       'mailbox_base_path',
-      'send_as_probe',
       'sent_items_writable',
       'live_send_test',
     ]);
@@ -185,6 +185,79 @@ describe('runOutboundEmailDiagnosticsWithSettings', () => {
     expect(report.summary.defaultFromEmail).toBe('sender@example.com');
     expect(report.summary.authenticatedUserEmail).toBe('auth@example.com');
     expect(report.summary.mailboxBasePath).toBe('/users/sender@example.com');
+    expect(report.summary.overallStatus).toBe('pass');
+    expect(report.recommendations).toEqual([]);
+    expect(report.steps.find(step => step.id === 'live_send_test')?.status).toBe('skip');
+    expect(JSON.stringify(report.supportBundle)).not.toContain('send_as_probe');
+  });
+
+  it.each([false, true])('keeps an optional Sent Items failure as evidence without warning about sending (live send: %s)', async (liveSendTest) => {
+    const adapter = makeAdapter({
+      fetchSentItemsFolder: vi.fn(async () => {
+        throw { response: { status: 403, data: { error: { code: 'ErrorAccessDenied', message: 'Access denied' } } } };
+      }),
+    });
+    const sendLive = vi.fn(async () => ({ success: true }));
+    const report = await runWith(
+      { providerId: 'p1', providerType: 'microsoft', configuredMailbox: 'sender@example.com', rawConfig: {}, adapter: adapter as any },
+      { liveSendTest, ...(liveSendTest ? { recipient: 'admin@example.com' } : {}) },
+      sendLive,
+    );
+
+    expect(report.summary.overallStatus).toBe('pass');
+    expect(report.recommendations).toEqual([]);
+    expect(report.steps.find(step => step.id === 'sent_items_writable')).toMatchObject({
+      status: 'warn', error: { status: 403, code: 'ErrorAccessDenied' },
+    });
+    expect(JSON.stringify(report.supportBundle)).toContain('ErrorAccessDenied');
+    expect(sendLive).toHaveBeenCalledTimes(liveSendTest ? 1 : 0);
+  });
+
+  it.each([
+    { decoded: false, scopesAvailable: false },
+    { decoded: true, scopesAvailable: false },
+  ])('keeps an unavailable permission inspection neutral (%j)', async (claims) => {
+    const adapter = makeAdapter({
+      decodeCurrentAccessTokenClaims: vi.fn(async () => ({ ...claims, scopes: [], claims: null })),
+    });
+    const report = await runWith({ providerId: 'p1', providerType: 'microsoft', configuredMailbox: 'sender@example.com', rawConfig: {}, adapter: adapter as any });
+    expect(report.summary.overallStatus).toBe('pass');
+    expect(report.recommendations).toEqual([]);
+    expect(report.steps.find(step => step.id === 'token_claims')).toMatchObject({ status: 'warn', data: claims });
+  });
+
+  it.each([
+    { status: 403, overall: 'pass', denied: true },
+    { status: 401, overall: 'fail', denied: false },
+    { status: 503, overall: 'fail', denied: false },
+  ])('distinguishes a Resend inspection limit from a real connection failure (%j)', async ({ status, overall, denied }) => {
+    const create = vi.spyOn(axios, 'create').mockReturnValue({
+      get: vi.fn(async () => { throw { response: { status, data: { message: 'Request denied' } } }; }),
+    } as any);
+    try {
+      const report = await runWith({ providerId: 'resend-1', providerType: 'resend', rawConfig: { apiKey: 'key' } });
+      expect(report.summary.overallStatus).toBe(overall);
+      expect(report.steps.find(step => step.id === 'resend_domains_check')).toMatchObject({
+        status: denied ? 'warn' : 'fail', data: { denied }, error: { status },
+      });
+      if (denied) expect(report.recommendations).toEqual([]);
+      else expect(report.recommendations.length).toBeGreaterThan(0);
+    } finally {
+      create.mockRestore();
+    }
+  });
+
+  it('still fails the sending verdict when email permission is missing and Sent Items is unavailable', async () => {
+    const adapter = makeAdapter({
+      decodeCurrentAccessTokenClaims: vi.fn(async () => ({ decoded: true, scopesAvailable: true, scopes: ['Mail.Read'], claims: {} })),
+      fetchSentItemsFolder: vi.fn(async () => { throw new Error('Read denied'); }),
+    });
+    const report = await runWith({ providerId: 'p1', providerType: 'microsoft', configuredMailbox: 'sender@example.com', rawConfig: {}, adapter: adapter as any });
+    expect(report.summary.overallStatus).toBe('fail');
+    expect(report.steps.find(step => step.id === 'token_claims')).toMatchObject({
+      status: 'fail', detail: 'The Microsoft 365 connection is missing permission to send email.',
+    });
+    expect(report.recommendations.join(' ')).toMatch(/Reconnect.*approve the requested email permissions/);
   });
 
   it('resolves the SMTP effective sender through the production resolver (domain rewrite + display name)', async () => {
@@ -284,8 +357,54 @@ describe('runOutboundEmailDiagnosticsWithSettings', () => {
     const live = report.steps.find((s) => s.id === 'live_send_test');
     expect(live?.status).toBe('pass');
     expect(live?.data).toMatchObject({ accepted: true, delivered: false, messageId: 'mid-1' });
+    expect(live?.detail).toMatch(/accepted the test email.*confirm delivery/);
     expect((live?.data as any)?.note).toMatch(/acceptance is not delivery/i);
     expect(report.summary.liveSendPerformed).toBe(true);
+  });
+
+  it('explains an uncertain send result without encouraging an immediate duplicate', async () => {
+    const sendLive = vi.fn(async () => ({
+      success: false,
+      error: 'Request timed out after submission',
+      errorCode: 'ETIMEDOUT',
+      requiresReconciliation: true,
+      definitelyNotSent: false,
+    }));
+    const adapter = makeAdapter();
+    const report = await runWith(
+      { providerId: 'p1', providerType: 'microsoft', configuredMailbox: 'sender@example.com', rawConfig: {}, adapter: adapter as any },
+      { liveSendTest: true, recipient: 'admin@example.com' },
+      sendLive,
+    );
+    expect(sendLive).toHaveBeenCalledTimes(1);
+    expect(report.steps.find(step => step.id === 'live_send_test')).toMatchObject({
+      status: 'fail',
+      detail: 'The email service did not confirm whether the test email was sent.',
+      data: { requiresReconciliation: true, definitelyNotSent: false },
+      error: { code: 'ETIMEDOUT', message: 'Request timed out after submission' },
+    });
+    expect(report.recommendations).toEqual([
+      'The email service did not confirm the result. Check the recipient’s inbox and spam folder before sending another test email.',
+    ]);
+  });
+
+  it.each(['microsoft', 'smtp', 'resend'] as const)('does not claim a %s message was rejected when a plain timeout has no delivery evidence', async (providerType) => {
+    const sendLive = vi.fn(async () => { throw new Error('Request timed out'); });
+    const adapter = makeAdapter();
+    const report = await runWith(
+      { providerId: 'p1', providerType, configuredMailbox: 'sender@example.com', rawConfig: {}, adapter: adapter as any },
+      { liveSendTest: true, recipient: 'admin@example.com' },
+      sendLive,
+    );
+    expect(sendLive).toHaveBeenCalledTimes(1);
+    expect(report.steps.find(step => step.id === 'live_send_test')).toMatchObject({
+      status: 'fail',
+      detail: 'The email service did not confirm whether the test email was sent.',
+      data: { definitelyNotSent: null, requiresReconciliation: null },
+      error: { message: 'Request timed out' },
+    });
+    expect(report.recommendations).toContain('The email service did not confirm the result. Check the recipient’s inbox and spam folder before sending another test email.');
+    expect(report.recommendations.join(' ')).not.toMatch(/rejected|could not be sent/i);
   });
 
   it('names Exchange Send As when a live send fails with ErrorSendAsDenied and preserves correlation ids', async () => {
@@ -314,8 +433,8 @@ describe('runOutboundEmailDiagnosticsWithSettings', () => {
       clientRequestId: 'cli-send',
     });
     expect(live?.http).toMatchObject({ status: 403, requestId: 'req-send', clientRequestId: 'cli-send' });
-    expect(report.recommendations.join(' ')).toMatch(/ErrorSendAsDenied/);
-    expect(report.recommendations.join(' ')).toMatch(/Exchange Send As/);
+    expect(report.recommendations.join(' ')).toMatch(/does not have permission to send as/);
+    expect(report.recommendations.join(' ')).toMatch(/Send As permission.*Exchange admin center/);
     // Outbound advice must never inherit the inbound Mail.Read remediation.
     expect(report.recommendations.join(' ')).not.toMatch(/Mail\.Read/);
     expect(report.recommendations.join(' ')).not.toMatch(/delegated access to the target mailbox/i);
@@ -335,8 +454,8 @@ describe('runOutboundEmailDiagnosticsWithSettings', () => {
       sendLive as any,
     );
     const text = report.recommendations.join(' ');
-    expect(text).toMatch(/does not identify the missing permission/i);
-    expect(text).not.toMatch(/ErrorSendAsDenied/);
+    expect(text).toMatch(/did not identify the missing permission/i);
+    expect(text).not.toMatch(/does not have permission to send as/);
   });
 
   it('preserves Graph status and request id when the identity preflight fails', async () => {
@@ -360,6 +479,7 @@ describe('runOutboundEmailDiagnosticsWithSettings', () => {
     });
     const me = report.steps.find((s) => s.id === 'graph_me');
     expect(me?.status).toBe('fail');
+    expect(me?.detail).toBe('The connected Microsoft account could not be checked.');
     expect(me?.error).toMatchObject({
       status: 401,
       code: 'InvalidAuthenticationToken',
@@ -395,8 +515,8 @@ describe('runOutboundEmailDiagnosticsWithSettings', () => {
         command: 'AUTH',
         response: '535 5.7.8 Authentication credentials invalid',
       }),
-      expected: /SMTP authentication was rejected/i,
-      forbidden: /rejected the recipient or message|could not be reached|TLS handshake failed/i,
+      expected: /mail server rejected the sign-in/i,
+      forbidden: /rejected the recipient or message|could not reach|could not establish a secure connection/i,
       data: { errorCode: 'EAUTH', responseCode: 535, command: 'AUTH' },
     },
     {
@@ -408,7 +528,7 @@ describe('runOutboundEmailDiagnosticsWithSettings', () => {
         response: '550 5.1.1 User unknown',
       }),
       expected: /rejected the recipient or message/i,
-      forbidden: /authentication was rejected|could not be reached|TLS handshake failed/i,
+      forbidden: /rejected the sign-in|could not reach|could not establish a secure connection/i,
       data: { errorCode: 'EENVELOPE', responseCode: 550, command: 'RCPT' },
     },
     {
@@ -417,8 +537,8 @@ describe('runOutboundEmailDiagnosticsWithSettings', () => {
         code: 'ECONNREFUSED',
         command: 'CONN',
       }),
-      expected: /could not be reached/i,
-      forbidden: /authentication was rejected|rejected the recipient or message|TLS handshake failed/i,
+      expected: /could not reach/i,
+      forbidden: /rejected the sign-in|rejected the recipient or message|could not establish a secure connection/i,
       data: { errorCode: 'ECONNREFUSED', command: 'CONN' },
     },
     {
@@ -426,8 +546,8 @@ describe('runOutboundEmailDiagnosticsWithSettings', () => {
       error: Object.assign(new Error('self-signed certificate in certificate chain'), {
         code: 'ETLS',
       }),
-      expected: /TLS handshake failed/i,
-      forbidden: /authentication was rejected|rejected the recipient or message|could not be reached/i,
+      expected: /could not establish a secure connection/i,
+      forbidden: /rejected the sign-in|rejected the recipient or message|could not reach/i,
       data: { errorCode: 'ETLS' },
     },
   ])(
@@ -462,7 +582,7 @@ describe('runOutboundEmailDiagnosticsWithSettings', () => {
     const live = report.steps.find((s) => s.id === 'live_send_test');
     expect(live?.status).toBe('fail');
     const text = report.recommendations.join(' ');
-    expect(text).toMatch(/Resend denied the send/i);
+    expect(text).toMatch(/API key allows sending.*domain is verified in Resend/i);
     expect(text).not.toMatch(/Microsoft Graph|Exchange Send As|Mail\.Read/i);
   });
 

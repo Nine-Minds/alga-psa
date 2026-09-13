@@ -46,7 +46,8 @@ describe('resend steps', () => {
     expect(outcome.status).toBe('pass');
     expect(outcome.http).toMatchObject({ path: '/domains', status: 200, requestId: 'resend-req-1' });
     expect(outcome.data).toMatchObject({ cacheBypassed: true, domainCount: 1 });
-    expect(outcome.recommendations?.join(' ')).toMatch(/does not prove send permission/i);
+    expect(outcome.recommendations).toBeUndefined();
+    expect(outcome.detail).toMatch(/Send a test email to check sending/);
   });
 
   it('reports a restricted-key denial as warn, not as proof sending is forbidden', async () => {
@@ -61,7 +62,17 @@ describe('resend steps', () => {
     expect(outcome.status).toBe('warn');
     expect(outcome.error).toMatchObject({ message: 'restricted_api_key', status: 403, requestId: 'resend-req-2' });
     expect(outcome.data).toMatchObject({ denied: true });
-    expect(outcome.recommendations?.join(' ')).toMatch(/does not by itself prove that sending is forbidden/i);
+    expect(outcome.detail).toMatch(/Some API keys allow sending email without access to domain settings/);
+    expect(outcome.recommendations).toEqual([]);
+  });
+
+  it('treats an invalid API key as a real failure, not a restricted-key inspection limit', async () => {
+    get.mockRejectedValue({ response: { status: 401, data: { message: 'API key is invalid' } } });
+    const outcome = await buildResendOutboundSteps().find(step => step.id === 'resend_domains_check')!.run(makeContext({ apiKey: 'invalid' }));
+    expect(outcome.status).toBe('fail');
+    expect(outcome.data).toMatchObject({ denied: false });
+    expect(outcome.detail).toMatch(/did not accept the API key/);
+    expect(outcome.recommendations).toEqual(['Update the Resend API key in email settings.']);
   });
 
   it('fails on network errors without inventing an HTTP status', async () => {

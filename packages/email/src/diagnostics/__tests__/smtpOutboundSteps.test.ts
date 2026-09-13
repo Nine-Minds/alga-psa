@@ -168,7 +168,7 @@ describe('smtp steps', () => {
 
     const tls = await steps.find((s) => s.id === 'smtp_tls')!.run(ctx);
     expect(tls.status).toBe('skip');
-    expect(tls.detail).toMatch(/not established/i);
+    expect(tls.detail).toMatch(/could not be checked because the connection failed/i);
   });
 
   it('classifies connection refusals and skips later phases', async () => {

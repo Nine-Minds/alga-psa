@@ -195,8 +195,8 @@ describe('outbound Graph body-only correlation ids (adapter -> provider -> repor
     });
 
     const recommendations = report.recommendations.join(' ');
-    expect(recommendations).toMatch(/ErrorSendAsDenied/);
-    expect(recommendations).toMatch(/Exchange Send As/);
+    expect(recommendations).toMatch(/does not have permission to send as/);
+    expect(recommendations).toMatch(/Send As permission.*Exchange admin center/);
     expect(recommendations).not.toMatch(/Mail\.Read/);
 
     const bundleJson = JSON.stringify(report.supportBundle);

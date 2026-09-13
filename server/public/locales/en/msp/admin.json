@@ -665,7 +665,9 @@
     "unsavedNotice": "Unsaved changes on this screen are not included. Save settings before running diagnostics.",
     "states": {
       "running": "Running diagnostics...",
-      "failed": "Diagnostics failed"
+      "failed": "Diagnostics failed",
+      "copyFailed": "Could not copy the support bundle. Use Download to save it as a file.",
+      "checking": "Checking email settings…"
     },
     "actions": {
       "retry": "Retry",
@@ -692,9 +694,42 @@
     },
     "liveSend": {
       "label": "Send one test message (live)",
+      "permissionHelp": "Send a test email to confirm this account can send from the selected mailbox.",
       "recipient": "Recipient",
       "run": "Run with live send",
-      "invalidRecipient": "Enter a valid recipient email address."
-    }
+      "invalidRecipient": "Enter a valid recipient email address.",
+      "enableTest": "Send a test email",
+      "sendTo": "Send to",
+      "sendTest": "Send test email",
+      "sending": "Sending test email…",
+      "unconfirmed": "We could not confirm whether the test email was sent. Check the recipient’s inbox before trying again."
+    },
+    "introduction": "Check your saved email settings. Sending a test email is optional.",
+    "checkStatus": {
+      "pass": "Passed",
+      "warn": "Needs attention",
+      "fail": "Failed",
+      "skip": "Not checked"
+    },
+    "result": {
+      "pass": "Setup checks passed",
+      "warn": "Some checks could not be completed",
+      "fail": "An email check failed",
+      "skip": "Some checks could not be completed"
+    },
+    "noTestSent": "These checks did not send an email.",
+    "emailService": "Email service",
+    "sender": "From",
+    "connectedAccount": "Connected account",
+    "checkAgain": "Check again",
+    "nextSteps": "Next steps",
+    "limitedChecksHelp": "Some account information was unavailable for these checks. Send a test email to check whether sending works.",
+    "sentItemsHelp": "The Sent Items folder could not be checked. After sending a test email, check that a copy appears in the sending mailbox’s Sent Items folder.",
+    "copyReport": "Copy report",
+    "downloadReport": "Download report",
+    "copyConfirmed": "Report copied to clipboard.",
+    "copyReportFailed": "Could not copy the report. Use Download report to save it as a file.",
+    "shareHelp": "Share this report with support. Email addresses and account identifiers are hidden.",
+    "technicalDetails": "Technical details for support"
   }
 }

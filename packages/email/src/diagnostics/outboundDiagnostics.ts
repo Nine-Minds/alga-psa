@@ -18,13 +18,13 @@ import {
   MicrosoftGraphAdapter,
 } from '@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter';
 import {
-  mapOutboundRecommendations,
   normalizeOutboundGraphFailure,
   toDiagnosticsErrorMeta,
   type GraphFailure,
 } from '@alga-psa/shared/services/email/microsoftGraphDiagnostics';
 import {
   assembleDiagnosticsReport,
+  computeOverallStatus,
   runDiagnosticsSteps,
   type DiagnosticsStepDefinition,
 } from '@alga-psa/shared/services/diagnostics/diagnosticsRunner';
@@ -32,13 +32,14 @@ import type { EmailProviderConfig as InboundEmailProviderConfig } from '@alga-ps
 import { TenantEmailService } from '../TenantEmailService';
 import { resolveDefaultFromAddress, resolveTenantCompanyName } from '../senderIdentity';
 import { EmailProviderManager } from '../providers/EmailProviderManager';
-import { buildMicrosoftOutboundSteps } from './microsoftOutboundSteps';
+import { buildMicrosoftOutboundSteps, microsoftOutboundRecommendations } from './microsoftOutboundSteps';
 import { buildSmtpOutboundSteps } from './smtpOutboundSteps';
 import { buildResendOutboundSteps } from './resendOutboundSteps';
 import {
   buildSanitizedSupportBundle,
   sanitizeDiagnosticsReport,
 } from './redaction';
+import { isAdvisoryOutboundStep } from './outboundTypes';
 import type {
   NormalizedOutboundOptions,
   OutboundDiagnosticsContext,
@@ -89,7 +90,7 @@ async function defaultResolveProvider(input: {
   if (providerType === 'microsoft') {
     const inboundProvider = resolvedConfig.inboundProvider as InboundEmailProviderConfig | undefined;
     if (!inboundProvider) {
-      return { error: 'The selected Microsoft 365 mailbox has no OAuth configuration. Reconnect it before running diagnostics.' };
+      return { error: 'The selected Microsoft 365 mailbox is not connected. Reconnect it in email settings.' };
     }
     return {
       providerId: enabled.providerId,
@@ -164,7 +165,7 @@ export function liveSendResultFromEmailSendResult(result: EmailSendResult): Outb
   }
   return {
     success: false,
-    error: result.error || 'The provider rejected the test message.',
+    error: result.error || 'The email service did not confirm the test result.',
     errorCode: metadataField(result.metadata, 'errorCode'),
     status: metadataNumber(result.metadata, 'status'),
     requestId: metadataField(result.metadata, 'requestId'),
@@ -209,7 +210,7 @@ function buildSelectionStep(
 ): OutboundStepDefinition {
   return {
     id: 'outbound_provider_selected',
-    title: 'Outbound provider selected',
+    title: 'Email service settings',
     run: async () => {
       if ('error' in resolution) {
         return {
@@ -238,7 +239,7 @@ function buildSelectionStep(
 function buildDependentSkipStep(reason: string): OutboundStepDefinition {
   return {
     id: 'outbound_provider_steps',
-    title: 'Provider-specific diagnostics',
+    title: 'Connection checks',
     run: async () => ({
       status: 'skip',
       detail: `Skipped: ${reason}`,
@@ -270,7 +271,7 @@ function liveSendRecommendations(
 ): string[] {
   switch (providerType) {
     case 'microsoft':
-      return mapOutboundRecommendations({
+      return microsoftOutboundRecommendations({
         status: input.status,
         code: input.errorCode,
         message: input.message || '',
@@ -283,7 +284,7 @@ function liveSendRecommendations(
       const response = input.response || '';
 
       if (code === 'ETLS' || /certificate|self[- ]signed|\btls\b|\bssl\b/i.test(response)) {
-        return ['The SMTP TLS handshake failed. Verify the certificate chain and TLS settings (including verify-certificate).'];
+        return ['AlgaPSA could not establish a secure connection to the mail server. Check the encryption settings and ask your mail administrator to check the server certificate.'];
       }
       if (
         command === 'AUTH' ||
@@ -292,12 +293,12 @@ function liveSendRecommendations(
         /^\s*535\b/.test(response) ||
         /\bauthentication\b/i.test(response)
       ) {
-        return ['SMTP authentication was rejected. Verify the username/password and that the relay permits AUTH.'];
+        return ['The mail server rejected the sign-in. Check the username and password, and confirm this account is allowed to send through this server.'];
       }
       if (
         ['ECONNECTION', 'ECONNREFUSED', 'ENOTFOUND', 'ETIMEDOUT', 'ESOCKET', 'EHOSTUNREACH', 'EAI_AGAIN'].includes(code)
       ) {
-        return ['The SMTP server could not be reached. Verify host, port, DNS, and firewall rules.'];
+        return ['AlgaPSA could not reach the mail server. Check SMTP Host and Port. If they are correct, ask your network administrator to check access to the server.'];
       }
       if (
         code === 'EENVELOPE' ||
@@ -305,21 +306,21 @@ function liveSendRecommendations(
         (typeof responseCode === 'number' && responseCode >= 500 && responseCode < 600)
       ) {
         return [
-          'The SMTP server rejected the recipient or message after connecting. Verify the recipient address and the sending account permissions, then retry.',
+          'The mail server rejected the recipient or message. Check the recipient address and confirm this account is allowed to send from the configured address.',
         ];
       }
-      return ['The SMTP provider rejected the message. Review the native code/response above and retry after correcting the cause.'];
+      return ['Ask your mail administrator to review the technical details, or share the support report with AlgaPSA support.'];
     }
     case 'resend':
       if (input.status === 401 || input.status === 403) {
-        return ['Resend denied the send. Verify the API key scope and the verified sending domain, then retry.'];
+        return ['Check that the API key allows sending and that the sender’s domain is verified in Resend.'];
       }
       if (input.status === 429) {
-        return ['Resend throttled the send. Wait and retry; avoid repeated live sends.'];
+        return ['Resend is receiving too many requests. Wait a few minutes before trying again.'];
       }
-      return ['Resend rejected the message. Verify the API key, verified sending domain, and payload, then retry.'];
+      return ['Check the API key and sending domain in Resend. If the problem continues, share the support report with AlgaPSA support.'];
     default:
-      return ['Review the provider error above and retry after correcting the cause.'];
+      return ['The email service could not complete the check. Share the support report with AlgaPSA support if the problem continues.'];
   }
 }
 
@@ -368,40 +369,46 @@ function normalizeOutboundFailure(error: unknown, providerType: OutboundProvider
 function buildLiveSendStep(): OutboundStepDefinition {
   return {
     id: 'live_send_test',
-    title: 'Live outbound send test',
+    title: 'Test email',
     run: async (ctx) => {
       if (!ctx.options.liveSendTest) {
         return {
           status: 'skip',
-          detail: 'Live send is off by default and was not requested.',
+          detail: 'No test email has been sent.',
           data: { performed: false },
         };
       }
       if (!ctx.options.recipient) {
         return {
           status: 'fail',
-          error: { message: 'A valid recipient is required when live send is enabled.' },
+          error: { message: 'Enter a valid recipient email address to send a test email.' },
         };
       }
       if (!ctx.effectiveSender) {
         return {
           status: 'fail',
-          error: { message: 'No effective sender could be resolved for the live send.' },
+          error: { message: 'No sending address is configured. Save a From Address in email settings before sending a test email.' },
         };
       }
 
-      const result = await ctx.liveSend({
-        tenant: ctx.tenant,
-        settings: ctx.settings,
-        from: ctx.effectiveSender,
-        fromName: ctx.effectiveSenderName ?? ctx.settings.ticketingFromName ?? undefined,
-        recipient: ctx.options.recipient,
-      });
+      let result: OutboundLiveSendResult;
+      try {
+        result = await ctx.liveSend({
+          tenant: ctx.tenant,
+          settings: ctx.settings,
+          from: ctx.effectiveSender,
+          fromName: ctx.effectiveSenderName ?? ctx.settings.ticketingFromName ?? undefined,
+          recipient: ctx.options.recipient,
+        });
+      } catch (error) {
+        result = toLiveSendFailure(error, 'The email service did not confirm the test result.');
+      }
       ctx.checkedCapabilities.push('live_send');
 
       if (result.success) {
         return {
           status: 'pass',
+          detail: 'The email service accepted the test email. Check the recipient’s inbox and spam folder to confirm delivery.',
           http: {
             method: 'POST',
             ...(result.status !== undefined ? { status: result.status } : {}),
@@ -423,7 +430,11 @@ function buildLiveSendStep(): OutboundStepDefinition {
         };
       }
 
-      const recommendations = liveSendRecommendations(ctx.provider.providerType, {
+      const rejectionConfirmed = result.definitelyNotSent === true ||
+        (typeof result.status === 'number' && result.status >= 400 && result.status < 500 && result.status !== 408) ||
+        (typeof result.responseCode === 'number' && result.responseCode >= 400 && result.responseCode < 600);
+      const sendResultUnknown = result.requiresReconciliation === true || !rejectionConfirmed;
+      const providerRecommendations = liveSendRecommendations(ctx.provider.providerType, {
         status: result.status,
         errorCode: result.errorCode,
         message: result.error,
@@ -431,9 +442,15 @@ function buildLiveSendStep(): OutboundStepDefinition {
         command: result.command,
         response: result.response,
       });
+      const recommendations = sendResultUnknown
+        ? ['The email service did not confirm the result. Check the recipient’s inbox and spam folder before sending another test email.', ...providerRecommendations]
+        : providerRecommendations;
 
       return {
         status: 'fail',
+        detail: sendResultUnknown
+          ? 'The email service did not confirm whether the test email was sent.'
+          : 'The test email could not be sent.',
         http: {
           method: 'POST',
           ...(result.status !== undefined ? { status: result.status } : {}),
@@ -452,7 +469,7 @@ function buildLiveSendStep(): OutboundStepDefinition {
           response: result.response ?? null,
         },
         error: {
-          message: result.error || 'Live send failed.',
+          message: result.error || 'The test email could not be sent.',
           status: result.status,
           code: result.errorCode,
           requestId: result.requestId,
@@ -460,7 +477,7 @@ function buildLiveSendStep(): OutboundStepDefinition {
         },
         recommendations: recommendations.length
           ? recommendations
-          : ['Review the provider error above and retry after correcting the cause.'],
+          : ['The email service could not complete the check. Share the support report with AlgaPSA support if the problem continues.'],
       };
     },
   };
@@ -581,21 +598,40 @@ export async function runOutboundEmailDiagnosticsWithSettings(
   const run = await runDiagnosticsSteps<OutboundDiagnosticsContext, OutboundStepData>({
     context: ctx,
     steps,
-    onError: (error) => {
+    onError: (error, step) => {
       const failure = normalizeOutboundFailure(error, providerForContext.providerType);
       return {
         error: toDiagnosticsErrorMeta(failure),
-        recommendations: liveSendRecommendations(providerForContext.providerType, {
-          status: failure.status,
-          errorCode: failure.code,
-          message: failure.message,
-          responseCode: failure.responseCode,
-          command: failure.command,
-          response: failure.response,
-        }),
+        recommendations: step.id === 'graph_me'
+          ? ['The connected Microsoft account could not be checked. Reconnect the mailbox in email settings and run checks again.']
+          : liveSendRecommendations(providerForContext.providerType, {
+              status: failure.status,
+              errorCode: failure.code,
+              message: failure.message,
+              responseCode: failure.responseCode,
+              command: failure.command,
+              response: failure.response,
+            }),
       };
     },
   });
+
+  // Provider errors remain available for support; their raw protocol messages
+  // must not be the administrator’s only explanation of a failed request.
+  const requestFailureDetails: Record<string, string> = {
+    tokens_present: 'The Microsoft 365 connection could not be checked.',
+    token_claims: 'Email permissions could not be checked.',
+    graph_me: 'The connected Microsoft account could not be checked.',
+    mailbox_base_path: 'The sending mailbox could not be checked.',
+    smtp_connection: 'The mail server connection could not be checked.',
+    resend_domains_check: 'The Resend connection could not be checked.',
+    live_send_test: 'The test email could not be sent.',
+  };
+  for (const step of run.steps) {
+    if (step.error && !step.detail && requestFailureDetails[step.id]) {
+      step.detail = requestFailureDetails[step.id];
+    }
+  }
 
   const liveSendStep = run.steps.find((step) => step.id === 'live_send_test');
   const liveSendPerformed = liveSendStep?.status === 'pass' || liveSendStep?.status === 'fail';
@@ -620,7 +656,8 @@ export async function runOutboundEmailDiagnosticsWithSettings(
       checkedCapabilities: Array.from(new Set(ctx.checkedCapabilities)),
       liveSendRequested: options.liveSendTest,
       liveSendPerformed,
-      overallStatus: outcome.overallStatus,
+      // Keep inspection limits as evidence without presenting them as sending faults.
+      overallStatus: computeOverallStatus(outcome.steps.filter((step) => !isAdvisoryOutboundStep(step))),
     }),
     buildSupportBundle: () => ({}),
   });
