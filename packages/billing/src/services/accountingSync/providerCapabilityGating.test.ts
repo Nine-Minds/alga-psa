@@ -136,4 +136,28 @@ describe('outbound capability gating for adapters without write support', () => 
       })
     );
   });
+
+  it('never falls back to QboClientService for a non-QBO adapter that claims a capability but exposes no providerOperations', async () => {
+    const misconfiguredAdapter = {
+      type: 'xero',
+      capabilities: () => ({
+        deliveryMode: 'api',
+        supportedExportTypes: ['invoice'],
+        supportsPartialRetry: true,
+        supportsInvoiceUpdates: true,
+        supportsOutboundPayment: true
+      })
+      // providerOperations intentionally absent
+    } as any;
+    const { deps, markFailedTerminal, exceptions } = makeHarness('record_payment');
+    await drainRecordPaymentOps({ ...deps, adapter: misconfiguredAdapter });
+
+    expect(QboClientService.create).not.toHaveBeenCalled();
+    expect(markFailedTerminal).toHaveBeenCalled();
+    expect(exceptions.createOrUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        context: expect.objectContaining({ reason: 'outbound_operation_unsupported' })
+      })
+    );
+  });
 });
