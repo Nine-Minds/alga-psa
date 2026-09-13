@@ -14,6 +14,24 @@ import {
 } from '@alga-psa/billing/services';
 import Invoice from '@alga-psa/billing/models/invoice';
 
+// An explicit manual export target must resolve to a connected integration.
+// This suite has no live QBO OAuth setup, so declare realm-100 connected while
+// keeping the rest of the real client module intact.
+vi.mock('@alga-psa/integrations/lib/qbo/qboClientService', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/integrations/lib/qbo/qboClientService')>()),
+  getStoredQboCredentialsMap: async () => ({ 'realm-100': { realmId: 'realm-100' } })
+}));
+
+// No-target Xero exports need a deterministic persisted connection instead of
+// whatever tenant secrets happen to be present on the machine.
+vi.mock('@alga-psa/integrations/lib/xero/xeroClientService', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/integrations/lib/xero/xeroClientService')>()),
+  getXeroDefaultSelection: async () => ({ status: 'resolved', connectionId: 'xero-default-realm' }),
+  getStoredXeroConnections: async () => ({
+    'xero-default-realm': { connectionId: 'xero-default-realm', xeroTenantId: 'xero-org-default' }
+  })
+}));
+
 const helpers = TestContext.createHelpers();
 const HOOK_TIMEOUT = 240_000;
 
@@ -1022,5 +1040,39 @@ describe('Accounting export invoice selection integration', () => {
     const storedLines = await repository.listLines(batch.batch_id);
     expect(storedLines).toHaveLength(3);
     expect(storedLines.map((line) => line.document_id)).not.toContain(seeded.manual.invoiceId);
+  }, HOOK_TIMEOUT);
+
+  it('rejects invalid explicit live targets without persisting a batch or its lines', async () => {
+    const seeded = await seedInvoices();
+
+    const batchCount = async () =>
+      Number(((await tenantTable(ctx, 'accounting_export_batches')
+        .where({ tenant: ctx.tenantId })
+        .count('* as count')
+        .first()) as { count?: string } | undefined)?.count ?? 0);
+    const lineCount = async () =>
+      Number(((await tenantTable(ctx, 'accounting_export_lines')
+        .where({ tenant: ctx.tenantId })
+        .count('* as count')
+        .first()) as { count?: string } | undefined)?.count ?? 0);
+
+    const batchesBefore = await batchCount();
+    const linesBefore = await lineCount();
+
+    // A stale picker can leave a target that belongs to another provider, an
+    // unknown company or another tenant. Every combination must be rejected
+    // before the batch or its lines are written.
+    for (const [adapterType, targetRealm] of [
+      ['quickbooks_online', 'xero-conn-b'],
+      ['quickbooks_online', 'realm-other-tenant'],
+      ['xero', 'realm-100']
+    ] as const) {
+      await expect(
+        selector.createBatchFromFilters({ adapterType, targetRealm, filters: seeded.filters })
+      ).rejects.toMatchObject({ code: 'ACCOUNTING_EXPORT_TARGET_UNAVAILABLE' });
+    }
+
+    expect(await batchCount()).toBe(batchesBefore);
+    expect(await lineCount()).toBe(linesBefore);
   }, HOOK_TIMEOUT);
 });

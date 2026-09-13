@@ -28,7 +28,10 @@ vi.mock('@alga-psa/db', () => ({
   })
 }));
 vi.mock('@alga-psa/integrations/lib/qbo/qboClientService', () => ({
-  getDefaultQboRealmId: async () => 'qbo-realm'
+  getDefaultQboRealmId: async () => 'qbo-realm',
+  // Explicit manual targets are validated against the tenant's connected
+  // integrations, so the QBO company must appear connected here.
+  getStoredQboCredentialsMap: async () => ({ 'qbo-realm': { realmId: 'qbo-realm' } })
 }));
 vi.mock('../../src/services/accountingExportService', () => ({
   AccountingExportService: { createForTenant: async () => ({ createBatch, appendLines }) }

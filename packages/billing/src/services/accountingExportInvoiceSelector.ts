@@ -9,9 +9,21 @@ import { getDefaultQboRealmId } from '@alga-psa/integrations/lib/qbo/qboClientSe
 // eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- batch creation stamps live-accounting realms so realm-scoped mappings resolve
 import { getXeroDefaultSelection } from '@alga-psa/integrations/lib/xero/xeroClientService';
 import { satisfyExportOpsForManualBatch } from './accountingSync/syncProducers';
+import { resolveConnectedAccountingIntegration } from './accountingSync/connectedAccountingIntegration';
 import { normalizeAccountingExportCalendarDate } from './accountingExportDateUtils';
 
 type Nullable<T> = T | null | undefined;
+
+/** Adapters that route through a live, connected accounting organisation. */
+type LiveAccountingAdapterType = 'quickbooks_online' | 'xero';
+
+function isLiveAccountingAdapter(adapterType: string): adapterType is LiveAccountingAdapterType {
+  return adapterType === 'quickbooks_online' || adapterType === 'xero';
+}
+
+function accountingTargetLabel(adapterType: LiveAccountingAdapterType): string {
+  return adapterType === 'xero' ? 'Xero organisation' : 'QuickBooks company';
+}
 
 export interface InvoiceSelectionFilters {
   startDate?: Nullable<string>;
@@ -342,13 +354,53 @@ export class AccountingExportInvoiceSelector {
     });
   }
 
+  /**
+   * Prove an explicitly requested live target is connected for this tenant and
+   * belongs to the selected provider. Reuses the same provider-selection
+   * resolver as sync routing and health, so manual exports cannot diverge from
+   * the rest of the accounting surface. Returns the connection id/realm to
+   * stamp on the batch; throws when the target is not a valid pairing.
+   */
+  private async assertExplicitTargetRealm(
+    adapterType: LiveAccountingAdapterType,
+    targetRealm: string
+  ): Promise<string> {
+    const resolved = await resolveConnectedAccountingIntegration(this.knex, this.tenantId, {
+      preferredAdapterType: adapterType,
+      preferredTargetRealm: targetRealm
+    });
+
+    if (!resolved || resolved.adapterType !== adapterType || resolved.targetRealm !== targetRealm) {
+      throw new AppError(
+        'ACCOUNTING_EXPORT_TARGET_UNAVAILABLE',
+        `The selected ${accountingTargetLabel(adapterType)} (${targetRealm}) is not connected for this tenant. Reconnect it or choose another.`,
+        { adapterType, targetRealm }
+      );
+    }
+
+    return resolved.targetRealm;
+  }
+
   async createBatchFromFilters(options: CreateBatchOptions): Promise<{ batch: AccountingExportBatch; lines: InvoicePreviewLine[] }> {
     let targetRealm = options.targetRealm ?? null;
-    if (!targetRealm && options.adapterType === 'quickbooks_online') {
+
+    if (!isLiveAccountingAdapter(options.adapterType)) {
+      // File-based adapters (CSV/desktop) have no connected accounting realm;
+      // discard any stale realm the caller carried over so a manual CSV export
+      // is never blocked or mis-stamped by a previously selected provider.
+      targetRealm = null;
+    } else if (targetRealm) {
+      // An explicitly supplied target is authoritative and must be validated
+      // before any persistence. Unknown, disconnected, cross-provider and
+      // cross-tenant targets are rejected here rather than silently falling
+      // back to another connection, so a stale browser picker can never stamp
+      // a mismatched adapter/target pair on a batch.
+      targetRealm = await this.assertExplicitTargetRealm(options.adapterType, targetRealm);
+    } else if (options.adapterType === 'quickbooks_online') {
       // Live QBO mappings are realm-scoped, so a batch without a realm cannot
       // resolve them; default to the tenant's connected company.
       targetRealm = await getDefaultQboRealmId(this.tenantId).catch(() => null);
-    } else if (!targetRealm && options.adapterType === 'xero') {
+    } else {
       // Live Xero mappings are keyed by the connection id (the persisted
       // provider-scoped selection), not the organisation tenant id. An
       // ambiguous persisted organisation fails closed with an actionable
