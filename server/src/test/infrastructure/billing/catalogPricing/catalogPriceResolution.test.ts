@@ -237,4 +237,70 @@ describe('Catalog price resolution – fixed path', () => {
     expect(invoiceItems).toHaveLength(1);
     expect(parseInt(invoiceItems[0].net_amount)).toBe(12000);
   });
+
+  it('T16: the unreviewed backfill is money-neutral for an existing line', async () => {
+    const serviceId = await createTestService(context, {
+      service_name: 'Backfill Service',
+      billing_method: 'fixed',
+      default_rate: 10000
+    });
+
+    const { contractLineId } = await createFixedPlanAssignment(context, serviceId, {
+      planName: 'Backfill Plan',
+      billingFrequency: 'monthly',
+      baseRateCents: 10000,
+      quantity: 1,
+      startDate: createTestDateISO({ year: 2023, month: 1, day: 1 }),
+      billingTiming: 'advance'
+    });
+
+    // Legacy pre-migration state: a stored rate with no provenance label at
+    // either rate level, which is exactly what the backfill finds.
+    await context.db('contract_lines')
+      .where({ tenant: context.tenantId, contract_line_id: contractLineId })
+      .update({ custom_rate: 10000, rate_provenance: null });
+
+    await materializeRecurringServicePeriods(context, contractLineId);
+
+    const januaryCycleId = await context.createEntity('client_billing_cycles', {
+      client_id: context.clientId,
+      billing_cycle: 'monthly',
+      effective_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
+      period_start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
+      period_end_date: createTestDateISO({ year: 2023, month: 2, day: 1 })
+    }, 'billing_cycle_id');
+
+    const before = await generateInvoice(januaryCycleId);
+    expect(before).not.toBeNull();
+
+    // Apply the migration's mechanical backfill: non-null rate => unreviewed,
+    // at the line and fixed-config levels.
+    await setLineProvenance(context, contractLineId, 'unreviewed', 10000);
+    await context.db.raw(
+      `UPDATE contract_line_service_fixed_config AS clsfc
+       SET rate_provenance = 'unreviewed'
+       FROM contract_line_service_configuration AS clsc
+       WHERE clsc.config_id = clsfc.config_id
+         AND clsc.tenant = clsfc.tenant
+         AND clsc.tenant = ?
+         AND clsc.contract_line_id = ?`,
+      [context.tenantId, contractLineId],
+    );
+
+    await materializeRecurringServicePeriods(context, contractLineId);
+
+    const februaryCycleId = await context.createEntity('client_billing_cycles', {
+      client_id: context.clientId,
+      billing_cycle: 'monthly',
+      effective_date: createTestDateISO({ year: 2023, month: 2, day: 1 }),
+      period_start_date: createTestDateISO({ year: 2023, month: 2, day: 1 }),
+      period_end_date: createTestDateISO({ year: 2023, month: 3, day: 1 })
+    }, 'billing_cycle_id');
+
+    const after = await generateInvoice(februaryCycleId);
+    expect(after).not.toBeNull();
+
+    expect(after!.subtotal).toBe(before!.subtotal);
+    expect(after!.subtotal).toBe(10000);
+  });
 });
