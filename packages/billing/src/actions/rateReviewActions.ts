@@ -330,8 +330,19 @@ export const resetContractLineRateToStandard = withAuth(
         // Reset is a deliberate operator action, not the exact-match
         // reclassification (plan §3.3): it must be available precisely for a
         // line wrongly marked `custom`, which the classifier would skip. The
-        // only precondition is that the line resolves to a number at all.
-        const resolved = resolveFixedLineRate(toResolverInput(bundle, period));
+        // only precondition is that the line resolves to a number at all once
+        // its stored rate is treated as NULL — the same null-rate resolution
+        // the classifier uses. Resolving the unmodified bundle would return the
+        // stored custom rate and never fire this guard.
+        const resolverInput = toResolverInput(bundle, period);
+        const resolved = resolveFixedLineRate({
+          ...resolverInput,
+          line: {
+            ...resolverInput.line,
+            custom_rate: null,
+            rate_provenance: 'inherited',
+          },
+        });
         if (resolved.line.rateCents === null) {
           return {
             applied: [],
@@ -339,9 +350,7 @@ export const resetContractLineRateToStandard = withAuth(
               {
                 contractLineId,
                 target: 'inherited' as const,
-                reason:
-                  classification.reason ??
-                  'The line resolves to no catalog rate.',
+                reason: 'The line resolves to no catalog rate.',
                 skipReason: classification.skipReason,
               },
             ],
@@ -351,6 +360,20 @@ export const resetContractLineRateToStandard = withAuth(
         await trx('contract_lines')
           .where({ tenant, contract_line_id: contractLineId })
           .update({ custom_rate: null, rate_provenance: 'inherited' });
+
+        // A member-level snapshot (`clsfc.base_rate`) shadows the catalog even
+        // after the line rate is cleared, so it must be reset in the same
+        // transaction or the line reports Standard and bills the old number.
+        await trx.raw(
+          `UPDATE contract_line_service_fixed_config AS clsfc
+           SET base_rate = NULL, rate_provenance = 'inherited'
+           FROM contract_line_service_configuration AS clsc
+           WHERE clsc.config_id = clsfc.config_id
+             AND clsc.tenant = clsfc.tenant
+             AND clsc.tenant = ?
+             AND clsc.contract_line_id = ?`,
+          [tenant, contractLineId],
+        );
 
         return {
           applied: [{ contractLineId, target: 'inherited' as const }],
