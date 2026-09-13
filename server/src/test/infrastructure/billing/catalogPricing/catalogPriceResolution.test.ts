@@ -725,4 +725,81 @@ describe('Catalog price resolution – fixed path', () => {
   it('T6b (custom): with no schedule, custom keeps its rate and the report agrees', async () => {
     await assertReportAgreesWithInvoice('custom', false);
   });
+
+  it('T21: a null-rate newest schedule blocks older schedules in billing and the report', async () => {
+    const { serviceId, contractLineId, contractId } = await seedInheritedLine(
+      'T21 Service',
+      10000,
+      JAN_START,
+    );
+
+    // Two non-overlapping rows (the DB EXCLUDE backstop forbids overlapping
+    // ones): an older bounded override, then a newer null-rate row. The newest
+    // active schedule is the null one and the engine checks its rate *after*
+    // choosing it, so the older 20000 must not resurface — and the deferred
+    // revenue report must land on the same number (plan §2.3, test T21).
+    await context.db('contract_pricing_schedules').insert([
+      {
+        schedule_id: uuidv4(),
+        contract_id: contractId,
+        tenant: context.tenantId,
+        effective_date: '2022-12-01',
+        end_date: '2023-01-15',
+        custom_rate: 20000,
+        notes: 'T21 older override',
+      },
+      {
+        schedule_id: uuidv4(),
+        contract_id: contractId,
+        tenant: context.tenantId,
+        effective_date: '2023-01-15',
+        end_date: null,
+        custom_rate: null,
+        notes: 'T21 newest null',
+      },
+    ]);
+    await materializeRecurringServicePeriods(context, contractLineId);
+
+    const january = await invoiceCycle(JAN_START, FEB_START);
+    expect(january.subtotal).toBe(10000);
+
+    const schedules = await loadPricingScheduleRates(context.db, context.tenantId, [contractId]);
+    const scheduleRate = resolvePricingScheduleRate(
+      JAN_START,
+      '2023-01-31',
+      contractId,
+      schedules,
+      contractLineId,
+    );
+    expect(scheduleRate).toBeNull();
+
+    const baseRates = await loadFixedConfigBaseRates(context.db, context.tenantId);
+    const line = await context.db('contract_lines')
+      .where({ tenant: context.tenantId, contract_line_id: contractLineId })
+      .first('custom_rate');
+    const periodRow: RawBucketPeriodRow = {
+      usageId: 't21',
+      contractLineId,
+      contractId,
+      contractLineName: 'T21',
+      clientId: context.clientId,
+      serviceId,
+      serviceName: 'T21 Service',
+      periodStart: JAN_START,
+      periodEnd: '2023-01-31',
+      minutesUsed: 0,
+      rolledOverMinutes: 0,
+      totalMinutes: 0,
+      allowRollover: false,
+      currencyCode: 'USD',
+      lineCustomRate: line?.custom_rate != null ? Number(line.custom_rate) : null,
+      catalogDefaultRate: 10000,
+    };
+    const configured = resolveConfiguredFee(
+      periodRow,
+      baseRates.get(`${contractLineId}\u0000${serviceId}`) ?? null,
+      scheduleRate,
+    );
+    expect(configured).toBe(january.subtotal);
+  });
 });
