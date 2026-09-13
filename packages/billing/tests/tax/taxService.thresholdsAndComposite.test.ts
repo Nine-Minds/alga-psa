@@ -215,6 +215,16 @@ describe('TaxService threshold-based tax', () => {
     expect(result.taxRate).toBe(5);
   });
 
+  it('rejects a negative cap on the progressive path', async () => {
+    setupDefaultRate({ tax_rate_id: 'rate-1', tax_percentage: 0, is_composite: false, cap_amount: -1 });
+    vi.mocked(ClientTaxSettings.getTaxRateThresholds).mockResolvedValue([
+      { tax_rate_threshold_id: 't1', tax_rate_id: 'rate-1', min_amount: 0, max_amount: null, rate: 5 },
+    ] as any);
+
+    await expect(new TaxService().calculateTax('client-1', 10000, DATE))
+      .rejects.toThrow('Tax rate cap amount must be a non-negative whole number.');
+  });
+
   it.each([0, -10000])('returns finite zero tax for a non-positive bracket base (%s)', async amount => {
     setupDefaultRate({ tax_rate_id: 'rate-1', tax_percentage: 0, is_composite: false });
     vi.mocked(ClientTaxSettings.getTaxRateThresholds).mockResolvedValue([

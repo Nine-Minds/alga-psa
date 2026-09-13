@@ -142,22 +142,105 @@ describe('TaxService PostgreSQL rate selection', () => {
     expect(result.taxAmount).toBe(1200);
   });
 
-  it('applies a period cap on the default-rate path and zeroes days outside rate validity', async () => {
+  it('applies a period cap on the default-rate path when the rate covers the period', async () => {
     const service = new TaxService();
     await context.db!('tax_rates').where({ tenant: context.tenant, tax_rate_id: defaultRateId }).update({ cap_amount: 400 });
-    // 2026-02-01 -> 2026-03-01 is one 28-day segment: 500 uncapped, capped at 400.
+    // 2026-02-01 -> 2026-03-01 is one 28-day segment fully inside the default rate: 500 -> capped 400.
     const capped = await service.calculateTaxForPeriod(clientId, 10000, '2026-02-01', '2026-03-01');
     expect(capped.taxAmount).toBe(400);
-    expect(capped.segments[0].taxAmount).toBe(400);
-
-    await context.db!('tax_rates').where({ tenant: context.tenant, tax_rate_id: defaultRateId }).update({ cap_amount: null });
-    // 2026-06-15 -> 2026-07-15: 16 days taxed at 5%, 14 days after the default rate ends.
-    const spanning = await service.calculateTaxForPeriod(clientId, 30000, '2026-06-15', '2026-07-15');
-    expect(spanning.segments).toEqual([
-      { start_date: '2026-06-15', end_date: '2026-07-01', days: 16, netAmount: 16000, taxAmount: 800, taxRate: 5 },
-      { start_date: '2026-07-01', end_date: '2026-07-15', days: 14, netAmount: 14000, taxAmount: 0, taxRate: 0 },
+    expect(capped.segments).toEqual([
+      { start_date: '2026-02-01', end_date: '2026-03-01', days: 28, netAmount: 10000, taxAmount: 400, taxRate: 5 },
     ]);
-    expect(spanning.taxAmount).toBe(800);
+  });
+
+  it('throws a coverage gap when the default rate does not cover the period', async () => {
+    // The default rate ends 2026-07-01, so 2026-06-15 -> 2026-07-15 leaves 14 uncovered days.
+    await expect(new TaxService().calculateTaxForPeriod(clientId, 30000, '2026-06-15', '2026-07-15'))
+      .rejects.toMatchObject({
+        code: 'TAX_RATE_COVERAGE_GAP',
+        params: { startDate: '2026-07-01', endDate: '2026-07-15' },
+      });
+  });
+
+  it('caps a single regional rate on the single-date path', async () => {
+    await context.db!('tax_rates').where({ tenant: context.tenant, region_code: region }).update({ is_active: false });
+    await context.db!('tax_rates').insert({
+      tenant: context.tenant, tax_rate_id: randomUUID(), region_code: region,
+      tax_percentage: 5, start_date: '2026-01-01', cap_amount: 300,
+    });
+
+    expect(await new TaxService().calculateTax(clientId, 10000, '2026-06-01', region)).toEqual({ taxAmount: 300, taxRate: 5 });
+  });
+
+  it('caps each regional rate per segment across a capped rate boundary', async () => {
+    await context.db!('tax_rates').where({ tenant: context.tenant, region_code: region }).update({ is_active: false });
+    await context.db!('tax_rates').insert([
+      { tenant: context.tenant, tax_rate_id: randomUUID(), region_code: region, tax_percentage: 5, start_date: '2026-01-01', end_date: '2026-07-01', cap_amount: 100 },
+      { tenant: context.tenant, tax_rate_id: randomUUID(), region_code: region, tax_percentage: 7, start_date: '2026-07-01', cap_amount: 200 },
+    ]);
+
+    const result = await new TaxService().calculateTaxForPeriod(clientId, 30000, '2026-06-15', '2026-07-15', region);
+    expect(result.segments).toEqual([
+      { start_date: '2026-06-15', end_date: '2026-07-01', days: 16, netAmount: 16000, taxAmount: 100, taxRate: 5 },
+      { start_date: '2026-07-01', end_date: '2026-07-15', days: 14, netAmount: 14000, taxAmount: 200, taxRate: 7 },
+    ]);
+    expect(result.taxAmount).toBe(300);
+  });
+
+  it('caps each regional rate independently within a single segment', async () => {
+    await context.db!('tax_rates').where({ tenant: context.tenant, region_code: region }).update({ is_active: false });
+    await context.db!('tax_rates').insert([
+      { tenant: context.tenant, tax_rate_id: randomUUID(), region_code: region, tax_percentage: 5, start_date: '2026-01-01', cap_amount: 200 },
+      { tenant: context.tenant, tax_rate_id: randomUUID(), region_code: region, tax_percentage: 2.5, start_date: '2026-01-01', cap_amount: 100 },
+    ]);
+
+    // 28000 * 5% = 1400 -> 200; 28000 * 2.5% = 700 -> 100; sum 300.
+    const result = await new TaxService().calculateTaxForPeriod(clientId, 28000, '2026-02-01', '2026-03-01', region);
+    expect(result.taxAmount).toBe(300);
+    expect(result.segments[0].taxRate).toBe(7.5);
+  });
+
+  it('throws a coverage gap for a regional period with an uncovered interval', async () => {
+    await context.db!('tax_rates').where({ tenant: context.tenant, region_code: region }).update({ is_active: false });
+    await context.db!('tax_rates').insert([
+      { tenant: context.tenant, tax_rate_id: randomUUID(), region_code: region, tax_percentage: 5, start_date: '2026-01-01', end_date: '2026-01-10' },
+      { tenant: context.tenant, tax_rate_id: randomUUID(), region_code: region, tax_percentage: 9, start_date: '2026-01-20' },
+    ]);
+
+    await expect(new TaxService().calculateTaxForPeriod(clientId, 20000, '2026-01-05', '2026-01-25', region))
+      .rejects.toMatchObject({
+        code: 'TAX_RATE_COVERAGE_GAP',
+        params: { region, startDate: '2026-01-10', endDate: '2026-01-20' },
+      });
+  });
+
+  it('rejects invalid cap amounts through the action before writing', async () => {
+    const saved = await context.db!('tax_rates').where({ tenant: context.tenant, tax_rate_id: defaultRateId }).first();
+    const { tax_rate_id: omitted, ...data } = saved;
+    for (const cap of [-1, 1.5, Number.NaN, 'abc' as unknown as number]) {
+      const result = await addTaxRate({ ...data, start_date: '2025-01-01', end_date: '2026-01-01', cap_amount: cap });
+      expect(result).toMatchObject({ actionError: 'Tax rate cap amount must be a non-negative whole number.' });
+    }
+    // None of the rejected attempts may persist a row.
+    expect(await context.db!('tax_rates').where({ tenant: context.tenant, start_date: '2025-01-01' })).toHaveLength(0);
+  });
+
+  it('rejects a negative cap at the database boundary', async () => {
+    await expect(
+      context.db!.transaction(async (savepoint) => {
+        await savepoint('tax_rates')
+          .where({ tenant: context.tenant, tax_rate_id: defaultRateId })
+          .update({ cap_amount: -1 });
+      }),
+    ).rejects.toThrow(/tax_rates_cap_amount_check/);
+  });
+
+  it('hydrates cap_amount as a PostgreSQL bigint string and still clamps', async () => {
+    await context.db!('tax_rates').where({ tenant: context.tenant, tax_rate_id: defaultRateId }).update({ cap_amount: 300 });
+    const row = await context.db!('tax_rates').where({ tenant: context.tenant, tax_rate_id: defaultRateId }).first();
+    expect(typeof row.cap_amount).toBe('string');
+    expect(row.cap_amount).toBe('300');
+    expect(await new TaxService().calculateTax(clientId, 10000, '2026-06-01')).toEqual({ taxAmount: 300, taxRate: 5 });
   });
 
   it('rejects an empty period and a period before any regional rate', async () => {

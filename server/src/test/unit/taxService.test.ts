@@ -415,18 +415,25 @@ describe('TaxService', () => {
         expect(result.taxAmount).toBe(4);
         expect(result.taxRate).toBe(4);
     });
-    it('splits a default-rate period at the rate end and applies the cap per segment', async () => {
+    it('applies the cap once when the default rate covers the whole period', async () => {
         db.rows['tax_rates'] = {
             tax_rate_id: 'rate1', tax_percentage: 10, is_composite: false, cap_amount: 6,
-            start_date: '2023-06-01', end_date: '2023-06-11',
+            start_date: '2023-06-01', end_date: '2023-06-21',
         };
-        // 2023-06-01 -> 2023-06-21 is 20 days, split 10/10 at the exclusive end date.
         const result = await taxService.calculateTaxForPeriod('client1', 200, '2023-06-01', '2023-06-21');
         expect(result.segments).toEqual([
-            { start_date: '2023-06-01', end_date: '2023-06-11', days: 10, netAmount: 100, taxAmount: 6, taxRate: 10 },
-            { start_date: '2023-06-11', end_date: '2023-06-21', days: 10, netAmount: 100, taxAmount: 0, taxRate: 0 },
+            { start_date: '2023-06-01', end_date: '2023-06-21', days: 20, netAmount: 200, taxAmount: 6, taxRate: 10 },
         ]);
         expect(result.taxAmount).toBe(6);
+    });
+    it('throws a coverage gap when the default rate does not cover the period', async () => {
+        db.rows['tax_rates'] = {
+            tax_rate_id: 'rate1', tax_percentage: 10, is_composite: false,
+            start_date: '2023-06-01', end_date: '2023-06-11',
+        };
+        // 2023-06-11 -> 2023-06-21 has no default rate coverage.
+        await expect(taxService.calculateTaxForPeriod('client1', 200, '2023-06-01', '2023-06-21'))
+            .rejects.toMatchObject({ code: 'TAX_RATE_COVERAGE_GAP' });
     });
     it('rejects an empty or reversed period range', async () => {
         await expect(taxService.calculateTaxForPeriod('client1', 100, '2023-06-01', '2023-06-01'))

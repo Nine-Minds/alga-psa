@@ -13,6 +13,7 @@ const translatedManualInvoiceErrorCodes = new Set<ManualInvoiceErrorCode>([
   'SERVICE_NOT_FOUND',
   'INVALID_QUANTITY',
   'NO_TAX_RATE',
+  'TAX_RATE_COVERAGE_GAP',
   'DISCOUNT_TARGET_NOT_FOUND',
   'INVOICE_NUMBER_CONFLICT',
   'PERMISSION_DENIED',

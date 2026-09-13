@@ -10,17 +10,27 @@ before treating any of this as production-ready.
 - `tax_rates.cap_amount` is a nullable `bigint` in the same unit as the net
   amount (the smallest currency unit used by invoices). `NULL` means uncapped;
   a stored `0` is a real cap that charges no tax.
-- Caps are applied as `min(taxAmount, cap)` on the single-rate paths only:
-  `calculateSimpleTax` (flat percentage) and `calculateThresholdBasedTax`
-  (progressive brackets). Both are reached from the default-rate branch of
-  `calculateTax` and `calculateTaxForPeriod`.
-- The regional branch of `calculateTax`/`calculateTaxForPeriod` sums the
-  percentages of every active rate in the region. It does not select
-  `cap_amount` and is intentionally left uncapped, matching its existing
-  single-date behavior.
+- A database check constraint (`tax_rates_cap_amount_check`) rejects negative
+  caps, and `normalizeTaxCapAmount` validates every cap the service reads or
+  the actions write: it must be a non-negative, finite, safely representable
+  whole number. Numeric strings are accepted because PostgreSQL `bigint`
+  hydrates as a string. Malformed or negative values throw instead of silently
+  disabling the cap or producing negative tax.
+- Caps apply on every path that resolves rates:
+  - **Simple and progressive default-rate paths**: `min(taxAmount, cap)` on the
+    rate's single calculation, as before.
+  - **Single-date regional path**: each rate's unrounded contribution is capped
+    at that rate's `cap_amount`, the capped contributions are summed, and the
+    sum is ceiling-rounded once. With no caps this is identical to the previous
+    `ceil(netAmount * combinedRate / 100)`, so existing uncapped rounding is
+    preserved.
+  - **Period regional path**: the same per-rate capping is applied within each
+    segment, so a period crossing several rate intervals charges each interval's
+    cap.
 - No UI reads or writes `cap_amount`. It can be set through the
-  `addTaxRate`/`updateTaxRate` actions (which spread the full row) or directly
-  in the database. The API tax-rate Zod schemas do not expose it.
+  `addTaxRate`/`updateTaxRate` actions (which validate it and spread the full
+  row) or directly in the database. The API tax-rate Zod schemas do not expose
+  it.
 
 ## Period-spanning tax
 
@@ -30,9 +40,17 @@ regionCode?, is_taxable?, currencyCode?)` returns
 
 - The period is half-open: `[startDate, endDate)`. The start day is charged,
   the end day is not.
-- Dates are normalized to their UTC calendar day before arithmetic. This keeps
-  a `date` column hydrated as local midnight and a `YYYY-MM-DD` string on the
-  same day count.
+- Dates are strictly validated and normalized to a `YYYY-MM-DD` calendar day
+  before any query or arithmetic; the same normalized days feed the SQL overlap
+  filters and segmentation. Supported inputs:
+  - `YYYY-MM-DD` calendar days.
+  - ISO 8601 timestamps (`YYYY-MM-DD`, optional `THH:mm[:ss[.sss]]`, optional
+    `Z` or `±HH:mm`). The calendar day is the one the timestamp spells out in
+    its own offset, not the UTC instant, so an offset never shifts the day.
+  - `Date` objects, interpreted by their local calendar components because
+    PostgreSQL `date` columns hydrate as local midnight.
+  - Invalid dates (`2026-02-30`), trailing garbage, and impossible times throw.
+    Leap days are accepted; a non-leap February 29 is rejected.
 - Every rate `start_date`/`end_date` strictly inside the period splits it into
   constant-rate segments. A period inside one rate interval is a single
   segment.
@@ -44,49 +62,50 @@ regionCode?, is_taxable?, currencyCode?)` returns
   `taxAmount / netAmount * 100`.
 - Exemption, reverse charge, currency filtering, and the region/default
   precedence are evaluated once for the whole period, exactly as the
-  single-date `calculateTax` does.
+  single-date `calculateTax` does, and short-circuit before any coverage check.
 
-### Gaps, invalid ranges, and missing rates
+### Coverage is mandatory
 
-- An empty or reversed period (`end <= start`) throws
-  `Tax period end date must be after start date`.
-- On the regional path, a period that overlaps no active rate throws
-  `ManualInvoiceError` with code `NO_TAX_RATE`.
-- Days inside the period with no valid rate are returned as a segment with
-  `taxAmount: 0` and `taxRate: 0`. The default-rate path only knows the
-  client's one default rate, so a period extending past that rate's end is
-  partly untaxed rather than rolling to a successor rate.
-- A missing client throws; a tax-exempt client, a non-taxable charge, or a
-  reverse-charge client returns `{ taxAmount: 0, taxRate: 0, segments: [] }`
-  without resolving a rate. A client with no default rate also returns that
-  zero result.
+- Every taxable day must have an applicable rate. An uncovered interval throws
+  `TAX_RATE_COVERAGE_GAP` naming the first uncovered `[start, end)` interval; a
+  period that overlaps no rate at all (regional) or has no usable default rate
+  throws `NO_TAX_RATE`.
+- The default path knows only the client's single default rate. If the period
+  extends past that rate's validity it fails rather than understating tax or
+  guessing a successor rate from the region. A successor must come from a
+  supported association; none exists today, so this is an error, not a lookup.
+- An empty or reversed period (`end <= start`) throws.
+- A tax-exempt client, a non-taxable charge, or a reverse-charge client still
+  returns `{ taxAmount: 0, taxRate: 0, segments: [] }` without a coverage check.
 
 ### Caps and progressive brackets across segments
 
-- Caps apply per segment. Because each segment is a separate calculation, a
-  two-segment period can charge up to `2 * cap_amount`. The alternative (a
-  single cap across the whole period) is not implemented.
-- Progressive brackets are evaluated per segment on that segment's prorated
-  amount, so brackets reset at every rate boundary. A period that spans a rate
-  change can therefore fall into a lower bracket on each side than the same
-  total amount would if it were not split.
+- On the default path the rate must cover the whole period, so there is one
+  segment and the cap applies once.
+- On the regional path caps are per rate per segment: each rate's unrounded
+  contribution is capped before the segment sum is ceiled, and a period crossing
+  capped rate boundaries charges each interval's cap.
+- Progressive thresholds on the default path apply to the whole covered amount.
+  If a future caller supplies a multi-segment default path, brackets would be
+  evaluated per segment on that segment's prorated amount; today partial
+  coverage fails first, so this cannot happen.
 
 ## Open questions for domain review
 
-1. **Cap scope.** Should a cap be per calculation (current, per segment) or per
-   period across all segments? The stored meaning currently says "per
-   calculation".
-2. **Cap currency/units.** `cap_amount` is assumed to be in the same unit as
-   the net amount and the invoice currency. There is no per-currency cap and no
-   validation that the cap is non-negative.
-3. **Progressive thresholds across a split period.** Resetting brackets per
-   segment is a guess. Real jurisdictions may want the brackets applied to the
-   aggregate period amount instead.
-4. **Gaps without a rate.** Silent zero tax for uncovered days may be wrong;
-   some jurisdictions require the nearest effective rate or a hard failure.
-5. **Regional path and caps.** A region can contain several rate rows; capping
-   the summed result or capping each row's contribution is undefined. Neither
-   is implemented.
+1. **Cap scope.** Caps are per rate per calculation/segment. Whether a
+   jurisdiction intends a per-period cap across all rates and segments is not
+   resolved.
+2. **Cap units and currency.** `cap_amount` is assumed to be in the same unit as
+   the net amount and the invoice currency. There is no per-currency cap.
+3. **Progressive thresholds across a split period.** Applying brackets to the
+   whole covered default amount (current, single segment) versus resetting per
+   segment is a guess for any future multi-segment default path.
+4. **Coverage semantics.** Failing hard on a gap is deliberate; some
+   jurisdictions may instead want the nearest effective rate or a zero-tax
+   period. The default path deliberately does not infer successor rates.
+5. **Regional cap interaction.** Capping each rate's contribution before
+   summing preserves uncapped rounding, but jurisdictions that define a
+   combined-rate cap (rather than per-rate caps) would need different behavior.
 6. **Rounding.** Per-segment `ceil` is deliberately conservative but may not
    match jurisdiction-specific rounding (e.g. round-half-up, per-invoice, or
    banker's rounding).
@@ -94,11 +113,15 @@ regionCode?, is_taxable?, currencyCode?)` returns
 ## Tests
 
 - Unit: `packages/billing/tests/tax/taxService.calculateTax.test.ts`
-  (flat-rate caps), `taxService.thresholdsAndComposite.test.ts` (progressive
-  caps), `taxService.calculateTaxForPeriod.test.ts` (segmentation, proration,
-  per-segment rounding, gaps, caps, invalid ranges, region/default paths).
+  (flat-rate caps on default and regional paths, malformed/negative caps,
+  string hydration), `taxService.thresholdsAndComposite.test.ts` (progressive
+  caps and rejection), `taxService.calculateTaxForPeriod.test.ts` (segmentation,
+  proration, per-segment rounding, coverage gaps, regional per-rate caps,
+  strict date validation, timezone offsets, Date hydration).
 - Server unit: `server/src/test/unit/taxService.test.ts` (cap clamping on the
-  mocked default-rate path and period splitting).
+  mocked default-rate path, coverage gap).
 - PostgreSQL: `packages/billing/src/services/taxService.rateSelection.db.test.ts`
-  (persisted `cap_amount` through the create/update actions, cap read back as a
-  string, region/tenant isolation, real rate-validity splitting).
+  (persisted `cap_amount` through the create/update actions, bigint string
+  hydration, the non-negative constraint, action validation, single-date and
+  period regional caps across a rate boundary, coverage gaps, region/tenant
+  isolation, real rate-validity splitting).

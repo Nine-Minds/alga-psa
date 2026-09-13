@@ -266,7 +266,7 @@ describe('TaxService.calculateTaxForPeriod', () => {
       expect(result.taxAmount).toBe(2);
     });
 
-    it('leaves a gap between rate intervals untaxed', async () => {
+    it('throws a coverage gap naming the interval between rate intervals', async () => {
       setupKnex({
         clients: [[{ is_tax_exempt: false }]],
         tax_rates: [[
@@ -275,33 +275,79 @@ describe('TaxService.calculateTaxForPeriod', () => {
         ]],
       });
 
-      // 2026-01-05 -> 2026-01-25: 5 taxed days, 10 untaxed, 5 taxed.
-      const result = await new TaxService().calculateTaxForPeriod(
-        'client-1', 20000, '2026-01-05', '2026-01-25', 'US-NY',
-      );
-
-      expect(result.segments.map(segment => [segment.days, segment.taxAmount, segment.taxRate])).toEqual([
-        [5, 250, 5],
-        [10, 0, 0],
-        [5, 450, 9],
-      ]);
-      expect(result.taxAmount).toBe(700);
+      // 2026-01-05 -> 2026-01-25 leaves 2026-01-10 -> 2026-01-20 uncovered.
+      await expect(
+        new TaxService().calculateTaxForPeriod('client-1', 20000, '2026-01-05', '2026-01-25', 'US-NY'),
+      ).rejects.toMatchObject({
+        code: 'TAX_RATE_COVERAGE_GAP',
+        params: { region: 'US-NY', startDate: '2026-01-10', endDate: '2026-01-20' },
+      });
     });
 
-    it('does not apply a per-rate cap on the regional combined-rate path', async () => {
+    it('caps a single regional rate at its configured cap', async () => {
       setupKnex({
         clients: [[{ is_tax_exempt: false }]],
         tax_rates: [[rate({ tax_percentage: 5, cap_amount: 100 })]],
       });
 
-      // 28000 * 5% = 1400, which exceeds the 100 cap. The regional path sums
-      // rate percentages and is intentionally uncapped (see taxService.ts).
+      // 28000 * 5% = 1400, capped at 100.
       const result = await new TaxService().calculateTaxForPeriod(
         'client-1', 28000, '2026-02-01', '2026-03-01', 'US-NY',
       );
 
-      expect(result.taxAmount).toBe(1400);
-      expect(result.segments[0].taxAmount).toBe(1400);
+      expect(result.taxAmount).toBe(100);
+      expect(result.segments[0].taxAmount).toBe(100);
+      expect(result.segments[0].taxRate).toBe(5);
+    });
+
+    it('caps each regional rate independently within one segment', async () => {
+      setupKnex({
+        clients: [[{ is_tax_exempt: false }]],
+        tax_rates: [[
+          rate({ tax_rate_id: 'a', tax_percentage: 5, cap_amount: 200 }),
+          rate({ tax_rate_id: 'b', tax_percentage: 2.5, cap_amount: 100 }),
+        ]],
+      });
+
+      // 28000 * 5% = 1400 -> 200; 28000 * 2.5% = 700 -> 100; sum 300.
+      const result = await new TaxService().calculateTaxForPeriod(
+        'client-1', 28000, '2026-02-01', '2026-03-01', 'US-NY',
+      );
+
+      expect(result.taxAmount).toBe(300);
+      expect(result.segments[0].taxRate).toBe(7.5);
+    });
+
+    it('caps each regional rate per segment across a capped rate boundary', async () => {
+      setupKnex({
+        clients: [[{ is_tax_exempt: false }]],
+        tax_rates: [[
+          rate({ tax_rate_id: 'old', tax_percentage: 5, cap_amount: 100, start_date: '2026-01-01', end_date: '2026-07-01' }),
+          rate({ tax_rate_id: 'new', tax_percentage: 7, cap_amount: 200, start_date: '2026-07-01', end_date: null }),
+        ]],
+      });
+
+      // 2026-06-15 -> 2026-07-15 splits 16/14; each segment caps at its rate's cap.
+      const result = await new TaxService().calculateTaxForPeriod(
+        'client-1', 30000, '2026-06-15', '2026-07-15', 'US-NY',
+      );
+
+      expect(result.segments).toEqual([
+        { start_date: '2026-06-15', end_date: '2026-07-01', days: 16, netAmount: 16000, taxAmount: 100, taxRate: 5 },
+        { start_date: '2026-07-01', end_date: '2026-07-15', days: 14, netAmount: 14000, taxAmount: 200, taxRate: 7 },
+      ]);
+      expect(result.taxAmount).toBe(300);
+    });
+
+    it('rejects a negative regional cap instead of producing negative tax', async () => {
+      setupKnex({
+        clients: [[{ is_tax_exempt: false }]],
+        tax_rates: [[rate({ tax_percentage: 5, cap_amount: -100 })]],
+      });
+
+      await expect(
+        new TaxService().calculateTaxForPeriod('client-1', 28000, '2026-02-01', '2026-03-01', 'US-NY'),
+      ).rejects.toThrow('Tax rate cap amount must be a non-negative whole number.');
     });
 
     it('throws NO_TAX_RATE when no rate overlaps the period', async () => {
@@ -365,19 +411,27 @@ describe('TaxService.calculateTaxForPeriod', () => {
       expect(result.taxRate).toBe(0);
     });
 
-    it('zeroes segments outside the default rate validity window', async () => {
+    it('throws a coverage gap when the default rate does not cover the whole period', async () => {
       setupDefaultRate({ cap_amount: null, end_date: '2026-07-01' });
 
-      // 2026-06-15 -> 2026-07-15 is 30 days: 16 taxable, 14 past the rate end.
-      const result = await new TaxService().calculateTaxForPeriod(
-        'client-1', 30000, '2026-06-15', '2026-07-15',
-      );
+      // 2026-06-15 -> 2026-07-15 runs 14 days past the default rate's end.
+      await expect(
+        new TaxService().calculateTaxForPeriod('client-1', 30000, '2026-06-15', '2026-07-15'),
+      ).rejects.toMatchObject({
+        code: 'TAX_RATE_COVERAGE_GAP',
+        params: { startDate: '2026-07-01', endDate: '2026-07-15' },
+      });
+    });
 
-      expect(result.segments).toEqual([
-        { start_date: '2026-06-15', end_date: '2026-07-01', days: 16, netAmount: 16000, taxAmount: 1600, taxRate: 10 },
-        { start_date: '2026-07-01', end_date: '2026-07-15', days: 14, netAmount: 14000, taxAmount: 0, taxRate: 0 },
-      ]);
-      expect(result.taxAmount).toBe(1600);
+    it('throws a coverage gap when the default rate starts after the period', async () => {
+      setupDefaultRate({ cap_amount: null, start_date: '2026-03-01' });
+
+      await expect(
+        new TaxService().calculateTaxForPeriod('client-1', 10000, '2026-02-01', '2026-03-15'),
+      ).rejects.toMatchObject({
+        code: 'TAX_RATE_COVERAGE_GAP',
+        params: { startDate: '2026-02-01', endDate: '2026-03-01' },
+      });
     });
 
     it('applies the cap to the progressive-threshold path within a period', async () => {
@@ -396,17 +450,98 @@ describe('TaxService.calculateTaxForPeriod', () => {
       expect(result.segments[0].taxAmount).toBe(6000);
     });
 
-    it('returns zero when the client has no default tax rate', async () => {
+    it('throws NO_TAX_RATE when the client has no default tax rate', async () => {
       setupKnex({
         clients: [[{ is_tax_exempt: false }]],
         client_tax_rates: [[]],
       });
 
-      const result = await new TaxService().calculateTaxForPeriod(
-        'client-1', 10000, '2026-02-01', '2026-03-01',
-      );
+      await expect(
+        new TaxService().calculateTaxForPeriod('client-1', 10000, '2026-02-01', '2026-03-01'),
+      ).rejects.toMatchObject({ code: 'NO_TAX_RATE' });
+    });
 
-      expect(result).toEqual({ taxAmount: 0, taxRate: 0, segments: [] });
+    it('throws NO_TAX_RATE when the default rate is inactive for the period', async () => {
+      setupKnex({
+        clients: [[{ is_tax_exempt: false }]],
+        client_tax_rates: [[{ tax_rate_id: 'rate-1' }]],
+        tax_rates: [[]],
+      });
+
+      await expect(
+        new TaxService().calculateTaxForPeriod('client-1', 10000, '2026-02-01', '2026-03-01'),
+      ).rejects.toMatchObject({ code: 'NO_TAX_RATE' });
+    });
+  });
+
+  describe('date validation', () => {
+    beforeEach(() => {
+      const client = [{ is_tax_exempt: false }];
+      const regionRate = [rate({ tax_percentage: 5, start_date: '2020-01-01' })];
+      setupKnex({
+        clients: [client, client, client, client],
+        tax_rates: [regionRate, regionRate, regionRate, regionRate],
+      });
+    });
+
+    it.each([
+      '2026-02-30',
+      '2026-13-01',
+      '2026-00-10',
+      '2026-01-00',
+      '2026-01-01junk',
+      '2026-1-1',
+      '01-01-2026',
+      '2026-01-01T25:00',
+      '2026-01-01T12:60',
+    ])('rejects an invalid date %s', async bad => {
+      await expect(
+        new TaxService().calculateTaxForPeriod('client-1', 10000, bad, '2026-03-01', 'US-NY'),
+      ).rejects.toThrow('Invalid tax calculation date');
+      await expect(
+        new TaxService().calculateTaxForPeriod('client-1', 10000, '2026-01-01', bad, 'US-NY'),
+      ).rejects.toThrow('Invalid tax calculation date');
+    });
+
+    it('accepts a leap day and rejects a non-leap February 29', async () => {
+      const leap = await new TaxService().calculateTaxForPeriod(
+        'client-1', 28000, '2024-02-28', '2024-03-01', 'US-NY',
+      );
+      expect(leap.segments[0].days).toBe(2);
+
+      await expect(
+        new TaxService().calculateTaxForPeriod('client-1', 10000, '2026-02-29', '2026-03-01', 'US-NY'),
+      ).rejects.toThrow('Invalid tax calculation date');
+    });
+
+    it('keeps the spelled-out calendar day for offset timestamps', async () => {
+      // The leading date is 2026-02-01 in every case, regardless of offset.
+      for (const start of [
+        '2026-02-01T23:00:00-05:00',
+        '2026-02-01T00:00:00.000Z',
+        '2026-02-01 12:30:00',
+      ]) {
+        const result = await new TaxService().calculateTaxForPeriod(
+          'client-1', 28000, start, '2026-03-01', 'US-NY',
+        );
+        expect(result.segments[0].start_date).toBe('2026-02-01');
+        expect(result.segments[0].days).toBe(28);
+      }
+    });
+
+    it('normalizes a local-midnight Date the way PostgreSQL date columns hydrate', async () => {
+      const hydrated = new Date(2026, 1, 1); // local midnight, 2026-02-01
+      const result = await new TaxService().calculateTaxForPeriod(
+        'client-1', 28000, hydrated as any, '2026-03-01', 'US-NY',
+      );
+      expect(result.segments[0].start_date).toBe('2026-02-01');
+      expect(result.segments[0].days).toBe(28);
+    });
+
+    it('rejects an invalid Date object', async () => {
+      await expect(
+        new TaxService().calculateTaxForPeriod('client-1', 10000, new Date(NaN) as any, '2026-03-01', 'US-NY'),
+      ).rejects.toThrow('Invalid tax calculation date');
     });
   });
 });
