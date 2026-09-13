@@ -17,7 +17,7 @@ import {
   updateContractLineAssociation,
 } from '@alga-psa/billing/actions/contractLineMappingActions';
 import { checkContractHasInvoices } from '@alga-psa/billing/actions/contractActions';
-import { resetContractLineRateToStandard } from '@alga-psa/billing/actions/rateReviewActions';
+import { resetContractLineRateToStandard, previewContractLineRateReset } from '@alga-psa/billing/actions/rateReviewActions';
 import {
   applyContractLineServiceMembershipChanges,
   getContractLineServicesWithConfigurations,
@@ -34,6 +34,7 @@ import {
   type BillingLocationSummary,
 } from '@alga-psa/billing/actions/billingClientLocationActions';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { AlertCircle } from 'lucide-react';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -212,6 +213,16 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
   const [editBucketConfigs, setEditBucketConfigs] = useState<Record<string, BucketOverlayInput | null>>({});
   const [pendingServiceAdditions, setPendingServiceAdditions] = useState<PendingServiceAddition[]>([]);
   const [pendingServiceRemovalIds, setPendingServiceRemovalIds] = useState<string[]>([]);
+  // "Reset to standard" confirmation (plan §3.3): shows the current rate and the
+  // catalog rate it will fall back to. Fetched from the resolver so the dialog
+  // and the apply cannot disagree.
+  const [resetConfirmation, setResetConfirmation] = useState<{
+    line: DetailedContractLineMapping;
+    currentRateCents: number | null;
+    targetRateCents: number | null;
+  } | null>(null);
+  const [isPreparingReset, setIsPreparingReset] = useState(false);
+  const [isResettingLine, setIsResettingLine] = useState(false);
 
   // Location grouping state
   const [clientLocations, setClientLocations] = useState<BillingLocationSummary[]>([]);
@@ -538,14 +549,40 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
     }
   };
 
-  const handleResetLineRateToStandard = async (line: DetailedContractLineMapping) => {
-    const confirmed = window.confirm(t('contractLines.dialogs.confirmResetRate', {
-      defaultValue: 'Reset this line to the standard catalog rate? The stored custom rate will be removed.',
-    }));
-    if (!confirmed) return;
-
+  const openResetConfirmation = async (line: DetailedContractLineMapping) => {
+    setIsPreparingReset(true);
     try {
-      const result = await resetContractLineRateToStandard(line.contract_line_id);
+      const preview = await previewContractLineRateReset(line.contract_line_id);
+      if (isReturnedActionError(preview)) {
+        setError(getErrorMessage(preview));
+        return;
+      }
+      if (preview.targetRateCents === null) {
+        setError(preview.reason ?? t('contractLines.errors.failedToResetRate', {
+          defaultValue: 'Failed to reset the line rate',
+        }));
+        return;
+      }
+      setResetConfirmation({
+        line,
+        currentRateCents: preview.currentRateCents,
+        targetRateCents: preview.targetRateCents,
+      });
+    } catch (err) {
+      console.error('Error preparing line rate reset:', err);
+      setError(err instanceof Error
+        ? err.message
+        : t('contractLines.errors.failedToResetRate', { defaultValue: 'Failed to reset the line rate' }));
+    } finally {
+      setIsPreparingReset(false);
+    }
+  };
+
+  const confirmResetLineRateToStandard = async () => {
+    if (!resetConfirmation) return;
+    setIsResettingLine(true);
+    try {
+      const result = await resetContractLineRateToStandard(resetConfirmation.line.contract_line_id);
       if ('refused' in result && result.refused.length > 0) {
         setError(result.refused[0].reason);
         return;
@@ -556,11 +593,14 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
       }
       await fetchData();
       onContractLinesChanged?.();
+      setResetConfirmation(null);
     } catch (err) {
       console.error('Error resetting line rate:', err);
       setError(err instanceof Error
         ? err.message
         : t('contractLines.errors.failedToResetRate', { defaultValue: 'Failed to reset the line rate' }));
+    } finally {
+      setIsResettingLine(false);
     }
   };
 
@@ -1265,16 +1305,16 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                       </Button>
                       {line.custom_rate !== null && line.custom_rate !== undefined && (
                         <Button
-                          id="reset-line-rate-to-standard"
+                          id={`reset-line-rate-to-standard-${line.contract_line_id}`}
                           data-line-id={line.contract_line_id}
                           variant="ghost"
                           size="sm"
                           onClick={(e) => {
                             e.stopPropagation();
-                            void handleResetLineRateToStandard(line);
+                            void openResetConfirmation(line);
                           }}
                           className="h-8 text-muted-foreground hover:text-[rgb(var(--color-text-700))] hover:bg-muted"
-                          disabled={isReadOnly}
+                          disabled={isReadOnly || isPreparingReset || isResettingLine}
                         >
                           <RotateCcw className="h-4 w-4 mr-1" />
                           {t('contractLines.actions.resetToStandard', { defaultValue: 'Reset to standard' })}
@@ -1959,6 +1999,33 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
           )}
         </>
       ) : null}
+
+      <ConfirmationDialog
+        isOpen={resetConfirmation !== null}
+        onClose={() => setResetConfirmation(null)}
+        onConfirm={confirmResetLineRateToStandard}
+        isConfirming={isResettingLine}
+        title={t('contractLines.actions.resetToStandard', { defaultValue: 'Reset to standard' })}
+        message={
+          <div className="space-y-2">
+            <p>
+              {t('contractLines.dialogs.confirmResetRate', {
+                defaultValue: 'Reset this line to the standard catalog rate? The stored custom rate will be removed.',
+              })}
+            </p>
+            {resetConfirmation && (
+              <p className="font-medium text-foreground">
+                {t('contractLines.columns.rate', { defaultValue: 'Rate' })}:{' '}
+                {formatRate(resetConfirmation.currentRateCents)} &rarr;{' '}
+                {formatRate(resetConfirmation.targetRateCents)}
+              </p>
+            )}
+          </div>
+        }
+        confirmLabel={t('contractLines.actions.resetToStandard', { defaultValue: 'Reset to standard' })}
+        cancelLabel={t('common.actions.cancel', { defaultValue: 'Cancel' })}
+        id="reset-line-rate-to-standard-confirmation"
+      />
     </Card>
   );
 };

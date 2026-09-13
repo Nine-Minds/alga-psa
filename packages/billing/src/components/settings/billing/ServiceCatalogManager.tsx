@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
@@ -87,6 +87,11 @@ const ServiceCatalogManager: React.FC = () => {
   const [rateInput, setRateInput] = useState<string>('');
   // State for editing prices (multi-currency support)
   const [editingPrices, setEditingPrices] = useState<Array<{ currency_code: string; rate: number }>>([]);
+  // Baseline primary price (cents) captured from the DB-effective price when
+  // the edit dialog opens. `editingService.default_rate` is mutated by the
+  // primary input's onBlur, so comparing the new rate against it can never
+  // detect a change; the snapshot is what the rollout guard must use.
+  const originalPriceCentsRef = useRef<number | null>(null);
   // Price-change rollout: when the effective rate changed and the service is on
   // a contract, saving opens the rollout dialog instead of writing immediately.
   const [pendingPriceChange, setPendingPriceChange] = useState<{
@@ -385,8 +390,22 @@ const ServiceCatalogManager: React.FC = () => {
 
     const service = editingService;
     const prices = editingPrices;
-    const newRateCents = Math.round(Number(prices[0]?.rate ?? 0));
-    const oldRateCents = Math.round(Number(service.default_rate ?? 0));
+    // Derive the submitted primary rate from the live text input first. A save
+    // can run before the field ever blurs (clicking Save does not guarantee the
+    // blur has flushed), so `editingPrices[0]` may still hold the old value;
+    // trusting it silently discards what the operator typed.
+    const fallbackRateCents = Math.round(Number(prices[0]?.rate ?? 0));
+    const parsedRateCents =
+      rateInput.trim() === '' ? Number.NaN : Math.round(parseFloat(rateInput) * 100);
+    const newRateCents = Number.isFinite(parsedRateCents) ? parsedRateCents : fallbackRateCents;
+    // The baseline is the price that was effective when the dialog opened, held
+    // outside mutable editing state (see `originalPriceCentsRef`).
+    const oldRateCents = originalPriceCentsRef.current;
+    // Keep the persisted prices in step with the typed rate so the rollout's
+    // Apply/Skip paths (and a direct save) write what the operator actually saw.
+    const effectivePrices = prices.map((price, index) =>
+      index === 0 ? { ...price, rate: newRateCents } : price,
+    );
 
     // A changed rate on a service that is on at least one contract opens the
     // rollout dialog so the operator can choose when it takes effect.
@@ -404,7 +423,7 @@ const ServiceCatalogManager: React.FC = () => {
             newRateCents,
             currency: prices[0].currency_code,
             service,
-            prices,
+            prices: effectivePrices,
           });
           return;
         }
@@ -413,7 +432,7 @@ const ServiceCatalogManager: React.FC = () => {
       }
     }
 
-    await saveService(service, prices);
+    await saveService(service, effectivePrices);
   };
 
   const saveService = async (
@@ -702,7 +721,7 @@ const ServiceCatalogManager: React.FC = () => {
       {
         title: t('serviceCatalog.table.contractUsage', { defaultValue: 'Contracts' }),
         dataIndex: 'contract_usage',
-        render: (_value, record) => {
+        render: (_value, record, index) => {
           const serviceId = record.service_id;
           const count = serviceId ? usageByService[serviceId]?.contractCount : undefined;
           if (!serviceId || count === undefined) {
@@ -721,7 +740,7 @@ const ServiceCatalogManager: React.FC = () => {
           }
           return (
             <Button
-              id="service-contract-usage"
+              id={`service-contract-usage-${index}`}
               data-service-id={serviceId}
               variant="ghost"
               size="sm"
@@ -807,6 +826,9 @@ const ServiceCatalogManager: React.FC = () => {
               id={`edit-service-${record.service_id}`}
               onClick={() => {
                 setEditingService(record);
+                originalPriceCentsRef.current = Math.round(
+                  Number(record.prices?.[0]?.rate ?? record.default_rate ?? 0),
+                );
                 // Initialize editingPrices from service prices or create default entry with tenant currency
                 const prices = record.prices && record.prices.length > 0
                   ? record.prices.map(p => ({ currency_code: p.currency_code, rate: p.rate }))
@@ -844,9 +866,23 @@ const ServiceCatalogManager: React.FC = () => {
     <>
       <Card>
         <CardHeader>
-          <h3 className="text-lg font-semibold">
-            {t('serviceCatalog.title', { defaultValue: 'Service Catalog Management' })}
-          </h3>
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="text-lg font-semibold">
+              {t('serviceCatalog.title', { defaultValue: 'Service Catalog Management' })}
+            </h3>
+            {/* First-class entry point into rate review (plan §3.3). Legacy
+                `unreviewed` lines need a route to reclassification that does
+                not depend on making a price change first. */}
+            <Button
+              id="open-rate-review"
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setIsRateReviewOpen(true)}
+            >
+              {t('priceChangeRollout.reviewRates', { defaultValue: 'Review rates' })}
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {error && <div className="text-red-500 mb-4">{error}</div>}
@@ -916,6 +952,9 @@ const ServiceCatalogManager: React.FC = () => {
                     ...record,
                     // sku: record.sku || '', // Example if sku was fetched
                   });
+                  originalPriceCentsRef.current = Math.round(
+                    Number(record.prices?.[0]?.rate ?? record.default_rate ?? 0),
+                  );
                   // Initialize editingPrices from service prices or create default entry with tenant currency
                   const prices = record.prices && record.prices.length > 0
                     ? record.prices.map(p => ({ currency_code: p.currency_code, rate: p.rate }))
@@ -1377,6 +1416,10 @@ const ServiceCatalogManager: React.FC = () => {
             Number(reviewingService.prices?.[0]?.rate ?? reviewingService.default_rate ?? 0),
           )}
           currency={reviewingService.prices?.[0]?.currency_code ?? defaultCurrency}
+          onReviewRates={() => {
+            setReviewingService(null);
+            setIsRateReviewOpen(true);
+          }}
         />
       )}
       <RateReviewDialog

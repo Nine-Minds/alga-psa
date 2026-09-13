@@ -277,6 +277,10 @@ export const previewServicePriceChange = withAuth(
         const currentPrice = await db
           .table('service_prices')
           .where({ service_id: serviceId, currency_code: priceCurrency })
+          // The dialog header shows this as the "old" rate. Without the date
+          // filter a scheduled future row would be reported as the current
+          // price. Same fix as `quoteItem.ts` and `Service.setPrice`.
+          .where('effective_date', '<=', calendarDate(new Date()))
           .orderBy('effective_date', 'desc')
           .first('rate');
 
@@ -396,13 +400,30 @@ export const previewServicePriceChange = withAuth(
             reason: null,
           };
 
+          // Line-level provenance alone mislabels a line that is `inherited`
+          // but shadowed lower down: a member-level override or an active
+          // pricing schedule means the catalog change does not reach it, so it
+          // must not appear under "Will change" with a $0 delta. The money
+          // total already excludes those; this fixes the label.
+          let effectiveProvenance: RateProvenance = provenance;
           if (provenance === 'inherited') {
+            const memberOverride = [...current.perService.values()].find(
+              (member) => member.provenance !== 'inherited' && member.rateCents !== null,
+            );
+            if (memberOverride) {
+              effectiveProvenance = memberOverride.provenance;
+            } else if (current.line.source === 'pricing_schedule') {
+              effectiveProvenance = 'custom';
+            }
+          }
+
+          if (effectiveProvenance === 'inherited') {
             willChange.push(row);
             totalMonthlyDeltaCents += row.deltaCents;
-          } else if (provenance === 'unreviewed') {
-            unreviewed.push(row);
+          } else if (effectiveProvenance === 'unreviewed') {
+            unreviewed.push({ ...row, provenance: 'unreviewed' });
           } else {
-            custom.push(row);
+            custom.push({ ...row, provenance: 'custom' });
           }
         }
 

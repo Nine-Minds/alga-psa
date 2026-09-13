@@ -35,11 +35,22 @@ export interface PriceChangeRolloutDialogProps {
 
 function defaultEffectiveDate(): Date {
   const now = new Date();
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
+  // Local-calendar components: a UTC-midnight Date is rendered by the picker in
+  // local time, so a UTC+ tenant would see the previous day, and a user-picked
+  // local date would serialise one day early.
+  return new Date(now.getFullYear(), now.getMonth() + 1, 1);
 }
 
-function isoDate(date: Date): string {
-  return date.toISOString().slice(0, 10);
+/**
+ * Format a Date as the local calendar date (`YYYY-MM-DD`). `toISOString()`
+ * converts to UTC first, so in a UTC+ tenant it emits the day before the one
+ * the operator picked — and a price change dated one day early moves money.
+ */
+export function toLocalCalendarDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 export default function PriceChangeRolloutDialog({
@@ -71,7 +82,7 @@ export default function PriceChangeRolloutDialog({
         const result = await previewServicePriceChange(
           serviceId,
           newRateCents,
-          isoDate(date),
+          toLocalCalendarDate(date),
           currency,
         );
         if ('willChange' in result) {
@@ -164,7 +175,7 @@ export default function PriceChangeRolloutDialog({
     setIsSaving(true);
     setError(null);
     try {
-      await onApply(isoDate(effectiveDate));
+      await onApply(toLocalCalendarDate(effectiveDate));
       onClose();
     } catch (applyError) {
       console.error('Failed to apply price change:', applyError);

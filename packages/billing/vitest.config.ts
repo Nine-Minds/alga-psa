@@ -25,6 +25,12 @@ export default defineConfig({
       'src/actions/documentTemplateActions.existingDocument.test.ts',
       'src/components/billing-dashboard/documents/DocumentTemplateEditor.existingDocument.test.tsx',
       'src/components/billing-dashboard/LineItem.test.tsx',
+      // Catalog-price rollout reachability and the effective-date serialisation
+      // regression — listed explicitly so this package's own `npm test` target
+      // (the `nx affected -t test` lane) selects them, not only the server
+      // coverage run that globs ../packages/**.
+      'src/components/settings/billing/ServiceCatalogManager.rollout.contract.test.tsx',
+      'src/components/settings/billing/PriceChangeRolloutDialog.contract.test.tsx',
       'src/components/billing-dashboard/quotes/QuoteDocumentTemplateEditor.tenantBranding.test.tsx',
       'src/components/billing-dashboard/quotes/QuoteDocumentTemplateEditor.existingQuote.test.tsx',
       'src/components/invoice-designer/DesignerVisualWorkspace.test.tsx',

@@ -285,6 +285,85 @@ export const applyRateReclassification = withAuth(
   },
 );
 
+export interface ContractLineRateResetPreview {
+  contractLineId: string;
+  currentRateCents: number | null;
+  targetRateCents: number | null;
+  currency: string;
+  canReset: boolean;
+  reason: string | null;
+}
+
+/**
+ * Read-only view of what "reset to standard" would do to one line: the stored
+ * (current) rate and the rate the resolver returns once the stored rate and
+ * member snapshot are treated as NULL. The confirmation dialog shows both so
+ * the operator sees what the line bills before and after, and the apply path
+ * re-checks the same resolver.
+ */
+export const previewContractLineRateReset = withAuth(
+  async (
+    user,
+    { tenant },
+    contractLineId: string,
+    options: { period?: RateReviewPeriod } = {},
+  ): Promise<ContractLineRateResetPreview | RateReviewActionError> => {
+    if (!(await hasPermission(user, 'billing', 'read'))) {
+      return permissionError(
+        'Permission denied: Cannot inspect contract rates',
+        'msp/billing:errors.permissions.billingRead',
+      );
+    }
+
+    const period = resolvePeriod(options.period);
+    const { knex } = await createTenantKnex();
+
+    try {
+      return await withTransaction(knex, async (trx: Knex.Transaction) => {
+        const bundles = await loadFixedLineRateInputs(trx, tenant, [contractLineId]);
+        const bundle = bundles.get(contractLineId);
+        if (!bundle) {
+          return actionError(
+            'Contract line not found or is a template.',
+            'msp/billing:errors.rateReview.previewFailed',
+          );
+        }
+
+        const resolverInput = toResolverInput(bundle, period);
+        const current = resolveFixedLineRate(resolverInput);
+        // Mirror `resetContractLineRateToStandard`'s guard: resolve as if the
+        // stored line rate were already cleared.
+        const target = resolveFixedLineRate({
+          ...resolverInput,
+          line: {
+            ...resolverInput.line,
+            custom_rate: null,
+            rate_provenance: 'inherited',
+          },
+        });
+
+        return {
+          contractLineId,
+          currentRateCents: current.line.rateCents,
+          targetRateCents: target.line.rateCents,
+          currency: bundle.currency,
+          canReset: target.line.rateCents !== null,
+          reason:
+            target.line.rateCents === null
+              ? 'The line resolves to no catalog rate.'
+              : null,
+        };
+      });
+    } catch (error) {
+      console.error('[rateReviewActions] previewContractLineRateReset failed:', error);
+      return actionError(
+        'Could not inspect the line rate. Please try again.',
+        'msp/billing:errors.rateReview.previewFailed',
+      );
+    }
+  },
+);
+
 /**
  * Reset a single line to the catalog (plan §3.3). Shares the apply path, the
  * resolver and the transaction with the reclassification pass.

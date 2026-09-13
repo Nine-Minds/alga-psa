@@ -1115,6 +1115,33 @@ describe('Catalog price resolution – fixed path', () => {
     expect(Number(catalog.default_rate)).toBe(11000);
   }, 120000);
 
+  it('preview reports the currently-effective catalog price, not a scheduled future one', async () => {
+    // Non-blocking defect #1: `previewServicePriceChange` selected the latest
+    // `service_prices` row with no date filter, so once a future price was
+    // scheduled the dialog header reported it as the "old" rate.
+    const { serviceId } = await seedInheritedLine(
+      'Preview current price service',
+      10000,
+      monthStart(0),
+    );
+    const futureStart = monthStart(1);
+    await context.db('service_prices').insert({
+      tenant: context.tenantId,
+      service_id: serviceId,
+      currency_code: 'USD',
+      rate: 15000,
+      effective_date: futureStart,
+    });
+
+    const preview = await previewServicePriceChange(serviceId, 12000, monthStart(2));
+    if (!('willChange' in preview)) {
+      throw new Error(`preview failed: ${JSON.stringify(preview)}`);
+    }
+
+    expect(preview.oldRateCents).toBe(10000);
+    expect(preview.oldRateCents).not.toBe(15000);
+  }, 120000);
+
   it('applyServicePriceChange requires service:update', async () => {
     const { hasPermission } = await import('@alga-psa/auth/rbac');
     vi.mocked(hasPermission).mockResolvedValueOnce(false);
