@@ -235,11 +235,25 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
   }
 
   async fetchChanges(tenantId: string, since: string, targetRealm?: string | null): Promise<AccountingChangeSet> {
+    // Conservative pre-poll watermark mirrors the Xero adapter: next cycle
+    // re-fetches anything written after this instant, so a long fetch cannot
+    // skip a record it failed to reach.
+    const watermark = new Date().toISOString();
     const qboClient = await QboClientService.create(tenantId, targetRealm ?? null);
     const changeSet = await qboClient.fetchChanges(since);
+    const changes = changeSet.changes.map((change) => normalizeQboChange(change));
+
+    const maxUpdated = changes
+      .map((change) => change.updatedAt)
+      .filter((value): value is string => Boolean(value))
+      .sort()
+      .pop();
+
     return {
-      ...changeSet,
-      changes: changeSet.changes.map((change) => normalizeQboChange(change))
+      changes,
+      truncated: changeSet.truncated,
+      fetchedAt: watermark,
+      nextCursor: changeSet.truncated ? maxUpdated ?? watermark : undefined
     };
   }
 

@@ -184,9 +184,14 @@ export class XeroAdapter implements AccountingExportAdapter {
       throw new AppError('XERO_REALM_REQUIRED', 'Xero change polling requires a connection id');
     }
 
+    // Conservative pre-poll watermark: any change written after this instant is
+    // re-fetched on the next cycle, so a poll that outlives the cursor overlap
+    // can never skip a record it happened to collect before that record was
+    // written. `fetchedAt` is therefore the *start* of the poll, not its end.
+    const watermark = new Date().toISOString();
+
     const client = await XeroClientService.create(tenantId, targetRealm);
     const changes: AccountingExternalChange[] = [];
-    let truncated = false;
 
     const [invoices, payments, creditNotes] = await Promise.all([
       this.collectChanged(client, 'invoice', since),
@@ -194,7 +199,7 @@ export class XeroAdapter implements AccountingExportAdapter {
       this.collectChanged(client, 'creditNote', since)
     ]);
 
-    truncated = invoices.truncated || payments.truncated || creditNotes.truncated;
+    const truncated = invoices.truncated || payments.truncated || creditNotes.truncated;
 
     for (const record of invoices.records) {
       const change = normalizeXeroInvoice(record);
@@ -240,16 +245,31 @@ export class XeroAdapter implements AccountingExportAdapter {
       changes.push(...removed);
     }
 
-    return { changes, truncated, fetchedAt: new Date().toISOString() };
+    // When a safety page cap was hit, resume from the newest record already
+    // fetched so successive capped polls move forward instead of re-reading
+    // the same first pages forever.
+    const maxUpdated = [invoices.maxUpdated, payments.maxUpdated, creditNotes.maxUpdated]
+      .filter((value): value is string => Boolean(value))
+      .sort()
+      .pop();
+
+    return {
+      changes,
+      truncated,
+      fetchedAt: watermark,
+      nextCursor: truncated ? maxUpdated ?? watermark : undefined
+    };
   }
 
   private async collectChanged(
     client: XeroClientService,
     kind: 'invoice' | 'payment' | 'creditNote',
     since: string
-  ): Promise<{ records: Array<Record<string, any>>; truncated: boolean }> {
+  ): Promise<{ records: Array<Record<string, any>>; truncated: boolean; maxUpdated: string | null }> {
     const records: Array<Record<string, any>> = [];
+    let maxUpdated: string | null = null;
     const MAX_PAGES = 100;
+
     for (let page = 1; page <= MAX_PAGES; page += 1) {
       const result =
         kind === 'invoice'
@@ -257,12 +277,21 @@ export class XeroAdapter implements AccountingExportAdapter {
           : kind === 'payment'
             ? await client.listChangedPayments(since, page)
             : await client.listChangedCreditNotes(since, page);
+
       records.push(...result.records);
+      for (const record of result.records) {
+        const updated = xeroDateToIso(record?.UpdatedDateUTC);
+        if (updated && (!maxUpdated || updated > maxUpdated)) {
+          maxUpdated = updated;
+        }
+      }
+
       if (!result.hasMore) {
-        return { records, truncated: false };
+        return { records, truncated: false, maxUpdated };
       }
     }
-    return { records, truncated: true };
+
+    return { records, truncated: true, maxUpdated };
   }
 
   private async findRemovedCreditAllocations(
@@ -270,14 +299,22 @@ export class XeroAdapter implements AccountingExportAdapter {
     targetRealm: string,
     current: Map<string, Set<string>>
   ): Promise<AccountingExternalChange[]> {
+    const creditNoteIds = Array.from(current.keys());
+    if (creditNoteIds.length === 0) {
+      return [];
+    }
+
     const { knex } = await createTenantKnex();
+    // `metadata->>` is a JSON expression, not a column: bind it through a raw
+    // parameterized predicate so PostgreSQL evaluates the extraction instead
+    // of looking for a column literally named `metadata->>xero_credit_note_id`.
     const rows = await tenantDb(knex, tenantId).table<MappingRowRaw>('tenant_external_entity_mappings')
       .select('*')
       .where('integration_type', this.type)
       .where('alga_entity_type', 'invoice_payment')
       .where('external_realm_id', targetRealm)
       .whereNull('deleted_at')
-      .whereIn('metadata->>xero_credit_note_id', Array.from(current.keys()));
+      .whereRaw("(metadata->>'xero_credit_note_id') = ANY(?)", [creditNoteIds]);
 
     const removed: AccountingExternalChange[] = [];
     for (const row of rows) {
@@ -742,10 +779,20 @@ export class XeroAdapter implements AccountingExportAdapter {
           }
         }
 
-        // Store invoice mapping with charge line mappings
+        // Store invoice mapping with the authoritative delivery snapshot the
+        // drift detector compares against, plus the charge line mappings used
+        // for tax import. Older mappings that lack a snapshot are handled
+        // explicitly by the drift detector (it adopts the first observed
+        // document as the baseline instead of silently ignoring changes).
+        const rawTotal = Number(rawInvoice?.Total);
+        const exportedTotal = Number.isFinite(rawTotal) ? rawTotal : payload.invoice.amountCents / 100;
         const metadata = {
           last_exported_at: new Date().toISOString(),
-          invoiceNumber: result.invoiceNumber,
+          invoiceNumber: result.invoiceNumber ?? rawInvoice?.InvoiceNumber ?? null,
+          doc_number: result.invoiceNumber ?? rawInvoice?.InvoiceNumber ?? null,
+          sync_token: rawInvoice?.UpdatedDateUTC != null ? String(rawInvoice.UpdatedDateUTC) : null,
+          exported_total: exportedTotal,
+          external_entity_type: 'Invoice',
           chargeLineMappings // Store mapping for tax import
         };
 
@@ -1089,6 +1136,31 @@ function xeroSyncToken(record: Record<string, any> | undefined): string | undefi
   return record?.UpdatedDateUTC != null ? String(record.UpdatedDateUTC) : undefined;
 }
 
+/**
+ * Normalize the date shapes Xero returns. Wrapped dates
+ * (`/Date(1700000000000+0000)/`) are common in older responses; a naive
+ * `new Date(value)` yields Invalid Date and downstream writes would silently
+ * fall back to "now".
+ */
+function xeroDateToIso(value: unknown): string | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : value.toISOString();
+  }
+  if (typeof value === 'string') {
+    const match = /^\/Date\((-?\d+)([+-]\d{4})?\)\/$/.exec(value.trim());
+    if (match) {
+      const ms = Number(match[1]);
+      return Number.isFinite(ms) ? new Date(ms).toISOString() : null;
+    }
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+  }
+  return null;
+}
+
 function xeroStatusIsDeleted(status: unknown): boolean {
   return (
     typeof status === 'string' &&
@@ -1118,7 +1190,7 @@ function normalizeXeroInvoice(record: Record<string, any>): AccountingExternalCh
     externalId,
     syncToken: xeroSyncToken(record),
     deleted: typeof status === 'string' && status.toUpperCase() === 'DELETED',
-    updatedAt: record?.UpdatedDateUTC,
+    updatedAt: xeroDateToIso(record?.UpdatedDateUTC) ?? undefined,
     payload: record,
     normalized
   };
@@ -1142,7 +1214,7 @@ function normalizeXeroCreditNote(record: Record<string, any>): AccountingExterna
     externalId,
     syncToken: xeroSyncToken(record),
     deleted: typeof status === 'string' && status.toUpperCase() === 'DELETED',
-    updatedAt: record?.UpdatedDateUTC,
+    updatedAt: xeroDateToIso(record?.UpdatedDateUTC) ?? undefined,
     payload: record,
     normalized
   };
@@ -1167,7 +1239,7 @@ function normalizeXeroPayment(record: Record<string, any>): AccountingExternalCh
 
   const normalized: NormalizedExternalPaymentPayload = {
     reference,
-    txnDate: typeof record?.Date === 'string' ? record.Date : undefined,
+    txnDate: xeroDateToIso(record?.Date) ?? undefined,
     totalCents: Number.isFinite(amountCents) ? amountCents : undefined,
     allocations,
     isCreditApplication,
@@ -1182,57 +1254,124 @@ function normalizeXeroPayment(record: Record<string, any>): AccountingExternalCh
     externalId,
     syncToken: xeroSyncToken(record),
     deleted: typeof record?.Status === 'string' && record.Status.toUpperCase() === 'DELETED',
-    updatedAt: record?.UpdatedDateUTC,
+    updatedAt: xeroDateToIso(record?.UpdatedDateUTC) ?? undefined,
+    payload: record,
+    normalized
+  };
+}
+
+interface NormalizedXeroAllocation {
+  allocationId: string | null;
+  invoiceId: string;
+  amountCents: number;
+  date: string | null;
+}
+
+function makeCreditAllocationChange(
+  record: Record<string, any>,
+  externalId: string,
+  allocation: { invoiceId: string; amountCents: number; date: string | null },
+  providerMetadata: Record<string, unknown>
+): AccountingExternalChange {
+  const normalized: NormalizedExternalPaymentPayload = {
+    reference: `Xero credit note ${record?.CreditNoteNumber ?? record?.CreditNoteID ?? ''}`,
+    txnDate: allocation.date ?? undefined,
+    totalCents: allocation.amountCents,
+    allocations: [{ externalInvoiceId: allocation.invoiceId, amountCents: allocation.amountCents }],
+    isCreditApplication: true,
+    providerMetadata
+  };
+  return {
+    entityType: 'Payment',
+    externalId,
+    syncToken: `${xeroSyncToken(record) ?? ''}:${allocation.amountCents}`,
+    deleted: false,
+    updatedAt: xeroDateToIso(record?.UpdatedDateUTC) ?? undefined,
     payload: record,
     normalized
   };
 }
 
 /**
- * Synthesize one payment change per current credit-note allocation so the
- * shared payment applier records the credit application exactly once. The
- * synthetic external id is stable (`creditnote:<noteId>:<invoiceId>`), which
- * is what lets the same ledger row be found for idempotent replay and for the
- * removal reconciliation in `findRemovedCreditAllocations`.
+ * Synthesize the payment changes that carry a credit note's current
+ * allocations into the shared applier.
+ *
+ * Identity: when every allocation has an AllocationID, one change is emitted
+ * per allocation (`creditnote:<noteId>:alloc:<allocationId>`). Two allocations
+ * to the same invoice therefore stay distinct instead of collapsing (equal
+ * amounts skipped, differing amounts replacing one another). When Xero omits
+ * AllocationID, allocations are explicitly aggregated per invoice
+ * (`creditnote:<noteId>:inv:<invoiceId>`, summed amount). The stable ids are
+ * what let the applier replay, reverse, and reconcile removals correctly; a
+ * scheme change across polls surfaces as a removal + fresh application.
  */
 function normalizeXeroCreditAllocations(record: Record<string, any>): AccountingExternalChange[] {
   const creditNoteId = record?.CreditNoteID != null ? String(record.CreditNoteID) : null;
   if (!creditNoteId || xeroStatusIsDeleted(record?.Status)) {
     return [];
   }
-  const allocations = Array.isArray(record?.Allocations) ? record.Allocations : [];
-  const changes: AccountingExternalChange[] = [];
 
-  for (const allocation of allocations) {
+  const rawAllocations = Array.isArray(record?.Allocations) ? record.Allocations : [];
+  const allocations: NormalizedXeroAllocation[] = [];
+  for (const allocation of rawAllocations) {
     const invoiceId = allocation?.Invoice?.InvoiceID;
     const amountCents = Math.round(Number(allocation?.Amount) * 100);
     if (!invoiceId || !Number.isFinite(amountCents) || amountCents <= 0) {
       continue;
     }
-    const externalId = `creditnote:${creditNoteId}:${String(invoiceId)}`;
-    const normalized: NormalizedExternalPaymentPayload = {
-      reference: `Xero credit note ${record?.CreditNoteNumber ?? creditNoteId}`,
-      txnDate: typeof allocation?.Date === 'string' ? allocation.Date : undefined,
-      totalCents: amountCents,
-      allocations: [{ externalInvoiceId: String(invoiceId), amountCents }],
-      isCreditApplication: true,
-      providerMetadata: {
-        xero_credit_note_id: creditNoteId,
-        xero_allocation_invoice_id: String(invoiceId)
-      }
-    };
-    changes.push({
-      entityType: 'Payment',
-      externalId,
-      syncToken: `${xeroSyncToken(record) ?? ''}:${amountCents}`,
-      deleted: false,
-      updatedAt: record?.UpdatedDateUTC,
-      payload: record,
-      normalized
+    allocations.push({
+      allocationId: typeof allocation?.AllocationID === 'string' ? allocation.AllocationID : null,
+      invoiceId: String(invoiceId),
+      amountCents,
+      date: xeroDateToIso(allocation?.Date)
     });
   }
 
-  return changes;
+  if (allocations.length === 0) {
+    return [];
+  }
+
+  const allHaveIds = allocations.every((allocation) => Boolean(allocation.allocationId));
+  if (allHaveIds) {
+    return allocations.map((allocation) =>
+      makeCreditAllocationChange(
+        record,
+        `creditnote:${creditNoteId}:alloc:${allocation.allocationId}`,
+        allocation,
+        {
+          xero_credit_note_id: creditNoteId,
+          xero_allocation_id: allocation.allocationId,
+          xero_allocation_invoice_id: allocation.invoiceId
+        }
+      )
+    );
+  }
+
+  const byInvoice = new Map<string, { amountCents: number; date: string | null }>();
+  for (const allocation of allocations) {
+    const existing = byInvoice.get(allocation.invoiceId);
+    if (existing) {
+      existing.amountCents += allocation.amountCents;
+      if (!existing.date) {
+        existing.date = allocation.date;
+      }
+    } else {
+      byInvoice.set(allocation.invoiceId, { amountCents: allocation.amountCents, date: allocation.date });
+    }
+  }
+
+  return Array.from(byInvoice.entries()).map(([invoiceId, aggregate]) =>
+    makeCreditAllocationChange(
+      record,
+      `creditnote:${creditNoteId}:inv:${invoiceId}`,
+      { invoiceId, amountCents: aggregate.amountCents, date: aggregate.date },
+      {
+        xero_credit_note_id: creditNoteId,
+        xero_allocation_invoice_id: invoiceId,
+        xero_allocations_aggregated: true
+      }
+    )
+  );
 }
 
 function coerceChargeCents(value: unknown): number | null {

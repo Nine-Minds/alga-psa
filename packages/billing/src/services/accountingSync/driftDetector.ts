@@ -108,6 +108,30 @@ export async function applyExternalDocumentChange(
   const snapshotTotal = toAmount(metadata.exported_total);
   const snapshotDocNumber = metadata.doc_number ?? null;
 
+  // Explicit legacy-baseline adoption: mappings written before the delivery
+  // snapshot existed (e.g. Xero mappings that only stored invoiceNumber) have
+  // no total/doc number to compare against. Rather than silently ignoring
+  // every later change, adopt the first observed document as the baseline and
+  // record that we did.
+  if (snapshotTotal === null && snapshotDocNumber === null) {
+    await deps.ledger.update(mapping.id, {
+      metadata: {
+        ...metadata,
+        sync_token: change.syncToken ?? metadata.sync_token,
+        exported_total: externalTotal,
+        doc_number: externalDocNumber,
+        baseline_adopted_at: new Date().toISOString()
+      },
+      touchSyncedAt: true
+    });
+    logger.info('[accountingSync] Adopted external document as drift baseline', {
+      tenantId: deps.tenantId,
+      invoiceId: mapping.alga_entity_id,
+      externalInvoiceId: change.externalId
+    });
+    return;
+  }
+
   const totalChanged =
     externalTotal !== null && snapshotTotal !== null && Math.abs(externalTotal - snapshotTotal) > 0.005;
   const docNumberChanged =

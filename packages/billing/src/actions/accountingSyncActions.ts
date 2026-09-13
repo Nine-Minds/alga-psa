@@ -295,6 +295,10 @@ export interface InvoiceSyncStatus {
   error?: string | null;
   /** Intuit environment of the connection — drives the View-in-QuickBooks deep link. */
   environment?: 'sandbox' | 'production';
+  /** Accounting provider that owns this mapping; gates provider-specific links. */
+  provider?: 'qbo' | 'xero';
+  /** Human-readable organisation name when the provider exposes one. */
+  organisationName?: string | null;
 }
 
 /** Batched per-invoice sync status for list views and the badge. */
@@ -322,15 +326,21 @@ export const getInvoiceSyncStatuses = withAuth(async (
   }
   const { integration } = target;
   const integrationType = integration.adapterType;
+  const targetRealm = integration.targetRealm;
 
   const [mappings, ops] = await Promise.all([
     tenantDb(knex, tenant).table('tenant_external_entity_mappings')
       .where({ integration_type: integrationType, alga_entity_type: 'invoice' })
       .whereIn('alga_entity_id', ids)
+      // Organisation-scoped and tombstones excluded: another company's or an
+      // unlinked mapping must never determine the displayed status.
+      .where('external_realm_id', targetRealm)
+      .whereNull('deleted_at')
       .select('alga_entity_id', 'external_entity_id', 'sync_status', 'last_synced_at', 'metadata'),
     tenantDb(knex, tenant).table('accounting_sync_operations')
       .where({ adapter_type: integrationType, operation: 'export_invoice', alga_entity_type: 'invoice' })
       .whereIn('alga_entity_id', ids)
+      .where('target_realm', targetRealm)
       .whereIn('status', ['pending', 'in_progress', 'skipped'])
       .select('alga_entity_id', 'status', 'last_error')
   ]);
@@ -383,7 +393,8 @@ export const getInvoiceSyncStatuses = withAuth(async (
       docNumber: mapping?.metadata?.doc_number ?? null,
       lastSyncedAt: mapping?.last_synced_at ?? null,
       error: op?.last_error ?? null,
-      environment
+      environment,
+      provider: integrationType === 'xero' ? 'xero' : 'qbo'
     };
   }
 
@@ -471,8 +482,8 @@ export const getAccountingSyncHealth = withAuth(async (
   const ledger = new SyncMappingLedger(knex, tenant, adapterType);
   const [lastCycle, opCounts, statusCounts, openExceptions, autoApplyCreditsEnabled] = await Promise.all([
     new SyncCycleRepository(knex).getLatestCycle(tenant, adapterType, realm),
-    new SyncOperationsRepository(knex).countByStatus(tenant, adapterType),
-    ledger.countByStatus(),
+    new SyncOperationsRepository(knex).countByStatus(tenant, adapterType, realm),
+    ledger.countByStatus(realm),
     new WorkflowTaskSyncExceptionService(knex, tenant).countOpen(),
     adapterType === 'quickbooks_online' ? readAutoApplyCreditsPreference(tenant, realm) : Promise.resolve(null)
   ]);

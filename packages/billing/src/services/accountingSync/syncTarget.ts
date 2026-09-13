@@ -6,6 +6,7 @@ import { getStoredXeroConnections } from '@alga-psa/integrations/lib/xero/xeroCl
 import { AccountingAdapterRegistry } from '../../adapters/accounting/registry';
 import {
   resolveConnectedAccountingIntegration,
+  type AccountingIntegrationSelection,
   type ConnectedAccountingIntegration
 } from './connectedAccountingIntegration';
 
@@ -19,13 +20,15 @@ export interface ResolvedSyncTarget {
  * Resolve the tenant's connected accounting provider + organisation/connection
  * and the matching adapter for an outbound action. This is the single place
  * Sync Now, queueing, drift resolution and health/status lookups select a
- * provider — no shared path may assume QuickBooks.
+ * provider — no shared path may assume QuickBooks. Callers pass a selection
+ * when the user has chosen a specific organisation.
  */
 export async function resolveSyncTarget(
   knex: Knex,
-  tenantId: string
+  tenantId: string,
+  selection: AccountingIntegrationSelection = {}
 ): Promise<ResolvedSyncTarget | null> {
-  const integration = await resolveConnectedAccountingIntegration(knex, tenantId);
+  const integration = await resolveConnectedAccountingIntegration(knex, tenantId, selection);
   if (!integration) {
     return null;
   }

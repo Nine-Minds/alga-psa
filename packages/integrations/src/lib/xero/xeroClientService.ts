@@ -597,12 +597,19 @@ export class XeroClientService {
     page: number,
     extraParams: Record<string, unknown> = {}
   ): Promise<XeroChangedPage> {
-    const response = await this.request<Record<string, any>>({
-      method: 'GET',
-      url: path,
-      params: { page, ...extraParams },
-      headers: { 'If-Modified-Since': modifiedAfter }
-    });
+    let response: Record<string, any>;
+    try {
+      response = await this.request<Record<string, any>>({
+        method: 'GET',
+        url: path,
+        params: { page, ...extraParams },
+        headers: { 'If-Modified-Since': modifiedAfter }
+      });
+    } catch (error) {
+      // Normalize so polling callers classify 401s and expired credentials as
+      // terminal auth failures instead of a generic request error.
+      throw this.normalizeError(error);
+    }
 
     const collectionKey = path.replace(/^\//, '');
     const records = Array.isArray(response?.[collectionKey]) ? response[collectionKey] : [];

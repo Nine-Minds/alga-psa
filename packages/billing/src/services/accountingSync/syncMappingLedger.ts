@@ -243,10 +243,21 @@ export class SyncMappingLedger {
       .update(update);
   }
 
-  /** Counts by sync_status for the health panel. */
-  async countByStatus(): Promise<Record<string, number>> {
-    const rows = await this.table()
+  /** Counts by sync_status for the health panel, optionally scoped to one realm. */
+  async countByStatus(targetRealm?: string | null): Promise<Record<string, number>> {
+    const query = this.table()
       .where({ integration_type: this.integrationType })
+      .whereNull('deleted_at');
+
+    if (targetRealm !== undefined) {
+      if (targetRealm === null) {
+        query.whereNull('external_realm_id');
+      } else {
+        query.andWhere('external_realm_id', targetRealm);
+      }
+    }
+
+    const rows = await query
       .select('sync_status')
       .count<{ sync_status: string | null; count: string }[]>('* as count')
       .groupBy('sync_status');

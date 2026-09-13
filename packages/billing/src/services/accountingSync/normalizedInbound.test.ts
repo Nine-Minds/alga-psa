@@ -95,8 +95,33 @@ describe('provider-neutral inbound change contracts', () => {
     );
   });
 
-  it('refreshes the token without drift when only the sync token moved', async () => {
-    const deps = makeDeps();
+  it('adopts the first observed document as the baseline for legacy mappings instead of ignoring it', async () => {
+    const deps = makeDeps({ metadata: { invoiceNumber: 'XERO-INV-OLD' } });
+    await applyExternalDocumentChange(
+      { tenantId: 't', targetRealm: 'r', adapterType: 'xero', ledger: deps.ledger as any, exceptions: deps.exceptions as any, stats: makeStats() },
+      {
+        entityType: 'Invoice',
+        externalId: 'ext-1',
+        syncToken: '2',
+        deleted: false,
+        normalized: { totalAmount: 200, docNumber: 'XERO-INV-OLD', isVoided: false }
+      } as any
+    );
+
+    expect(deps.exceptions.createOrUpdate).not.toHaveBeenCalled();
+    expect(deps.ledger.update).toHaveBeenCalledWith(
+      'map-1',
+      expect.objectContaining({
+        metadata: expect.objectContaining({
+          exported_total: 200,
+          doc_number: 'XERO-INV-OLD',
+          sync_token: '2'
+        })
+      })
+    );
+  });
+
+  it('refreshes the token without drift when only the sync token moved', async () => {    const deps = makeDeps();
     await applyExternalDocumentChange(
       { tenantId: 't', targetRealm: 'r', adapterType: 'xero', ledger: deps.ledger as any, exceptions: deps.exceptions as any, stats: makeStats() },
       {

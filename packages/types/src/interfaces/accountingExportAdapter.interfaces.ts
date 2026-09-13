@@ -140,10 +140,16 @@ export interface AccountingProviderOperations {
 
 export interface AccountingChangeSet {
   changes: AccountingExternalChange[];
-  /** True when the source truncated results; the next poll should run soon with the same cursor */
+  /** True when the source truncated results; the next poll should resume from `nextCursor`. */
   truncated: boolean;
   /** Timestamp the changes were fetched (next cycle's cursor basis) */
   fetchedAt: string;
+  /**
+   * Forward boundary to persist when the source was truncated, so successive
+   * capped polls make progress instead of re-reading the same pages. When
+   * absent the caller must fall back to a conservative pre-poll watermark.
+   */
+  nextCursor?: string;
 }
 
 /** Tax delegation mode for the export */
