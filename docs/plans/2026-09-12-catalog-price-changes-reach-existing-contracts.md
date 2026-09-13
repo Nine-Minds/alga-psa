@@ -650,3 +650,44 @@ bills the old rate for the current period, survives an intervening
 `updateServicePricing`, then bills the new rate for the next period; a second
 test covers the no-effective-date branch; a third asserts the `service:update`
 gate.
+
+**Known limitation — history collapse (accepted, not fixed).** An ordinary save
+deletes *every* row effective on or before today and rewrites a single epoch
+row. Once a scheduled increase has taken effect, that collapses the pre-change
+and post-change rows into one undated row. Trigger conditions: an ordinary save
+(a price edit or an unrelated field edit) on a service that has a past
+effective-dated price change. Consequences: invoices already issued are never
+re-priced, so **no invoice moves**; but the deferred-revenue report resolves the
+catalog price per period, so after an ordinary save it will resolve today's rate
+for periods that were actually billed at the old one, and the plan's "the report
+agrees with what billing charged" property stops holding for those pre-change
+periods. History retention is a larger question than this card; as-of-now is the
+deliberate choice, and this limitation is recorded so a later reconciliation
+meets it as a documented decision rather than a mystery.
+
+**REST API reads (round 3).** `ServiceCatalogService.list`/`.getById` and
+`ProductCatalogService.list`/`.getById` returned every `service_prices` row as
+`prices`, unsplit and unordered — so an API consumer reading `prices[0]` could
+take a not-yet-effective rate. All four now run the rows through
+`splitServicePricesByEffectiveDate`, returning current rows in `prices` and
+future rows in `scheduled_prices`. The OpenAPI `ServicePrice`/`ProductPrice`
+response schemas gained `effective_date` and the resource schemas
+`scheduled_prices`; the MCP/chat registry is generated from route metadata and
+request bodies only, so it needs no regeneration for this. A DB-backed
+integration test covers `ServiceCatalogService.getById` and `.list` (and the
+product `getById`) with one current and one future row.
+
+**Legacy price writers (round 3).** `Service.setPrice` picked its target with an
+unordered `.first()`, so with multiple effective-dated rows it could overwrite a
+scheduled row; it now selects the latest row effective today and inserts at the
+epoch. `Service.removePrice` still deletes every row for a currency including
+scheduled ones — that is a full currency removal, which is the intended meaning
+of the action, and it is documented at the method. Both are reachable only from
+the `setServicePrice` / `removeServicePrice` actions, which have no in-repo
+callers.
+
+**Nits (round 3).** The scheduled-price badge and edit-dialog notice format the
+effective date through `useFormatters().formatDate` (locale-aware, and
+calendar-date-safe) rather than printing raw `YYYY-MM-DD`. A future-dated
+`applyServicePriceChange` with no `servicePatch` now skips the empty
+`Service.update` call instead of letting knex reject an empty `.update()`.
