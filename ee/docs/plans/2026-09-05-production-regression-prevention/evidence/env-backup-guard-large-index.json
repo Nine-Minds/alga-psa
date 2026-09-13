@@ -1,0 +1,17 @@
+{
+  "status": "verified_locally",
+  "nativeJob": "https://github.com/Nine-Minds/alga-psa/actions/runs/34102126622/job/101678731400",
+  "failure": "git ls-files output exceeded execFileSync default 1 MiB buffer (ENOBUFS).",
+  "fix": "Stream NUL-delimited tracked filenames, retaining only offenders, and fail closed on Git errors or incomplete output.",
+  "verification": [
+    "Original guard reproduces ENOBUFS with a real 9000-entry safe index.",
+    "Updated guard passes empty and large clean indices.",
+    "Updated guard rejects ordinary and late-index env backup offenders.",
+    "Updated guard rejects Git failure outside a repository.",
+    "Actual worktree guard passes."
+  ],
+  "command": "node scripts/test-guard-no-tracked-env-backups.mjs && node scripts/guard-no-tracked-env-backups.mjs",
+  "limits": [
+    "Native rerun pending publication."
+  ]
+}

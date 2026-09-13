@@ -1,6 +1,7 @@
 // @ts-nocheck
 // TODO: Comment model method signature changes
 'use server'
+import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
 
 import { admitScheduledCommentCommand } from '../../lib/scheduledCommentCommands';
 import Comment from '../../models/comment';
@@ -13,7 +14,7 @@ import { convertBlockNoteToMarkdown } from '@alga-psa/formatting/blocknoteUtils'
 import { publishNativeCommentEvent, publishNativeCommentWorkflowEvent } from '../../lib/nativeConversationEvents';
 import { TicketResponseState } from '@alga-psa/types';
 import { maybeReopenBundleMasterFromChildReply } from '@alga-psa/tickets/actions/ticketBundleUtils';
-import { withAuth } from '@alga-psa/auth';
+import { withAuth, hasPermission } from '@alga-psa/auth';
 import { buildTicketCommunicationWorkflowEvents } from '../../lib/workflowTicketCommunicationEvents';
 import { isResponseStateTrackingEnabled } from '../../lib/responseStateSettings';
 import { publishTicketUpdate } from '../../lib/liveUpdates';
@@ -244,6 +245,8 @@ export const findCommentById = withAuth(async (_user, { tenant }, commentId: str
 
 export const createComment = withAuth(async (user, { tenant }, comment: Omit<IComment, 'tenant'>): Promise<string | TicketActionError> => {
   try {
+    if (!await hasPermission(user, 'ticket', 'update')) throw new Error('Permission denied: Cannot add comment');
+    comment.user_id = user.user_id;
     console.log(`[createComment] Starting with comment:`, {
       note_length: comment.note ? comment.note.length : 0,
       is_internal: comment.is_internal,
@@ -645,7 +648,7 @@ export const updateComment = withAuth(async (user, { tenant }, id: string, comme
     });
 
       // Use the Comment model to update the comment
-      await Comment.update(trx, commentTenant, id, commentToUpdate);
+      await Comment.update(trx, commentTenant, id, commentToUpdate, user.user_id);
       console.log(`[updateComment] Successfully updated comment with ID: ${id}`);
 
       // Verify the comment was updated correctly

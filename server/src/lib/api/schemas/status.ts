@@ -54,6 +54,8 @@ export const statusResponseSchema = z.object({
 
 // Status list query schema
 export const statusListQuerySchema = paginationQuerySchema.extend({
+  sort: z.string().optional().default('order_number'),
+  order: z.enum(['asc', 'desc']).optional().default('asc'),
   type: z.enum(['ticket', 'project', 'project_task', 'interaction']).optional(),
   search: z.string().optional(),
   board_id: uuidSchema.optional(),

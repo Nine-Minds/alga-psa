@@ -1,0 +1,34 @@
+{
+  "scope": "Email template publication and application-action launch",
+  "baseRevision": "012b6f809f730d1ae8546995f18f68cce4af0233",
+  "workingTreeDirty": true,
+  "validation": {
+    "before": {
+      "artifact": "/tmp/alga-email-start-action-diagnostic.log",
+      "sha256": "034c8cf08df16a435e31b83743a421a57aa714b387bb28cafdc56a6198f76663",
+      "failed": 1,
+      "selected": 1,
+      "excludedByNameFilter": 49,
+      "failure": "TRIGGER_MAPPING_REQUIRED when publishing the source email template"
+    },
+    "after": {
+      "artifact": "/tmp/alga-email-start-publish-final.log",
+      "sha256": "dafed82e978a4f57b4b9ee005821e20172191dc7f77523dac9dbbe6d85c24f53",
+      "passed": 50,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  "behavior": [
+    "Publishes the source email template through actual application actions, starts its published version, preserves its payload in the run row and requests the corresponding Temporal execution.",
+    "Invalid email input receives HTTP-style 400, leaves an intentional FAILED audit record, and does not request Temporal execution.",
+    "Event-source input passes through explicit event.payload mappings to the workflow input, with source schema and mapping flag recorded.",
+    "Corrected template trigger to declare payload.InboundEmailReceived.v1 and map emailData/providerId/tenantId into the workflow payload schema.",
+    "Removed the final retired interpreter email suite after active replacements across publish, snapshot/storage, real-threading and engine suites."
+  ],
+  "limits": [
+    "Auth identities/permission decisions and the Temporal launch client use existing suite substitutes; this does not prove real authentication or external scheduling. Separate engine/database suites provide execution evidence.",
+    "Historical migration copies and persisted tenant workflow definitions are unchanged. The legacy system email workflow was paused/hidden by the April tenant migration; this template validation defect does not establish failure in the current production inbound email pipeline.",
+    "No updated native CI candidate pass or broad plan completion claim."
+  ]
+}

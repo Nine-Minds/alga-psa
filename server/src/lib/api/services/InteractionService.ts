@@ -8,7 +8,13 @@ import {
   withTransaction,
 } from '@alga-psa/db';
 import type { IInteraction } from '@alga-psa/types';
-import { createInteractionWithSideEffects } from '@alga-psa/clients/actions/interactionCreateHelper';
+import {
+  createInteractionWithSideEffects,
+  createInteractionScheduleEntry,
+  resolveScheduleAssignees,
+} from '@alga-psa/clients/actions/interactionCreateHelper';
+import { hasPermission } from '@alga-psa/auth/rbac';
+import { ForbiddenError, ValidationError } from '../middleware/apiMiddleware';
 import type {
   CreateInteractionApi,
   InteractionTypeResponse,
@@ -160,7 +166,18 @@ export class InteractionService extends BaseService<InteractionApiRow> {
   ): Promise<InteractionApiRow> {
     const knex = await this.getDbForContext(context);
     let publishSideEffects: (() => Promise<void>) | undefined;
+    let publishScheduleEntryCreated: (() => Promise<void>) | undefined;
     const input = data as CreateInteractionApi;
+    const assignedUserIds = resolveScheduleAssignees(context.userId, input.schedule_assigned_user_ids);
+    if (input.create_schedule_entry) {
+      if (!input.start_time || !Number.isFinite(new Date(input.start_time).getTime())) {
+        throw new ValidationError('start_time is required when creating a schedule entry');
+      }
+      if (assignedUserIds.some((id) => id !== context.userId) &&
+          (!context.user || !await hasPermission(context.user, 'user_schedule', 'update', knex))) {
+        throw new ForbiddenError('Permission denied to assign schedule entries to other users.');
+      }
+    }
 
     const interaction = await withTransaction(knex, async (trx) => {
       const interactionData: InteractionCreateHelperInput = {
@@ -185,10 +202,28 @@ export class InteractionService extends BaseService<InteractionApiRow> {
         interactionData,
       });
       publishSideEffects = result.publishSideEffects;
+      if (input.create_schedule_entry) {
+        try {
+          const scheduled = await createInteractionScheduleEntry({
+            tenant: context.tenant,
+            trx,
+            interaction: result.interaction,
+            assignedUserIds,
+            assignedByUserId: context.userId,
+          });
+          publishScheduleEntryCreated = scheduled?.publishScheduleEntryCreated;
+        } catch (error) {
+          if (error instanceof Error && /^Users .+ not found/.test(error.message)) {
+            throw new ValidationError('One or more assigned users could not be found.');
+          }
+          throw error;
+        }
+      }
       return result.interaction;
     });
 
     await publishSideEffects?.();
+    await publishScheduleEntryCreated?.();
     return interaction as InteractionApiRow;
   }
 

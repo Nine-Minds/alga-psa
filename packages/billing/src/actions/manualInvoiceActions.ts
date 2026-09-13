@@ -42,6 +42,7 @@ export interface ManualInvoiceItem { // Add export
 
 interface ManualInvoiceRequest {
   clientId: string;
+  invoiceNumber?: string;
   items: ManualInvoiceItem[];
   expirationDate?: string; // Add expiration date for prepayments
   isPrepayment?: boolean;
@@ -178,7 +179,7 @@ export const generateManualInvoice = withAuth(async (
       throw new Error(getErrorMessage(dueDate));
     }
 
-    const invoiceNumber = await generateInvoiceNumber();
+    const invoiceNumber = request.invoiceNumber?.trim() || await generateInvoiceNumber();
     const invoiceId = uuidv4();
     const taxSource = await getInitialInvoiceTaxSource(clientId);
     if (isActionMessageError(taxSource) || isActionPermissionError(taxSource)) {

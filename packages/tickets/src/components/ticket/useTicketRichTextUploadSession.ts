@@ -1,5 +1,6 @@
 'use client';
 
+import { discardCommentAttachmentDrafts } from '../../actions/comment-actions/commentAttachmentDraftActions';
 import { useCallback, useRef, useState } from 'react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
@@ -20,6 +21,7 @@ export interface TicketRichTextDraftClipboardImage {
 
 interface UseTicketRichTextUploadSessionOptions {
   componentLabel: string;
+  commentAttachments?: boolean;
   ticketId?: string | null;
   userId?: string | null;
   trackDraftUploads: boolean;
@@ -40,6 +42,7 @@ interface UseTicketRichTextUploadSessionOptions {
 
 export function useTicketRichTextUploadSession({
   componentLabel,
+  commentAttachments = false,
   ticketId,
   userId,
   trackDraftUploads,
@@ -57,9 +60,15 @@ export function useTicketRichTextUploadSession({
   );
   const [showDraftCancelDialog, setShowDraftCancelDialog] = useState(false);
   const [isDeletingDraftImages, setIsDeletingDraftImages] = useState(false);
+  const [pendingUploads, setPendingUploads] = useState(0);
   const clipboardUploadSequenceRef = useRef(0);
+  const trackedRef = useRef<TicketRichTextDraftClipboardImage[]>([]);
+  const pendingRef = useRef(new Set<Promise<string>>());
+  const cancellingRef = useRef(false);
 
   const resetDraftTracking = useCallback(() => {
+    trackedRef.current = [];
+    cancellingRef.current = false;
     setDraftClipboardImages([]);
     clipboardUploadSequenceRef.current = 0;
   }, []);
@@ -80,7 +89,7 @@ export function useTicketRichTextUploadSession({
     }
   }, [componentLabel, onDocumentsChanged, ticketId, userId]);
 
-  const uploadFile = useCallback(
+  const performUpload = useCallback(
     async (file: File): Promise<string> => {
       if (!ticketId) {
         throw new Error('Ticket ID is required for clipboard image upload.');
@@ -89,7 +98,7 @@ export function useTicketRichTextUploadSession({
         throw new Error('User session is required for clipboard image upload.');
       }
 
-      const validation = validateClipboardImageFile(file);
+      const validation = commentAttachments && !file.type.startsWith('image/') ? { valid: true, error: undefined } : validateClipboardImageFile(file);
       if (!validation.valid) {
         console.warn(`[${componentLabel}] Clipboard upload rejected by validation`, {
           ticketId,
@@ -103,7 +112,7 @@ export function useTicketRichTextUploadSession({
 
       const sequence = (clipboardUploadSequenceRef.current += 1);
       const timestamp = new Date();
-      const renamedFile = renameClipboardImageForUpload({
+      const renamedFile = !file.type.startsWith('image/') ? file : renameClipboardImageForUpload({
         file,
         timestamp,
         sequence,
@@ -111,6 +120,7 @@ export function useTicketRichTextUploadSession({
 
       const formData = new FormData();
       formData.append('file', renamedFile);
+      if (commentAttachments) formData.append('commentAttachmentDraft', 'true');
 
       const activeUploadDocumentAction =
         uploadDocumentAction ??
@@ -158,29 +168,20 @@ export function useTicketRichTextUploadSession({
         sequence,
         mimeType: renamedFile.type,
       });
-      const viewUrl = resolveDocumentViewUrl
+      const viewUrl = commentAttachments && !file.type.startsWith('image/')
+        ? `/api/documents/download/${uploadedDocument.file_id}`
+        : resolveDocumentViewUrl
         ? resolveDocumentViewUrl(uploadedDocument)
         : uploadedDocument.file_id
           ? `/api/documents/view/${uploadedDocument.file_id}`
           : `/api/documents/download/${uploadedDocument.document_id}`;
 
-      if (trackDraftUploads) {
-        setDraftClipboardImages((previous) => {
-          const exists = previous.some((item) => item.documentId === uploadedDocument.document_id);
-          if (exists) {
-            return previous;
-          }
-
-          return [
-            ...previous,
-            {
-              documentId: uploadedDocument.document_id,
-              fileId: uploadedDocument.file_id || '',
-              name: uploadedDocument.document_name || fallbackName,
-              url: viewUrl,
-            },
-          ];
-        });
+      if (trackDraftUploads || commentAttachments) {
+        if (!trackedRef.current.some(item => item.documentId === uploadedDocument.document_id)) {
+          trackedRef.current.push({ documentId: uploadedDocument.document_id,
+            fileId: uploadedDocument.file_id || '', name: uploadedDocument.document_name || fallbackName, url: viewUrl });
+          setDraftClipboardImages([...trackedRef.current]);
+        }
       }
 
       console.info(`[${componentLabel}] Clipboard image uploaded`, {
@@ -194,10 +195,12 @@ export function useTicketRichTextUploadSession({
 
       await refreshDocuments();
 
+      if (cancellingRef.current) throw new DOMException('Attachment upload canceled', 'AbortError');
       return viewUrl;
     },
     [
       componentLabel,
+      commentAttachments,
       refreshDocuments,
       ticketId,
       toastApi,
@@ -207,6 +210,15 @@ export function useTicketRichTextUploadSession({
       userId,
     ]
   );
+
+  const uploadFile = useCallback(async (file: File) => {
+    setPendingUploads(count => count + 1);
+    if (cancellingRef.current) { setPendingUploads(count => count - 1); throw new Error('Draft cancellation is in progress'); }
+    const pending = performUpload(file);
+    pendingRef.current.add(pending);
+    try { return await pending; }
+    finally { pendingRef.current.delete(pending); setPendingUploads(count => count - 1); }
+  }, [performUpload]);
 
   const requestDiscard = useCallback(() => {
     if (trackDraftUploads && draftClipboardImages.length > 0) {
@@ -229,12 +241,19 @@ export function useTicketRichTextUploadSession({
   }, [componentLabel, draftClipboardImages.length, onDiscard, resetDraftTracking, ticketId]);
 
   const deleteTrackedDraftClipboardImages = useCallback(async () => {
+    if (commentAttachments) {
+      cancellingRef.current = true;
+      setIsDeletingDraftImages(true);
+      await Promise.allSettled([...pendingRef.current]);
+    } else if (pendingUploads > 0) return;
+    const tracked = trackedRef.current;
     if (!ticketId) {
       toastApi.error('Ticket context is missing for draft image deletion.');
       return;
     }
 
-    if (draftClipboardImages.length === 0) {
+    if (tracked.length === 0) {
+      setIsDeletingDraftImages(false);
       setShowDraftCancelDialog(false);
       resetDraftTracking();
       onDiscard();
@@ -243,16 +262,16 @@ export function useTicketRichTextUploadSession({
 
     setIsDeletingDraftImages(true);
     try {
-      if (!deleteDraftClipboardImagesAction && !deleteDocumentFn) {
+      if (!commentAttachments && !deleteDraftClipboardImagesAction && !deleteDocumentFn) {
         throw new Error('Either deleteDraftClipboardImagesAction or deleteDocumentFn is required for draft image cleanup');
       }
       const activeDeleteDraftClipboardImagesAction =
-        deleteDraftClipboardImagesAction ??
+        (commentAttachments ? discardCommentAttachmentDrafts : deleteDraftClipboardImagesAction) ??
         ((input: { ticketId: string; documentIds: string[] }) =>
           deleteDraftClipboardImagesInternal({ ...input, deleteDocumentFn: deleteDocumentFn! }));
       const result = await activeDeleteDraftClipboardImagesAction({
         ticketId,
-        documentIds: draftClipboardImages.map((image) => image.documentId),
+        documentIds: tracked.map((image) => image.documentId),
       });
 
       const deletedCount = result.deletedDocumentIds.length;
@@ -267,11 +286,12 @@ export function useTicketRichTextUploadSession({
       });
 
       if (deletedCount > 0) {
-        toastApi.success(t('messages.pastedImagesDeleted', { defaultValue: 'Deleted {{count}} pasted images.', count: deletedCount }));
+        toastApi.success(commentAttachments ? 'Draft attachments removed.' : t('messages.pastedImagesDeleted', { defaultValue: 'Deleted {{count}} pasted images.', count: deletedCount }));
         await refreshDocuments();
       }
       if (failedCount > 0) {
         toastApi.error(t('messages.pastedImagesDeleteFailed', { defaultValue: 'Could not delete {{count}} pasted images.', count: failedCount }));
+        if (commentAttachments) return;
       }
 
       setShowDraftCancelDialog(false);
@@ -281,11 +301,14 @@ export function useTicketRichTextUploadSession({
       console.error(`[${componentLabel}] Failed deleting draft clipboard images:`, error);
       toastApi.error('Failed to delete pasted images.');
     } finally {
+      cancellingRef.current = false;
       setIsDeletingDraftImages(false);
     }
   }, [
     componentLabel,
     deleteDraftClipboardImagesAction,
+    pendingUploads,
+    commentAttachments,
     draftClipboardImages,
     onDiscard,
     refreshDocuments,
@@ -296,9 +319,10 @@ export function useTicketRichTextUploadSession({
 
   return {
     draftClipboardImages,
+    isUploading: pendingUploads > 0,
     isDeletingDraftImages,
     keepDraftClipboardImages,
-    requestDiscard,
+    requestDiscard: commentAttachments ? deleteTrackedDraftClipboardImages : requestDiscard,
     resetDraftTracking,
     showDraftCancelDialog,
     setShowDraftCancelDialog,

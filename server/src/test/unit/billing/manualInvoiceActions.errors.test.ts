@@ -186,6 +186,18 @@ describe('generateManualInvoice structured errors', () => {
     });
   });
 
+  it('persists the entered invoice number instead of allocating an automatic number', async () => {
+    const result = await generateManualInvoice({ ...request, invoiceNumber: '  MAN-042  ' });
+    expect(result.success).toBe(true);
+    expect(mocks.insert).toHaveBeenCalledWith(expect.objectContaining({ invoice_number: 'MAN-042' }));
+  });
+
+  it.each([undefined, '', '   '])('allocates a number when the optional number is blank: %s', async invoiceNumber => {
+    const result = await generateManualInvoice({ ...request, invoiceNumber });
+    expect(result.success).toBe(true);
+    expect(mocks.insert).toHaveBeenCalledWith(expect.objectContaining({ invoice_number: 'INV-001' }));
+  });
+
   it('maps the invoice-number unique constraint to INVOICE_NUMBER_CONFLICT', async () => {
     mocks.insert.mockRejectedValueOnce(Object.assign(new Error('duplicate key'), {
       code: '23505',

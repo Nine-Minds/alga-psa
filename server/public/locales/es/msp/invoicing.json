@@ -1004,7 +1004,8 @@
     },
     "messages": {
       "success": "¡Factura generada exitosamente!",
-      "loadFailed": "No se pudieron cargar los datos"
+      "loadFailed": "No se pudieron cargar los datos",
+      "salesOrderSourcesUnavailable": "No se pudieron cargar las órdenes de venta de origen. Puede seguir introduciendo partidas de factura manuales."
     }
   },
   "prepayment": {
@@ -1412,6 +1413,14 @@
       "modern-invoice-complete": {
         "label": "Plantilla de factura moderna",
         "description": "Diseño completo con encabezado, información de facturación, tabla de elementos y pie."
+      },
+      "billed-time-entries": {
+        "label": "Detalle de las entradas de tiempo facturado",
+        "description": "Añadir una tabla informativa con fechas, elementos de trabajo, horas, tarifas e importes."
+      },
+      "billed-time-by-ticket": {
+        "label": "Detalle del tiempo facturado por ticket",
+        "description": "Repetir un encabezado y la tabla de entradas correspondiente para cada ticket o tarea."
       }
     },
     "schema": {
@@ -1594,6 +1603,9 @@
               "label": "Contrato.pdf"
             }
           }
+        },
+        "totals-rows": {
+          "title": "Filas de totales"
         }
       }
     },
@@ -1867,7 +1879,8 @@
         "transformsSource": "{{binding}} (origen de transformaciones)",
         "transformsOutput": "{{binding}} (salida de transformaciones)",
         "ticketGroups": "Tiempo facturado por ticket",
-        "timeEntries": "Entradas de tiempo facturadas"
+        "timeEntries": "Entradas de tiempo facturadas",
+        "ticketPresentationRows": "Cargos por ticket"
       },
       "presets": {
         "description": {
@@ -1945,7 +1958,12 @@
         "headerPlaceholder": "Etiqueta del encabezado",
         "bindingKey": "Clave de vinculación",
         "type": "Tipo",
-        "width": "Ancho"
+        "width": "Ancho",
+        "stackedLines": "Líneas apiladas",
+        "addLine": "+ Línea",
+        "clearLines": "Línea única",
+        "stackedLinesHint": "Cada línea no vacía se muestra en su propia fila. Cuando todas las líneas están vacías, se muestra la clave de vinculación de la columna indicada arriba.",
+        "removeLine": "Quitar la línea {{index}}"
       },
       "columnTypes": {
         "text": "Texto",
@@ -1990,6 +2008,15 @@
       "visibleInPortal": "Visible en el portal del cliente",
       "dialogTitle": "Seleccionar imagen",
       "dialogDescription": "Elija una imagen de sus documentos para usarla en esta plantilla."
+    },
+    "totalsRowsEditor": {
+      "rowBackground": "Fondo de fila",
+      "rowTextColor": "Color del texto",
+      "resetColors": "Restablecer colores",
+      "clearRowBackground": "Borrar color de fondo de la fila",
+      "clearRowTextColor": "Borrar color de texto de la fila",
+      "labelColorOverrideNote": "Esta etiqueta conserva su propio color guardado y no hereda el color de texto de la fila establecido arriba. El importe sigue el color de texto de la fila.",
+      "noRows": "Este bloque de totales aún no tiene filas guardadas. Guarde la plantilla y vuelva a abrirla para editar los colores de las filas."
     }
   },
   "draftInvoiceDetails": {
@@ -2136,7 +2163,8 @@
       "referenceMissing": "La plantilla de factura o el cliente seleccionado ya no existe. Actualice la página e inténtelo de nuevo.",
       "duplicate": "Ya existe una plantilla de factura con esa configuración.",
       "missingField": "Falta un campo obligatorio de la plantilla de factura.",
-      "missingFieldNamed": "Falta un campo obligatorio de la plantilla de factura: {{field}}."
+      "missingFieldNamed": "Falta un campo obligatorio de la plantilla de factura: {{field}}.",
+      "evaluationFailed": "Error en el enlace de datos de la plantilla: {{details}}"
     }
   },
   "periodTotal": {

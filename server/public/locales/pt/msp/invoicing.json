@@ -1004,7 +1004,8 @@
     },
     "messages": {
       "success": "Fatura gerada com sucesso!",
-      "loadFailed": "Falha ao carregar dados"
+      "loadFailed": "Falha ao carregar dados",
+      "salesOrderSourcesUnavailable": "Não foi possível carregar os pedidos de venda de origem. Ainda pode introduzir itens de fatura manuais."
     }
   },
   "prepayment": {
@@ -1412,6 +1413,14 @@
       "modern-invoice-complete": {
         "label": "Modelo de fatura moderno",
         "description": "Layout completo com Cabeçalho, Informações de Faturamento, Tabela de Itens e Rodapé."
+      },
+      "billed-time-entries": {
+        "label": "Detalhes dos registros de tempo faturado",
+        "description": "Adicionar uma tabela informativa com datas, itens de trabalho, horas, taxas e valores."
+      },
+      "billed-time-by-ticket": {
+        "label": "Detalhes do tempo faturado por chamado",
+        "description": "Repetir um cabeçalho e a tabela de registros correspondente para cada chamado ou tarefa."
       }
     },
     "schema": {
@@ -1594,6 +1603,9 @@
               "label": "Contrato.pdf"
             }
           }
+        },
+        "totals-rows": {
+          "title": "Linhas de totais"
         }
       }
     },
@@ -1867,7 +1879,8 @@
         "transformsSource": "{{binding}} (origem das transformações)",
         "transformsOutput": "{{binding}} (saída das transformações)",
         "ticketGroups": "Tempo faturado por ticket",
-        "timeEntries": "Lançamentos de horas faturados"
+        "timeEntries": "Lançamentos de horas faturados",
+        "ticketPresentationRows": "Cobranças por ticket"
       },
       "presets": {
         "description": {
@@ -1945,7 +1958,12 @@
         "headerPlaceholder": "Rótulo do cabeçalho",
         "bindingKey": "Chave de vinculação",
         "type": "Tipo",
-        "width": "Largura"
+        "width": "Largura",
+        "stackedLines": "Linhas empilhadas",
+        "addLine": "+ Linha",
+        "clearLines": "Linha única",
+        "stackedLinesHint": "Cada linha não vazia é exibida em sua própria linha. Quando todas as linhas estão vazias, é exibida a chave de vinculação da coluna indicada acima.",
+        "removeLine": "Remover a linha {{index}}"
       },
       "columnTypes": {
         "text": "Texto",
@@ -1990,6 +2008,15 @@
       "visibleInPortal": "Visível no portal do cliente",
       "dialogTitle": "Selecionar imagem",
       "dialogDescription": "Escolha uma imagem dos seus documentos para usar neste modelo."
+    },
+    "totalsRowsEditor": {
+      "rowBackground": "Fundo da linha",
+      "rowTextColor": "Cor do texto",
+      "resetColors": "Redefinir cores",
+      "clearRowBackground": "Limpar cor de fundo da linha",
+      "clearRowTextColor": "Limpar cor do texto da linha",
+      "labelColorOverrideNote": "Este rótulo mantém a sua própria cor guardada e não herda a cor do texto da linha definida acima. O valor continua a seguir a cor do texto da linha.",
+      "noRows": "Este bloco de totais ainda não tem linhas guardadas. Guarde o modelo e reabra-o para editar as cores das linhas."
     }
   },
   "draftInvoiceDetails": {
@@ -2136,7 +2163,8 @@
       "referenceMissing": "O modelo de fatura ou o cliente selecionado não existe mais. Atualize a página e tente novamente.",
       "duplicate": "Já existe um modelo de fatura com essas configurações.",
       "missingField": "Falta um campo obrigatório do modelo de fatura.",
-      "missingFieldNamed": "Falta um campo obrigatório do modelo de fatura: {{field}}."
+      "missingFieldNamed": "Falta um campo obrigatório do modelo de fatura: {{field}}.",
+      "evaluationFailed": "Falha na vinculação de dados do modelo: {{details}}"
     }
   },
   "periodTotal": {

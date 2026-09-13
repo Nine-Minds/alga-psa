@@ -160,6 +160,7 @@ const SEARCHABLE_ASSOCIATION_ENTITY_TYPES = new Set<SearchableDocumentAssociatio
   'quote',
 ]);
 
+// LEVERAGE: pattern tenant-scoped-table — document actions and shared authorization repeat this typed facade.
 function tenantScopedTable(
   conn: Knex | Knex.Transaction,
   table: string,
@@ -383,7 +384,8 @@ export async function authorizeAndRedactDocuments<T extends IDocument>(
   trx: Knex.Transaction,
   tenant: string,
   user: IUser,
-  documents: T[]
+  documents: T[],
+  verifiedRecipientLifecycleAccess?: (documentId: string) => Promise<boolean>
 ): Promise<T[]> {
   if (documents.length === 0) {
     return [];
@@ -1718,7 +1720,7 @@ export const downloadDocument = withAuth(async (user, { tenant }, documentIdOrFi
         const isImage = metadata.mime_type?.startsWith('image/');
         if (isImage) {
             // Cache images for 7 days, but revalidate after 1 day
-            headers.set('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
+            headers.set('Cache-Control', 'private, no-store');
             // Add ETag for conditional requests
             headers.set('ETag', `"${authorizedDocument.file_id}"`);
         } else {
@@ -2502,6 +2504,7 @@ export const uploadDocument = withAuth(async (
     folder_path?: string | null;
     /** The document this upload is embedded in — inline editor images point at their article. */
     parentDocumentId?: string;
+    commentAttachmentDraft?: boolean;
     /** Forces client visibility — used for images embedded in client-facing content. */
     isClientVisible?: boolean;
   }
@@ -2510,7 +2513,9 @@ export const uploadDocument = withAuth(async (
   | { success: false; error: string }
   | ActionPermissionError
 > => {
+  let unclaimedStorageFileId: string | undefined;
   try {
+    options = { ...options, commentAttachmentDraft: options.commentAttachmentDraft === true || file.get('commentAttachmentDraft') === 'true' };
     // Check permission for document creation/upload
     if (!await hasPermission(user, 'document', 'create')) {
       return permissionError('Permission denied: Cannot create documents', 'documents:errors.permissions.create');
@@ -2536,6 +2541,14 @@ export const uploadDocument = withAuth(async (
         });
       }
 
+      if (options.commentAttachmentDraft) {
+        if (!options.ticketId || !await hasPermission(user, 'ticket', 'update') ||
+            !await canAccessAttachmentTicket(knex, tenant, authenticatedUserId, options.ticketId)) {
+          throw new Error('Permission denied: Cannot attach files to this ticket');
+        }
+        await expireCommentAttachmentDrafts(knex, tenant);
+      }
+
       // Extract file from FormData
       const fileData = file.get('file') as File;
       if (!fileData) {
@@ -2552,6 +2565,8 @@ export const uploadDocument = withAuth(async (
         mime_type: fileData.type,
         uploaded_by_id: authenticatedUserId
       });
+
+      if (options.commentAttachmentDraft) unclaimedStorageFileId = uploadResult.file_id;
 
       // Get document type based on mime type
       const typeResult = await getDocumentTypeId(fileData.type);
@@ -2669,12 +2684,19 @@ export const uploadDocument = withAuth(async (
         mime_type: fileData.type,
         file_size: fileData.size,
         folder_path: resolvedFolderPath,
-        is_client_visible: isClientVisible,
+        is_client_visible: options.commentAttachmentDraft ? true : isClientVisible,
       };
 
       // Use transaction for document creation and associations
       const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
         await tenantScopedTable(trx, 'documents', tenant).insert(document);
+        if (options.commentAttachmentDraft) {
+          await tenantDb(trx, tenant).table('ticket_comment_attachments').insert({
+            tenant, ticket_id: options.ticketId, document_id: document.document_id,
+            created_by: authenticatedUserId, state: 'draft',
+            expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000),
+          });
+        }
         const documentWithId = document;
 
         // Create associations if any entity IDs are provided
@@ -2764,6 +2786,8 @@ export const uploadDocument = withAuth(async (
         };
       });
 
+      unclaimedStorageFileId = undefined; // The document transaction committed; never remove shared storage.
+
       if (createdAssociations.length > 0) {
         const occurredAt = new Date().toISOString();
         await Promise.all(
@@ -2835,6 +2859,11 @@ export const uploadDocument = withAuth(async (
       success: false,
       error: await documentActionErrorMessage(expectedError)
     };
+  } finally {
+    if (unclaimedStorageFileId) {
+      try { await StorageService.deleteFile(unclaimedStorageFileId, user.user_id); }
+      catch (cleanupError) { console.error('[uploadDocument] Failed to remove unclaimed attachment storage', cleanupError); }
+    }
   }
 });
 

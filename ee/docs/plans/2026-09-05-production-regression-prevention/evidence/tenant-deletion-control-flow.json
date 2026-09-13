@@ -1,0 +1,22 @@
+{
+  "scope": "Tenant deletion workflow control flow with activity doubles",
+  "test": "ee/temporal-workflows/src/workflows/__tests__/tenant-deletion-workflow.behavior.test.ts",
+  "checks": [
+    "All four trigger sources suspend users, email and background activity before trigger-specific cancellation",
+    "Schedule and provider teardown precede tenant data deletion",
+    "Rollback reactivates users before email/background activity and does not delete data",
+    "Either resume failure is contained and rollback still completes",
+    "Provider teardown failure is contained before deletion",
+    "Legacy patch-disabled deletion and rollback omit new activity calls"
+  ],
+  "validation": {
+    "readinessFiles": 32,
+    "readinessTestsPassed": 229,
+    "mutation": "Removing background suspension produces four order-assertion failures, one per trigger source; source restored"
+  },
+  "limits": [
+    "Temporal APIs and activities are doubled; this does not prove engine history replay compatibility or real provider side effects",
+    "Existing source-only contracts are not replaced or counted as executable behavior",
+    "Native CI execution pending publication"
+  ]
+}

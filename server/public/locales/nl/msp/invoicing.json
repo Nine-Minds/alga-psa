@@ -1004,7 +1004,8 @@
     },
     "messages": {
       "success": "Factuur succesvol gegenereerd!",
-      "loadFailed": "Laden van gegevens is mislukt"
+      "loadFailed": "Laden van gegevens is mislukt",
+      "salesOrderSourcesUnavailable": "Bronverkooporders konden niet worden geladen. U kunt nog steeds handmatige factuurregels invoeren."
     }
   },
   "prepayment": {
@@ -1412,6 +1413,14 @@
       "modern-invoice-complete": {
         "label": "Modern factuursjabloon",
         "description": "Volledige lay-out met kop, factureringsinfo, regelstabel en voettekst."
+      },
+      "billed-time-entries": {
+        "label": "Specificatie van gefactureerde tijdregistraties",
+        "description": "Voeg een informatietabel toe met datums, werkitems, uren, tarieven en bedragen."
+      },
+      "billed-time-by-ticket": {
+        "label": "Gefactureerde tijd per ticket",
+        "description": "Herhaal voor elk ticket of elke taak een kop en de bijbehorende tabel met tijdregistraties."
       }
     },
     "schema": {
@@ -1594,6 +1603,9 @@
               "label": "Contract.pdf"
             }
           }
+        },
+        "totals-rows": {
+          "title": "Totaalrijen"
         }
       }
     },
@@ -1867,7 +1879,8 @@
         "transformsSource": "{{binding}} (transformatiebron)",
         "transformsOutput": "{{binding}} (transformatie-uitvoer)",
         "ticketGroups": "Gefactureerde tijd per ticket",
-        "timeEntries": "Gefactureerde tijdregistraties"
+        "timeEntries": "Gefactureerde tijdregistraties",
+        "ticketPresentationRows": "Kosten per ticket"
       },
       "presets": {
         "description": {
@@ -1945,7 +1958,12 @@
         "headerPlaceholder": "Koptekstlabel",
         "bindingKey": "Bindingssleutel",
         "type": "Type",
-        "width": "Breedte"
+        "width": "Breedte",
+        "stackedLines": "Gestapelde regels",
+        "addLine": "+ Regel",
+        "clearLines": "Enkele regel",
+        "stackedLinesHint": "Elke niet-lege regel wordt op een eigen rij weergegeven. Wanneer alle regels leeg zijn, wordt de hierboven vermelde bindingssleutel van de kolom weergegeven.",
+        "removeLine": "Regel {{index}} verwijderen"
       },
       "columnTypes": {
         "text": "Tekst",
@@ -1990,6 +2008,15 @@
       "visibleInPortal": "Zichtbaar in het klantenportaal",
       "dialogTitle": "Afbeelding selecteren",
       "dialogDescription": "Kies een afbeelding uit uw documenten om in deze sjabloon te gebruiken."
+    },
+    "totalsRowsEditor": {
+      "rowBackground": "Achtergrond van rij",
+      "rowTextColor": "Tekstkleur",
+      "resetColors": "Kleuren resetten",
+      "clearRowBackground": "Rij-achtergrondkleur wissen",
+      "clearRowTextColor": "Rij-tekstkleur wissen",
+      "labelColorOverrideNote": "Dit label behoudt zijn eigen opgeslagen kleur en erft niet de hierboven ingestelde rij-tekstkleur. Het bedrag volgt nog steeds de rij-tekstkleur.",
+      "noRows": "Dit totalenblok heeft nog geen opgeslagen rijen. Sla de sjabloon op en open deze opnieuw om rijkleuren te bewerken."
     }
   },
   "draftInvoiceDetails": {
@@ -2136,7 +2163,8 @@
       "referenceMissing": "Het geselecteerde factuursjabloon of de klant bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
       "duplicate": "Er bestaat al een factuursjabloon met deze instellingen.",
       "missingField": "Er ontbreekt een verplicht veld van het factuursjabloon.",
-      "missingFieldNamed": "Er ontbreekt een verplicht veld van het factuursjabloon: {{field}}."
+      "missingFieldNamed": "Er ontbreekt een verplicht veld van het factuursjabloon: {{field}}.",
+      "evaluationFailed": "Gegevensbinding van het sjabloon is mislukt: {{details}}"
     }
   },
   "periodTotal": {

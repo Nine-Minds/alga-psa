@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { createHash } from 'node:crypto';
 import { EmulatorHost } from '@alga-psa/emulator-host';
 import xeroEmulator from '../src/index';
 
@@ -26,6 +27,11 @@ beforeAll(async () => {
   const { controlPort, ports } = await host.start();
   base = `http://127.0.0.1:${ports.xero}`;
   control = `http://127.0.0.1:${controlPort}`;
+  for (const app of [
+    { type: 'confidential', clientId: 'alga-app', clientSecret: 'alga-secret', redirectUris: ['http://localhost/api/integrations/xero/callback'] },
+    { type: 'confidential', clientId: 'bound-app', clientSecret: 'synthetic-secret', redirectUris: ['http://localhost/bound-callback'] },
+    { type: 'pkce', clientId: 'pkce-app', redirectUris: ['http://localhost/pkce-callback'] },
+  ]) expect((await controlPost('/control/xero/seed/application', app)).ok).toBe(true);
 });
 
 afterAll(async () => {
@@ -111,10 +117,81 @@ describe('xero emulator', { shuffle: false }, () => {
     accessToken = rotated.access_token;
   });
 
+  it('binds codes and refresh tokens to the originating client and redirect', async () => {
+    const redirectUri = 'http://localhost/bound-callback';
+    const authorize = new URL(`${base}/identity/connect/authorize`);
+    authorize.search = new URLSearchParams({ response_type: 'code', client_id: 'bound-app', redirect_uri: redirectUri, scope: SCOPE }).toString();
+    const response = await fetch(authorize, { redirect: 'manual' });
+    const code = new URL(response.headers.get('location')!).searchParams.get('code')!;
+    const exchange = (body: Record<string, string>, basic?: string) => fetch(`${base}/connect/token`, {
+      method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded', ...(basic ? { authorization: `Basic ${Buffer.from(basic).toString('base64')}` } : {}) },
+      body: new URLSearchParams(body),
+    });
+    const request = { grant_type: 'authorization_code', code, client_id: 'bound-app', client_secret: 'synthetic-secret', redirect_uri: redirectUri };
+    for (const patch of [{ client_id: 'different-app' }, { client_id: '' }, { redirect_uri: 'http://localhost/different' }]) {
+      const denied = await exchange({ ...request, ...patch });
+      expect(denied.status).toBe(400);
+      expect(await denied.json()).toEqual({ error: 'invalid_grant' });
+    }
+    const wrongSecret = await exchange({ ...request, client_secret: 'wrong-secret' });
+    expect(wrongSecret.status).toBe(401);
+    expect(await wrongSecret.json()).toEqual({ error: 'invalid_client' });
+    const valid = await exchange(request);
+    expect(valid.status).toBe(200);
+    const token = await valid.json();
+    const refresh = { grant_type: 'refresh_token', refresh_token: token.refresh_token };
+    for (const client_id of ['different-app', '']) {
+      const denied = await exchange({ ...refresh, client_id });
+      expect(denied.status).toBe(400);
+      expect(await denied.json()).toEqual({ error: 'invalid_grant' });
+    }
+    const wrongRefreshSecret = await exchange(refresh, 'bound-app:wrong-secret');
+    expect(wrongRefreshSecret.status).toBe(401);
+    expect(await wrongRefreshSecret.json()).toEqual({ error: 'invalid_client' });
+    const rotated = await exchange(refresh, 'bound-app:synthetic-secret');
+    expect(rotated.status).toBe(200);
+    expect((await rotated.json()).refresh_token).not.toBe(token.refresh_token);
+    expect((await exchange(request)).status).toBe(400);
+  });
+
+  it('requires the S256 verifier before exchanging a PKCE authorization code', async () => {
+    const verifier = 'synthetic-verifier-'.repeat(4);
+    const challenge = createHash('sha256').update(verifier).digest('base64url');
+    const redirectUri = 'http://localhost/pkce-callback';
+    const query = { response_type: 'code', client_id: 'pkce-app', redirect_uri: redirectUri,
+      code_challenge: challenge, code_challenge_method: 'S256' };
+    const authorize = async (params: Record<string, string>) => fetch(`${base}/identity/connect/authorize?${new URLSearchParams(params)}`, { redirect: 'manual' });
+    for (const patch of [{ code_challenge_method: 'plain' }, { code_challenge: '' }, { code_challenge: 'invalid' }, { client_id: 'unknown' }, { redirect_uri: 'http://localhost/unregistered' }]) {
+      expect((await authorize({ ...query, ...patch })).status).toBe(400);
+    }
+    const { code_challenge: _challenge, code_challenge_method: _method, ...withoutPkce } = query;
+    expect((await authorize(withoutPkce)).status).toBe(400);
+    const granted = await authorize(query);
+    expect(granted.status).toBe(302);
+    const code = new URL(granted.headers.get('location')!).searchParams.get('code')!;
+    const exchange = (code_verifier: string) => fetch(`${base}/connect/token`, {
+      method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ grant_type: 'authorization_code', client_id: 'pkce-app', redirect_uri: redirectUri, code, code_verifier }),
+    });
+    for (const wrong of ['', 'different-verifier-'.repeat(4), 'short']) {
+      const denied = await exchange(wrong);
+      expect(denied.status).toBe(400);
+      expect(await denied.json()).toEqual({ error: 'invalid_grant' });
+    }
+    const valid = await exchange(verifier);
+    expect(valid.status).toBe(200);
+    expect((await valid.json()).access_token).toEqual(expect.any(String));
+    expect((await exchange(verifier)).status).toBe(400);
+  });
+
   it('lists connected organisations, including seeded additional ones', async () => {
     const seeded = await controlPost('/control/xero/seed/organisation', { tenantName: 'Second Org Ltd' });
     expect(seeded.ok).toBe(true);
 
+    const inventory = (await (await fetch(`${control}/control/xero/state/organisations`)).json()).result;
+    expect((await controlPost('/control/xero/actions/set-connections', {
+      clientId: 'alga-app', xeroTenantIds: inventory.map((org: any) => org.tenantId),
+    })).ok).toBe(true);
     const response = await fetch(`${base}/connections`, {
       headers: { authorization: `Bearer ${accessToken}` },
     });
@@ -127,7 +204,51 @@ describe('xero emulator', { shuffle: false }, () => {
       expect(connection.tenantId).toBeTruthy();
     }
     expect(connections.map((c) => c.tenantName)).toContain('Second Org Ltd');
-    tenantId = connections[0].tenantId;
+    const selected = await controlPost('/control/xero/actions/select-organisation', { xeroTenantId: seeded.result.tenantId });
+    expect(selected.ok).toBe(true);
+    const readConnections = async () => (await fetch(`${base}/connections`, {
+      headers: { authorization: `Bearer ${accessToken}` },
+    })).json();
+    const reordered = await readConnections();
+    expect(reordered).toEqual([connections[1], connections[0]]);
+    expect((await controlPost('/control/xero/actions/select-organisation', { xeroTenantId: 'unconnected' })).ok).toBe(false);
+    expect(await readConnections()).toEqual(reordered);
+    tenantId = reordered[0].tenantId;
+  });
+
+  it('denies reads and writes to seeded organisations without application consent', async () => {
+    const hidden = (await controlPost('/control/xero/seed/organisation', { tenantName: 'Unconsented Org' })).result;
+    const connections = await (await fetch(`${base}/connections`, { headers: authed() })).json();
+    expect(connections.map((org: any) => org.tenantId)).not.toContain(hidden.tenantId);
+    const before = await (await fetch(`${control}/control/xero/state/contacts`)).json();
+    for (const method of ['GET', 'POST']) {
+      const response = await fetch(api('/Contacts'), {
+        method, headers: authed({ 'xero-tenant-id': hidden.tenantId }),
+        ...(method === 'POST' ? { body: JSON.stringify({ Contacts: [{ Name: 'Must not be written' }] }) } : {}),
+      });
+      expect(response.status).toBe(403);
+      expect(await response.json()).toMatchObject({ Title: 'Forbidden', Status: 403 });
+    }
+    expect(await (await fetch(`${control}/control/xero/state/contacts`)).json()).toEqual(before);
+  });
+
+  it('applies consent revocation to existing tokens and rejects invalid changes atomically', async () => {
+    const read = () => fetch(api('/Accounts'), { headers: authed() });
+    const set = (clientId: string, xeroTenantIds: string[]) => controlPost('/control/xero/actions/set-connections', { clientId, xeroTenantIds });
+    expect((await read()).status).toBe(200);
+    expect((await set('bound-app', [])).ok).toBe(true);
+    expect((await read()).status).toBe(200);
+    expect((await set('alga-app', [tenantId, 'unknown-organisation'])).ok).toBe(false);
+    expect((await read()).status).toBe(200);
+    expect((await set('unknown-app', [tenantId])).ok).toBe(false);
+    expect((await set('alga-app', [])).ok).toBe(true);
+    expect((await read()).status).toBe(403);
+    expect(await (await fetch(`${base}/connections`, { headers: authed() })).json()).toEqual([]);
+    expect((await set('alga-app', [tenantId])).ok).toBe(true);
+    expect((await read()).status).toBe(200);
+    expect(await (await fetch(`${base}/connections`, { headers: authed() })).json()).toEqual([
+      expect.objectContaining({ tenantId }),
+    ]);
   });
 
   it('serves the read-only settings collections', async () => {
@@ -225,7 +346,12 @@ describe('xero emulator', { shuffle: false }, () => {
     });
     expect(badItem.status).toBe(400);
     const badBody = (await badItem.json()) as any;
-    expect(JSON.stringify(badBody)).toContain("Item code '200' is not valid");
+    // Independent accounting Error schema and examples from Xero's OpenAPI:
+    // https://github.com/XeroAPI/Xero-OpenAPI/blob/master/xero_accounting.yaml
+    expect(badBody).toMatchObject({
+      ErrorNumber: 10, Type: 'ValidationException', Message: expect.any(String),
+      Elements: [{ ValidationErrors: expect.arrayContaining([{ Message: "Item code '200' is not valid" }]) }],
+    });
 
     // Archived account code is rejected too.
     const archivedAccount = await fetch(api('/Invoices'), {
@@ -234,6 +360,15 @@ describe('xero emulator', { shuffle: false }, () => {
       body: JSON.stringify(invoiceFor({ AccountCode: '299' })),
     });
     expect(archivedAccount.status).toBe(400);
+    expect(await archivedAccount.json()).toMatchObject({ ErrorNumber: 10, Type: 'ValidationException',
+      Message: expect.any(String), Elements: [{ ValidationErrors: expect.any(Array) }] });
+
+    const invalidContact = await fetch(api('/Contacts'), {
+      method: 'POST', headers: authed(), body: JSON.stringify({ Contacts: [{ Name: '' }] }),
+    });
+    expect(invalidContact.status).toBe(400);
+    expect(await invalidContact.json()).toMatchObject({ ErrorNumber: 10, Type: 'ValidationException',
+      Message: expect.any(String), Elements: [{ ValidationErrors: [{ Message: 'Contact Name is required' }] }] });
 
     // Account-code-only line (no ItemCode property) is valid.
     const accountOnly = await fetch(api('/Invoices'), {
@@ -255,11 +390,12 @@ describe('xero emulator', { shuffle: false }, () => {
     expect(rejected.status).toBe(401);
 
     const tokensView = (await (await fetch(`${control}/control/xero/state/tokens`)).json()) as any;
-    const refreshToken = tokensView.result.refreshTokens.at(-1).token;
+    const refreshRecord = tokensView.result.refreshTokens.find((record: any) => record.clientId === 'alga-app');
+    const refreshToken = refreshRecord.token;
     const refreshed = await fetch(`${base}/connect/token`, {
       method: 'POST',
       headers: { 'content-type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ grant_type: 'refresh_token', refresh_token: refreshToken }),
+      body: new URLSearchParams({ grant_type: 'refresh_token', refresh_token: refreshToken, client_id: refreshRecord.clientId, client_secret: 'alga-secret' }),
     });
     expect(refreshed.status).toBe(200);
     accessToken = (await refreshed.json()).access_token;
@@ -277,4 +413,11 @@ describe('xero emulator', { shuffle: false }, () => {
     const wrongTenant = await fetch(api('/Accounts'), { headers: authed({ 'xero-tenant-id': 'not-a-tenant' }) });
     expect(wrongTenant.status).toBe(403);
   });
+  it('reset removes registered applications and their issued credentials', async () => {
+    expect((await controlPost('/control/xero/reset')).ok).toBe(true);
+    const query = new URLSearchParams({ response_type: 'code', client_id: 'alga-app', redirect_uri: 'http://localhost/api/integrations/xero/callback' });
+    expect((await fetch(`${base}/identity/connect/authorize?${query}`, { redirect: 'manual' })).status).toBe(400);
+    expect((await fetch(`${base}/connections`, { headers: { authorization: `Bearer ${accessToken}` } })).status).toBe(401);
+  });
+
 });

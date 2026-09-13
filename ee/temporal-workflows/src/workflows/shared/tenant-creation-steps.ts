@@ -3,8 +3,11 @@ import {
   defineSignal,
   defineQuery,
   setHandler,
+  startChild,
+  ParentClosePolicy,
   log,
 } from '@temporalio/workflow';
+import { trialPaymentReminderWorkflow } from '../trial-payment-reminder-workflow.js';
 import type {
   TenantCreationInput,
   TenantCreationResult,
@@ -447,6 +450,46 @@ export async function runTenantCreationOrchestration(
       emailSent = emailResult.emailSent;
     }
     workflowState.emailSent = emailSent;
+
+    // Step 7: Schedule the trial payment reminder for hosted Stripe signups.
+    // Runs as an abandoned child so its ~13-day timer outlives this workflow's
+    // run timeout; failures here must never fail tenant creation.
+    const isHostedStripeSignup =
+      !!stripeDetails.stripeSubscriptionId &&
+      (input.billingSource === undefined || input.billingSource === 'stripe') &&
+      // AlgaDesk is sold without a trial, so there is no first payment to warn about.
+      input.productCode !== 'algadesk' &&
+      !input.skipWelcomeEmail &&
+      !input.skipCustomerTracking;
+
+    if (isHostedStripeSignup) {
+      try {
+        await startChild(trialPaymentReminderWorkflow, {
+          workflowId: `trial-payment-reminder-${tenantResult.tenantId}`,
+          args: [{
+            tenantId: tenantResult.tenantId,
+            stripeSubscriptionId: stripeDetails.stripeSubscriptionId!,
+            tenantName: input.tenantName,
+            companyName: tenantCompanyName,
+          }],
+          parentClosePolicy: ParentClosePolicy.ABANDON,
+          workflowExecutionTimeout: '60 days',
+        });
+
+        workflowState.trialReminderScheduled = true;
+        log.info('Trial payment reminder scheduled', {
+          tenantId: tenantResult.tenantId,
+          stripeSubscriptionId: stripeDetails.stripeSubscriptionId,
+        });
+      } catch (reminderError) {
+        workflowState.trialReminderScheduled = false;
+        log.warn('Failed to schedule trial payment reminder (non-fatal)', {
+          tenantId: tenantResult.tenantId,
+          error: reminderError instanceof Error ? reminderError.message : 'Unknown error',
+        });
+      }
+    }
+
     workflowState.progress = 100;
     workflowState.step = 'completed';
 

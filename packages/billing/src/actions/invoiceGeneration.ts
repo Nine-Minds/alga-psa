@@ -83,6 +83,7 @@ import {
   DUPLICATE_RECURRING_INVOICE_CODE,
   DUPLICATE_RECURRING_INVOICE_MESSAGE_KEY,
   NO_BILLING_EMAIL_MESSAGE_KEY,
+  TIME_APPROVAL_REQUIRED_MESSAGE_KEY,
   USAGE_RECORDS_MISSING_MESSAGE_KEY,
   USAGE_RECORDS_MISSING_ACK_REQUIRED_MESSAGE_KEY,
   USAGE_PERIOD_TOTAL_STALE_MESSAGE_KEY,
@@ -421,6 +422,12 @@ async function prepareProjectCapChargesForPersistence(
         originalAmount,
       );
       charge.total = result.billable;
+      if (charge.type === 'time') {
+        const timeCharge = charge as ITimeBasedCharge;
+        if (timeCharge.workItemSnapshot?.version === 2 && timeCharge.workItemSnapshot.rateKind === 'uniform' && timeCharge.workItemSnapshot.netAmount !== charge.total) {
+          timeCharge.workItemSnapshot = { ...timeCharge.workItemSnapshot, rateKind: 'unknown', uniformRate: null };
+        }
+      }
       charge.write_down_amount = result.writtenDown;
       charge.write_down_reason = result.writtenDown > 0 ? 'project_cap' : undefined;
       charge.tax_amount = originalAmount > 0
@@ -951,6 +958,8 @@ function manualInvoiceErrorMessageKey(
   switch (code) {
     case 'NO_BILLING_EMAIL':
       return NO_BILLING_EMAIL_MESSAGE_KEY;
+    case 'TIME_APPROVAL_REQUIRED':
+      return TIME_APPROVAL_REQUIRED_MESSAGE_KEY;
     case 'USAGE_RECORDS_MISSING':
       return USAGE_RECORDS_MISSING_MESSAGE_KEY;
     case 'USAGE_RECORDS_MISSING_ACK_REQUIRED':
@@ -2069,6 +2078,12 @@ async function adaptToWasmViewModel(
     }
   }
 
+  for (const item of invoiceItems) {
+    if (item.time_entry_links) {
+      item.tenant = tenant;
+      item.time_entry_links = item.time_entry_links.map((link) => ({ ...link, itemId: item.item_id, invoiceId: item.invoice_id, tenant }));
+    }
+  }
   const previewViewModelItems = invoiceItems.map(buildPreviewViewModelItem);
 
   const previewViewModel: WasmInvoiceViewModel = {
@@ -2233,7 +2248,7 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
       tax_amount: charge.tax_amount || 0,
       tax_rate: charge.tax_rate || 0,
       tax_region: charge.tax_region || '',
-      net_amount: charge.total - (charge.tax_amount || 0),
+      net_amount: charge.total,
       is_manual: false,
       rate: charge.rate,
       service_period_start: recurringSummary.servicePeriodStart,
@@ -2244,6 +2259,8 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
         service_period_end: period.servicePeriodEnd ?? null,
         billing_timing: period.billingTiming ?? null,
       })),
+      billing_charge_type: charge.type,
+      time_entry_links: charge.type === 'time' ? [{ itemId: '', entryId: (charge as ITimeBasedCharge).entryId, invoiceId: '', tenant, snapshot: (charge as ITimeBasedCharge).workItemSnapshot ?? null }] : [],
       time_entry_snapshots: previewTimeEntrySnapshots(charge),
     });
   });
@@ -2305,7 +2322,7 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
         tax_amount: charge.tax_amount || 0,
         tax_rate: charge.tax_rate || 0,
         tax_region: charge.tax_region || '',
-        net_amount: charge.total - (charge.tax_amount || 0),
+        net_amount: charge.total,
         is_manual: false,
         client_contract_id: clientContractGroupId,
         contract_name: contractGroupName,
@@ -2319,6 +2336,8 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
           service_period_end: period.servicePeriodEnd ?? null,
           billing_timing: period.billingTiming ?? null,
         })),
+        billing_charge_type: charge.type,
+        time_entry_links: charge.type === 'time' ? [{ itemId: '', entryId: (charge as ITimeBasedCharge).entryId, invoiceId: '', tenant, snapshot: (charge as ITimeBasedCharge).workItemSnapshot ?? null }] : [],
         time_entry_snapshots: previewTimeEntrySnapshots(charge),
       });
     });
@@ -2357,7 +2376,7 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
         tax_amount: charge.tax_amount || 0,
         tax_rate: charge.tax_rate || 0,
         tax_region: charge.tax_region || '',
-        net_amount: charge.total - (charge.tax_amount || 0),
+        net_amount: charge.total,
         is_manual: false,
         parent_item_id: projectGroupHeaderId,
         rate: charge.rate,
@@ -2369,6 +2388,8 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
           service_period_end: period.servicePeriodEnd ?? null,
           billing_timing: period.billingTiming ?? null,
         })),
+        billing_charge_type: charge.type,
+        time_entry_links: charge.type === 'time' ? [{ itemId: '', entryId: (charge as ITimeBasedCharge).entryId, invoiceId: '', tenant, snapshot: (charge as ITimeBasedCharge).workItemSnapshot ?? null }] : [],
         time_entry_snapshots: previewTimeEntrySnapshots(charge),
       });
     });
@@ -3037,7 +3058,7 @@ export async function generateInvoiceForNormalizedSelectionInputs(params: {
   options?: IInvoiceGenerationRequestOptions;
   bridgeMetadata?: RecurringBridgeMetadata;
 }): Promise<InvoiceViewModel | null> {
-  return params.knex.transaction(async (trx) => {
+  return withTransaction(params.knex, async (trx) => {
     await lockTenantBilling(trx, params.tenant);
     return generateInvoiceForLockedSelectionInputs({ ...params, knex: trx });
   });
@@ -3099,7 +3120,9 @@ async function generateInvoiceForLockedSelectionInputs(params: Parameters<typeof
   );
   if (approvalBlockedEntryCount > 0) {
     throw withRecurringWindowErrorContext(
-      new Error(formatApprovalBlockedReason(approvalBlockedEntryCount)),
+      new ManualInvoiceError('TIME_APPROVAL_REQUIRED', formatApprovalBlockedReason(approvalBlockedEntryCount), {
+        count: String(approvalBlockedEntryCount),
+      }),
       normalizedSelectorInput,
     );
   }
@@ -3449,10 +3472,11 @@ export async function createInvoiceFromBillingResultImpl(
     invoiceDate?: string;
     /**
      * The recurring execution windows this invoice was generated for. When
-     * present, every recurring service period those windows represent is
+     * present, each fulfilled recurring service period those windows represent is
      * claimed for the invoice atomically with charge persistence — including
      * periods whose lines produced no charges (zero-dollar usage/bucket) and
      * would otherwise stay unclaimed, blind to the duplicate detector.
+     * Unreported usage deliberately omitted from the invoice remains due.
      */
     recurringSelectorInputs?: IRecurringDueSelectionInput[];
   } = {},
@@ -3650,17 +3674,20 @@ export async function createInvoiceFromBillingResultImpl(
     const calculatedSubtotal = standardSubtotal + projectScheduleSubtotal;
 
     // Recurring windows must end this transaction fully claimed: every
-    // recurring service period the selection represents is linked to this
-    // invoice (charge-backed rows already are; zero-dollar leftovers are swept
-    // here) or the whole generation aborts. This is what arms the duplicate
-    // guard for grouped zero-dollar windows.
+    // fulfilled recurring service period is linked to this invoice (including
+    // zero-dollar leftovers). Deliberately omitted, unreported usage stays due
+    // so a later report can be billed. This still arms the duplicate guard for
+    // grouped zero-dollar windows whose obligations have been fulfilled.
     if (options.recurringSelectorInputs?.length && !options.projectId) {
       await claimRecurringServicePeriodsForSelectionInputs({
         tx: trx,
         tenant,
         invoiceId: newInvoice!.invoice_id,
-        selectorInputs: options.recurringSelectorInputs,
+        // Unresolved time/usage selections identify source records, not
+        // recurring obligations. Their invoice linkage is handled by charges.
+        selectorInputs: options.recurringSelectorInputs.filter((selector) => !isUnresolvedSelectorInput(selector)),
         linkedAt: Temporal.Now.instant().toString(),
+        omittedUsagePeriods: selectUnreportedUsageStatuses(billingResult.usageServicePeriodStatuses ?? []),
       });
     }
 

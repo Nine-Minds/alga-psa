@@ -73,7 +73,7 @@
       "noPhasesDefined": "Nie zdefiniowano faz"
     },
     "note": {
-      "billedTimePortalDetail": "Szczegółowe zestawienie wpisów czasu dla każdego zgłoszenia jest dostępne w portalu klienta.",
+      "billedTimePortalDetail": "Skontaktuj się z dostawcą usług, aby uzyskać zestawienie rozliczonego czasu.",
       "pickedBy": "Pobrał: ____________________     Data: ____________",
       "preTaxTotals": "Podane sumy nie zawierają podatku. Należny podatek jest naliczany na fakturze.",
       "thankYouForOrder": "Dziękujemy za zamówienie."
@@ -118,5 +118,20 @@
       "typeNotAllowed": "Ten typ pliku jest niedozwolony.",
       "sessionRequired": "Przesyłanie dokumentów wymaga aktywnej sesji. Zaloguj się ponownie."
     }
+  },
+  "time": {
+    "mixed": "Różne stawki",
+    "unknown": "Stawka niedostępna",
+    "other": "Inny rozliczony czas",
+    "ticket": "Zgłoszenie",
+    "task": "Zadanie projektu",
+    "partial": "Część rozliczonego czasu jest pokazana jako usługi, ponieważ szczegóły zgłoszeń są niedostępne.",
+    "unavailable": "Szczegóły zgłoszeń są niedostępne. Wszystkie opłaty są pokazane poniżej.",
+    "quantityHours": "Ilość / Godziny",
+    "breakdown": "Skontaktuj się z dostawcą usług, aby uzyskać zestawienie rozliczonego czasu.",
+    "detail": "Szczegóły rozliczonego czasu — uwzględnione w opłatach powyżej",
+    "incompleteDetail": "Szczegóły rozliczonego czasu mogą być niekompletne.",
+    "detailPartial": "To zestawienie zawiera tylko dostępne wpisy rozliczonego czasu.",
+    "detailUnavailable": "Szczegóły wpisów rozliczonego czasu nie są dostępne dla tej faktury."
   }
 }

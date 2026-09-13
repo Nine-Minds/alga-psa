@@ -13,6 +13,7 @@ import { setupCommonMocks } from "../../../../../test-utils/testMocks";
 import { previewInvoice } from "@alga-psa/billing/actions/invoiceGeneration";
 import {
   createUsageRecord,
+  updateUsageRecord,
   getEligibleContractLinesForUI,
 } from "@alga-psa/billing/actions/usageActions";
 import { v4 as uuidv4 } from "uuid";
@@ -399,4 +400,32 @@ describe("Usage contracts – add-usage flow with overlapping usage + bucket lin
       .where({ tenant: context.tenantId });
     expect(charges).toHaveLength(0);
   });
+
+  it('persists usage comments, rejects changed replay content and preserves comments on unrelated edits', async () => {
+    const { serviceId, usageLineId } = await setupOverlappingUsageAndBucketLines();
+    const input = {
+      client_id: context.clientId, service_id: serviceId, quantity: 4,
+      usage_date: '2023-01-15T00:00:00.000Z', contract_line_id: usageLineId,
+      comments: 'Four monitored endpoints — approved by the client', request_id: uuidv4(),
+    };
+    const created = await createUsageRecord(input);
+    if (!created || !('usage_id' in created)) throw new Error(JSON.stringify(created));
+    const row = () => context.db('usage_tracking').where({ tenant: context.tenantId, usage_id: created.usage_id }).first();
+    expect((await row()).comments).toBe(input.comments);
+    expect(await createUsageRecord(input)).toMatchObject({ usage_id: created.usage_id, comments: input.comments });
+    const conflicting = await createUsageRecord({ ...input, comments: 'Different instructions' });
+    expect(conflicting).not.toHaveProperty('usage_id');
+    expect((await row()).comments).toBe(input.comments);
+    expect(await context.db('usage_tracking').where({ tenant: context.tenantId, request_id: input.request_id })).toHaveLength(1);
+
+    expect(await updateUsageRecord({ usage_id: created.usage_id, quantity: 5 })).toHaveProperty('usage_id', created.usage_id);
+    expect((await row()).comments).toBe(input.comments);
+    expect(Number((await row()).quantity)).toBe(5);
+    const changed = 'Updated approval';
+    expect(await updateUsageRecord({ usage_id: created.usage_id, comments: changed })).toHaveProperty('usage_id', created.usage_id);
+    expect((await row()).comments).toBe(changed);
+    expect(await updateUsageRecord({ usage_id: created.usage_id, comments: '' })).toHaveProperty('usage_id', created.usage_id);
+    expect((await row()).comments).toBe('');
+  });
+
 });

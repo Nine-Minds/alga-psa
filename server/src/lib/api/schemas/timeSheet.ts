@@ -323,6 +323,7 @@ export const scheduleEntryResponseSchema = z.object({
   work_item_type: z.string().nullable(),
   notes: z.string().nullable(),
   is_private: z.boolean(),
+  is_all_day: z.boolean(),
   status: z.string(),
   recurrence_pattern: z.union([z.string(), z.record(z.unknown())]).nullable(),
   created_by: uuidSchema.optional(),

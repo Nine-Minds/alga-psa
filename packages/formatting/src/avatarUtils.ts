@@ -9,9 +9,11 @@ export type EntityType = 'user' | 'contact' | 'client' | 'tenant' | 'team';
 
 /**
  * Logo variant. 'default' is the light-surface logo every existing row carries;
- * 'dark' is the optional logo used on dark surfaces.
+ * 'dark' is the optional logo used on dark surfaces. 'wide'/'wide-dark' are the
+ * optional landscape wordmarks (Enterprise white-labeling) and 'favicon' is the
+ * browser tab icon. The column is plain text, so no migration is involved.
  */
-export type EntityLogoVariant = 'default' | 'dark';
+export type EntityLogoVariant = 'default' | 'dark' | 'wide' | 'wide-dark' | 'favicon';
 
 /**
  * Retrieves the image URL for an entity (user avatar, contact avatar, client logo).

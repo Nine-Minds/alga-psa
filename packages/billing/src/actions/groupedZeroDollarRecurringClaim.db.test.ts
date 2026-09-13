@@ -94,6 +94,7 @@ function buildSelectorInputs(lines = GROUP_LINES) {
 async function claimInTransaction(params: {
   invoiceId: string;
   selectorInputs: ReturnType<typeof buildSelectorInputs>;
+  omittedUsagePeriods?: Parameters<typeof claimRecurringServicePeriodsForSelectionInputs>[0]['omittedUsagePeriods'];
 }): Promise<void> {
   await db.transaction(async (trx) => {
     await claimRecurringServicePeriodsForSelectionInputs({
@@ -102,6 +103,7 @@ async function claimInTransaction(params: {
       invoiceId: params.invoiceId,
       selectorInputs: params.selectorInputs,
       linkedAt: new Date().toISOString(),
+      omittedUsagePeriods: params.omittedUsagePeriods,
     });
   });
 }
@@ -137,6 +139,31 @@ afterAll(async () => {
 });
 
 describe('claimRecurringServicePeriodsForSelectionInputs (DB-backed)', () => {
+  it('retains exactly the omitted usage period while claiming fulfilled zero-dollar obligations', async () => {
+    await insertGroupServicePeriods();
+    const omittedLine = GROUP_LINES[1]!;
+    await claimInTransaction({
+      invoiceId: INVOICE_ID,
+      selectorInputs: buildSelectorInputs(),
+      omittedUsagePeriods: [
+        { client_contract_line_id: omittedLine.lineId, service_period_start: '2026-09-01', service_period_end: '2026-09-30' },
+        // A diagnosis for another period must not exempt September's row.
+        { client_contract_line_id: GROUP_LINES[2]!.lineId, service_period_start: '2026-08-01', service_period_end: '2026-08-31' },
+      ],
+    });
+    const rows = await fetchGroupRows();
+    expect(rows.find((row) => row.schedule_key === omittedLine.scheduleKey)).toMatchObject({
+      lifecycle_state: 'generated', invoice_id: null,
+    });
+    for (const row of rows.filter((row) => row.schedule_key !== omittedLine.scheduleKey)) {
+      expect(row).toMatchObject({ lifecycle_state: 'billed', invoice_id: INVOICE_ID });
+    }
+    const laterInvoiceId = uuidv4();
+    await claimInTransaction({ invoiceId: laterInvoiceId, selectorInputs: buildSelectorInputs([omittedLine]) });
+    expect((await fetchGroupRows()).find((row) => row.schedule_key === omittedLine.scheduleKey))
+      .toMatchObject({ lifecycle_state: 'billed', invoice_id: laterInvoiceId });
+  });
+
   it('claims every grouped zero-dollar period for the invoice', async () => {
     await insertGroupServicePeriods();
 

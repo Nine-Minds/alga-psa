@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "incident": "https://github.com/Nine-Minds/alga-psa/issues/3348",
+  "scope": "EntryPopup date display and save",
+  "before": {
+    "status": "assertion-failed",
+    "assertion": "Berlin editor received 2026-10-25T00:00:00Z (02:00 local) instead of local midnight."
+  },
+  "after": {
+    "timezones": [
+      "UTC",
+      "Europe/Berlin",
+      "America/Los_Angeles"
+    ],
+    "passedPerTimezone": 13,
+    "filesPerTimezone": 3,
+    "failed": 0,
+    "assertions": [
+      "Editor receives local-midnight dates.",
+      "Title-only save retains exclusive UTC-midnight boundaries.",
+      "Moving an all-day event across Berlin DST retains calendar-day duration.",
+      "Existing timed-entry start/end and Teams refresh tests remain green."
+    ]
+  },
+  "sourceSha256": {
+    "packages/scheduling/src/lib/calendarDateDisplay.ts": "e5001638848779ec7510ca3690f0c2b69b4c8112f1a9590be68d8842ad99cc96",
+    "packages/scheduling/src/components/schedule/EntryPopup.tsx": "8958ab737d3c116d27b19b5ded3382837cfbd26914e2b157800b09f65a3ddef6",
+    "packages/scheduling/tests/entryPopup.startEndSync.test.tsx": "654b39cebf5d7d782e6828a28e06b315b2c8e8a51babc478bee93afdbc1ccf7b"
+  },
+  "limits": [
+    "Component tests stub DateTimePicker and server actions; real browser verification remains required.",
+    "Grid accessors and drag/resize date handling remain unfinished and must be changed together.",
+    "Existing schema infers all-day from UTC-midnight boundaries.",
+    "No current-source CI or full incident completion claim."
+  ]
+}

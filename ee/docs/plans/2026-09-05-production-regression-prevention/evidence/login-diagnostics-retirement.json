@@ -1,0 +1,49 @@
+{
+  "scope": "Retire non-asserting login diagnostics after reviewing runtime expectations",
+  "baseRevision": "76888a4426",
+  "workingTreeDirty": true,
+  "retired": [
+    {
+      "file": "ee/server/src/__tests__/integration/debug-login-details.playwright.test.ts",
+      "reason": "Printed error text, user fields and URL; no login outcome assertion.",
+      "canonicalCoverage": "e2e-tests/tests/login.spec.ts: unknown-account and rejected-password cases"
+    },
+    {
+      "file": "ee/server/src/__tests__/integration/debug-successful-login.playwright.test.ts",
+      "reason": "Printed dashboard/error booleans and temporary credentials; no success assertion.",
+      "canonicalCoverage": "e2e-tests/tests/login.spec.ts: real sign-in, dashboard and session persistence"
+    },
+    {
+      "file": "ee/server/src/__tests__/integration/debug-tenant-auth.playwright.test.ts",
+      "reason": "Printed tenant records and authentication request bodies; no tenant identity assertion.",
+      "canonicalCoverage": "login.spec.ts: MSP session identity; portal-identity.spec.ts: portal identity and wrong-tenant rejection"
+    }
+  ],
+  "preserved": "basic-browser.playwright.test.ts contains assertions against synthetic pages and remains for separate harness classification.",
+  "verification": {
+    "kind": "Playwright collection only",
+    "collections": [
+      {
+        "edition": "community",
+        "files": 18,
+        "tests": 37,
+        "errors": [],
+        "path": "/tmp/alga-login-audit-ce-collection.json",
+        "sha256": "2a52d6625d01bfb12b74dd11f28c4fc722f5198262118a826e198c0be52440a9"
+      },
+      {
+        "edition": "enterprise",
+        "files": 18,
+        "tests": 41,
+        "errors": [],
+        "path": "/tmp/alga-login-audit-ee-collection.json",
+        "sha256": "abfd32dc6e34b9a4b1d03b661b0a85d07bbe7ae6eab554f5c329bb28c6588694"
+      }
+    ]
+  },
+  "limitations": [
+    "No new browser execution is claimed.",
+    "Duplicate-email behavior was only logged by the retired script and is not established by this mapping.",
+    "Current candidate execution, global inventory completion and native CI remain outstanding."
+  ]
+}

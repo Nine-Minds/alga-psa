@@ -1,0 +1,16 @@
+{
+  "scope": "bounded-native-qbo-transient-investigation",
+  "revision": "52be914701",
+  "runs": 3,
+  "testsPerRun": 29,
+  "runner": "default parallel with process-local hidden application dist",
+  "listenersPerRun": 32,
+  "reusedListenerPorts": 0,
+  "unexpectedAuthorizationResponses": 0,
+  "undiciRequestErrors": 0,
+  "limitations": [
+    "Two earlier failures remain unexplained; passing reruns do not establish a fix.",
+    "No runner serialization, automatic retry, or host shutdown change was introduced.",
+    "Current-source CI remains required."
+  ]
+}

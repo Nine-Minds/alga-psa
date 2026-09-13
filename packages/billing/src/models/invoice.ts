@@ -25,6 +25,7 @@ import type {
   InvoiceViewModel,
 } from '@alga-psa/types';
 import { getClientLogoUrl } from '@alga-psa/formatting/avatarUtils';
+import { isValidInvoiceTimeSnapshot } from '../lib/billing/invoiceTimeSnapshot';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 
 type InvoiceChargeDetailPeriodRow = {
@@ -40,6 +41,8 @@ type InvoiceChargeDisplayRow = IInvoiceCharge & {
 };
 
 type InvoiceTimeEntrySnapshotRow = {
+  invoice_id: string;
+  tenant: string;
   item_id: string | null;
   entry_id: string;
   /** jsonb — parsed object from pg, or a JSON string from some drivers. */
@@ -143,7 +146,7 @@ function sortInvoiceChargesForDisplay(charges: IInvoiceCharge[]): IInvoiceCharge
  * Attach immutable billed-time snapshots (invoice_time_entries.work_item_snapshot)
  * to their invoice charges. Reads only the frozen jsonb column — never the
  * mutable tickets/time_entries tables — so finalized invoices stay stable.
- * Rows without a snapshot (all pre-feature invoices) are simply skipped.
+ * Unavailable links remain coverage evidence; only valid, owned snapshots enter detail.
  */
 function attachTimeEntrySnapshots(
   charges: IInvoiceCharge[],
@@ -153,48 +156,20 @@ function attachTimeEntrySnapshots(
     return charges;
   }
 
-  const snapshotsByItemId = new Map<string, IInvoiceChargeTimeEntrySnapshot[]>();
-  for (const row of snapshotRows) {
-    if (!row.item_id) {
-      continue;
-    }
-    const parsed = typeof row.work_item_snapshot === 'string'
-      ? (() => {
-          try {
-            return JSON.parse(row.work_item_snapshot);
-          } catch {
-            return null;
-          }
-        })()
-      : row.work_item_snapshot;
-    if (!parsed || typeof parsed !== 'object') {
-      continue;
-    }
-    const snapshot: IInvoiceChargeTimeEntrySnapshot = {
-      ...(parsed as InvoiceTimeEntrySnapshot),
-      entryId: row.entry_id,
-    };
-    const existing = snapshotsByItemId.get(row.item_id) ?? [];
-    existing.push(snapshot);
-    snapshotsByItemId.set(row.item_id, existing);
-  }
-
-  if (snapshotsByItemId.size === 0) {
-    return charges;
-  }
-
   return charges.map((charge) => {
-    const snapshots = snapshotsByItemId.get(charge.item_id);
-    if (!snapshots || snapshots.length === 0) {
-      return charge;
-    }
-    const ordered = [...snapshots].sort((left, right) => {
-      if (left.entryDate !== right.entryDate) {
-        return String(left.entryDate ?? '').localeCompare(String(right.entryDate ?? ''));
+    const links = snapshotRows.filter((row) => row.item_id === charge.item_id).map((row) => {
+      let snapshot = row.work_item_snapshot;
+      if (typeof snapshot === 'string') {
+        try { snapshot = JSON.parse(snapshot); } catch { snapshot = null; }
       }
-      return left.entryId.localeCompare(right.entryId);
+      return { itemId: row.item_id!, entryId: row.entry_id, invoiceId: row.invoice_id, tenant: row.tenant, snapshot };
     });
-    return { ...charge, time_entry_snapshots: ordered };
+    return {
+      ...charge,
+      time_entry_links: links,
+      time_entry_snapshots: links.filter((link) => link.invoiceId === charge.invoice_id && link.tenant === charge.tenant && isValidInvoiceTimeSnapshot(link.snapshot))
+        .map((link) => ({ ...(link.snapshot as InvoiceTimeEntrySnapshot), entryId: link.entryId })),
+    };
   });
 }
 
@@ -758,6 +733,8 @@ const Invoice = {
         .select(
           'ic.item_id',
           'ic.invoice_id',
+          'ic.tenant',
+          'ic.billing_charge_type',
           'ic.service_id',
           'sc.item_kind as service_item_kind',
           'sc.sku as service_sku',
@@ -788,16 +765,15 @@ const Invoice = {
             .whereIn('item_id', itemIds)
             .orderBy('service_period_start', 'asc');
 
-      // Frozen billed-time snapshots for ticket-level detail. Snapshot-less
-      // rows (all invoices generated before the feature) are dropped below so
-      // legacy invoices take the no-detail path untouched.
+      // Keep every owned link, including missing snapshots, to prove complete
+      // charge coverage. Only valid snapshots enter optional supporting detail.
       const snapshotRows: InvoiceTimeEntrySnapshotRow[] = itemIds.length === 0
         ? []
         : (
             await tenantScopedTable<InvoiceTimeEntrySnapshotRow>(knexOrTrx, tenant, 'invoice_time_entries')
-              .select('item_id', 'entry_id', 'work_item_snapshot')
+              .select('item_id', 'entry_id', 'invoice_id', 'tenant', 'work_item_snapshot')
               .whereIn('item_id', itemIds)
-          ).filter((row) => row.work_item_snapshot != null);
+          );
 
       return sortInvoiceChargesForDisplay(
         attachTimeEntrySnapshots(

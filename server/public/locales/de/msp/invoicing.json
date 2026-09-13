@@ -1004,7 +1004,8 @@
     },
     "messages": {
       "success": "Rechnung erfolgreich erstellt!",
-      "loadFailed": "Daten konnten nicht geladen werden"
+      "loadFailed": "Daten konnten nicht geladen werden",
+      "salesOrderSourcesUnavailable": "Kundenaufträge konnten nicht geladen werden. Sie können weiterhin Positionen für manuelle Rechnungen eingeben."
     }
   },
   "prepayment": {
@@ -1412,6 +1413,14 @@
       "modern-invoice-complete": {
         "label": "Moderne Rechnungsvorlage",
         "description": "Vollständiges Layout mit Kopf, Rechnungsinfo, Positionstabelle und Fuß."
+      },
+      "billed-time-entries": {
+        "label": "Details zu abgerechneten Zeiteinträgen",
+        "description": "Eine informative Tabelle mit Datum, Arbeitselementen, Stunden, Sätzen und Beträgen hinzufügen."
+      },
+      "billed-time-by-ticket": {
+        "label": "Abgerechnete Zeit nach Ticket",
+        "description": "Für jedes Ticket oder jede Aufgabe eine Überschrift und die zugehörige Tabelle der Zeiteinträge wiederholen."
       }
     },
     "schema": {
@@ -1594,6 +1603,9 @@
               "label": "Vertrag.pdf"
             }
           }
+        },
+        "totals-rows": {
+          "title": "Summenzeilen"
         }
       }
     },
@@ -1867,7 +1879,8 @@
         "transformsSource": "{{binding}} (Transformationsquelle)",
         "transformsOutput": "{{binding}} (Transformationsausgabe)",
         "ticketGroups": "Abgerechnete Zeit nach Ticket",
-        "timeEntries": "Abgerechnete Zeiteinträge"
+        "timeEntries": "Abgerechnete Zeiteinträge",
+        "ticketPresentationRows": "Leistungen nach Ticket"
       },
       "presets": {
         "description": {
@@ -1945,7 +1958,12 @@
         "headerPlaceholder": "Kopfzeilenbezeichnung",
         "bindingKey": "Bindungsschlüssel",
         "type": "Typ",
-        "width": "Breite"
+        "width": "Breite",
+        "stackedLines": "Gestapelte Zeilen",
+        "addLine": "+ Zeile",
+        "clearLines": "Einzelne Zeile",
+        "stackedLinesHint": "Jede nicht leere Zeile wird in einer eigenen Zeile dargestellt. Wenn alle Zeilen leer sind, wird der oben stehende Bindungsschlüssel der Spalte angezeigt.",
+        "removeLine": "Zeile {{index}} entfernen"
       },
       "columnTypes": {
         "text": "Text",
@@ -1990,6 +2008,15 @@
       "visibleInPortal": "Im Kundenportal sichtbar",
       "dialogTitle": "Bild auswählen",
       "dialogDescription": "Wählen Sie ein Bild aus Ihren Dokumenten aus, das in dieser Vorlage verwendet werden soll."
+    },
+    "totalsRowsEditor": {
+      "rowBackground": "Zeilenhintergrund",
+      "rowTextColor": "Textfarbe",
+      "resetColors": "Farben zurücksetzen",
+      "clearRowBackground": "Zeilenhintergrundfarbe löschen",
+      "clearRowTextColor": "Textfarbe der Zeile löschen",
+      "labelColorOverrideNote": "Diese Beschriftung behält ihre eigene gespeicherte Farbe und übernimmt nicht die oben festgelegte Textfarbe der Zeile. Der Betrag folgt weiterhin der Textfarbe der Zeile.",
+      "noRows": "Dieser Summenblock hat noch keine gespeicherten Zeilen. Speichern Sie die Vorlage und öffnen Sie sie erneut, um Zeilenfarben zu bearbeiten."
     }
   },
   "draftInvoiceDetails": {
@@ -2136,7 +2163,8 @@
       "referenceMissing": "Die ausgewählte Rechnungsvorlage oder der Kunde existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
       "duplicate": "Eine Rechnungsvorlage mit diesen Einstellungen existiert bereits.",
       "missingField": "Erforderliches Feld der Rechnungsvorlage fehlt.",
-      "missingFieldNamed": "Erforderliches Feld der Rechnungsvorlage fehlt: {{field}}."
+      "missingFieldNamed": "Erforderliches Feld der Rechnungsvorlage fehlt: {{field}}.",
+      "evaluationFailed": "Datenbindung der Vorlage fehlgeschlagen: {{details}}"
     }
   },
   "periodTotal": {

@@ -1,0 +1,91 @@
+{
+  "schemaVersion": 1,
+  "runId": "34308610232",
+  "jobId": 102330473964,
+  "artifactId": 10087751104,
+  "revision": "3db700f653e28ddd322dfdb652f1689a54f6b65d",
+  "source": {
+    "before": {
+      "revision": "3db700f653e28ddd322dfdb652f1689a54f6b65d",
+      "dirty": false,
+      "changes": []
+    },
+    "after": {
+      "revision": "3db700f653e28ddd322dfdb652f1689a54f6b65d",
+      "dirty": false,
+      "changes": []
+    }
+  },
+  "recordId": "manual-invoice-entered-number",
+  "file": "server/src/test/infrastructure/billing/invoices/manualInvoice.test.ts",
+  "tests": [
+    {
+      "fullName": "Manual Invoice Generation Basic Invoice Creation creates a manual invoice with single line item",
+      "status": "passed"
+    },
+    {
+      "fullName": "Manual Invoice Generation Basic Invoice Creation preserves a manual invoice number and rejects its retry without another invoice or ledger entry",
+      "status": "passed"
+    },
+    {
+      "fullName": "Manual Invoice Generation Basic Invoice Creation creates a manual invoice with multiple line items",
+      "status": "passed"
+    },
+    {
+      "fullName": "Manual Invoice Generation Basic Invoice Creation calculates correct subtotal with mixed positive and negative line items",
+      "status": "passed"
+    },
+    {
+      "fullName": "Manual Invoice Generation Validation and Error Handling rejects invalid client IDs",
+      "status": "passed"
+    },
+    {
+      "fullName": "Manual Invoice Generation Validation and Error Handling rejects invalid service IDs",
+      "status": "passed"
+    },
+    {
+      "fullName": "Manual Invoice Generation Tax Calculations applies correct tax rates based on region",
+      "status": "passed"
+    },
+    {
+      "fullName": "Manual Invoice Generation Tax Calculations handles tax exempt clients correctly",
+      "status": "passed"
+    },
+    {
+      "fullName": "Manual Invoice Generation Tax Calculations calculates tax accurately when line items have different tax rates",
+      "status": "passed"
+    },
+    {
+      "fullName": "Manual Invoice Generation Transaction Recording creates appropriate transaction records",
+      "status": "passed"
+    },
+    {
+      "fullName": "Manual Invoice Generation Invoice Adjustments correctly updates an invoice when new manual items are added",
+      "status": "passed"
+    },
+    {
+      "fullName": "Manual Invoice Generation Invoice Adjustments correctly handles mixed items including discounts when adding new items",
+      "status": "passed"
+    },
+    {
+      "fullName": "Manual Invoice Generation Invoice Adjustments correctly handles different tax regions when adding new items",
+      "status": "passed"
+    },
+    {
+      "fullName": "Manual Invoice Generation Invoice Adjustments correctly updates an invoice when existing items are modified",
+      "status": "passed"
+    },
+    {
+      "fullName": "Manual Invoice Generation Invoice Adjustments validates manual item adjustments when items are removed",
+      "status": "passed"
+    },
+    {
+      "fullName": "Manual Invoice Generation Invoice Adjustments tests manual item adjustments affecting tax calculation",
+      "status": "passed"
+    }
+  ],
+  "limits": [
+    "Current published candidate CI database assertions only; latest local commits require subsequent CI.",
+    "Does not verify browser behavior, production deployment or incident attribution."
+  ]
+}

@@ -168,6 +168,8 @@ export function buildTimeEntryWorkItemSnapshot(
   >,
   billed: {
     billedMinutes: number;
+    rateKind?: 'uniform' | 'mixed' | 'unknown';
+    uniformRate?: number | null;
     rate: number;
     netAmount: number;
     serviceId: string | null;
@@ -187,7 +189,9 @@ export function buildTimeEntryWorkItemSnapshot(
   const isTicket = workItemType === "ticket";
 
   return {
-    version: 1,
+    version: 2,
+    rateKind: billed.billedMinutes > 0 ? (billed.rateKind ?? 'unknown') : 'unknown',
+    uniformRate: billed.billedMinutes > 0 && billed.rateKind === 'uniform' ? (billed.uniformRate ?? null) : null,
     workItemType,
     workItemId: shared ? entry.work_source_id! : entry.work_item_id ?? null,
     ...(shared ? { sourceTenant: entry.work_source_tenant!, relationshipId: entry.work_relationship_id!, workReferenceId: entry.work_item_id ?? null } : {}),
@@ -408,6 +412,8 @@ export function computeTimeBasedCharges(
       type: "time",
       workItemSnapshot: buildTimeEntryWorkItemSnapshot(entry, {
         billedMinutes: durationMinutes,
+        rateKind: overtimeDetail && overtimeDetail.regularHours > 0 && overtimeDetail.overtimeHours > 0 && overtimeDetail.overtimeRate !== rate ? 'mixed' : 'uniform',
+        uniformRate: overtimeDetail && overtimeDetail.regularHours <= 0 ? overtimeDetail.overtimeRate : rate,
         rate,
         netAmount: total,
         serviceId: effectiveServiceId ?? null,

@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "suite": "node-tooling",
+  "revision": "8063cf6db70942bcbeee2a4bca3a8a7467c038b4",
+  "runtime": "v25.5.0",
+  "status": "passed",
+  "counts": {
+    "tests": 501,
+    "passed": 501,
+    "failed": 0,
+    "skipped": 0,
+    "todo": 0,
+    "cancelled": 0
+  },
+  "source": {
+    "before": {
+      "revision": "8063cf6db70942bcbeee2a4bca3a8a7467c038b4",
+      "dirty": false,
+      "changes": []
+    },
+    "after": {
+      "revision": "8063cf6db70942bcbeee2a4bca3a8a7467c038b4",
+      "dirty": false,
+      "changes": []
+    }
+  },
+  "selection": {
+    "mode": "full"
+  },
+  "fileCount": 52,
+  "discoveryStatus": "passed",
+  "artifacts": [
+    {
+      "path": "test-results/node-tooling/events.jsonl",
+      "sha256": "7a461435a566a9088a86192433525ccd5ef59e6243cff561c83281e8b794b62c"
+    },
+    {
+      "path": "test-results/node-tooling/evidence.json",
+      "sha256": "588ad28a042574d25bdb53424a4b42688e8684e880c700ed756b6cb3e329fc86"
+    },
+    {
+      "path": "test-results/node-tooling/discovery.json",
+      "sha256": "c967739ad368ac3687bf36e47c8cec0e6e50d7ca1a767734b5347b072e66e606"
+    },
+    {
+      "path": "/tmp/alga-node-tooling-8063cf.log",
+      "sha256": "19213ec7f5c6b006f6f06886511408da87b0bd0402d7b2cef1c546d48c3d07aa"
+    }
+  ],
+  "limitations": [
+    "Local Node 25 run, not native CI.",
+    "One explicit manual localization baseline exclusion remains outside the required suite.",
+    "This tooling run does not execute application browser or database journeys."
+  ]
+}

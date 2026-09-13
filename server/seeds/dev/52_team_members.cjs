@@ -5,30 +5,30 @@ exports.seed = async function (knex) {
     if (!context) return;
 
     const { tenantId, db } = context;
-    const teamId = (teamName) => db.table('teams')
+    const teamId = async (teamName) => (await db.table('teams')
         .where({ team_name: teamName })
         .select('team_id')
-        .first();
-    const userId = (username) => db.table('users')
+        .first())?.team_id ?? null;
+    const userId = async (username) => (await db.table('users')
         .where({ username })
         .select('user_id')
-        .first();
+        .first())?.user_id ?? null;
 
     return db.table('team_members').insert([
         {
             tenant: tenantId,
-            team_id: teamId('Wonderland Team'),
-            user_id: userId('glinda')
+            team_id: await teamId('Wonderland Team'),
+            user_id: await userId('glinda')
         },
         {
             tenant: tenantId,
-            team_id: teamId('Oz Team'),
-            user_id: userId('dorothy')
+            team_id: await teamId('Oz Team'),
+            user_id: await userId('dorothy')
         },
         {
             tenant: tenantId,
-            team_id: teamId('Oz Team'),
-            user_id: userId('scarecrow')
+            team_id: await teamId('Oz Team'),
+            user_id: await userId('scarecrow')
         }
     ]);
 };

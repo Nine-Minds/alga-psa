@@ -1,0 +1,53 @@
+name: Reconcile browser metrics exports
+
+on:
+  workflow_run:
+    workflows: [Production regression tests]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: Production regression workflow run ID to reconcile
+        type: string
+        required: true
+      tested_revision:
+        description: Full tested commit SHA (the tested merge commit for a pull request)
+        type: string
+        required: true
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # A completed PR can contain untrusted code. Reconcile using the
+          # repository's maintained code, never the triggering head or artifact.
+          ref: ${{ github.event.repository.default_branch }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Collect CI identities and existing metric rows
+        run: node scripts/collect-browser-metric-executions.mjs "$RUNNER_TEMP/browser-metric-executions.json"
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          RECONCILE_RUN_ID: ${{ inputs.run_id || github.event.workflow_run.id }}
+          RECONCILE_REVISION_MODE: ${{ github.event_name == 'workflow_run' && 'artifact' || 'operator' }}
+          RECONCILE_TESTED_REVISION: ${{ inputs.tested_revision }}
+          GOOGLE_SA_KEY: ${{ secrets.TEST_METRICS_GOOGLE_SA_KEY }}
+          TEST_METRICS_SHEET_ID: ${{ vars.TEST_METRICS_SHEET_ID }}
+      - name: Reconcile observed browser executions
+        run: node scripts/reconcile-browser-metric-executions.mjs "$RUNNER_TEMP/browser-metric-executions.json" "$RUNNER_TEMP/browser-metric-reconciliation.json"
+      - name: Preserve reconciliation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-metric-reconciliation-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/browser-metric-reconciliation.json
+          if-no-files-found: error
+          retention-days: 14

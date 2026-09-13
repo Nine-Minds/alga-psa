@@ -14,14 +14,14 @@
  *   - time-of-day change that changes the after-hours multiplier,
  * and assert `bucket_usage` deltas on BOTH sides.
  *
- * Opt-in: needs a reachable database (RUN_DB_TESTS=1).
+ * Required integration coverage against the isolated migrated test database.
  */
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { randomUUID } from 'node:crypto';
 
-import { createTestDbConnection, wireLocalTestDbEnv } from '../../../test-utils/dbConfig';
+import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { createClient, createTenant, createUser } from '../../../test-utils/testDataFactory';
 import { tenantDb } from '@alga-psa/db';
 
@@ -112,7 +112,6 @@ vi.mock('@alga-psa/users/actions', async () => ({
   getCurrentUser: vi.fn(async () => mockCurrentUser),
 }));
 
-const ENABLED = process.env.RUN_DB_TESTS === '1';
 
 let db: Knex;
 let tenantId: string;
@@ -120,6 +119,7 @@ let userId: string;
 let saveTimeEntry: any;
 
 interface PoolSeed {
+  serviceId: string;
   bucketId: string;
   contractLineId: string;
 }
@@ -181,9 +181,8 @@ async function grantTimeEntryPermissions(connection: Knex, tenant: string, userI
     .ignore();
 }
 
-describe.skipIf(!ENABLED)('time-entry edit/reassignment resolves weighted draws per record side (real DB)', () => {
+describe('time-entry edit/reassignment resolves weighted draws per record side (real DB)', () => {
   beforeAll(async () => {
-    wireLocalTestDbEnv();
     db = await createTestDbConnection();
     tenantId = await createTenant(db, 'Weighted draw adjustment tenant');
     userId = await createUser(db, tenantId, {
@@ -293,8 +292,7 @@ describe.skipIf(!ENABLED)('time-entry edit/reassignment resolves weighted draws 
         service_id: serviceId,
         burn_multiplier: poolDef.multiplier,
       });
-      pools.set(poolDef.key, { bucketId, contractLineId, serviceId: serviceId as unknown as string });
-      (pools.get(poolDef.key) as any).serviceId = serviceId;
+      pools.set(poolDef.key, { bucketId, contractLineId, serviceId });
     }
 
     const ticketId = randomUUID();

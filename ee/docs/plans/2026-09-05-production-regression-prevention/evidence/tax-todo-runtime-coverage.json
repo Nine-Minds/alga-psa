@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "scope": "Runtime coverage replacing seven TaxService TODOs",
+  "baseRevision": "ca60ea3796",
+  "testFiles": [
+    "server/src/test/unit/taxService.test.ts",
+    "packages/billing/tests/tax/taxService.calculateTax.test.ts",
+    "packages/billing/tests/tax/taxService.thresholdsAndComposite.test.ts"
+  ],
+  "result": {
+    "files": 3,
+    "passed": 52,
+    "failed": 0,
+    "todo": 6,
+    "log": "/tmp/alga-tax-todos-runtime.log",
+    "sha256": "a25e3ab0907f4e07d24602a6c8f3f5febcafc95bdecbcb9e32c0d82ab60a45b5"
+  },
+  "covered": [
+    "Overlapping composite-tax holidays at start, overlapping interior, final end and adjacent taxable dates.",
+    "Client exemptions and reverse charge short-circuit before tax-rate queries.",
+    "Simple-rate policy for negative/zero amounts and upward fractional-cent rounding.",
+    "Progressive brackets at the first boundary, one cent over it and a third bracket.",
+    "Separate taxable and non-taxable portions retain their own taxability."
+  ],
+  "remainingTodos": [
+    "Transaction-date rate selection",
+    "International transaction rate selection",
+    "Multi-item invoices with different rates",
+    "Tax caps",
+    "Currency-specific rate selection",
+    "Subscriptions spanning tax periods"
+  ],
+  "limitations": [
+    "Model and database I/O are substituted; these tests do not verify SQL filtering or invoice/subscription orchestration.",
+    "Mixed portions are supplied separately by the caller; no claim is made about an invoice breakdown.",
+    "Six tax TODOs and environment-dependent secret-store coverage remain unresolved.",
+    "Local focused execution, not full-suite or native CI readiness."
+  ]
+}

@@ -1595,7 +1595,8 @@
     "usedOrders": "Gebruikte volgordenummers: {{orders}}",
     "noUsedOrders": "Nog geen volgordenummers gebruikt",
     "markClosed": "Markeren als afgesloten status",
-    "setDefault": "Instellen als standaardstatus voor nieuwe tickets"
+    "setDefault": "Instellen als standaardstatus voor nieuwe items",
+    "defaultClosedHelp": "Een afgesloten status kan niet de standaard voor nieuwe items zijn."
   },
   "callLink": {
     "teamsCall": "Bellen in Microsoft Teams"
@@ -1603,5 +1604,21 @@
   "users": {
     "soloLicenseLimit": "Het Solo-abonnement ondersteunt één technicus. Waardeer de werkruimte op voordat u nog een gebruiker activeert.",
     "technicianLicenseLimit": "Deze werkruimte kan geen extra technicus activeren. Controleer de activeringsstatus en de beschikbare licentietoewijzing."
+  },
+  "editor": {
+    "attachFiles": "Bestanden bijvoegen",
+    "uploadingFiles": "Bestanden uploaden…",
+    "fileUploadFailed": "Bestand uploaden mislukt."
+  },
+  "emailPreferences": {
+    "loading": "E-mailvoorkeuren laden…",
+    "saving": "E-mailvoorkeuren opslaan…",
+    "slow": "Dit duurt langer dan normaal. Wacht op bevestiging voordat u meer wijzigingen aanbrengt.",
+    "loadError": "Opgeslagen e-mailvoorkeuren konden niet worden geladen. Probeer opnieuw om uw instellingen te bevestigen.",
+    "saveError": "Opslaan kon niet worden bevestigd. Controleer uw opgeslagen voorkeuren en probeer het opnieuw.",
+    "retry": "Opnieuw proberen",
+    "disabledByAdmin": "Uitgeschakeld door beheerder",
+    "mixed": "Gedeeltelijk ingeschakeld",
+    "empty": "Geen categorieën voor e-mailmeldingen beschikbaar."
   }
 }

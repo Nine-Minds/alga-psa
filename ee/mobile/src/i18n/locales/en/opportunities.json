@@ -215,7 +215,20 @@
     "notes": "Notes",
     "duration": "Duration (minutes)",
     "submit": "Log it",
-    "success": "Interaction logged"
+    "success": "Interaction logged",
+    "schedule": {
+      "label": "Add to schedule",
+      "date": "Schedule date",
+      "start": "Start time",
+      "durationHint": "Uses the duration above, or 30 minutes if blank.",
+      "invalidTime": "Choose a valid start time and a positive whole-minute duration.",
+      "assignees": "Schedule for",
+      "removeUser": "Remove {{name}}",
+      "selfHint": "A schedule entry will be added to your AlgaPSA calendar.",
+      "selectedHint": "A schedule entry will be added to the selected users' AlgaPSA calendars.",
+      "usersError": "Could not load users.",
+      "you": "You"
+    }
   },
   "callPrompt": {
     "title": "Log this call?",

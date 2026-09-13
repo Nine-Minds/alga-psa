@@ -1202,6 +1202,12 @@ const inferTimeWaitUntilAuthoringMode = (config: Record<string, unknown> | null)
     return 'fixed';
   }
 
+  // Newly selected Until steps have no expression yet. Keep the date picker
+  // available when the parent reflects that empty config back into the editor.
+  if (!(config.until as Expr | undefined)?.$expr?.trim()) {
+    return 'fixed';
+  }
+
   return parseFixedTimeWaitUntilExpr(config.until as Expr | undefined) ? 'fixed' : 'expression';
 };
 

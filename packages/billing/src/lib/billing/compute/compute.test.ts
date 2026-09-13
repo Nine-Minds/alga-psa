@@ -351,6 +351,7 @@ describe("computeTimeBasedCharges", () => {
 
     expect(result.charges[0].duration).toBe(1.25);
     expect(result.charges[0].total).toBe(Math.round(1.25 * 15000));
+    expect(result.charges[0].workItemSnapshot).toMatchObject({ rateKind: 'uniform', uniformRate: 15000, billedMinutes: 75 });
     expect(result.explanations[0].markers).toContain("rounding_applied");
   });
 
@@ -384,6 +385,7 @@ describe("computeTimeBasedCharges", () => {
       TEN_PERCENT_PORTS,
     );
     expect(byUserType.charges[0].rate).toBe(18000);
+    expect(byUserType.charges[0].workItemSnapshot).toMatchObject({ rateKind: 'uniform', uniformRate: 18000 });
 
     const byCustomRate = await computeTimeBasedCharges(
       timeInputs({
@@ -393,6 +395,7 @@ describe("computeTimeBasedCharges", () => {
       TEN_PERCENT_PORTS,
     );
     expect(byCustomRate.charges[0].rate).toBe(20000);
+    expect(byCustomRate.charges[0].workItemSnapshot).toMatchObject({ rateKind: 'uniform', uniformRate: 20000 });
   });
 
   it("splits hours over the overtime threshold at the overtime rate", async () => {
@@ -409,6 +412,7 @@ describe("computeTimeBasedCharges", () => {
     );
 
     expect(result.charges[0].total).toBe(Math.round(1 * 15000 + 1 * 22500));
+    expect(result.charges[0].workItemSnapshot).toMatchObject({ rateKind: 'mixed', uniformRate: null, netAmount: 37500 });
     expect(result.explanations[0].markers).toContain("overtime");
   });
 
@@ -450,7 +454,9 @@ describe("computeTimeBasedCharges", () => {
 
     const snapshot = result.charges[0].workItemSnapshot;
     expect(snapshot).toMatchObject({
-      version: 1,
+      version: 2,
+      rateKind: 'uniform',
+      uniformRate: 15000,
       workItemType: "ticket",
       workItemId: "ticket-1",
       ticketNumber: "T-20260818-002",
@@ -706,6 +712,25 @@ describe("computeUsageBasedCharges", () => {
 });
 
 describe("computeBucketCharges", () => {
+  it("carries selected period identity and refuses to claim unrelated bucket usage", () => {
+    const input = {
+      billingPeriod: PERIOD,
+      clientContractLine: line({ contract_line_type: "Hourly" }),
+      client: CLIENT,
+      timing: timing({ servicePeriodRecordId: "period-august" }),
+      config: { config_id: "pool", service_id: "service", service_name: "Hours", total_minutes: 600, overage_rate: 15000 },
+      usageRecords: [{ period_start: "2026-08-01", period_end: "2026-08-31", minutes_used: 660 }],
+      contractCurrency: "USD",
+    };
+    expect(computeBucketCharges(input, TEN_PERCENT_PORTS).charges).toEqual([
+      expect.objectContaining({ servicePeriodRecordId: "period-august", total: 15000 }),
+    ]);
+    expect(() => computeBucketCharges({
+      ...input,
+      usageRecords: [{ period_start: "2026-07-01", period_end: "2026-07-31", minutes_used: 660 }],
+    }, TEN_PERCENT_PORTS)).toThrow("does not match the selected recurring service period");
+  });
+
   it("threads one-period rollover through a deterministic state chain", () => {
     const first = computeBucketPeriodState({
       includedQuantity: 600,

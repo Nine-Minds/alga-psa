@@ -77,11 +77,7 @@ describe('Email Settings Webhook Processing Tests', () => {
       console.log(`     📥 Received response with status: ${response.status}`);
       
       // Check if endpoint exists
-      if (response.status === 404) {
-        console.log('     ⚠️ Webhook endpoint not implemented yet');
-        console.log('     ✓ 404 response handled correctly - test skipped until implementation');
-        return; // Skip test until endpoint is implemented
-      }
+      expect(response.status, 'Required email endpoint is unavailable').not.toBe(404);
       
       expect(response.status).toBe(200);
       console.log('     ✓ Webhook accepted successfully');
@@ -128,9 +124,7 @@ describe('Email Settings Webhook Processing Tests', () => {
       
       const response = await context.simulateEmailWebhook('microsoft', webhookPayload);
       
-      if (response.status === 404) {
-        return; // Skip test until endpoint is implemented
-      }
+      expect(response.status, 'Required email endpoint is unavailable').not.toBe(404);
       
       expect(response.status).toBe(400);
     });
@@ -182,10 +176,7 @@ describe('Email Settings Webhook Processing Tests', () => {
         'Authorization': `Bearer ${jwt}`
       });
       
-      if (response.status === 404) {
-        console.log('⚠️ Google webhook endpoint not implemented yet');
-        return;
-      }
+      expect(response.status, 'Required email endpoint is unavailable').not.toBe(404);
       
       expect(response.status).toBe(200);
       
@@ -209,9 +200,7 @@ describe('Email Settings Webhook Processing Tests', () => {
         'Authorization': 'Bearer invalid-jwt-token'
       });
       
-      if (response.status === 404) {
-        return; // Skip test until endpoint is implemented
-      }
+      expect(response.status, 'Required email endpoint is unavailable').not.toBe(404);
       
       expect(response.status).toBe(401);
     });
@@ -227,9 +216,7 @@ describe('Email Settings Webhook Processing Tests', () => {
         missing: 'required fields'
       });
       
-      if (response.status === 404) {
-        return;
-      }
+      expect(response.status, 'Required email endpoint is unavailable').not.toBe(404);
       
       expect(response.status).toBeGreaterThanOrEqual(400);
       expect(response.status).toBeLessThan(500);
@@ -260,9 +247,7 @@ describe('Email Settings Webhook Processing Tests', () => {
         'Client-State': mockClientState
       });
       
-      if (response1.status === 404) {
-        return;
-      }
+      expect(response1.status, 'Required email endpoint is unavailable').not.toBe(404);
       
       const response2 = await context.simulateEmailWebhook('microsoft', webhookPayload, {
         'Client-State': mockClientState

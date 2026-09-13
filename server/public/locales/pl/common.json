@@ -1629,7 +1629,8 @@
     "usedOrders": "Zajęte numery kolejności: {{orders}}",
     "noUsedOrders": "Żaden numer kolejności nie jest jeszcze zajęty",
     "markClosed": "Oznacz jako status zamknięty",
-    "setDefault": "Ustaw jako domyślny status nowych zgłoszeń"
+    "setDefault": "Ustaw jako domyślny status nowych elementów",
+    "defaultClosedHelp": "Status zamknięty nie może być domyślny dla nowych elementów."
   },
   "callLink": {
     "teamsCall": "Zadzwoń w Microsoft Teams"
@@ -1637,5 +1638,21 @@
   "users": {
     "soloLicenseLimit": "Plan Solo obsługuje jednego technika. Podnieś plan obszaru roboczego, zanim aktywujesz kolejnego użytkownika.",
     "technicianLicenseLimit": "W tym obszarze roboczym nie można aktywować kolejnego technika. Sprawdź jego stan aktywacji i dostępny przydział licencji."
+  },
+  "editor": {
+    "attachFiles": "Załącz pliki",
+    "uploadingFiles": "Przesyłanie plików…",
+    "fileUploadFailed": "Nie udało się przesłać pliku."
+  },
+  "emailPreferences": {
+    "loading": "Ładowanie preferencji e-mail…",
+    "saving": "Zapisywanie preferencji e-mail…",
+    "slow": "To trwa dłużej niż zwykle. Poczekaj na potwierdzenie przed wprowadzeniem kolejnych zmian.",
+    "loadError": "Nie udało się wczytać zapisanych preferencji e-mail. Spróbuj ponownie, aby potwierdzić ustawienia.",
+    "saveError": "Nie udało się potwierdzić zapisu. Sprawdź zapisane preferencje i spróbuj ponownie.",
+    "retry": "Spróbuj ponownie",
+    "disabledByAdmin": "Wyłączone przez administratora",
+    "mixed": "Częściowo włączone",
+    "empty": "Brak kategorii powiadomień e-mail."
   }
 }

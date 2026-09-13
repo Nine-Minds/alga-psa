@@ -1,0 +1,21 @@
+{
+  "status": "passed",
+  "counts": {
+    "passed": 180,
+    "failed": 0,
+    "skipped": 0,
+    "todo": 0,
+    "pending": 0
+  },
+  "files": 21,
+  "failures": [],
+  "addedSuites": [
+    "portal-domain-activities.test.ts",
+    "portal-domain-activities.git.test.ts",
+    "portal-domain-nextauth-url.test.ts"
+  ],
+  "limits": [
+    "Native expanded readiness verification pending.",
+    "Rendering and Git helper behavior uses temporary files/injected dependencies; live portal deployment is not verified."
+  ]
+}

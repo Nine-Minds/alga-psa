@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 1,
+  "runId": "34320694357",
+  "runAttempt": 1,
+  "testedMerge": "cec08351189624fb4db8db7ec453e788157fbdad",
+  "invoiceEvidence": {
+    "jobId": "102366429522",
+    "jobConclusion": "failure (other suites failed)",
+    "log": "/tmp/alga-c523-nx-unit.log",
+    "passedFiles": [
+      {
+        "file": "packages/billing/tests/automaticInvoices.groupedParentRows.test.tsx",
+        "passed": 39,
+        "line": 23350
+      },
+      {
+        "file": "packages/billing/tests/automaticInvoices.poOverageDialog.test.tsx",
+        "passed": 10,
+        "line": 24174
+      },
+      {
+        "file": "packages/billing/tests/automaticInvoices.duplicateIdentityDedupe.test.tsx",
+        "passed": 3,
+        "line": 28082
+      }
+    ],
+    "limitation": "Nx log supplies complete passed file summaries, not individually named successful assertions. The39-case grouped file includes both filter regression cases; exact independently exported per-case assertions await server unit artifact."
+  },
+  "calendarTimezone": {
+    "artifactId": "10091813048",
+    "artifactSha256": "7bc6478dba7ca739b79b60661bb03d75a1b0800019b222b1bc7fe2ef9c9f8750",
+    "results": [
+      {
+        "report": "America-Los_Angeles.json",
+        "allCasesPassed": 51,
+        "success": true,
+        "teamsCases": [
+          {
+            "name": "ScheduleCalendar refreshes its events after a Teams meeting is created supplies local all-day grid dates and persists exclusive UTC dates after resize and drop",
+            "status": "passed"
+          },
+          {
+            "name": "ScheduleCalendar refreshes its events after a Teams meeting is created standalone entry: creating a meeting refetches events (not via save) so reopen binds the persisted entry",
+            "status": "passed"
+          },
+          {
+            "name": "ScheduleCalendar refreshes its events after a Teams meeting is created recurring occurrence: the refetch replaces the dead virtual event with the materialized entry and save targets it",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "report": "Europe-Berlin.json",
+        "allCasesPassed": 51,
+        "success": true,
+        "teamsCases": [
+          {
+            "name": "ScheduleCalendar refreshes its events after a Teams meeting is created supplies local all-day grid dates and persists exclusive UTC dates after resize and drop",
+            "status": "passed"
+          },
+          {
+            "name": "ScheduleCalendar refreshes its events after a Teams meeting is created standalone entry: creating a meeting refetches events (not via save) so reopen binds the persisted entry",
+            "status": "passed"
+          },
+          {
+            "name": "ScheduleCalendar refreshes its events after a Teams meeting is created recurring occurrence: the refetch replaces the dead virtual event with the materialized entry and save targets it",
+            "status": "passed"
+          }
+        ]
+      }
+    ]
+  },
+  "limitations": [
+    "Workspace-unit artifact10091827709 contains a different21-file93-case selection and does not establish these invoice cases.",
+    "Unpublished Teams warning additions are not part of this CI evidence.",
+    "Overall candidate readiness is not established."
+  ]
+}

@@ -57,6 +57,27 @@ describe('shouldSkipApiKeyAuth', () => {
     expect(shouldSkipApiKeyAuth('/api/tickets/ticket-123/live-token')).toBe(true);
   });
 
+  it('allows the Level.io webhook route (X-Alga-Webhook-Secret authenticated in-route)', () => {
+    expect(shouldSkipApiKeyAuth('/api/webhooks/levelio')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/webhooks/levelio/')).toBe(true);
+  });
+
+  it('exempts the Level.io route exactly, never a prefixed or deeper sibling', () => {
+    expect(shouldSkipApiKeyAuth('/api/webhooks/levelioevil')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/webhooks/levelio-extra')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/webhooks/levelio.more')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/webhooks/levelio/malicious')).toBe(false);
+  });
+
+  it('keeps sibling RMM + payment webhook routes and unrelated APIs gated', () => {
+    expect(shouldSkipApiKeyAuth('/api/webhooks/ninjaone')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/webhooks/tacticalrmm')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/webhooks/ai-gateway')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/webhooks/stripe/payments')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/webhooks/other-provider')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/instanceinfo')).toBe(false);
+  });
+
   it('still requires an API key for unrelated API routes', () => {
     expect(shouldSkipApiKeyAuth('/api/teams/package/upload')).toBe(false);
     expect(shouldSkipApiKeyAuth('/api/instanceinfo')).toBe(false);

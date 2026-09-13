@@ -7,14 +7,15 @@ describe('module boundary enforcement (eslint rule)', () => {
     const { default: rule } = await import('../../eslint-plugin-custom-rules/no-feature-to-feature-imports.js');
 
     const linter = new Linter();
-    linter.defineRule('custom-rules/no-feature-to-feature-imports', rule);
 
     const messages = linter.verify(
       "import '@alga-psa/billing';\nexport {};\n",
-      {
-        parserOptions: { ecmaVersion: 2020, sourceType: 'module' },
+      [{
+        files: ['**/*.ts'],
+        languageOptions: { ecmaVersion: 2020, sourceType: 'module' },
+        plugins: { 'custom-rules': { rules: { 'no-feature-to-feature-imports': rule } } },
         rules: { 'custom-rules/no-feature-to-feature-imports': 'error' },
-      },
+      }],
       {
         filename: path.join(process.cwd(), 'packages/clients/src/__lintTmp_invalid.ts'),
       }
@@ -27,14 +28,15 @@ describe('module boundary enforcement (eslint rule)', () => {
     const { default: rule } = await import('../../eslint-plugin-custom-rules/no-feature-to-feature-imports.js');
 
     const linter = new Linter();
-    linter.defineRule('custom-rules/no-feature-to-feature-imports', rule);
 
     const messages = linter.verify(
       "import '@alga-psa/types';\nexport {};\n",
-      {
-        parserOptions: { ecmaVersion: 2020, sourceType: 'module' },
+      [{
+        files: ['**/*.ts'],
+        languageOptions: { ecmaVersion: 2020, sourceType: 'module' },
+        plugins: { 'custom-rules': { rules: { 'no-feature-to-feature-imports': rule } } },
         rules: { 'custom-rules/no-feature-to-feature-imports': 'error' },
-      },
+      }],
       {
         filename: path.join(process.cwd(), 'packages/clients/src/__lintTmp_valid.ts'),
       }

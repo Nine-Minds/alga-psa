@@ -1,0 +1,19 @@
+{
+  "scope": "Current runner assignment for newly recorded tax defects",
+  "revision": "ed2a23d2b3",
+  "collectionStatus": "passed",
+  "collectedFiles": 60,
+  "requiredTest": "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+  "assignment": {
+    "workflow": ".github/workflows/integration-tests.yml",
+    "job": "Workspace database tests",
+    "jobId": "workspace-db-tests",
+    "runner": "scripts/run-workspace-db-tests.mjs",
+    "config": "server/vitest.workspace-db.config.ts"
+  },
+  "limitation": "Collection and workflow assignment establish eligibility, not current native execution success.",
+  "artifact": {
+    "path": "/tmp/alga-workspace-db-current-files.json",
+    "sha256": "f92ccf6a112cfa1c96582a8b993a8a2106d328643c02df6dba4cc11cc0662bdf"
+  }
+}

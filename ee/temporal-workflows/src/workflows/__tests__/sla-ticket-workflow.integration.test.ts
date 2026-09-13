@@ -46,9 +46,9 @@ async function setupWorkflowTest(activitiesOverrides: Record<string, any> = {}) 
   const calculateCalls: Array<{ targetMinutes: number; pauseMinutes: number }> = [];
 
   const activities = {
-    calculateNextWakeTime: async ({ targetMinutes, pauseMinutes }: { targetMinutes: number; pauseMinutes: number }) => {
+    calculateNextWakeTime: async ({ currentTime, targetMinutes, pauseMinutes }: { currentTime: string; targetMinutes: number; pauseMinutes: number }) => {
       calculateCalls.push({ targetMinutes, pauseMinutes });
-      return new Date(Date.now() + targetMinutes * 60000).toISOString();
+      return new Date(new Date(currentTime).getTime() + (targetMinutes + pauseMinutes) * 60000).toISOString();
     },
     sendSlaNotification: async (input: {
       tenantId: string;
@@ -86,7 +86,7 @@ async function setupWorkflowTest(activitiesOverrides: Record<string, any> = {}) 
   const worker = await Worker.create({
     connection: env.nativeConnection,
     taskQueue,
-    workflowsPath: path.resolve(__dirname, '../..'),
+    workflowsPath: path.resolve(__dirname, '../sla-ticket-workflow.ts'),
     activities,
   });
 
@@ -117,7 +117,7 @@ describe('slaTicketWorkflow integration', () => {
       const responseThresholds = notifications
         .filter((entry) => entry.phase === 'response')
         .map((entry) => entry.thresholdPercent);
-      expect(responseThresholds).toEqual([50, 75, 90]);
+      expect(responseThresholds).toEqual([50, 75, 90, 100]);
 
       expect(statusUpdates).toEqual([
         {
@@ -175,6 +175,7 @@ describe('slaTicketWorkflow integration', () => {
         expect(notifications).toHaveLength(0);
 
         await handle.signal('resume');
+        await env.sleep(5 * 60 * 1000);
         await notificationPromise;
 
         expect(calculateCalls.some((call) => call.pauseMinutes > 0)).toBe(true);
@@ -226,7 +227,7 @@ describe('slaTicketWorkflow integration', () => {
                 {
                   ...target,
                   response_time_minutes: 4,
-                  resolution_time_minutes: 4,
+                  resolution_time_minutes: 10,
                 },
               ],
               businessHoursSchedule: schedule24x7,
@@ -236,6 +237,8 @@ describe('slaTicketWorkflow integration', () => {
           workflowId: 'sla-ticket-tenant-lifecycle-ticket-lifecycle',
         });
 
+        await expect.poll(async () => (await handle.query<any>('getState')).nextWakeTime).toBeTruthy();
+        await env.sleep(2 * 60 * 1000);
         await responseNotification;
 
         await handle.signal('pause', { reason: 'status_pause' });
@@ -247,9 +250,9 @@ describe('slaTicketWorkflow integration', () => {
         await handle.signal('resume');
         await handle.signal('completeResponse', { met: true });
 
-        const state = await handle.query('getState');
-        expect(state.currentPhase).toBe('resolution');
+        await expect.poll(async () => (await handle.query<any>('getState')).currentPhase).toBe('resolution');
 
+        await env.sleep(3 * 60 * 1000);
         await resolutionNotification;
 
         await handle.signal('completeResolution', { met: true });
@@ -266,8 +269,8 @@ describe('slaTicketWorkflow integration', () => {
     const notifications: Array<{ thresholdPercent: number }> = [];
 
     const activities = {
-      calculateNextWakeTime: async ({ targetMinutes }: { targetMinutes: number }) => {
-        return new Date(Date.now() + targetMinutes * 60000).toISOString();
+      calculateNextWakeTime: async ({ currentTime, targetMinutes, pauseMinutes }: { currentTime: string; targetMinutes: number; pauseMinutes: number }) => {
+        return new Date(new Date(currentTime).getTime() + (targetMinutes + pauseMinutes) * 60000).toISOString();
       },
       sendSlaNotification: async (input: { thresholdPercent: number }) => {
         notifications.push(input);
@@ -283,9 +286,10 @@ describe('slaTicketWorkflow integration', () => {
     };
 
     const worker1 = await Worker.create({
+      maxCachedWorkflows: 0,
       connection: env.nativeConnection,
       taskQueue,
-      workflowsPath: path.resolve(__dirname, '../..'),
+      workflowsPath: path.resolve(__dirname, '../sla-ticket-workflow.ts'),
       activities,
     });
 
@@ -304,22 +308,23 @@ describe('slaTicketWorkflow integration', () => {
 
     try {
       await worker1.runUntil(async () => {
-        const state = await handle.query('getState');
-        expect(state.nextWakeTime).toBeTruthy();
+        await expect.poll(async () => (await handle.query<any>('getState')).nextWakeTime).toBeTruthy();
       });
 
       const worker2 = await Worker.create({
+        maxCachedWorkflows: 0,
         connection: env.nativeConnection,
         taskQueue,
-        workflowsPath: path.resolve(__dirname, '../..'),
+        workflowsPath: path.resolve(__dirname, '../sla-ticket-workflow.ts'),
         activities,
       });
 
       await worker2.runUntil(async () => {
+        await env.sleep(11 * 60 * 1000);
         await handle.result();
       });
 
-      expect(notifications.length).toBeGreaterThan(0);
+      expect(notifications.map(({ thresholdPercent }) => thresholdPercent)).toEqual([50, 75, 90, 100]);
     } finally {
       await env.teardown();
     }

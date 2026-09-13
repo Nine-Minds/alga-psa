@@ -1,3 +1,4 @@
+import { createWorkerStripeClient } from '../config/stripeClient.js';
 import { ApplicationFailure, Context } from '@temporalio/activity';
 import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
@@ -101,10 +102,7 @@ function defaultStripeClient(env: NodeJS.ProcessEnv): Stripe {
   if (stripeClient) return stripeClient;
 
   const secretKey = requiredEnv(env, 'STRIPE_SECRET_KEY');
-  stripeClient = new Stripe(secretKey, {
-    apiVersion: '2024-12-18.acacia' as any,
-    typescript: true,
-  });
+  stripeClient = createWorkerStripeClient(secretKey, env);
   return stripeClient;
 }
 

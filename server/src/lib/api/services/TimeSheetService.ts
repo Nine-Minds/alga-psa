@@ -1257,6 +1257,14 @@ export class TimeSheetService extends BaseService<any> {
           updated_at: new Date()
         };
   
+
+        const { validateAllDayInterval } = await import('@alga-psa/shared/models/scheduleEntry');
+        validateAllDayInterval({
+          is_all_day: data.is_all_day ?? existing.is_all_day,
+          scheduled_start: data.scheduled_start === undefined ? existing.scheduled_start : new Date(data.scheduled_start),
+          scheduled_end: data.scheduled_end === undefined ? existing.scheduled_end : new Date(data.scheduled_end),
+        });
+
         await tenantDb(trx, context.tenant).table('schedule_entries')
           .where({ entry_id: id })
           .update(updateData);

@@ -1,0 +1,30 @@
+{
+  "scope": "Host verifier for exact-source published native readiness",
+  "coverage": [
+    "Fixed production-regression workflow and named readiness job",
+    "Full source SHA, repository and push event checked; successful PR-only checks insufficient",
+    "Latest matching run wins; older success cannot hide newer failure/pending run",
+    "Jobs read from exact run attempt, final run reread rejects concurrent rerun",
+    "Missing/duplicate/wrong-commit/skipped job and HTTP/malformed API failure reject"
+  ],
+  "testLog": {
+    "path": "/tmp/alga-published-readiness.log",
+    "sha256": "2ea72e5fa5bea3ef24a6190033ee6316f8eb1701557847082b9e930a5eb1fb21"
+  },
+  "readOnlyNativeProbe": {
+    "schemaVersion": 1,
+    "scope": "published-production-readiness",
+    "repository": "Nine-Minds/alga-psa",
+    "revision": "7b170294a755dfebba34cb8bbfc1069b6d8ba8bc",
+    "status": "failed",
+    "failures": [
+      "GitHub readiness lookup failed: HTTP 404"
+    ]
+  },
+  "limitations": [
+    "Native probe received HTTP404; no qualifying readiness was verified and this does not distinguish absent workflow from access restriction",
+    "Argo integration not applied; exact resolved commit must be guarded on both new-build and existing-image paths before any promotion",
+    "Does not replace exact-image smoke or release manifest/runtime checks",
+    "No Docker builds or external repository mutations"
+  ]
+}

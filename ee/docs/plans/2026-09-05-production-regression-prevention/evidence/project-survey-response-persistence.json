@@ -1,0 +1,38 @@
+{
+  "scope": "Ticket and project survey response persistence and legacy event contracts",
+  "baseRevision": "3de7717839e63e5193cac54696878411f0107ab8",
+  "workingTreeDirty": true,
+  "validation": {
+    "databaseBefore": {
+      "path": "/tmp/alga-survey-response-db-before.log",
+      "sha256": "c85112f99e5bf1e4b68fa912f55f0aed912236b4722186ccf5497bb2d779fb9f",
+      "passed": 4,
+      "failed": 2
+    },
+    "databaseAfter": {
+      "path": "/tmp/alga-survey-response-db.log",
+      "sha256": "55f8d8d7740f72d9bb7398a365ec94d0db92a5abbfbe33c1c4fdc47eabfe90b9",
+      "passed": 6,
+      "failed": 0
+    },
+    "eventContracts": {
+      "path": "/tmp/alga-survey-subject-schema.log",
+      "sha256": "15657ea6b8054bbbb4d5ad3436d058868d2a201a798529853be3c813f5cb1488",
+      "passed": 12,
+      "failed": 0
+    }
+  },
+  "behavior": [
+    "Real token hashing and lookup, tenant-scoped SQL, locked invitation update and response insert execute against PostgreSQL.",
+    "Project responses persist project_id with null ticket_id; legacy and workflow events preserve project identity.",
+    "Ticket responses remain compatible; duplicate submissions and out-of-range ratings do not create responses.",
+    "Tenant joins suppress foreign-owned contact/client metadata.",
+    "Legacy event schemas require exactly one subject and matching negative-response number."
+  ],
+  "limits": [
+    "Tests use transaction-owned schemas cloned from the migrated disposable database. The project migration is applied when absent; this does not prove the full migration chain.",
+    "Only connection/context, localization and event publication boundaries are substituted; no real event delivery is claimed.",
+    "Invitation dispatch/delivery and analytics/UI remain incomplete; the project dispatch skip remains.",
+    "This is local evidence, not native candidate CI success."
+  ]
+}

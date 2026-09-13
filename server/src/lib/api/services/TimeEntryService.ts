@@ -280,6 +280,7 @@ export class TimeEntryService extends BaseService<any> {
     query
       .select(
         `${this.tableName}.*`,
+        this.workDateProjection(knex),
         knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as user_name`),
         'service_catalog.service_name',
         knex.raw(`ROUND(${this.tableName}.billable_duration / 60.0, 2) as duration_hours`),
@@ -342,6 +343,7 @@ export class TimeEntryService extends BaseService<any> {
       .where(`${this.tableName}.${this.primaryKey}`, id)
       .select(
         `${this.tableName}.*`,
+        this.workDateProjection(knex),
         knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as user_name`),
         'service_catalog.service_name',
         knex.raw(`ROUND(${this.tableName}.billable_duration / 60.0, 2) as duration_hours`),
@@ -836,6 +838,7 @@ export class TimeEntryService extends BaseService<any> {
     query
       .select(
         `${this.tableName}.*`,
+        this.workDateProjection(knex),
         knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as user_name`),
         'service_catalog.service_name',
         knex.raw(`CASE WHEN tickets.ticket_id IS NOT NULL THEN tickets.title ELSE project_tasks.task_name END as work_item_title`),
@@ -1031,6 +1034,7 @@ export class TimeEntryService extends BaseService<any> {
     query
       .select(
         `${this.tableName}.*`,
+        this.workDateProjection(knex),
         knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as user_name`),
         'service_catalog.service_name',
         knex.raw(`CASE WHEN ${this.tableName}.billable_duration > 0 THEN true ELSE false END as is_billable`)
@@ -1121,6 +1125,7 @@ export class TimeEntryService extends BaseService<any> {
     query
       .select(
         `${this.tableName}.*`,
+        this.workDateProjection(knex),
         knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as user_name`),
         'service_catalog.service_name'
       )

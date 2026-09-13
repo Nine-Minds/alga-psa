@@ -41,6 +41,11 @@ const {
   getUserAvatarUrlsBatchAction: vi.fn(),
 }));
 
+const releaseFlag = vi.hoisted(() => ({ enabled: true }));
+vi.mock('@alga-psa/ui/hooks/useFeatureFlag', () => ({
+  useFeatureFlag: () => ({ enabled: releaseFlag.enabled, loading: false, error: null }),
+}));
+
 vi.mock('@alga-psa/scheduling/actions', () => ({
   approveAppointmentRequest,
   declineAppointmentRequest,
@@ -270,6 +275,7 @@ const notesField = () => document.getElementById('notes') as HTMLTextAreaElement
 
 describe('EntryPopup Teams meeting creation refreshes the calendar', () => {
   beforeEach(() => {
+    releaseFlag.enabled = true;
     serverEvents = [];
     serverMeetings = {};
     savedEntries = [];
@@ -285,6 +291,18 @@ describe('EntryPopup Teams meeting creation refreshes the calendar', () => {
 
   afterEach(() => {
     vi.clearAllMocks();
+  });
+
+  it.each([false, true])('flag off hides creation but keeps existing meeting access (%s)', async existing => {
+    releaseFlag.enabled = false;
+    serverEvents = [baseEntry({ entry_id: 'entry-standalone' })];
+    if (existing) serverMeetings['entry-standalone'] = { meeting_id: 'meeting-1', join_url: JOIN_URL };
+    render(<CalendarHarness />);
+    openEntry('entry-standalone');
+    await waitFor(() => expect(getScheduleEntryTeamsMeeting).toHaveBeenCalled());
+    if (existing) await screen.findByRole('button', { name: 'Join Teams Meeting' });
+    expect(screen.queryByRole('button', { name: 'Create Teams meeting' })).toBeNull();
+    expect(scheduleTeamsMeeting).not.toHaveBeenCalled();
   });
 
   it('standalone entry: reopening without a reload shows the persisted join link and Save preserves it', async () => {

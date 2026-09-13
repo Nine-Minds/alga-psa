@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "status": "passed",
+  "testCount": 1,
+  "checks": [
+    "Both upgraded admins save ticket title through UI",
+    "Database title equals edited title",
+    "Reload displays saved title",
+    "Original title restored through UI",
+    "Other tenant ticket URL reports not found and reveals no title",
+    "Other tenant client URL returns visible 404",
+    "Replay real save action against other tenant ticket ID in both directions; rejection response and unchanged entire target row"
+  ],
+  "appRevision": "c5938cdad5",
+  "migrationRevision": "8bc3d1a6142d691401abae0245b6367a83d3a23f",
+  "logSha256": "d9939070d626835c10ba07aaa22a682e27d59236fa823839da6fb68dfc4126ad",
+  "limitations": [
+    "Not current-source CI evidence",
+    "Usage and invoice paths pending"
+  ],
+  "initialFailure": "Test omitted explicit Save Changes after title entry; corrected UI flow"
+}

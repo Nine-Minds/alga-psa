@@ -23,6 +23,20 @@ import type {
 import { v4 as uuidv4, validate as isUuid } from 'uuid';
 import { generateOccurrences } from '../utils/recurrenceUtils';
 
+/** All-day dates use UTC-midnight boundaries and an exclusive end date. */
+export function validateAllDayInterval(entry: Pick<IScheduleEntry, 'is_all_day' | 'scheduled_start' | 'scheduled_end'>): void {
+  if (!entry.is_all_day) return;
+  if (entry.scheduled_start == null || entry.scheduled_end == null) {
+    throw new Error('All-day schedule entries require both date boundaries');
+  }
+  const start = new Date(entry.scheduled_start).getTime();
+  const end = new Date(entry.scheduled_end).getTime();
+  const dayMs = 24 * 60 * 60 * 1000;
+  if (!Number.isFinite(start) || !Number.isFinite(end) || start % dayMs !== 0 || end % dayMs !== 0 || end <= start) {
+    throw new Error('All-day schedule entries require UTC-midnight boundaries and an exclusive end after the start');
+  }
+}
+
 function tenantScopedTable(
   knexOrTrx: Knex | Knex.Transaction,
   table: string,
@@ -218,7 +232,8 @@ const ScheduleEntry = {
           if (!pattern || Object.keys(pattern).length === 0) continue;
 
           pattern.startDate = new Date(pattern.startDate);
-          pattern.startDate.setHours(0, 0, 0, 0);
+          if (entry.is_all_day) pattern.startDate.setUTCHours(0, 0, 0, 0);
+          else pattern.startDate.setHours(0, 0, 0, 0);
 
           if (pattern.endDate) {
             pattern.endDate = new Date(pattern.endDate);
@@ -428,6 +443,7 @@ const ScheduleEntry = {
         Object.keys(entry.recurrence_pattern).length > 0
       ),
       is_private: entry.is_private || false,
+      is_all_day: entry.is_all_day ?? false,
     };
 
     // Create main entry
@@ -480,6 +496,22 @@ const ScheduleEntry = {
       return undefined;
     }
 
+    const isFutureSplit = updateType === 'future' && originalEntry.recurrence_pattern && virtualTimestamp;
+    const futureStart = entry.scheduled_start !== undefined ? entry.scheduled_start : virtualTimestamp;
+    const futureEnd = entry.scheduled_end !== undefined ? entry.scheduled_end :
+      (isFutureSplit && futureStart != null
+        ? new Date(new Date(futureStart).getTime() +
+          new Date(originalEntry.scheduled_end).getTime() - new Date(originalEntry.scheduled_start).getTime())
+        : originalEntry.scheduled_end);
+
+    validateAllDayInterval({
+      is_all_day: entry.is_all_day ?? originalEntry.is_all_day,
+      scheduled_start: entry.scheduled_start !== undefined ? entry.scheduled_start :
+        (isFutureSplit ? virtualTimestamp : originalEntry.scheduled_start),
+      scheduled_end: isFutureSplit ? futureEnd :
+        (entry.scheduled_end !== undefined ? entry.scheduled_end : originalEntry.scheduled_end),
+    });
+
     // Handle recurring entries with scope
     if (originalEntry.recurrence_pattern && updateType && !(updateType === 'all' && entry.recurrence_pattern === null)) {
       const originalPattern = ScheduleEntry.parseRecurrencePattern(originalEntry.recurrence_pattern);
@@ -509,6 +541,7 @@ const ScheduleEntry = {
               original_entry_id: null,
               recurrence_pattern: null,
               is_private: entry.is_private !== undefined ? entry.is_private : originalEntry.is_private,
+              is_all_day: entry.is_all_day ?? originalEntry.is_all_day,
             });
 
             // Copy assignments from master to standalone entry
@@ -552,6 +585,7 @@ const ScheduleEntry = {
               is_recurring: false,
               original_entry_id: null,
               is_private: entry.is_private !== undefined ? entry.is_private : originalEntry.is_private,
+              is_all_day: entry.is_all_day ?? originalEntry.is_all_day,
               assigned_user_ids: entry.assigned_user_ids || assignedUserIds[masterEntryId] || [],
             };
           }
@@ -566,8 +600,13 @@ const ScheduleEntry = {
 
             // Truncate original master to end before the current instance
             const originalEndDate = new Date(virtualTimestamp);
-            originalEndDate.setDate(originalEndDate.getDate() - 1);
-            originalEndDate.setHours(23, 59, 59, 999);
+            if (originalEntry.is_all_day) {
+              originalEndDate.setUTCDate(originalEndDate.getUTCDate() - 1);
+              originalEndDate.setUTCHours(23, 59, 59, 999);
+            } else {
+              originalEndDate.setDate(originalEndDate.getDate() - 1);
+              originalEndDate.setHours(23, 59, 59, 999);
+            }
 
             const futureOriginalPattern = {
               ...originalPattern,
@@ -621,6 +660,7 @@ const ScheduleEntry = {
               is_recurring: !!newPattern,
               original_entry_id: null,
               is_private: entry.is_private !== undefined ? entry.is_private : originalEntry.is_private,
+              is_all_day: entry.is_all_day ?? originalEntry.is_all_day,
             };
 
             await tenantScopedTable(knexOrTrx, 'schedule_entries', tenant).insert(newMasterEntry);
@@ -713,6 +753,7 @@ const ScheduleEntry = {
     if (entry.work_item_id !== undefined) updateData.work_item_id = entry.work_item_id;
     if (entry.work_item_type !== undefined) updateData.work_item_type = entry.work_item_type;
     if (entry.is_private !== undefined) updateData.is_private = entry.is_private;
+    if (entry.is_all_day !== undefined) updateData.is_all_day = entry.is_all_day;
 
     if (entry.recurrence_pattern !== undefined && !isRemovingRecurrence) {
       updateData.recurrence_pattern =
@@ -855,6 +896,7 @@ const ScheduleEntry = {
                   recurrence_pattern: JSON.stringify(newPattern),
                   is_recurring: true,
                   is_private: originalEntry.is_private,
+                  is_all_day: originalEntry.is_all_day,
                 });
 
                 // Copy assignees to new master
@@ -888,8 +930,13 @@ const ScheduleEntry = {
             if (virtualTimestamp) {
               // Truncate series to end before this instance
               const endDate = new Date(virtualTimestamp);
-              endDate.setDate(endDate.getDate() - 1);
-              endDate.setHours(23, 59, 59, 999);
+              if (originalEntry.is_all_day) {
+                endDate.setUTCDate(endDate.getUTCDate() - 1);
+                endDate.setUTCHours(23, 59, 59, 999);
+              } else {
+                endDate.setDate(endDate.getDate() - 1);
+                endDate.setHours(23, 59, 59, 999);
+              }
 
               const updatedPattern = {
                 ...originalPattern,

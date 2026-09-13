@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   evaluateCalendarMonthEndEarlyCloseEligibility,
+  isCalendarMonthEndEarlyCloseEligible,
 } from '@alga-psa/shared/billingClients/calendarMonthEndClosePolicy';
 
 const JUNE_2026 = {
@@ -223,9 +224,41 @@ describe('evaluateCalendarMonthEndEarlyCloseEligibility', () => {
     expect(utc.eligible).toBe(true);
   });
 
-  it('falls back to UTC when no instant is provided and no asOfDate is set', () => {
+  it('refuses an early close when neither an instant nor a calendar date is provided', () => {
     const result = evaluateCalendarMonthEndEarlyCloseEligibility({ ...JUNE_2026 });
     expect(result.eligible).toBe(false);
     expect(result.reason).toBe('not_final_calendar_day');
+  });
+
+  it.each([
+    ['2026-08-01', '2026-07-31'],
+    ['2026-07-02', '2026-07-01'],
+  ])('rejects a first-of-month period ending %s that is not exactly one calendar month', (end, finalDay) => {
+    expect(evaluateCalendarMonthEndEarlyCloseEligibility({ ...JUNE_2026,
+      servicePeriodEnd: end, invoiceWindowStart: end, asOfDate: finalDay,
+    })).toEqual({ eligible: false, reason: 'not_calendar_month_period', finalCalendarDay: finalDay });
+  });
+
+  it('accepts legacy ISO service boundaries using their calendar date', () => {
+    expect(evaluateCalendarMonthEndEarlyCloseEligibility({ ...JUNE_2026,
+      servicePeriodStart: '2026-06-01T04:00:00.000Z', servicePeriodEnd: '2026-07-01T04:00:00.000Z',
+      invoiceWindowStart: '2026-07-01T04:00:00.000Z', asOfDate: '2026-06-30',
+    })).toEqual({ eligible: true, reason: 'eligible', finalCalendarDay: '2026-06-30' });
+  });
+
+  it.each([undefined, 'not/a/timezone'])('uses UTC for an absent or invalid billing timezone (%s)', timeZone => {
+    expect(evaluateCalendarMonthEndEarlyCloseEligibility({ ...JUNE_2026,
+      asOf: new Date('2026-06-30T23:30:00.000Z'), timeZone,
+    })).toEqual({ eligible: true, reason: 'eligible', finalCalendarDay: '2026-06-30' });
+  });
+
+  it.each(['not-an-instant', new Date(NaN)])('refuses an invalid current instant (%s)', asOf => {
+    expect(evaluateCalendarMonthEndEarlyCloseEligibility({ ...JUNE_2026, asOf, timeZone: 'UTC' }))
+      .toEqual({ eligible: false, reason: 'not_final_calendar_day', finalCalendarDay: '2026-06-30' });
+  });
+
+  it('exposes the same eligibility boundary to boolean-only callers', () => {
+    expect(isCalendarMonthEndEarlyCloseEligible({ ...JUNE_2026, asOfDate: '2026-06-30' })).toBe(true);
+    expect(isCalendarMonthEndEarlyCloseEligible({ ...JUNE_2026, asOfDate: '2026-07-01' })).toBe(false);
   });
 });

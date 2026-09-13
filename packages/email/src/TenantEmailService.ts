@@ -108,6 +108,12 @@ export class TenantEmailService extends BaseEmailService {
     }
   }
 
+  public async getAttachmentCapabilities() {
+    const knex = await getConnection(this.tenantId);
+    const snapshot = await this.refreshProviderState(knex);
+    return snapshot.emailProvider?.capabilities ?? { supportsAttachments: false, maxAttachmentSize: 0, blockedAttachmentExtensions: [] as string[] };
+  }
+
   protected getServiceName(): string {
     return `TenantEmailService[${this.tenantId}]`;
   }
@@ -138,7 +144,8 @@ export class TenantEmailService extends BaseEmailService {
       });
       return {
         success: false,
-        error: 'Tenant is suspended; outbound email is disabled'
+        error: 'Tenant is suspended; outbound email is disabled',
+        metadata: { definitelyNotSent: true, retryable: false, errorCode: 'TENANT_SUSPENDED' }
       };
     }
 
@@ -149,6 +156,12 @@ export class TenantEmailService extends BaseEmailService {
         return { success: false, error: `Rate limit exceeded: ${rateLimitResult.reason}`,
           metadata: { retryable: true, errorCode: 'rate_limited', retryAfterMs: rateLimitResult.retryAfterMs } };
       }
+      // Event retries must reconstruct comment attachments and recheck visibility.
+      if (params.revalidateCommentOnRetry) return {
+        success: false, error: 'Comment notification rate limited',
+        metadata: { retryable: true, errorCode: 'COMMENT_RATE_LIMITED', definitelyNotSent: true, retryAfterMs: rateLimitResult.retryAfterMs, rateLimitReason: rateLimitResult.reason },
+      };
+
       const retryCount = params._retryCount ?? 0;
 
       // Check if we've exceeded max retries

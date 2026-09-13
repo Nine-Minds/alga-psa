@@ -48,6 +48,7 @@ function createTrxHarness(options?: {
   const threadInserts: any[] = [];
 
   const trx: any = vi.fn((table: string) => {
+    if (table === 'ticket_comment_attachments') return { where: () => ({ orderBy: () => ({ forUpdate: async () => [] }) }) };
     if (table === 'tickets') {
       return { where: ticketsWhere };
     }
@@ -55,7 +56,7 @@ function createTrxHarness(options?: {
       return { where: contactsWhere };
     }
     if (table === 'comments') {
-      return { insert: commentsInsert };
+      return { insert: commentsInsert, where: () => ({ forUpdate: () => ({ first: async () => insertedComments.at(-1) }) }) };
     }
     // Comment threading: root comments insert a thread row; replies bump
     // reply_count via where().update().

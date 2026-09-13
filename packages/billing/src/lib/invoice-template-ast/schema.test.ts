@@ -587,4 +587,100 @@ describe('templateAstSchema', () => {
       expect(result.success).toBe(false);
     });
   });
+
+  describe('table column stacked lines', () => {
+    const columnWithLines = (overrides: Record<string, unknown> = {}) => ({
+      id: 'description',
+      header: 'Description',
+      value: { type: 'path', path: 'description' },
+      lines: [
+        { id: 'item-name', value: { type: 'path', path: 'service_name' }, style: { inline: { fontWeight: 600 } } },
+        { id: 'catalog-description', value: { type: 'path', path: 'catalog_description' } },
+      ],
+      ...overrides,
+    });
+
+    const astWithColumn = (column: unknown, nodeType = 'dynamic-table') => ({
+      kind: 'invoice-template-ast',
+      version: TEMPLATE_AST_VERSION,
+      bindings: {
+        values: {},
+        collections: { lineItems: { id: 'lineItems', kind: 'collection', path: 'items' } },
+      },
+      layout: {
+        id: 'root',
+        type: 'document',
+        children: [
+          nodeType === 'dynamic-table'
+            ? {
+                id: 'line-items',
+                type: 'dynamic-table',
+                repeat: { sourceBinding: { bindingId: 'lineItems' }, itemBinding: 'item' },
+                columns: [column],
+              }
+            : {
+                id: 'line-items',
+                type: 'table',
+                sourceBinding: { bindingId: 'lineItems' },
+                rowBinding: 'row',
+                columns: [column],
+              },
+        ],
+      },
+    });
+
+    it('accepts stacked lines on a dynamic-table column', () => {
+      const result = validateTemplateAst(astWithColumn(columnWithLines()));
+      expect(result.success).toBe(true);
+    });
+
+    it('accepts stacked lines on a plain table column', () => {
+      const result = validateTemplateAst(astWithColumn(columnWithLines(), 'table'));
+      expect(result.success).toBe(true);
+    });
+
+    it('keeps columns without lines valid (additive change)', () => {
+      const result = validateTemplateAst(
+        astWithColumn({ id: 'description', header: 'Description', value: { type: 'path', path: 'description' } })
+      );
+      expect(result.success).toBe(true);
+    });
+
+    it('accepts lines whose value is a template expression', () => {
+      const result = validateTemplateAst(
+        astWithColumn(
+          columnWithLines({
+            lines: [
+              {
+                id: 'stacked',
+                value: {
+                  type: 'template',
+                  template: '{{name}}\n{{description}}',
+                  args: {
+                    name: { type: 'path', path: 'service_name' },
+                    description: { type: 'path', path: 'description' },
+                  },
+                },
+              },
+            ],
+          })
+        )
+      );
+      expect(result.success).toBe(true);
+    });
+
+    it('rejects a line entry that lacks a value', () => {
+      const result = validateTemplateAst(astWithColumn(columnWithLines({ lines: [{ id: 'broken' }] })));
+      expect(result.success).toBe(false);
+      if (result.success) return;
+      expect(result.errors.some((error) => error.path.includes('columns.0.lines.0'))).toBe(true);
+    });
+
+    it('rejects unknown members inside a line entry', () => {
+      const result = validateTemplateAst(
+        astWithColumn(columnWithLines({ lines: [{ id: 'item-name', value: { type: 'path', path: 'x' }, bogus: 1 }] }))
+      );
+      expect(result.success).toBe(false);
+    });
+  });
 });

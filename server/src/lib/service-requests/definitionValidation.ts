@@ -20,9 +20,8 @@ export interface ServiceRequestPublishValidationResult {
 
 export interface ServiceRequestPublishValidationOptions {
   /**
-   * Whether the `service-request-store-only` feature flag allows publishing a
-   * store-only definition. Callers evaluate the flag (this layer never does);
-   * omitting it leaves publishing ungated.
+   * Optional caller-supplied adoption policy. Omission keeps publication
+   * unrestricted; release rollout only filters the editor options.
    */
   storeOnlyAuthoringEnabled?: boolean;
 }

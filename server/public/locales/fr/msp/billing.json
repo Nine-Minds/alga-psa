@@ -141,6 +141,8 @@
   },
   "usage": {
     "bucketHoursOverview": "Aperçu du forfait d'heures",
+    "bucketLoadError": "Impossible de charger les soldes des forfaits d’heures. Réessayez pour afficher les soldes actuels.",
+    "retryBucketBalances": "Recharger les soldes des forfaits",
     "usageRecords": "Enregistrements d'utilisation",
     "actions": {
       "addUsage": "Ajouter une utilisation",

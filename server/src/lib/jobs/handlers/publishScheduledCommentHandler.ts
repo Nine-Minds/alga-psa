@@ -10,10 +10,13 @@ export async function publishScheduledCommentHandler(data: PublishScheduledComme
 }
 
 /** Re-arms persisted future schedules and immediately catches up overdue rows. */
-export async function reconcileScheduledCommentPublications(): Promise<void> {
+export async function reconcileScheduledCommentPublications(rearmFutureSchedules = true, tenantId?: string): Promise<void> {
   const root = await getConnection(null);
-  const rows = await root('comments').where({ publish_state: 'scheduled' })
-    .select('tenant', 'comment_id', 'ticket_id', 'scheduled_publish_at');
+  const scope = (query: any) => { if (tenantId) query.where('tenant', tenantId); };
+  const rows = await root('comments').modify(scope).where({ publish_state: 'scheduled' }).whereNull('deleted_at')
+    .select('tenant', 'comment_id', 'ticket_id', 'scheduled_publish_at', 'schedule_job_id');
+  const draftTenants = await root('ticket_comment_attachments').modify(scope).distinct('tenant').whereNull('comment_id').whereNull('cleanup_completed_at').where('expires_at', '<=', new Date()).limit(100);
+  for (const row of draftTenants) await cleanupCommentAttachmentDrafts(root, row.tenant);
   const runner = await getJobRunner();
   for (const row of rows) {
     try {

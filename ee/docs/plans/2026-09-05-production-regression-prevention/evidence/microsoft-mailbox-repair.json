@@ -1,0 +1,169 @@
+{
+  "schemaVersion": 1,
+  "kind": "microsoft-mailbox-behavioral-regression",
+  "baseRevision": "387191b9fb",
+  "status": "focused-tests-and-diagnostic-browser-passed-native-pending",
+  "repairs": [
+    {
+      "component": "Email callback URL",
+      "before": "Application setup used the browser localhost origin while the email worker used APPLICATION_URL. Graph rejected subscription validation.",
+      "after": "Both application helpers honor APPLICATION_URL after NGROK_URL, matching the worker. The isolated HTTPS proxy forwards the exact mailbox callback route."
+    },
+    {
+      "component": "Managed outbound email settings",
+      "before": "Selecting Microsoft enabled dependent controls before the returned mailbox configuration arrived; sender saves failed mailboxRequired.",
+      "after": "Provider changes and dependent outbound saves are serialized through disabled controls, with recovery after failure."
+    },
+    {
+      "component": "Graph emulator mailbox folders",
+      "before": "The real email worker retried GET /me/mailFolders/inbox with 404; messages lacked parentFolderId.",
+      "after": "Inbox name/opaque ID lookups, parent metadata, unknown-folder errors and MIME download execute through the real adapter."
+    },
+    {
+      "component": "Authenticated mail fixture",
+      "before": "The draft expected contact attribution for MIME without authentication results. The application correctly withheld contact identity.",
+      "after": "Explicit optional authentication results are preserved in downloaded MIME. Default mail remains unverified; control input rejects extra header lines."
+    },
+    {
+      "component": "Graph delegated token scopes",
+      "before": "Refresh replaced granted send permission with read-only defaults; initial resource-qualified scopes also leaked into scp claims and failed the application consent check.",
+      "after": "Graph permission names are normalized in issued access tokens and the granted scope is retained through refresh. Application consent checks remain unchanged."
+    },
+    {
+      "component": "Graph MIME send capture",
+      "before": "sendMail returned 202 but discarded text/plain base64 MIME bodies, leaving an empty captured payload.",
+      "after": "Both sendMail routes parse text/plain MIME; the actual adapter smoke test verifies exact captured bytes and the browser harness parses recipient and body with mailparser."
+    }
+  ],
+  "validation": {
+    "managedSettingsTests": 17,
+    "emailActionAndUrlTests": 9,
+    "httpsProxyTests": 6,
+    "msgraph": {
+      "filesPassed": 4,
+      "testsPassed": 53,
+      "skipped": 0,
+      "typecheck": "passed",
+      "build": "passed"
+    },
+    "existingTeamsProductionGuardTests": 8,
+    "targetedTypeScript": "passed",
+    "diagnosticBrowser": {
+      "edition": "enterprise",
+      "testsPassed": 1,
+      "durationSeconds": 48.3,
+      "applicationRevision": "9b12c5fa638a6757b990b3894d8f8c1682cddb19",
+      "scope": "OAuth, webhook ticket/contact creation, UI reply, expired token refresh, decoded MIME recipient/body, callback replay and reopened UI",
+      "acceptance": false
+    }
+  },
+  "limits": [
+    "F034 remains false; the Microsoft journeys require execution on newly built CE/EE candidates containing the application repairs.",
+    "The passing diagnostic browser used published 9b12c5 plus current emulator, NGROK_URL workaround and a temporary response wait. The checked-in journey has no response wait; remove the local NGROK_URL workaround when installing the new application candidate.",
+    "Only one authorized mailbox and Inbox are modeled. Real delivery, Exchange Send As permission and provider parity are not established.",
+    "Calendar browser coverage and bundled handler identity stability remain to be verified in the actual production build."
+  ],
+  "logs": [
+    {
+      "path": "/tmp/alga-managed-mail-switch-before.log",
+      "sha256": "244c10f1e102e8f24f98339ca18d134155fb402077fa6d9be06c306ba31895aa"
+    },
+    {
+      "path": "/tmp/alga-managed-mail-switch-after.log",
+      "sha256": "b86ee78b30cafc5087f0ebfc8470c1fc8dc2137a024ca53c5b65b350149ea41e"
+    },
+    {
+      "path": "/tmp/alga-mailbox-url-before.log",
+      "sha256": "83b77f7eb0b811a89977d922463bc9e24ada9aeb4e5c624f5c0359ed3ed0765d"
+    },
+    {
+      "path": "/tmp/alga-microsoft-mail-actions.log",
+      "sha256": "b6609bdc91b1d9e71a02f99fa90e137dd104dbb4193098d932e087c32e0029e8"
+    },
+    {
+      "path": "/tmp/alga-microsoft-callback-proxy.log",
+      "sha256": "ba610351369a06914fcd40648fc18793ac0115b8f6feab4f7466baeb7707a14a"
+    },
+    {
+      "path": "/tmp/alga-msgraph-mail-auth-after.log",
+      "sha256": "ba51a3cfacd2cd26629a7311e1f903f1373254a9be22ae10db77307517399281"
+    },
+    {
+      "path": "/tmp/alga-msgraph-mail-auth-types.log",
+      "sha256": "9581404340fec1040430b76e44b32598837051ecaa7b07a7e56f93d521c5f485"
+    },
+    {
+      "path": "/tmp/alga-msgraph-mail-auth-build.log",
+      "sha256": "50c396081d8ed9f2461639de15bc98f989cd81231e6e9386c56ec7a6c26d6a13"
+    },
+    {
+      "path": "/tmp/alga-mailbox-browser-folder-fix.log",
+      "sha256": "5a249c27350e8645f707a482df002d68aae0c77b18b70eeee9157d1a9ab80db7"
+    },
+    {
+      "path": "/tmp/alga-msgraph-refresh-scopes-before.log",
+      "sha256": "a89f490af54a01ee5153add9754434b29bfe0744c1eb3da57aeb744a11edd560"
+    },
+    {
+      "path": "/tmp/alga-msgraph-qualified-scopes-before.log",
+      "sha256": "294637193e2326566ee86fa45685a02f2dcea275b50fc481390ed9338e69742d"
+    },
+    {
+      "path": "/tmp/alga-msgraph-mail-final.log",
+      "sha256": "3590625c05b10cb87244834f4c75bf11ed189851daced2de2e0be967b1b0a759"
+    },
+    {
+      "path": "/tmp/alga-msgraph-mail-final-types.log",
+      "sha256": "9581404340fec1040430b76e44b32598837051ecaa7b07a7e56f93d521c5f485"
+    },
+    {
+      "path": "/tmp/alga-msgraph-mail-final-build.log",
+      "sha256": "bceca40311423b96148e501a9d14d153fbee1e232ec81581dd6b53c046e7b1a8"
+    },
+    {
+      "path": "/tmp/alga-mailbox-browser-auth-fixture.log",
+      "sha256": "107bc30db25c3b6ac4797c7faa1f72e0688f9b36231bdef1fb430659d06879b6"
+    },
+    {
+      "path": "/tmp/alga-mailbox-browser-refresh-fix.log",
+      "sha256": "1ed6ddd542144b4d4b24d97f1618d6e478cc3c8d1cbed35d41b94a678c2a41ee"
+    },
+    {
+      "path": "/tmp/alga-msgraph-mime-before.log",
+      "sha256": "fed76d4f12db6b0f17fcb0897006a82005d3bb36659289f982b68f1169236f0c"
+    },
+    {
+      "path": "/tmp/alga-msgraph-mail-mime-final.log",
+      "sha256": "8e36853e8afc85d3c36f7220af6f388855363452e666f92db5ebf5b4092d63b8"
+    },
+    {
+      "path": "/tmp/alga-msgraph-mail-mime-types.log",
+      "sha256": "9581404340fec1040430b76e44b32598837051ecaa7b07a7e56f93d521c5f485"
+    },
+    {
+      "path": "/tmp/alga-msgraph-mail-mime-build.log",
+      "sha256": "b3bba708664b4ffcf61e85f4986428103742b758a7cd1d2637c701a1f4b0965f"
+    },
+    {
+      "path": "/tmp/alga-mailbox-browser-normalized-scopes.log",
+      "sha256": "83adf955ec664c9803f0b7f5974881ec1ac064b22b568a43f3cef3a8f03c4240"
+    },
+    {
+      "path": "/tmp/alga-mailbox-browser-mime-final.log",
+      "sha256": "84d64900a9e8bff281159fb2b83f7d6bf8bc42fb752bd1ec87c71fd60530f1a5"
+    },
+    {
+      "path": "/tmp/alga-microsoft-mail-types-mime.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/tmp/alga-microsoft-callback-proxy-final-authorized.log",
+      "sha256": "53a988392e607e1950f28b81c3d5f0150e7b0a4d24dd2bf7c8b4d776d6189e33"
+    }
+  ],
+  "references": [
+    "https://learn.microsoft.com/en-us/graph/api/mailfolder-get?view=graph-rest-1.0",
+    "https://learn.microsoft.com/en-us/graph/api/resources/message?view=graph-rest-1.0",
+    "https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-auth-code-flow"
+  ]
+}

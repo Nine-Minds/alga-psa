@@ -52,7 +52,7 @@ import {
   getExternalEntityMappings,
 } from './externalMappingActions';
 
-const realmA = 'realm-aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+let realmA: string;
 const xeroRealm = 'xero-org-11111111-1111-1111-1111-111111111111';
 
 const tenantA = uuidv4();
@@ -152,6 +152,9 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   vi.clearAllMocks();
+  // Direct DB seeding bypasses action cache invalidation. Give each test a
+  // fresh connected realm so randomized tests cannot reuse a previous read.
+  realmA = `realm-${uuidv4()}`;
   await db('tenant_external_entity_mappings').where({ tenant: tenantA }).del();
   await db('audit_logs').where({ tenant: tenantA }).del();
   vi.mocked(getStoredQboCredentialsMap).mockResolvedValue({ [realmA]: { realmId: realmA } } as any);

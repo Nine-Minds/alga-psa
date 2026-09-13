@@ -1529,7 +1529,18 @@
         "unavailable": "Tworzenie spotkań Teams nie jest dostępne dla tego tenanta."
       },
       "loadFailed": "Nie udało się wczytać opcji interakcji. Spróbuj ponownie.",
-      "saveFailed": "Nie udało się zapisać interakcji. Spróbuj ponownie."
+      "saveFailed": "Nie udało się zapisać interakcji. Spróbuj ponownie.",
+      "schedule": {
+        "addToggle": "Dodaj do harmonogramu",
+        "addHelp": "Wpis harmonogramu zostanie dodany do Twojego kalendarza AlgaPSA.",
+        "addHelpOthers": "Wpis harmonogramu zostanie dodany do kalendarzy AlgaPSA wybranych użytkowników.",
+        "assigneesLabel": "Zaplanuj dla",
+        "assigneesPlaceholder": "Wybierz użytkowników"
+      },
+      "assignedTo": {
+        "label": "Przypisane do",
+        "placeholder": "Wybierz użytkownika"
+      }
     },
     "feed": {
       "addInteraction": "Dodaj interakcję",
@@ -1825,7 +1836,9 @@
       "missingField": "Brakuje wymaganego pola interakcji.",
       "missingFieldNamed": "Brakuje wymaganego pola interakcji: {{field}}.",
       "referenceMissing": "Wybrana interakcja, klient, kontakt, użytkownik, status lub typ już nie istnieje. Odśwież stronę i spróbuj ponownie.",
-      "duplicate": "Interakcja o takich danych już istnieje."
+      "duplicate": "Interakcja o takich danych już istnieje.",
+      "scheduleAssignDenied": "Odmowa uprawnień: nie można przypisywać wpisów harmonogramu innym użytkownikom.",
+      "scheduleUsersMissing": "Nie można odnaleźć co najmniej jednego przypisanego użytkownika."
     },
     "interactionType": {
       "notFound": "Nie znaleziono typu interakcji lub nie masz do niego dostępu.",

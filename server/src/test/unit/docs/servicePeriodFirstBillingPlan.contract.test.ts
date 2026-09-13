@@ -114,7 +114,7 @@ const billingCycleAlignmentPostInventoryRefs = new Set([
   // Prepaid balance alert subscriber integration test (feature/low-balance-alerts)
   // seeds billing_cycle_alignment in fixtures; landed after the pass-0 snapshot.
   'server/src/lib/eventBus/subscribers/prepaidBalanceAlertSubscriber.integration.test.ts',
-  'packages/reporting/src/actions/report-actions/deferred-revenue/deferredRevenueReport.integration.test.ts',
+  'packages/reporting/src/actions/report-actions/deferred-revenue/deferredRevenueReport.db.test.ts',
   'server/src/lib/api/openapi/routes/contractLines.ts',
   'server/src/lib/mcp/registry.generated.ts',
   'server/src/test/integration/contractLineBucketsMigration.integration.test.ts',
@@ -140,6 +140,21 @@ const billingCycleAlignmentPostInventoryRemovals = new Set([
 // pass-0 inventory snapshot was taken (recurring service-period ledger work
 // landed after the inventory was captured).
 const servicePeriodPostInventoryRefs = new Set([
+  // Invoice ticket presentation (origin/main a81661446e) added template
+  // descriptors and behavioral coverage after this historical snapshot.
+  'packages/billing/src/lib/invoice-template-ast/collectionDescriptors.ts',
+  'server/src/test/integration/invoiceTicketProduction.integration.test.ts',
+  'server/src/test/unit/billing/invoiceTicketPresentation.test.ts',
+  // Explicit usage-contract measurement semantics (usage period totals, seat
+  // revisions, unit-pricing revisions) added persisted service-period readers
+  // and fixtures after the pass-0 snapshot.
+  'packages/billing/src/actions/contractLineUnitPricingActions.ts',
+  'packages/billing/src/components/billing-dashboard/UsagePeriodTotalQuickEntry.tsx',
+  'packages/billing/src/components/billing-dashboard/UsageTracking.tsx',
+  'packages/billing/src/lib/billing/seatRevisions.ts',
+  'packages/billing/src/lib/billing/usagePeriodTotalIdentity.ts',
+  'packages/billing/tests/automaticInvoices.duplicateIdentityDedupe.test.tsx',
+  'server/src/test/infrastructure/billing/invoices/contractQuantityUsageSemantics.test.ts',
   // Calendar month-end close and grouped zero-dollar claims added persisted
   // window readers and regression fixtures after the pass-0 snapshot.
   'packages/billing/src/actions/calendarMonthEndCloseActions.db.test.ts',
@@ -155,7 +170,7 @@ const servicePeriodPostInventoryRefs = new Set([
   // Deferred-revenue reporting reads persisted service-period boundaries to
   // value prepaid bucket liability; it landed after the pass-0 snapshot.
   'packages/reporting/src/actions/report-actions/deferred-revenue/compose.test.ts',
-  'packages/reporting/src/actions/report-actions/deferred-revenue/deferredRevenueReport.integration.test.ts',
+  'packages/reporting/src/actions/report-actions/deferred-revenue/deferredRevenueReport.db.test.ts',
   'packages/reporting/src/actions/report-actions/deferred-revenue/fee.test.ts',
   'packages/reporting/src/actions/report-actions/deferred-revenue/fee.ts',
   'packages/reporting/src/actions/report-actions/deferred-revenue/loaders.ts',

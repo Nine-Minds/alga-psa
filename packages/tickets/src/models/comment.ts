@@ -1,3 +1,4 @@
+import { reconcileCommentAttachments, withdrawCommentAttachments } from '@shared/lib/ticketCommentAttachments';
 import type { Knex } from 'knex';
 import type { IComment } from '@alga-psa/types';
 import { tenantDb } from '@alga-psa/db';

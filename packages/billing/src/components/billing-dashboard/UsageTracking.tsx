@@ -181,6 +181,8 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({
   type BucketUsageData = RemainingBucketUnitsResult & { plan_id: string; plan_name: string };
   const [bucketData, setBucketData] = useState<BucketUsageData[]>([]);
   const [loadingBuckets, setLoadingBuckets] = useState(false);
+  const [bucketLoadFailed, setBucketLoadFailed] = useState(false);
+  const bucketRequest = React.useRef(0);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -258,8 +260,10 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({
     } else {
       // No client selected; clear bucket view
       setBucketData([]);
+      setBucketLoadFailed(false);
       setLoadingBuckets(false);
     }
+    return () => { bucketRequest.current += 1; };
   }, [selectedClient]);
 
   // Load eligible contract lines when client and service change in the form
@@ -339,11 +343,16 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({
   };
 
   const loadBucketUsageForClient = async (clientId: string) => {
+    const request = ++bucketRequest.current;
+    setBucketData([]);
+    setBucketLoadFailed(false);
+    setLoadingBuckets(true);
     try {
-      setLoadingBuckets(true);
       const currentDate = new Date().toISOString().split('T')[0];
       const buckets = await getRemainingBucketUnits({ clientId, currentDate });
+      if (request !== bucketRequest.current) return;
       if (isReturnedActionError(buckets)) {
+        setBucketLoadFailed(true);
         toast({
           title: t('common.error', { defaultValue: 'Error' }),
           description: getErrorMessage(buckets),
@@ -360,9 +369,12 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({
       }));
       setBucketData(mapped);
     } catch (error) {
+      if (request !== bucketRequest.current) return;
+      setBucketData([]);
+      setBucketLoadFailed(true);
       console.error('Error loading bucket usage:', error);
     } finally {
-      setLoadingBuckets(false);
+      if (request === bucketRequest.current) setLoadingBuckets(false);
     }
   };
 
@@ -590,6 +602,7 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({
                   quantity: record.quantity,
                   usage_date: usageDateToStored(usageDateFromStored(record.usage_date)),
                   contract_line_id: record.contract_line_id,
+                  comments: record.comments ?? '',
                 });
                 setIsAddModalOpen(true);
               }}
@@ -626,7 +639,7 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({
         </section>
       )}
       {/* Bucket Usage Overview */}
-      {(loadingBuckets || bucketData.length > 0) && (
+      {(loadingBuckets || bucketLoadFailed || bucketData.length > 0) && (
         <Card className="mb-6">
           <CardHeader>
             <div className="flex items-center">
@@ -641,6 +654,16 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({
                   <Skeleton key={i} className="h-40 w-full" />
                 ))}
               </div>
+            ) : bucketLoadFailed ? (
+              <Alert variant="destructive" role="alert">
+                <AlertDescription>
+                  {t('usage.bucketLoadError', { defaultValue: 'Bucket balances could not be loaded. Retry to see the current balances.' })}
+                </AlertDescription>
+                <Button id="retry-bucket-usage" variant="outline" className="mt-2"
+                  onClick={() => { if (selectedClient && selectedClient !== 'all_clients') void loadBucketUsageForClient(selectedClient); }}>
+                  {t('usage.retryBucketBalances', { defaultValue: 'Retry bucket balances' })}
+                </Button>
+              </Alert>
             ) : bucketData.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {bucketData.map((bucket) => (
@@ -769,6 +792,7 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({
                     quantity: record.quantity,
                     usage_date: usageDateToStored(usageDateFromStored(record.usage_date)),
                     contract_line_id: record.contract_line_id,
+                    comments: record.comments ?? '',
                   });
                   setIsAddModalOpen(true);
                 }}
@@ -865,6 +889,7 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({
               <Input
                 id="comments-input"
                 type="text"
+                value={newUsage.comments ?? ''}
                 onChange={(e) => setNewUsage({ ...newUsage, comments: e.target.value })}
               />
             </div>

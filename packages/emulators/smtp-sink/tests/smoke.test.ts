@@ -1,5 +1,5 @@
 import nodemailer from 'nodemailer';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { EmulatorHost } from '@alga-psa/emulator-host';
 import smtpSink from '../src/index';
 
@@ -23,7 +23,40 @@ afterAll(async () => {
   await host.stop();
 });
 
+beforeEach(async () => {
+  await fetch(`${control}/control/smtp-sink/reset`, { method: 'POST' });
+});
+
 describe('smtp sink', () => {
+  it('preserves binary attachment bytes and reply headers received over SMTP', async () => {
+    const pdf = Buffer.from([0x25, 0x50, 0x44, 0x46, 0x00, 0xff, 0x80, 0x0a]);
+    const logo = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x00]);
+    await transporter.sendMail({
+      from: 'agent@alga.test', to: 'customer@example.test', subject: 'Attachment reply',
+      text: 'See the attached invoice.', html: '<p>Invoice</p><img src="cid:logo@alga.test">',
+      messageId: '<reply@alga.test>', inReplyTo: '<original@example.test>',
+      references: ['<root@example.test>', '<original@example.test>'],
+      attachments: [
+        { filename: 'invoice.pdf', content: pdf, contentType: 'application/pdf' },
+        { filename: 'logo.png', content: logo, contentType: 'image/png', cid: 'logo@alga.test' },
+      ],
+    });
+    const state = await (await fetch(`${control}/control/smtp-sink/state/emails`)).json() as any;
+    expect(state.result).toHaveLength(1);
+    expect(state.result[0]).toMatchObject({
+      messageId: '<reply@alga.test>', inReplyTo: '<original@example.test>',
+      references: ['<root@example.test>', '<original@example.test>'],
+    });
+    // MIME nesting can put related inline parts before ordinary attachments.
+    expect(state.result[0].attachments).toHaveLength(2);
+    expect(state.result[0].attachments).toEqual(expect.arrayContaining([
+      expect.objectContaining({ filename: 'invoice.pdf', contentType: 'application/pdf', contentDisposition: 'attachment', size: pdf.length, contentBase64: pdf.toString('base64') }),
+      expect.objectContaining({ filename: 'logo.png', contentType: 'image/png', contentDisposition: 'inline', contentId: '<logo@alga.test>', size: logo.length, contentBase64: logo.toString('base64') }),
+    ]));
+    await fetch(`${control}/control/smtp-sink/reset`, { method: 'POST' });
+    expect((await (await fetch(`${control}/control/smtp-sink/state/emails`)).json() as any).result).toEqual([]);
+  });
+
   it('captures and parses delivered mail', async () => {
     await transporter.sendMail({
       from: 'Alga <noreply@alga.test>',

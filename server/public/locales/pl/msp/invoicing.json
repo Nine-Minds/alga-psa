@@ -1054,7 +1054,8 @@
     },
     "messages": {
       "success": "Faktura została wygenerowana pomyślnie!",
-      "loadFailed": "Nie udało się wczytać danych"
+      "loadFailed": "Nie udało się wczytać danych",
+      "salesOrderSourcesUnavailable": "Nie udało się wczytać źródłowych zamówień sprzedaży. Nadal można ręcznie wprowadzać pozycje faktury."
     }
   },
   "prepayment": {
@@ -1462,6 +1463,14 @@
       "modern-invoice-complete": {
         "label": "Nowoczesny szablon faktury",
         "description": "Pełny układ z nagłówkiem, informacjami rozliczeniowymi, tabelą pozycji i stopką."
+      },
+      "billed-time-entries": {
+        "label": "Szczegóły wpisów rozliczonego czasu",
+        "description": "Dodaj tabelę informacyjną z datami, elementami pracy, godzinami, stawkami i kwotami."
+      },
+      "billed-time-by-ticket": {
+        "label": "Szczegóły rozliczonego czasu według zgłoszeń",
+        "description": "Powtórz nagłówek i tabelę powiązanych wpisów dla każdego zgłoszenia lub zadania."
       }
     },
     "schema": {
@@ -1644,6 +1653,9 @@
               "label": "Umowa.pdf"
             }
           }
+        },
+        "totals-rows": {
+          "title": "Wiersze sum"
         }
       }
     },
@@ -1917,7 +1929,8 @@
         "transformsSource": "{{binding}} (źródło transformacji)",
         "transformsOutput": "{{binding}} (wynik transformacji)",
         "ticketGroups": "Rozliczony czas według zgłoszeń",
-        "timeEntries": "Rozliczone wpisy czasu"
+        "timeEntries": "Rozliczone wpisy czasu",
+        "ticketPresentationRows": "Opłaty według zgłoszenia"
       },
       "presets": {
         "description": {
@@ -1995,7 +2008,12 @@
         "headerPlaceholder": "Etykieta nagłówka",
         "bindingKey": "Klucz powiązania",
         "type": "Typ",
-        "width": "Szerokość"
+        "width": "Szerokość",
+        "stackedLines": "Wiersze skumulowane",
+        "addLine": "+ Wiersz",
+        "clearLines": "Pojedynczy wiersz",
+        "stackedLinesHint": "Każdy niepusty wiersz jest wyświetlany w osobnym wierszu. Gdy wszystkie wiersze są puste, wyświetlany jest klucz powiązania kolumny podany powyżej.",
+        "removeLine": "Usuń wiersz {{index}}"
       },
       "columnTypes": {
         "text": "Tekst",
@@ -2040,6 +2058,15 @@
       "visibleInPortal": "Widoczny w portalu klienta",
       "dialogTitle": "Wybierz obraz",
       "dialogDescription": "Wybierz obraz ze swoich dokumentów, którego chcesz użyć w tym szablonie."
+    },
+    "totalsRowsEditor": {
+      "rowBackground": "Tło wiersza",
+      "rowTextColor": "Kolor tekstu",
+      "resetColors": "Resetuj kolory",
+      "clearRowBackground": "Wyczyść kolor tła wiersza",
+      "clearRowTextColor": "Wyczyść kolor tekstu wiersza",
+      "labelColorOverrideNote": "Ta etykieta zachowuje swój zapisany kolor i nie dziedziczy koloru tekstu wiersza ustawionego powyżej. Kwota nadal używa koloru tekstu wiersza.",
+      "noRows": "Ten blok sum nie ma jeszcze zapisanych wierszy. Zapisz szablon i otwórz go ponownie, aby edytować kolory wierszy."
     }
   },
   "draftInvoiceDetails": {
@@ -2186,7 +2213,8 @@
       "referenceMissing": "Wybrany szablon faktury lub klient już nie istnieje. Odśwież stronę i spróbuj ponownie.",
       "duplicate": "Szablon faktury o tych ustawieniach już istnieje.",
       "missingField": "Brakuje wymaganego pola szablonu faktury.",
-      "missingFieldNamed": "Brakuje wymaganego pola szablonu faktury: {{field}}."
+      "missingFieldNamed": "Brakuje wymaganego pola szablonu faktury: {{field}}.",
+      "evaluationFailed": "Powiązanie danych szablonu nie powiodło się: {{details}}"
     }
   },
   "periodTotal": {

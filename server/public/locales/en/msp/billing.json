@@ -140,6 +140,8 @@
     }
   },
   "usage": {
+    "bucketLoadError": "Bucket balances could not be loaded. Retry to see the current balances.",
+    "retryBucketBalances": "Retry bucket balances",
     "bucketHoursOverview": "Bucket Hours Overview",
     "usageRecords": "Usage Records",
     "actions": {

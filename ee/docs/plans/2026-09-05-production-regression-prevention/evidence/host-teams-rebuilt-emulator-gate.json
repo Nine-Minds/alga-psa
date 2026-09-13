@@ -1,0 +1,43 @@
+{
+  "status": "passed",
+  "counts": {
+    "passed": 1,
+    "failed": 0,
+    "flaky": 0,
+    "skipped": 0,
+    "interrupted": 0,
+    "missing": 0
+  },
+  "source": {
+    "before": {
+      "revision": "98a7d47f75dcd96d96c734056af0439cf9bd9caa",
+      "dirty": false,
+      "changes": []
+    },
+    "after": {
+      "revision": "98a7d47f75dcd96d96c734056af0439cf9bd9caa",
+      "dirty": false,
+      "changes": []
+    }
+  },
+  "releaseValidation": false,
+  "schemaVersion": 1,
+  "suite": "teams-development-browser",
+  "runtime": {
+    "lifecycle": "fresh host app before gate, matching CI recreation",
+    "heapMiB": 12288,
+    "nodeSourceMaps": false
+  },
+  "hashes": {
+    "test-results/teams-development/evidence.json": "a561c093a08755ac61228997d1dfb818a169ef5bf034806c5bbc8eec185810fa",
+    "test-results/teams-development/results.json": "b756982a327610141f8e2c2605681d961f4c214eec571a3137c3c2720703aba7",
+    "test-results/teams-development/runner.json": "ff8ae5796bcef71911ff9c5c3eaea341819c471f669549e252b830106edd4305",
+    "packages/emulators/msgraph/dist/index.js": "74b2307de1078f0b63969aea5847e51c7b055cd18111f078d368670e1373a418",
+    "/tmp/alga-teams-gate-98a7-fresh.log": "0b4bf82f453568b1b2813db993f9e1bfc929a8bbd6f9eca27bef560675b25be4"
+  },
+  "limitations": [
+    "The first run against a long-running app failed during a memory-threshold restart; preserved at /tmp/alga-teams-98a7-reused-app-failure.",
+    "This proves a fresh-server local development lane, not indefinite repeated-run memory stability.",
+    "No Linux CI, current-source publication, production-artifact, or full-plan completion is established."
+  ]
+}

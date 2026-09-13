@@ -824,6 +824,8 @@ describeDb('ticket client-portal ABAC (TicketService)', () => {
     const scheduledJobId = uuidv4();
     optimizedPathMocks.user = { user_id: fixture.internalUserId, user_type: 'internal' };
     optimizedPathMocks.tenant = fixture.tenantId;
+    // createComment requires ticket:update before it touches the database.
+    optimizedPathMocks.hasPermission.mockResolvedValue(true);
     optimizedPathMocks.scheduleJobAt.mockResolvedValue({ jobId: scheduledJobId });
     optimizedPathMocks.maybeReopenBundleMasterFromChildReply.mockClear();
 

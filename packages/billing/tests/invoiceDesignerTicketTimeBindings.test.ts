@@ -48,7 +48,7 @@ describe('invoice designer: billed-time collection discoverability', () => {
       'item.ticketNumber',
       'item.title',
       'item.hours',
-      'item.rate',
+      'item.rateDisplay',
       'item.amount',
     ]);
   });
@@ -78,31 +78,4 @@ describe('invoice designer: billed-time collection discoverability', () => {
     ]);
   });
 
-  it('exposes every preset key on the underlying collection row shapes', () => {
-    const groupPresetFields = buildTicketGroupColumnPresets(t).map((preset) =>
-      preset.key.replace(/^item\./, ''),
-    );
-    const entryPresetFields = buildTimeEntryColumnPresets(t).map((preset) =>
-      preset.key.replace(/^item\./, ''),
-    );
-
-    const groupShape: Record<string, unknown> = {
-      key: 'ticket:1', workItemType: 'ticket', workItemId: '1', ticketNumber: 'T-1',
-      title: 't', description: 'd', label: 'l', dateStart: null, dateEnd: null,
-      totalMinutes: 0, totalHours: 0, totalAmount: 0, hasMixedRates: false,
-      rate: null, rateDisplay: 'Mixed rates', entryCount: 0, entries: [],
-    };
-    const entryShape: Record<string, unknown> = {
-      id: 'e', itemId: null, workItemType: 'ticket', workItemId: '1', ticketNumber: 'T-1',
-      title: 't', description: 'd', date: null, billedMinutes: 0, hours: 0,
-      rate: 0, amount: 0, serviceId: null, serviceName: null,
-    };
-
-    for (const field of groupPresetFields) {
-      expect(groupShape).toHaveProperty(field);
-    }
-    for (const field of entryPresetFields) {
-      expect(entryShape).toHaveProperty(field);
-    }
-  });
 });

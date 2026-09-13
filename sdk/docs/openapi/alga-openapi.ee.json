@@ -23804,6 +23804,18 @@
           "interaction_date": {
             "type": "string",
             "format": "date-time"
+          },
+          "create_schedule_entry": {
+            "type": "boolean",
+            "description": "Also book an AlgaPSA calendar entry. Requires start_time; defaults to false."
+          },
+          "schedule_assigned_user_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Calendar assignees; omitted or empty defaults to the API key owner. Assigning others requires user_schedule:update."
           }
         },
         "required": [
@@ -107149,7 +107161,7 @@
             }
           },
           "403": {
-            "description": "Interaction RBAC denied.",
+            "description": "Interaction RBAC or assignment to another user’s schedule denied.",
             "content": {
               "application/json": {
                 "schema": {
@@ -107182,6 +107194,7 @@
       },
       "post": {
         "summary": "Create an interaction",
+        "description": "Optionally creates a linked AlgaPSA calendar entry in the same transaction. Set create_schedule_entry and start_time; end_time defaults to start_time plus duration (or 30 minutes). schedule_assigned_user_ids defaults to the API key owner; booking other users requires user_schedule:update. This does not create a Teams meeting.",
         "tags": [
           "Interactions v1"
         ],
@@ -107241,7 +107254,7 @@
             }
           },
           "403": {
-            "description": "Interaction RBAC denied.",
+            "description": "Interaction RBAC or assignment to another user’s schedule denied.",
             "content": {
               "application/json": {
                 "schema": {
@@ -107336,7 +107349,7 @@
             }
           },
           "403": {
-            "description": "Interaction RBAC denied.",
+            "description": "Interaction RBAC or assignment to another user’s schedule denied.",
             "content": {
               "application/json": {
                 "schema": {
@@ -107421,7 +107434,7 @@
             }
           },
           "403": {
-            "description": "Interaction RBAC denied.",
+            "description": "Interaction RBAC or assignment to another user’s schedule denied.",
             "content": {
               "application/json": {
                 "schema": {

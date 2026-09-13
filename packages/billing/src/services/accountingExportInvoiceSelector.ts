@@ -156,11 +156,21 @@ export class AccountingExportInvoiceSelector {
       ]);
 
     if (filters.startDate) {
-      query.andWhere('inv.invoice_date', '>=', filters.startDate);
+      const start = /^\d{4}-\d{2}-\d{2}$/.test(filters.startDate)
+        ? `${filters.startDate}T00:00:00.000Z` : filters.startDate;
+      query.andWhere('inv.invoice_date', '>=', start);
     }
 
     if (filters.endDate) {
-      query.andWhere('inv.invoice_date', '<=', filters.endDate);
+      // Legacy invoice dates are timestamps. A calendar end date includes the
+      // whole UTC day; explicit timestamp filters retain their exact boundary.
+      if (/^\d{4}-\d{2}-\d{2}$/.test(filters.endDate)) {
+        query.andWhere('inv.invoice_date', '<', this.knex.raw(
+          "(?::date + 1)::timestamp AT TIME ZONE 'UTC'", [filters.endDate]
+        ));
+      } else {
+        query.andWhere('inv.invoice_date', '<=', filters.endDate);
+      }
     }
 
     if (invoiceStatusesForQuery && invoiceStatusesForQuery.length > 0) {

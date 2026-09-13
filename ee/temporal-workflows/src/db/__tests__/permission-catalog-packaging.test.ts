@@ -75,7 +75,15 @@ describe("packaged permission catalog", () => {
     expect(typeof loaded.applyDefaultRoleGrants).toBe("function");
     expect(typeof loaded.listTenantsForProduct).toBe("function");
     expect(typeof loaded.reconcileAllTenants).toBe("function");
-    expect(typeof loaded.roleGrants.compileLegacyRoleGrants).toBe("function");
+    const grants = loaded.roleGrants.compileLegacyRoleGrants('psa', [
+      { resource: 'tickets', action: 'read', products: ['psa'], msp: true, client: false,
+        defaultGrants: { psa: ['msp:Technician'] } },
+      { resource: 'tickets', action: 'delete', products: ['algadesk'], msp: true, client: false,
+        defaultGrants: { algadesk: ['msp:Agent'] } },
+    ]);
+    expect(grants.msp.Technician).toEqual(['tickets:read:msp']);
+    expect(grants.client.User).toEqual([]);
+    expect(grants.msp.Admin).toBe('ALL_MSP');
   });
 
   it("loads from the source checkout too", () => {

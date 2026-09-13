@@ -9,3 +9,4 @@ export { EmailTemplates } from './settings/EmailTemplates';
 export { NotificationCategories } from './settings/NotificationCategories';
 export { InternalNotificationCategories } from './settings/InternalNotificationCategories';
 export { InternalNotificationPreferences } from './settings/InternalNotificationPreferences';
+export { EmailNotificationPreferences } from './settings/EmailNotificationPreferences';

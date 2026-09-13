@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 /**
  * Anti-drift contract tests: fixture workflows run through BOTH the real
  * Temporal interpreter loop (workflowRuntimeV2RunWorkflow with mocked
@@ -564,4 +566,76 @@ describe('simulator ↔ interpreter contract', () => {
     const outcome = await runBoth({ definition, payload: {} });
     expectContractParity(outcome);
   });
+});
+
+// Execute the shipped email definition through the current Temporal workflow loop.
+// External action effects remain fixtures; these cases establish routing and real
+// node processing before the database-backed legacy email suite is ported.
+describe('published inbound email definition on the Temporal interpreter', () => {
+  const emailDefinition = JSON.parse(readFileSync(path.resolve(__dirname,
+    '../../../../../shared/workflow/runtime/workflows/email-processing-workflow.v2.json'), 'utf8')) as WorkflowDefinition;
+  const payload = {
+    tenantId: 'tenant_contract', providerId: 'provider-1',
+    emailData: { id: 'message-1', subject: 'Help needed', from: { email: 'sender@example.com' },
+      body: { text: 'Please help', html: '<p>Please help</p>' }, attachments: [] },
+  };
+  it('routes a reply to the existing ticket and never creates a new ticket', async () => {
+    const result = await runInterpreter({ definition: emailDefinition, payload, fixtures: {
+      resolve_existing_ticket_from_email: { ticket: { ticketId: 'ticket-1' } },
+    } });
+    expect(result.status).toBe('SUCCEEDED');
+    expect(result.startedStepIds).toContain('comment-existing-ticket');
+    expect(result.startedStepIds).toContain('attachments-existing-ticket');
+    expect(result.startedStepIds.at(-1)).toBe('return-after-reply');
+    expect(result.startedStepIds).not.toContain('create-ticket-with-comment');
+    expect(result.finalVars.parsedEmail).toBeDefined();
+    expect(result.finalVars.processedAt).toEqual(expect.any(String));
+  });
+  it('stops without creating a ticket when required defaults are absent', async () => {
+    const result = await runInterpreter({ definition: emailDefinition, payload, fixtures: {
+      resolve_existing_ticket_from_email: { ticket: null },
+      resolve_inbound_ticket_context: { ticketDefaults: null },
+    } });
+    expect(result.status).toBe('SUCCEEDED');
+    expect(result.startedStepIds).toContain('state-error-no-defaults');
+    expect(result.startedStepIds.at(-1)).toBe('return-no-defaults');
+    expect(result.startedStepIds).not.toContain('create-ticket-with-comment');
+  });
+  it('creates a new ticket and acknowledges a matched contact', async () => {
+    const result = await runInterpreter({ definition: emailDefinition, payload, fixtures: {
+      resolve_existing_ticket_from_email: { ticket: null },
+      resolve_inbound_ticket_context: { ticketDefaults: { board_id: 'board-1' }, matchedClient: { email: 'sender@example.com' } },
+      create_ticket_with_initial_comment: { ticket_id: 'created-ticket' },
+    } });
+    expect(result.status).toBe('SUCCEEDED');
+    expect(result.finalVars.createdTicket).toEqual({ ticket_id: 'created-ticket' });
+    expect(result.startedStepIds).toContain('attachments-new-ticket');
+    expect(result.startedStepIds).toContain('state-email-processed');
+    expect(result.startedStepIds).toContain('ack-email-action');
+    expect(result.startedStepIds.at(-1)).toBe('return-after-create');
+  });
+  it.each(['attachments-new-ticket', 'ack-email-action'])('continues after optional %s failure', async (step) => {
+    const result = await runInterpreter({ definition: emailDefinition, payload, fixtures: {
+      resolve_existing_ticket_from_email: { ticket: null },
+      resolve_inbound_ticket_context: { ticketDefaults: { board_id: 'board-1' }, matchedClient: { email: 'sender@example.com' } },
+      create_ticket_with_initial_comment: { ticket_id: 'created-ticket' },
+      [step]: { $error: { message: 'Provider temporarily unavailable' } },
+    } });
+    expect(result.status).toBe('SUCCEEDED');
+    expect(result.startedStepIds).toContain(step);
+    expect(result.startedStepIds.at(-1)).toBe('return-after-create');
+    expect(result.startedStepIds).not.toContain('create-human-task-failure');
+  });
+  it('routes a required action failure to manual resolution without creating a ticket', async () => {
+    const result = await runInterpreter({ definition: emailDefinition, payload, fixtures: {
+      resolve_existing_ticket_from_email: { $error: { message: 'Thread lookup failed' } },
+    } });
+    expect(result.status).toBe('SUCCEEDED');
+    expect(result.startedStepIds).toContain('state-error-processing');
+    expect(result.startedStepIds).toContain('create-human-task-failure');
+    expect(result.startedStepIds).toContain('state-awaiting-manual');
+    expect(result.startedStepIds.at(-1)).toBe('return-after-error');
+    expect(result.startedStepIds).not.toContain('create-ticket-with-comment');
+  });
+
 });

@@ -184,6 +184,11 @@ const dbMocks = vi.hoisted(() => {
 
 (globalThis as unknown as { React?: typeof React }).React = React;
 
+const releaseFlag = vi.hoisted(() => ({ enabled: true }));
+vi.mock('@alga-psa/ui/hooks/useFeatureFlag', () => ({
+  useFeatureFlag: () => ({ enabled: releaseFlag.enabled, loading: false, error: null }),
+}));
+
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (action: (...args: any[]) => Promise<unknown>) =>
     (...args: any[]) =>
@@ -500,6 +505,7 @@ describe('AutomaticInvoices recurring due-work UI', () => {
   });
 
   beforeEach(() => {
+    releaseFlag.enabled = true;
     cleanup();
     vi.clearAllMocks();
     dbMocks.missingTables.clear();
@@ -678,6 +684,43 @@ describe('AutomaticInvoices recurring due-work UI', () => {
 
     expect(await screen.findByText('Zenith Health')).toBeInTheDocument();
     expect(getAvailableBillingPeriodsMock).not.toHaveBeenCalled();
+  });
+
+  it('hides eligible month-end close when the release flag is off', async () => {
+    releaseFlag.enabled = false;
+    const clientRow = {
+      ...createClientRow(),
+      duePosition: 'arrears' as const,
+      servicePeriodStart: '2025-03-01',
+      servicePeriodEnd: '2025-04-01',
+      invoiceWindowStart: '2025-04-01',
+      invoiceWindowEnd: '2025-05-01',
+      canGenerate: false,
+      isEarly: true,
+    };
+    const candidate = {
+      ...buildInvoiceCandidate([clientRow], { candidateKey: 'candidate-month-end' }),
+      canGenerate: false,
+      notYetDue: true,
+      availableOnDate: '2025-04-01',
+      monthEndCloseEligible: true,
+    };
+    getAvailableRecurringDueWorkMock.mockResolvedValueOnce({
+      invoiceCandidates: [candidate],
+      materializationGaps: [],
+      total: 1,
+      page: 1,
+      pageSize: 10,
+      totalPages: 1,
+    });
+
+    const onGenerateSuccess = vi.fn();
+    render(<AutomaticInvoices onGenerateSuccess={onGenerateSuccess} />);
+
+    await waitFor(() => expect(getAvailableRecurringDueWorkMock).toHaveBeenCalled());
+    await screen.findAllByText('Not yet due');
+    expect(screen.queryByRole('button', { name: 'Generate month-end invoice' })).not.toBeInTheDocument();
+    expect(generateCalendarMonthEndCloseInvoicesMock).not.toHaveBeenCalled();
   });
 
   it('T-EC1: a month-end-eligible not-yet-due group offers the early-close action with an omission warning and confirms through the dedicated action', async () => {

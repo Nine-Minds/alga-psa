@@ -1,6 +1,7 @@
 import type { WasmInvoiceViewModel } from '@alga-psa/types';
 import {
   buildInvoiceTimeCollections,
+  attachInvoiceTimeCollections,
   enrichWithGroupedItems,
   type InvoiceTimeCollectionSource,
 } from '../../../lib/adapters/invoiceAdapters';
@@ -36,10 +37,19 @@ const createBaseInvoice = (): WasmInvoiceViewModel => ({
   taxSource: 'internal',
 });
 
-const enrichScenario = (scenario: InvoicePreviewSampleScenario): InvoicePreviewSampleScenario => ({
-  ...scenario,
-  data: enrichWithGroupedItems({ ...scenario.data }),
-});
+const enrichScenario = (scenario: InvoicePreviewSampleScenario): InvoicePreviewSampleScenario => {
+  const data = enrichWithGroupedItems({ ...scenario.data });
+  if (scenario.id === 'sample-ticket-time-detail') {
+    attachInvoiceTimeCollections(data, data.items.map((item) => {
+      const sources = TICKET_TIME_SAMPLE_SOURCES.filter((s) => s.itemId === item.id);
+      return { item_id: item.id, invoice_id: 'sample', tenant: 'sample', net_amount: item.total,
+        billing_charge_type: sources.length ? 'time' : 'fixed', time_entry_snapshots: sources,
+        time_entry_links: sources.map((s) => ({ itemId: item.id, invoiceId: 'sample', tenant: 'sample', entryId: s.entryId, snapshot: s })),
+      };
+    }));
+  }
+  return { ...scenario, data };
+};
 
 /**
  * Billed-time snapshot sources for the ticket-detail sample. Run through the
@@ -49,7 +59,9 @@ const enrichScenario = (scenario: InvoicePreviewSampleScenario): InvoicePreviewS
  */
 const TICKET_TIME_SAMPLE_SOURCES: InvoiceTimeCollectionSource[] = [
   {
-    version: 1,
+    version: 2,
+    rateKind: 'uniform',
+    uniformRate: 15000,
     entryId: 'entry-a1',
     itemId: 'time-a1',
     workItemType: 'ticket',
@@ -65,7 +77,9 @@ const TICKET_TIME_SAMPLE_SOURCES: InvoiceTimeCollectionSource[] = [
     serviceName: 'Remote Support',
   },
   {
-    version: 1,
+    version: 2,
+    rateKind: 'uniform',
+    uniformRate: 15000,
     entryId: 'entry-a2',
     itemId: 'time-a2',
     workItemType: 'ticket',
@@ -81,7 +95,9 @@ const TICKET_TIME_SAMPLE_SOURCES: InvoiceTimeCollectionSource[] = [
     serviceName: 'Remote Support',
   },
   {
-    version: 1,
+    version: 2,
+    rateKind: 'uniform',
+    uniformRate: 12500,
     entryId: 'entry-b1',
     itemId: 'time-b1',
     workItemType: 'ticket',
@@ -97,7 +113,9 @@ const TICKET_TIME_SAMPLE_SOURCES: InvoiceTimeCollectionSource[] = [
     serviceName: 'Onsite Support',
   },
   {
-    version: 1,
+    version: 2,
+    rateKind: 'uniform',
+    uniformRate: 15000,
     entryId: 'entry-b2',
     itemId: 'time-b2',
     workItemType: 'ticket',
@@ -113,7 +131,9 @@ const TICKET_TIME_SAMPLE_SOURCES: InvoiceTimeCollectionSource[] = [
     serviceName: 'After Hours Support',
   },
   {
-    version: 1,
+    version: 2,
+    rateKind: 'uniform',
+    uniformRate: 14000,
     entryId: 'entry-p1',
     itemId: 'time-p1',
     workItemType: 'project_task',

@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   createInteractionWithSideEffects: vi.fn(),
+  createInteractionScheduleEntry: vi.fn(),
+  hasPermission: vi.fn(),
   tenantDb: vi.fn(),
   withTransaction: vi.fn(async (_knex: unknown, callback: (trx: unknown) => unknown) => callback({ trx: true })),
 }));
@@ -17,7 +19,11 @@ vi.mock('@alga-psa/db', async (importOriginal) => {
 
 vi.mock('@alga-psa/clients/actions/interactionCreateHelper', () => ({
   createInteractionWithSideEffects: mocks.createInteractionWithSideEffects,
+  createInteractionScheduleEntry: mocks.createInteractionScheduleEntry,
+  resolveScheduleAssignees: (creator: string, requested?: string[]) => requested?.length ? [...new Set(requested)] : [creator],
 }));
+
+vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: mocks.hasPermission }));
 
 import { InteractionService } from '../../../lib/api/services/InteractionService';
 
@@ -51,7 +57,77 @@ function queryResolving<T>(result: T) {
 
 describe('InteractionService', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
+    mocks.withTransaction.mockImplementation(async (_knex, callback) => callback({ trx: true }));
+    mocks.createInteractionWithSideEffects.mockResolvedValue({
+      interaction: { interaction_id: 'interaction-1' },
+      publishSideEffects: vi.fn(),
+    });
+  });
+
+  const scheduleInput = {
+    type_id: '11111111-1111-4111-8111-111111111111',
+    client_id: '22222222-2222-4222-8222-222222222222',
+    start_time: '2026-10-01T12:00:00.000Z',
+    create_schedule_entry: true,
+  };
+
+  it.each([undefined, [], ['user-1']])('books self without a schedule permission check (%j)', async (ids) => {
+    const publish = vi.fn();
+    mocks.createInteractionScheduleEntry.mockResolvedValue({ publishScheduleEntryCreated: publish });
+    await new InteractionService().create({ ...scheduleInput, schedule_assigned_user_ids: ids }, context);
+    expect(mocks.hasPermission).not.toHaveBeenCalled();
+    expect(mocks.createInteractionScheduleEntry).toHaveBeenCalledWith({
+      tenant: context.tenant,
+      trx: { trx: true },
+      interaction: { interaction_id: 'interaction-1' },
+      assignedUserIds: ['user-1'],
+      assignedByUserId: 'user-1',
+    });
+    expect(publish).toHaveBeenCalledOnce();
+    expect(mocks.withTransaction.mock.invocationCallOrder[0]).toBeLessThan(publish.mock.invocationCallOrder[0]);
+  });
+
+  it('rejects assigning others before writing when permission is missing', async () => {
+    mocks.hasPermission.mockResolvedValue(false);
+    await expect(new InteractionService().create({ ...scheduleInput, schedule_assigned_user_ids: ['user-2'] }, context))
+      .rejects.toMatchObject({ statusCode: 403, message: 'Permission denied to assign schedule entries to other users.' });
+    expect(mocks.hasPermission).toHaveBeenCalledWith(context.user, 'user_schedule', 'update', context.db);
+    expect(mocks.withTransaction).not.toHaveBeenCalled();
+  });
+
+  it('books multiple users with permission in the interaction transaction', async () => {
+    mocks.hasPermission.mockResolvedValue(true);
+    await new InteractionService().create({ ...scheduleInput, schedule_assigned_user_ids: ['user-2', 'user-3', 'user-2'] }, context);
+    expect(mocks.createInteractionScheduleEntry).toHaveBeenCalledWith(expect.objectContaining({
+      trx: { trx: true }, assignedUserIds: ['user-2', 'user-3'], assignedByUserId: 'user-1',
+    }));
+  });
+
+  it('leaves scheduling opt-in even when times and assignees are present', async () => {
+    await new InteractionService().create({ ...scheduleInput, create_schedule_entry: false, schedule_assigned_user_ids: ['user-2'] }, context);
+    expect(mocks.hasPermission).not.toHaveBeenCalled();
+    expect(mocks.createInteractionScheduleEntry).not.toHaveBeenCalled();
+  });
+
+  it('rejects booking without a start time before any write', async () => {
+    await expect(new InteractionService().create({ ...scheduleInput, start_time: undefined }, context))
+      .rejects.toMatchObject({ statusCode: 400 });
+    expect(mocks.withTransaction).not.toHaveBeenCalled();
+  });
+
+  it.each(['Users user-2 not found in tenant tenant-1', 'Database unavailable'])('fails the transaction and suppresses publishers on schedule failure: %s', async (message) => {
+    const publish = vi.fn();
+    mocks.createInteractionWithSideEffects.mockResolvedValue({ interaction: {}, publishSideEffects: publish });
+    mocks.createInteractionScheduleEntry.mockRejectedValue(new Error(message));
+    const promise = new InteractionService().create(scheduleInput, context);
+    if (message.startsWith('Users ')) {
+      await expect(promise).rejects.toMatchObject({ statusCode: 400, message: 'One or more assigned users could not be found.' });
+    } else {
+      await expect(promise).rejects.toThrow(message);
+    }
+    expect(publish).not.toHaveBeenCalled();
+    await expect(mocks.withTransaction.mock.results[0].value).rejects.toThrow();
   });
 
   it('T011: delegates create to the session-free helper inside a transaction', async () => {

@@ -46,6 +46,8 @@ export const boardResponseSchema = z.object({
 
 // Board list query schema
 export const boardListQuerySchema = paginationQuerySchema.extend({
+  sort: z.string().optional().default('display_order'),
+  order: z.enum(['asc', 'desc']).optional().default('asc'),
   include_inactive: z.string().transform(val => val === 'true').optional(),
   search: z.string().optional()
 });

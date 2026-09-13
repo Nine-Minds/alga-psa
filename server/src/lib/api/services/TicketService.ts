@@ -6,6 +6,7 @@ import { assertCommentThreadAudience } from '@alga-psa/shared/lib/commentAudienc
  * Business logic for ticket-related operations
  */
 
+import { reconcileCommentAttachments, canReadCommentAttachment, filterReadableCommentAttachments, canAccessAttachmentTicket } from '@shared/lib/ticketCommentAttachments';
 import { Knex } from 'knex';
 import { assertCoManagedOperationalWrite } from '@alga-psa/licensing';
 import {
@@ -693,7 +694,7 @@ export class TicketService extends BaseService<ITicket> {
       )
       .orderBy('d.updated_at', 'desc');
 
-    return documents as IDocument[];
+    return filterReadableCommentAttachments(knex, context.tenant, context.userId, documents) as Promise<IDocument[]>;
   }
 
   /**
@@ -1033,7 +1034,7 @@ export class TicketService extends BaseService<ITicket> {
     };
   }
 
-  async uploadTicketDocument(ticketId: string, file: File, context: ServiceContext): Promise<IDocument> {
+  async uploadTicketDocument(ticketId: string, file: File, context: ServiceContext, commentAttachmentDraft = false): Promise<IDocument> {
     const { knex } = await this.getKnex();
     this.assertValidTicketId(ticketId);
 
@@ -1052,6 +1053,7 @@ export class TicketService extends BaseService<ITicket> {
       ]);
     }
 
+    if (commentAttachmentDraft && !await canAccessAttachmentTicket(knex, context.tenant, context.userId, ticketId)) throw new NotFoundError('Ticket not found');
     const mimeType = file.type || 'application/octet-stream';
     try {
       await StorageService.validateFileUpload(context.tenant, mimeType, file.size);
@@ -1130,12 +1132,19 @@ export class TicketService extends BaseService<ITicket> {
       },
     });
 
+    documentCommitted = true;
     const createdDocument = await this.getDocumentById(documentId, context);
     if (!createdDocument) {
       throw new Error('Uploaded document could not be loaded');
     }
 
     return createdDocument;
+    } finally {
+      if (commentAttachmentDraft && !documentCommitted) {
+        try { await StorageService.deleteFile(uploadResult.file_id, context.userId); }
+        catch (error) { console.error('Unable to remove unclaimed comment attachment storage', error); }
+      }
+    }
   }
 
   async downloadTicketDocument(
@@ -1166,7 +1175,7 @@ export class TicketService extends BaseService<ITicket> {
       .select('d.file_id', 'd.document_name', 'd.mime_type')
       .first();
 
-    if (!doc || !doc.file_id) {
+    if (!doc || !doc.file_id || !await canReadCommentAttachment(knex, context.tenant, context.userId, documentId)) {
       throw new NotFoundError('Document not found');
     }
 
@@ -2194,6 +2203,8 @@ export class TicketService extends BaseService<ITicket> {
 
       await assertCommentThreadAudience(trx, context.tenant, apiThreadId, { ticketId, isInternal: apiIsInternal, parentCommentId: apiParentCommentId });
       const [comment] = await tenantScopedTable(trx, 'comments', context.tenant).insert(commentData).returning('*');
+
+      await reconcileCommentAttachments(trx, context.tenant, comment.comment_id, context.userId);
 
       if (apiIsReply) {
         await tenantScopedTable(trx, 'comment_threads', context.tenant)

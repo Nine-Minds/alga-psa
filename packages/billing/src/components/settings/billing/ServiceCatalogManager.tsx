@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import CurrencyPicker from '@alga-psa/ui/components/CurrencyPicker';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { DeleteEntityDialog } from '@alga-psa/ui';
 // Import new action and types
@@ -885,7 +886,7 @@ const ServiceCatalogManager: React.FC = () => {
                 {editingPrices.map((price, index) => (
                   <div key={index} className="flex items-center gap-3">
                     <div className="w-32">
-                      <CustomSelect
+                      <CurrencyPicker
                         id={`edit-price-currency-${index}`}
                         options={CURRENCY_OPTIONS.filter(c =>
                           c.value === price.currency_code ||

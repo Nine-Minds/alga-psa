@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
+import { getApiKeyUserOverride } from '@alga-psa/auth';
+import { getTenantContext } from '@alga-psa/db';
 
 const createAccountingExportBatchMock = vi.hoisted(() => vi.fn());
 
@@ -18,6 +20,42 @@ import { ApiAccountingExportController } from '../../../lib/api/controllers/ApiA
 describe('ApiAccountingExportController.createBatch', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  it('preserves each authenticated caller through concurrent sessionless action calls and clears the context afterwards', async () => {
+    const controller = new ApiAccountingExportController();
+    const internals = controller as any;
+    vi.spyOn(internals, 'authenticate').mockImplementation(async (request: any) => {
+      const tenant = request.headers.get('x-fixture-tenant');
+      request.context = { tenant, userId: `user-${tenant}`, user: {
+        tenant, user_id: `user-${tenant}`, user_type: 'internal',
+      } };
+      return request;
+    });
+    vi.spyOn(internals, 'authorize').mockResolvedValue(undefined);
+    let entered = 0;
+    let release!: () => void;
+    const bothEntered = new Promise<void>(resolve => { release = resolve; });
+    createAccountingExportBatchMock.mockImplementation(async () => {
+      if (++entered === 2) release();
+      await bothEntered;
+      const user = getApiKeyUserOverride();
+      if (!user) throw new Error('Authenticated API identity was lost before the server action');
+      expect(await getTenantContext()).toBe(user.tenant);
+      return { batch_id: `batch-${user.tenant}`, created_by: user.user_id };
+    });
+    const responses = await Promise.all(['one', 'two'].map(tenant => controller.createBatch(new NextRequest(
+      'http://localhost/api/accounting/exports', {
+        method: 'POST', headers: { 'content-type': 'application/json', 'x-fixture-tenant': tenant },
+        body: JSON.stringify({ adapter_type: 'xero', export_type: 'invoice' }),
+      },
+    ))));
+    expect(responses.map(response => response.status)).toEqual([201, 201]);
+    expect(await Promise.all(responses.map(response => response.json()))).toEqual([
+      { batch_id: 'batch-one', created_by: 'user-one' },
+      { batch_id: 'batch-two', created_by: 'user-two' },
+    ]);
+    expect(getApiKeyUserOverride()).toBeUndefined();
   });
 
   it('returns a conflict response when the server action reports a duplicate export', async () => {

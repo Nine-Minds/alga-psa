@@ -117,7 +117,8 @@
     "collapseSidebar": "Recolher barra lateral",
     "collapseSection": "Recolher {{section}}",
     "expandSection": "Expandir {{section}}",
-    "appLogoAlt": "Logotipo do {{appName}}"
+    "appLogoAlt": "Logotipo do {{appName}}",
+    "poweredBy": "Com tecnologia de"
   },
   "settings": {
     "sections": {

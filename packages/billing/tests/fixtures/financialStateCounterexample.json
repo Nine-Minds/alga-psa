@@ -1,0 +1,24 @@
+{
+  "seed": 20260906,
+  "path": "0:0:2:0:2:3:8:7:7:7:7:7:7:9:7:8:8:8:5:5:5",
+  "total": 100,
+  "steps": [
+    {
+      "operation": "pay",
+      "actor": 0,
+      "amount": 1
+    },
+    {
+      "operation": "credit",
+      "actor": 0,
+      "amount": 100
+    },
+    {
+      "operation": "finalize",
+      "actor": 0,
+      "amount": 1
+    }
+  ],
+  "defect": "Credit application ignored prior cash payments; 100 cents credit was applied when 99 cents remained due.",
+  "shrinks": 20
+}

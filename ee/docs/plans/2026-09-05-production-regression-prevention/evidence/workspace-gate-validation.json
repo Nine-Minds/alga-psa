@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "observedAt": "2026-09-06",
+  "kind": "gate-validation",
+  "revision": "939a12de51009f7c234e5ab3a516546821a955f4",
+  "dirty": true,
+  "validationStatus": "passed",
+  "harness": {
+    "tests": 20,
+    "failed": 0,
+    "skipped": 0,
+    "includes": "Eight gate cases, including real CLI execution in a disposable clean git checkout, plus execution/discovery regression checks."
+  },
+  "nativeReplay": {
+    "workflowRun": "34052241154",
+    "candidateRevision": "095ad7124f91aa2012b5e8aef2fb21d9d9e7d766",
+    "expectedGateStatus": "failed",
+    "actualGateStatus": "failed",
+    "passingSuites": 7,
+    "totalSuites": 8,
+    "failures": [
+      "Required job workspace-tests: failure",
+      "nx-tooling: nx-tooling bundle 1: Runner exited with 1",
+      "nx-tooling: Shard 1 did not pass"
+    ],
+    "elapsedMs": 23701.549208,
+    "reportSha256": "0522d883321d3b4bb89466f812b75e95261b768430ade149408979786ec1d9cb"
+  },
+  "limits": [
+    "The native replay uses unchanged downloaded reports and producer paths from published22c; it is not execution of the new gate in GitHub Actions.",
+    "The workspace gate covers eight suites in one workflow. Server unit, integration, infrastructure, browser, release and effective repository protection remain separate unfinished scope.",
+    "The known native Nx runtime failure remains correctly non-green despite eleven passing assertions. Its source fix awaits new-candidate CI."
+  ]
+}

@@ -141,6 +141,8 @@
   },
   "usage": {
     "bucketHoursOverview": "Przegląd pakietu godzin",
+    "bucketLoadError": "Nie udało się wczytać sald pakietów godzin. Spróbuj ponownie, aby zobaczyć aktualne salda.",
+    "retryBucketBalances": "Wczytaj ponownie salda pakietów godzin",
     "usageRecords": "Zapisy użytkowania",
     "actions": {
       "addUsage": "Dodaj użycie",

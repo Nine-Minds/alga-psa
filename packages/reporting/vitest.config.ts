@@ -3,6 +3,8 @@ import path from 'path';
 
 export default defineConfig({
   test: {
+    // Required database suites execute in the workspace DB lane.
+    exclude: ['**/node_modules/**', '**/*.db.test.?(c|m)[jt]s?(x)'],
     globals: true,
     environment: 'node',
     include: ['src/**/*.{test,spec}.{ts,tsx}', 'tests/**/*.{test,spec}.{ts,tsx}'],

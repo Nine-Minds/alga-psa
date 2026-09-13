@@ -68,6 +68,10 @@ vi.mock('@enterprise/lib/actions/integrations/huduDataActions', () => ({
 // alias, which in the ee/server test env resolves to the CE stub (render
 // null). Mock it to a recognizable stub so the flag-on wrapper path can be
 // asserted without pulling the real EE component through next/dynamic.
+vi.mock('@enterprise/components/credentials/AssetCredentialsSection', () => ({
+  AssetCredentialsSection: ({ assetId }: { assetId: string }) => <div id="edition-asset-credentials">{assetId}</div>,
+}));
+
 vi.mock('@enterprise/components/credentials/EntityCredentialsSection', () => ({
   EntityCredentialsSection: ({ entityType, entityId }: { entityType: string; entityId: string }) => (
     <div id={`ee-entity-section-${entityType}`}>{entityId}</div>

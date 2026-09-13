@@ -141,6 +141,8 @@
   },
   "usage": {
     "bucketHoursOverview": "Resumen de las bolsas de horas",
+    "bucketLoadError": "No se pudieron cargar los saldos de las bolsas de horas. Vuelva a intentarlo para ver los saldos actuales.",
+    "retryBucketBalances": "Volver a cargar los saldos de horas",
     "usageRecords": "Registros de uso",
     "actions": {
       "addUsage": "Agregar uso",

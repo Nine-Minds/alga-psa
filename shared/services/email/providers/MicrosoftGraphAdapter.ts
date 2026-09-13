@@ -1039,7 +1039,7 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       graphErr?.message ||
       error?.message ||
       (typeof error === 'string' ? error : 'Unknown error');
-    const code = graphErr?.code || (status ? String(status) : undefined);
+    const code = graphErr?.code || error?.code || (status ? String(status) : undefined);
     const ids = this.extractGraphIds(res?.headers);
     return {
       status,
@@ -1065,6 +1065,9 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       code: failure.code,
       requestId: failure.requestId,
       responseBody: failure.responseBody,
+      // Keep only the retry header across the sanitization boundary, never the
+      // Axios request/config (which can contain the mailbox access token).
+      retryAfter: (error as any)?.response?.headers?.['retry-after'] ?? (error as any)?.retryAfter,
     });
     return wrapped;
   }

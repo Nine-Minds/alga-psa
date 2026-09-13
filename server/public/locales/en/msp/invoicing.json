@@ -1004,7 +1004,8 @@
     },
     "messages": {
       "success": "Invoice generated successfully!",
-      "loadFailed": "Failed to load data"
+      "loadFailed": "Failed to load data",
+      "salesOrderSourcesUnavailable": "Sales order sources could not be loaded. You can still enter manual invoice items."
     }
   },
   "prepayment": {
@@ -1412,6 +1413,14 @@
       "modern-invoice-complete": {
         "label": "Modern Invoice Template",
         "description": "Complete layout with Header, Billing Info, Items Table, and Footer."
+      },
+      "billed-time-entries": {
+        "label": "Billed-time entry detail",
+        "description": "Add an informational entry table with dates, work items, hours, rates and amounts."
+      },
+      "billed-time-by-ticket": {
+        "label": "Billed-time detail by ticket",
+        "description": "Repeat a work-item heading and its scoped entry table for each ticket or task."
       }
     },
     "schema": {
@@ -1594,6 +1603,9 @@
               "label": "Contract.pdf"
             }
           }
+        },
+        "totals-rows": {
+          "title": "Totals Rows"
         }
       }
     },
@@ -1867,7 +1879,8 @@
         "transformsSource": "{{binding}} (Transforms source)",
         "transformsOutput": "{{binding}} (Transforms output)",
         "ticketGroups": "Billed Time by Ticket",
-        "timeEntries": "Billed Time Entries"
+        "timeEntries": "Billed Time Entries",
+        "ticketPresentationRows": "Charges by Ticket"
       },
       "presets": {
         "description": {
@@ -1945,7 +1958,12 @@
         "headerPlaceholder": "Header label",
         "bindingKey": "Binding key",
         "type": "Type",
-        "width": "Width"
+        "width": "Width",
+        "stackedLines": "Stacked lines",
+        "addLine": "+ Line",
+        "clearLines": "Single line",
+        "stackedLinesHint": "Each non-empty line renders on its own row. When all lines are empty the column’s binding key above is shown.",
+        "removeLine": "Remove line {{index}}"
       },
       "columnTypes": {
         "text": "Text",
@@ -1990,6 +2008,15 @@
       "visibleInPortal": "Visible in client portal",
       "dialogTitle": "Select Image",
       "dialogDescription": "Choose an image from your documents to use in this template."
+    },
+    "totalsRowsEditor": {
+      "rowBackground": "Row background",
+      "rowTextColor": "Text color",
+      "resetColors": "Reset colors",
+      "clearRowBackground": "Clear row background color",
+      "clearRowTextColor": "Clear row text color",
+      "labelColorOverrideNote": "This label keeps its own saved color and does not inherit the row text color set above. The amount still follows the row text color.",
+      "noRows": "This totals block has no saved rows yet. Save the template and reopen it to edit row colors."
     }
   },
   "draftInvoiceDetails": {
@@ -2136,7 +2163,8 @@
       "referenceMissing": "The selected invoice template or client no longer exists. Please refresh and try again.",
       "duplicate": "An invoice template with those settings already exists.",
       "missingField": "Missing required invoice template field.",
-      "missingFieldNamed": "Missing required invoice template field: {{field}}."
+      "missingFieldNamed": "Missing required invoice template field: {{field}}.",
+      "evaluationFailed": "Template data binding failed: {{details}}"
     }
   },
   "periodTotal": {

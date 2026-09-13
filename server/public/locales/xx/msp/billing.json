@@ -140,6 +140,8 @@
     }
   },
   "usage": {
+    "bucketLoadError": "⟦Ɓŭƈķḗŧ ƀȧŀȧƞƈḗş ƈȯŭŀḓ ƞȯŧ ƀḗ ŀȯȧḓḗḓ. Řḗŧřẏ ŧȯ şḗḗ ŧħḗ ƈŭřřḗƞŧ ƀȧŀȧƞƈḗş.⟧",
+    "retryBucketBalances": "⟦Řḗŧřẏ ƀŭƈķḗŧ ƀȧŀȧƞƈḗş⟧",
     "bucketHoursOverview": "⟦Ɓŭƈķḗŧ Ħȯŭřş Ȯṽḗřṽīḗẇ⟧",
     "usageRecords": "⟦Ŭşȧɠḗ Řḗƈȯřḓş⟧",
     "actions": {

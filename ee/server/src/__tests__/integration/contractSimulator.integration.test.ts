@@ -228,8 +228,24 @@ describe("Contract simulator – migrated-schema integration", () => {
     expect(
       new Set(chargedPeriod?.lines.map((line) => line.charge_type)),
     ).toEqual(
-      new Set(["fixed", "time", "usage", "bucket", "product", "license"]),
+      new Set(["fixed", "usage", "bucket", "product", "license"]),
     );
+    const engineeringCharges = chargedPeriod?.lines.filter(
+      (line) => line.service_id === fixture.services.hourly,
+    );
+    expect(engineeringCharges).toHaveLength(1);
+    expect(engineeringCharges?.[0]).toMatchObject({ charge_type: "bucket", net_amount: 2_000 });
+
+    // Removing the overlay restores ordinary hourly pricing. The same hours
+    // must be priced once in either configuration, never silently omitted.
+    const hourlyOnly = structuredClone(scenario);
+    for (const line of hourlyOnly.lines) {
+      line.services = line.services.filter((service) => service.configuration.configuration_type !== "Bucket");
+    }
+    const hourlyResult = await simulateContractScenario(context.db, context.tenantId, hourlyOnly);
+    const hourlyCharge = hourlyResult.periods.flatMap((period) => period.lines)
+      .find((line) => line.service_id === fixture.services.hourly);
+    expect(hourlyCharge).toMatchObject({ charge_type: "time", net_amount: 15_000 });
     expect(chargedPeriod?.lines.every((line) => line.explanation)).toBe(true);
     expect(chargedPeriod?.subtotal).toBeGreaterThan(0);
     expect(chargedPeriod?.tax).toBeGreaterThan(0);
@@ -1117,7 +1133,7 @@ async function persistScenarioServicePeriods(
         period_key: `2025-01-15:2025-02-15`,
         revision: 1,
         obligation_id: line.origin_contract_line_id ?? line.key,
-        obligation_type: "client_contract_line",
+        obligation_type: "contract_line",
         charge_family: chargeFamily,
         cadence_owner: "contract",
         due_position: "arrears",

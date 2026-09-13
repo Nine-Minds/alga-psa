@@ -293,11 +293,8 @@ describe('client portal ticket visibility enforcement', () => {
           }
 
           if (table === 'documents as d') {
-            return {
-              select: vi.fn().mockReturnThis(),
-              join: vi.fn().mockReturnThis(),
-              where: vi.fn().mockResolvedValue([]),
-            };
+            // Awaited as a builder; comment-attachment filtering runs on the resolved rows.
+            return makeChainable();
           }
 
           // Subqueries the detail SUT builds via tenantDb(trx, tenant).table(...):
@@ -367,11 +364,8 @@ describe('client portal ticket visibility enforcement', () => {
           }
 
           if (table === 'documents as d') {
-            return {
-              select: vi.fn().mockReturnThis(),
-              join: vi.fn().mockReturnThis(),
-              where: vi.fn().mockResolvedValue([]),
-            };
+            // Awaited as a builder; comment-attachment filtering runs on the resolved rows.
+            return makeChainable();
           }
 
           // Subqueries the detail SUT builds via tenantDb(trx, tenant).table(...):
@@ -450,11 +444,8 @@ describe('client portal ticket visibility enforcement', () => {
           }
 
           if (table === 'documents as d') {
-            return {
-              select: vi.fn().mockReturnThis(),
-              join: vi.fn().mockReturnThis(),
-              where: vi.fn().mockResolvedValue([]),
-            };
+            // Awaited as a builder; comment-attachment filtering runs on the resolved rows.
+            return makeChainable();
           }
 
           if (

@@ -62,6 +62,8 @@ export interface QboSimulatorOptions {
   realmId?: string;
   /** Company display name served for CompanyInfo reads. */
   companyName?: string;
+  /** Wire emulators use the host clock; pure tests retain the logical clock. */
+  now?: () => Date;
 }
 
 interface ChangeJournalEntry {
@@ -185,11 +187,11 @@ export class QboSimulator {
 
   /** Current simulator time; use as the `since` cursor between test phases. */
   now(): string {
-    return new Date(this.clockMs).toISOString();
+    return (this.options.now?.() ?? new Date(this.clockMs)).toISOString();
   }
 
   private tick(): string {
-    this.clockMs += 1000;
+    if (!this.options.now) this.clockMs += 1000;
     return this.now();
   }
 

@@ -80,6 +80,8 @@ describe('Xero callback access-log redaction (real Next server)', () => {
       E2E_SKIP_APP_INIT: 'true',
       NEXT_PUBLIC_EDITION: 'enterprise',
       NEXT_TELEMETRY_DISABLED: '1',
+      NEXTAUTH_SECRET: 'xero-access-log-synthetic-test-secret',
+      USE_PREBUILT: 'false',
       // The callback paths exercised here never reach the attempt store, so
       // no Redis/DB dependency is needed; keep the store's lazy client from
       // connecting to anything the environment happens to serve.
@@ -122,6 +124,9 @@ describe('Xero callback access-log redaction (real Next server)', () => {
       }
       child = null;
     }
+    const diagnostics = path.resolve(appDir, '../test-results/api-e2e/diagnostics');
+    fs.mkdirSync(diagnostics, { recursive: true });
+    fs.writeFileSync(path.join(diagnostics, 'xero-access-log-server.log'), childOutput.join(''));
     if (originalSkipAppInit === undefined) {
       delete process.env.E2E_SKIP_APP_INIT;
     } else {
