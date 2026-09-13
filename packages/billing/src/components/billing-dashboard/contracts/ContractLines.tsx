@@ -77,6 +77,8 @@ interface DetailedContractLineMapping {
   contract_line_id: string;
   display_order: number;
   custom_rate?: number | null;
+  /** Who owns `custom_rate`; drives the Standard/Custom/Unreviewed badge. */
+  rate_provenance?: 'custom' | 'inherited' | 'unreviewed' | null;
   created_at: string | Date;
   contract_line_name: string;
   billing_frequency: string;
@@ -1185,8 +1187,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                           </>
                         )}
                         {(() => {
-                          const provenance = (line as { rate_provenance?: string | null })
-                            .rate_provenance;
+                          const provenance = line.rate_provenance ?? null;
                           if (provenance === 'inherited') {
                             return (
                               <>
@@ -1207,19 +1208,29 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                               </>
                             );
                           }
-                          return null;
+                          // A stored rate with no label is a pre-migration row;
+                          // the resolver treats it as custom/unreviewed by rate
+                          // presence, so the badge does the same.
+                          const isCustom =
+                            provenance === 'custom' ||
+                            (provenance === null &&
+                              line.custom_rate !== null &&
+                              line.custom_rate !== undefined);
+                          if (!isCustom) {
+                            return null;
+                          }
+                          return (
+                            <>
+                              <span>•</span>
+                              <span className="inline-flex items-center gap-1 font-medium text-[rgb(var(--color-primary-700))]">
+                                <Badge variant="secondary">
+                                  {t('contractLines.rateProvenance.custom', { defaultValue: 'Custom' })}
+                                </Badge>
+                                {formatRate(line.custom_rate)}
+                              </span>
+                            </>
+                          );
                         })()}
-                        {line.custom_rate !== null && line.custom_rate !== undefined && (
-                          <>
-                            <span>•</span>
-                            <span className="inline-flex items-center gap-1 font-medium text-[rgb(var(--color-primary-700))]">
-                              <Badge variant="secondary">
-                                {t('contractLines.rateProvenance.custom', { defaultValue: 'Custom' })}
-                              </Badge>
-                              {formatRate(line.custom_rate)}
-                            </span>
-                          </>
-                        )}
                         {line.location_id && (
                           <>
                             <span>•</span>

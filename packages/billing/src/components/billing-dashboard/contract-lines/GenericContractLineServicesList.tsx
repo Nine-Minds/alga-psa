@@ -354,14 +354,29 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contr
       render: (value, record) => {
         const rate = value !== undefined ? value : record.default_rate;
         const hasCustomRate = value !== undefined && value !== null;
+        // The member-level rate_provenance governs the same way the line-level
+        // one does: `inherited` follows the catalog, `custom`/`unreviewed` take
+        // the stored number. Fall back to stored-rate presence only for rows
+        // that predate the provenance column.
+        const provenance =
+          (record.typeConfig as { rate_provenance?: string | null } | undefined)?.rate_provenance ??
+          null;
+        const isUnreviewed = provenance === 'unreviewed';
+        const isCustom = provenance === 'custom' || (provenance === null && hasCustomRate);
+        const badgeVariant = isUnreviewed
+          ? 'warning'
+          : isCustom
+            ? 'secondary'
+            : 'default-muted';
+        const badgeLabel = isUnreviewed
+          ? t('services.generic.badges.unreviewed', { defaultValue: 'Unreviewed' })
+          : isCustom
+            ? t('services.generic.badges.custom', { defaultValue: 'Custom' })
+            : t('services.generic.badges.standard', { defaultValue: 'Standard' });
         // Display rate directly as decimal
         return (
           <span className="inline-flex items-center gap-2">
-            <Badge variant={hasCustomRate ? 'secondary' : 'default-muted'}>
-              {hasCustomRate
-                ? t('services.generic.badges.custom', { defaultValue: 'Custom' })
-                : t('services.generic.badges.standard', { defaultValue: 'Standard' })}
-            </Badge>
+            <Badge variant={badgeVariant}>{badgeLabel}</Badge>
             {rate !== undefined && rate !== null
               ? money(Math.round(Number(rate) * 100))
               : t('common.notAvailable', { defaultValue: 'N/A' })}

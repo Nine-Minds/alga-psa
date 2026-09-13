@@ -57,6 +57,11 @@ export interface IContractLineMapping extends TenantEntity {
   contract_line_id: string;
   display_order?: number;
   custom_rate?: number | null;
+  /**
+   * Who owns `custom_rate`. `inherited` (custom_rate NULL) follows the catalog;
+   * `custom`/`unreviewed` take the stored number. See the rate-provenance plan.
+   */
+  rate_provenance?: 'custom' | 'inherited' | 'unreviewed' | null;
   billing_timing?: 'arrears' | 'advance';
   cadence_owner?: CadenceOwner;
   location_id?: string | null;
