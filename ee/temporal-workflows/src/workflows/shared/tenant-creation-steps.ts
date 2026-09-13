@@ -79,13 +79,13 @@ const activities = proxyActivities<{
   createCustomerClientActivity(input: {
     tenantName: string;
     adminUserEmail: string;
-  }): Promise<{ customerId: string }>;
+  }): Promise<{ customerId: string; reused: boolean }>;
   createCustomerContactActivity(input: {
     clientId: string;
     firstName: string;
     lastName: string;
     email: string;
-  }): Promise<{ contactId: string }>;
+  }): Promise<{ contactId: string; reused: boolean }>;
   tagCustomerClientActivity(input: {
     clientId: string;
     tagText: string;
@@ -118,7 +118,12 @@ const activities = proxyActivities<{
     backoffCoefficient: 2.0,
     initialInterval: '1s',
     maximumInterval: '30s',
-    nonRetryableErrorTypes: ['ValidationError', 'DuplicateError'],
+    nonRetryableErrorTypes: [
+      'ValidationError',
+      'DuplicateError',
+      'AmbiguousCustomerMatchError',
+      'ContactEmailConflictError',
+    ],
   },
 });
 
@@ -128,6 +133,22 @@ export const getWorkflowStateQuery = defineQuery<TenantCreationWorkflowState>('g
 
 export interface TenantCreationOrchestrationConfig {
   customerTag: string;
+}
+
+/**
+ * Unwrap Temporal's activity-failure wrapper so state/logs carry the activity's
+ * real reason instead of the generic "Activity task failed". Pure and
+ * deterministic, so it is safe inside the workflow sandbox.
+ */
+function errorDetail(error: unknown): string {
+  let current: unknown = error;
+  for (let depth = 0; depth < 5 && current; depth += 1) {
+    if (current instanceof Error && current.message && current.message !== 'Activity task failed') {
+      return current.message;
+    }
+    current = current instanceof Error ? (current as { cause?: unknown }).cause : undefined;
+  }
+  return error instanceof Error ? error.message : 'Unknown error';
 }
 
 export async function runTenantCreationOrchestration(
@@ -338,10 +359,15 @@ export async function runTenantCreationOrchestration(
     // Step 5: Create customer tracking records (optional, non-blocking).
     // Skipped on appliance installs: there is no nineminds management tenant
     // to track the customer in.
+    //
+    // Each stage is isolated so one failure no longer starves the rest: a
+    // reused client/contact is success, a portal failure is recorded (not
+    // swallowed), and only an unresolvable client skips the downstream chain.
+    workflowState.customerTracking = { portalStatus: 'skipped' };
+
     if (input.skipCustomerTracking) {
       log.info('Skipping customer tracking records (skipCustomerTracking=true)');
     } else {
-    try {
       workflowState.step = 'creating_customer_tracking';
       workflowState.progress = 85;
 
@@ -351,35 +377,87 @@ export async function runTenantCreationOrchestration(
 
       log.info('Creating customer tracking records in nineminds tenant');
 
-      const customerClientResult = await activities.createCustomerClientActivity({
-        tenantName: input.tenantName,
-        adminUserEmail: input.adminUser.email,
-      });
-      customerClientId = customerClientResult.customerId;
+      // 5a. Resolve the management-tenant client.
+      try {
+        const customerClientResult = await activities.createCustomerClientActivity({
+          tenantName: input.tenantName,
+          adminUserEmail: input.adminUser.email,
+        });
+        customerClientId = customerClientResult.customerId;
+        workflowState.customerTracking.clientId = customerClientId;
+        workflowState.customerTracking.clientReused = customerClientResult.reused;
 
-      log.info('Customer client created', { customerId: customerClientId });
+        log.info('Customer client resolved', {
+          customerId: customerClientId,
+          reused: customerClientResult.reused,
+        });
+      } catch (customerClientError) {
+        const message = errorDetail(customerClientError);
+        workflowState.customerTracking.clientError = message;
 
-      const customerContactResult = await activities.createCustomerContactActivity({
-        clientId: customerClientId,
-        firstName: input.adminUser.firstName,
-        lastName: input.adminUser.lastName,
-        email: input.adminUser.email,
-      });
-      customerContactId = customerContactResult.contactId;
+        log.error('Failed to resolve customer client (skipping downstream customer tracking)', {
+          error: message,
+          tenantName: input.tenantName,
+        });
 
-      log.info('Customer contact created', { contactId: customerContactId });
+        customerClientId = undefined;
+      }
 
-      const tagResult = await activities.tagCustomerClientActivity({
-        clientId: customerClientId,
-        tagText: config.customerTag,
-      });
-      customerTagId = tagResult.tagId;
-
-      log.info('Customer client tagged', { tagId: customerTagId });
-
-      if (customerContactId) {
+      // 5b. Resolve the contact for the client.
+      if (customerClientId) {
         try {
-          log.info('Creating portal user in Nine Minds tenant for customer');
+          const customerContactResult = await activities.createCustomerContactActivity({
+            clientId: customerClientId,
+            firstName: input.adminUser.firstName,
+            lastName: input.adminUser.lastName,
+            email: input.adminUser.email,
+          });
+          customerContactId = customerContactResult.contactId;
+          workflowState.customerTracking.contactId = customerContactId;
+          workflowState.customerTracking.contactReused = customerContactResult.reused;
+
+          log.info('Customer contact resolved', {
+            contactId: customerContactId,
+            reused: customerContactResult.reused,
+          });
+        } catch (customerContactError) {
+          const message = errorDetail(customerContactError);
+          workflowState.customerTracking.contactError = message;
+
+          log.error('Failed to resolve customer contact (non-fatal)', {
+            error: message,
+            email: input.adminUser.email,
+          });
+
+          customerContactId = undefined;
+        }
+      }
+
+      // 5c. Tag the client. Tagging failures never block portal provisioning.
+      if (customerClientId) {
+        try {
+          const tagResult = await activities.tagCustomerClientActivity({
+            clientId: customerClientId,
+            tagText: config.customerTag,
+          });
+          customerTagId = tagResult.tagId;
+
+          log.info('Customer client tagged', { tagId: customerTagId });
+        } catch (customerTagError) {
+          log.error('Failed to tag customer client (non-fatal)', {
+            error: customerTagError instanceof Error ? customerTagError.message : 'Unknown error',
+            clientId: customerClientId,
+          });
+        }
+      }
+
+      // 5d. Provision the Nine Minds Support Portal user for the contact. A
+      // failure here never fails tenant creation, but it is captured in state
+      // and drives the welcome-email copy so we never promise access that does
+      // not exist.
+      if (customerContactId && customerClientId) {
+        try {
+          log.info('Resolving portal user in Nine Minds tenant for customer');
 
           const { tenantId: ninemindsTenantId } = await activities.getManagementTenantId();
 
@@ -395,28 +473,28 @@ export async function runTenantCreationOrchestration(
           });
 
           portalUserId = portalUserResult.userId;
-          portalUserCreated = true;
+          portalUserCreated = portalUserResult.status === 'created';
+          workflowState.customerTracking.portalStatus = portalUserResult.status;
 
-          log.info('Portal user created in Nine Minds tenant', {
+          log.info('Portal user resolved in Nine Minds tenant', {
             portalUserId,
+            portalStatus: portalUserResult.status,
             roleId: portalUserResult.roleId,
             tenantId: ninemindsTenantId,
           });
         } catch (portalUserError) {
+          const message = errorDetail(portalUserError);
+          workflowState.customerTracking.portalStatus = 'failed';
+          workflowState.customerTracking.portalError = message;
+
           log.error('Failed to create portal user in Nine Minds tenant (non-fatal)', {
-            error: portalUserError instanceof Error ? portalUserError.message : 'Unknown error',
+            error: message,
             email: input.adminUser.email,
           });
         }
       }
 
       workflowState.progress = 90;
-    } catch (customerTrackingError) {
-      log.error('Failed to create customer tracking records (non-fatal)', {
-        error: customerTrackingError instanceof Error ? customerTrackingError.message : 'Unknown error',
-        tenantName: input.tenantName,
-      });
-    }
     }
 
     // Step 6: Send welcome email. Skipped on appliance installs: the operator
@@ -445,6 +523,7 @@ export async function runTenantCreationOrchestration(
         clientName: tenantDefaultClientName,
         companyName: tenantCompanyName,
         productCode: input.productCode,
+        portalStatus: workflowState.customerTracking?.portalStatus,
       });
 
       emailSent = emailResult.emailSent;
