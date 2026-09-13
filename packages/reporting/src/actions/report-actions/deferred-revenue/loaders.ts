@@ -6,6 +6,10 @@
 
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+// The schedule-selection semantics live in one place now (plan §0.5 / §2.3):
+// the deferred-revenue report and the billing engine cannot disagree about
+// which pricing schedule is active, including the null-rate-latest case.
+import { selectActivePricingSchedule } from '@alga-psa/billing/lib/billing/pricing/resolveFixedLineRate';
 
 import { resolvePeriodFee, type BilledFeeCandidate } from './fee';
 import { classifyCreditSource, type CreditSourceInvoice } from './creditSource';
@@ -263,11 +267,9 @@ export async function loadBucketPeriods(
 }
 
 /**
- * Active pricing-schedule custom rates per contract. Mirrors the billing
- * engine's override lookup (billingEngine.ts): the schedule with the latest
- * effective_date that starts before the period's end (exclusive) and ends
- * after the period's start (exclusive) wins, and its custom_rate — in cents —
- * takes precedence over the contract-line custom rate.
+ * Pricing-schedule rows per contract, in the shape the shared resolver reads.
+ * Selection semantics are NOT re-implemented here — see
+ * {@link resolvePricingScheduleRate}, which delegates to the resolver.
  */
 export async function loadPricingScheduleRates(
   conn: Knex | Knex.Transaction,
@@ -299,6 +301,13 @@ function addDays(dateString: string, days: number): string {
 /**
  * Resolve the pricing-schedule custom rate in effect for an inclusive bucket
  * period, or null when no schedule overrides it.
+ *
+ * Delegates to the shared resolver's `selectActivePricingSchedule`, which
+ * preserves the billing engine's ordering: the latest active schedule wins and
+ * its null rate is checked *after* selection. A null-rate latest schedule
+ * therefore blocks older schedules here exactly as it does in billing (plan
+ * §2.3, test T21) — the previous implementation skipped null-rate rows before
+ * choosing a winner and so silently fell back to an older schedule.
  */
 export function resolvePricingScheduleRate(
   periodStart: string,
@@ -306,20 +315,25 @@ export function resolvePricingScheduleRate(
   contractId: string,
   schedules: RawPricingScheduleRow[],
 ): number | null {
-  const startExclusive = periodStart;
-  const endExclusive = addDays(periodEnd, 1);
+  const forContract = schedules.filter((schedule) => schedule.contractId === contractId);
+  if (forContract.length === 0) return null;
 
-  let best: RawPricingScheduleRow | null = null;
-  for (const schedule of schedules) {
-    if (schedule.contractId !== contractId) continue;
-    if (schedule.customRate === null) continue;
-    if (schedule.effectiveDate >= endExclusive) continue;
-    if (schedule.endDate !== null && schedule.endDate <= startExclusive) continue;
-    if (best === null || schedule.effectiveDate > best.effectiveDate) {
-      best = schedule;
-    }
+  const active = selectActivePricingSchedule(
+    forContract.map((schedule) => ({
+      schedule_id: null,
+      contract_line_id: null,
+      effective_date: schedule.effectiveDate,
+      end_date: schedule.endDate,
+      custom_rate: schedule.customRate,
+    })),
+    '',
+    { start: periodStart, end: addDays(periodEnd, 1) },
+  );
+
+  if (!active || active.custom_rate === null || active.custom_rate === undefined) {
+    return null;
   }
-  return best?.customRate ?? null;
+  return toNumber(active.custom_rate);
 }
 
 /**

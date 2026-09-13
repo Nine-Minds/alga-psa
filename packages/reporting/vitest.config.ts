@@ -19,6 +19,10 @@ export default defineConfig({
       // alias scheduling and billing already use.
       { find: /^@alga-psa\/core$/, replacement: path.resolve(__dirname, '../core/src/index.ts') },
       { find: /^@alga-psa\/core\/(.*)$/, replacement: path.resolve(__dirname, '../core/src/lib/$1') },
+      // The deferred-revenue loader shares the billing rate resolver so the
+      // report and the engine cannot disagree; resolve it from source.
+      { find: /^@alga-psa\/billing$/, replacement: path.resolve(__dirname, '../billing/src/index.ts') },
+      { find: /^@alga-psa\/billing\/(.*)$/, replacement: path.resolve(__dirname, '../billing/src/$1') },
     ],
   },
 });

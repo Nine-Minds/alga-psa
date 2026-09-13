@@ -142,6 +142,57 @@ describe("resolveFixedLineRate (T15 equivalence matrix)", () => {
     });
   });
 
+  it("schedule end_date boundary matches the engine (end == period start excluded)", () => {
+    const inclusiveStart = PERIOD.start; // 2026-11-01
+    const dayBeforeStart = "2026-10-31";
+    const dayAfterStart = "2026-11-02";
+
+    expect(
+      selectActivePricingSchedule(
+        [
+          {
+            schedule_id: "s-ends-on-start",
+            effective_date: "2026-01-01",
+            end_date: inclusiveStart,
+            custom_rate: 11111,
+          },
+        ],
+        "line-1",
+        PERIOD,
+      ),
+    ).toBeNull();
+
+    expect(
+      selectActivePricingSchedule(
+        [
+          {
+            schedule_id: "s-ends-day-before-start",
+            effective_date: "2026-01-01",
+            end_date: dayBeforeStart,
+            custom_rate: 11111,
+          },
+        ],
+        "line-1",
+        PERIOD,
+      ),
+    ).toBeNull();
+
+    expect(
+      selectActivePricingSchedule(
+        [
+          {
+            schedule_id: "s-ends-day-after-start",
+            effective_date: "2026-01-01",
+            end_date: dayAfterStart,
+            custom_rate: 11111,
+          },
+        ],
+        "line-1",
+        PERIOD,
+      )?.schedule_id,
+    ).toBe("s-ends-day-after-start");
+  });
+
   it("T21: a null-rate newest schedule blocks older schedules (engine semantics)", () => {
     const schedules = [
       {

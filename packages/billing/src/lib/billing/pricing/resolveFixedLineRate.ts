@@ -1,5 +1,3 @@
-import { Temporal } from "@js-temporal/polyfill";
-
 /**
  * One resolver for the fixed/recurring rate decision.
  *
@@ -143,10 +141,6 @@ function toCalendarDate(value: string | Date): string | null {
   }
   const match = /^(\d{4}-\d{2}-\d{2})/.exec(String(value));
   return match ? match[1] : null;
-}
-
-function dayBefore(date: string): string {
-  return Temporal.PlainDate.from(date).subtract({ days: 1 }).toString();
 }
 
 function compareCalendarDates(a: string | null, b: string | null): number {
@@ -333,9 +327,11 @@ export function isActivePricingSchedule(
   // [start, end): a schedule starting at/after period end does not apply.
   if (compareCalendarDates(effectiveDate, period.end) >= 0) return false;
   const endDate = toCalendarDate(schedule.end_date ?? "");
-  // Matches the engine's exclusive service-period start: an end date equal to
-  // the inclusive period start still applies.
-  return endDate === null || compareCalendarDates(endDate, dayBefore(period.start)) > 0;
+  // Exact engine parity (`billingEngine.ts` schedule lookup): the engine keeps
+  // a schedule when `end_date IS NULL OR end_date > servicePeriodStartExclusive`,
+  // where `servicePeriodStartExclusive` is the inclusive period start. An end
+  // date equal to the period start is therefore excluded, not included.
+  return endDate === null || compareCalendarDates(endDate, period.start) > 0;
 }
 
 /** Pick the active schedule: line-scoped rows preferred, then newest. */
