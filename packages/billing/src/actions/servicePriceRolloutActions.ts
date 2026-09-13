@@ -13,7 +13,9 @@
 import { revalidatePath } from 'next/cache';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
+import type { IService } from '@alga-psa/types';
 import { withAuth } from '@alga-psa/auth';
+import Service from '../models/service';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import {
   actionError,
@@ -462,15 +464,27 @@ export const applyServicePriceChange = withAuth(
 
         const primaryRate =
           normalizedPrices.length > 0 ? normalizedPrices[0].rate : null;
-        const patch: Record<string, unknown> = {
-          ...(input.servicePatch ?? {}),
-          ...(primaryRate !== null ? { default_rate: primaryRate } : {}),
-          updated_at: trx.fn.now(),
+        const today = new Date().toISOString().slice(0, 10);
+        // A scheduled write must not move `default_rate` (the catalog's display
+        // and comparison price) to the future rate. Keep it at the
+        // currently-effective price so the list and the edit dialog still show
+        // what bills today and a later price change still re-opens the rollout
+        // dialog. Only an immediate write mirrors the submitted rate.
+        const isFutureEffective =
+          Boolean(input.effectiveDate) && input.effectiveDate! > today;
+        // Route service fields through Service.update: it strips virtual fields
+        // (service_type_name, prices, scheduled_prices), ignores undefined, and
+        // normalizes `default_rate`. The previous raw update wrote an
+        // `updated_at` column `service_catalog` does not have, so every apply
+        // failed — a defect the missing coverage hid.
+        const servicePatch: Partial<IService> = {
+          ...(input.servicePatch as Partial<IService> | undefined),
         };
-        await db
-          .table('service_catalog')
-          .where({ service_id: input.serviceId })
-          .update(patch);
+        delete servicePatch.default_rate;
+        if (!isFutureEffective && primaryRate !== null) {
+          servicePatch.default_rate = primaryRate;
+        }
+        await Service.update(trx, input.serviceId, servicePatch);
 
         for (const price of normalizedPrices) {
           if (input.effectiveDate) {
@@ -491,12 +505,15 @@ export const applyServicePriceChange = withAuth(
               ])
               .merge({ rate: price.rate });
           } else {
+            // Immediate write: replace only the currently-effective window and
+            // leave scheduled future rows alone (same rule as Service.setPrices).
             await db
               .table('service_prices')
               .where({
                 service_id: input.serviceId,
                 currency_code: price.currency_code,
               })
+              .where('effective_date', '<=', today)
               .del();
             await db.table('service_prices').insert({
               tenant,
