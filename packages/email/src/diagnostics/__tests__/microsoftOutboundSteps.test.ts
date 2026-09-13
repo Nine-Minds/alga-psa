@@ -41,6 +41,7 @@ const baseAdapter = (): any => ({
   inspectStoredCredentials: vi.fn(async () => ({ accessTokenPresent: true, refreshTokenPresent: true })),
   decodeCurrentAccessTokenClaims: vi.fn(async () => ({
     decoded: true,
+    scopesAvailable: true,
     scopes: ['Mail.Send', 'Mail.Send.Shared', 'Mail.Read'],
     claims: {},
   })),
@@ -81,7 +82,7 @@ describe('tokens_present', () => {
 describe('token_claims', () => {
   it('passes when Mail.Send is present for the authenticated user', async () => {
     const adapter = baseAdapter();
-    adapter.decodeCurrentAccessTokenClaims = vi.fn(async () => ({ decoded: true, scopes: ['Mail.Send'], claims: {} }));
+    adapter.decodeCurrentAccessTokenClaims = vi.fn(async () => ({ decoded: true, scopesAvailable: true, scopes: ['Mail.Send'], claims: {} }));
     const ctx = makeContext({ adapter, authenticatedUserEmail: 'sender@example.com' });
     const outcome = await stepById('token_claims', buildMicrosoftOutboundSteps()).run(ctx);
     expect(outcome.status).toBe('pass');
@@ -90,7 +91,7 @@ describe('token_claims', () => {
 
   it('fails with reconnection advice when Mail.Send is missing', async () => {
     const adapter = baseAdapter();
-    adapter.decodeCurrentAccessTokenClaims = vi.fn(async () => ({ decoded: true, scopes: ['Mail.Read'], claims: {} }));
+    adapter.decodeCurrentAccessTokenClaims = vi.fn(async () => ({ decoded: true, scopesAvailable: true, scopes: ['Mail.Read'], claims: {} }));
     const ctx = makeContext({ adapter, authenticatedUserEmail: 'sender@example.com' });
     const outcome = await stepById('token_claims', buildMicrosoftOutboundSteps()).run(ctx);
     expect(outcome.status).toBe('fail');
@@ -101,7 +102,7 @@ describe('token_claims', () => {
 
   it('requires Mail.Send.Shared when the sending mailbox differs from the authenticated user', async () => {
     const adapter = baseAdapter();
-    adapter.decodeCurrentAccessTokenClaims = vi.fn(async () => ({ decoded: true, scopes: ['Mail.Send'], claims: {} }));
+    adapter.decodeCurrentAccessTokenClaims = vi.fn(async () => ({ decoded: true, scopesAvailable: true, scopes: ['Mail.Send'], claims: {} }));
     const ctx = makeContext({
       adapter,
       configuredMailbox: 'shared@example.com',
@@ -124,11 +125,22 @@ describe('token_claims', () => {
 
   it('does not require Mail.Send.Shared when the authenticated identity is unknown', async () => {
     const adapter = baseAdapter();
-    adapter.decodeCurrentAccessTokenClaims = vi.fn(async () => ({ decoded: true, scopes: ['Mail.Send'], claims: {} }));
+    adapter.decodeCurrentAccessTokenClaims = vi.fn(async () => ({ decoded: true, scopesAvailable: true, scopes: ['Mail.Send'], claims: {} }));
     const ctx = makeContext({ adapter, configuredMailbox: 'shared@example.com', authenticatedUserEmail: undefined });
     const outcome = await stepById('token_claims', buildMicrosoftOutboundSteps()).run(ctx);
     expect(outcome.status).toBe('pass');
+    expect(outcome.data).toMatchObject({ missing: [], mailboxRelation: 'unknown' });
     expect(outcome.recommendations?.join(' ')).toMatch(/identity could not be confirmed/i);
+  });
+
+  it('warns, never passes, when a decoded token carries no usable scope claim', async () => {
+    const adapter = baseAdapter();
+    adapter.decodeCurrentAccessTokenClaims = vi.fn(async () => ({ decoded: true, scopesAvailable: false, scopes: [], claims: {} }));
+    const ctx = makeContext({ adapter, authenticatedUserEmail: 'sender@example.com' });
+    const outcome = await stepById('token_claims', buildMicrosoftOutboundSteps()).run(ctx);
+    expect(outcome.status).toBe('warn');
+    expect(outcome.data).toMatchObject({ decoded: true, scopesAvailable: false });
+    expect(outcome.recommendations?.join(' ')).toMatch(/no usable scp claim/i);
   });
 });
 

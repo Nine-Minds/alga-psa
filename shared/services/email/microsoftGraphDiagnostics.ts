@@ -61,6 +61,62 @@ export function toDiagnosticsErrorMeta(failure: GraphFailure): DiagnosticsErrorM
   };
 }
 
+/**
+ * Outbound-only normalization that preserves evidence `classifyGraphFailure`
+ * cannot see: correlation ids carried at the top level of already-sanitized
+ * errors, and EmailProviderError's errorCode/metadata. Inbound keeps using
+ * `classifyGraphFailure` so its observable report is unchanged.
+ */
+export function normalizeOutboundGraphFailure(error: any): GraphFailure {
+  const base = classifyGraphFailure(error);
+  const metadata = error?.metadata as Record<string, unknown> | undefined;
+  const providerCode = typeof error?.errorCode === 'string' ? error.errorCode : undefined;
+  const topRequestId = typeof error?.requestId === 'string' ? error.requestId : undefined;
+  const topClientRequestId = typeof error?.clientRequestId === 'string' ? error.clientRequestId : undefined;
+  const metaRequestId = typeof metadata?.requestId === 'string' ? metadata.requestId : undefined;
+  const metaClientRequestId = typeof metadata?.clientRequestId === 'string' ? metadata.clientRequestId : undefined;
+  const metaStatus = Number.isFinite(Number(metadata?.status)) ? Number(metadata?.status) : undefined;
+  const metaCode = typeof metadata?.code === 'string' ? metadata.code : undefined;
+
+  // classifyGraphFailure synthesizes `code` from the HTTP status. Prefer a real
+  // provider/graph code over that synthesized value.
+  const syntheticStatus = base.status !== undefined ? String(base.status) : undefined;
+  const explicitBaseCode = base.code && base.code !== syntheticStatus ? base.code : undefined;
+  const code = explicitBaseCode ?? providerCode ?? metaCode ?? base.code;
+  const status = base.status ?? metaStatus;
+
+  return {
+    status,
+    code,
+    message: base.message,
+    requestId: base.requestId ?? topRequestId ?? metaRequestId,
+    clientRequestId: base.clientRequestId ?? topClientRequestId ?? metaClientRequestId,
+    responseBody: base.responseBody,
+  };
+}
+
+export type SendPermissionDenial =
+  | 'send-as-denied'
+  | 'send-on-behalf-denied'
+  | 'access-denied'
+  | 'unknown';
+
+/**
+ * Classify a Graph/Exchange denial code. ErrorSendAsDenied and
+ * ErrorSendOnBehalfDenied are provider-confirmed Exchange permission denials;
+ * they are distinct from Graph Mail.Send consent and from a generic 403.
+ */
+export function classifySendPermissionDenial(code?: string): SendPermissionDenial {
+  if (!code) return 'unknown';
+  const normalized = code.toLowerCase();
+  if (normalized.includes('sendasdenied')) return 'send-as-denied';
+  if (normalized.includes('sendonbehalf') || normalized.includes('onbehalfdenied')) {
+    return 'send-on-behalf-denied';
+  }
+  if (normalized.includes('accessdenied') || normalized.includes('forbidden')) return 'access-denied';
+  return 'unknown';
+}
+
 export interface GraphRecommendationInput {
   status?: number;
   code?: string;
@@ -111,6 +167,8 @@ export function mapInboundRecommendations(args: GraphRecommendationInput): strin
 export interface OutboundGraphRecommendationInput extends GraphRecommendationInput {
   /** True when the configured sending mailbox differs from the authenticated user. */
   sharedMailbox?: boolean;
+  /** True when the authenticated identity could not be confirmed. */
+  identityUnknown?: boolean;
 }
 
 /**
@@ -131,9 +189,20 @@ export function mapOutboundRecommendations(args: OutboundGraphRecommendationInpu
   }
 
   if (args.status === 403) {
-    recs.push(
-      'Microsoft Graph returned 403 (Forbidden). This alone does not identify the missing permission: verify Mail.Send consent and, when sending as a shared/delegated mailbox, Exchange Send As (or Send on Behalf) for the sending identity.'
-    );
+    const denial = classifySendPermissionDenial(args.code);
+    if (denial === 'send-as-denied') {
+      recs.push(
+        'Microsoft Graph/Exchange rejected the send with ErrorSendAsDenied, a provider-confirmed Exchange send-permission denial for the target mailbox. This is distinct from Microsoft Graph Mail.Send consent. Grant the sending identity Exchange Send As on the shared mailbox (or Send on Behalf). Send on Behalf appears as "<sender> on behalf of <mailbox>", which is not the same as Send As.'
+      );
+    } else if (denial === 'send-on-behalf-denied') {
+      recs.push(
+        'Microsoft Graph/Exchange rejected the send with ErrorSendOnBehalfDenied, a provider-confirmed Exchange Send on Behalf denial for the target mailbox. Grant the sending identity Send on Behalf (or Send As). Send on Behalf appears as "<sender> on behalf of <mailbox>", which is not the same as Send As.'
+      );
+    } else {
+      recs.push(
+        'Microsoft Graph returned 403 (Forbidden). This alone does not identify the missing permission: verify Mail.Send consent and, when sending as a shared/delegated mailbox, Exchange Send As (or Send on Behalf) for the sending identity.'
+      );
+    }
   }
 
   if (args.status === 404) {
@@ -147,6 +216,12 @@ export function mapOutboundRecommendations(args: OutboundGraphRecommendationInpu
   if (args.sharedMailbox) {
     recs.push(
       'Sending as a mailbox other than the authenticated user requires Exchange Send As (or Send on Behalf) permission on the target mailbox in addition to Microsoft Graph consent.'
+    );
+  }
+
+  if (args.identityUnknown) {
+    recs.push(
+      'The authenticated Microsoft identity could not be confirmed, so whether Mail.Send.Shared or Exchange Send As is required is unknown. Reconnect the mailbox and re-run diagnostics.'
     );
   }
 

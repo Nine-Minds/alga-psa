@@ -18,7 +18,7 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
-import { CheckCircle, AlertCircle, XCircle, Clock, Copy, Download, Send } from 'lucide-react';
+import { CheckCircle, AlertCircle, XCircle, Clock, Copy, Download, Send, RefreshCw } from 'lucide-react';
 import type {
   OutboundEmailDiagnosticsReport,
   OutboundStep,
@@ -190,10 +190,21 @@ export function OutboundEmailDiagnosticsDialog({
           </div>
         )}
 
-        {error && (
-          <Alert variant="destructive">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
+        {error && !loading && (
+          <div className="space-y-3">
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+            <Button
+              id="outbound-diagnostics-retry"
+              variant="outline"
+              onClick={() => void runDiagnostics(false)}
+              disabled={loading}
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              {t('outboundDiagnostics.actions.retry', { defaultValue: 'Retry' })}
+            </Button>
+          </div>
         )}
 
         {report && !loading && (
@@ -249,6 +260,16 @@ export function OutboundEmailDiagnosticsDialog({
               >
                 <Download className="h-4 w-4 mr-2" />
                 {t('outboundDiagnostics.actions.downloadBundle', { defaultValue: 'Download' })}
+              </Button>
+              <Button
+                id="outbound-diagnostics-rerun"
+                variant="outline"
+                size="sm"
+                onClick={() => void runDiagnostics(false)}
+                disabled={loading}
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                {t('outboundDiagnostics.actions.rerun', { defaultValue: 'Run again' })}
               </Button>
               <span className="text-xs text-muted-foreground">
                 {t('outboundDiagnostics.labels.redacted', {

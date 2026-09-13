@@ -18,14 +18,31 @@ import type {
   OutboundStepDefinition,
 } from './outboundTypes';
 
-function isSharedMailbox(ctx: OutboundDiagnosticsContext): boolean {
+type MailboxRelation = 'self' | 'shared' | 'unknown';
+
+function mailboxRelation(ctx: OutboundDiagnosticsContext): MailboxRelation {
   const configured = (ctx.provider.configuredMailbox || '').trim().toLowerCase();
   const authenticated = (ctx.authenticatedUserEmail || '').trim().toLowerCase();
-  return Boolean(configured) && Boolean(authenticated) && configured !== authenticated;
+  if (!configured) return 'self';
+  if (!authenticated) return 'unknown';
+  return configured === authenticated ? 'self' : 'shared';
+}
+
+/**
+ * True only when both identities are known and differ. Unknown identity is NOT
+ * treated as a shared mailbox (nor as self-send); see mailboxRelation.
+ */
+function isSharedMailbox(ctx: OutboundDiagnosticsContext): boolean {
+  return mailboxRelation(ctx) === 'shared';
+}
+
+function isUnknownMailboxIdentity(ctx: OutboundDiagnosticsContext): boolean {
+  return mailboxRelation(ctx) === 'unknown';
 }
 
 function requiredSendScopes(ctx: OutboundDiagnosticsContext): string[] {
   const scopes = ['Mail.Send'];
+  // Mail.Send.Shared is required only for a confirmed different sending mailbox.
   if (isSharedMailbox(ctx)) {
     scopes.push('Mail.Send.Shared');
   }
@@ -85,7 +102,8 @@ export function buildMicrosoftOutboundSteps(): OutboundStepDefinition[] {
           };
         }
         const claims = await adapter.decodeCurrentAccessTokenClaims();
-        const shared = isSharedMailbox(ctx);
+        const relation = mailboxRelation(ctx);
+        const shared = relation === 'shared';
         const required = requiredSendScopes(ctx);
 
         if (!claims.decoded) {
@@ -93,12 +111,32 @@ export function buildMicrosoftOutboundSteps(): OutboundStepDefinition[] {
             status: 'warn',
             data: {
               decoded: false,
-              reason: 'The access token could not be decoded or has no usable scp claim.',
+              scopesAvailable: false,
+              reason: 'The access token is missing, opaque, or is not a decodable JWT.',
               required,
               isSharedMailbox: shared,
+              mailboxRelation: relation,
             },
             recommendations: [
               'The access token could not be decoded to inspect delegated scopes, so Mail.Send consent cannot be confirmed. Reconnect the Microsoft 365 mailbox.',
+            ],
+          };
+        }
+
+        if (!claims.scopesAvailable) {
+          return {
+            status: 'warn',
+            data: {
+              decoded: true,
+              scopesAvailable: false,
+              reason: 'The decoded token has no usable scp claim, so delegated scopes are unavailable.',
+              scp: claims.scopes,
+              required,
+              isSharedMailbox: shared,
+              mailboxRelation: relation,
+            },
+            recommendations: [
+              'The access token decoded but carries no usable scp claim, so delegated scopes are unavailable and Mail.Send consent cannot be confirmed. Reconnect the Microsoft 365 mailbox and confirm the delegated scopes.',
             ],
           };
         }
@@ -107,10 +145,12 @@ export function buildMicrosoftOutboundSteps(): OutboundStepDefinition[] {
         const missing = required.filter((scope) => !claims.scopes.includes(scope));
         const data = {
           decoded: true,
+          scopesAvailable: true,
           scp: claims.scopes,
           required,
           missing,
           isSharedMailbox: shared,
+          mailboxRelation: relation,
           authenticatedUserEmail: ctx.authenticatedUserEmail ?? null,
         };
 
@@ -127,7 +167,11 @@ export function buildMicrosoftOutboundSteps(): OutboundStepDefinition[] {
           };
         }
 
-        if (!ctx.authenticatedUserEmail) {
+        if (relation === 'unknown') {
+          // Mail.Send is present, so Graph send consent is satisfied. Mail.Send.Shared
+          // is only required for a *confirmed* different mailbox, so unknown
+          // identity stays a pass here with an explicit note; mailbox_base_path
+          // surfaces the identity uncertainty as a warn.
           return {
             status: 'pass',
             data: {
@@ -177,18 +221,31 @@ export function buildMicrosoftOutboundSteps(): OutboundStepDefinition[] {
         }
         const route = adapter.getMailboxRoute();
         ctx.mailboxBasePath = route.basePath;
+        const data = {
+          configuredMailbox: route.configuredMailbox,
+          authenticatedUserEmail: route.authenticatedUserEmail ?? null,
+          mailboxBasePath: route.basePath,
+          relation: route.relation,
+          isSharedOrDelegated: route.isSharedOrDelegated,
+          rationale: route.rationale,
+        };
+
+        if (route.relation === 'unknown') {
+          return {
+            status: 'warn',
+            data,
+            recommendations: [
+              'The authenticated identity could not be confirmed, so self-send cannot be assumed and the Mail.Send.Shared/Send As requirement for the configured mailbox is unknown. Confirm the /me identity and re-run diagnostics.',
+            ],
+          };
+        }
+
         return {
           status: 'pass',
-          data: {
-            configuredMailbox: route.configuredMailbox,
-            authenticatedUserEmail: route.authenticatedUserEmail ?? null,
-            mailboxBasePath: route.basePath,
-            isSharedOrDelegated: route.isSharedOrDelegated,
-            rationale: route.rationale,
-          },
+          data,
           recommendations: route.isSharedOrDelegated
             ? [
-                'Sending as a mailbox other than the authenticated user additionally requires Exchange Send As (or Send on Behalf) on the target mailbox; Graph Mail.Send consent alone is not sufficient.',
+                'Sending as a mailbox other than the authenticated user additionally requires Exchange Send As (or Send on Behalf) on the target mailbox; Graph Mail.Send consent alone is not sufficient. Send on Behalf appears as "<sender> on behalf of <mailbox>", which is not the same as Send As.',
               ]
             : undefined,
         };
@@ -198,11 +255,30 @@ export function buildMicrosoftOutboundSteps(): OutboundStepDefinition[] {
       id: 'send_as_probe',
       title: 'Exchange Send As verification',
       run: async (ctx): Promise<DiagnosticsStepOutcome<OutboundStepData>> => {
-        if (!isSharedMailbox(ctx)) {
+        const relation = mailboxRelation(ctx);
+        if (relation === 'self') {
           return {
             status: 'skip',
             detail: 'Not applicable: sending as the authenticated user (/me).',
-            data: { isSharedMailbox: false, requiresSendAs: false },
+            data: { isSharedMailbox: false, mailboxRelation: 'self', requiresSendAs: false },
+          };
+        }
+        if (relation === 'unknown') {
+          return {
+            status: 'warn',
+            detail: 'Authenticated identity is unknown, so Exchange Send As applicability cannot be determined.',
+            data: {
+              isSharedMailbox: false,
+              mailboxRelation: 'unknown',
+              requiresSendAs: null,
+              authoritative: false,
+              draftProbePerformed: false,
+              limitation:
+                'The configured mailbox could not be compared to the authenticated user, so self-send is not confirmed and neither is a shared/delegated send. A draft-create probe requires Mail.ReadWrite, which this delegated scope set does not request.',
+            },
+            recommendations: [
+              'Confirm the authenticated Microsoft identity before concluding whether Exchange Send As (or Send on Behalf) is required, then re-run diagnostics.',
+            ],
           };
         }
         return {
@@ -210,6 +286,7 @@ export function buildMicrosoftOutboundSteps(): OutboundStepDefinition[] {
           detail: 'Exchange Send As has not been verified.',
           data: {
             isSharedMailbox: true,
+            mailboxRelation: 'shared',
             requiresSendAs: true,
             authoritative: false,
             draftProbePerformed: false,
@@ -218,7 +295,7 @@ export function buildMicrosoftOutboundSteps(): OutboundStepDefinition[] {
               'A draft-create probe requires Mail.ReadWrite, which this delegated scope set does not request; a draft 403 would not isolate Exchange Send As from a Graph write-scope denial. No authoritative verdict is available without real-tenant validation.',
           },
           recommendations: [
-            'Grant the sending identity Exchange Send As (or Send on Behalf) on the shared mailbox, then confirm with an explicit live send test.',
+            'Grant the sending identity Exchange Send As (or Send on Behalf) on the shared mailbox, then confirm with an explicit live send test. Send on Behalf appears as "<sender> on behalf of <mailbox>", which is not the same as Send As.',
           ],
         };
       },

@@ -17,7 +17,8 @@ import {
   MicrosoftGraphAdapter,
 } from '@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter';
 import {
-  classifyGraphFailure,
+  mapOutboundRecommendations,
+  normalizeOutboundGraphFailure,
   toDiagnosticsErrorMeta,
 } from '@alga-psa/shared/services/email/microsoftGraphDiagnostics';
 import {
@@ -32,7 +33,10 @@ import { EmailProviderManager } from '../providers/EmailProviderManager';
 import { buildMicrosoftOutboundSteps } from './microsoftOutboundSteps';
 import { buildSmtpOutboundSteps } from './smtpOutboundSteps';
 import { buildResendOutboundSteps } from './resendOutboundSteps';
-import { redactDiagnosticsValue } from './redaction';
+import {
+  buildSanitizedSupportBundle,
+  sanitizeDiagnosticsReport,
+} from './redaction';
 import type {
   NormalizedOutboundOptions,
   OutboundDiagnosticsContext,
@@ -123,6 +127,7 @@ function toLiveSendFailure(error: unknown, fallback: string): OutboundLiveSendRe
       errorCode: error.errorCode,
       status: metadataNumber(error.metadata, 'status'),
       requestId: metadataField(error.metadata, 'requestId'),
+      clientRequestId: metadataField(error.metadata, 'clientRequestId'),
       definitelyNotSent: error.metadata?.definitelyNotSent === true,
       requiresReconciliation: error.metadata?.requiresReconciliation === true,
       retryable: error.isRetryable,
@@ -151,7 +156,16 @@ async function defaultSendLive(input: OutboundLiveSendInput): Promise<OutboundLi
   try {
     const result = await manager.sendEmail(message, input.tenant);
     if (result.success) {
-      return { success: true, messageId: result.messageId, metadata: result.metadata };
+      // Preserve the provider acceptance evidence (status/correlation ids) so
+      // the report can show it; acceptance is not delivery.
+      return {
+        success: true,
+        messageId: result.messageId,
+        status: metadataNumber(result.metadata, 'status'),
+        requestId: metadataField(result.metadata, 'requestId'),
+        clientRequestId: metadataField(result.metadata, 'clientRequestId'),
+        metadata: result.metadata,
+      };
     }
     return {
       success: false,
@@ -159,6 +173,7 @@ async function defaultSendLive(input: OutboundLiveSendInput): Promise<OutboundLi
       errorCode: metadataField(result.metadata, 'errorCode'),
       status: metadataNumber(result.metadata, 'status'),
       requestId: metadataField(result.metadata, 'requestId'),
+      clientRequestId: metadataField(result.metadata, 'clientRequestId'),
       definitelyNotSent: result.metadata?.definitelyNotSent === true,
       requiresReconciliation: result.metadata?.requiresReconciliation === true,
       retryable: result.metadata?.retryable === true,
@@ -249,20 +264,45 @@ function buildLiveSendStep(): OutboundStepDefinition {
       if (result.success) {
         return {
           status: 'pass',
+          http: {
+            method: 'POST',
+            ...(result.status !== undefined ? { status: result.status } : {}),
+            ...(result.requestId ? { requestId: result.requestId } : {}),
+            ...(result.clientRequestId ? { clientRequestId: result.clientRequestId } : {}),
+          },
           data: {
             accepted: true,
             delivered: false,
             messageId: result.messageId ?? null,
+            status: result.status ?? null,
+            requestId: result.requestId ?? null,
+            clientRequestId: result.clientRequestId ?? null,
             note: 'The provider accepted the message; acceptance is not delivery.',
           },
         };
       }
 
+      const recommendations = mapOutboundRecommendations({
+        status: result.status,
+        code: result.errorCode,
+        message: result.error || '',
+      });
+
       return {
         status: 'fail',
+        http: {
+          method: 'POST',
+          ...(result.status !== undefined ? { status: result.status } : {}),
+          ...(result.requestId ? { requestId: result.requestId } : {}),
+          ...(result.clientRequestId ? { clientRequestId: result.clientRequestId } : {}),
+        },
         data: {
           definitelyNotSent: result.definitelyNotSent ?? null,
           requiresReconciliation: result.requiresReconciliation ?? null,
+          status: result.status ?? null,
+          requestId: result.requestId ?? null,
+          clientRequestId: result.clientRequestId ?? null,
+          errorCode: result.errorCode ?? null,
         },
         error: {
           message: result.error || 'Live send failed.',
@@ -271,11 +311,9 @@ function buildLiveSendStep(): OutboundStepDefinition {
           requestId: result.requestId,
           clientRequestId: result.clientRequestId,
         },
-        recommendations: [
-          result.status === 403
-            ? 'The provider denied the send. For Microsoft Graph, verify Mail.Send consent and Exchange Send As for the sending identity.'
-            : 'Review the provider error above and retry after correcting the cause.',
-        ],
+        recommendations: recommendations.length
+          ? recommendations
+          : ['Review the provider error above and retry after correcting the cause.'],
       };
     },
   };
@@ -387,13 +425,23 @@ export async function runOutboundEmailDiagnosticsWithSettings(
   const run = await runDiagnosticsSteps<OutboundDiagnosticsContext, OutboundStepData>({
     context: ctx,
     steps,
-    onError: (error) => ({ error: toDiagnosticsErrorMeta(classifyGraphFailure(error)) }),
+    onError: (error) => {
+      const failure = normalizeOutboundGraphFailure(error);
+      return {
+        error: toDiagnosticsErrorMeta(failure),
+        recommendations: mapOutboundRecommendations({
+          status: failure.status,
+          code: failure.code,
+          message: failure.message,
+        }),
+      };
+    },
   });
 
   const liveSendStep = run.steps.find((step) => step.id === 'live_send_test');
   const liveSendPerformed = liveSendStep?.status === 'pass' || liveSendStep?.status === 'fail';
 
-  const report = assembleDiagnosticsReport<
+  const rawReport = assembleDiagnosticsReport<
     OutboundDiagnosticsContext,
     OutboundStepData,
     OutboundDiagnosticsSummary
@@ -414,15 +462,18 @@ export async function runOutboundEmailDiagnosticsWithSettings(
       liveSendPerformed,
       overallStatus: outcome.overallStatus,
     }),
-    buildSupportBundle: ({ run: outcome, summary }) => ({
-      createdAt: outcome.createdAt,
-      summary: redactDiagnosticsValue(summary, { includeIdentifiers: options.includeIdentifiers }),
-      steps: redactDiagnosticsValue(outcome.steps, { includeIdentifiers: options.includeIdentifiers }),
-      recommendations: redactDiagnosticsValue(outcome.recommendations, {
-        includeIdentifiers: options.includeIdentifiers,
-      }),
-    }),
+    buildSupportBundle: () => ({}),
   });
+
+  // The action report keeps operational identities visible to the authorized
+  // admin, but always scrubs secrets and drops raw provider response bodies. The
+  // export honors the explicit includeIdentifiers option.
+  const report: OutboundEmailDiagnosticsReport = {
+    ...sanitizeDiagnosticsReport(rawReport, { includeIdentifiers: true }),
+    supportBundle: buildSanitizedSupportBundle(rawReport, {
+      includeIdentifiers: options.includeIdentifiers,
+    }),
+  };
 
   return report;
 }

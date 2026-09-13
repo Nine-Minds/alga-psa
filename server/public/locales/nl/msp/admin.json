@@ -658,5 +658,43 @@
       "fail": "Mislukt",
       "skip": "Overgeslagen"
     }
+  },
+  "outboundDiagnostics": {
+    "title": "Diagnose voor uitgaande e-mail",
+    "description": "Voert de opgeslagen uitgaande configuratie uit via een providerchecklist. Er wordt geen bericht verzonden tenzij u hieronder de optie voor live verzenden expliciet inschakelt.",
+    "unsavedNotice": "Niet-opgeslagen wijzigingen op dit scherm worden niet meegenomen. Sla de instellingen op voordat u de diagnose uitvoert.",
+    "states": {
+      "running": "Diagnose wordt uitgevoerd...",
+      "failed": "Diagnose mislukt"
+    },
+    "actions": {
+      "retry": "Opnieuw proberen",
+      "rerun": "Opnieuw uitvoeren",
+      "copyBundle": "Ondersteuningsbundel kopiëren",
+      "copied": "Gekopieerd",
+      "downloadBundle": "Downloaden"
+    },
+    "labels": {
+      "overall": "Algemeen:",
+      "provider": "Aanbieder:",
+      "effectiveSender": "Effectieve afzender:",
+      "authorizedUser": "Gemachtigde gebruiker:",
+      "mailboxRoute": "Mailboxroute:",
+      "recommendations": "Aanbevelingen",
+      "error": "Fout",
+      "redacted": "De ondersteuningsexport redigeert mailbox-ID's standaard."
+    },
+    "statuses": {
+      "pass": "Geslaagd",
+      "warn": "Waarschuwing",
+      "fail": "Mislukt",
+      "skip": "Overgeslagen"
+    },
+    "liveSend": {
+      "label": "Eén testbericht verzenden (live)",
+      "recipient": "Ontvanger",
+      "run": "Uitvoeren met live verzenden",
+      "invalidRecipient": "Voer een geldig e-mailadres van de ontvanger in."
+    }
   }
 }

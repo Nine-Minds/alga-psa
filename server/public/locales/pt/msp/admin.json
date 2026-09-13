@@ -658,5 +658,43 @@
       "fail": "Falhar",
       "skip": "Pular"
     }
+  },
+  "outboundDiagnostics": {
+    "title": "Diagnóstico de e-mail de saída",
+    "description": "Executa a configuração de saída guardada através de uma lista de verificação do fornecedor. Nenhuma mensagem é enviada, a menos que ative explicitamente a opção de envio real abaixo.",
+    "unsavedNotice": "As alterações não guardadas nesta tela não são incluídas. Guarde as definições antes de executar o diagnóstico.",
+    "states": {
+      "running": "A executar o diagnóstico...",
+      "failed": "O diagnóstico falhou"
+    },
+    "actions": {
+      "retry": "Tentar novamente",
+      "rerun": "Executar novamente",
+      "copyBundle": "Copiar pacote de suporte",
+      "copied": "Copiado",
+      "downloadBundle": "Transferir"
+    },
+    "labels": {
+      "overall": "Geral:",
+      "provider": "Fornecedor:",
+      "effectiveSender": "Remetente efetivo:",
+      "authorizedUser": "Usuário autorizado:",
+      "mailboxRoute": "Rota da caixa de correio:",
+      "recommendations": "Recomendações",
+      "error": "Erro",
+      "redacted": "A exportação de suporte oculta os identificadores de caixa de correio por predefinição."
+    },
+    "statuses": {
+      "pass": "Aprovado",
+      "warn": "Aviso",
+      "fail": "Falhou",
+      "skip": "Ignorado"
+    },
+    "liveSend": {
+      "label": "Enviar uma mensagem de teste (real)",
+      "recipient": "Destinatário",
+      "run": "Executar com envio real",
+      "invalidRecipient": "Introduza um endereço de e-mail de destinatário válido."
+    }
   }
 }

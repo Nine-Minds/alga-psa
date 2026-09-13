@@ -43,6 +43,11 @@ vi.mock('@alga-psa/ui/components/providers/TenantProvider', () => ({
   useTenant: () => 'tenant-1',
 }));
 
+vi.mock('./OutboundEmailDiagnosticsDialog', () => ({
+  OutboundEmailDiagnosticsDialog: ({ isOpen }: { isOpen: boolean }) =>
+    isOpen ? <div data-testid="outbound-diagnostics-dialog" /> : null,
+}));
+
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useTranslation: () => ({
     t: (key: string, options?: { defaultValue?: string; company?: string }) => {
@@ -109,6 +114,16 @@ describe('EmailSettings sender identities', () => {
     });
     getMicrosoftOutboundMailboxesMock.mockResolvedValue({ mailboxes: [] });
     getEmailDomainsMock.mockResolvedValue([]);
+  });
+
+  it('opens the shared outbound diagnostics dialog from the outbound tab', async () => {
+    render(<EmailSettings />);
+
+    const diagnosticsButton = await screen.findByRole('button', { name: /test connection/i });
+    expect(screen.queryByTestId('outbound-diagnostics-dialog')).not.toBeInTheDocument();
+    fireEvent.click(diagnosticsButton);
+
+    expect(await screen.findByTestId('outbound-diagnostics-dialog')).toBeInTheDocument();
   });
 
   it('renders both identities and saves each field to its existing storage group', async () => {

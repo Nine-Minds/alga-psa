@@ -875,7 +875,8 @@
         "clearButton": "Cancella l’identità dei ticket",
         "savingButton": "Salvataggio...",
         "saveButton": "Salva identità dei mittenti"
-      }
+      },
+      "diagnosticsButton": "Esegui diagnostica email in uscita"
     },
     "inbound": {
       "intro": "Configura il routing delle email in entrata e l'automazione specifica del provider."

@@ -875,7 +875,8 @@
         "clearButton": "Effacer l'identité des tickets",
         "savingButton": "Enregistrement…",
         "saveButton": "Enregistrer les identités d'expéditeur"
-      }
+      },
+      "diagnosticsButton": "Exécuter le diagnostic des e-mails sortants"
     },
     "inbound": {
       "intro": "Configurez le routage des e-mails entrants et l'automatisation spécifique au fournisseur."

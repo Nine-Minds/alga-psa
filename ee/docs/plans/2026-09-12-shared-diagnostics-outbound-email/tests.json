@@ -42,7 +42,7 @@
   {
     "id": "T005",
     "description": "DB-backed integration happy path against migrated schema: saved enabled provider/binding resolves for session tenant using real queries; report default/ticketing/effective From and selected dispatch correctly.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F009",
       "F010",
@@ -52,7 +52,7 @@
   {
     "id": "T006",
     "description": "DB-backed guard suite: missing settings, disabled provider and foreign-tenant binding cannot initialize/send; unauthorized and client-portal callers fail before reads/network, and no caller-supplied tenant is trusted.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F009",
       "F010",
@@ -73,7 +73,7 @@
   {
     "id": "T008",
     "description": "Permission evidence matrix: explicit ErrorSendAsDenied on live send names Exchange permission with status/request-id; generic 403 remains inconclusive; draft success and readable Sent Items never imply Send As or writable Sent Items; no additional OAuth scopes.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015",
       "F017",
@@ -122,7 +122,7 @@
   {
     "id": "T013",
     "description": "Shared-dialog component and CE/EE entry tests: saved configuration notice, both entry points, unknown/warn/fail rows, identities, protocol IDs, live-send opt-in, validation, pending/error/retry and bundle export.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F023",
       "F024",

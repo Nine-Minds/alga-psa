@@ -45,6 +45,7 @@ function makeAdapter(overrides: Record<string, any> = {}) {
     })),
     decodeCurrentAccessTokenClaims: vi.fn(async () => ({
       decoded: true,
+      scopesAvailable: true,
       scopes: ['Mail.Send', 'Mail.Send.Shared', 'Mail.Read'],
       claims: {},
     })),
@@ -177,6 +178,57 @@ describe('runOutboundEmailDiagnosticsWithSettings', () => {
     expect(live?.data).toMatchObject({ accepted: true, delivered: false, messageId: 'mid-1' });
     expect((live?.data as any)?.note).toMatch(/acceptance is not delivery/i);
     expect(report.summary.liveSendPerformed).toBe(true);
+  });
+
+  it('names Exchange Send As when a live send fails with ErrorSendAsDenied and preserves correlation ids', async () => {
+    const sendLive = vi.fn(async () => ({
+      success: false,
+      error: 'The send-as permission was denied.',
+      errorCode: 'ErrorSendAsDenied',
+      status: 403,
+      requestId: 'req-send',
+      clientRequestId: 'cli-send',
+      definitelyNotSent: true,
+      requiresReconciliation: false,
+    }));
+    const adapter = makeAdapter();
+    const report = await runWith(
+      { providerId: 'p1', providerType: 'microsoft', configuredMailbox: 'shared@example.com', rawConfig: {}, adapter: adapter as any },
+      { liveSendTest: true, recipient: 'admin@example.com' },
+      sendLive as any,
+    );
+    const live = report.steps.find((s) => s.id === 'live_send_test');
+    expect(live?.status).toBe('fail');
+    expect(live?.error).toMatchObject({
+      status: 403,
+      code: 'ErrorSendAsDenied',
+      requestId: 'req-send',
+      clientRequestId: 'cli-send',
+    });
+    expect(live?.http).toMatchObject({ status: 403, requestId: 'req-send', clientRequestId: 'cli-send' });
+    expect(report.recommendations.join(' ')).toMatch(/ErrorSendAsDenied/);
+    expect(report.recommendations.join(' ')).toMatch(/Exchange Send As/);
+    // Outbound advice must never inherit the inbound Mail.Read remediation.
+    expect(report.recommendations.join(' ')).not.toMatch(/Mail\.Read/);
+    expect(report.recommendations.join(' ')).not.toMatch(/delegated access to the target mailbox/i);
+  });
+
+  it('treats a generic live-send 403 as inconclusive rather than a confirmed Send As denial', async () => {
+    const sendLive = vi.fn(async () => ({
+      success: false,
+      error: 'Forbidden',
+      status: 403,
+      requestId: 'req-generic',
+    }));
+    const adapter = makeAdapter();
+    const report = await runWith(
+      { providerId: 'p1', providerType: 'microsoft', configuredMailbox: 'sender@example.com', rawConfig: {}, adapter: adapter as any },
+      { liveSendTest: true, recipient: 'admin@example.com' },
+      sendLive as any,
+    );
+    const text = report.recommendations.join(' ');
+    expect(text).toMatch(/does not identify the missing permission/i);
+    expect(text).not.toMatch(/ErrorSendAsDenied/);
   });
 
   it('preserves Graph status and request id when the identity preflight fails', async () => {

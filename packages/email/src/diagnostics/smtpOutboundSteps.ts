@@ -3,8 +3,9 @@
  *
  * Reuses the same transport configuration as real sending via
  * buildSmtpTransportOptions and performs exactly one verify() attempt. Native
- * transport errors are preserved; stages that a combined verify() cannot
- * independently establish are reported as skip/unverified rather than invented.
+ * transport errors are preserved; connection/TLS/AUTH are reported from the
+ * actual verify outcome, and phases a combined verify() cannot independently
+ * establish are reported as skip rather than invented.
  */
 
 import nodemailer from 'nodemailer';
@@ -16,45 +17,53 @@ import type {
   OutboundStepDefinition,
 } from './outboundTypes';
 
+type SmtpPhase = 'connection' | 'tls' | 'auth' | 'unknown';
+
 interface SmtpNativeFailure {
   message: string;
   code?: string;
   responseCode?: number;
   command?: string;
   response?: string;
-  phase: 'connection' | 'tls' | 'auth' | 'unknown';
+  phase: SmtpPhase;
 }
 
+type VerifyState =
+  | { kind: 'not-attempted' }
+  | { kind: 'succeeded'; durationMs: number }
+  | { kind: 'failed'; failure: SmtpNativeFailure; durationMs: number };
+
+/**
+ * Classify a native nodemailer error into the phase it actually failed in.
+ * A 5xx response is NOT automatically an AUTH failure: the reported command and
+ * error code decide, so a post-AUTH 5xx (e.g. MAIL FROM rejection) is not
+ * mislabeled as authentication.
+ */
 function classifySmtpFailure(error: any): SmtpNativeFailure {
   const message = error?.message ? String(error.message) : 'SMTP verification failed';
   const code = typeof error?.code === 'string' ? error.code : undefined;
   const responseCode = Number.isFinite(Number(error?.responseCode))
     ? Number(error.responseCode)
     : undefined;
-  const command = typeof error?.command === 'string' ? error.command : undefined;
+  const command = typeof error?.command === 'string' ? error.command.toUpperCase() : undefined;
   const response = typeof error?.response === 'string' ? error.response : undefined;
 
-  let phase: SmtpNativeFailure['phase'] = 'unknown';
-  if (
-    code === 'ETLS' ||
-    /certificate|self[- ]signed|tls|ssl/i.test(message)
-  ) {
-    phase = 'tls';
-  } else if (
+  const tlsFailure =
+    code === 'ETLS' || /certificate|self[- ]signed|\btls\b|\bssl\b/i.test(message);
+  const authFailure =
     code === 'EAUTH' ||
     command === 'AUTH' ||
-    (typeof responseCode === 'number' && responseCode >= 500 && responseCode < 600) ||
-    /\b(535|auth|credentials|username|password)\b/i.test(message)
-  ) {
-    phase = 'auth';
-  } else if (
+    responseCode === 535 ||
+    /\b(535|auth|credentials|invalid login|username|password)\b/i.test(message);
+  const connectionFailure =
     ['ECONNECTION', 'ECONNREFUSED', 'ENOTFOUND', 'ETIMEDOUT', 'ESOCKET', 'EHOSTUNREACH', 'EAI_AGAIN'].includes(
       code ?? '',
-    ) ||
-    /connect|connection|refused|timeout|getaddrinfo/i.test(message)
-  ) {
-    phase = 'connection';
-  }
+    ) || /connect|connection|refused|timeout|getaddrinfo|greeting/i.test(message);
+
+  let phase: SmtpPhase = 'unknown';
+  if (tlsFailure) phase = 'tls';
+  else if (authFailure) phase = 'auth';
+  else if (connectionFailure) phase = 'connection';
 
   return { message, code, responseCode, command, response, phase };
 }
@@ -72,9 +81,12 @@ function smtpConfigProblems(config: Record<string, any>): string[] {
   return problems;
 }
 
+function notAttemptedDetail(reason: string): string {
+  return `Skipped: verify() was not attempted because ${reason}.`;
+}
+
 export function buildSmtpOutboundSteps(): OutboundStepDefinition[] {
-  let verifyOutcome: SmtpNativeFailure | null = null;
-  let verificationDurationMs = 0;
+  let verifyState: VerifyState = { kind: 'not-attempted' };
 
   return [
     {
@@ -112,34 +124,41 @@ export function buildSmtpOutboundSteps(): OutboundStepDefinition[] {
       run: async (ctx): Promise<DiagnosticsStepOutcome<OutboundStepData>> => {
         const config = ctx.provider.rawConfig;
         if (smtpConfigProblems(config).length > 0) {
-          return { status: 'skip', detail: 'Skipped because the SMTP configuration is incomplete.' };
+          verifyState = { kind: 'not-attempted' };
+          return {
+            status: 'skip',
+            detail: 'Skipped because the SMTP configuration is incomplete.',
+            data: { attempted: false },
+          };
         }
         const transport = buildSmtpTransportOptions(config);
         const transporter = nodemailer.createTransport(transport.options);
         const started = Date.now();
         try {
           await transporter.verify();
-          verificationDurationMs = Date.now() - started;
-          verifyOutcome = null;
+          const durationMs = Date.now() - started;
+          verifyState = { kind: 'succeeded', durationMs };
           return {
             status: 'pass',
             data: {
+              attempted: true,
               verified: true,
-              durationMs: verificationDurationMs,
+              durationMs,
               // verify() exercises connection, TLS (when required) and AUTH, but
               // does not expose which individual stages were negotiated.
               combinedVerification: true,
             },
           };
         } catch (error: any) {
-          verificationDurationMs = Date.now() - started;
+          const durationMs = Date.now() - started;
           const failure = classifySmtpFailure(error);
-          verifyOutcome = failure;
+          verifyState = { kind: 'failed', failure, durationMs };
           return {
             status: 'fail',
             data: {
+              attempted: true,
               verified: false,
-              durationMs: verificationDurationMs,
+              durationMs,
               phase: failure.phase,
               code: failure.code ?? null,
               responseCode: failure.responseCode ?? null,
@@ -158,7 +177,7 @@ export function buildSmtpOutboundSteps(): OutboundStepDefinition[] {
                   ? 'The TLS handshake failed. Verify the certificate chain and TLS settings (including verify-certificate).'
                   : failure.phase === 'auth'
                     ? 'SMTP authentication failed. Verify the username/password and that AUTH is permitted.'
-                    : 'The SMTP verification failed in a phase that could not be isolated; review the native error details.',
+                    : 'The SMTP verification failed in a phase that could not be isolated; review the native error details (command/response).',
             ],
           };
         } finally {
@@ -177,26 +196,37 @@ export function buildSmtpOutboundSteps(): OutboundStepDefinition[] {
           return {
             status: 'skip',
             detail: 'TLS was not explicitly required, so TLS negotiation was not established by this verification.',
+            data: { tlsRequested: false, attempted: false },
           };
         }
-        if (verifyOutcome?.phase === 'tls') {
+        if (verifyState.kind === 'failed' && verifyState.failure.phase === 'tls') {
           return {
             status: 'fail',
-            data: { durationMs: verificationDurationMs, code: verifyOutcome.code ?? null },
-            error: { message: verifyOutcome.message, code: verifyOutcome.code },
+            data: { durationMs: verifyState.durationMs, code: verifyState.failure.code ?? null },
+            error: { message: verifyState.failure.message, code: verifyState.failure.code },
           };
         }
-        if (verifyOutcome) {
+        if (verifyState.kind === 'failed') {
           return {
             status: 'skip',
-            detail: 'TLS was not reached because the connection/authentication attempt failed earlier.',
+            detail: 'Skipped: TLS was not reached because verification failed earlier.',
+            data: { attempted: false, durationMs: verifyState.durationMs },
+          };
+        }
+        if (verifyState.kind === 'not-attempted') {
+          return {
+            status: 'skip',
+            detail: notAttemptedDetail('the SMTP configuration is incomplete'),
+            data: { attempted: false },
           };
         }
         return {
           status: 'pass',
           data: {
+            attempted: true,
             secure: transport.secure,
             requireTLS: transport.requireTLS,
+            durationMs: verifyState.durationMs,
             note: 'TLS was required and the verification handshake completed.',
           },
         };
@@ -212,28 +242,42 @@ export function buildSmtpOutboundSteps(): OutboundStepDefinition[] {
           return {
             status: 'skip',
             detail: 'No SMTP credentials are configured; AUTH was not attempted.',
+            data: { authConfigured: false, attempted: false },
           };
         }
-        if (verifyOutcome?.phase === 'auth') {
+        if (verifyState.kind === 'failed' && verifyState.failure.phase === 'auth') {
           return {
             status: 'fail',
-            data: { durationMs: verificationDurationMs, code: verifyOutcome.code ?? null },
+            data: { durationMs: verifyState.durationMs, code: verifyState.failure.code ?? null },
             error: {
-              message: verifyOutcome.message,
-              code: verifyOutcome.code,
-              status: verifyOutcome.responseCode,
+              message: verifyState.failure.message,
+              code: verifyState.failure.code,
+              status: verifyState.failure.responseCode,
             },
           };
         }
-        if (verifyOutcome) {
+        if (verifyState.kind === 'failed') {
           return {
             status: 'skip',
-            detail: 'Authentication was not reached because the connection failed earlier.',
+            detail: 'Skipped: authentication was not reached because verification failed earlier.',
+            data: { attempted: false, durationMs: verifyState.durationMs },
+          };
+        }
+        if (verifyState.kind === 'not-attempted') {
+          return {
+            status: 'skip',
+            detail: notAttemptedDetail('the SMTP configuration is incomplete'),
+            data: { attempted: false },
           };
         }
         return {
           status: 'pass',
-          data: { authConfigured: true, note: 'Credentials were configured and verify() completed.' },
+          data: {
+            attempted: true,
+            authConfigured: true,
+            durationMs: verifyState.durationMs,
+            note: 'Credentials were configured and verify() completed.',
+          },
         };
       },
     },

@@ -660,5 +660,43 @@
       "fail": "Niepowodzenie",
       "skip": "Pominięto"
     }
+  },
+  "outboundDiagnostics": {
+    "title": "Diagnostyka poczty wychodzącej",
+    "description": "Uruchamia zapisaną konfigurację wychodzącą przez listę kontrolną dostawcy. Żadna wiadomość nie zostanie wysłana, o ile nie włączysz jawnie opcji wysyłki na żywo poniżej.",
+    "unsavedNotice": "Niezapisane zmiany na tym ekranie nie są uwzględniane. Zapisz ustawienia przed uruchomieniem diagnostyki.",
+    "states": {
+      "running": "Uruchamianie diagnostyki...",
+      "failed": "Diagnostyka nie powiodła się"
+    },
+    "actions": {
+      "retry": "Ponów",
+      "rerun": "Uruchom ponownie",
+      "copyBundle": "Kopiuj pakiet pomocy",
+      "copied": "Skopiowano",
+      "downloadBundle": "Pobierz"
+    },
+    "labels": {
+      "overall": "Ogólnie:",
+      "provider": "Dostawca:",
+      "effectiveSender": "Efektywny nadawca:",
+      "authorizedUser": "Autoryzowany użytkownik:",
+      "mailboxRoute": "Trasa skrzynki:",
+      "recommendations": "Zalecenia",
+      "error": "Błąd",
+      "redacted": "Eksport pomocy domyślnie redaguje identyfikatory skrzynek."
+    },
+    "statuses": {
+      "pass": "Zaliczone",
+      "warn": "Ostrzeżenie",
+      "fail": "Niepowodzenie",
+      "skip": "Pominięte"
+    },
+    "liveSend": {
+      "label": "Wyślij jedną wiadomość testową (na żywo)",
+      "recipient": "Odbiorca",
+      "run": "Uruchom z wysyłką na żywo",
+      "invalidRecipient": "Wprowadź prawidłowy adres e-mail odbiorcy."
+    }
   }
 }

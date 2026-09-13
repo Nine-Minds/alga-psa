@@ -1054,22 +1054,32 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
   }
 
   /**
-   * Refresh if needed and decode the access token actually used. Missing or
-   * opaque tokens yield decoded=false rather than a guessed scope set.
+   * Refresh if needed and decode the access token actually used.
+   *
+   * Returns a distinct scopes-unavailable outcome when the token is not a
+   * decodable JWT or carries no usable `scp` claim. A decoded JWT with no scopes
+   * is NOT evidence that delegated scopes are present, so callers must never
+   * treat `decoded: true, scopesAvailable: false` as a scope match.
    */
   async decodeCurrentAccessTokenClaims(): Promise<{
     decoded: boolean;
+    scopesAvailable: boolean;
     scopes: string[];
     claims: Record<string, unknown> | null;
   }> {
     await this.ensureTokenHealthy();
-    if (!this.accessToken) return { decoded: false, scopes: [], claims: null };
+    if (!this.accessToken) {
+      return { decoded: false, scopesAvailable: false, scopes: [], claims: null };
+    }
     const payload = this.decodeJwtPayload(this.accessToken);
-    if (!payload) return { decoded: false, scopes: [], claims: null };
-    const scp = typeof payload.scp === 'string' ? payload.scp : '';
+    if (!payload) {
+      return { decoded: false, scopesAvailable: false, scopes: [], claims: null };
+    }
+    const scp = typeof payload.scp === 'string' ? payload.scp.trim() : '';
     return {
       decoded: true,
-      scopes: scp.split(/\s+/).filter(Boolean),
+      scopesAvailable: scp.length > 0,
+      scopes: scp ? scp.split(/\s+/).filter(Boolean) : [],
       claims: payload,
     };
   }
@@ -1109,27 +1119,50 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
 
   /**
    * The routing decision (which is not proof of delegated mailbox access).
+   *
+   * `relation` is tri-state: `self` only when the configured mailbox is known to
+   * match the authenticated user (or no mailbox is configured, so /me is used);
+   * `shared` only when both identities are known and differ; `unknown` when the
+   * authenticated identity could not be confirmed. Callers must not assume
+   * self-send from `unknown`.
    */
   getMailboxRoute(): {
     basePath: string;
     configuredMailbox: string;
     authenticatedUserEmail?: string;
+    relation: 'self' | 'shared' | 'unknown';
     isSharedOrDelegated: boolean;
     rationale: string;
   } {
     const configuredMailbox = (this.config.mailbox || '').trim();
     const authenticatedUserEmail = (this.authenticatedUserEmail || '').trim() || undefined;
     const basePath = this.getMailboxBasePath();
-    const isSharedOrDelegated =
-      Boolean(configuredMailbox) &&
-      (!authenticatedUserEmail ||
-        configuredMailbox.toLowerCase() !== authenticatedUserEmail.toLowerCase());
-    const rationale = !configuredMailbox
-      ? 'No mailbox configured; defaulting to /me'
-      : authenticatedUserEmail && !isSharedOrDelegated
-        ? 'Configured mailbox matches authenticated user; using /me'
-        : 'Configured mailbox differs from authenticated user; using /users/{mailbox}';
-    return { basePath, configuredMailbox, authenticatedUserEmail, isSharedOrDelegated, rationale };
+
+    let relation: 'self' | 'shared' | 'unknown';
+    let rationale: string;
+    if (!configuredMailbox) {
+      relation = 'self';
+      rationale = 'No mailbox configured; defaulting to /me';
+    } else if (!authenticatedUserEmail) {
+      relation = 'unknown';
+      rationale =
+        'Configured mailbox is set but the authenticated user could not be confirmed; routing uses /users/{mailbox} and self-send cannot be assumed';
+    } else if (configuredMailbox.toLowerCase() === authenticatedUserEmail.toLowerCase()) {
+      relation = 'self';
+      rationale = 'Configured mailbox matches authenticated user; using /me';
+    } else {
+      relation = 'shared';
+      rationale = 'Configured mailbox differs from authenticated user; using /users/{mailbox}';
+    }
+
+    return {
+      basePath,
+      configuredMailbox,
+      authenticatedUserEmail,
+      relation,
+      isSharedOrDelegated: relation === 'shared',
+      rationale,
+    };
   }
 
   /**

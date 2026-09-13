@@ -658,5 +658,43 @@
       "fail": "Non riuscito",
       "skip": "Saltato"
     }
+  },
+  "outboundDiagnostics": {
+    "title": "Diagnostica email in uscita",
+    "description": "Esegue la configurazione in uscita salvata tramite una lista di controllo del provider. Nessun messaggio viene inviato a meno che non si abiliti esplicitamente l'opzione di invio reale qui sotto.",
+    "unsavedNotice": "Le modifiche non salvate in questa schermata non sono incluse. Salva le impostazioni prima di eseguire la diagnostica.",
+    "states": {
+      "running": "Esecuzione della diagnostica...",
+      "failed": "Diagnostica non riuscita"
+    },
+    "actions": {
+      "retry": "Riprova",
+      "rerun": "Esegui di nuovo",
+      "copyBundle": "Copia pacchetto di supporto",
+      "copied": "Copiato",
+      "downloadBundle": "Scarica"
+    },
+    "labels": {
+      "overall": "Generale:",
+      "provider": "Fornitore:",
+      "effectiveSender": "Mittente effettivo:",
+      "authorizedUser": "Utente autorizzato:",
+      "mailboxRoute": "Percorso casella:",
+      "recommendations": "Raccomandazioni",
+      "error": "Errore",
+      "redacted": "L'esportazione di supporto oscura gli identificatori delle caselle per impostazione predefinita."
+    },
+    "statuses": {
+      "pass": "Superato",
+      "warn": "Avviso",
+      "fail": "Non riuscito",
+      "skip": "Saltato"
+    },
+    "liveSend": {
+      "label": "Invia un messaggio di prova (reale)",
+      "recipient": "Destinatario",
+      "run": "Esegui con invio reale",
+      "invalidRecipient": "Inserisci un indirizzo email del destinatario valido."
+    }
   }
 }

@@ -875,7 +875,8 @@
         "clearButton": "Wyczyść tożsamość nadawcy zgłoszeń",
         "savingButton": "Zapisywanie...",
         "saveButton": "Zapisz tożsamości nadawców"
-      }
+      },
+      "diagnosticsButton": "Uruchom diagnostykę poczty wychodzącej"
     },
     "inbound": {
       "intro": "Skonfiguruj routing poczty przychodzącej i automatyzację specyficzną dla dostawcy."

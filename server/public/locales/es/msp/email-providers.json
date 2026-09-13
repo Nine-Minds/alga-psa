@@ -875,7 +875,8 @@
         "clearButton": "Borrar identidad de tickets",
         "savingButton": "Guardando...",
         "saveButton": "Guardar identidades de remitente"
-      }
+      },
+      "diagnosticsButton": "Ejecutar diagnóstico de correo saliente"
     },
     "inbound": {
       "intro": "Configure el enrutamiento de correo entrante y la automatización específica del proveedor."
