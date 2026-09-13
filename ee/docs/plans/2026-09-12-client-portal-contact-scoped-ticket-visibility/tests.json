@@ -1,128 +1,205 @@
 [
   {
     "id": "T001",
-    "description": "Resolver: a contact with no visibility group returns ticketScope 'client' and visibleBoardIds null — today's behavior, unchanged.",
-    "implemented": false,
-    "featureIds": ["F010", "F013"]
+    "description": "Resolver: a contact with no visibility group returns ticketScope 'client' and visibleBoardIds null \u2014 today's behavior, unchanged.",
+    "implemented": true,
+    "featureIds": [
+      "F010",
+      "F013"
+    ]
   },
   {
     "id": "T002",
     "description": "Resolver: a contact in a group with ticket_scope 'contact' returns effective scope 'contact', and one with 'client' returns 'client'.",
-    "implemented": false,
-    "featureIds": ["F011", "F012", "F014"]
+    "implemented": true,
+    "featureIds": [
+      "F011",
+      "F012",
+      "F014"
+    ]
   },
   {
     "id": "T003",
     "description": "Resolver: a contact with is_client_admin true in a 'contact'-scoped group resolves to effective scope 'client' (the override), and the same contact with is_client_admin absent/false resolves to 'contact'.",
-    "implemented": false,
-    "featureIds": ["F011", "F014", "F015"]
+    "implemented": true,
+    "featureIds": [
+      "F011",
+      "F014",
+      "F015"
+    ]
   },
   {
     "id": "T004",
     "description": "Resolver: a missing group and a cross-client group each still throw their existing error, preserving fail-closed behavior.",
-    "implemented": false,
-    "featureIds": ["F016"]
+    "implemented": true,
+    "featureIds": [
+      "F016"
+    ]
   },
   {
     "id": "T005",
-    "description": "Helper unit: with effective scope 'client' the contact predicate is not applied and the board predicate behaves exactly as applyVisibilityBoardFilter did — including null (no filter) and empty-array (1 = 0) cases. Primary regression guard.",
-    "implemented": false,
-    "featureIds": ["F020", "F024"]
+    "description": "Helper unit: with effective scope 'client' the contact predicate is not applied and the board predicate behaves exactly as applyVisibilityBoardFilter did \u2014 including null (no filter) and empty-array (1 = 0) cases. Primary regression guard.",
+    "implemented": true,
+    "featureIds": [
+      "F020",
+      "F024"
+    ]
   },
   {
     "id": "T006",
     "description": "Helper unit: with effective scope 'contact' AND a board list, both predicates are applied together (composition).",
-    "implemented": false,
-    "featureIds": ["F020", "F023"]
+    "implemented": true,
+    "featureIds": [
+      "F020",
+      "F023"
+    ]
   },
   {
     "id": "T007",
-    "description": "Helper unit: the chosen null-contact policy is asserted explicitly — a ticket with contact_name_id NULL is matched or not matched per the decision in OQ1, with the test named so the policy is discoverable.",
-    "implemented": false,
-    "featureIds": ["F022"]
+    "description": "Helper unit: the chosen null-contact policy is asserted explicitly \u2014 a ticket with contact_name_id NULL is matched or not matched per the decision in OQ1, with the test named so the policy is discoverable.",
+    "implemented": true,
+    "featureIds": [
+      "F022"
+    ],
+    "implementationNotes": "Draft admins-only NULL policy covered by helper/kernel and portal/REST regression tests; product approval pending."
   },
   {
     "id": "T008",
     "description": "Enforcement matrix, scope 'contact': a sibling contact's ticket is absent from the portal ticket list, ticket detail, and ticket documents.",
-    "implemented": false,
-    "featureIds": ["F031", "F032", "F033"]
+    "implemented": true,
+    "featureIds": [
+      "F031",
+      "F032",
+      "F033"
+    ]
   },
   {
     "id": "T009",
     "description": "Enforcement matrix, scope 'contact': a sibling contact's ticket is excluded from the dashboard open-ticket count and does not appear in the dashboard activity feed (neither title nor comment excerpt).",
-    "implemented": false,
-    "featureIds": ["F034", "F035"]
+    "implemented": true,
+    "featureIds": [
+      "F034",
+      "F035"
+    ]
   },
   {
     "id": "T010",
     "description": "Direct-ID denial: a contact-scoped user calling resolveVisibleTicket with a sibling's ticket ID is refused, which closes the comment add/update/delete AND status-change paths that sit behind it.",
-    "implemented": false,
-    "featureIds": ["F030"]
+    "implemented": true,
+    "featureIds": [
+      "F030"
+    ]
   },
   {
     "id": "T011",
     "description": "Client-admin override end to end: a contact-scoped group member with is_client_admin true sees sibling tickets on list, detail, and dashboard count.",
-    "implemented": false,
-    "featureIds": ["F015", "F031", "F032", "F034"]
+    "implemented": true,
+    "featureIds": [
+      "F015",
+      "F031",
+      "F032",
+      "F034"
+    ]
   },
   {
     "id": "T012",
     "description": "Default-scope regression: with every group left at 'client', list, detail, documents, dashboard count, and dashboard feed return exactly what they returned before this change.",
-    "implemented": false,
-    "featureIds": ["F003", "F005", "F020"]
+    "implemented": true,
+    "featureIds": [
+      "F003",
+      "F005",
+      "F020"
+    ]
   },
   {
     "id": "T013",
     "description": "DB-backed REST: in ticketClientPortalAbac.integration.test.ts, a contact-scoped API subject gets only their own tickets from list, search, count, and getById, with pagination totals consistent; a client-admin subject gets all of the client's.",
-    "implemented": false,
-    "featureIds": ["F036", "F015"]
+    "implemented": true,
+    "featureIds": [
+      "F036",
+      "F015"
+    ]
   },
   {
     "id": "T014",
     "description": "DB-backed real-SQL guard: each enforcement site's query executes successfully against migrated schema with a board-restricted AND contact-scoped group, proving column/alias correctness. This is the test class that would have caught the 't.board_id'-against-unaliased-'tickets' defect, which mock-level assertions cannot.",
-    "implemented": false,
-    "featureIds": ["F021", "F033", "F037"]
+    "implemented": true,
+    "featureIds": [
+      "F021",
+      "F033",
+      "F037"
+    ]
   },
   {
     "id": "T015",
     "description": "DB-backed: the migration applies to a database with existing visibility groups, every pre-existing row reads back ticket_scope 'client', and the CHECK constraint rejects any third value.",
-    "implemented": false,
-    "featureIds": ["F001", "F002", "F003"]
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F002",
+      "F003"
+    ],
+    "implementationNotes": "Existing-row DEFAULT and CHECK verified with exact migration up/retry/down/up on disposable Citus; migrated PostgreSQL fixture checks scope and CHECK as well."
   },
   {
     "id": "T016",
     "description": "Actions round-trip: creating and then updating a group with scope 'contact' persists and reads back through BOTH the portal-side and MSP-side action modules, and an MSP-side update that does not mention scope leaves it intact.",
-    "implemented": false,
-    "featureIds": ["F050", "F051", "F052", "F053", "F054"]
+    "implemented": true,
+    "featureIds": [
+      "F050",
+      "F051",
+      "F052",
+      "F053",
+      "F054"
+    ]
   },
   {
     "id": "T017",
     "description": "Locale parity: the new client-portal visibility-group keys and the new msp/contacts scope keys exist in all ten locales, with 'pt' now included in the parity assertion.",
-    "implemented": false,
-    "featureIds": ["F070", "F071", "F072"]
+    "implemented": true,
+    "featureIds": [
+      "F070",
+      "F071",
+      "F072"
+    ]
   },
   {
     "id": "T021",
     "description": "Portal-side group editor: the scope control renders both options, defaults to 'client' for a new group, hydrates the saved scope when editing an existing one, and submits the chosen scope in the payload. Extends the existing VisibilityGroupsSettings component test.",
-    "implemented": false,
-    "featureIds": ["F060", "F061", "F065"]
+    "implemented": true,
+    "featureIds": [
+      "F060",
+      "F061",
+      "F065"
+    ]
   },
   {
     "id": "T018",
     "description": "Kernel parity: the new relationship template's JS matches() and its compiled SQL agree for contact-scoped, admin-override, and null-contact cases, asserted through the existing relationshipSqlParity integration harness.",
-    "implemented": false,
-    "featureIds": ["F040", "F041", "F042"]
+    "implemented": true,
+    "featureIds": [
+      "F040",
+      "F041",
+      "F042"
+    ],
+    "implementationNotes": "JS/SQL parity lives in ticketClientPortalAbac.integration.test.ts alongside the migrated ticket fixture, avoiding a second DB bootstrap."
   },
   {
     "id": "T019",
     "description": "Fail-closed: a client user whose visibility context fails to resolve is denied rather than widened, preserving the catch-and-deny path in both ticketActions and optimizedTicketActions.",
-    "implemented": false,
-    "featureIds": ["F043"]
+    "implemented": true,
+    "featureIds": [
+      "F043"
+    ],
+    "implementationNotes": "Real-kernel ticketActions fail-closed test and SQL template denial guard; both action implementations inspected for identical null-context failure handling."
   },
   {
     "id": "T020",
-    "description": "Live-token leak guard: a contact-scoped portal session calling GET /api/tickets/{siblingTicketId}/live-token is refused and no Hocuspocus token is minted — asserted both through getTicketById narrowing and through the route's own user-type rejection.",
-    "implemented": false,
-    "featureIds": ["F044", "F045"]
+    "description": "Live-token leak guard: a contact-scoped portal session calling GET /api/tickets/{siblingTicketId}/live-token is refused and no Hocuspocus token is minted \u2014 asserted both through getTicketById narrowing and through the route's own user-type rejection.",
+    "implemented": true,
+    "featureIds": [
+      "F044",
+      "F045"
+    ]
   }
 ]

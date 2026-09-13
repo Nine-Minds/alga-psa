@@ -8,7 +8,7 @@ import { Knex } from 'knex';
 import { withAuth, type AuthContext } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
 import {
-  applyVisibilityBoardFilter,
+  applyTicketVisibilityFilter,
 } from '@alga-psa/tickets/lib';
 import { getClientContactVisibilityContext } from '@alga-psa/tickets/lib/clientPortalVisibility.server';
 import { clientPortalActionErrorFrom, type ClientPortalActionError } from './clientPortalActionErrors';
@@ -214,14 +214,14 @@ export const getDashboardMetrics = withAuth(async (
           [serviceRequestCount],
         ] = await Promise.all([
         // Get open tickets count
-        applyVisibilityBoardFilter(
+        applyTicketVisibilityFilter(
           scopedDb.table('tickets')
             .where({
               'tickets.client_id': clientId,
               'is_closed': false
             }),
-          visibility.visibleBoardIds,
-          'tickets.board_id'
+          visibility,
+          { boardColumn: 'tickets.board_id', contactColumn: 'tickets.contact_name_id' }
         ).count('ticket_id as count') as unknown as Promise<Array<{ count: string }>>,
 
         // Get active projects count
@@ -344,7 +344,7 @@ export const getRecentActivity = withAuth(async (
             .orWhere('comments.publish_state', 'published');
         })
         .modify((queryBuilder: Knex.QueryBuilder) => {
-          applyVisibilityBoardFilter(queryBuilder, visibility.visibleBoardIds, 'tickets.board_id');
+          applyTicketVisibilityFilter(queryBuilder, visibility, { boardColumn: 'tickets.board_id', contactColumn: 'tickets.contact_name_id' });
         })
         .orderBy('tickets.updated_at', 'desc')
         .limit(3);

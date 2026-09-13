@@ -2,303 +2,407 @@
   {
     "id": "F001",
     "description": "Migration adds client_portal_visibility_groups.ticket_scope (text, NOT NULL, DEFAULT 'client') with a CHECK constraint restricting values to 'client' or 'contact'.",
-    "implemented": false,
-    "prdRefs": ["Requirements/FR1", "Data / API / Integrations/Schema"]
+    "implemented": true,
+    "prdRefs": [
+      "Requirements/FR1",
+      "Data / API / Integrations/Schema"
+    ]
   },
   {
     "id": "F002",
     "description": "Migration follows house style: exports.config = { transaction: false }, hasColumn idempotency guard, and a mirrored down that drops the constraint and column.",
-    "implemented": false,
-    "prdRefs": ["Data / API / Integrations/Schema"]
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations/Schema"
+    ]
   },
   {
     "id": "F003",
     "description": "Existing visibility group rows resolve to ticket_scope 'client' via the column DEFAULT, with no per-row backfill loop.",
-    "implemented": false,
-    "prdRefs": ["Requirements/NFR2"]
+    "implemented": true,
+    "prdRefs": [
+      "Requirements/NFR2"
+    ]
   },
   {
     "id": "F004",
     "description": "Citus distribution status of client_portal_visibility_groups is confirmed on a real Citus stack before landing; if the table is distributed, the migration falls back to the select-then-update-with-tenant-in-WHERE backfill idiom.",
     "implemented": false,
-    "prdRefs": ["Data / API / Integrations/Schema"]
+    "prdRefs": [
+      "Data / API / Integrations/Schema"
+    ]
   },
   {
     "id": "F005",
     "description": "Index added on tickets (tenant, contact_name_id) via CREATE INDEX CONCURRENTLY, with a decision recorded on whether to make it partial on contact_name_id IS NOT NULL.",
-    "implemented": false,
-    "prdRefs": ["Requirements/NFR3"]
+    "implemented": true,
+    "prdRefs": [
+      "Requirements/NFR3"
+    ]
   },
-
   {
     "id": "F010",
     "description": "ContactVisibilityContext gains ticketScope ('client' | 'contact') and isClientAdmin (boolean).",
-    "implemented": false,
-    "prdRefs": ["Requirements/FR2"]
+    "implemented": true,
+    "prdRefs": [
+      "Requirements/FR2"
+    ]
   },
   {
     "id": "F011",
     "description": "getClientContactVisibilityContext adds is_client_admin to its existing contacts .first() select, coalescing the optional field to false.",
-    "implemented": false,
-    "prdRefs": ["Requirements/FR2"]
+    "implemented": true,
+    "prdRefs": [
+      "Requirements/FR2"
+    ]
   },
   {
     "id": "F012",
     "description": "getClientContactVisibilityContext reads ticket_scope from the visibility group and returns it on the context.",
-    "implemented": false,
-    "prdRefs": ["Requirements/FR2"]
+    "implemented": true,
+    "prdRefs": [
+      "Requirements/FR2"
+    ]
   },
   {
     "id": "F013",
     "description": "A contact with no assigned visibility group resolves to ticketScope 'client'.",
-    "implemented": false,
-    "prdRefs": ["Requirements/FR2"]
+    "implemented": true,
+    "prdRefs": [
+      "Requirements/FR2"
+    ]
   },
   {
     "id": "F014",
     "description": "The resolver computes a single effectiveTicketScope that already applies the client-admin override, so no enforcement site re-derives it.",
-    "implemented": false,
-    "prdRefs": ["Requirements/FR3"]
+    "implemented": true,
+    "prdRefs": [
+      "Requirements/FR3"
+    ]
   },
   {
     "id": "F015",
     "description": "A contact with is_client_admin true resolves to effective scope 'client' even when their group is set to 'contact'.",
-    "implemented": false,
-    "prdRefs": ["Requirements/FR3"]
+    "implemented": true,
+    "prdRefs": [
+      "Requirements/FR3"
+    ]
   },
   {
     "id": "F016",
     "description": "The resolver continues to throw on a missing or cross-client visibility group, preserving the existing fail-closed contract.",
-    "implemented": false,
-    "prdRefs": ["Requirements/NFR1"]
+    "implemented": true,
+    "prdRefs": [
+      "Requirements/NFR1"
+    ]
   },
-
   {
     "id": "F020",
     "description": "applyTicketVisibilityFilter(query, visibility, { boardColumn, contactColumn }) is introduced, applying the board predicate as today and the contact predicate when effective scope is 'contact'.",
-    "implemented": false,
-    "prdRefs": ["Requirements/FR4", "Implementation Notes"]
+    "implemented": true,
+    "prdRefs": [
+      "Requirements/FR4",
+      "Implementation Notes"
+    ]
   },
   {
     "id": "F021",
     "description": "The new helper takes its column names explicitly with NO defaults, so a caller cannot inherit an alias its own FROM clause does not define.",
-    "implemented": false,
-    "prdRefs": ["Implementation Notes"]
+    "implemented": true,
+    "prdRefs": [
+      "Implementation Notes"
+    ]
   },
   {
     "id": "F022",
     "description": "The chosen null-contact policy is implemented in exactly one place inside the shared predicate.",
-    "implemented": false,
-    "prdRefs": ["Requirements/FR7", "Open Questions/OQ1"]
+    "implemented": true,
+    "prdRefs": [
+      "Requirements/FR7",
+      "Open Questions/OQ1"
+    ],
+    "implementationNotes": "Draft implements the recommended policy; OQ1 approval is still pending."
   },
   {
     "id": "F023",
     "description": "Board scope and contact scope both apply when a group is configured with both; neither predicate replaces the other.",
-    "implemented": false,
-    "prdRefs": ["Requirements/FR5"]
+    "implemented": true,
+    "prdRefs": [
+      "Requirements/FR5"
+    ]
   },
   {
     "id": "F024",
     "description": "All callers are migrated off applyVisibilityBoardFilter and the old export is retired, leaving no two competing helpers with overlapping responsibility.",
-    "implemented": false,
-    "prdRefs": ["Implementation Notes"]
+    "implemented": true,
+    "prdRefs": [
+      "Implementation Notes"
+    ]
   },
   {
     "id": "F025",
     "description": "The re-export shim client-portal-actions/visibilityResolver.ts is updated in step with the rename so it does not silently stop exporting a symbol that still has importers.",
-    "implemented": false,
-    "prdRefs": ["Implementation Notes"]
+    "implemented": true,
+    "prdRefs": [
+      "Implementation Notes"
+    ]
   },
-
   {
     "id": "F030",
     "description": "Enforcement: single-ticket gate resolveVisibleTicket (client-tickets.ts:158) applies the contact predicate, closing direct-ID access.",
-    "implemented": false,
-    "prdRefs": ["Requirements/FR4", "Security / Permissions"]
+    "implemented": true,
+    "prdRefs": [
+      "Requirements/FR4",
+      "Security / Permissions"
+    ]
   },
   {
     "id": "F031",
     "description": "Enforcement: portal ticket list (client-tickets.ts:220).",
-    "implemented": false,
-    "prdRefs": ["Requirements/FR4"]
+    "implemented": true,
+    "prdRefs": [
+      "Requirements/FR4"
+    ]
   },
   {
     "id": "F032",
     "description": "Enforcement: portal ticket detail (client-tickets.ts:333).",
-    "implemented": false,
-    "prdRefs": ["Requirements/FR4"]
+    "implemented": true,
+    "prdRefs": [
+      "Requirements/FR4"
+    ]
   },
   {
     "id": "F033",
     "description": "Enforcement: ticket documents (client-tickets.ts:1082), using the unaliased 'tickets' column names.",
-    "implemented": false,
-    "prdRefs": ["Requirements/FR4"]
+    "implemented": true,
+    "prdRefs": [
+      "Requirements/FR4"
+    ]
   },
   {
     "id": "F034",
     "description": "Enforcement: dashboard open-ticket count (dashboard.ts:218).",
-    "implemented": false,
-    "prdRefs": ["Requirements/FR4"]
+    "implemented": true,
+    "prdRefs": [
+      "Requirements/FR4"
+    ]
   },
   {
     "id": "F035",
     "description": "Enforcement: dashboard activity feed (dashboard.ts:318), so no sibling ticket title or comment excerpt surfaces.",
-    "implemented": false,
-    "prdRefs": ["Requirements/FR4"]
+    "implemented": true,
+    "prdRefs": [
+      "Requirements/FR4"
+    ]
   },
   {
     "id": "F036",
     "description": "Enforcement: REST API applyClientTicketScope (TicketService.ts:284), covering list, search, count, and getById.",
-    "implemented": false,
-    "prdRefs": ["Requirements/FR4"]
+    "implemented": true,
+    "prdRefs": [
+      "Requirements/FR4"
+    ]
   },
   {
     "id": "F037",
     "description": "Pre-existing defect fixed: getClientTicketDocuments no longer passes the default 't.board_id' against an unaliased 'tickets' FROM clause.",
-    "implemented": false,
-    "prdRefs": ["Implementation Notes", "Acceptance Criteria/9"]
+    "implemented": true,
+    "prdRefs": [
+      "Implementation Notes",
+      "Acceptance Criteria/9"
+    ]
   },
   {
     "id": "F038",
     "description": "ticketFormActions.ts:107 audited and explicitly confirmed to need no contact predicate (it lists boards, not tickets); the decision is recorded in a comment so the omission is not read as an oversight.",
-    "implemented": false,
-    "prdRefs": ["Implementation Notes"]
+    "implemented": true,
+    "prdRefs": [
+      "Implementation Notes"
+    ]
   },
-
   {
     "id": "F040",
     "description": "A contact-aware relationship template is added to RelationshipTemplateKey with both matches() and compileSql() facets, relying on the Record type's exhaustiveness to prevent JS/SQL drift.",
-    "implemented": false,
-    "prdRefs": ["Open Questions/OQ2"]
+    "implemented": true,
+    "prdRefs": [
+      "Open Questions/OQ2"
+    ]
   },
   {
     "id": "F041",
     "description": "The ticket authorization record maps contact_name_id and the ticket SQL adapter exposes a contact column, in both the ticketActions and optimizedTicketActions copies of toTicketAuthorizationRecord.",
-    "implemented": false,
-    "prdRefs": ["Open Questions/OQ2"]
+    "implemented": true,
+    "prdRefs": [
+      "Open Questions/OQ2"
+    ]
   },
   {
     "id": "F042",
     "description": "The duplicated authorization trees stay in lockstep: catalog and service changes applied to BOTH packages/authorization and server/src/lib/authorization, and the per-rule override block in relationshipTemplates.ts kept in sync with its twin in providers/bundleProvider.ts.",
-    "implemented": false,
-    "prdRefs": ["Open Questions/OQ2"]
+    "implemented": true,
+    "prdRefs": [
+      "Open Questions/OQ2"
+    ],
+    "implementationNotes": "Kernel server files are re-export shims; both catalogs updated. The combined template consumes trusted context and requires no rule-config/service changes."
   },
   {
     "id": "F043",
     "description": "ticketActions.ts:251 and optimizedTicketActions.ts:234 return the fuller visibility context rather than only visibleBoardIds, and both preserve their catch-and-deny fail-closed behavior.",
-    "implemented": false,
-    "prdRefs": ["Open Questions/OQ2", "Requirements/NFR1"]
+    "implemented": true,
+    "prdRefs": [
+      "Open Questions/OQ2",
+      "Requirements/NFR1"
+    ]
   },
   {
     "id": "F044",
     "description": "getTicketById narrowing covers contact scope, closing the live-reachable GET /api/tickets/[id]/live-token path so a contact-scoped user cannot mint a Hocuspocus collaboration token for a sibling's ticket.",
-    "implemented": false,
-    "prdRefs": ["Open Questions/OQ2", "Security / Permissions"]
+    "implemented": true,
+    "prdRefs": [
+      "Open Questions/OQ2",
+      "Security / Permissions"
+    ]
   },
   {
     "id": "F045",
     "description": "Hardening: the live-token route handler rejects non-internal user types directly, matching apiMiddleware.ts:235, so route access control does not rest on a downstream action's narrowing.",
-    "implemented": false,
-    "prdRefs": ["Open Questions/OQ2"]
+    "implemented": true,
+    "prdRefs": [
+      "Open Questions/OQ2"
+    ]
   },
-
   {
     "id": "F050",
     "description": "Portal-side zod payload schema accepts ticketScope with a 'client' default.",
-    "implemented": false,
-    "prdRefs": ["Requirements/FR6"]
+    "implemented": true,
+    "prdRefs": [
+      "Requirements/FR6"
+    ]
   },
   {
     "id": "F051",
     "description": "Portal-side create action persists ticket_scope.",
-    "implemented": false,
-    "prdRefs": ["Requirements/FR6"]
+    "implemented": true,
+    "prdRefs": [
+      "Requirements/FR6"
+    ]
   },
   {
     "id": "F052",
     "description": "Portal-side update action persists ticket_scope.",
-    "implemented": false,
-    "prdRefs": ["Requirements/FR6"]
+    "implemented": true,
+    "prdRefs": [
+      "Requirements/FR6"
+    ]
   },
   {
     "id": "F053",
     "description": "Portal-side list and detail read actions select ticket_scope, and the VisibilityGroup types carry it.",
-    "implemented": false,
-    "prdRefs": ["Requirements/FR6"]
+    "implemented": true,
+    "prdRefs": [
+      "Requirements/FR6"
+    ]
   },
   {
     "id": "F054",
     "description": "MSP-side action module (contactActions.tsx) carries ticket_scope through create, update, and read, keeping parity with the portal-side module.",
-    "implemented": false,
-    "prdRefs": ["Requirements/FR6", "Data / API / Integrations/Two action modules, two UIs"]
+    "implemented": true,
+    "prdRefs": [
+      "Requirements/FR6",
+      "Data / API / Integrations/Two action modules, two UIs"
+    ]
   },
-
   {
     "id": "F060",
     "description": "Portal-side group editor renders the scope choice using the existing RadioGroup component with per-option descriptions.",
-    "implemented": false,
-    "prdRefs": ["UX / UI Notes"]
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
   },
   {
     "id": "F061",
     "description": "Portal-side editor hydrates scope when editing an existing group and resets it to 'client' on form reset.",
-    "implemented": false,
-    "prdRefs": ["UX / UI Notes"]
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
   },
   {
     "id": "F062",
     "description": "Portal-side group list row shows the scope alongside the board and assignment counts.",
-    "implemented": false,
-    "prdRefs": ["UX / UI Notes"]
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
   },
   {
     "id": "F063",
     "description": "MSP-side group editor renders the same scope choice, so a technician cannot edit a contact-scoped group through a form that hides its scope.",
-    "implemented": false,
-    "prdRefs": ["UX / UI Notes"]
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
   },
   {
     "id": "F064",
     "description": "MSP-side group list row shows the scope, and the assignment help text is reworded so it no longer implies board-only semantics.",
-    "implemented": false,
-    "prdRefs": ["UX / UI Notes"]
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
   },
   {
     "id": "F065",
     "description": "The contact-scope option's description states the client-admin carve-out and the chosen null-contact policy inline, so an admin is not surprised by their own unchanged view.",
-    "implemented": false,
-    "prdRefs": ["UX / UI Notes", "Open Questions/OQ1"]
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Open Questions/OQ1"
+    ]
   },
-
   {
     "id": "F070",
     "description": "New client-portal i18n keys added to all ten locales in server/public/locales/<locale>/client-portal.json, including the xx and yy pseudo-locales.",
-    "implemented": false,
-    "prdRefs": ["Data / API / Integrations/i18n"]
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations/i18n"
+    ]
   },
   {
     "id": "F071",
     "description": "MSP-side scope strings get real keys in server/public/locales/*/msp/contacts.json rather than extending the hardcoded-English precedent in ContactPortalTab.tsx.",
-    "implemented": false,
-    "prdRefs": ["Data / API / Integrations/i18n"]
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations/i18n"
+    ]
   },
   {
     "id": "F072",
     "description": "visibilityGroupsLocales.test.ts parity list extended to include 'pt', closing a pre-existing gap.",
-    "implemented": false,
-    "prdRefs": ["Data / API / Integrations/i18n", "Acceptance Criteria/8"]
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations/i18n",
+      "Acceptance Criteria/8"
+    ]
   },
-
   {
     "id": "F080",
     "description": "algadeskPortalTicketing.contract.test.ts source-text assertion updated to assert the new choke point instead of the retired helper name.",
-    "implemented": false,
-    "prdRefs": ["Implementation Notes/Test infrastructure gotchas"]
+    "implemented": true,
+    "prdRefs": [
+      "Implementation Notes/Test infrastructure gotchas"
+    ]
   },
   {
     "id": "F081",
     "description": "User-facing doc client-ticket-visibility.md in nm-store describes the setting, the client-admin override, and the null-contact policy.",
     "implemented": false,
-    "prdRefs": ["Rollout / Migration", "Acceptance Criteria/10"]
+    "prdRefs": [
+      "Rollout / Migration",
+      "Acceptance Criteria/10"
+    ],
+    "implementationNotes": "Local guide and apply-checked website-docs.patch are ready; apply/publish in nm-store with the approved feature release."
   }
 ]

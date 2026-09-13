@@ -53,7 +53,7 @@ export {
 } from './ticketMobileEditorBridge';
 export { TicketMobileEditorRuntime } from './ticketMobileEditorRuntime';
 export {
-  applyVisibilityBoardFilter,
+  applyTicketVisibilityFilter,
   VISIBILITY_GROUP_MISMATCH_ERROR,
   VISIBILITY_GROUP_MISSING_ERROR,
 } from './clientPortalVisibility';

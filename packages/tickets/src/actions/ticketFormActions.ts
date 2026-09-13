@@ -104,6 +104,7 @@ export const getClientTicketFormData = withAuth(async (_user, { tenant }): Promi
         throw new Error('User not associated with a contact');
       }
 
+      // This query lists creation boards, not existing tickets: contact scope does not narrow boards.
       const visibility = await getClientContactVisibilityContext(
         trx,
         tenant,

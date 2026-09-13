@@ -389,3 +389,83 @@ product flow. Same intent applies to contact scope.
   See the reachability notes above.
 - Not blocking, but decide during implementation: whether the new
   `(tenant, contact_name_id)` index should be partial on `IS NOT NULL`.
+
+## Draft implementation — 2026-09-12
+
+Implemented the opt-in scope migration, partial contact index, resolver/admin override,
+explicit-column SQL helper, all portal/REST callers, and the kernel narrowing for
+client users invoking MSP ticket actions. `getTicketById` narrows with the real
+kernel; the live-token handler also rejects non-internal principals before lookup.
+Both admin editors and action modules carry scope, both group lists show it, and
+old callers omitting scope on update preserve the saved value.
+
+OQ1 remains **unapproved**. The unpublished draft explicitly implements the
+recommendation (NULL contacts hidden from ordinary contact-scoped members, visible
+to client admins within their board scope). The decision packet was surfaced to
+Robert; no answer has been recorded. This must not be treated as approval to land.
+
+### Corrections to design-session assumptions
+
+- The server kernel files are re-export shims, not duplicate logic. Both bundle
+  catalogs still need the new key. No per-rule override/service schema addition is
+  needed: `contact_visibility` consumes trusted, resolved request context.
+- Built-in relationships are OR-combined. One template intersects client, board,
+  and effective contact scope, rather than OR-ing separate board/contact rules.
+- The Citus skill was found at
+  `/home/robert/nm-skills/skills/citus-migration-gotchas/SKILL.md`.
+- Local runtime DB is plain PostgreSQL. Its app connection is PgBouncer on 6472;
+  the same stack's direct PostgreSQL endpoint is 5472. The new migration has been
+  applied to this dev DB via a temporary CE+EE overlay and a targeted `migrate.up`.
+  Historical migration entries are missing even from that overlay; only this
+  targeted invocation used `disableMigrationsListValidation: true`. No historical
+  entries were changed and no other migrations were run.
+- The port-3812 app was not listening at takeover smoke time. A temporary dev
+  process started successfully and returned HTTP 307 for the unauthenticated
+  visibility-settings URL. It was stopped after the check. Alga Dev browser
+  discovery timed out, so no authenticated browser/light-dark visual pass is claimed.
+
+### Validation evidence
+
+- `NODE_OPTIONS=--max-old-space-size=16384 npm run typecheck -w server`: passed.
+  The default Node heap failed with OOM; the larger-heap check passed. A full
+  production Next build was not run.
+- Server Vitest with `SKIP_DB_TESTS=1`, focused on the changed visibility suites,
+  both editors, group permission tests, authorization SQL/catalog, and live-token
+  route: **15 files, 97 tests passed**. This includes the real kernel in
+  `ticketActions.authorizationNarrowing.test.ts`; the previous kernel double was
+  removed because it could not prove the new rule semantics.
+- `DB_HOST=127.0.0.1 DB_PORT=5472 TEST_DB_NAME=contact_scope_draft_test REQUIRE_DB=1
+  npx vitest run src/test/integration/ticketClientPortalAbac.integration.test.ts`
+  (from `server`): **18 tests passed**. Uses an isolated, migrated test database.
+  Added actual portal list/detail/documents/dashboard/comment/status calls,
+  sibling and NULL REST denial, pagination totals, admin behavior, explicit-alias
+  SQL, kernel JS/SQL agreement, invalid-scope CHECK rejection, and both group
+  action modules' create/update/read round trips including omitted-scope updates.
+- Permission mocks in that integration harness now route both auth import paths
+  through the same mock, preventing new portal imports from changing the existing
+  scheduled-comment test's permission behavior.
+- Exact new migration executed against a disposable DB on `alga-smoke-citus`:
+  up/retry/down/up passed, existing group row retained default `client`, invalid
+  scope was rejected, concurrent partial index built on distributed `tickets`.
+  Scratch DB was removed. This is not a full production-schema Citus upgrade;
+  F004 remains a before-landing verification item.
+- `node scripts/validate-translations.cjs`: passed, zero errors/warnings. The
+  targeted locale parity test also checks Portuguese and all MSP scope keys.
+  New pseudo-locale strings use `tools/i18n/lib/pseudo-locale.mjs`.
+- `git diff --check`: passed.
+
+### Documentation and review order
+
+`docs/client-ticket-visibility.md` is the user-facing draft in this branch.
+`website-docs.patch` applies cleanly to nm-store's existing ticket-visibility guide
+(`git -C /home/robert/nm-store apply --check <patch>` passed). The website repository
+was left unchanged; apply the patch with the approved feature release.
+
+Review first: OQ1, `clientPortalVisibility.server.ts`, `clientPortalVisibility.ts`,
+`contact_visibility` JS/SQL semantics, and the database enforcement matrix. Then
+review both editors and localized descriptions. New translations need normal
+human language review. Full target-schema Citus verification, the website patch,
+and authenticated browser review remain release tasks.
+
+The existing unrelated `package-lock.json` changes were preserved and excluded
+from the implementation commit. No branch push or PR creation is authorized.

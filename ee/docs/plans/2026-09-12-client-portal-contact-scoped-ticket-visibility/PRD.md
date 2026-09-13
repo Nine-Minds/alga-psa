@@ -6,6 +6,20 @@
   A recommendation with supporting evidence is attached; it needs a yes/no, not
   research. OQ2 (kernel scope) is resolved: required.
 
+## Draft implementation review (2026-09-12)
+
+The implementation is an unpublished draft. **OQ1 still needs Robert’s decision before landing.** The draft implements the recommendation: ordinary members of contact-scoped groups cannot see tickets with no contact; client admins can see them on their allowed boards. Default client-scoped groups retain existing behavior. This is a provisional choice, not a recorded product approval.
+
+Implementation refinements verified in this checkout:
+
+- The kernel’s built-in rules combine with OR. A single `contact_visibility` template therefore intersects client, board, and effective contact scope in both JS and SQL. Splitting these into separate built-in rules would widen access.
+- `server/src/lib/authorization/kernel/*` are re-export shims. The package implementation is authoritative; both bundle catalogs are updated. The new template uses trusted resolved context, not editable per-rule IDs, so no additional bundle configuration/service override is needed.
+- Both update actions preserve saved scope when older callers omit `ticketScope`. Both editors submit scope explicitly.
+- The contact index is partial (`contact_name_id IS NOT NULL`), since contact equality cannot match NULL.
+- User documentation is in `docs/client-ticket-visibility.md`. `website-docs.patch` is the corresponding nm-store update, prepared here for review and application with the feature release; the website checkout was not changed or published.
+
+Full existing-schema Citus deployment verification and the null-contact decision remain release checks. See `SCRATCHPAD.md` for the executed PostgreSQL/Citus checks and their limits.
+
 ## Summary
 
 Let an MSP restrict a client portal contact to seeing only the tickets they are

@@ -1,4 +1,6 @@
-'use server'
+'use server';
+
+import type { ContactVisibilityContext } from '../lib/clientPortalVisibility';
 import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
 
 import { reconcileCommentAttachments } from '@shared/lib/ticketCommentAttachments';
@@ -213,28 +215,23 @@ function toTicketAuthorizationRecord(
     assignedUserIds: Array.from(assignees),
     clientId: ticket.client_id ?? null,
     boardId: ticket.board_id ?? null,
+    contactId: ticket.contact_name_id ?? null,
     teamIds: ticket.assigned_team_id ? [ticket.assigned_team_id] : [],
   };
 }
 
-async function resolveClientSelectedBoardIds(
+async function resolveClientVisibility(
   trx: Knex.Transaction,
   tenant: string,
   user: IUserWithRoles
-): Promise<string[] | undefined> {
-  if (user.user_type !== 'client') {
-    return undefined;
-  }
-
-  if (!user.contact_id) {
-    return [];
-  }
-
+): Promise<ContactVisibilityContext | null | undefined> {
+  if (user.user_type !== 'client') return undefined;
+  if (!user.contact_id) return null;
   try {
-    const visibilityContext = await getClientContactVisibilityContext(trx, tenant, user.contact_id);
-    return visibilityContext.visibleBoardIds ?? undefined;
+    return await getClientContactVisibilityContext(trx, tenant, user.contact_id);
   } catch {
-    return [];
+    // A failed resolution is distinct from an internal user: deny all.
+    return null;
   }
 }
 
@@ -246,13 +243,15 @@ async function createTicketAuthorizationContext(
   authorizationSubject: AuthorizationSubject;
   authorizationKernel: ReturnType<typeof createAuthorizationKernel>;
   selectedBoardIds: string[] | undefined;
+  contactVisibility: ContactVisibilityContext | null | undefined;
   requestCache: RequestLocalAuthorizationCache;
   ticketReadBundleNarrowingRules: Awaited<ReturnType<typeof resolveBundleNarrowingRulesForEvaluation>>;
 }> {
   const authorizationSubject = await resolveAuthorizationSubjectForUser(trx, tenant, user);
-  const selectedBoardIds = await resolveClientSelectedBoardIds(trx, tenant, user);
+  const contactVisibility = await resolveClientVisibility(trx, tenant, user);
+  const selectedBoardIds = contactVisibility === null ? [] : contactVisibility?.visibleBoardIds ?? undefined;
   const relationshipRules =
-    selectedBoardIds === undefined ? [] : [{ template: 'selected_boards' as const }];
+    contactVisibility === undefined ? [] : [{ template: 'contact_visibility' as const }];
   const requestCache = new RequestLocalAuthorizationCache();
   const ticketReadBundleNarrowingRules = await resolveBundleNarrowingRulesForEvaluation(trx, {
     subject: authorizationSubject,
@@ -261,6 +260,7 @@ async function createTicketAuthorizationContext(
       action: 'read',
     },
     selectedBoardIds,
+    contactVisibility,
     requestCache,
     knex: trx,
   });
@@ -291,6 +291,7 @@ async function createTicketAuthorizationContext(
       rbacEvaluator: async () => true,
     }),
     selectedBoardIds,
+    contactVisibility,
     requestCache,
     ticketReadBundleNarrowingRules,
   };
@@ -317,6 +318,7 @@ async function filterAuthorizedTickets<T extends Partial<ITicket> & { ticket_id?
         },
         record: toTicketAuthorizationRecord(ticket),
         selectedBoardIds: context.selectedBoardIds,
+        contactVisibility: context.contactVisibility,
         requestCache: context.requestCache,
         knex: trx,
       });
@@ -336,7 +338,7 @@ function applyTicketReadAuthorizationSql(
 ): RelationshipSqlCompileResult {
   // Built-in narrowing for client-portal users mirrors createTicketAuthorizationContext.
   const builtinRules: RelationshipRule[] =
-    context.selectedBoardIds === undefined ? [] : [{ template: 'selected_boards' }];
+    context.contactVisibility === undefined ? [] : [{ template: 'contact_visibility' }];
 
   return compileTenantScopedResourceReadAuthorizationSql(query, {
     resourceType: 'ticket',
@@ -346,6 +348,7 @@ function applyTicketReadAuthorizationSql(
     ctx: {
       subject: context.authorizationSubject,
       selectedBoardIds: context.selectedBoardIds,
+      contactVisibility: context.contactVisibility,
       adapter: createTicketRelationshipSqlAdapter(trx, tenant),
     },
   });

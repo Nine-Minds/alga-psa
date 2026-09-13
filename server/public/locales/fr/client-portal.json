@@ -681,7 +681,13 @@
       "fullAccess": "Accès complet",
       "cancel": "Annuler",
       "assignSuccess": "Affectation de visibilité du contact mise à jour",
-      "assignError": "Impossible d'attribuer le groupe de visibilité"
+      "assignError": "Impossible d'attribuer le groupe de visibilité",
+      "scopeLabel": "Visibilité des tickets",
+      "scopeClient": "Tous les tickets de ce client",
+      "scopeContact": "Uniquement leurs propres tickets",
+      "scopeClientDescription": "Les membres voient tous les tickets de ce client sur les tableaux sélectionnés.",
+      "scopeContactDescription": "Les membres voient uniquement les tickets dont ils sont le contact. Les administrateurs du client voient tous les tickets des tableaux sélectionnés, y compris ceux sans contact.",
+      "assignmentHelp": "Attribuez un groupe pour limiter les tableaux et les tickets, ou conservez un accès complet au client."
     },
     "messages": {
       "saveChanges": "Enregistrer les modifications",

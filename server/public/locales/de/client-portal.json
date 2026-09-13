@@ -681,7 +681,13 @@
       "fullAccess": "Vollzugriff",
       "cancel": "Abbrechen",
       "assignSuccess": "Kontaktzuweisung für die Sichtbarkeit aktualisiert",
-      "assignError": "Sichtbarkeitsgruppe konnte nicht zugewiesen werden"
+      "assignError": "Sichtbarkeitsgruppe konnte nicht zugewiesen werden",
+      "scopeLabel": "Ticketsichtbarkeit",
+      "scopeClient": "Alle Tickets dieses Kunden",
+      "scopeContact": "Nur eigene Tickets",
+      "scopeClientDescription": "Mitglieder sehen alle Tickets dieses Kunden auf den ausgewählten Boards.",
+      "scopeContactDescription": "Mitglieder sehen nur Tickets, bei denen sie als Kontakt eingetragen sind. Kundenadministratoren sehen alle Tickets auf den ausgewählten Boards, auch ohne Kontakt.",
+      "assignmentHelp": "Weisen Sie eine Gruppe zu, um Boards und Tickets einzuschränken, oder behalten Sie den vollständigen Kundenzugriff."
     },
     "messages": {
       "saveChanges": "Änderungen speichern",
