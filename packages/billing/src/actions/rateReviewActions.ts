@@ -33,6 +33,7 @@ import {
   type LineRateClassification,
   type LineRateSkipReason,
 } from '../lib/billing/pricing/classifyLineRateProvenance';
+import { resolveFixedLineRate } from '../lib/billing/pricing/resolveFixedLineRate';
 
 export type RateReviewActionError = ActionMessageError | ActionPermissionError;
 
@@ -307,10 +308,12 @@ export const resetContractLineRateToStandard = withAuth(
         }
 
         const classification = classifyBundle(bundle, period);
-        // Reset is always available for a line that is currently custom or
-        // unreviewed: it is a deliberate operator action, not the exact-match
-        // reclassification. The resolver must produce a number, though.
-        if (classification.resolvedRateCents === null) {
+        // Reset is a deliberate operator action, not the exact-match
+        // reclassification (plan §3.3): it must be available precisely for a
+        // line wrongly marked `custom`, which the classifier would skip. The
+        // only precondition is that the line resolves to a number at all.
+        const resolved = resolveFixedLineRate(toResolverInput(bundle, period));
+        if (resolved.line.rateCents === null) {
           return {
             applied: [],
             refused: [
