@@ -75,6 +75,8 @@ export interface RawBucketPeriodRow {
 
 export interface RawPricingScheduleRow {
   contractId: string;
+  /** NULL = contract-wide; otherwise the schedule is scoped to this line. */
+  contractLineId: string | null;
   effectiveDate: string;
   endDate: string | null;
   customRate: number | null;
@@ -282,10 +284,11 @@ export async function loadPricingScheduleRates(
   const rows = await tenantDb(conn, tenant)
     .table('contract_pricing_schedules')
     .whereIn('contract_id', distinct)
-    .select('contract_id', 'effective_date', 'end_date', 'custom_rate');
+    .select('contract_id', 'contract_line_id', 'effective_date', 'end_date', 'custom_rate');
 
   return rows.map((row) => ({
     contractId: row.contract_id,
+    contractLineId: row.contract_line_id ?? null,
     effectiveDate: toStringValue(row.effective_date).slice(0, 10),
     endDate: row.end_date ? toStringValue(row.end_date).slice(0, 10) : null,
     customRate: row.custom_rate !== null && row.custom_rate !== undefined ? toNumber(row.custom_rate) : null,
@@ -314,6 +317,7 @@ export function resolvePricingScheduleRate(
   periodEnd: string,
   contractId: string,
   schedules: RawPricingScheduleRow[],
+  contractLineId: string | null = null,
 ): number | null {
   const forContract = schedules.filter((schedule) => schedule.contractId === contractId);
   if (forContract.length === 0) return null;
@@ -321,12 +325,12 @@ export function resolvePricingScheduleRate(
   const active = selectActivePricingSchedule(
     forContract.map((schedule) => ({
       schedule_id: null,
-      contract_line_id: null,
+      contract_line_id: schedule.contractLineId,
       effective_date: schedule.effectiveDate,
       end_date: schedule.endDate,
       custom_rate: schedule.customRate,
     })),
-    '',
+    contractLineId ?? '',
     { start: periodStart, end: addDays(periodEnd, 1) },
   );
 
@@ -491,6 +495,7 @@ export function buildBucketPeriodInputs(
       period.periodEnd,
       period.contractId,
       data.pricingSchedules,
+      period.contractLineId,
     );
     const configuredFee = resolveConfiguredFee(
       period,

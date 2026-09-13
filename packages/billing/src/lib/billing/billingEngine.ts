@@ -329,8 +329,17 @@ const selectActivePricingSchedule = (
   schedules: any[],
   servicePeriodStartExclusive: ISO8601String,
   servicePeriodEndExclusive: ISO8601String,
-): any | undefined =>
-  schedules.find((schedule) => {
+  contractLineId?: string | null,
+): any | undefined => {
+  const candidates = schedules.filter((schedule) => {
+    // A line-scoped schedule applies only to its line; contract-wide (NULL)
+    // applies to all of them. Mirrors the resolver's selection.
+    if (contractLineId !== undefined && contractLineId !== null) {
+      const scope = schedule.contract_line_id ?? null;
+      if (scope !== null && scope !== contractLineId) {
+        return false;
+      }
+    }
     const effectiveDate = normalizeScheduleDate(schedule.effective_date);
     if (effectiveDate === null || effectiveDate >= servicePeriodEndExclusive) {
       return false;
@@ -338,6 +347,20 @@ const selectActivePricingSchedule = (
     const endDate = normalizeScheduleDate(schedule.end_date);
     return endDate === null || endDate > servicePeriodStartExclusive;
   });
+
+  // Most-specific scope wins, then newest effective_date.
+  return candidates
+    .slice()
+    .sort((a, b) => {
+      const scopeDelta =
+        Number((b.contract_line_id ?? null) !== null) -
+        Number((a.contract_line_id ?? null) !== null);
+      if (scopeDelta !== 0) return scopeDelta;
+      const aDate = normalizeScheduleDate(a.effective_date) ?? "";
+      const bDate = normalizeScheduleDate(b.effective_date) ?? "";
+      return bDate < aDate ? -1 : bDate > aDate ? 1 : 0;
+    })[0];
+};
 
 /** Pricing-schedule overrides cannot rescue a missing plan-level base rate. */
 const isFixedLineUnpriceable = (
@@ -4140,12 +4163,24 @@ export class BillingEngine {
               preloaded.pricingSchedules,
               servicePeriodStartExclusive,
               servicePeriodEndExclusive,
+              clientContractLine.contract_line_id,
             )
           : await db
               .table("contract_pricing_schedules")
               .where({
                 tenant: this.tenant,
                 contract_id: clientContractLine.contract_id,
+              })
+              // A line-scoped schedule only applies to its line; NULL is
+              // contract-wide. Most-specific scope wins, then newest.
+              .where(function (builder) {
+                builder.whereNull("contract_line_id");
+                if (clientContractLine.contract_line_id) {
+                  builder.orWhere(
+                    "contract_line_id",
+                    clientContractLine.contract_line_id,
+                  );
+                }
               })
               // [start, end) semantics: schedule starting exactly on service-period end does not apply.
               .where("effective_date", "<", servicePeriodEndExclusive)
@@ -4154,6 +4189,9 @@ export class BillingEngine {
                   .whereNull("end_date")
                   .orWhere("end_date", ">", servicePeriodStartExclusive);
               })
+              .orderByRaw(
+                "CASE WHEN contract_line_id IS NULL THEN 1 ELSE 0 END",
+              )
               .orderBy("effective_date", "desc")
               .first();
 

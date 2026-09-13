@@ -167,6 +167,12 @@ export interface IContractAssignmentSummary extends TenantEntity {
 export interface IContractPricingSchedule extends TenantEntity {
   schedule_id: string;
   contract_id: string;
+  /**
+   * Optional line scope. NULL keeps the original contract-wide meaning (the
+   * schedule applies to every line on the contract); a line id scopes the
+   * override to that line only.
+   */
+  contract_line_id?: string | null;
   effective_date: ISO8601String;
   end_date?: ISO8601String | null;
   duration_value?: number;
