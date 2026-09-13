@@ -14,6 +14,7 @@ export default defineConfig({
       'src/actions/projectBillingActions.contract.test.ts',
       'src/lib/prepaidBalanceAlerts.test.ts',
       'src/lib/billing/compute/**/*.test.ts',
+      'src/lib/billing/pricing/**/*.test.ts',
       'src/schemas/**/*.test.ts',
       // Colocated suites for the document-preview tenant-branding seam. Most
       // src/ tests are reached only through server/vitest.config.ts (which globs
