@@ -776,6 +776,8 @@ export interface ITaxRate extends TenantEntity {
   is_active?: boolean;
   conditions?: Record<string, any>;
   name?: string;
+  /** Maximum tax per calculation, in the smallest currency unit. Null means uncapped. */
+  cap_amount?: number | null;
 }
 
 export interface IClientTaxRate extends TenantEntity {

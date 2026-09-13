@@ -3,6 +3,8 @@ import type {
   ITaxCalculationResult,
   ITaxComponent,
   ITaxHoliday,
+  ITaxPeriodCalculationResult,
+  ITaxPeriodSegment,
   ITaxRateDetails as ITaxRate,
   ITaxRateThreshold,
   ISO8601String,
@@ -12,6 +14,95 @@ import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { ensureClientDefaultBillingProfile } from '@alga-psa/shared/billingClients/billingProfiles';
 import { v4 as uuid4 } from 'uuid';
 import { ManualInvoiceError } from '../errors/manualInvoiceErrors';
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+/**
+ * Normalize a date to UTC midnight for inclusive-start/exclusive-end day
+ * arithmetic. PostgreSQL `date` columns hydrate as local-midnight Date objects,
+ * so use their calendar components rather than the instant; ISO strings are
+ * parsed by their leading YYYY-MM-DD.
+ */
+function toUtcDay(value: ISO8601String | Date): Date {
+  if (value instanceof Date) {
+    return new Date(Date.UTC(value.getFullYear(), value.getMonth(), value.getDate()));
+  }
+  const match = String(value).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!match) {
+    throw new Error(`Invalid tax calculation date: ${String(value)}`);
+  }
+  return new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
+}
+
+function daysBetween(start: Date, end: Date): number {
+  return Math.round((end.getTime() - start.getTime()) / MS_PER_DAY);
+}
+
+function formatDay(date: Date): ISO8601String {
+  return date.toISOString().slice(0, 10);
+}
+
+/** PostgreSQL numeric columns hydrate as strings; keep percentage math numeric. */
+function normalizePercentage(value: number | string): number {
+  const percentage = typeof value === 'string' ? parseFloat(value) : value;
+  return Number.isNaN(percentage) ? 0 : percentage;
+}
+
+/** A rate applies to a day when start_date <= day < end_date (end null = open). */
+function isRateActiveOn(rate: Pick<ITaxRate, 'start_date' | 'end_date'>, day: Date): boolean {
+  if (toUtcDay(rate.start_date).getTime() > day.getTime()) return false;
+  if (rate.end_date && toUtcDay(rate.end_date).getTime() <= day.getTime()) return false;
+  return true;
+}
+
+/**
+ * Split [periodStart, periodEnd) at every rate start/end that falls strictly
+ * inside the period, returning a sorted, de-duplicated list of boundaries that
+ * always begins at periodStart and ends at periodEnd.
+ */
+function collectBoundaries(
+  periodStart: Date,
+  periodEnd: Date,
+  rates: Pick<ITaxRate, 'start_date' | 'end_date'>[],
+): Date[] {
+  const boundaries: Date[] = [periodStart];
+  for (const rate of rates) {
+    for (const value of [rate.start_date, rate.end_date]) {
+      if (!value) continue;
+      const day = toUtcDay(value);
+      if (day.getTime() > periodStart.getTime() && day.getTime() < periodEnd.getTime()) {
+        boundaries.push(day);
+      }
+    }
+  }
+  boundaries.push(periodEnd);
+  boundaries.sort((a, b) => a.getTime() - b.getTime());
+  return boundaries.filter((day, index) => index === 0 || day.getTime() !== boundaries[index - 1].getTime());
+}
+
+function segmentsFromBoundaries(boundaries: Date[]): { start: Date; end: Date; days: number }[] {
+  const segments: { start: Date; end: Date; days: number }[] = [];
+  for (let index = 0; index < boundaries.length - 1; index += 1) {
+    const start = boundaries[index];
+    const end = boundaries[index + 1];
+    const days = daysBetween(start, end);
+    if (days > 0) segments.push({ start, end, days });
+  }
+  return segments;
+}
+
+function emptyPeriodResult(): ITaxPeriodCalculationResult {
+  return { taxAmount: 0, taxRate: 0, segments: [] };
+}
+
+function aggregatePeriodResult(segments: ITaxPeriodSegment[], netAmount: number): ITaxPeriodCalculationResult {
+  const taxAmount = segments.reduce((sum, segment) => sum + segment.taxAmount, 0);
+  return {
+    taxAmount,
+    taxRate: netAmount > 0 ? (taxAmount / netAmount) * 100 : 0,
+    segments,
+  };
+}
 
 export class TaxService {
   constructor() {
@@ -208,7 +299,206 @@ export class TaxService {
     console.log(`Tax calculation result for client ${clientId}:`, result);
     return result;
   }
-  
+
+  /**
+   * Calculate tax for a period that may span several rate-validity windows.
+   *
+   * Semantics (the approved design left these under-specified; this is the
+   * draft's contract, and domain review may change them):
+   *
+   * - Period is [startDate, endDate): the start day is charged, the end day is
+   *   not. Dates are normalized to their UTC calendar day before arithmetic, so
+   *   callers may pass `date`/`timestamptz` values or `YYYY-MM-DD` strings
+   *   without a timezone shifting the day count.
+   * - Every rate `start_date`/`end_date` strictly inside the period splits it
+   *   into constant-rate segments. Each segment's net amount is its day-share
+   *   of the requested net amount; tax is `ceil`-rounded per segment, not once
+   *   for the whole period.
+   * - `netAmount` is pro-rated by calendar day count and may be fractional;
+   *   only the tax is rounded.
+   * - Gaps with no valid rate charge zero tax for the uncovered days (the
+   *   segment is still returned with `taxRate: 0`). A period with no overlap
+   *   at all on the regional path throws `NO_TAX_RATE`; the default-rate path
+   *   returns a zero result when the client has no default rate. An empty or
+   *   reversed period (`end <= start`) throws.
+   * - Exemption, reverse charge and currency filtering are evaluated once for
+   *   the whole period, exactly as the single-date `calculateTax` does.
+   * - Caps belong to a single rate and clamp the single-rate simple and
+   *   progressive-threshold paths (the default-rate path here). The cap is
+   *   applied independently to each segment, because each segment is a
+   *   separate calculation; a two-segment period can therefore charge up to
+   *   `2 * cap`. Progressive brackets are likewise evaluated per segment on
+   *   that segment's prorated amount, so brackets reset at every rate
+   *   boundary.
+   * - The regional path combines several rate rows by summing percentages and
+   *   is intentionally left uncapped and threshold-free, mirroring the
+   *   single-date regional path.
+   */
+  async calculateTaxForPeriod(
+    clientId: string,
+    netAmount: number,
+    startDate: ISO8601String,
+    endDate: ISO8601String,
+    regionCode?: string,
+    is_taxable: boolean = true,
+    currencyCode?: string,
+  ): Promise<ITaxPeriodCalculationResult> {
+    const { knex, tenant } = await createTenantKnex();
+
+    if (!tenant) {
+      throw new Error('Tenant context is required for tax calculation');
+    }
+
+    const periodStart = toUtcDay(startDate);
+    const periodEnd = toUtcDay(endDate);
+    const totalDays = daysBetween(periodStart, periodEnd);
+    if (totalDays <= 0) {
+      throw new Error('Tax period end date must be after start date');
+    }
+
+    console.log(`Calculating tax for client ${clientId} over period ${startDate} - ${endDate} (${totalDays} days), regionCode ${regionCode}, currency ${currencyCode}`);
+
+    // Client-level decisions are evaluated once for the whole period.
+    const client = await tenantDb(knex, tenant).table('clients')
+      .where({
+        client_id: clientId
+      })
+      .select('is_tax_exempt')
+      .first();
+
+    if (!client) {
+      throw new Error(`Client ${clientId} not found in tenant ${tenant}`);
+    }
+
+    if (client.is_tax_exempt || !is_taxable) {
+      console.log(`No period tax applied: client ${clientId} is tax exempt or item is not taxable`);
+      return emptyPeriodResult();
+    }
+
+    const taxSettings = await this.getClientTaxSettings(clientId);
+    if (taxSettings.is_reverse_charge_applicable) {
+      console.log(`Reverse charge is applicable for client ${clientId}. Returning zero period tax.`);
+      return emptyPeriodResult();
+    }
+
+    if (regionCode) {
+      const applicableRates: Pick<ITaxRate, 'tax_rate_id' | 'tax_percentage' | 'start_date' | 'end_date'>[] =
+        await tenantDb(knex, tenant).table('tax_rates')
+          .where({
+            region_code: regionCode,
+            is_active: true
+          })
+          .andWhere('start_date', '<', endDate)
+          .andWhere(function() {
+            this.whereNull('end_date')
+              .orWhere('end_date', '>', startDate);
+          })
+          .andWhere(function() {
+            this.whereNull('currency_code');
+            if (currencyCode) {
+              this.orWhere('currency_code', currencyCode);
+            }
+          })
+          .select('tax_rate_id', 'tax_percentage', 'start_date', 'end_date');
+
+      if (!applicableRates || applicableRates.length === 0) {
+        console.error(`No active tax rate(s) found for regionCode ${regionCode} in period ${startDate} - ${endDate}`);
+        throw new ManualInvoiceError(
+          'NO_TAX_RATE',
+          `No active tax rate(s) found for region ${regionCode} in period ${startDate} - ${endDate}`,
+          { region: regionCode, startDate, endDate },
+        );
+      }
+
+      const boundaries = collectBoundaries(periodStart, periodEnd, applicableRates);
+      const segments: ITaxPeriodSegment[] = segmentsFromBoundaries(boundaries).map(({ start, end, days }) => {
+        const segmentNet = netAmount * (days / totalDays);
+        const ratesForSegment = applicableRates.filter(rate => isRateActiveOn(rate, start));
+        const combinedTaxRate = ratesForSegment.reduce(
+          (sum, rate) => sum + normalizePercentage(rate.tax_percentage),
+          0,
+        );
+        const taxAmount = segmentNet > 0 ? Math.ceil((segmentNet * combinedTaxRate) / 100) : 0;
+        return {
+          start_date: formatDay(start),
+          end_date: formatDay(end),
+          days,
+          netAmount: segmentNet,
+          taxAmount,
+          taxRate: combinedTaxRate,
+        };
+      });
+
+      return aggregatePeriodResult(segments, netAmount);
+    }
+
+    // Default-rate fallback, mirroring calculateTax's precedence.
+    const defaultRateAssoc = await tenantDb(knex, tenant).table('client_tax_rates')
+      .where({
+        client_id: clientId,
+        is_default: true,
+      })
+      .whereNull('location_id')
+      .select('tax_rate_id')
+      .first();
+
+    if (!defaultRateAssoc) {
+      console.error(`No default tax rate configured for client ${clientId} in tenant ${tenant}`);
+      return emptyPeriodResult();
+    }
+
+    const taxRate = await tenantDb(knex, tenant).table<ITaxRate>('tax_rates')
+      .where({
+        tax_rate_id: defaultRateAssoc.tax_rate_id,
+        is_active: true
+      })
+      .andWhere('start_date', '<', endDate)
+      .andWhere(function() {
+        this.whereNull('end_date')
+          .orWhere('end_date', '>', startDate);
+      })
+      .andWhere(function() {
+        this.whereNull('currency_code');
+        if (currencyCode) {
+          this.orWhere('currency_code', currencyCode);
+        }
+      })
+      .first();
+
+    if (!taxRate) {
+      console.error(`Default tax rate (ID: ${defaultRateAssoc.tax_rate_id}) is inactive or does not overlap period ${startDate} - ${endDate}`);
+      return emptyPeriodResult();
+    }
+
+    const boundaries = collectBoundaries(periodStart, periodEnd, [taxRate]);
+    const segments: ITaxPeriodSegment[] = [];
+    for (const { start, end, days } of segmentsFromBoundaries(boundaries)) {
+      const segmentNet = netAmount * (days / totalDays);
+      let taxAmount = 0;
+      let segmentTaxRate = 0;
+
+      if (isRateActiveOn(taxRate, start)) {
+        const segmentDate = formatDay(start);
+        const result = taxRate.is_composite
+          ? await this.calculateCompositeTax(taxRate, segmentNet, segmentDate)
+          : await this.calculateSimpleTax(taxRate, segmentNet, segmentDate);
+        taxAmount = result.taxAmount;
+        segmentTaxRate = result.taxRate;
+      }
+
+      segments.push({
+        start_date: formatDay(start),
+        end_date: formatDay(end),
+        days,
+        netAmount: segmentNet,
+        taxAmount,
+        taxRate: segmentTaxRate,
+      });
+    }
+
+    return aggregatePeriodResult(segments, netAmount);
+  }
+
   private async calculateCompositeTax(taxRate: ITaxRate, netAmount: number, date: ISO8601String): Promise<ITaxCalculationResult> {
     const { knex } = await createTenantKnex();
     const components = await ClientTaxSettings.getCompositeTaxComponents(taxRate.tax_rate_id);
@@ -239,7 +529,7 @@ export class TaxService {
     const thresholds = await ClientTaxSettings.getTaxRateThresholds(taxRate.tax_rate_id);
     
     if (thresholds.length > 0) {
-      return this.calculateThresholdBasedTax(thresholds, netAmount);
+      return this.calculateThresholdBasedTax(thresholds, netAmount, taxRate.cap_amount);
     }
 
     // PostgreSQL numeric columns hydrate as strings even though the domain
@@ -251,10 +541,10 @@ export class TaxService {
     }
 
     const taxAmount = Math.ceil((netAmount * taxPercentage) / 100);
-    return { taxAmount, taxRate: taxPercentage };
+    return { taxAmount: this.applyCap(taxAmount, taxRate.cap_amount), taxRate: taxPercentage };
   }
 
-  private calculateThresholdBasedTax(thresholds: ITaxRateThreshold[], netAmount: number): ITaxCalculationResult {
+  private calculateThresholdBasedTax(thresholds: ITaxRateThreshold[], netAmount: number, capAmount?: number | null): ITaxCalculationResult {
     console.log(`Calculating threshold-based tax for net amount: ${netAmount}`);
     console.log(`Number of thresholds: ${thresholds.length}`);
 
@@ -281,17 +571,30 @@ export class TaxService {
       console.log(`Cumulative tax amount: ${taxAmount}`);
     }
 
-    const effectiveTaxRate = (taxAmount / netAmount) * 100;
+    const cappedTaxAmount = this.applyCap(taxAmount, capAmount);
+    const effectiveTaxRate = (cappedTaxAmount / netAmount) * 100;
     console.log(`Effective tax rate: ${effectiveTaxRate}%`);
 
     const result = {
-      taxAmount,
+      taxAmount: cappedTaxAmount,
       taxRate: effectiveTaxRate,
       appliedThresholds
     };
 
     console.log(`Final tax calculation result: ${JSON.stringify(result)}`);
     return result;
+  }
+
+  /**
+   * Clamp a calculated tax to a rate's cap. `null`/`undefined` (or an
+   * unparseable value) means uncapped; a stored 0 is a supplied cap.
+   * PostgreSQL bigint columns hydrate as strings, so coerce first.
+   */
+  private applyCap(taxAmount: number, capAmount?: number | null): number {
+    if (capAmount === null || capAmount === undefined) return taxAmount;
+    const cap = Number(capAmount);
+    if (Number.isNaN(cap)) return taxAmount;
+    return Math.min(taxAmount, cap);
   }
 
   private async calculateComponentTax(component: ITaxComponent, amount: number, date: ISO8601String): Promise<number> {

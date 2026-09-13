@@ -284,4 +284,74 @@ describe('TaxService.calculateTax', () => {
       expect(result).toEqual({ taxAmount: 0, taxRate: 7.25 });
     });
   });
+
+  describe('rate caps (default-rate simple path)', () => {
+    function setupCappedRate(cap: number | null) {
+      vi.mocked(ClientTaxSettings.getTaxRateThresholds).mockResolvedValue([]);
+      setupKnex({
+        clients: [[{ is_tax_exempt: false }]],
+        client_tax_rates: [[{ tax_rate_id: 'rate-1' }]],
+        tax_rates: [
+          [{ tax_rate_id: 'rate-1', tax_percentage: 10, is_composite: false, cap_amount: cap }],
+        ],
+      });
+    }
+
+    it('charges no tax when the cap is zero (a zero cap is a supplied value)', async () => {
+      setupCappedRate(0);
+
+      const result = await new TaxService().calculateTax('client-1', 10000, DATE);
+
+      expect(result).toEqual({ taxAmount: 0, taxRate: 10 });
+    });
+
+    it('leaves tax unchanged when it is below the cap', async () => {
+      // 10000 * 10% = 1000, below a 2500 cap.
+      setupCappedRate(2500);
+
+      const result = await new TaxService().calculateTax('client-1', 10000, DATE);
+
+      expect(result).toEqual({ taxAmount: 1000, taxRate: 10 });
+    });
+
+    it('leaves tax unchanged when it exactly equals the cap', async () => {
+      setupCappedRate(1000);
+
+      const result = await new TaxService().calculateTax('client-1', 10000, DATE);
+
+      expect(result).toEqual({ taxAmount: 1000, taxRate: 10 });
+    });
+
+    it('clamps tax that exceeds the cap', async () => {
+      // 10000 * 10% = 1000, clamped to 400.
+      setupCappedRate(400);
+
+      const result = await new TaxService().calculateTax('client-1', 10000, DATE);
+
+      expect(result).toEqual({ taxAmount: 400, taxRate: 10 });
+    });
+
+    it('preserves uncapped behavior when cap_amount is null', async () => {
+      setupCappedRate(null);
+
+      const result = await new TaxService().calculateTax('client-1', 10000, DATE);
+
+      expect(result).toEqual({ taxAmount: 1000, taxRate: 10 });
+    });
+
+    it('parses a bigint cap hydrated as a string', async () => {
+      vi.mocked(ClientTaxSettings.getTaxRateThresholds).mockResolvedValue([]);
+      setupKnex({
+        clients: [[{ is_tax_exempt: false }]],
+        client_tax_rates: [[{ tax_rate_id: 'rate-1' }]],
+        tax_rates: [
+          [{ tax_rate_id: 'rate-1', tax_percentage: 10, is_composite: false, cap_amount: '350' }],
+        ],
+      });
+
+      const result = await new TaxService().calculateTax('client-1', 10000, DATE);
+
+      expect(result).toEqual({ taxAmount: 350, taxRate: 10 });
+    });
+  });
 });

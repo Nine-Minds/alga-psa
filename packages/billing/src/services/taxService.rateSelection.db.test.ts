@@ -84,6 +84,112 @@ describe('TaxService PostgreSQL rate selection', () => {
     }
   });
 
+  it('clamps the default-rate simple path at a persisted cap and treats null/zero as distinct', async () => {
+    const service = new TaxService();
+    const setCap = (cap: number | null) =>
+      context.db!('tax_rates').where({ tenant: context.tenant, tax_rate_id: defaultRateId }).update({ cap_amount: cap });
+
+    await setCap(300);
+    expect(await service.calculateTax(clientId, 10000, '2026-06-01')).toEqual({ taxAmount: 300, taxRate: 5 });
+
+    await setCap(null);
+    expect(await service.calculateTax(clientId, 10000, '2026-06-01')).toEqual({ taxAmount: 500, taxRate: 5 });
+
+    await setCap(0);
+    expect(await service.calculateTax(clientId, 10000, '2026-06-01')).toEqual({ taxAmount: 0, taxRate: 5 });
+  });
+
+  it('persists cap_amount through the create and update actions', async () => {
+    const saved = await context.db!('tax_rates').where({ tenant: context.tenant, tax_rate_id: defaultRateId }).first();
+    const { tax_rate_id: omitted, ...data } = saved;
+    const created = await addTaxRate({ ...data, start_date: '2025-01-01', end_date: '2026-01-01', cap_amount: 1234 });
+    expect(created).toHaveProperty('tax_rate_id');
+    if (!('tax_rate_id' in created)) throw new Error('Expected a persisted tax rate');
+    expect(Number(created.cap_amount)).toBe(1234);
+
+    const updated = await updateTaxRate({ ...created, cap_amount: 4321 });
+    expect(updated).toMatchObject({ tax_rate_id: created.tax_rate_id });
+    const readback = await context.db!('tax_rates').where({ tenant: context.tenant, tax_rate_id: created.tax_rate_id }).first();
+    expect(Number(readback.cap_amount)).toBe(4321);
+  });
+
+  it('keeps a regional period inside one rate interval as a single segment', async () => {
+    // 2026-02-01 -> 2026-03-01 is 28 days at the 5% rate.
+    const result = await new TaxService().calculateTaxForPeriod(clientId, 28000, '2026-02-01', '2026-03-01', region);
+    expect(result.taxAmount).toBe(1400);
+    expect(result.taxRate).toBe(5);
+    expect(result.segments).toEqual([
+      { start_date: '2026-02-01', end_date: '2026-03-01', days: 28, netAmount: 28000, taxAmount: 1400, taxRate: 5 },
+    ]);
+  });
+
+  it('pro-rates and ceiling-rounds a regional period across a rate change', async () => {
+    // 2026-06-15 -> 2026-07-15 is 30 days, split 16/14 at the 5% -> 7% change.
+    const result = await new TaxService().calculateTaxForPeriod(clientId, 30000, '2026-06-15', '2026-07-15', region);
+    expect(result.segments).toEqual([
+      { start_date: '2026-06-15', end_date: '2026-07-01', days: 16, netAmount: 16000, taxAmount: 800, taxRate: 5 },
+      { start_date: '2026-07-01', end_date: '2026-07-15', days: 14, netAmount: 14000, taxAmount: 980, taxRate: 7 },
+    ]);
+    expect(result.taxAmount).toBe(1780);
+  });
+
+  it('charges the boundary day at the new regional rate (inclusive start, exclusive end)', async () => {
+    const result = await new TaxService().calculateTaxForPeriod(clientId, 20000, '2026-06-30', '2026-07-02', region);
+    expect(result.segments).toEqual([
+      { start_date: '2026-06-30', end_date: '2026-07-01', days: 1, netAmount: 10000, taxAmount: 500, taxRate: 5 },
+      { start_date: '2026-07-01', end_date: '2026-07-02', days: 1, netAmount: 10000, taxAmount: 700, taxRate: 7 },
+    ]);
+    expect(result.taxAmount).toBe(1200);
+  });
+
+  it('applies a period cap on the default-rate path and zeroes days outside rate validity', async () => {
+    const service = new TaxService();
+    await context.db!('tax_rates').where({ tenant: context.tenant, tax_rate_id: defaultRateId }).update({ cap_amount: 400 });
+    // 2026-02-01 -> 2026-03-01 is one 28-day segment: 500 uncapped, capped at 400.
+    const capped = await service.calculateTaxForPeriod(clientId, 10000, '2026-02-01', '2026-03-01');
+    expect(capped.taxAmount).toBe(400);
+    expect(capped.segments[0].taxAmount).toBe(400);
+
+    await context.db!('tax_rates').where({ tenant: context.tenant, tax_rate_id: defaultRateId }).update({ cap_amount: null });
+    // 2026-06-15 -> 2026-07-15: 16 days taxed at 5%, 14 days after the default rate ends.
+    const spanning = await service.calculateTaxForPeriod(clientId, 30000, '2026-06-15', '2026-07-15');
+    expect(spanning.segments).toEqual([
+      { start_date: '2026-06-15', end_date: '2026-07-01', days: 16, netAmount: 16000, taxAmount: 800, taxRate: 5 },
+      { start_date: '2026-07-01', end_date: '2026-07-15', days: 14, netAmount: 14000, taxAmount: 0, taxRate: 0 },
+    ]);
+    expect(spanning.taxAmount).toBe(800);
+  });
+
+  it('rejects an empty period and a period before any regional rate', async () => {
+    const service = new TaxService();
+    await expect(service.calculateTaxForPeriod(clientId, 10000, '2026-07-01', '2026-07-01', region))
+      .rejects.toThrow('Tax period end date must be after start date');
+    await expect(service.calculateTaxForPeriod(clientId, 10000, '2025-01-01', '2025-02-01', region))
+      .rejects.toMatchObject({ code: 'NO_TAX_RATE' });
+  });
+
+  it('combines only universal and matching currency rates across a period', async () => {
+    await context.db!('tax_rates').where({ tenant: context.tenant, region_code: region }).update({ is_active: false });
+    await context.db!('tax_rates').insert([
+      { tenant: context.tenant, tax_rate_id: randomUUID(), region_code: region, tax_percentage: 1, start_date: '2026-01-01', currency_code: null },
+      { tenant: context.tenant, tax_rate_id: randomUUID(), region_code: region, tax_percentage: 5, start_date: '2026-01-01', currency_code: 'USD' },
+      { tenant: context.tenant, tax_rate_id: randomUUID(), region_code: region, tax_percentage: 7, start_date: '2026-01-01', currency_code: 'EUR' },
+    ]);
+    const service = new TaxService();
+    // 28000 cents over 28 days: universal 1% + matching currency rate.
+    expect((await service.calculateTaxForPeriod(clientId, 28000, '2026-02-01', '2026-03-01', region, true, 'USD')).taxAmount).toBe(1680);
+    expect((await service.calculateTaxForPeriod(clientId, 28000, '2026-02-01', '2026-03-01', region, true, 'EUR')).taxAmount).toBe(2240);
+    expect((await service.calculateTaxForPeriod(clientId, 28000, '2026-02-01', '2026-03-01', region, true, undefined)).taxAmount).toBe(280);
+  });
+
+  it('isolates period tax by region and tenant', async () => {
+    const service = new TaxService();
+    // The OTHER region's 30% rate and the foreign tenant's 90% rate must not leak.
+    const result = await service.calculateTaxForPeriod(clientId, 28000, '2026-02-01', '2026-03-01', 'OTHER');
+    expect(result.taxAmount).toBe(8400);
+    expect(result.segments[0].taxRate).toBe(30);
+  });
+
   it('create and update actions persist a valid rate through their real transactions', async () => {
     const saved = await context.db!('tax_rates').where({ tenant: context.tenant, tax_rate_id: defaultRateId }).first();
     const { tax_rate_id: omitted, ...data } = saved;
