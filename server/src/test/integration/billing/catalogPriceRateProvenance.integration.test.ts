@@ -145,6 +145,7 @@ describe('Catalog price changes reach existing contracts – rate review', () =>
     expect(row?.proposed).toBe('inherited');
     expect(row?.resolvedRateCents).toBe(10000);
     expect(row?.storedRateCents).toBe(10000);
+    expect(row?.serviceNames).toContain('Managed Endpoint');
 
     const result = await applyRateReclassification(
       [{ contractLineId, target: 'inherited' }],

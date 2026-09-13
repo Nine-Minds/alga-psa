@@ -11,6 +11,7 @@ import { DeleteEntityDialog } from '@alga-psa/ui';
 import { getServices, updateService, updateServicePricing, deleteService, getServiceTypesForSelection, PaginatedServicesResponse, createServiceTypeInline, updateServiceTypeInline, deleteServiceTypeInline } from '../../../actions/serviceActions';
 import { getServiceContractUsage, applyServicePriceChange } from '../../../actions/servicePriceRolloutActions';
 import PriceChangeRolloutDialog from './PriceChangeRolloutDialog';
+import RateReviewDialog from './RateReviewDialog';
 import { getDefaultBillingSettings } from '../../../actions/billingSettingsActions';
 import { CURRENCY_OPTIONS, getCurrencySymbol } from '@alga-psa/core';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
@@ -93,6 +94,7 @@ const ServiceCatalogManager: React.FC = () => {
     service: IService;
     prices: Array<{ currency_code: string; rate: number }>;
   } | null>(null);
+  const [isRateReviewOpen, setIsRateReviewOpen] = useState(false);
   const filteredServices = services.filter(service => {
     // Filter by Service Type
     const serviceTypeMatch = selectedServiceType === 'all' || service.custom_service_type_id === selectedServiceType;
@@ -1218,8 +1220,16 @@ const ServiceCatalogManager: React.FC = () => {
           onApply={(effectiveDate) =>
             saveService(pendingPriceChange.service, pendingPriceChange.prices, effectiveDate)
           }
+          onReviewRates={() => {
+            setPendingPriceChange(null);
+            setIsRateReviewOpen(true);
+          }}
         />
       )}
+      <RateReviewDialog
+        isOpen={isRateReviewOpen}
+        onClose={() => setIsRateReviewOpen(false)}
+      />
     </>
   );
 };

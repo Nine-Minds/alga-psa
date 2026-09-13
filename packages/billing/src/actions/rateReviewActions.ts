@@ -48,6 +48,8 @@ export interface RateReviewRow {
   contractName: string | null;
   clientId: string | null;
   currency: string;
+  /** Services on the line, for grouping by service in the review surface. */
+  serviceNames: string[];
   storedRateCents: number | null;
   resolvedRateCents: number | null;
   currentProvenance: string | null;
@@ -145,6 +147,20 @@ export const previewRateReclassification = withAuth(
         const lineIds = await loadUnreviewedLineIds(trx, tenant);
         const bundles = await loadFixedLineRateInputs(trx, tenant, lineIds);
 
+        const allServiceIds = [
+          ...new Set([...bundles.values()].flatMap((bundle) => bundle.serviceIds)),
+        ];
+        const serviceNameById = new Map<string, string>();
+        if (allServiceIds.length > 0) {
+          const serviceRows = await trx('service_catalog')
+            .where({ tenant })
+            .whereIn('service_id', allServiceIds)
+            .select('service_id', 'service_name');
+          for (const row of serviceRows as Array<{ service_id: string; service_name: string }>) {
+            serviceNameById.set(String(row.service_id), row.service_name);
+          }
+        }
+
         const rows: RateReviewRow[] = [];
         for (const bundle of bundles.values()) {
           const classification = classifyBundle(bundle, period);
@@ -154,6 +170,9 @@ export const previewRateReclassification = withAuth(
             contractName: bundle.contractName,
             clientId: bundle.clientId,
             currency: bundle.currency,
+            serviceNames: bundle.serviceIds.map(
+              (serviceId) => serviceNameById.get(serviceId) ?? serviceId,
+            ),
             storedRateCents: classification.storedRateCents,
             resolvedRateCents: classification.resolvedRateCents,
             currentProvenance: bundle.line.rate_provenance
