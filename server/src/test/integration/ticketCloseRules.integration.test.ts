@@ -829,6 +829,13 @@ describe('ticket close rules', () => {
     expect(returned.is_closed).toBe(true);
     expect(returned.closed_at).not.toBeNull();
     expect(returned.closed_by).toBe(fixture.userId);
+
+    const persisted = await scopedDb().table('tickets').where({ ticket_id: ticketId }).first();
+    expect(persisted.is_closed).toBe(true);
+    expect(new Date(returned.closed_at as unknown as string).toISOString()).toBe(
+      new Date(persisted.closed_at).toISOString()
+    );
+    expect(returned.closed_by).toBe(persisted.closed_by);
   });
 
   async function insertStatus(overrides: Record<string, unknown>): Promise<string> {
@@ -874,6 +881,14 @@ describe('ticket close rules', () => {
       new Date(closed.closed_at as unknown as string).toISOString()
     );
     expect(moved.closed_by).toBe(closed.closed_by);
+
+    const persisted = await scopedDb().table('tickets').where({ ticket_id: ticketId }).first();
+    expect(persisted.status_id).toBe(secondClosedStatusId);
+    expect(persisted.is_closed).toBe(true);
+    expect(new Date(persisted.closed_at).toISOString()).toBe(
+      new Date(closed.closed_at as unknown as string).toISOString()
+    );
+    expect(persisted.closed_by).toBe(closed.closed_by);
   });
 
   it('T052: repeating the same closed status preserves closure metadata', async () => {
@@ -896,6 +911,13 @@ describe('ticket close rules', () => {
       new Date(closed.closed_at as unknown as string).toISOString()
     );
     expect(repeated.closed_by).toBe(closed.closed_by);
+
+    const persisted = await scopedDb().table('tickets').where({ ticket_id: ticketId }).first();
+    expect(persisted.is_closed).toBe(true);
+    expect(new Date(persisted.closed_at).toISOString()).toBe(
+      new Date(closed.closed_at as unknown as string).toISOString()
+    );
+    expect(persisted.closed_by).toBe(closed.closed_by);
   });
 
   it('T053: an update with no status_id preserves closure state and metadata', async () => {
@@ -915,6 +937,14 @@ describe('ticket close rules', () => {
       new Date(closed.closed_at as unknown as string).toISOString()
     );
     expect(renamed.closed_by).toBe(closed.closed_by);
+
+    const persisted = await scopedDb().table('tickets').where({ ticket_id: ticketId }).first();
+    expect(persisted.title).toBe('Still closed');
+    expect(persisted.is_closed).toBe(true);
+    expect(new Date(persisted.closed_at).toISOString()).toBe(
+      new Date(closed.closed_at as unknown as string).toISOString()
+    );
+    expect(persisted.closed_by).toBe(closed.closed_by);
   });
 
   it('T054: open-to-open status change keeps is_closed false and closure metadata null', async () => {
@@ -931,6 +961,12 @@ describe('ticket close rules', () => {
     expect(moved.is_closed).toBe(false);
     expect(moved.closed_at).toBeNull();
     expect(moved.closed_by).toBeNull();
+
+    const persisted = await scopedDb().table('tickets').where({ ticket_id: ticketId }).first();
+    expect(persisted.status_id).toBe(fixture.waitingStatusId);
+    expect(persisted.is_closed).toBe(false);
+    expect(persisted.closed_at).toBeNull();
+    expect(persisted.closed_by).toBeNull();
   });
 
   it('T055: a close-rule-rejected status change leaves the ticket wholly unchanged', async () => {
@@ -947,5 +983,37 @@ describe('ticket close rules', () => {
     expect(persisted.is_closed).toBe(false);
     expect(persisted.closed_at).toBeNull();
     expect(persisted.closed_by).toBeNull();
+  });
+
+  // Pre-fix precedence: the derived close fields only win when the status
+  // crosses the closed boundary. On a status change that stays open, a
+  // caller-supplied closed_at/closed_by passed through updateTicketStatusSchema
+  // must still reach the row (the follow-up writes only ever touched the
+  // boundary cases). This is the silent-regression seam called out in the
+  // review: folding must not start clobbering caller metadata.
+  it('T056: caller-supplied closure metadata survives a non-boundary status change', async () => {
+    const ticketId = await insertTicket(db, fixture);
+    const service = new TicketService();
+    const callerClosedAt = '2020-05-05T05:05:05.000Z';
+    const callerClosedBy = uuidv4();
+
+    const moved = await service.update(
+      ticketId,
+      {
+        status_id: fixture.waitingStatusId,
+        closed_at: callerClosedAt,
+        closed_by: callerClosedBy,
+      },
+      serviceContext()
+    );
+
+    expect(moved.status_id).toBe(fixture.waitingStatusId);
+    expect(moved.is_closed).toBe(false);
+    expect(new Date(moved.closed_at as unknown as string).toISOString()).toBe(callerClosedAt);
+    expect(moved.closed_by).toBe(callerClosedBy);
+
+    const persisted = await scopedDb().table('tickets').where({ ticket_id: ticketId }).first();
+    expect(new Date(persisted.closed_at).toISOString()).toBe(callerClosedAt);
+    expect(persisted.closed_by).toBe(callerClosedBy);
   });
 });
