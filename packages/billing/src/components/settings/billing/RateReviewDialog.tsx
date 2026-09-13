@@ -9,6 +9,7 @@ import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { ColumnDefinition } from '@alga-psa/types';
 import {
   previewRateReclassification,
@@ -23,25 +24,31 @@ export interface RateReviewDialogProps {
   onClose: () => void;
 }
 
+type TranslateFn = (key: string, options?: Record<string, unknown>) => string;
+
 function isActionable(row: RateReviewRow): boolean {
   return row.proposed === 'inherited' || row.proposed === 'custom';
 }
 
-function proposalLabel(row: RateReviewRow): string {
+function proposalLabel(row: RateReviewRow, t: TranslateFn): string {
   switch (row.proposed) {
     case 'inherited':
-      return 'Follow the catalog';
+      return t('rateReview.proposal.inherited', { defaultValue: 'Follow the catalog' });
     case 'custom':
-      return 'Keep as custom';
+      return t('rateReview.proposal.custom', { defaultValue: 'Keep as custom' });
     default:
-      return 'Leave unreviewed';
+      return t('rateReview.proposal.unreviewed', { defaultValue: 'Leave unreviewed' });
   }
 }
 
-function confidenceLabel(row: RateReviewRow): string {
-  if (row.proposed === 'inherited') return 'Exact match';
-  if (row.proposed === 'custom') return 'Differs from catalog';
-  return row.reason ?? 'Needs a decision';
+function confidenceLabel(row: RateReviewRow, t: TranslateFn): string {
+  if (row.proposed === 'inherited') {
+    return t('rateReview.confidence.exact', { defaultValue: 'Exact match' });
+  }
+  if (row.proposed === 'custom') {
+    return t('rateReview.confidence.differs', { defaultValue: 'Differs from catalog' });
+  }
+  return row.reason ?? t('rateReview.confidence.needsDecision', { defaultValue: 'Needs a decision' });
 }
 
 /**
@@ -53,6 +60,7 @@ function confidenceLabel(row: RateReviewRow): string {
  */
 export default function RateReviewDialog({ isOpen, onClose }: RateReviewDialogProps) {
   const { money } = useCurrencyFormat();
+  const { t } = useTranslation('msp/billing-settings');
   const [preview, setPreview] = useState<RateReviewPreview | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -77,15 +85,19 @@ export default function RateReviewDialog({ isOpen, onClose }: RateReviewDialogPr
           ),
         );
       } else {
-        setError('Could not load the rates for review.');
+        setError(
+          t('rateReview.previewFailed', { defaultValue: 'Could not load the rates for review.' }),
+        );
       }
     } catch (previewError) {
       console.error('Failed to load rate review:', previewError);
-      setError('Could not load the rates for review.');
+      setError(
+        t('rateReview.previewFailed', { defaultValue: 'Could not load the rates for review.' }),
+      );
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     if (isOpen) {
@@ -98,13 +110,16 @@ export default function RateReviewDialog({ isOpen, onClose }: RateReviewDialogPr
   const groups = useMemo(() => {
     const byService = new Map<string, RateReviewRow[]>();
     for (const row of preview?.rows ?? []) {
-      const label = row.serviceNames.length > 0 ? row.serviceNames.join(', ') : 'No service';
+      const label =
+        row.serviceNames.length > 0
+          ? row.serviceNames.join(', ')
+          : t('rateReview.noService', { defaultValue: 'No service' });
       const rows = byService.get(label) ?? [];
       rows.push(row);
       byService.set(label, rows);
     }
     return [...byService.entries()].sort((a, b) => a[0].localeCompare(b[0]));
-  }, [preview?.rows]);
+  }, [preview?.rows, t]);
 
   const exactMatchCount = preview?.rows.filter((row) => row.proposed === 'inherited').length ?? 0;
 
@@ -135,24 +150,24 @@ export default function RateReviewDialog({ isOpen, onClose }: RateReviewDialogPr
         ),
       },
       {
-        title: 'Contract',
+        title: t('rateReview.columns.contract', { defaultValue: 'Contract' }),
         dataIndex: 'contractName',
         render: (_value: unknown, record: RateReviewRow) => record.contractName ?? '—',
       },
       {
-        title: 'Current rate',
+        title: t('rateReview.columns.currentRate', { defaultValue: 'Current rate' }),
         dataIndex: 'storedRateCents',
         render: (_value: unknown, record: RateReviewRow) =>
           record.storedRateCents === null ? '—' : money(record.storedRateCents, record.currency),
       },
       {
-        title: 'Catalog rate',
+        title: t('rateReview.columns.catalogRate', { defaultValue: 'Catalog rate' }),
         dataIndex: 'resolvedRateCents',
         render: (_value: unknown, record: RateReviewRow) =>
           record.resolvedRateCents === null ? '—' : money(record.resolvedRateCents, record.currency),
       },
       {
-        title: 'Proposed',
+        title: t('rateReview.columns.proposed', { defaultValue: 'Proposed' }),
         dataIndex: 'proposed',
         render: (_value: unknown, record: RateReviewRow) => (
           <Badge
@@ -164,17 +179,17 @@ export default function RateReviewDialog({ isOpen, onClose }: RateReviewDialogPr
                   : 'warning'
             }
           >
-            {proposalLabel(record)}
+            {proposalLabel(record, t)}
           </Badge>
         ),
       },
       {
-        title: 'Confidence',
+        title: t('rateReview.columns.confidence', { defaultValue: 'Confidence' }),
         dataIndex: 'reason',
-        render: (_value: unknown, record: RateReviewRow) => confidenceLabel(record),
+        render: (_value: unknown, record: RateReviewRow) => confidenceLabel(record, t),
       },
     ],
-    [money, selected, toggleSelected],
+    [money, selected, toggleSelected, t],
   );
 
   const handleApply = async () => {
@@ -195,11 +210,19 @@ export default function RateReviewDialog({ isOpen, onClose }: RateReviewDialogPr
         setResult(response);
         await loadPreview();
       } else {
-        setError('Could not apply the rate review. No changes were made.');
+        setError(
+          t('rateReview.applyFailed', {
+            defaultValue: 'Could not apply the rate review. No changes were made.',
+          }),
+        );
       }
     } catch (applyError) {
       console.error('Failed to apply rate review:', applyError);
-      setError('Could not apply the rate review. No changes were made.');
+      setError(
+        t('rateReview.applyFailed', {
+          defaultValue: 'Could not apply the rate review. No changes were made.',
+        }),
+      );
     } finally {
       setIsApplying(false);
     }
@@ -208,7 +231,7 @@ export default function RateReviewDialog({ isOpen, onClose }: RateReviewDialogPr
   const footer = (
     <div className="flex items-center justify-end gap-2">
       <Button id="rate-review-close" type="button" variant="outline" onClick={onClose}>
-        Close
+        {t('rateReview.close', { defaultValue: 'Close' })}
       </Button>
       <Button
         id="rate-review-apply"
@@ -216,7 +239,11 @@ export default function RateReviewDialog({ isOpen, onClose }: RateReviewDialogPr
         onClick={handleApply}
         disabled={isApplying || isLoading || selected.size === 0}
       >
-        {isApplying ? 'Applying…' : 'Apply selected'}
+        {isApplying
+          ? t('rateReview.applying', { defaultValue: 'Applying…' })
+          : t('rateReview.applySelected', {
+              defaultValue: 'Apply selected',
+            })}
       </Button>
     </div>
   );
@@ -226,7 +253,7 @@ export default function RateReviewDialog({ isOpen, onClose }: RateReviewDialogPr
       isOpen={isOpen}
       onClose={onClose}
       id="rate-review-dialog"
-      title="Rate review"
+      title={t('rateReview.title', { defaultValue: 'Rate review' })}
       footer={footer}
       className="max-w-4xl"
     >
@@ -234,8 +261,10 @@ export default function RateReviewDialog({ isOpen, onClose }: RateReviewDialogPr
         <div className="space-y-4">
           <Alert variant="info">
             <AlertDescription>
-              Lines priced at exactly the catalog rate will not change on your next invoice. Lines
-              that differ keep their current rate as a negotiated price.
+              {t('rateReview.intro', {
+                defaultValue:
+                  'Lines priced at exactly the catalog rate will not change on your next invoice. Lines that differ keep their current rate as a negotiated price.',
+              })}
             </AlertDescription>
           </Alert>
 
@@ -248,9 +277,16 @@ export default function RateReviewDialog({ isOpen, onClose }: RateReviewDialogPr
           {result && (
             <Alert variant="success">
               <AlertDescription>
-                Applied {result.applied.length} change(s).
+                {t('rateReview.applied', {
+                  applied: result.applied.length,
+                  defaultValue: 'Applied {{applied}} change(s).',
+                })}
                 {result.refused.length > 0
-                  ? ` ${result.refused.length} row(s) were refused because they changed since the preview.`
+                  ? ` ${t('rateReview.refused', {
+                      refused: result.refused.length,
+                      defaultValue:
+                        '{{refused}} row(s) were refused because they changed since the preview.',
+                    })}`
                   : ''}
               </AlertDescription>
             </Alert>
@@ -263,13 +299,22 @@ export default function RateReviewDialog({ isOpen, onClose }: RateReviewDialogPr
           ) : preview ? (
             <div className="space-y-6">
               <p className="text-sm text-muted-foreground">
-                {preview.summary.total} unreviewed line(s): {preview.summary.inherited} exact
-                match(es), {preview.summary.custom} negotiated, {preview.summary.skipped} skipped.
+                {t('rateReview.summary', {
+                  total: preview.summary.total,
+                  inherited: preview.summary.inherited,
+                  custom: preview.summary.custom,
+                  skipped: preview.summary.skipped,
+                  exact: exactMatchCount,
+                  defaultValue:
+                    '{{total}} unreviewed line(s): {{inherited}} exact match(es), {{custom}} negotiated, {{skipped}} skipped.',
+                })}
               </p>
 
               {preview.rows.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
-                  Every line has been classified. Nothing to review.
+                  {t('rateReview.allClassified', {
+                    defaultValue: 'Every line has been classified. Nothing to review.',
+                  })}
                 </p>
               ) : (
                 <div className="space-y-6">
