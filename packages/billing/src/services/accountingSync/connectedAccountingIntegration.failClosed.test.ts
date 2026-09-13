@@ -27,6 +27,15 @@ beforeEach(() => {
 });
 
 describe('resolveConnectedAccountingIntegration organisation selection', () => {
+  it('keeps the saved second Xero organisation when health explicitly selects Xero with both providers connected', async () => {
+    settingsMock.mockResolvedValue({ defaultRealm: 'org-2' } as any);
+    xeroConnectionsMock.mockResolvedValue({ 'org-1': {}, 'org-2': {} });
+    qboCredsMock.mockResolvedValue({ 'realm-1': {} });
+    defaultRealmMock.mockResolvedValue('realm-1' as any);
+    expect(await resolveConnectedAccountingIntegration({} as any, 'tenant-a', {
+      preferredAdapterType: 'xero'
+    })).toEqual({ adapterType: 'xero', targetRealm: 'org-2' });
+  });
   it('fails closed when an explicitly requested Xero organisation is gone', async () => {
     xeroConnectionsMock.mockResolvedValue({ 'other-organisation': {} });
 

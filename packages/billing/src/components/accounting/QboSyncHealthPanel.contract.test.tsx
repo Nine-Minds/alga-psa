@@ -161,6 +161,7 @@ describe('QboSyncHealthPanel contracts', () => {
     });
     runAccountingSyncNowMock.mockResolvedValue({ ran: true, status: 'succeeded' });
     setDefaultQboRealmMock.mockResolvedValue({ success: true });
+    setDefaultAccountingRealmMock.mockResolvedValue({ success: true });
     getQboAccountsMock.mockResolvedValue([]);
     getQboClassesMock.mockResolvedValue([]);
     getQboDepartmentsMock.mockResolvedValue([]);
@@ -560,4 +561,47 @@ describe('QboSyncHealthPanel contracts', () => {
       );
     });
   });
+  it.each(['aborted', 'failed'])('reports a %s cycle error instead of success', async (status) => {
+    runAccountingSyncNowMock.mockResolvedValue({ ran: true, status, error: 'Xero refresh token was rejected; reconnect required' });
+    const { default: Panel } = await import('./QboSyncHealthPanel');
+    render(<Panel adapterType="xero" />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Sync Now' }));
+    expect(await screen.findByText('Xero refresh token was rejected; reconnect required')).toBeInTheDocument();
+    expect(screen.queryByText('Sync completed successfully.')).not.toBeInTheDocument();
+  });
+
+  it.each([
+    [{ truncated: true }, /Sync is incomplete/],
+    [{ opsFailed: 1 }, /Some accounting operations failed/]
+  ])('reports incomplete results for stats %j', async (stats, message) => {
+    runAccountingSyncNowMock.mockResolvedValue({ ran: true, status: 'succeeded', stats });
+    const { default: Panel } = await import('./QboSyncHealthPanel');
+    render(<Panel />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Sync Now' }));
+    expect(await screen.findByText(message as RegExp)).toBeInTheDocument();
+    expect(screen.queryByText('Sync completed successfully.')).not.toBeInTheDocument();
+  });
+
+  it('shows a persisted reconnect error and disables sync for an unavailable connection', async () => {
+    getAccountingSyncHealthMock.mockResolvedValue({ ...healthConnected, connected: false, adapterType: 'xero',
+      lastCycle: { ...healthConnected.lastCycle, status: 'aborted', error: 'Credentials revoked; reconnect Xero' } });
+    const { default: Panel } = await import('./QboSyncHealthPanel');
+    render(<Panel adapterType="xero" />);
+    expect(await screen.findByText('Credentials revoked; reconnect Xero')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Sync Now' })).toBeDisabled();
+    expect(getAccountingSyncHealthMock).toHaveBeenCalledWith({ preferredAdapterType: 'xero' });
+  });
+
+  it('surfaces an unavailable organisation when Make default fails', async () => {
+    getAccountingSyncHealthMock.mockResolvedValue({ ...healthConnected, adapterType: 'xero', realms: [
+      { realmId: 'conn-1', isDefault: true }, { realmId: 'removed', isDefault: false }
+    ] });
+    setDefaultAccountingRealmMock.mockResolvedValue({ success: false, error: 'Organisation removed; reconnect required' });
+    const { default: Panel } = await import('./QboSyncHealthPanel');
+    render(<Panel adapterType="xero" />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Make default' }));
+    expect(await screen.findByText('Organisation removed; reconnect required')).toBeInTheDocument();
+    expect(runAccountingSyncNowMock).not.toHaveBeenCalled();
+  });
+
 });

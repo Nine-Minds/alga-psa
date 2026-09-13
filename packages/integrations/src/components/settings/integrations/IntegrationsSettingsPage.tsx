@@ -143,6 +143,7 @@ interface IntegrationsSettingsPageProps {
   canUseCipp?: boolean;
   /** Slot for QBO sync health panel (injected from billing to avoid a circular dep) */
   qboSyncHealthSlot?: React.ReactNode;
+  xeroSyncHealthSlot?: React.ReactNode;
   /** Slot for QBO onboarding wizard entry (injected from billing to avoid a circular dep) */
   qboOnboardingSlot?: React.ReactNode;
 }
@@ -210,6 +211,7 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
   canUseEntraSync = true,
   canUseCipp = true,
   qboSyncHealthSlot,
+  xeroSyncHealthSlot,
   qboOnboardingSlot,
 }) => {
   const { t } = useTranslation('msp/settings');
@@ -243,7 +245,7 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
           id: 'accounting-setup',
           name: t('integrations.items.accountingSetup.name'),
           description: t('integrations.items.accountingSetup.description'),
-          component: () => <AccountingIntegrationsSetup qboSyncHealthSlot={qboSyncHealthSlot} qboOnboardingSlot={qboOnboardingSlot} />,
+          component: () => <AccountingIntegrationsSetup qboSyncHealthSlot={qboSyncHealthSlot} xeroSyncHealthSlot={xeroSyncHealthSlot} qboOnboardingSlot={qboOnboardingSlot} />,
         }
       ],
     },
@@ -402,7 +404,7 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
         }] : []),
       ],
     },
-  ], [canUseCipp, canUseEntraSync, isEEAvailable, isHuduEnabled, t]);
+  ], [canUseCipp, canUseEntraSync, isEEAvailable, isHuduEnabled, t, qboSyncHealthSlot, xeroSyncHealthSlot, qboOnboardingSlot]);
 
   // Filter out empty categories
   const visibleCategories = categories.filter((category) => {

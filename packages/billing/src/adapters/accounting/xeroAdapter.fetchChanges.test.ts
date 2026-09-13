@@ -213,18 +213,18 @@ describe('XeroAdapter.fetchChanges', () => {
     expect(result.changes.filter((c) => c.entityType === 'Invoice')).toHaveLength(101);
   });
 
-  it('does not emit a resume boundary when any feed is truncated (mixed feeds)', async () => {
-    // The invoice feed never completes and its records stop at January 2...
+  it('finishes invoice pages beyond the former cap despite a newer completed payment feed', async () => {
+    // Invoices continue beyond the former ceiling; the last page contains January 3.
     xeroListChangedInvoices.mockImplementation(async (_since: string, page: number) => ({
       records: [
         {
           InvoiceID: `invoice-${page}`,
           Status: 'AUTHORISED',
           Total: 1,
-          UpdatedDateUTC: '2026-01-02T00:00:00.000Z'
+          UpdatedDateUTC: page <= 1000 ? '2026-01-02T00:00:00.000Z' : '2026-01-03T00:00:00.000Z'
         }
       ],
-      hasMore: true
+      hasMore: page < 2001
     }));
     // ...while the payment feed completes with a much newer January 20 record.
     xeroListChangedPayments.mockResolvedValue({
@@ -242,14 +242,14 @@ describe('XeroAdapter.fetchChanges', () => {
     const adapter = await XeroAdapter.create();
     const result = await adapter.fetchChanges('tenant-x', '2026-01-01T00:00:00Z', 'conn-1');
 
-    expect(result.truncated).toBe(true);
-    // The newer completed feed must NOT provide a resume boundary: January 3+
-    // invoice pages are still unread. No boundary means the cycle keeps its
-    // cursor and re-polls the same window.
+    expect(result.truncated).toBe(false);
+    expect(xeroListChangedInvoices).toHaveBeenCalledTimes(2001);
+    expect(result.changes.filter((change) => change.entityType === 'Invoice')).toHaveLength(2001);
+    // The January 3 invoice has been read before a watermark can be returned.
     expect(result.nextCursor).toBeUndefined();
   });
 
-  it('does not advance past a block of identical timestamps that exceeds the cap', async () => {
+  it('finishes more than two former caps of identical timestamps', async () => {
     xeroListChangedInvoices.mockImplementation(async (_since: string, page: number) => ({
       records: [
         {
@@ -259,13 +259,15 @@ describe('XeroAdapter.fetchChanges', () => {
           UpdatedDateUTC: '2026-01-05T00:00:00.000Z'
         }
       ],
-      hasMore: true
+      hasMore: page < 2001
     }));
 
     const adapter = await XeroAdapter.create();
     const result = await adapter.fetchChanges('tenant-x', '2026-01-01T00:00:00Z', 'conn-1');
 
-    expect(result.truncated).toBe(true);
+    expect(result.truncated).toBe(false);
+    expect(xeroListChangedInvoices).toHaveBeenCalledTimes(2001);
+    expect(result.changes.filter((change) => change.entityType === 'Invoice')).toHaveLength(2001);
     expect(result.nextCursor).toBeUndefined();
   });
 
@@ -291,6 +293,22 @@ describe('XeroAdapter.fetchChanges', () => {
     await expect(adapter.fetchChanges('tenant-x', '2026-01-01T00:00:00Z', 'conn-1')).rejects.toThrow(
       /page 2/
     );
+  });
+
+  it('fails a repeated page and can recover by replaying the original window', async () => {
+    const first = { records: [{ InvoiceID: 'first', Status: 'AUTHORISED', Total: 1 }], hasMore: true };
+    xeroListChangedInvoices.mockResolvedValue(first);
+    const adapter = await XeroAdapter.create();
+    const since = '2026-01-01T00:00:00Z';
+    await expect(adapter.fetchChanges('tenant-x', since, 'conn-1')).rejects.toThrow(/pagination did not advance/);
+    expect(xeroListChangedInvoices).toHaveBeenCalledTimes(2);
+    xeroListChangedInvoices.mockReset().mockResolvedValueOnce(first).mockResolvedValueOnce({
+      records: [{ InvoiceID: 'second', Status: 'AUTHORISED', Total: 2 }], hasMore: false
+    });
+    const recovered = await adapter.fetchChanges('tenant-x', since, 'conn-1');
+    expect(recovered.truncated).toBe(false);
+    expect(recovered.changes.map((change) => change.externalId)).toEqual(['first', 'second']);
+    expect(xeroListChangedInvoices).toHaveBeenNthCalledWith(1, since, 1);
   });
 
   it('marks voided/deleted documents and emits a deletion for a removed allocation', async () => {

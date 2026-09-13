@@ -446,7 +446,8 @@ export interface AccountingSyncHealth {
 /** Health panel data for the integration settings page. */
 export const getAccountingSyncHealth = withAuth(async (
   user,
-  { tenant }
+  { tenant },
+  selection: AccountingIntegrationSelection = {}
 ): Promise<AccountingSyncHealth> => {
   assertEnterpriseEdition();
   await checkCatalogReadAccess(user);
@@ -455,9 +456,9 @@ export const getAccountingSyncHealth = withAuth(async (
   const settings = await getAccountingSyncSettings(knex, tenant);
   const qboCredentials = await getStoredQboCredentialsMap(tenant).catch(() => ({} as Record<string, any>));
   const xeroConnections = await getStoredXeroConnections(tenant).catch(() => ({} as Record<string, any>));
-  const target = await resolveSyncTarget(knex, tenant).catch(() => null);
+  const target = await resolveSyncTarget(knex, tenant, selection);
 
-  const adapterType = target?.integration.adapterType ?? null;
+  const adapterType = target?.integration.adapterType ?? selection.preferredAdapterType ?? null;
   const realm = target?.integration.targetRealm ?? null;
 
   let realms: AccountingSyncRealmInfo[];
@@ -467,11 +468,7 @@ export const getAccountingSyncHealth = withAuth(async (
     organisationName = realm ? xeroConnections[realm]?.tenantName ?? null : null;
   } else {
     const realmIds = Object.keys(qboCredentials);
-    const defaultRealm =
-      settings.defaultRealm && realmIds.includes(settings.defaultRealm)
-        ? settings.defaultRealm
-        : (realm ?? realmIds[0] ?? null);
-    realms = realmIds.map((r) => ({ realmId: r, isDefault: r === defaultRealm }));
+    realms = realmIds.map((r) => ({ realmId: r, isDefault: r === realm }));
     organisationName = realm ?? null;
   }
 
@@ -497,7 +494,7 @@ export const getAccountingSyncHealth = withAuth(async (
     new SyncCycleRepository(knex).getLatestCycle(tenant, adapterType, realm),
     new SyncOperationsRepository(knex).countByStatus(tenant, adapterType, realm),
     ledger.countByStatus(realm),
-    new WorkflowTaskSyncExceptionService(knex, tenant).countOpen(),
+    new WorkflowTaskSyncExceptionService(knex, tenant).countOpen(realm),
     adapterType === 'quickbooks_online' ? readAutoApplyCreditsPreference(tenant, realm) : Promise.resolve(null)
   ]);
 

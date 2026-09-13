@@ -73,10 +73,11 @@ function IntegrationBanner({ option }: { option: AccountingIntegrationOption }) 
 
 interface AccountingIntegrationsSetupProps {
   qboSyncHealthSlot?: React.ReactNode;
+  xeroSyncHealthSlot?: React.ReactNode;
   qboOnboardingSlot?: React.ReactNode;
 }
 
-export default function AccountingIntegrationsSetup({ qboSyncHealthSlot, qboOnboardingSlot }: AccountingIntegrationsSetupProps = {}) {
+export default function AccountingIntegrationsSetup({ qboSyncHealthSlot, xeroSyncHealthSlot, qboOnboardingSlot }: AccountingIntegrationsSetupProps = {}) {
   const { t } = useTranslation('msp/integrations');
   const caps = useAccountingCapabilities();
   const searchParams = useSearchParams();
@@ -292,7 +293,7 @@ export default function AccountingIntegrationsSetup({ qboSyncHealthSlot, qboOnbo
         ) : selected === 'quickbooks_online' ? (
           <QboIntegrationSettings syncHealthSlot={qboSyncHealthSlot} onboardingSlot={qboOnboardingSlot} />
         ) : selected === 'xero' ? (
-          <XeroIntegrationSettings syncHealthSlot={qboSyncHealthSlot} />
+          <XeroIntegrationSettings syncHealthSlot={xeroSyncHealthSlot} />
         ) : selected === 'xero_csv' ? (
           <XeroCsvIntegrationSettings />
         ) : (
