@@ -355,6 +355,7 @@ export class MicrosoftGraphEmailProvider implements IEmailProvider {
     const status = Number(error?.status || error?.response?.status || 0) || undefined;
     const code = String(error?.code || error?.response?.data?.error?.code || status || 'SEND_FAILED');
     const requestId = error?.requestId || error?.response?.headers?.['request-id'];
+    const clientRequestId = error?.clientRequestId || error?.response?.headers?.['client-request-id'];
     // A named Graph code does not identify acceptance. HTTP 429 is an explicit
     // rejection; network failures and 5xx responses may follow an accepted send.
     const definitelyNotSent = Boolean(status && status >= 400 && status < 500 && status !== 408);
@@ -388,7 +389,7 @@ export class MicrosoftGraphEmailProvider implements IEmailProvider {
       this.providerType,
       retryable,
       code,
-      { status, requestId, definitelyNotSent, requiresReconciliation: !definitelyNotSent,
+      { status, requestId, clientRequestId, definitelyNotSent, requiresReconciliation: !definitelyNotSent,
         ...(Number.isFinite(retryAfterMs) ? { retryAfterMs } : {}) }
     );
   }

@@ -144,9 +144,12 @@ export class SMTPEmailProvider implements IEmailProvider {
       };
     } catch (error: any) {
       logger.error(`[SMTPEmailProvider:${this.providerId}] Failed to send email:`, error);
-      
+
       const isRetryable = this.isRetryableError(error);
-      
+      const responseCode = Number.isFinite(Number(error?.responseCode))
+        ? Number(error.responseCode)
+        : undefined;
+
       return {
         success: false,
         providerId: this.providerId,
@@ -159,6 +162,11 @@ export class SMTPEmailProvider implements IEmailProvider {
             (Number(error.responseCode) >= 400 && Number(error.responseCode) < 600),
           errorCode: error.code,
           command: error.command,
+          // Native protocol evidence only (server response text, never the AUTH
+          // payload), so diagnostics can show the real rejection.
+          response: typeof error.response === 'string' ? error.response : undefined,
+          responseCode,
+          status: responseCode,
           retryable: isRetryable
         }
       };

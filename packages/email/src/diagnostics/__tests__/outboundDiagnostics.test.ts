@@ -1,11 +1,22 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { runOutboundEmailDiagnosticsWithSettings } from '../outboundDiagnostics';
+import { liveSendResultFromEmailSendResult, runOutboundEmailDiagnosticsWithSettings } from '../outboundDiagnostics';
 import type { ResolvedOutboundProvider, OutboundLiveSend } from '../outboundTypes';
+import { SMTPEmailProvider } from '../../providers/SMTPEmailProvider';
 
-vi.mock('../../senderIdentity', () => ({
-  resolveTenantCompanyName: vi.fn(async () => 'Acme Corp'),
-  resolveDefaultFromAddress: vi.fn(() => ({ email: 'default@example.com', name: 'Acme' })),
+const smtpCreateTransport = vi.hoisted(() => vi.fn());
+vi.mock('nodemailer', () => ({
+  default: { createTransport: (...args: unknown[]) => smtpCreateTransport(...args) },
 }));
+
+// Exercise the real production sender resolver; only the DB-backed tenant
+// company lookup is stubbed.
+vi.mock('../../senderIdentity', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../senderIdentity')>();
+  return {
+    ...actual,
+    resolveTenantCompanyName: vi.fn(async () => 'Acme Corp'),
+  };
+});
 
 function makeSettings(overrides: Record<string, any> = {}) {
   return {
@@ -126,10 +137,60 @@ describe('runOutboundEmailDiagnosticsWithSettings', () => {
     ]);
     expect(report.summary.providerType).toBe('microsoft');
     expect(report.summary.effectiveSender).toBe('sender@example.com');
+    expect(report.summary.effectiveSenderName).toBe('Acme Corp');
     expect(report.summary.ticketingFromEmail).toBe('ticketing@example.com');
-    expect(report.summary.defaultFromEmail).toBe('default@example.com');
+    expect(report.summary.defaultFromEmail).toBe('sender@example.com');
     expect(report.summary.authenticatedUserEmail).toBe('auth@example.com');
     expect(report.summary.mailboxBasePath).toBe('/users/sender@example.com');
+  });
+
+  it('resolves the SMTP effective sender through the production resolver (domain rewrite + display name)', async () => {
+    const settings = makeSettings({
+      emailProvider: 'smtp',
+      defaultFromDomain: 'acme.example',
+      providerConfigs: [
+        {
+          providerId: 'smtp-1',
+          providerType: 'smtp',
+          isEnabled: true,
+          config: {
+            host: '',
+            port: 587,
+            from: '"Support Team" <support@provider.example>',
+            fromName: 'Support Team',
+          },
+        },
+      ],
+    });
+    const report = await runWith(
+      { providerId: 'smtp-1', providerType: 'smtp', rawConfig: { host: '', port: 587 } },
+      {},
+      undefined,
+      settings,
+    );
+
+    // The provider From is re-homed onto defaultFromDomain and its display name
+    // is preserved, matching what a real test send would use.
+    expect(report.summary.effectiveSender).toBe('support@acme.example');
+    expect(report.summary.effectiveSenderName).toBe('Support Team');
+    expect(report.summary.defaultFromEmail).toBe('support@acme.example');
+    expect(report.steps.find((s) => s.id === 'outbound_provider_selected')?.data).toMatchObject({
+      effectiveSender: 'support@acme.example',
+      effectiveSenderName: 'Support Team',
+    });
+  });
+
+  it('keeps Microsoft effective sender as the bound mailbox while preserving the resolved name', async () => {
+    const adapter = makeAdapter();
+    const report = await runWith(
+      { providerId: 'p1', providerType: 'microsoft', configuredMailbox: 'mailbox@contoso.example', rawConfig: {}, adapter: adapter as any },
+      {},
+      undefined,
+      makeSettings({ defaultFromDomain: 'contoso.example' }),
+    );
+
+    expect(report.summary.effectiveSender).toBe('mailbox@contoso.example');
+    expect(report.summary.effectiveSenderName).toBe('Acme Corp');
   });
 
   it('does not send by default and skips the live-send step', async () => {
@@ -171,7 +232,11 @@ describe('runOutboundEmailDiagnosticsWithSettings', () => {
 
     expect(sendLive).toHaveBeenCalledTimes(1);
     expect(sendLive).toHaveBeenCalledWith(
-      expect.objectContaining({ from: 'sender@example.com', recipient: 'admin@example.com' }),
+      expect.objectContaining({
+        from: 'sender@example.com',
+        fromName: 'Acme Corp',
+        recipient: 'admin@example.com',
+      }),
     );
     const live = report.steps.find((s) => s.id === 'live_send_test');
     expect(live?.status).toBe('pass');
@@ -276,6 +341,80 @@ describe('runOutboundEmailDiagnosticsWithSettings', () => {
     ]);
     expect(report.steps.find((s) => s.id === 'smtp_configuration')?.status).toBe('fail');
     expect(report.steps.find((s) => s.id === 'smtp_connection')?.status).toBe('skip');
+  });
+
+  it('carries a real SMTP provider rejection through the live-send boundary with SMTP advice', async () => {
+    const transporter = {
+      verify: vi.fn(async () => true),
+      close: vi.fn(),
+      sendMail: vi.fn(async () => {
+        throw Object.assign(new Error('auth failed'), {
+          code: 'EAUTH',
+          responseCode: 535,
+          command: 'AUTH',
+          response: '535 5.7.8 Authentication credentials invalid',
+        });
+      }),
+    };
+    smtpCreateTransport.mockReturnValue(transporter);
+
+    const provider = new SMTPEmailProvider('smtp-1');
+    await provider.initialize({
+      host: 'smtp.example.com',
+      port: 587,
+      username: 'u',
+      password: 'p',
+      from: 'sender@example.com',
+    });
+
+    const sendLive = async () =>
+      liveSendResultFromEmailSendResult(
+        await provider.sendEmail(
+          { from: { email: 'sender@example.com' }, to: [{ email: 'admin@example.com' }], subject: 'diag', text: 'body' },
+          'tenant-1',
+        ),
+      );
+
+    const report = await runWith(
+      {
+        providerId: 'smtp-1',
+        providerType: 'smtp',
+        rawConfig: { host: 'smtp.example.com', port: 587, username: 'u', password: 'p', from: 'sender@example.com' },
+      },
+      { liveSendTest: true, recipient: 'admin@example.com' },
+      sendLive as any,
+    );
+
+    const live = report.steps.find((s) => s.id === 'live_send_test');
+    expect(live?.status).toBe('fail');
+    expect(live?.data).toMatchObject({
+      errorCode: 'EAUTH',
+      responseCode: 535,
+      command: 'AUTH',
+      response: '535 5.7.8 Authentication credentials invalid',
+    });
+    expect(live?.error).toMatchObject({ status: 535, code: 'EAUTH' });
+    const text = report.recommendations.join(' ');
+    expect(text).toMatch(/SMTP authentication was rejected/i);
+    expect(text).not.toMatch(/Microsoft Graph|Exchange Send As|Mail\.Read/i);
+  });
+
+  it('uses Resend-specific live-send advice rather than Graph advice', async () => {
+    const sendLive = vi.fn(async () => ({
+      success: false,
+      error: 'Forbidden',
+      status: 403,
+    }));
+    const report = await runWith(
+      { providerId: 'resend-1', providerType: 'resend', rawConfig: {} },
+      { liveSendTest: true, recipient: 'admin@example.com' },
+      sendLive as any,
+    );
+    const live = report.steps.find((s) => s.id === 'live_send_test');
+    expect(live?.status).toBe('fail');
+    const text = report.recommendations.join(' ');
+    expect(text).toMatch(/Resend denied the send/i);
+    expect(text).not.toMatch(/Microsoft Graph|Exchange Send As|Mail\.Read/i);
   });
 
   it('dispatches Resend steps and skips the domains call without an API key', async () => {

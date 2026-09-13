@@ -206,10 +206,26 @@ export function buildSmtpOutboundSteps(): OutboundStepDefinition[] {
             error: { message: verifyState.failure.message, code: verifyState.failure.code },
           };
         }
+        if (verifyState.kind === 'failed' && verifyState.failure.phase === 'auth') {
+          // AUTH is only reached after a successful TLS upgrade, so a required
+          // TLS connection that later failed at AUTH did negotiate TLS. This is
+          // supported evidence, unlike a connection/unknown failure where TLS
+          // may never have been attempted.
+          return {
+            status: 'pass',
+            data: {
+              attempted: true,
+              secure: transport.secure,
+              requireTLS: transport.requireTLS,
+              durationMs: verifyState.durationMs,
+              note: 'TLS was required and verification advanced to AUTH, so the TLS handshake completed; AUTH failed separately.',
+            },
+          };
+        }
         if (verifyState.kind === 'failed') {
           return {
             status: 'skip',
-            detail: 'Skipped: TLS was not reached because verification failed earlier.',
+            detail: 'TLS negotiation was not established by the failed verification.',
             data: { attempted: false, durationMs: verifyState.durationMs },
           };
         }
@@ -257,10 +273,17 @@ export function buildSmtpOutboundSteps(): OutboundStepDefinition[] {
           };
         }
         if (verifyState.kind === 'failed') {
+          const phase = verifyState.failure.phase;
+          const detail =
+            phase === 'connection'
+              ? 'Skipped: authentication was not reached because the connection failed earlier.'
+              : phase === 'tls'
+                ? 'Skipped: authentication was not reached because TLS failed earlier.'
+                : 'Skipped: authentication could not be reached or verified because the failed phase could not be isolated.';
           return {
             status: 'skip',
-            detail: 'Skipped: authentication was not reached because verification failed earlier.',
-            data: { attempted: false, durationMs: verifyState.durationMs },
+            detail,
+            data: { attempted: false, phase, durationMs: verifyState.durationMs },
           };
         }
         if (verifyState.kind === 'not-attempted') {

@@ -61,6 +61,12 @@ export interface OutboundLiveSendResult {
   status?: number;
   requestId?: string;
   clientRequestId?: string;
+  /** Native SMTP response code / provider protocol status when distinct from HTTP status. */
+  responseCode?: number;
+  /** Native SMTP command that failed (e.g. AUTH, RCPT). */
+  command?: string;
+  /** Native SMTP/provider response text. */
+  response?: string;
   definitelyNotSent?: boolean;
   requiresReconciliation?: boolean;
   retryable?: boolean;
@@ -80,6 +86,8 @@ export interface OutboundDiagnosticsContext {
   defaultFromEmail?: string;
   provider: ResolvedOutboundProvider;
   effectiveSender?: string;
+  /** Display name paired with effectiveSender by the production sender resolver. */
+  effectiveSenderName?: string;
   authenticatedUserEmail?: string;
   mailboxBasePath?: string;
   liveSend: OutboundLiveSend;
@@ -107,6 +115,7 @@ export interface OutboundDiagnosticsSummary {
   ticketingFromEmail?: string;
   defaultFromEmail?: string;
   effectiveSender?: string;
+  effectiveSenderName?: string;
   authenticatedUserEmail?: string;
   mailboxBasePath?: string;
   checkedCapabilities: string[];

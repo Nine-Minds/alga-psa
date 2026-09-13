@@ -9,6 +9,7 @@ import {
   runDiagnosticsSteps,
   type DiagnosticsStep,
   type DiagnosticsStepDefinition,
+  type DiagnosticsStepStatus,
 } from '@alga-psa/shared/services/diagnostics/diagnosticsRunner';
 
 import {
@@ -89,15 +90,17 @@ const MESSAGE_BOT_RECOMMENDATION = 'Open the AlgaPSA bot in Teams and send it an
 const BOT_ENV_RECOMMENDATION = 'Configure TEAMS_BOT_APP_ID, TEAMS_BOT_APP_TENANT_ID, and TEAMS_BOT_APP_PASSWORD.';
 const ACTIVATE_INTEGRATION_RECOMMENDATION = 'Activate the Teams integration in settings.';
 
-export type TeamsDiagnosticsStatus = 'pass' | 'warn' | 'fail' | 'skip';
+export type TeamsDiagnosticsStatus = DiagnosticsStepStatus;
 
-export interface TeamsDiagnosticsStep {
-  id: string;
-  title: string;
-  status: TeamsDiagnosticsStatus;
+/**
+ * Teams' public step shape. The shared kernel owns id/title/durationMs/data;
+ * Teams additionally projects a required string `detail` and a string `error`,
+ * and omits `startedAt`/`http` to keep its existing report contract.
+ */
+export interface TeamsDiagnosticsStep
+  extends Pick<DiagnosticsStep<Record<string, unknown>>, 'id' | 'title' | 'durationMs' | 'data'> {
+  status: DiagnosticsStepStatus;
   detail: string;
-  durationMs: number;
-  data?: Record<string, unknown>;
   error?: string;
 }
 

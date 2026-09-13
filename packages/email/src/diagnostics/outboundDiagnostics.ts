@@ -10,6 +10,7 @@
 import type { Knex } from 'knex';
 import type {
   EmailMessage,
+  EmailSendResult,
   TenantEmailSettings,
 } from '@alga-psa/types';
 import { EmailProviderError } from '@alga-psa/types';
@@ -128,6 +129,9 @@ function toLiveSendFailure(error: unknown, fallback: string): OutboundLiveSendRe
       status: metadataNumber(error.metadata, 'status'),
       requestId: metadataField(error.metadata, 'requestId'),
       clientRequestId: metadataField(error.metadata, 'clientRequestId'),
+      responseCode: metadataNumber(error.metadata, 'responseCode'),
+      command: metadataField(error.metadata, 'command'),
+      response: metadataField(error.metadata, 'response'),
       definitelyNotSent: error.metadata?.definitelyNotSent === true,
       requiresReconciliation: error.metadata?.requiresReconciliation === true,
       retryable: error.isRetryable,
@@ -135,6 +139,43 @@ function toLiveSendFailure(error: unknown, fallback: string): OutboundLiveSendRe
     };
   }
   return { success: false, error: error instanceof Error ? error.message : fallback };
+}
+
+/**
+ * Project the production provider manager's `EmailSendResult` onto the
+ * diagnostics live-send result, keeping every safe native protocol field
+ * (status/responseCode/command/response and correlation ids). Exposed so tests
+ * can run an actual provider wrapper through this boundary.
+ */
+export function liveSendResultFromEmailSendResult(result: EmailSendResult): OutboundLiveSendResult {
+  if (result.success) {
+    return {
+      success: true,
+      messageId: result.messageId,
+      status: metadataNumber(result.metadata, 'status'),
+      requestId: metadataField(result.metadata, 'requestId'),
+      clientRequestId: metadataField(result.metadata, 'clientRequestId'),
+      responseCode: metadataNumber(result.metadata, 'responseCode'),
+      command: metadataField(result.metadata, 'command'),
+      response: metadataField(result.metadata, 'response'),
+      metadata: result.metadata,
+    };
+  }
+  return {
+    success: false,
+    error: result.error || 'The provider rejected the test message.',
+    errorCode: metadataField(result.metadata, 'errorCode'),
+    status: metadataNumber(result.metadata, 'status'),
+    requestId: metadataField(result.metadata, 'requestId'),
+    clientRequestId: metadataField(result.metadata, 'clientRequestId'),
+    responseCode: metadataNumber(result.metadata, 'responseCode'),
+    command: metadataField(result.metadata, 'command'),
+    response: metadataField(result.metadata, 'response'),
+    definitelyNotSent: result.metadata?.definitelyNotSent === true,
+    requiresReconciliation: result.metadata?.requiresReconciliation === true,
+    retryable: result.metadata?.retryable === true,
+    metadata: result.metadata,
+  };
 }
 
 async function defaultSendLive(input: OutboundLiveSendInput): Promise<OutboundLiveSendResult> {
@@ -155,30 +196,7 @@ async function defaultSendLive(input: OutboundLiveSendInput): Promise<OutboundLi
 
   try {
     const result = await manager.sendEmail(message, input.tenant);
-    if (result.success) {
-      // Preserve the provider acceptance evidence (status/correlation ids) so
-      // the report can show it; acceptance is not delivery.
-      return {
-        success: true,
-        messageId: result.messageId,
-        status: metadataNumber(result.metadata, 'status'),
-        requestId: metadataField(result.metadata, 'requestId'),
-        clientRequestId: metadataField(result.metadata, 'clientRequestId'),
-        metadata: result.metadata,
-      };
-    }
-    return {
-      success: false,
-      error: result.error || 'The provider rejected the test message.',
-      errorCode: metadataField(result.metadata, 'errorCode'),
-      status: metadataNumber(result.metadata, 'status'),
-      requestId: metadataField(result.metadata, 'requestId'),
-      clientRequestId: metadataField(result.metadata, 'clientRequestId'),
-      definitelyNotSent: result.metadata?.definitelyNotSent === true,
-      requiresReconciliation: result.metadata?.requiresReconciliation === true,
-      retryable: result.metadata?.retryable === true,
-      metadata: result.metadata,
-    };
+    return liveSendResultFromEmailSendResult(result);
   } catch (error) {
     return toLiveSendFailure(error, 'Failed to send the test message.');
   }
@@ -209,6 +227,7 @@ function buildSelectionStep(
           ticketingFromEmail: ctx.ticketingFromEmail ?? null,
           defaultFromEmail: ctx.defaultFromEmail ?? null,
           effectiveSender: ctx.effectiveSender ?? null,
+          effectiveSenderName: ctx.effectiveSenderName ?? null,
         },
       };
     },
@@ -225,6 +244,80 @@ function buildDependentSkipStep(reason: string): OutboundStepDefinition {
       data: { reason },
     }),
   };
+}
+
+/**
+ * Provider-specific remediation for a failed live send. Graph advice must not be
+ * shown for SMTP or Resend failures.
+ */
+function liveSendRecommendations(
+  providerType: OutboundProviderType,
+  input: { status?: number; errorCode?: string; message?: string; sharedMailbox?: boolean },
+): string[] {
+  switch (providerType) {
+    case 'microsoft':
+      return mapOutboundRecommendations({
+        status: input.status,
+        code: input.errorCode,
+        message: input.message || '',
+        sharedMailbox: input.sharedMailbox,
+      });
+    case 'smtp': {
+      const code = (input.errorCode || '').toUpperCase();
+      const responseCode = input.status;
+      if (responseCode === 535 || code === 'EAUTH' || /\bauth|credential|password\b/i.test(input.message || '')) {
+        return ['SMTP authentication was rejected. Verify the username/password and that the relay permits AUTH.'];
+      }
+      if (code === 'ETLS' || /certificate|self[- ]signed|\btls\b|\bssl\b/i.test(input.message || '')) {
+        return ['The SMTP TLS handshake failed. Verify the certificate chain and TLS settings (including verify-certificate).'];
+      }
+      if (
+        ['ECONNECTION', 'ECONNREFUSED', 'ENOTFOUND', 'ETIMEDOUT', 'ESOCKET', 'EHOSTUNREACH', 'EAI_AGAIN'].includes(code) ||
+        /connect|refused|timeout|getaddrinfo/i.test(input.message || '')
+      ) {
+        return ['The SMTP server could not be reached. Verify host, port, DNS, and firewall rules.'];
+      }
+      return ['The SMTP provider rejected the message. Review the native code/response above and retry after correcting the cause.'];
+    }
+    case 'resend':
+      if (input.status === 401 || input.status === 403) {
+        return ['Resend denied the send. Verify the API key scope and the verified sending domain, then retry.'];
+      }
+      if (input.status === 429) {
+        return ['Resend throttled the send. Wait and retry; avoid repeated live sends.'];
+      }
+      return ['Resend rejected the message. Verify the API key, verified sending domain, and payload, then retry.'];
+    default:
+      return ['Review the provider error above and retry after correcting the cause.'];
+  }
+}
+
+/**
+ * Normalize a thrown outbound failure without assuming Graph. Microsoft keeps
+ * the shared Graph classifier; other providers read `EmailProviderError`'s
+ * errorCode/metadata and native protocol fields.
+ */
+function normalizeOutboundFailure(error: unknown, providerType: OutboundProviderType) {
+  if (providerType === 'microsoft') {
+    return normalizeOutboundGraphFailure(error);
+  }
+  const e = error as any;
+  const metadata = (e?.metadata ?? {}) as Record<string, unknown>;
+  const rawStatus = e?.status ?? e?.response?.status ?? metadata.status;
+  const status = Number.isFinite(Number(rawStatus)) ? Number(rawStatus) : undefined;
+  const code =
+    (typeof e?.errorCode === 'string' ? e.errorCode : undefined) ??
+    (typeof metadata.errorCode === 'string' ? metadata.errorCode : undefined) ??
+    (typeof e?.code === 'string' ? e.code : undefined) ??
+    (status ? String(status) : undefined);
+  const message = e instanceof Error ? e.message : typeof error === 'string' ? error : 'Unknown error';
+  const requestId =
+    (typeof e?.requestId === 'string' ? e.requestId : undefined) ??
+    (typeof metadata.requestId === 'string' ? metadata.requestId : undefined);
+  const clientRequestId =
+    (typeof e?.clientRequestId === 'string' ? e.clientRequestId : undefined) ??
+    (typeof metadata.clientRequestId === 'string' ? metadata.clientRequestId : undefined);
+  return { status, code, message, requestId, clientRequestId };
 }
 
 function buildLiveSendStep(): OutboundStepDefinition {
@@ -256,7 +349,7 @@ function buildLiveSendStep(): OutboundStepDefinition {
         tenant: ctx.tenant,
         settings: ctx.settings,
         from: ctx.effectiveSender,
-        fromName: ctx.settings.ticketingFromName ?? undefined,
+        fromName: ctx.effectiveSenderName ?? ctx.settings.ticketingFromName ?? undefined,
         recipient: ctx.options.recipient,
       });
       ctx.checkedCapabilities.push('live_send');
@@ -277,15 +370,18 @@ function buildLiveSendStep(): OutboundStepDefinition {
             status: result.status ?? null,
             requestId: result.requestId ?? null,
             clientRequestId: result.clientRequestId ?? null,
+            responseCode: result.responseCode ?? null,
+            command: result.command ?? null,
+            response: result.response ?? null,
             note: 'The provider accepted the message; acceptance is not delivery.',
           },
         };
       }
 
-      const recommendations = mapOutboundRecommendations({
+      const recommendations = liveSendRecommendations(ctx.provider.providerType, {
         status: result.status,
-        code: result.errorCode,
-        message: result.error || '',
+        errorCode: result.errorCode,
+        message: result.error,
       });
 
       return {
@@ -303,6 +399,9 @@ function buildLiveSendStep(): OutboundStepDefinition {
           requestId: result.requestId ?? null,
           clientRequestId: result.clientRequestId ?? null,
           errorCode: result.errorCode ?? null,
+          responseCode: result.responseCode ?? null,
+          command: result.command ?? null,
+          response: result.response ?? null,
         },
         error: {
           message: result.error || 'Live send failed.',
@@ -363,21 +462,29 @@ export async function runOutboundEmailDiagnosticsWithSettings(
   const resolved = 'error' in resolution ? null : resolution;
   const resolutionError = 'error' in resolution ? resolution.error : null;
 
-  let ticketingFromEmail = settings?.ticketingFromEmail ?? undefined;
-  let defaultFromEmail: string | undefined;
+  const ticketingFromEmail = settings?.ticketingFromEmail ?? undefined;
+  let tenantCompanyName: string | null = null;
   if (settings) {
     try {
-      const tenantCompanyName = await resolveTenantCompanyName(knex, tenant);
-      defaultFromEmail = resolveDefaultFromAddress(settings, tenantCompanyName).email;
+      tenantCompanyName = await resolveTenantCompanyName(knex, tenant);
     } catch {
-      defaultFromEmail = undefined;
+      tenantCompanyName = null;
     }
   }
+  // Reuse the production sender resolution (the same helper the real test send
+  // uses) so diagnostics test the same From: provider From, defaultFromDomain
+  // rewrite, address parsing and resolved display name. Microsoft always sends
+  // as its bound mailbox, which the resolver's provider From normally mirrors.
+  const resolvedDefaultFrom = settings
+    ? resolveDefaultFromAddress(settings, tenantCompanyName)
+    : undefined;
+  const defaultFromEmail = resolvedDefaultFrom?.email;
+  const effectiveSenderName = resolvedDefaultFrom?.name;
 
   const effectiveSender = resolved
     ? resolved.providerType === 'microsoft'
-      ? resolved.configuredMailbox
-      : (resolved.rawConfig?.from as string | undefined) || ticketingFromEmail || defaultFromEmail
+      ? resolved.configuredMailbox || resolvedDefaultFrom?.email
+      : resolvedDefaultFrom?.email
     : undefined;
 
   const providerForContext: ResolvedOutboundProvider = resolved ?? {
@@ -395,6 +502,7 @@ export async function runOutboundEmailDiagnosticsWithSettings(
     defaultFromEmail,
     provider: providerForContext,
     effectiveSender,
+    effectiveSenderName,
     liveSend: sendLive,
     checkedCapabilities: [],
   };
@@ -426,12 +534,12 @@ export async function runOutboundEmailDiagnosticsWithSettings(
     context: ctx,
     steps,
     onError: (error) => {
-      const failure = normalizeOutboundGraphFailure(error);
+      const failure = normalizeOutboundFailure(error, providerForContext.providerType);
       return {
         error: toDiagnosticsErrorMeta(failure),
-        recommendations: mapOutboundRecommendations({
+        recommendations: liveSendRecommendations(providerForContext.providerType, {
           status: failure.status,
-          code: failure.code,
+          errorCode: failure.code,
           message: failure.message,
         }),
       };
@@ -455,6 +563,7 @@ export async function runOutboundEmailDiagnosticsWithSettings(
       ticketingFromEmail,
       defaultFromEmail,
       effectiveSender,
+      effectiveSenderName,
       authenticatedUserEmail: ctx.authenticatedUserEmail,
       mailboxBasePath: ctx.mailboxBasePath,
       checkedCapabilities: Array.from(new Set(ctx.checkedCapabilities)),

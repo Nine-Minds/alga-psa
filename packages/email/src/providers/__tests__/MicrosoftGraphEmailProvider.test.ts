@@ -319,6 +319,24 @@ describe('MicrosoftGraphEmailProvider', () => {
     });
   });
 
+  it('preserves clientRequestId alongside status/requestId when a send is rejected', async () => {
+    const provider = new MicrosoftGraphEmailProvider('microsoft-provider-1');
+    await provider.initialize(providerConfig());
+    sendMailMock.mockRejectedValue(Object.assign(new Error('Forbidden'), {
+      status: 403,
+      code: 'ErrorSendAsDenied',
+      requestId: 'graph-request-403',
+      clientRequestId: 'graph-client-403',
+    }));
+
+    await expect(provider.sendEmail(message(), 'tenant-1')).rejects.toMatchObject({
+      name: 'EmailProviderError',
+      isRetryable: false,
+      errorCode: 'ErrorSendAsDenied',
+      metadata: { status: 403, requestId: 'graph-request-403', clientRequestId: 'graph-client-403' },
+    });
+  });
+
   it('classifies named Graph throttling by HTTP status and preserves sanitized retry timing', async () => {
     const provider = new MicrosoftGraphEmailProvider('microsoft-provider-1');
     await provider.initialize(providerConfig());

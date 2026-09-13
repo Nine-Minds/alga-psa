@@ -225,7 +225,11 @@ export function OutboundEmailDiagnosticsDialog({
                   <>
                     {' · '}
                     {t('outboundDiagnostics.labels.effectiveSender', { defaultValue: 'Effective sender:' })}{' '}
-                    <span className="text-foreground">{report.summary.effectiveSender}</span>
+                    <span className="text-foreground">
+                      {report.summary.effectiveSenderName
+                        ? `${report.summary.effectiveSenderName} <${report.summary.effectiveSender}>`
+                        : report.summary.effectiveSender}
+                    </span>
                   </>
                 )}
                 {report.summary.authenticatedUserEmail && (

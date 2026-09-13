@@ -1210,6 +1210,7 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       status: failure.status,
       code: failure.code,
       requestId: failure.requestId,
+      clientRequestId: failure.clientRequestId,
       responseBody: failure.responseBody,
       // Keep only the retry header across the sanitization boundary, never the
       // Axios request/config (which can contain the mailbox access token).
@@ -1249,13 +1250,15 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
         title: 'Load stored OAuth tokens',
         run: async () => {
           try {
-            await this.loadCredentials();
+            // Reuse the shared credential primitive instead of re-loading and
+            // fingerprinting here; project back to the inbound report fields.
+            const credentials = await this.inspectStoredCredentials();
             return {
               status: 'pass' as const,
               data: {
-                accessToken: this.buildTokenFingerprint(this.accessToken),
-                refreshToken: this.buildTokenFingerprint(this.refreshToken),
-                tokenExpiresAt: this.tokenExpiresAt?.toISOString(),
+                accessToken: credentials.accessTokenFingerprint,
+                refreshToken: credentials.refreshTokenFingerprint,
+                tokenExpiresAt: credentials.tokenExpiresAt,
               },
             };
           } catch (e: any) {

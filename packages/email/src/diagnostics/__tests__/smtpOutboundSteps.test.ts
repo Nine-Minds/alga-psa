@@ -114,6 +114,63 @@ describe('smtp steps', () => {
     expect(auth.error).toMatchObject({ code: 'EAUTH', status: 535 });
   });
 
+  it('reports required TLS as negotiated when a later AUTH phase fails', async () => {
+    createTransport.mockReturnValue({
+      verify: vi.fn(async () => {
+        throw { code: 'EAUTH', responseCode: 535, command: 'AUTH', response: '535 Authentication failed', message: 'Invalid login' };
+      }),
+      close: vi.fn(),
+    });
+
+    const steps = buildSmtpOutboundSteps();
+    const ctx = makeContext({
+      host: 'smtp.example.com',
+      port: 587,
+      from: 'sender@example.com',
+      username: 'u',
+      password: 'p',
+      requireTLS: true,
+    });
+
+    await steps.find((s) => s.id === 'smtp_configuration')!.run(ctx);
+    await steps.find((s) => s.id === 'smtp_connection')!.run(ctx);
+
+    // AUTH is reached only after a successful STARTTLS upgrade, so this is
+    // supported evidence that TLS was negotiated even though verify() failed.
+    const tls = await steps.find((s) => s.id === 'smtp_tls')!.run(ctx);
+    expect(tls.status).toBe('pass');
+    expect((tls.data as any).note).toMatch(/advanced to AUTH/);
+
+    const auth = await steps.find((s) => s.id === 'smtp_auth')!.run(ctx);
+    expect(auth.status).toBe('fail');
+  });
+
+  it('leaves required TLS unverified when verify fails at the connection phase', async () => {
+    createTransport.mockReturnValue({
+      verify: vi.fn(async () => {
+        throw Object.assign(new Error('connect ECONNREFUSED'), { code: 'ECONNREFUSED' });
+      }),
+      close: vi.fn(),
+    });
+
+    const steps = buildSmtpOutboundSteps();
+    const ctx = makeContext({
+      host: 'smtp.example.com',
+      port: 587,
+      from: 'sender@example.com',
+      username: 'u',
+      password: 'p',
+      requireTLS: true,
+    });
+
+    await steps.find((s) => s.id === 'smtp_configuration')!.run(ctx);
+    await steps.find((s) => s.id === 'smtp_connection')!.run(ctx);
+
+    const tls = await steps.find((s) => s.id === 'smtp_tls')!.run(ctx);
+    expect(tls.status).toBe('skip');
+    expect(tls.detail).toMatch(/not established/i);
+  });
+
   it('classifies connection refusals and skips later phases', async () => {
     createTransport.mockReturnValue({
       verify: vi.fn(async () => {
