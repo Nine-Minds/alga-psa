@@ -530,3 +530,77 @@ editor.
 | Is "reset to standard" in round one? | **Yes.** It shares the resolver, transaction and apply path with reclassification, and without it a wrongly-`custom` line is uncorrectable. |
 | Does the affected count need a preview action? | **Split.** The bare count is one indexed aggregate, inline. The full preview with deltas and invoiced-period exclusion is a separate action, modelled on `previewQboItemImport`. |
 | Is `contract_pricing_schedules` salvageable? | **Yes, but demoted** — it keeps contract-level negotiated overrides, gains line scoping, loses the overlap bug. It is *not* the mechanism for catalog price changes. |
+
+---
+
+## Implementation notes (appended after the approved body)
+
+These notes record what the implementation round actually landed and the
+decisions it had to make. They do not modify the body above.
+
+### Reconciliation against the branch
+
+All seven pieces are landed. The load-bearing surface:
+
+| Piece | Status | Where it lives |
+|---|---|---|
+| 0.1 resolver | landed | `packages/billing/src/lib/billing/pricing/resolveFixedLineRate.ts` + `loadFixedLineRateInputs.ts` |
+| 0.2 effective-dated catalog price | landed | `server/migrations/20260912100000_service_prices_effective_dating.cjs` |
+| 0.3 effective price join incl. fixed path | landed | `joinEffectiveServicePrice.ts`; engine sites 3594/3750/5021/5457/5511/6105; T20 |
+| 0.4 atomic price write; `ServiceForm.tsx` deleted | landed | `packages/billing/src/actions/serviceActions.ts` (`updateServicePricing`); static guard in `onboardingServiceTypeDecoupling.static.test.ts` |
+| 0.5 retire divergent copies | partial by design | the 687-line `server/` repository fork now re-exports the package repo; the deferred-revenue loader and EE simulator share `selectActivePricingSchedule` / `selectEffectiveServicePrice`; `contractMonthlyValue.ts` still re-derives the chain (its own `LEVERAGE` note). See the verdict below. |
+| 1 provenance + backfill + check constraints | landed | `20260912110000`, `20260912120000`, `20260912130000`; `rateReviewActions.ts`; `classifyLineRateProvenance.ts` |
+| 2 schedules line-scoped, overlap fixed, EXCLUDE backstop | landed | `20260912140000`; `contractPricingScheduleActions.ts` |
+| 3 rollout dialog, usage badge, line surfaces, rate review | landed | `servicePriceRolloutActions.ts`; `PriceChangeRolloutDialog.tsx`; `RateReviewDialog.tsx`; `ServiceCatalogManager.tsx`; `ContractLines.tsx`; `GenericContractLineServicesList.tsx` |
+
+Tests T1–T7, T16, T19, T20, T21 run in the tier-1 infrastructure floor
+(`scripts/lib/infrastructure-selection.mjs`). T8–T14, T17, T18, T22 run in
+`server/src/test/integration/billing` (tier-1 integration). T15 remains the
+hand-authored precedence matrix in `resolveFixedLineRate.test.ts`, whose own
+header disclaims engine parity; the DB-backed preview-vs-invoice parity test
+below now supplies the engine-equivalence evidence T15 named as a gap.
+
+### Resolver-drift verdict (open item 3c)
+
+**The billing engine keeps its inline resolution chain in round one, guarded by
+the DB-backed preview-vs-invoice parity test. Collapsing the engine onto
+`resolveFixedLineRate` is a recorded follow-up, not part of this card.**
+
+Rationale. The parity test
+(`catalogPriceResolution.test.ts`, "the rate the rollout preview shows equals
+the rate the engine bills") prices the same line through both implementations —
+the preview through the resolver, the invoice through the engine — across five
+fixed-path shapes: inherited, custom, unreviewed, active pricing schedule, and a
+unit-priced member. They agree today. That is the safety property the deviation
+needs, and it is now CI-selected rather than asserted by reading code.
+
+Collapsing the engine now would risk moving money for reasons outside this
+card's subject: the engine's fixed-charge path also carries FMV allocation,
+`Math.ceil` unit-seat arithmetic, the `client_contract_line` custom-rate alias,
+and a fallback to `service_catalog.default_rate` when a non-default-currency
+contract has no `service_prices` row — behaviours the pure resolver either does
+not model or models differently. Those differences are precisely what a
+follow-up should reconcile deliberately, with its own before/after invoice
+evidence, rather than fold into a catalog-price-change round.
+
+Blast radius of keeping the chain. The parity test guards fixed/recurring lines
+on the five shapes above. It does **not** guard: hourly/usage paths (out of
+scope per the plan), the non-default-currency missing-`service_prices` fallback
+divergence, unit revisions applied when a member is not `pricing_basis='unit'`,
+or `contractMonthlyValue.ts` (which re-derives and is named in Piece 0.5). Each
+is a known, bounded gap, not a silent one.
+
+### Open items from the work order
+
+- **3a** — `docs/billing/billing.md` now states which callers use the full
+  resolver (rollout preview, rate review, `classifyLineRateProvenance`) versus
+  the shared selection helpers (deferred-revenue report, EE simulator), and
+  records that the engine keeps an equivalent inline chain and that
+  `contractMonthlyValue.ts` does not use the resolver.
+- **3b** — the DB-backed preview-vs-invoice parity test lives in the tier-1
+  infrastructure floor and is selected by `INFRA_MODE=tier1` (confirmed by
+  running `scripts/run-infrastructure-tests.mjs`).
+- **3c** — verdict recorded above.
+- **3d** — the six-case `automatic submission refuses stale …` matrix in
+  `contractQuantityUsageSemantics.test.ts` carries a per-test 120 s timeout
+  (test-only); the suite's global `testTimeout` is unchanged.
