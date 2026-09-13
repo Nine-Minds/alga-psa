@@ -1,0 +1,313 @@
+[
+  {
+    "id": "F001",
+    "description": "Provide an authorized per-client co-managed read endpoint that discovers all relevant sponsor-owned mappings without filtering a paginated global list in the browser.",
+    "implemented": true,
+    "milestone": "M1",
+    "prdRefs": [
+      "PRD.md#target-resolution-and-api-changes"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Replace operation-based resolveTarget navigation with explicit customer-home and sponsor-client selectors, preserving tracked browser identity, home record policy, qualified relationship validation, and transaction lock order.",
+    "implemented": true,
+    "milestone": "M1",
+    "prdRefs": [
+      "PRD.md#re-key-resolvetarget"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Handle absent, single, multiple, ended, inconsistent, and forbidden client relationships explicitly and require exact expected relationship identity for writes.",
+    "implemented": true,
+    "milestone": "M1",
+    "prdRefs": [
+      "PRD.md#cardinality-and-stale-selection"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Prevent concurrent client Enable submissions with different operation IDs from starting duplicate current workspaces while preserving existing multiple relationships and acknowledged cleanup/new-setup behavior.",
+    "implemented": true,
+    "milestone": "M1",
+    "prdRefs": [
+      "PRD.md#cardinality-and-stale-selection"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Migrate all six policy/SLA resolveTarget consumers to the new selector and common browser actor handling while retaining revisions and customer-owned sharing authority.",
+    "implemented": true,
+    "milestone": "M1",
+    "prdRefs": [
+      "PRD.md#consumers-and-operation-identities"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Use the same authorized client relationship selection for sponsor delegation, departure, allocation, and setup recovery adapters without changing engine operation or command receipts.",
+    "implemented": true,
+    "milestone": "M1",
+    "prdRefs": [
+      "PRD.md#consumers-and-operation-identities"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Resolve legacy sponsor operation/client URLs to the authorized canonical client and exact relationship, reject conflicting selectors, and preserve customer-home and qualified work routes.",
+    "implemented": true,
+    "milestone": "M1",
+    "prdRefs": [
+      "PRD.md#legacy-links"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Return lifecycle, per-action authority, redacted client/workspace metadata, and seat usage consistent with active-technician and distinct-live-invitation admission counts.",
+    "implemented": true,
+    "milestone": "M1",
+    "prdRefs": [
+      "PRD.md#summary-and-state",
+      "PRD.md#consumers-and-operation-identities"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Add an optional client co-managed render-child composition seam through ClientCrossFeatureContext and MspClientCrossFeatureProvider with app-owned injection in WorkspaceProviders and no reverse package imports.",
+    "implemented": true,
+    "milestone": "M2",
+    "prdRefs": [
+      "PRD.md#entry-and-composition"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Render a client-authorized compact relationship/seat summary with state-appropriate Enable or Manage navigation and shared refresh state with the client view.",
+    "implemented": true,
+    "milestone": "M2",
+    "prdRefs": [
+      "PRD.md#summary-and-state"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Register the stable co-managed client view in the full-page command center Service rail and full drawer tabs, with a full-client link from Details-only quick view.",
+    "implemented": true,
+    "milestone": "M2",
+    "prdRefs": [
+      "PRD.md#entry-and-composition"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Handle asynchronous deep-link registration, denied/unavailable fallback, flag transitions, stale client/relationship responses, and dialog unmount without breaking ordinary client views.",
+    "implemented": true,
+    "milestone": "M2",
+    "prdRefs": [
+      "PRD.md#entry-and-composition",
+      "PRD.md#boundary-inventory"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Keep client/relationship-specific drafts across local section changes, guard unsaved dismissal, and namespace controls for simultaneous full-page/drawer instances.",
+    "implemented": true,
+    "milestone": "M2",
+    "prdRefs": [
+      "PRD.md#entry-and-composition"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Extract client-fixed setup with prefilled workspace name, initial administrator, allocation, visibility, escalation destination, and distinct customer acceptance state.",
+    "implemented": true,
+    "milestone": "M3",
+    "prdRefs": [
+      "PRD.md#summary-and-state"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Expose provisioning progress, retry, invitation resend, cancellation, and acknowledged cleanup in the client view using the original operation after uncertain responses.",
+    "implemented": true,
+    "milestone": "M3",
+    "prdRefs": [
+      "PRD.md#summary-and-state",
+      "PRD.md#consumers-and-operation-identities"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Manage client allocation beside usage and pending reservations, preserving expected-seat checks, minimum allocation, lapse/growth restrictions, and permitted reductions.",
+    "implemented": true,
+    "milestone": "M3",
+    "prdRefs": [
+      "PRD.md#summary-and-state",
+      "PRD.md#purchasing-and-allocation"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Embed MSP staff assignments, read-only customer-approved sharing, existing SLA mappings, and permitted delegated actions within the selected client's relationship view.",
+    "implemented": true,
+    "milestone": "M3",
+    "prdRefs": [
+      "PRD.md#summary-and-state"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Expose relationship departure and historical/archive navigation from the client without reading live customer identity/content after the relationship ends.",
+    "implemented": true,
+    "milestone": "M3",
+    "prdRefs": [
+      "PRD.md#summary-and-state",
+      "PRD.md#cardinality-and-stale-selection"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Provide sanitized typed purchase readiness covering deployment, edition implementation, sponsorship eligibility, account authority, configuration, and pending purchase state.",
+    "implemented": true,
+    "milestone": "M4",
+    "prdRefs": [
+      "PRD.md#separate-relationship-state-from-billing-readiness"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Load relationship management independently of billing readiness and keep usable licensed operations available during provider/configuration failures.",
+    "implemented": true,
+    "milestone": "M4",
+    "prdRefs": [
+      "PRD.md#separate-relationship-state-from-billing-readiness",
+      "PRD.md#purchase-degradation-matrix"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Compute a client allocation shortfall from refreshed capacity and review the resulting absolute sponsor pool target with provider-supplied recurring and due-now amounts.",
+    "implemented": true,
+    "milestone": "M4",
+    "prdRefs": [
+      "PRD.md#client-shortfall-flow"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Invalidate stale previews and freeze submitted purchase operation identity/quantity across lost responses, client navigation, and pending purchases started elsewhere.",
+    "implemented": true,
+    "milestone": "M4",
+    "prdRefs": [
+      "PRD.md#client-shortfall-flow",
+      "PRD.md#purchase-degradation-matrix"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "Distinguish checkout success, verified entitlement, and client allocation completion; recover expired/failed/uncertain purchases and allocation races without duplicate payment or implicit refund.",
+    "implemented": true,
+    "milestone": "M4",
+    "prdRefs": [
+      "PRD.md#client-shortfall-flow",
+      "PRD.md#purchase-degradation-matrix"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "Preserve expiring session-scoped client drafts and validated relative return navigation through account/license management while keeping secrets and authorization out of draft storage.",
+    "implemented": true,
+    "milestone": "M4",
+    "prdRefs": [
+      "PRD.md#client-shortfall-flow",
+      "PRD.md#full-pool-management"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "Move full hosted pool editing and pending recovery into Account Management using the same purchase controller; route self-host capacity changes through License Management.",
+    "implemented": true,
+    "milestone": "M4",
+    "prdRefs": [
+      "PRD.md#full-pool-management"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "Implement all purchase degradation outcomes, including relationship-only/account-only roles, invalid signed claims, CE stubs, missing provider keys/price, and unusable embedded checkout.",
+    "implemented": true,
+    "milestone": "M4",
+    "prdRefs": [
+      "PRD.md#purchase-degradation-matrix"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "Make the global overview an authorized searchable/paginated client/workspace status and usage table with independent pool visibility and no restricted-client count inference.",
+    "implemented": true,
+    "milestone": "M5",
+    "prdRefs": [
+      "PRD.md#global-overview-and-work-integration"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "Replace duplicate global setup/edit ownership with canonical client-section navigation and retain working/oversight, task, and archive entry points.",
+    "implemented": true,
+    "milestone": "M5",
+    "prdRefs": [
+      "PRD.md#global-overview-and-work-integration",
+      "PRD.md#legacy-links"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "Integrate a sponsor-client filter into combined ticket reads/counts/export and the client Tickets composition, matching native client records and authorized shared relationships before pagination.",
+    "implemented": true,
+    "milestone": "M5",
+    "prdRefs": [
+      "PRD.md#global-overview-and-work-integration"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "Provide client-context shared project/task navigation while preserving MSP-shell operation, qualified identities, and the existing native client experience when feature UI is unavailable.",
+    "implemented": true,
+    "milestone": "M5",
+    "prdRefs": [
+      "PRD.md#global-overview-and-work-integration"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "Apply the original T21 boundary to every relocated summary, descriptor, deep link, management section, portal dialog, checkout/account editor, combined work control, and legacy adapter while preserving T22 backend independence.",
+    "implemented": true,
+    "milestone": "M6",
+    "prdRefs": [
+      "PRD.md#t21-boundary-and-evidence-updates",
+      "PRD.md#boundary-inventory"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "Complete translated labels/errors, keyboard and focus behavior, narrow layout, light/dark presentation, and affected CE/EE composition/build compatibility for the new surfaces.",
+    "implemented": true,
+    "milestone": "M6",
+    "prdRefs": [
+      "PRD.md#entry-and-composition",
+      "PRD.md#required-evidence",
+      "PRD.md#verification-and-rollout"
+    ]
+  },
+  {
+    "id": "F033",
+    "description": "Record revision-specific component, migrated-database, hosted/self-host browser, and provider evidence with explicit pending/blocked dependencies and update original plan, flag docs, and audit addenda.",
+    "implemented": true,
+    "milestone": "M6",
+    "prdRefs": [
+      "PRD.md#required-evidence",
+      "PRD.md#milestones"
+    ]
+  }
+]

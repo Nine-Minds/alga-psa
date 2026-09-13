@@ -1,5 +1,5 @@
 'use server'
-import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
+import { persistCommentPublication, reconcileCommentAttachments } from '@alga-psa/shared/lib/ticketCommentAttachments';
 
 import { publishNativeCommentEvent, publishNativeCommentWorkflowEvent } from '../lib/nativeConversationEvents';
 

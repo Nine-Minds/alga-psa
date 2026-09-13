@@ -2,6 +2,7 @@ import logger from '@alga-psa/core/logger';
 import { getConnection } from 'server/src/lib/db/db';
 import { tenantDb } from '@alga-psa/db';
 import { getJobRunner } from '../JobRunnerFactory';
+import { cleanupCommentAttachmentDrafts } from './cleanupCommentAttachmentDrafts';
 import { publishScheduledComment,
   PUBLISH_SCHEDULED_COMMENT_JOB, type PublishScheduledCommentJobData } from '@alga-psa/jobs/handlers/publishScheduledComment';
 export { PUBLISH_SCHEDULED_COMMENT_JOB, type PublishScheduledCommentJobData };

@@ -69,3 +69,13 @@ Reviewed 2026-09-08 against the approved requirements near the beginning of [the
 **Existing validation.** Backend PostgreSQL/service/action tests execute the real authorization paths independently of a UI feature flag, while UI tests establish that the same surfaces disappear when it is off. The export and attachment routes are callable without a release-flag branch.
 
 **Remaining required evidence.** Add the actual flag-off direct-route/action/API and running-worker checks to the final dev smoke journey. No backend flag-removal implementation is indicated by the present source. Do not add a backend flag check to make the UI smoke pass.
+
+## T21/T22 addendum for client-integrated surfaces (2026-09-11)
+
+This is a dated addendum for the surfaces moved by the [2026-09-11 follow-on plan](2026-09-11-co-managed-client-integration/PRD.md). The historical screen evidence above was collected against the old global page and does not by itself accept the relocated UI.
+
+- **T21 (UI-only boundary).** The client integration, its summary and `co-managed` Service view, the Tickets override, the Account Management pool editor, the client shortfall/checkout flow, and the legacy `/msp/co-managed?clientId=` and `/msp/co-management?...` adapters all evaluate `release-v1-6-feature` through `CoManagedFeatureBoundary` or the integration's own flag check. Component tests cover disabled/loading/unknown/error states with no feature reads or slots, tab removal without later reopen, and no adapter discovery while unavailable. A boundary-inventory contract test asserts the pages and editors remain wrapped.
+- **T22 (backend independence).** The new resolver, per-client read, overview, allocation, and purchase paths contain no release-key check. `packages/co-managed/src/managementPolicy.ts` and the adapters resolve under normal product, session, RBAC, and record-policy rules. A focused case asserts the resolver source carries no release key.
+
+Executed evidence is component and migrated-database coverage in the follow-on plan directory. Still required and unexecuted: the real hosted Stripe test-mode and self-host issuer browser journeys, the full translated/narrow/dark presentation matrix, and any Citus migration evidence. These remain marked pending rather than passed.
+

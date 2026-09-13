@@ -218,6 +218,7 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
   // Load eligible contract lines and set default tax region when service or client ID changes
   useEffect(() => {
     let current = true;
+    let cancelled = false;
     const loadDataAndSetDefaults = async () => {
       if (entry?.billing_mode === 'operational') { setEligibleContractLines([]); setShowContractLineSelector(false); return; }
       // --- Removed Tax Region / Default Rate Logic ---
@@ -314,7 +315,7 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
     if (entry) {
       loadDataAndSetDefaults();
     }
-    return () => { current = false; };
+    return () => { current = false; cancelled = true; };
   }, [entry?.billing_mode, entry?.service_id, clientId, entry?.start_time, entry?.contract_line_id, index, onUpdateEntry]);
 
 const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDuration: number) => {

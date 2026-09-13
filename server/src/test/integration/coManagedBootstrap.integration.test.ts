@@ -4374,6 +4374,23 @@ it('combines authorized native and customer tickets before queue search, sorting
   expect((await list(db, principal, { view: 'working', state: 'closed' })).items.map(item => item.tenant)).toEqual([resource.tenant]);
 }));
 
+it('filters native and shared work by the sponsor client before search, counts and pagination', async () => withTicketQueueFixture(async ({ principal, sponsor, operation, resource, nativeId, list }) => {
+  const otherClient = randomUUID();
+  await sponsor.table('clients').insert({ tenant: principal.tenant, client_id: otherClient, client_name: 'Sibling client' });
+  const status = await sponsor.table('statuses').where({ board_id: operation.request.escalationBoardId }).first();
+  const otherTicket = randomUUID();
+  await sponsor.table('tickets').insert({ tenant: principal.tenant, ticket_id: otherTicket, ticket_number: 'SIB-1', title: 'Sibling issue',
+    client_id: otherClient, board_id: operation.request.escalationBoardId, status_id: status.status_id, entered_by: principal.userId,
+    entered_at: '2026-01-02T00:00:00Z', updated_at: '2026-01-02T00:00:00Z' });
+  const scoped = await list(db, principal, { view: 'working', clientId: operation.request.clientId, state: 'all' });
+  expect(scoped.totalCount).toBe(2);
+  expect(scoped.items.map(item => item.ticketId).sort()).toEqual([nativeId, resource.id].sort());
+  const sibling = await list(db, principal, { view: 'working', clientId: otherClient, state: 'all' });
+  expect(sibling.totalCount).toBe(1);
+  expect(sibling.items.map(item => item.ticketId)).toEqual([otherTicket]);
+  expect(scoped.openCount + scoped.closedCount).toBe(2);
+}));
+
 it('removes handed-back tickets from working while retaining oversight, and removes revoked explicit access from all queue results', async () => withTicketQueueFixture(async ({ principal, customerPrincipal, resource, nativeId, list }) => {
   const { handBackCoManagedTicket, revokeCoManagedTicketGrant } = await import('../../../../packages/co-managed/src/ticketHandoffs');
   await handBackCoManagedTicket(db, principal, resource, { operationId: randomUUID(), expectedRevision: 1, note: 'Customer IT continues' });

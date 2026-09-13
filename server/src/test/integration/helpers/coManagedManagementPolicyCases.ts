@@ -4,8 +4,10 @@ import { describe, expect, it, vi } from 'vitest';
 import { tenantDb } from '@alga-psa/db';
 import * as bundles from '@alga-psa/authorization';
 import { canManageCoManagedClient, getCoManagedManagementOptions, getCoManagedManagementStatus,
-  prepareCoManagedProvisioningForActor, changeCoManagedAllocationForActor, withCoManagedManagementOperation } from '../../../../../packages/co-managed/src/managementPolicy';
-import type { CoManagedProvisioningOperation } from '../../../../../packages/co-managed/src/provisioning';
+  prepareCoManagedProvisioningForActor, changeCoManagedAllocationForActor, withCoManagedManagementOperation,
+  getCoManagedClientManagement, resolveCoManagedManagementTarget, getCoManagedOperationTarget,
+  getCoManagedClientOverview } from '../../../../../packages/co-managed/src/managementPolicy';
+import { prepareCoManagedProvisioning, type CoManagedProvisioningOperation } from '../../../../../packages/co-managed/src/provisioning';
 import { bootstrapCoManagedWorkspace } from '../../../../../ee/temporal-workflows/src/db/co-managed-provisioning-operations';
 
 export function registerCoManagedManagementPolicyTests(getDb: () => Knex, prepare: () => Promise<CoManagedProvisioningOperation>) {
@@ -152,6 +154,109 @@ export function registerCoManagedManagementPolicyTests(getDb: () => Knex, prepar
       await customer.table('users').insert({ tenant: f.operation.customer_tenant, user_id: id, username: id,
         email: invitation.email.toUpperCase(), first_name: 'Existing', last_name: 'Administrator', hashed_password: 'do-not-reset', user_type: 'internal', is_inactive: false });
       expect((await getCoManagedManagementStatus(f.db, f.actor)).items[0]).toMatchObject({ invitationExpired: false, canRetry: false, canCancel: false });
+    });
+  });
+
+  describe('co-managed client target and read contracts', () => {
+    async function secondOperation(f: Awaited<ReturnType<typeof fixture>>, clientId: string) {
+      await f.home.table('co_managed_entitlements').update({ capacity: 10 });
+      return prepareCoManagedProvisioning(f.db, { sponsorTenant: f.actor.tenant, clientId, requestedBy: f.actor.userId,
+        escalationBoardId: f.operation.escalation_board_id, operationId: randomUUID(), seats: 1, visibilityMode: 'board_scope',
+        workspaceName: 'Second workspace', administrator: { firstName: 'Second', lastName: 'Admin', email: `second-${randomUUID()}@example.test` } });
+    }
+
+    it('resolves an authorized sponsor-client selector to its exact relationship and reports admission-consistent usage', async () => {
+      const f = await fixture();
+      await expect(resolveCoManagedManagementTarget(f.db, f.actor, { kind: 'sponsor-client', clientId: f.operation.request.clientId }))
+        .resolves.toMatchObject({ kind: 'resolved', target: { side: 'sponsor', relationshipId: f.operation.relationship_id,
+          operationId: f.operation.operation_id, customerTenant: f.operation.customer_tenant, ended: false } });
+      await bootstrapCoManagedWorkspace(f.db, f.actor.tenant, f.operation.operation_id, { info() {}, warn() {}, error() {} });
+      const customer = tenantDb(f.db, f.operation.customer_tenant);
+      await customer.table('user_invitations').where('invitation_id', f.operation.administrator_invitation_id).update({ used_at: new Date() });
+      const activeId = randomUUID();
+      await customer.table('users').insert({ tenant: f.operation.customer_tenant, user_id: activeId, username: `tech-${activeId}`,
+        email: `tech-${activeId}@example.test`, first_name: 'Active', last_name: 'Tech', hashed_password: 'test-not-a-login', user_type: 'internal', is_inactive: false });
+      await customer.table('user_invitations').insert({ tenant: f.operation.customer_tenant, invitation_id: randomUUID(),
+        email: `pending-${randomUUID()}@example.test`, first_name: 'Pending', last_name: 'Tech', token: `token-${randomUUID()}`,
+        used_at: null, expires_at: new Date(Date.now() + 3600000), role_id: randomUUID(), metadata: {} });
+      const view = await getCoManagedClientManagement(f.db, f.actor, f.operation.request.clientId);
+      expect(view).toMatchObject({ clientId: f.operation.request.clientId, selectionRequired: false,
+        selectedRelationshipId: f.operation.relationship_id, relationships: [{ operationId: f.operation.operation_id,
+          canManage: true, seats: 2, usedSeats: 2 }] });
+    });
+
+    it('denies foreign clients and forged or mismatched relationship selections without leaking labels', async () => {
+      const f = await fixture();
+      const foreign = await prepare();
+      await expect(resolveCoManagedManagementTarget(f.db, f.actor, { kind: 'sponsor-client', clientId: foreign.request.clientId })).rejects.toThrow();
+      await expect(resolveCoManagedManagementTarget(f.db, f.actor, { kind: 'sponsor-client', clientId: f.otherClient })).rejects.toThrow();
+      await expect(resolveCoManagedManagementTarget(f.db, f.actor, { kind: 'sponsor-client',
+        clientId: f.operation.request.clientId, relationshipId: foreign.relationship_id })).rejects.toThrow();
+      await expect(getCoManagedClientManagement(f.db, f.actor, foreign.request.clientId)).rejects.toThrow();
+      const view = await getCoManagedClientManagement(f.db, f.actor, f.operation.request.clientId);
+      expect(view.clientName).toBe('Customer');
+      expect(JSON.stringify(view)).not.toContain('Hidden');
+    });
+
+    it('requires an explicit selection for multiple current relationships and retains ended history', async () => {
+      const f = await fixture();
+      const clientId = f.operation.request.clientId;
+      const second = await secondOperation(f, clientId);
+      const ambiguous = await resolveCoManagedManagementTarget(f.db, f.actor, { kind: 'sponsor-client', clientId });
+      expect(ambiguous.kind).toBe('selection-required');
+      if (ambiguous.kind !== 'selection-required') throw new Error('expected selection');
+      expect(ambiguous.relationships.map(entry => entry.relationshipId).sort())
+        .toEqual([f.operation.relationship_id, second.relationship_id].sort());
+      await expect(resolveCoManagedManagementTarget(f.db, f.actor, { kind: 'sponsor-client', clientId,
+        relationshipId: second.relationship_id })).resolves.toMatchObject({ kind: 'resolved',
+        target: { operationId: second.operation_id, relationshipId: second.relationship_id } });
+      await tenantDb(f.db, f.operation.customer_tenant).table('co_management_relationships')
+        .update({ state: 'terminated', ended_at: new Date() });
+      await expect(resolveCoManagedManagementTarget(f.db, f.actor, { kind: 'sponsor-client', clientId })).resolves
+        .toMatchObject({ kind: 'resolved', target: { operationId: second.operation_id } });
+      await tenantDb(f.db, second.customer_tenant).table('co_management_relationships')
+        .update({ state: 'terminated', ended_at: new Date() });
+      // Only terminated history remains: an explicit history selection is required.
+      await expect(resolveCoManagedManagementTarget(f.db, f.actor, { kind: 'sponsor-client', clientId })).resolves
+        .toMatchObject({ kind: 'selection-required' });
+    });
+
+    it('returns an authorized, searchable cross-client overview without hidden candidate counts', async () => {
+      const f = await fixture();
+      const overview = await getCoManagedClientOverview(f.db, f.actor);
+      expect(overview).toMatchObject({ totalCount: 1, rows: [{ clientId: f.operation.request.clientId, clientName: 'Customer',
+        relationshipId: f.operation.relationship_id, operationId: f.operation.operation_id, state: 'queued', seats: 2, canManage: true }] });
+      expect((await getCoManagedClientOverview(f.db, f.actor, { search: 'Cust' })).totalCount).toBe(1);
+      expect((await getCoManagedClientOverview(f.db, f.actor, { search: 'Hidden' })).totalCount).toBe(0);
+      await f.home.table('authorization_bundle_rules').where('revision_id', f.clientPolicy.revisionId)
+        .update({ config: { selectedClientIds: [f.operation.request.clientId], redactedFields: ['client_name'] } });
+      expect((await getCoManagedClientOverview(f.db, f.actor)).rows[0].clientName).toBeNull();
+    });
+
+    it('maps a legacy operation to its authorized client and rejects a conflicting client selector', async () => {
+      const f = await fixture();
+      await expect(getCoManagedOperationTarget(f.db, f.actor, f.operation.operation_id)).resolves
+        .toMatchObject({ clientId: f.operation.request.clientId, relationshipId: f.operation.relationship_id,
+          operationId: f.operation.operation_id, workspaceName: 'Customer IT' });
+      await expect(getCoManagedOperationTarget(f.db, f.actor, f.operation.operation_id, f.otherClient)).resolves.toBeNull();
+      await expect(getCoManagedOperationTarget(f.db, f.actor, f.otherBoard)).resolves.toBeNull();
+      await expect(getCoManagedOperationTarget(f.db, f.actor, f.operation.operation_id, f.operation.request.clientId))
+        .resolves.toMatchObject({ relationshipId: f.operation.relationship_id });
+    });
+
+    it('keeps client Enable single-setup by resuming the current operation under different operation IDs', async () => {
+      const f = await fixture();
+      const clientId = randomUUID();
+      await f.home.table('clients').insert({ tenant: f.actor.tenant, client_id: clientId, client_name: 'Fresh customer' });
+      await f.home.table('authorization_bundle_rules').where('revision_id', f.clientPolicy.revisionId)
+        .update({ config: { selectedClientIds: [f.operation.request.clientId, clientId] } });
+      await f.home.table('co_managed_entitlements').update({ capacity: 10 });
+      const request = { ...f.operation.request, clientId, operationId: randomUUID(), seats: 1 };
+      const first = await prepareCoManagedProvisioningForActor(f.db, f.actor, request);
+      const resumed = await prepareCoManagedProvisioningForActor(f.db, f.actor, { ...request, operationId: randomUUID() });
+      expect(resumed.operation_id).toBe(first.operation_id);
+      expect(await f.home.table('co_managed_provisioning_operations').whereRaw("lower(request->>'clientId') = ?", [clientId]))
+        .toHaveLength(1);
     });
   });
 }

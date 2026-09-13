@@ -163,6 +163,7 @@ import {
 import {
   PUBLISH_SCHEDULED_COMMENT_JOB,
   publishScheduledCommentHandler,
+  reconcileScheduledCommentPublications,
   PublishScheduledCommentJobData,
 } from './handlers/publishScheduledCommentHandler';
 

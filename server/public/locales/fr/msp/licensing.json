@@ -363,6 +363,7 @@
   "coManaged": {
     "title": "Informatique cogérée",
     "description": "Gérez les postes de technicien mis à la disposition des espaces de travail de vos clients.",
+    "sharedWork": "Travail partagé",
     "capacity": "Postes achetés",
     "allocated": "Attribués aux clients",
     "available": "Postes disponibles",
@@ -617,8 +618,16 @@
         "returned": "Renvoyé à l’équipe informatique du client",
         "forbidden": "Accès refusé",
         "changed": "Le ticket a changé. Actualisez avant de réessayer.",
-        "invalid": "Sélection non valide"
-      }
+        "invalid": "Sélection non valide",
+        "selected": "{{count}} ticket(s) sélectionné(s) seront renvoyés.",
+        "resume": "Un renvoi vers l'IT client a été interrompu. Reprenez-le pour confirmer le résultat.",
+        "noReloadRecovery": "La récupération après rechargement n'est pas disponible dans ce navigateur ; vous pouvez toujours réessayer dans cette session."
+      },
+      "thisMsp": "Ce MSP",
+      "scopeUnavailable": "Ouverture de la liste des tickets…",
+      "searchPlaceholder": "Rechercher par numéro ou titre",
+      "addMspTicket": "Ajouter un ticket MSP",
+      "mspAlsoAssigned": "MSP également assigné"
     },
     "conversation": {
       "title": "Conversation",
@@ -918,6 +927,61 @@
       "loadError": "Vos droits actuels ne permettent pas d’exporter cet espace.",
       "lengthError": "Utilisez une phrase secrète de 16 à 1024 octets UTF-8.",
       "matchError": "Les phrases secrètes doivent être identiques."
+    },
+    "accountTitle": "Informatique cogérée",
+    "checkoutUnavailable": "Le paiement intégré n'est pas disponible. Réessayez après la réparation de la configuration de paiement.",
+    "pendingCapacity": "Un achat de {{quantity}} sièges est en attente.",
+    "previewError": "Impossible de chiffrer cette modification. Actualisez et réessayez.",
+    "purchaseNeedsAdmin": "Un administrateur de compte doit ajouter de la capacité cogérée.",
+    "purchaseProviderUnconfigured": "Le fournisseur de paiement n'est pas configuré.",
+    "purchaseUnavailable": "L'achat cogéré hébergé n'est pas disponible dans ce déploiement.",
+    "client": {
+      "awaitingAcceptance": "L'administrateur client doit accepter avant que l'accès soit accordé.",
+      "capacity": "Capacité",
+      "chooseRelationship": "Choisir la relation",
+      "endedHint": "Cette relation est terminée. L'historique conservé et les archives restent disponibles.",
+      "forClient": "Informatique cogérée pour {{name}}",
+      "history": "Historique de la relation",
+      "invitation": "Invitation de l'administrateur",
+      "notEnabled": "Informatique cogérée non activée",
+      "progress": "Progression de la configuration",
+      "provisioningHint": "Les sièges réservés restent retenus jusqu'à la fin de la configuration ou la confirmation du nettoyage.",
+      "relationship": "Relation",
+      "seatAllocation": "{{allocated}} sièges de technicien attribués",
+      "seatUsage": "{{used}} sur {{allocated}} sièges de technicien",
+      "selectionRequired": "Plusieurs relations cogérées",
+      "setupHint": "Activez l'informatique cogérée depuis ce client pour réserver des techniciens du client et inviter un administrateur.",
+      "tab": "Informatique cogérée",
+      "viewHistory": "Voir l'historique",
+      "work": "Travail",
+      "workHint": "Les projets clients et les files de tâches partagées restent dans le shell MSP avec leurs identités qualifiées.",
+      "workspace": "Espace de travail client"
+    },
+    "overview": {
+      "clients": "Clients cogérés",
+      "allClients": "Tous les clients",
+      "empty": "Aucun client cogéré ne correspond à cette recherche.",
+      "loadError": "Impossible de charger les clients cogérés.",
+      "search": "Rechercher des clients",
+      "unnamed": "Client",
+      "client": "Client",
+      "workspace": "Espace de travail",
+      "status": "Statut",
+      "seats": "Sièges",
+      "actions": "Actions"
+    },
+    "shortfall": {
+      "baselineChanged": "Le pool a changé depuis ce devis. Vérifiez à nouveau le déficit.",
+      "confirming": "La capacité achetée est en cours de vérification. Actualisez, puis enregistrez à nouveau l'attribution.",
+      "ineligible": "L'espace de travail sponsor n'est pas éligible à davantage de capacité cogérée.",
+      "needsAdmin": "Cette attribution nécessite plus de capacité du pool. Un administrateur de compte doit l'ajouter.",
+      "pending": "Un achat cogéré est déjà en préparation ou en cours. Reprenez-le avant de modifier la capacité.",
+      "pool": "Pool : {{capacity}} achetés, {{allocated}} attribués, {{available}} disponibles",
+      "provider": "Le fournisseur de paiement n'est pas configuré. Un administrateur doit terminer la configuration de facturation.",
+      "raceRetry": "Les sièges sont dans le pool. L'attribution n'a pas encore pu être enregistrée ; réessayez.",
+      "review": "Ajoutez {{additional}} sièges au pool du sponsor (nouveau total {{total}}).",
+      "selfHost": "Cette attribution dépasse la capacité auto-hébergée vérifiée. Mettez à jour la licence signée, puis actualisez.",
+      "unavailable": "L'achat cogéré hébergé n'est pas disponible dans ce déploiement."
     }
   }
 }

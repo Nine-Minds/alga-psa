@@ -3,6 +3,7 @@
 import { resolveDocumentAuthorizationRecords } from '@alga-psa/shared/lib/documents/authorizationRecords';
 
 import { admitMeetingDocumentsForBrowser } from '../lib/meetingDocumentAdmission';
+import { canAccessAttachmentTicket, expireCommentAttachmentDrafts } from '@shared/lib/ticketCommentAttachments';
 import { StorageService } from '@alga-psa/storage/StorageService';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth, hasPermission } from '@alga-psa/auth';

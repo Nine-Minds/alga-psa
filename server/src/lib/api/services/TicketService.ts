@@ -1132,19 +1132,16 @@ export class TicketService extends BaseService<ITicket> {
       },
     });
 
-    documentCommitted = true;
+    // No unclaimed-storage cleanup here: uploadFile persists the document and
+    // its association inside its own transaction via persistRelatedRecords, so
+    // a failed upload leaves nothing to delete. The earlier manual rollback
+    // guarded a version that inserted the rows after the upload had committed.
     const createdDocument = await this.getDocumentById(documentId, context);
     if (!createdDocument) {
       throw new Error('Uploaded document could not be loaded');
     }
 
     return createdDocument;
-    } finally {
-      if (commentAttachmentDraft && !documentCommitted) {
-        try { await StorageService.deleteFile(uploadResult.file_id, context.userId); }
-        catch (error) { console.error('Unable to remove unclaimed comment attachment storage', error); }
-      }
-    }
   }
 
   async downloadTicketDocument(

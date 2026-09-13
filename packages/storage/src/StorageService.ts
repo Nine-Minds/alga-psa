@@ -26,7 +26,6 @@ import {
 } from './config/storage';
 import { LocalProviderConfig, S3ProviderConfig } from './types/storage';
 import { createTenantKnex, runWithTenant } from '@alga-psa/db';
-import type { Knex } from 'knex';
 import { CoManagedLifecycleError, getCoManagedOperationalState, withCoManagedOperationalTransaction } from '@alga-psa/licensing';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { isValidUUID } from '@alga-psa/validation';
@@ -45,6 +44,9 @@ async function streamToBuffer(stream: Readable): Promise<Buffer> {
     stream.on('end', () => resolve(Buffer.concat(chunks as any)));
   });
 }
+
+/** Square canvas every raster favicon is rendered onto. */
+const FAVICON_DIMENSION = 32;
 
 async function assertUploadAdmission(db: Knex, tenant: string): Promise<void> {
   const lifecycle = await getCoManagedOperationalState(db, tenant);

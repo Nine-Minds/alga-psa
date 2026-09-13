@@ -402,13 +402,13 @@ export async function sendEventEmailWithOutcome(params: SendEmailParams): Promis
         ticket_id: destinationTicketId, master_ticket_id: attachmentTicketId,
       }).first();
       if (!child || !await isPublicAttachmentComment(knex, params.tenantId, attachmentCommentId!, attachmentTicketId!) ||
-        !await recipientCanReceiveCommentFiles(knex, params.tenantId, destinationTicketId!, params.to)) return;
+        !await recipientCanReceiveCommentFiles(knex, params.tenantId, destinationTicketId!, params.to)) return 'skipped';
 
       const mirror = await db.table('ticket_bundle_mirrors').where({
         source_comment_id: attachmentCommentId!, child_ticket_id: destinationTicketId!,
       }).first();
-      if (mirror && !await isPublicAttachmentComment(knex, params.tenantId, mirror.child_comment_id, destinationTicketId!)) return;
-      if (params.replyContext?.commentId && params.replyContext.commentId !== mirror?.child_comment_id) return;
+      if (mirror && !await isPublicAttachmentComment(knex, params.tenantId, mirror.child_comment_id, destinationTicketId!)) return 'skipped';
+      if (params.replyContext?.commentId && params.replyContext.commentId !== mirror?.child_comment_id) return 'skipped';
       // Link-only bundles have no child comment. Never persist a master comment
       // under a child's reply token; incoming replies still target that ticket.
       params = { ...params, replyContext: { ...params.replyContext, commentId: mirror?.child_comment_id } };
@@ -425,7 +425,7 @@ export async function sendEventEmailWithOutcome(params: SendEmailParams): Promis
             .whereRaw('lower(email) = ?', [params.to.trim().toLowerCase()]).first();
           // Preserve staff text notifications; never send private files or stale
           // public-event content to a customer after a visibility change.
-          if (!current || current.deleted_at || current.publish_state !== 'published' || !staffRecipient) return;
+          if (!current || current.deleted_at || current.publish_state !== 'published' || !staffRecipient) return 'skipped';
         }
         const service = TenantEmailService.getInstance(params.tenantId);
         const capabilities = await service.getAttachmentCapabilities();
@@ -507,7 +507,9 @@ export async function sendEventEmailWithOutcome(params: SendEmailParams): Promis
     if (managedCommentDelivery && !await claimCommentEmailDelivery(knex, params.tenantId, attachmentCommentId!, params.to)) {
       const delivery = await tenantDb(knex, params.tenantId).table('ticket_comment_email_deliveries')
         .where({ comment_id: attachmentCommentId!, recipient: params.to.trim().toLowerCase() }).first();
-      if (delivery?.state === 'sent') return;
+      // Another attempt already delivered this comment email; report the real
+      // outcome rather than a fresh send.
+      if (delivery?.state === 'sent') return 'sent';
       throw new EmailProviderError('Comment email has an unresolved provider outcome; reconcile before retrying.',
         'unknown', 'unknown', false, 'COMMENT_DELIVERY_RECONCILIATION_REQUIRED', { requiresReconciliation: true });
     }

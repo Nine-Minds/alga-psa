@@ -60,6 +60,15 @@ export interface DataTableProps<T> {
    */
   itemsPerPageOptions?: Array<{ value: string; label: string }>;
   /**
+   * How the table handles columns that do not fit the container.
+   *
+   * - `auto` (default, unchanged): measure and hide overflowing columns behind
+   *   the "N columns hidden / Show all" notice.
+   * - `scroll`: render every column and scroll horizontally. Use when columns
+   *   carry identity/responsibility that must not silently disappear.
+   */
+  columnFitMode?: 'auto' | 'scroll';
+  /**
    * Render detail beneath a row, in a cell spanning the full width.
    *
    * Return `null` for rows with nothing to show — which is the normal case, since

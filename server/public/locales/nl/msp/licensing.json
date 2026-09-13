@@ -361,6 +361,7 @@
   "coManaged": {
     "title": "Gezamenlijk beheerde IT",
     "description": "Beheer de technicusplaatsen die beschikbaar zijn voor de werkruimten van uw klanten.",
+    "sharedWork": "Gedeeld werk",
     "capacity": "Gekochte plaatsen",
     "allocated": "Toegewezen aan klanten",
     "available": "Beschikbare plaatsen",
@@ -615,8 +616,16 @@
         "returned": "Teruggegeven aan de IT-afdeling van de klant",
         "forbidden": "Toegang geweigerd",
         "changed": "Het ticket is gewijzigd. Vernieuw voordat u het opnieuw probeert.",
-        "invalid": "Ongeldige selectie"
-      }
+        "invalid": "Ongeldige selectie",
+        "selected": "{{count}} geselecteerde ticket(s) worden geretourneerd.",
+        "resume": "Een terugzetting naar de klant-IT is onderbroken. Hervat om het resultaat te bevestigen.",
+        "noReloadRecovery": "Herstel na herladen is niet beschikbaar in deze browser; u kunt het in deze sessie nog steeds opnieuw proberen."
+      },
+      "thisMsp": "Deze MSP",
+      "scopeUnavailable": "Ticketlijst wordt geopend…",
+      "searchPlaceholder": "Zoeken op nummer of titel",
+      "addMspTicket": "MSP-ticket toevoegen",
+      "mspAlsoAssigned": "MSP ook toegewezen"
     },
     "conversation": {
       "title": "Gesprek",
@@ -916,6 +925,61 @@
       "loadError": "Met uw huidige rechten kunt u deze werkruimte niet exporteren.",
       "lengthError": "Gebruik een wachtzin van 16 tot 1024 UTF-8-bytes.",
       "matchError": "De herstelwachtzinnen moeten overeenkomen."
+    },
+    "accountTitle": "Gezamenlijk beheerde IT",
+    "checkoutUnavailable": "De ingebedde afrekening is niet beschikbaar. Probeer het opnieuw nadat de betalingsconfiguratie is hersteld.",
+    "pendingCapacity": "Een aankoop van {{quantity}} plaatsen is in behandeling.",
+    "previewError": "Deze wijziging kon niet worden geprijsd. Vernieuw en probeer het opnieuw.",
+    "purchaseNeedsAdmin": "Een accountbeheerder moet gezamenlijk beheerde capaciteit toevoegen.",
+    "purchaseProviderUnconfigured": "De betalingsprovider is niet geconfigureerd.",
+    "purchaseUnavailable": "Gehoste gezamenlijk beheerde aankoop is niet beschikbaar in deze implementatie.",
+    "client": {
+      "awaitingAcceptance": "De klantbeheerder moet accepteren voordat toegang wordt verleend.",
+      "capacity": "Capaciteit",
+      "chooseRelationship": "Relatie kiezen",
+      "endedHint": "Deze relatie is beëindigd. Bewaarde geschiedenis en archieven blijven beschikbaar.",
+      "forClient": "Gezamenlijk beheerde IT voor {{name}}",
+      "history": "Relatiegeschiedenis",
+      "invitation": "Beheerdersuitnodiging",
+      "notEnabled": "Gezamenlijk beheerde IT niet ingeschakeld",
+      "progress": "Voortgang van instelling",
+      "provisioningHint": "Gereserveerde plaatsen blijven gereserveerd tot de instelling is voltooid of de opschoning is bevestigd.",
+      "relationship": "Relatie",
+      "seatAllocation": "{{allocated}} toegewezen technicusplaatsen",
+      "seatUsage": "{{used}} van {{allocated}} technicusplaatsen",
+      "selectionRequired": "Meerdere gezamenlijk beheerde relaties",
+      "setupHint": "Schakel gezamenlijk beheerde IT in vanaf deze klant om klanttechnici te reserveren en een beheerder uit te nodigen.",
+      "tab": "Gezamenlijk beheerde IT",
+      "viewHistory": "Geschiedenis bekijken",
+      "work": "Werk",
+      "workHint": "Klantprojecten en gedeelde taakwachtrijen blijven in de MSP-shell met hun gekwalificeerde identiteiten.",
+      "workspace": "Klantwerkruimte"
+    },
+    "overview": {
+      "clients": "Gezamenlijk beheerde klanten",
+      "allClients": "Alle klanten",
+      "empty": "Geen gezamenlijk beheerde klanten komen overeen met deze zoekopdracht.",
+      "loadError": "Gezamenlijk beheerde klanten konden niet worden geladen.",
+      "search": "Klanten zoeken",
+      "unnamed": "Klant",
+      "client": "Klant",
+      "workspace": "Werkruimte",
+      "status": "Status",
+      "seats": "Plaatsen",
+      "actions": "Acties"
+    },
+    "shortfall": {
+      "baselineChanged": "De pool is gewijzigd sinds deze prijsopgave. Controleer het tekort opnieuw.",
+      "confirming": "De gekochte capaciteit wordt geverifieerd. Vernieuw en sla de toewijzing opnieuw op.",
+      "ineligible": "De sponsorwerkruimte komt niet in aanmerking voor meer gezamenlijk beheerde capaciteit.",
+      "needsAdmin": "Deze toewijzing heeft meer poolcapaciteit nodig. Een accountbeheerder moet deze toevoegen.",
+      "pending": "Er wordt al een gezamenlijk beheerde aankoop voorbereid of afgerond. Hervat deze voordat u de capaciteit wijzigt.",
+      "pool": "Pool: {{capacity}} gekocht, {{allocated}} toegewezen, {{available}} beschikbaar",
+      "provider": "De betalingsprovider is niet geconfigureerd. Een beheerder moet de factureringsconfiguratie voltooien.",
+      "raceRetry": "De plaatsen zitten in de pool. De toewijzing kon nog niet worden opgeslagen; probeer het opnieuw.",
+      "review": "Voeg {{additional}} plaatsen toe aan de sponsorpool (nieuw totaal {{total}}).",
+      "selfHost": "Deze toewijzing overschrijdt de geverifieerde self-host-capaciteit. Werk de ondertekende licentie bij en vernieuw.",
+      "unavailable": "Gehoste gezamenlijk beheerde aankoop is niet beschikbaar in deze implementatie."
     }
   }
 }

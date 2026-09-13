@@ -17,7 +17,7 @@ function ClientAction({ clientId }: { clientId: string }) {
     return () => { cancelled = true; };
   }, [clientId]);
   return allowed ? <Button id="client-enable-co-managed" variant="outline" size="sm"
-    onClick={() => router.push(`/msp/co-managed?clientId=${encodeURIComponent(clientId)}`)}>{t('coManaged.provisioning.create')}</Button> : null;
+    onClick={() => router.push(`/msp/clients/${encodeURIComponent(clientId)}?tab=co-managed`)}>{t('coManaged.provisioning.create')}</Button> : null;
 }
 
 export default function CoManagedClientAction({ clientId }: { clientId: string }) {

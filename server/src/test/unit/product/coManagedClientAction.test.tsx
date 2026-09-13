@@ -17,8 +17,8 @@ describe('client-linked co-management entry', () => {
     mocks.flag.mockReturnValue({ enabled: false, loading: false, error: null }); render(<CoManagedClientAction clientId="client" />);
     expect(mocks.allowed).not.toHaveBeenCalled(); expect(screen.queryByRole('button')).toBeNull();
   });
-  it('opens provisioning with the authorized client already selected', async () => {
+  it('opens the canonical client co-managed view with the authorized client already selected', async () => {
     render(<CoManagedClientAction clientId="client" />); fireEvent.click(await screen.findByRole('button'));
-    expect(mocks.allowed).toHaveBeenCalledWith('client'); expect(mocks.push).toHaveBeenCalledWith('/msp/co-managed?clientId=client');
+    expect(mocks.allowed).toHaveBeenCalledWith('client'); expect(mocks.push).toHaveBeenCalledWith('/msp/clients/client?tab=co-managed');
   });
 });

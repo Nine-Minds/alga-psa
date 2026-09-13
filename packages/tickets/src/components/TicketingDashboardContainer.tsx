@@ -171,6 +171,8 @@ interface TicketingDashboardContainerProps {
   renderClientDetails?: React.ComponentProps<typeof TicketingDashboard>['renderClientDetails'];
   allowSlaStatusFilter?: boolean;
   useAlgaDeskQuickAddForm?: boolean;
+  /** App-owned source scope control slot (see TicketingDashboardProps). */
+  scopeControls?: React.ReactNode;
 }
 
 export default function TicketingDashboardContainer({
@@ -186,6 +188,7 @@ export default function TicketingDashboardContainer({
   renderClientDetails,
   allowSlaStatusFilter = true,
   useAlgaDeskQuickAddForm = false,
+  scopeControls,
 }: TicketingDashboardContainerProps) {
   const { t } = useTranslation('features/tickets');
   const initialStatusId = initialFilters?.statusId ?? TICKET_STATUS_FILTER_OPEN;
@@ -980,6 +983,7 @@ export default function TicketingDashboardContainer({
         savedViewSettings={savedViewForActiveTab}
         hasStoredDefaultView={hasStoredDefaultForActiveTab}
         onSavedViewChanged={handleSavedViewChanged}
+        scopeControls={scopeControls}
       />
   );
 }

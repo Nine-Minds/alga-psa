@@ -25,6 +25,7 @@ const RAIL_GROUP_BY_TAB: Record<string, string> = {
   details: '',
   tickets: 'service',
   interactions: 'service',
+  'co-managed': 'service',
   billing: 'money',
   'billing-dashboard': 'money',
   'tax-settings': 'money',

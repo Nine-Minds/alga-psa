@@ -12,6 +12,8 @@ export { default as ResponseSourceBadge } from './ResponseSourceBadge';
 export { default as TicketOriginBadge } from './TicketOriginBadge';
 export { default as ResponseStateSelect, ResponseStateDisplay } from './ResponseStateSelect';
 export { default as TicketListSkeleton } from './TicketListSkeleton';
+export { default as TicketListShell } from './TicketListShell';
+export type { TicketListShellProps } from './TicketListShell';
 export { default as TicketingDashboard } from './TicketingDashboard';
 export { default as TicketingDashboardContainer } from './TicketingDashboardContainer';
 

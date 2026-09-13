@@ -363,6 +363,7 @@
   "coManaged": {
     "title": "IT cogestita",
     "description": "Gestisci le postazioni per tecnici disponibili per gli spazi di lavoro dei tuoi clienti.",
+    "sharedWork": "Lavoro condiviso",
     "capacity": "Postazioni acquistate",
     "allocated": "Assegnate ai clienti",
     "available": "Postazioni disponibili",
@@ -617,8 +618,16 @@
         "returned": "Restituito al team IT del cliente",
         "forbidden": "Accesso negato",
         "changed": "Il ticket è cambiato. Aggiorna prima di riprovare.",
-        "invalid": "Selezione non valida"
-      }
+        "invalid": "Selezione non valida",
+        "selected": "Verranno restituiti {{count}} ticket selezionati.",
+        "resume": "Un rinvio all'IT del cliente è stato interrotto. Riprendilo per confermare l'esito.",
+        "noReloadRecovery": "Il recupero dopo il ricaricamento non è disponibile in questo browser; puoi comunque riprovare in questa sessione."
+      },
+      "thisMsp": "Questo MSP",
+      "scopeUnavailable": "Apertura dell'elenco dei ticket…",
+      "searchPlaceholder": "Cerca per numero o titolo",
+      "addMspTicket": "Aggiungi ticket MSP",
+      "mspAlsoAssigned": "MSP assegnato anche"
     },
     "conversation": {
       "title": "Conversazione",
@@ -918,6 +927,61 @@
       "loadError": "I tuoi permessi attuali non consentono di esportare questa area.",
       "lengthError": "Usa una passphrase tra 16 e 1024 byte UTF-8.",
       "matchError": "Le passphrase di recupero devono coincidere."
+    },
+    "accountTitle": "IT cogestita",
+    "checkoutUnavailable": "Il pagamento integrato non è disponibile. Riprova dopo aver riparato la configurazione di pagamento.",
+    "pendingCapacity": "Un acquisto di {{quantity}} posti è in sospeso.",
+    "previewError": "Impossibile calcolare il prezzo di questa modifica. Aggiorna e riprova.",
+    "purchaseNeedsAdmin": "Un amministratore dell'account deve aggiungere capacità cogestita.",
+    "purchaseProviderUnconfigured": "Il provider di pagamento non è configurato.",
+    "purchaseUnavailable": "L'acquisto cogestito ospitato non è disponibile in questa distribuzione.",
+    "client": {
+      "awaitingAcceptance": "L'amministratore del cliente deve accettare prima che venga concesso l'accesso.",
+      "capacity": "Capacità",
+      "chooseRelationship": "Scegli relazione",
+      "endedHint": "Questa relazione è terminata. La cronologia conservata e gli archivi restano disponibili.",
+      "forClient": "IT cogestita per {{name}}",
+      "history": "Cronologia della relazione",
+      "invitation": "Invito dell'amministratore",
+      "notEnabled": "IT cogestita non abilitata",
+      "progress": "Avanzamento della configurazione",
+      "provisioningHint": "I posti riservati restano trattenuti finché la configurazione non è completata o la pulizia non è confermata.",
+      "relationship": "Relazione",
+      "seatAllocation": "{{allocated}} posti tecnico assegnati",
+      "seatUsage": "{{used}} di {{allocated}} posti tecnico",
+      "selectionRequired": "Più relazioni cogestite",
+      "setupHint": "Abilita l'IT cogestita da questo cliente per riservare tecnici del cliente e invitare un amministratore.",
+      "tab": "IT cogestita",
+      "viewHistory": "Visualizza cronologia",
+      "work": "Lavoro",
+      "workHint": "I progetti del cliente e le code di attività condivise restano nella shell MSP con le loro identità qualificate.",
+      "workspace": "Area di lavoro del cliente"
+    },
+    "overview": {
+      "clients": "Clienti cogestiti",
+      "allClients": "Tutti i clienti",
+      "empty": "Nessun cliente cogestito corrisponde a questa ricerca.",
+      "loadError": "Impossibile caricare i clienti cogestiti.",
+      "search": "Cerca clienti",
+      "unnamed": "Cliente",
+      "client": "Cliente",
+      "workspace": "Area di lavoro",
+      "status": "Stato",
+      "seats": "Posti",
+      "actions": "Azioni"
+    },
+    "shortfall": {
+      "baselineChanged": "Il pool è cambiato da questo preventivo. Rivedi il deficit.",
+      "confirming": "La capacità acquistata è in verifica. Aggiorna, poi salva di nuovo l'assegnazione.",
+      "ineligible": "L'area di lavoro sponsor non è idonea a ulteriore capacità cogestita.",
+      "needsAdmin": "Questa assegnazione richiede più capacità del pool. Un amministratore dell'account deve aggiungerla.",
+      "pending": "Un acquisto cogestito è già in preparazione o in corso. Riprendilo prima di modificare la capacità.",
+      "pool": "Pool: {{capacity}} acquistati, {{allocated}} assegnati, {{available}} disponibili",
+      "provider": "Il provider di pagamento non è configurato. Un amministratore deve completare la configurazione della fatturazione.",
+      "raceRetry": "I posti sono nel pool. L'assegnazione non è ancora stata salvata; riprova.",
+      "review": "Aggiungi {{additional}} posti al pool dello sponsor (nuovo totale {{total}}).",
+      "selfHost": "Questa assegnazione supera la capacità self-host verificata. Aggiorna la licenza firmata, poi aggiorna.",
+      "unavailable": "L'acquisto cogestito ospitato non è disponibile in questa distribuzione."
     }
   }
 }

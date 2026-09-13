@@ -363,6 +363,7 @@
   "coManaged": {
     "title": "TI cogerida",
     "description": "Gerencie os assentos de técnico disponíveis para os espaços de trabalho dos seus clientes.",
+    "sharedWork": "Trabalho compartilhado",
     "capacity": "Assentos comprados",
     "allocated": "Alocados a clientes",
     "available": "Assentos disponíveis",
@@ -617,8 +618,16 @@
         "returned": "Devolvido à equipa de TI do cliente",
         "forbidden": "Acesso negado",
         "changed": "O ticket foi alterado. Atualize antes de tentar novamente.",
-        "invalid": "Seleção inválida"
-      }
+        "invalid": "Seleção inválida",
+        "selected": "Serão devolvidos {{count}} ticket(s) selecionado(s).",
+        "resume": "Uma devolução ao TI do cliente foi interrompida. Retome para confirmar o resultado.",
+        "noReloadRecovery": "A recuperação ao recarregar não está disponível neste navegador; ainda pode tentar novamente nesta sessão."
+      },
+      "thisMsp": "Este MSP",
+      "scopeUnavailable": "Abrindo a lista de chamados…",
+      "searchPlaceholder": "Pesquisar por número ou título",
+      "addMspTicket": "Adicionar ticket MSP",
+      "mspAlsoAssigned": "MSP também atribuído"
     },
     "conversation": {
       "title": "Conversa",
@@ -918,6 +927,61 @@
       "loadError": "As suas permissões atuais não permitem exportar este espaço.",
       "lengthError": "Use uma frase entre 16 e 1024 bytes UTF-8.",
       "matchError": "As frases de recuperação têm de ser iguais."
+    },
+    "accountTitle": "TI cogerida",
+    "checkoutUnavailable": "O pagamento incorporado não está disponível. Tente novamente após reparar a configuração de pagamento.",
+    "pendingCapacity": "Está pendente uma compra de {{quantity}} lugares.",
+    "previewError": "Não foi possível calcular o preço desta alteração. Atualize e tente novamente.",
+    "purchaseNeedsAdmin": "Um administrador da conta deve adicionar capacidade cogerida.",
+    "purchaseProviderUnconfigured": "O fornecedor de pagamentos não está configurado.",
+    "purchaseUnavailable": "A compra cogerida alojada não está disponível nesta implementação.",
+    "client": {
+      "awaitingAcceptance": "O administrador do cliente deve aceitar antes que o acesso seja concedido.",
+      "capacity": "Capacidade",
+      "chooseRelationship": "Escolher relação",
+      "endedHint": "Esta relação terminou. O histórico retido e os arquivos continuam disponíveis.",
+      "forClient": "TI cogerida para {{name}}",
+      "history": "Histórico da relação",
+      "invitation": "Convite do administrador",
+      "notEnabled": "TI cogerida não ativada",
+      "progress": "Progresso da configuração",
+      "provisioningHint": "Os lugares reservados permanecem retidos até a configuração ser concluída ou a limpeza ser confirmada.",
+      "relationship": "Relação",
+      "seatAllocation": "{{allocated}} lugares de técnico atribuídos",
+      "seatUsage": "{{used}} de {{allocated}} lugares de técnico",
+      "selectionRequired": "Várias relações cogeridas",
+      "setupHint": "Ative a TI cogerida neste cliente para reservar técnicos do cliente e convidar um administrador.",
+      "tab": "TI cogerida",
+      "viewHistory": "Ver histórico",
+      "work": "Trabalho",
+      "workHint": "Os projetos do cliente e as filas de tarefas partilhadas permanecem na shell do MSP com as suas identidades qualificadas.",
+      "workspace": "Espaço de trabalho do cliente"
+    },
+    "overview": {
+      "clients": "Clientes cogeridos",
+      "allClients": "Todos os clientes",
+      "empty": "Nenhum cliente cogerido corresponde a esta pesquisa.",
+      "loadError": "Não foi possível carregar os clientes cogeridos.",
+      "search": "Pesquisar clientes",
+      "unnamed": "Cliente",
+      "client": "Cliente",
+      "workspace": "Espaço de trabalho",
+      "status": "Estado",
+      "seats": "Lugares",
+      "actions": "Ações"
+    },
+    "shortfall": {
+      "baselineChanged": "O conjunto mudou desde este orçamento. Reveja a insuficiência novamente.",
+      "confirming": "A capacidade comprada está a ser verificada. Atualize e guarde a atribuição novamente.",
+      "ineligible": "O espaço de trabalho patrocinador não é elegível para mais capacidade cogerida.",
+      "needsAdmin": "Esta atribuição necessita de mais capacidade do conjunto. Um administrador da conta deve adicioná-la.",
+      "pending": "Já está a ser preparada ou processada uma compra cogerida. Retome-a antes de alterar a capacidade.",
+      "pool": "Conjunto: {{capacity}} comprados, {{allocated}} atribuídos, {{available}} disponíveis",
+      "provider": "O fornecedor de pagamentos não está configurado. Um administrador deve concluir a configuração de faturação.",
+      "raceRetry": "Os lugares estão no conjunto. A atribuição ainda não pôde ser guardada; tente novamente.",
+      "review": "Adicione {{additional}} lugares ao conjunto do patrocinador (novo total {{total}}).",
+      "selfHost": "Esta atribuição excede a capacidade self-host verificada. Atualize a licença assinada e, em seguida, atualize.",
+      "unavailable": "A compra cogerida alojada não está disponível nesta implementação."
     }
   }
 }

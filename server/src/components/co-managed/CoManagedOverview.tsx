@@ -1,109 +1,88 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Button } from '@alga-psa/ui/components/Button';
-import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
-import { Input } from '@alga-psa/ui/components/Input';
-import { Label } from '@alga-psa/ui/components/Label';
-import { Dialog } from '@alga-psa/ui/components/Dialog';
-import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import CoManagedCheckout from '@enterprise/components/co-managed/CoManagedCheckout';
-import { previewCoManagedSeatsAction, purchaseCoManagedSeatsAction } from '@enterprise/lib/actions/coManagedBillingActions';
+import { Archive, ArrowUpRight, LifeBuoy, ListChecks } from 'lucide-react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { BentoTile, BentoRow, BentoRowList } from '@alga-psa/ui/components/bento';
 import { getCoManagedBillingState } from '@/lib/actions/coManagedActions';
 import CoManagedProvisioningPanel from './CoManagedProvisioningPanel';
-import CoManagedProjectTaskQueueLink from './CoManagedProjectTaskQueueLink';
-import CoManagedTicketQueueLink from './CoManagedTicketQueueLink';
+import CoManagedPoolEditor from './CoManagedPoolEditor';
+import CoManagedClientOverviewTable from './CoManagedClientOverviewTable';
 import { CoManagedFeatureBoundary } from './CoManagedFeatureBoundary';
 
+/**
+ * Cross-client co-managed overview, laid out on the shared bento canvas so it
+ * reads as one product with the client command center: a wide tile column with
+ * the seat pool, clients, and provisioning, plus a sticky shared-work rail.
+ * The sponsor pool editor is shared with Account Management; client setup and
+ * recovery are client-scoped, so this page links to client records.
+ */
 export default function CoManagedOverview({ initialClientId }: { initialClientId?: string }) {
   const { t } = useTranslation('msp/licensing');
-  const { formatCurrency, formatDate } = useFormatters();
+  // The provisioning panel needs the pool numbers, not just the permission:
+  // seat capacity decides whether a new customer workspace can be created at
+  // all. Keep the whole billing state so the panel is driven by real capacity.
   const [state, setState] = useState<Awaited<ReturnType<typeof getCoManagedBillingState>> | null>(null);
-  const [quantity, setQuantity] = useState(1);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [preview, setPreview] = useState<Awaited<ReturnType<typeof previewCoManagedSeatsAction>> | null>(null);
-  const [checkout, setCheckout] = useState<{ clientSecret: string; publishableKey: string } | null>(null);
-  const operation = useRef<string | null>(null);
-
+  const [denied, setDenied] = useState(false);
   const reload = useCallback(async () => {
-    const next = await getCoManagedBillingState();
-    setState(next);
-    setQuantity(next.pending?.quantity ?? Math.max(1, next.capacity));
-    operation.current = next.pending?.operation_id ?? null;
+    try { setState(await getCoManagedBillingState()); setDenied(false); }
+    catch { setState(null); setDenied(true); }
   }, []);
-  useEffect(() => { void reload().catch((err) => setError(err instanceof Error ? err.message : t('coManaged.loadError'))); }, [reload, t]);
+  useEffect(() => { void reload(); }, [reload]);
+  // Relationship authority is independent of pool authority: an account-only
+  // reader still gets the pool editor but no relationship rows.
+  const canReadRelationships = state?.canReadRelationships === true;
 
-  const review = async () => {
-    setBusy(true); setError(null);
-    try {
-      setPreview(await previewCoManagedSeatsAction(quantity));
-      operation.current = crypto.randomUUID();
-    } catch (err) { setError(err instanceof Error ? err.message : t('coManaged.purchaseError')); }
-    finally { setBusy(false); }
-  };
-  const purchase = async () => {
-    if (!operation.current) return;
-    setBusy(true); setError(null);
-    try {
-      const result = await purchaseCoManagedSeatsAction({ quantity, operationId: operation.current });
-      setPreview(null);
-      if (result.kind === 'checkout' && result.publishableKey) {
-        setCheckout({ clientSecret: result.clientSecret, publishableKey: result.publishableKey });
-      } else {
-        setCheckout(null);
-        if (result.kind === 'expired') setError(t('coManaged.checkoutExpired'));
-      }
-      await reload();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t('coManaged.purchaseError'));
-      await reload().catch(() => undefined);
-    } finally { setBusy(false); }
-  };
-
-  return <div className="mx-auto max-w-5xl space-y-6 p-6">
-    <div><h1 className="text-3xl font-bold">{t('coManaged.title')}</h1>
-      <p className="mt-2 text-muted-foreground">{t('coManaged.description')}</p></div>
-    <CoManagedTicketQueueLink />
-    <CoManagedProjectTaskQueueLink />
-    <CoManagedFeatureBoundary><Link id="co-managed-archive-link" className="block px-6 text-primary underline" href="/msp/co-managed/archive">{t('coManaged.archive.title')}</Link></CoManagedFeatureBoundary>
-    {error && <p role="alert" className="text-destructive">{error}</p>}
-    {!state ? (!error && <p role="status">{t('coManaged.loading')}</p>) : <>
-      <div className="grid gap-4 sm:grid-cols-3">
-        {(['capacity', 'allocated', 'available'] as const).map((key) => <Card key={key}>
-          <CardHeader><CardTitle>{t(`coManaged.${key}`)}</CardTitle></CardHeader>
-          <CardContent><p className="text-3xl font-semibold">{state[key]}</p></CardContent>
-        </Card>)}
+  return <div id="co-managed-overview" className="min-w-0">
+    <header className="mb-4">
+      <h1 className="text-3xl font-bold text-[rgb(var(--color-text-900))]">{t('coManaged.title')}</h1>
+      <p className="mt-1 text-sm text-[rgb(var(--color-text-500))]">{t('coManaged.description')}</p>
+    </header>
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <CoManagedPoolEditor showTotals className="min-w-0 lg:col-span-2" />
+      <div className="min-w-0 lg:col-span-1 [&>*]:h-full">
+        <CoManagedFeatureBoundary>
+          <SharedWorkTile />
+        </CoManagedFeatureBoundary>
       </div>
-      {state.graceEndsAt && <p role="status">{t(state.isReadOnly ? 'coManaged.readOnly' : 'coManaged.grace', { date: formatDate(new Date(state.graceEndsAt)) })}</p>}
-      {!state.isPro && <p>{t('coManaged.proRequired')}</p>}
-      <Card><CardHeader><CardTitle>{t('coManaged.seatPool')}</CardTitle></CardHeader><CardContent className="space-y-4">
-        <p className="text-muted-foreground">{t('coManaged.seatDescription')}</p>
-        {state.selfHosted ? <Link id="co-managed-manage-license" href="/msp/licenses" className="text-primary underline">{t('coManaged.manageLicense')}</Link> :
-          state.canPurchase && state.isPro ? <div className="flex flex-wrap items-end gap-3">
-            <div className="space-y-2"><Label htmlFor="co-managed-seat-quantity">{t('coManaged.quantity')}</Label>
-              <Input id="co-managed-seat-quantity" type="number" min={state.allocated} max={100000} step={1}
-                value={quantity} disabled={busy || Boolean(state.pending)} onChange={(event) => setQuantity(Number(event.target.value))} /></div>
-            <Button id="co-managed-review-purchase" disabled={busy || !Number.isInteger(quantity) || quantity < state.allocated || quantity > 100000}
-              onClick={() => void (state.pending ? purchase() : review())}>
-              {t(state.pending ? 'coManaged.resumePurchase' : 'coManaged.reviewPurchase')}
-            </Button>
-          </div> : null}
-      </CardContent></Card>
-      {state.canReadRelationships && <CoManagedProvisioningPanel available={state.available} canGrow={state.isPro && state.canGrow}
-        initialClientId={initialClientId} onChanged={reload} />}
-    </>}
-    <Dialog id="co-managed-purchase-review" isOpen={preview !== null} onClose={() => { if (!busy) setPreview(null); }} title={t('coManaged.confirmTitle')}>
-      {preview && <div className="space-y-4">
-        <p>{t('coManaged.monthlyTotal', { count: quantity, amount: formatCurrency(preview.monthlyTotal / 100, preview.currency) })}</p>
-        <p>{t('coManaged.dueNow', { amount: formatCurrency(preview.amountDue / 100, preview.currency) })}</p>
-        {quantity === 0 && <p>{t('coManaged.cancelPool')}</p>}
-        <Button id="co-managed-confirm-purchase" disabled={busy} onClick={() => void purchase()}>{t('coManaged.confirmPurchase')}</Button>
-      </div>}
-    </Dialog>
-    <Dialog id="co-managed-checkout" isOpen={checkout !== null} onClose={() => setCheckout(null)} title={t('coManaged.checkoutTitle')}>
-      {checkout && <CoManagedCheckout {...checkout} onComplete={() => void purchase()} />}
-    </Dialog>
+    </div>
+    {/* A failed read is not the same as "no co-managed clients": say so rather
+        than rendering an empty page that looks like an answer. */}
+    {denied && <p id="co-managed-overview-error" role="alert" className="mt-4 text-destructive">
+      {t('coManaged.loadError')}
+    </p>}
+    {canReadRelationships && state && <div className="mt-4 grid grid-cols-1 gap-4">
+      <CoManagedClientOverviewTable />
+      <CoManagedProvisioningPanel available={state.available} canGrow={state.isPro && state.canGrow}
+        initialClientId={initialClientId} onChanged={reload} />
+    </div>}
   </div>;
+}
+
+/** Contextual entry points into the co-managed work queues and archive. */
+function SharedWorkTile() {
+  const { t } = useTranslation('msp/licensing');
+  const links = [
+    // Canonical combined scope on the one ticket list. /msp/co-managed/tickets
+    // still resolves here through the legacy adapter, but product-owned links
+    // point at the destination rather than the compatibility route.
+    { id: 'co-managed-ticket-queues', href: '/msp/tickets?queueView=working&workspace=all', label: t('coManaged.queue.title'), icon: LifeBuoy },
+    { id: 'co-managed-task-queues', href: '/msp/co-management/tasks', label: t('coManaged.projects.queue.title'), icon: ListChecks },
+    { id: 'co-managed-archive-link', href: '/msp/co-managed/archive', label: t('coManaged.archive.title'), icon: Archive },
+  ];
+  return <BentoTile id="co-managed-shared-work" className="h-full" title={t('coManaged.sharedWork', { defaultValue: 'Shared work' })}>
+    <BentoRowList id="co-managed-shared-work-list">
+      {links.map(({ id, href, label, icon: Icon }) => (
+        <BentoRow key={id} align="center">
+          <Link id={id} href={href}
+            className="group flex min-w-0 w-full items-center gap-2 text-sm font-medium text-[rgb(var(--color-text-700))] hover:text-[rgb(var(--color-primary-600))]">
+            <Icon className="h-4 w-4 flex-shrink-0 text-[rgb(var(--color-text-400))] group-hover:text-[rgb(var(--color-primary-500))]" aria-hidden="true" />
+            <span className="truncate">{label}</span>
+            <ArrowUpRight className="ml-auto h-3.5 w-3.5 flex-shrink-0 text-primary-500 group-hover:text-primary-700" aria-hidden="true" />
+          </Link>
+        </BentoRow>
+      ))}
+    </BentoRowList>
+  </BentoTile>;
 }

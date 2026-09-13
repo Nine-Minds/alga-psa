@@ -365,6 +365,7 @@
   "coManaged": {
     "title": "Współzarządzane IT",
     "description": "Zarządzaj stanowiskami techników dostępnymi dla obszarów roboczych Twoich klientów.",
+    "sharedWork": "Wspólna praca",
     "capacity": "Zakupione stanowiska",
     "allocated": "Przydzielone klientom",
     "available": "Dostępne stanowiska",
@@ -619,8 +620,16 @@
         "returned": "Zwrócono do zespołu IT klienta",
         "forbidden": "Odmowa dostępu",
         "changed": "Zgłoszenie uległo zmianie. Odśwież przed ponowną próbą.",
-        "invalid": "Nieprawidłowy wybór"
-      }
+        "invalid": "Nieprawidłowy wybór",
+        "selected": "{{count}} wybranych zgłoszeń zostanie zwróconych.",
+        "resume": "Zwrot do działu IT klienta został przerwany. Wznów, aby potwierdzić wynik.",
+        "noReloadRecovery": "Odzyskiwanie po odświeżeniu jest niedostępne w tej przeglądarce; nadal możesz ponowić próbę w tej sesji."
+      },
+      "thisMsp": "Ten MSP",
+      "scopeUnavailable": "Otwieranie listy zgłoszeń…",
+      "searchPlaceholder": "Szukaj według numeru lub tytułu",
+      "addMspTicket": "Dodaj zgłoszenie MSP",
+      "mspAlsoAssigned": "MSP również przypisany"
     },
     "conversation": {
       "title": "Rozmowa",
@@ -920,6 +929,61 @@
       "loadError": "Obecne uprawnienia nie pozwalają wyeksportować tej przestrzeni.",
       "lengthError": "Użyj hasła o długości od 16 do 1024 bajtów UTF-8.",
       "matchError": "Hasła odzyskiwania muszą być identyczne."
+    },
+    "accountTitle": "Współzarządzane IT",
+    "checkoutUnavailable": "Wbudowana płatność jest niedostępna. Spróbuj ponownie po naprawieniu konfiguracji płatności.",
+    "pendingCapacity": "Zakup {{quantity}} miejsc oczekuje na realizację.",
+    "previewError": "Nie udało się wycenić tej zmiany. Odśwież i spróbuj ponownie.",
+    "purchaseNeedsAdmin": "Administrator konta musi dodać współzarządzaną pojemność.",
+    "purchaseProviderUnconfigured": "Dostawca płatności nie jest skonfigurowany.",
+    "purchaseUnavailable": "Hostowany zakup współzarządzany nie jest dostępny w tym wdrożeniu.",
+    "client": {
+      "awaitingAcceptance": "Administrator klienta musi zaakceptować, zanim dostęp zostanie przyznany.",
+      "capacity": "Pojemność",
+      "chooseRelationship": "Wybierz relację",
+      "endedHint": "Ta relacja została zakończona. Zachowana historia i archiwa pozostają dostępne.",
+      "forClient": "Współzarządzane IT dla {{name}}",
+      "history": "Historia relacji",
+      "invitation": "Zaproszenie administratora",
+      "notEnabled": "Współzarządzane IT nie jest włączone",
+      "progress": "Postęp konfiguracji",
+      "provisioningHint": "Zarezerwowane miejsca pozostają zarezerwowane, dopóki konfiguracja nie zostanie ukończona lub czyszczenie nie zostanie potwierdzone.",
+      "relationship": "Relacja",
+      "seatAllocation": "{{allocated}} przydzielonych miejsc techników",
+      "seatUsage": "{{used}} z {{allocated}} miejsc techników",
+      "selectionRequired": "Wiele współzarządzanych relacji",
+      "setupHint": "Włącz współzarządzane IT dla tego klienta, aby zarezerwować techników klienta i zaprosić administratora.",
+      "tab": "Współzarządzane IT",
+      "viewHistory": "Zobacz historię",
+      "work": "Praca",
+      "workHint": "Projekty klienta i współdzielone kolejki zadań pozostają w powłoce MSP z ich kwalifikowanymi tożsamościami.",
+      "workspace": "Obszar roboczy klienta"
+    },
+    "overview": {
+      "clients": "Współzarządzani klienci",
+      "allClients": "Wszyscy klienci",
+      "empty": "Żaden współzarządzany klient nie pasuje do tego wyszukiwania.",
+      "loadError": "Nie udało się załadować współzarządzanych klientów.",
+      "search": "Szukaj klientów",
+      "unnamed": "Klient",
+      "client": "Klient",
+      "workspace": "Obszar roboczy",
+      "status": "Status",
+      "seats": "Miejsca",
+      "actions": "Akcje"
+    },
+    "shortfall": {
+      "baselineChanged": "Pula zmieniła się od tej wyceny. Sprawdź ponownie niedobór.",
+      "confirming": "Zakupiona pojemność jest weryfikowana. Odśwież, a następnie ponownie zapisz przydział.",
+      "ineligible": "Obszar roboczy sponsora nie kwalifikuje się do większej współzarządzanej pojemności.",
+      "needsAdmin": "Ten przydział wymaga większej pojemności puli. Administrator konta musi ją dodać.",
+      "pending": "Zakup współzarządzany jest już przygotowywany lub realizowany. Wznów go przed zmianą pojemności.",
+      "pool": "Pula: {{capacity}} zakupionych, {{allocated}} przydzielonych, {{available}} dostępnych",
+      "provider": "Dostawca płatności nie jest skonfigurowany. Administrator musi dokończyć konfigurację rozliczeń.",
+      "raceRetry": "Miejsca są w puli. Nie udało się jeszcze zapisać przydziału; spróbuj ponownie.",
+      "review": "Dodaj {{additional}} miejsc do puli sponsora (nowa suma {{total}}).",
+      "selfHost": "Ten przydział przekracza zweryfikowaną pojemność self-host. Zaktualizuj podpisaną licencję, a następnie odśwież.",
+      "unavailable": "Hostowany zakup współzarządzany nie jest dostępny w tym wdrożeniu."
     }
   }
 }

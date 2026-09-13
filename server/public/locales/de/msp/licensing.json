@@ -361,6 +361,7 @@
   "coManaged": {
     "title": "Co-Managed IT",
     "description": "Verwalten Sie die Technikerplätze, die Ihren Kunden-Workspaces zur Verfügung stehen.",
+    "sharedWork": "Gemeinsame Arbeit",
     "capacity": "Gekaufte Plätze",
     "allocated": "Kunden zugewiesen",
     "available": "Verfügbare Plätze",
@@ -615,8 +616,16 @@
         "returned": "An die Kunden-IT zurückgegeben",
         "forbidden": "Zugriff verweigert",
         "changed": "Ticket geändert. Aktualisieren Sie vor einem erneuten Versuch.",
-        "invalid": "Ungültige Auswahl"
-      }
+        "invalid": "Ungültige Auswahl",
+        "selected": "{{count}} ausgewählte(s) Ticket(s) werden zurückgegeben.",
+        "resume": "Eine Rückgabe an die Kunden-IT wurde unterbrochen. Fortsetzen, um das Ergebnis zu bestätigen.",
+        "noReloadRecovery": "Die Wiederherstellung nach dem Neuladen ist in diesem Browser nicht verfügbar; ein erneuter Versuch in dieser Sitzung ist weiterhin möglich."
+      },
+      "thisMsp": "Dieser MSP",
+      "scopeUnavailable": "Ticketliste wird geöffnet…",
+      "searchPlaceholder": "Nach Nummer oder Titel suchen",
+      "addMspTicket": "MSP-Ticket hinzufügen",
+      "mspAlsoAssigned": "MSP ebenfalls zugewiesen"
     },
     "conversation": {
       "title": "Unterhaltung",
@@ -916,6 +925,61 @@
       "loadError": "Ihre aktuellen Berechtigungen erlauben keinen Export dieses Arbeitsbereichs.",
       "lengthError": "Verwenden Sie eine Passphrase mit 16 bis 1024 UTF-8-Bytes.",
       "matchError": "Die Passphrasen müssen übereinstimmen."
+    },
+    "accountTitle": "Co-Managed IT",
+    "checkoutUnavailable": "Die eingebettete Kasse ist nicht verfügbar. Versuchen Sie es nach der Reparatur der Zahlungseinrichtung erneut.",
+    "pendingCapacity": "Ein Kauf von {{quantity}} Plätzen ist ausstehend.",
+    "previewError": "Diese Änderung konnte nicht berechnet werden. Aktualisieren Sie und versuchen Sie es erneut.",
+    "purchaseNeedsAdmin": "Ein Kontoadministrator muss Co-Managed-Kapazität hinzufügen.",
+    "purchaseProviderUnconfigured": "Der Zahlungsanbieter ist nicht konfiguriert.",
+    "purchaseUnavailable": "Der gehostete Co-Managed-Kauf ist in dieser Bereitstellung nicht verfügbar.",
+    "client": {
+      "awaitingAcceptance": "Der Kundenadministrator muss zustimmen, bevor der Zugriff gewährt wird.",
+      "capacity": "Kapazität",
+      "chooseRelationship": "Beziehung auswählen",
+      "endedHint": "Diese Beziehung wurde beendet. Aufbewahrter Verlauf und Archive bleiben verfügbar.",
+      "forClient": "Co-Managed IT für {{name}}",
+      "history": "Beziehungsverlauf",
+      "invitation": "Administrator-Einladung",
+      "notEnabled": "Co-Managed IT ist nicht aktiviert",
+      "progress": "Einrichtungsfortschritt",
+      "provisioningHint": "Reservierte Plätze bleiben reserviert, bis die Einrichtung abgeschlossen oder die Bereinigung bestätigt ist.",
+      "relationship": "Beziehung",
+      "seatAllocation": "{{allocated}} zugewiesene Technikerplätze",
+      "seatUsage": "{{used}} von {{allocated}} Technikerplätzen",
+      "selectionRequired": "Mehrere Co-Managed-Beziehungen",
+      "setupHint": "Aktivieren Sie Co-Managed IT für diesen Kunden, um Kundentechniker zu reservieren und einen Administrator einzuladen.",
+      "tab": "Co-Managed IT",
+      "viewHistory": "Verlauf anzeigen",
+      "work": "Arbeit",
+      "workHint": "Kundenprojekte und gemeinsame Aufgabenwarteschlangen bleiben in der MSP-Shell mit ihren qualifizierten Identitäten.",
+      "workspace": "Kundenarbeitsbereich"
+    },
+    "overview": {
+      "clients": "Co-Managed-Kunden",
+      "allClients": "Alle Kunden",
+      "empty": "Keine Co-Managed-Kunden entsprechen dieser Suche.",
+      "loadError": "Co-Managed-Kunden konnten nicht geladen werden.",
+      "search": "Kunden suchen",
+      "unnamed": "Kunde",
+      "client": "Kunde",
+      "workspace": "Arbeitsbereich",
+      "status": "Status",
+      "seats": "Plätze",
+      "actions": "Aktionen"
+    },
+    "shortfall": {
+      "baselineChanged": "Der Pool hat sich seit diesem Angebot geändert. Überprüfen Sie den Fehlbetrag erneut.",
+      "confirming": "Die gekaufte Kapazität wird überprüft. Aktualisieren Sie und speichern Sie die Zuweisung erneut.",
+      "ineligible": "Der sponsernde Arbeitsbereich ist für weitere Co-Managed-Kapazität nicht berechtigt.",
+      "needsAdmin": "Diese Zuweisung benötigt mehr Poolkapazität. Ein Kontoadministrator muss sie hinzufügen.",
+      "pending": "Ein Co-Managed-Kauf wird bereits vorbereitet oder abgewickelt. Setzen Sie ihn fort, bevor Sie die Kapazität ändern.",
+      "pool": "Pool: {{capacity}} gekauft, {{allocated}} zugewiesen, {{available}} verfügbar",
+      "provider": "Der Zahlungsanbieter ist nicht konfiguriert. Ein Administrator muss die Abrechnungseinrichtung abschließen.",
+      "raceRetry": "Die Plätze sind im Pool. Die Zuweisung konnte noch nicht gespeichert werden; versuchen Sie es erneut.",
+      "review": "Fügen Sie {{additional}} Plätze zum Sponsor-Pool hinzu (neue Gesamtzahl {{total}}).",
+      "selfHost": "Diese Zuweisung übersteigt die verifizierte Self-Host-Kapazität. Aktualisieren Sie die signierte Lizenz und aktualisieren Sie dann.",
+      "unavailable": "Der gehostete Co-Managed-Kauf ist in dieser Bereitstellung nicht verfügbar."
     }
   }
 }

@@ -363,6 +363,7 @@
   "coManaged": {
     "title": "TI cogestionada",
     "description": "Gestione los puestos de técnico disponibles para los espacios de trabajo de sus clientes.",
+    "sharedWork": "Trabajo compartido",
     "capacity": "Puestos comprados",
     "allocated": "Asignados a clientes",
     "available": "Puestos disponibles",
@@ -617,8 +618,16 @@
         "returned": "Devuelto al equipo de TI del cliente",
         "forbidden": "Acceso denegado",
         "changed": "El ticket ha cambiado. Actualice antes de volver a intentarlo.",
-        "invalid": "Selección no válida"
-      }
+        "invalid": "Selección no válida",
+        "selected": "Se devolverán {{count}} ticket(s) seleccionado(s).",
+        "resume": "Se interrumpió una devolución al TI del cliente. Reanúdala para confirmar el resultado.",
+        "noReloadRecovery": "La recuperación al recargar no está disponible en este navegador; aún puede reintentar en esta sesión."
+      },
+      "thisMsp": "Este MSP",
+      "scopeUnavailable": "Abriendo la lista de tickets…",
+      "searchPlaceholder": "Buscar por número o título",
+      "addMspTicket": "Añadir ticket MSP",
+      "mspAlsoAssigned": "MSP también asignado"
     },
     "conversation": {
       "title": "Conversación",
@@ -918,6 +927,61 @@
       "loadError": "Sus permisos actuales no permiten exportar este espacio.",
       "lengthError": "Use una frase de entre 16 y 1024 bytes UTF-8.",
       "matchError": "Las frases de recuperación deben coincidir."
+    },
+    "accountTitle": "TI cogestionada",
+    "checkoutUnavailable": "El pago integrado no está disponible. Vuelva a intentarlo después de reparar la configuración de pago.",
+    "pendingCapacity": "Hay pendiente una compra de {{quantity}} puestos.",
+    "previewError": "No se pudo calcular el precio de este cambio. Actualice e inténtelo de nuevo.",
+    "purchaseNeedsAdmin": "Un administrador de la cuenta debe añadir capacidad cogestionada.",
+    "purchaseProviderUnconfigured": "El proveedor de pagos no está configurado.",
+    "purchaseUnavailable": "La compra cogestionada alojada no está disponible en esta implementación.",
+    "client": {
+      "awaitingAcceptance": "El administrador del cliente debe aceptar antes de conceder el acceso.",
+      "capacity": "Capacidad",
+      "chooseRelationship": "Elegir relación",
+      "endedHint": "Esta relación ha finalizado. El historial retenido y los archivos siguen disponibles.",
+      "forClient": "TI cogestionada para {{name}}",
+      "history": "Historial de la relación",
+      "invitation": "Invitación del administrador",
+      "notEnabled": "TI cogestionada no habilitada",
+      "progress": "Progreso de configuración",
+      "provisioningHint": "Los puestos reservados se mantienen hasta que finalice la configuración o se confirme la limpieza.",
+      "relationship": "Relación",
+      "seatAllocation": "{{allocated}} puestos de técnico asignados",
+      "seatUsage": "{{used}} de {{allocated}} puestos de técnico",
+      "selectionRequired": "Varias relaciones cogestionadas",
+      "setupHint": "Habilite TI cogestionada desde este cliente para reservar técnicos del cliente e invitar a un administrador.",
+      "tab": "TI cogestionada",
+      "viewHistory": "Ver historial",
+      "work": "Trabajo",
+      "workHint": "Los proyectos del cliente y las colas de tareas compartidas permanecen en el shell del MSP con sus identidades cualificadas.",
+      "workspace": "Espacio de trabajo del cliente"
+    },
+    "overview": {
+      "clients": "Clientes cogestionados",
+      "allClients": "Todos los clientes",
+      "empty": "Ningún cliente cogestionado coincide con esta búsqueda.",
+      "loadError": "No se pudieron cargar los clientes cogestionados.",
+      "search": "Buscar clientes",
+      "unnamed": "Cliente",
+      "client": "Cliente",
+      "workspace": "Espacio de trabajo",
+      "status": "Estado",
+      "seats": "Puestos",
+      "actions": "Acciones"
+    },
+    "shortfall": {
+      "baselineChanged": "El grupo cambió desde esta cotización. Revise el déficit de nuevo.",
+      "confirming": "Se está verificando la capacidad comprada. Actualice y guarde la asignación de nuevo.",
+      "ineligible": "El espacio de trabajo patrocinador no es elegible para más capacidad cogestionada.",
+      "needsAdmin": "Esta asignación necesita más capacidad del grupo. Un administrador de la cuenta debe añadirla.",
+      "pending": "Ya se está preparando o procesando una compra cogestionada. Reanúdela antes de cambiar la capacidad.",
+      "pool": "Grupo: {{capacity}} comprados, {{allocated}} asignados, {{available}} disponibles",
+      "provider": "El proveedor de pagos no está configurado. Un administrador debe completar la configuración de facturación.",
+      "raceRetry": "Los puestos están en el grupo. La asignación aún no se pudo guardar; vuelva a intentarlo.",
+      "review": "Añada {{additional}} puestos al grupo del patrocinador (nuevo total {{total}}).",
+      "selfHost": "Esta asignación supera la capacidad autoalojada verificada. Actualice la licencia firmada y luego actualice.",
+      "unavailable": "La compra cogestionada alojada no está disponible en esta implementación."
     }
   }
 }

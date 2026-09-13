@@ -166,6 +166,12 @@ export class TimeEntryService extends BaseService<any> {
     registerAfterCommit(this.retainedConnection.knex, work, 'api-time-entry');
   }
 
+  // A PostgreSQL DATE is a calendar date, not an instant. Project it as text
+  // before pg hydrates it into a Date in the Node process's timezone.
+  private workDateProjection(knex: Knex): Knex.Raw {
+    return knex.raw("to_char(??, 'YYYY-MM-DD') as ??", [`${this.tableName}.work_date`, 'work_date']);
+  }
+
   private assertServiceIdPresent(serviceId: string | null | undefined): void {
     if (!serviceId) {
       throw new ValidationError('Validation failed', [

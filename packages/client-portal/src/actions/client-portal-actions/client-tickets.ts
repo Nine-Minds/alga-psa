@@ -1,5 +1,6 @@
 'use server'
-import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
+import { persistCommentPublication, filterReadableCommentAttachments, reconcileCommentAttachments, withdrawCommentAttachments } from '@alga-psa/shared/lib/ticketCommentAttachments';
+import Comment from '@alga-psa/tickets/models/comment';
 
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- Client portal ticket actions intentionally compose ticketing feature APIs for client-facing workflows. */
 

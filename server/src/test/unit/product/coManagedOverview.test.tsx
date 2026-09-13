@@ -19,7 +19,9 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
 }));
 
 const billing = { capacity: 4, allocated: 2, available: 2, canGrow: true, isReadOnly: false,
-  graceEndsAt: null, selfHosted: false, isPro: true, canPurchase: true, pending: null };
+  graceEndsAt: null, selfHosted: false, isPro: true, canPurchase: true, pending: null,
+  purchase: { deployment: 'hosted', sponsorshipEligible: true, accountAuthority: 'purchaser', implementationAvailable: true,
+    providerReady: true, pending: null, canPurchase: true, canResume: false, reason: 'available' } };
 
 beforeEach(() => {
   vi.resetAllMocks();
@@ -51,7 +53,8 @@ describe('co-managed seat purchase UI', () => {
   });
 
   it('resumes the immutable pending operation after a lost response', async () => {
-    mocks.state.mockResolvedValue({ ...billing, pending: { operation_id: 'old-operation', quantity: 6, state: 'preparing' } });
+    mocks.state.mockResolvedValue({ ...billing, pending: { operation_id: 'old-operation', quantity: 6, state: 'preparing' },
+      purchase: { ...billing.purchase, canPurchase: false, canResume: true, pending: { operationId: 'old-operation', quantity: 6, state: 'preparing' } } });
     render(await CoManagedPage({}));
     fireEvent.click(await screen.findByRole('button', { name: 'coManaged.resumePurchase' }));
     await waitFor(() => expect(mocks.purchase).toHaveBeenCalledWith({ quantity: 6, operationId: 'old-operation' }));
@@ -66,7 +69,8 @@ describe('co-managed seat purchase UI', () => {
   });
 
   it('does not offer purchases to a caller without billing update permission', async () => {
-    mocks.state.mockResolvedValue({ ...billing, canPurchase: false });
+    mocks.state.mockResolvedValue({ ...billing, canPurchase: false,
+      purchase: { ...billing.purchase, canPurchase: false, reason: 'no_permission' } });
     render(await CoManagedPage({}));
     await screen.findByText('coManaged.seatPool');
     expect(screen.queryByRole('button', { name: 'coManaged.reviewPurchase' })).toBeNull();

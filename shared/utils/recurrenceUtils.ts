@@ -55,8 +55,6 @@ export interface GenerateOccurrencesOptions {
   includeMaster?: boolean;
   /** Holidays to exclude from generated occurrences */
   holidays?: IHoliday[];
-  /** Include the master date when the caller materializes the whole series virtually. */
-  includeMaster?: boolean;
 }
 
 export function generateOccurrences(

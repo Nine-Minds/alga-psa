@@ -286,6 +286,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     onItemsPerPageChange,
     itemsPerPageOptions,
     expandedRowRender,
+    columnFitMode = 'auto',
   } = props;
   const { t } = useTranslation('common');
   const defaultItemsPerPageOptions = useMemo(() => [
@@ -391,6 +392,13 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
   // Recalculate which columns fit the container (see computeColumnFit for the algorithm).
   // `showAllColumns` bypasses this and renders everything with horizontal scroll.
   useEffect(() => {
+    // Opt-in scroll mode: every column renders and the table scrolls. Identity
+    // and responsibility columns must not disappear behind adaptive hiding.
+    if (columnFitMode === 'scroll') {
+      setVisibleColumnIds(columns.map(col => getColumnId(col.dataIndex)));
+      setFittedSizeOverrides({});
+      return;
+    }
     if (showAllColumns) {
       setVisibleColumnIds(columns.map(col => getColumnId(col.dataIndex)));
       setFittedSizeOverrides({});
@@ -403,7 +411,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     const { visibleColumnIds: fittedColumnIds, sizeOverrides } = computeColumnFit(columns, containerWidth, columnLayout);
     setFittedSizeOverrides(sizeOverrides);
     setVisibleColumnIds(fittedColumnIds);
-  }, [columns, showAllColumns, containerWidth, columnLayout]);
+  }, [columns, showAllColumns, containerWidth, columnLayout, columnFitMode]);
 
   // Memoize the initial column configuration to prevent loops
   const columnConfig = useMemo(() => {
@@ -674,7 +682,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
       data-automation-id={id}
       ref={tableContainerRef}
     >
-        {showAllColumns ? (
+        {columnFitMode === 'auto' && showAllColumns ? (
           <Alert variant="info" className="rounded-none border-x-0 border-t-0">
             <AlertDescription className="flex items-center text-sm">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -690,7 +698,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
               </button>
             </AlertDescription>
           </Alert>
-        ) : visibleColumnIds.length < columns.length && (
+        ) : columnFitMode === 'auto' && visibleColumnIds.length < columns.length && (
           <Alert variant="info" className="rounded-none border-x-0 border-t-0">
             <AlertDescription className="flex items-center text-sm">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">

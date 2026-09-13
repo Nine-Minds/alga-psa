@@ -307,10 +307,36 @@ export class StripeService {
 
   private async initialize() {
     this.config = await getStripeConfig();
-    this.stripe = new Stripe(this.config.secretKey, {
+    const clientOptions: Stripe.StripeConfig = {
       apiVersion: '2024-12-18.acacia' as any,
       typescript: true,
-    });
+    };
+    // Test-only endpoint override: an explicit STRIPE_API_BASE_URL points the
+    // Stripe SDK at the local emulator, matching the payment provider path.
+    //
+    // Enforced test-only. This redirects requests that carry the live secret
+    // key, so it is ignored outside development/test, and cleartext http is
+    // confined to loopback even there. A production deployment that sets the
+    // variable gets real Stripe, not a silent exfiltration path.
+    const apiBaseUrl = process.env.NODE_ENV === 'production' ? undefined : process.env.STRIPE_API_BASE_URL;
+    if (apiBaseUrl) {
+      let parsed: URL;
+      try {
+        parsed = new URL(apiBaseUrl);
+      } catch {
+        throw new Error(`Invalid STRIPE_API_BASE_URL: ${apiBaseUrl}`);
+      }
+      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+        throw new Error(`Invalid STRIPE_API_BASE_URL protocol: ${parsed.protocol}`);
+      }
+      if (parsed.protocol === 'http:' && !['localhost', '127.0.0.1', '[::1]', '::1'].includes(parsed.hostname)) {
+        throw new Error(`STRIPE_API_BASE_URL must use https outside loopback: ${apiBaseUrl}`);
+      }
+      clientOptions.host = parsed.hostname;
+      if (parsed.port) clientOptions.port = Number(parsed.port);
+      clientOptions.protocol = parsed.protocol === 'https:' ? 'https' : 'http';
+    }
+    this.stripe = new Stripe(this.config.secretKey, clientOptions);
     await this.cleanupRetiredPremiumSchedules();
   }
 

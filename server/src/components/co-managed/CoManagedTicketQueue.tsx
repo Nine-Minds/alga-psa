@@ -12,10 +12,11 @@ import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { getCoManagedTicketQueueAction, exportCoManagedTicketQueueAction } from '@/lib/actions/coManagedTicketQueueActions';
 import CoManagedTicketBulkHandback from './CoManagedTicketBulkHandback';
 
-export default function CoManagedTicketQueue() {
+export default function CoManagedTicketQueue({ clientId }: { clientId?: string } = {}) {
   const { t } = useTranslation('msp/licensing');
   const { formatDate } = useFormatters();
-  const [request, setRequest] = useState<CoManagedTicketQueueRequest>({ view: 'working', state: 'open', sort: 'updated', direction: 'desc', page: 1, pageSize: 25 });
+  const [request, setRequest] = useState<CoManagedTicketQueueRequest>(() => ({ view: 'working', state: 'open', sort: 'updated', direction: 'desc', page: 1, pageSize: 25,
+    ...(clientId ? { clientId } : {}) }));
   const [search, setSearch] = useState('');
   const [result, setResult] = useState<CoManagedTicketQueuePage | null>(null);
   const [error, setError] = useState<'load' | 'export' | null>(null);

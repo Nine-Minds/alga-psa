@@ -71,4 +71,28 @@ describe('sponsor management authentication adapters', () => {
     mocks.permission.mockImplementation(async (_user, resource) => resource === 'co_management');
     expect(await getCoManagedBillingState()).toMatchObject({ capacity: 3, canReadRelationships: true, canPurchase: false });
   });
+  it('reports typed purchase availability across configuration, permission, implementation, and pending states', async () => {
+    vi.stubEnv('NEXT_PUBLIC_EDITION', 'enterprise');
+    vi.stubEnv('STRIPE_SECRET_KEY', 'sk_test');
+    vi.stubEnv('STRIPE_CO_MANAGED_USER_PRICE_ID', 'price_test');
+    mocks.permission.mockImplementation(async (_user, resource) => resource === 'account_management');
+    expect((await getCoManagedBillingState()).purchase).toMatchObject({ deployment: 'hosted', sponsorshipEligible: true,
+      accountAuthority: 'purchaser', implementationAvailable: true, providerReady: true, canPurchase: true, reason: 'available' });
+    mocks.rows['home:co_managed_purchase_operations'] = [{ operation_id: 'op', quantity: 6, state: 'preparing', provider_reference: 'pi' }];
+    const pending = await getCoManagedBillingState();
+    expect(pending.purchase).toMatchObject({ canPurchase: false, canResume: true, reason: 'pending',
+      pending: { operationId: 'op', quantity: 6, state: 'preparing' } });
+    expect(pending.canPurchase).toBe(true);
+    mocks.rows['home:co_managed_purchase_operations'] = [];
+    vi.stubEnv('STRIPE_CO_MANAGED_USER_PRICE_ID', '');
+    expect((await getCoManagedBillingState()).purchase).toMatchObject({ providerReady: false, canPurchase: false, reason: 'provider_unconfigured' });
+    vi.unstubAllEnvs();
+  });
+  it('never presents hosted purchase for self-host or unavailable enterprise implementations', async () => {
+    mocks.permission.mockImplementation(async (_user, resource) => resource === 'account_management');
+    mocks.license.mockResolvedValue({ signed_license: 'signed' });
+    expect((await getCoManagedBillingState()).purchase).toMatchObject({ deployment: 'self_host', canPurchase: false, reason: 'self_host_license' });
+    mocks.license.mockResolvedValue(null);
+    expect((await getCoManagedBillingState()).purchase).toMatchObject({ implementationAvailable: false, canPurchase: false, reason: 'implementation_unavailable' });
+  });
 });

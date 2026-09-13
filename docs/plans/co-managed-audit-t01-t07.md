@@ -79,3 +79,14 @@ Native customer KBs, documents and vault entries do not receive an automatic MSP
 ## Acceptance work versus future features
 
 No additional repository implementation defect remains demonstrated in this bounded review after the fixes above. Production price/issuer verification and the combined multi-actor browser/API/Citus smoke matrix remain acceptance evidence; broad builds and suites were intentionally deferred under the user's faster implementation/testing direction. Nested tenants, multiple sponsors, existing-tenant attachment, cross-installation live trust, annual customer-seat pricing and new RMM/directory connectors remain outside the approved release.
+
+## Client-integrated follow-on addendum (2026-09-11)
+
+This addendum covers the client-record management, provisioning, and purchase paths moved by the [2026-09-11 follow-on plan](2026-09-11-co-managed-client-integration/PRD.md). It does not revise the historical results above.
+
+- Client target management now resolves from the authorized local client through the shared management projection (`getCoManagedClientManagement`, `resolveCoManagedManagementTarget`, `getCoManagedOperationTarget`) rather than a browser-supplied operation or customer tenant. The migrated-database cases cover single/multiple/ended relationships, forged selections, redaction, the cross-client overview, and the single-setup resume guard.
+- The client view exposes fixed-client setup, resumable provisioning, allocation, access/SLA, delegation, and departure; a shortfall purchase reviews the absolute sponsor pool total, freezes the operation, and requires verified entitlement before the allocation retries.
+- The hosted pool editor is shared with Account Management; self-host capacity changes route to License Management with a validated relative return. The typed purchase-availability result prevents CE stubs and unconfigured providers from presenting as purchasable.
+
+Pending acceptance evidence is unchanged in kind: real hosted Stripe test-mode purchase/reconciliation, self-host signed-license return, and Citus coverage for the added client-mapping lookup. The lookup reuses the existing `operations` projection and adds no index or new transaction path.
+

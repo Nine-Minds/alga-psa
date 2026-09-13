@@ -37,6 +37,19 @@ MSP authorization without checking the release flag.
 Export and assignment actions apply current ticket access independently of the flag.
 Ordinary PSA and AlgaDesk workspaces do not depend on this flag.
 
+The client record composes one stable `co-managed` Service view and a compact
+summary through an optional cross-feature seam. The app-owned integration
+evaluates this same flag and, while it is not enabled, resolved, and error-free,
+supplies no summary, tab, rail entry, or Tickets override and starts no feature
+read; the ordinary client stays mounted. Disabling the flag with setup, a
+shortfall review, or embedded checkout open removes those controls and stops UI
+polling without revoking a submitted purchase. Legacy `/msp/co-managed?clientId=`,
+`/msp/co-management?operationId=`, SLA, delegated-administration, and departure
+links resolve through the same boundary; while unavailable they perform no
+adapter discovery. The hosted sponsor pool editor inside Account Management and
+the client shortfall purchase UI are wrapped by this boundary, so ordinary
+account and subscription controls remain available with the flag off.
+
 This is a UI-only release switch. Routes remain registered. APIs, server actions,
 provisioning, intake, licensing, billing, and background work must not check it.
 Product, authorization, and license restrictions apply independently. Local overrides

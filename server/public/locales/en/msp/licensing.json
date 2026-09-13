@@ -361,6 +361,7 @@
   "coManaged": {
     "title": "Co-managed IT",
     "description": "Manage the technician seats available to your customer workspaces.",
+    "sharedWork": "Shared work",
     "capacity": "Purchased seats",
     "allocated": "Allocated to customers",
     "available": "Available seats",
@@ -615,8 +616,16 @@
         "returned": "Returned to customer IT",
         "forbidden": "Access denied",
         "changed": "Ticket changed. Refresh before trying again.",
-        "invalid": "Invalid selection"
-      }
+        "invalid": "Invalid selection",
+        "selected": "{{count}} selected ticket(s) will be returned.",
+        "resume": "A return to customer IT was interrupted. Resume it to confirm the result.",
+        "noReloadRecovery": "Reload recovery is unavailable in this browser; you can still retry in this session."
+      },
+      "thisMsp": "This MSP",
+      "scopeUnavailable": "Opening the ticket list…",
+      "searchPlaceholder": "Search by number or title",
+      "addMspTicket": "Add MSP ticket",
+      "mspAlsoAssigned": "MSP also assigned"
     },
     "conversation": {
       "title": "Conversation",
@@ -916,6 +925,61 @@
       "loadError": "You cannot export this workspace with your current access.",
       "lengthError": "Use a passphrase between 16 and 1024 UTF-8 bytes.",
       "matchError": "The recovery passphrases must match."
+    },
+    "accountTitle": "Co-managed IT",
+    "checkoutUnavailable": "Embedded checkout is unavailable. Retry after the payment setup is repaired.",
+    "pendingCapacity": "A purchase of {{quantity}} seats is pending.",
+    "previewError": "Could not price this change. Refresh and try again.",
+    "purchaseNeedsAdmin": "An account administrator must add co-managed capacity.",
+    "purchaseProviderUnconfigured": "The payment provider is not configured.",
+    "purchaseUnavailable": "Hosted co-managed purchasing is not available in this deployment.",
+    "client": {
+      "awaitingAcceptance": "The customer administrator must accept before access is granted.",
+      "capacity": "Capacity",
+      "chooseRelationship": "Choose relationship",
+      "endedHint": "This relationship has ended. Retained history and archives remain available.",
+      "forClient": "Co-managed IT for {{name}}",
+      "history": "Relationship history",
+      "invitation": "Administrator invitation",
+      "notEnabled": "Co-managed IT not enabled",
+      "progress": "Setup progress",
+      "provisioningHint": "Reserved seats stay held until setup completes or cleanup is acknowledged.",
+      "relationship": "Relationship",
+      "seatAllocation": "{{allocated}} allocated technician seats",
+      "seatUsage": "{{used}} of {{allocated}} technician seats",
+      "selectionRequired": "Multiple co-managed relationships",
+      "setupHint": "Enable co-managed IT from this client to reserve customer technicians and invite an administrator.",
+      "tab": "Co-managed IT",
+      "viewHistory": "View history",
+      "work": "Work",
+      "workHint": "Client projects and shared task queues stay in the MSP shell with their qualified identities.",
+      "workspace": "Customer workspace"
+    },
+    "overview": {
+      "clients": "Co-managed clients",
+      "allClients": "All clients",
+      "empty": "No co-managed clients match this search.",
+      "loadError": "Could not load co-managed clients.",
+      "search": "Search clients",
+      "unnamed": "Client",
+      "client": "Client",
+      "workspace": "Workspace",
+      "status": "Status",
+      "seats": "Seats",
+      "actions": "Actions"
+    },
+    "shortfall": {
+      "baselineChanged": "The pool changed since this quote. Review the shortfall again.",
+      "confirming": "Purchased capacity is being verified. Refresh, then save the allocation again.",
+      "ineligible": "The sponsoring workspace is not eligible for more co-managed capacity.",
+      "needsAdmin": "This allocation needs more pool capacity. An account administrator must add it.",
+      "pending": "A co-managed purchase is already being prepared or checked out. Resume it before changing capacity.",
+      "pool": "Pool: {{capacity}} purchased, {{allocated}} allocated, {{available}} available",
+      "provider": "The payment provider is not configured. An administrator must finish billing setup.",
+      "raceRetry": "The seats are in the pool. The allocation could not be saved yet; retry it.",
+      "review": "Add {{additional}} seats to the sponsor pool (new total {{total}}).",
+      "selfHost": "This allocation exceeds verified self-host capacity. Update the signed license, then refresh.",
+      "unavailable": "Hosted co-managed purchasing is not available in this deployment."
     }
   }
 }

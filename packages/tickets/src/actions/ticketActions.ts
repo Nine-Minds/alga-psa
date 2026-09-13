@@ -1,5 +1,5 @@
 'use server'
-import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
+import { persistCommentPublication, reconcileCommentAttachments } from '@alga-psa/shared/lib/ticketCommentAttachments';
 
 import { publishNativeCommentEvent, publishNativeCommentWorkflowEvent } from '../lib/nativeConversationEvents';
 
@@ -1585,7 +1585,7 @@ export const addTicketComment = withAuth(async (user, { tenant }, ticketId: stri
             isInternal
           }
         }
-      }, publishEvent);
+      });
 
       // Publish workflow v2 ticket message events (additive).
       {

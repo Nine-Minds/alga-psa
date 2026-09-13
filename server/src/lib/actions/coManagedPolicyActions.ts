@@ -4,30 +4,44 @@ import { withAuth } from '@alga-psa/auth';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { getCoManagedOperationalState } from '@alga-psa/licensing';
 import { getCoManagedCollaborationPolicy, replaceCoManagedCustomerScope, replaceCoManagedStaffAssignments,
-  CoManagedPolicyError, type CoManagedCustomerScope, type CoManagedStaffAssignment } from '@alga-psa/co-managed';
+  CoManagedPolicyError, resolveCoManagedManagementTarget, type CoManagedCustomerScope, type CoManagedStaffAssignment,
+  type CoManagedManagementSelector } from '@alga-psa/co-managed';
 import { getCoManagedSlaPriorityMappings, replaceCoManagedSlaPriorityMappings, type CoManagedSlaPriorityMapping } from '@alga-psa/co-managed';
+import type { CoManagedSessionActor } from '@alga-psa/co-managed';
 import { coManagedBrowserActor } from '../co-managed/browserActor';
 import type { Knex } from 'knex';
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-/** Customer identity comes from home; MSP discovery comes from its own operation. */
-async function resolveTarget(db: Knex, tenant: string, operationId?: string) {
-  const home = tenantDb(db, tenant);
-  const owner = await home.table('tenants').first('product_code');
-  if (owner?.product_code === 'co_managed') {
-    if (operationId !== undefined) throw new CoManagedPolicyError('FORBIDDEN');
-    const relationship = await home.table('co_management_relationships').whereNull('ended_at').first('relationship_id', 'sponsor_tenant');
-    if (!relationship) throw new CoManagedPolicyError('FORBIDDEN');
-    return { side: 'customer' as const, target: { customerTenant: tenant, relationshipId: relationship.relationship_id as string },
-      otherTenant: relationship.sponsor_tenant as string };
+/** A legacy provisioning operation ID is only a compatibility selector. The
+ * normal interface is the explicit customer-home or sponsor-client selector. */
+export type CoManagedPolicySelectorInput =
+  | CoManagedManagementSelector
+  | { kind: 'provisioning-operation'; operationId: string };
+
+function policySelection(input?: string | CoManagedManagementSelector): CoManagedPolicySelectorInput {
+  if (input === undefined || input === null) return { kind: 'customer-home' };
+  if (typeof input === 'string') return { kind: 'provisioning-operation', operationId: input };
+  return input;
+}
+
+/** Customer identity comes from home; MSP discovery binds the authorized local
+ * client to its exact qualified relationship through the shared selector. */
+async function resolveTarget(db: Knex, actor: CoManagedSessionActor, selection: CoManagedPolicySelectorInput) {
+  if (selection.kind === 'provisioning-operation') {
+    const home = tenantDb(db, actor.tenant);
+    const owner = await home.table('tenants').first('product_code');
+    if (owner?.product_code !== 'psa' || !uuid.test(selection.operationId)) throw new CoManagedPolicyError('FORBIDDEN');
+    const operation = await home.table('co_managed_provisioning_operations').where('operation_id', selection.operationId)
+      .first('customer_tenant', 'relationship_id');
+    if (!operation) throw new CoManagedPolicyError('FORBIDDEN');
+    return { side: 'sponsor' as const, target: { customerTenant: operation.customer_tenant as string, relationshipId: operation.relationship_id as string },
+      otherTenant: operation.customer_tenant as string };
   }
-  if (owner?.product_code !== 'psa' || typeof operationId !== 'string' || !uuid.test(operationId)) throw new CoManagedPolicyError('FORBIDDEN');
-  const operation = await home.table('co_managed_provisioning_operations').where('operation_id', operationId)
-    .first('customer_tenant', 'relationship_id');
-  if (!operation) throw new CoManagedPolicyError('FORBIDDEN');
-  return { side: 'sponsor' as const, target: { customerTenant: operation.customer_tenant as string, relationshipId: operation.relationship_id as string },
-    otherTenant: operation.customer_tenant as string };
+  const resolution = await resolveCoManagedManagementTarget(db, actor, selection);
+  if (resolution.kind !== 'resolved') throw new CoManagedPolicyError('FORBIDDEN');
+  return { side: resolution.target.side, target: { customerTenant: resolution.target.customerTenant, relationshipId: resolution.target.relationshipId },
+    otherTenant: resolution.target.otherTenant };
 }
 
 export interface CoManagedPolicyOption { id: string; name: string; inactive?: boolean }
@@ -47,12 +61,13 @@ function toOption(row: any): CoManagedPolicyOption {
     ...(row.is_inactive !== undefined ? { inactive: Boolean(row.is_inactive) } : {}) };
 }
 
-export const getCoManagedPolicyScreen = withAuth(async (user, { tenant }, operationId?: string) => {
+export const getCoManagedPolicyScreen = withAuth(async (user, { tenant }, target?: string | CoManagedManagementSelector) => {
   if (user.user_type !== 'internal') throw new CoManagedPolicyError('FORBIDDEN');
+  const actor = await coManagedBrowserActor(user, tenant);
   const { knex } = await createTenantKnex(tenant);
   return withTransaction(knex, async trx => {
-    const resolved = await resolveTarget(trx, tenant, operationId);
-    const policy = await getCoManagedCollaborationPolicy(trx, { tenant, userId: user.user_id }, resolved.target);
+    const resolved = await resolveTarget(trx, actor, policySelection(target));
+    const policy = await getCoManagedCollaborationPolicy(trx, actor, resolved.target);
     const other = await tenantDb(trx, resolved.otherTenant).table('tenants').first('client_name');
     const lifecycle = await getCoManagedOperationalState(trx, resolved.target.customerTenant);
     // Sponsor administrators see only the explicitly granted customer labels.
@@ -68,7 +83,7 @@ export const getCoManagedPolicyScreen = withAuth(async (user, { tenant }, operat
     if (resolved.side === 'sponsor') for (const kind of ['user', 'team'] as const) {
       const ids = policy.assignments.filter(item => item.kind === kind).map(item => item.principalId);
       if (ids.length) {
-        const { query, id } = optionQuery(trx, tenant, kind);
+        const { query, id } = optionQuery(trx, actor.tenant, kind);
         labels[kind] = (await query.whereIn(id, ids)).map(toOption);
       }
     }
@@ -77,18 +92,19 @@ export const getCoManagedPolicyScreen = withAuth(async (user, { tenant }, operat
 });
 
 export const searchCoManagedPolicyOptions = withAuth(async (user, { tenant }, input: {
-  operationId?: string; kind: CoManagedPolicyOptionKind; search?: string; page?: number;
+  operationId?: string; selector?: CoManagedManagementSelector; kind: CoManagedPolicyOptionKind; search?: string; page?: number;
 }) => {
   if (user.user_type !== 'internal') throw new CoManagedPolicyError('FORBIDDEN');
   if (!input || !['board', 'project', 'user', 'team'].includes(input.kind) ||
       (input.search !== undefined && (typeof input.search !== 'string' || input.search.length > 200)) ||
       (input.page !== undefined && (!Number.isSafeInteger(input.page) || input.page < 0 || input.page > 1000000))) throw new CoManagedPolicyError('INVALID_POLICY');
+  const actor = await coManagedBrowserActor(user, tenant);
   const { knex } = await createTenantKnex(tenant);
   return withTransaction(knex, async trx => {
-    const resolved = await resolveTarget(trx, tenant, input.operationId);
-    await getCoManagedCollaborationPolicy(trx, { tenant, userId: user.user_id }, resolved.target);
+    const resolved = await resolveTarget(trx, actor, input.selector ?? policySelection(input.operationId));
+    await getCoManagedCollaborationPolicy(trx, actor, resolved.target);
     if ((resolved.side === 'customer') !== ['board', 'project'].includes(input.kind)) throw new CoManagedPolicyError('FORBIDDEN');
-    const { query, id, name } = optionQuery(trx, tenant, input.kind);
+    const { query, id, name } = optionQuery(trx, actor.tenant, input.kind);
     if (input.kind === 'user') query.where({ user_type: 'internal', is_inactive: false });
     if (input.kind === 'board') query.where('is_inactive', false);
     const search = input.search?.trim();
@@ -104,43 +120,45 @@ export const searchCoManagedPolicyOptions = withAuth(async (user, { tenant }, in
 export const saveCustomerCoManagedScope = withAuth(async (user, { tenant }, input: { revision: number; scope: CoManagedCustomerScope }) => {
   if (user.user_type !== 'internal') throw new CoManagedPolicyError('FORBIDDEN');
   if (!input) throw new CoManagedPolicyError('INVALID_POLICY');
+  const actor = await coManagedBrowserActor(user, tenant);
   const { knex } = await createTenantKnex(tenant);
   return withTransaction(knex, async trx => {
-    const resolved = await resolveTarget(trx, tenant);
+    const resolved = await resolveTarget(trx, actor, { kind: 'customer-home' });
     if (resolved.side !== 'customer') throw new CoManagedPolicyError('FORBIDDEN');
-    return { revision: await replaceCoManagedCustomerScope(trx, { tenant, userId: user.user_id }, resolved.target, input.revision, input.scope) };
+    return { revision: await replaceCoManagedCustomerScope(trx, actor, resolved.target, input.revision, input.scope) };
   });
 });
 
 export const saveSponsorCoManagedAssignments = withAuth(async (user, { tenant }, input: {
-  operationId: string; revision: number; assignments: CoManagedStaffAssignment[];
+  operationId?: string; selector?: CoManagedManagementSelector; revision: number; assignments: CoManagedStaffAssignment[];
 }) => {
   if (user.user_type !== 'internal') throw new CoManagedPolicyError('FORBIDDEN');
   if (!input) throw new CoManagedPolicyError('INVALID_POLICY');
+  const actor = await coManagedBrowserActor(user, tenant);
   const { knex } = await createTenantKnex(tenant);
   return withTransaction(knex, async trx => {
-    const resolved = await resolveTarget(trx, tenant, input.operationId);
+    const resolved = await resolveTarget(trx, actor, input.selector ?? policySelection(input.operationId));
     if (resolved.side !== 'sponsor') throw new CoManagedPolicyError('FORBIDDEN');
-    return { revision: await replaceCoManagedStaffAssignments(trx, { tenant, userId: user.user_id }, resolved.target, input.revision, input.assignments) };
+    return { revision: await replaceCoManagedStaffAssignments(trx, actor, resolved.target, input.revision, input.assignments) };
   });
 });
 
-export const getCoManagedSlaPolicyScreen = withAuth(async (user, { tenant }, operationId: string) => {
+export const getCoManagedSlaPolicyScreen = withAuth(async (user, { tenant }, target: string | CoManagedManagementSelector) => {
   const actor = await coManagedBrowserActor(user, tenant), { knex } = await createTenantKnex(tenant);
   return withTransaction(knex, async trx => {
-    const resolved = await resolveTarget(trx, tenant, operationId);
+    const resolved = await resolveTarget(trx, actor, policySelection(target));
     if (resolved.side !== 'sponsor') throw new CoManagedPolicyError('FORBIDDEN');
     return getCoManagedSlaPriorityMappings(trx, actor, resolved.target);
   });
 });
 
 export const saveCoManagedSlaPriorityMappings = withAuth(async (user, { tenant }, input: {
-  operationId: string; revision: number; mappings: CoManagedSlaPriorityMapping[];
+  operationId?: string; selector?: CoManagedManagementSelector; revision: number; mappings: CoManagedSlaPriorityMapping[];
 }) => {
   const actor = await coManagedBrowserActor(user, tenant), { knex } = await createTenantKnex(tenant);
   if (!input) throw new CoManagedPolicyError('INVALID_POLICY');
   return withTransaction(knex, async trx => {
-    const resolved = await resolveTarget(trx, tenant, input.operationId);
+    const resolved = await resolveTarget(trx, actor, input.selector ?? policySelection(input.operationId));
     if (resolved.side !== 'sponsor') throw new CoManagedPolicyError('FORBIDDEN');
     return { revision: await replaceCoManagedSlaPriorityMappings(trx, actor, resolved.target, input.revision, input.mappings) };
   });

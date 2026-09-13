@@ -2,9 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { ArrowUpRight } from 'lucide-react';
 import type { CoManagedProvisioningRequest } from '@alga-psa/co-managed';
 import { Button } from '@alga-psa/ui/components/Button';
-import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { BentoChip, BentoTile, type BentoChipTone } from '@alga-psa/ui/components/bento';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
@@ -18,8 +19,14 @@ type Request = Omit<CoManagedProvisioningRequest, 'sponsorTenant' | 'requestedBy
 const emptyForm = (): Omit<Request, 'operationId'> => ({ clientId: '', workspaceName: '', seats: 1,
   administrator: { firstName: '', lastName: '', email: '' }, visibilityMode: 'board_scope', escalationBoardId: '' });
 
-export default function CoManagedProvisioningPanel({ available, canGrow, initialClientId, onChanged }: {
-  available: number; canGrow: boolean; initialClientId?: string; onChanged: () => Promise<void>;
+/** State marker tone, matching the cross-client overview table. */
+const STATE_TONE: Record<string, BentoChipTone> = {
+  active: 'success', queued: 'info', provisioning: 'info', pending_acceptance: 'info',
+  cleanup_requested: 'warning', failed: 'danger', cancelled: 'neutral', terminated: 'neutral',
+};
+
+export default function CoManagedProvisioningPanel({ available, canGrow, initialClientId, onChanged, className }: {
+  available: number; canGrow: boolean; initialClientId?: string; onChanged: () => Promise<void>; className?: string;
 }) {
   const { t } = useTranslation('msp/licensing');
   const [status, setStatus] = useState<Awaited<ReturnType<typeof getCoManagedProvisioningStatus>> | null>(null);
@@ -112,24 +119,33 @@ export default function CoManagedProvisioningPanel({ available, canGrow, initial
   };
   const valid = form.clientId && form.workspaceName.trim() && form.administrator.firstName.trim() && form.administrator.lastName.trim() &&
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.administrator.email) && form.escalationBoardId && Number.isInteger(form.seats) && form.seats >= 1 && form.seats <= available;
-  return <Card><CardHeader><CardTitle>{t('coManaged.provisioning.title')}</CardTitle></CardHeader><CardContent className="space-y-4">
-    {error && <p role="alert" className="text-destructive">{error}</p>}
-    {!status && !error && <p role="status">{t('coManaged.loading')}</p>}
-    <div className="flex flex-wrap gap-3">
-      {status?.canCreate && <Button id="co-managed-create-workspace" disabled={busy || !canGrow || available < 1} onClick={openForm}>
+  return <BentoTile
+    id="co-managed-provisioning"
+    className={className}
+    title={t('coManaged.provisioning.title')}
+    action={status ? <div className="flex flex-wrap items-center gap-3">
+      {status.canCreate && <Button id="co-managed-create-workspace" variant="outline" size="sm" disabled={busy || !canGrow || available < 1} onClick={openForm}>
         {t('coManaged.provisioning.create')}
       </Button>}
-      <Button id="co-managed-refresh-workspaces" variant="outline" disabled={busy} onClick={() => void refresh()}>{t('coManaged.provisioning.refresh')}</Button>
-    </div>
+      <button id="co-managed-refresh-workspaces" type="button" disabled={busy} onClick={() => void refresh()}
+        className="inline-flex items-center gap-0.5 text-xs font-semibold text-primary-600 hover:text-primary-800 whitespace-nowrap disabled:opacity-50">
+        {t('coManaged.provisioning.refresh')}
+        <ArrowUpRight className="h-3 w-3" aria-hidden="true" />
+      </button>
+    </div> : undefined}
+  >
+    <div className="space-y-4">
+    {error && <p role="alert" className="text-destructive">{error}</p>}
+    {!status && !error && <p role="status">{t('coManaged.loading')}</p>}
     {status?.items.length === 0 && <p>{t('coManaged.provisioning.empty')}</p>}
-    {status && status.items.length > 0 && <div className="overflow-x-auto"><Table>
+    {status && status.items.length > 0 && <div className="overflow-x-auto"><Table className="[&_td]:py-2.5 [&_th]:h-10">
       <TableHeader><TableRow>{['workspace', 'administrator', 'seats', 'status', 'actions'].map(key =>
         <TableHead key={key}>{t(`coManaged.provisioning.${key}`)}</TableHead>)}</TableRow></TableHeader>
-      <TableBody>{status.items.map(item => <TableRow key={item.operationId}>
+      <TableBody className="[&_tr]:border-b [&_tr]:border-[rgb(var(--color-border-100))]">{status.items.map(item => <TableRow key={item.operationId}>
         <TableCell>{item.workspaceName ?? t('coManaged.provisioning.workspace')}</TableCell><TableCell>{item.administratorEmail}</TableCell><TableCell>{item.seats}</TableCell>
-        <TableCell>{t(`coManaged.provisioning.states.${item.state}`)}
-          {item.state === 'cleanup_requested' && <p className="text-muted-foreground">{t(item.cleanupFailed ? 'coManaged.provisioning.cleanupFailed' : 'coManaged.provisioning.cleanupPending')}</p>}
-          {item.state === 'pending_acceptance' && <p className="text-muted-foreground">{t(item.invitationExpired ? 'coManaged.provisioning.invitationExpired' : item.invitationSent
+        <TableCell><BentoChip tone={STATE_TONE[item.state] ?? 'neutral'}>{t(`coManaged.provisioning.states.${item.state}`)}</BentoChip>
+          {item.state === 'cleanup_requested' && <p className="mt-1 text-muted-foreground">{t(item.cleanupFailed ? 'coManaged.provisioning.cleanupFailed' : 'coManaged.provisioning.cleanupPending')}</p>}
+          {item.state === 'pending_acceptance' && <p className="mt-1 text-muted-foreground">{t(item.invitationExpired ? 'coManaged.provisioning.invitationExpired' : item.invitationSent
             ? 'coManaged.provisioning.invitationSent' : item.deliveryFailed ? 'coManaged.provisioning.deliveryFailed' : 'coManaged.provisioning.invitationPending')}</p>}
         </TableCell>
         <TableCell><div className="flex gap-2">
@@ -201,5 +217,6 @@ export default function CoManagedProvisioningPanel({ available, canGrow, initial
           allocatedSeats > allocation.seats + (canGrow ? available : 0)} onClick={() => void resize()}>{t('coManaged.provisioning.saveAllocation')}</Button>
       </div>}
     </Dialog>
-  </CardContent></Card>;
+    </div>
+  </BentoTile>;
 }

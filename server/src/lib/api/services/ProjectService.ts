@@ -30,8 +30,6 @@ import {
 } from '../schemas/project';
 import { ConflictError, NotFoundError, ValidationError } from '../middleware/apiMiddleware';
 import { ProjectModel } from '@alga-psa/projects/models';
-import { deleteEntityWithValidation } from '@alga-psa/core/server';
-import { projectKanbanHiddenStatusesKey } from '@alga-psa/projects/lib/kanbanPreferences';
 import { publishEvent, publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
 import { OrderingService } from 'server/src/lib/services/orderingService';
 import { SharedNumberingService } from '@shared/services/numberingService';
@@ -305,7 +303,6 @@ export class ProjectService extends BaseService<IProject> {
       };
 
       const [project] = await db.table(this.tableName).insert(projectData).returning('*');
-      await this.setupDefaultStatusMappings(project.project_id, context, trx);
 
       // Create initial phase if needed
       if (data.create_default_phase) {
@@ -445,15 +442,18 @@ export class ProjectService extends BaseService<IProject> {
         return mutation;
       });
 
-      // Keep events based on the persisted UUID. Named API inputs retain their
-      // response compatibility without changing the row used by subscribers.
-      return {
-        ...result.project,
-        ...(data.status && !this.isUUID(data.status) ? { status: data.status } : {}),
-      } as IProject;
+      return result.project as IProject;
     }
 
 
+  // TODO: This bare DELETE has the same gap that was fixed for tickets — it
+  // skips dependency validation and child-row cleanup. A project with blocking
+  // records (phases, ticket links, interactions, materials, asset associations)
+  // will FK-crash (500) instead of returning a clean 409, and there's no
+  // safeguard against the API force-deleting a project that shouldn't be deleted.
+  // Mirror TicketService.delete: route through deleteEntityWithValidation('project', ...)
+  // (config already exists in @alga-psa/core), clean up child rows, and throw
+  // ConflictError when blocking dependencies exist.
   async delete(id: string, context: ServiceContext): Promise<void> {
       const knex = await this.getDbForContext(context);
 
@@ -480,11 +480,6 @@ export class ProjectService extends BaseService<IProject> {
       });
     }
 
-    await publishEvent({
-      eventType: 'PROJECT_DELETED',
-      payload: { tenantId: context.tenant, projectId: id, userId: context.userId, timestamp: new Date().toISOString() },
-    });
-  }
 
   // Project phases
   async getPhases(projectId: string, context: ServiceContext): Promise<IProjectPhase[]> {
@@ -1181,12 +1176,6 @@ export class ProjectService extends BaseService<IProject> {
       });
     }
 
-    for (const [index, mapping] of mappings.entries()) {
-      await ProjectModel.addProjectStatusMapping(trx, context.tenant, projectId, {
-        ...mapping, custom_name: null, display_order: index + 1, is_visible: true,
-      });
-    }
-  }
 
   private async getProjectStatistics(projectId: string, context: ServiceContext): Promise<any> {
       const knex = await this.getDbForContext(context);

@@ -157,6 +157,12 @@ interface TicketingDashboardProps {
   /** True when this tab has a stored document of its own (Reset has work to do). */
   hasStoredDefaultView?: boolean;
   onSavedViewChanged?: (boardId: string | null, saved: TicketViewSettings | null) => void;
+  /**
+   * App-owned source scope control (working/oversight + workspace). Injected as
+   * a slot so this package component never imports the app's co-managed actions
+   * or feature boundary. Rendered below the heading, above the board strip.
+   */
+  scopeControls?: React.ReactNode;
 }
 
 const useDebounce = <T,>(value: T, delay: number): T => {
@@ -295,6 +301,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   savedViewSettings,
   hasStoredDefaultView = false,
   onSavedViewChanged,
+  scopeControls,
 }) => {
   const BUNDLE_VIEW_STORAGE_KEY = 'tickets_bundle_view';
   const router = useRouter();
@@ -2157,6 +2164,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
           </Button>
         </div>
       </div>
+      {scopeControls}
       <BoardTabStrip
         id={`${id}-board-tabs`}
         tabs={boardTabs}
