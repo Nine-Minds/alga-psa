@@ -2969,9 +2969,31 @@ async function withPolicyActionFixture(work: (fixture: Awaited<ReturnType<typeof
   const dbModule = await import('@alga-psa/db');
   const auth = await import('@alga-psa/auth');
   const spy = vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: db, tenant: fixture.actor.tenant });
+  const sessions = new Map<string, string>();
   const asActor = async <T>(actor: { tenant: string; userId: string }, callback: () => Promise<T>): Promise<T> => {
     const user = await tenantDb(db, actor.tenant).table('users').where('user_id', actor.userId).first();
-    return auth.runWithApiKeyUser(user, () => runWithTenant(actor.tenant, callback));
+    // The co-managed policy actions bind the tracked browser session and refuse
+    // API-key authority (browserActor.ts). runWithApiKeyUser is still how this
+    // fixture tells withAuth who the caller is — getCurrentUser reads the
+    // override through a direct import — so the barrel spies below hide it from
+    // browserActor only, and supply the matching session it demands.
+    let sessionId = sessions.get(`${actor.tenant}:${actor.userId}`);
+    if (!sessionId) {
+      sessionId = randomUUID();
+      await tenantDb(db, actor.tenant).table('sessions').insert({ tenant: actor.tenant, session_id: sessionId,
+        user_id: actor.userId, expires_at: new Date(Date.now() + 3600000) });
+      sessions.set(`${actor.tenant}:${actor.userId}`, sessionId);
+    }
+    const spies = [
+      vi.spyOn(auth, 'getApiKeyUserOverride').mockReturnValue(undefined),
+      vi.spyOn(auth, 'getSession').mockResolvedValue({ session_id: sessionId,
+        user: { id: actor.userId, tenant: actor.tenant, user_type: user.user_type } } as any),
+    ];
+    try {
+      return await auth.runWithApiKeyUser(user, () => runWithTenant(actor.tenant, callback));
+    } finally {
+      for (const s of spies.reverse()) s.mockRestore();
+    }
   };
   try {
     const actions = await import('../../lib/actions/coManagedPolicyActions');

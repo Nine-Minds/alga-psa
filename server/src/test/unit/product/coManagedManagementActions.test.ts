@@ -90,9 +90,18 @@ describe('sponsor management authentication adapters', () => {
   });
   it('never presents hosted purchase for self-host or unavailable enterprise implementations', async () => {
     mocks.permission.mockImplementation(async (_user, resource) => resource === 'account_management');
+    // isEnterpriseEdition() reads ambient EDITION/NEXT_PUBLIC_EDITION, so both
+    // arms pin the edition rather than inheriting whatever the shell exported.
+    // Sourcing server/.env.local (the documented recipe for the integration
+    // runs) otherwise flips this case to provider_unconfigured.
+    vi.stubEnv('EDITION', 'ee');
+    vi.stubEnv('NEXT_PUBLIC_EDITION', 'enterprise');
     mocks.license.mockResolvedValue({ signed_license: 'signed' });
     expect((await getCoManagedBillingState()).purchase).toMatchObject({ deployment: 'self_host', canPurchase: false, reason: 'self_host_license' });
     mocks.license.mockResolvedValue(null);
+    vi.stubEnv('EDITION', '');
+    vi.stubEnv('NEXT_PUBLIC_EDITION', '');
     expect((await getCoManagedBillingState()).purchase).toMatchObject({ implementationAvailable: false, canPurchase: false, reason: 'implementation_unavailable' });
+    vi.unstubAllEnvs();
   });
 });

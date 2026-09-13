@@ -4,7 +4,7 @@ import { withAuth } from '@alga-psa/auth';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { getCoManagedOperationalState } from '@alga-psa/licensing';
 import { getCoManagedCollaborationPolicy, replaceCoManagedCustomerScope, replaceCoManagedStaffAssignments,
-  CoManagedPolicyError, resolveCoManagedManagementTarget, type CoManagedCustomerScope, type CoManagedStaffAssignment,
+  CoManagedPolicyError, CoManagedSharedWorkError, resolveCoManagedManagementTarget, type CoManagedCustomerScope, type CoManagedStaffAssignment,
   type CoManagedManagementSelector } from '@alga-psa/co-managed';
 import { getCoManagedSlaPriorityMappings, replaceCoManagedSlaPriorityMappings, type CoManagedSlaPriorityMapping } from '@alga-psa/co-managed';
 import type { CoManagedSessionActor } from '@alga-psa/co-managed';
@@ -38,7 +38,16 @@ async function resolveTarget(db: Knex, actor: CoManagedSessionActor, selection: 
     return { side: 'sponsor' as const, target: { customerTenant: operation.customer_tenant as string, relationshipId: operation.relationship_id as string },
       otherTenant: operation.customer_tenant as string };
   }
-  const resolution = await resolveCoManagedManagementTarget(db, actor, selection);
+  // The management layer denies with CoManagedSharedWorkError. These actions
+  // publish a CoManagedPolicyError contract, so translate rather than leaking a
+  // second error shape (and a different code) to the policy UI.
+  let resolution;
+  try {
+    resolution = await resolveCoManagedManagementTarget(db, actor, selection);
+  } catch (error) {
+    if (error instanceof CoManagedSharedWorkError) throw new CoManagedPolicyError('FORBIDDEN');
+    throw error;
+  }
   if (resolution.kind !== 'resolved') throw new CoManagedPolicyError('FORBIDDEN');
   return { side: resolution.target.side, target: { customerTenant: resolution.target.customerTenant, relationshipId: resolution.target.relationshipId },
     otherTenant: resolution.target.otherTenant };

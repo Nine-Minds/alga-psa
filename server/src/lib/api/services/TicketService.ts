@@ -1097,10 +1097,21 @@ export class TicketService extends BaseService<ITicket> {
           mime_type: mimeType,
           file_size: file.size,
           folder_path: folderRecord?.folder_path,
+          // A comment attachment is authored to be published with the comment,
+          // so it is client-visible from the start; the draft row below is what
+          // withholds it until the comment is actually posted.
+          ...(commentAttachmentDraft ? { is_client_visible: true } : {}),
         };
 
         await assertCoManagedOperationalWrite(trx, context.tenant);
         await tenantScopedTable(trx, 'documents', context.tenant).insert(document);
+        // The draft row is what reconcileCommentAttachments later promotes to
+        // 'published'. Without it the canAccessAttachmentTicket guard above
+        // protects nothing and the attachment silently never attaches.
+        if (commentAttachmentDraft) await tenantDb(trx, context.tenant).table('ticket_comment_attachments').insert({
+          tenant: context.tenant, ticket_id: ticketId, document_id: documentId,
+          created_by: context.userId, state: 'draft', expires_at: new Date(Date.now() + 86400000),
+        });
         await tenantScopedTable(trx, 'document_associations', context.tenant).insert({
           association_id: uuidv4(),
           document_id: documentId,
@@ -2337,6 +2348,12 @@ export class TicketService extends BaseService<ITicket> {
         .where({ comment_id: commentId })
         .update(update)
         .returning('*');
+
+      // Editing the note body changes which attachments it references. Without
+      // this, an attachment dropped from the text is never marked removed, so
+      // it stays readable and email-deliverable, and a newly referenced draft
+      // is never promoted and silently expires.
+      await reconcileCommentAttachments(trx, context.tenant, commentId, context.userId);
 
       await retainNativeConversationEvent(trx, { tenant: context.tenant, ticketId, commentId },
         { kind: 'event', eventType: 'TICKET_COMMENT_UPDATED', payload: { tenantId: context.tenant, ticketId, commentId, userId: context.userId } },
