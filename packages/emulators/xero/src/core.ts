@@ -40,7 +40,7 @@ export interface XeroTokenResponse {
   scope: string;
 }
 
-const DEFAULT_SCOPE = 'offline_access accounting.settings.read accounting.invoices accounting.contacts';
+const DEFAULT_SCOPE = 'offline_access accounting.settings.read accounting.invoices accounting.payments.read accounting.contacts';
 
 /**
  * Pure state machine behind the Xero vendor surface: the identity authorize +

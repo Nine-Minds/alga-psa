@@ -15,7 +15,10 @@ export function XeroLiveMappingManager({ defaultConnection }: XeroLiveMappingMan
   const { t } = useTranslation('msp/integrations');
   const modules = useMemo(() => createXeroLiveMappingModules(t), [t]);
   const context = useMemo<AccountingMappingContext>(() => ({
-    realmId: defaultConnection.xeroTenantId,
+    // The canonical mapping identity is the Xero connection id — the same key
+    // outbound export and inbound reconciliation resolve against. The
+    // organisation id (xeroTenantId) is only the API tenant header.
+    realmId: defaultConnection.connectionId,
     connectionId: defaultConnection.connectionId,
     realmDisplayValue: defaultConnection.tenantName ?? defaultConnection.xeroTenantId
   }), [defaultConnection]);

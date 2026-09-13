@@ -208,3 +208,121 @@ The focused acceptance checklist is in `ee/docs/plans/2026-09-13-accounting-sync
 - Xero finishes all numbered pages, including histories exceeding the former 1000-page cap. Repeated page identities or empty continuing pages fail the poll, retaining its cursor. Progress is independent of timestamp ordering, ties or missing update timestamps. QBO truncated CDC responses still preserve the cursor and show incomplete status.
 - A real DB test interrupts replacement after reversal and after the new AR writes but before their ledger insert. The new writes roll back; replay restores the paid balance with exactly two payment transactions and one reversal, with no further replay effect.
 - HTTP-boundary tests mock axios; DB integration tests mock the Xero client factory. Neither exercises a live external Xero account.
+
+## Mitigation round 2026-09-13 (four smoke failures)
+
+The scope-enforcing smoke run against `0a6d4c9cd8` (evidence under
+`/tmp/alga-smoke-evidence/shared-accounting-xero-20260913-2130`) passed routing,
+export, payment/credit reconciliation, pagination and capability gating, and
+failed four narrow acceptance checks. This round repairs only those four and
+keeps every prior invariant.
+
+### 1. Xero payment polling needs `accounting.payments.read`
+
+`DEFAULT_XERO_SCOPES` omitted the Payments scope because no pre-polling flow
+called `/Payments`; inbound polling now does. Add `accounting.payments.read`
+(read-only — outbound payment/credit/void stay gated). Connection scope is
+already persisted from the token response, so existing reduced-scope
+connections are detectable:
+
+- `computeMissingXeroScopes(grantedScope, required)` accepts legacy broad
+  scopes (`accounting.transactions`, `accounting.transactions.read`,
+  `accounting.payments`, `accounting.settings`) as satisfying their granular
+  replacements, and returns `[]` for an unknown/absent stored scope so legacy
+  connections are never falsely blocked.
+- `XeroConnectionSummary` carries the granted `scope` and any `missingScopes`.
+- `getXeroConnectionStatus` surfaces an actionable reauthorization error
+  (reconnect grants the updated set; a token refresh does not) and reports the
+  connection as not usable.
+- A persistent 401 on `/Payments` when the stored scope is known to lack the
+  payment read scope throws `XERO_SCOPE_INSUFFICIENT`, which the cycle treats as
+  reconnect-required (no cursor advance); transient failures stay retryable.
+
+### 2. One mapping identity: the Xero connection id
+
+The canonical target is the connection id; `xeroTenantId` is the API tenant
+header. The UI mapping context persisted `xeroTenantId` while export resolution
+looked up the connection id, so a UI-created mapping never resolved.
+
+- `XeroLiveMappingManager` sets `realmId = connectionId` (as QBO already does),
+  so list/create/update and catalog calls all use the connection id.
+- A shared `resolveXeroRealmAliases(tenantId, targetRealm)` returns the ordered
+  accepted realm ids: the connection id first, then its `xeroTenantId` only
+  when ownership is verified unique within the tenant. Unknown or ambiguous
+  targets return the exact id only (fail closed), never another organisation's.
+- `AccountingMappingResolver`, `KnexInvoiceMappingRepository`, the
+  `SyncMappingLedger` realm scope and `XeroAdapter.findRemovedCreditAllocations`
+  accept the alias set, preferring the exact connection id and keeping the
+  existing NULL-realm fallback for catalog defaults.
+- Historical org-keyed rows therefore still resolve for the owning connection
+  and remain invisible to every other tenant and organisation.
+
+### 3. Persisted provider-scoped default selection
+
+`getXeroConnectionStatus` and the catalog helpers used `summaries[0]` /
+first-key ordering, ignoring the persisted `settings.accountingSync.defaultRealm`
+that `resolveConnectedAccountingIntegration` already honours.
+
+- `resolveDefaultXeroConnectionId(tenantId)` reads the persisted default and
+  returns it when it names a connected Xero connection (accepting a historical
+  org id owned by exactly one connection); otherwise it falls back to the first
+  connection.
+- Status, catalog load and default-dependent helpers all use it. Explicit
+  connection requests stay authoritative and fail closed when unavailable.
+- The settings-UI event `accounting-default-realm-changed` reloads the Xero
+  settings panel when the health panel changes the default. QBO's own
+  ordering-derived default is untouched.
+
+### 4. Terminal failed operations count as errors in health
+
+`markFailedTerminal` writes `status = 'failed'`, but `getAccountingSyncHealth`
+counted only `skipped`, so a capability-gated Xero operation showed as zero
+errored ops. Count `failed` alongside `skipped`; the counts remain scoped to
+tenant + provider + target realm.
+
+### Validation
+
+- HTTP-boundary tests with a scope-enforcing provider: fresh authorization
+  requests the payment read scope and Payments polling succeeds; a known
+  reduced-scope connection gets `XERO_SCOPE_INSUFFICIENT` with the missing
+  scope; a revoked refresh is still reconnect-required and a 5xx stays
+  retryable.
+- DB-backed tests: UI-identity mapping resolves for export; a historical
+  org-keyed mapping resolves for its owning connection and for no other
+  tenant/org; an ambiguous org owner aliases nothing.
+- Action/UI tests: selected B persists and status + catalog + mapping route to
+  B with QBO also connected; explicit unavailable selection fails closed.
+- Health tests: `skipped` + `failed` counted, other-org failures excluded.
+- Focused QBO regressions, replay/reversal, pagination-failure cursor
+  preservation and reconnect classification remain green.
+
+### Mitigation round results (2026-09-13)
+
+Implemented in this round and verified with behavioral tests, no live vendor
+call and no full Next.js build (billing `tsup` build ran):
+
+- `packages/integrations`: 810 passed / 2 pre-existing unrelated
+  `teamsPackageActions` mock failures. New: real local HTTP scope-enforcing
+  boundary (Payments 401 unless a payment scope is granted) passes with the
+  shipped default scopes, denies a reduced grant with
+  `XERO_SCOPE_INSUFFICIENT`, and accepts a legacy `accounting.transactions`
+  grant; polling/refresh classification unchanged.
+- `packages/billing` accounting-sync unit set: 290 passed, including the QBO
+  simulator scenarios, capability gating, pagination/cursor and health counts.
+- DB-backed (`TEST_DB_NAME=test_shared_acct_mitigation*`, serial): mapping
+  realm/alias 13, Xero payment reconciliation 6, cycle repository 2, Xero
+  fail-closed 2, QBO unlink-export mapping suppression 2 (the pre-existing
+  `qboAdapterUnlinkExport.db.test.ts` suite itself fails on an unseeded
+  `invoices` row, unrelated to this round), plus the server Xero inbound
+  reconciliation integration 11 and Xero live-export/mapping integration 12.
+- `packages/integrations`, `packages/billing` and `packages/types` typechecks
+  pass with `NODE_OPTIONS=--max-old-space-size=12288`; `packages/emulators/xero`
+  typecheck and tests pass; changed-file ESLint reports 0 errors.
+- Pre-existing, out of scope: 5 billing curated suites fail on locale-pack
+  parity (`integrations.qbo.sync.autoProvisionCustomersLabelProvider` and
+  contract-lines/credits keys), and the `teamsPackageActions` suite fails on a
+  partial `@alga-psa/core/secrets` mock. Neither is touched by this round.
+
+Validation used a local HTTP simulator and DB fixtures only — no live Xero or
+QBO account. Billing `npm run build` (tsup) passed; no full production Next.js
+build was run.

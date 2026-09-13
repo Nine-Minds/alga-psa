@@ -299,6 +299,11 @@ function SyncHealthPanel({ adapterType }: SyncHealthPanelProps) {
                               defaultValue: 'Could not select this organisation. Reconnect and try again.'
                             }));
                             await loadHealth();
+                            window.dispatchEvent(
+                              new CustomEvent('accounting-default-realm-changed', {
+                                detail: { adapterType: providerType, realmId: realm.realmId }
+                              })
+                            );
                           } catch (error) {
                             setSyncNowFeedback({ type: 'error', message: getErrorMessage(error) });
                           } finally {

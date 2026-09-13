@@ -176,6 +176,17 @@ describe('accounting sync actions organisation scoping', () => {
     expect(countOperationsByStatusMock).not.toHaveBeenCalled();
   });
 
+  it('counts terminal failed operations alongside skipped, scoped to the organisation', async () => {
+    countOperationsByStatusMock.mockResolvedValue({ pending: 1, in_progress: 2, skipped: 1, failed: 3 });
+    const selection = { preferredAdapterType: 'xero', preferredTargetRealm: 'conn-1' };
+
+    const health = await (getAccountingSyncHealth as any)(USER, { tenant: TENANT }, selection);
+
+    expect(countOperationsByStatusMock).toHaveBeenCalledWith(TENANT, 'xero', 'conn-1');
+    expect(health.erroredOps).toBe(4); // 1 skipped + 3 failed
+    expect(health.pendingOps).toBe(3); // 1 pending + 2 in_progress
+  });
+
   it('marks the explicitly selected QBO realm as the health target', async () => {
     qboCredentialsMock.mockResolvedValue({ 'realm-1': {}, 'realm-2': {} });
     resolveSyncTargetMock.mockResolvedValue({ integration: { adapterType: 'quickbooks_online', targetRealm: 'realm-2' } });

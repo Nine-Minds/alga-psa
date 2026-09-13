@@ -71,6 +71,7 @@ describe('XeroIntegrationSettings contracts', () => {
         'offline_access',
         'accounting.settings.read',
         'accounting.invoices',
+        'accounting.payments.read',
         'accounting.contacts'
       ],
       scopeSource: 'default',
@@ -98,8 +99,10 @@ describe('XeroIntegrationSettings contracts', () => {
     expect(screen.getByText('offline_access')).toBeInTheDocument();
     expect(screen.getByText('accounting.settings.read')).toBeInTheDocument();
     expect(screen.getByText('accounting.invoices')).toBeInTheDocument();
+    expect(screen.getByText('accounting.payments.read')).toBeInTheDocument();
     expect(screen.getByText('accounting.contacts')).toBeInTheDocument();
     expect(screen.queryByText('accounting.banktransactions')).not.toBeInTheDocument();
+    // The write payment scope is never requested; only the read scope is.
     expect(screen.queryByText('accounting.payments')).not.toBeInTheDocument();
     expect(
       screen.getByText(/An existing connection keeps the scopes it was originally granted/)

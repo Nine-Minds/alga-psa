@@ -19,15 +19,18 @@ vi.mock('@alga-psa/core/logger', () => ({
 }));
 
 import {
+  computeMissingXeroScopes,
   getXeroOAuthScopeConfig,
   getXeroOAuthScopes,
-  getXeroOAuthScopesString
+  getXeroOAuthScopesString,
+  XERO_PAYMENT_READ_SCOPE
 } from './xeroClientService';
 
 const REDUCED_DEFAULTS = [
   'offline_access',
   'accounting.settings.read',
   'accounting.invoices',
+  'accounting.payments.read',
   'accounting.contacts'
 ];
 
@@ -47,7 +50,7 @@ describe('Xero OAuth scope configuration', () => {
     }
   });
 
-  it('defaults new authorizations to the reduced scope set', () => {
+  it('defaults new authorizations to the reduced read-only scope set including payments read', () => {
     const config = getXeroOAuthScopeConfig();
 
     expect(config.scopes).toEqual(REDUCED_DEFAULTS);
@@ -55,13 +58,15 @@ describe('Xero OAuth scope configuration', () => {
     expect(config.invalidOverrideScopes).toBeUndefined();
     expect(getXeroOAuthScopes()).toEqual(REDUCED_DEFAULTS);
     expect(getXeroOAuthScopesString()).toBe(REDUCED_DEFAULTS.join(' '));
+    expect(config.scopes).toContain(XERO_PAYMENT_READ_SCOPE);
   });
 
-  it('does not request manage-level settings, bank transaction, or payment scopes by default', () => {
+  it('does not request manage-level settings, bank transactions, or payment-write scopes by default', () => {
     const scopes = getXeroOAuthScopes();
 
     expect(scopes).not.toContain('accounting.settings');
     expect(scopes).not.toContain('accounting.banktransactions');
+    // Read-only payments polling must not enable outbound payment writes.
     expect(scopes).not.toContain('accounting.payments');
   });
 
@@ -100,5 +105,44 @@ describe('Xero OAuth scope configuration', () => {
       expect.stringContaining('ignoring malformed XERO_OAUTH_SCOPES override'),
       { invalidScopes: ['Accounting.Settings', 'a$scope'] }
     );
+  });
+
+  describe('computeMissingXeroScopes', () => {
+    const required = ['accounting.settings.read', 'accounting.invoices', XERO_PAYMENT_READ_SCOPE, 'accounting.contacts'];
+
+    it('reports the payment read scope missing from the reduced authorization set', () => {
+      expect(
+        computeMissingXeroScopes(
+          'offline_access accounting.settings.read accounting.invoices accounting.contacts',
+          [XERO_PAYMENT_READ_SCOPE]
+        )
+      ).toEqual([XERO_PAYMENT_READ_SCOPE]);
+    });
+
+    it('treats legacy broad scopes as satisfying their granular replacements', () => {
+      expect(
+        computeMissingXeroScopes(
+          'offline_access accounting.settings accounting.transactions accounting.contacts',
+          required
+        )
+      ).toEqual([]);
+      expect(
+        computeMissingXeroScopes('accounting.transactions.read', [XERO_PAYMENT_READ_SCOPE])
+      ).toEqual([]);
+      // The write payment scope implies read.
+      expect(computeMissingXeroScopes('accounting.payments', [XERO_PAYMENT_READ_SCOPE])).toEqual([]);
+    });
+
+    it('does not flag an unknown or absent stored grant', () => {
+      expect(computeMissingXeroScopes(undefined, required)).toEqual([]);
+      expect(computeMissingXeroScopes('', required)).toEqual([]);
+      expect(computeMissingXeroScopes(null, required)).toEqual([]);
+    });
+
+    it('reports every unsatisfied required scope for a partial grant', () => {
+      expect(
+        computeMissingXeroScopes('offline_access accounting.invoices', required)
+      ).toEqual(['accounting.settings.read', XERO_PAYMENT_READ_SCOPE, 'accounting.contacts']);
+    });
   });
 });

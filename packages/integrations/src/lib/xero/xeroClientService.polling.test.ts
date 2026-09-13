@@ -118,4 +118,67 @@ describe('XeroClientService polling HTTP boundary', () => {
     }
     expect(['XERO_REFRESH_FAILED', 'XERO_UNAUTHORIZED', 'XERO_REFRESH_EXPIRED']).toContain(failure?.code);
   });
+
+  it('classifies a persistent Payments 401 under a known reduced grant as actionable scope-insufficient', async () => {
+    // Build the client directly so the refresh path can be stubbed: the
+    // scenario is a token refresh that succeeds while Payments still 401s,
+    // which is the signature of an insufficient grant.
+    const client = Object.create(XeroClientService.prototype) as any;
+    client.tenantId = TENANT;
+    client.connection = {
+      connectionId: 'conn-limited',
+      xeroTenantId: 'tenant-limited',
+      accessToken: 'access-limited',
+      refreshToken: 'refresh-limited',
+      accessTokenExpiresAt: '2999-01-01T00:00:00.000Z',
+      scope: 'offline_access accounting.invoices accounting.contacts'
+    };
+    client.connections = { 'conn-limited': client.connection };
+    client.appSecrets = { clientId: 'app-client-id', clientSecret: 'app-client-secret' };
+    vi.spyOn(client, 'refreshAccessToken').mockResolvedValue(undefined);
+    vi.spyOn(axios, 'request').mockRejectedValue({
+      isAxiosError: true,
+      message: 'unauthorized',
+      response: { status: 401, headers: {}, data: {} }
+    });
+
+    let failure: any;
+    try {
+      await client.listChangedPayments('2026-01-01T00:00:00.000Z', 1);
+    } catch (error) {
+      failure = error;
+    }
+
+    expect(failure?.code).toBe('XERO_SCOPE_INSUFFICIENT');
+    expect(failure?.message).toContain('accounting.payments.read');
+    expect(failure?.message).toContain('Reconnect');
+    expect(failure?.message).toContain('refreshing');
+    expect(failure?.details?.missingScopes).toEqual(['accounting.payments.read']);
+  });
+
+  it('accepts a legacy broad transactions grant for Payments polling', async () => {
+    const client = Object.create(XeroClientService.prototype) as any;
+    client.tenantId = TENANT;
+    client.connection = {
+      connectionId: 'conn-legacy',
+      xeroTenantId: 'tenant-legacy',
+      accessToken: 'access-legacy',
+      refreshToken: 'refresh-legacy',
+      accessTokenExpiresAt: '2999-01-01T00:00:00.000Z',
+      scope: 'offline_access accounting.settings accounting.transactions accounting.contacts'
+    };
+    client.connections = { 'conn-legacy': client.connection };
+    client.appSecrets = { clientId: 'app-client-id', clientSecret: 'app-client-secret' };
+
+    const requestMock = vi.spyOn(axios, 'request').mockResolvedValue({
+      data: { Payments: [{ PaymentID: 'pay-1' }] }
+    } as any);
+
+    const page = await client.listChangedPayments('2026-01-01T00:00:00.000Z', 1);
+
+    // No scope-insufficient failure: legacy broad scopes satisfy the granular
+    // requirement (asserted by the request reaching the provider).
+    expect(page.records).toHaveLength(1);
+    expect(requestMock).toHaveBeenCalled();
+  });
 });

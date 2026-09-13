@@ -1,7 +1,7 @@
 import axios, { AxiosError, AxiosRequestConfig } from 'axios';
 import logger from '@alga-psa/core/logger';
 import { getSecretProviderInstance, type ISecretProvider } from '@alga-psa/core/secrets';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { retireTerminalDisconnectRecord } from '../providerDisconnect/retire';
 import {
   getProviderCredentialWriteDisposition,
@@ -32,16 +32,62 @@ const XERO_CLIENT_ID_SECRET = 'xero_client_id';
 const XERO_CLIENT_SECRET_SECRET = 'xero_client_secret';
 const ACCESS_TOKEN_BUFFER_SECONDS = 300;
 // Minimum scope set covering shipped functionality: invoice export (POST/GET
-// /Invoices), contact export (GET/POST /Contacts), and read-only settings
-// lookups (GET /Accounts, /Items, /TaxRates, /TrackingCategories — all covered
-// by accounting.settings.read). No shipped flow calls the Payments or
-// BankTransactions APIs, so those scopes are not requested by default.
+// /Invoices), contact export (GET/POST /Contacts), read-only settings lookups
+// (GET /Accounts, /Items, /TaxRates, /TrackingCategories — covered by
+// accounting.settings.read), and inbound payment polling (GET /Payments —
+// accounting.payments.read, read-only). No shipped flow writes payments,
+// credit notes or voids, so the write scopes are deliberately absent.
 const DEFAULT_XERO_SCOPES = [
   'offline_access',
   'accounting.settings.read',
   'accounting.invoices',
+  'accounting.payments.read',
   'accounting.contacts'
 ];
+
+/** The read-only Payments scope required for Xero inbound payment polling. */
+export const XERO_PAYMENT_READ_SCOPE = 'accounting.payments.read';
+
+// Xero still honours the pre-granular broad scopes for authorizations granted
+// before the split (until its legacy cutoff). A stored connection carrying one
+// of these satisfies the granular scope it covers, so existing broad-scope
+// connections are never falsely flagged as missing permissions.
+const XERO_LEGACY_SCOPE_EQUIVALENTS: Record<string, readonly string[]> = {
+  'accounting.settings.read': ['accounting.settings'],
+  'accounting.invoices': ['accounting.transactions', 'accounting.transactions.read'],
+  [XERO_PAYMENT_READ_SCOPE]: [
+    'accounting.payments',
+    'accounting.transactions',
+    'accounting.transactions.read'
+  ],
+  'accounting.contacts': []
+};
+
+/**
+ * Scopes in `required` that the granted scope string does not satisfy, taking
+ * legacy broad-scope equivalents into account.
+ *
+ * An absent/empty granted scope returns an empty list: the stored grant is
+ * unknown, and guessing would block a legacy connection that may be perfectly
+ * entitled. Callers use this only to produce an actionable reauthorization
+ * message, never to assume a grant exists.
+ */
+export function computeMissingXeroScopes(
+  grantedScope: string | null | undefined,
+  required: readonly string[] = DEFAULT_XERO_SCOPES
+): string[] {
+  if (!grantedScope || grantedScope.trim() === '') {
+    return [];
+  }
+  const granted = new Set(grantedScope.split(/\s+/).filter(Boolean));
+  return required.filter((scope) => {
+    if (granted.has(scope)) {
+      return false;
+    }
+    const legacy = XERO_LEGACY_SCOPE_EQUIVALENTS[scope] ?? [];
+    return !legacy.some((alternative) => granted.has(alternative));
+  });
+}
 
 // Provider endpoint overrides so test environments can point at the local
 // provider simulator (tools/smoke-sim/accounting-provider-simulator.cjs)
@@ -351,6 +397,13 @@ export interface XeroConnectionSummary {
   xeroTenantId: string;
   tenantName?: string;
   status?: 'connected' | 'expired';
+  /** Scope granted by Xero on the authorization that created this connection. */
+  scope?: string;
+  /**
+   * Required scopes the granted scope does not satisfy. Empty/absent when the
+   * grant is unknown (legacy stored connection without a scope) or complete.
+   */
+  missingScopes?: string[];
 }
 
 export interface XeroConnectionsStore {
@@ -608,7 +661,26 @@ export class XeroClientService {
     } catch (error) {
       // Normalize so polling callers classify 401s and expired credentials as
       // terminal auth failures instead of a generic request error.
-      throw this.normalizeError(error);
+      const normalized = this.normalizeError(error);
+      // A persistent 401 on the Payments feed (the client already retried after
+      // a token refresh) is the signature of a connection authorized without
+      // the payment read scope. Surface the missing grant as actionable
+      // reauthorization rather than a generic authentication failure. A token
+      // refresh keeps the original grant, so only a fresh authorization adds
+      // the scope.
+      if (normalized.code === 'XERO_UNAUTHORIZED' && path === '/Payments') {
+        const missingScopes = computeMissingXeroScopes(this.connection.scope, [
+          XERO_PAYMENT_READ_SCOPE
+        ]);
+        if (missingScopes.length > 0) {
+          throw new AppError(
+            'XERO_SCOPE_INSUFFICIENT',
+            `This Xero connection was not authorized for payments polling (missing ${missingScopes.join(', ')}). Reconnect Xero to grant the updated permissions — refreshing the existing connection keeps its current permissions and will not add them.`,
+            { missingScopes, connectionId: this.connection.connectionId }
+          );
+        }
+      }
+      throw normalized;
     }
 
     const collectionKey = path.replace(/^\//, '');
@@ -1041,15 +1113,69 @@ export async function getXeroConnectionSummaries(tenantId: string): Promise<Xero
 
   for (const connection of Object.values(connections)) {
     const expiresAt = new Date(connection.accessTokenExpiresAt).getTime();
+    const missingScopes = computeMissingXeroScopes(connection.scope);
     summaries.push({
       connectionId: connection.connectionId,
       xeroTenantId: connection.xeroTenantId,
       tenantName: connection.tenantName,
-      status: Date.now() < expiresAt ? 'connected' : 'expired'
+      status: Date.now() < expiresAt ? 'connected' : 'expired',
+      scope: connection.scope,
+      ...(missingScopes.length > 0 ? { missingScopes } : {})
     });
   }
 
   return summaries;
+}
+
+/**
+ * Resolve the connection id the tenant has selected as the live Xero default.
+ *
+ * The persisted `tenant_settings.accountingSync.defaultRealm` is the single
+ * selection that outbound sync already honours, so settings/catalog/mapping
+ * must read the same value. It may name the connection id directly or, for a
+ * connection created before the canonical identity moved to the connection id,
+ * the organisation id owned by exactly one connection. When the persisted
+ * value is absent, stale, or ambiguously owned, fall back to the first stored
+ * connection — never to another provider's selection.
+ */
+export async function resolveDefaultXeroConnectionId(tenantId: string): Promise<string | null> {
+  const connections = await getTenantConnections(tenantId);
+  const connectionIds = Object.keys(connections);
+  if (connectionIds.length === 0) {
+    return null;
+  }
+
+  let persisted: string | null = null;
+  try {
+    const { knex } = await createTenantKnex(tenantId);
+    const row = await tenantDb(knex, tenantId).table('tenant_settings')
+      .select('settings')
+      .first();
+    const candidate = row?.settings?.accountingSync?.defaultRealm;
+    if (typeof candidate === 'string' && candidate.trim().length > 0) {
+      persisted = candidate.trim();
+    }
+  } catch (error) {
+    logger.warn('[XeroClientService] failed to read persisted Xero default; using first connection', {
+      tenantId,
+      errorName: error instanceof Error ? error.name : 'unknown'
+    });
+    return connectionIds[0];
+  }
+
+  if (persisted) {
+    if (connections[persisted]) {
+      return persisted;
+    }
+    const owners = Object.values(connections).filter(
+      (connection) => connection.xeroTenantId === persisted
+    );
+    if (owners.length === 1) {
+      return owners[0].connectionId;
+    }
+  }
+
+  return connectionIds[0];
 }
 
 export async function getDefaultXeroTenantId(tenantId: string): Promise<string | null> {

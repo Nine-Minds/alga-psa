@@ -66,6 +66,10 @@ const AUTH_ERROR_CODES = new Set([
   'XERO_REFRESH_EXPIRED',
   'XERO_REFRESH_FAILED',
   'XERO_UNAUTHORIZED',
+  // A connection authorized without the payment read scope cannot poll
+  // Payments; reauthorization (reconnect) is required and the grant is
+  // unchanged by a token refresh.
+  'XERO_SCOPE_INSUFFICIENT',
   'XERO_CONNECTION_NOT_FOUND',
   'XERO_NOT_CONFIGURED'
 ]);
