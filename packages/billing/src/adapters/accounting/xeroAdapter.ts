@@ -163,8 +163,8 @@ export class XeroAdapter implements AccountingExportAdapter {
    *
    * Pagination: each Xero collection is fetched page by page (100 per page)
    * until a short page is returned, so the caller receives a complete change
-   * set before the cycle may advance its cursor. `truncated` is set only if a
-   * safety page cap is hit.
+   * set before the cycle may advance its cursor. A repeated page fails the
+   * poll rather than returning an incomplete set or looping indefinitely.
    *
    * Replay/idempotency: every emitted change carries a stable external id and
    * a `syncToken` (Xero UpdatedDateUTC, plus amount for synthesized credit
@@ -248,13 +248,8 @@ export class XeroAdapter implements AccountingExportAdapter {
       changes.unshift(...removed);
     }
 
-    // No nextCursor is emitted: with a single stored timestamp there is no safe
-    // resume boundary when a feed truncates. Xero pages are not guaranteed to
-    // be ordered by UpdatedDateUTC, and a set larger than the page cap can share
-    // one timestamp across pages, so advancing to the newest fetched record (or
-    // to a newer completed feed's timestamp) can skip unread history. The cycle
-    // leaves the cursor untouched on a truncated poll and re-polls the same
-    // window until the source stops truncating.
+    // Only a fully collected set may advance the pre-poll watermark. Timestamps
+    // from individual feeds cannot represent progress through numbered pages.
     return {
       changes,
       truncated,
@@ -268,9 +263,10 @@ export class XeroAdapter implements AccountingExportAdapter {
     since: string
   ): Promise<{ records: Array<Record<string, any>>; truncated: boolean }> {
     const records: Array<Record<string, any>> = [];
-    const MAX_PAGES = 1000;
+    const seenPages = new Set<string>();
+    const idField = kind === 'invoice' ? 'InvoiceID' : kind === 'payment' ? 'PaymentID' : 'CreditNoteID';
 
-    for (let page = 1; page <= MAX_PAGES; page += 1) {
+    for (let page = 1; ; page += 1) {
       const result =
         kind === 'invoice'
           ? await client.listChangedInvoices(since, page)
@@ -278,14 +274,20 @@ export class XeroAdapter implements AccountingExportAdapter {
             ? await client.listChangedPayments(since, page)
             : await client.listChangedCreditNotes(since, page);
 
+      // Detect servers ignoring the page argument without imposing a ceiling
+      // that permanently strands large histories or timestamp ties. Identity,
+      // not UpdatedDateUTC, determines whether a page made progress.
+      const pageIds = JSON.stringify(result.records.map((record) => record[idField]).sort());
+      if ((result.hasMore && result.records.length === 0) || (result.records.length > 0 && seenPages.has(pageIds))) {
+        throw new AppError('XERO_PAGINATION_STALLED', `Xero ${kind} pagination did not advance at page ${page}`);
+      }
+      seenPages.add(pageIds);
       records.push(...result.records);
 
       if (!result.hasMore) {
         return { records, truncated: false };
       }
     }
-
-    return { records, truncated: true };
   }
 
   private async findRemovedCreditAllocations(

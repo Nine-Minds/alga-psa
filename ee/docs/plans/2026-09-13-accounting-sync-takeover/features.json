@@ -1,0 +1,17 @@
+[
+  {
+    "id": "F1",
+    "description": "Scope health and interactive controls to the settings provider and preserve organisation selection",
+    "implemented": true
+  },
+  {
+    "id": "F2",
+    "description": "Report failed, aborted and incomplete cycles accurately",
+    "implemented": true
+  },
+  {
+    "id": "F3",
+    "description": "Complete Xero pagination beyond the former cap with a repeated-page guard",
+    "implemented": true
+  }
+]

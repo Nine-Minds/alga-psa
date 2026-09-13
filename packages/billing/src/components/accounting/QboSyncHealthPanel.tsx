@@ -28,7 +28,15 @@ import type { QboAccount, QboClass, QboDepartment } from '@alga-psa/integrations
 // eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- billing panel gates its controls on the same capability hook the integrations settings panels use
 import { useAccountingCapabilities } from '@alga-psa/integrations/components/settings/integrations/useAccountingCapabilities';
 
-export default function QboSyncHealthPanel() {
+interface SyncHealthPanelProps {
+  adapterType?: 'quickbooks_online' | 'xero';
+}
+
+export default function QboSyncHealthPanel(props: SyncHealthPanelProps) {
+  return <SyncHealthPanel key={props.adapterType ?? 'default'} {...props} />;
+}
+
+function SyncHealthPanel({ adapterType }: SyncHealthPanelProps) {
   const { t } = useTranslation('msp/integrations');
   const caps = useAccountingCapabilities();
   const canManageConnections = caps.connectionsManage;
@@ -54,13 +62,13 @@ export default function QboSyncHealthPanel() {
   const loadHealth = React.useCallback(async () => {
     if (healthHidden) return;
     try {
-      const h = await getAccountingSyncHealth();
+      const h = await getAccountingSyncHealth({ preferredAdapterType: adapterType });
       setHealth(h);
     } catch {
       // CE / no permission — suppress the health card entirely
       setHealthHidden(true);
     }
-  }, [healthHidden]);
+  }, [healthHidden, adapterType]);
 
   React.useEffect(() => {
     void loadHealth();
@@ -115,6 +123,14 @@ export default function QboSyncHealthPanel() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        {!health.connected && (
+          <Alert variant="destructive">
+            <AlertDescription>{t('integrations.qbo.sync.connectionUnavailableProvider', {
+              provider: providerLabel,
+              defaultValue: '{{provider}} connection is unavailable. Reconnect to resume syncing.'
+            })}</AlertDescription>
+          </Alert>
+        )}
         {syncNowFeedback && (
           <Alert variant={syncNowFeedback.type === 'success' ? 'success' : 'destructive'}>
             <AlertDescription>{syncNowFeedback.message}</AlertDescription>
@@ -145,6 +161,14 @@ export default function QboSyncHealthPanel() {
                     </span>
                   )}
                 </div>
+                {health.lastCycle.error && (
+                  <Alert variant="destructive"><AlertDescription>{health.lastCycle.error}</AlertDescription></Alert>
+                )}
+                {health.lastCycle.stats?.truncated && (
+                  <Alert variant="destructive"><AlertDescription>{t('integrations.qbo.sync.syncIncomplete', {
+                    defaultValue: 'Sync is incomplete. The cursor was preserved because the provider returned a partial change set.'
+                  })}</AlertDescription></Alert>
+                )}
                 {health.lastCycle.stats && (
                   <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
                     {health.lastCycle.stats.opsProcessed !== undefined && (
@@ -244,8 +268,7 @@ export default function QboSyncHealthPanel() {
             );
           })()}
 
-          {/* Multi-organisation: organisation list with Make default (QBO only —
-              the default-organisation action validates QBO credentials). */}
+          {/* The default-organisation action validates the selected provider. */}
           {multiRealm && (
             <div id="qbo-realm-list" className="rounded-lg border p-4 space-y-2 text-sm">
               <p className="font-medium text-foreground">
@@ -271,8 +294,13 @@ export default function QboSyncHealthPanel() {
                           setSavingRef(realm.realmId);
                           try {
                             const providerType = health.adapterType === 'xero' ? 'xero' : 'quickbooks_online';
-                            await setDefaultAccountingRealm(providerType, realm.realmId);
+                            const result = await setDefaultAccountingRealm(providerType, realm.realmId);
+                            if (!result.success) throw new Error(result.error ?? t('integrations.qbo.sync.defaultRealmError', {
+                              defaultValue: 'Could not select this organisation. Reconnect and try again.'
+                            }));
                             await loadHealth();
+                          } catch (error) {
+                            setSyncNowFeedback({ type: 'error', message: getErrorMessage(error) });
                           } finally {
                             setSavingRef(null);
                           }
@@ -430,7 +458,7 @@ export default function QboSyncHealthPanel() {
           id="qbo-sync-now-button"
           type="button"
           variant="outline"
-          disabled={syncNowRunning || !canExecuteExports}
+          disabled={syncNowRunning || savingRef !== null || !canExecuteExports || !health.connected || !defaultRealm}
           onClick={async () => {
             if (!canExecuteExports) return;
             setSyncNowRunning(true);
@@ -440,8 +468,15 @@ export default function QboSyncHealthPanel() {
                 preferredAdapterType: health.adapterType === 'xero' ? 'xero' : 'quickbooks_online',
                 preferredTargetRealm: defaultRealm ?? undefined
               });
-              if (result.ran) {
+              if (result.ran && result.status === 'succeeded' && !result.stats?.truncated && !result.stats?.opsFailed) {
                 setSyncNowFeedback({ type: 'success', message: t('integrations.qbo.sync.syncNowSuccess', { defaultValue: 'Sync completed successfully.' }) });
+              } else if (result.ran) {
+                const message = result.error ?? (result.stats?.truncated
+                  ? t('integrations.qbo.sync.syncIncomplete', { defaultValue: 'Sync is incomplete. The cursor was preserved because the provider returned a partial change set.' })
+                  : result.stats?.opsFailed
+                    ? t('integrations.qbo.sync.syncOperationsFailed', { defaultValue: 'Some accounting operations failed. Review the sync errors before retrying.' })
+                    : result.status);
+                setSyncNowFeedback({ type: 'error', message });
               } else {
                 setSyncNowFeedback({
                   type: 'error',

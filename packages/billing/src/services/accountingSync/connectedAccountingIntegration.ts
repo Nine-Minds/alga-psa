@@ -63,7 +63,9 @@ export async function resolveConnectedAccountingIntegration(
         ? { adapterType: 'xero', targetRealm: selection.preferredTargetRealm }
         : null;
     }
-    const connectionId = xeroConnectionIds[0];
+    const connectionId = settings?.defaultRealm && xeroConnections[settings.defaultRealm]
+      ? settings.defaultRealm
+      : xeroConnectionIds[0];
     return connectionId ? { adapterType: 'xero', targetRealm: connectionId } : null;
   }
 

@@ -8,6 +8,7 @@ const countLedgerByStatusMock = vi.hoisted(() => vi.fn(async () => ({})));
 const getLatestCycleMock = vi.hoisted(() => vi.fn(async () => null));
 const countOpenMock = vi.hoisted(() => vi.fn(async () => 0));
 const readAutoApplyMock = vi.hoisted(() => vi.fn(async () => null));
+const qboCredentialsMock = vi.hoisted(() => vi.fn(async () => ({})));
 
 vi.mock('@alga-psa/auth', () => ({ withAuth: (fn: unknown) => fn }));
 vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: vi.fn(async () => true) }));
@@ -41,7 +42,7 @@ vi.mock('../services/accountingSync/syncExceptionService', () => ({
   })
 }));
 vi.mock('@alga-psa/integrations/lib/qbo/qboClientService', () => ({
-  getStoredQboCredentialsMap: vi.fn(async () => ({})),
+  getStoredQboCredentialsMap: qboCredentialsMock,
   QboClientService: { create: vi.fn(), getPreferences: vi.fn() },
   getQboEnvironment: vi.fn(() => 'sandbox')
 }));
@@ -105,6 +106,7 @@ beforeEach(() => {
   vi.stubEnv('NEXT_PUBLIC_EDITION', 'enterprise');
   queryRecords = [];
   resolveSyncTargetMock.mockResolvedValue(xeroTarget());
+  qboCredentialsMock.mockResolvedValue({});
   tenantDbMock.mockImplementation((_knex: unknown, _tenant: unknown) => ({
     table: (table: string) => makeBuilder(table, [])
   }));
@@ -152,12 +154,35 @@ describe('accounting sync actions organisation scoping', () => {
   });
 
   it('scopes health counts and provider label to the selected organisation', async () => {
-    const health = await (getAccountingSyncHealth as any)(USER, { tenant: TENANT });
+    const selection = { preferredAdapterType: 'xero', preferredTargetRealm: 'conn-1' };
+    const health = await (getAccountingSyncHealth as any)(USER, { tenant: TENANT }, selection);
 
+    expect(resolveSyncTargetMock).toHaveBeenCalledWith(expect.anything(), TENANT, selection);
     expect(health.adapterType).toBe('xero');
     expect(health.organisationName).toBe('Acme Org');
     expect(countOperationsByStatusMock).toHaveBeenCalledWith(TENANT, 'xero', 'conn-1');
     expect(countLedgerByStatusMock).toHaveBeenCalledWith('conn-1');
+    expect(countOpenMock).toHaveBeenCalledWith('conn-1');
     expect(getLatestCycleMock).toHaveBeenCalledWith(TENANT, 'xero', 'conn-1');
+  });
+
+  it('keeps unavailable Xero health disconnected without querying another provider', async () => {
+    resolveSyncTargetMock.mockResolvedValue(null);
+    const health = await (getAccountingSyncHealth as any)(USER, { tenant: TENANT }, {
+      preferredAdapterType: 'xero', preferredTargetRealm: 'removed'
+    });
+    expect(health).toMatchObject({ connected: false, adapterType: 'xero', lastCycle: null });
+    expect(health.realms.every((realm: any) => !realm.isDefault)).toBe(true);
+    expect(countOperationsByStatusMock).not.toHaveBeenCalled();
+  });
+
+  it('marks the explicitly selected QBO realm as the health target', async () => {
+    qboCredentialsMock.mockResolvedValue({ 'realm-1': {}, 'realm-2': {} });
+    resolveSyncTargetMock.mockResolvedValue({ integration: { adapterType: 'quickbooks_online', targetRealm: 'realm-2' } });
+    const health = await (getAccountingSyncHealth as any)(USER, { tenant: TENANT }, {
+      preferredAdapterType: 'quickbooks_online', preferredTargetRealm: 'realm-2'
+    });
+    expect(health.realms).toEqual([{ realmId: 'realm-1', isDefault: false }, { realmId: 'realm-2', isDefault: true }]);
+    expect(countOperationsByStatusMock).toHaveBeenCalledWith(TENANT, 'quickbooks_online', 'realm-2');
   });
 });

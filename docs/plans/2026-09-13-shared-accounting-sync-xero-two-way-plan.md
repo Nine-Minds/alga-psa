@@ -65,7 +65,7 @@ QBO implements all of them by wrapping `QboClientService` inside the adapter
 (the adapter is already the sanctioned billing→integrations bridge). Xero
 declares every outbound flag `false`; the shared appliers gate on the flag and
 mark the operation terminally failed with an observable
-`accounting_sync_operation_unsupported` exception. No shared path constructs a
+`accounting_sync_export_error` exception with reason `outbound_operation_unsupported`. No shared path constructs a
 `QboClientService` for a Xero connection once the appliers dispatch through the
 adapter.
 
@@ -92,19 +92,20 @@ Normalization:
 - Payment → `Payment` change with `NormalizedExternalPaymentPayload`; the
   invoice link becomes one allocation. `Status: DELETED` → `deleted`.
 - CreditNote → `CreditMemo` document change, plus one synthesized
-  `Payment` credit-application change per `Allocations[]` entry, keyed by
-  `creditnote:<CreditNoteID>:<InvoiceID>`. The payment applier applies these
+  `Payment` credit-application change per AllocationID, keyed by
+  `creditnote:<CreditNoteID>:alloc:<AllocationID>`. When IDs are absent,
+  allocations are aggregated per invoice under `creditnote:<CreditNoteID>:inv:<InvoiceID>`. The payment applier applies these
   through the same idempotent ledger path as QBO credit applications.
 
-Cursor strategy: `fetchedAt` is the poll's completion instant, only persisted
+Cursor strategy: `fetchedAt` is the poll's start instant, only persisted
 after a successful apply. Overlapping polls are absorbed by the 5-minute
 cursor overlap plus idempotent appliers (mapping `sync_token` equality). If the
 change set is `truncated`, the cycle keeps the pre-poll cursor instead of
 advancing, so a pathologically large page cannot skip changes.
 
-Provider limitation (documented): Xero `ModifiedAfter` is a UTC `UpdatedDateUTC`
-filter; API-side page caps mean the adapter must fully paginate before the
-cursor may advance, which it does. Allocation removal on a credit note is
+Xero sends the UTC cursor as `If-Modified-Since`. The adapter fully paginates
+before the cursor may advance, without a fixed page ceiling; repeated pages
+fail the poll with no cursor advance. Allocation removal on a credit note is
 reconciled best-effort by re-deriving the current allocation set for each
 changed credit note; a credit note that stops appearing in the change feed is
 not reversed until its next change event.
@@ -118,8 +119,8 @@ not reversed until its next change event.
   organisation/connection.
 - `runAccountingSyncCycle` runs outbound drains even when the adapter does not
   support change polling, so an export-only adapter is never stranded.
-- The scheduled handler continues to enumerate QBO realms / the Xero
-  connection via the resolver.
+- The scheduled handler enumerates every connected QBO realm and Xero
+  connection, independently of the interactive default provider.
 
 ## Validation
 
@@ -134,7 +135,7 @@ DB-backed happy/guard paths are exercised by the existing
 `*.db.test.ts` suites and the QBO simulator; a Xero DB-backed reconciliation
 test is added where the harness allows, otherwise the limitation is recorded.
 
-## Follow-up hardening (review round 1)
+## Historical review round 1 (cursor proposal superseded below)
 
 - Fixed `XeroAdapter.findRemovedCreditAllocations`: the JSON extraction is a
   bound raw predicate (`(metadata->>'xero_credit_note_id') = ANY(?)`), asserted
@@ -167,7 +168,7 @@ test is added where the harness allows, otherwise the limitation is recorded.
   (real export → poll → apply, AR rows, balances, cursor, real allocation
   query) and QBO provider-operation regressions against the simulator.
 
-## Follow-up hardening (review round 2)
+## Historical review round 2 (page ceiling and UI composition superseded below)
 
 - Cursor safety: a truncated poll no longer advances to any timestamp. A
   single stored cursor cannot describe an unfinished feed, and a newer
@@ -198,3 +199,12 @@ test is added where the harness allows, otherwise the limitation is recorded.
   organisation selection, paging and token-refresh classification.
 
 
+## Final takeover repair
+
+The focused acceptance checklist is in `ee/docs/plans/2026-09-13-accounting-sync-takeover/`.
+
+- Separate QBO and Xero health slots carry the selected provider from server composition through integrations settings to the authenticated health action. Xero provider-only resolution honors the saved second organisation even with QBO connected. Unavailable connections disable Sync Now; failed Make default actions surface their error. Open exception health counts filter the selected realm.
+- Sync Now only reports success for a succeeded, complete cycle with no failed operations. Persisted cycle errors and truncated results remain visible, including reconnect errors.
+- Xero finishes all numbered pages, including histories exceeding the former 1000-page cap. Repeated page identities or empty continuing pages fail the poll, retaining its cursor. Progress is independent of timestamp ordering, ties or missing update timestamps. QBO truncated CDC responses still preserve the cursor and show incomplete status.
+- A real DB test interrupts replacement after reversal and after the new AR writes but before their ledger insert. The new writes roll back; replay restores the paid balance with exactly two payment transactions and one reversal, with no further replay effect.
+- HTTP-boundary tests mock axios; DB integration tests mock the Xero client factory. Neither exercises a live external Xero account.

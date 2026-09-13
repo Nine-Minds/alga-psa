@@ -1,7 +1,7 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { v4 as uuidv4 } from 'uuid';
 
-// Controlled provider HTTP boundary: the adapter's single client entry point is
+// Controlled provider client boundary: the adapter's single client entry point is
 // mocked while everything else (DB, ledger, reconciliation appliers) is real.
 const xeroCreateMock = vi.hoisted(() => vi.fn());
 
@@ -16,6 +16,7 @@ import {
   AccountingExportRepository,
   AccountingExportService,
   XeroAdapter,
+  WorkflowTaskSyncExceptionService,
   runAccountingSyncCycle
 } from '@alga-psa/billing/services';
 import { SyncMappingLedger } from '@alga-psa/billing/services';
@@ -522,6 +523,25 @@ describe('Xero inbound reconciliation (DB + controlled provider boundary)', () =
     return rows.reduce((sum, row) => sum + Number(row.amount), 0);
   }
 
+  it('counts open health exceptions only for the selected organisation', async () => {
+    const exceptions = new WorkflowTaskSyncExceptionService(ctx.db, ctx.tenantId);
+    const ids = [uuidv4(), uuidv4()];
+    try {
+      for (const [index, realm] of [REALM, 'other-xero-connection'].entries()) {
+        await exceptions.createOrUpdate({
+          type: 'accounting_connection_expired', entityType: 'connection', entityId: ids[index],
+          title: 'Reconnect required', context: { realm, adapter_type: 'xero' }
+        });
+      }
+      expect(await exceptions.countOpen(REALM)).toBe(1);
+      expect(await exceptions.countOpen('other-xero-connection')).toBe(1);
+      expect(await exceptions.countOpen('unconnected-realm')).toBe(0);
+    } finally {
+      await ctx.db('workflow_tasks').where({ tenant: ctx.tenantId })
+        .whereRaw("context_data->>'entity_id' = ANY(?)", [ids]).del();
+    }
+  }, HOOK_TIMEOUT);
+
   it('replacing a fully settling credit allocation preserves the paid balance', async () => {
     const invoiceId = await seedInvoiceAndExport();
 
@@ -644,6 +664,45 @@ describe('Xero inbound reconciliation (DB + controlled provider boundary)', () =
     expect((await ledger.findByExternalId('invoice_payment', legacyId, REALM))?.sync_status).toBe('reversed');
     const invoice = await ctx.db('invoices').where({ tenant: ctx.tenantId, invoice_id: invoiceId }).first();
     expect(invoice.status).toBe('paid');
+  }, HOOK_TIMEOUT);
+
+  it('rolls back a failed replacement application and recovers after the committed reversal', async () => {
+    const invoiceId = await seedInvoiceAndExport();
+    await runCreditNotePoll(creditNoteWithAllocations([
+      { AllocationID: 'old-allocation', Amount: 50, Invoice: { InvoiceID: 'xero-invoice-1' } }
+    ]));
+    const replacement = creditNoteWithAllocations([
+      { AllocationID: 'new-allocation', Amount: 50, Invoice: { InvoiceID: 'xero-invoice-1' } }
+    ], '2026-03-04T00:00:00.000Z');
+
+    // Fail after the new payment/transaction writes but before their ledger
+    // insert. Those writes must roll back together; the preceding reversal
+    // is already committed and must not repeat when the original poll replays.
+    const insert = SyncMappingLedger.prototype.insert;
+    const failure = vi.spyOn(SyncMappingLedger.prototype, 'insert').mockImplementation(async function (input) {
+      if (input.externalEntityId === 'creditnote:replacement-cn:alloc:new-allocation') {
+        throw new Error('Injected replacement ledger failure');
+      }
+      return insert.call(this, input);
+    });
+    const failed = await runCreditNotePoll(replacement);
+    failure.mockRestore();
+    expect(failed.status).toBe('failed');
+    expect(failed.error).toContain('Injected replacement ledger failure');
+    const failedCycle = await ctx.db('accounting_sync_cycles').where({ tenant: ctx.tenantId, cycle_id: failed.cycleId }).first();
+    expect(failedCycle.cursor_after).toBeNull();
+    expect(await invoicePaymentsTotal(invoiceId)).toBe(0);
+    expect((await ctx.db('invoices').where({ tenant: ctx.tenantId, invoice_id: invoiceId }).first()).status).not.toBe('paid');
+    const payments = () => ctx.db('transactions').where({ tenant: ctx.tenantId, invoice_id: invoiceId }).whereIn('type', ['payment', 'payment_reversal']);
+    expect(await payments()).toHaveLength(2);
+
+    expect((await runCreditNotePoll(replacement)).status).toBe('succeeded');
+    expect((await runCreditNotePoll(replacement)).status).toBe('succeeded');
+    expect(await invoicePaymentsTotal(invoiceId)).toBe(5000);
+    expect((await ctx.db('invoices').where({ tenant: ctx.tenantId, invoice_id: invoiceId }).first()).status).toBe('paid');
+    const transactions = await payments();
+    expect(transactions.filter((row) => row.type === 'payment')).toHaveLength(2);
+    expect(transactions.filter((row) => row.type === 'payment_reversal')).toHaveLength(1);
   }, HOOK_TIMEOUT);
 
   it('recovers when the replacement is split across polls (reversal then application)', async () => {
