@@ -2,15 +2,19 @@
 import logger from '@alga-psa/core/logger';
 import { Knex } from 'knex';
 import {
+  AccountingChangeSet,
   AccountingExportAdapter,
   AccountingExportAdapterCapabilities,
   AccountingExportAdapterContext,
   AccountingExportDeliveryResult,
   AccountingExportTransformResult,
   AccountingExportDocument,
+  AccountingExternalChange,
   ExternalInvoiceFetchResult,
   ExternalInvoiceData,
   ExternalInvoiceChargeTax,
+  NormalizedExternalDocumentPayload,
+  NormalizedExternalPaymentPayload,
   PendingTaxImportRecord
 } from '@alga-psa/types';
 import {
@@ -142,8 +146,157 @@ export class XeroAdapter implements AccountingExportAdapter {
       supportsInvoiceUpdates: true,
       supportsTaxDelegation: true,
       supportsInvoiceFetch: true,
-      supportsTaxComponentImport: true // Xero provides detailed tax component breakdown
+      supportsTaxComponentImport: true, // Xero provides detailed tax component breakdown
+      supportsChangePolling: true,
+      // Xero outbound writes beyond invoice export are not implemented. These
+      // flags make shared appliers gate them explicitly (observable exception)
+      // instead of dispatching through another provider's client.
+      supportsPaymentRecording: false,
+      supportsOutboundPayment: false,
+      supportsOutboundCredit: false,
+      supportsOutboundVoid: false
     };
+  }
+
+  /**
+   * Poll changed invoices, payments and credit notes since a cursor.
+   *
+   * Pagination: each Xero collection is fetched page by page (100 per page)
+   * until a short page is returned, so the caller receives a complete change
+   * set before the cycle may advance its cursor. `truncated` is set only if a
+   * safety page cap is hit.
+   *
+   * Replay/idempotency: every emitted change carries a stable external id and
+   * a `syncToken` (Xero UpdatedDateUTC, plus amount for synthesized credit
+   * allocations). The shared appliers no-op on an unchanged token, which makes
+   * overlapping polls and the cursor overlap window safe.
+   *
+   * Reversals: a status of DELETED/VOIDED emits a deleted document change; a
+   * removed credit allocation emits a deleted synthesized payment change for
+   * the previously recorded ledger row.
+   */
+  async fetchChanges(
+    tenantId: string,
+    since: string,
+    targetRealm?: string | null
+  ): Promise<AccountingChangeSet> {
+    if (!targetRealm) {
+      throw new AppError('XERO_REALM_REQUIRED', 'Xero change polling requires a connection id');
+    }
+
+    const client = await XeroClientService.create(tenantId, targetRealm);
+    const changes: AccountingExternalChange[] = [];
+    let truncated = false;
+
+    const [invoices, payments, creditNotes] = await Promise.all([
+      this.collectChanged(client, 'invoice', since),
+      this.collectChanged(client, 'payment', since),
+      this.collectChanged(client, 'creditNote', since)
+    ]);
+
+    truncated = invoices.truncated || payments.truncated || creditNotes.truncated;
+
+    for (const record of invoices.records) {
+      const change = normalizeXeroInvoice(record);
+      if (change) {
+        changes.push(change);
+      }
+    }
+
+    for (const record of payments.records) {
+      const change = normalizeXeroPayment(record);
+      if (change) {
+        changes.push(change);
+      }
+    }
+
+    const currentCreditAllocations = new Map<string, Set<string>>();
+    for (const record of creditNotes.records) {
+      const documentChange = normalizeXeroCreditNote(record);
+      if (documentChange) {
+        changes.push(documentChange);
+      }
+      const creditNoteId = String(record?.CreditNoteID ?? '');
+      if (!creditNoteId) {
+        continue;
+      }
+      const allocationIds = new Set<string>();
+      for (const allocationChange of normalizeXeroCreditAllocations(record)) {
+        changes.push(allocationChange);
+        allocationIds.add(allocationChange.externalId);
+      }
+      currentCreditAllocations.set(creditNoteId, allocationIds);
+    }
+
+    // Reconcile credit notes whose allocations were removed: emit a deletion
+    // for any previously recorded synthetic allocation that is no longer in
+    // Xero's current allocation set.
+    if (currentCreditAllocations.size > 0) {
+      const removed = await this.findRemovedCreditAllocations(
+        tenantId,
+        targetRealm,
+        currentCreditAllocations
+      );
+      changes.push(...removed);
+    }
+
+    return { changes, truncated, fetchedAt: new Date().toISOString() };
+  }
+
+  private async collectChanged(
+    client: XeroClientService,
+    kind: 'invoice' | 'payment' | 'creditNote',
+    since: string
+  ): Promise<{ records: Array<Record<string, any>>; truncated: boolean }> {
+    const records: Array<Record<string, any>> = [];
+    const MAX_PAGES = 100;
+    for (let page = 1; page <= MAX_PAGES; page += 1) {
+      const result =
+        kind === 'invoice'
+          ? await client.listChangedInvoices(since, page)
+          : kind === 'payment'
+            ? await client.listChangedPayments(since, page)
+            : await client.listChangedCreditNotes(since, page);
+      records.push(...result.records);
+      if (!result.hasMore) {
+        return { records, truncated: false };
+      }
+    }
+    return { records, truncated: true };
+  }
+
+  private async findRemovedCreditAllocations(
+    tenantId: string,
+    targetRealm: string,
+    current: Map<string, Set<string>>
+  ): Promise<AccountingExternalChange[]> {
+    const { knex } = await createTenantKnex();
+    const rows = await tenantDb(knex, tenantId).table<MappingRowRaw>('tenant_external_entity_mappings')
+      .select('*')
+      .where('integration_type', this.type)
+      .where('alga_entity_type', 'invoice_payment')
+      .where('external_realm_id', targetRealm)
+      .whereNull('deleted_at')
+      .whereIn('metadata->>xero_credit_note_id', Array.from(current.keys()));
+
+    const removed: AccountingExternalChange[] = [];
+    for (const row of rows) {
+      const metadata = parseMetadata(row.metadata) ?? {};
+      const creditNoteId = String(metadata.xero_credit_note_id ?? '');
+      if (!creditNoteId) {
+        continue;
+      }
+      const allocations = current.get(creditNoteId);
+      if (allocations && !allocations.has(row.external_entity_id)) {
+        removed.push({
+          entityType: 'Payment',
+          externalId: row.external_entity_id,
+          deleted: true,
+          updatedAt: new Date().toISOString()
+        });
+      }
+    }
+    return removed;
   }
 
   async transform(context: AccountingExportAdapterContext): Promise<AccountingExportTransformResult> {
@@ -930,6 +1083,156 @@ function safeString(value: unknown): string | undefined {
     return value;
   }
   return undefined;
+}
+
+function xeroSyncToken(record: Record<string, any> | undefined): string | undefined {
+  return record?.UpdatedDateUTC != null ? String(record.UpdatedDateUTC) : undefined;
+}
+
+function xeroStatusIsDeleted(status: unknown): boolean {
+  return (
+    typeof status === 'string' &&
+    (status.toUpperCase() === 'DELETED' || status.toUpperCase() === 'VOIDED')
+  );
+}
+
+function normalizeXeroInvoice(record: Record<string, any>): AccountingExternalChange | null {
+  const externalId = record?.InvoiceID != null ? String(record.InvoiceID) : null;
+  if (!externalId) {
+    return null;
+  }
+  const status = record?.Status;
+  const total = Number(record?.Total);
+  const normalized: NormalizedExternalDocumentPayload = {
+    totalAmount: Number.isFinite(total) ? total : null,
+    docNumber: record?.InvoiceNumber != null ? String(record.InvoiceNumber) : null,
+    isVoided: xeroStatusIsDeleted(status),
+    providerMetadata: {
+      xero_status: status ?? null,
+      xero_type: record?.Type ?? null,
+      xero_reference: record?.Reference ?? null
+    }
+  };
+  return {
+    entityType: 'Invoice',
+    externalId,
+    syncToken: xeroSyncToken(record),
+    deleted: typeof status === 'string' && status.toUpperCase() === 'DELETED',
+    updatedAt: record?.UpdatedDateUTC,
+    payload: record,
+    normalized
+  };
+}
+
+function normalizeXeroCreditNote(record: Record<string, any>): AccountingExternalChange | null {
+  const externalId = record?.CreditNoteID != null ? String(record.CreditNoteID) : null;
+  if (!externalId) {
+    return null;
+  }
+  const status = record?.Status;
+  const total = Number(record?.Total);
+  const normalized: NormalizedExternalDocumentPayload = {
+    totalAmount: Number.isFinite(total) ? total : null,
+    docNumber: record?.CreditNoteNumber != null ? String(record.CreditNoteNumber) : null,
+    isVoided: xeroStatusIsDeleted(status),
+    providerMetadata: { xero_status: status ?? null, xero_type: record?.Type ?? null }
+  };
+  return {
+    entityType: 'CreditMemo',
+    externalId,
+    syncToken: xeroSyncToken(record),
+    deleted: typeof status === 'string' && status.toUpperCase() === 'DELETED',
+    updatedAt: record?.UpdatedDateUTC,
+    payload: record,
+    normalized
+  };
+}
+
+function normalizeXeroPayment(record: Record<string, any>): AccountingExternalChange | null {
+  const externalId = record?.PaymentID != null ? String(record.PaymentID) : null;
+  if (!externalId) {
+    return null;
+  }
+  const amountCents = Math.round(Number(record?.Amount) * 100);
+  const allocations: NormalizedExternalPaymentPayload['allocations'] = [];
+  const invoiceId = record?.Invoice?.InvoiceID;
+  if (invoiceId && Number.isFinite(amountCents) && amountCents > 0) {
+    allocations.push({ externalInvoiceId: String(invoiceId), amountCents });
+  }
+  const isCreditApplication = Boolean(record?.CreditNote?.CreditNoteID);
+  const reference =
+    typeof record?.Reference === 'string' && record.Reference.trim().length > 0
+      ? record.Reference.trim()
+      : externalId;
+
+  const normalized: NormalizedExternalPaymentPayload = {
+    reference,
+    txnDate: typeof record?.Date === 'string' ? record.Date : undefined,
+    totalCents: Number.isFinite(amountCents) ? amountCents : undefined,
+    allocations,
+    isCreditApplication,
+    providerMetadata: {
+      xero_status: record?.Status ?? null,
+      xero_payment_type: isCreditApplication ? 'credit_application' : 'payment'
+    }
+  };
+
+  return {
+    entityType: 'Payment',
+    externalId,
+    syncToken: xeroSyncToken(record),
+    deleted: typeof record?.Status === 'string' && record.Status.toUpperCase() === 'DELETED',
+    updatedAt: record?.UpdatedDateUTC,
+    payload: record,
+    normalized
+  };
+}
+
+/**
+ * Synthesize one payment change per current credit-note allocation so the
+ * shared payment applier records the credit application exactly once. The
+ * synthetic external id is stable (`creditnote:<noteId>:<invoiceId>`), which
+ * is what lets the same ledger row be found for idempotent replay and for the
+ * removal reconciliation in `findRemovedCreditAllocations`.
+ */
+function normalizeXeroCreditAllocations(record: Record<string, any>): AccountingExternalChange[] {
+  const creditNoteId = record?.CreditNoteID != null ? String(record.CreditNoteID) : null;
+  if (!creditNoteId || xeroStatusIsDeleted(record?.Status)) {
+    return [];
+  }
+  const allocations = Array.isArray(record?.Allocations) ? record.Allocations : [];
+  const changes: AccountingExternalChange[] = [];
+
+  for (const allocation of allocations) {
+    const invoiceId = allocation?.Invoice?.InvoiceID;
+    const amountCents = Math.round(Number(allocation?.Amount) * 100);
+    if (!invoiceId || !Number.isFinite(amountCents) || amountCents <= 0) {
+      continue;
+    }
+    const externalId = `creditnote:${creditNoteId}:${String(invoiceId)}`;
+    const normalized: NormalizedExternalPaymentPayload = {
+      reference: `Xero credit note ${record?.CreditNoteNumber ?? creditNoteId}`,
+      txnDate: typeof allocation?.Date === 'string' ? allocation.Date : undefined,
+      totalCents: amountCents,
+      allocations: [{ externalInvoiceId: String(invoiceId), amountCents }],
+      isCreditApplication: true,
+      providerMetadata: {
+        xero_credit_note_id: creditNoteId,
+        xero_allocation_invoice_id: String(invoiceId)
+      }
+    };
+    changes.push({
+      entityType: 'Payment',
+      externalId,
+      syncToken: `${xeroSyncToken(record) ?? ''}:${amountCents}`,
+      deleted: false,
+      updatedAt: record?.UpdatedDateUTC,
+      payload: record,
+      normalized
+    });
+  }
+
+  return changes;
 }
 
 function coerceChargeCents(value: unknown): number | null {

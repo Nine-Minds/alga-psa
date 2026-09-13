@@ -401,6 +401,13 @@ export interface XeroInvoiceDetails {
   raw?: Record<string, unknown>;
 }
 
+/** One page of changed records returned by Xero's modified-since polling. */
+export interface XeroChangedPage {
+  records: Array<Record<string, any>>;
+  /** True when the page was full (100 records) — request the next page. */
+  hasMore: boolean;
+}
+
 export interface XeroStoredConnection {
   connectionId: string;
   xeroTenantId: string;
@@ -566,11 +573,47 @@ export class XeroClientService {
   }
 
   /**
+   * Changed-invoice polling. Xero caps each page at 100 records; callers page
+   * until `hasMore` is false. `modifiedAfter` is an ISO 8601 timestamp matched
+   * against each record's UpdatedDateUTC.
+   */
+  async listChangedInvoices(modifiedAfter: string, page: number): Promise<XeroChangedPage> {
+    return this.listChangedPage('/Invoices', modifiedAfter, page, { modifiedAfter });
+  }
+
+  /** Changed-payment polling (payments applied to invoices or credit notes). */
+  async listChangedPayments(modifiedAfter: string, page: number): Promise<XeroChangedPage> {
+    return this.listChangedPage('/Payments', modifiedAfter, page);
+  }
+
+  /** Changed-credit-note polling, including each note's current allocations. */
+  async listChangedCreditNotes(modifiedAfter: string, page: number): Promise<XeroChangedPage> {
+    return this.listChangedPage('/CreditNotes', modifiedAfter, page);
+  }
+
+  private async listChangedPage(
+    path: string,
+    modifiedAfter: string,
+    page: number,
+    extraParams: Record<string, unknown> = {}
+  ): Promise<XeroChangedPage> {
+    const response = await this.request<Record<string, any>>({
+      method: 'GET',
+      url: path,
+      params: { page, ...extraParams },
+      headers: { 'If-Modified-Since': modifiedAfter }
+    });
+
+    const collectionKey = path.replace(/^\//, '');
+    const records = Array.isArray(response?.[collectionKey]) ? response[collectionKey] : [];
+    return { records, hasMore: records.length >= 100 };
+  }
+
+  /**
    * Fetch a single invoice by its Xero Invoice ID.
    * Returns the full invoice including line items with tax details.
    */
-  async getInvoice(invoiceId: string): Promise<XeroInvoiceDetails | null> {
-    try {
+  async getInvoice(invoiceId: string): Promise<XeroInvoiceDetails | null> {    try {
       const response = await this.request<{ Invoices: Array<Record<string, any>> }>({
         method: 'GET',
         url: `/Invoices/${invoiceId}`

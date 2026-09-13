@@ -1,0 +1,187 @@
+import { describe, expect, it, vi, beforeEach } from 'vitest';
+
+// The adapter resolves removed credit allocations through the tenant facade.
+const tenantDbMock = vi.hoisted(() => vi.fn());
+
+vi.mock('@alga-psa/db', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  createTenantKnex: vi.fn(async () => ({ knex: {}, tenant: 'tenant-x' })),
+  tenantDb: tenantDbMock
+}));
+
+const xeroListChangedInvoices = vi.hoisted(() => vi.fn());
+const xeroListChangedPayments = vi.hoisted(() => vi.fn());
+const xeroListChangedCreditNotes = vi.hoisted(() => vi.fn());
+const xeroCreate = vi.hoisted(() => vi.fn());
+
+vi.mock('@alga-psa/integrations/lib/xero/xeroClientService', () => ({
+  XeroClientService: {
+    create: xeroCreate
+  }
+}));
+
+function makeTenantQueryBuilder(rows: unknown[] = []) {
+  const builder: any = {};
+  for (const method of ['select', 'where', 'whereNull', 'whereIn', 'andWhere', 'orderBy', 'limit']) {
+    builder[method] = () => builder;
+  }
+  builder.then = (resolve: (value: unknown[]) => unknown) => Promise.resolve(rows).then(resolve);
+  return builder;
+}
+
+let XeroAdapter: typeof import('./xeroAdapter').XeroAdapter;
+
+beforeEach(async () => {
+  vi.clearAllMocks();
+  xeroCreate.mockResolvedValue({
+    listChangedInvoices: xeroListChangedInvoices,
+    listChangedPayments: xeroListChangedPayments,
+    listChangedCreditNotes: xeroListChangedCreditNotes
+  });
+  xeroListChangedInvoices.mockResolvedValue({ records: [], hasMore: false });
+  xeroListChangedPayments.mockResolvedValue({ records: [], hasMore: false });
+  xeroListChangedCreditNotes.mockResolvedValue({ records: [], hasMore: false });
+  tenantDbMock.mockReturnValue({ table: () => makeTenantQueryBuilder([]) });
+  ({ XeroAdapter } = await import('./xeroAdapter'));
+});
+
+describe('XeroAdapter.fetchChanges', () => {
+  it('requires a connection id', async () => {
+    const adapter = await XeroAdapter.create();
+    await expect(adapter.fetchChanges('tenant-x', '2026-01-01T00:00:00Z', null)).rejects.toThrow(/connection id/i);
+  });
+
+  it('normalizes changed invoices, payments and credit notes', async () => {
+    xeroListChangedInvoices.mockResolvedValueOnce({
+      records: [
+        {
+          InvoiceID: 'inv-1',
+          InvoiceNumber: 'INV-0001',
+          Status: 'AUTHORISED',
+          Total: 120.5,
+          UpdatedDateUTC: '/Date(1700000000000+0000)/',
+          Type: 'ACCREC'
+        }
+      ],
+      hasMore: false
+    });
+    xeroListChangedPayments.mockResolvedValueOnce({
+      records: [
+        {
+          PaymentID: 'pay-1',
+          Status: 'AUTHORISED',
+          Amount: 50,
+          Reference: 'STRIPE-1',
+          Date: '2026-01-10T00:00:00Z',
+          Invoice: { InvoiceID: 'inv-1' },
+          UpdatedDateUTC: '/Date(1700000001000+0000)/'
+        }
+      ],
+      hasMore: false
+    });
+    xeroListChangedCreditNotes.mockResolvedValueOnce({
+      records: [
+        {
+          CreditNoteID: 'cn-1',
+          CreditNoteNumber: 'CN-0001',
+          Status: 'AUTHORISED',
+          Total: 25,
+          UpdatedDateUTC: '/Date(1700000002000+0000)/',
+          Allocations: [{ Amount: 25, Invoice: { InvoiceID: 'inv-1' }, Date: '2026-01-11T00:00:00Z' }]
+        }
+      ],
+      hasMore: false
+    });
+
+    const adapter = await XeroAdapter.create();
+    const result = await adapter.fetchChanges('tenant-x', '2026-01-01T00:00:00Z', 'conn-1');
+
+    const invoice = result.changes.find((c) => c.entityType === 'Invoice');
+    expect(invoice?.externalId).toBe('inv-1');
+    expect(invoice?.normalized).toMatchObject({
+      totalAmount: 120.5,
+      docNumber: 'INV-0001',
+      isVoided: false
+    });
+
+    const payment = result.changes.find((c) => c.entityType === 'Payment' && c.externalId === 'pay-1');
+    expect(payment?.normalized).toMatchObject({
+      reference: 'STRIPE-1',
+      allocations: [{ externalInvoiceId: 'inv-1', amountCents: 5000 }],
+      isCreditApplication: false
+    });
+
+    const creditDocument = result.changes.find((c) => c.entityType === 'CreditMemo');
+    expect(creditDocument?.externalId).toBe('cn-1');
+
+    const allocation = result.changes.find((c) => c.externalId === 'creditnote:cn-1:inv-1');
+    expect(allocation).toBeDefined();
+    expect(allocation?.normalized).toMatchObject({
+      isCreditApplication: true,
+      allocations: [{ externalInvoiceId: 'inv-1', amountCents: 2500 }]
+    });
+    expect(result.truncated).toBe(false);
+  });
+
+  it('paginates a full page before returning', async () => {
+    const fullPage = Array.from({ length: 100 }, (_, index) => ({
+      InvoiceID: `inv-${index}`,
+      InvoiceNumber: `INV-${index}`,
+      Status: 'AUTHORISED',
+      Total: 1,
+      UpdatedDateUTC: '/Date(1700000000000+0000)/'
+    }));
+    xeroListChangedInvoices
+      .mockResolvedValueOnce({ records: fullPage, hasMore: true })
+      .mockResolvedValueOnce({ records: [{ InvoiceID: 'inv-last', Status: 'AUTHORISED', Total: 2 }], hasMore: false });
+
+    const adapter = await XeroAdapter.create();
+    const result = await adapter.fetchChanges('tenant-x', '2026-01-01T00:00:00Z', 'conn-1');
+
+    expect(xeroListChangedInvoices).toHaveBeenCalledTimes(2);
+    expect(xeroListChangedInvoices).toHaveBeenNthCalledWith(1, '2026-01-01T00:00:00Z', 1);
+    expect(xeroListChangedInvoices).toHaveBeenNthCalledWith(2, '2026-01-01T00:00:00Z', 2);
+    expect(result.changes.filter((c) => c.entityType === 'Invoice')).toHaveLength(101);
+  });
+
+  it('marks voided/deleted documents and emits a deletion for a removed allocation', async () => {
+    xeroListChangedInvoices.mockResolvedValueOnce({
+      records: [{ InvoiceID: 'inv-void', Status: 'VOIDED', Total: 0, UpdatedDateUTC: '/Date(1+0000)/' }],
+      hasMore: false
+    });
+    xeroListChangedCreditNotes.mockResolvedValueOnce({
+      records: [
+        {
+          CreditNoteID: 'cn-2',
+          CreditNoteNumber: 'CN-0002',
+          Status: 'AUTHORISED',
+          Total: 10,
+          UpdatedDateUTC: '/Date(2+0000)/',
+          // No allocations now — the previously recorded allocation was removed.
+          Allocations: []
+        }
+      ],
+      hasMore: false
+    });
+    // The stored ledger row for the removed allocation.
+    tenantDbMock.mockReturnValue({
+      table: () =>
+        makeTenantQueryBuilder([
+          {
+            external_entity_id: 'creditnote:cn-2:inv-9',
+            metadata: { xero_credit_note_id: 'cn-2' }
+          }
+        ])
+    });
+
+    const adapter = await XeroAdapter.create();
+    const result = await adapter.fetchChanges('tenant-x', '2026-01-01T00:00:00Z', 'conn-1');
+
+    const voided = result.changes.find((c) => c.externalId === 'inv-void');
+    expect(voided?.normalized).toMatchObject({ isVoided: true });
+    expect(voided?.deleted).toBe(false);
+
+    const removed = result.changes.find((c) => c.externalId === 'creditnote:cn-2:inv-9');
+    expect(removed?.deleted).toBe(true);
+  });
+});

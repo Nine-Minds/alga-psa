@@ -1,13 +1,16 @@
 import { Knex } from 'knex';
 import logger from '@alga-psa/core/logger';
-// eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- sync-engine applier intentionally bridges billing to the QuickBooks client (same bridge as the accounting export adapter)
+// eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- sync-engine applier bridges billing to the QuickBooks client only for the legacy (no-adapter) path
 import { QboClientService } from '@alga-psa/integrations/lib/qbo/qboClientService';
 import { writeAccountingAudit } from '@alga-psa/db';
+import type { AccountingExportAdapter, AccountingProviderOperations } from '@alga-psa/types';
 import type { AccountingSyncCycleStats } from './accountingSync.types';
 import { MAPPING_SYNC_STATUS } from './accountingSync.types';
 import type { SyncOperationsRepository } from './syncOperationsRepository';
 import type { SyncMappingLedger } from './syncMappingLedger';
 import type { SyncExceptionService } from './syncExceptions.types';
+import { adapterSupportsOutbound } from './normalizedChange';
+import { failUnsupportedOperations } from './unsupportedOperations';
 
 interface DrainDeps {
   knex: Knex;
@@ -18,6 +21,8 @@ interface DrainDeps {
   ledger: SyncMappingLedger;
   exceptions: SyncExceptionService;
   stats: AccountingSyncCycleStats;
+  /** Adapter selected for this cycle; gates the outbound operation. */
+  adapter?: AccountingExportAdapter;
 }
 
 /**
@@ -43,16 +48,35 @@ export async function drainVoidInvoiceOps(deps: DrainDeps): Promise<void> {
     return;
   }
 
-  let qboClient: QboClientService | null = null;
-  try {
-    qboClient = await QboClientService.create(deps.tenantId, deps.targetRealm);
-  } catch (error) {
-    logger.warn('[invoiceVoidApplier] Cannot create QBO client; leaving void_invoice ops pending', {
-      tenantId: deps.tenantId,
-      targetRealm: deps.targetRealm,
-      error: error instanceof Error ? error.message : error
+  // ── Capability gate ──────────────────────────────────────────────────────
+  if (!adapterSupportsOutbound(deps.adapter, deps.adapterType, 'void')) {
+    await failUnsupportedOperations(deps, pending, {
+      entityType: 'invoice',
+      operationLabel: 'invoice void',
+      providerLabel: deps.adapterType === 'xero' ? 'Xero' : deps.adapterType
     });
     return;
+  }
+
+  const providerOps: AccountingProviderOperations | null = deps.adapter?.providerOperations
+    ? await deps.adapter.providerOperations(deps.tenantId, deps.targetRealm)
+    : null;
+  const providerLabel = deps.adapterType === 'xero' ? 'Xero' : 'QuickBooks';
+  const auditProvider: 'xero' | 'quickbooks_online' =
+    deps.adapterType === 'xero' ? 'xero' : 'quickbooks_online';
+
+  let qboClient: QboClientService | null = null;
+  if (!providerOps) {
+    try {
+      qboClient = await QboClientService.create(deps.tenantId, deps.targetRealm);
+    } catch (error) {
+      logger.warn('[invoiceVoidApplier] Cannot create QBO client; leaving void_invoice ops pending', {
+        tenantId: deps.tenantId,
+        targetRealm: deps.targetRealm,
+        error: error instanceof Error ? error.message : error
+      });
+      return;
+    }
   }
 
   for (const op of pending) {
@@ -65,9 +89,9 @@ export async function drainVoidInvoiceOps(deps: DrainDeps): Promise<void> {
       const blocked = await deps.ledger.findNonConsumable('invoice', op.alga_entity_id, deps.targetRealm);
       if (blocked) {
         const reason = blocked.deleted_at
-          ? 'invoice was unlinked from QuickBooks'
-          : 'invoice maps to a different QuickBooks company';
-        const message = `Cannot void in QuickBooks: ${reason}. Relink the invoice mapping to this company first.`;
+          ? 'invoice was unlinked from the accounting provider'
+          : 'invoice maps to a different accounting company';
+        const message = `Cannot void in ${providerLabel}: ${reason}. Relink the invoice mapping to this company first.`;
         logger.warn('[invoiceVoidApplier] Void blocked by non-consumable mapping', {
           opId: op.op_id,
           tenantId: deps.tenantId,
@@ -90,7 +114,7 @@ export async function drainVoidInvoiceOps(deps: DrainDeps): Promise<void> {
               attempts: op.attempts + 1,
               message,
               details:
-                `${message} The QuickBooks document was not touched. ` +
+                `${message} The remote document was not touched. ` +
                 'Relink the invoice in the accounting mapping screen, then retry the void.',
               realm: deps.targetRealm
             }
@@ -130,9 +154,11 @@ export async function drainVoidInvoiceOps(deps: DrainDeps): Promise<void> {
       await deps.ops.markInProgress(deps.tenantId, op.op_id);
 
       // Read the current entity to get a fresh SyncToken
-      const entity = await qboClient.read<any>(externalEntityType, externalId);
+      const entity = providerOps
+        ? await providerOps.readDocument(externalEntityType, externalId)
+        : await qboClient!.read<any>(externalEntityType, externalId);
       if (!entity) {
-        // Already deleted/voided in QBO — treat as done
+        // Already deleted/voided in the provider — treat as done
         await deps.ledger.update(mapping.id, {
           syncStatus: MAPPING_SYNC_STATUS.voided,
           metadata: { ...(mapping.metadata ?? {}), voided_at: new Date().toISOString() }
@@ -142,12 +168,15 @@ export async function drainVoidInvoiceOps(deps: DrainDeps): Promise<void> {
         continue;
       }
 
-      const syncToken: string = String(entity.SyncToken ?? entity.syncToken ?? '0');
-
-      if (externalEntityType === 'CreditMemo') {
-        await qboClient.deleteCreditMemo(externalId, syncToken);
+      if (providerOps) {
+        await providerOps.voidDocument({ externalId, externalEntityType });
       } else {
-        await qboClient.voidInvoice(externalId, syncToken);
+        const syncToken: string = String((entity as any).SyncToken ?? (entity as any).syncToken ?? '0');
+        if (externalEntityType === 'CreditMemo') {
+          await qboClient!.deleteCreditMemo(externalId, syncToken);
+        } else {
+          await qboClient!.voidInvoice(externalId, syncToken);
+        }
       }
 
       await deps.ledger.update(mapping.id, {
@@ -158,7 +187,7 @@ export async function drainVoidInvoiceOps(deps: DrainDeps): Promise<void> {
       await deps.ops.markDone(deps.tenantId, op.op_id);
       deps.stats.opsProcessed += 1;
 
-      logger.info('[invoiceVoidApplier] Invoice voided in QBO', {
+      logger.info('[invoiceVoidApplier] Invoice voided in accounting provider', {
         tenantId: deps.tenantId,
         invoiceId: op.alga_entity_id,
         externalId,
@@ -170,7 +199,7 @@ export async function drainVoidInvoiceOps(deps: DrainDeps): Promise<void> {
       // requested the void.
       await writeAccountingAudit(deps.knex, deps.tenantId, 'accounting_remote_void', {
         userId: requestedByUserId ?? undefined,
-        provider: 'quickbooks_online',
+        provider: auditProvider,
         recordId: externalId,
         details: {
           algaEntityType: 'invoice',
@@ -187,8 +216,8 @@ export async function drainVoidInvoiceOps(deps: DrainDeps): Promise<void> {
         });
       });
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'QBO void/delete failed';
-      logger.warn('[invoiceVoidApplier] Failed to void invoice in QBO', {
+      const message = error instanceof Error ? error.message : `${providerLabel} void/delete failed`;
+      logger.warn('[invoiceVoidApplier] Failed to void invoice in accounting provider', {
         opId: op.op_id,
         tenantId: deps.tenantId,
         externalId,
@@ -201,7 +230,7 @@ export async function drainVoidInvoiceOps(deps: DrainDeps): Promise<void> {
       // enqueue, so partial failures still leave an audit trail.
       await writeAccountingAudit(deps.knex, deps.tenantId, 'accounting_remote_void', {
         userId: requestedByUserId ?? undefined,
-        provider: 'quickbooks_online',
+        provider: auditProvider,
         recordId: externalId,
         details: {
           algaEntityType: 'invoice',

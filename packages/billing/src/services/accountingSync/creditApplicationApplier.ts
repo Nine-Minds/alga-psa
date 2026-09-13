@@ -1,11 +1,14 @@
 import { Knex } from 'knex';
 import logger from '@alga-psa/core/logger';
-// eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- sync-engine applier intentionally bridges billing to the QuickBooks client (same bridge as the accounting export adapter)
+// eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- sync-engine applier bridges billing to the QuickBooks client only for the legacy (no-adapter) path
 import { QboClientService } from '@alga-psa/integrations/lib/qbo/qboClientService';
+import type { AccountingExportAdapter, AccountingProviderOperations } from '@alga-psa/types';
 import type { AccountingSyncCycleStats } from './accountingSync.types';
 import type { SyncOperationsRepository } from './syncOperationsRepository';
 import type { SyncMappingLedger } from './syncMappingLedger';
 import type { SyncExceptionService } from './syncExceptions.types';
+import { adapterSupportsOutbound } from './normalizedChange';
+import { failUnsupportedOperations } from './unsupportedOperations';
 
 interface DrainDeps {
   knex: Knex;
@@ -16,6 +19,8 @@ interface DrainDeps {
   ledger: SyncMappingLedger;
   exceptions: SyncExceptionService;
   stats: AccountingSyncCycleStats;
+  /** Adapter selected for this cycle; gates the outbound operation. */
+  adapter?: AccountingExportAdapter;
 }
 
 interface ApplyCreditPayload {
@@ -83,18 +88,35 @@ export async function drainApplyCreditOps(deps: DrainDeps): Promise<void> {
     return;
   }
 
-  let qboClient: QboClientService | null = null;
-  try {
-    qboClient = await QboClientService.create(deps.tenantId, deps.targetRealm);
-  } catch (error) {
-    // Auth / setup error — leave all ops pending; the export drain will have
-    // already surfaced a connection exception.
-    logger.warn('[creditApplicationApplier] Cannot create QBO client; leaving apply_credit ops pending', {
-      tenantId: deps.tenantId,
-      targetRealm: deps.targetRealm,
-      error: error instanceof Error ? error.message : error
+  // ── Capability gate ──────────────────────────────────────────────────────
+  if (!adapterSupportsOutbound(deps.adapter, deps.adapterType, 'credit')) {
+    await failUnsupportedOperations(deps, pending, {
+      entityType: 'credit_allocation',
+      operationLabel: 'credit application',
+      providerLabel: deps.adapterType === 'xero' ? 'Xero' : deps.adapterType
     });
     return;
+  }
+
+  const providerOps: AccountingProviderOperations | null = deps.adapter?.providerOperations
+    ? await deps.adapter.providerOperations(deps.tenantId, deps.targetRealm)
+    : null;
+  const providerLabel = deps.adapterType === 'xero' ? 'Xero' : 'QuickBooks';
+
+  let qboClient: QboClientService | null = null;
+  if (!providerOps) {
+    try {
+      qboClient = await QboClientService.create(deps.tenantId, deps.targetRealm);
+    } catch (error) {
+      // Auth / setup error — leave all ops pending; the export drain will have
+      // already surfaced a connection exception.
+      logger.warn('[creditApplicationApplier] Cannot create QBO client; leaving apply_credit ops pending', {
+        tenantId: deps.tenantId,
+        targetRealm: deps.targetRealm,
+        error: error instanceof Error ? error.message : error
+      });
+      return;
+    }
   }
 
   for (const op of pending) {
@@ -266,15 +288,23 @@ export async function drainApplyCreditOps(deps: DrainDeps): Promise<void> {
     // linking Payment blindly would double-apply the credit, so check the
     // CM's remaining balance first and surface a conflict instead.
     try {
-      const qboCreditMemo = await qboClient.read<any>('CreditMemo', qboCreditMemoId);
-      const remainingDollars = Number(qboCreditMemo?.Balance);
-      const remainingCents = Number.isFinite(remainingDollars) ? Math.round(remainingDollars * 100) : null;
+      let remainingCents: number | null;
+      let creditMemoMissing: boolean;
+      if (providerOps) {
+        remainingCents = await providerOps.getCreditRemainingCents(qboCreditMemoId);
+        creditMemoMissing = remainingCents === null;
+      } else {
+        const qboCreditMemo = await qboClient!.read<any>('CreditMemo', qboCreditMemoId);
+        creditMemoMissing = !qboCreditMemo;
+        const remainingDollars = Number(qboCreditMemo?.Balance);
+        remainingCents = Number.isFinite(remainingDollars) ? Math.round(remainingDollars * 100) : null;
+      }
 
-      if (!qboCreditMemo || (remainingCents !== null && remainingCents < payload.amountCents)) {
-        const message = !qboCreditMemo
-          ? `QBO CreditMemo ${qboCreditMemoId} no longer exists`
-          : `QBO CreditMemo ${qboCreditMemoId} has only ${remainingCents} cents of credit remaining; ` +
-            `Alga applied ${payload.amountCents} cents — QBO likely auto-applied the credit to another invoice`;
+      if (creditMemoMissing || (remainingCents !== null && remainingCents < payload.amountCents)) {
+        const message = creditMemoMissing
+          ? `${providerLabel} CreditMemo ${qboCreditMemoId} no longer exists`
+          : `${providerLabel} CreditMemo ${qboCreditMemoId} has only ${remainingCents} cents of credit remaining; ` +
+            `Alga applied ${payload.amountCents} cents — the provider likely auto-applied the credit to another invoice`;
 
         logger.warn('[creditApplicationApplier] Credit memo conflict; not pushing application', {
           opId: op.op_id,
@@ -333,9 +363,11 @@ export async function drainApplyCreditOps(deps: DrainDeps): Promise<void> {
     // customer ref when the mapping metadata lacks one.
     let qboInvoiceForRevalidation: any = null;
     try {
-      qboInvoiceForRevalidation = await qboClient.read<any>('Invoice', qboInvoiceId);
+      qboInvoiceForRevalidation = providerOps
+        ? await providerOps.readDocument('Invoice', qboInvoiceId)
+        : await qboClient!.read<any>('Invoice', qboInvoiceId);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to read QBO invoice';
+      const message = error instanceof Error ? error.message : `Failed to read ${providerLabel} invoice`;
       logger.warn('[creditApplicationApplier] Could not revalidate target invoice; retrying later', {
         opId: op.op_id,
         qboInvoiceId,
@@ -347,7 +379,7 @@ export async function drainApplyCreditOps(deps: DrainDeps): Promise<void> {
     }
 
     if (!qboInvoiceForRevalidation) {
-      const message = `QBO Invoice ${qboInvoiceId} no longer exists in this company — credit application not pushed`;
+      const message = `${providerLabel} Invoice ${qboInvoiceId} no longer exists in this company — credit application not pushed`;
       logger.warn('[creditApplicationApplier] Target invoice missing at push time; marking failed', {
         opId: op.op_id,
         qboInvoiceId
@@ -385,13 +417,15 @@ export async function drainApplyCreditOps(deps: DrainDeps): Promise<void> {
       null;
 
     if (!qboCustomerId) {
-      // The revalidation read above already has the CustomerRef — use it
+      // The revalidation read above already has the customer ref — use it
       // instead of a second remote read.
-      qboCustomerId = qboInvoiceForRevalidation?.CustomerRef?.value ?? null;
+      qboCustomerId = providerOps
+        ? (qboInvoiceForRevalidation?.customerExternalId ?? null)
+        : (qboInvoiceForRevalidation?.CustomerRef?.value ?? null);
     }
 
     if (!qboCustomerId) {
-      const message = 'Could not resolve QBO customer ID for credit application';
+      const message = `Could not resolve ${providerLabel} customer ID for credit application`;
       const nextStatus = await deps.ops.markFailed(deps.tenantId, op.op_id, message);
       deps.stats.opsFailed += 1;
       if (nextStatus === 'skipped') {
@@ -413,7 +447,7 @@ export async function drainApplyCreditOps(deps: DrainDeps): Promise<void> {
       continue;
     }
 
-    // ── Create the zero-dollar QBO Payment linking CreditMemo → Invoice ─
+    // ── Create the zero-dollar link between CreditMemo → Invoice ─────────
     const amountDollars = Math.round(payload.amountCents) / 100;
     const paymentPayload = {
       CustomerRef: { value: qboCustomerId },
@@ -433,10 +467,21 @@ export async function drainApplyCreditOps(deps: DrainDeps): Promise<void> {
 
     try {
       await deps.ops.markInProgress(deps.tenantId, op.op_id);
-      const createdPayment = await qboClient.create<any>('Payment', paymentPayload);
-      const externalPaymentId: string = createdPayment?.Id ?? createdPayment?.payment?.Id;
-      if (!externalPaymentId) {
-        throw new Error('QBO Payment response missing Id');
+      let externalPaymentId: string;
+      if (providerOps) {
+        const created = await providerOps.applyCredit({
+          externalCreditNoteId: qboCreditMemoId,
+          externalInvoiceId: qboInvoiceId,
+          externalCustomerId: qboCustomerId,
+          amountCents: payload.amountCents
+        });
+        externalPaymentId = created.externalPaymentId;
+      } else {
+        const createdPayment = await qboClient!.create<any>('Payment', paymentPayload);
+        externalPaymentId = createdPayment?.Id ?? createdPayment?.payment?.Id;
+        if (!externalPaymentId) {
+          throw new Error('QBO Payment response missing Id');
+        }
       }
 
       // Store mapping for idempotency and echo suppression.
@@ -461,7 +506,7 @@ export async function drainApplyCreditOps(deps: DrainDeps): Promise<void> {
       // The application landed, so any earlier conflict exception is moot.
       await deps.exceptions.resolve('accounting_sync_export_error', 'credit_allocation', op.alga_entity_id);
 
-      logger.info('[creditApplicationApplier] Credit application synced to QBO', {
+      logger.info('[creditApplicationApplier] Credit application synced to accounting provider', {
         tenantId: deps.tenantId,
         allocationId: op.alga_entity_id,
         externalPaymentId,
@@ -469,8 +514,8 @@ export async function drainApplyCreditOps(deps: DrainDeps): Promise<void> {
         qboInvoiceId
       });
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'QBO payment creation failed';
-      logger.warn('[creditApplicationApplier] Failed to create QBO Payment for credit application', {
+      const message = error instanceof Error ? error.message : `${providerLabel} payment creation failed`;
+      logger.warn('[creditApplicationApplier] Failed to create credit-application link in accounting provider', {
         opId: op.op_id,
         tenantId: deps.tenantId,
         error: message

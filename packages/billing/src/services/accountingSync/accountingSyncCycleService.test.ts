@@ -183,18 +183,25 @@ describe('runAccountingSyncCycle', () => {
     tenantDbMock.mockImplementation(() => makeVendorBillDb([]));
   });
 
-  it('skips when adapter does not support change polling', async () => {
+  it('runs outbound drains when adapter does not support change polling', async () => {
     const adapter = { capabilities: vi.fn(function () { return ({ supportsChangePolling: false }); }), fetchChanges: undefined };
     const result = await runAccountingSyncCycle({
       knex: {} as any,
       tenantId: TENANT,
       adapterType: ADAPTER_TYPE,
       targetRealm: REALM,
-      adapter: adapter as any
+      adapter: adapter as any,
+      exceptions: makeFakeExceptions(),
+      notifications: makeFakeNotifications()
     });
 
-    expect(result.ran).toBe(false);
-    expect(result.status).toBe('skipped');
+    // An export-only adapter must not be stranded: inbound is skipped but the
+    // queued outbound work still drains, and the cycle reports success.
+    expect(result.ran).toBe(true);
+    expect(result.status).toBe('succeeded');
+    expect(drainApplyCreditOps).toHaveBeenCalled();
+    expect(drainVoidInvoiceOps).toHaveBeenCalled();
+    expect(drainRecordPaymentOps).toHaveBeenCalled();
   });
 
   it('skips when autoSyncEnabled=false and force not set', async () => {
@@ -303,8 +310,44 @@ describe('runAccountingSyncCycle', () => {
     expect(finishCycleCall.cursorAfter).toBe(fetchedAt);
   });
 
-  it('inbound failure → status failed, no cursorAfter', async () => {
+  it('truncated change set preserves the pre-poll cursor (no skipping)', async () => {
+    const fixedNow = new Date('2026-01-15T12:00:00.000Z');
+    const expectedCursor = new Date(fixedNow.getTime() - CURSOR_OVERLAP_MS).toISOString();
     const adapter = makeFakeAdapter({
+      fetchChanges: vi.fn(async () => ({
+        changes: [],
+        truncated: true,
+        fetchedAt: '2026-01-15T13:00:00.000Z'
+      }))
+    });
+
+    let finishCycleCall: any = null;
+    vi.mocked(SyncCycleRepository).mockImplementationOnce(function () { return ({
+      getLastSuccessfulCursor: vi.fn(async () => null),
+      startCycle: vi.fn(async () => 'cycle-truncated'),
+      finishCycle: vi.fn(async (_tenant: string, _cycleId: string, result: any) => {
+        finishCycleCall = result;
+      })
+    } as any); });
+
+    await runAccountingSyncCycle({
+      knex: {} as any,
+      tenantId: TENANT,
+      adapterType: ADAPTER_TYPE,
+      targetRealm: REALM,
+      adapter,
+      exceptions: makeFakeExceptions(),
+      notifications: makeFakeNotifications(),
+      now: () => fixedNow
+    });
+
+    expect(finishCycleCall.status).toBe('succeeded');
+    // A full page could contain changes the poll did not reach, so the cursor
+    // must not jump forward to fetchedAt.
+    expect(finishCycleCall.cursorAfter).toBe(expectedCursor);
+  });
+
+  it('inbound failure → status failed, no cursorAfter', async () => {    const adapter = makeFakeAdapter({
       fetchChanges: vi.fn(async () => {
         throw new Error('network error');
       })
