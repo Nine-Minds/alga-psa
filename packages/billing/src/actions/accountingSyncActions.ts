@@ -503,7 +503,10 @@ export const getAccountingSyncHealth = withAuth(async (
     settings,
     lastCycle,
     pendingOps: (opCounts['pending'] ?? 0) + (opCounts['in_progress'] ?? 0),
-    erroredOps: opCounts['skipped'] ?? 0,
+    // Terminal failures are both capped retries ('skipped') and capability-gated
+    // or otherwise non-retryable operations ('failed'). Both are terminal and
+    // must be visible; counts stay scoped to adapter type + target realm.
+    erroredOps: (opCounts['skipped'] ?? 0) + (opCounts['failed'] ?? 0),
     driftCount:
       (statusCounts[MAPPING_SYNC_STATUS.drift] ?? 0) + (statusCounts[MAPPING_SYNC_STATUS.externalVoided] ?? 0),
     openExceptions,

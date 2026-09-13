@@ -104,9 +104,20 @@ export default function XeroIntegrationSettings(
     void load();
   }, [load]);
 
+  // The sync-health panel writes the same persisted default the settings panel
+  // reads, so a default change must refresh this panel's status, catalog and
+  // mapping context without a full page reload.
+  React.useEffect(() => {
+    const reload = () => {
+      void load();
+    };
+    window.addEventListener('accounting-default-realm-changed', reload);
+    return () => window.removeEventListener('accounting-default-realm-changed', reload);
+  }, [load]);
+
   React.useEffect(() => {
     if (oauthStatus === 'success') {
-      setSuccessMessage(t('integrations.xero.settings.connectSuccess', { defaultValue: 'Xero connected successfully. The first connected organisation is now the default live Xero context.' }));
+      setSuccessMessage(t('integrations.xero.settings.connectSuccess', { defaultValue: 'Xero connected successfully. The connected organisation is available as the live Xero context; select it as the default in the sync panel below.' }));
       void load();
       return;
     }
@@ -256,7 +267,7 @@ export default function XeroIntegrationSettings(
           <div className="rounded-lg border bg-muted/20 p-4 text-sm text-muted-foreground">
             <p className="font-medium text-foreground">{t('integrations.xero.settings.howItWorksTitle', { defaultValue: 'How live Xero works in this release' })}</p>
             <p className="mt-2">
-              {t('integrations.xero.settings.howItWorksDescription', { defaultValue: 'Save a tenant-owned Xero client ID and client secret here, complete the Xero OAuth flow, and AlgaPSA will use the first connected Xero organisation as the default live context.' })}
+              {t('integrations.xero.settings.howItWorksDescription', { defaultValue: 'Save a tenant-owned Xero client ID and client secret here, complete the Xero OAuth flow, and AlgaPSA will use the Xero organisation selected as the default for live exports and sync.' })}
             </p>
           </div>
 
@@ -317,7 +328,7 @@ export default function XeroIntegrationSettings(
                     </p>
                   ) : null}
                   <p className="mt-2 text-xs text-muted-foreground">
-                    {t('integrations.xero.settings.scopeReconnectNote', { defaultValue: 'These scopes apply to new authorizations. An existing connection keeps the scopes it was originally granted; to apply the current set, disconnect and reconnect Xero. You can also remove this app from Connected apps in Xero to revoke earlier grants.' })}
+                    {t('integrations.xero.settings.scopeReconnectNote', { defaultValue: 'These scopes apply to new authorizations. An existing connection keeps the scopes it was originally granted; to apply the current set, disconnect and reconnect Xero. A token refresh keeps the existing permissions — only a fresh authorization grants new ones. You can also remove this app from Connected apps in Xero to revoke earlier grants.' })}
                   </p>
                 </div>
               </div>
@@ -551,7 +562,7 @@ export default function XeroIntegrationSettings(
           <CardContent className="space-y-4">
             <Alert variant="info">
               <AlertDescription>
-                {t('integrations.xero.settings.mapping.alert', { defaultValue: 'Xero items, revenue accounts, tax rates, and tracking categories are loaded from the default connected organisation so live exports can keep using the first stored Xero connection in v1.' })}
+                {t('integrations.xero.settings.mapping.alert', { defaultValue: 'Xero items, revenue accounts, tax rates, and tracking categories are loaded from the selected default organisation, and mappings are saved against that connection so live exports and reconciliation use the same organisation.' })}
               </AlertDescription>
             </Alert>
             {canManageMappings ? (

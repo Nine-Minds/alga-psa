@@ -1,5 +1,6 @@
 import { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import { resolveXeroRealmAliases } from './xeroRealmIdentity';
 
 /**
  * Thin knex helpers over tenant_external_entity_mappings — the single ledger
@@ -36,6 +37,8 @@ export interface ExternalEntityMappingRow {
 }
 
 export class SyncMappingLedger {
+  private readonly realmAliasCache = new Map<string, Promise<string[]>>();
+
   constructor(
     private readonly knex: Knex,
     private readonly tenantId: string,
@@ -46,9 +49,30 @@ export class SyncMappingLedger {
     return tenantDb(this.knex, this.tenantId).table<Row>(TABLE);
   }
 
+  /**
+   * Ordered realm ids accepted for a target. For Xero the target is the
+   * connection id and its uniquely-owned organisation id is accepted as a
+   * historical alias; ambiguous/foreign ownership yields the exact id only.
+   * Memoized per ledger instance (one per sync cycle) so repeated applier
+   * lookups do not re-read the stored connections.
+   */
+  private acceptedRealmAliases(targetRealm: string): Promise<string[]> {
+    const cached = this.realmAliasCache.get(targetRealm);
+    if (cached) {
+      return cached;
+    }
+    const resolved =
+      this.integrationType === 'xero'
+        ? resolveXeroRealmAliases(this.tenantId, targetRealm)
+        : Promise.resolve([targetRealm]);
+    this.realmAliasCache.set(targetRealm, resolved);
+    return resolved;
+  }
+
   private applyRealmScope(
     query: Knex.QueryBuilder,
-    targetRealm?: string | null
+    targetRealm: string | null | undefined,
+    aliases?: string[]
   ): Knex.QueryBuilder {
     if (targetRealm === undefined) {
       return query;
@@ -56,7 +80,12 @@ export class SyncMappingLedger {
     if (targetRealm === null) {
       return query.whereNull('external_realm_id');
     }
-    return query.andWhere('external_realm_id', targetRealm);
+    const realmIds = aliases && aliases.length > 0 ? aliases : [targetRealm];
+    query.andWhere((builder) => builder.whereIn('external_realm_id', realmIds));
+    if (realmIds.length > 1) {
+      query.orderByRaw('CASE WHEN external_realm_id = ? THEN 0 ELSE 1 END', [targetRealm]);
+    }
+    return query;
   }
 
   async findByExternalId(
@@ -73,7 +102,8 @@ export class SyncMappingLedger {
       .whereNull('deleted_at');
 
     // Realm-scoped lookups are exact matches only — no NULL-realm fallback.
-    this.applyRealmScope(query, targetRealm);
+    const aliases = targetRealm ? await this.acceptedRealmAliases(targetRealm) : undefined;
+    this.applyRealmScope(query, targetRealm, aliases);
 
     return query.first();
   }
@@ -91,7 +121,8 @@ export class SyncMappingLedger {
       })
       .whereNull('deleted_at');
 
-    this.applyRealmScope(query, targetRealm);
+    const aliases = targetRealm ? await this.acceptedRealmAliases(targetRealm) : undefined;
+    this.applyRealmScope(query, targetRealm, aliases);
 
     return query.first();
   }
@@ -108,6 +139,8 @@ export class SyncMappingLedger {
     algaEntityId: string,
     targetRealm: string
   ): Promise<ExternalEntityMappingRow | undefined> {
+    const aliases = await this.acceptedRealmAliases(targetRealm);
+    const realmIds = aliases.length > 0 ? aliases : [targetRealm];
     return this.table<ExternalEntityMappingRow>()
       .where({
         integration_type: this.integrationType,
@@ -118,7 +151,7 @@ export class SyncMappingLedger {
         builder
           .whereNotNull('deleted_at')
           .orWhereNull('external_realm_id')
-          .orWhereNot('external_realm_id', targetRealm);
+          .orWhereNotIn('external_realm_id', realmIds);
       })
       .first();
   }
@@ -253,7 +286,9 @@ export class SyncMappingLedger {
       if (targetRealm === null) {
         query.whereNull('external_realm_id');
       } else {
-        query.andWhere('external_realm_id', targetRealm);
+        const aliases = await this.acceptedRealmAliases(targetRealm);
+        const realmIds = aliases.length > 0 ? aliases : [targetRealm];
+        query.andWhere((builder) => builder.whereIn('external_realm_id', realmIds));
       }
     }
 

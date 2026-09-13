@@ -17,6 +17,16 @@ vi.mock('./recordExternalPayment', async (importOriginal) => ({
   reverseExternalPayment: reverseExternalPaymentMock
 }));
 
+// Stored Xero connections for historical org-keyed mapping compatibility.
+const xeroConnectionsState = vi.hoisted(() => ({
+  value: {
+    'xero-conn-1': { connectionId: 'xero-conn-1', xeroTenantId: 'org-1' }
+  } as Record<string, { connectionId: string; xeroTenantId: string }>
+}));
+vi.mock('@alga-psa/integrations/lib/xero/xeroClientService', () => ({
+  getStoredXeroConnections: async () => xeroConnectionsState.value
+}));
+
 import { applyExternalPaymentChange } from './paymentApplier';
 import { SyncMappingLedger } from './syncMappingLedger';
 
@@ -207,5 +217,34 @@ describe('Xero normalized payment reconciliation (DB-backed)', () => {
       .where({ tenant: tenantId, integration_type: 'xero', alga_entity_type: 'invoice_payment' })
       .first();
     expect(mapping.metadata.xero_credit_note_id).toBe('cn-1');
+  });
+
+  it('reconciles a payment against a historical organisation-keyed invoice mapping', async () => {
+    const historicalInvoiceId = uuidv4();
+    await db('tenant_external_entity_mappings').insert({
+      id: uuidv4(),
+      tenant: tenantId,
+      integration_type: 'xero',
+      alga_entity_type: 'invoice',
+      alga_entity_id: historicalInvoiceId,
+      external_entity_id: 'xero-inv-org-keyed',
+      // Persisted before the identity was unified: the organisation id, not
+      // the connection id.
+      external_realm_id: 'org-1',
+      sync_status: 'synced',
+      created_at: db.fn.now(),
+      updated_at: db.fn.now()
+    });
+
+    const deps = makeDeps();
+    await applyExternalPaymentChange(
+      deps,
+      xeroPaymentChange({
+        externalId: 'xero-pay-org-keyed',
+        allocations: [{ externalInvoiceId: 'xero-inv-org-keyed', amountCents: 5000 }]
+      }) as any
+    );
+
+    expect(recordExternalPaymentMock).toHaveBeenCalledTimes(1);
   });
 });

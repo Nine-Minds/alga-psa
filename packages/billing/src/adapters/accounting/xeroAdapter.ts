@@ -36,6 +36,7 @@ import { KnexCompanyMappingRepository } from '../../services/companySync/company
 import { buildNormalizedCompanyPayload } from '../../services/companySync/companySyncNormalizer';
 import { XeroCompanyAdapter } from '../../services/companySync/adapters/xeroCompanyAdapter';
 import { KnexInvoiceMappingRepository } from '../../repositories/invoiceMappingRepository';
+import { resolveXeroRealmAliases } from '../../services/accountingSync/xeroRealmIdentity';
 import { AppError } from '@alga-psa/core';
 
 export function buildXeroInvoiceReference(baseReference: string, poNumber?: string | null): string {
@@ -301,6 +302,10 @@ export class XeroAdapter implements AccountingExportAdapter {
     }
 
     const { knex } = await createTenantKnex();
+    // Accept the connection's uniquely-owned organisation id as a historical
+    // alias for mappings created before the identity was unified.
+    const realmIds = await resolveXeroRealmAliases(tenantId, targetRealm);
+    const acceptedRealms = realmIds.length > 0 ? realmIds : [targetRealm];
     // `metadata->>` is a JSON expression, not a column: bind it through a raw
     // parameterized predicate so PostgreSQL evaluates the extraction instead
     // of looking for a column literally named `metadata->>xero_credit_note_id`.
@@ -308,7 +313,7 @@ export class XeroAdapter implements AccountingExportAdapter {
       .select('*')
       .where('integration_type', this.type)
       .where('alga_entity_type', 'invoice_payment')
-      .where('external_realm_id', targetRealm)
+      .whereIn('external_realm_id', acceptedRealms)
       .whereNull('deleted_at')
       .whereRaw("(metadata->>'xero_credit_note_id') = ANY(?)", [creditNoteIds]);
 

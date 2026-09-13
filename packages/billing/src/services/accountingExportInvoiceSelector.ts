@@ -7,7 +7,7 @@ import { AppError } from '@alga-psa/core';
 // eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- batch creation stamps live-accounting realms so realm-scoped mappings resolve
 import { getDefaultQboRealmId } from '@alga-psa/integrations/lib/qbo/qboClientService';
 // eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- batch creation stamps live-accounting realms so realm-scoped mappings resolve
-import { getDefaultXeroTenantId } from '@alga-psa/integrations/lib/xero/xeroClientService';
+import { resolveDefaultXeroConnectionId } from '@alga-psa/integrations/lib/xero/xeroClientService';
 import { satisfyExportOpsForManualBatch } from './accountingSync/syncProducers';
 import { normalizeAccountingExportCalendarDate } from './accountingExportDateUtils';
 
@@ -359,8 +359,9 @@ export class AccountingExportInvoiceSelector {
       // resolve them; default to the tenant's connected company.
       targetRealm = await getDefaultQboRealmId(this.tenantId).catch(() => null);
     } else if (!targetRealm && options.adapterType === 'xero') {
-      // Live Xero mappings use the Xero organisation tenant id as their realm.
-      targetRealm = await getDefaultXeroTenantId(this.tenantId).catch(() => null);
+      // Live Xero mappings are keyed by the connection id (the persisted
+      // provider-scoped selection), not the organisation tenant id.
+      targetRealm = await resolveDefaultXeroConnectionId(this.tenantId).catch(() => null);
     }
 
     const preview = await this.previewInvoiceLines({
