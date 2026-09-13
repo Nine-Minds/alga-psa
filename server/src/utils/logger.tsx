@@ -2,7 +2,7 @@
 import DailyRotateFile from 'winston-daily-rotate-file';
 import winston from 'winston';
 import path from 'path';
-import { sanitizeLogMeta } from '@alga-psa/core';
+import { resolveLogLevel, sanitizeLogMeta } from '@alga-psa/core';
 
 // Define custom log levels
 const levels = {
@@ -30,7 +30,11 @@ const colors = {
 
 
 // Get values from environment variables
-const logLevel = (process.env.LOG_LEVEL || 'system').toLowerCase();
+// Shares the core logger's vocabulary and `info` default, so LOG_LEVEL means
+// the same thing here as it does for @alga-psa/core/logger. Winston silently
+// drops every record when handed a level name outside `levels` (e.g. the
+// documented `WARNING`/`CRITICAL` spellings), which resolveLogLevel maps.
+const logLevel = resolveLogLevel(process.env.LOG_LEVEL);
 const useJsonFormat = process.env.LOG_IS_FORMAT_JSON === 'true'; // Change this to `false` for pretty format
 const useDetails = process.env.LOG_IS_FULL_DETAILS === 'true'; // Change this to `false` to hide file and line details and some more information in logs 
 const enableFileLogging = process.env.LOG_ENABLED_FILE_LOGGING === 'true';
