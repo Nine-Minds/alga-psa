@@ -80,7 +80,9 @@ export async function loadFixedLineRateInputs(
       "contract_lines",
     )
     .whereIn("contract_line_id", uniqueIds)
-    .whereNot("is_template", true)
+    // Live lines are attached to a contract; template lines are not billed and
+    // have no contract currency to compare against.
+    .whereNotNull("contract_id")
     .modify((query) => {
       if (options.provenance) {
         query.where("rate_provenance", options.provenance);

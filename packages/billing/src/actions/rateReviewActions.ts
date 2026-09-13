@@ -117,7 +117,8 @@ async function loadUnreviewedLineIds(
 ): Promise<string[]> {
   const rows = await trx('contract_lines')
     .where({ tenant, rate_provenance: 'unreviewed' })
-    .whereNot('is_template', true)
+    // Live lines carry a contract; template lines are never billed.
+    .whereNotNull('contract_id')
     .select('contract_line_id');
   return rows.map((row: { contract_line_id: string }) => row.contract_line_id);
 }
