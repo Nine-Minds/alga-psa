@@ -3561,7 +3561,7 @@
         "clientIdPlaceholder": "Paste your tenant-owned Xero client ID",
         "clientSecretLabel": "Xero Client Secret",
         "clientSecretPlaceholder": "Paste your tenant-owned Xero client secret",
-        "connectSuccess": "Xero connected successfully. The first connected organisation is now the default live Xero context.",
+        "connectSuccess": "Xero connected successfully. The connected organisation is available as the live Xero context; select it as the default in the sync panel below.",
         "connection": {
           "connectionId": "Connection ID: {{id}}",
           "defaultOrganisation": "Default organisation",
@@ -3581,11 +3581,11 @@
           "load": "Failed to load Xero settings.",
           "saveCredentials": "Failed to save Xero credentials."
         },
-        "howItWorksDescription": "Save a tenant-owned Xero client ID and client secret here, complete the Xero OAuth flow, and AlgaPSA will use the first connected Xero organisation as the default live context.",
+        "howItWorksDescription": "Save a tenant-owned Xero client ID and client secret here, complete the Xero OAuth flow, and AlgaPSA will use the Xero organisation selected as the default for live exports and sync.",
         "howItWorksTitle": "How live Xero works in this release",
         "loading": "Loading Xero settings…",
         "mapping": {
-          "alert": "Xero items, revenue accounts, tax rates, and tracking categories are loaded from the default connected organisation so live exports can keep using the first stored Xero connection in v1.",
+          "alert": "Xero items, revenue accounts, tax rates, and tracking categories are loaded from the selected default organisation, and mappings are saved against that connection so live exports and reconciliation use the same organisation.",
           "descriptionPrefix": "Configure live Xero mappings for the default connected organisation. These mappings are scoped to",
           "placeholderAlert": "The mapping manager becomes available after the first Xero organisation is connected and set as the default live Xero context.",
           "placeholderDescription": "Connect a live Xero organisation before configuring live Xero item and tax mappings.",
@@ -3598,7 +3598,7 @@
         "requiredScopes": "Required Scopes",
         "scopeOverride": "Deployment override (XERO_OAUTH_SCOPES)",
         "scopeOverrideInvalid": "The XERO_OAUTH_SCOPES override was ignored because it contains invalid entries ({{scopes}}). The default scopes are used instead.",
-        "scopeReconnectNote": "These scopes apply to new authorizations. An existing connection keeps the scopes it was originally granted; to apply the current set, disconnect and reconnect Xero. You can also remove this app from Connected apps in Xero to revoke earlier grants.",
+        "scopeReconnectNote": "These scopes apply to new authorizations. An existing connection keeps the scopes it was originally granted; to apply the current set, disconnect and reconnect Xero. A token refresh keeps the existing permissions — only a fresh authorization grants new ones. You can also remove this app from Connected apps in Xero to revoke earlier grants.",
         "storedClientId": "Stored client ID: {{value}}",
         "storedClientSecret": "Stored client secret: {{value}}",
         "tenantOauthDescription": "Paste the Xero app credentials registered for this tenant. Secret values are never returned to the browser after they are saved.",

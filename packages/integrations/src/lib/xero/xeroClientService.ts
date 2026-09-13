@@ -8,6 +8,7 @@ import {
   withProviderCredentialLock,
 } from '../providerDisconnect/lock';
 import { PROVIDER_XERO } from '../providerDisconnect/types';
+import { normalizeXeroConnectionSelection } from './xeroRealmIdentity';
 import { AppError, sanitizeProviderMessage, toSafeProviderError } from '@alga-psa/core';
 import type {
   ExternalCompanyRecord,
@@ -54,7 +55,11 @@ export const XERO_PAYMENT_READ_SCOPE = 'accounting.payments.read';
 // connections are never falsely flagged as missing permissions.
 const XERO_LEGACY_SCOPE_EQUIVALENTS: Record<string, readonly string[]> = {
   'accounting.settings.read': ['accounting.settings'],
-  'accounting.invoices': ['accounting.transactions', 'accounting.transactions.read'],
+  // Invoice export writes (POST /Invoices), so only the read+write broad scope
+  // satisfies it. `accounting.transactions.read` is read-only and must NOT
+  // satisfy the invoice write requirement — a read-only legacy grant can poll
+  // Payments but cannot export.
+  'accounting.invoices': ['accounting.transactions'],
   [XERO_PAYMENT_READ_SCOPE]: [
     'accounting.payments',
     'accounting.transactions',
@@ -519,6 +524,21 @@ export class XeroClientService {
   async createInvoices(payloads: XeroInvoicePayload[]): Promise<XeroInvoiceCreateSuccess[]> {
     if (payloads.length === 0) {
       return [];
+    }
+
+    // Invoice export is a write. A connection whose known grant is read-only
+    // (e.g. legacy accounting.transactions.read) can poll but not export; fail
+    // with actionable reauthorization instead of sending a request Xero will
+    // reject. An unknown/absent stored scope is not guessed at.
+    const missingInvoiceWrite = computeMissingXeroScopes(this.connection.scope, [
+      'accounting.invoices'
+    ]);
+    if (missingInvoiceWrite.length > 0) {
+      throw new AppError(
+        'XERO_SCOPE_INSUFFICIENT',
+        `This Xero connection does not have permission to write invoices (missing ${missingInvoiceWrite.join(', ')}). Reconnect Xero to grant invoice write access — refreshing the existing connection keeps its current permissions and will not add them.`,
+        { missingScopes: missingInvoiceWrite, connectionId: this.connection.connectionId }
+      );
     }
 
     const requestBody = {
@@ -1164,14 +1184,9 @@ export async function resolveDefaultXeroConnectionId(tenantId: string): Promise<
   }
 
   if (persisted) {
-    if (connections[persisted]) {
-      return persisted;
-    }
-    const owners = Object.values(connections).filter(
-      (connection) => connection.xeroTenantId === persisted
-    );
-    if (owners.length === 1) {
-      return owners[0].connectionId;
+    const normalized = normalizeXeroConnectionSelection(connections, persisted);
+    if (normalized) {
+      return normalized;
     }
   }
 

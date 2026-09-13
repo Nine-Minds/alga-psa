@@ -427,6 +427,29 @@ describe('Xero integration actions', () => {
     expect(xeroCreateMock).not.toHaveBeenCalled();
   });
 
+  it('T016d: a read-only legacy grant reports the missing invoice-write permission', async () => {
+    tenantSecrets.set('tenant-1:xero_client_id', 'client-id');
+    tenantSecrets.set('tenant-1:xero_client_secret', 'client-secret');
+    getXeroConnectionSummariesMock.mockResolvedValue([
+      {
+        connectionId: 'connection-1',
+        xeroTenantId: 'tenant-guid-1',
+        tenantName: 'Acme Holdings',
+        status: 'connected',
+        scope: 'offline_access accounting.settings.read accounting.transactions.read accounting.contacts',
+        // getXeroConnectionSummaries derives this; the mock states it directly.
+        missingScopes: ['accounting.invoices']
+      }
+    ] as any);
+
+    const status = await getXeroConnectionStatus();
+
+    expect(status.connected).toBe(false);
+    expect(status.errorCode).toBe('SCOPE_INSUFFICIENT');
+    expect(status.error).toContain('accounting.invoices');
+    expect(xeroCreateMock).not.toHaveBeenCalled();
+  });
+
   it('catalog actions report a missing Xero connection instead of returning an empty catalog', async () => {
     getXeroConnectionSummariesMock.mockResolvedValue([]);
 
