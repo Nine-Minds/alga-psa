@@ -4,6 +4,7 @@ import { getConnection } from '@alga-psa/db';
 import { CoManagedSharedWorkError } from '@alga-psa/co-managed';
 import { TicketConversationError } from '@alga-psa/shared/lib/tickets/namedConversations';
 import { StorageProviderFactory } from '@alga-psa/storage/StorageProviderFactory';
+import { downloadRequesterTaskAttachment } from '@alga-psa/co-managed';
 import { downloadPortalConversationAttachment } from '@/lib/co-managed/portalAttachments';
 import { conversationAttachmentHeaders as headers, conversationAttachmentResponse } from '@/lib/co-managed/attachmentResponse';
 
@@ -15,7 +16,13 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const query = request.nextUrl.searchParams, { attachmentId } = await params;
     const conversationId = query.get('conversationId');
     // The store always comes from the verified requester session, never a URL tenant.
-    const result = await downloadPortalConversationAttachment(await getConnection(session.user.tenant),
+    if ([...query.keys()].some(key => !['ticketId', 'taskId', 'projectId', 'threadId', 'commentId'].includes(key) || query.getAll(key).length !== 1) ||
+        (query.has('ticketId') ? query.has('taskId') || query.has('projectId') : !query.has('taskId') || !query.has('projectId'))) throw new CoManagedSharedWorkError();
+    const result = query.has('taskId') ? await downloadRequesterTaskAttachment(await getConnection(session.user.tenant),
+      { kind: 'session', tenant: session.user.tenant, userId: session.user.id, sessionId: session.session_id },
+      { projectId: query.get('projectId') ?? '', taskId: query.get('taskId') ?? '' },
+      { threadId: query.get('threadId') ?? '', commentId: query.get('commentId') ?? '' }, attachmentId,
+      async path => (await StorageProviderFactory.createProvider()).download(path)) : await downloadPortalConversationAttachment(await getConnection(session.user.tenant),
       { kind: 'session', tenant: session.user.tenant, userId: session.user.id, sessionId: session.session_id },
       { ticketId: query.get('ticketId') ?? '', threadId: query.get('threadId') ?? '', commentId: query.get('commentId') ?? '',
         ...(conversationId !== null ? { conversationId } : {}) }, attachmentId,

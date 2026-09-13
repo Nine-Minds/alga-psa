@@ -1,4 +1,4 @@
-const { ensureTenantDistribution } = require('./utils/citusDistribution.cjs');
+const { ensureTenantDistribution, supportsTriggers } = require('./utils/citusDistribution.cjs');
 const TABLE = 'native_time_tracking_sessions';
 exports.up = async function(knex) {
   // Standard time entries require an end instant. Customized installations must
@@ -56,8 +56,10 @@ exports.up = async function(knex) {
       END IF;
       RETURN NEW;
     END; $$ LANGUAGE plpgsql`);
-  await knex.raw('DROP TRIGGER IF EXISTS preserve_native_time_tracking_session ON ??', [TABLE]);
-  await knex.raw('CREATE TRIGGER preserve_native_time_tracking_session BEFORE INSERT OR UPDATE ON ?? FOR EACH ROW EXECUTE FUNCTION preserve_native_time_tracking_session()', [TABLE]);
+  if (await supportsTriggers(knex, TABLE)) {
+    await knex.raw('DROP TRIGGER IF EXISTS preserve_native_time_tracking_session ON ??', [TABLE]);
+    await knex.raw('CREATE TRIGGER preserve_native_time_tracking_session BEFORE INSERT OR UPDATE ON ?? FOR EACH ROW EXECUTE FUNCTION preserve_native_time_tracking_session()', [TABLE]);
+  }
 };
 exports.down = async function(knex) {
   if (await knex.schema.hasTable(TABLE) && await knex(TABLE).first()) throw new Error('Cannot discard retained timer clocks or completion receipts');

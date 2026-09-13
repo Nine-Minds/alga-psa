@@ -14,7 +14,7 @@ import {
 } from './common';
 
 // Work item type schema
-export const workItemTypeSchema = z.enum(['ticket', 'project_task', 'non_billable_category', 'ad_hoc', 'interaction']);
+export const workItemTypeSchema = z.enum(['ticket', 'project_task', 'co_managed', 'non_billable_category', 'ad_hoc', 'interaction']);
 
 // Approval status schema
 export const approvalStatusSchema = z.enum(['DRAFT', 'SUBMITTED', 'APPROVED', 'CHANGES_REQUESTED']);
@@ -28,6 +28,7 @@ const baseTimeEntrySchema = z.object({
   notes: z.string().optional(),
   service_id: uuidSchema.optional(),
   tax_region: z.string().optional(),
+  contract_line_id: uuidSchema.nullable().optional(),
   is_billable: z.boolean().optional().default(true)
 });
 

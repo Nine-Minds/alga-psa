@@ -499,6 +499,52 @@
     },
     "layout": {
       "defaultTitle": "Dashboard | AlgaPSA"
+    },
+    "coManaged": {
+      "title": "Gezamenlijk beheerde IT",
+      "archive": {
+        "title": "Archief van gedeeld werk"
+      },
+      "tickets": {
+        "title": "Wachtrijen voor tickets in gezamenlijk beheer"
+      }
+    },
+    "coManagement": {
+      "title": "Toegang voor gezamenlijk beheer",
+      "administration": {
+        "title": "Gedelegeerd beheer"
+      },
+      "departure": {
+        "title": "Gezamenlijk beheer beëindigen"
+      },
+      "export": {
+        "title": "Werkruimte exporteren"
+      },
+      "projects": {
+        "detail": {
+          "title": "Gedeeld project"
+        }
+      },
+      "sla": {
+        "title": "SLA-prioriteiten voor gezamenlijk beheer"
+      },
+      "tasks": {
+        "title": "Wachtrijen voor projecttaken",
+        "detail": {
+          "title": "Gedeelde projecttaak"
+        }
+      },
+      "ticketAccess": {
+        "title": "Toegang tot afzonderlijke tickets"
+      },
+      "tickets": {
+        "detail": {
+          "title": "Gedeeld ticket"
+        }
+      },
+      "upgrade": {
+        "title": "Upgraden naar AlgaPSA"
+      }
     }
   },
   "auth": {

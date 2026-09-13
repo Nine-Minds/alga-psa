@@ -1,4 +1,5 @@
 "use client";
+import { CoManagedRequesterTaskProvider } from '@/components/co-managed/CoManagedRequesterTaskConversation';
 
 import { AppSessionProvider } from "@alga-psa/auth/client";
 import { ClientPortalLayout } from "@alga-psa/client-portal/components";
@@ -50,7 +51,7 @@ export function ClientPortalLayoutClient({
         <CurrencyFormatProvider currencyCode={currencyCode || 'USD'}>
         <BrandingProvider initialBranding={branding}>
           <ClientPortalDocumentsProvider>
-          <CoManagedPortalAttachmentsProvider>
+          <CoManagedPortalAttachmentsProvider><CoManagedRequesterTaskProvider>
             <ClientPortalLayout
               productCode={productCode}
               appointmentsEnabled={appointmentsEnabled}
@@ -60,7 +61,7 @@ export function ClientPortalLayoutClient({
                 ? <ProductRouteBoundary behavior={routeBehavior} scope="client-portal" />
                 : children}
             </ClientPortalLayout>
-          </CoManagedPortalAttachmentsProvider>
+          </CoManagedRequesterTaskProvider></CoManagedPortalAttachmentsProvider>
           </ClientPortalDocumentsProvider>
         </BrandingProvider>
         </CurrencyFormatProvider>

@@ -499,6 +499,52 @@
     },
     "layout": {
       "defaultTitle": "Panel | AlgaPSA"
+    },
+    "coManaged": {
+      "title": "TI cogestionada",
+      "archive": {
+        "title": "Archivo de trabajo compartido"
+      },
+      "tickets": {
+        "title": "Colas de tickets cogestionados"
+      }
+    },
+    "coManagement": {
+      "title": "Acceso cogestionado",
+      "administration": {
+        "title": "Administración delegada"
+      },
+      "departure": {
+        "title": "Finalizar la cogestión"
+      },
+      "export": {
+        "title": "Exportar espacio de trabajo"
+      },
+      "projects": {
+        "detail": {
+          "title": "Proyecto compartido"
+        }
+      },
+      "sla": {
+        "title": "Prioridades de SLA de TI cogestionada"
+      },
+      "tasks": {
+        "title": "Colas de tareas de proyecto",
+        "detail": {
+          "title": "Tarea de proyecto compartida"
+        }
+      },
+      "ticketAccess": {
+        "title": "Acceso a tickets individuales"
+      },
+      "tickets": {
+        "detail": {
+          "title": "Ticket compartido"
+        }
+      },
+      "upgrade": {
+        "title": "Actualizar a AlgaPSA"
+      }
     }
   },
   "auth": {

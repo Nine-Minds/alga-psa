@@ -55,7 +55,8 @@
     "settings": "Instellingen",
     "profile": "Profiel",
     "logout": "Afmelden",
-    "help": "Hulp"
+    "help": "Hulp",
+    "coManagedDelegation": "Gedelegeerd beheer"
   },
   "actions": {
     "save": "Opslaan",
@@ -1598,5 +1599,9 @@
   },
   "callLink": {
     "teamsCall": "Bellen in Microsoft Teams"
+  },
+  "users": {
+    "soloLicenseLimit": "Het Solo-abonnement ondersteunt één technicus. Waardeer de werkruimte op voordat u nog een gebruiker activeert.",
+    "technicianLicenseLimit": "Deze werkruimte kan geen extra technicus activeren. Controleer de activeringsstatus en de beschikbare licentietoewijzing."
   }
 }

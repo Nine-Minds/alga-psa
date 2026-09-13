@@ -100,7 +100,7 @@ export function unparseCSV(data: any[], fields: string[]): string {
       stringField = `'${stringField}`;
     }
 
-    if (stringField.includes(',') || stringField.includes('"') || stringField.includes('\n')) {
+    if (stringField.includes(',') || stringField.includes('"') || stringField.includes('\n') || stringField.includes('\r')) {
       return `"${stringField.replace(/"/g, '""')}"`;
     }
     return stringField;

@@ -26,6 +26,7 @@ export interface CoManagedTicketQueueItem {
     ticket_number?: string | null; title?: string | null; status_name?: string | null;
     priority_name?: string | null; is_closed?: boolean | null;
     responsibility?: 'msp' | 'customer' | null; entered_at?: string | null; updated_at?: string | null;
+    work_revision?: number | null;
   };
 }
 export interface CoManagedTicketQueuePage {
@@ -43,6 +44,7 @@ const sources = {
   priority_name: ['priority', 'priority_id', 'priority_name', 'tickets.priority_id', 'priorities'],
   is_closed: ['is_closed', 'status', 'status_id', 'tickets.status_id', 'statuses'],
   responsibility: ['responsibility', 'work', 'co_management_ticket_work'],
+  work_revision: ['work_revision', 'values.work_revision', 'tickets.work_revision', 'revision', 'work', 'co_management_ticket_work', 'co_management_ticket_work.revision'],
   entered_at: ['entered_at', 'tickets.entered_at'], updated_at: ['updated_at', 'tickets.updated_at'],
 };
 function snapshotRequest(input: CoManagedTicketQueueRequest): Required<Omit<CoManagedTicketQueueRequest, 'workspaceTenant'>> & { workspaceTenant?: string } {
@@ -61,6 +63,17 @@ function snapshotRequest(input: CoManagedTicketQueueRequest): Required<Omit<CoMa
 /** One authorized SQL relation drives search, sorting, pagination and counts.
  * No independently paginated tenant lists, cached permissions, or shadow tickets. */
 export async function getCoManagedTicketQueue(db: Knex, inputActor: CoManagedSessionActor, input: CoManagedTicketQueueRequest): Promise<CoManagedTicketQueuePage> {
+  return readCoManagedTicketQueue(db, inputActor, input, true);
+}
+
+/** Export the complete filtered relation in one snapshot. Page controls are
+ * deliberately absent: concatenating page reads can skip or duplicate tickets. */
+export async function exportCoManagedTicketQueue(db: Knex, actor: CoManagedSessionActor, input: Omit<CoManagedTicketQueueRequest, 'page' | 'pageSize'>): Promise<CoManagedTicketQueueItem[]> {
+  const result = await readCoManagedTicketQueue(db, actor, { ...input, page: 1, pageSize: 25 }, false);
+  return result.items;
+}
+
+async function readCoManagedTicketQueue(db: Knex, inputActor: CoManagedSessionActor, input: CoManagedTicketQueueRequest, paginate: boolean): Promise<CoManagedTicketQueuePage> {
   const actor = snapshotCoManagedSessionActor(inputActor), request = snapshotRequest(input);
   return withTransaction(db, async trx => {
     // LEVERAGE: pattern co-managed-read-admission — detail and federated query paths share trust/session locks but need distinct record projections.
@@ -83,6 +96,7 @@ export async function getCoManagedTicketQueue(db: Knex, inputActor: CoManagedSes
       .filter(rule => rule.resource === 'ticket' && rule.action === 'read');
     const redactions = rules.flatMap(rule => rule.redactedFields ?? []);
     const visible = Object.fromEntries(Object.entries(sources).map(([field, aliases]) => [field, !isCoManagedReadFieldHidden(redactions, aliases)]));
+    const assignmentVisible = !isCoManagedReadFieldHidden(redactions, ['mspAssignment', 'msp_assignment', 'assigned_to', 'assigned_team_id', 'assignee', 'work', 'co_managed_ticket_references'].flatMap(name => [name, `values.${name}`, `tickets.${name}`]));
     const queries: Knex.QueryBuilder[] = [];
     function projection(ownerTenant: string, name: string, relationship?: any, boardIds: string[] = []) {
       const owner = tenantDb(trx, ownerTenant), shared = Boolean(relationship);
@@ -100,8 +114,11 @@ export async function getCoManagedTicketQueue(db: Knex, inputActor: CoManagedSes
         base.where(function () {
           this.where(function () { this.whereNotNull('w.work_id').whereNull('w.grant_revoked_at'); }).orWhereIn('t.board_id', boardIds);
         });
-        if (request.view === 'working') base.where('w.responsibility', 'msp').whereNotNull('r.reference_id');
-        if (request.view === 'working' && !visible.responsibility) base.whereRaw('false');
+        if (request.view === 'working') base.whereNotNull('r.reference_id').where(function () {
+          if (visible.responsibility) this.where('w.responsibility', 'msp');
+          if (assignmentVisible) this.orWhereNotNull('r.assigned_to').orWhereNotNull('r.assigned_team_id');
+          if (!visible.responsibility && !assignmentVisible) this.whereRaw('false');
+        });
       }
       const policyColumns = shared
         ? { auth_owner: trx.raw('NULL::uuid'), auth_client: trx.raw('?::uuid', [relationship.sponsor_client_id]), auth_board: 'r.board_id', auth_assigned: 'r.assigned_to', auth_team: 'r.assigned_team_id' }
@@ -109,11 +126,11 @@ export async function getCoManagedTicketQueue(db: Knex, inputActor: CoManagedSes
       base.select({ tenant: 't.tenant', ticket_id: 't.ticket_id', relationship_id: trx.raw('?::uuid', [relationship?.relationship_id ?? null]),
         workspace_name: trx.raw('?::text', [name]), ticket_number: 't.ticket_number', title: 't.title', status_name: 's.name', priority_name: 'p.priority_name',
         is_closed: 's.is_closed', responsibility: shared ? trx.raw("COALESCE(w.responsibility, 'customer')") : trx.raw("'msp'::text"),
-        entered_at: 't.entered_at', updated_at: 't.updated_at', ...policyColumns });
+        entered_at: 't.entered_at', updated_at: 't.updated_at', work_revision: shared ? 'w.revision' : trx.raw('NULL::integer'), ...policyColumns });
       const authorized = trx.from(base.as('q'));
       applyCoManagedQueuePolicy(authorized, subject, rules, { resourceType: 'ticket', shared });
       authorized.select('q.tenant', 'q.ticket_id', 'q.relationship_id', 'q.workspace_name');
-      for (const field of Object.keys(sources)) authorized.select(visible[field] ? `q.${field}` : trx.raw(`NULL::${field === 'is_closed' ? 'boolean' : ['entered_at', 'updated_at'].includes(field) ? 'timestamptz' : 'text'} as ??`, [field]));
+      for (const field of Object.keys(sources)) authorized.select(visible[field] ? `q.${field}` : trx.raw(`NULL::${field === 'is_closed' ? 'boolean' : field === 'work_revision' ? 'integer' : ['entered_at', 'updated_at'].includes(field) ? 'timestamptz' : 'text'} as ??`, [field]));
       queries.push(authorized);
     }
     if (request.view === 'working') projection(actor.tenant, workspace.client_name);
@@ -139,7 +156,8 @@ export async function getCoManagedTicketQueue(db: Knex, inputActor: CoManagedSes
     }
     if (request.state !== 'all') filtered.where('is_closed', request.state === 'closed');
     const sort = { updated: 'updated_at', created: 'entered_at', title: 'title', number: 'ticket_number' }[request.sort];
-    const page = trx.from('filtered').select('*').orderBy(sort, request.direction, 'last').orderBy('tenant').orderBy('ticket_id').limit(request.pageSize).offset((request.page - 1) * request.pageSize);
+    const page = trx.from('filtered').select('*').orderBy(sort, request.direction, 'last').orderBy('tenant').orderBy('ticket_id');
+    if (paginate) page.limit(request.pageSize).offset((request.page - 1) * request.pageSize);
     // A single statement snapshot keeps rows and counts coherent during local ticket edits.
     const result = await trx.with('authorized', combined).with('filtered', filtered).with('page_rows', page)
       .select(trx.raw("COALESCE((SELECT json_agg(workspaces ORDER BY name, tenant) FROM (SELECT DISTINCT tenant, workspace_name AS name FROM authorized) workspaces), '[]'::json) AS workspaces"),

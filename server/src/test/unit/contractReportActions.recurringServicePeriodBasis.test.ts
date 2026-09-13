@@ -83,6 +83,10 @@ function buildReportKnex(params: {
     if (table === 'contract_line_service_configuration as clsc') {
       return buildThenableQuery([]);
     }
+    // Unaliased: the usage-configuration probe that flags a line as variable.
+    if (table === 'contract_line_service_configuration') {
+      return buildThenableQuery([]);
+    }
     if (table === 'contract_line_unit_pricing_revisions as rev') {
       return buildThenableQuery([]);
     }
@@ -168,6 +172,10 @@ describe('contractReportActions recurring service-period basis', () => {
         return buildThenableQuery(contractLines);
       }
       if (table === 'contract_line_service_configuration as clsc') {
+        return buildThenableQuery([]);
+      }
+      // Unaliased: the usage-configuration probe that flags a line as variable.
+      if (table === 'contract_line_service_configuration') {
         return buildThenableQuery([]);
       }
       if (table === 'contract_line_unit_pricing_revisions as rev') {

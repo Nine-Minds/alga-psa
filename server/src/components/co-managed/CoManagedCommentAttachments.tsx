@@ -18,14 +18,14 @@ function downloadUrl(resource: CoManagedSharedResource, attachment: CoManagedCon
       conversationId: conversation.conversationId, storeTenant: attachment.storeTenant, threadId: attachment.threadId, commentId: attachment.commentId });
     return `/api/tickets/conversation-attachments/${encodeURIComponent(attachment.attachmentId)}?${query}`;
   }
-  const query = new URLSearchParams({ customerTenant: resource.tenant, relationshipId: resource.relationshipId, ticketId: resource.id,
+  const query = new URLSearchParams({ customerTenant: resource.tenant, relationshipId: resource.relationshipId, [resource.kind === 'project_task' ? 'taskId' : 'ticketId']: resource.id,
     storeTenant: attachment.storeTenant, threadId: attachment.threadId, commentId: attachment.commentId });
   return `/api/co-management/attachments/${encodeURIComponent(attachment.attachmentId)}?${query}`;
 }
 export default function CoManagedCommentAttachments({ resource, comment, conversation }: { resource: CoManagedSharedResource; comment: CoManagedCommentReference; conversation?: TicketConversationReference }) {
   const { data: session } = useSession();
   const actor = { tenant: session?.user?.tenant, userId: session?.user?.id };
-  const identity = `${session?.session_id}:${resource.tenant}:${resource.relationshipId}:${resource.id}:${comment.storeTenant}:${comment.threadId}:${comment.commentId}:${actor.tenant}:${actor.userId}:${conversation?.storeTenant}:${conversation?.conversationId}`;
+  const identity = `${session?.session_id}:${resource.tenant}:${resource.relationshipId}:${resource.kind}:${resource.id}:${comment.storeTenant}:${comment.threadId}:${comment.commentId}:${actor.tenant}:${actor.userId}:${conversation?.storeTenant}:${conversation?.conversationId}`;
   return <Attachments key={identity} resource={resource} comment={comment} actor={actor} conversation={conversation} />;
 }
 function Attachments({ resource, comment, actor, conversation }: { resource: CoManagedSharedResource; comment: CoManagedCommentReference; actor: { tenant?: string; userId?: string }; conversation?: TicketConversationReference }) {

@@ -329,8 +329,8 @@
     "recovery": {
       "title": "Onvoltooide imports",
       "refresh": "Vernieuwen",
-      "paused": "Imports zijn gepauzeerd voor deze werkruimte. Je bestanden zijn opgeslagen.",
-      "retry": "Je bestanden zijn opgeslagen. Hervat de import zonder ze opnieuw te uploaden.",
+      "paused": "Imports zijn gepauzeerd voor deze werkruimte. Uw bestanden zijn opgeslagen.",
+      "retry": "Uw bestanden zijn opgeslagen. Hervat de import zonder ze opnieuw te uploaden.",
       "resume": "Import hervatten",
       "remaining": "{{pending}} van {{total}} bestanden resterend",
       "open": "Voortgang bekijken",

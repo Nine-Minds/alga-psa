@@ -1,3 +1,4 @@
+import { syncCoManagedTicketAwaitingClientSla } from './ticketSla';
 import { createHash, randomUUID } from 'node:crypto';
 import { tenantDb } from '@alga-psa/db';
 import type { EmailReplyAdmission } from '../../../shared/services/email/qualifiedReplyAdmission';
@@ -52,6 +53,7 @@ export const admitCoManagedEmailReply: EmailReplyAdmission = async (trx, input, 
             comment.is_internal !== (context.audience !== 'requester') || thread.is_internal !== comment.is_internal) {
           throw new Error('Accepted technician reply does not match its durable source and canonical author');
         }
+        await syncCoManagedTicketAwaitingClientSla(context.trx, context.actor.tenant, written.ticketId);
         // Relationship identity is historical provenance, not continuing MSP
         // authority: the customer retains accepted replies after departure.
         const relationship = await owner.table('co_management_relationships').orderBy('created_at', 'desc').orderBy('relationship_id').forShare().first('relationship_id');

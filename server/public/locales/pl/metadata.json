@@ -499,6 +499,52 @@
     },
     "layout": {
       "defaultTitle": "Pulpit | AlgaPSA"
+    },
+    "coManaged": {
+      "title": "Współzarządzane IT",
+      "archive": {
+        "title": "Archiwum współdzielonej pracy"
+      },
+      "tickets": {
+        "title": "Kolejki zgłoszeń współzarządzanych"
+      }
+    },
+    "coManagement": {
+      "title": "Dostęp do współzarządzania",
+      "administration": {
+        "title": "Administracja delegowana"
+      },
+      "departure": {
+        "title": "Zakończ współzarządzanie"
+      },
+      "export": {
+        "title": "Eksportuj przestrzeń roboczą"
+      },
+      "projects": {
+        "detail": {
+          "title": "Projekt współdzielony"
+        }
+      },
+      "sla": {
+        "title": "Priorytety SLA współzarządzania"
+      },
+      "tasks": {
+        "title": "Kolejki zadań projektowych",
+        "detail": {
+          "title": "Współdzielone zadanie projektowe"
+        }
+      },
+      "ticketAccess": {
+        "title": "Dostęp do pojedynczych zgłoszeń"
+      },
+      "tickets": {
+        "detail": {
+          "title": "Zgłoszenie współdzielone"
+        }
+      },
+      "upgrade": {
+        "title": "Przejdź na AlgaPSA"
+      }
     }
   },
   "auth": {

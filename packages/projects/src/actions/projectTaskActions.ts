@@ -1,5 +1,6 @@
 'use server';
 
+import { retainCoManagedConversationBeforeSourceChange } from '@alga-psa/co-managed';
 import { Knex } from 'knex';
 import ProjectTaskModel from '../models/projectTask';
 import ProjectModel from '@alga-psa/projects/models/project';
@@ -2152,6 +2153,8 @@ export const moveTaskToPhase = withAuth(async (
                 due_date: existingTask.due_date,
                 updated_at: trx.fn.now()
             };
+
+            if (existingTask.phase_id !== newPhaseId) await retainCoManagedConversationBeforeSourceChange(trx, tenant, 'project_task', taskId);
 
             const [updatedTask] = await tenantScopedTable(trx, 'project_tasks', tenant)
                 .where('task_id', taskId)

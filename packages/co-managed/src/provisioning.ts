@@ -36,7 +36,7 @@ export interface CoManagedProvisioningOperation {
 export class CoManagedProvisioningError extends Error {
   constructor(public readonly code: 'INVALID_REQUEST' | 'OPERATION_CONFLICT' | 'OPERATION_NOT_FOUND' |
     'ACTOR_NOT_FOUND' | 'DESTINATION_NOT_FOUND' | 'OPERATION_CLOSED' | 'RELATIONSHIP_ACTIVE' |
-    'CLEANUP_INCOMPLETE' | 'RESERVATION_NOT_FOUND' | 'CAPACITY_UNAVAILABLE') {
+    'CLEANUP_INCOMPLETE' | 'ADMINISTRATOR_CLAIMED' | 'RESERVATION_NOT_FOUND' | 'CAPACITY_UNAVAILABLE') {
     super({ INVALID_REQUEST: 'Provide a workspace name, customer administrator, and valid provisioning details.',
       OPERATION_CONFLICT: 'This provisioning operation was started with different details.',
       OPERATION_NOT_FOUND: 'Provisioning operation not found.', ACTOR_NOT_FOUND: 'An active internal sponsor user is required.',
@@ -44,6 +44,7 @@ export class CoManagedProvisioningError extends Error {
       OPERATION_CLOSED: 'This provisioning operation cannot run in its current state.',
       RELATIONSHIP_ACTIVE: 'An accepted relationship must use the customer departure process.',
       CLEANUP_INCOMPLETE: 'Customer workspace cleanup must complete before releasing its seats.',
+      ADMINISTRATOR_CLAIMED: 'The customer administrator has claimed this workspace. Use the customer departure process.',
       RESERVATION_NOT_FOUND: 'The provisioning reservation is no longer valid.',
       CAPACITY_UNAVAILABLE: 'Restore the sponsoring Pro license and co-managed capacity before provisioning.',
     }[code]);
@@ -163,13 +164,53 @@ export async function recordCoManagedProvisioningFailure(db: Knex, sponsorTenant
   });
 }
 
+/** Signup and cleanup share the seat/operation lock order. Once the customer
+ * claims an account, an MSP may no longer erase the workspace through setup. */
+async function assertProvisioningCleanupEligible(trx: Knex.Transaction, operation: CoManagedProvisioningOperation): Promise<void> {
+  if (operation.customer_tenant === operation.tenant) throw new CoManagedProvisioningError('RESERVATION_NOT_FOUND');
+  const customer = tenantDb(trx, operation.customer_tenant);
+  const owner = await customer.table('tenants').forUpdate().first('product_code');
+  if (owner && owner.product_code !== 'co_managed') throw new CoManagedProvisioningError('OPERATION_CLOSED');
+  const allocation = await tenantDb(trx, operation.tenant).table('co_managed_allocations').where({
+    allocation_id: operation.allocation_id, operation_id: operation.operation_id, customer_tenant: operation.customer_tenant,
+    relationship_id: operation.relationship_id, state: 'reserved',
+  }).forUpdate().first();
+  if (!allocation) throw new CoManagedProvisioningError('RESERVATION_NOT_FOUND');
+  const invitation = await customer.table('user_invitations').where('invitation_id', operation.administrator_invitation_id).forUpdate().first('used_at');
+  if (invitation?.used_at || await customer.table('users').first('user_id')) throw new CoManagedProvisioningError('ADMINISTRATOR_CLAIMED');
+  if (await customer.table('co_management_relationships').whereNot('relationship_id', operation.relationship_id).first())
+    throw new CoManagedProvisioningError('RESERVATION_NOT_FOUND');
+}
+
 export async function requestCoManagedProvisioningCleanup(db: Knex, sponsorTenant: string, operationId: string): Promise<void> {
   await db.transaction(async trx => {
     const operation = await lockOperation(trx, sponsorTenant, operationId);
     if (operation.state === 'cancelled') return;
+    await assertProvisioningCleanupEligible(trx, operation);
     await tenantDb(trx, sponsorTenant).table('co_managed_provisioning_operations').where('operation_id', operationId)
       .update({ state: 'cleanup_requested', updated_at: trx.fn.now() });
   });
+}
+
+/** Trusted worker adapter deletes the qualified unclaimed workspace and proves
+ * cleanup in one transaction. A lost acknowledgment is a harmless exact retry. */
+export async function runCoManagedProvisioningCleanup(db: Knex, sponsorTenant: string, operationId: string,
+  cleanup: (trx: Knex.Transaction, operation: CoManagedProvisioningOperation) => Promise<void>): Promise<void> {
+  if (![sponsorTenant, operationId].every(id => uuid.test(id))) throw new CoManagedProvisioningError('INVALID_REQUEST');
+  await db.transaction(async trx => {
+    const operation = await lockOperation(trx, sponsorTenant, operationId);
+    if (operation.state === 'cancelled') return;
+    if (operation.state !== 'cleanup_requested') throw new CoManagedProvisioningError('OPERATION_CLOSED');
+    await assertProvisioningCleanupEligible(trx, operation);
+    await cleanup(trx, operation);
+    await completeCoManagedProvisioningCleanup(trx, sponsorTenant, operationId);
+  });
+}
+
+export async function recordCoManagedProvisioningCleanupFailure(db: Knex, sponsorTenant: string, operationId: string): Promise<void> {
+  await tenantDb(db, sponsorTenant).table('co_managed_provisioning_operations')
+    .where({ operation_id: operationId, state: 'cleanup_requested' })
+    .update({ error_code: 'PROVISIONING_CLEANUP_FAILED', updated_at: db.fn.now() });
 }
 
 /** Final cleanup acknowledgement, after deleting the unactivated workspace.
@@ -179,6 +220,7 @@ export async function completeCoManagedProvisioningCleanup(db: Knex, sponsorTena
     const operation = await lockOperation(trx, sponsorTenant, operationId);
     if (operation.state === 'cancelled') return;
     if (operation.state !== 'cleanup_requested') throw new CoManagedProvisioningError('OPERATION_CLOSED');
+    await assertProvisioningCleanupEligible(trx, operation);
     const customer = tenantDb(trx, operation.customer_tenant);
     if (await customer.table('tenants').first()) throw new CoManagedProvisioningError('CLEANUP_INCOMPLETE');
     const existingTables = await trx('information_schema.tables').where({ table_schema: 'public', table_type: 'BASE TABLE' }).pluck('table_name');

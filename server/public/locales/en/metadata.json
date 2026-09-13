@@ -229,6 +229,52 @@
       },
       "title": "Clients"
     },
+    "coManaged": {
+      "title": "Co-Managed IT",
+      "archive": {
+        "title": "Shared Work Archive"
+      },
+      "tickets": {
+        "title": "Co-Managed Ticket Queues"
+      }
+    },
+    "coManagement": {
+      "title": "Co-Managed Access",
+      "administration": {
+        "title": "Delegated Administration"
+      },
+      "departure": {
+        "title": "End Co-Management"
+      },
+      "export": {
+        "title": "Export Workspace"
+      },
+      "projects": {
+        "detail": {
+          "title": "Shared Project"
+        }
+      },
+      "sla": {
+        "title": "Co-Managed SLA Priorities"
+      },
+      "tasks": {
+        "title": "Project Task Queues",
+        "detail": {
+          "title": "Shared Project Task"
+        }
+      },
+      "ticketAccess": {
+        "title": "Individual Ticket Access"
+      },
+      "tickets": {
+        "detail": {
+          "title": "Shared Ticket"
+        }
+      },
+      "upgrade": {
+        "title": "Upgrade to AlgaPSA"
+      }
+    },
     "contacts": {
       "title": "Contacts",
       "detail": {

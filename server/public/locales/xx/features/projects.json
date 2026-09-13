@@ -1416,12 +1416,12 @@
     "loading": "⟦Ŀȯȧḓīƞɠ...⟧",
     "empty": "⟦Ƞȯ ƈȯḿḿḗƞŧş ẏḗŧ. Ɓḗ ŧħḗ ƒīřşŧ ŧȯ ƈȯḿḿḗƞŧ!⟧",
     "audiences": {
-      "requester": "11111",
-      "shared_it": "11111",
-      "organization_private": "11111"
+      "requester": "⟦Řḗʠŭḗşŧḗř ȧƞḓ ĪŦ ŧḗȧḿş⟧",
+      "shared_it": "⟦Şħȧřḗḓ ĪŦ ŧḗȧḿş⟧",
+      "organization_private": "⟦Ḿẏ ȯřɠȧƞīẑȧŧīȯƞ ȯƞŀẏ⟧"
     },
-    "authorUnavailable": "11111",
-    "loadError": "11111"
+    "authorUnavailable": "⟦Ȧŭŧħȯř ŭƞȧṽȧīŀȧƀŀḗ⟧",
+    "loadError": "⟦Ŭƞȧƀŀḗ ŧȯ ŀȯȧḓ ŧħīş ƈȯƞṽḗřşȧŧīȯƞ. Řḗƒřḗşħ ŧȯ ƈħḗƈķ ẏȯŭř ƈŭřřḗƞŧ ȧƈƈḗşş.⟧"
   },
   "addStatusDialog": {
     "phaseTitle": "⟦Ȧḓḓ Ƥħȧşḗ Şŧȧŧŭş ƒřȯḿ Ŀīƀřȧřẏ⟧",

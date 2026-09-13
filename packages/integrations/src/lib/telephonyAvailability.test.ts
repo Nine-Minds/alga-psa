@@ -1,6 +1,8 @@
+vi.mock('@shared/services/productAccessGuard', async importOriginal => ({ ...await importOriginal<typeof import('@shared/services/productAccessGuard')>(), assertPsaOnlyTenantAccess: vi.fn(async () => undefined) }));
+import { assertPsaOnlyTenantAccess, ProductAccessError } from '@shared/services/productAccessGuard';
 import fs from 'node:fs';
 import path from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   getTelephonyAvailability,
@@ -38,4 +40,16 @@ describe('telephonyAvailability', () => {
     expect(clientSafeSource).toContain('export function resolveTelephonyAvailability');
     expect(serverSource).toContain('export async function getTelephonyAvailability');
   });
+});
+
+// Product admission remains independent of the presentation release flag.
+afterEach(() => { vi.mocked(assertPsaOnlyTenantAccess).mockReset().mockResolvedValue(undefined); });
+it('rejects an excluded product before exposing integration availability', async () => {
+  vi.mocked(assertPsaOnlyTenantAccess).mockRejectedValue(new ProductAccessError('telephony_integration', 'co_managed'));
+  await expect(getTelephonyAvailability({ isEnterpriseEdition: true, tenantId: 'customer' })).resolves.toMatchObject({ enabled: false, reason: 'product_unavailable' });
+  expect(assertPsaOnlyTenantAccess).toHaveBeenCalledWith('customer', 'telephony_integration');
+});
+it('does not convert database admission failure into enabled availability', async () => {
+  vi.mocked(assertPsaOnlyTenantAccess).mockRejectedValue(new Error('Unavailable database'));
+  await expect(getTelephonyAvailability({ isEnterpriseEdition: true, tenantId: 'customer' })).rejects.toThrow('Unavailable database');
 });

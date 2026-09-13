@@ -1,6 +1,7 @@
 'use server';
 
 import axios, { AxiosError } from 'axios';
+import { assertTenantProductCapability } from '@shared/services/productAccessGuard';
 import { randomBytes } from 'crypto';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
@@ -118,6 +119,7 @@ export const getTacticalRmmSettings = withAuth(async (user, { tenant }): Promise
 }> => {
   const permitted = await hasPermission(user as any, 'system_settings', 'read');
   if (!permitted) return { success: false, error: 'Forbidden' };
+  await assertTenantProductCapability(tenant, 'rmm');
 
   try {
     const { knex } = await createTenantKnex();
@@ -182,6 +184,7 @@ export const getTacticalRmmConnectionSummary = withAuth(async (
 }> => {
   const permitted = await hasPermission(user as any, 'system_settings', 'read');
   if (!permitted) return { success: false, error: 'Forbidden' };
+  await assertTenantProductCapability(tenant, 'rmm');
 
   try {
     const { knex } = await createTenantKnex();
@@ -287,6 +290,7 @@ export const saveTacticalRmmConfiguration = withAuth(async (
 ): Promise<{ success: boolean; error?: string }> => {
   const permitted = await hasPermission(user as any, 'system_settings', 'update');
   if (!permitted) return { success: false, error: 'Forbidden' };
+  await assertTenantProductCapability(tenant, 'rmm');
 
   const instanceUrl = normalizeBaseUrl(input.instanceUrl);
   if (!instanceUrl) return { success: false, error: 'Instance URL is required' };
@@ -343,6 +347,7 @@ export const disconnectTacticalRmmIntegration = withAuth(async (
 ): Promise<{ success: boolean; error?: string }> => {
   const permitted = await hasPermission(user as any, 'system_settings', 'update');
   if (!permitted) return { success: false, error: 'Forbidden' };
+  await assertTenantProductCapability(tenant, 'rmm');
 
   try {
     const secretProvider = await getSecretProviderInstance();
@@ -372,6 +377,7 @@ export const testTacticalRmmConnection = withAuth(async (
 ): Promise<{ success: boolean; error?: string; totpRequired?: boolean }> => {
   const permitted = await hasPermission(user as any, 'system_settings', 'update');
   if (!permitted) return { success: false, error: 'Forbidden' };
+  await assertTenantProductCapability(tenant, 'rmm');
 
   try {
     const secretProvider = await getSecretProviderInstance();
@@ -481,6 +487,7 @@ export const syncTacticalRmmOrganizations = withAuth(async (
 }> => {
   const permitted = await hasPermission(user as any, 'system_settings', 'update');
   if (!permitted) return { success: false, error: 'Forbidden' };
+  await assertTenantProductCapability(tenant, 'rmm');
 
   const errors: string[] = [];
   const actorUserId = (user as any)?.user_id as string | undefined;
@@ -604,6 +611,7 @@ export const syncTacticalRmmDevices = withAuth(async (
 ): Promise<TacticalDeviceSyncResult> => {
   const permitted = await hasPermission(user as any, 'system_settings', 'update');
   if (!permitted) return { success: false, error: 'Forbidden' };
+  await assertTenantProductCapability(tenant, 'rmm');
 
   // The work itself lives in the lib module so the scheduled job can call it
   // without an acting user; passing actorUserId here keeps a manual run
@@ -633,6 +641,7 @@ export const listTacticalRmmOrganizationMappings = withAuth(async (
 }> => {
   const permitted = await hasPermission(user as any, 'system_settings', 'read');
   if (!permitted) return { success: false, error: 'Forbidden' };
+  await assertTenantProductCapability(tenant, 'rmm');
 
   try {
     const { knex } = await createTenantKnex();
@@ -677,6 +686,7 @@ export const updateTacticalRmmOrganizationMapping = withAuth(async (
 ): Promise<{ success: boolean; error?: string }> => {
   const permitted = await hasPermission(user as any, 'system_settings', 'update');
   if (!permitted) return { success: false, error: 'Forbidden' };
+  await assertTenantProductCapability(tenant, 'rmm');
 
   try {
     const { knex } = await createTenantKnex();
@@ -711,6 +721,7 @@ export const getTacticalRmmWebhookInfo = withAuth(async (
 }> => {
   const permitted = await hasPermission(user as any, 'system_settings', 'read');
   if (!permitted) return { success: false, error: 'Forbidden' };
+  await assertTenantProductCapability(tenant, 'rmm');
 
   try {
     const secretProvider = await getSecretProviderInstance();
@@ -773,6 +784,7 @@ export const backfillTacticalRmmAlerts = withAuth(async (
 }> => {
   const permitted = await hasPermission(user as any, 'system_settings', 'update');
   if (!permitted) return { success: false, error: 'Forbidden' };
+  await assertTenantProductCapability(tenant, 'rmm');
 
   const errors: string[] = [];
   const actorUserId = (user as any)?.user_id as string | undefined;
@@ -981,6 +993,7 @@ export const ingestTacticalRmmSoftwareInventory = withAuth(async (
 }> => {
   const permitted = await hasPermission(user as any, 'system_settings', 'update');
   if (!permitted) return { success: false, error: 'Forbidden' };
+  await assertTenantProductCapability(tenant, 'rmm');
 
   const errors: string[] = [];
 
@@ -1078,6 +1091,7 @@ export const syncTacticalRmmSingleAgent = withAuth(async (
 ): Promise<{ success: boolean; error?: string; updated?: boolean; assetId?: string | null }> => {
   const permitted = await hasPermission(user as any, 'system_settings', 'update');
   if (!permitted) return { success: false, error: 'Forbidden' };
+  await assertTenantProductCapability(tenant, 'rmm');
 
   const agentId = String(input.agentId || '').trim();
   if (!agentId) return { success: false, error: 'agentId is required' };

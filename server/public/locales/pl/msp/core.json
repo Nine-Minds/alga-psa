@@ -102,6 +102,8 @@
       "channels": "Kanały"
     },
     "passwords": "Hasła",
+    "coManaged": "Współzarządzane IT",
+    "coManagedDelegation": "Administracja delegowana",
     "coManagedAccess": "Dostęp do współzarządzania"
   },
   "sidebar": {

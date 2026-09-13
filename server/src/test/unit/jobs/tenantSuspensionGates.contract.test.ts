@@ -28,11 +28,21 @@ describe('tenant suspension chokepoint gates', () => {
     expect(source).toContain('running job anyway');
   });
 
-  it('T018: EE maintenance excludes suspended tenants by default, with an explicit upload-cleanup exception', () => {
+  it('T018: EE maintenance excludes suspended tenants by default, except the two compensation-only jobs', () => {
     const source = read('packages/jobs/src/lib/maintenanceJobFanout.ts');
     expect(source).toContain("if (!def.includeSuspended) tenantQuery.whereNull('suspended_at')");
+    // Both exceptions exist to finish work that already escaped the workspace:
+    // bytes written to object storage, and meetings created in Microsoft Graph.
+    // Suspension must not strand either, so these two jobs — and only these
+    // two — still see suspended tenants.
     expect(source).toMatch(/\[CO_MANAGED_UPLOAD_CLEANUP_JOB\]:[^\n]*includeSuspended: true/);
-    expect(source.match(/includeSuspended: true/g)).toHaveLength(1);
+    expect(source).toMatch(/\[TEAMS_MEETING_SWEEP_JOB\]:[^\n]*includeSuspended: true/);
+    expect(source.match(/includeSuspended: true/g)).toHaveLength(2);
+
+    // The sweep exception stays narrow because the handler re-reads the
+    // workspace and returns before any non-compensating work.
+    const sweep = read('packages/jobs/src/lib/handlers/teamsMeetingSweepHandler.ts');
+    expect(sweep).toMatch(/recoverCoManagedAppointmentMeetings\([\s\S]*?suspended_at[\s\S]*?return;/);
   });
 
   it('T019: marketing tenant enumeration excludes suspended tenants', () => {

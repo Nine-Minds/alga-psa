@@ -152,6 +152,12 @@ export async function claimRecurringServicePeriodsForSelectionInputs(params: {
 
   for (const selectorInput of selectorInputs) {
     const executionWindow = selectorInput.executionWindow;
+    // Catalog time/usage selectors have source-consumption receipts, not a
+    // recurring contract period. Their invoice_time_entries/usage claims were
+    // already persisted atomically with the charges above.
+    // LEVERAGE: pattern unresolved-selection-identity — generation and persistence recognize the same current/legacy catalog schedule suffix.
+    if (executionWindow.kind === 'client_cadence_window' &&
+        /:(?:unresolved|non_contract):(time|usage):[^:]+$/.test(executionWindow.scheduleKey ?? '')) continue;
     const windowStart = toRecurringWindowDate(String(selectorInput.windowStart));
     const windowEnd = toRecurringWindowDate(String(selectorInput.windowEnd));
 

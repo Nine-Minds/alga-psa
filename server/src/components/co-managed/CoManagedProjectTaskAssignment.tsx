@@ -20,6 +20,7 @@ function Assignment({ resource, onUnavailable, onChanged }: { resource: CoManage
   const [pending, setPending] = useState<CoManagedTaskAssignmentRequest | null>(null), [refresh, setRefresh] = useState(0);
   const generation = useRef(0);
   useEffect(() => {
+    // LEVERAGE: pattern qualified-assignment-request-lifetime — ticket/task forms retain identities and discard responses after navigation.
     const current = ++generation.current; setState(null); setError(null);
     void getSharedProjectTaskAssignmentAction(resource).then(result => {
       if (current !== generation.current) return;

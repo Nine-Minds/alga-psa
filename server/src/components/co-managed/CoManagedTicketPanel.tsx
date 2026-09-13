@@ -1,13 +1,17 @@
 'use client';
 
+import CoManagedEffort from './CoManagedEffort';
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { getCoManagedTicketScreenAction, getSharedTicketHandoffHistoryAction, type CoManagedTicketScreenTarget } from '@/lib/actions/coManagedSharedWorkActions';
 import CoManagedTicketEditor from './CoManagedTicketEditor';
+import CoManagedTicketSla from './CoManagedTicketSla';
+import CoManagedTimeEntry from './CoManagedTimeEntry';
 import CoManagedTicketConversation from './CoManagedTicketConversation';
 import CoManagedNamedTicketConversation from './CoManagedNamedTicketConversation';
+import CoManagedTicketAssignment from './CoManagedTicketAssignment';
 import CoManagedHandoffComposer, { type HandoffAction } from './CoManagedHandoffComposer';
 
 type Screen = Awaited<ReturnType<typeof getCoManagedTicketScreenAction>>;
@@ -23,6 +27,7 @@ function TicketPanel({ target, showSummary }: { target: CoManagedTicketScreenTar
   const { t } = useTranslation('msp/licensing');
   const { formatDate } = useFormatters();
   const initialTarget = useRef(target);
+  const [effortRefresh, setEffortRefresh] = useState(0);
   const [screen, setScreen] = useState<Screen | null>(null);
   const [history, setHistory] = useState<History>({ items: [], nextBeforeRevision: null });
   const [historyBusy, setHistoryBusy] = useState(false);
@@ -34,6 +39,7 @@ function TicketPanel({ target, showSummary }: { target: CoManagedTicketScreenTar
   const generation = useRef(0);
   const historyRequest = useRef(false);
   function reload() { generation.current++; setScreen(null); setAction(null); setRefresh(value => value + 1); }
+  function unavailable() { generation.current++; setScreen(null); setAction(null); setHistory({ items: [], nextBeforeRevision: null }); setError(true); }
   useEffect(() => {
     const current = ++generation.current;
     setError(false); setHistoryError(false); setHistory({ items: [], nextBeforeRevision: null });
@@ -60,6 +66,9 @@ function TicketPanel({ target, showSummary }: { target: CoManagedTicketScreenTar
     finally { if (generation.current === current) { setHistoryBusy(false); historyRequest.current = false; } }
   }
   const fields = screen?.summary.fields;
+  // After the relationship ends the screen no longer carries the former sponsor's
+  // name, so the retained read still renders instead of printing an empty organization.
+  const sponsorName = screen?.sponsorName ?? t('coManaged.ticket.formerSponsor');
   const display = (field: unknown) => typeof field === 'string' ? field : undefined;
   const named = (field: unknown) => field && typeof field === 'object' && 'name' in field ? display(field.name) : undefined;
   return <Card className="my-4"><CardHeader><CardTitle>{t('coManaged.ticket.title')}</CardTitle></CardHeader><CardContent className="space-y-4">
@@ -70,7 +79,8 @@ function TicketPanel({ target, showSummary }: { target: CoManagedTicketScreenTar
         <h1 className="break-words text-xl font-semibold">{[display(fields?.ticket_number), display(fields?.title)].filter(Boolean).join(' · ') || t('coManaged.ticket.restricted')}</h1>
         {(named(fields?.status) || named(fields?.priority)) && <p>{[named(fields?.status), named(fields?.priority)].filter(Boolean).join(' · ')}</p>}
       </div>}
-      {(fields?.responsibility === 'customer' || fields?.responsibility === 'msp') && <p>{t('coManaged.ticket.responsibility', { organization: fields.responsibility === 'msp' ? screen.sponsorName : screen.customerName })}</p>}
+      {(fields?.responsibility === 'customer' || fields?.responsibility === 'msp') && <p>{t('coManaged.ticket.responsibility', { organization: fields.responsibility === 'msp' ? sponsorName : screen.customerName })}</p>}
+      {screen.sla && <CoManagedTicketSla sla={screen.sla} customerName={screen.customerName} sponsorName={sponsorName} />}
       {!screen.canWrite && <p role="status" className="rounded-md border p-3">{t('coManaged.ticket.readOnly')}</p>}
       {action && typeof fields?.work_revision === 'number' ? <CoManagedHandoffComposer key={action} action={action} side={screen.side}
         resource={screen.summary.resource} revision={fields.work_revision} onSaved={reload} onCancel={() => setAction(null)} onReload={reload} />
@@ -80,6 +90,9 @@ function TicketPanel({ target, showSummary }: { target: CoManagedTicketScreenTar
           {screen.canRevoke && <Button id="co-ticket-revoke" variant="outline" onClick={() => setAction('revoke')}>{t('coManaged.ticket.revoke')}</Button>}
         </div>}
       {showSummary && screen.side === 'sponsor' && <CoManagedTicketEditor resource={screen.summary.resource} onSaved={reload} onReload={reload} />}
+      <CoManagedEffort target={{ kind: 'shared', resource: screen.summary.resource }} refreshKey={effortRefresh} />
+      {screen.side === 'sponsor' && <CoManagedTimeEntry resource={screen.summary.resource} canWrite={screen.canWrite} onSaved={() => setEffortRefresh(value => value + 1)} />}
+      <CoManagedTicketAssignment resource={screen.summary.resource} onSaved={reload} onReload={reload} onUnavailable={unavailable} />
       {showSummary ? <CoManagedNamedTicketConversation resource={screen.summary.resource} /> : <CoManagedTicketConversation resource={screen.summary.resource} />}
       <section className="space-y-3" aria-labelledby="co-ticket-history-title">
         <h2 id="co-ticket-history-title" className="font-semibold">{t('coManaged.ticket.history')}</h2>

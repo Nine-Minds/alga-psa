@@ -20,7 +20,7 @@ export class NativeTimeSheetError extends Error {
 async function customerTimeWorkspace(trx: Knex.Transaction, tenant: string) {
   await getCoManagedOperationalState(trx, tenant);
   const owner = tenantDb(trx, tenant), workspace = await owner.table('tenants').forShare().first('product_code', 'suspended_at');
-  const operational = await owner.table('time_entries').where('billing_mode', 'operational').first('entry_id');
+  const operational = await owner.table('time_entries').where(q => q.where('billing_mode', 'operational').orWhere('work_item_type', 'co_managed')).first('entry_id');
   if (workspace?.product_code !== 'co_managed' && !operational && !await hasCoManagedConversationOwnership(trx, tenant)) return false;
   if (!workspace || workspace.suspended_at || !productTimeEntryMode(workspace.product_code)) throw new CoManagedSharedWorkError();
   return true;

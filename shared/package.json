@@ -36,6 +36,7 @@
     "./models/tagModel.js": "./dist/models/tagModel.js",
     "./models/ticketModel.js": "./dist/models/ticketModel.js",
     "./models/userModel.js": "./dist/models/userModel.js",
+    "./utils/appointmentDateTime": { "types": "./utils/appointmentDateTime.ts", "import": "./utils/appointmentDateTime.ts" },
     "./utils/recurrenceUtils": "./dist/utils/recurrenceUtils.js",
     "./utils/recurrenceUtils.js": "./dist/utils/recurrenceUtils.js",
     "./extensions/domain.js": "./dist/extensions/domain.js",
@@ -53,7 +54,13 @@
     "./lib/tickets/clientPortalVisibility.server": "./dist/lib/tickets/clientPortalVisibility.server.js",
     "./*": "./dist/*",
     "./lib/email/senderAuthVerification": "./dist/lib/email/senderAuthVerification.js",
-    "./utils/tenantSlug": "./dist/utils/tenantSlug.js"
+    "./utils/tenantSlug": "./dist/utils/tenantSlug.js",
+    "./lib/sla/organizationSlaClock": "./dist/lib/sla/organizationSlaClock.js",
+    "./lib/sla/organizationSlaStore": "./dist/lib/sla/organizationSlaStore.js",
+    "./lib/sla/organizationSlaNotifications": "./dist/lib/sla/organizationSlaNotifications.js",
+    "./lib/sla/organizationSlaLock": "./dist/lib/sla/organizationSlaLock.js",
+    "./lib/sla/slaPolicyResolver": "./dist/lib/sla/slaPolicyResolver.js",
+    "./billingClients/timeEntryWorkBillingContext": "./dist/billingClients/timeEntryWorkBillingContext.js"
   },
   "scripts": {
     "build": "tsup",

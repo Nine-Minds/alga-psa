@@ -53,7 +53,7 @@ export {
  *
  * Synced from cli/cleanup-tenant.nu
  */
-const TENANT_TABLES_DELETION_ORDER: string[] = [
+export const TENANT_TABLES_DELETION_ORDER: string[] = [
   // === LEVEL 0: Sessions (CRITICAL - must be deleted before users/tenants) ===
   'sessions',
 
@@ -381,7 +381,11 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'service_request_definition_versions', 'service_request_definitions',
 
   // === LEVEL 3: Mid-level entities ===
-  'co_management_project_scopes', 'co_management_staff_assignments',
+  'co_management_board_scopes', 'co_management_project_scopes', 'co_management_staff_assignments',
+  'co_management_delegated_receipts', 'co_management_delegated_grants',
+  'co_management_ticket_routing_recipients', 'co_management_ticket_routing_events',
+  'co_managed_sla_priority_mappings',
+  'sla_organization_notification_recipients', 'sla_organization_notification_events', 'sla_organization_events', 'sla_organization_obligations',
   'co_management_ticket_handoffs', 'co_management_ticket_work', 'co_managed_ticket_references',
   'co_management_conversation_attachments',
   'co_management_event_consumers',
@@ -394,6 +398,19 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'co_management_customer_reply_tokens',
   'co_management_inbound_reply_receipts',
   'co_management_requester_email_deliveries',
+  'co_management_workflow_ticket_emails',
+  'co_managed_time_work_references',
+  'co_managed_relationship_closures',
+  'co_managed_participation_evidence',
+  'co_managed_archive_files',
+  'co_managed_archive_manifests',
+  'tenant_license_state',
+  'co_managed_independent_upgrades',
+  'portable_workspace_activations',
+  // Portable upload recovery tombstones outlive tenant deletion: an abandoned
+  // provider request can finish late and still needs its destination cleanup.
+  'portable_workspace_restores',
+  'co_managed_upgrade_purchases',
   'co_management_notification_deliveries',
   'co_management_in_app_receipts',
   'co_management_private_comments',

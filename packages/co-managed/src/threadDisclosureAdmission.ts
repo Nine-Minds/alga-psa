@@ -3,7 +3,7 @@ import type { Knex } from 'knex';
 import { assertCoManagedOperationalWrite } from '@alga-psa/licensing';
 import { type CommentAudience } from '@alga-psa/shared/lib/commentAudience';
 import { withCoManagedSharedWork, type CoManagedSharedResource, type CoManagedSharedWorkContext } from './sharedWork';
-import { withCoManagedCustomerTicket } from './customerWork';
+import { withCoManagedCustomerTicket, withCoManagedCustomerProject } from './customerWork';
 import { assertCoManagedSessionUnexpired, isCoManagedUuid, CoManagedSharedWorkError, type CoManagedSessionActor } from './sharedWorkIdentity';
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
 import { coManagedConversationBodySources, coManagedConversationAuthorSources, coManagedConversationAttachmentSources } from './conversationPolicy';
@@ -32,15 +32,15 @@ export function target(input: CoManagedThreadReference): CoManagedThreadReferenc
   return { storeTenant: input.storeTenant.toLowerCase(), threadId: input.threadId.toLowerCase() };
 }
 export function resourceSnapshot(input: CoManagedSharedResource): CoManagedSharedResource {
-  if (!input || input.kind !== 'ticket' || ![input.tenant, input.relationshipId, input.id].every(isCoManagedUuid)) deny();
-  return { kind: 'ticket', tenant: input.tenant.toLowerCase(), relationshipId: input.relationshipId.toLowerCase(), id: input.id.toLowerCase() };
+  if (!input || !['ticket','project_task'].includes(input.kind) || ![input.tenant, input.relationshipId, input.id].every(isCoManagedUuid)) deny();
+  return { kind: input.kind, tenant: input.tenant.toLowerCase(), relationshipId: input.relationshipId.toLowerCase(), id: input.id.toLowerCase() };
 }
 export async function withAuthority<T>(db: Knex, actor: CoManagedSessionActor, resource: CoManagedSharedResource,
   work: (context: CoManagedSharedWorkContext) => Promise<T>, privateStore = false): Promise<T> {
-  const authorize = actor.tenant === resource.tenant ? withCoManagedCustomerTicket : withCoManagedSharedWork;
+  const authorize = actor.tenant === resource.tenant ? (resource.kind === 'project_task' ? withCoManagedCustomerProject : withCoManagedCustomerTicket) : withCoManagedSharedWork;
   return authorize(db, actor, resource, 'update', context => authorize(context.trx, actor, resource, 'read', async read => {
     if (isCoManagedReadFieldHidden([...context.redactedFields, ...read.redactedFields], [...coManagedConversationBodySources,
-      ...coManagedConversationAuthorSources, ...coManagedConversationAttachmentSources, 'comments', 'comment_threads', 'co_management_conversation_drafts', ...(privateStore ? ['co_management_private_comments', 'co_management_private_threads', 'co_management_thread_transfers'] : [])])) deny();
+      ...coManagedConversationAuthorSources, ...coManagedConversationAttachmentSources, 'comments', ...(resource.kind === 'project_task' ? ['project_task_comments','collaboration_revision'] : []), 'comment_threads', 'co_management_conversation_drafts', ...(privateStore ? ['co_management_private_comments', 'co_management_private_threads', 'co_management_thread_transfers'] : [])])) deny();
     await assertCoManagedSessionUnexpired(context.trx, actor);
     const result = await work(context);
     await assertCoManagedSessionUnexpired(context.trx, actor); await assertCoManagedOperationalWrite(context.trx, resource.tenant);

@@ -1,5 +1,6 @@
 import { getEventBus } from '../index';
 import { handleCoManagedTaskCommentEmailEvent } from './coManagedCommentEmailSubscriber';
+import { deliverCoManagedRequesterTaskCommentEmailEvent } from './coManagedRequesterCommentEmailSubscriber';
 import { hasCoManagedConversationOwnership } from '@alga-psa/co-managed/nativeConversationEvents';
 import {
   EventType,
@@ -1653,6 +1654,7 @@ export async function registerProjectEmailSubscriber(): Promise<void> {
       logger.info(`[ProjectEmailSubscriber] Successfully subscribed to ${eventType} events on channel "${channel}"`);
     }
     await getEventBus().subscribe('PROJECT_TASK_COMMENT_CREATED', handleCoManagedTaskCommentEmailEvent, { channel, subscriberId: 'co-managed-email' });
+    await getEventBus().subscribe('PROJECT_TASK_COMMENT_CREATED', deliverCoManagedRequesterTaskCommentEmailEvent, { channel, subscriberId: 'requester-email' });
 
   } catch (error) {
     logger.error('Failed to register project email subscribers:', error);
@@ -1684,6 +1686,7 @@ export async function unregisterProjectEmailSubscriber(): Promise<void> {
       await getEventBus().unsubscribe(eventType, handleProjectEvent, { channel });
     }
     await getEventBus().unsubscribe('PROJECT_TASK_COMMENT_CREATED', handleCoManagedTaskCommentEmailEvent, { channel });
+    await getEventBus().unsubscribe('PROJECT_TASK_COMMENT_CREATED', deliverCoManagedRequesterTaskCommentEmailEvent, { channel });
 
     logger.info('[ProjectEmailSubscriber] Successfully unregistered from project events', { channel });
   } catch (error) {

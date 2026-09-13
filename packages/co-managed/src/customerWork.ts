@@ -19,12 +19,21 @@ async function withCoManagedCustomerWork<T>(db: Knex, inputActor: CoManagedSessi
     if (action === 'update') await assertCoManagedOperationalWrite(trx, actor.tenant);
     else await getCoManagedOperationalState(trx, actor.tenant);
     const customer = tenantDb(trx, actor.tenant);
-    const relationship = await customer.table('co_management_relationships').where({ relationship_id: resource.relationshipId, state: 'active' })
-      .whereNull('ended_at').forShare().first();
+    // Reads survive relationship termination: the customer keeps read access to
+    // its own operational records after departure, so a read only needs the
+    // relationship row for identity. Updates still require live, unended trust.
+    const relationshipQuery = customer.table('co_management_relationships').where({ relationship_id: resource.relationshipId });
+    if (action === 'update') relationshipQuery.where({ state: 'active' }).whereNull('ended_at');
+    const relationship = await relationshipQuery.forShare().first();
     const owner = await customer.table('tenants').first('product_code', 'suspended_at');
     if (!relationship || owner?.product_code !== 'co_managed' || owner.suspended_at) throw new CoManagedSharedWorkError();
-    const sponsor = await tenantDb(trx, relationship.sponsor_tenant).table('tenants').forShare().first('product_code', 'suspended_at');
-    if (sponsor?.product_code !== 'psa' || sponsor.suspended_at) throw new CoManagedSharedWorkError();
+    // Sponsor lifecycle admission only guards live collaboration. A retained
+    // customer read after the relationship ended is purely customer-local and
+    // must not depend on the former sponsor's continued product state.
+    if (action === 'update' || (relationship.state === 'active' && !relationship.ended_at)) {
+      const sponsor = await tenantDb(trx, relationship.sponsor_tenant).table('tenants').forShare().first('product_code', 'suspended_at');
+      if (sponsor?.product_code !== 'psa' || sponsor.suspended_at) throw new CoManagedSharedWorkError();
+    }
     const subject = await lockCoManagedSessionIdentity(trx, actor);
     let record: AuthorizationRecord;
     if (resource.kind === 'ticket') {

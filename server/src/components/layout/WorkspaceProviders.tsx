@@ -2,6 +2,7 @@
 
 import React from "react";
 import { useProduct } from "@/context/ProductContext";
+import CoManagedProjectEffortProvider from '@/components/co-managed/CoManagedProjectEffortProvider';
 import { DrawerOutlet } from "@alga-psa/ui";
 import { ActivityDrawerProvider } from "@alga-psa/msp-composition/user-activities/ActivityDrawerProvider";
 import { SchedulingProviderWithCallbacks } from '@alga-psa/scheduling/providers/SchedulingProviderWithCallbacks';
@@ -49,8 +50,10 @@ export default function WorkspaceProviders({ children }: WorkspaceProvidersProps
                     <MspSchedulingCrossFeatureProvider>
                       <MspActivityCrossFeatureProvider>
                         <QuickAddClientProviderWithCallbacks>
-                          {children}
-                          <DrawerOutlet />
+                          <CoManagedProjectEffortProvider>
+                            {children}
+                            <DrawerOutlet />
+                          </CoManagedProjectEffortProvider>
                         </QuickAddClientProviderWithCallbacks>
                       </MspActivityCrossFeatureProvider>
                     </MspSchedulingCrossFeatureProvider>

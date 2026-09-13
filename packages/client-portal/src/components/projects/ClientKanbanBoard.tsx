@@ -9,6 +9,7 @@ import { IClientPortalConfig } from '@alga-psa/types';
 import { Calendar, Clock, CheckSquare, Ban, GitBranch } from 'lucide-react';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import TaskDocumentUpload from './TaskDocumentUpload';
+import { RequesterTaskConversation } from './RequesterTaskConversation';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
@@ -69,6 +70,7 @@ interface Task {
 }
 
 interface ClientKanbanBoardProps {
+  projectId: string;
   phases: Phase[];
   statuses: Status[];
   tasks: Task[];
@@ -100,11 +102,13 @@ function lightenColor(hex: string, amount: number): string {
 
 // Task card component
 function TaskCard({
+  projectId,
   task,
   config,
   dateLocale,
   dependencies
 }: {
+  projectId: string;
   task: Task;
   config: IClientPortalConfig;
   dateLocale: Locale;
@@ -139,6 +143,8 @@ function TaskCard({
           )}
         </div>
       )}
+
+      <RequesterTaskConversation projectId={projectId} taskId={task.task_id} />
 
       {/* Task Description - Expandable */}
       {visibleFields.includes('description') && task.description && (
@@ -407,6 +413,7 @@ function PhaseCard({
 }
 
 export default function ClientKanbanBoard({
+  projectId,
   phases,
   statuses,
   tasks,
@@ -534,6 +541,7 @@ export default function ClientKanbanBoard({
                 ) : (
                   statusTasks.map((task) => (
                     <TaskCard
+                      projectId={projectId}
                       key={task.task_id}
                       task={task}
                       config={config}

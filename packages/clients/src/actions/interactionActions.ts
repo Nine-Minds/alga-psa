@@ -2,6 +2,8 @@
 
 'use server'
 
+import { readCoManagedNativeInteractions, createCoManagedNativeInteraction, updateCoManagedNativeInteraction, deleteCoManagedNativeInteraction, NativeInteractionCommandError, CoManagedSharedWorkError } from '@alga-psa/co-managed';
+import { resolveInteractionBrowserActor } from '../lib/coManagedInteractionReader';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { revalidatePath } from 'next/cache'
@@ -9,6 +11,7 @@ import { StorageService } from '@alga-psa/storage/StorageService';
 import InteractionModel from '../models/interactions';
 import type { InteractionPageFilters, InteractionPageResult } from '../models/interactions';
 import { IInteractionType, IInteraction } from '@alga-psa/types'
+import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { withAuth } from '@alga-psa/auth';
 import {
   createInteractionWithSideEffects,
@@ -85,6 +88,13 @@ export const addInteraction = withAuth(async (
 
   try {
     const { knex: db } = await createTenantKnex();
+    const admitted = await createCoManagedNativeInteraction(db, tenant, interactionData, () => resolveInteractionBrowserActor(user, tenant), publishEvent);
+    if (admitted.handled) {
+      revalidatePath('/msp/interactions');
+      revalidatePath('/msp/contacts/[id]', 'page');
+      revalidatePath('/msp/clients/[id]', 'page');
+      return admitted.interaction;
+    }
 
     console.log('Received interaction data:', interactionData);
 
@@ -112,6 +122,8 @@ export const addInteraction = withAuth(async (
     await publishSideEffects?.();
     return newInteraction;
   } catch (error) {
+    if (error instanceof NativeInteractionCommandError) return actionError(error.message);
+    if (error instanceof CoManagedSharedWorkError) return permissionError('Permission denied: Cannot create this interaction.');
     console.error('Error adding interaction:', error)
     const expected = interactionActionErrorFrom(error);
     if (expected) return expected;
@@ -145,6 +157,8 @@ export const getInteractionsForEntity = withAuth(async (
     await assertMspPermission(user, 'interaction', 'read', 'Permission denied: Cannot read interactions');
 
     const { knex } = await createTenantKnex();
+    const admitted = await readCoManagedNativeInteractions(knex, tenant, () => resolveInteractionBrowserActor(user, tenant), { entity: { id: entityId, type: entityType } });
+    if (admitted.handled) return admitted.interactions;
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
       return await InteractionModel.getForEntity(entityId, entityType, tenant);
     });
@@ -171,6 +185,8 @@ export const getRecentInteractions = withAuth(async (
     await assertMspPermission(user, 'interaction', 'read', 'Permission denied: Cannot read interactions');
 
     const { knex } = await createTenantKnex();
+    const admitted = await readCoManagedNativeInteractions(knex, tenant, () => resolveInteractionBrowserActor(user, tenant), { filters });
+    if (admitted.handled) return admitted.interactions;
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
       return await InteractionModel.getRecentInteractions(filters, tenant);
     });
@@ -191,6 +207,8 @@ export const getInteractionsPage = withAuth(async (
     await assertMspPermission(user, 'interaction', 'read', 'Permission denied: Cannot read interactions');
 
     const { knex } = await createTenantKnex();
+    const admitted = await readCoManagedNativeInteractions(knex, tenant, () => resolveInteractionBrowserActor(user, tenant), { filters, paginated: true });
+    if (admitted.handled) return { interactions: admitted.interactions, total: admitted.total, page: admitted.page, pageSize: admitted.pageSize };
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
       return InteractionModel.getInteractionsPage(filters, tenant, trx);
     });
@@ -218,6 +236,11 @@ export const updateInteraction = withAuth(async (
 
   try {
     const { knex } = await createTenantKnex();
+    const admitted = await updateCoManagedNativeInteraction(knex, tenant, interactionId, updateData, () => resolveInteractionBrowserActor(user, tenant), publishEvent);
+    if (admitted.handled) {
+      revalidatePath('/msp/interactions/[id]', 'page');
+      return admitted.interaction;
+    }
     const updatedInteraction = await withTransaction(knex, async (trx: Knex.Transaction) => {
       return await InteractionModel.updateInteraction(interactionId, updateData, tenant);
     });
@@ -230,6 +253,8 @@ export const updateInteraction = withAuth(async (
     revalidatePath('/msp/interactions/[id]', 'page');
     return updatedInteraction;
   } catch (error) {
+    if (error instanceof NativeInteractionCommandError) return actionError(error.message);
+    if (error instanceof CoManagedSharedWorkError) return permissionError('Permission denied: Cannot update this interaction.');
     console.error('Error updating interaction:', error);
     const expected = interactionActionErrorFrom(error);
     if (expected) return expected;
@@ -310,6 +335,12 @@ export const deleteInteraction = withAuth(async (user, { tenant }, interactionId
   try {
     const { knex } = await createTenantKnex();
 
+    const admitted = await deleteCoManagedNativeInteraction(knex, tenant, interactionId, () => resolveInteractionBrowserActor(user, tenant), publishEvent);
+    if (admitted.handled) {
+      revalidatePath('/');
+      return;
+    }
+
     const { existing, recordingFileIds } = await withTransaction(knex, async (trx: Knex.Transaction) => {
       const db = tenantDb(trx, tenant);
 
@@ -357,6 +388,8 @@ export const deleteInteraction = withAuth(async (user, { tenant }, interactionId
 
     revalidatePath('/'); // Revalidate to update any cached data
   } catch (error) {
+    if (error instanceof NativeInteractionCommandError) return actionError(error.message);
+    if (error instanceof CoManagedSharedWorkError) return permissionError('Permission denied: Cannot delete this interaction.');
     console.error('Error deleting interaction:', error);
     const expected = interactionActionErrorFrom(error);
     if (expected) return expected;

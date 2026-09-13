@@ -8,7 +8,14 @@ vi.mock('@alga-psa/ui/hooks', () => ({ useFeatureFlag: mocks.flag }));
 vi.mock('@alga-psa/users/actions/user-actions/userInvitationActions', () => ({ verifyUserInvitationToken: mocks.verify, completeUserInvitationSetup: mocks.complete }));
 vi.mock('../../../lib/actions/coManagedAcceptanceActions', () => ({}));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }), useSearchParams: () => new URLSearchParams('token=test-token') }));
-vi.mock('next-auth/react', () => ({ signIn: vi.fn() }));
+// The setup page renders inside AppSessionProvider (added so the pre-login
+// co-managed invitation flow can call useSession), so the mock must supply the
+// provider and session hook the real module exports.
+vi.mock('next-auth/react', () => ({
+  signIn: vi.fn(),
+  SessionProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useSession: () => ({ data: null, status: 'unauthenticated', update: vi.fn() }),
+}));
 vi.mock('@alga-psa/tenancy/components', () => ({ I18nWrapper: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
 const translate = (key: string) => key;
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({ useTranslation: () => ({ t: translate }), useOptionalI18n: () => null }));

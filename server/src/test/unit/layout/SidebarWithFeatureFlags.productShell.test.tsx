@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
-import { render, waitFor } from '@testing-library/react';
+import { act, render, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TIER_FEATURES } from '@alga-psa/types';
 
@@ -88,6 +88,15 @@ describe('SidebarWithFeatureFlags product shell composition', () => {
     useTier.mockReturnValue({ hasFeature: () => true });
     useProduct.mockReturnValue({ productCode: 'psa', edition: 'enterprise' });
     getLicenseStatus.mockResolvedValue({ selfHostMode: false });
+  });
+
+  it.each([false, true])('gates independent tenant license navigation with release enabled=%s', async enabled => {
+    getLicenseStatus.mockResolvedValue({ selfHostMode: true, scope: 'tenant' });
+    useFeatureFlag.mockImplementation((name: string) => name === 'release-v1-6-feature' ? { enabled } : true);
+    await act(async () => { render(<SidebarWithFeatureFlags sidebarOpen={true} setSidebarOpen={vi.fn()} />); });
+    const props = sidebarPropsSpy.mock.calls.at(-1)?.[0];
+    const names = props.settingsSectionsOverride.flatMap((section: NavigationSection) => section.items.map(item => item.name));
+    expect(names.includes('License')).toBe(enabled);
   });
 
   it('shows License settings only for self-hosted installs', async () => {

@@ -499,6 +499,52 @@
     },
     "layout": {
       "defaultTitle": "Dashboard | AlgaPSA"
+    },
+    "coManaged": {
+      "title": "Co-Managed-IT",
+      "archive": {
+        "title": "Archiv geteilter Arbeit"
+      },
+      "tickets": {
+        "title": "Co-Managed-Ticketwarteschlangen"
+      }
+    },
+    "coManagement": {
+      "title": "Co-Managed-Zugriff",
+      "administration": {
+        "title": "Delegierte Administration"
+      },
+      "departure": {
+        "title": "Co-Management beenden"
+      },
+      "export": {
+        "title": "Arbeitsbereich exportieren"
+      },
+      "projects": {
+        "detail": {
+          "title": "Geteiltes Projekt"
+        }
+      },
+      "sla": {
+        "title": "SLA-Prioritäten für Co-Managed IT"
+      },
+      "tasks": {
+        "title": "Projektaufgaben-Warteschlangen",
+        "detail": {
+          "title": "Geteilte Projektaufgabe"
+        }
+      },
+      "ticketAccess": {
+        "title": "Einzelticket-Zugriff"
+      },
+      "tickets": {
+        "detail": {
+          "title": "Geteiltes Ticket"
+        }
+      },
+      "upgrade": {
+        "title": "Auf AlgaPSA umsteigen"
+      }
     }
   },
   "auth": {

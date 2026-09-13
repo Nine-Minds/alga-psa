@@ -2,16 +2,27 @@
 import React from 'react';
 import { fr } from '@blocknote/core/locales';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
-import { afterEach, beforeAll, beforeEach, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, expect, it, vi } from 'vitest';
 import Document from '../../../components/co-managed/CoManagedConversationDocument';
 import { snapshotConversationDocument } from '../../../../../packages/co-managed/src/conversationRichText';
 const context = vi.hoisted(() => ({ theme: 'dark', locale: 'en' }));
 vi.mock('@alga-psa/ui/hooks/useAppTheme', () => ({ useAppTheme: () => ({ resolvedTheme: context.theme }) }));
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({ useOptionalI18n: () => ({ locale: context.locale }) }));
 beforeEach(() => { context.theme = 'dark'; context.locale = 'en'; });
+// Every test file shares one process (vitest singleFork), so a global left
+// behind here reaches whatever file runs next, and file order is shuffled.
+// Plain functions rather than vi.fn(): a foreign vi.resetAllMocks() would strip
+// a mock's implementation and hand the next file a matchMedia returning
+// undefined. Both globals are restored after this file.
+const originalMatchMedia = window.matchMedia;
+const originalResizeObserver = globalThis.ResizeObserver;
 beforeAll(() => {
-  window.matchMedia = vi.fn().mockImplementation(() => ({ matches: false, addEventListener() {}, removeEventListener() {} }));
-  globalThis.ResizeObserver = class { observe() {} unobserve() {} disconnect() {} };
+  window.matchMedia = (() => ({ matches: false, addEventListener() {}, removeEventListener() {} })) as unknown as typeof window.matchMedia;
+  globalThis.ResizeObserver = class { observe() {} unobserve() {} disconnect() {} } as unknown as typeof globalThis.ResizeObserver;
+});
+afterAll(() => {
+  window.matchMedia = originalMatchMedia;
+  globalThis.ResizeObserver = originalResizeObserver;
 });
 afterEach(cleanup);
 it.each(['light', 'dark'])('renders actual BlockNote styles and literal text in %s without markdown reinterpretation', async theme => {

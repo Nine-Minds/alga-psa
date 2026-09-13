@@ -8,6 +8,8 @@ const updateLastLoginMock = vi.fn(async () => undefined);
 const tenantFirstMock = vi.fn();
 const subscriptionFirstMock = vi.fn();
 const addonsSelectMock = vi.fn();
+const licensing = vi.hoisted(() => ({ state: vi.fn(), tier: vi.fn() }));
+vi.mock('@alga-psa/licensing', () => ({ getTenantSelfHostLicenseState: licensing.state, resolveTenantTier: licensing.tier }));
 
 function makeTableQuery(table: string) {
   if (table === 'tenants') {
@@ -126,6 +128,8 @@ const { getAuthOptions } = await import('./nextAuthOptions');
 describe('nextAuth product_code mapping', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    licensing.state.mockReset().mockResolvedValue(null);
+    licensing.tier.mockReset().mockResolvedValue('pro');
     tenantFirstMock.mockResolvedValue({ plan: 'pro', product_code: 'algadesk' });
     subscriptionFirstMock.mockResolvedValue({
       status: 'trialing',
@@ -141,6 +145,17 @@ describe('nextAuth product_code mapping', () => {
       { addon_key: 'voice', expires_at: null },
       { addon_key: 'expired-addon', expires_at: '2000-01-01T00:00:00.000Z' },
     ]);
+  });
+
+  it.each(['async', 'sync'])('clears a cached paid tier on a license read failure in the %s auth configuration', async kind => {
+    licensing.state.mockRejectedValue(new Error('License database unavailable'));
+    const module = await import('./nextAuthOptions');
+    const config = kind === 'async' ? await getAuthOptions() : module.options;
+    const token = await config.callbacks.jwt({ token: { id: 'u-1', tenant: 'tenant-1', user_type: 'internal',
+      session_id: 'session-1', effectiveTier: 'pro', last_session_extend: Date.now() }, trigger: 'update' });
+    expect(licensing.state).toHaveBeenCalledWith('tenant-1');
+    expect(token.effectiveTier).toBe('essentials');
+    expect(licensing.tier).not.toHaveBeenCalled();
   });
 
   it('maps product_code into jwt and session user while ignoring legacy Premium-trial metadata', async () => {

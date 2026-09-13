@@ -16,6 +16,7 @@ export default function CoManagedHandoffComposer({ action, side, resource, revis
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
   const [uncertain, setUncertain] = useState(false);
+  const [setupRequired, setSetupRequired] = useState(false);
   const request = useRef<{ action: HandoffAction; resource: CoManagedSharedResource; input: CoManagedTicketHandoffRequest } | null>(null);
   const mounted = useRef(false);
   const inFlight = useRef(false);
@@ -24,11 +25,16 @@ export default function CoManagedHandoffComposer({ action, side, resource, revis
   async function submit() {
     if (inFlight.current || (!request.current && !note.trim())) return;
     request.current ??= { action, resource: { ...resource }, input: { operationId: crypto.randomUUID(), expectedRevision: revision, note: note.trim() } };
-    inFlight.current = true; setBusy(true); setUncertain(false);
+    inFlight.current = true; setBusy(true); setUncertain(false); setSetupRequired(false);
     const saved = request.current;
     try {
       const command = saved.action === 'escalate' ? escalateSharedTicketAction : saved.action === 'handback' ? handBackSharedTicketAction : revokeSharedTicketGrantAction;
-      await command(saved.resource, saved.input);
+      const result = await command(saved.resource, saved.input);
+      if ('setupRequired' in result) {
+        inFlight.current = false;
+        if (mounted.current) { setBusy(false); setSetupRequired(true); request.current = null; }
+        return;
+      }
     } catch {
       if (mounted.current) { setBusy(false); setUncertain(true); }
       inFlight.current = false;
@@ -44,6 +50,7 @@ export default function CoManagedHandoffComposer({ action, side, resource, revis
       disabled={busy || uncertain} onChange={event => setNote(event.target.value)} />
     <p className="text-sm text-muted-foreground">{t('coManaged.ticket.noteAudience')}</p>
     {uncertain && <p role="alert" className="text-destructive">{t('coManaged.ticket.uncertain')}</p>}
+    {setupRequired && <p role="alert" className="text-destructive">{t('coManaged.ticket.slaSetupRequired')}</p>}
     <div className="flex flex-wrap gap-2">
       <Button id="co-handoff-submit" type="submit" disabled={busy || !note.trim()}>{t(`coManaged.ticket.${busy ? 'saving' : uncertain ? 'retry' : label}`)}</Button>
       <Button id="co-handoff-cancel" type="button" variant="outline" disabled={busy} onClick={uncertain ? onReload : onCancel}>

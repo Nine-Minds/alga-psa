@@ -1,3 +1,4 @@
+import { admitCoManagedTimeWorkSource } from './timeWorkSource';
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import type { AuthorizationRecord, AuthorizationSubject } from '@alga-psa/authorization';
@@ -16,7 +17,15 @@ interface TimeSaveInput {
   entry_id?: string | null; user_id: string; time_sheet_id?: string;
   work_item_id: string; work_item_type: string; approval_status?: string;
 }
-export interface CoManagedNativeTimeAccess { subject: AuthorizationSubject; record: AuthorizationRecord; redactedSourceFields: readonly string[]; clientId?: string | null; workItem: IWorkItem; subjectUserId: string; redactedTimeFields: readonly string[]; assertCurrent(): Promise<void> }
+export interface CoManagedNativeTimeAccess { subject: AuthorizationSubject; record: AuthorizationRecord; redactedSourceFields: readonly string[]; clientId?: string | null; billingProfileId?: string | null; workItem: IWorkItem; subjectUserId: string; redactedTimeFields: readonly string[]; assertCurrent(): Promise<void> }
+
+/** Shared commercial writers return these persisted values, so a caller must
+ * be allowed to see them before choosing or replacing financial details. */
+export function assertCoManagedTimeSaveFields(access: CoManagedNativeTimeAccess, workItemType: string) {
+  if (workItemType === 'co_managed' && isNativeTimeFieldHidden(access.redactedTimeFields,
+    ['entry_id', 'tenant', 'user_id', 'work_item_id', 'work_item_type', 'co_managed_work_reference_id', 'start_time', 'end_time', 'work_date', 'work_timezone',
+      'created_at', 'updated_at', 'approval_status', 'service_id', 'tax_region', 'tax_rate_id', 'contract_line_id', 'contract_line_source', 'billable_duration', 'invoiced', 'billing'])) throw new CoManagedSharedWorkError();
+}
 
 /** Retain actual local work, entry ownership and editable sheets through the
  * native save. Source locators are hints until their parent and entry locks
@@ -111,13 +120,22 @@ async function admitNativeTimeAccess(trx: Knex.Transaction, inputActor: CoManage
   const tasks = await taskQuery.select('task.task_id', 'task.task_name', 'task.description', 'phase.project_id', 'phase.phase_name');
   if (tasks.length !== taskIds.length || tasks.some(task => hints.find(row => row.task_id === task.task_id)?.project_id !== task.project_id)) throw new CoManagedSharedWorkError();
 
+  const sourceChecks: Array<() => Promise<void>> = [];
+  const billingProfiles = new Map<string, string | null>();
   const records = new Map<string, AuthorizationRecord>();
   const projections = new Map<string, IWorkItem>(), projectedClients = new Map<string, string | null>(), redactedTimeFields: string[] = [], redactedSourceFields: string[] = [];
+  // LEVERAGE: pattern native-operational-source-admission — schedule reads retain these work roots too, with distinct operation permissions.
   const uniqueSources = [...new Map(sources.map(source => [`${source.work_item_type}:${source.work_item_id}`, source])).entries()].sort(([a], [b]) => a.localeCompare(b));
   for (const [key, source] of uniqueSources) {
     let resourceType: string | null = null, record: AuthorizationRecord = {}, fields: string[] = [];
     const workItem: IWorkItem & { project_name?: string; phase_name?: string; ticket_number?: string } = { work_item_id: source.work_item_id, type: source.work_item_type, name: '', description: '', is_billable: false };
-    if (source.work_item_type === 'project_task') {
+    if (source.work_item_type === 'co_managed') {
+      const existingId = hint?.work_item_type === 'co_managed' && hint.work_item_id === source.work_item_id ? hint.entry_id
+        : sourceOnly && action !== 'create' ? input.entry_id : null;
+      const shared = await admitCoManagedTimeWorkSource(trx, actor, subject, source.work_item_id, existingId);
+      record = shared.record; fields = [...shared.fields]; Object.assign(workItem, shared.workItem);
+      billingProfiles.set(key, shared.billingProfileId); sourceChecks.push(shared.assertCurrent);
+    } else if (source.work_item_type === 'project_task') {
       const task = tasks.find(row => row.task_id === source.work_item_id), project = projects.find(row => row.project_id === task?.project_id);
       if (!task || !project) throw new CoManagedSharedWorkError();
       resourceType = 'project'; record = { id: project.project_id, clientId: project.client_id, assignedUserIds: project.assigned_to ? [project.assigned_to] : [], teamIds: [] };
@@ -171,7 +189,7 @@ async function admitNativeTimeAccess(trx: Knex.Transaction, inputActor: CoManage
     const current = await owner.table('time_entries').where('entry_id', input.entry_id).forUpdate().first();
     if (!current || ['work_item_id', 'work_item_type', 'user_id', 'time_sheet_id', 'approval_status', 'billing_mode', 'invoiced'].some(field => current[field] !== hint[field])) throw new CoManagedSharedWorkError();
   }
-  const assertCurrent = async () => { await assertAuthenticationCurrent(); if (!reading) await assertCoManagedOperationalWrite(trx, actor.tenant); };
+  const assertCurrent = async () => { for (const check of sourceChecks) await check(); await assertAuthenticationCurrent(); if (!reading) await assertCoManagedOperationalWrite(trx, actor.tenant); };
   await assertCurrent();
-  return { redactedSourceFields, subject, record: records.get(`${input.work_item_type}:${input.work_item_id}`)!, clientId: projectedClients.get(`${input.work_item_type}:${input.work_item_id}`), subjectUserId, redactedTimeFields, workItem: projections.get(`${input.work_item_type}:${input.work_item_id}`)!, assertCurrent };
+  return { billingProfileId: billingProfiles.get(`${input.work_item_type}:${input.work_item_id}`), redactedSourceFields, subject, record: records.get(`${input.work_item_type}:${input.work_item_id}`)!, clientId: projectedClients.get(`${input.work_item_type}:${input.work_item_id}`), subjectUserId, redactedTimeFields, workItem: projections.get(`${input.work_item_type}:${input.work_item_id}`)!, assertCurrent };
 }

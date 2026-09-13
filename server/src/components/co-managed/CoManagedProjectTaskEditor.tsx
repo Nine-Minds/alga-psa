@@ -1,4 +1,5 @@
 'use client';
+import CoManagedEffort from './CoManagedEffort';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CoManagedSharedResource, CoManagedTaskEditorState, CoManagedTaskEditPatch, CoManagedTaskEditRequest } from '@alga-psa/co-managed';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -11,6 +12,7 @@ import { getSharedProjectTaskEditorAction, getSharedProjectTaskStatusesAction, e
 import CoManagedProjectTaskAssignment from './CoManagedProjectTaskAssignment';
 import CoManagedProjectTaskConversation from './CoManagedProjectTaskConversation';
 import CoManagedProjectTaskHistory from './CoManagedProjectTaskHistory';
+import CoManagedTimeEntry from './CoManagedTimeEntry';
 
 function localTime(value: string | null | undefined) {
   if (!value) return '';
@@ -22,6 +24,7 @@ export default function CoManagedProjectTaskEditor({ resource }: { resource: CoM
 }
 function TaskEditor({ resource }: { resource: CoManagedSharedResource }) {
   const { t } = useTranslation('msp/licensing');
+  const [effortRefresh, setEffortRefresh] = useState(0);
   const [state, setState] = useState<CoManagedTaskEditorState | null>(null), [draft, setDraft] = useState<CoManagedTaskEditPatch>({});
   const [choices, setChoices] = useState<{ id: string; name: string }[]>([]), [next, setNext] = useState<string | null>(null);
   const [busy, setBusy] = useState(false), [refresh, setRefresh] = useState(0), [error, setError] = useState<string | null>(null);
@@ -85,6 +88,8 @@ function TaskEditor({ resource }: { resource: CoManagedSharedResource }) {
     </form>}
     {pending && <Button id="co-project-task-discard" variant="outline" disabled={busy} onClick={() => { setPending(null); setState(null); setRefresh(value => value + 1); }}>{t('coManaged.projects.discard')}</Button>}
     <Button id="co-project-task-reload" variant="outline" disabled={busy || pending !== null} onClick={() => { setState(null); setRefresh(value => value + 1); }}>{t('coManaged.policy.reload')}</Button>
+    {state && <CoManagedEffort target={{ kind: 'shared', resource }} refreshKey={effortRefresh} />}
+    {state && <CoManagedTimeEntry resource={resource} canWrite={state.canWrite} onSaved={() => setEffortRefresh(value => value + 1)} />}
     {state && <CoManagedProjectTaskAssignment key={`assignment-${collaborationRefresh}`} resource={resource} onUnavailable={historyUnavailable} onChanged={assignmentChanged} />}
     {state && <CoManagedProjectTaskConversation resource={resource} onUnavailable={historyUnavailable} />}
     {state && <CoManagedProjectTaskHistory key={`history-${collaborationRefresh}`} resource={resource} onUnavailable={historyUnavailable} />}

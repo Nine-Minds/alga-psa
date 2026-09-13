@@ -249,3 +249,4 @@ tools/i18n/*/baseline.json
 
 # T013 gate writes this on a diff for inspection; never committed.
 server/src/test/integration/billing/goldenOutput/baseline.actual.json
+.dev-temporal/

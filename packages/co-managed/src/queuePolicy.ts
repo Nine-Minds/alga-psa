@@ -5,9 +5,9 @@ import { CoManagedSharedWorkError, isCoManagedUuid } from './sharedWorkIdentity'
 /** The compiler sees only home-policy projections. Shared work has no MSP
  * owner, and its queue/assignee exist only through the verified MSP work reference. */
 export function applyCoManagedQueuePolicy(query: Knex.QueryBuilder, subject: AuthorizationSubject, rules: BundleNarrowingRule[],
-  options: { resourceType: 'ticket' | 'project'; shared: boolean; ownerAvailable?: boolean; boardAvailable?: boolean }) {
-  const { resourceType, shared, ownerAvailable = !shared, boardAvailable = true } = options;
-  const result = compileResourceReadAuthorizationSql(query, { resourceType, action: 'read', builtinRules: [], bundleRules: rules,
+  options: { resourceType: string; action?: string; shared: boolean; ownerAvailable?: boolean; boardAvailable?: boolean }) {
+  const { resourceType, action = 'read', shared, ownerAvailable = !shared, boardAvailable = true } = options;
+  const result = compileResourceReadAuthorizationSql(query, { resourceType, action, builtinRules: [], bundleRules: rules,
     ctx: { subject, adapter: { ownerColumn: 'q.auth_owner', clientColumn: 'q.auth_client', boardColumn: 'q.auth_board', teamColumn: 'q.auth_team',
       applyAssignedUsers: (builder, ids) => { builder.whereIn('q.auth_assigned', ids); } } } });
   // Do not execute a partially compiled policy if the kernel gains a new guard.

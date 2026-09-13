@@ -5,6 +5,10 @@ import { assertCoManagedOperationalWrite } from '@alga-psa/licensing';
 import { withCoManagedSharedWork, type CoManagedSharedResource, type CoManagedSharedWorkContext } from './sharedWork';
 import { lockCoManagedCustomerPolicy } from './policy';
 import { withCoManagedCustomerTicket } from './customerWork';
+import { applyCoManagedTicketSlaTransition } from './ticketSla';
+import { retainCoManagedSharedConversationBeforeReduction } from './conversationParticipationEvidence';
+import { retainCoManagedParticipationEvidence } from './participationEvidence';
+import { retainCoManagedTicketRoutingNotification } from './ticketRoutingNotifications';
 import { CoManagedSharedWorkError, isCoManagedUuid, assertCoManagedSessionUnexpired, snapshotCoManagedSessionActor, lockCoManagedSessionIdentity, type CoManagedSessionActor } from './sharedWorkIdentity';
 
 export interface CoManagedTicketHandoffRequest {
@@ -81,13 +85,16 @@ async function transitionTicket(context: CoManagedSharedWorkContext, request: Co
   // Revocation is a security reduction, available even during a license pause.
   if (transition !== 'access_revoked') await assertCoManagedOperationalWrite(trx, resource.tenant);
   const occurredAt = (await trx.select({ at: trx.raw('clock_timestamp()') }).first()).at;
+  if (transition === 'access_revoked') await retainCoManagedSharedConversationBeforeReduction(trx, resource, request.operationId);
   const workId = work?.work_id ?? randomUUID();
   const revision = request.expectedRevision + 1;
+  await applyCoManagedTicketSlaTransition(trx, relationship, resource,
+    { workId, firstEscalatedAt: work?.first_escalated_at ?? null }, request.operationId, transition, occurredAt);
   if (!work) await customer.table('co_management_ticket_work').insert({ tenant: resource.tenant, ...key, work_id: workId,
     revision, responsibility, can_collaborate: true, first_escalated_at: occurredAt, last_transition_at: occurredAt });
   else await customer.table('co_management_ticket_work').where(key).update({ revision, responsibility, last_transition_at: occurredAt,
     // Re-escalating is a new explicit customer decision to share this ticket.
-    ...(transition === 'escalated' ? { grant_revoked_at: null, can_collaborate: true } :
+    ...(transition === 'escalated' ? { grant_revoked_at: null, can_collaborate: true, first_escalated_at: work.first_escalated_at ?? occurredAt } :
       transition === 'access_revoked' ? { grant_revoked_at: occurredAt, can_collaborate: false } : {}) });
   if (!previousReference && transition !== 'access_revoked') {
     if (transition !== 'escalated') throw new CoManagedTicketHandoffError('HANDOFF_CHANGED');
@@ -95,7 +102,7 @@ async function transitionTicket(context: CoManagedSharedWorkContext, request: Co
       reference_id: randomUUID(), work_id: workId, client_id: relationship.sponsor_client_id, board_id: relationship.escalation_board_id,
       created_at: occurredAt, updated_at: occurredAt });
   } else if (previousReference) await sponsor.table('co_managed_ticket_references').where(referenceKey).update({ updated_at: occurredAt,
-    ...(transition === 'escalated' ? { board_id: relationship.escalation_board_id } : {}) });
+    ...(transition === 'escalated' ? { board_id: relationship.escalation_board_id } : { assigned_to: null, assigned_team_id: null }) });
   const home = tenantDb(trx, actor.tenant);
   const author = await home.table('users').where('user_id', actor.userId).first('first_name', 'last_name', 'username');
   const organization = await home.table('tenants').first('client_name');
@@ -104,6 +111,10 @@ async function transitionTicket(context: CoManagedSharedWorkContext, request: Co
     actor_name: [author.first_name, author.last_name].filter(Boolean).join(' ').trim() || author.username,
     actor_organization: organization.client_name, note: request.note, audience: 'shared_it', occurred_at: occurredAt };
   await customer.table('co_management_ticket_handoffs').insert(event);
+  if (transition !== 'access_revoked') await retainCoManagedTicketRoutingNotification(context, request.operationId, transition, revision);
+  await retainCoManagedParticipationEvidence(context, 'ticket_handoff', request.operationId);
+  await assertCoManagedSessionUnexpired(trx, { ...actor, kind: 'session', sessionId: context.sessionId });
+  if (transition !== 'access_revoked') await assertCoManagedOperationalWrite(trx, resource.tenant);
   return receipt(event);
 }
 

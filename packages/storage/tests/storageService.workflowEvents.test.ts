@@ -1,4 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { Readable } from 'node:stream';
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(),
@@ -123,6 +124,25 @@ describe('StorageService.uploadFile workflow events', () => {
         ctx: expect.objectContaining({ tenantId: 'tenant-1' }),
       })
     );
+  });
+
+  it('passes a verified stream length to transport and removes a mismatched receipt before persisting', async () => {
+    createTenantKnexMock.mockResolvedValue({ knex: {} } as any);
+    const upload = vi.fn(async (stream: Readable, path: string, options: { content_length: number }) => {
+      const chunks: Buffer[] = []; for await (const chunk of stream) chunks.push(Buffer.from(chunk));
+      expect(options.content_length).toBe(Buffer.concat(chunks).length);
+      return { path, size: 3, mime_type: 'text/plain' };
+    }), remove = vi.fn();
+    createProviderMock.mockResolvedValue({ upload, delete: remove } as any);
+    fileCreateMock.mockResolvedValue({ file_id: 'stored-stream' } as any);
+    await expect(StorageService.uploadStream('tenant-1', Readable.from([Buffer.from('abc')]), 'sample.txt',
+      { uploaded_by_id: 'user-1', size: 3, mime_type: 'text/plain' })).resolves.toMatchObject({ file_id: 'stored-stream' });
+    expect(fileCreateMock).toHaveBeenCalledTimes(1);
+    upload.mockResolvedValueOnce({ path: 'tenant-1/files/mismatch', size: 2, mime_type: 'text/plain' });
+    await expect(StorageService.uploadStream('tenant-1', Readable.from([Buffer.from('abc')]), 'sample.txt',
+      { uploaded_by_id: 'user-1', size: 3 })).rejects.toThrow('declared size');
+    expect(remove).toHaveBeenCalledWith('tenant-1/files/mismatch');
+    expect(fileCreateMock).toHaveBeenCalledTimes(1);
   });
 
   it('publishes DOCUMENT_DELETED after deleting the file record', async () => {

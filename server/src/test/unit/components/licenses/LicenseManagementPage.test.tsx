@@ -12,11 +12,18 @@ import LicenseManagementPage from "@/components/licenses/LicenseManagementPage";
 import {
   getLicenseStatus,
   startTrial,
+  submitLicense,
 } from "@/lib/actions/licenseManagementActions";
 import type { LicenseStatus } from "@/lib/actions/licenseManagementActions";
 
 const mockUpdateSession = vi.fn();
 const mockRouterRefresh = vi.fn();
+const release = vi.hoisted(() => ({ enabled: true }));
+vi.mock('@alga-psa/ui/hooks', () => ({ useFeatureFlag: () => ({ enabled: release.enabled }) }));
+vi.mock('@/lib/actions/coManagedAcceptanceActions', () => ({}));
+vi.mock('@alga-psa/ui/ui-reflection/useAutomationIdAndRegister', () => ({
+  useAutomationIdAndRegister: ({ id }: any) => ({ automationIdProps: { id }, updateMetadata: () => {}, updateActions: () => {} }),
+}));
 
 vi.mock("next-auth/react", () => ({
   useSession: () => ({ update: mockUpdateSession }),
@@ -50,6 +57,7 @@ const baseStatus: LicenseStatus = {
 };
 
 beforeEach(() => {
+  release.enabled = true;
   mockUpdateSession.mockResolvedValue(undefined);
   mockGetLicenseStatus.mockResolvedValue(baseStatus);
   mockStartTrial.mockResolvedValue({
@@ -63,6 +71,40 @@ beforeEach(() => {
       trialUsed: true,
     },
   });
+});
+
+it('uses tenant key activation without appliance trials or connection controls', async () => {
+  const status: LicenseStatus = { ...baseStatus, scope: 'tenant', state: 'license_required' };
+  mockGetLicenseStatus.mockResolvedValue(status);
+  vi.mocked(submitLicense).mockResolvedValue({ success: true, status: { ...status, state: 'licensed', tier: 'pro' } });
+  render(<LicenseManagementPage />);
+  expect(await screen.findByRole('heading', { name: 'coManaged.tenantLicense.title' })).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /Start 15-day Pro trial/ })).not.toBeInTheDocument();
+  expect(document.querySelector('#license-claim-code')).toBeNull();
+  fireEvent.change(screen.getByLabelText('coManaged.tenantLicense.key'), { target: { value: '  signed-tenant-key  ' } });
+  fireEvent.click(screen.getByRole('button', { name: 'coManaged.tenantLicense.activate' }));
+  await waitFor(() => expect(submitLicense).toHaveBeenCalledWith('signed-tenant-key'));
+  expect(await screen.findByText('Workspace license key activated.')).toBeInTheDocument();
+  expect(screen.getByLabelText('coManaged.tenantLicense.key')).toHaveValue('');
+});
+
+it('hides tenant license controls while the UI release flag is disabled', async () => {
+  release.enabled = false;
+  mockGetLicenseStatus.mockResolvedValue({ ...baseStatus, scope: 'tenant', state: 'license_required' });
+  render(<LicenseManagementPage />);
+  await waitFor(() => expect(document.querySelector('.animate-pulse')).toBeNull());
+  expect(screen.queryByLabelText('coManaged.tenantLicense.key')).not.toBeInTheDocument();
+  expect(document.querySelector('#license-claim-code')).toBeNull();
+});
+
+it('keeps the tenant key for correction and shows a safe error when activation is denied', async () => {
+  mockGetLicenseStatus.mockResolvedValue({ ...baseStatus, scope: 'tenant', state: 'license_required' });
+  vi.mocked(submitLicense).mockRejectedValue(new Error('Internal database detail must not be displayed'));
+  render(<LicenseManagementPage />);
+  fireEvent.change(await screen.findByLabelText('coManaged.tenantLicense.key'), { target: { value: 'invalid-key' } });
+  fireEvent.click(screen.getByRole('button', { name: 'coManaged.tenantLicense.activate' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('Failed to activate license key.');
+  expect(screen.getByLabelText('coManaged.tenantLicense.key')).toHaveValue('invalid-key');
 });
 
 afterEach(() => {

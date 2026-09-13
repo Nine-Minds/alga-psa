@@ -85,6 +85,7 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
     timeInputs,
     totalDurations,
     isLoading,
+    error,
     initializeEntries,
     updateEntry,
     updateTimeInputs,
@@ -364,6 +365,7 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
               })}
         </div>
       )}
+      {error && <p role="alert">{error}</p>}
       {isLoading ? (
         <TimeEntrySkeletons />
       ) : entries[0] ? (

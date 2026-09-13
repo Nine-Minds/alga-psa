@@ -51,7 +51,7 @@ export async function assertCoManagedSessionUnexpired(trx: Knex.Transaction, act
 
 /** Evaluate only fields for which the caller supplied a meaningful home-tenant
  * projection. Unknown fields cannot accidentally compare against customer IDs. */
-function matchesCoManagedScopeConstraints(constraints: ScopeConstraint[], record: AuthorizationRecord): boolean {
+export function matchesCoManagedScopeConstraints(constraints: ScopeConstraint[], record: AuthorizationRecord): boolean {
   const fields: Record<string, unknown> = { client_id: record.clientId, board_id: record.boardId,
     owner_user_id: record.ownerUserId, assigned_to: record.assignedUserIds?.[0] };
   return constraints.every(constraint => {

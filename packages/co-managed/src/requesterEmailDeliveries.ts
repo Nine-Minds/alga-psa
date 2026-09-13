@@ -6,10 +6,11 @@ import { discoverCoManagedRequesterCommentEmail, withCoManagedRequesterCommentEm
 import { issueCoManagedRequesterReplyToken } from './requesterReplyTokens';
 import { coManagedCommentEmailSettings } from './commentEmailRecipient';
 import type { CoManagedEmailDeliveryResult } from './commentEmailDeliveries';
+import { withCoManagedRequesterTaskCommentEmail, type CoManagedRequesterTaskEmailDelivery } from './requesterTaskEmail';
 
 const TABLE = 'co_management_requester_email_deliveries';
 const SOURCE = ['tenant', 'delivery_key', 'event_id', 'ticket_id', 'comment_id'] as const;
-const IDENTITY = [...SOURCE, 'recipient_kind', 'client_id', 'recipient_id', 'thread_id'] as const;
+const IDENTITY = [...SOURCE, 'recipient_kind', 'client_id', 'recipient_id', 'thread_id', 'resource_type', 'resource_id', 'project_id', 'contact_id'] as const;
 const normalize = (email: string) => email.trim().toLowerCase();
 export interface CoManagedRequesterEmailDelivery {
   tenant: string; recipient: CoManagedRequesterEmailRecipient; email: string; subtypeId?: number;
@@ -50,8 +51,8 @@ async function finish(trx: Knex.Transaction, row: any, result: CoManagedEmailDel
   const attempts = row.attempt_count + 1, retry = result.status === 'failed' && result.retryable && attempts < 10;
   const delay = Math.min(3600000, Math.max(60000 * 2 ** Math.min(attempts - 1, 6), result.status === 'failed' && Number.isFinite(result.retryAfterMs) ? result.retryAfterMs! : 0));
   await tenantDb(trx, row.tenant).table(TABLE).where('delivery_key', row.delivery_key).update({ status: retry ? 'pending' : result.status,
-    attempt_count: attempts, next_attempt_at: retry ? trx.raw("clock_timestamp() + ? * interval '1 millisecond'", [delay]) : null,
-    completed_at: retry ? null : trx.raw('clock_timestamp()'), error_code: result.status === 'failed' ? result.errorCode.slice(0, 100) : null });
+    attempt_count: attempts, next_attempt_at: retry ? trx.raw("now() + ? * interval '1 millisecond'", [delay]) : null,
+    completed_at: retry ? null : trx.raw('now()'), error_code: result.status === 'failed' ? result.errorCode.slice(0, 100) : null });
 }
 /** Two transactions are intentional: token issuance must commit before SMTP can
  * expose it. The second transaction reacquires current source/recipient authority
@@ -59,7 +60,7 @@ async function finish(trx: Knex.Transaction, row: any, result: CoManagedEmailDel
  * with the same Message-ID/token; this is not exactly-once external delivery.
  * Requires the cm1 admission adapter in the receiving durable inbox workers. */
 export async function processCoManagedRequesterEmailDeliveries(db: Knex, tenant: string,
-  send: (delivery: CoManagedRequesterEmailDelivery) => Promise<CoManagedEmailDeliveryResult>, options: { limit?: number } = {}) {
+  send: (delivery: CoManagedRequesterEmailDelivery | CoManagedRequesterTaskEmailDelivery) => Promise<CoManagedEmailDeliveryResult>, options: { limit?: number } = {}) {
   const limit = options.limit ?? 30;
   if (db.isTransaction || !isCoManagedUuid(tenant) || !Number.isInteger(limit) || limit < 1 || limit > 300) throw new Error('Invalid requester email recovery scope');
   const due = (trx: Knex) => tenantDb(trx, tenant).table(TABLE).where('status', 'pending').where('next_attempt_at', '<=', trx.raw('clock_timestamp()'));
@@ -77,6 +78,26 @@ export async function processCoManagedRequesterEmailDeliveries(db: Knex, tenant:
   let processed = 0;
   for (const candidate of rows) {
     try {
+      if (candidate.resource_type === 'project_task') {
+        const recipient = { kind: 'requester_task_user' as const, tenant, clientId: candidate.client_id, userId: candidate.recipient_id, contactId: candidate.contact_id };
+        if (candidate.recipient_kind !== recipient.kind || candidate.ticket_id !== null) throw new CoManagedSharedWorkError();
+        const didProcess = await withTransaction(db, async trx => {
+          const result = await withCoManagedRequesterTaskCommentEmail(trx, recipient, { projectId: candidate.project_id, taskId: candidate.resource_id },
+            candidate.comment_id, candidate.thread_id, async (_context, message, email, subtypeId) => {
+              const row = await claim(trx, candidate); if (!row) return false;
+              const messageId = `<co-managed-requester-task-${createHash('sha256').update(row.delivery_key).digest('hex')}@notifications.alga.invalid>`;
+              let outcome: CoManagedEmailDeliveryResult;
+              try { outcome = await send({ tenant, recipient, email, subtypeId, messageId, message }); }
+              catch { outcome = { status: 'failed', retryable: true, errorCode: 'email_transport_failed' }; }
+              if (!outcome || !['delivered', 'skipped', 'failed'].includes(outcome.status)) outcome = { status: 'failed', retryable: true, errorCode: 'invalid_email_transport_result' };
+              await finish(trx, row, outcome); return true;
+            });
+          return result ?? complete(trx, candidate, { status: 'skipped' });
+        });
+        if (didProcess) processed++;
+        continue;
+      }
+      if (candidate.resource_type !== undefined && candidate.resource_type !== 'ticket') throw new CoManagedSharedWorkError();
       const recipient = recipientOf(candidate), resource = { tenant, kind: 'ticket' as const, id: candidate.ticket_id };
       // LEVERAGE: pattern qualified-email-preparation — requester and technician credentials need a committed prepare phase before retained-authority delivery.
       const prepared = await withTransaction(db, async trx => {

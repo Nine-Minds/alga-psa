@@ -529,3 +529,296 @@ Inline markers are the per-site ledger; `grep -rn "LEVERAGE:"` is the count.
 - **Where:** `optimizedTicketActions.ts`, `postNamedTicketConversation.ts`, `ticketBundleCommentEffects.ts`.
 - **Gate:** Two concrete callers, stable legacy effects and a high cost of skipping bundle behavior when migrating the default composer. ACT / bounded-now within the approved native Requester integration.
 - **Status:** extracted. Both paths use the same persisted-source engine; named publication supplies current per-target authority. Additional Requester and private/vendor conversations are excluded. Four representative real-schema cases cover mirror/history/retry, reopen, target-scope rollback and side exclusion. No generic event, inbound or ticket mutation framework introduced.
+## native-time-period-worker-boundary — friction
+- **What:** The background generator was exported as a server action, accepted caller-supplied settings and diverged from browser calendar calculations.
+- **Where:** `timePeriodJob`, scheduling `timePeriodAutomation`/`timePeriodCadence`, `TimePeriodSuggester`, native generation and scheduler registration.
+- **Gate:** An actual persisted system job supplies bounded worker authority; the existing calendar engine serializes work and shared pure date math removes divergent period-end calculations. ACT / bounded-now.
+- **Status:** Worker admission retains processing job/queue identity and current product/lifecycle; active settings are loaded under the calendar lock and final authority changes roll dates back. Native generation and suggestions share exclusive ends and compatible profile boundaries. Six focused scenarios verified across initial and corrected assertion runs; broader calendar, worker integration and Citus/browser coverage remain deferred.
+
+## native-schedule-read-authority — pattern
+- **What:** Native detail and API list/detail had divergent private-entry filtering and no common retained source/credential boundary; API enrichment returned placeholder work titles and unadmitted assignee PII.
+- **Where:** `nativeScheduleRead`, schedule detail actions and `TimeSheetService` schedule readers.
+- **Gate:** Three real consumers share stable read admission and high disclosure cost. ACT / bounded-now within approved scheduling work.
+- **Status:** Retained credentials, actual assignments, schedule/source scope and explicit projections now govern these readers; five focused scenarios verified across initial/follow-up/expiry runs. Native recurring collections and all schedule command adapters remain pending.
+
+## native-operational-source-admission — pattern
+- **What:** Time and schedule readers retain the same project/task/ticket/interaction roots but apply different operation permissions.
+- **Where:** `nativeTimeEntryAccess` and `nativeScheduleRead`.
+- **Gate:** Real duplication with meaningful lock/field-projection cost; schedule commands and recurrence are still evolving. WAIT for the command boundary before extracting a shared work-source engine.
+- **Status:** Watching; source authority is explicit in both domains, and scheduling does not require time-entry permission.
+
+## native-schedule-calendar-projection — friction
+- **What:** Native calendar reads bypassed retained detail authority; the model excluded recurring masters while the recurrence engine also excluded their first occurrence.
+- **Where:** `nativeScheduleRead`, `getScheduleEntries`, shared recurrence utilities and model expansion.
+- **Gate:** Existing admitted master/source projection is the appropriate layer for every occurrence; an explicit pure-engine master-inclusion option fixes the calendar contract without changing subsequent-only consumers. ACT / bounded-now.
+- **Status:** Native calendar expansion retains actual master/assignment/source scope and projects each occurrence after holiday/exception processing. Half-open overlap includes spanning events; first occurrences are represented once. Three focused PostgreSQL cases, 18 pure recurrence cases and four existing model cases pass using fast Node source tests. Schedule commands and broader timezone/workday/scale checks remain pending.
+
+## native-schedule-command-authority — friction
+- **What:** Schedule API writes used raw rows and independent permission checks, wrote assignment arrays as columns, returned details only after commit and published private snapshots. Own-calendar permission also differs from dispatcher permission while bundles must evaluate the actual command action.
+- **Where:** `nativeScheduleCommand`, shared schedule read/source helpers, `TimeSheetService`, schedule schemas and model update.
+- **Gate:** Create/update/delete share stable current actor/source/assignment and response-admission requirements. ACT / bounded-now for API master commands; native recurrence scopes follow.
+- **Status:** Commands retain current credentials, write lifecycle and actual assignments, map own/dispatcher RBAC from locked state while retaining actual bundle actions, normalize model inputs, protect time dependencies and publish IDs after commit. Six focused scenarios verified across corrected runs; eight existing model-update cases pass in under a second. Native adapters, recurrence command scopes and appointment/workflow consequences remain pending.
+
+## native-schedule-recurrence-commands — friction
+- **What:** Native mutations bypassed API command authority; model recurrence branches conflated empty/null updates with absence, reused master dates for future splits and reset counted series. Stored-master replacement on first-occurrence cancellation could also discard historical source identity.
+- **Where:** `nativeScheduleCommand`, native schedule actions and shared schedule model recurrence branches.
+- **Gate:** Existing retained command admission fits occurrence mutations when master membership is verified first; the model must preserve explicit fields and count/duration semantics. ACT / bounded-now.
+- **Status:** Native mutations share current credentials/scope; exact occurrence checks, single/future/all behavior, stable cancellation identity and actual-row events are verified by eight focused PostgreSQL scenarios and 22 fast model cases. Native branches now publish identity-only schedule events; appointment/Teams cleanup and derived workflow consequences still need retained integration.
+
+## native-schedule-relations — friction
+- **What:** Co-managed calendar commands needed atomic local appointment/meeting cleanup; legacy request-only provider IDs would otherwise disappear during cancellation, and external failure must not leave a half-cancelled local booking.
+- **Where:** `nativeScheduleRelations`, retained schedule source/command admission and online_meetings synchronization intent columns.
+- **Gate:** The admitted schedule transaction owns its local relation changes; provider work requires a durable operation retained on the actual meeting. ACT / bounded-now for local consistency and intent storage.
+- **Status:** Local request/meeting rescheduling and cancellation, stable provider IDs, conflicting binding rejection and final-credential rollback pass six focused source-mode PostgreSQL scenarios in 9.45 seconds. Six source files and the migration pass syntax checks. External provider execution, retries and explicit appointment/meeting action admission remain pending; no Graph calls or broad builds performed.
+
+## native-schedule-meeting-reconciliation — friction
+- **What:** Committed calendar changes left external provider state pending; ordinary cleanup drops unavailable operations and addressing the current organizer can target the wrong mailbox after configuration changes.
+- **Where:** `nativeScheduleMeetingSync`, scheduling provider bridge, existing Teams maintenance sweep and Graph update/delete adapters.
+- **Gate:** Reuse the durable meeting operation as narrow system reconciliation authority and existing recurring maintenance for recovery; serialize the provider effect on that actual operation. ACT / bounded-now.
+- **Status:** Pending clock updates/deletions retry without copying calendar text or attendees, retain unavailable operations and sanitize persisted errors. Persisted event/organizer identity is required; incomplete legacy bindings stay pending for repair instead of acknowledging guessed-resource 404s. Six focused PostgreSQL scenarios, six fast mocked provider cases and six syntax-only checks pass. Recipient reconciliation, broader appointment action authority and live runner/provider validation remain pending.
+
+## native-appointment-authority — friction
+- **What:** Appointment list/detail/ticket-linked readers disagreed on visibility; direct decline/reschedule writers bypassed retained request/schedule authority, transactionally coupled cleanup and final credential checks.
+- **Where:** `nativeAppointmentRequest`, `nativeAppointmentRequestCommand`, schedule relation engine and native appointment adapters.
+- **Gate:** The actual request source, preferred technician, current approver configuration and schedule are the shared admission substrate for these operations. ACT / bounded-now for read/decline/reschedule; approval and provider creation follow.
+- **Status:** Current read scopes and field-safe filters/labels, atomic decline/rescheduling, pending-state preservation, local-time validation and final-expiry rollback are verified by eight new focused PostgreSQL scenarios. The existing implicit-approval guard also passes; five sources pass syntax checks. Requester notifications, recording artifacts, approval/creation, association and legacy binding repair remain pending. The pure approver-config decoding duplication is marked at both layers for later extraction.
+
+## native-appointment-approval-and-ticket — friction
+- **What:** Approval needed current request/assignee/schedule authority and stable creation identity; ticket association replaced the calendar's appointment reference and broke later relation commands.
+- **Where:** `nativeAppointmentApproval`, request schedule-policy projection, native approval/association adapters and schedule model creation options.
+- **Gate:** Reuse the retained request policy for old/proposed ticket roots and actual schedule changes. Allow command-reserved model IDs to align pre-insert admission with the real row. ACT / bounded-now for local approval and association.
+- **Status:** Six focused PostgreSQL scenarios verify local approval, duplicate creation prevention, scope/masks, stable ticket association, legacy repair and final-expiry rollback; six sources pass syntax checks. Teams-enabled approval remains on its legacy path until the provider coordinator is connected. Shared canonical allocation admission is marked at the three command sites for later extraction.
+
+## appointment-meeting-creation-recovery — friction
+- **What:** A successful Graph create followed by a lost response or failed local approval could orphan an external event; the old provider also discarded partial creation evidence before online-meeting indexing completed.
+- **Where:** Shared retained approval planner, `meetingCreationOperation`, new journal migration, EE creation/recovery helpers and the CE-safe provider registry.
+- **Gate:** Freeze an admitted operation before external effects, retain its source fingerprint and original organizer, and pair retry identity with read-only provider discovery. ACT / bounded-now for preparation and recovery substrate.
+- **Status:** Immutable duplicate-safe reservations and changed/expired authority rejection pass four focused PostgreSQL cases; seventeen mocked provider cases verify transaction/property identity, lost-response recovery, partial receipts and target changes. Eight sources and the migration pass syntax checks. Actual create/attach coordination and durable cleanup execution remain pending; no live provider or migration effects performed.
+
+- 2026-09-07 — Appointment creation now composes the shared retained approval planner with a durable provider operation. The scheduling layer owns Graph payload rendering and transport adaptation; the co-managed layer owns current authority, frozen disclosure, state transitions, atomic attachment and narrow compensation. The recurring Teams runner supplies only durable identities, and recovery never builds new recipients or reissues creation. Remaining friction: Generate Teams Meeting still has its legacy orchestration, requester mail/artifact admission is separate, and an ambiguous absent provider event needs an explicit resolution policy.
+
+## appointment-meeting-creation — friction
+- **What:** Approved-request generation previously duplicated provider creation and bypassed the retained receipt/attachment engine used by approval.
+- **Where:** `nativeAppointmentApproval.ts`, `meetingCreationOperation.ts`, `appointmentMeetingCreation.ts`, and the scheduling generation action.
+- **Gate:** Two concrete callers with the same irreversible provider effect and compensation rules; high duplication cost and a stable durable-operation boundary. ACT / bounded-now within the approved meeting workstream.
+- **Status:** revised. Both callers compose purpose-specific retained intent with one preparation, attempt, attachment and recovery engine. Generation uses actual calendar times and all current assignees, while approval keeps its status transition and frozen encoding. Only undisclosed failed placeholders are reusable. The previously recorded Generate Teams Meeting orchestration gap is closed; notifications, artifact delivery and ambiguous-event resolution remain separate requirements.
+
+- 2026-09-07 — Native artifact metadata, content delivery and transcript-document admission now share `retainNativeOnlineMeeting`, which retains all actual source owners and the calendar before the artifact. Media requires full source/content visibility; the composition route owns storage/Graph streaming and receives only retained identities. The native browser session adapter shape is marked in the document bridge; capture, portal/API HTTP adapters, interaction projections and generic file delivery remain subsequent callers to migrate.
+
+- 2026-09-07 — `resolveMeetingArtifactActor` gives both artifact HTTP URLs one explicit principal boundary: a supplied key uses the real hashed-key validator and its actual tenant/user/key identity, while absent keys use the tracked browser session. The retained domain consumer remains responsible for current key scope and expiry. No user-profile-only API override or caller tenant header is treated as credential evidence.
+
+- 2026-09-07 — Interaction loaders were another live source of unprojected meeting rows, beyond the dedicated meeting action. `readCoManagedNativeInteractions` now owns current interaction/label projection, search and count semantics; `nativeInteractionMeetingView` and the shared artifact projector own linked meeting visibility. The storage model retains its internal shape, while the public interaction type references an explicit meeting view. Native session adapter duplication is marked; API credential propagation is still evolving, so extraction is deferred. Mutation/refresh enrichment and broader model/API consumers remain to migrate.
+
+- 2026-09-07 — Interaction editing now owns one retained transaction for credential/lifecycle, old/proposed relationships, record field scope, mutation and response projection. It bypasses the legacy model method that opened its own connection inside a nominal transaction and returned raw meeting enrichment. An exact-identity option on the existing reader supplies the mutation response without introducing a second projector. Linked calendar/media/effort identity is preserved until an explicit linked-work operation handles the change; creation/deletion remain subsequent command paths.
+
+- 2026-09-07: Co-managed native interaction creation/deletion reuse the retained parent checks and admitted interaction projection. Extracted only the existing classification and linked-work checks within the command module; ordinary PSA fallbacks remain in the action layer. Seven focused source-mode PG cases passed in 11.97s; no build/broad regression. Direct model/API/workflow writers and derived creation workflow consequences remain open.
+
+- 2026-09-08: Consolidated ticket export shares the existing admitted relation with queue pagination, using an internal pagination choice rather than a second policy/query implementation or independently fetched pages. The browser action only serializes admitted values. Existing CSV serializer copies now both quote carriage returns. Focused validation: 5 PG, 12 UI/action and 25 CSV cases passed without builds; bulk routing and remaining original plan tasks stay open.
+
+- 2026-09-08: Bulk handback composes existing canonical handoff transactions and receipts. Each selected qualified ticket retains its own admission and failure result; no batch-level shadow lifecycle or replacement routing implementation. The queue exposes only the permitted work revision. Existing UI retry semantics freeze the complete uncertain batch. Six focused PG cases and sixteen distinct UI/action cases passed; field-alias refinement was checked separately. No builds.
+
+## shared-work-assignee-admission — pattern
+- What: Active MSP identity, technician participation, proposed-assignment policy and staffed-team eligibility repeat across ticket and project-task assignment.
+- Where: `sharedWorkAssignees.ts`, `projectTaskAssignments.ts`, `ticketAssignments.ts` in `packages/co-managed/src`.
+- Gate: Two concrete callers, high isolation risk, stable principal and membership rules, real reuse; ACT / bounded-now within assignment implementation. The helper accepts the domain's field restrictions and actual routing board, leaving storage/lifecycle outside it.
+- Status: Extracted and exercised through both actual domain callers. Qualified work audit writing is shared similarly; the existing task wrapper preserves its task-only contract. Pagination remains a marked candidate rather than another extraction. Nine focused PG and ten action tests passed without builds.
+
+- 2026-09-08: Ticket assignment UI composes the existing ticket assignment actions and parent refresh/access-loss callbacks. Generic assignment labels and ticket error translations are reused. Request lifetime is marked alongside task assignment as a candidate; no UI engine was extracted while these lifecycles still differ. Twenty-three focused source-mode UI tests passed in 2.67s; no build or database rerun.
+
+- 2026-09-08: Revised the ticket work substrate to distinguish participation from escalation. Nullable, constrained escalation timestamps let the same assignment engine create work on already-collaborative boards without manufacturing a handoff or permanent ticket grant. Queue membership composes responsibility and assignment under their respective field visibility. Existing work/reference identity survives the first real escalation; handback clears active assignment. Eleven focused PG and thirteen UI cases passed without builds; migration replay/retained-data rollback refusal were checked in the disposable database.
+
+## organization-sla-obligation — friction
+- **What:** Native SLA storage and locking assume that the policy owner also owns the ticket; an MSP must have its own obligation for the canonical customer ticket.
+- **Where:** `packages/sla/src/services/slaService.ts`, `slaLock.ts`, and the co-managed SLA requirements in this plan.
+- **Gate:** High correctness cost (cross-tenant storage and repeated handoffs resetting deadlines); organization/source separation is settled. ACT / staged migration within the approved SLA work.
+- **Status:** Added an independent clock reducer and transaction-scoped obligation/event store. Calendar classification reuses the existing shared segmentation primitive, retaining millisecond precision. Native ticket storage and its existing lock key remain compatible. Mapping/resolution adapters and scheduler integration are the next stage, not yet migrated.
+
+Organization SLA migration checkpoint (2026-09-08): shared policy/calendar resolution now lives in `shared/lib/sla/slaPolicyResolver.ts`; native SLA callers use the extracted helper unchanged. Co-managed handoffs reuse that precedence with explicit, administrator-owned priority mappings and independent persistence. Start/pause/resume are connected to actual handoff transactions; response/resolution admission, scheduling, and policy-change reconciliation remain in the next stage. No second ticket or customer SLA rewrite was introduced.
+
+The clock, store, and organization lock also moved into `shared/lib/sla`, with compatible SLA-package re-exports. Direct co-managed → SLA imports would create a co-managed → SLA → notifications → co-managed cycle; both consumers now depend on the existing lower shared package. Shared resolver types use the existing backend contracts in `@alga-psa/types`. Source-mode native/organization checks (47 cases) and two targeted PG handoff/configuration checks passed after this dependency correction.
+
+Organization SLA source effects checkpoint (2026-09-08): `ticketSla.ts` now retains the canonical ticket/work and current visibility before applying first response, resolution, or reopen effects. The native and shared mutation adapters use one organization-obligation reducer/store. Replies use actual persisted attribution and root/reply audience rather than an event-bus payload; completely revoked work remains frozen. Future timer workers must preserve source-ticket/work → organization-obligation lock order before choosing an observation timestamp so they cannot race a source mutation with a later clock observation.
+
+Organization SLA scheduler checkpoint (2026-09-08): CE and EE reuse the same qualified observation adapter through the existing maintenance fanout, with independent schedules and no duplicate ticket workflow state. The adapter reuses the source-retaining helper from synchronous reply/closure effects and the shared clock/store; source work is locked before organization time is observed. Nine focused PostgreSQL cases and 23 maintenance unit cases passed. Warning thresholds and recipient delivery remain subsequent adapters.
+
+Organization SLA display checkpoint (2026-09-08): qualified ticket readers reuse the immutable organization clock for current display projection; reading never emits timer events or invents a second SLA store. A minimized presentation contract separates native customer timing from MSP timing, keeping policy configuration and private pause details out of the shared screen. Source-field redaction removes derived displays together. Existing source/credential admission is reused; repeated screen admission remains a performance candidate to watch rather than a new authorization abstraction in this pass.
+
+Organization SLA notification checkpoint (2026-09-08): the shared organization event store captures threshold crossings atomically, so timer polling, handbacks, replies, and closures do not each need a separate notification detector. Existing policy-owned threshold configuration supplies recipient flags/channels; the outbox retains source identity and timing, never cached ticket text as authority. ACT / staged migration: detection and durable inputs are connected, while recipient verification and existing inbox/delivery adaptation remain the next stage. Fifteen focused PostgreSQL cases passed without a production build.
+
+## co-managed-notification-source-dispatch — friction
+- **What:** Inbox and channel delivery were hard-wired to comment receipts; SLA notices require a distinct durable source without cached-content fallback.
+- **Where:** `coManagedInbox.ts`, `notificationDelivery.ts`, and the new organization SLA notice readers.
+- **Gate:** Two high-risk authorization/presentation callers with a stable source-qualified contract; ACT / bounded-now within planned notification integration.
+- **Status:** Both callers now use `withCoManagedStoredPresentation`, which dispatches to comment or SLA verification under the owning transaction. Actual comment/inbox regressions and SLA recipient/redaction/queue cases passed. Transport-specific effects remain in the existing delivery queue/runtime; email notices are retained pending their send adapter.
+
+Organization SLA email checkpoint (2026-09-08): recipient preference gates reuse `coManagedInternalEmailRecipient` with the existing SLA subtype catalog. The dedicated SLA receipt queue reuses the current source verifier and the existing tenant email service; channel completion is kept separate from fanout and in-app delivery. Retry-state repetition is marked alongside the existing comment/email queues; source identities and authority remain distinct, so no transaction/transport abstraction was extracted in this pass. Eleven focused PostgreSQL cases and 30 job/transport unit cases passed with mocked sends.
+
+## email-template-context-escaping — friction
+- **What:** The generic database template processor substitutes raw strings into HTML, text, and subjects using one operation; authorized ticket text still needs output-context escaping.
+- **Where:** `packages/email/src/templateProcessors.ts` and `coManagedSlaEmailTransport.ts`.
+- **Gate:** High correctness cost but wide existing-caller impact. ACT / staged migration when revising the generic renderer; do not silently change every existing email template in an SLA delivery task.
+- **Status:** SLA transport loads existing template definitions without raw data substitution, then safely fills its flat admitted data. Existing processor semantics remain compatible; general engine revision remains staged work.
+
+## ticket-close-transition — pattern
+
+Primary ticket updates and bundle child propagation now both perform close-rule admission, closure fields, independent SLA effects, and audit. The full primary updater also owns notifications, so calling it recursively would duplicate the existing master-owned bundle close email behavior. Keep the per-child path explicit for now; a future extraction should separate the canonical lifecycle transition from notification ownership and retain each source transaction and actor's authority. Markers are in `packages/tickets/src/actions/optimizedTicketActions.ts`.
+
+## executing-workflow-authority — pattern
+
+Co-managed conversation retention and ticket field mutation retain the same executing workflow run/version, published actor, lifecycle, and current home permissions. Both now have inline markers. The runtime supplies these domain adapters through composition registries to avoid a shared-to-co-managed package cycle. A common retained workflow-authority layer should eventually cover other operational actions; do not substitute an unqualified run-user lookup or generic event payload for admission.
+
+
+Workflow closure checkpoint (2026-09-08): the existing ticket workflow admission was factored into `workflowTicketAuthority.ts` for operational mutations and committed closure-email delivery. This is a bounded extraction: both callers retain the exact version/author, current record and field permissions, while only mutations require a running lease. Conversation admission remains a separate caller to reconcile later. The mutation registry supplies a transactional email-intent capability instead of importing its co-managed consumer. Closure email retains its distinct command identity; bounded email retry and context-aware template substitution remain marked alongside the existing queues/renderers. Notification recovery now continues independent committed stages and aggregates failures, matching the existing SLA maintenance behavior (`independent-maintenance-recovery`); no general job engine was introduced.
+
+
+## normalized-time-billing-work — pattern (bounded extraction)
+
+The contract and catalog billing loaders duplicated native ticket/project joins and assumed a time owner also owned the work. The new shared work kind made those joins insufficient; both now use `timeEntryWorkContext.ts`. It produces one owner/type/id-qualified billing row from native work or an MSP-owned retained reference, keeps foreign project IDs out of local project billing rules, and leaves charge calculation in the existing engine. Invoice snapshots and grouping preserve the qualified source. The local conditional time-entry/reference FK deliberately uses an explicit nullable reference column plus a type/ID equality check, preserving real tenant-local referential integrity without a hidden ticket or foreign-tenant FK. General time UI/writer adoption is the next stage, not a second billing engine.
+
+
+## time-work-evidence — pattern
+
+Reference registration and admitted new time contributions capture the same allowlisted ticket/task descriptions. Both now carry an inline marker. Current time writes refresh local evidence only inside the retained source transaction, so failed writes cannot capture customer changes. Historical MSP time uses current home authority and retained evidence without live customer reads. A future common evidence projector should preserve those distinct admission and transaction contracts; it must not turn registration alone into participation or an archive entitlement. Native browser/API financial save-field requirements also repeat and should converge when the existing API billing stub is brought into native billing parity.
+
+Shared timer checkpoint (2026-09-08): the third financial writer now uses `assertCoManagedTimeSaveFields` with the native browser/API callers. This bounded extraction keeps their returned commercial fields consistent without changing unrelated native time behavior. Existing clocks and completed time use the same retained-evidence admission; a guessed reference or registration alone cannot substitute for actual effort. Timer completion continues through the existing receipt and API writer rather than a separate time engine.
+
+
+## time-entry-preparation — friction (bounded extraction)
+
+The native launcher coupled user/period/sheet preparation to a global drawer. Shared customer screens need their form lifetime to follow the qualified resource and release boundary. `prepareTimeEntryForWorkItem` now returns the existing form inputs, and the native drawer launcher and shared-work dialog both consume them. No alternate timesheet writer or form was introduced. The native launcher now propagates save failures to the existing dialog handler, eliminating a swallowed-error path that could report success. Shared client lookup retains the actual source/entry authority and then uses ordinary contract selection; it does not add a separate billing engine.
+
+
+## native-time-billing-command — pattern (bounded extraction)
+
+Native saves held contract resolution and allocation sequencing inline while the REST writer returned stub contract fields. Both now use transaction-bound contract selection and the existing reverse-old/apply-new allocation routine. Candidate loading is separate from browser authentication, preserving the retained write connection. Charge calculation and invoicing remain in the existing billing engine; this extraction does not introduce another invoice engine. The same task/client lookup also existed in prepaid-hour allocation, so work client/profile resolution moved into shared billing runtime and scheduling retains a compatibility facade. Reconciliation’s collection query now admits the shared reference kind. Current lower-level lock-order and eligibility concurrency audits remain part of the broader billing validation work.
+
+## shared-work-effective-grant — pattern (watching)
+
+MSP source admission and customer-side aggregate reads both resolve explicit ticket or board visibility. Customer ownership permits local effort after unsharing, so it cannot use foreign-user admission directly. Two sites now carry the marker; keep this small predicate duplication while the aggregate/retention contract settles rather than introducing a generic cross-tenant grant engine. Project effort composes existing work authorization for each actual child and reads owner-local time instead of copying timesheets or mutating native cached hours.
+
+Native task effort checkpoint (2026-09-08): reused the project's existing composition-slot pattern for an optional TaskEffort component. The server workspace layer owns product/session knowledge and co-managed actions; the native project form receives only its local task ID. The provider sits above the common drawer outlet so task dialogs and pages have the same behavior without importing server product code into projects. No new calculation or timesheet engine.
+
+## co-managed-relationship-closure — domain transaction boundary
+
+Explicit departure and independent upgrade need the same retained trust/capacity order, archive cutoff, final credential check and idempotent release. `closeCoManagedRelationship` supplies that boundary without granting independent product entitlement. The caller must provide a transactional evidence finalizer; there is no default or public action until the production archive adapter exists. This keeps future upgrade orchestration from reimplementing seat release or closing access before authorized evidence is retained. Current validation proves transaction semantics with stand-ins, not archival completeness.
+
+## co-managed-participation-evidence — retained event boundary
+
+Handoff and shared-work audit writers now call one append-only evidence recorder after their actual source event exists in the transaction. It resolves the sponsoring owner and qualification from persisted records, selects explicit fields and compares immutable replay hashes. Archive participation comes from actual work, not a viewed row or registered time reference. No generic audit-log copier or retrospective source scanner was introduced; later conversation/file adapters must enforce their own audience rules before entering the archive.
+
+Time participation checkpoint (2026-09-08): the second source adapter uses a factored qualified append/hash store. Source eligibility and content selection remain in the handoff/audit and completed-time adapters. Native manual, API and timer-completion writers invoke capture inside their actual transaction; no read-side capture, shadow timer, copied timesheet, or foreign-source lookup was introduced. First time proof is immutable even when the retained native entry subsequently moves, changes or is deleted.
+
+Conversation capture checkpoint (2026-09-08): effective source disclosure now has two concrete non-user consumers, organization effort totals and transactional conversation retention. Extracted their small predicate into `hasEffectiveSharedGrant`; each caller still owns its current trust/authentication boundary. The shared-work authorization engine retains its richer predicate with collaboration/routing decisions, so its existing marker stays. Newly inserted canonical event intent is the single capture hook for ticket/task writers; retries do not re-read mutable history. Source adapters continue to own audience and participation eligibility, and the immutable store remains a qualified append/hash primitive.
+
+## co-managed-archive-file-staging — transaction and storage boundary
+
+Archive retention must survive customer object removal immediately, while remote storage retries must not keep reading newly private sources. The writer therefore captures verified bytes into MSP-owned transactional staging; existing tenant maintenance drains that staging into a separate immutable object identity. This is a bounded domain outbox, not a generic storage framework. Direct uploads supply already-confirmed bytes; publication/disclosure adapters use the existing storage provider. The existing 25 MB attachment limit bounds each staged object, and successful storage clears its temporary database payload. File metadata and byte identity are immutable; retention readers must enforce current MSP policy separately. Effective grants and qualified participation reuse existing lower-level rules. Future source types can use the same staging/transport boundary once their actual audience and publication semantics are defined.
+
+## co-managed-retained-read-authority — local policy projection
+
+Retained time and archive reads need current MSP work permissions without requiring renewed customer trust. The archive reader composes the existing credential locks, RBAC/bundle evaluator and qualified local routing projection; it does not fabricate a foreign session or reuse live collaboration admission. Stored source identities select retained records only. One archive admission function serves discovery, history, file metadata and byte delivery. Source-specific field restrictions remain in presentation, and file transport retains the final credential check. No generic export or authorization engine was introduced; time and archive projections remain separate while their caller-specific retention rules settle.
+
+Private archive checkpoint (2026-09-08): the existing common MSP-private ticket/task writer now owns one receipt-based capture hook. Canonical and MSP-private file source adapters retain distinct publication/audience admission, then share a small published-file selector and immutable byte-staging engine. This removes duplicated copy/retry mechanics without merging the two privacy boundaries. Archive reads likewise apply private and canonical source restrictions separately. Earlier source-enumeration migration replays preserve later expansions instead of narrowing an already-upgraded schema; no generic migration framework was introduced.
+
+Sharing reduction checkpoint (2026-09-08): bounded revision of canonical conversation capture separates real outbox-event admission from the source snapshot. Explicit revocation and board/project policy removal can now reuse the existing source/audience/participation rules without manufacturing comment events or an MSP principal. The persisted policy event supplies the snapshot operation identity. No generic archival framework or backend release-flag boundary was added.
+
+Source move checkpoint (2026-09-08): the existing archive source capture now has a small internal adapter for native ticket/task/phase moves. Existing mutation admission remains in each writer; the adapter handles actual relationship resolution and phase-child expansion, then delegates to the same qualified capture engine. No change to the licensing transaction abstraction or generic callback registry was needed. Whole-batch structure updates capture before mutating phase membership.
+
+Closure seal checkpoint (2026-09-08): source-specific archive admission remains separate from the immutable manifest. The closure primitive seals only already-owned evidence/file identities and checksums after its mandatory finalizer, then revokes trust. This keeps file storage retries independent of live sharing and avoids a generic export framework. A fixed ordered checksum representation avoids depending on JSONB object-key order.
+
+Private closure source checkpoint (2026-09-08): extracted the existing private evidence construction behind two actual source admissions: a newly persisted private command and closure's qualified owned history. Closure does not fabricate a writer context or read current customer work to recover captions. The owned-file adapter permits retaining a previously disclosed private source without granting any new live write authority.
+
+Work snapshot checkpoint (2026-09-08): extracted the existing shared metadata candidate projection for live reads and admitted archive capture. This reuses its explicit field allowlist and derived-source aliases without manufacturing a session or widening source reads. Archived candidates retain those aliases for current policy projection. Private note-body restrictions stay distinct from work metadata restrictions; no generic record-export layer was introduced.
+
+Archive composition checkpoint (2026-09-08): closure now has a concrete composition of its source adapters. Candidate discovery derives from actual participation records and historical contributions, while each source retains its own live-grant/owned-data admission. Historical handoff/audit recovery reads persisted actor attribution directly and skips existing evidence; it does not impersonate the original writer or reuse a current session as historical proof. The immutable store/seal remain below this source composition.
+
+Tenant licensing checkpoint (2026-09-08): the installation singleton cannot represent an independently licensed customer on the MSP's host. Added a tenant-scoped override below tier and seat resolution, keeping signed-token verification and the existing pure state resolver. A minimal resolution input avoids manufacturing installation IDs or connected-appliance credentials for a tenant license. User admission passes its real tenant/transaction; no changes to global installation licensing or subscription ownership are hidden in activation.
+
+PSA upgrade backfill checkpoint (2026-09-08): the existing backfill engine opened separate transactions, preventing an independent co-managed upgrade from committing its commercial defaults together with entitlement and closure. Reused the existing optional retained-transaction bootstrap helper for four backfills. Existing activity callers retain their original boundaries; no duplicate seed engine or new generic transaction abstraction. The permission catalog adds only the approved forward product transition.
+
+Independent upgrade checkpoint (2026-09-08): the domain coordinator owns current customer authority, lock order, closure reuse, capacity accounting and immutable replay. Its runtime adapter supplies an actually retained paid entitlement and calls the existing PSA backfill engine. This keeps self-host token verification in licensing and leaves hosted payment admission to its future concrete adapter, rather than coupling the domain to Stripe or duplicating product seeds. Already-departed upgrades consume the original closure seal instead of rerunning source capture. An upgrade receipt is distinct from a closure receipt because the customer can depart before purchasing PSA.
+
+Tenant license management checkpoint (2026-09-08): management scope now comes from actual product identity, owned licensing or durable upgrade history, rather than the installation singleton. The existing license action facade routes tenant status/activation into a retained customer-admin domain boundary and leaves ordinary installation operations in place. The pure resolver receives an explicit independent scope instead of fabricated trial timestamps, and the native seat limit follows signed renewal. The tenant UI is a small panel under the existing release boundary, with the original license-page activation/session-refresh orchestration reused.
+
+Session licensing checkpoint (2026-09-08): inspection narrowed the suspected edition-runtime problem to the duplicated NextAuth callback paths, rather than the unused broad edition helper. Both callbacks now reuse tenant-aware licensing for the real session tenant, preserving hosted plan presentation and failing closed on license-read errors. No parallel tier engine or speculative global edition API was introduced.
+
+- 2026-09-08 — Independent upgrade admission: extracted the existing customer-admin transaction admission so hosted provider inspection and final commit use the same session, trust revision and replay checks. Stripe reads happen between transactions; completion compares the retained subscription fingerprint before using the existing atomic upgrade coordinator. The two paid adapters' shared PSA backfill sequence is marked as a small extraction candidate. Two hosted source-mode PostgreSQL checks passed in 8.45s; three existing self-host cases also passed. Production builds and broad validation remain deferred for implementation speed.
+
+- 2026-09-08 — Customer upgrade delivery: extended the existing tenant product-upgrade workflow with a single co-managed atomic activity; public actions construct its command from the actual tracked browser principal. The workflow retains its AlgaDesk path while independent conversion uses the already implemented entitlement/closure coordinator. Advisory UI state and durable completion receipts are customer-owned; the release flag is presentation only. Two focused source-mode PostgreSQL scenarios and five fast UI/workflow checks passed. Hosted purchase initiation remains separate work.
+
+- 2026-09-08 — Independent hosted purchasing: the existing MSP pool purchase primitive assumes sponsor capacity and cannot own an independent customer subscription. A separate customer purchase journal uses current customer-admin admission and provider calls between short transactions. Checkout and webhook paths share session recovery and billing import; the existing paid PSA validator now serves both reconciliation and worker admission from the EE Stripe layer. The existing webhook handler intercepts pre-conversion billing so ordinary PSA cancellation cannot delete a still-sponsored customer. Three focused PostgreSQL scenarios and five UI checks pass; live provider timing/deployment validation remains open.
+
+- 2026-09-08 — Payment recovery and seat confirmation: fresh Stripe invoice evidence distinguishes active-but-unpaid asynchronous failures from paid entitlement. The existing purchase journal now retains failure and prevents duplicate checkout; explicit retry reuses customer-admin admission and canceled-subscription recovery. Paid seat changes use Stripe's existing confirmation flow rather than adding a second charge/proration implementation. Four focused PostgreSQL cases and seven UI checks passed. The hosted worker uses the same secret-provider convention as checkout. Live portal configuration remains a deployment check.
+
+## portable-document-authority — pattern
+- **What:** Native document reads and portable export need the same association-to-client/owner/team projection.
+- **Where:** `packages/documents/src/actions/documentActions.ts`, `packages/co-managed/src/portableDocumentExport.ts`.
+- **Gate:** Two callers; high permission-drift cost; existing resolver is stable. Keep network/file transport separate from database authority.
+- **Status:** revised / bounded-now (2026-09-08). Moved the resolver unchanged to `shared/lib/documents/authorizationRecords.ts`, added optional retained association/parent locks for export, and kept native reads on the default behavior. Focused export database checks and existing document authorization wiring checks pass.
+
+## portable-blob-staging — pattern
+- **What:** Document and conversation exports need the same private streamed staging, size/checksum verification, lease and cleanup behavior.
+- **Where:** `packages/co-managed/src/portableDocumentExport.ts`, `packages/co-managed/src/portableConversationExport.ts`.
+- **Gate:** Two callers, high byte-integrity/cleanup cost, stable transport shape. Domain-specific source admission and path ownership remain in their collectors.
+- **Status:** extracted / bounded-now (2026-09-08) into `portableBlobStaging.ts`. Optional expected SHA-256 supports immutable conversation objects; native document streams receive a calculated digest. Four focused source-mode database/real-staging checks pass.
+
+## portable-record-section — pattern
+- **What:** strict portable table/column rosters, composite identities and parent references repeated across core, work and documents, with two incoming collectors.
+- **Gate:** three stable existing sites; inconsistent validation admits malformed archives. ACT / bounded-now: a pure internal validator, without authorization, provider I/O or transaction orchestration.
+- **Status:** extracted into `portableRecordValidation.ts`; core/work/document callers migrated. Domain conversation/source checks stay local. The assembler can require cross-section parents using the same reference engine. Five direct tests and six actual PostgreSQL collector regressions pass; authenticated archive assembly and restore remain separate work.
+
+
+## portable-transfer-resource-context — pattern
+- **What:** Native staging, remote capture, encryption and extraction need one cancellation and temporary-write budget per operation.
+- **Where:** portableBlobStaging, portableArchive, portableRemoteMeetingExport, credential portable envelope and workspace coordinators.
+- **Gate:** Repeated streaming boundaries share stable byte/deadline admission; missing a check risks retaining sensitive staging or exhausting disk. ACT / bounded-now.
+- **Status:** extracted into portableTransfer; provider upload cancellation and durable crash cleanup remain distinct lifecycle work.
+
+
+## independent-psa-backfills — pattern
+- **What:** Hosted upgrades, tenant-license upgrades and restored-workspace activation must apply the same additive PSA setup atomically.
+- **Where:** co-managed-hosted-upgrade, co-managed-upgrade-operations, portableWorkspaceActivation.
+- **Gate:** Three real callers with an identical established four-step sequence and a shared transaction boundary; omission would produce inconsistent capabilities. ACT / bounded-now.
+- **Status:** extracted as initializeIndependentPsa; the two prior source markers were removed. Activation's explicit workflow pause remains its own lifecycle policy.
+
+
+## portable-upload-location-and-fence — friction
+- **What:** Restore cleanup needs the provider's stable object-store location and a durable commit/abandon fence; transient upload leases hide both.
+- **Where:** native provider base, portable file staging, restore coordinator and installation recovery command.
+- **Gate:** Lost COMMIT acknowledgement and process-exit recovery are distinct verified lifecycle gaps; cleanup cannot safely reconstruct provider location from current environment alone. ACT / bounded-now.
+- **Status:** revised native provider base to expose a credential-free location identity, fixed local base-path capture, and connected a durable restore-upload journal. Native reference publication retains the journal fence through a database trigger. Scheduled maintenance and local crash-staging cleanup remain separate work.
+
+
+## portable-recovery-runtime-placement — friction
+- **What:** Installation-wide maintenance needs the recovery engine without depending on an EE server runtime or active tenant discovery.
+- **Where:** portableRestoreUploads, maintenanceJobFanout system jobs, PG Boss/Temporal registration and operator compatibility entries.
+- **Gate:** A concrete scheduled caller exposed the wrong placement of an otherwise shared database/storage engine. ACT / bounded-now.
+- **Status:** moved recovery and installation authority to the shared co-managed package, retaining EE compatibility exports; used the existing system-maintenance dispatch instead of a separate timer.
+
+
+## portable-local-staging-lifecycle — pattern
+- **What:** Four private-directory producers disposed normal completion but left no durable ownership or expiry evidence after process exit.
+- **Where:** Archive sealing/extraction, native blob staging, remote meeting staging and installation archive capture.
+- **Gate:** Four established identical filesystem lifecycles; sensitive crash remnants cannot be recovered by the remote provider-maintenance worker. ACT / bounded-now.
+- **Status:** Extracted a private directory lease and bounded, resumable local sweeper. All four producers use it; application startup runs one process-local recovery timer. Prepared download admission checks the same lease expiry.
+
+
+## storage-stream-length-and-replay — friction
+- **What:** The upload interface discarded a source length already known by both streaming callers, while S3 retried non-replayable bodies together with receipt reads.
+- **Where:** Portable restore staging, native uploadStream, StorageProvider options and S3 PUT/HEAD transport.
+- **Gate:** Actual loopback execution failed in the installed SDK with an undefined decoded-content-length header; a consumed-body retry could overwrite previously uploaded bytes. ACT / bounded-now.
+- **Status:** Added optional exact content_length, forwarded both known-length streaming callers, and split S3 replay policy by body type and receipt operation. Existing buffer callers remain compatible; live provider/multipart validation remains separate.
+
+
+## portable-authored-reference-boundary — friction
+- **What:** Native file and document IDs were remapped, but editor URLs still addressed source IDs; generic string replacement would also alter prose, code and external links.
+- **Where:** Portable file preparation and declared document/comment/task/KB content columns.
+- **Gate:** A concrete native restore showed usable copied bytes behind broken embedded references. Source document routes and editor formats are established. ACT / bounded-now.
+- **Status:** Added explicit route mapping and editor-field traversal, plus parser-position replacement for Markdown/HTML. The file adapter supplies verified file/document mappings after allocation. Literal content and unknown external references remain outside rewriting authority.
+
+
+## co-managed-attachment-work-parent — friction
+- **What:** The established upload/archive engine accepted only ticket parents although task comments already used the same qualified audience and actor model.
+- **Where:** Conversation attachments, archive capture/reads and portable conversation export/restore.
+- **Gate:** A concrete task UI needs the same storage integrity and retention boundaries. Parent ambiguity is an isolation risk. ACT / bounded-now.
+- **Status:** Revised the shared engine around an explicit ticket-or-task parent helper and database exclusivity constraint, retaining ticket compatibility. Kept task publication separate from ticket drafts/disclosure until that protocol is implemented.

@@ -6,7 +6,7 @@ vi.mock('@alga-psa/auth', () => ({ withAuth: (fn: any) => (...args: any[]) => fn
 vi.mock('@alga-psa/db', () => ({ createTenantKnex: mocks.db }));
 vi.mock('@alga-psa/licensing', () => ({ CoManagedLifecycleError: mocks.Lifecycle }));
 vi.mock('@alga-psa/co-managed', () => ({ CoManagedSharedWorkError: mocks.Forbidden, CoManagedThreadDisclosureError: mocks.Command, previewCoManagedThreadDisclosure: mocks.preview, previewCoManagedPrivateThreadDisclosure: mocks.privatePreview }));
-vi.mock('../../../lib/co-managed/discloseTicketThread', () => ({ discloseSharedTicketThread: mocks.mutate }));
+vi.mock('../../../lib/co-managed/discloseTicketThread', () => ({ discloseSharedThread: mocks.mutate }));
 import { previewCoManagedThreadDisclosureAction, discloseCoManagedThreadAction } from '../../../lib/actions/coManagedThreadDisclosureActions';
 const resource = { tenant: 'customer', relationshipId: 'relationship', kind: 'ticket' as const, id: 'ticket' };
 const request = { storeTenant: 'customer', threadId: 'thread', operationId: 'operation', expectedSnapshot: 'a'.repeat(64), audience: 'requester' as const, confirmed: true as const };
@@ -46,4 +46,11 @@ it('routes a private-store preview through retained private-thread authority wit
   const thread = { storeTenant: 'home-tenant', threadId: 'private-thread' }; mocks.privatePreview.mockResolvedValue({ ...thread, audience: 'organization_private' });
   expect(await previewCoManagedThreadDisclosureAction(resource, thread)).toMatchObject({ actor: { tenant: 'home-tenant', userId: 'home-user' } });
   expect(mocks.preview).not.toHaveBeenCalled(); expect(mocks.privatePreview).toHaveBeenCalledWith(mocks.knex, expect.objectContaining({ tenant: 'home-tenant', userId: 'home-user' }), resource, thread);
+});
+
+it('forwards the explicit project task kind without changing the tracked actor or treating it as a ticket',async()=>{
+  const task={...resource,kind:'project_task' as const,id:'task'};
+  mocks.mutate.mockResolvedValue({operationId:request.operationId});
+  expect(await discloseCoManagedThreadAction(task,request)).toMatchObject({ok:true});
+  expect(mocks.mutate).toHaveBeenCalledWith(mocks.knex,expect.objectContaining({tenant:'home-tenant',userId:'home-user'}),task,request);
 });

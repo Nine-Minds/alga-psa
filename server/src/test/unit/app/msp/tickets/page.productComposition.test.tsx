@@ -45,10 +45,18 @@ vi.mock('@alga-psa/msp-composition/tickets/MspTicketsPageClient', () => ({
 const { default: TicketsPage } = await import('server/src/app/msp/tickets/page');
 
 describe('MSP tickets page product composition', () => {
+  // The page container also renders product-scoped siblings (the co-managed
+  // queue link), so the list client is found by identity, not by position.
   const getRenderedTicketsClientProps = async (search: Record<string, string>) => {
     const result = await TicketsPage({ searchParams: Promise.resolve(search) });
-    const pageContainer = result as React.ReactElement<{ children: React.ReactElement }>;
-    const ticketsClientElement = pageContainer.props.children as React.ReactElement;
+    const pageContainer = result as React.ReactElement<{ children: React.ReactNode }>;
+    const ticketsClientElement = React.Children.toArray(pageContainer.props.children).find(
+      (child): child is React.ReactElement<Record<string, unknown>> =>
+        React.isValidElement(child) && child.type === MspTicketsPageClientMock,
+    );
+    if (!ticketsClientElement) {
+      throw new Error('the tickets page did not render MspTicketsPageClient');
+    }
     return ticketsClientElement.props as Record<string, unknown>;
   };
 

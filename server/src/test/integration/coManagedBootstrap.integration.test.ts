@@ -1,3 +1,21 @@
+import { registerCoManagedArchiveBoundaryTests } from './coManagedArchiveBoundaryCases';
+import { registerCoManagedTaskDisclosureCases } from './helpers/coManagedTaskDisclosureCases';
+import { registerCoManagedRequesterTaskEmailCases } from './helpers/coManagedRequesterTaskEmailCases';
+import { registerCoManagedProvisioningCleanupTests } from './helpers/coManagedProvisioningCleanupCases';
+import { registerCoManagedDelegatedAdministrationCases } from './helpers/coManagedDelegatedAdministrationCases';
+import { registerCoManagedRequesterTaskCases } from './helpers/coManagedRequesterTaskCases';
+import { registerCoManagedTicketRoutingNotificationTests } from './helpers/coManagedTicketRoutingNotificationCases';
+import { registerCoManagedManagementPolicyTests } from './helpers/coManagedManagementPolicyCases';
+import { registerCoManagedInvoiceJourneyTests } from './helpers/coManagedInvoiceJourneyCases';
+import { registerCoManagedInvitationRecoveryTests } from './helpers/coManagedInvitationRecoveryCases';
+import { registerCoManagedTimeBillingProfileTests } from './helpers/coManagedTimeBillingProfileCases';
+import { registerCoManagedPortableWorkspaceExportTests } from './helpers/coManagedPortableWorkspaceExportCases';
+import { registerCoManagedPortableRemoteMeetingCases } from './coManagedPortableRemoteMeeting.cases';
+import { registerCoManagedPortableSupplementalFileCases } from './coManagedPortableSupplementalFiles.cases';
+import { registerCoManagedPortableEngagementCases } from './coManagedPortableEngagement.cases';
+import { registerCoManagedPortableWorkflowTests } from './helpers/coManagedPortableWorkflowCases';
+import { registerCoManagedPortableAssetTests } from './helpers/coManagedPortableAssetCases';
+import { registerCoManagedPortableOperationalCases } from './coManagedPortableOperational.cases';
 import { retainCoManagedInboundCommentEvent } from '../../../../packages/co-managed/src/inboundConversationEvents';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createRequire } from 'node:module';
@@ -27,7 +45,7 @@ const delivery = vi.hoisted(() => ({ send: vi.fn() }));
 const statusEmail = vi.hoisted(() => ({ create: vi.fn(), send: vi.fn() }));
 const intake = vi.hoisted(() => ({ read: vi.fn(), parse: vi.fn(), process: vi.fn(), stage: vi.fn() }));
 const durableTransport = vi.hoisted(() => ({ enqueue: vi.fn() }));
-const artifactStorage = vi.hoisted(() => ({ upload: vi.fn(), delete: vi.fn(), download: vi.fn() }));
+const artifactStorage = vi.hoisted(() => ({ upload: vi.fn(), delete: vi.fn(), download: vi.fn(), getReadStream: vi.fn() }));
 vi.mock('@alga-psa/storage/config/storage', () => ({
   validateFileUpload: async () => {},
   getStorageConfig: async () => ({ defaultProvider: 'local' }),
@@ -102,7 +120,7 @@ beforeAll(async () => {
     '20260906080000_create_co_management_relationship_events.cjs',
     '20260906100000_add_external_file_metadata.cjs',
     '20260906110000_add_kb_import_batch_identity.cjs',
-    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs', '20260908013607_create_named_ticket_conversations.cjs', '20260908015652_create_ticket_conversation_editor_drafts.cjs', '20260908022249_scope_ticket_conversation_defaults_to_relationship.cjs', '20260908024119_create_ticket_conversation_publications.cjs', '20260908030840_retain_ticket_conversation_draft_reply_target.cjs', '20260908033011_create_ticket_conversation_sender_grants.cjs', '20260908034701_create_ticket_conversation_email_operations.cjs', '20260908042702_create_ticket_conversation_inbound_receipts.cjs', '20260908045632_track_named_conversation_correspondents.cjs', '20260908051006_retain_named_reply_review_resolutions.cjs', '20260908052731_extend_conversation_files_to_native_vendor_replies.cjs', '20260908054601_retain_named_editor_file_bindings.cjs', '20260908060651_retain_named_file_publication_operations.cjs', '20260908091259_retain_named_requester_publication_options.cjs', '20260908094308_retain_named_requester_close_intent.cjs', '20260908101532_retain_named_email_recovery_due.cjs', '20260908102605_retain_named_requester_schedule_intent.cjs', '20260908115747_create_ticket_conversation_attention.cjs', '20260908122807_retain_named_conversation_notification_receipts.cjs', '20260908125648_retain_named_conversation_email_notifications.cjs', '20260908133439_retain_native_ticket_email_recipient_policy.cjs', '20260908152720_retain_ticket_conversation_share_lineage.cjs', '20260908165830_retain_ticket_conversation_ai_runs.cjs', '20260908191034_retain_ticket_conversation_ai_participation.cjs', '20260909100000_add_inbound_reply_reopen_side_conversations_to_boards.cjs']) {
+    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs', '20260908011054_add_co_managed_meeting_sync_intents.cjs', '20260908013607_create_named_ticket_conversations.cjs', '20260908015652_create_ticket_conversation_editor_drafts.cjs', '20260908021208_create_co_managed_meeting_creation_operations.cjs', '20260908022249_scope_ticket_conversation_defaults_to_relationship.cjs', '20260908024119_create_ticket_conversation_publications.cjs', '20260908030840_retain_ticket_conversation_draft_reply_target.cjs', '20260908033011_create_ticket_conversation_sender_grants.cjs', '20260908034701_create_ticket_conversation_email_operations.cjs', '20260908042702_create_ticket_conversation_inbound_receipts.cjs', '20260908043851_allow_co_managed_assignment_before_escalation.cjs', '20260908045632_track_named_conversation_correspondents.cjs', '20260908050419_create_organization_sla_obligations.cjs', '20260908051006_retain_named_reply_review_resolutions.cjs', '20260908051552_create_co_managed_sla_priority_mappings.cjs', '20260908052731_extend_conversation_files_to_native_vendor_replies.cjs', '20260908054601_retain_named_editor_file_bindings.cjs', '20260908060651_retain_named_file_publication_operations.cjs', '20260908062358_create_organization_sla_notification_events.cjs', '20260908063356_create_organization_sla_notification_recipients.cjs', '20260908065525_add_organization_sla_email_retry_state.cjs', '20260908081909_create_co_managed_workflow_ticket_emails.cjs', '20260908084034_create_co_managed_time_work_references.cjs', '20260908091259_retain_named_requester_publication_options.cjs', '20260908091756_allow_co_managed_time_tracking.cjs', '20260908094308_retain_named_requester_close_intent.cjs', '20260908101532_retain_named_email_recovery_due.cjs', '20260908102605_retain_named_requester_schedule_intent.cjs', '20260908102610_create_co_managed_relationship_closures.cjs', '20260908103849_create_co_managed_participation_evidence.cjs', '20260908105022_allow_co_managed_time_participation.cjs', '20260908110522_retain_co_managed_conversation_participation.cjs', '20260908111943_create_co_managed_archive_files.cjs', '20260908115747_create_ticket_conversation_attention.cjs', '20260908115957_retain_co_managed_private_history.cjs', '20260908122807_retain_named_conversation_notification_receipts.cjs', '20260908123721_create_co_managed_archive_manifests.cjs', '20260908124921_retain_co_managed_work_snapshots.cjs', '20260908125648_retain_named_conversation_email_notifications.cjs', '20260908131037_create_tenant_license_state.cjs', '20260908133439_retain_native_ticket_email_recipient_policy.cjs', '20260908134800_create_co_managed_independent_upgrades.cjs', '20260908143941_retain_stripe_subscription_item_identity.cjs', '20260908150135_create_co_managed_upgrade_purchases.cjs', '20260908152550_retain_co_managed_payment_failure.cjs', '20260908152720_retain_ticket_conversation_share_lineage.cjs', '20260908165830_retain_ticket_conversation_ai_runs.cjs', '20260908191034_retain_ticket_conversation_ai_participation.cjs', '20260908191851_add_portable_restore_suspension.cjs', '20260908194606_retain_portable_workspace_restore_receipts.cjs', '20260908200922_retain_portable_workspace_activation_receipts.cjs', '20260908203743_retain_portable_restore_upload_attempts.cjs', '20260908220024_add_co_managed_task_attachment_parents.cjs', '20260908225004_add_co_managed_delegated_administration.cjs', '20260908230030_add_requester_project_task_comments.cjs', '20260908231657_qualify_requester_task_email_deliveries.cjs', '20260908232516_add_co_managed_task_thread_disclosure.cjs', '20260909100000_add_inbound_reply_reopen_side_conversations_to_boards.cjs']) {
     await require('../../../migrations/' + file).up(db);
   }
   for (const table of ['standard_statuses', 'standard_priorities', 'countries', 'notification_categories',
@@ -110,6 +128,7 @@ beforeAll(async () => {
     const rows = await source(table).select('*');
     if (rows.length) await db.batchInsert(table, rows, 100);
   }
+  await require('../../../migrations/20260908225920_create_co_managed_ticket_routing_notifications.cjs').up(db);
 }, 120000);
 
 afterAll(async () => {
@@ -2975,6 +2994,65 @@ async function withPolicyActionFixture(work: (fixture: Awaited<ReturnType<typeof
   } finally { spy.mockRestore(); }
 }
 
+it('co-managed admins cannot configure Teams or telephony through direct actions or EE availability', async () => withPolicyActionFixture(async f => {
+  const adminDb = await import('@alga-psa/db/admin'), secrets = await import('@alga-psa/core/secrets');
+  const adminConnection = vi.spyOn(adminDb, 'getAdminConnection').mockResolvedValue(db);
+  const secretProvider = vi.spyOn(secrets, 'getSecretProviderInstance');
+  const oldEdition = process.env.EDITION; process.env.EDITION = 'ee';
+  try {
+    const teams = await import('../../../../packages/integrations/src/actions/integrations/teamsActions');
+    const telephony = await import('../../../../packages/integrations/src/actions/integrations/telephonyActions');
+    const availability = await import('../../../../packages/integrations/src/lib/teamsAvailability');
+    const ee = await import('../../../../ee/packages/microsoft-teams/src/lib/teams/teamsAvailability');
+    const realAuth = await import('../../../../packages/auth/src/lib/apiKeyUserContext');
+    const user = await f.customer.table('users').where('user_id', f.actor.userId).first();
+    const expected = { enabled: false, reason: 'product_unavailable' };
+    expect(await availability.getTeamsAvailability({ tenantId: f.actor.tenant })).toMatchObject(expected);
+    expect(await ee.getTeamsAvailability({ tenantId: f.actor.tenant })).toMatchObject(expected);
+    for (const call of [
+      () => teams.saveTeamsIntegrationSettings({} as any),
+      () => teams.getTeamsIntegrationStatus(),
+      () => telephony.setTelephonyProviderEnabled({ provider: 'teams_phone', enabled: true }),
+      () => telephony.setTelephonyAutoTicketPolicy({ provider: 'teams_phone', autoCreateTickets: true }),
+    ]) expect(await f.asActor(f.actor, () => realAuth.runWithApiKeyUser(user, call))).toMatchObject({ success: false, error: expect.stringContaining('not available for this product') });
+    expect(secretProvider).not.toHaveBeenCalled();
+    expect(await availability.getTeamsAvailability({ tenantId: f.operation.tenant })).toEqual({ enabled: true, reason: 'enabled' });
+    expect(await ee.getTeamsAvailability({ tenantId: f.operation.tenant })).toEqual({ enabled: true, reason: 'enabled' });
+  } finally {
+    secretProvider.mockRestore(); adminConnection.mockRestore();
+    if (oldEdition === undefined) delete process.env.EDITION; else process.env.EDITION = oldEdition;
+  }
+}));
+
+it('co-managed admins cannot invoke excluded RMM actions or background engines despite settings permission', async () => withPolicyActionFixture(async f => {
+  const adminDb = await import('@alga-psa/db/admin'), secrets = await import('@alga-psa/core/secrets');
+  const adminConnection = vi.spyOn(adminDb, 'getAdminConnection').mockResolvedValue(db);
+  const secretRead = vi.fn(async () => 'fixture-webhook-secret');
+  const secretProvider = vi.spyOn(secrets, 'getSecretProviderInstance').mockResolvedValue({ getTenantSecret: secretRead } as any);
+  try {
+    const tactical = await import('../../../../packages/integrations/src/actions/integrations/tacticalRmmActions');
+    const status = await import('../../../../packages/integrations/src/actions/integrations/rmmIntegrationStatusActions');
+    const automation = await import('../../../../packages/integrations/src/actions/integrations/rmmAlertRuleActions');
+    const actions = Object.entries({ ...tactical, ...status, ...automation }).filter(([, action]) => typeof action === 'function');
+    expect(actions).toHaveLength(28);
+    for (const [name, action] of actions) await expect(f.asActor(f.actor, () => (action as any)({})), name)
+      .rejects.toMatchObject({ code: 'PRODUCT_ACCESS_DENIED', capability: 'rmm', productCode: 'co_managed' });
+    const { runTacticalRmmDeviceSync } = await import('../../../../packages/integrations/src/lib/rmm/tacticalrmm/deviceSync');
+    const { syncTacticalSingleAgentForTenant } = await import('../../../../packages/integrations/src/lib/rmm/tacticalrmm/syncSingleAgent');
+    await expect(runTacticalRmmDeviceSync({ tenant: f.actor.tenant })).rejects.toMatchObject({ code: 'PRODUCT_ACCESS_DENIED' });
+    await expect(syncTacticalSingleAgentForTenant({ tenant: f.actor.tenant, agentId: 'fixture-agent' })).rejects.toMatchObject({ code: 'PRODUCT_ACCESS_DENIED' });
+    expect(secretProvider).not.toHaveBeenCalled();
+    const { POST } = await import('../../app/api/webhooks/tacticalrmm/route');
+    const response = await POST(new Request(`http://fixture/api/webhooks/tacticalrmm?tenant=${f.actor.tenant}`, {
+      method: 'POST', headers: { 'X-Alga-Webhook-Secret': 'fixture-webhook-secret', 'content-type': 'application/json' }, body: JSON.stringify({ agent_id: 'fixture-agent' }),
+    }));
+    expect(response.status).toBe(403); expect(await response.json()).toMatchObject({ code: 'PRODUCT_ACCESS_DENIED' });
+    expect(secretRead).toHaveBeenCalledTimes(1);
+    expect(await tenantDb(db, f.actor.tenant).table('rmm_integrations')).toEqual([]);
+    expect(await runTacticalRmmDeviceSync({ tenant: f.operation.tenant })).toMatchObject({ success: false, error: expect.stringContaining('not configured') });
+  } finally { secretProvider.mockRestore(); adminConnection.mockRestore(); }
+}));
+
 describe('authenticated co-managed policy actions', () => {
   it('derives targets and principals from home context and exposes only authorized resource options', async () => withPolicyActionFixture(async ({
     actions, asActor, actor, sponsorActor, operation, customer, sponsor, roleId, permissionId,
@@ -3163,6 +3241,17 @@ async function ticketHandoffFixture() {
   await policy.replaceCoManagedCustomerScope(db, fixture.actor, fixture.target, 2, { visibilityMode: 'escalation_only', boards: [], projects: [] });
   await policy.replaceCoManagedStaffAssignments(db, fixture.sponsorActor, fixture.target, 3,
     [{ kind: 'user', principalId: fixture.principal.userId, role: 'technician' }]);
+  // Explicit MSP policy and cross-organization priority mappings are part of handoff setup.
+  const priorities = await fixture.customer.table('priorities').where('item_type', 'ticket');
+  const mspPriorityId = randomUUID(), slaPolicyId = randomUUID();
+  await fixture.sponsor.table('priorities').insert({ ...priorities[0], tenant: fixture.principal.tenant,
+    priority_id: mspPriorityId, priority_name: 'MSP mapped priority', created_by: null });
+  await fixture.sponsor.table('sla_policies').insert({ tenant: fixture.principal.tenant, sla_policy_id: slaPolicyId, policy_name: 'MSP policy', is_default: true });
+  await fixture.sponsor.table('sla_policy_targets').insert({ tenant: fixture.principal.tenant, target_id: randomUUID(),
+    sla_policy_id: slaPolicyId, priority_id: mspPriorityId, response_time_minutes: 60, resolution_time_minutes: 480, is_24x7: true });
+  await fixture.sponsor.table('co_managed_sla_priority_mappings').insert(priorities.map(priority => ({ tenant: fixture.principal.tenant,
+    customer_tenant: fixture.resource.tenant, relationship_id: fixture.resource.relationshipId,
+    customer_priority_id: priority.priority_id, msp_priority_id: mspPriorityId })));
   return { ...fixture, customerPrincipal: { ...fixture.actor, kind: 'session' as const, sessionId } };
 }
 
@@ -3425,6 +3514,49 @@ it('paginates the qualified shared IT journal without leaking source fields hidd
   } });
   expect(await history(db, principal, resource)).toEqual({ items: [], nextBeforeRevision: null });
   expect(await customer.table('co_management_ticket_handoffs').where('ticket_id', resource.id)).toHaveLength(26);
+});
+
+it('discloses the sponsor identity and escalation destination while the relationship is live', async () => {
+  const { customerPrincipal, resource, customer, sponsor } = await ticketHandoffFixture();
+  const { getCoManagedTicketScreen: screen } = await import('../../../../packages/co-managed/src/ticketCollaboration');
+  const { escalateCoManagedTicket: escalate } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  await escalate(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 0, note: 'Live collaboration.' });
+  const relationship = await customer.table('co_management_relationships').where('relationship_id', resource.relationshipId).first();
+  const sponsorName = (await sponsor.table('tenants').first('client_name')).client_name;
+  const boardName = (await sponsor.table('boards').where('board_id', relationship.escalation_board_id).first('board_name')).board_name;
+  expect(relationship).toMatchObject({ state: 'active', ended_at: null });
+  const result = await screen(db, customerPrincipal, resource);
+  expect(result).toMatchObject({ side: 'customer', sponsorName, destinationName: boardName });
+  expect(result.customerName).toBe((await customer.table('tenants').first('client_name')).client_name);
+  expect(result.sla.msp).toMatchObject({ state: 'tracking' });
+});
+
+// A retained read keeps the customer's own history; it does not authorize continued
+// live access to the former sponsor. Sponsor-derived fields are omitted after departure
+// rather than re-read, so a post-termination rename can never reach the customer.
+it('withholds current former-sponsor state from retained customer reads after departure', async () => {
+  const { principal, customerPrincipal, resource, customer, sponsor } = await ticketHandoffFixture();
+  const { getCoManagedTicketScreen: screen } = await import('../../../../packages/co-managed/src/ticketCollaboration');
+  const { escalateCoManagedTicket: escalate } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  await escalate(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 0, note: 'Investigate together.' });
+  const relationship = await customer.table('co_management_relationships').where('relationship_id', resource.relationshipId).first();
+  const customerName = (await customer.table('tenants').first('client_name')).client_name;
+  expect(await screen(db, customerPrincipal, resource)).toMatchObject({ sponsorName: (await sponsor.table('tenants').first('client_name')).client_name });
+  await customer.table('co_management_relationships').where('relationship_id', resource.relationshipId).update({ state: 'terminated', ended_at: new Date() });
+  await sponsor.table('tenants').update({ client_name: 'Renamed after departure' });
+  await sponsor.table('boards').where('board_id', relationship.escalation_board_id).update({ board_name: 'Renamed escalation board' });
+  const retained = await screen(db, customerPrincipal, resource);
+  expect(retained.sponsorName).toBeNull();
+  expect(retained.destinationName).toBeUndefined();
+  for (const current of ['Renamed after departure', 'Renamed escalation board']) expect(JSON.stringify(retained)).not.toContain(current);
+  // The retained read still succeeds and still carries the customer's own record.
+  expect(retained).toMatchObject({ side: 'customer', customerName, canEscalate: false });
+  expect(retained.summary.fields).toMatchObject({ ticket_number: 'SHARED-1', work_revision: 1, responsibility: 'msp' });
+  // The customer keeps its own SLA outcome; the former MSP obligation is no longer read
+  // from the sponsor tenant, so its clock cannot keep advancing after departure.
+  expect(retained.sla).toEqual({ customer: { state: 'not_configured' }, msp: { state: 'unavailable' } });
+  // Withholding the sponsor's name restores no MSP-side authority.
+  await expect(screen(db, principal, resource)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
 });
 
 it('inventories only customer-owned active grants, withholds unreadable ticket labels, and allows revocation while paused', async () => {
@@ -5792,6 +5924,9 @@ it('guards the actual Redis broadcaster and asynchronous post-creation hooks wit
   const teams = await import('../../../../packages/notifications/src/realtime/teamsNotificationDelivery');
   const { broadcastNotification } = await import('../../../../packages/notifications/src/realtime/internalNotificationBroadcaster');
   const { registerInternalNotificationHook, runPostCreationHooks } = await import('../../../../packages/notifications/src/actions/internal-notification-actions/notificationHooks');
+  // Production wiring: notificationCreatedEffects injects deliverCurrentNotification
+  // (notificationHooks itself must stay free of server-only imports).
+  const { deliverCurrentNotification } = await import('../../../../packages/notifications/src/lib/notificationDelivery');
   await persist(db, event);
   const queued = await sponsor.table('internal_notifications').where('user_id', principal.userId).first();
   const publish = vi.fn(async (_channel: string, _payload: string) => 1), observed: any[] = [];
@@ -5807,13 +5942,13 @@ it('guards the actual Redis broadcaster and asynchronous post-creation hooks wit
   });
   try {
     await customer.table('comments').where('comment_id', event.payload.comment.id).update({ note: 'Current transport body' });
-    await broadcastNotification(queued); await runPostCreationHooks(queued);
+    await broadcastNotification(queued); await runPostCreationHooks(queued, deliverCurrentNotification);
     expect(publish).toHaveBeenCalledTimes(1);
     const sent = JSON.parse(publish.mock.calls[0][1] as string).notification;
     expect(sent.message).toContain('Current transport body'); expect(sent.metadata.coManaged.resource).toEqual(resource);
     expect(observed).toHaveLength(1); expect(observed[0].message).toContain('Current transport body');
     await customer.table('co_management_ticket_work').where('ticket_id', resource.id).update({ grant_revoked_at: new Date() });
-    await broadcastNotification(queued); await runPostCreationHooks(queued);
+    await broadcastNotification(queued); await runPostCreationHooks(queued, deliverCurrentNotification);
     expect(publish).toHaveBeenCalledTimes(1); expect(observed).toHaveLength(1);
   } finally { for (const spy of spies.reverse()) spy.mockRestore(); }
 }));
@@ -6362,7 +6497,10 @@ async function withAttachmentFixture(work: (fixture: Parameters<Parameters<typeo
     const objects = new Map<string, Uint8Array>();
     const upload = vi.fn(async (path: string, content: Uint8Array, _mime: string) => { objects.set(path, Uint8Array.from(content)); });
     const download = vi.fn(async (path: string) => { const data = objects.get(path); if (!data) throw new Error('Missing test object'); return data; });
-    await work({ ...fixture, attachments, objects, upload, download });
+    const previousDownload = artifactStorage.download.getMockImplementation();
+    artifactStorage.download.mockImplementation(download);
+    try { await work({ ...fixture, attachments, objects, upload, download }); }
+    finally { artifactStorage.download.mockReset(); if (previousDownload) artifactStorage.download.mockImplementation(previousDownload); }
   });
 }
 const attachmentComment = (comment: { storeTenant: string; threadId: string; commentId: string }) => ({ storeTenant: comment.storeTenant, threadId: comment.threadId, commentId: comment.commentId });
@@ -7312,6 +7450,11 @@ it('transfers a confirmed MSP-private thread and files atomically with historica
   const comments = await customer.table('comments').where('thread_id', receipt.threadId); expect(comments).toHaveLength(3);
   expect(await customer.table('comments').where('comment_id', receipt.threadId).whereRaw('created_at = ?::timestamptz', ['2026-09-07T00:00:00.123456Z']).first()).toBeDefined();
   expect(comments.find(row => row.deleted_at)).toMatchObject({ note: '', markdown_content: '' });
+  const archivedHistory = await sponsor.table('co_managed_participation_evidence').where({ resource_id: resource.id, source_type: 'conversation' });
+  expect(archivedHistory).toHaveLength(3); expect(JSON.stringify(archivedHistory)).not.toContain('Deleted private secret');
+  expect(archivedHistory.find(row => row.payload.deleted).payload).not.toHaveProperty('note');
+  expect(await sponsor.table('co_managed_archive_files').where({ ticket_id: resource.id, source_tenant: resource.tenant })).toHaveLength(1);
+  expect(await sponsor.table('co_managed_archive_files').where({ ticket_id: resource.id, source_tenant: principal.tenant })).toHaveLength(1);
   const former = comments.find(row => row.actor_display_name === 'Former colleague');
   expect(await customer.table('collaboration_actor_references').where('actor_reference_id', former.actor_reference_id).first()).toMatchObject({ actor_tenant: principal.tenant, actor_user_id: formerUser });
   expect(await customer.table('users').whereIn('user_id', [principal.userId, formerUser])).toEqual([]);
@@ -8737,9 +8880,15 @@ it.each(['sender', 'authentication', 'contact', 'private', 'revoked', 'expired',
   }));
 
 it('rolls qualified requester reply writes and outbox back before retaining quarantine after expiry during the writer', async () => withRequesterInboundFixture(async ({
-  customer, resource, inbox, run,
+  customer, sponsor, resource, inbox, run,
 }) => {
+  const { syncCoManagedTicketAwaitingClientSla } = await import('../../../../packages/co-managed/src/ticketSla');
+  await db.transaction(async trx => {
+    await tenantDb(trx, resource.tenant).table('tickets').where('ticket_id', resource.id).update({ response_state: 'awaiting_client' });
+    await syncCoManagedTicketAwaitingClientSla(trx, resource.tenant, resource.id);
+  });
   const workflow = await import('../../../../shared/workflow/actions/emailWorkflowActions'), original = workflow.createCommentFromEmail;
+  const slaBefore = await sponsor.table('sla_organization_obligations').first();
   const before = await customer.table('comments').where('ticket_id', resource.id);
   const writer = vi.spyOn(workflow, 'createCommentFromEmail').mockImplementationOnce(async (...args) => {
     const comment = await original(...args);
@@ -8750,6 +8899,7 @@ it('rolls qualified requester reply writes and outbox back before retaining quar
   try {
     expect(await run()).toMatchObject({ disposition: 'ack', outcome: 'skipped', reason: 'quarantined:unauthorized_requester_reply' });
     expect(writer).toHaveBeenCalledTimes(1);
+    expect(await sponsor.table('sla_organization_obligations').first()).toEqual(slaBefore);
     expect(await customer.table('comments').where('ticket_id', resource.id)).toHaveLength(before.length);
     expect(await customer.table('inbound_email_outbox').where('inbox_id', inbox.inbox_id)).toHaveLength(0);
     expect(await customer.table('co_management_event_outbox')).toHaveLength(0);
@@ -9348,7 +9498,7 @@ it.each(['sender', 'spf_only', 'missing_auth', 'no_update', 'inactive', 'disclos
   }));
 
 it('rolls actual technician comment and outbox writes back before quarantining a late token rejection', async () => withTechnicianInboundFixture(async ({
-  customer, resource, inbox, run,
+  customer, sponsor, resource, inbox, run,
 }) => {
   const workflow = await import('../../../../shared/workflow/actions/emailWorkflowActions'), real = workflow.createCommentFromEmail;
   const writer = vi.spyOn(workflow, 'createCommentFromEmail').mockImplementation(async (...args: any[]) => {
@@ -9356,9 +9506,11 @@ it('rolls actual technician comment and outbox writes back before quarantining a
     await tenantDb(args[3].existingConnection, resource.tenant).table('co_management_customer_reply_tokens').update({ expires_at: new Date(Date.now() - 1000) });
     return result;
   });
+  const slaBefore = await sponsor.table('sla_organization_obligations').first();
   const before = await customer.table('comments').where('ticket_id', resource.id);
   try {
     expect(await run()).toMatchObject({ disposition: 'ack', outcome: 'skipped', reason: 'quarantined:unauthorized_technician_reply' });
+    expect(await sponsor.table('sla_organization_obligations').first()).toEqual(slaBefore);
     expect(await customer.table('comments').where('ticket_id', resource.id)).toHaveLength(before.length);
     expect(await customer.table('inbound_email_outbox').where('inbox_id', inbox.inbox_id)).toHaveLength(0);
     expect(await customer.table('co_management_event_outbox')).toHaveLength(0);
@@ -10541,6 +10693,7 @@ async function withSharedProjectTaskFixture(work: (fixture: any) => Promise<void
 it('lets both organizations edit one canonical task and retains foreign attribution without copied users or assignments', async () => withSharedProjectTaskFixture(async ({ customer, sponsor, principal, customerPrincipal, resource, mappings, domain, edit }: any) => {
   const beforeUsers = await customer.table('users');
   const first = await domain.getCoManagedProjectTaskEditor(db, principal, resource);
+  expect(first.canWrite).toBe(true);
   expect(first.editableFields).toEqual(['task_name', 'due_date', 'project_status_mapping_id']);
   expect(JSON.stringify(first)).not.toMatch(/Private detailed work|actual_hours|service_id|assigned_to/);
   const options = await domain.getCoManagedProjectTaskStatuses(db, principal, resource);
@@ -10585,7 +10738,7 @@ it.each(['revoked_project', 'viewer_staff', 'read_only_grant', 'inactive_actor',
     const before = await customer.table('project_tasks');
     await expect(edit(db, principal, resource, { operationId: randomUUID(), expected: { task_name: 'Verify rollout' }, patch: { task_name: 'Denied' } })).rejects.toThrow();
     expect(await customer.table('project_tasks')).toEqual(before); expect(await customer.table('co_management_command_receipts').where('resource_id', resource.id)).toHaveLength(0);
-    if (['viewer_staff','read_only_grant','lapsed_license'].includes(reason)) expect((await domain.getCoManagedProjectTaskEditor(db, principal, resource)).editableFields).toEqual([]);
+    if (['viewer_staff','read_only_grant','lapsed_license'].includes(reason)) expect(await domain.getCoManagedProjectTaskEditor(db, principal, resource)).toMatchObject({ editableFields: [], canWrite: false });
   }));
 
 it('rejects shared task status mappings from a different customer phase', async () => withSharedProjectTaskFixture(async ({ customer, principal, resource, phase, mappings, domain, edit }: any) => {
@@ -11005,6 +11158,176 @@ async function withTaskConversationFixture(work: (fixture: any) => Promise<void>
     await work({ ...fixture, conversation, write, read, ref, add });
   });
 }
+
+it('task attachments retain qualified audiences, retry identity and independent MSP archive bytes', async () => withTaskConversationFixture(async ({ customer, sponsor, principal, customerPrincipal, resource, add, ref }: any) => {
+  const attachments = await import('../../../../packages/co-managed/src/conversationAttachments');
+  const archives = await import('../../../../packages/co-managed/src/archiveReads');
+  const objects = new Map<string, Buffer>(), upload = vi.fn(async (path: string, bytes: Uint8Array) => { objects.set(path, Buffer.from(bytes)); });
+  const download = async (path: string) => objects.get(path)!;
+  const shared = ref(await add(principal, 'shared_it', 'Shared task evidence'));
+  const ownPrivate = ref(await add(customerPrincipal, 'organization_private', 'Customer private evidence'));
+  const mspPrivate = ref(await add(principal, 'organization_private', 'MSP private evidence'));
+  const requester = ref(await add(customerPrincipal, 'requester', 'Requester task evidence'));
+  for (const [actor, comment, audience] of [[principal, shared, 'shared_it'], [customerPrincipal, ownPrivate, 'organization_private'],
+    [principal, mspPrivate, 'organization_private'], [customerPrincipal, requester, 'requester']] as const) {
+    const input = { attachmentId: randomUUID(), comment, fileName: `${audience}.txt`, mimeType: 'text/plain', content: Buffer.from(`${actor.tenant}:${comment.commentId}`) };
+    const created = await attachments.uploadCoManagedConversationAttachment(db, actor, resource, input, upload);
+    expect(await attachments.uploadCoManagedConversationAttachment(db, actor, resource, input, upload)).toEqual(created);
+    expect((await attachments.downloadCoManagedConversationAttachment(db, actor, resource, { ...comment, attachmentId: created.attachmentId }, download)).content).toEqual(input.content);
+    await expect(attachments.uploadCoManagedConversationAttachment(db, actor, resource, { ...input, content: Buffer.from('Changed') }, upload)).rejects.toMatchObject({ code: 'ATTACHMENT_OPERATION_CONFLICT' });
+    const row = await (actor === principal && comment === mspPrivate ? sponsor : customer).table('co_management_conversation_attachments').where('attachment_id', input.attachmentId).first();
+    expect(row).toMatchObject({ ticket_id: null, project_task_id: resource.id, status: 'ready', draft_operation_id: null });
+    const other = actor === principal ? customerPrincipal : principal;
+    if (audience === 'organization_private') await expect(attachments.listCoManagedConversationAttachments(db, other, resource, comment)).rejects.toThrow();
+    else {
+      expect(await attachments.listCoManagedConversationAttachments(db, other, resource, comment)).toHaveLength(1);
+      expect(await attachments.canManageCoManagedConversationAttachments(db, other, resource, comment)).toBe(false);
+      await expect(attachments.removeCoManagedConversationAttachment(db, other, resource, { ...comment, attachmentId: created.attachmentId })).rejects.toThrow();
+    }
+    await expect(attachments.listCoManagedConversationAttachments(db, actor, { ...resource, kind: 'ticket' }, comment)).rejects.toThrow();
+  }
+  expect(upload).toHaveBeenCalledTimes(4);
+  const retained = await archives.listCoManagedArchiveFiles(db, principal, resource);
+  expect(retained.items).toHaveLength(3);
+  expect((await archives.listCoManagedArchiveWork(db, principal)).items.some((item: any) => item.resource.kind === 'project_task' && item.resource.id === resource.id)).toBe(true);
+  const kept = retained.items.find(file => file.commentId === shared.commentId)!;
+  const before = await archives.downloadCoManagedArchiveFile(db, principal, resource, kept.archiveFileId);
+  expect(Buffer.from(before.content).toString()).toBe(`${principal.tenant}:${shared.commentId}`);
+  await expect(sponsor.table('co_managed_archive_files').where('archive_file_id', kept.archiveFileId).update({ project_task_id: randomUUID() })).rejects.toThrow('immutable');
+  const source = (await attachments.listCoManagedConversationAttachments(db, principal, resource, shared))[0];
+  await expect(customer.table('co_management_conversation_attachments').where('attachment_id', source.attachmentId).update({ ticket_id: resource.id })).rejects.toThrow('co_attachment_parent_check');
+  const migration = (await import('../../../../server/migrations/20260908220024_add_co_managed_task_attachment_parents.cjs')).default;
+  await migration.up(db);
+  await expect(migration.down(db)).rejects.toThrow('retained task attachments');
+  await attachments.removeCoManagedConversationAttachment(db, principal, resource, { ...shared, attachmentId: source.attachmentId });
+  const cleanup = await import('../../../../packages/co-managed/src/uploadCleanup');
+  await cleanup.cleanupCoManagedUploads(db, resource.tenant, async path => { objects.delete(path); });
+  expect(await attachments.listCoManagedConversationAttachments(db, customerPrincipal, resource, shared)).toEqual([]);
+  expect((await archives.downloadCoManagedArchiveFile(db, principal, resource, kept.archiveFileId)).content).toEqual(before.content);
+  await customer.table('co_management_project_scopes').del();
+  await expect(attachments.listCoManagedConversationAttachments(db, principal, resource, requester)).rejects.toThrow();
+  expect(await attachments.listCoManagedConversationAttachments(db, customerPrincipal, resource, requester)).toHaveLength(1);
+  expect((await archives.listCoManagedArchiveFiles(db, principal, resource)).items).toHaveLength(3);
+}));
+
+it('task attachments survive encrypted customer export and native restore without the MSP private store', async () => withTaskConversationFixture(async f => {
+  const fs = await import('node:fs/promises'), os = await import('node:os'), path = await import('node:path');
+  const { Readable } = await import('node:stream');
+  const attachments = await import('../../../../packages/co-managed/src/conversationAttachments');
+  const { prepareCoManagedPortableWorkspaceExport } = await import('../../../../ee/server/src/lib/co-managed/portableWorkspaceExport');
+  const { openPortableArchive } = await import('../../../../packages/co-managed/src/portableArchive');
+  const { prepareCoManagedPortableWorkspaceRecords } = await import('../../../../packages/co-managed/src/portableWorkspaceRestoreRecords');
+  const { prepareCoManagedPortableWorkspaceFiles, stageCoManagedPortableWorkspaceFiles } = await import('../../../../packages/co-managed/src/portableWorkspaceRestoreFiles');
+  const { prepareCoManagedPortableWorkspaceVault } = await import('../../../../ee/server/src/lib/co-managed/portableWorkspaceRestoreVault');
+  const { resolveCoManagedPortableDestinationCatalogs, insertCoManagedPortableWorkspaceDatabase } = await import('../../../../ee/server/src/lib/co-managed/portableWorkspaceRestoreDatabase');
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'portable-task-files-test-')), previousTmp = process.env.TMPDIR;
+  process.env.TMPDIR = root;
+  const objects = new Map<string, Buffer>(), upload = async (key: string, bytes: Uint8Array) => { objects.set(key, Buffer.from(bytes)); };
+  let prepared: any, opened: any, lease: any;
+  try {
+    for (const [actor, audience, name] of [[f.principal, 'shared_it', 'shared.txt'], [f.customerPrincipal, 'organization_private', 'customer-private.txt'],
+      [f.customerPrincipal, 'requester', 'requester.txt'], [f.principal, 'organization_private', 'msp-private.txt']] as const) {
+      const comment = f.ref(await f.add(actor, audience, name));
+      await attachments.uploadCoManagedConversationAttachment(db, actor, f.resource,
+        { attachmentId: randomUUID(), comment, fileName: name, mimeType: 'text/plain', content: Buffer.from(`Task bytes: ${name}`) }, upload);
+    }
+    let permission = await f.customer.table('permissions').where({ resource: 'credential', action: 'read' }).first();
+    if (!permission) {
+      const existing = await f.customer.table('permissions').where({ resource: 'co_management', action: 'manage' }).first();
+      permission = { ...existing, permission_id: randomUUID(), resource: 'credential', action: 'read' };
+      await f.customer.table('permissions').insert(permission);
+    }
+    const role = await f.customer.table('user_roles').where('user_id', f.customerPrincipal.userId).first();
+    await f.customer.table('role_permissions').insert({ tenant: f.resource.tenant, role_id: role.role_id, permission_id: permission.permission_id }).onConflict().ignore();
+    artifactStorage.getReadStream.mockReset().mockImplementation(async (key: string) => {
+      const bytes = objects.get(key); if (!bytes) throw new Error('Unexpected source object'); return Readable.from([bytes]);
+    });
+    await f.customer.table('co_management_relationships').update({ state: 'terminated', ended_at: new Date() });
+    const passphrase = 'Customer task files departure recovery phrase';
+    prepared = await prepareCoManagedPortableWorkspaceExport(db, f.customerPrincipal, passphrase);
+    const archive = path.join(root, 'customer.alga');
+    await prepared.consume(async (artifact: any) => fs.copyFile(artifact.path, archive));
+    opened = await openPortableArchive(archive, passphrase);
+    const manifest = opened.manifest;
+    expect(manifest.conversationFiles.attachments).toEqual([]);
+    expect(manifest.conversationFiles.taskAttachments.map((row: any) => row.fileName).sort()).toEqual(['customer-private.txt', 'requester.txt', 'shared.txt']);
+    expect(JSON.stringify(manifest)).not.toContain('msp-private.txt');
+    const sections = Object.fromEntries(Object.entries(manifest.sections).map(([name, component]: any) => [name, component.records]));
+    const catalog = await db.transaction(trx => resolveCoManagedPortableDestinationCatalogs(trx, sections as any, f.resource.tenant));
+    const destinationTenant = randomUUID(), records = prepareCoManagedPortableWorkspaceRecords({ sourceTenant: f.resource.tenant, destinationTenant,
+      sections: sections as any, destinationCatalogMappings: catalog });
+    const administrator = records.domains.find(domain => domain.table === 'users' && domain.column === 'user_id')!.mappings.find(row => row.source === f.customerPrincipal.userId)!.destination;
+    const files = prepareCoManagedPortableWorkspaceFiles({ manifest, files: opened.files, preparedRecords: records, importedByUserId: String(administrator) });
+    const vault = await prepareCoManagedPortableWorkspaceVault({ manifest, restoreRecords: records, passphrase }, { reservedUuids: files.allocatedIds });
+    const restoredObjects = new Map<string, Buffer>();
+    lease = await stageCoManagedPortableWorkspaceFiles(files, {
+      getCapabilities: () => ({ supportsStreaming: true, maxFileSize: 1024 ** 3 }),
+      upload: async (stream: any, key: string, options: any) => { const chunks = []; for await (const chunk of stream) chunks.push(Buffer.from(chunk));
+        const bytes = Buffer.concat(chunks); restoredObjects.set(key, bytes); return { path: key, size: bytes.length, mime_type: options.mime_type }; },
+      delete: async (key: string) => { restoredObjects.delete(key); },
+    } as any);
+    await db.transaction(trx => insertCoManagedPortableWorkspaceDatabase(trx, { preparedRecords: files, externalFiles: lease.externalFiles, vault,
+      archive: { packageId: prepared.packageId, sha256: prepared.sha256, sourceAdministratorUserId: f.customerPrincipal.userId, administratorUserId: String(administrator) } }));
+    lease.release();
+    const own = tenantDb(db, destinationTenant), task = await own.table('project_tasks').first();
+    expect(task.task_id).not.toBe(f.resource.id);
+    expect(await own.table('co_management_relationships')).toEqual([]);
+    expect(await own.table('co_management_conversation_attachments')).toEqual([]);
+    expect(await own.table('document_associations')).toHaveLength(3);
+    for (const file of await own.table('external_files')) {
+      const document = await own.table('documents').where('file_id', file.file_id).first();
+      const binding = await own.table('document_associations').where('document_id', document.document_id).first();
+      expect(binding).toMatchObject({ entity_type: 'project_task', entity_id: task.task_id });
+      expect(restoredObjects.get(file.storage_path)).toEqual(Buffer.from(`Task bytes: ${file.original_name}`));
+      const metadata = file.metadata.conversation;
+      expect(metadata.task_id).toBe(task.task_id); expect(metadata.ticket_id).toBeUndefined();
+      expect(await own.table('project_task_comments').where('task_comment_id', metadata.task_comment_id).first()).toMatchObject({ task_id: task.task_id, thread_id: metadata.thread_id });
+      expect(document.is_client_visible).toBe(file.original_name === 'requester.txt');
+      if (file.original_name === 'shared.txt') expect(metadata).toMatchObject({ actor_tenant: f.principal.tenant, actor_user_id: f.principal.userId, actor_reference_id: expect.any(String) });
+    }
+  } finally {
+    await lease?.dispose(); await opened?.dispose(); await prepared?.dispose(); artifactStorage.getReadStream.mockReset();
+    if (previousTmp === undefined) delete process.env.TMPDIR; else process.env.TMPDIR = previousTmp;
+    await fs.rm(root, { recursive: true, force: true });
+  }
+}));
+
+it('task attachments preserve files on surviving replies and reject removed comments or changed audiences', async () => withTaskConversationFixture(async ({ customer, principal, customerPrincipal, resource, add, write, ref }: any) => {
+  const attachments = await import('../../../../packages/co-managed/src/conversationAttachments');
+  const root = await add(principal, 'shared_it', 'Root'), parent = ref(root);
+  const reply = await write(customerPrincipal, { kind: 'create', operationId: randomUUID(), parent, expectedAudience: 'shared_it', text: 'Reply' });
+  const comment = ref(reply), upload = vi.fn(async () => {});
+  const file = await attachments.uploadCoManagedConversationAttachment(db, customerPrincipal, resource,
+    { attachmentId: randomUUID(), comment, fileName: 'reply.txt', mimeType: 'text/plain', content: Buffer.from('Reply file') }, upload);
+  await write(principal, { kind: 'delete', operationId: randomUUID(), comment: parent, expectedRevision: 1 });
+  expect(await attachments.listCoManagedConversationAttachments(db, principal, resource, comment)).toHaveLength(1);
+  await customer.table('comment_threads').where('thread_id', comment.threadId).update({ collaboration_audience: 'organization_private', is_internal: true });
+  await expect(attachments.listCoManagedConversationAttachments(db, principal, resource, comment)).rejects.toThrow();
+  expect(await attachments.listCoManagedConversationAttachments(db, customerPrincipal, resource, comment)).toHaveLength(1);
+  await write(customerPrincipal, { kind: 'delete', operationId: randomUUID(), comment, expectedRevision: 1 });
+  await expect(attachments.downloadCoManagedConversationAttachment(db, customerPrincipal, resource, { ...comment, attachmentId: file.attachmentId }, async () => Buffer.from('Reply file'))).rejects.toThrow();
+}));
+
+it.each(['customer', 'sponsor'])('task attachments reject %s body redaction and preserve failed-upload retry reservations', async side => withTaskConversationFixture(async ({ customer, principal, customerPrincipal, resource, operation, add, ref }: any) => {
+  const attachments = await import('../../../../packages/co-managed/src/conversationAttachments');
+  const comment = ref(await add(customerPrincipal, 'shared_it', 'Task evidence'));
+  const input = { attachmentId: randomUUID(), comment, fileName: 'Retry.txt', mimeType: 'text/plain', content: Buffer.from('Immutable retry') };
+  const upload = vi.fn().mockRejectedValueOnce(new Error('Fixture transport failed')).mockResolvedValue(undefined);
+  await expect(attachments.uploadCoManagedConversationAttachment(db, customerPrincipal, resource, input, upload)).rejects.toThrow('Fixture transport failed');
+  expect(await attachments.listCoManagedConversationAttachments(db, principal, resource, comment)).toEqual([]);
+  expect(await customer.table('co_management_conversation_attachments').where('attachment_id', input.attachmentId).first()).toMatchObject({ status: 'pending', project_task_id: resource.id });
+  await attachments.uploadCoManagedConversationAttachment(db, customerPrincipal, resource, input, upload);
+  expect(upload.mock.calls[0]).toEqual(upload.mock.calls[1]);
+  const actor = side === 'customer' ? customerPrincipal : principal, bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: actor.tenant, name: 'Task file body policy', actorUserId: actor.userId });
+  await bundles.upsertBundleRule(db, { tenant: actor.tenant, bundleId, revisionId, resourceType: 'project', action: 'read', templateKey: 'selected_clients',
+    config: { selectedClientIds: [side === 'customer' ? operation.customer_client_id : operation.request.clientId], redactedFields: ['project_task_comments.note'] } });
+  await bundles.publishBundleRevision(db, { tenant: actor.tenant, bundleId, revisionId, actorUserId: actor.userId });
+  await bundles.createBundleAssignment(db, { tenant: actor.tenant, bundleId, targetType: 'user', targetId: actor.userId });
+  const download = vi.fn();
+  await expect(attachments.downloadCoManagedConversationAttachment(db, actor, resource, { ...comment, attachmentId: input.attachmentId }, download)).rejects.toThrow();
+  expect(download).not.toHaveBeenCalled();
+}));
 
 it('task conversations preserve canonical ownership, separate private stores, and durable foreign authorship', async () => withTaskConversationFixture(async ({ customer, sponsor, principal, customerPrincipal, resource, add, read }: any) => {
   const beforeUsers = await customer.table('users');
@@ -11432,7 +11755,12 @@ it('task events retain metadata-only qualified intent and consumer work atomical
   expect(rows.map((row: any) => row.publication.payload.collaboration.revision)).toEqual([1, 2, 3]);
   expect(rows.every((row: any) => row.ticket_id === null && row.resource_type === 'project_task' && row.resource_id === resource.id)).toBe(true);
   expect(JSON.stringify(rows)).not.toMatch(/Never retain|Changed body|MSP private content|actor_display_name/);
-  expect(await customer.table('co_management_event_consumers')).toHaveLength(5);
+  // Four consumers fan out from the create and one each from the edit and delete. The repeated
+  // create adds none: consumers are keyed (tenant, event_id, consumer) against one retained event.
+  const consumers = await customer.table('co_management_event_consumers');
+  expect(consumers).toHaveLength(6);
+  expect(consumers.filter((row: any) => row.event_id === rows[0].event_id).map((row: any) => row.consumer).sort())
+    .toEqual(['co-managed-email', 'internal-notifications', 'requester-email', 'search-index']);
   expect(await sponsor.table('co_management_event_outbox')).toHaveLength(0);
   const { EventSchemas } = await import('@alga-psa/event-schemas');
   for (const row of rows) {
@@ -11472,8 +11800,8 @@ it('task events replay stable identities after transport loss and recover incomp
   expect(await dispatch(db, resource.tenant, send)).toEqual({ published: 1, cancelled: 0, failed: 0 });
   expect(send.mock.calls[0][1]).toBe(root.operationId); expect(send.mock.calls[1]).toEqual(send.mock.calls[0]);
   await customer.table('co_management_event_consumers').update({ next_attempt_at: new Date(0) });
-  const replay = vi.fn(); expect(await recover(db, resource.tenant, replay)).toEqual({ queued: 3, cancelled: 0, failed: 0 });
-  expect(replay.mock.calls.map(call => call[2]).sort()).toEqual(['co-managed-email', 'internal-notifications', 'search-index']);
+  const replay = vi.fn(); expect(await recover(db, resource.tenant, replay)).toEqual({ queued: 4, cancelled: 0, failed: 0 });
+  expect(replay.mock.calls.map(call => call[2]).sort()).toEqual(['co-managed-email', 'internal-notifications', 'requester-email', 'search-index']);
   const event = { id: root.operationId, eventType: 'PROJECT_TASK_COMMENT_CREATED', payload: { tenantId: resource.tenant, taskId: randomUUID(), taskCommentId: randomUUID(), commentContent: 'Forged transport body' } };
   const effect = vi.fn();
   await Promise.all([consume(db, event, 'search-index', effect), consume(db, event, 'search-index', effect)]);
@@ -18839,3 +19167,6145 @@ describe('ticket conversation AI prompt injection against migrated PostgreSQL', 
     expect(publishEvent).not.toHaveBeenCalled(); expect(publishWorkflowEvent).not.toHaveBeenCalled();
   });
 });
+async function withPeriodJobFixture(work: (fixture: any) => Promise<void>) {
+  return withTimeSheetApiFixture(async (fixture: any) => {
+    const { Temporal } = await import('@js-temporal/polyfill');
+    const today = Temporal.Now.plainDateISO('UTC'), boundary = today.add({ days: 2 });
+    const { customer, context } = fixture;
+    await customer.table('time_periods').update({ start_date: today.subtract({ days: 5 }).toString(), end_date: boundary.toString() });
+    const settings = await fixture.sheetService.createTimePeriodSettings({ frequency: 7, frequency_unit: 'day', effective_from: today.subtract({ days: 30 }).toString() }, context);
+    const identity = { tenant: context.tenant, jobId: randomUUID(), scheduledJobId: randomUUID() };
+    await customer.table('jobs').insert({ tenant: context.tenant, job_id: identity.jobId, type: 'createNextTimePeriods', status: 'processing', user_id: null,
+      metadata: JSON.stringify({ triggeredBy: 'scheduler', scheduledJobId: identity.scheduledJobId }) });
+    const { createNextTimePeriod } = await import('../../../../packages/scheduling/src/lib/timePeriodAutomation');
+    const run = (extra: any = {}) => createNextTimePeriod(db, { ...identity, ...extra }, 2);
+    await work({ ...fixture, identity, settings, today, boundary, run });
+  });
+}
+
+it('customer period jobs serialize duplicate execution and read the current stored settings', async () => withPeriodJobFixture(async ({ run, sheetService, context, settings, boundary, customer }: any) => {
+  await sheetService.updateTimePeriodSettings(settings.settings_id, { frequency: 9 }, context);
+  const results = await Promise.all([run(), run()]);
+  expect(results.map(result => result.result.createdCount).sort()).toEqual([0, 1]);
+  const [created] = await customer.table('time_periods').where('start_date', boundary.toString());
+  expect((await import('@alga-psa/db')).timePeriodCalendarDate(created.end_date)).toBe(boundary.add({ days: 9 }).toString());
+  expect(await customer.table('time_periods')).toHaveLength(2);
+}));
+
+it('customer period jobs reject forged queue identity completed jobs and human job records', async () => withPeriodJobFixture(async ({ run, identity, context, customer }: any) => {
+  await expect(run({ scheduledJobId: randomUUID() })).rejects.toMatchObject({ code: 'TIME_PERIOD_JOB_FORBIDDEN' });
+  await customer.table('jobs').where('job_id', identity.jobId).update({ status: 'completed' });
+  await expect(run()).rejects.toMatchObject({ code: 'TIME_PERIOD_JOB_FORBIDDEN' });
+  await customer.table('jobs').where('job_id', identity.jobId).update({ status: 'processing', user_id: context.userId });
+  await expect(run()).rejects.toMatchObject({ code: 'TIME_PERIOD_JOB_FORBIDDEN' });
+  await customer.table('jobs').where('job_id', identity.jobId).update({ user_id: null, type: 'unrelatedJob' });
+  await expect(run()).rejects.toMatchObject({ code: 'TIME_PERIOD_JOB_FORBIDDEN' });
+  expect(await customer.table('time_periods')).toHaveLength(1);
+  const actions = await import('../../../../packages/scheduling/src/actions/timePeriodsActions');
+  expect('createNextTimePeriod' in actions).toBe(false);
+}));
+
+it('customer period jobs skip expired entitlement suspended tenants and inactive configuration', async () => withPeriodJobFixture(async ({ run, customer, principal, settings, sheetService, context }: any) => {
+  await sheetService.updateTimePeriodSettings(settings.settings_id, { is_active: false }, context);
+  expect(await run()).toMatchObject({ status: 'completed', result: { createdCount: 0, reason: 'No active time period settings' } });
+  await sheetService.updateTimePeriodSettings(settings.settings_id, { is_active: true }, context);
+  await customer.table('tenants').update({ suspended_at: db.fn.now() });
+  expect(await run()).toMatchObject({ status: 'skipped', reason: 'Workspace suspended' });
+  await customer.table('tenants').update({ suspended_at: null });
+  await expireCoManagedEntitlement(principal.tenant);
+  expect(await run()).toMatchObject({ status: 'skipped', reason: 'Co-management read_only' });
+  expect(await customer.table('time_periods')).toHaveLength(1);
+}));
+
+it('customer period jobs roll back generated dates when their retained job changes before final admission', async () => withPeriodJobFixture(async ({ run, identity, customer }: any) => {
+  await db.raw(`CREATE FUNCTION fail_period_worker_job() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN UPDATE jobs SET status = 'failed' WHERE tenant = NEW.tenant AND job_id = '${identity.jobId}'::uuid; RETURN NEW; END $$`);
+  await db.raw('CREATE TRIGGER fail_period_worker_job AFTER INSERT ON time_periods FOR EACH ROW EXECUTE FUNCTION fail_period_worker_job()');
+  try {
+    await expect(run()).rejects.toMatchObject({ code: 'TIME_PERIOD_JOB_FORBIDDEN' });
+    expect(await customer.table('time_periods')).toHaveLength(1);
+    expect(await customer.table('jobs').where('job_id', identity.jobId).first()).toMatchObject({ status: 'processing' });
+  } finally { await db.raw('DROP TRIGGER fail_period_worker_job ON time_periods'); await db.raw('DROP FUNCTION fail_period_worker_job()'); }
+}));
+
+it('customer period jobs roll back generated dates if the sponsor becomes read-only during the run', async () => withPeriodJobFixture(async ({ run, principal, customer }: any) => {
+  await db.raw(`CREATE FUNCTION expire_period_worker_entitlement() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN UPDATE co_managed_entitlements SET valid_until = clock_timestamp() - interval '31 days', lapse_started_at = clock_timestamp() - interval '31 days', read_only_after = clock_timestamp() - interval '1 day' WHERE tenant = '${principal.tenant}'::uuid; RETURN NEW; END $$`);
+  await db.raw('CREATE TRIGGER expire_period_worker_entitlement AFTER INSERT ON time_periods FOR EACH ROW EXECUTE FUNCTION expire_period_worker_entitlement()');
+  try {
+    await expect(run()).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+    expect(await customer.table('time_periods')).toHaveLength(1);
+  } finally { await db.raw('DROP TRIGGER expire_period_worker_entitlement ON time_periods'); await db.raw('DROP FUNCTION expire_period_worker_entitlement()'); }
+}));
+
+it('customer period jobs and native generation share semi-monthly and seasonal annual boundaries', async () => {
+  const { Temporal } = await import('@js-temporal/polyfill');
+  const { TimePeriodSuggester } = await import('../../../../packages/scheduling/src/lib/timePeriodSuggester');
+  const { generateTimePeriods } = await import('../../../../packages/scheduling/src/actions/timePeriodsActions');
+  const base = { tenant: randomUUID(), time_period_settings_id: randomUUID(), frequency: 1, is_active: true, effective_from: '2026-01-01', created_at: '2026-01-01T00:00:00Z', updated_at: '2026-01-01T00:00:00Z' };
+  for (const [settings, end, expected] of [
+    [[{ ...base, frequency_unit: 'month', start_day: 1, end_day: 16 }, { ...base, frequency_unit: 'month', start_day: 16, end_day: 0 }], '2027-03-01', [['2027-01-01', '2027-01-16'], ['2027-01-16', '2027-02-01'], ['2027-02-01', '2027-02-16'], ['2027-02-16', '2027-03-01']]],
+    [[{ ...base, frequency_unit: 'year', start_month: 1, start_day_of_month: 1, end_month: 7, end_day_of_month: 1 }, { ...base, frequency_unit: 'year', start_month: 7, start_day_of_month: 1, end_month: 12, end_day_of_month: 0 }], '2028-01-01', [['2027-01-01', '2027-07-01'], ['2027-07-01', '2028-01-01']]],
+  ] as any[]) {
+    const native = await generateTimePeriods(settings, '2027-01-01', end);
+    expect(native.map(row => [row.start_date, row.end_date]).sort()).toEqual(expected);
+    const periods: any[] = [];
+    for (let index = 0; index < expected.length; index++) {
+      const next = TimePeriodSuggester.suggestNewTimePeriod(settings, periods, Temporal.PlainDate.from('2027-01-01'));
+      expect(next.success).toBe(true); periods.push(next.data);
+    }
+    expect(periods.map(row => [row.start_date, row.end_date])).toEqual(expected);
+    expect(TimePeriodSuggester.suggestNewTimePeriod(settings.map((setting: any) => ({ ...setting, effective_to: end })), periods).success).toBe(false);
+  }
+});
+
+async function withScheduleReadFixture(work: (fixture: any) => Promise<void>) {
+  await withTimeSheetApiFixture(async (fixture: any) => {
+    const { customer, context, resource } = fixture;
+    const ownId = randomUUID(), busyId = randomUUID(), taskId = randomUUID();
+    const base = { tenant: context.tenant, scheduled_start: '2026-09-07T09:00:00Z', scheduled_end: '2026-09-07T10:30:00Z', status: 'scheduled', notes: 'Private schedule notes', work_item_type: 'ad_hoc' };
+    await customer.table('schedule_entries').insert([
+      { ...base, entry_id: ownId, title: 'Own appointment', is_private: false, work_item_id: null },
+      { ...base, entry_id: busyId, title: 'Sensitive appointment', is_private: true, work_item_id: null },
+      { ...base, entry_id: taskId, title: 'Rollout appointment', is_private: false, work_item_type: 'project_task', work_item_id: resource.id },
+    ]);
+    await customer.table('schedule_entry_assignees').insert([ownId, taskId].map(entry_id => ({ tenant: context.tenant, entry_id, user_id: context.userId })));
+    const native = await import('../../../../packages/scheduling/src/actions/scheduleActions');
+    await work({ ...fixture, ownId, busyId, taskId, native });
+  });
+}
+
+it('customer schedule reads share private detail projections and actual work titles across native and API', async () => withScheduleReadFixture(async ({ sheetService, context, resource, ownId, busyId, taskId, native }: any) => {
+  const rows = await sheetService.getScheduleEntries(context);
+  expect(rows).toHaveLength(3);
+  const own = await sheetService.getScheduleEntry(ownId, context);
+  expect(own).toMatchObject({ title: 'Own appointment', notes: 'Private schedule notes', duration_hours: 1.5, assigned_users: [{ user_id: context.userId }], work_item: null });
+  expect(await native.getScheduleEntryById(ownId)).toMatchObject({ title: own.title, notes: own.notes, scheduled_start: new Date(own.scheduled_start) });
+  const busy = await sheetService.getScheduleEntry(busyId, context);
+  expect(busy).toMatchObject({ title: 'Busy', notes: '', work_item_id: null, recurrence_pattern: null });
+  expect(await native.getScheduleEntryById(busyId)).toMatchObject({ title: 'Busy', notes: '', work_item_id: null });
+  expect(await sheetService.getScheduleEntry(taskId, context)).toMatchObject({ work_item: { id: resource.id, title: 'Verify rollout', type: 'project_task' } });
+  const { scheduleEntryResponseSchema } = await import('../../lib/api/schemas/timeSheet');
+  for (const row of rows) scheduleEntryResponseSchema.parse(row);
+  expect(await sheetService.getScheduleEntries(context, { user_id: context.userId })).toHaveLength(2);
+  expect(await sheetService.getScheduleEntries(context, { start_date: '2026-09-07T10:00:00Z' })).toEqual([]);
+  expect(await sheetService.getScheduleEntry(randomUUID(), context)).toBeNull();
+}));
+
+it('customer schedule reads require actual assignment and current source permission without time-entry permission', async () => withScheduleReadFixture(async ({ sheetService, context, customer, ownId, busyId, taskId, native }: any) => {
+  await customer.table('role_permissions').whereIn('permission_id', customer.table('permissions').where('resource', 'time_entry').select('permission_id')).del();
+  expect(await sheetService.getScheduleEntry(taskId, context)).toMatchObject({ entry_id: taskId });
+  await customer.table('role_permissions').whereIn('permission_id', customer.table('permissions').where({ resource: 'user_schedule', action: 'update' }).select('permission_id')).del();
+  expect(await sheetService.getScheduleEntries(context)).toHaveLength(2);
+  await expect(sheetService.getScheduleEntry(busyId, context)).rejects.toMatchObject({ statusCode: 403 });
+  await customer.table('role_permissions').whereIn('permission_id', customer.table('permissions').where({ resource: 'project', action: 'read' }).select('permission_id')).del();
+  expect((await sheetService.getScheduleEntries(context)).map((row: any) => row.entry_id)).toEqual([ownId]);
+  await expect(sheetService.getScheduleEntry(taskId, context)).rejects.toMatchObject({ statusCode: 403 });
+  await expect(native.getScheduleEntryById(taskId)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+}));
+
+it('customer schedule reads retain key-specific bundle masks independently of browser authority', async () => withScheduleReadFixture(async ({ sheetService, context, customer, resource, user, ownId, taskId, native }: any) => {
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: resource.tenant, name: 'Schedule field scope', actorUserId: user.user_id });
+  await bundles.upsertBundleRule(db, { tenant: resource.tenant, bundleId, revisionId, resourceType: 'user_schedule', action: 'read', templateKey: 'assigned', config: { redactedFields: ['notes', 'duration_hours'] } });
+  await bundles.upsertBundleRule(db, { tenant: resource.tenant, bundleId, revisionId, resourceType: 'project', action: 'read', templateKey: 'selected_clients', config: { selectedClientIds: [(await customer.table('projects').first('client_id')).client_id], redactedFields: ['task_name'] } });
+  await bundles.publishBundleRevision(db, { tenant: resource.tenant, bundleId, revisionId, actorUserId: user.user_id });
+  await bundles.createBundleAssignment(db, { tenant: resource.tenant, bundleId, targetType: 'api_key', targetId: context.apiKeyId });
+  const own = await sheetService.getScheduleEntry(ownId, context);
+  expect(own.notes).toBe(''); expect(own.duration_hours).toBeUndefined();
+  const task = await sheetService.getScheduleEntry(taskId, context);
+  expect(task).toMatchObject({ title: '', notes: '', work_item: null });
+  expect(await sheetService.getScheduleEntries(context)).toHaveLength(2);
+  expect(await native.getScheduleEntryById(taskId)).toMatchObject({ title: 'Rollout appointment', notes: 'Private schedule notes' });
+  await customer.table('api_keys').where('api_key_id', context.apiKeyId).update({ active: false });
+  await expect(sheetService.getScheduleEntries(context)).rejects.toMatchObject({ statusCode: 403 });
+}));
+
+it('customer schedule reads retain lapse history and reject missing credentials or suspended workspaces', async () => withScheduleReadFixture(async ({ sheetService, context, principal, customer, ownId }: any) => {
+  await expireCoManagedEntitlement(principal.tenant);
+  expect(await sheetService.getScheduleEntry(ownId, context)).toMatchObject({ entry_id: ownId });
+  await expect(sheetService.getScheduleEntries({ ...context, apiKeyId: undefined })).rejects.toMatchObject({ statusCode: 403 });
+  await customer.table('tenants').update({ suspended_at: db.fn.now() });
+  await expect(sheetService.getScheduleEntry(ownId, context)).rejects.toMatchObject({ statusCode: 403 });
+}));
+
+it('customer schedule reads reject the whole collection when its key expires while retaining a work root', async () => withScheduleReadFixture(async ({ context, customer, resource }: any) => {
+  const { readCoManagedNativeSchedules } = await import('../../../../packages/co-managed/src/nativeScheduleRead');
+  const blocker = await db.transaction();
+  await tenantDb(blocker, context.tenant).table('project_tasks').where('task_id', resource.id).forUpdate().first();
+  await customer.table('api_keys').where('api_key_id', context.apiKeyId).update({ expires_at: new Date(Date.now() + 1500) });
+  let pid: number | undefined;
+  const reading = withTransaction(db, async trx => {
+    pid = Number((await trx.raw('SELECT pg_backend_pid() AS pid')).rows[0].pid);
+    return readCoManagedNativeSchedules(trx, context.tenant, async () => ({ kind: 'api_key', tenant: context.tenant, userId: context.userId, apiKeyId: context.apiKeyId }));
+  });
+  const rejected = expect(reading).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  try {
+    await vi.waitFor(async () => { expect(pid).toBeDefined(); expect((await db('pg_stat_activity').where('pid', pid!).first('wait_event_type'))?.wait_event_type).toBe('Lock'); });
+    await db.raw('SELECT pg_sleep(1.6)');
+  } finally { await blocker.rollback(); }
+  await rejected;
+}));
+
+async function withScheduleCalendarFixture(work: (fixture: any) => Promise<void>) {
+  await withScheduleReadFixture(async (fixture: any) => {
+    const { customer, context, ownId, busyId, taskId } = fixture;
+    await customer.table('schedule_entries').whereIn('entry_id', [ownId, busyId, taskId]).update({ is_recurring: true, recurrence_pattern: JSON.stringify({
+      frequency: 'daily', interval: 1, startDate: '2026-09-07T00:00:00Z', endDate: '2026-09-10T23:59:59Z', exceptions: ['2026-09-08T00:00:00Z'],
+    }) });
+    await customer.table('holidays').insert({ tenant: context.tenant, holiday_name: 'Local closure', holiday_date: '2026-09-09', is_recurring: false });
+    const calendar = (start = '2026-09-07T00:00:00Z', end = '2026-09-11T00:00:00Z', ids?: string[]) => fixture.native.getScheduleEntries(new Date(start), new Date(end), ids);
+    await work({ ...fixture, calendar });
+  });
+}
+
+it('customer schedule calendar retains the first occurrence exceptions holidays and private Busy projection', async () => withScheduleCalendarFixture(async ({ calendar, ownId, busyId, taskId }: any) => {
+  const result = await calendar(); expect(result.success).toBe(true);
+  expect(result.entries).toHaveLength(6);
+  for (const id of [ownId, busyId, taskId]) {
+    const rows = result.entries.filter((row: any) => row.entry_id.startsWith(id));
+    expect(rows.map((row: any) => row.scheduled_start.toISOString())).toEqual(['2026-09-07T09:00:00.000Z', '2026-09-10T09:00:00.000Z']);
+    if (id === busyId) for (const row of rows) expect(row).toMatchObject({ title: 'Busy', notes: '', recurrence_pattern: null, work_item_id: null });
+    else for (const row of rows) expect(row.recurrence_pattern.startDate).toBeInstanceOf(Date);
+  }
+}));
+
+it('customer schedule calendar includes spanning events and overlapping occurrences with exclusive range ends', async () => withScheduleCalendarFixture(async ({ calendar, context, customer }: any) => {
+  const spanId = randomUUID();
+  await customer.table('schedule_entries').insert({ tenant: context.tenant, entry_id: spanId, title: 'Extended allocation', notes: '', work_item_type: 'ad_hoc', status: 'scheduled', scheduled_start: '2026-09-01T00:00:00Z', scheduled_end: '2026-09-30T00:00:00Z' });
+  await customer.table('schedule_entry_assignees').insert({ tenant: context.tenant, entry_id: spanId, user_id: context.userId });
+  expect((await calendar('2026-09-10T09:30:00Z', '2026-09-10T10:00:00Z')).entries).toHaveLength(4);
+  expect((await calendar('2026-09-10T10:30:00Z', '2026-09-10T11:00:00Z')).entries.map((row: any) => row.entry_id)).toEqual([spanId]);
+  expect((await calendar('2026-09-10T08:30:00Z', '2026-09-10T09:00:00Z')).entries.map((row: any) => row.entry_id)).toEqual([spanId]);
+}));
+
+it('customer schedule calendar filters actual assignments sources and recurrence field masks before disclosure', async () => withScheduleCalendarFixture(async ({ calendar, context, customer, ownId, resource, user }: any) => {
+  expect((await calendar(undefined, undefined, [context.userId])).entries).toHaveLength(4);
+  await customer.table('role_permissions').whereIn('permission_id', customer.table('permissions').where({ resource: 'user_schedule', action: 'update' }).select('permission_id')).del();
+  expect((await calendar(undefined, undefined, [randomUUID()])).entries).toHaveLength(4);
+  await customer.table('role_permissions').whereIn('permission_id', customer.table('permissions').where({ resource: 'project', action: 'read' }).select('permission_id')).del();
+  const visible = await calendar(); expect(visible.entries).toHaveLength(2); expect(visible.entries.every((row: any) => row.entry_id.startsWith(ownId))).toBe(true);
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: resource.tenant, name: 'Calendar recurrence mask', actorUserId: user.user_id });
+  await bundles.upsertBundleRule(db, { tenant: resource.tenant, bundleId, revisionId, resourceType: 'user_schedule', action: 'read', templateKey: 'assigned', config: { redactedFields: ['recurrence_pattern'] } });
+  await bundles.publishBundleRevision(db, { tenant: resource.tenant, bundleId, revisionId, actorUserId: user.user_id });
+  await bundles.createBundleAssignment(db, { tenant: resource.tenant, bundleId, targetType: 'user', targetId: user.user_id });
+  expect((await calendar()).entries).toEqual([]);
+  await customer.table('role_permissions').whereIn('permission_id', customer.table('permissions').where({ resource: 'user_schedule', action: 'read' }).select('permission_id')).del();
+  expect(await calendar()).toMatchObject({ success: false });
+}));
+
+it('customer schedule commands create edit and delete actual API entries without leaking event content', async () => withScheduleReadFixture(async ({ sheetService, context, resource, customer, publish }: any) => {
+  const { createScheduleEntrySchema, updateScheduleEntrySchema, scheduleEntryResponseSchema } = await import('../../lib/api/schemas/timeSheet');
+  publish.mockClear();
+  const created = await sheetService.createScheduleEntry(createScheduleEntrySchema.parse({ title: 'API allocation', notes: 'Private allocation details', scheduled_start: '2026-09-15T09:00:00Z', scheduled_end: '2026-09-15T10:00:00Z', work_item_type: 'project_task', work_item_id: resource.id }), context);
+  expect(created).toMatchObject({ title: 'API allocation', assigned_user_ids: [context.userId], work_item: { title: 'Verify rollout' }, duration_hours: 1 });
+  scheduleEntryResponseSchema.parse(created);
+  const changed = await sheetService.updateScheduleEntry(created.entry_id, updateScheduleEntrySchema.parse({ notes: '', work_item_type: 'ad_hoc', scheduled_end: '2026-09-15T10:30:00Z' }), context);
+  expect(changed).toMatchObject({ notes: '', work_item_id: null, work_item_type: 'ad_hoc', duration_hours: 1.5 });
+  await sheetService.updateScheduleEntry(created.entry_id, { tenant: randomUUID(), entry_id: randomUUID(), assigned_user_ids: [context.userId, context.userId] }, context);
+  expect(await customer.table('schedule_entry_assignees').where('entry_id', created.entry_id)).toHaveLength(1);
+  await sheetService.deleteScheduleEntry(created.entry_id, context);
+  expect(await sheetService.getScheduleEntry(created.entry_id, context)).toBeNull();
+  expect(await customer.table('schedule_entry_assignees').where('entry_id', created.entry_id)).toHaveLength(0);
+  expect(publish).toHaveBeenCalledTimes(4);
+  for (const [event] of publish.mock.calls) expect(Object.keys(event.payload).sort()).toEqual(['entryId', 'tenantId', 'userId']);
+}));
+
+it('customer schedule commands retain own-calendar permission and enforce actual write bundle rules', async () => withScheduleReadFixture(async ({ sheetService, context, customer, ownId, busyId, user, resource }: any) => {
+  await customer.table('role_permissions').whereIn('permission_id', customer.table('permissions').where('resource', 'user_schedule').whereNot('action', 'read').select('permission_id')).del();
+  expect(await sheetService.updateScheduleEntry(ownId, { title: 'Own calendar edit' }, context)).toMatchObject({ title: 'Own calendar edit' });
+  await expect(sheetService.updateScheduleEntry(ownId, { assigned_user_ids: [] }, context)).rejects.toMatchObject({ statusCode: 403 });
+  await expect(sheetService.deleteScheduleEntry(busyId, context)).rejects.toMatchObject({ statusCode: 403 });
+  const input = { title: 'Own new entry', scheduled_start: '2026-09-15T09:00:00Z', scheduled_end: '2026-09-15T10:00:00Z', work_item_type: 'ad_hoc' };
+  const created = await sheetService.createScheduleEntry(input, context);
+  await sheetService.deleteScheduleEntry(created.entry_id, context);
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: resource.tenant, name: 'Schedule command scope', actorUserId: user.user_id });
+  for (const action of ['create', 'update', 'delete']) await bundles.upsertBundleRule(db, { tenant: resource.tenant, bundleId, revisionId, resourceType: 'user_schedule', action, templateKey: 'selected_clients', config: { selectedClientIds: [randomUUID()] } });
+  await bundles.publishBundleRevision(db, { tenant: resource.tenant, bundleId, revisionId, actorUserId: user.user_id });
+  await bundles.createBundleAssignment(db, { tenant: resource.tenant, bundleId, targetType: 'api_key', targetId: context.apiKeyId });
+  await expect(sheetService.createScheduleEntry(input, context)).rejects.toMatchObject({ statusCode: 403 });
+  await expect(sheetService.updateScheduleEntry(ownId, { title: 'Forbidden edit' }, context)).rejects.toMatchObject({ statusCode: 403 });
+  await expect(sheetService.deleteScheduleEntry(ownId, context)).rejects.toMatchObject({ statusCode: 403 });
+}));
+
+it('customer schedule commands validate current assignments partial dates recurrence and retained time dependencies', async () => withScheduleReadFixture(async ({ sheetService, context, customer, ownId, create, resource }: any) => {
+  await expect(sheetService.updateScheduleEntry(ownId, { scheduled_end: '2026-09-07T08:00:00Z' }, context)).rejects.toMatchObject({ statusCode: 400 });
+  await expect(sheetService.updateScheduleEntry(ownId, { recurrence_pattern: '{invalid' }, context)).rejects.toMatchObject({ statusCode: 400 });
+  await expect(sheetService.updateScheduleEntry(ownId, { assigned_user_ids: [randomUUID()] }, context)).rejects.toMatchObject({ statusCode: 403 });
+  const updated = await sheetService.updateScheduleEntry(ownId, { recurrence_pattern: { frequency: 'daily', interval: 1, startDate: '2026-09-07T00:00:00Z', count: 3 } }, context);
+  expect(updated).toMatchObject({ is_recurring: true, recurrence_pattern: { count: 3 } });
+  expect(await sheetService.updateScheduleEntry(ownId, { recurrence_pattern: null }, context)).toMatchObject({ is_recurring: false, recurrence_pattern: null });
+  await create({ work_item_type: 'ad_hoc', work_item_id: ownId, start_time: '2026-09-07T12:00:00Z', end_time: '2026-09-07T13:00:00Z' });
+  await expect(sheetService.deleteScheduleEntry(ownId, context)).rejects.toMatchObject({ statusCode: 409 });
+  await expect(sheetService.updateScheduleEntry(ownId, { work_item_type: 'project_task', work_item_id: resource.id }, context)).rejects.toMatchObject({ statusCode: 409 });
+  expect(await customer.table('schedule_entries').where('entry_id', ownId).first()).toMatchObject({ work_item_type: 'ad_hoc', work_item_id: null });
+}));
+
+it('customer schedule commands respect current source scope and field masks without blind replacement', async () => withScheduleReadFixture(async ({ sheetService, context, customer, taskId, user, resource }: any) => {
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: resource.tenant, name: 'Schedule write masks', actorUserId: user.user_id });
+  await bundles.upsertBundleRule(db, { tenant: resource.tenant, bundleId, revisionId, resourceType: 'user_schedule', action: 'update', templateKey: 'assigned', config: { redactedFields: ['notes'] } });
+  await bundles.publishBundleRevision(db, { tenant: resource.tenant, bundleId, revisionId, actorUserId: user.user_id });
+  await bundles.createBundleAssignment(db, { tenant: resource.tenant, bundleId, targetType: 'api_key', targetId: context.apiKeyId });
+  await expect(sheetService.updateScheduleEntry(taskId, { notes: 'Blind edit' }, context)).rejects.toMatchObject({ statusCode: 403 });
+  expect(await sheetService.updateScheduleEntry(taskId, { title: 'Allowed edit' }, context)).toMatchObject({ title: 'Allowed edit', notes: '' });
+  expect(await customer.table('schedule_entries').where('entry_id', taskId).first()).toMatchObject({ notes: 'Private schedule notes' });
+  await customer.table('role_permissions').whereIn('permission_id', customer.table('permissions').where({ resource: 'project', action: 'read' }).select('permission_id')).del();
+  await expect(sheetService.updateScheduleEntry(taskId, { title: 'Hidden root' }, context)).rejects.toMatchObject({ statusCode: 403 });
+}));
+
+it('customer schedule commands roll back writes assignments and events when the actual key expires before commit', async () => withScheduleReadFixture(async ({ sheetService, context, customer, ownId, publish }: any) => {
+  await db.raw(`CREATE FUNCTION expire_schedule_command_key() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN UPDATE api_keys SET expires_at = clock_timestamp() - interval '1 second' WHERE tenant = COALESCE(NEW.tenant, OLD.tenant) AND api_key_id = '${context.apiKeyId}'::uuid; RETURN COALESCE(NEW, OLD); END $$`);
+  await db.raw('CREATE TRIGGER expire_schedule_command_key AFTER INSERT OR UPDATE OR DELETE ON schedule_entries FOR EACH ROW EXECUTE FUNCTION expire_schedule_command_key()');
+  publish.mockClear();
+  try {
+    await expect(sheetService.createScheduleEntry({ title: 'Rolled back create', scheduled_start: '2026-09-15T09:00:00Z', scheduled_end: '2026-09-15T10:00:00Z' }, context)).rejects.toMatchObject({ statusCode: 403 });
+    await expect(sheetService.updateScheduleEntry(ownId, { title: 'Rolled back edit', assigned_user_ids: [] }, context)).rejects.toMatchObject({ statusCode: 403 });
+    await expect(sheetService.deleteScheduleEntry(ownId, context)).rejects.toMatchObject({ statusCode: 403 });
+    expect(await customer.table('schedule_entries')).toHaveLength(3);
+    expect(await customer.table('schedule_entries').where('entry_id', ownId).first()).toMatchObject({ title: 'Own appointment' });
+    expect(await customer.table('schedule_entry_assignees').where('entry_id', ownId)).toHaveLength(1);
+    expect(publish).not.toHaveBeenCalled();
+  } finally { await db.raw('DROP TRIGGER expire_schedule_command_key ON schedule_entries'); await db.raw('DROP FUNCTION expire_schedule_command_key()'); }
+}));
+
+it('customer schedule commands protect active clocks and reject mutations after entitlement lapse', async () => withScheduleReadFixture(async ({ sheetService, service, context, customer, ownId, principal }: any) => {
+  const timer = await service.startTimeTracking({ work_item_type: 'ad_hoc', work_item_id: ownId }, context);
+  await expect(sheetService.deleteScheduleEntry(ownId, context)).rejects.toMatchObject({ statusCode: 409 });
+  await service.cancelTimeTracking(timer.session_id, context);
+  await expireCoManagedEntitlement(principal.tenant);
+  await expect(sheetService.updateScheduleEntry(ownId, { title: 'Expired write' }, context)).rejects.toMatchObject({ statusCode: 403, code: 'CO_MANAGED_READ_ONLY' });
+  await expect(sheetService.deleteScheduleEntry(ownId, context)).rejects.toMatchObject({ statusCode: 403, code: 'CO_MANAGED_READ_ONLY' });
+  await expect(sheetService.createScheduleEntry({ title: 'Expired create', scheduled_start: '2026-09-15T09:00:00Z', scheduled_end: '2026-09-15T10:00:00Z' }, context)).rejects.toMatchObject({ statusCode: 403, code: 'CO_MANAGED_READ_ONLY' });
+  expect(await sheetService.getScheduleEntry(ownId, context)).toMatchObject({ title: 'Own appointment' });
+  expect(await customer.table('schedule_entries')).toHaveLength(3);
+}));
+
+async function withNativeScheduleCommandFixture(work: (fixture: any) => Promise<void>) {
+  await withScheduleReadFixture(async (fixture: any) => {
+    const { native, context } = fixture;
+    const events = vi.mocked((await import('@alga-psa/event-bus/publishers')).publishEvent);
+    const createSchedule = (data: any = {}) => native.addScheduleEntry({ title: 'Native allocation', notes: 'Private recurring notes', scheduled_start: new Date('2026-10-05T09:00:00Z'), scheduled_end: new Date('2026-10-05T10:30:00Z'), work_item_type: 'ad_hoc', work_item_id: null, assigned_user_ids: [context.userId], status: 'scheduled', ...data });
+    const createSeries = async (data: any = {}) => {
+      const created = await createSchedule({ recurrence_pattern: { frequency: 'daily', interval: 1, startDate: new Date('2026-10-05T00:00:00Z'), count: 5 }, ...data });
+      expect(created.success).toBe(true); return created.entry;
+    };
+    const calendar = () => native.getScheduleEntries(new Date('2026-10-05T00:00:00Z'), new Date('2026-10-15T00:00:00Z'));
+    await work({ ...fixture, createSchedule, createSeries, calendar, events });
+  });
+}
+
+it('native schedule commands share current authority and ordinary create edit delete projections', async () => withNativeScheduleCommandFixture(async ({ createSchedule, native, sheetService, context, customer, events }: any) => {
+  events.mockClear();
+  const created = await createSchedule({ assigned_user_ids: [] });
+  expect(created).toMatchObject({ success: true, entry: { assigned_user_ids: [context.userId] } });
+  expect(created.entry.scheduled_start).toBeInstanceOf(Date);
+  expect(await native.updateScheduleEntry(created.entry.entry_id, { notes: '', title: 'Native changed' })).toMatchObject({ success: true, entry: { title: 'Native changed', notes: '' } });
+  expect(await sheetService.getScheduleEntry(created.entry.entry_id, context)).toMatchObject({ title: 'Native changed' });
+  expect(await native.deleteScheduleEntry(created.entry.entry_id)).toMatchObject({ success: true, deleted: true });
+  expect(await customer.table('schedule_entries').where('entry_id', created.entry.entry_id)).toHaveLength(0);
+  expect(events).toHaveBeenCalledTimes(3);
+  for (const [event] of events.mock.calls) expect(Object.keys(event.payload).sort()).toEqual(['entryId', 'tenantId', 'userId']);
+}));
+
+it('native schedule commands edit one actual occurrence while preserving its siblings and explicit clears', async () => withNativeScheduleCommandFixture(async ({ createSeries, native, calendar, customer, events, resource }: any) => {
+  const series = await createSeries({ work_item_type: 'project_task', work_item_id: resource.id });
+  const before = await calendar(); expect(before.entries).toHaveLength(5);
+  const second = before.entries[1]; events.mockClear();
+  const updated = await native.updateScheduleEntry(second.entry_id, { updateType: 'single', title: 'Rescheduled one', notes: '', work_item_type: 'ad_hoc', work_item_id: null,
+    scheduled_start: new Date('2026-10-06T11:00:00Z'), scheduled_end: new Date('2026-10-06T12:30:00Z') });
+  expect(updated).toMatchObject({ success: true, entry: { title: 'Rescheduled one', notes: '', work_item_id: null, is_recurring: false, recurrence_pattern: null } });
+  const after = await calendar(); expect(after.entries).toHaveLength(5);
+  expect(after.entries.some((row: any) => row.entry_id === second.entry_id)).toBe(false);
+  expect(after.entries.find((row: any) => row.entry_id === updated.entry.entry_id).scheduled_start.toISOString()).toBe('2026-10-06T11:00:00.000Z');
+  expect(await customer.table('schedule_entries').where('entry_id', series.entry_id).first()).toMatchObject({ work_item_type: 'project_task', work_item_id: resource.id });
+  expect(events.mock.calls.map(([event]: any) => [event.eventType, event.payload.entryId])).toEqual([['SCHEDULE_ENTRY_UPDATED', series.entry_id], ['SCHEDULE_ENTRY_CREATED', updated.entry.entry_id]]);
+  expect(await native.updateScheduleEntry(second.entry_id, { updateType: 'single', title: 'Stale retry' })).toMatchObject({ success: false });
+}));
+
+it('native schedule commands split future occurrences without restarting their count or duration', async () => withNativeScheduleCommandFixture(async ({ createSeries, native, calendar, events }: any) => {
+  const series = await createSeries(); const third = (await calendar()).entries[2]; events.mockClear();
+  const updated = await native.updateScheduleEntry(third.entry_id, { updateType: 'future', title: 'Future allocation', notes: '' });
+  expect(updated).toMatchObject({ success: true, entry: { notes: '', recurrence_pattern: { count: 3 } } });
+  expect(updated.entry.scheduled_start.toISOString()).toBe('2026-10-07T09:00:00.000Z');
+  expect(updated.entry.scheduled_end.toISOString()).toBe('2026-10-07T10:30:00.000Z');
+  const after = await calendar(); expect(after.entries).toHaveLength(5);
+  expect(after.entries.map((row: any) => row.title)).toEqual(['Native allocation', 'Native allocation', 'Future allocation', 'Future allocation', 'Future allocation']);
+  expect(events.mock.calls.map(([event]: any) => event.payload.entryId)).toEqual([series.entry_id, updated.entry.entry_id]);
+}));
+
+it('native schedule commands update all occurrences from a virtual ID while retaining the original series anchor', async () => withNativeScheduleCommandFixture(async ({ createSeries, native, calendar }: any) => {
+  const series = await createSeries(); const fourth = (await calendar()).entries[3];
+  const updated = await native.updateScheduleEntry(fourth.entry_id, { updateType: 'all', title: 'All changed', notes: '', is_private: true,
+    scheduled_start: new Date('2026-10-08T11:00:00Z'), scheduled_end: new Date('2026-10-08T12:00:00Z') });
+  expect(updated).toMatchObject({ success: true, entry: { entry_id: series.entry_id, title: 'All changed', notes: '', is_private: true } });
+  expect(updated.entry.scheduled_start.toISOString()).toBe('2026-10-05T11:00:00.000Z');
+  const after = await calendar(); expect(after.entries).toHaveLength(5);
+  expect(after.entries.every((row: any) => row.scheduled_start.getUTCHours() === 11)).toBe(true);
+  expect(await native.updateScheduleEntry(series.entry_id, { updateType: 'all', recurrence_pattern: null })).toMatchObject({ success: true, entry: { is_recurring: false, recurrence_pattern: null } });
+  expect((await calendar()).entries).toHaveLength(1);
+}));
+
+it('native schedule commands cancel single future and all scopes without dropping the retained master early', async () => withNativeScheduleCommandFixture(async ({ createSeries, native, calendar, customer, events }: any) => {
+  const series = await createSeries(); events.mockClear();
+  expect(await native.deleteScheduleEntry(series.entry_id, 'single')).toMatchObject({ success: true });
+  expect(await customer.table('schedule_entries').where('entry_id', series.entry_id)).toHaveLength(1);
+  let rows = (await calendar()).entries; expect(rows).toHaveLength(4);
+  expect(events.mock.calls[0][0]).toMatchObject({ eventType: 'SCHEDULE_ENTRY_UPDATED', payload: { entryId: series.entry_id } });
+  expect(await native.deleteScheduleEntry(rows[2].entry_id, 'future')).toMatchObject({ success: true });
+  rows = (await calendar()).entries; expect(rows).toHaveLength(2);
+  expect(await native.deleteScheduleEntry(rows[0].entry_id, 'all')).toMatchObject({ success: true });
+  expect((await calendar()).entries).toHaveLength(0);
+  expect(await customer.table('schedule_entries').where('entry_id', series.entry_id)).toHaveLength(0);
+  expect(events.mock.calls.at(-1)[0]).toMatchObject({ eventType: 'SCHEDULE_ENTRY_DELETED' });
+}));
+
+it('native schedule commands reject forged excluded and out-of-scope virtual occurrences', async () => withNativeScheduleCommandFixture(async ({ createSeries, native, calendar, customer, context, resource, user }: any) => {
+  const series = await createSeries();
+  expect(await native.updateScheduleEntry(`${series.entry_id}_${Date.parse('2026-10-20T09:00:00Z')}`, { updateType: 'single', title: 'Forged future' })).toMatchObject({ success: false });
+  expect(await native.deleteScheduleEntry(`${series.entry_id}_${Date.parse('2026-10-06T09:01:00Z')}`, 'all')).toMatchObject({ success: false });
+  const second = (await calendar()).entries[1];
+  await customer.table('holidays').insert({ tenant: context.tenant, holiday_name: 'Excluded appointment day', holiday_date: '2026-10-06', is_recurring: false });
+  expect(await native.deleteScheduleEntry(second.entry_id, 'single')).toMatchObject({ success: false });
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: resource.tenant, name: 'Native recurrence command mask', actorUserId: user.user_id });
+  await bundles.upsertBundleRule(db, { tenant: resource.tenant, bundleId, revisionId, resourceType: 'user_schedule', action: 'update', templateKey: 'assigned', config: { redactedFields: ['recurrence_pattern'] } });
+  await bundles.publishBundleRevision(db, { tenant: resource.tenant, bundleId, revisionId, actorUserId: user.user_id });
+  await bundles.createBundleAssignment(db, { tenant: resource.tenant, bundleId, targetType: 'user', targetId: user.user_id });
+  const first = (await calendar()).entries[0];
+  expect(await native.updateScheduleEntry(first.entry_id, { updateType: 'single', title: 'Masked change' })).toMatchObject({ success: false });
+  expect((await calendar()).entries).toHaveLength(4);
+}));
+
+it('native schedule commands roll series children assignments and events back on final session expiry', async () => withNativeScheduleCommandFixture(async ({ createSeries, native, calendar, customer, sessionId, events }: any) => {
+  const series = await createSeries(); const third = (await calendar()).entries[2];
+  await db.raw(`CREATE FUNCTION expire_native_schedule_session() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN UPDATE sessions SET expires_at = clock_timestamp() - interval '1 second' WHERE tenant = COALESCE(NEW.tenant, OLD.tenant) AND session_id = '${sessionId}'::uuid; RETURN COALESCE(NEW, OLD); END $$`);
+  await db.raw('CREATE TRIGGER expire_native_schedule_session AFTER INSERT OR UPDATE OR DELETE ON schedule_entries FOR EACH ROW EXECUTE FUNCTION expire_native_schedule_session()');
+  events.mockClear();
+  try {
+    expect(await native.updateScheduleEntry(third.entry_id, { updateType: 'future', title: 'Rolled back split' })).toMatchObject({ success: false });
+    expect(await native.deleteScheduleEntry(third.entry_id, 'single')).toMatchObject({ success: false });
+    expect(await native.deleteScheduleEntry(series.entry_id, 'all')).toMatchObject({ success: false });
+    expect((await calendar()).entries).toHaveLength(5);
+    expect(await customer.table('schedule_entries').where('title', 'Rolled back split')).toHaveLength(0);
+    expect(await customer.table('schedule_entry_assignees').where('entry_id', series.entry_id)).toHaveLength(1);
+    expect(events).not.toHaveBeenCalled();
+  } finally { await db.raw('DROP TRIGGER expire_native_schedule_session ON schedule_entries'); await db.raw('DROP FUNCTION expire_native_schedule_session()'); }
+}));
+
+it('native schedule commands preserve recorded time when cancelling an occurrence and refuse destruction of its master', async () => withNativeScheduleCommandFixture(async ({ createSeries, native, calendar, sheetService, create, context, customer }: any) => {
+  const series = await createSeries();
+  await sheetService.createTimePeriod({ start_date: '2026-10-05', end_date: '2026-10-12' }, context);
+  const time = await create({ work_item_type: 'ad_hoc', work_item_id: series.entry_id, start_time: '2026-10-05T09:00:00Z', end_time: '2026-10-05T10:00:00Z' });
+  expect(await native.deleteScheduleEntry(series.entry_id, 'single')).toMatchObject({ success: true });
+  expect((await calendar()).entries).toHaveLength(4);
+  expect(await native.deleteScheduleEntry(series.entry_id, 'all')).toMatchObject({ success: false });
+  expect(await customer.table('schedule_entries').where('entry_id', series.entry_id)).toHaveLength(1);
+  expect(await customer.table('time_entries').where('entry_id', time.entry_id).first()).toMatchObject({ work_item_id: series.entry_id });
+}));
+
+async function withScheduleAppointmentFixture(work: (fixture: any) => Promise<void>) {
+  await withNativeScheduleCommandFixture(async (fixture: any) => {
+    const { customer, context, ownId, operation } = fixture;
+    const requestId = randomUUID(), meetingId = randomUUID(), serviceId = randomUUID(), typeId = randomUUID();
+    await customer.table('service_types').insert({ tenant: context.tenant, id: typeId, name: 'Appointment service type' });
+    await customer.table('service_catalog').insert({ tenant: context.tenant, service_id: serviceId, service_name: 'IT appointment', billing_method: 'hourly', custom_service_type_id: typeId });
+    await customer.table('appointment_requests').insert({ tenant: context.tenant, appointment_request_id: requestId, service_id: serviceId, client_id: operation.customer_client_id,
+      requested_date: '2026-09-07', requested_time: '05:00:00', requested_duration: 90, requester_timezone: 'America/New_York', status: 'approved',
+      schedule_entry_id: ownId, preferred_assigned_user_id: context.userId, online_meeting_provider: 'teams', online_meeting_id: `provider-${meetingId}`, online_meeting_url: 'https://meeting.test.invalid/join' });
+    await customer.table('schedule_entries').where('entry_id', ownId).update({ work_item_type: 'appointment_request', work_item_id: requestId });
+    const meeting = { tenant: context.tenant, meeting_id: meetingId, provider: 'teams', provider_meeting_id: `provider-${meetingId}`, provider_event_id: `event-${meetingId}`,
+      subject: 'Previously disclosed appointment', join_url: 'https://meeting.test.invalid/join', start_time: '2026-09-07T09:00:00Z', end_time: '2026-09-07T10:30:00Z', status: 'scheduled', schedule_entry_id: ownId, appointment_request_id: requestId };
+    await customer.table('online_meetings').insert(meeting);
+    await work({ ...fixture, requestId, meetingId, meeting });
+  });
+}
+
+it('customer schedule relations move request wall-clock dates and queue meeting updates in the same command', async () => withScheduleAppointmentFixture(async ({ native, ownId, customer, requestId, meetingId, context }: any) => {
+  const changed = await native.updateScheduleEntry(ownId, { scheduled_start: new Date('2026-09-15T09:30:00Z'), scheduled_end: new Date('2026-09-15T11:00:00Z'), title: 'Internal calendar title', notes: 'Internal calendar note' });
+  expect(changed.success).toBe(true);
+  const request = await customer.table('appointment_requests').where('appointment_request_id', requestId).first();
+  expect((await import('@alga-psa/db')).timePeriodCalendarDate(request.requested_date)).toBe('2026-09-15');
+  expect(request).toMatchObject({ requested_time: '05:30:00', requested_duration: 90, preferred_assigned_user_id: context.userId, status: 'approved', schedule_entry_id: ownId });
+  const meeting = await customer.table('online_meetings').where('meeting_id', meetingId).first();
+  expect(meeting.start_time.toISOString()).toBe('2026-09-15T09:30:00.000Z');
+  expect(meeting).toMatchObject({ subject: 'Previously disclosed appointment', co_managed_sync_action: 'update', co_managed_sync_attempts: 0, co_managed_sync_last_error: null });
+  expect(meeting.co_managed_sync_operation_id).toMatch(/^[a-f0-9-]{36}$/);
+  expect(JSON.stringify(changed)).not.toContain('co_managed_sync');
+}));
+
+it('customer schedule relations cancel linked requests meetings and conflicts atomically while retaining provider IDs', async () => withScheduleAppointmentFixture(async ({ native, ownId, busyId, customer, context, requestId, meetingId }: any) => {
+  await customer.table('schedule_conflicts').insert({ tenant: context.tenant, entry_id_1: ownId, entry_id_2: busyId, conflict_type: 'overlap' });
+  expect(await native.deleteScheduleEntry(ownId)).toMatchObject({ success: true, deleted: true });
+  expect(await customer.table('schedule_entries').where('entry_id', ownId)).toHaveLength(0);
+  expect(await customer.table('schedule_conflicts')).toHaveLength(0);
+  expect(await customer.table('appointment_requests').where('appointment_request_id', requestId).first()).toMatchObject({ status: 'cancelled', schedule_entry_id: null, online_meeting_provider: null, online_meeting_id: null, online_meeting_url: null });
+  const meeting = await customer.table('online_meetings').where('meeting_id', meetingId).first();
+  expect(meeting).toMatchObject({ status: 'cancelled', provider_meeting_id: `provider-${meetingId}`, provider_event_id: `event-${meetingId}`, co_managed_sync_action: 'delete' });
+  expect(meeting.co_managed_sync_operation_id).toBeTruthy();
+  await expect(require('../../../migrations/20260908011054_add_co_managed_meeting_sync_intents.cjs').down(db)).rejects.toThrow(/pending co-managed meeting/);
+}));
+
+it('customer schedule relations retain request-only provider identity before clearing live join fields', async () => withScheduleAppointmentFixture(async ({ native, ownId, customer, meetingId, requestId }: any) => {
+  await customer.table('online_meetings').where('meeting_id', meetingId).del();
+  expect(await native.deleteScheduleEntry(ownId)).toMatchObject({ success: true });
+  const rows = await customer.table('online_meetings').where('appointment_request_id', requestId);
+  expect(rows).toHaveLength(1);
+  expect(rows[0]).toMatchObject({ provider_meeting_id: `provider-${meetingId}`, status: 'cancelled', co_managed_sync_action: 'delete' });
+  expect(await customer.table('appointment_requests').where('appointment_request_id', requestId).first()).toMatchObject({ online_meeting_id: null, online_meeting_url: null });
+}));
+
+it('customer schedule relations enforce canonical request binding and cannot approve pending requests through calendar edits', async () => withScheduleAppointmentFixture(async ({ native, ownId, taskId, customer, requestId, createSchedule }: any) => {
+  await customer.table('appointment_requests').where('appointment_request_id', requestId).update({ schedule_entry_id: taskId });
+  expect(await native.updateScheduleEntry(ownId, { title: 'Wrong binding' })).toMatchObject({ success: false });
+  await customer.table('appointment_requests').where('appointment_request_id', requestId).update({ schedule_entry_id: ownId, status: 'pending' });
+  expect(await native.updateScheduleEntry(ownId, { title: 'Implicit approval' })).toMatchObject({ success: false });
+  expect(await createSchedule({ work_item_type: 'appointment_request', work_item_id: requestId })).toMatchObject({ success: false });
+  expect(await customer.table('schedule_entries')).toHaveLength(3);
+  expect(await customer.table('schedule_entries').where('entry_id', ownId).first()).toMatchObject({ title: 'Own appointment' });
+  expect(await customer.table('appointment_requests').where('appointment_request_id', requestId).first()).toMatchObject({ status: 'pending', schedule_entry_id: ownId });
+}));
+
+it('customer schedule relations roll request meeting intents and conflict cleanup back on final key expiry', async () => withScheduleAppointmentFixture(async ({ sheetService, context, ownId, busyId, customer, meetingId, requestId }: any) => {
+  await customer.table('schedule_conflicts').insert({ tenant: context.tenant, entry_id_1: ownId, entry_id_2: busyId, conflict_type: 'overlap' });
+  await db.raw(`CREATE FUNCTION expire_schedule_relation_key() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN UPDATE api_keys SET expires_at = clock_timestamp() - interval '1 second' WHERE tenant = NEW.tenant AND api_key_id = '${context.apiKeyId}'::uuid; RETURN NEW; END $$`);
+  await db.raw('CREATE TRIGGER expire_schedule_relation_key AFTER UPDATE ON online_meetings FOR EACH ROW EXECUTE FUNCTION expire_schedule_relation_key()');
+  try {
+    await expect(sheetService.updateScheduleEntry(ownId, { scheduled_start: '2026-09-15T09:00:00Z', scheduled_end: '2026-09-15T10:00:00Z' }, context)).rejects.toMatchObject({ statusCode: 403 });
+    await expect(sheetService.deleteScheduleEntry(ownId, context)).rejects.toMatchObject({ statusCode: 403 });
+    expect(await customer.table('schedule_entries').where('entry_id', ownId)).toHaveLength(1);
+    expect(await customer.table('schedule_conflicts')).toHaveLength(1);
+    expect(await customer.table('appointment_requests').where('appointment_request_id', requestId).first()).toMatchObject({ status: 'approved', schedule_entry_id: ownId });
+    expect(await customer.table('online_meetings').where('meeting_id', meetingId).first()).toMatchObject({ status: 'scheduled', co_managed_sync_operation_id: null, co_managed_sync_action: null });
+  } finally { await db.raw('DROP TRIGGER expire_schedule_relation_key ON online_meetings'); await db.raw('DROP FUNCTION expire_schedule_relation_key()'); }
+}));
+
+async function withScheduleMeetingSyncFixture(work: (fixture: any) => Promise<void>) {
+  return withScheduleAppointmentFixture(async (fixture: any) => {
+    const { native, ownId, customer, meetingId, context } = fixture;
+    await customer.table('online_meetings').where('meeting_id', meetingId).update({ organizer_user_id: 'original-organizer' });
+    expect(await native.updateScheduleEntry(ownId, { scheduled_start: new Date('2026-09-15T09:30:00Z'), scheduled_end: new Date('2026-09-15T11:00:00Z'), notes: 'Never send these private notes' })).toMatchObject({ success: true });
+    const { synchronizeNativeScheduleMeeting } = await import('@alga-psa/co-managed');
+    const identity = { tenant: context.tenant, meetingId, operationId: (await customer.table('online_meetings').where('meeting_id', meetingId).first()).co_managed_sync_operation_id };
+    const deliver = vi.fn().mockResolvedValue({ status: 'updated' });
+    const run = (extra: any = {}) => synchronizeNativeScheduleMeeting(db, { ...identity, ...extra }, deliver);
+    await work({ ...fixture, identity, deliver, run });
+  });
+}
+
+it('customer schedule meeting sync sends only committed provider identity and clock fields and clears confirmed intent', async () => withScheduleMeetingSyncFixture(async ({ run, deliver, customer, meetingId, context, requestId }: any) => {
+  expect(await run()).toEqual({ status: 'synchronized' });
+  expect(deliver).toHaveBeenCalledWith({ action: 'update', tenantId: context.tenant, meetingId: `provider-${meetingId}`, eventId: `event-${meetingId}`, organizerUserId: 'original-organizer', appointmentRequestId: requestId,
+    startDateTime: '2026-09-15T09:30:00.000Z', endDateTime: '2026-09-15T11:00:00.000Z' });
+  expect(await customer.table('online_meetings').where('meeting_id', meetingId).first()).toMatchObject({ co_managed_sync_operation_id: null, co_managed_sync_action: null, co_managed_sync_requested_at: null, co_managed_sync_attempts: 1, co_managed_sync_last_error: null });
+  expect(await run()).toEqual({ status: 'obsolete' });
+  expect(deliver).toHaveBeenCalledTimes(1);
+}));
+
+it('customer schedule meeting sync retains failures with bounded backoff and replays provider deletion idempotently', async () => withScheduleMeetingSyncFixture(async ({ run, deliver, customer, native, ownId, meetingId, identity }: any) => {
+  deliver.mockRejectedValueOnce(new Error('Transport contained private URL and secret'));
+  expect(await run()).toEqual({ status: 'retry' });
+  expect(await run()).toEqual({ status: 'deferred' });
+  expect(deliver).toHaveBeenCalledTimes(1);
+  expect(await customer.table('online_meetings').where('meeting_id', meetingId).first()).toMatchObject({ co_managed_sync_operation_id: identity.operationId, co_managed_sync_last_error: 'provider_exception', co_managed_sync_attempts: 1 });
+  await customer.table('online_meetings').where('meeting_id', meetingId).update({ co_managed_sync_attempted_at: db.raw("clock_timestamp() - interval '2 hours'") });
+  deliver.mockResolvedValueOnce({ status: 'skipped', reason: 'not_configured' });
+  expect(await run()).toEqual({ status: 'retry' });
+  expect(await customer.table('online_meetings').where('meeting_id', meetingId).first()).toMatchObject({ co_managed_sync_last_error: 'skipped_not_configured' });
+  expect(await native.deleteScheduleEntry(ownId)).toMatchObject({ success: true });
+  expect(await run()).toEqual({ status: 'obsolete' });
+  const next = await customer.table('online_meetings').where('meeting_id', meetingId).first();
+  deliver.mockResolvedValueOnce({ status: 'deleted', alreadyDeleted: true });
+  expect(await run({ operationId: next.co_managed_sync_operation_id })).toEqual({ status: 'synchronized' });
+  expect(deliver.mock.lastCall[0]).toMatchObject({ action: 'delete', meetingId: `provider-${meetingId}` });
+}));
+
+it('customer schedule meeting sync serializes duplicate workers and rejects foreign stale or inconsistent operations', async () => withScheduleMeetingSyncFixture(async ({ run, deliver, customer, meetingId, principal }: any) => {
+  expect(await run({ tenant: principal.tenant })).toEqual({ status: 'obsolete' });
+  expect(await run({ operationId: randomUUID() })).toEqual({ status: 'obsolete' });
+  await customer.table('online_meetings').where('meeting_id', meetingId).update({ provider_event_id: null });
+  expect(await run()).toEqual({ status: 'retry' });
+  expect(await customer.table('online_meetings').where('meeting_id', meetingId).first()).toMatchObject({ co_managed_sync_last_error: 'provider_binding_incomplete' });
+  expect(deliver).not.toHaveBeenCalled();
+  await customer.table('online_meetings').where('meeting_id', meetingId).update({ provider_event_id: `event-${meetingId}`, status: 'cancelled', co_managed_sync_attempted_at: null });
+  expect(await run()).toEqual({ status: 'retry' });
+  expect(deliver).not.toHaveBeenCalled();
+  await customer.table('online_meetings').where('meeting_id', meetingId).update({ status: 'scheduled', co_managed_sync_attempted_at: null });
+  const results = await Promise.all([run(), run()]);
+  expect(results.map(result => result.status).sort()).toEqual(['obsolete', 'synchronized']);
+  expect(deliver).toHaveBeenCalledTimes(1);
+}));
+
+it('customer schedule meeting sync defers suspended and read-only workspaces without dropping pending operations', async () => withScheduleMeetingSyncFixture(async ({ run, deliver, customer, principal, identity, meetingId }: any) => {
+  await customer.table('tenants').update({ suspended_at: db.fn.now() });
+  expect(await run()).toEqual({ status: 'deferred' });
+  await customer.table('tenants').update({ suspended_at: null });
+  await expireCoManagedEntitlement(principal.tenant);
+  expect(await run()).toEqual({ status: 'deferred' });
+  expect(deliver).not.toHaveBeenCalled();
+  expect(await customer.table('online_meetings').where('meeting_id', meetingId).first()).toMatchObject({ co_managed_sync_operation_id: identity.operationId, co_managed_sync_attempts: 0 });
+}));
+
+it('customer schedule meeting sync sweep uses the retained consumer and a successful replay does not call the provider twice', async () => withScheduleMeetingSyncFixture(async ({ customer, context, meetingId }: any) => {
+  const providerModule = await import('../../../../packages/scheduling/src/lib/teamsMeetingService');
+  const update = vi.fn().mockResolvedValue({ status: 'updated' }), remove = vi.fn();
+  const spy = vi.spyOn(providerModule, 'resolveTeamsMeetingService').mockResolvedValue({ updateTeamsMeetingWithResult: update, deleteTeamsMeetingWithResult: remove } as any);
+  try {
+    const { synchronizeCoManagedScheduleMeetings } = await import('../../../../packages/scheduling/src/lib/scheduleMeetingSynchronization');
+    expect(await synchronizeCoManagedScheduleMeetings(db, context.tenant)).toEqual([{ status: 'synchronized' }]);
+    expect(update).toHaveBeenCalledTimes(1);
+    expect(update.mock.lastCall[0]).toMatchObject({ organizerUserId: 'original-organizer', eventId: `event-${meetingId}` });
+    expect(update.mock.lastCall[0]).not.toHaveProperty('action');
+    expect(update.mock.lastCall[0]).not.toHaveProperty('attendees');
+    expect(await synchronizeCoManagedScheduleMeetings(db, context.tenant)).toEqual([]);
+    expect(update).toHaveBeenCalledTimes(1); expect(remove).not.toHaveBeenCalled();
+  } finally { spy.mockRestore(); }
+}));
+
+it('customer schedule meeting sync retains the actual operation through provider execution and leaves subsequent edits pending', async () => withScheduleMeetingSyncFixture(async ({ run, deliver, customer, native, ownId, meetingId, identity }: any) => {
+  deliver.mockImplementationOnce(async () => {
+    await expect(db.transaction(async trx => {
+      await tenantDb(trx, identity.tenant).table('online_meetings').where('meeting_id', meetingId).forUpdate().noWait().first();
+    })).rejects.toMatchObject({ code: '55P03' });
+    return { status: 'updated' };
+  });
+  expect(await run()).toEqual({ status: 'synchronized' });
+  expect(await native.updateScheduleEntry(ownId, { scheduled_start: new Date('2026-09-16T09:00:00Z'), scheduled_end: new Date('2026-09-16T10:00:00Z') })).toMatchObject({ success: true });
+  const next = await customer.table('online_meetings').where('meeting_id', meetingId).first();
+  expect(next.co_managed_sync_operation_id).not.toBe(identity.operationId);
+  expect(await run()).toEqual({ status: 'obsolete' });
+  expect(await run({ operationId: next.co_managed_sync_operation_id })).toEqual({ status: 'synchronized' });
+  expect(deliver.mock.lastCall[0]).toMatchObject({ startDateTime: '2026-09-16T09:00:00.000Z' });
+}));
+
+async function withAppointmentAuthorityFixture(work: (fixture: any) => Promise<void>) {
+  return withScheduleAppointmentFixture(async (fixture: any) => {
+    const { customer, requestId, context } = fixture;
+    await customer.table('appointment_requests').where('appointment_request_id', requestId).update({ description: 'Private appointment description', requester_name: 'Appointment requester', requester_email: 'requester@example.invalid' });
+    const appointment = await import('../../../../packages/scheduling/src/actions/appointmentRequestManagementActions');
+    const domain = await import('@alga-psa/co-managed');
+    const actor = async () => ({ kind: 'api_key' as const, tenant: context.tenant, userId: context.userId, apiKeyId: context.apiKeyId });
+    const read = (options: any = {}) => domain.readCoManagedNativeAppointmentRequests(db, context.tenant, actor, options);
+    await work({ ...fixture, appointment, domain, actor, read });
+  });
+}
+
+it('customer appointment authority applies the same actual technician scope to list and detail', async () => withAppointmentAuthorityFixture(async ({ appointment, customer, context, requestId }: any) => {
+  const base = await customer.table('appointment_requests').where('appointment_request_id', requestId).first();
+  const otherId = randomUUID();
+  await customer.table('appointment_requests').insert({ ...base, appointment_request_id: otherId, preferred_assigned_user_id: null, schedule_entry_id: null });
+  await customer.table('role_permissions').whereIn('permission_id', customer.table('permissions').where(builder => builder.where({ resource: 'user_schedule', action: 'update' }).orWhere({ resource: 'user', action: 'read' })).select('permission_id')).del();
+  expect((await appointment.getAppointmentRequests()).data.map((row: any) => row.appointment_request_id)).toEqual([requestId]);
+  expect(await appointment.getAppointmentRequestById(requestId)).toMatchObject({ success: true, data: { appointment_request_id: requestId, requested_date: '2026-09-07', description: 'Private appointment description' } });
+  expect(await appointment.getAppointmentRequestById(otherId)).toMatchObject({ success: false });
+  expect(await appointment.getAppointmentRequestsByTicketId(randomUUID())).toMatchObject({ success: false });
+  await customer.table('availability_settings').insert({ tenant: context.tenant, setting_type: 'general_settings', config_json: { approver_user_ids: [context.userId] } });
+  expect((await appointment.getAppointmentRequests()).data).toHaveLength(2);
+  expect(await appointment.getAppointmentRequestById(otherId)).toMatchObject({ success: true });
+}));
+
+it('customer appointment authority filters projected fields and keeps API-key masks separate from native sessions', async () => withAppointmentAuthorityFixture(async ({ read, appointment, context, requestId, user, customer }: any) => {
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: context.tenant, name: 'Appointment field scope', actorUserId: user.user_id });
+  await bundles.upsertBundleRule(db, { tenant: context.tenant, bundleId, revisionId, resourceType: 'user_schedule', action: 'read', templateKey: 'assigned', config: { redactedFields: ['description', 'requester_email', 'requested_date'] } });
+  await bundles.publishBundleRevision(db, { tenant: context.tenant, bundleId, revisionId, actorUserId: user.user_id });
+  await bundles.createBundleAssignment(db, { tenant: context.tenant, bundleId, targetType: 'api_key', targetId: context.apiKeyId });
+  const result = await read({ id: requestId });
+  expect(result.requests[0]).not.toHaveProperty('description'); expect(result.requests[0]).not.toHaveProperty('requester_email');
+  expect((await read({ filters: { search_query: 'Private appointment description' } })).requests).toEqual([]);
+  expect((await read({ filters: { start_date: '2026-09-01' } })).requests).toEqual([]);
+  expect(await appointment.getAppointmentRequestById(requestId)).toMatchObject({ success: true, data: { description: 'Private appointment description' } });
+  await customer.table('api_keys').where('api_key_id', context.apiKeyId).update({ active: false });
+  await expect(read()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+}));
+
+it('customer appointment authority declines approved bookings with atomic request meeting and conflict cleanup', async () => withAppointmentAuthorityFixture(async ({ appointment, customer, context, requestId, ownId, busyId, meetingId, events }: any) => {
+  await customer.table('schedule_conflicts').insert({ tenant: context.tenant, entry_id_1: ownId, entry_id_2: busyId, conflict_type: 'overlap' });
+  events.mockClear();
+  expect(await appointment.declineAppointmentRequest({ appointment_request_id: requestId, decline_reason: 'Please choose another appointment' })).toEqual({ success: true });
+  expect(await customer.table('schedule_entries').where('entry_id', ownId)).toEqual([]);
+  expect(await customer.table('schedule_conflicts')).toEqual([]);
+  expect(await customer.table('appointment_requests').where('appointment_request_id', requestId).first()).toMatchObject({ status: 'declined', declined_reason: 'Please choose another appointment', schedule_entry_id: null, online_meeting_id: null, approved_by_user_id: context.userId });
+  expect(await customer.table('online_meetings').where('meeting_id', meetingId).first()).toMatchObject({ status: 'cancelled', co_managed_sync_action: 'delete' });
+  expect(events).toHaveBeenCalledWith({ eventType: 'SCHEDULE_ENTRY_DELETED', payload: { tenantId: context.tenant, userId: context.userId, entryId: ownId } });
+  expect(await appointment.declineAppointmentRequest({ appointment_request_id: requestId, decline_reason: 'Duplicate' })).toMatchObject({ success: false });
+}));
+
+it('customer appointment authority honors current configured approvers while rejecting unapproved technicians', async () => withAppointmentAuthorityFixture(async ({ appointment, customer, context, requestId }: any) => {
+  await customer.table('role_permissions').whereIn('permission_id', customer.table('permissions').where({ resource: 'user_schedule', action: 'update' }).select('permission_id')).del();
+  expect(await appointment.declineAppointmentRequest({ appointment_request_id: requestId, decline_reason: 'Not permitted' })).toMatchObject({ success: false });
+  const id = randomUUID();
+  await customer.table('availability_settings').insert({ tenant: context.tenant, availability_setting_id: id, setting_type: 'user_hours', user_id: context.userId, config_json: { default_approver_id: context.userId } });
+  expect(await appointment.declineAppointmentRequest({ appointment_request_id: requestId, decline_reason: 'Configured approver' })).toMatchObject({ success: true });
+}));
+
+it('customer appointment authority rolls decline back on final credential expiry and defers writes during lapse', async () => withAppointmentAuthorityFixture(async ({ domain, actor, customer, context, requestId, ownId, meetingId, principal }: any) => {
+  const publish = vi.fn();
+  const decline = () => domain.declineCoManagedNativeAppointment(db, context.tenant, { id: requestId, reason: 'Cannot make it' }, actor, publish);
+  await db.raw(`CREATE FUNCTION expire_appointment_decline_key() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN UPDATE api_keys SET expires_at = clock_timestamp() - interval '1 second' WHERE tenant = NEW.tenant AND api_key_id = '${context.apiKeyId}'::uuid; RETURN NEW; END $$`);
+  await db.raw('CREATE TRIGGER expire_appointment_decline_key AFTER UPDATE ON appointment_requests FOR EACH ROW EXECUTE FUNCTION expire_appointment_decline_key()');
+  try {
+    await expect(decline()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    expect(await customer.table('appointment_requests').where('appointment_request_id', requestId).first()).toMatchObject({ status: 'approved', schedule_entry_id: ownId });
+    expect(await customer.table('schedule_entries').where('entry_id', ownId)).toHaveLength(1);
+    expect(await customer.table('online_meetings').where('meeting_id', meetingId).first()).toMatchObject({ status: 'scheduled', co_managed_sync_operation_id: null });
+    expect(publish).not.toHaveBeenCalled();
+  } finally { await db.raw('DROP TRIGGER expire_appointment_decline_key ON appointment_requests'); await db.raw('DROP FUNCTION expire_appointment_decline_key()'); }
+  await expireCoManagedEntitlement(principal.tenant);
+  await expect(decline()).rejects.toMatchObject({ name: 'CoManagedLifecycleError' });
+}));
+
+it('customer appointment rescheduling keeps requester wall-clock calendar and meeting intent consistent', async () => withAppointmentAuthorityFixture(async ({ appointment, customer, requestId, ownId, meetingId, events, context }: any) => {
+  events.mockClear();
+  const result = await appointment.updateAppointmentRequestDateTime({ appointment_request_id: requestId, new_date: '2026-09-18', new_time: '14:00', new_timezone: 'Asia/Tokyo', new_duration: 45 });
+  expect(result).toMatchObject({ success: true, data: { requested_date: '2026-09-18', requested_time: '14:00:00', requester_timezone: 'Asia/Tokyo', requested_duration: 45, status: 'approved' } });
+  const schedule = await customer.table('schedule_entries').where('entry_id', ownId).first();
+  expect(schedule.scheduled_start.toISOString()).toBe('2026-09-18T05:00:00.000Z');
+  expect(schedule.scheduled_end.toISOString()).toBe('2026-09-18T05:45:00.000Z');
+  const meeting = await customer.table('online_meetings').where('meeting_id', meetingId).first();
+  expect(meeting).toMatchObject({ co_managed_sync_action: 'update', subject: 'Previously disclosed appointment' });
+  expect(meeting.start_time.toISOString()).toBe(schedule.scheduled_start.toISOString());
+  expect(events).toHaveBeenCalledWith({ eventType: 'SCHEDULE_ENTRY_UPDATED', payload: { tenantId: context.tenant, userId: context.userId, entryId: ownId } });
+}));
+
+it('customer appointment rescheduling supports pending requests without approving them and rejects impossible local times', async () => withAppointmentAuthorityFixture(async ({ appointment, customer, requestId, ownId, meetingId }: any) => {
+  await customer.table('online_meetings').where('meeting_id', meetingId).del();
+  await customer.table('appointment_requests').where('appointment_request_id', requestId).update({ status: 'pending', online_meeting_id: null, online_meeting_provider: null, online_meeting_url: null });
+  for (const [date, time] of [['2026-02-30', '12:00'], ['2026-03-08', '02:30']]) expect(await appointment.updateAppointmentRequestDateTime({ appointment_request_id: requestId, new_date: date, new_time: time, new_timezone: 'America/New_York' })).toMatchObject({ success: false });
+  expect(await appointment.updateAppointmentRequestDateTime({ appointment_request_id: requestId, new_date: '2026-09-19', new_time: '10:00' })).toMatchObject({ success: true, data: { status: 'pending', requested_date: '2026-09-19', requested_time: '10:00:00' } });
+  expect((await customer.table('schedule_entries').where('entry_id', ownId).first()).scheduled_start.toISOString()).toBe('2026-09-19T14:00:00.000Z');
+  expect(await customer.table('online_meetings')).toHaveLength(0);
+}));
+
+it('customer appointment rescheduling rolls back request calendar and meeting updates when final credentials expire', async () => withAppointmentAuthorityFixture(async ({ domain, actor, customer, context, requestId, ownId, meetingId }: any) => {
+  const publish = vi.fn();
+  await db.raw(`CREATE FUNCTION expire_appointment_reschedule_key() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN UPDATE api_keys SET expires_at = clock_timestamp() - interval '1 second' WHERE tenant = NEW.tenant AND api_key_id = '${context.apiKeyId}'::uuid; RETURN NEW; END $$`);
+  await db.raw('CREATE TRIGGER expire_appointment_reschedule_key AFTER UPDATE ON online_meetings FOR EACH ROW EXECUTE FUNCTION expire_appointment_reschedule_key()');
+  try {
+    await expect(domain.rescheduleCoManagedNativeAppointment(db, context.tenant, { id: requestId, date: '2026-09-18', time: '10:00' }, actor, publish)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    expect((await customer.table('schedule_entries').where('entry_id', ownId).first()).scheduled_start.toISOString()).toBe('2026-09-07T09:00:00.000Z');
+    expect(await customer.table('appointment_requests').where('appointment_request_id', requestId).first()).toMatchObject({ requested_time: '05:00:00', status: 'approved' });
+    expect(await customer.table('online_meetings').where('meeting_id', meetingId).first()).toMatchObject({ co_managed_sync_operation_id: null });
+    expect(publish).not.toHaveBeenCalled();
+  } finally { await db.raw('DROP TRIGGER expire_appointment_reschedule_key ON online_meetings'); await db.raw('DROP FUNCTION expire_appointment_reschedule_key()'); }
+}));
+
+async function withAppointmentApprovalFixture(work: (fixture: any) => Promise<void>) {
+  return withAppointmentAuthorityFixture(async (fixture: any) => {
+    const { customer, requestId, meetingId, context } = fixture;
+    await customer.table('online_meetings').where('meeting_id', meetingId).del();
+    await customer.table('appointment_requests').where('appointment_request_id', requestId).update({ status: 'pending', online_meeting_id: null, online_meeting_provider: null, online_meeting_url: null, approved_at: null, approved_by_user_id: null });
+    const approve = (extra: any = {}) => fixture.appointment.approveAppointmentRequest({ appointment_request_id: requestId, assigned_user_id: context.userId, ...extra });
+    await work({ ...fixture, approve });
+  });
+}
+
+it('customer appointment approval retains pending calendar identity and requester-local time without exposing internal notes', async () => withAppointmentApprovalFixture(async ({ approve, customer, requestId, ownId, context, events }: any) => {
+  events.mockClear();
+  const result = await approve({ internal_notes: 'IT approval note' });
+  expect(result).toMatchObject({ success: true, data: { status: 'approved', schedule_entry_id: ownId, preferred_assigned_user_id: context.userId, requested_date: '2026-09-07', requested_time: '05:00:00', requester_timezone: 'America/New_York' } });
+  expect(JSON.stringify(result)).not.toContain('IT approval note');
+  const schedule = await customer.table('schedule_entries').where('entry_id', ownId).first();
+  expect(schedule).toMatchObject({ title: 'Appointment: IT appointment', notes: 'Private appointment description\n\nIT approval note', work_item_type: 'appointment_request', work_item_id: requestId });
+  expect(schedule.scheduled_start.toISOString()).toBe('2026-09-07T09:00:00.000Z');
+  expect(events).toHaveBeenCalledWith({ eventType: 'SCHEDULE_ENTRY_UPDATED', payload: { tenantId: context.tenant, userId: context.userId, entryId: ownId } });
+  expect(await approve()).toMatchObject({ success: false });
+  expect(await customer.table('schedule_entries')).toHaveLength(3);
+}));
+
+it('customer appointment approval creates one actual allocation for an unlinked request and honors UTC form overrides', async () => withAppointmentApprovalFixture(async ({ approve, customer, requestId, ownId, context, events }: any) => {
+  await customer.table('appointment_requests').where('appointment_request_id', requestId).update({ schedule_entry_id: null });
+  await customer.table('schedule_entry_assignees').where('entry_id', ownId).del();
+  await customer.table('schedule_entries').where('entry_id', ownId).del();
+  events.mockClear();
+  const outcomes = await Promise.all([approve({ final_date: '2026-09-21', final_time: '09:30' }), approve({ final_date: '2026-09-21', final_time: '09:30' })]);
+  expect(outcomes.map(outcome => outcome.success).sort()).toEqual([false, true]);
+  const request = await customer.table('appointment_requests').where('appointment_request_id', requestId).first();
+  const rows = await customer.table('schedule_entries').where({ work_item_type: 'appointment_request', work_item_id: requestId });
+  expect(rows).toHaveLength(1); expect(rows[0].entry_id).toBe(request.schedule_entry_id);
+  expect(rows[0].scheduled_start.toISOString()).toBe('2026-09-21T09:30:00.000Z');
+  expect(request.requested_time).toBe('05:30:00');
+  expect(events).toHaveBeenCalledWith({ eventType: 'SCHEDULE_ENTRY_CREATED', payload: { tenantId: context.tenant, userId: context.userId, entryId: rows[0].entry_id } });
+}));
+
+it('customer appointment approval requires current approver scope active assignees and unmasked fields', async () => withAppointmentApprovalFixture(async ({ approve, customer, context, requestId, user, domain, actor }: any) => {
+  expect(await approve({ assigned_user_id: randomUUID() })).toMatchObject({ success: false });
+  await customer.table('role_permissions').whereIn('permission_id', customer.table('permissions').where({ resource: 'user_schedule', action: 'update' }).select('permission_id')).del();
+  expect(await approve()).toMatchObject({ success: false });
+  await customer.table('availability_settings').insert({ tenant: context.tenant, setting_type: 'general_settings', config_json: { approver_user_ids: [context.userId] } });
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: context.tenant, name: 'Approval content scope', actorUserId: user.user_id });
+  for (const action of ['read', 'update']) await bundles.upsertBundleRule(db, { tenant: context.tenant, bundleId, revisionId, resourceType: 'user_schedule', action, templateKey: 'assigned', config: { redactedFields: ['description'] } });
+  await bundles.publishBundleRevision(db, { tenant: context.tenant, bundleId, revisionId, actorUserId: user.user_id });
+  await bundles.createBundleAssignment(db, { tenant: context.tenant, bundleId, targetType: 'api_key', targetId: context.apiKeyId });
+  await expect(domain.approveCoManagedNativeAppointment(db, context.tenant, { id: requestId, assignedUserId: context.userId }, actor, vi.fn())).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(await approve()).toMatchObject({ success: true });
+}));
+
+it('customer appointment association preserves canonical appointment identity and permits later rescheduling', async () => withAppointmentApprovalFixture(async ({ appointment, approve, customer, requestId, ownId }: any) => {
+  const ticket = await customer.table('tickets').first('ticket_id');
+  expect(await appointment.associateRequestToTicket({ appointment_request_id: requestId, ticket_id: ticket.ticket_id })).toEqual({ success: true });
+  expect(await customer.table('schedule_entries').where('entry_id', ownId).first()).toMatchObject({ work_item_type: 'appointment_request', work_item_id: requestId });
+  expect(await customer.table('appointment_requests').where('appointment_request_id', requestId).first()).toMatchObject({ ticket_id: ticket.ticket_id });
+  expect(await approve()).toMatchObject({ success: true });
+  expect(await appointment.updateAppointmentRequestDateTime({ appointment_request_id: requestId, new_date: '2026-09-21', new_time: '10:00' })).toMatchObject({ success: true });
+}));
+
+it('customer appointment association rejects cross-client links and repairs only its actual legacy ticket allocation', async () => withAppointmentApprovalFixture(async ({ appointment, customer, requestId, ownId, context }: any) => {
+  const ticket = await customer.table('tickets').first();
+  const clientId = randomUUID(), otherTicketId = randomUUID();
+  await customer.table('clients').insert({ tenant: context.tenant, client_id: clientId, client_name: 'Another client' });
+  await customer.table('tickets').insert({ tenant: context.tenant, ticket_id: otherTicketId, ticket_number: 'OTHER-APPOINTMENT', title: 'Other client appointment', client_id: clientId, board_id: ticket.board_id, status_id: ticket.status_id, priority_id: ticket.priority_id, entered_by: context.userId });
+  expect(await appointment.associateRequestToTicket({ appointment_request_id: requestId, ticket_id: otherTicketId })).toMatchObject({ success: false });
+  await customer.table('appointment_requests').where('appointment_request_id', requestId).update({ ticket_id: ticket.ticket_id });
+  await customer.table('schedule_entries').where('entry_id', ownId).update({ work_item_type: 'ticket', work_item_id: ticket.ticket_id });
+  expect(await appointment.associateRequestToTicket({ appointment_request_id: requestId, ticket_id: ticket.ticket_id })).toMatchObject({ success: true });
+  expect(await customer.table('schedule_entries').where('entry_id', ownId).first()).toMatchObject({ work_item_type: 'appointment_request', work_item_id: requestId });
+  await customer.table('role_permissions').whereIn('permission_id', customer.table('permissions').where({ resource: 'ticket', action: 'read' }).select('permission_id')).del();
+  expect(await appointment.associateRequestToTicket({ appointment_request_id: requestId, ticket_id: ticket.ticket_id })).toMatchObject({ success: false });
+}));
+
+it('customer appointment approval and association roll back assignments and bindings on final credential expiry', async () => withAppointmentApprovalFixture(async ({ domain, actor, customer, context, requestId, ownId, events }: any) => {
+  const ticket = await customer.table('tickets').first('ticket_id');
+  const publish = vi.fn();
+  await db.raw(`CREATE FUNCTION expire_appointment_approval_key() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN UPDATE api_keys SET expires_at = clock_timestamp() - interval '1 second' WHERE tenant = NEW.tenant AND api_key_id = '${context.apiKeyId}'::uuid; RETURN NEW; END $$`);
+  await db.raw('CREATE TRIGGER expire_appointment_approval_key AFTER UPDATE ON appointment_requests FOR EACH ROW EXECUTE FUNCTION expire_appointment_approval_key()');
+  try {
+    await expect(domain.approveCoManagedNativeAppointment(db, context.tenant, { id: requestId, assignedUserId: context.userId, finalDate: '2026-09-21', finalTime: '09:30' }, actor, publish)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    await expect(domain.associateCoManagedNativeAppointmentTicket(db, context.tenant, { id: requestId, ticketId: ticket.ticket_id }, actor, publish)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    expect(await customer.table('appointment_requests').where('appointment_request_id', requestId).first()).toMatchObject({ status: 'pending', ticket_id: null, approved_at: null });
+    expect(await customer.table('schedule_entries').where('entry_id', ownId).first()).toMatchObject({ title: 'Own appointment', work_item_type: 'appointment_request', work_item_id: requestId });
+    expect(await customer.table('schedule_entry_assignees').where('entry_id', ownId)).toHaveLength(1);
+    expect(publish).not.toHaveBeenCalled();
+  } finally { await db.raw('DROP TRIGGER expire_appointment_approval_key ON appointment_requests'); await db.raw('DROP FUNCTION expire_appointment_approval_key()'); }
+}));
+
+it('customer meeting creation preparation reserves one immutable disclosure without approving or exposing credentials', async () => withAppointmentApprovalFixture(async ({ domain, actor, context, requestId, customer, ownId }: any) => {
+  const target = { microsoftTenantId: 'directory', organizerUserId: 'organizer', organizerUpn: 'organizer@example.invalid', sendMeetingInvites: true };
+  const prepare = () => domain.prepareCoManagedAppointmentMeeting(db, context.tenant, { id: requestId, assignedUserId: context.userId, internalNotes: 'Do not send this internal note' }, target, actor);
+  const [first, second] = await Promise.all([prepare(), prepare()]);
+  expect(first).toEqual(second); expect(first).toMatchObject({ handled: true, status: 'prepared' });
+  const rows = await customer.table('co_managed_meeting_creation_operations'); expect(rows).toHaveLength(1);
+  expect(rows[0]).toMatchObject({ requested_by: context.userId, credential_id: context.apiKeyId, credential_kind: 'api_key', external_attempted_at: null, status: 'prepared' });
+  expect(JSON.stringify(rows[0].provider_request)).not.toContain('Do not send this internal note');
+  expect(rows[0].approval_input.internalNotes).toBe('Do not send this internal note');
+  expect(JSON.stringify(first)).not.toContain(context.apiKeyId);
+  expect(await customer.table('appointment_requests').where('appointment_request_id', requestId).first()).toMatchObject({ status: 'pending', schedule_entry_id: ownId });
+  await expect(customer.table('co_managed_meeting_creation_operations').where('operation_id', first.operationId).update({ provider_request: '{}' })).rejects.toMatchObject({ code: '23514' });
+  await expect(require('../../../migrations/20260908021208_create_co_managed_meeting_creation_operations.cjs').down(db)).rejects.toThrow('retained meeting creation');
+}));
+
+it('customer meeting creation preparation rejects changed disclosures and revoked credentials while retaining the original operation', async () => withAppointmentApprovalFixture(async ({ domain, actor, context, requestId, customer }: any) => {
+  const target = { microsoftTenantId: 'directory', organizerUserId: 'organizer', organizerUpn: 'organizer@example.invalid', sendMeetingInvites: true };
+  const input = { id: requestId, assignedUserId: context.userId };
+  const prepare = (extra: any = {}) => domain.prepareCoManagedAppointmentMeeting(db, context.tenant, { ...input, ...extra }, target, actor);
+  const original = await prepare();
+  await expect(prepare({ finalTime: '10:00' })).rejects.toMatchObject({ code: 'MEETING_CREATION_OPERATION_CONFLICT' });
+  await customer.table('appointment_requests').where('appointment_request_id', requestId).update({ requester_email: 'changed@example.invalid' });
+  await expect(prepare()).rejects.toMatchObject({ code: 'MEETING_CREATION_OPERATION_CONFLICT' });
+  expect(await customer.table('co_managed_meeting_creation_operations')).toHaveLength(1);
+  expect(await customer.table('co_managed_meeting_creation_operations').first()).toMatchObject({ operation_id: original.operationId });
+  await customer.table('api_keys').where('api_key_id', context.apiKeyId).update({ active: false });
+  await expect(prepare()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+}));
+
+it('customer meeting creation preparation rolls back its reservation when credentials expire before commit', async () => withAppointmentApprovalFixture(async ({ domain, actor, context, requestId, customer }: any) => {
+  await db.raw(`CREATE FUNCTION expire_meeting_preparation_key() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN UPDATE api_keys SET expires_at = clock_timestamp() - interval '1 second' WHERE tenant = NEW.tenant AND api_key_id = '${context.apiKeyId}'::uuid; RETURN NEW; END $$`);
+  await db.raw('CREATE TRIGGER expire_meeting_preparation_key AFTER INSERT ON co_managed_meeting_creation_operations FOR EACH ROW EXECUTE FUNCTION expire_meeting_preparation_key()');
+  try {
+    await expect(domain.prepareCoManagedAppointmentMeeting(db, context.tenant, { id: requestId, assignedUserId: context.userId }, { microsoftTenantId: 'directory', organizerUserId: 'organizer', organizerUpn: 'organizer@example.invalid', sendMeetingInvites: true }, actor)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    expect(await customer.table('co_managed_meeting_creation_operations')).toHaveLength(0);
+    expect(await customer.table('appointment_requests').where('appointment_request_id', requestId).first()).toMatchObject({ status: 'pending' });
+  } finally { await db.raw('DROP TRIGGER expire_meeting_preparation_key ON co_managed_meeting_creation_operations'); await db.raw('DROP FUNCTION expire_meeting_preparation_key()'); }
+}));
+
+async function withMeetingCreationFixture(work: (fixture: any) => Promise<void>) {
+  return withAppointmentApprovalFixture(async (fixture: any) => {
+    const { domain, context, requestId, actor, customer, events } = fixture;
+    const target = { microsoftTenantId: 'directory', organizerUserId: 'organizer', organizerUpn: 'organizer@example.invalid', sendMeetingInvites: true };
+    const receipt = { eventId: `created-event-${requestId}`, organizerUserId: target.organizerUserId, organizerUpn: target.organizerUpn, microsoftTenantId: target.microsoftTenantId, joinWebUrl: 'https://teams.example.invalid/join' };
+    const meeting = { ...receipt, meetingId: `created-online-${requestId}` };
+    const provider = { target: vi.fn(async () => ({ status: 'ready', target })), create: vi.fn(async () => ({ status: 'created', meeting })),
+      recover: vi.fn(async () => ({ status: 'found', event: receipt, meetingId: meeting.meetingId })), remove: vi.fn(async () => ({ status: 'deleted' })) };
+    const input = { id: requestId, assignedUserId: context.userId };
+    const create = (without = false) => domain.approveCoManagedAppointmentWithMeeting(db, context.tenant, input, actor, events, provider, without);
+    const operation = () => customer.table('co_managed_meeting_creation_operations').where('appointment_request_id', requestId).first();
+    const recover = async () => {
+      const row = await operation();
+      await customer.table('co_managed_meeting_creation_operations').where('operation_id', row.operation_id).update({ next_attempt_at: db.raw("clock_timestamp() - interval '1 second'") });
+      return domain.recoverCoManagedAppointmentMeeting(db, context.tenant, row.operation_id, provider, events);
+    };
+    await work({ ...fixture, target, receipt, meeting, provider, input, create, operation, recover });
+  });
+}
+
+it('customer meeting creation execution attaches one actual event and approves its retained allocation atomically', async () => withMeetingCreationFixture(async ({ create, provider, customer, requestId, ownId, operation, meeting, events }: any) => {
+  events.mockClear();
+  const result = await create();
+  expect(result).toMatchObject({ handled: true, request: { status: 'approved', schedule_entry_id: ownId, online_meeting_id: meeting.meetingId, online_meeting_url: meeting.joinWebUrl } });
+  const row = await operation(); expect(row).toMatchObject({ status: 'attached', provider_meeting_id: meeting.meetingId }); expect(row.completed_at).toBeInstanceOf(Date);
+  expect(provider.create).toHaveBeenCalledOnce();
+  expect(provider.create.mock.lastCall[1]).toEqual({ operationId: row.operation_id, target: row.creation_target });
+  expect(await customer.table('online_meetings').where('appointment_request_id', requestId).first()).toMatchObject({ meeting_id: row.meeting_id, provider_event_id: meeting.eventId, schedule_entry_id: ownId, organizer_user_id: 'organizer' });
+  expect(events).toHaveBeenCalledOnce();
+  await expect(create()).rejects.toBeDefined(); expect(provider.create).toHaveBeenCalledOnce();
+}));
+
+it('customer meeting creation execution keeps lost-response cleanup separate from explicit approval without a meeting', async () => withMeetingCreationFixture(async ({ create, recover, provider, operation, customer, requestId }: any) => {
+  provider.create.mockRejectedValue(new Error('transport failed with secret provider details'));
+  expect(await create()).toEqual({ handled: true, meetingCreationFailed: true });
+  expect(await operation()).toMatchObject({ status: 'cleanup_pending', event_receipt: null, last_error_code: 'provider_creation_failed' });
+  expect(await customer.table('appointment_requests').where('appointment_request_id', requestId).first()).toMatchObject({ status: 'pending' });
+  expect(await create(true)).toMatchObject({ handled: true, request: { status: 'approved', online_meeting_id: null } });
+  expect(provider.create).toHaveBeenCalledOnce();
+  expect(await recover()).toEqual({ status: 'cleaned' }); expect(provider.remove).toHaveBeenCalledOnce();
+  expect(await customer.table('online_meetings').where('appointment_request_id', requestId)).toHaveLength(0);
+  expect(JSON.stringify(await operation())).not.toContain('secret provider details');
+}));
+
+it('customer meeting creation execution preserves the provider receipt when the original credential expires before attachment', async () => withMeetingCreationFixture(async ({ create, recover, operation, context, customer, requestId, meeting, provider, events }: any) => {
+  await db.raw(`CREATE FUNCTION expire_created_meeting_key() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.status = 'created' THEN UPDATE api_keys SET expires_at = clock_timestamp() - interval '1 second' WHERE tenant = NEW.tenant AND api_key_id = '${context.apiKeyId}'::uuid; END IF; RETURN NEW; END $$`);
+  await db.raw('CREATE TRIGGER expire_created_meeting_key AFTER UPDATE ON co_managed_meeting_creation_operations FOR EACH ROW EXECUTE FUNCTION expire_created_meeting_key()');
+  events.mockClear();
+  try {
+    await expect(create()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    expect(await operation()).toMatchObject({ status: 'cleanup_pending', event_receipt: { eventId: meeting.eventId }, provider_meeting_id: meeting.meetingId });
+    expect(await customer.table('appointment_requests').where('appointment_request_id', requestId).first()).toMatchObject({ status: 'pending', online_meeting_id: null });
+    expect(events).not.toHaveBeenCalled();
+    expect(await recover()).toEqual({ status: 'cleaned' }); expect(provider.remove).toHaveBeenCalledOnce();
+  } finally { await db.raw('DROP TRIGGER expire_created_meeting_key ON co_managed_meeting_creation_operations'); await db.raw('DROP FUNCTION expire_created_meeting_key()'); }
+}));
+
+it('customer meeting creation recovery attaches an interrupted attempt only under its still-current captured authority', async () => withMeetingCreationFixture(async ({ domain, input, target, actor, context, customer, requestId, provider, recover, operation }: any) => {
+  const row = await domain.prepareCoManagedAppointmentMeeting(db, context.tenant, input, target, actor);
+  await customer.table('co_managed_meeting_creation_operations').where('operation_id', row.operationId).update({ status: 'uncertain', external_attempted_at: db.fn.now() });
+  expect(await recover()).toEqual({ status: 'attached' });
+  expect(provider.create).not.toHaveBeenCalled(); expect(provider.recover).toHaveBeenCalledOnce(); expect(provider.remove).not.toHaveBeenCalled();
+  expect(await operation()).toMatchObject({ status: 'attached' });
+  expect(await customer.table('appointment_requests').where('appointment_request_id', requestId).first()).toMatchObject({ status: 'approved' });
+}));
+
+it('customer meeting creation recovery retracts a changed disclosure instead of approving stale intent', async () => withMeetingCreationFixture(async ({ domain, input, target, actor, context, customer, requestId, provider, recover, operation }: any) => {
+  const row = await domain.prepareCoManagedAppointmentMeeting(db, context.tenant, input, target, actor);
+  await customer.table('co_managed_meeting_creation_operations').where('operation_id', row.operationId).update({ status: 'uncertain', external_attempted_at: db.fn.now() });
+  await customer.table('appointment_requests').where('appointment_request_id', requestId).update({ requester_email: 'new-recipient@example.invalid' });
+  expect(await recover()).toEqual({ status: 'retry' }); expect(await operation()).toMatchObject({ status: 'cleanup_pending' });
+  expect(await recover()).toEqual({ status: 'cleaned' });
+  expect(provider.create).not.toHaveBeenCalled(); expect(provider.remove).toHaveBeenCalledOnce();
+  expect(await customer.table('appointment_requests').where('appointment_request_id', requestId).first()).toMatchObject({ status: 'pending' });
+}));
+
+it('customer meeting creation UI approval uses the durable provider identity and admitted recipient payload', async () => withMeetingCreationFixture(async ({ approve, provider, target, meeting, operation, requestId }: any) => {
+  const registry = await import('../../../../packages/scheduling/src/lib/teamsMeetingService');
+  const createMeeting = vi.fn(async () => ({ status: 'created', meeting }));
+  const resolve = vi.spyOn(registry, 'resolveTeamsMeetingService').mockResolvedValue({ getTeamsMeetingCreationTarget: provider.target, createTeamsMeetingWithResult: createMeeting } as any);
+  try {
+    const result = await approve({ generate_teams_meeting: true, internal_notes: 'Local approval only' });
+    expect(result).toMatchObject({ success: true, data: { status: 'approved', online_meeting_id: meeting.meetingId } });
+    const row = await operation(), payload = createMeeting.mock.lastCall[0];
+    expect(payload).toMatchObject({ appointmentRequestId: requestId, creationIdentity: { operationId: row.operation_id, target } });
+    expect(payload.attendees.some((attendee: any) => attendee.emailAddress.address === 'requester@example.invalid')).toBe(true);
+    expect(payload.bodyHtml).toContain('Private appointment description'); expect(JSON.stringify(payload)).not.toContain('Local approval only');
+  } finally { resolve.mockRestore(); }
+}));
+
+it('customer meeting creation recovery preserves narrow cleanup after credential revocation source removal and suspension', async () => withMeetingCreationFixture(async ({ domain, input, target, actor, context, customer, requestId, provider, recover, operation }: any) => {
+  const row = await domain.prepareCoManagedAppointmentMeeting(db, context.tenant, input, target, actor);
+  await customer.table('co_managed_meeting_creation_operations').where('operation_id', row.operationId).update({ status: 'uncertain', external_attempted_at: db.fn.now() });
+  await customer.table('api_keys').where('api_key_id', context.apiKeyId).update({ active: false });
+  await customer.table('appointment_requests').where('appointment_request_id', requestId).del();
+  await customer.table('tenants').update({ suspended_at: db.fn.now() });
+  expect(await recover()).toEqual({ status: 'retry' }); expect(await operation()).toMatchObject({ status: 'cleanup_pending' });
+  expect(await recover()).toEqual({ status: 'cleaned' });
+  expect(provider.create).not.toHaveBeenCalled(); expect(provider.remove).toHaveBeenCalledOnce();
+}));
+
+it('customer meeting creation recovery keeps an ambiguous absent event pending without reissuing creation', async () => withMeetingCreationFixture(async ({ domain, input, target, actor, context, customer, provider, recover, operation }: any) => {
+  const row = await domain.prepareCoManagedAppointmentMeeting(db, context.tenant, input, target, actor);
+  await customer.table('co_managed_meeting_creation_operations').where('operation_id', row.operationId).update({ status: 'uncertain', external_attempted_at: db.fn.now() });
+  provider.recover.mockResolvedValue({ status: 'absent' });
+  expect(await recover()).toEqual({ status: 'retry' }); expect(await recover()).toEqual({ status: 'retry' });
+  expect(await operation()).toMatchObject({ status: 'uncertain', completed_at: null });
+  expect(provider.create).not.toHaveBeenCalled(); expect(provider.remove).not.toHaveBeenCalled();
+}));
+
+it('customer meeting creation recovery serializes duplicate cleanup workers against the actual operation', async () => withMeetingCreationFixture(async ({ domain, create, receipt, operation, context, customer, provider }: any) => {
+  provider.create.mockResolvedValue({ status: 'failed', errorCode: 'online_index_pending', createdEvent: receipt });
+  expect(await create()).toEqual({ handled: true, meetingCreationFailed: true });
+  const row = await operation();
+  await customer.table('co_managed_meeting_creation_operations').where('operation_id', row.operation_id).update({ next_attempt_at: db.raw("clock_timestamp() - interval '1 second'") });
+  const run = () => domain.recoverCoManagedAppointmentMeeting(db, context.tenant, row.operation_id, provider, vi.fn());
+  const results = await Promise.all([run(), run()]);
+  expect(results.map((result: any) => result.status).sort()).toEqual(['cleaned', 'obsolete']);
+  expect(provider.remove).toHaveBeenCalledOnce(); expect(provider.recover).not.toHaveBeenCalled();
+}));
+
+async function withMeetingGenerationFixture(work: (fixture: any) => Promise<void>) {
+  return withMeetingCreationFixture(async (fixture: any) => {
+    const { domain, context, requestId, actor, customer, events, provider } = fixture;
+    expect(await fixture.approve({ internal_notes: 'Keep this approval note local' })).toMatchObject({ success: true });
+    const approved = await customer.table('appointment_requests').where('appointment_request_id', requestId).first();
+    events.mockClear();
+    const generate = () => domain.generateCoManagedAppointmentMeeting(db, context.tenant, requestId, actor, events, provider);
+    const prepareGeneration = () => domain.prepareCoManagedApprovedAppointmentMeeting(db, context.tenant, requestId, fixture.target, actor);
+    await work({ ...fixture, approved, generate, prepareGeneration });
+  });
+}
+
+it('customer approved meeting generation uses actual calendar times and all assignees through the native action', async () => withMeetingGenerationFixture(async ({ appointment, customer, context, requestId, ownId, approved, provider, meeting, operation, events }: any) => {
+  const secondId = randomUUID(), baseUser = await customer.table('users').where('user_id', context.userId).first();
+  await customer.table('users').insert({ ...baseUser, user_id: secondId, email: 'second-technician@example.invalid', username: `meeting-tech-${secondId}` });
+  await customer.table('schedule_entry_assignees').insert({ tenant: context.tenant, entry_id: ownId, user_id: secondId });
+  await customer.table('schedule_entries').where('entry_id', ownId).update({ scheduled_start: '2026-09-18T13:00:00Z', scheduled_end: '2026-09-18T14:00:00Z' });
+  const before = await customer.table('schedule_entries').where('entry_id', ownId).first();
+  const registry = await import('../../../../packages/scheduling/src/lib/teamsMeetingService');
+  const createMeeting = vi.fn(async () => ({ status: 'created', meeting }));
+  const resolve = vi.spyOn(registry, 'resolveTeamsMeetingService').mockResolvedValue({ getTeamsMeetingCreationTarget: provider.target, createTeamsMeetingWithResult: createMeeting } as any);
+  try {
+    expect(await appointment.generateTeamsMeetingForApprovedRequest(requestId)).toMatchObject({ success: true, data: { status: 'approved', schedule_entry_id: ownId, online_meeting_id: meeting.meetingId } });
+    const payload = createMeeting.mock.lastCall[0];
+    expect(payload).toMatchObject({ startDateTime: '2026-09-18T13:00:00.000Z', endDateTime: '2026-09-18T14:00:00.000Z' });
+    expect(payload.attendees.map((row: any) => row.emailAddress.address).sort()).toEqual([baseUser.email, 'second-technician@example.invalid', 'requester@example.invalid'].sort());
+    expect(JSON.stringify(payload)).not.toContain('Keep this approval note local');
+    expect(await operation()).toMatchObject({ purpose: 'generate', approval_input: { id: requestId }, status: 'attached' });
+    expect(await customer.table('schedule_entries').where('entry_id', ownId).first()).toEqual(before);
+    expect(await customer.table('appointment_requests').where('appointment_request_id', requestId).first()).toMatchObject({ approved_at: approved.approved_at, approved_by_user_id: approved.approved_by_user_id, requested_date: approved.requested_date, requested_time: approved.requested_time });
+    expect(events).toHaveBeenCalledOnce();
+  } finally { resolve.mockRestore(); }
+}));
+
+it('customer approved meeting generation reuses only an undisclosed failed placeholder and repairs its exact legacy allocation', async () => withMeetingGenerationFixture(async ({ generate, customer, context, requestId, ownId, approved, meeting, operation }: any) => {
+  const ticket = await customer.table('tickets').first(), failedId = randomUUID();
+  await customer.table('appointment_requests').where('appointment_request_id', requestId).update({ ticket_id: ticket.ticket_id });
+  await customer.table('schedule_entries').where('entry_id', ownId).update({ work_item_type: 'ticket', work_item_id: ticket.ticket_id });
+  await customer.table('online_meetings').insert({ tenant: context.tenant, meeting_id: failedId, provider: 'teams', provider_meeting_id: null, join_url: null, subject: 'Failed attempt',
+    status: 'failed', error_code: 'provider_failure', start_time: '2026-09-07T09:00:00Z', end_time: '2026-09-07T10:30:00Z', appointment_request_id: requestId, schedule_entry_id: ownId, created_by: context.userId });
+  expect(await generate()).toMatchObject({ handled: true, request: { status: 'approved', online_meeting_id: meeting.meetingId } });
+  const rows = await customer.table('online_meetings').where('appointment_request_id', requestId); expect(rows).toHaveLength(1);
+  expect(rows[0]).toMatchObject({ meeting_id: failedId, status: 'scheduled', provider_event_id: meeting.eventId, error_code: null });
+  expect(await operation()).toMatchObject({ meeting_id: failedId });
+  expect(await customer.table('schedule_entries').where('entry_id', ownId).first()).toMatchObject({ work_item_type: 'appointment_request', work_item_id: requestId });
+  expect(await customer.table('appointment_requests').where('appointment_request_id', requestId).first()).toMatchObject({ approved_at: approved.approved_at, approved_by_user_id: approved.approved_by_user_id });
+}));
+
+it('customer approved meeting generation rejects existing provider evidence and unrelated schedule bindings before creation', async () => withMeetingGenerationFixture(async ({ generate, customer, context, requestId, ownId, provider }: any) => {
+  const failedId = randomUUID();
+  await customer.table('online_meetings').insert({ tenant: context.tenant, meeting_id: failedId, provider: 'teams', provider_meeting_id: null, provider_event_id: 'partial-event', join_url: null, subject: 'Partial creation',
+    status: 'failed', start_time: '2026-09-07T09:00:00Z', end_time: '2026-09-07T10:30:00Z', appointment_request_id: requestId, schedule_entry_id: ownId });
+  await expect(generate()).rejects.toMatchObject({ code: 'MEETING_CREATION_OPERATION_CONFLICT' });
+  await customer.table('online_meetings').where('meeting_id', failedId).update({ provider_event_id: null, appointment_request_id: null });
+  await expect(generate()).rejects.toMatchObject({ code: 'MEETING_CREATION_OPERATION_CONFLICT' });
+  expect(provider.create).not.toHaveBeenCalled(); expect(await customer.table('co_managed_meeting_creation_operations')).toHaveLength(0);
+}));
+
+it('customer approved meeting generation honors current approvers and API-key field masks before disclosing participants', async () => withMeetingGenerationFixture(async ({ generate, customer, context, requestId, user, provider }: any) => {
+  await customer.table('role_permissions').whereIn('permission_id', customer.table('permissions').where({ resource: 'user_schedule', action: 'update' }).select('permission_id')).del();
+  await expect(generate()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await customer.table('availability_settings').insert({ tenant: context.tenant, setting_type: 'general_settings', config_json: { approver_user_ids: [context.userId] } });
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: context.tenant, name: 'Generation content scope', actorUserId: user.user_id });
+  for (const action of ['read', 'update']) await bundles.upsertBundleRule(db, { tenant: context.tenant, bundleId, revisionId, resourceType: 'user_schedule', action, templateKey: 'assigned', config: { redactedFields: ['online_meeting_url'] } });
+  await bundles.publishBundleRevision(db, { tenant: context.tenant, bundleId, revisionId, actorUserId: user.user_id });
+  await bundles.createBundleAssignment(db, { tenant: context.tenant, bundleId, targetType: 'api_key', targetId: context.apiKeyId });
+  await expect(generate()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(provider.create).not.toHaveBeenCalled();
+  expect(await customer.table('appointment_requests').where('appointment_request_id', requestId).first()).toMatchObject({ status: 'approved', online_meeting_id: null });
+}));
+
+it('customer approved meeting generation keeps approval intact on provider failure and permits a fresh attempt after cleanup', async () => withMeetingGenerationFixture(async ({ generate, recover, provider, approved, customer, requestId, meeting, operation }: any) => {
+  provider.create.mockRejectedValueOnce(new Error('Lost provider response'));
+  expect(await generate()).toMatchObject({ handled: true, meetingCreationFailed: true });
+  expect(await operation()).toMatchObject({ purpose: 'generate', status: 'cleanup_pending' });
+  expect(await customer.table('appointment_requests').where('appointment_request_id', requestId).first()).toMatchObject({ status: 'approved', online_meeting_id: null, approved_at: approved.approved_at });
+  expect(await recover()).toEqual({ status: 'cleaned' });
+  expect(await generate()).toMatchObject({ handled: true, request: { status: 'approved', online_meeting_id: meeting.meetingId } });
+  expect(provider.create).toHaveBeenCalledTimes(2);
+  expect((await customer.table('co_managed_meeting_creation_operations').where('appointment_request_id', requestId)).map((row: any) => row.status).sort()).toEqual(['attached', 'cleaned']);
+}));
+
+it('customer approved meeting generation recovery attaches current intent without changing approval metadata', async () => withMeetingGenerationFixture(async ({ prepareGeneration, recover, provider, approved, customer, requestId }: any) => {
+  const prepared = await prepareGeneration();
+  await customer.table('co_managed_meeting_creation_operations').where('operation_id', prepared.operationId).update({ status: 'uncertain', external_attempted_at: db.fn.now() });
+  expect(await recover()).toEqual({ status: 'attached' });
+  expect(provider.create).not.toHaveBeenCalled();
+  expect(await customer.table('appointment_requests').where('appointment_request_id', requestId).first()).toMatchObject({ status: 'approved', approved_at: approved.approved_at, approved_by_user_id: approved.approved_by_user_id });
+}));
+
+it('customer approved meeting generation recovery cleans an event when its retained allocation changes', async () => withMeetingGenerationFixture(async ({ prepareGeneration, recover, provider, customer, ownId, operation, requestId }: any) => {
+  const prepared = await prepareGeneration();
+  await customer.table('co_managed_meeting_creation_operations').where('operation_id', prepared.operationId).update({ status: 'uncertain', external_attempted_at: db.fn.now() });
+  await customer.table('schedule_entries').where('entry_id', ownId).update({ scheduled_start: '2026-09-18T13:00:00Z', scheduled_end: '2026-09-18T14:00:00Z' });
+  expect(await recover()).toEqual({ status: 'retry' }); expect(await operation()).toMatchObject({ status: 'cleanup_pending' });
+  expect(await recover()).toEqual({ status: 'cleaned' });
+  expect(provider.create).not.toHaveBeenCalled(); expect(provider.remove).toHaveBeenCalledOnce();
+  expect(await customer.table('appointment_requests').where('appointment_request_id', requestId).first()).toMatchObject({ status: 'approved', online_meeting_id: null });
+}));
+
+it('customer approved meeting generation rolls attachment back on final credential expiry while retaining compensation evidence', async () => withMeetingGenerationFixture(async ({ generate, recover, operation, context, customer, requestId, approved, events }: any) => {
+  await db.raw(`CREATE FUNCTION expire_generated_meeting_attachment() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.online_meeting_id IS NOT NULL THEN UPDATE api_keys SET expires_at = clock_timestamp() - interval '1 second' WHERE tenant = NEW.tenant AND api_key_id = '${context.apiKeyId}'::uuid; END IF; RETURN NEW; END $$`);
+  await db.raw('CREATE TRIGGER expire_generated_meeting_attachment AFTER UPDATE ON appointment_requests FOR EACH ROW EXECUTE FUNCTION expire_generated_meeting_attachment()');
+  try {
+    await expect(generate()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    expect(await operation()).toMatchObject({ status: 'cleanup_pending' });
+    expect(await customer.table('online_meetings').where('appointment_request_id', requestId)).toHaveLength(0);
+    expect(await customer.table('appointment_requests').where('appointment_request_id', requestId).first()).toMatchObject({ status: 'approved', online_meeting_id: null, approved_at: approved.approved_at });
+    expect(events).not.toHaveBeenCalled(); expect(await recover()).toEqual({ status: 'cleaned' });
+  } finally { await db.raw('DROP TRIGGER expire_generated_meeting_attachment ON appointment_requests'); await db.raw('DROP FUNCTION expire_generated_meeting_attachment()'); }
+}));
+
+it('customer approved meeting generation leaves the appointment unchanged when Teams is unavailable and still requires current admission', async () => withMeetingGenerationFixture(async ({ generate, approved, provider, customer, context, requestId }: any) => {
+  provider.target.mockResolvedValue({ status: 'skipped', reason: 'not_configured' });
+  expect(await generate()).toEqual({ handled: true, meetingCreationFailed: true, unavailable: true });
+  expect(await customer.table('appointment_requests').where('appointment_request_id', requestId).first()).toEqual(approved);
+  expect(await customer.table('co_managed_meeting_creation_operations')).toHaveLength(0);
+  await customer.table('api_keys').where('api_key_id', context.apiKeyId).update({ active: false });
+  await expect(generate()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(provider.target).toHaveBeenCalledOnce(); expect(provider.create).not.toHaveBeenCalled();
+}));
+
+async function withMeetingArtifactFixture(work: (fixture: any) => Promise<void>) {
+  return withAppointmentAuthorityFixture(async (fixture: any) => {
+    const { customer, context, meetingId, domain, actor } = fixture;
+    const transcriptId = randomUUID(), recordingId = randomUUID(), documentId = randomUUID();
+    await customer.table('documents').insert({ tenant: context.tenant, document_id: documentId, document_name: 'Private meeting transcript', user_id: context.userId, created_by: context.userId, order_number: 0, is_client_visible: false });
+    await customer.table('document_block_content').insert({ tenant: context.tenant, document_id: documentId, content_id: randomUUID(), block_data: JSON.stringify([{ type: 'paragraph', content: [{ type: 'text', text: 'WEBVTT\n\nPrivate transcript content', styles: {} }] }]) });
+    await customer.table('online_meeting_artifacts').insert([
+      { tenant: context.tenant, artifact_id: transcriptId, meeting_id: meetingId, artifact_type: 'transcript', provider_artifact_id: 'provider-transcript', document_id: documentId, content_url: 'https://untrusted.example.invalid/transcript' },
+      { tenant: context.tenant, artifact_id: recordingId, meeting_id: meetingId, artifact_type: 'recording', provider_artifact_id: 'provider-recording', content_url: 'https://untrusted.example.invalid/recording' },
+    ]);
+    const consume = (id: string, callback: any = async (content: any) => ({ value: content })) => domain.consumeCoManagedMeetingArtifact(db, context.tenant, id, actor, callback);
+    await work({ ...fixture, transcriptId, recordingId, documentId, consume });
+  });
+}
+
+it('customer meeting artifact reads project only admitted metadata and download through retained document content', async () => withMeetingArtifactFixture(async ({ read, requestId, transcriptId, recordingId, consume, documentId, customer }: any) => {
+  const response = await read({ id: requestId }), artifacts = response.requests[0].online_meeting_artifacts;
+  expect(artifacts.map((artifact: any) => artifact.artifact_id).sort()).toEqual([transcriptId, recordingId].sort());
+  expect(artifacts[0]).toMatchObject({ document_id: null, download_url: `/api/online-meetings/artifacts/${artifacts[0].artifact_id}` });
+  expect(JSON.stringify(response)).not.toContain('untrusted.example.invalid'); expect(JSON.stringify(response)).not.toContain(documentId);
+  const content = await consume(transcriptId); expect(content).toMatchObject({ handled: true, value: { artifactId: transcriptId, type: 'transcript', provider: null, fileId: null } });
+  expect(JSON.stringify(content.value.blocks)).toContain('Private transcript content');
+  await customer.table('role_permissions').whereIn('permission_id', customer.table('permissions').where({ resource: 'document', action: 'read' }).select('permission_id')).del();
+  expect((await read({ id: requestId })).requests[0].online_meeting_artifacts.map((artifact: any) => artifact.artifact_id)).toEqual([recordingId]);
+  await expect(consume(transcriptId)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+}));
+
+it('customer meeting artifact reads enforce the actual appointment calendar binding and private assignees', async () => withMeetingArtifactFixture(async ({ read, requestId, recordingId, consume, customer, ownId, context }: any) => {
+  await customer.table('schedule_entries').where('entry_id', ownId).update({ is_private: true });
+  expect((await read({ id: requestId })).requests[0].online_meeting_artifacts).toHaveLength(2);
+  await customer.table('schedule_entry_assignees').where('entry_id', ownId).del();
+  expect((await read({ id: requestId })).requests[0].online_meeting_artifacts).toEqual([]);
+  await expect(consume(recordingId)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await customer.table('schedule_entry_assignees').insert({ tenant: context.tenant, entry_id: ownId, user_id: context.userId });
+  await customer.table('schedule_entries').where('entry_id', ownId).update({ work_item_type: 'ad_hoc', work_item_id: null });
+  await expect(consume(recordingId)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+}));
+
+it('customer meeting artifact reads reject masked appointment content and generic transcript document escapes', async () => withMeetingArtifactFixture(async ({ customer, context, user, requestId, transcriptId, documentId, read, consume, domain, actor }: any) => {
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: context.tenant, name: 'Artifact source scope', actorUserId: user.user_id });
+  await bundles.upsertBundleRule(db, { tenant: context.tenant, bundleId, revisionId, resourceType: 'user_schedule', action: 'read', templateKey: 'assigned', config: { redactedFields: ['description'] } });
+  await bundles.publishBundleRevision(db, { tenant: context.tenant, bundleId, revisionId, actorUserId: user.user_id });
+  await bundles.createBundleAssignment(db, { tenant: context.tenant, bundleId, targetType: 'api_key', targetId: context.apiKeyId });
+  expect((await read({ id: requestId })).requests[0].online_meeting_artifacts).toEqual([]);
+  await expect(consume(transcriptId)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(await domain.admitCoManagedMeetingDocuments(db, context.tenant, [documentId], actor)).toMatchObject({ handled: true, deniedDocumentIds: [documentId] });
+}));
+
+it('customer meeting artifact delivery cancels prepared content on final credential expiry and cannot use revoked credentials', async () => withMeetingArtifactFixture(async ({ customer, context, transcriptId, consume }: any) => {
+  const discard = vi.fn(async () => undefined);
+  // Expiry is a clock event rather than a concurrent row update, which the
+  // retained key lock correctly excludes during the delivery callback.
+  await customer.table('api_keys').where('api_key_id', context.apiKeyId).update({ expires_at: new Date(Date.now() + 1200) });
+  await expect(consume(transcriptId, async () => {
+    await db.raw('SELECT pg_sleep(1.3)');
+    return { value: 'Prepared private bytes', discard };
+  })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(discard).toHaveBeenCalledOnce();
+  const deliver = vi.fn(async () => ({ value: 'Must not be delivered' }));
+  await expect(consume(transcriptId, deliver)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' }); expect(deliver).not.toHaveBeenCalled();
+}));
+
+it('customer meeting artifact HTTP transcript download uses its owner and bypasses neither scope nor content-type controls', async () => withMeetingArtifactFixture(async ({ user, transcriptId, customer, ownId }: any) => {
+  const auth = await import('@alga-psa/auth'), current = vi.spyOn(auth, 'getCurrentUser').mockResolvedValue(user);
+  try {
+    const route = await import('../../app/api/online-meetings/artifacts/[artifactId]/route');
+    const result = await route.GET(new Request('http://localhost/api/online-meetings/artifacts/test') as any, { params: Promise.resolve({ artifactId: transcriptId }) });
+    expect(result.status).toBe(200); expect(result.headers.get('cache-control')).toBe('private, no-store');
+    expect(result.headers.get('content-type')).toBe('text/plain; charset=utf-8'); expect(await result.text()).toContain('Private transcript content');
+    await customer.table('schedule_entries').where('entry_id', ownId).update({ work_item_type: 'ad_hoc', work_item_id: null });
+    const denied = await route.GET(new Request('http://localhost/api/online-meetings/artifacts/test') as any, { params: Promise.resolve({ artifactId: transcriptId }) });
+    expect(denied.status).toBe(403); expect(await denied.text()).not.toContain('Private transcript');
+  } finally { current.mockRestore(); }
+}));
+
+it('customer meeting artifact document actions retain owner scope instead of relying on broad document permission', async () => withMeetingArtifactFixture(async ({ customer, documentId }: any) => {
+  const blocks = await import('../../../../packages/documents/src/actions/documentBlockContentActions');
+  expect(JSON.stringify(await blocks.getBlockContent(documentId))).toContain('Private transcript content');
+  await customer.table('role_permissions').whereIn('permission_id', customer.table('permissions').where('resource', 'user_schedule').select('permission_id')).del();
+  const result = await blocks.getBlockContent(documentId);
+  expect(JSON.stringify(result)).not.toContain('Private transcript content'); expect(result).toHaveProperty('permissionError');
+}));
+
+it('customer meeting artifact document admission rejects masked transcript bytes and preserves read access during product lapse', async () => withMeetingArtifactFixture(async ({ domain, actor, context, user, customer, documentId, transcriptId, consume, principal }: any) => {
+  await expireCoManagedEntitlement(principal.tenant);
+  expect(await consume(transcriptId)).toMatchObject({ handled: true });
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: context.tenant, name: 'Transcript document content scope', actorUserId: user.user_id });
+  await bundles.upsertBundleRule(db, { tenant: context.tenant, bundleId, revisionId, resourceType: 'document', action: 'read', templateKey: 'own', config: { redactedFields: ['block_data'] } });
+  await bundles.publishBundleRevision(db, { tenant: context.tenant, bundleId, revisionId, actorUserId: user.user_id });
+  await bundles.createBundleAssignment(db, { tenant: context.tenant, bundleId, targetType: 'api_key', targetId: context.apiKeyId });
+  expect(await domain.admitCoManagedMeetingDocuments(db, context.tenant, [documentId], actor)).toMatchObject({ handled: true, deniedDocumentIds: [documentId] });
+  await expect(consume(transcriptId)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+}));
+
+async function withMeetingArtifactApiFixture(work: (fixture: any) => Promise<void>) {
+  return withMeetingArtifactFixture(async (fixture: any) => {
+    const { customer, context, user, transcriptId } = fixture;
+    const { createHash } = await import('node:crypto'), plaintext = `artifact-test-${randomUUID()}`;
+    await customer.table('api_keys').where('api_key_id', context.apiKeyId).update({ api_key: createHash('sha256').update(plaintext).digest('hex') });
+    const auth = await import('@alga-psa/auth'), dbModule = await import('@alga-psa/db');
+    const browser = vi.spyOn(auth, 'getCurrentUser').mockResolvedValue(user), connection = vi.spyOn(dbModule, 'getConnection').mockResolvedValue(db);
+    const route = await import('../../app/api/online-meetings/artifacts/[artifactId]/route');
+    const request = (key: string | null = plaintext, extra: Record<string, string> = {}) => new Request('http://localhost/api/online-meetings/artifacts/test', { headers: { ...(key !== null ? { 'x-api-key': key } : {}), ...extra } }) as any;
+    const download = (key: string | null = plaintext, extra: Record<string, string> = {}) => route.GET(request(key, extra), { params: Promise.resolve({ artifactId: transcriptId }) });
+    try { await work({ ...fixture, plaintext, request, download, browser }); }
+    finally { browser.mockRestore(); connection.mockRestore(); }
+  });
+}
+
+it('customer meeting artifact API authenticates the actual key through both download URLs without trusting tenant headers or cookies', async () => withMeetingArtifactApiFixture(async ({ download, request, browser, transcriptId }: any) => {
+  const response = await download(undefined, { 'x-tenant-id': randomUUID(), 'x-user-id': randomUUID(), 'x-api-key-id': randomUUID() });
+  expect(response.status).toBe(200); expect(await response.text()).toContain('Private transcript content');
+  const legacy = await import('../../app/api/online-meetings/recordings/[artifactId]/route');
+  const alias = await legacy.GET(request(), { params: Promise.resolve({ artifactId: transcriptId }) });
+  expect(alias.status).toBe(200); expect(alias.headers.get('cache-control')).toBe('private, no-store');
+  expect(browser).not.toHaveBeenCalled();
+}));
+
+it('customer meeting artifact API rejects invalid empty expired and exhausted keys without browser fallback', async () => withMeetingArtifactApiFixture(async ({ download, browser, customer, context }: any) => {
+  for (const key of ['', 'invalid-artifact-key']) expect((await download(key)).status).toBe(401);
+  await customer.table('api_keys').where('api_key_id', context.apiKeyId).update({ expires_at: new Date(0) });
+  expect((await download()).status).toBe(401);
+  await customer.table('api_keys').where('api_key_id', context.apiKeyId).update({ expires_at: null, usage_limit: 1, usage_count: 1 });
+  expect((await download()).status).toBe(401);
+  expect(await customer.table('api_keys').where('api_key_id', context.apiKeyId).first()).toMatchObject({ active: false });
+  expect(browser).not.toHaveBeenCalled();
+  expect((await download(null)).status).toBe(200); expect(browser).toHaveBeenCalledOnce();
+}));
+
+it('customer meeting artifact API applies key-specific document narrowing even when the same browser user can read the transcript', async () => withMeetingArtifactApiFixture(async ({ download, user, context }: any) => {
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: context.tenant, name: 'Artifact HTTP key scope', actorUserId: user.user_id });
+  await bundles.upsertBundleRule(db, { tenant: context.tenant, bundleId, revisionId, resourceType: 'document', action: 'read', templateKey: 'own', config: { redactedFields: ['block_data'] } });
+  await bundles.publishBundleRevision(db, { tenant: context.tenant, bundleId, revisionId, actorUserId: user.user_id });
+  await bundles.createBundleAssignment(db, { tenant: context.tenant, bundleId, targetType: 'api_key', targetId: context.apiKeyId });
+  const denied = await download(); expect(denied.status).toBe(403); expect(await denied.text()).not.toContain('Private transcript');
+  expect((await download(null)).status).toBe(200);
+}));
+
+it('customer meeting artifact API rechecks revocation after initial key validation before delivering content', async () => withMeetingArtifactApiFixture(async ({ download, context, customer }: any) => {
+  const { ApiKeyServiceForApi } = await import('../../lib/services/apiKeyServiceForApi');
+  const validate = ApiKeyServiceForApi.validateApiKeyAnyTenant.bind(ApiKeyServiceForApi);
+  const lookup = vi.spyOn(ApiKeyServiceForApi, 'validateApiKeyAnyTenant').mockImplementation(async (plaintext: string) => {
+    const key = await validate(plaintext);
+    await customer.table('api_keys').where('api_key_id', context.apiKeyId).update({ active: false });
+    return key;
+  });
+  try { const response = await download(); expect(response.status).toBe(403); expect(await response.text()).not.toContain('Private transcript'); }
+  finally { lookup.mockRestore(); }
+}));
+
+it('customer meeting artifact API cannot use a sponsoring MSP key to select customer content with a tenant header', async () => withMeetingArtifactApiFixture(async ({ download, principal, context }: any) => {
+  const { createHash } = await import('node:crypto'), plaintext = `sponsor-artifact-${randomUUID()}`;
+  await tenantDb(db, principal.tenant).table('api_keys').insert({ tenant: principal.tenant, api_key_id: randomUUID(), api_key: createHash('sha256').update(plaintext).digest('hex'), user_id: principal.userId, active: true });
+  const response = await download(plaintext, { 'x-tenant-id': context.tenant });
+  expect([403, 404]).toContain(response.status); expect(await response.text()).not.toContain('Private transcript');
+}));
+
+async function withInteractionMeetingReadFixture(work: (fixture: any) => Promise<void>) {
+  return withMeetingArtifactFixture(async (fixture: any) => {
+    const { customer, context, requestId, meetingId, domain, actor } = fixture;
+    const interactionId = randomUUID(), typeId = randomUUID();
+    const request = await customer.table('appointment_requests').where('appointment_request_id', requestId).first();
+    await customer.table('interaction_types').insert({ tenant: context.tenant, type_id: typeId, type_name: 'Online Meeting', icon: 'video' });
+    await customer.table('interactions').insert({ tenant: context.tenant, interaction_id: interactionId, type_id: typeId, user_id: context.userId, client_id: request.client_id,
+      title: 'Customer meeting follow-up', notes: 'Private interaction details', interaction_date: '2026-09-07T09:00:00Z' });
+    await customer.table('online_meetings').where('meeting_id', meetingId).update({ interaction_id: interactionId });
+    const actions = await import('../../../../packages/clients/src/actions/interactionActions');
+    const meetings = await import('../../../../packages/clients/src/actions/onlineMeetingActions');
+    const list = (options: any = {}) => domain.readCoManagedNativeInteractions(db, context.tenant, actor, options);
+    await work({ ...fixture, interactionId, typeId, clientId: request.client_id, actions, meetings, list });
+  });
+}
+
+it('customer interaction meeting reads use the same admitted projection in page recent entity and dedicated native actions', async () => withInteractionMeetingReadFixture(async ({ actions, meetings, interactionId, clientId, transcriptId, recordingId, documentId }: any) => {
+  const page = await actions.getInteractionsPage({ page: 1, pageSize: 10 });
+  expect(page).toMatchObject({ total: 1, page: 1, pageSize: 10, interactions: [{ interaction_id: interactionId, title: 'Customer meeting follow-up', type_name: 'online meeting' }] });
+  const meeting = page.interactions[0].online_meeting;
+  expect(meeting.artifacts.map((row: any) => row.artifact_id).sort()).toEqual([transcriptId, recordingId].sort());
+  expect(meeting.artifacts[0].download_url).toBe(`/api/online-meetings/artifacts/${meeting.artifacts[0].artifact_id}`);
+  expect(JSON.stringify(page)).not.toMatch(/untrusted.example.invalid|provider_artifact_id|provider_meeting_id|provider_event_id|organizer_upn|content_url|file_id/);
+  expect(JSON.stringify(page)).not.toContain(documentId);
+  expect((await actions.getRecentInteractions({}))[0].online_meeting).toEqual(meeting);
+  expect((await actions.getInteractionsForEntity(clientId, 'client'))[0].online_meeting).toEqual(meeting);
+  expect(await meetings.getOnlineMeetingForInteraction(interactionId)).toEqual(meeting);
+}));
+
+it('customer interaction meeting reads hide masked text from search totals and meeting enrichment', async () => withInteractionMeetingReadFixture(async ({ list, context, user, actions }: any) => {
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: context.tenant, name: 'Interaction content scope', actorUserId: user.user_id });
+  await bundles.upsertBundleRule(db, { tenant: context.tenant, bundleId, revisionId, resourceType: 'interaction', action: 'read', templateKey: 'own', config: { redactedFields: ['notes'] } });
+  await bundles.publishBundleRevision(db, { tenant: context.tenant, bundleId, revisionId, actorUserId: user.user_id });
+  await bundles.createBundleAssignment(db, { tenant: context.tenant, bundleId, targetType: 'api_key', targetId: context.apiKeyId });
+  expect(await list({ filters: { search: 'Private interaction details' }, paginated: true })).toMatchObject({ total: 0, interactions: [] });
+  const visible = await list({ filters: { search: 'Customer meeting' }, paginated: true });
+  expect(visible.total).toBe(1); expect(visible.interactions[0]).not.toHaveProperty('notes'); expect(visible.interactions[0].online_meeting).toBeNull();
+  expect((await actions.getInteractionsPage({ search: 'Private interaction details' })).total).toBe(1);
+}));
+
+it('customer interaction meeting reads require both owners and the private calendar allocation', async () => withInteractionMeetingReadFixture(async ({ customer, ownId, actions, meetings, interactionId, consume, recordingId }: any) => {
+  await customer.table('schedule_entries').where('entry_id', ownId).update({ is_private: true });
+  await customer.table('schedule_entry_assignees').where('entry_id', ownId).del();
+  expect((await actions.getInteractionsPage({})).interactions[0]).toMatchObject({ interaction_id: interactionId, online_meeting: null });
+  expect(await meetings.getOnlineMeetingForInteraction(interactionId)).toBeNull();
+  await expect(consume(recordingId)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+}));
+
+it('customer interaction meeting reads omit inaccessible related labels and validate an empty entity parent', async () => withInteractionMeetingReadFixture(async ({ customer, clientId, list, actions }: any) => {
+  const client = await customer.table('clients').where('client_id', clientId).first();
+  await customer.table('role_permissions').whereIn('permission_id', customer.table('permissions').where({ resource: 'client', action: 'read' }).select('permission_id')).del();
+  const result = await list(); expect(result.interactions[0]).not.toHaveProperty('client_name');
+  expect((await list({ filters: { search: client.client_name } })).total).toBe(0);
+  await expect(actions.getInteractionsForEntity(clientId, 'client')).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+}));
+
+it('customer interaction meeting reads filter out other owners before paginating and counting', async () => withInteractionMeetingReadFixture(async ({ customer, context, user, list, typeId, clientId }: any) => {
+  const otherUserId = randomUUID(), otherId = randomUUID(), base = await customer.table('users').where('user_id', context.userId).first();
+  await customer.table('users').insert({ ...base, user_id: otherUserId, email: 'other-interaction@example.invalid', username: `other-interaction-${otherUserId}` });
+  await customer.table('interactions').insert({ tenant: context.tenant, interaction_id: otherId, type_id: typeId, user_id: otherUserId, client_id: clientId, title: 'Other owner secret', interaction_date: '2026-09-08T09:00:00Z' });
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: context.tenant, name: 'Own interactions', actorUserId: user.user_id });
+  await bundles.upsertBundleRule(db, { tenant: context.tenant, bundleId, revisionId, resourceType: 'interaction', action: 'read', templateKey: 'own', config: {} });
+  await bundles.publishBundleRevision(db, { tenant: context.tenant, bundleId, revisionId, actorUserId: user.user_id });
+  await bundles.createBundleAssignment(db, { tenant: context.tenant, bundleId, targetType: 'api_key', targetId: context.apiKeyId });
+  expect(await list({ filters: { page: 2, pageSize: 1 }, paginated: true })).toMatchObject({ total: 1, interactions: [], page: 2 });
+  expect(await list({ filters: { search: 'Other owner secret' }, paginated: true })).toMatchObject({ total: 0, interactions: [] });
+}));
+
+it('customer interaction meeting reads reject expired credentials after waiting for an actual source lock', async () => withInteractionMeetingReadFixture(async ({ customer, context, interactionId, list }: any) => {
+  const blocker = await db.transaction();
+  await tenantDb(blocker, context.tenant).table('interactions').where('interaction_id', interactionId).forUpdate().first();
+  await customer.table('api_keys').where('api_key_id', context.apiKeyId).update({ expires_at: new Date(Date.now() + 1200) });
+  const reading = list(), rejected = expect(reading).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  try { await db.raw('SELECT pg_sleep(1.3)'); } finally { await blocker.rollback(); }
+  await rejected;
+}));
+
+async function withInteractionUpdateFixture(work: (fixture: any) => Promise<void>) {
+  return withInteractionMeetingReadFixture(async (fixture: any) => {
+    const { domain, context, interactionId, actor, events } = fixture;
+    events.mockClear();
+    const update = (data: any, id = interactionId) => domain.updateCoManagedNativeInteraction(db, context.tenant, id, data, actor, events);
+    await work({ ...fixture, update });
+  });
+}
+
+it('customer interaction edits persist only writable fields and return the admitted meeting projection from the native action', async () => withInteractionUpdateFixture(async ({ actions, interactionId, customer, context, events }: any) => {
+  const result = await actions.updateInteraction(interactionId, { title: 'Updated local interaction', notes: 'New private interaction note', tenant: randomUUID(), interaction_id: randomUUID(), client_name: 'Forged customer label', online_meeting: { join_url: 'https://forged.example.invalid' } } as any);
+  expect(result).toMatchObject({ tenant: context.tenant, interaction_id: interactionId, title: 'Updated local interaction', notes: 'New private interaction note' });
+  expect(result.online_meeting.artifacts).toHaveLength(2);
+  expect(JSON.stringify(result)).not.toMatch(/provider_event_id|provider_artifact_id|untrusted.example.invalid|Forged customer label|forged.example.invalid/);
+  expect(await customer.table('interactions').where('interaction_id', interactionId).first()).toMatchObject({ title: 'Updated local interaction', notes: 'New private interaction note' });
+  expect(events).toHaveBeenCalledOnce();
+  expect(events.mock.lastCall[0]).toEqual({ eventType: 'INTERACTION_UPDATED', payload: { tenantId: context.tenant, interactionId, userId: context.userId, changedFields: ['title', 'notes'] } });
+  events.mockClear(); await actions.updateInteraction(interactionId, { title: 'Updated local interaction' }); expect(events).not.toHaveBeenCalled();
+}));
+
+it('customer interaction edits cannot reveal a private appointment meeting through their mutation response', async () => withInteractionUpdateFixture(async ({ actions, interactionId, customer, ownId }: any) => {
+  await customer.table('schedule_entries').where('entry_id', ownId).update({ is_private: true });
+  await customer.table('schedule_entry_assignees').where('entry_id', ownId).del();
+  expect(await actions.updateInteraction(interactionId, { notes: 'Editable interaction note' })).toMatchObject({ interaction_id: interactionId, notes: 'Editable interaction note', online_meeting: null });
+}));
+
+it('customer interaction edits enforce changed-field scope while allowing unrelated masked fields to remain private', async () => withInteractionUpdateFixture(async ({ update, context, user, customer, interactionId }: any) => {
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: context.tenant, name: 'Interaction edit scope', actorUserId: user.user_id });
+  for (const action of ['read', 'update']) await bundles.upsertBundleRule(db, { tenant: context.tenant, bundleId, revisionId, resourceType: 'interaction', action, templateKey: 'own', config: { redactedFields: ['notes'] } });
+  await bundles.publishBundleRevision(db, { tenant: context.tenant, bundleId, revisionId, actorUserId: user.user_id });
+  await bundles.createBundleAssignment(db, { tenant: context.tenant, bundleId, targetType: 'api_key', targetId: context.apiKeyId });
+  await expect(update({ notes: 'Forbidden new note' })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  const result = await update({ title: 'Permitted title change' }); expect(result.interaction).not.toHaveProperty('notes'); expect(result.interaction.online_meeting).toBeNull();
+  expect(await customer.table('interactions').where('interaction_id', interactionId).first()).toMatchObject({ title: 'Permitted title change', notes: 'Private interaction details' });
+  await customer.table('api_keys').where('api_key_id', context.apiKeyId).update({ active: false });
+  await expect(update({ title: 'Revoked key change' })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+}));
+
+it('customer interaction edits preserve ownership and timing of linked meetings and reject invalid local fields', async () => withInteractionUpdateFixture(async ({ update, customer, context, interactionId, actions }: any) => {
+  const otherClientId = randomUUID(); await customer.table('clients').insert({ tenant: context.tenant, client_id: otherClientId, client_name: 'Other interaction client' });
+  const before = await customer.table('interactions').where('interaction_id', interactionId).first();
+  for (const patch of [{ client_id: otherClientId }, { duration: 30 }, { start_time: '2026-09-10T09:00:00Z', end_time: '2026-09-10T10:00:00Z' }]) await expect(update(patch)).rejects.toMatchObject({ code: 'INTERACTION_IN_USE' });
+  for (const patch of [{ title: '' }, { type_id: randomUUID() }, { status_id: randomUUID() }, { duration: -1 }, { start_time: 'not-a-date' }]) await expect(update(patch)).rejects.toMatchObject({ code: 'INTERACTION_INVALID' });
+  expect(await customer.table('interactions').where('interaction_id', interactionId).first()).toEqual(before);
+  expect(await actions.updateInteraction(interactionId, { duration: 30 })).toHaveProperty('actionError');
+}));
+
+it('customer interaction edits support standalone reparenting only when both old and proposed record scopes admit it', async () => withInteractionUpdateFixture(async ({ update, customer, context, user, typeId, clientId }: any) => {
+  const id = randomUUID(), nextClientId = randomUUID();
+  await customer.table('clients').insert({ tenant: context.tenant, client_id: nextClientId, client_name: 'Admitted destination' });
+  await customer.table('interactions').insert({ tenant: context.tenant, interaction_id: id, type_id: typeId, user_id: context.userId, client_id: clientId, title: 'Standalone call' });
+  expect(await update({ client_id: nextClientId, start_time: '2026-09-10T09:00:00Z', end_time: '2026-09-10T10:00:00Z', duration: 60 }, id)).toMatchObject({ handled: true, interaction: { client_id: nextClientId, duration: 60, online_meeting: null } });
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: context.tenant, name: 'Interaction destination scope', actorUserId: user.user_id });
+  for (const action of ['read', 'update']) await bundles.upsertBundleRule(db, { tenant: context.tenant, bundleId, revisionId, resourceType: 'interaction', action, templateKey: 'selected_clients', config: { selectedClientIds: [nextClientId] } });
+  await bundles.publishBundleRevision(db, { tenant: context.tenant, bundleId, revisionId, actorUserId: user.user_id });
+  await bundles.createBundleAssignment(db, { tenant: context.tenant, bundleId, targetType: 'api_key', targetId: context.apiKeyId });
+  await expect(update({ client_id: clientId }, id)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(await customer.table('interactions').where('interaction_id', id).first()).toMatchObject({ client_id: nextClientId });
+}));
+
+it('customer interaction edits roll back on final credential expiry and reject read-only lifecycle writes', async () => withInteractionUpdateFixture(async ({ update, customer, context, interactionId, events, principal }: any) => {
+  await db.raw(`CREATE FUNCTION expire_interaction_edit_key() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN UPDATE api_keys SET expires_at = clock_timestamp() - interval '1 second' WHERE tenant = NEW.tenant AND api_key_id = '${context.apiKeyId}'::uuid; RETURN NEW; END $$`);
+  await db.raw('CREATE TRIGGER expire_interaction_edit_key AFTER UPDATE ON interactions FOR EACH ROW EXECUTE FUNCTION expire_interaction_edit_key()');
+  try {
+    await expect(update({ notes: 'Must roll back' })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    expect(await customer.table('interactions').where('interaction_id', interactionId).first()).toMatchObject({ notes: 'Private interaction details' });
+    expect(events).not.toHaveBeenCalled();
+  } finally { await db.raw('DROP TRIGGER expire_interaction_edit_key ON interactions'); await db.raw('DROP FUNCTION expire_interaction_edit_key()'); }
+  await expireCoManagedEntitlement(principal.tenant);
+  await expect(update({ title: 'Read-only change' })).rejects.toBeDefined();
+  expect(await customer.table('interactions').where('interaction_id', interactionId).first()).toMatchObject({ title: 'Customer meeting follow-up' });
+}));
+
+async function withInteractionLifecycleFixture(work: (fixture: any) => Promise<void>) {
+  return withInteractionUpdateFixture(async (fixture: any) => {
+    const { domain, customer, context, typeId, clientId, actor, events } = fixture;
+    const statusId = (await customer.table('statuses').where({ status_type: 'interaction', is_default: true }).first())?.status_id ?? randomUUID();
+    if (!await customer.table('statuses').where('status_id', statusId).first()) await customer.table('statuses').insert({ tenant: context.tenant, status_id: statusId, name: 'Completed interaction', status_type: 'interaction', is_default: true, is_closed: true, order_number: 1 });
+    const input = { type_id: typeId, user_id: context.userId, client_id: clientId, title: 'Customer phone call', notes: 'Local call notes' };
+    const create = (patch: any = {}) => domain.createCoManagedNativeInteraction(db, context.tenant, { ...input, ...patch }, actor, events);
+    const remove = (id: string) => domain.deleteCoManagedNativeInteraction(db, context.tenant, id, actor, events);
+    await work({ ...fixture, input, statusId, create, remove });
+  });
+}
+
+it('customer interaction lifecycle creates and deletes an admitted local interaction through native actions without accepting forged relationships', async () => withInteractionLifecycleFixture(async ({ actions, input, context, customer, statusId, events }: any) => {
+  const forgedId = randomUUID();
+  const created = await actions.addInteraction({ ...input, tenant: randomUUID(), interaction_id: forgedId, opportunity_id: randomUUID(), client_name: 'Forged client', online_meeting: { join_url: 'https://forged.example.invalid' } });
+  expect(created).toMatchObject({ tenant: context.tenant, title: input.title, client_id: input.client_id, user_id: context.userId, status_id: statusId, online_meeting: null });
+  expect(created.interaction_id).not.toBe(forgedId);
+  expect(await customer.table('interactions').where('interaction_id', created.interaction_id).first()).toMatchObject({ opportunity_id: null, notes: input.notes });
+  expect(events.mock.lastCall[0]).toEqual({ eventType: 'INTERACTION_CREATED', payload: { tenantId: context.tenant, interactionId: created.interaction_id, userId: context.userId } });
+  events.mockClear();
+  expect(await actions.deleteInteraction(created.interaction_id)).toBeUndefined();
+  expect(await customer.table('interactions').where('interaction_id', created.interaction_id).first()).toBeUndefined();
+  expect(events.mock.lastCall[0]).toEqual({ eventType: 'INTERACTION_DELETED', payload: { tenantId: context.tenant, interactionId: created.interaction_id, userId: context.userId } });
+}));
+
+it('customer interaction lifecycle resolves a contact client and rejects mismatched parents and inactive owners', async () => withInteractionLifecycleFixture(async ({ create, customer, context, clientId }: any) => {
+  const contact = await customer.table('contacts').where('client_id', clientId).first();
+  expect(contact).toBeDefined();
+  expect(await create({ client_id: null, contact_name_id: contact.contact_name_id })).toMatchObject({ interaction: { client_id: clientId, contact_name_id: contact.contact_name_id } });
+  const otherClient = randomUUID(); await customer.table('clients').insert({ tenant: context.tenant, client_id: otherClient, client_name: 'Another client' });
+  await expect(create({ client_id: otherClient, contact_name_id: contact.contact_name_id })).rejects.toMatchObject({ code: 'INTERACTION_INVALID' });
+  const otherUser = randomUUID(), base = await customer.table('users').where('user_id', context.userId).first();
+  await customer.table('users').insert({ ...base, user_id: otherUser, username: `inactive-${otherUser}`, email: 'inactive-interaction@example.invalid', is_inactive: true });
+  await expect(create({ user_id: otherUser })).rejects.toMatchObject({ code: 'INTERACTION_INVALID' });
+}));
+
+it('customer interaction lifecycle keeps linked meetings and transcript documents when deletion is requested', async () => withInteractionLifecycleFixture(async ({ remove, actions, interactionId, customer, meetingId, documentId, events }: any) => {
+  await expect(remove(interactionId)).rejects.toMatchObject({ code: 'INTERACTION_IN_USE' });
+  expect(await actions.deleteInteraction(interactionId)).toHaveProperty('actionError');
+  expect(await customer.table('interactions').where('interaction_id', interactionId).first()).toBeDefined();
+  expect(await customer.table('online_meetings').where('meeting_id', meetingId).first()).toBeDefined();
+  expect(await customer.table('documents').where('document_id', documentId).first()).toBeDefined();
+  expect(await customer.table('online_meeting_artifacts').where('meeting_id', meetingId).select()).toHaveLength(2);
+  expect(events).not.toHaveBeenCalled();
+}));
+
+it('customer interaction lifecycle intersects API field scope and rejects revoked keys for creation and deletion', async () => withInteractionLifecycleFixture(async ({ create, remove, context, customer, user, actions, input, events }: any) => {
+  const created = await create(); events.mockClear();
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: context.tenant, name: 'Interaction lifecycle scope', actorUserId: user.user_id });
+  for (const action of ['read', 'create', 'delete']) await bundles.upsertBundleRule(db, { tenant: context.tenant, bundleId, revisionId, resourceType: 'interaction', action, templateKey: 'own', config: { redactedFields: ['notes'] } });
+  await bundles.publishBundleRevision(db, { tenant: context.tenant, bundleId, revisionId, actorUserId: user.user_id });
+  await bundles.createBundleAssignment(db, { tenant: context.tenant, bundleId, targetType: 'api_key', targetId: context.apiKeyId });
+  await expect(create()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await expect(remove(created.interaction.interaction_id)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(events).not.toHaveBeenCalled();
+  expect(await actions.addInteraction(input)).toHaveProperty('interaction_id');
+  await customer.table('api_keys').where('api_key_id', context.apiKeyId).update({ active: false });
+  await expect(create({ notes: undefined })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await expect(remove(created.interaction.interaction_id)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+}));
+
+it('customer interaction lifecycle rolls back insertion and deletion when credentials expire at the final check', async () => withInteractionLifecycleFixture(async ({ create, remove, customer, context, events, principal }: any) => {
+  const created = await create(), id = created.interaction.interaction_id; events.mockClear();
+  const before = await customer.table('interactions').count('* as count').first();
+  await db.raw(`CREATE FUNCTION expire_interaction_lifecycle_key() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN UPDATE api_keys SET expires_at = clock_timestamp() - interval '1 second' WHERE tenant = COALESCE(NEW.tenant, OLD.tenant) AND api_key_id = '${context.apiKeyId}'::uuid; RETURN COALESCE(NEW, OLD); END $$`);
+  await db.raw('CREATE TRIGGER expire_interaction_lifecycle_key AFTER INSERT OR DELETE ON interactions FOR EACH ROW EXECUTE FUNCTION expire_interaction_lifecycle_key()');
+  try {
+    await expect(create()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    await expect(remove(id)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    expect(await customer.table('interactions').where('interaction_id', id).first()).toBeDefined();
+    expect(await customer.table('interactions').count('* as count').first()).toEqual(before);
+    expect(events).not.toHaveBeenCalled();
+  } finally { await db.raw('DROP TRIGGER expire_interaction_lifecycle_key ON interactions'); await db.raw('DROP FUNCTION expire_interaction_lifecycle_key()'); }
+  await expireCoManagedEntitlement(principal.tenant);
+  await expect(create()).rejects.toBeDefined(); await expect(remove(id)).rejects.toBeDefined();
+  expect(await customer.table('interactions').where('interaction_id', id).first()).toBeDefined();
+}));
+
+it('consolidated ticket export returns every matching row in global order regardless of page controls', async () => withTicketQueueFixture(async ({ principal, sponsor, nativeId, resource }: any) => {
+  const { exportCoManagedTicketQueue } = await import('../../../../packages/co-managed/src/ticketQueue');
+  const source = await sponsor.table('tickets').where('ticket_id', nativeId).first();
+  await sponsor.table('tickets').insert(Array.from({ length: 105 }, (_, n) => ({ tenant: principal.tenant, ticket_id: randomUUID(), ticket_number: `EXPORT-${String(n).padStart(3, '0')}`, title: `Export row ${String(n).padStart(3, '0')}`, client_id: source.client_id, board_id: source.board_id, status_id: source.status_id, entered_by: principal.userId })));
+  const rows = await exportCoManagedTicketQueue(db, principal, { view: 'working', state: 'all', sort: 'title', direction: 'asc', page: 100, pageSize: 1 } as any);
+  expect(rows).toHaveLength(107); expect(rows[0].ticketId).toBe(nativeId);
+  expect(new Set(rows.map(row => `${row.tenant}:${row.ticketId}`)).size).toBe(107);
+  expect(rows.find(row => row.ticketId === resource.id)).toMatchObject({ tenant: resource.tenant, relationshipId: resource.relationshipId });
+  const filtered = await exportCoManagedTicketQueue(db, principal, { view: 'working', search: 'Export row 10', sort: 'number', direction: 'desc' });
+  expect(filtered.map(row => row.fields.ticket_number)).toEqual(['EXPORT-104', 'EXPORT-103', 'EXPORT-102', 'EXPORT-101', 'EXPORT-100']);
+  expect(await exportCoManagedTicketQueue(db, principal, { view: 'working', workspaceTenant: randomUUID() })).toEqual([]);
+}));
+
+it('consolidated ticket export applies current field restrictions and removes revoked work from the downloadable relation', async () => withTicketQueueFixture(async ({ principal, resource, customerPrincipal, operation }: any) => {
+  const { exportCoManagedTicketQueue } = await import('../../../../packages/co-managed/src/ticketQueue');
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: principal.tenant, name: 'Export title restriction', actorUserId: principal.userId });
+  await bundles.upsertBundleRule(db, { tenant: principal.tenant, bundleId, revisionId, resourceType: 'ticket', action: 'read', templateKey: 'selected_clients', config: { selectedClientIds: [operation.request.clientId], redactedFields: ['title', 'status_id'] } });
+  await bundles.publishBundleRevision(db, { tenant: principal.tenant, bundleId, revisionId, actorUserId: principal.userId });
+  await bundles.createBundleAssignment(db, { tenant: principal.tenant, bundleId, targetType: 'user', targetId: principal.userId });
+  const exported = await exportCoManagedTicketQueue(db, principal, { view: 'oversight', state: 'all' });
+  expect(exported).toHaveLength(1); expect(exported[0].fields).not.toHaveProperty('title'); expect(exported[0].fields).not.toHaveProperty('status_name');
+  expect(await exportCoManagedTicketQueue(db, principal, { view: 'oversight', state: 'all', search: 'Customer issue' })).toEqual([]);
+  const { revokeCoManagedTicketGrant } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  await revokeCoManagedTicketGrant(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 1, note: 'End this disclosure' });
+  expect(await exportCoManagedTicketQueue(db, principal, { view: 'oversight', state: 'all' })).toEqual([]);
+}));
+
+it('consolidated ticket export remains available during license lapse but rejects expired sessions', async () => withTicketQueueFixture(async ({ principal, sponsor, resource }: any) => {
+  const { exportCoManagedTicketQueue } = await import('../../../../packages/co-managed/src/ticketQueue');
+  await expireCoManagedEntitlement(principal.tenant);
+  expect(await exportCoManagedTicketQueue(db, principal, { view: 'oversight' })).toEqual([expect.objectContaining({ tenant: resource.tenant, ticketId: resource.id })]);
+  await sponsor.table('sessions').where('session_id', principal.sessionId).update({ expires_at: new Date(0) });
+  await expect(exportCoManagedTicketQueue(db, principal, { view: 'working' })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+}));
+
+it('bulk handback retains individual authorization and receipts while returning mixed outcomes without copying tickets', async () => withTicketQueueFixture(async ({ principal, customerPrincipal, resource, customer, sponsor, nativeId }: any) => {
+  const { bulkHandBackCoManagedTickets, escalateCoManagedTicket } = await import('@alga-psa/co-managed');
+  const source = await customer.table('tickets').where('ticket_id', resource.id).first(), otherId = randomUUID();
+  const { title_index, ...copy } = source;
+  await customer.table('tickets').insert({ ...copy, ticket_id: otherId, ticket_number: 'BULK-2' });
+  const second = { ...resource, id: otherId };
+  await escalateCoManagedTicket(db, customerPrincipal, second, { operationId: randomUUID(), expectedRevision: 0, note: 'Second escalation' });
+  const foreign = await ticketHandoffFixture();
+  const input = { note: 'Customer IT can continue', items: [
+    { resource, operationId: randomUUID(), expectedRevision: 1 },
+    { resource: foreign.resource, operationId: randomUUID(), expectedRevision: 1 },
+    { resource: second, operationId: randomUUID(), expectedRevision: 9 },
+    { resource: { ...resource, tenant: principal.tenant, id: nativeId }, operationId: randomUUID(), expectedRevision: 1 },
+  ] };
+  const results = await bulkHandBackCoManagedTickets(db, principal, input);
+  expect(results).toMatchObject([{ index: 0, ok: true, receipt: { transition: 'handed_back', appliedRevision: 2 } }, { index: 1, ok: false, code: 'forbidden' }, { index: 2, ok: false, code: 'changed' }, { index: 3, ok: false, code: 'invalid' }]);
+  expect(await bulkHandBackCoManagedTickets(db, principal, input)).toEqual(results);
+  expect(await customer.table('co_management_ticket_handoffs').where({ ticket_id: resource.id, transition: 'handed_back' })).toHaveLength(1);
+  expect(await customer.table('co_management_ticket_work').where('ticket_id', otherId).first()).toMatchObject({ revision: 1, responsibility: 'msp' });
+  expect(await customer.table('tickets').where('ticket_id', resource.id).first()).toEqual(source);
+  expect(await sponsor.table('tickets').where('ticket_id', resource.id).first()).toBeUndefined();
+}));
+
+it('bulk handback rejects masked handoff fields and checks read permission as well as update', async () => withTicketQueueFixture(async ({ principal, resource, operation, sponsor, customer }: any) => {
+  const { bulkHandBackCoManagedTickets } = await import('@alga-psa/co-managed');
+  const input = { note: 'Do not write this note', items: [{ resource, operationId: randomUUID(), expectedRevision: 1 }] };
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: principal.tenant, name: 'Handoff note restrictions', actorUserId: principal.userId });
+  for (const action of ['read', 'update']) await bundles.upsertBundleRule(db, { tenant: principal.tenant, bundleId, revisionId, resourceType: 'ticket', action, templateKey: 'selected_clients', config: { selectedClientIds: [operation.request.clientId], redactedFields: ['values.notes'] } });
+  await bundles.publishBundleRevision(db, { tenant: principal.tenant, bundleId, revisionId, actorUserId: principal.userId });
+  await bundles.createBundleAssignment(db, { tenant: principal.tenant, bundleId, targetType: 'user', targetId: principal.userId });
+  expect(await bulkHandBackCoManagedTickets(db, principal, input)).toEqual([{ index: 0, ok: false, code: 'forbidden' }]);
+  await sponsor.table('authorization_bundle_assignments').where('bundle_id', bundleId).del();
+  await sponsor.table('role_permissions').whereIn('permission_id', sponsor.table('permissions').where({ resource: 'ticket', action: 'read' }).select('permission_id')).del();
+  expect(await bulkHandBackCoManagedTickets(db, principal, input)).toEqual([{ index: 0, ok: false, code: 'forbidden' }]);
+  expect(await customer.table('co_management_ticket_work').where('ticket_id', resource.id).first()).toMatchObject({ revision: 1 });
+}));
+
+it('bulk handback returns read-only and per-item invalid results without applying writes', async () => withTicketQueueFixture(async ({ principal, resource, customer }: any) => {
+  const { bulkHandBackCoManagedTickets } = await import('@alga-psa/co-managed');
+  await expireCoManagedEntitlement(principal.tenant);
+  const input = { note: 'Paused', items: [{ resource, operationId: randomUUID(), expectedRevision: 1 }, { resource, operationId: 'invalid', expectedRevision: 1 }] };
+  expect(await bulkHandBackCoManagedTickets(db, principal, input)).toEqual([{ index: 0, ok: false, code: 'readOnly' }, { index: 1, ok: false, code: 'invalid' }]);
+  expect(await customer.table('co_management_ticket_work').where('ticket_id', resource.id).first()).toMatchObject({ revision: 1, responsibility: 'msp' });
+}));
+
+it('bulk handback rolls back an individual handoff if its retained session expires before commit', async () => withTicketQueueFixture(async ({ principal, resource, customer }: any) => {
+  const { bulkHandBackCoManagedTickets } = await import('@alga-psa/co-managed');
+  await db.raw(`CREATE FUNCTION expire_bulk_handoff_session() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN UPDATE sessions SET expires_at = clock_timestamp() - interval '1 second' WHERE tenant = '${principal.tenant}'::uuid AND session_id = '${principal.sessionId}'::uuid; RETURN NEW; END $$`);
+  await db.raw('CREATE TRIGGER expire_bulk_handoff_session AFTER INSERT ON co_management_ticket_handoffs FOR EACH ROW EXECUTE FUNCTION expire_bulk_handoff_session()');
+  try {
+    expect(await bulkHandBackCoManagedTickets(db, principal, { note: 'Must roll back', items: [{ resource, operationId: randomUUID(), expectedRevision: 1 }] })).toEqual([{ index: 0, ok: false, code: 'forbidden' }]);
+    expect(await customer.table('co_management_ticket_work').where('ticket_id', resource.id).first()).toMatchObject({ revision: 1, responsibility: 'msp' });
+    expect(await customer.table('co_management_ticket_handoffs').where({ ticket_id: resource.id, transition: 'handed_back' })).toHaveLength(0);
+  } finally { await db.raw('DROP TRIGGER expire_bulk_handoff_session ON co_management_ticket_handoffs'); await db.raw('DROP FUNCTION expire_bulk_handoff_session()'); }
+}));
+
+async function withTicketAssignmentFixture(work: (fixture: any) => Promise<void>) {
+  return withTicketQueueFixture(async fixture => work({ ...fixture, assignments: await import('../../../../packages/co-managed/src/ticketAssignments'),
+    selected: { tenant: fixture.principal.tenant, kind: 'user', id: fixture.principal.userId } }));
+}
+
+it('shared ticket assignment keeps the customer ticket intact and records qualified MSP routing with exact retry', async () => withTicketAssignmentFixture(async ({ assignments, principal, customerPrincipal, resource, customer, sponsor, selected }: any) => {
+  const before = await customer.table('tickets').where('ticket_id', resource.id).first();
+  expect((await assignments.listCoManagedTicketAssignees(db, customerPrincipal, resource, 'user')).options.map((option: any) => option.id)).toEqual([principal.userId]);
+  const request = { operationId: randomUUID(), expectedRevision: 1, assignee: selected };
+  const receipt = await assignments.assignCoManagedTicket(db, customerPrincipal, resource, request);
+  expect(await assignments.assignCoManagedTicket(db, customerPrincipal, resource, request)).toEqual(receipt);
+  expect(await assignments.getCoManagedTicketAssignment(db, principal, resource)).toMatchObject({ revision: 2, canEdit: true, canAssign: true, mspAssignment: selected });
+  expect(await customer.table('tickets').where('ticket_id', resource.id).first()).toEqual(before);
+  expect(await sponsor.table('co_managed_ticket_references').where('ticket_id', resource.id).first()).toMatchObject({ assigned_to: principal.userId, assigned_team_id: null });
+  await assignments.assignCoManagedTicket(db, principal, resource, { operationId: randomUUID(), expectedRevision: 2, assignee: null });
+  expect(await assignments.getCoManagedTicketAssignment(db, customerPrincipal, resource)).toMatchObject({ revision: 3, mspAssignment: null, hasAssignment: false });
+  const history = await customer.table('audit_logs').where({ record_id: resource.id, operation: 'co_managed_ticket_assignment' }).orderBy('timestamp');
+  expect(history).toHaveLength(2); expect(history[0].user_id).toBe(customerPrincipal.userId);
+  expect(history[1].user_id).toBeNull(); expect(history[1].details).toMatchObject({ actor_tenant: principal.tenant, actor_user_id: principal.userId, relationship_id: resource.relationshipId });
+  expect(await customer.table('co_management_ticket_handoffs').where('ticket_id', resource.id)).toHaveLength(1);
+}));
+
+it('shared ticket assignment offers only staffed teams with an active eligible member', async () => withTicketAssignmentFixture(async ({ assignments, principal, customerPrincipal, resource, sponsor }: any) => {
+  const eligible = randomUUID(), empty = randomUUID();
+  for (const id of [eligible, empty]) {
+    await sponsor.table('teams').insert({ tenant: principal.tenant, team_id: id, team_name: id === eligible ? 'Service desk' : 'Empty private team', manager_id: principal.userId });
+    await sponsor.table('co_management_staff_assignments').insert({ tenant: principal.tenant, customer_tenant: resource.tenant, relationship_id: resource.relationshipId, principal_type: 'team', principal_id: id, relationship_role: 'technician' });
+  }
+  await sponsor.table('team_members').insert({ tenant: principal.tenant, team_id: eligible, user_id: principal.userId });
+  expect((await assignments.listCoManagedTicketAssignees(db, customerPrincipal, resource, 'team')).options.map((option: any) => option.id)).toEqual([eligible]);
+  await assignments.assignCoManagedTicket(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 1, assignee: { tenant: principal.tenant, kind: 'team', id: eligible } });
+  await sponsor.table('team_members').where('team_id', eligible).del();
+  expect(await assignments.getCoManagedTicketAssignment(db, customerPrincipal, resource)).toMatchObject({ hasAssignment: true, mspAssignment: null, canEdit: true });
+  expect((await assignments.listCoManagedTicketAssignees(db, customerPrincipal, resource, 'team')).options).toEqual([]);
+}));
+
+it('shared ticket assignment serializes competing changes and rejects stale operation reuse', async () => withTicketAssignmentFixture(async ({ assignments, principal, customerPrincipal, resource, selected }: any) => {
+  const first = { operationId: randomUUID(), expectedRevision: 1, assignee: selected }, second = { ...first, operationId: randomUUID() };
+  const results = await Promise.allSettled([assignments.assignCoManagedTicket(db, principal, resource, first), assignments.assignCoManagedTicket(db, customerPrincipal, resource, second)]);
+  expect(results.filter(result => result.status === 'fulfilled')).toHaveLength(1);
+  expect(results.find(result => result.status === 'rejected')).toMatchObject({ reason: { code: 'TICKET_ASSIGNMENT_CONFLICT' } });
+  const [actor, request] = results[0].status === 'fulfilled' ? [principal, first] : [customerPrincipal, second];
+  await expect(assignments.assignCoManagedTicket(db, actor, resource, { ...request, assignee: null })).rejects.toMatchObject({ code: 'TICKET_ASSIGNMENT_OPERATION_CONFLICT' });
+}));
+
+it('shared ticket assignment hides read-masked assignment values and rejects expired editors', async () => withTicketAssignmentFixture(async ({ assignments, principal, customerPrincipal, resource, customer, selected, operation }: any) => {
+  await assignments.assignCoManagedTicket(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 1, assignee: selected });
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: customerPrincipal.tenant, name: 'Assignment read restrictions', actorUserId: customerPrincipal.userId });
+  await bundles.upsertBundleRule(db, { tenant: customerPrincipal.tenant, bundleId, revisionId, resourceType: 'ticket', action: 'read', templateKey: 'selected_clients', config: { selectedClientIds: [operation.customer_client_id], redactedFields: ['values.msp_assignment'] } });
+  await bundles.publishBundleRevision(db, { tenant: customerPrincipal.tenant, bundleId, revisionId, actorUserId: customerPrincipal.userId });
+  await bundles.createBundleAssignment(db, { tenant: customerPrincipal.tenant, bundleId, targetType: 'user', targetId: customerPrincipal.userId });
+  const state = await assignments.getCoManagedTicketAssignment(db, customerPrincipal, resource);
+  expect(state).toMatchObject({ canEdit: false, canAssign: false }); expect(state).not.toHaveProperty('mspAssignment'); expect(state).not.toHaveProperty('revision');
+  await expect(assignments.listCoManagedTicketAssignees(db, customerPrincipal, resource, 'user')).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await expect(assignments.assignCoManagedTicket(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 2, assignee: null })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await customer.table('sessions').where('session_id', customerPrincipal.sessionId).update({ expires_at: new Date(0) });
+  await expect(assignments.getCoManagedTicketAssignment(db, customerPrincipal, resource)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+}));
+
+it('shared ticket assignment rolls back routing revision attribution and receipt on expiry at commit', async () => withTicketAssignmentFixture(async ({ assignments, principal, resource, sponsor, customer, selected }: any) => {
+  await db.raw(`CREATE FUNCTION expire_ticket_assignment_session() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN UPDATE sessions SET expires_at = to_timestamp(0) WHERE tenant = '${principal.tenant}'::uuid AND session_id = '${principal.sessionId}'::uuid; RETURN NEW; END $$`);
+  await db.raw("CREATE TRIGGER expire_ticket_assignment_session AFTER INSERT ON co_management_command_receipts FOR EACH ROW WHEN (NEW.command_type = 'ticket_assignment') EXECUTE FUNCTION expire_ticket_assignment_session()");
+  try {
+    await expect(assignments.assignCoManagedTicket(db, principal, resource, { operationId: randomUUID(), expectedRevision: 1, assignee: selected })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    expect(await sponsor.table('co_managed_ticket_references').where('ticket_id', resource.id).first()).toMatchObject({ assigned_to: null });
+    expect(await customer.table('co_management_ticket_work').where('ticket_id', resource.id).first()).toMatchObject({ revision: 1 });
+    expect(await customer.table('audit_logs').where('operation', 'co_managed_ticket_assignment')).toHaveLength(0);
+    expect(await customer.table('co_management_command_receipts').where('command_type', 'ticket_assignment')).toHaveLength(0);
+  } finally { await db.raw('DROP TRIGGER expire_ticket_assignment_session ON co_management_command_receipts'); await db.raw('DROP FUNCTION expire_ticket_assignment_session()'); }
+}));
+
+it('shared ticket assignment requires collaboration scope and honors a retained board grant after explicit revocation', async () => withTicketAssignmentFixture(async ({ assignments, principal, customerPrincipal, resource, customer, selected }: any) => {
+  await customer.table('co_management_ticket_work').where('ticket_id', resource.id).update({ grant_revoked_at: new Date(), can_collaborate: false });
+  await expect(assignments.assignCoManagedTicket(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 1, assignee: selected })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  const ticket = await customer.table('tickets').where('ticket_id', resource.id).first('board_id');
+  await customer.table('co_management_relationships').where('relationship_id', resource.relationshipId).update({ visibility_mode: 'board_scope' });
+  await customer.table('co_management_board_scopes').insert({ tenant: resource.tenant, relationship_id: resource.relationshipId, board_id: ticket.board_id, can_collaborate: true });
+  await assignments.assignCoManagedTicket(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 1, assignee: selected });
+  expect(await assignments.getCoManagedTicketAssignment(db, principal, resource)).toMatchObject({ revision: 2, mspAssignment: selected });
+  expect((await customer.table('co_management_ticket_work').where('ticket_id', resource.id).first()).grant_revoked_at).not.toBeNull();
+}));
+
+async function withPreHandoffAssignmentFixture(work: (fixture: any) => Promise<void>) {
+  const fixture = await ticketHandoffFixture(), { customer, resource } = fixture;
+  const ticket = await customer.table('tickets').where('ticket_id', resource.id).first();
+  await customer.table('co_management_relationships').where('relationship_id', resource.relationshipId).update({ visibility_mode: 'board_scope' });
+  await customer.table('co_management_board_scopes').insert({ tenant: resource.tenant, relationship_id: resource.relationshipId, board_id: ticket.board_id, can_collaborate: true });
+  await work({ ...fixture, ticket, domain: await import('@alga-psa/co-managed'), selected: { tenant: fixture.principal.tenant, kind: 'user', id: fixture.principal.userId } });
+}
+
+it.each(['customer', 'sponsor'])('pre-handoff assignment lets the %s assign visible collaborative work without starting escalation', async side => withPreHandoffAssignmentFixture(async ({ domain, customer, sponsor, principal, customerPrincipal, resource, selected, ticket }: any) => {
+  const actor = side === 'customer' ? customerPrincipal : principal;
+  expect(await domain.getCoManagedTicketAssignment(db, actor, resource)).toMatchObject({ revision: 0, canEdit: true, canAssign: true, hasAssignment: false });
+  expect((await domain.getCoManagedTicketQueue(db, principal, { view: 'working' })).totalCount).toBe(0);
+  expect((await domain.getCoManagedTicketQueue(db, principal, { view: 'oversight' })).totalCount).toBe(1);
+  const request = { operationId: randomUUID(), expectedRevision: 0, assignee: selected };
+  const receipt = await domain.assignCoManagedTicket(db, actor, resource, request);
+  expect(await domain.assignCoManagedTicket(db, actor, resource, request)).toEqual(receipt);
+  expect(await customer.table('co_management_ticket_work').where('ticket_id', resource.id).first()).toMatchObject({ revision: 1, responsibility: 'customer', first_escalated_at: null, last_transition_at: null, can_collaborate: false });
+  expect((await domain.getCoManagedSharedWorkSummary(db, principal, resource)).fields).toMatchObject({ responsibility: 'customer', first_escalated_at: null, explicit_grant_active: false });
+  expect((await domain.getCoManagedTicketQueue(db, principal, { view: 'working' })).items).toEqual([expect.objectContaining({ tenant: resource.tenant, ticketId: resource.id, fields: expect.objectContaining({ responsibility: 'customer' }) })]);
+  expect(await customer.table('tickets').where('ticket_id', resource.id).first()).toEqual(ticket);
+  expect(await customer.table('co_management_ticket_handoffs').where('ticket_id', resource.id)).toHaveLength(0);
+  await domain.assignCoManagedTicket(db, actor, resource, { operationId: randomUUID(), expectedRevision: 1, assignee: null });
+  expect((await domain.getCoManagedTicketQueue(db, principal, { view: 'working' })).totalCount).toBe(0);
+  expect(await sponsor.table('co_managed_ticket_references').where('ticket_id', resource.id).first()).toMatchObject({ assigned_to: null, assigned_team_id: null });
+  const migration = require('../../../migrations/20260908043851_allow_co_managed_assignment_before_escalation.cjs');
+  await migration.up(db); await expect(migration.down(db)).rejects.toThrow('not been escalated');
+}));
+
+it('pre-handoff assignment preserves its identity through actual escalation and clears working assignment on handback', async () => withPreHandoffAssignmentFixture(async ({ domain, customer, sponsor, principal, customerPrincipal, resource, selected }: any) => {
+  await domain.assignCoManagedTicket(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 0, assignee: selected });
+  const before = await customer.table('co_management_ticket_work').where('ticket_id', resource.id).first();
+  const escalation = await domain.escalateCoManagedTicket(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 1, note: 'MSP is now responsible' });
+  const escalated = await customer.table('co_management_ticket_work').where('ticket_id', resource.id).first();
+  expect(escalated).toMatchObject({ work_id: before.work_id, revision: 2, responsibility: 'msp', grant_revoked_at: null });
+  expect(new Date(escalated.first_escalated_at).toISOString()).toBe(escalation.occurredAt);
+  await domain.handBackCoManagedTicket(db, principal, resource, { operationId: randomUUID(), expectedRevision: 2, note: 'Customer continues' });
+  expect(await sponsor.table('co_managed_ticket_references').where('ticket_id', resource.id).first()).toMatchObject({ assigned_to: null, assigned_team_id: null });
+  expect((await domain.getCoManagedTicketQueue(db, principal, { view: 'working' })).totalCount).toBe(0);
+  expect((await domain.getCoManagedTicketQueue(db, principal, { view: 'oversight' })).totalCount).toBe(1);
+  await domain.escalateCoManagedTicket(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 3, note: 'MSP resumes' });
+  expect((await customer.table('co_management_ticket_work').where('ticket_id', resource.id).first()).first_escalated_at).toEqual(escalated.first_escalated_at);
+  expect((await domain.getCoManagedTicketQueue(db, principal, { view: 'working' })).totalCount).toBe(1);
+}));
+
+it('pre-handoff assignment does not preserve live access after its board grant is removed or manufacture an explicit grant', async () => withPreHandoffAssignmentFixture(async ({ domain, customer, principal, customerPrincipal, resource, selected }: any) => {
+  await domain.assignCoManagedTicket(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 0, assignee: selected });
+  await expect(customer.table('co_management_ticket_work').where('ticket_id', resource.id).update({ grant_revoked_at: null })).rejects.toMatchObject({ code: '23514' });
+  await customer.table('co_management_board_scopes').where('relationship_id', resource.relationshipId).del();
+  await expect(domain.getCoManagedTicketAssignment(db, principal, resource)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect((await domain.getCoManagedTicketQueue(db, principal, { view: 'working' })).totalCount).toBe(0);
+  expect((await domain.getCoManagedTicketQueue(db, principal, { view: 'oversight' })).totalCount).toBe(0);
+  expect(await domain.getCoManagedTicketAssignment(db, customerPrincipal, resource)).toMatchObject({ canAssign: false, canEdit: true, hasAssignment: true, mspAssignment: null });
+}));
+
+it('pre-handoff assignment requires collaborative board sharing before any routing record is created', async () => withPreHandoffAssignmentFixture(async ({ domain, customer, sponsor, principal, customerPrincipal, resource, selected }: any) => {
+  await customer.table('co_management_board_scopes').where('relationship_id', resource.relationshipId).update({ can_collaborate: false });
+  await expect(domain.assignCoManagedTicket(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 0, assignee: selected })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(await customer.table('co_management_ticket_work').where('ticket_id', resource.id)).toHaveLength(0);
+  expect(await sponsor.table('co_managed_ticket_references').where('ticket_id', resource.id)).toHaveLength(0);
+  expect(await domain.getCoManagedTicketAssignment(db, customerPrincipal, resource)).toMatchObject({ canAssign: false, canEdit: false });
+  expect((await domain.getCoManagedTicketQueue(db, principal, { view: 'working' })).totalCount).toBe(0);
+}));
+
+it('pre-handoff assignment serializes initial creation across both organizations', async () => withPreHandoffAssignmentFixture(async ({ domain, customer, sponsor, principal, customerPrincipal, resource, selected }: any) => {
+  const request = () => ({ operationId: randomUUID(), expectedRevision: 0, assignee: selected });
+  const results = await Promise.allSettled([domain.assignCoManagedTicket(db, customerPrincipal, resource, request()), domain.assignCoManagedTicket(db, principal, resource, request())]);
+  expect(results.filter(result => result.status === 'fulfilled')).toHaveLength(1);
+  expect(results.find(result => result.status === 'rejected')).toMatchObject({ reason: { code: 'TICKET_ASSIGNMENT_CONFLICT' } });
+  expect(await customer.table('co_management_ticket_work').where('ticket_id', resource.id)).toHaveLength(1);
+  expect(await sponsor.table('co_managed_ticket_references').where('ticket_id', resource.id)).toHaveLength(1);
+}));
+
+it('pre-handoff assignment is excluded from working counts when assignment visibility is masked', async () => withPreHandoffAssignmentFixture(async ({ domain, principal, customerPrincipal, resource, selected, operation }: any) => {
+  await domain.assignCoManagedTicket(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 0, assignee: selected });
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: principal.tenant, name: 'Working assignment privacy', actorUserId: principal.userId });
+  await bundles.upsertBundleRule(db, { tenant: principal.tenant, bundleId, revisionId, resourceType: 'ticket', action: 'read', templateKey: 'selected_clients', config: { selectedClientIds: [operation.request.clientId], redactedFields: ['msp_assignment'] } });
+  await bundles.publishBundleRevision(db, { tenant: principal.tenant, bundleId, revisionId, actorUserId: principal.userId });
+  await bundles.createBundleAssignment(db, { tenant: principal.tenant, bundleId, targetType: 'user', targetId: principal.userId });
+  expect((await domain.getCoManagedTicketQueue(db, principal, { view: 'working' })).totalCount).toBe(0);
+  expect((await domain.getCoManagedTicketQueue(db, principal, { view: 'oversight' })).totalCount).toBe(1);
+  expect(await domain.exportCoManagedTicketQueue(db, principal, { view: 'working' })).toEqual([]);
+}));
+
+it('pre-handoff assignment rolls back new work routing and receipts on final credential expiry', async () => withPreHandoffAssignmentFixture(async ({ domain, principal, customer, sponsor, resource, selected }: any) => {
+  await db.raw(`CREATE FUNCTION expire_first_assignment_session() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN UPDATE sessions SET expires_at = to_timestamp(0) WHERE tenant = '${principal.tenant}'::uuid AND session_id = '${principal.sessionId}'::uuid; RETURN NEW; END $$`);
+  await db.raw("CREATE TRIGGER expire_first_assignment_session AFTER INSERT ON co_management_command_receipts FOR EACH ROW WHEN (NEW.command_type = 'ticket_assignment') EXECUTE FUNCTION expire_first_assignment_session()");
+  try {
+    await expect(domain.assignCoManagedTicket(db, principal, resource, { operationId: randomUUID(), expectedRevision: 0, assignee: selected })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    expect(await customer.table('co_management_ticket_work').where('ticket_id', resource.id)).toHaveLength(0);
+    expect(await sponsor.table('co_managed_ticket_references').where('ticket_id', resource.id)).toHaveLength(0);
+    expect(await customer.table('co_management_command_receipts').where('resource_id', resource.id)).toHaveLength(0);
+  } finally { await db.raw('DROP TRIGGER expire_first_assignment_session ON co_management_command_receipts'); await db.raw('DROP FUNCTION expire_first_assignment_session()'); }
+}));
+
+async function organizationSlaStoreFixture() {
+  const fixture = await ticketHandoffFixture();
+  const domain = await import('../../../../packages/sla/src/services/organizationSlaStore');
+  const identity = { tenant: fixture.principal.tenant, obligationId: randomUUID(), sourceTenant: fixture.resource.tenant, ticketId: fixture.resource.id };
+  const input = { workId: randomUUID(), generation: 1, policyId: randomUUID(), priorityId: randomUUID(),
+    schedule: { timezone: 'UTC', is_24x7: true, entries: [] }, targets: { responseMinutes: 1, resolutionMinutes: 10 }, occurredAt: '2026-09-08T12:00:00.000Z' };
+  const operationId = randomUUID();
+  const start = () => db.transaction(trx => domain.startOrganizationSlaObligation(trx, identity, operationId, input));
+  const apply = (operation: string, event: Parameters<typeof domain.applyOrganizationSlaEvent>[3]) =>
+    db.transaction(trx => domain.applyOrganizationSlaEvent(trx, identity, operation, event));
+  const read = () => fixture.sponsor.table('sla_organization_obligations').where('obligation_id', identity.obligationId).first();
+  return { ...fixture, domain, identity, input, operationId, start, apply, read };
+}
+
+describe('organization SLA durable clock', () => {
+  it('deduplicates concurrent starts and handoffs, keeps customer SLA fields unchanged, and retains exact receipts', async () => {
+    const f = await organizationSlaStoreFixture();
+    const before = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+    const starts = await Promise.all([f.start(), f.start()]);
+    expect(starts[0]).toEqual(starts[1]);
+    const pauseId = randomUUID(), event = { kind: 'paused' as const, reason: 'customer_responsible', occurredAt: '2026-09-08T12:01:30.000Z' };
+    const pauses = await Promise.all([f.apply(pauseId, event), f.apply(pauseId, event)]);
+    expect(pauses[0]).toEqual(pauses[1]);
+    await f.apply(randomUUID(), { kind: 'resumed', reason: 'customer_responsible', occurredAt: '2026-09-08T13:00:00.000Z' });
+    expect(await f.apply(pauseId, event)).toEqual(pauses[0]);
+    expect(await f.start()).toEqual(starts[0]);
+    expect(await db.transaction(trx => f.domain.startOrganizationSlaObligation(trx, f.identity, f.operationId,
+      { occurredAt: f.input.occurredAt, targets: { resolutionMinutes: 10, responseMinutes: 1 },
+        schedule: { entries: [], is_24x7: true, timezone: 'UTC' }, priorityId: f.input.priorityId,
+        policyId: f.input.policyId, generation: 1, workId: f.input.workId }))).toEqual(starts[0]);
+    const row = await f.read();
+    expect(row).toMatchObject({ tenant: f.principal.tenant, revision: 3, source_tenant: f.resource.tenant,
+      clock: { elapsedMilliseconds: 90000, startedAt: f.input.occurredAt, response: { breached: true, breachedAt: '2026-09-08T12:01:00.000Z' },
+        resolution: { dueAt: '2026-09-08T13:08:30.000Z' } } });
+    expect(await f.sponsor.table('sla_organization_events').where('obligation_id', f.identity.obligationId)).toHaveLength(3);
+    expect(await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).toEqual(before);
+    expect(await f.customer.table('sla_organization_obligations')).toEqual([]);
+    expect(await f.sponsor.table('tickets')).toEqual([]);
+    await expect(f.apply(pauseId, { ...event, reason: 'different' })).rejects.toThrow('operation changed');
+    expect(await f.read()).toEqual(row);
+  });
+
+  it('qualifies source identity and owning tenant even when obligation UUIDs collide', async () => {
+    const f = await organizationSlaStoreFixture();
+    await f.start();
+    const other = { ...f.identity, tenant: f.resource.tenant, sourceTenant: f.principal.tenant };
+    await db.transaction(trx => f.domain.startOrganizationSlaObligation(trx, other, f.operationId, f.input));
+    await expect(db.transaction(trx => f.domain.applyOrganizationSlaEvent(trx,
+      { ...f.identity, sourceTenant: randomUUID() }, randomUUID(), { kind: 'observed', occurredAt: '2026-09-08T12:02:00.000Z' })))
+      .rejects.toThrow('source does not match');
+    await f.apply(randomUUID(), { kind: 'responded', actorTenant: f.principal.tenant, audience: 'shared_it', occurredAt: '2026-09-08T12:00:30.000Z' });
+    expect((await f.read()).clock.response.completedAt).toBe('2026-09-08T12:00:30.000Z');
+    expect((await f.customer.table('sla_organization_obligations').where('obligation_id', other.obligationId).first()).clock.response.completedAt).toBeNull();
+  });
+
+  it('rolls the clock and event receipt back together and rejects out-of-order events', async () => {
+    const f = await organizationSlaStoreFixture();
+    await f.start();
+    const original = await f.read(), operationId = randomUUID();
+    await expect(db.transaction(async trx => {
+      await f.domain.applyOrganizationSlaEvent(trx, f.identity, operationId, { kind: 'resolved', occurredAt: '2026-09-08T12:02:00.000Z' });
+      throw new Error('Original credential expired');
+    })).rejects.toThrow('credential expired');
+    expect(await f.read()).toEqual(original);
+    expect(await f.sponsor.table('sla_organization_events').where({ obligation_id: f.identity.obligationId, operation_id: operationId })).toEqual([]);
+    await expect(f.apply(operationId, { kind: 'resolved', occurredAt: '2026-09-08T11:59:59.000Z' })).rejects.toThrow('causal order');
+    expect(await f.read()).toEqual(original);
+    await f.apply(operationId, { kind: 'resolved', occurredAt: '2026-09-08T12:02:00.000Z' });
+    expect((await f.read()).clock.resolution).toMatchObject({ completedAt: '2026-09-08T12:02:00.000Z', breached: false });
+  });
+
+  it('replays migration safely, refuses history loss, and rejects mismatched clock identities', async () => {
+    const f = await organizationSlaStoreFixture();
+    await f.start();
+    const migration = require('../../../../server/migrations/20260908050419_create_organization_sla_obligations.cjs');
+    await migration.up(db);
+    await expect(migration.down(db)).rejects.toThrow('retained organization SLA history');
+    await expect(f.sponsor.table('sla_organization_obligations').where('obligation_id', f.identity.obligationId)
+      .update({ clock: JSON.stringify({}) })).rejects.toMatchObject({ code: '23514' });
+    const row = await f.read();
+    await expect(f.sponsor.table('sla_organization_obligations').insert({ ...row, obligation_id: randomUUID(), clock: JSON.stringify(row.clock) }))
+      .rejects.toMatchObject({ code: '23514' });
+    expect((await f.read()).clock.identity).toEqual(f.identity);
+  });
+});
+
+it('handoff SLA starts with actual escalation, resumes the original MSP target and leaves the customer timeline intact', async () => {
+  const f = await ticketHandoffFixture();
+  const { escalateCoManagedTicket: escalate, handBackCoManagedTicket: handback } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  const before = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  expect(await f.sponsor.table('sla_organization_obligations')).toEqual([]);
+  const request = { operationId: randomUUID(), expectedRevision: 0, note: 'Please investigate' };
+  const first = await escalate(db, f.customerPrincipal, f.resource, request);
+  const obligation = await f.sponsor.table('sla_organization_obligations').first();
+  const target = await f.sponsor.table('sla_policy_targets').first();
+  expect(obligation).toMatchObject({ source_tenant: f.resource.tenant, ticket_id: f.resource.id, sla_policy_id: target.sla_policy_id,
+    priority_id: target.priority_id, generation: 1, revision: 1, clock: { startedAt: first.occurredAt, response: { targetMinutes: 60 }, resolution: { targetMinutes: 480 } } });
+  expect(await escalate(db, f.customerPrincipal, f.resource, request)).toEqual(first);
+  const back = await handback(db, f.principal, f.resource, { operationId: randomUUID(), expectedRevision: 1, note: 'Check the hardware' });
+  const paused = await f.sponsor.table('sla_organization_obligations').first();
+  expect(paused.clock).toMatchObject({ pauseReasons: ['customer_responsible'], response: { dueAt: null } });
+  expect(paused.clock.elapsedMilliseconds).toBe(Date.parse(back.occurredAt) - Date.parse(first.occurredAt));
+  await f.sponsor.table('sla_policy_targets').update({ response_time_minutes: 9999 });
+  await f.sponsor.table('co_managed_sla_priority_mappings').del();
+  await escalate(db, f.customerPrincipal, f.resource, { operationId: randomUUID(), expectedRevision: 2, note: 'Hardware verified' });
+  const resumed = await f.sponsor.table('sla_organization_obligations').first();
+  expect(resumed).toMatchObject({ obligation_id: obligation.obligation_id, generation: 1, revision: 3,
+    clock: { startedAt: first.occurredAt, elapsedMilliseconds: paused.clock.elapsedMilliseconds, pauseReasons: [], response: { targetMinutes: 60 } } });
+  expect(await f.sponsor.table('sla_organization_events')).toHaveLength(3);
+  expect(await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).toEqual(before);
+});
+
+it.each(['mapping', 'policy', 'target'] as const)('handoff SLA rejects missing %s atomically without inventing a fallback', async missing => {
+  const f = await ticketHandoffFixture();
+  if (missing === 'mapping') await f.sponsor.table('co_managed_sla_priority_mappings').del();
+  if (missing === 'target') await f.sponsor.table('sla_policy_targets').del();
+  if (missing === 'policy') await f.sponsor.table('sla_policies').update({ is_default: false });
+  const { escalateCoManagedTicket } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  await expect(escalateCoManagedTicket(db, f.customerPrincipal, f.resource,
+    { operationId: randomUUID(), expectedRevision: 0, note: 'Escalate' })).rejects.toMatchObject({ code: 'CO_MANAGED_SLA_SETUP_REQUIRED' });
+  for (const table of ['co_management_ticket_work', 'co_management_ticket_handoffs']) expect(await f.customer.table(table)).toEqual([]);
+  for (const table of ['co_managed_ticket_references', 'sla_organization_obligations', 'sla_organization_events']) expect(await f.sponsor.table(table)).toEqual([]);
+});
+
+it('handoff SLA priority configuration requires the actual sponsor administrator and current revision/session', async () => {
+  const f = await ticketHandoffFixture();
+  const policy = await import('../../../../packages/co-managed/src/policy');
+  const state = await policy.getCoManagedSlaPriorityMappings(db, f.principal, f.target);
+  expect(state).toMatchObject({ revision: 4, canWrite: true });
+  expect(state.customerPriorities).toHaveLength(state.mappings.length);
+  await expect(policy.getCoManagedSlaPriorityMappings(db, f.customerPrincipal, f.target)).rejects.toMatchObject({ code: 'FORBIDDEN' });
+  const bad = [{ ...state.mappings[0], mspPriorityId: randomUUID() }];
+  await expect(policy.replaceCoManagedSlaPriorityMappings(db, f.principal, f.target, 4, bad)).rejects.toMatchObject({ code: 'RESOURCE_NOT_FOUND' });
+  expect(await policy.replaceCoManagedSlaPriorityMappings(db, f.principal, f.target, 4, state.mappings)).toBe(5);
+  expect(await policy.replaceCoManagedSlaPriorityMappings(db, f.principal, f.target, 4, [...state.mappings].reverse())).toBe(5);
+  await expect(policy.replaceCoManagedSlaPriorityMappings(db, f.principal, f.target, 4, [])).rejects.toMatchObject({ code: 'POLICY_CHANGED' });
+  const event = await f.customer.table('co_management_relationship_events').where('event_type', 'sla_priority_mappings_changed').first();
+  expect(event).toMatchObject({ actor_tenant: f.principal.tenant, actor_user_id: f.principal.userId, revision: 5 });
+  await f.sponsor.table('sessions').where('session_id', f.principal.sessionId).update({ expires_at: new Date(Date.now() - 1000) });
+  await expect(policy.replaceCoManagedSlaPriorityMappings(db, f.principal, f.target, 5, [])).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(await f.sponsor.table('co_managed_sla_priority_mappings')).toHaveLength(state.mappings.length);
+  expect((await f.customer.table('co_management_relationships').first()).revision).toBe(5);
+});
+
+it.each(['default', 'board', 'client'] as const)('handoff SLA uses the MSP %s policy through the existing precedence', async selection => {
+  const f = await ticketHandoffFixture();
+  const target = await f.sponsor.table('sla_policy_targets').first();
+  const boardPolicy = randomUUID(), clientPolicy = randomUUID();
+  for (const [id, minutes] of [[boardPolicy, 2], [clientPolicy, 3]] as const) {
+    await f.sponsor.table('sla_policies').insert({ tenant: f.principal.tenant, sla_policy_id: id, policy_name: `Policy ${minutes}`, is_default: false });
+    await f.sponsor.table('sla_policy_targets').insert({ ...target, target_id: randomUUID(), sla_policy_id: id, response_time_minutes: minutes });
+  }
+  if (selection !== 'default') await f.sponsor.table('boards').where('board_id', f.operation.escalation_board_id).update({ sla_policy_id: boardPolicy });
+  if (selection === 'client') await f.sponsor.table('clients').where('client_id', f.operation.request.clientId).update({ sla_policy_id: clientPolicy });
+  const { escalateCoManagedTicket } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  await escalateCoManagedTicket(db, f.customerPrincipal, f.resource, { operationId: randomUUID(), expectedRevision: 0, note: 'Escalate' });
+  expect(await f.sponsor.table('sla_organization_obligations').first()).toMatchObject({
+    sla_policy_id: selection === 'default' ? target.sla_policy_id : selection === 'board' ? boardPolicy : clientPolicy,
+    clock: { response: { targetMinutes: selection === 'default' ? 60 : selection === 'board' ? 2 : 3 } },
+  });
+});
+
+it('handoff SLA configuration blocks suspended workspaces and license-lapsed mutations', async () => {
+  const f = await ticketHandoffFixture(), policy = await import('../../../../packages/co-managed/src/policy');
+  const initial = await policy.getCoManagedSlaPriorityMappings(db, f.principal, f.target);
+  expect(initial.policyName).toBe('MSP policy');
+  for (const owner of [f.sponsor, f.customer]) {
+    await owner.table('tenants').update({ suspended_at: new Date() });
+    await expect(policy.getCoManagedSlaPriorityMappings(db, f.principal, f.target)).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    await expect(policy.replaceCoManagedSlaPriorityMappings(db, f.principal, f.target, 4, [])).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    await owner.table('tenants').update({ suspended_at: null });
+  }
+  await expireCoManagedEntitlement(f.operation.tenant);
+  expect(await policy.getCoManagedSlaPriorityMappings(db, f.principal, f.target)).toMatchObject({ canWrite: false, mappings: initial.mappings });
+  await expect(policy.replaceCoManagedSlaPriorityMappings(db, f.principal, f.target, 4, [])).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+});
+
+it('handoff SLA and responsibility both roll back when the initiating session expires at the final receipt', async () => {
+  const f = await ticketHandoffFixture(), actor = f.customerPrincipal;
+  await db.raw(`CREATE FUNCTION expire_sla_handoff_session() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN UPDATE sessions SET expires_at = to_timestamp(0) WHERE tenant = '${actor.tenant}'::uuid AND session_id = '${actor.sessionId}'::uuid; RETURN NEW; END $$`);
+  await db.raw('CREATE TRIGGER expire_sla_handoff_session AFTER INSERT ON co_management_ticket_handoffs FOR EACH ROW EXECUTE FUNCTION expire_sla_handoff_session()');
+  try {
+    const { escalateCoManagedTicket } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+    await expect(escalateCoManagedTicket(db, actor, f.resource, { operationId: randomUUID(), expectedRevision: 0, note: 'Escalate' }))
+      .rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    for (const table of ['co_management_ticket_work', 'co_management_ticket_handoffs']) expect(await f.customer.table(table)).toEqual([]);
+    for (const table of ['co_managed_ticket_references', 'sla_organization_obligations', 'sla_organization_events']) expect(await f.sponsor.table(table)).toEqual([]);
+  } finally { await db.raw('DROP TRIGGER expire_sla_handoff_session ON co_management_ticket_handoffs'); await db.raw('DROP FUNCTION expire_sla_handoff_session()'); }
+});
+
+it.each(['requester', 'shared_it'] as const)('MSP SLA response counts the first actual %s reply, not customer or MSP-private notes', async audience => withCommentCreationFixture(async f => {
+  const before = await f.sponsor.table('sla_organization_obligations').first();
+  await f.create(f.customerPrincipal, { operationId: randomUUID(), audience, text: 'Customer troubleshooting' });
+  const { mutateCoManagedPrivateTicketComment } = await import('../../../../packages/co-managed/src/privateTicketConversation');
+  await mutateCoManagedPrivateTicketComment(db, f.principal, f.resource, { operationId: randomUUID(), kind: 'create', text: 'MSP private diagnosis' });
+  expect(await f.sponsor.table('sla_organization_obligations').first()).toEqual(before);
+  const request = { operationId: randomUUID(), audience, text: 'MSP response' };
+  const first = await f.create(f.principal, request);
+  const after = await f.sponsor.table('sla_organization_obligations').first();
+  expect(after).toMatchObject({ revision: 2, clock: { response: { breached: false, completedAt: expect.any(String), completedElapsedMilliseconds: expect.any(Number) }, resolution: { completedAt: null } } });
+  const comment = await f.customer.table('comments').where('comment_id', first.commentId).first();
+  expect(Date.parse(after.clock.response.completedAt)).toBeGreaterThanOrEqual(new Date(comment.created_at).getTime());
+  expect(Date.parse(after.clock.response.completedAt)).toBeLessThanOrEqual(Date.parse(first.appliedAt));
+  expect(await f.create(f.principal, request)).toEqual(first);
+  await f.create(f.principal, { operationId: randomUUID(), parent: { storeTenant: first.storeTenant, threadId: first.threadId, commentId: first.commentId }, text: 'Further information' });
+  expect(await f.sponsor.table('sla_organization_obligations').first()).toEqual(after);
+  expect(await f.sponsor.table('sla_organization_events').where('event_type', 'responded')).toEqual([expect.objectContaining({ operation_id: first.commentId,
+    event: expect.objectContaining({ actorTenant: f.principal.tenant, audience }) })]);
+}));
+
+it('MSP SLA response while handed back records the paused elapsed time without restarting responsibility', async () => withCommentCreationFixture(async f => {
+  const { handBackCoManagedTicket } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  await handBackCoManagedTicket(db, f.principal, f.resource, { operationId: randomUUID(), expectedRevision: 1, note: 'Customer is checking' });
+  const paused = await f.sponsor.table('sla_organization_obligations').first();
+  await f.create(f.principal, { operationId: randomUUID(), audience: 'shared_it', text: 'Additional guidance' });
+  const updated = await f.sponsor.table('sla_organization_obligations').first();
+  expect(updated.clock).toMatchObject({ pauseReasons: ['customer_responsible'], elapsedMilliseconds: paused.clock.elapsedMilliseconds,
+    response: { completedElapsedMilliseconds: paused.clock.elapsedMilliseconds }, resolution: { completedAt: null, dueAt: null } });
+  expect((await f.customer.table('co_management_ticket_work').first()).responsibility).toBe('customer');
+}));
+
+it('MSP SLA response and published comment roll back together if the author expires at the final receipt', async () => withCommentCreationFixture(async f => {
+  const original = await f.sponsor.table('sla_organization_obligations').first();
+  await db.raw(`CREATE FUNCTION expire_sla_comment_session() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN UPDATE sessions SET expires_at = to_timestamp(0) WHERE tenant = '${f.principal.tenant}'::uuid AND session_id = '${f.principal.sessionId}'::uuid; RETURN NEW; END $$`);
+  await db.raw("CREATE TRIGGER expire_sla_comment_session AFTER INSERT ON co_management_command_receipts FOR EACH ROW WHEN (NEW.command_type = 'ticket_comment_create') EXECUTE FUNCTION expire_sla_comment_session()");
+  try {
+    await expect(f.create(f.principal, { operationId: randomUUID(), audience: 'requester', text: 'Uncommitted response' }))
+      .rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    expect(await f.sponsor.table('sla_organization_obligations').first()).toEqual(original);
+    expect(await f.sponsor.table('sla_organization_events').where('event_type', 'responded')).toEqual([]);
+    expect(await f.customer.table('comments')).toEqual([]);
+  } finally { await db.raw('DROP TRIGGER expire_sla_comment_session ON co_management_command_receipts'); await db.raw('DROP FUNCTION expire_sla_comment_session()'); }
+}));
+
+it.each(['customer', 'msp'] as const)('MSP SLA resolution closes during handback when %s closes the canonical ticket', async side => withSharedTicketMutationFixture(async f => {
+  const { handBackCoManagedTicket } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  await handBackCoManagedTicket(db, f.principal, f.resource, { operationId: randomUUID(), expectedRevision: 1, note: 'Please verify the fix' });
+  const paused = await f.sponsor.table('sla_organization_obligations').first();
+  if (side === 'msp') await f.mutate({ status_id: f.closedStatusId });
+  else {
+    const { updateTicketInTransaction } = await import('../../../../packages/tickets/src/actions/optimizedTicketActions');
+    const localUser = await f.customer.table('users').where('user_id', f.customerPrincipal.userId).first();
+    await db.transaction(trx => updateTicketInTransaction(trx, localUser, f.resource.tenant, f.resource.id, { status_id: f.closedStatusId }));
+  }
+  const resolved = await f.sponsor.table('sla_organization_obligations').first();
+  expect(resolved.clock).toMatchObject({ elapsedMilliseconds: paused.clock.elapsedMilliseconds,
+    resolution: { completedAt: expect.any(String), completedElapsedMilliseconds: paused.clock.elapsedMilliseconds, breached: false }, response: { completedAt: null } });
+  expect((await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).is_closed).toBe(true);
+  expect(await f.sponsor.table('sla_organization_events').where('event_type', 'resolved')).toHaveLength(1);
+  await f.mutate({ title: 'Resolved issue' });
+  expect(await f.sponsor.table('sla_organization_obligations').first()).toEqual(resolved);
+}));
+
+it('MSP SLA resolution preserves the frozen obligation after all ticket visibility is revoked', async () => withSharedTicketMutationFixture(async f => {
+  const { revokeCoManagedTicketGrant } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  await revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource, { operationId: randomUUID(), expectedRevision: 1, note: 'Keep this ticket private' });
+  const frozen = await f.sponsor.table('sla_organization_obligations').first();
+  const { updateTicketInTransaction } = await import('../../../../packages/tickets/src/actions/optimizedTicketActions');
+  const localUser = await f.customer.table('users').where('user_id', f.customerPrincipal.userId).first();
+  await db.transaction(trx => updateTicketInTransaction(trx, localUser, f.resource.tenant, f.resource.id, { status_id: f.closedStatusId }));
+  expect(await f.sponsor.table('sla_organization_obligations').first()).toEqual(frozen);
+  expect(await f.sponsor.table('sla_organization_events').where('event_type', 'resolved')).toEqual([]);
+  const { escalateCoManagedTicket } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  const shared = await escalateCoManagedTicket(db, f.customerPrincipal, f.resource,
+    { operationId: randomUUID(), expectedRevision: 2, note: 'Share the completed result' });
+  const resolved = await f.sponsor.table('sla_organization_obligations').first();
+  expect(resolved.clock).toMatchObject({ elapsedMilliseconds: frozen.clock.elapsedMilliseconds,
+    resolution: { completedAt: shared.occurredAt, completedElapsedMilliseconds: frozen.clock.elapsedMilliseconds } });
+
+}));
+
+it('MSP SLA resolution rolls back with canonical close validation and transaction failures', async () => withSharedTicketMutationFixture(async f => {
+  const original = await f.sponsor.table('sla_organization_obligations').first();
+  await f.customer.table('board_close_rules').insert({ tenant: f.resource.tenant, board_id: f.operation.customer_board_id, require_resolution_comment: true });
+  await expect(f.mutate({ status_id: f.closedStatusId })).rejects.toMatchObject({ name: 'TicketCloseValidationError' });
+  expect(await f.sponsor.table('sla_organization_obligations').first()).toEqual(original);
+  await f.customer.table('board_close_rules').del();
+  await expect(f.mutate({ status_id: f.closedStatusId }, undefined, async () => { throw new Error('Rollback close'); })).rejects.toThrow('Rollback close');
+  expect(await f.sponsor.table('sla_organization_obligations').first()).toEqual(original);
+  expect(await f.sponsor.table('sla_organization_events').where('event_type', 'resolved')).toEqual([]);
+}));
+
+it('MSP SLA reopen creates a new obligation only for a genuine reopening while MSP remains responsible', async () => withSharedTicketMutationFixture(async f => {
+  const ticket = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  const original = await f.sponsor.table('sla_organization_obligations').first();
+  await f.mutate({ status_id: f.closedStatusId });
+  const closed = await f.sponsor.table('sla_organization_obligations').first();
+  expect(closed.clock.resolution.completedAt).not.toBeNull();
+  await f.mutate({ status_id: ticket.status_id });
+  const rows = await f.sponsor.table('sla_organization_obligations').orderBy('generation');
+  expect(rows).toHaveLength(2); expect(rows[0]).toEqual(closed);
+  expect(rows[1]).toMatchObject({ generation: 2, work_id: original.work_id, clock: { elapsedMilliseconds: 0, response: { completedAt: null }, resolution: { completedAt: null } } });
+  expect(rows[1].obligation_id).not.toBe(original.obligation_id);
+  expect(Date.parse(rows[1].clock.startedAt)).toBeGreaterThanOrEqual(Date.parse(closed.clock.resolution.completedAt));
+  await f.mutate({ status_id: ticket.status_id });
+  expect(await f.sponsor.table('sla_organization_obligations').orderBy('generation')).toEqual(rows);
+  expect(await f.customer.table('co_management_ticket_handoffs')).toHaveLength(1);
+}));
+
+it('MSP SLA reopen under customer responsibility waits for a fresh escalation', async () => withSharedTicketMutationFixture(async f => {
+  const ticket = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  const { handBackCoManagedTicket, escalateCoManagedTicket } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  await handBackCoManagedTicket(db, f.principal, f.resource, { operationId: randomUUID(), expectedRevision: 1, note: 'Customer validates' });
+  await f.mutate({ status_id: f.closedStatusId });
+  const closed = await f.sponsor.table('sla_organization_obligations').first();
+  await f.mutate({ status_id: ticket.status_id });
+  expect(await f.sponsor.table('sla_organization_obligations')).toEqual([closed]);
+  const escalation = await escalateCoManagedTicket(db, f.customerPrincipal, f.resource, { operationId: randomUUID(), expectedRevision: 2, note: 'MSP please re-investigate' });
+  const rows = await f.sponsor.table('sla_organization_obligations').orderBy('generation');
+  expect(rows).toHaveLength(2); expect(rows[0]).toEqual(closed);
+  expect(rows[1]).toMatchObject({ generation: 2, clock: { startedAt: escalation.occurredAt, elapsedMilliseconds: 0, resolution: { completedAt: null } } });
+}));
+
+it('MSP SLA reopen rolls back on missing setup and leaves the closed obligation intact', async () => withSharedTicketMutationFixture(async f => {
+  const ticket = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  await f.mutate({ status_id: f.closedStatusId });
+  const closed = await f.sponsor.table('sla_organization_obligations').first();
+  await f.sponsor.table('co_managed_sla_priority_mappings').del();
+  await expect(f.mutate({ status_id: ticket.status_id })).rejects.toMatchObject({ code: 'CO_MANAGED_SLA_SETUP_REQUIRED' });
+  expect(await f.sponsor.table('sla_organization_obligations')).toEqual([closed]);
+  expect((await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).is_closed).toBe(true);
+}));
+
+it.each(['legacy', 'optimized'] as const)('MSP SLA native %s customer close/reopen actions update the independent obligation', async path => withSharedTicketMutationFixture(async f => {
+  const auth = await import('@alga-psa/auth'), dbModule = await import('@alga-psa/db');
+  const user = await f.customer.table('users').where('user_id', f.customerPrincipal.userId).first();
+  const ticket = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  const connection = vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: db, tenant: f.resource.tenant });
+  try {
+    const action = path === 'legacy' ? (await import('../../../../packages/tickets/src/actions/ticketActions')).updateTicket
+      : (await import('../../../../packages/tickets/src/actions/optimizedTicketActions')).updateTicketWithCache;
+    await auth.runWithApiKeyUser(user, () => runWithTenant(f.resource.tenant, async () => {
+      expect(await action(f.resource.id, { status_id: f.closedStatusId })).toBe('success');
+      const closed = await f.sponsor.table('sla_organization_obligations').first();
+      expect(closed.clock.resolution.completedAt).not.toBeNull();
+      expect(await action(f.resource.id, { status_id: ticket.status_id })).toBe('success');
+      const rows = await f.sponsor.table('sla_organization_obligations').orderBy('generation');
+      expect(rows).toHaveLength(2); expect(rows[0]).toEqual(closed); expect(rows[1].clock.resolution.completedAt).toBeNull();
+    }));
+  } finally { connection.mockRestore(); }
+}));
+
+it('MSP SLA shared edit checks the initiating session after its final close receipt', async () => withSharedTicketEditorFixture(async f => {
+  const before = await f.sponsor.table('sla_organization_obligations').first();
+  const ticket = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  await db.raw(`CREATE FUNCTION expire_sla_edit_session() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN UPDATE sessions SET expires_at = to_timestamp(0) WHERE tenant = '${f.principal.tenant}'::uuid AND session_id = '${f.principal.sessionId}'::uuid; RETURN NEW; END $$`);
+  await db.raw("CREATE TRIGGER expire_sla_edit_session AFTER INSERT ON co_management_command_receipts FOR EACH ROW WHEN (NEW.command_type = 'ticket_edit') EXECUTE FUNCTION expire_sla_edit_session()");
+  try {
+    await expect(f.save({ operationId: randomUUID(), expected: { status_id: ticket.status_id }, patch: { status_id: f.closedStatusId } }))
+      .rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    expect(await f.sponsor.table('sla_organization_obligations').first()).toEqual(before);
+    expect((await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).status_id).toBe(ticket.status_id);
+    expect(await f.customer.table('co_management_command_receipts').where('command_type', 'ticket_edit')).toEqual([]);
+  } finally { await db.raw('DROP TRIGGER expire_sla_edit_session ON co_management_command_receipts'); await db.raw('DROP FUNCTION expire_sla_edit_session()'); }
+}));
+
+async function dueMspSlaFixture() {
+  const f = await ticketHandoffFixture();
+  const { escalateCoManagedTicket } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  await escalateCoManagedTicket(db, f.customerPrincipal, f.resource, { operationId: randomUUID(), expectedRevision: 0, note: 'Please investigate' });
+  const row = await f.sponsor.table('sla_organization_obligations').first();
+  const { startOrganizationSlaClock } = await import('../../../../shared/lib/sla/organizationSlaClock');
+  const clock = startOrganizationSlaClock(row.clock.identity, row.clock.schedule, { responseMinutes: 60, resolutionMinutes: 480 },
+    new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString());
+  await f.sponsor.table('sla_organization_obligations').where('obligation_id', row.obligation_id).update({ clock: JSON.stringify(clock) });
+  const read = () => f.sponsor.table('sla_organization_obligations').where('obligation_id', row.obligation_id).first();
+  const observer = await import('../../../../packages/co-managed/src/ticketSla');
+  return { ...f, identity: clock.identity, read, ...observer };
+}
+
+it('MSP SLA observation records one due breach under concurrent workers and leaves customer SLA fields intact', async () => {
+  const f = await dueMspSlaFixture();
+  const customerBefore = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  const before = await f.read();
+  expect((await Promise.all([f.observeCoManagedTicketSla(db, f.identity), f.observeCoManagedTicketSla(db, f.identity)])).sort())
+    .toEqual([false, true]);
+  const after = await f.read();
+  expect(after.revision).toBe(before.revision + 1);
+  expect(after.clock.response).toMatchObject({ breached: true, breachedAt: before.clock.response.dueAt, completedAt: null });
+  expect(after.clock.resolution.breached).toBe(false);
+  expect(await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).toEqual(customerBefore);
+  expect(await f.observeDueCoManagedTicketSlas(db, f.identity.tenant, 1)).toEqual({ observed: 0, skipped: 0 });
+});
+
+it.each(['revoked', 'handback', 'terminated', 'suspended', 'read-only', 'wrong-owner', 'wrong-obligation'] as const)
+('MSP SLA observation does not advance %s work', async reason => {
+  const f = await dueMspSlaFixture();
+  const { revokeCoManagedTicketGrant, handBackCoManagedTicket } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  if (reason === 'revoked') await revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource,
+    { operationId: randomUUID(), expectedRevision: 1, note: 'Remove access' });
+  if (reason === 'handback') await handBackCoManagedTicket(db, f.principal, f.resource,
+    { operationId: randomUUID(), expectedRevision: 1, note: 'Please verify' });
+  if (reason === 'terminated') await f.customer.table('co_management_relationships').update({ state: 'terminated', ended_at: new Date() });
+  if (reason === 'suspended') await f.customer.table('tenants').update({ suspended_at: new Date() });
+  if (reason === 'read-only') await f.sponsor.table('co_managed_allocations').del();
+  const before = await f.read();
+  const identity = { ...f.identity };
+  if (reason === 'wrong-owner') identity.tenant = randomUUID();
+  if (reason === 'wrong-obligation') identity.obligationId = randomUUID();
+  expect(await f.observeCoManagedTicketSla(db, identity)).toBe(false);
+  expect(await f.read()).toEqual(before);
+});
+
+it('MSP SLA observation keyset scan reaches due work beyond a skipped historical candidate', async () => {
+  const f = await dueMspSlaFixture();
+  const row = await f.read();
+  const historicalId = '00000000-0000-4000-8000-000000000001';
+  const sourceTenant = randomUUID();
+  const historical = { ...row, obligation_id: historicalId, source_tenant: sourceTenant,
+    clock: JSON.stringify({ ...row.clock, identity: { ...row.clock.identity, obligationId: historicalId, sourceTenant } }) };
+  await f.sponsor.table('sla_organization_obligations').insert(historical);
+  expect(await f.observeDueCoManagedTicketSlas(db, f.identity.tenant, 1)).toEqual({ observed: 1, skipped: 1 });
+  expect((await f.read()).clock.response.breached).toBe(true);
+});
+
+it('MSP SLA display presents separate customer and MSP outcomes without persisting a read or exposing policy configuration', async () => {
+  const f = await dueMspSlaFixture();
+  const { getCoManagedTicketScreen: read } = await import('../../../../packages/co-managed/src/ticketCollaboration');
+  const policy = await f.sponsor.table('sla_policies').first();
+  const customerPolicyId = randomUUID();
+  await f.customer.table('sla_policies').insert({ ...policy, tenant: f.resource.tenant, sla_policy_id: customerPolicyId, policy_name: 'Private customer policy' });
+  const completed = new Date(Date.now() - 60000), due = new Date(Date.now() + 3600000);
+  await f.customer.table('tickets').where('ticket_id', f.resource.id).update({ sla_policy_id: customerPolicyId,
+    sla_response_due_at: due, sla_response_at: completed, sla_response_met: true, sla_resolution_due_at: due });
+  const before = await f.read();
+  const events = await f.sponsor.table('sla_organization_events');
+  const result = await read(db, f.principal, f.resource);
+  expect(result.sla).toMatchObject({ customer: { state: 'tracking', response: { status: 'completed', completedAt: completed.toISOString() },
+    resolution: { status: 'running', dueAt: due.toISOString() } }, msp: { state: 'tracking', response: { status: 'breached' }, resolution: { status: 'running' } } });
+  for (const privateValue of ['Private customer policy', policy.policy_name, customerPolicyId, before.obligation_id, 'schedule', 'targetMinutes', 'pauseReasons']) {
+    expect(JSON.stringify(result.sla)).not.toContain(privateValue);
+  }
+  expect(await f.read()).toEqual(before);
+  expect(await f.sponsor.table('sla_organization_events')).toEqual(events);
+  expect((await read(db, f.customerPrincipal, f.resource)).sla).toEqual(result.sla);
+});
+
+it('MSP SLA display distinguishes pre-escalation from unavailable historical timing and retains paused outcomes during lapse', async () => {
+  const f = await ticketHandoffFixture();
+  const { getCoManagedTicketScreen: read } = await import('../../../../packages/co-managed/src/ticketCollaboration');
+  expect((await read(db, f.customerPrincipal, f.resource)).sla).toEqual({ customer: { state: 'not_configured' }, msp: { state: 'not_started' } });
+  const { escalateCoManagedTicket, handBackCoManagedTicket } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  await escalateCoManagedTicket(db, f.customerPrincipal, f.resource, { operationId: randomUUID(), expectedRevision: 0, note: 'Investigate' });
+  await handBackCoManagedTicket(db, f.principal, f.resource, { operationId: randomUUID(), expectedRevision: 1, note: 'Please verify' });
+  await f.sponsor.table('co_managed_allocations').del();
+  expect((await read(db, f.principal, f.resource)).sla.msp).toMatchObject({ state: 'tracking', paused: true,
+    response: { status: 'paused', dueAt: null }, resolution: { status: 'paused', dueAt: null } });
+  await f.sponsor.table('sla_organization_obligations').del();
+  expect((await read(db, f.principal, f.resource)).sla.msp).toEqual({ state: 'unavailable' });
+});
+
+it.each(['sla', 'tickets.sla_response_at', 'work', 'fields.priority.name', 'tickets.response_state'] as const)
+('MSP SLA display obeys %s source redaction', async field => {
+  const f = await dueMspSlaFixture();
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: f.principal.tenant, name: 'SLA restrictions', actorUserId: f.principal.userId });
+  await bundles.upsertBundleRule(db, { tenant: f.principal.tenant, bundleId, revisionId, resourceType: 'ticket', action: 'read',
+    templateKey: 'selected_clients', config: { selectedClientIds: [f.operation.request.clientId], redactedFields: [field] } });
+  await bundles.publishBundleRevision(db, { tenant: f.principal.tenant, bundleId, revisionId, actorUserId: f.principal.userId });
+  await bundles.createBundleAssignment(db, { tenant: f.principal.tenant, bundleId, targetType: 'user', targetId: f.principal.userId });
+  const { getCoManagedTicketScreen: read } = await import('../../../../packages/co-managed/src/ticketCollaboration');
+  const result = (await read(db, f.principal, f.resource)).sla;
+  if (field === 'work') { expect(result.msp).toBeUndefined(); expect(result.customer).toBeDefined(); }
+  else if (field === 'tickets.sla_response_at') { expect(result.customer).toBeUndefined(); expect(result.msp).toBeDefined(); }
+  else expect(result).toEqual({});
+});
+
+it('MSP SLA display rejects revoked foreign readers and shows the customer only the retained paused result', async () => {
+  const f = await ticketHandoffFixture();
+  const { getCoManagedTicketScreen: read } = await import('../../../../packages/co-managed/src/ticketCollaboration');
+  const { escalateCoManagedTicket, revokeCoManagedTicketGrant } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  await escalateCoManagedTicket(db, f.customerPrincipal, f.resource, { operationId: randomUUID(), expectedRevision: 0, note: 'Investigate' });
+  await revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource, { operationId: randomUUID(), expectedRevision: 1, note: 'Remove access' });
+  const before = await f.sponsor.table('sla_organization_obligations').first();
+  await expect(read(db, f.principal, f.resource)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect((await read(db, f.customerPrincipal, f.resource)).sla.msp).toMatchObject({ state: 'tracking', paused: true,
+    response: { status: 'paused', dueAt: null } });
+  expect(await f.sponsor.table('sla_organization_obligations').first()).toEqual(before);
+});
+
+async function addMspSlaThresholds(f: Awaited<ReturnType<typeof dueMspSlaFixture>>, percentages = [50, 75, 100]) {
+  const obligation = await f.read();
+  await f.sponsor.table('sla_notification_thresholds').insert(percentages.map(percent => ({ tenant: f.identity.tenant, threshold_id: randomUUID(),
+    sla_policy_id: obligation.sla_policy_id, threshold_percent: percent, notification_type: percent >= 100 ? 'breach' : 'warning',
+    notify_assignee: true, notify_board_manager: true, notify_escalation_manager: false, channels: ['in_app', 'email'] })));
+  return () => f.sponsor.table('sla_organization_notification_events').where('obligation_id', f.identity.obligationId)
+    .orderBy('sla_type').orderBy('threshold_percent');
+}
+
+it('MSP SLA threshold scan captures warning crossings before the due date once across workers', async () => {
+  const f = await dueMspSlaFixture(), notices = await addMspSlaThresholds(f);
+  const saved = await f.read();
+  const { startOrganizationSlaClock } = await import('../../../../shared/lib/sla/organizationSlaClock');
+  const clock = startOrganizationSlaClock(f.identity, saved.clock.schedule, { responseMinutes: 60, resolutionMinutes: 480 },
+    new Date(Date.now() - 50 * 60000).toISOString());
+  await f.sponsor.table('sla_organization_obligations').where('obligation_id', f.identity.obligationId).update({ clock: JSON.stringify(clock) });
+  const results = await Promise.all([f.observeDueCoManagedTicketSlas(db, f.identity.tenant), f.observeDueCoManagedTicketSlas(db, f.identity.tenant)]);
+  expect(results.reduce((total, result) => total + result.observed, 0)).toBe(1);
+  const rows = await notices();
+  expect(rows.map(row => [row.sla_type, row.threshold_percent, row.notification_type])).toEqual([['response', 50, 'warning'], ['response', 75, 'warning']]);
+  expect(rows.every(row => row.status === 'pending' && row.completed_at === null)).toBe(true);
+  expect(rows[0].configuration).toEqual({ notifyAssignee: true, notifyBoardManager: true, notifyEscalationManager: false, channels: ['in_app', 'email'] });
+  expect((await f.read()).clock.response.breached).toBe(false);
+  const event = await f.sponsor.table('sla_organization_events').where('operation_id', rows[0].source_operation_id).first();
+  expect(event.event_type).toBe('observed');
+  expect(await f.observeCoManagedTicketSla(db, f.identity)).toBe(false);
+  expect(await notices()).toEqual(rows);
+});
+
+it('MSP SLA threshold capture retains all missed warnings and breaches with immutable source configuration', async () => {
+  const f = await dueMspSlaFixture(), notices = await addMspSlaThresholds(f);
+  await f.observeCoManagedTicketSla(db, f.identity);
+  const rows = await notices();
+  expect(rows.map(row => [row.threshold_percent, row.notification_type])).toEqual([[50, 'warning'], [75, 'warning'], [100, 'breach']]);
+  expect(rows.every(row => row.sla_type === 'response' && row.tenant === f.identity.tenant)).toBe(true);
+  await f.sponsor.table('sla_notification_thresholds').update({ notify_assignee: false, channels: ['email'] });
+  expect(await f.observeCoManagedTicketSla(db, f.identity)).toBe(false);
+  expect(await notices()).toEqual(rows);
+  expect(rows[2].due_at.toISOString()).toBe((await f.read()).clock.response.breachedAt);
+});
+
+it('MSP SLA threshold capture rolls back with the source transaction and deduplicates exact retries', async () => {
+  const f = await dueMspSlaFixture(), notices = await addMspSlaThresholds(f);
+  const { applyOrganizationSlaEvent } = await import('../../../../shared/lib/sla/organizationSlaStore');
+  const operationId = randomUUID(), event = { kind: 'observed' as const, occurredAt: new Date().toISOString() };
+  const before = await f.read();
+  await expect(db.transaction(async trx => { await applyOrganizationSlaEvent(trx, f.identity, operationId, event); throw new Error('Caller rollback'); })).rejects.toThrow('Caller rollback');
+  expect(await f.read()).toEqual(before); expect(await notices()).toEqual([]);
+  await db.transaction(trx => applyOrganizationSlaEvent(trx, f.identity, operationId, event));
+  const rows = await notices();
+  await db.transaction(trx => applyOrganizationSlaEvent(trx, f.identity, operationId, event));
+  expect(await notices()).toEqual(rows); expect(rows).toHaveLength(3);
+});
+
+it('MSP SLA threshold capture catches handback crossings without later paused or completed targets gaining new notices', async () => {
+  const f = await dueMspSlaFixture(), notices = await addMspSlaThresholds(f);
+  const { handBackCoManagedTicket } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  await handBackCoManagedTicket(db, f.principal, f.resource, { operationId: randomUUID(), expectedRevision: 1, note: 'Please verify' });
+  expect(await notices()).toHaveLength(3);
+  const { applyOrganizationSlaEvent } = await import('../../../../shared/lib/sla/organizationSlaStore');
+  await db.transaction(trx => applyOrganizationSlaEvent(trx, f.identity, randomUUID(), { kind: 'resolved', occurredAt: new Date().toISOString() }));
+  const rows = await notices();
+  await addMspSlaThresholds(f, [80]);
+  await db.transaction(trx => applyOrganizationSlaEvent(trx, f.identity, randomUUID(), { kind: 'observed', occurredAt: new Date().toISOString() }));
+  expect(await notices()).toEqual(rows);
+});
+
+it('MSP SLA threshold migration replays safely and refuses retained history loss', async () => {
+  const f = await dueMspSlaFixture(), notices = await addMspSlaThresholds(f);
+  await f.observeCoManagedTicketSla(db, f.identity);
+  const migration = require('../../../migrations/20260908062358_create_organization_sla_notification_events.cjs');
+  await migration.up(db);
+  await expect(migration.down(db)).rejects.toThrow('retained organization SLA notifications');
+  const row = (await notices())[0];
+  await expect(f.sponsor.table('sla_organization_notification_events').insert({ ...row, notification_event_id: randomUUID(),
+    source_operation_id: randomUUID(), threshold_percent: 85 })).rejects.toMatchObject({ code: '23503' });
+  expect(await notices()).toHaveLength(3);
+});
+
+it('MSP SLA threshold capture commits a late first reply and its breach together before any timer run', async () => withCommentCreationFixture(async f => {
+  const row = await f.sponsor.table('sla_organization_obligations').first();
+  const { startOrganizationSlaClock } = await import('../../../../shared/lib/sla/organizationSlaClock');
+  const clock = startOrganizationSlaClock(row.clock.identity, row.clock.schedule, { responseMinutes: 60, resolutionMinutes: 480 },
+    new Date(Date.now() - 2 * 60 * 60000).toISOString());
+  await f.sponsor.table('sla_organization_obligations').where('obligation_id', row.obligation_id).update({ clock: JSON.stringify(clock) });
+  await f.sponsor.table('sla_notification_thresholds').insert({ tenant: f.principal.tenant, threshold_id: randomUUID(),
+    sla_policy_id: row.sla_policy_id, threshold_percent: 100, notification_type: 'breach', notify_assignee: true, channels: ['in_app'] });
+  const request = { operationId: randomUUID(), audience: 'shared_it' as const, text: 'We have investigated' };
+  const reply = await f.create(f.principal, request);
+  const notices = await f.sponsor.table('sla_organization_notification_events');
+  expect(notices).toHaveLength(1);
+  expect(notices[0]).toMatchObject({ obligation_id: row.obligation_id, sla_type: 'response', threshold_percent: 100,
+    notification_type: 'breach', source_operation_id: reply.commentId, status: 'pending' });
+  const updated = await f.sponsor.table('sla_organization_obligations').first();
+  expect(updated.clock.response).toMatchObject({ completedAt: expect.any(String), breached: true });
+  expect(await f.create(f.principal, request)).toEqual(reply);
+  expect(await f.sponsor.table('sla_organization_notification_events')).toEqual(notices);
+}));
+
+async function mspSlaNoticeFixture() {
+  const f = await dueMspSlaFixture();
+  await addMspSlaThresholds(f, [100]);
+  await f.sponsor.table('sla_notification_thresholds').update({ notify_escalation_manager: true });
+  await f.sponsor.table('co_managed_ticket_references').update({ assigned_to: f.principal.userId });
+  await f.observeCoManagedTicketSla(db, f.identity);
+  const event = await f.sponsor.table('sla_organization_notification_events').first();
+  const subtype = await db('internal_notification_subtypes').where('name', 'ticket-comment-added').first();
+  await db('internal_notification_templates').insert(['sla-breach', 'sla-warning'].map(name => ({ name, language_code: 'en',
+    title: '{{slaType}} {{ticketNumber}}', message: '{{ticketTitle}}: {{timeOverdue}}', subtype_id: subtype.internal_notification_subtype_id })))
+    .onConflict(['name', 'language_code']).ignore();
+  const { persistCoManagedSlaNotifications: persist } = await import('@alga-psa/notifications/lib/coManagedSlaNotifications');
+  const { withCoManagedSlaNotification: withNotice } = await import('../../../../packages/co-managed/src/slaNotification');
+  const { withNotificationDelivery: deliver } = await import('@alga-psa/notifications/lib/notificationDelivery');
+  const { processCoManagedNotificationDeliveries: process } = await import('@alga-psa/notifications/lib/coManagedDeliveryQueue');
+  return { ...f, event, persist, withNotice, deliver, process };
+}
+
+it('MSP SLA notices create one in-app receipt and durable channel tasks under concurrent retries', async () => {
+  const f = await mspSlaNoticeFixture();
+  await Promise.all([f.persist(db, f.identity.tenant), f.persist(db, f.identity.tenant)]);
+  const notices = await f.sponsor.table('internal_notifications');
+  expect(notices).toHaveLength(1);
+  expect(notices[0]).toMatchObject({ user_id: f.principal.userId, template_name: 'sla-breach', category: 'sla',
+    metadata: { coManaged: { version: 3, kind: 'sla', resource: f.resource, eventId: f.event.notification_event_id } } });
+  expect(notices[0].link).toBe(`/msp/co-management/tickets/${f.resource.tenant}/${f.resource.relationshipId}/${f.resource.id}`);
+  const receipts = await f.sponsor.table('sla_organization_notification_recipients').orderBy('channel');
+  expect(receipts.map(row => [row.channel, row.status])).toEqual([['email', 'pending'], ['in_app', 'created']]);
+  expect(await f.sponsor.table('co_management_notification_deliveries')).toHaveLength(3);
+  const deliveries = vi.fn(async (_channel, current) => { expect(current.metadata.coManaged.eventId).toBe(f.event.notification_event_id); return { status: 'delivered' as const }; });
+  await Promise.all([f.process(db, f.identity.tenant, deliveries), f.process(db, f.identity.tenant, deliveries)]);
+  expect(deliveries).toHaveBeenCalledTimes(3);
+  await f.persist(db, f.identity.tenant);
+  expect(await f.sponsor.table('internal_notifications')).toEqual(notices);
+});
+
+it.each(['assignee', 'board-manager', 'escalation-manager'] as const)('MSP SLA notices use the current MSP %s and stop after removal', async role => {
+  const f = await mspSlaNoticeFixture();
+  await f.sponsor.table('co_managed_ticket_references').update({ assigned_to: role === 'assignee' ? f.principal.userId : null });
+  if (role === 'board-manager') await f.sponsor.table('boards').where('board_id', f.operation.escalation_board_id).update({ manager_user_id: f.principal.userId });
+  if (role === 'escalation-manager') await f.sponsor.table('escalation_managers').insert({ tenant: f.identity.tenant, config_id: randomUUID(),
+    board_id: f.operation.escalation_board_id, escalation_level: 1, manager_user_id: f.principal.userId });
+  const recipient = { kind: 'notification_recipient' as const, tenant: f.principal.tenant, userId: f.principal.userId };
+  expect(await f.withNotice(db, recipient, f.event.notification_event_id, 'in_app', async (_context, message) => message.eventId)).toBe(f.event.notification_event_id);
+  await f.persist(db, f.identity.tenant);
+  const notice = await f.sponsor.table('internal_notifications').first();
+  await f.sponsor.table('co_managed_ticket_references').update({ assigned_to: null });
+  await f.sponsor.table('boards').update({ manager_user_id: null });
+  await f.sponsor.table('escalation_managers').del();
+  expect(await f.deliver(db, notice, async () => 'delivered')).toBeNull();
+  // The actual recipient can still read an old notice while retaining ticket access.
+  const { withCoManagedStoredSlaNotification } = await import('../../../../packages/co-managed/src/storedSlaNotification');
+  expect(await withCoManagedStoredSlaNotification(db, f.principal, notice.internal_notification_id, async (_context, current) => current.message.eventId)).toBe(f.event.notification_event_id);
+});
+
+it.each(['revoked', 'metadata', 'threshold-disabled', 'inactive'] as const)('MSP SLA delivery denies %s notices without cached fallback', async reason => {
+  const f = await mspSlaNoticeFixture();
+  await f.persist(db, f.identity.tenant);
+  const notice = await f.sponsor.table('internal_notifications').first();
+  if (reason === 'revoked') {
+    const { revokeCoManagedTicketGrant } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+    await revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource, { operationId: randomUUID(), expectedRevision: 1, note: 'Remove access' });
+  }
+  if (reason === 'metadata') await f.sponsor.table('internal_notifications').update({ metadata: null, title: 'Cached private canary', message: 'Never deliver this' });
+  if (reason === 'threshold-disabled') await f.sponsor.table('sla_notification_thresholds').update({ notify_assignee: false });
+  if (reason === 'inactive') await f.sponsor.table('users').where('user_id', f.principal.userId).update({ is_inactive: true });
+  const send = vi.fn(async () => ({ status: 'delivered' as const }));
+  expect(await f.deliver(db, { ...notice, metadata: null }, send)).toBeNull();
+  await f.process(db, f.identity.tenant, send);
+  expect(send).not.toHaveBeenCalled();
+});
+
+it('MSP SLA inbox uses fresh redacted content, qualified counts and actual browser authority', async () => {
+  const f = await mspSlaNoticeFixture();
+  await f.persist(db, f.identity.tenant);
+  const notice = await f.sponsor.table('internal_notifications').first();
+  await f.customer.table('tickets').where('ticket_id', f.resource.id).update({ title: 'Current authorized title' });
+  const auth = await import('@alga-psa/auth'), dbModule = await import('@alga-psa/db');
+  const user = await f.sponsor.table('users').where('user_id', f.principal.userId).first();
+  const spies = [vi.spyOn(auth, 'getApiKeyUserOverride').mockReturnValue(undefined), vi.spyOn(auth, 'getSession').mockResolvedValue({
+    session_id: f.principal.sessionId, user: { id: f.principal.userId, tenant: f.principal.tenant, user_type: 'internal' } } as any),
+    vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: db, tenant: f.principal.tenant })];
+  try {
+    const actions = await import('@alga-psa/notifications/actions/internal-notification-actions/internalNotificationActions');
+    await auth.runWithApiKeyUser(user, () => runWithTenant(f.principal.tenant, async () => {
+      const page = await actions.getNotificationsAction({ limit: 5 } as any);
+      expect(page.total).toBe(1); expect(page.unread_count).toBe(1);
+      expect(page.notifications[0].message).toContain('Current authorized title');
+      const { revokeCoManagedTicketGrant } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+      await revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource, { operationId: randomUUID(), expectedRevision: 1, note: 'Remove access' });
+      expect((await actions.getNotificationsAction({ limit: 5 } as any)).total).toBe(0);
+      expect(await actions.getNotificationByIdAction(notice.internal_notification_id)).toBeNull();
+    }));
+  } finally { for (const spy of spies.reverse()) spy.mockRestore(); }
+});
+
+it.each(['title', 'sla', 'work', 'response_state'] as const)('MSP SLA notices apply %s redaction at delivery time', async field => {
+  const f = await mspSlaNoticeFixture();
+  await f.persist(db, f.identity.tenant);
+  const notice = await f.sponsor.table('internal_notifications').first();
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: f.principal.tenant, name: 'SLA notification restrictions', actorUserId: f.principal.userId });
+  await bundles.upsertBundleRule(db, { tenant: f.principal.tenant, bundleId, revisionId, resourceType: 'ticket', action: 'read',
+    templateKey: 'selected_clients', config: { selectedClientIds: [f.operation.request.clientId], redactedFields: [field] } });
+  await bundles.publishBundleRevision(db, { tenant: f.principal.tenant, bundleId, revisionId, actorUserId: f.principal.userId });
+  await bundles.createBundleAssignment(db, { tenant: f.principal.tenant, bundleId, targetType: 'user', targetId: f.principal.userId });
+  await f.customer.table('tickets').where('ticket_id', f.resource.id).update({ title: 'Hidden title canary' });
+  const delivered = await f.deliver(db, notice, async current => current);
+  if (field === 'title') { expect(delivered).not.toBeNull(); expect(JSON.stringify(delivered)).not.toContain('Hidden title canary'); }
+  else expect(delivered).toBeNull();
+});
+
+it('MSP SLA notice storage and delivery tasks roll back with the caller, then recover once', async () => {
+  const f = await mspSlaNoticeFixture();
+  await expect(db.transaction(async trx => { await f.persist(trx, f.identity.tenant); throw new Error('Abort notification storage'); })).rejects.toThrow('Abort notification storage');
+  expect(await f.sponsor.table('internal_notifications')).toEqual([]);
+  expect(await f.sponsor.table('sla_organization_notification_recipients')).toEqual([]);
+  expect(await f.sponsor.table('co_management_notification_deliveries')).toEqual([]);
+  expect((await f.sponsor.table('sla_organization_notification_events').first()).status).toBe('pending');
+  await f.persist(db, f.identity.tenant);
+  expect(await f.sponsor.table('internal_notifications')).toHaveLength(1);
+  const migration = require('../../../migrations/20260908063356_create_organization_sla_notification_recipients.cjs');
+  await migration.up(db);
+  await expect(migration.down(db)).rejects.toThrow('retained organization SLA notification recipients');
+});
+
+it('MSP SLA notices suppress obsolete warning delivery once the target is breached', async () => {
+  const f = await mspSlaNoticeFixture();
+  await addMspSlaThresholds(f, [50]);
+  await f.observeCoManagedTicketSla(db, f.identity);
+  expect(await f.sponsor.table('sla_organization_notification_events').where('notification_type', 'warning')).toHaveLength(1);
+  await f.persist(db, f.identity.tenant);
+  expect((await f.sponsor.table('internal_notifications')).map(row => row.template_name)).toEqual(['sla-breach']);
+});
+
+async function mspSlaEmailFixture() {
+  const f = await mspSlaNoticeFixture();
+  await f.sponsor.table('users').where('user_id', f.principal.userId).update({ email: 'original@example.test' });
+  await f.persist(db, f.identity.tenant);
+  const { processCoManagedSlaEmailDeliveries: processEmail } = await import('../../../../packages/co-managed/src/slaEmailDeliveries');
+  const readEmail = () => f.sponsor.table('sla_organization_notification_recipients').where('channel', 'email').first();
+  return { ...f, processEmail, readEmail };
+}
+
+it('MSP SLA email retries with a stable Message-ID and fresh recipient/content, then delivers once under concurrent workers', async () => {
+  const f = await mspSlaEmailFixture();
+  const attempts: any[] = [];
+  await f.processEmail(db, f.identity.tenant, async delivery => { attempts.push(delivery); return { status: 'failed', retryable: true, errorCode: 'rate_limited', retryAfterMs: 120000 }; });
+  const pending = await f.readEmail();
+  expect(pending).toMatchObject({ status: 'pending', attempt_count: 1, completed_at: null, error_code: 'rate_limited' });
+  expect(pending.next_attempt_at.getTime()).toBeGreaterThan(Date.now() + 110000);
+  expect(attempts[0].email).toBe('original@example.test');
+  await f.sponsor.table('users').where('user_id', f.principal.userId).update({ email: 'current@example.test' });
+  await f.customer.table('tickets').where('ticket_id', f.resource.id).update({ title: 'Current SLA email title' });
+  await f.sponsor.table('sla_organization_notification_recipients').where('channel', 'email').update({ next_attempt_at: new Date(Date.now() - 1000) });
+  const send = vi.fn(async delivery => { attempts.push(delivery); return { status: 'delivered' as const }; });
+  await Promise.all([f.processEmail(db, f.identity.tenant, send), f.processEmail(db, f.identity.tenant, send)]);
+  expect(send).toHaveBeenCalledTimes(1);
+  expect(attempts[1]).toMatchObject({ email: 'current@example.test', messageId: attempts[0].messageId, message: { ticketTitle: 'Current SLA email title' } });
+  expect((await f.readEmail())).toMatchObject({ status: 'delivered', attempt_count: 2, next_attempt_at: null, completed_at: expect.any(Date) });
+  expect((await f.sponsor.table('sla_organization_notification_recipients').where('channel', 'in_app').first()).status).toBe('created');
+});
+
+it.each(['revoked', 'unassigned', 'preference', 'tenant-settings', 'inactive', 'field-redaction'] as const)
+('MSP SLA email skips a queued recipient after %s changes', async condition => {
+  const f = await mspSlaEmailFixture();
+  if (condition === 'revoked') {
+    const { revokeCoManagedTicketGrant } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+    await revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource, { operationId: randomUUID(), expectedRevision: 1, note: 'Remove access' });
+  }
+  if (condition === 'unassigned') await f.sponsor.table('co_managed_ticket_references').update({ assigned_to: null });
+  if (condition === 'inactive') await f.sponsor.table('users').where('user_id', f.principal.userId).update({ is_inactive: true });
+  if (condition === 'preference') {
+    const subtype = await db('notification_subtypes').where('name', 'SLA Breach').first();
+    await f.sponsor.table('user_notification_preferences').insert({ tenant: f.identity.tenant, user_id: f.principal.userId, subtype_id: subtype.id, is_enabled: false });
+  }
+  if (condition === 'tenant-settings') {
+    if (await f.sponsor.table('notification_settings').first()) await f.sponsor.table('notification_settings').update({ is_enabled: false });
+    else await f.sponsor.table('notification_settings').insert({ tenant: f.identity.tenant, is_enabled: false });
+  }
+  if (condition === 'field-redaction') {
+    const bundles = await import('@alga-psa/authorization');
+    const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: f.principal.tenant, name: 'Hidden SLA email', actorUserId: f.principal.userId });
+    await bundles.upsertBundleRule(db, { tenant: f.principal.tenant, bundleId, revisionId, resourceType: 'ticket', action: 'read',
+      templateKey: 'selected_clients', config: { selectedClientIds: [f.operation.request.clientId], redactedFields: ['sla'] } });
+    await bundles.publishBundleRevision(db, { tenant: f.principal.tenant, bundleId, revisionId, actorUserId: f.principal.userId });
+    await bundles.createBundleAssignment(db, { tenant: f.principal.tenant, bundleId, targetType: 'user', targetId: f.principal.userId });
+  }
+  const send = vi.fn(async () => ({ status: 'delivered' as const }));
+  await f.processEmail(db, f.identity.tenant, send);
+  expect(send).not.toHaveBeenCalled();
+  expect(await f.readEmail()).toMatchObject({ status: 'skipped', attempt_count: 1, next_attempt_at: null });
+});
+
+it.each(['permanent', 'exhausted'] as const)('MSP SLA email records %s provider failure without repeated sending', async reason => {
+  const f = await mspSlaEmailFixture();
+  if (reason === 'exhausted') await f.sponsor.table('sla_organization_notification_recipients').where('channel', 'email').update({ attempt_count: 9 });
+  const send = vi.fn(async () => ({ status: 'failed' as const, retryable: reason !== 'permanent', errorCode: 'provider_failed' }));
+  await f.processEmail(db, f.identity.tenant, send);
+  await f.processEmail(db, f.identity.tenant, send);
+  expect(send).toHaveBeenCalledTimes(1);
+  expect(await f.readEmail()).toMatchObject({ status: 'failed', next_attempt_at: null, completed_at: expect.any(Date), error_code: 'provider_failed' });
+});
+
+it('MSP SLA email retry migration replays safely and refuses to discard retained delivery state', async () => {
+  const f = await mspSlaEmailFixture();
+  const migration = require('../../../migrations/20260908065525_add_organization_sla_email_retry_state.cjs');
+  await migration.up(db);
+  await expect(migration.down(db)).rejects.toThrow('retained SLA email retry state');
+  await expect(f.sponsor.table('sla_organization_notification_recipients').where('channel', 'email').update({ next_attempt_at: null })).rejects.toMatchObject({ code: '23514' });
+  expect((await f.readEmail()).status).toBe('pending');
+});
+
+it('MSP SLA email warning uses current remaining time without rewriting its captured crossing', async () => {
+  const f = await dueMspSlaFixture();
+  await addMspSlaThresholds(f, [50]);
+  await f.sponsor.table('sla_notification_thresholds').update({ channels: ['email'] });
+  await f.sponsor.table('co_managed_ticket_references').update({ assigned_to: f.principal.userId });
+  const { startOrganizationSlaClock } = await import('../../../../shared/lib/sla/organizationSlaClock');
+  const { applyOrganizationSlaEvent } = await import('../../../../shared/lib/sla/organizationSlaStore');
+  const old = await f.read(), now = Date.now();
+  const clock = startOrganizationSlaClock(f.identity, old.clock.schedule, { responseMinutes: 60, resolutionMinutes: 480 }, new Date(now - 45 * 60000).toISOString());
+  await f.sponsor.table('sla_organization_obligations').where('obligation_id', f.identity.obligationId).update({ clock: JSON.stringify(clock) });
+  await db.transaction(trx => applyOrganizationSlaEvent(trx, f.identity, randomUUID(), { kind: 'observed', occurredAt: new Date(now - 5 * 60000).toISOString() }));
+  const event = await f.sponsor.table('sla_organization_notification_events').first();
+  expect(Number(event.elapsed_milliseconds)).toBe(40 * 60000);
+  const { persistCoManagedSlaNotifications } = await import('@alga-psa/notifications/lib/coManagedSlaNotifications');
+  await persistCoManagedSlaNotifications(db, f.identity.tenant);
+  const { processCoManagedSlaEmailDeliveries } = await import('../../../../packages/co-managed/src/slaEmailDeliveries');
+  const send = vi.fn(async delivery => {
+    expect(delivery.message.notificationType).toBe('warning');
+    expect(delivery.message.elapsedMilliseconds).toBeGreaterThanOrEqual(45 * 60000);
+    expect(delivery.message.dueAt).toBe(clock.response.dueAt);
+    return { status: 'delivered' as const };
+  });
+  await processCoManagedSlaEmailDeliveries(db, f.identity.tenant, send);
+  expect(send).toHaveBeenCalledTimes(1);
+  expect((await f.sponsor.table('sla_organization_notification_events').first()).elapsed_milliseconds).toBe(event.elapsed_milliseconds);
+});
+
+it('MSP SLA awaiting-client pause composes with handback and preserves elapsed time and breaches', async () => {
+  const f = await dueMspSlaFixture();
+  const { handBackCoManagedTicket, escalateCoManagedTicket } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  const mutate = (state: string) => db.transaction(async trx => {
+    await tenantDb(trx, f.resource.tenant).table('tickets').where('ticket_id', f.resource.id).update({ response_state: state });
+    await f.syncCoManagedTicketAwaitingClientSla(trx, f.resource.tenant, f.resource.id);
+  });
+  const customerBefore = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  await mutate('awaiting_client');
+  const paused = await f.read();
+  expect(paused.clock).toMatchObject({ pauseReasons: ['awaiting_client'], response: { dueAt: null, breached: true } });
+  expect(paused.clock.elapsedMilliseconds).toBeGreaterThanOrEqual(7200000);
+  await mutate('awaiting_client');
+  expect(await f.read()).toEqual(paused);
+  await handBackCoManagedTicket(db, f.principal, f.resource, { operationId: randomUUID(), expectedRevision: 1, note: 'Please check' });
+  await mutate('awaiting_internal');
+  const handback = await f.read();
+  expect(handback.clock).toMatchObject({ pauseReasons: ['customer_responsible'], elapsedMilliseconds: paused.clock.elapsedMilliseconds,
+    response: { dueAt: null, breached: true, breachedAt: paused.clock.response.breachedAt } });
+  await escalateCoManagedTicket(db, f.customerPrincipal, f.resource, { operationId: randomUUID(), expectedRevision: 2, note: 'Checked' });
+  const resumed = await f.read();
+  expect(resumed.clock).toMatchObject({ pauseReasons: [], elapsedMilliseconds: paused.clock.elapsedMilliseconds,
+    response: { breached: true, breachedAt: paused.clock.response.breachedAt } });
+  expect(await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).toEqual({ ...customerBefore, response_state: 'awaiting_internal' });
+});
+
+it.each(['msp-pause-disabled', 'msp-tracking-disabled', 'customer-tracking-disabled', 'customer-pause-disabled'] as const)
+('MSP SLA awaiting-client initial escalation respects %s independently', async condition => {
+  const f = await ticketHandoffFixture();
+  const { escalateCoManagedTicket } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  if (condition.endsWith('pause-disabled')) {
+    const scope = condition.startsWith('msp') ? f.sponsor : f.customer;
+    const tenant = condition.startsWith('msp') ? f.principal.tenant : f.resource.tenant;
+    await scope.table('sla_settings').insert({ tenant, pause_on_awaiting_client: false }).onConflict('tenant').merge({ pause_on_awaiting_client: false });
+  } else {
+    const scope = condition.startsWith('msp') ? f.sponsor : f.customer;
+    const tenant = condition.startsWith('msp') ? f.principal.tenant : f.resource.tenant;
+    await scope.table('tenant_settings').insert({ tenant, settings: {}, ticket_display_settings: { responseStateTrackingEnabled: false } })
+      .onConflict('tenant').merge({ ticket_display_settings: { responseStateTrackingEnabled: false } });
+  }
+  await f.customer.table('tickets').where('ticket_id', f.resource.id).update({ response_state: 'awaiting_client' });
+  const result = await escalateCoManagedTicket(db, f.customerPrincipal, f.resource, { operationId: randomUUID(), expectedRevision: 0, note: 'Please investigate' });
+  const clock = (await f.sponsor.table('sla_organization_obligations').first()).clock;
+  expect(clock.pauseReasons).toEqual(condition === 'customer-pause-disabled' ? ['awaiting_client'] : []);
+  expect(clock.elapsedMilliseconds).toBe(0);
+  expect(clock.startedAt).toBe(result.occurredAt);
+});
+
+it.each(['revoked', 'terminated', 'suspended', 'read-only'] as const)
+('MSP SLA awaiting-client does not expose new response state after %s', async reason => {
+  const f = await dueMspSlaFixture();
+  if (reason === 'revoked') {
+    const { revokeCoManagedTicketGrant } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+    await revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource, { operationId: randomUUID(), expectedRevision: 1, note: 'Private work' });
+  }
+  if (reason === 'terminated') await f.customer.table('co_management_relationships').update({ state: 'terminated', ended_at: new Date() });
+  if (reason === 'suspended') await f.customer.table('tenants').update({ suspended_at: new Date() });
+  if (reason === 'read-only') await f.sponsor.table('co_managed_allocations').del();
+  const before = await f.read();
+  await db.transaction(async trx => {
+    await tenantDb(trx, f.resource.tenant).table('tickets').where('ticket_id', f.resource.id).update({ response_state: 'awaiting_client' });
+    await f.syncCoManagedTicketAwaitingClientSla(trx, f.resource.tenant, f.resource.id);
+  });
+  expect(await f.read()).toEqual(before);
+});
+
+it.each(['legacy', 'optimized'] as const)('MSP SLA awaiting-client follows native %s response-state edits atomically', async path => withSharedTicketMutationFixture(async f => {
+  const auth = await import('@alga-psa/auth'), dbModule = await import('@alga-psa/db');
+  const user = await f.customer.table('users').where('user_id', f.customerPrincipal.userId).first();
+  const connection = vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: db, tenant: f.resource.tenant });
+  try {
+    const action = path === 'legacy' ? (await import('../../../../packages/tickets/src/actions/ticketActions')).updateTicket
+      : (await import('../../../../packages/tickets/src/actions/optimizedTicketActions')).updateTicketWithCache;
+    await auth.runWithApiKeyUser(user, () => runWithTenant(f.resource.tenant, async () => {
+      expect(await action(f.resource.id, { response_state: 'awaiting_client' })).toBe('success');
+      const paused = await f.sponsor.table('sla_organization_obligations').first();
+      expect(paused.clock.pauseReasons).toEqual(['awaiting_client']);
+      expect(await action(f.resource.id, { response_state: 'awaiting_internal' })).toBe('success');
+      const resumed = await f.sponsor.table('sla_organization_obligations').first();
+      expect(resumed.clock).toMatchObject({ pauseReasons: [], elapsedMilliseconds: paused.clock.elapsedMilliseconds });
+    }));
+  } finally { connection.mockRestore(); }
+}));
+
+it('MSP SLA awaiting-client records the actual public MSP response before pausing and rolls back with the source', async () => withCommentCreationFixture(async f => {
+  const { createSharedTicketComment } = await import('../../lib/co-managed/createTicketComment');
+  const before = await f.sponsor.table('sla_organization_obligations').first();
+  const request = { operationId: randomUUID(), audience: 'requester' as const, text: 'Please confirm the fix' };
+  await expect(db.transaction(async trx => {
+    await createSharedTicketComment(trx, f.principal, f.resource, request);
+    throw new Error('rollback response');
+  })).rejects.toThrow('rollback response');
+  expect(await f.sponsor.table('sla_organization_obligations').first()).toEqual(before);
+  await createSharedTicketComment(db, f.principal, f.resource, request);
+  const paused = await f.sponsor.table('sla_organization_obligations').first();
+  expect(paused.clock.pauseReasons).toEqual(['awaiting_client']);
+  expect(paused.clock.response.completedAt).not.toBeNull();
+  expect(paused.clock.resolution.dueAt).toBeNull();
+  const events = await f.sponsor.table('sla_organization_events').where('obligation_id', paused.obligation_id).orderBy('revision');
+  expect(events.slice(-2).map(row => row.event_type)).toEqual(['responded', 'paused']);
+}));
+
+it('MSP SLA awaiting-client re-escalation preserves the pause until an actual response-state change', async () => {
+  const f = await ticketHandoffFixture();
+  const { escalateCoManagedTicket, handBackCoManagedTicket } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  await escalateCoManagedTicket(db, f.customerPrincipal, f.resource, { operationId: randomUUID(), expectedRevision: 0, note: 'Investigate' });
+  await handBackCoManagedTicket(db, f.principal, f.resource, { operationId: randomUUID(), expectedRevision: 1, note: 'Check locally' });
+  const before = await f.sponsor.table('sla_organization_obligations').first();
+  await f.customer.table('tickets').where('ticket_id', f.resource.id).update({ response_state: 'awaiting_client' });
+  await escalateCoManagedTicket(db, f.customerPrincipal, f.resource, { operationId: randomUUID(), expectedRevision: 2, note: 'Please assist' });
+  const current = await f.sponsor.table('sla_organization_obligations').first();
+  expect(current.clock).toMatchObject({ pauseReasons: ['awaiting_client'], elapsedMilliseconds: before.clock.elapsedMilliseconds });
+});
+
+it('MSP SLA awaiting-client reopening starts a paused new generation at zero elapsed', async () => withSharedTicketMutationFixture(async f => {
+  const ticket = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  await f.mutate({ status_id: f.closedStatusId });
+  await f.mutate({ status_id: ticket.status_id, response_state: 'awaiting_client' });
+  const current = await f.sponsor.table('sla_organization_obligations').orderBy('generation', 'desc').first();
+  expect(current).toMatchObject({ generation: 2, clock: { pauseReasons: ['awaiting_client'], elapsedMilliseconds: 0,
+    response: { completedAt: null, dueAt: null }, resolution: { completedAt: null, dueAt: null } } });
+}));
+
+it('MSP SLA awaiting-client follows scheduled customer publication without inventing an MSP first response', async () => withScheduledCommentFixture(async f => {
+  await f.run();
+  const current = await f.sponsor.table('sla_organization_obligations').first();
+  expect(current.clock).toMatchObject({ pauseReasons: ['awaiting_client'], response: { completedAt: null }, resolution: { dueAt: null } });
+}));
+
+it.each(['generic', 'optimized'] as const)('MSP SLA reply adapters pause on native %s public comments and ignore private notes', async writer => withNativeCommentFixture(async f => {
+  const before = await f.sponsor.table('sla_organization_obligations').first();
+  await f.create(writer, true);
+  expect(await f.sponsor.table('sla_organization_obligations').first()).toEqual(before);
+  await f.create(writer, false);
+  const current = await f.sponsor.table('sla_organization_obligations').first();
+  expect(current.clock).toMatchObject({ pauseReasons: ['awaiting_client'], response: { completedAt: null }, resolution: { dueAt: null } });
+}));
+
+it('MSP SLA reply adapters resume after an actual qualified requester email and retain replay identity', async () => withRequesterInboundFixture(async f => {
+  const { syncCoManagedTicketAwaitingClientSla } = await import('../../../../packages/co-managed/src/ticketSla');
+  await db.transaction(async trx => {
+    await tenantDb(trx, f.resource.tenant).table('tickets').where('ticket_id', f.resource.id).update({ response_state: 'awaiting_client' });
+    await syncCoManagedTicketAwaitingClientSla(trx, f.resource.tenant, f.resource.id);
+  });
+  const paused = await f.sponsor.table('sla_organization_obligations').first();
+  expect(paused.clock.pauseReasons).toEqual(['awaiting_client']);
+  expect(await f.run()).toMatchObject({ disposition: 'ack', outcome: 'replied', ticketId: f.resource.id });
+  const current = await f.sponsor.table('sla_organization_obligations').first();
+  expect(current.clock).toMatchObject({ pauseReasons: [], elapsedMilliseconds: paused.clock.elapsedMilliseconds });
+  expect(await f.run()).toMatchObject({ disposition: 'ack', reason: 'terminal_replay' });
+  expect(await f.sponsor.table('sla_organization_obligations').first()).toEqual(current);
+}));
+
+it.each(['requester', 'shared_it', 'organization_private'] as const)('MSP SLA reply adapters apply actual customer email %s audience without an MSP response', async audience => withTechnicianInboundFixture(async f => {
+  const before = await f.sponsor.table('sla_organization_obligations').first();
+  expect(await f.run()).toMatchObject({ disposition: 'ack', outcome: 'replied', ticketId: f.resource.id });
+  const current = await f.sponsor.table('sla_organization_obligations').first();
+  if (audience === 'requester') expect(current.clock).toMatchObject({ pauseReasons: ['awaiting_client'], response: { completedAt: before.clock.response.completedAt } });
+  else expect(current).toEqual(before);
+}, audience));
+
+async function withSlaPortalWriter(work: (fixture: Parameters<Parameters<typeof withPortalConversationFixture>[0]>[0] & {
+  add: () => Promise<unknown>; status: (id: string) => Promise<unknown>;
+}) => Promise<void>) {
+  return withPortalConversationFixture(async f => {
+    const permission = await f.customer.table('permissions').where({ resource: 'ticket', action: 'update', msp: false, client: true }).first();
+    const role = await f.customer.table('user_roles').where('user_id', f.requester.user_id).first();
+    await f.customer.table('role_permissions').insert({ tenant: f.resource.tenant, role_id: role.role_id, permission_id: permission.permission_id });
+    const auth = await import('@alga-psa/auth');
+    const portal = await import('../../../../packages/client-portal/src/actions/client-portal-actions/client-tickets');
+    const run = (action: () => Promise<unknown>) => auth.runWithApiKeyUser(f.requester, () => runWithTenant(f.resource.tenant, action));
+    await work({ ...f, add: () => run(() => portal.addClientTicketComment(f.resource.id, 'Requester has confirmed the fix')),
+      status: id => run(() => portal.updateTicketStatus(f.resource.id, id)) });
+  });
+}
+
+it('MSP SLA reply adapters resume through the actual requester portal and close/reopen independently', async () => withSlaPortalWriter(async f => {
+  const { syncCoManagedTicketAwaitingClientSla } = await import('../../../../packages/co-managed/src/ticketSla');
+  await db.transaction(async trx => {
+    await tenantDb(trx, f.resource.tenant).table('tickets').where('ticket_id', f.resource.id).update({ response_state: 'awaiting_client' });
+    await syncCoManagedTicketAwaitingClientSla(trx, f.resource.tenant, f.resource.id);
+  });
+  const paused = await f.sponsor.table('sla_organization_obligations').first();
+  expect(paused.clock.pauseReasons).toEqual(['awaiting_client']);
+  expect(await f.add()).toBe(true);
+  const resumed = await f.sponsor.table('sla_organization_obligations').first();
+  expect(resumed.clock).toMatchObject({ pauseReasons: [], elapsedMilliseconds: paused.clock.elapsedMilliseconds });
+  const ticket = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  await f.status(f.closedStatusId);
+  const closed = await f.sponsor.table('sla_organization_obligations').first();
+  expect(closed.clock.resolution.completedAt).not.toBeNull();
+  await f.status(ticket.status_id);
+  const rows = await f.sponsor.table('sla_organization_obligations').orderBy('generation');
+  expect(rows).toHaveLength(2); expect(rows[0]).toEqual(closed); expect(rows[1].clock.resolution.completedAt).toBeNull();
+}));
+
+it.each(['reply', 'status'] as const)('MSP SLA reply adapters block read-only portal %s without changing source or MSP history', async action => withSlaPortalWriter(async f => {
+  await f.sponsor.table('co_managed_allocations').del();
+  const ticket = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  const comments = await f.customer.table('comments');
+  const obligation = await f.sponsor.table('sla_organization_obligations').first();
+  await expect(action === 'reply' ? f.add() : f.status(f.closedStatusId)).rejects.toThrow();
+  expect(await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).toEqual(ticket);
+  expect(await f.customer.table('comments')).toEqual(comments);
+  expect(await f.sponsor.table('sla_organization_obligations').first()).toEqual(obligation);
+}));
+
+it('MSP SLA ticket API preserves validated response-state updates and closes/reopens the independent obligation', async () => withSharedTicketMutationFixture(async f => {
+  const { service, publish } = await ticketServiceForTest();
+  const { updateTicketSchema } = await import('../../lib/api/schemas/ticket');
+  const context = { tenant: f.resource.tenant, userId: f.customerPrincipal.userId };
+  const original = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  const patch = updateTicketSchema.parse({ response_state: 'awaiting_client' });
+  expect(patch).toEqual({ response_state: 'awaiting_client' });
+  expect(updateTicketSchema.safeParse({ response_state: 'arbitrary' }).success).toBe(false);
+  expect(await service.update(f.resource.id, patch, context)).toMatchObject({ response_state: 'awaiting_client' });
+  const paused = await f.sponsor.table('sla_organization_obligations').first();
+  expect(paused.clock.pauseReasons).toEqual(['awaiting_client']);
+  expect(publish.mock.calls.some(([type, , payload]: any[]) => type === 'TICKET_RESPONSE_STATE_CHANGED' && payload.newResponseState === 'awaiting_client')).toBe(true);
+  await service.update(f.resource.id, updateTicketSchema.parse({ response_state: 'awaiting_internal' }), context);
+  const resumed = await f.sponsor.table('sla_organization_obligations').first();
+  expect(resumed.clock).toMatchObject({ pauseReasons: [], elapsedMilliseconds: paused.clock.elapsedMilliseconds });
+  const closedTicket = await service.update(f.resource.id, updateTicketSchema.parse({ status_id: f.closedStatusId, response_state: 'awaiting_client' }), context);
+  expect(closedTicket).toMatchObject({ response_state: null, is_closed: true, closed_by: context.userId });
+  expect(closedTicket.closed_at).not.toBeNull();
+  const closed = await f.sponsor.table('sla_organization_obligations').first();
+  expect(closed.clock.resolution.completedAt).not.toBeNull(); expect(closed.clock.response.completedAt).toBeNull();
+  const reopened = await service.update(f.resource.id, updateTicketSchema.parse({ status_id: original.status_id, response_state: 'awaiting_client' }), context);
+  expect(reopened).toMatchObject({ is_closed: false, closed_at: null, closed_by: null });
+  const rows = await f.sponsor.table('sla_organization_obligations').orderBy('generation');
+  expect(rows).toHaveLength(2); expect(rows[0]).toEqual(closed);
+  expect(rows[1]).toMatchObject({ generation: 2, clock: { elapsedMilliseconds: 0, pauseReasons: ['awaiting_client'], resolution: { completedAt: null } } });
+  const customer = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  for (const key of Object.keys(original).filter(key => key.startsWith('sla_'))) expect(customer[key]).toEqual(original[key]);
+}));
+
+it('MSP SLA ticket API missing reopen setup rolls back the canonical row and retained clock', async () => withSharedTicketMutationFixture(async f => {
+  const { service } = await ticketServiceForTest();
+  const context = { tenant: f.resource.tenant, userId: f.customerPrincipal.userId };
+  const original = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  await service.update(f.resource.id, { status_id: f.closedStatusId }, context);
+  const ticket = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  const clock = await f.sponsor.table('sla_organization_obligations').first();
+  await f.sponsor.table('co_managed_sla_priority_mappings').del();
+  await expect(service.update(f.resource.id, { status_id: original.status_id }, context)).rejects.toMatchObject({ code: 'CO_MANAGED_SLA_SETUP_REQUIRED' });
+  expect(await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).toEqual(ticket);
+  expect(await f.sponsor.table('sla_organization_obligations')).toEqual([clock]);
+}));
+
+it('MSP SLA ticket API keeps revoked private response and closure changes outside retained MSP history', async () => withSharedTicketMutationFixture(async f => {
+  const { service } = await ticketServiceForTest();
+  const { revokeCoManagedTicketGrant } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  await revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource, { operationId: randomUUID(), expectedRevision: 1, note: 'Private customer investigation' });
+  const before = await f.sponsor.table('sla_organization_obligations').first();
+  await service.update(f.resource.id, { response_state: 'awaiting_client' }, { tenant: f.resource.tenant, userId: f.customerPrincipal.userId });
+  await service.update(f.resource.id, { status_id: f.closedStatusId }, { tenant: f.resource.tenant, userId: f.customerPrincipal.userId });
+  expect(await f.sponsor.table('sla_organization_obligations').first()).toEqual(before);
+}));
+
+it('MSP SLA ticket API source failures roll back both the response state and its pause event', async () => withSharedTicketMutationFixture(async f => {
+  const { service } = await ticketServiceForTest();
+  const ticket = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  const clock = await f.sponsor.table('sla_organization_obligations').first();
+  const failure = vi.spyOn(service as any, 'withDescriptionHtml').mockImplementation(() => { throw new Error('late API failure'); });
+  try {
+    await expect(service.update(f.resource.id, { response_state: 'awaiting_client' }, { tenant: f.resource.tenant, userId: f.customerPrincipal.userId })).rejects.toThrow('late API failure');
+    expect(await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).toEqual(ticket);
+    expect(await f.sponsor.table('sla_organization_obligations').first()).toEqual(clock);
+  } finally { failure.mockRestore(); }
+}));
+
+async function withBundleSlaFixture(work: (fixture: any) => Promise<void>) {
+  return withNativeCommentFixture(async f => {
+    const { title_index: _generated, ...original } = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+    await f.mutate({ status_id: f.closedStatusId });
+    const closed = await f.sponsor.table('sla_organization_obligations').first();
+    const childId = randomUUID();
+    await f.customer.table('tickets').insert({ ...original, ticket_id: childId, ticket_number: 'SLA-BUNDLE-CHILD', master_ticket_id: f.resource.id });
+    await f.customer.table('ticket_bundle_settings').insert({ tenant: f.resource.tenant, master_ticket_id: f.resource.id, mode: 'link_only', reopen_on_child_reply: true });
+    const { addTicketCommentWithCache } = await import('../../../../packages/tickets/src/actions/optimizedTicketActions');
+    const reply = (ticketId = childId) => f.run(() => addTicketCommentWithCache(ticketId, 'Customer technician has an update', false, false));
+    await work({ ...f, childId, original, closed, reply });
+  });
+}
+
+it('MSP SLA bundle child reply reopens its actual master board with one new obligation', async () => withBundleSlaFixture(async f => {
+  // A competing board default must never become the master's new status.
+  const board = await f.customer.table('boards').where('board_id', f.original.board_id).first();
+  const otherBoardId = randomUUID();
+  await f.customer.table('boards').insert({ ...board, board_id: otherBoardId, board_name: 'Competing SLA bundle board' });
+  const openStatus = await f.customer.table('statuses').where({ board_id: f.original.board_id, is_closed: false }).first();
+  await f.customer.table('statuses').insert({ ...openStatus, status_id: randomUUID(), board_id: otherBoardId, is_default: true, order_number: -999 });
+  expect(await f.reply()).toMatchObject({ comment_id: expect.any(String) });
+  const master = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  expect(master).toMatchObject({ board_id: f.original.board_id, is_closed: false, closed_at: null, closed_by: null });
+  expect(await f.customer.table('statuses').where('status_id', master.status_id).first()).toMatchObject({ board_id: master.board_id, is_closed: false });
+  const rows = await f.sponsor.table('sla_organization_obligations').orderBy('generation');
+  expect(rows).toHaveLength(2); expect(rows[0]).toEqual(f.closed); expect(rows[1]).toMatchObject({ generation: 2, clock: { elapsedMilliseconds: 0, response: { completedAt: null }, resolution: { completedAt: null } } });
+  await f.reply();
+  expect(await f.sponsor.table('sla_organization_obligations').orderBy('generation')).toEqual(rows);
+}));
+
+it.each(['handed-back', 'revoked'] as const)('MSP SLA bundle child reply does not restart %s master obligations', async reason => withBundleSlaFixture(async f => {
+  const { handBackCoManagedTicket, revokeCoManagedTicketGrant } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  if (reason === 'handed-back') await handBackCoManagedTicket(db, f.principal, f.resource, { operationId: randomUUID(), expectedRevision: 1, note: 'Customer investigation' });
+  else await revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource, { operationId: randomUUID(), expectedRevision: 1, note: 'Private investigation' });
+  const before = await f.sponsor.table('sla_organization_obligations').first();
+  await f.reply();
+  expect(await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).toMatchObject({ is_closed: false });
+  expect(await f.sponsor.table('sla_organization_obligations')).toEqual([before]);
+}));
+
+it('MSP SLA bundle child reply missing reopen setup rolls back the master and child comment together', async () => withBundleSlaFixture(async f => {
+  await f.sponsor.table('co_managed_sla_priority_mappings').del();
+  const before = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  const childBefore = await f.customer.table('tickets').where('ticket_id', f.childId).first();
+  await expect(f.reply()).rejects.toMatchObject({ code: 'CO_MANAGED_SLA_SETUP_REQUIRED' });
+  expect(await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).toEqual(before);
+  expect(await f.customer.table('tickets').where('ticket_id', f.childId).first()).toEqual(childBefore);
+  expect(await f.customer.table('comments').where('ticket_id', f.childId)).toHaveLength(0);
+  expect(await f.sponsor.table('sla_organization_obligations')).toEqual([f.closed]);
+}));
+
+it('MSP SLA bundle child reply concurrent siblings create only one genuine reopen generation', async () => withBundleSlaFixture(async f => {
+  const secondChild = randomUUID();
+  await f.customer.table('tickets').insert({ ...f.original, ticket_id: secondChild, ticket_number: 'SLA-BUNDLE-SECOND', master_ticket_id: f.resource.id });
+  await Promise.all([f.reply(), f.reply(secondChild)]);
+  const clocks = await f.sponsor.table('sla_organization_obligations').orderBy('generation');
+  expect(clocks).toHaveLength(2); expect(clocks[0]).toEqual(f.closed);
+  expect(await f.customer.table('ticket_audit_logs').where({ ticket_id: f.resource.id, event_type: 'TICKET_BUNDLE_REOPENED' })).toHaveLength(1);
+}));
+
+async function withBundlePropagationSlaFixture(work: (fixture: any) => Promise<void>) {
+  return withNativeCommentFixture(async f => {
+    const { title_index: _generated, ...original } = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+    const childPriorityId = randomUUID(), childId = randomUUID();
+    const priority = await f.customer.table('priorities').where('priority_id', original.priority_id).first();
+    await f.customer.table('priorities').insert({ ...priority, priority_id: childPriorityId, priority_name: 'Bundle child priority' });
+    const mapping = await f.sponsor.table('co_managed_sla_priority_mappings').where('customer_priority_id', original.priority_id).first();
+    await f.sponsor.table('co_managed_sla_priority_mappings').insert({ ...mapping, customer_priority_id: childPriorityId });
+    await f.customer.table('tickets').insert({ ...original, ticket_id: childId, ticket_number: 'SLA-PROPAGATED-CHILD', priority_id: childPriorityId });
+    const childResource = { ...f.resource, id: childId };
+    const { escalateCoManagedTicket } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+    await escalateCoManagedTicket(db, f.customerPrincipal, childResource, { operationId: randomUUID(), expectedRevision: 0, note: 'Escalated child' });
+    await f.customer.table('tickets').where('ticket_id', childId).update({ master_ticket_id: f.resource.id });
+    await f.customer.table('ticket_bundle_settings').insert({ tenant: f.resource.tenant, master_ticket_id: f.resource.id, mode: 'sync_updates' });
+    const { updateTicketWithCache } = await import('../../../../packages/tickets/src/actions/optimizedTicketActions');
+    const update = (patch: any) => f.run(() => updateTicketWithCache(f.resource.id, patch));
+    await work({ ...f, original, childId, childPriorityId, childResource, update });
+  });
+}
+
+it('MSP SLA bundle propagation closes and reopens each child with its own obligation and closure fields', async () => withBundlePropagationSlaFixture(async f => {
+  await f.customer.table('tickets').where('ticket_id', f.childId).update({ response_state: 'awaiting_client' });
+  f.workflow.mockClear();
+  expect(await f.update({ status_id: f.closedStatusId })).toBe('success');
+  const child = await f.customer.table('tickets').where('ticket_id', f.childId).first();
+  expect(child).toMatchObject({ status_id: f.closedStatusId, is_closed: true, response_state: null, closed_by: f.customerPrincipal.userId });
+  expect(child.closed_at).not.toBeNull();
+  const closed = await f.sponsor.table('sla_organization_obligations').orderBy('ticket_id');
+  expect(closed).toHaveLength(2); expect(closed.every(row => row.clock.resolution.completedAt !== null)).toBe(true);
+  expect(f.workflow.mock.calls.filter(([event]: any[]) => event.eventType === 'TICKET_CLOSED').map(([event]: any[]) => event.payload.ticketId)).toEqual([f.resource.id]);
+  expect(await f.update({ status_id: f.original.status_id })).toBe('success');
+  const reopened = await f.customer.table('tickets').where('ticket_id', f.childId).first();
+  expect(reopened).toMatchObject({ is_closed: false, closed_at: null, closed_by: null });
+  const rows = await f.sponsor.table('sla_organization_obligations').orderBy('ticket_id').orderBy('generation');
+  expect(rows).toHaveLength(4);
+  expect(rows.filter(row => row.generation === 1)).toEqual(closed);
+  expect(rows.filter(row => row.generation === 2).every(row => row.clock.resolution.completedAt === null)).toBe(true);
+  expect(await f.customer.table('ticket_audit_logs').where({ ticket_id: f.childId, event_type: 'TICKET_CLOSED' })).toHaveLength(1);
+  expect(await f.customer.table('ticket_audit_logs').where({ ticket_id: f.childId, event_type: 'TICKET_REOPENED' })).toHaveLength(1);
+}));
+
+it('MSP SLA bundle propagation missing child reopen mapping rolls back the master and all child state', async () => withBundlePropagationSlaFixture(async f => {
+  await f.update({ status_id: f.closedStatusId });
+  const before = await f.customer.table('tickets').whereIn('ticket_id', [f.resource.id, f.childId]).orderBy('ticket_id');
+  const clocks = await f.sponsor.table('sla_organization_obligations').orderBy('ticket_id');
+  await f.sponsor.table('co_managed_sla_priority_mappings').where('customer_priority_id', f.childPriorityId).del();
+  await expect(f.update({ status_id: f.original.status_id })).rejects.toMatchObject({ code: 'CO_MANAGED_SLA_SETUP_REQUIRED' });
+  expect(await f.customer.table('tickets').whereIn('ticket_id', [f.resource.id, f.childId]).orderBy('ticket_id')).toEqual(before);
+  expect(await f.sponsor.table('sla_organization_obligations').orderBy('ticket_id')).toEqual(clocks);
+}));
+
+it('MSP SLA bundle propagation leaves revoked child history frozen while customer IT closes the canonical child', async () => withBundlePropagationSlaFixture(async f => {
+  const { revokeCoManagedTicketGrant } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  await revokeCoManagedTicketGrant(db, f.customerPrincipal, f.childResource, { operationId: randomUUID(), expectedRevision: 1, note: 'Private child' });
+  const before = await f.sponsor.table('sla_organization_obligations').where('ticket_id', f.childId).first();
+  await f.update({ status_id: f.closedStatusId });
+  expect(await f.customer.table('tickets').where('ticket_id', f.childId).first()).toMatchObject({ is_closed: true });
+  expect(await f.sponsor.table('sla_organization_obligations').where('ticket_id', f.childId).first()).toEqual(before);
+}));
+
+it('MSP SLA bundle propagation rejects a foreign-board status before committing any ticket or obligation', async () => withBundlePropagationSlaFixture(async f => {
+  const board = await f.customer.table('boards').where('board_id', f.original.board_id).first();
+  const boardId = randomUUID();
+  await f.customer.table('boards').insert({ ...board, board_id: boardId, board_name: 'Child separate board' });
+  const status = await f.customer.table('statuses').where('status_id', f.original.status_id).first();
+  const statusId = randomUUID();
+  await f.customer.table('statuses').insert({ ...status, status_id: statusId, board_id: boardId });
+  await f.customer.table('tickets').where('ticket_id', f.childId).update({ board_id: boardId, status_id: statusId });
+  const clocks = await f.sponsor.table('sla_organization_obligations').orderBy('ticket_id');
+  await expect(f.update({ status_id: f.closedStatusId })).rejects.toThrow('status from another board');
+  expect(await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).toMatchObject({ status_id: f.original.status_id });
+  expect(await f.customer.table('tickets').where('ticket_id', f.childId).first()).toMatchObject({ status_id: statusId });
+  expect(await f.sponsor.table('sla_organization_obligations').orderBy('ticket_id')).toEqual(clocks);
+}));
+
+it('MSP SLA bundle propagation enforces child close gates and rolls back the completed master', async () => withBundlePropagationSlaFixture(async f => {
+  await f.customer.table('tickets').where('ticket_id', f.resource.id).update({ assigned_to: f.customerPrincipal.userId });
+  await f.customer.table('tickets').where('ticket_id', f.childId).update({ assigned_to: null });
+  await f.customer.table('board_close_rules').insert({ tenant: f.resource.tenant, board_id: f.original.board_id, required_fields: JSON.stringify(['assigned_to']) });
+  const clocks = await f.sponsor.table('sla_organization_obligations').orderBy('ticket_id');
+  expect(await f.update({ status_id: f.closedStatusId })).toMatchObject({ actionError: expect.stringContaining('Assignee') });
+  expect((await f.customer.table('tickets').whereIn('ticket_id', [f.resource.id, f.childId])).every(row => row.status_id === f.original.status_id)).toBe(true);
+  expect(await f.sponsor.table('sla_organization_obligations').orderBy('ticket_id')).toEqual(clocks);
+}));
+
+it('MSP SLA bundle propagation preserves additional resources when a child assignee is promoted', async () => withBundlePropagationSlaFixture(async f => {
+  const user = await f.customer.table('users').where('user_id', f.customerPrincipal.userId).first();
+  const incoming = randomUUID(), remaining = randomUUID();
+  for (const id of [incoming, remaining]) await f.customer.table('users').insert({ ...user, user_id: id, username: `bundle-${id}`, email: `${id}@example.test` });
+  await f.customer.table('tickets').whereIn('ticket_id', [f.resource.id, f.childId]).update({ assigned_to: user.user_id });
+  for (const id of [incoming, remaining]) await f.customer.table('ticket_resources').insert({ tenant: f.resource.tenant, assignment_id: randomUUID(), ticket_id: f.childId,
+    assigned_to: user.user_id, additional_user_id: id });
+  await f.update({ assigned_to: incoming });
+  expect(await f.customer.table('tickets').where('ticket_id', f.childId).first()).toMatchObject({ assigned_to: incoming });
+  expect(await f.customer.table('ticket_resources').where('ticket_id', f.childId)).toEqual([expect.objectContaining({ assigned_to: incoming, additional_user_id: remaining })]);
+}));
+
+async function withWorkflowSlaFixture(work: (fixture: any) => Promise<void>) {
+  return withWorkflowCommentFixture(async f => {
+    const registry = await import('../../../../shared/workflow/runtime/registries/workflowTicketMutationRegistry');
+    const { withCoManagedWorkflowTicketMutation } = await import('../../../../packages/co-managed/src/workflowTicketMutation');
+    registry.registerWorkflowTicketMutationAdapter(withCoManagedWorkflowTicketMutation);
+    const update = (patch: any) => f.act('tickets.update_fields', { ticket_id: f.resource.id, patch });
+    try { await work({ ...f, mutationRegistry: registry, update }); }
+    finally { registry.resetWorkflowTicketMutationAdapter(); }
+  });
+}
+
+it('MSP SLA workflow updates apply canonical response, close and reopen transitions under the executing version', async () => withWorkflowSlaFixture(async f => {
+  const original = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  await f.update({ response_state: 'awaiting_client' });
+  expect((await f.sponsor.table('sla_organization_obligations').first()).clock.pauseReasons).toEqual(['awaiting_client']);
+  await f.update({ status_id: f.closedStatusId });
+  const closed = await f.sponsor.table('sla_organization_obligations').first();
+  expect(closed.clock.resolution.completedAt).not.toBeNull();
+  expect(await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).toMatchObject({ is_closed: true, response_state: null, closed_by: f.customerPrincipal.userId });
+  await f.update({ status_id: original.status_id });
+  const rows = await f.sponsor.table('sla_organization_obligations').orderBy('generation');
+  expect(rows).toHaveLength(2); expect(rows[0]).toEqual(closed); expect(rows[1].clock.resolution.completedAt).toBeNull();
+  expect(await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).toMatchObject({ is_closed: false, closed_at: null, closed_by: null });
+}));
+
+it.each(['inactive_actor', 'missing_role', 'cancelled_run', 'expired_lease', 'missing_version', 'lapsed_license', 'missing_composition'] as const)
+('MSP SLA workflow updates reject %s before mutating canonical work', async reason => withWorkflowSlaFixture(async f => {
+  if (reason === 'inactive_actor') await f.customer.table('users').where('user_id', f.customerPrincipal.userId).update({ is_inactive: true });
+  if (reason === 'missing_role') await f.customer.table('user_roles').where('user_id', f.customerPrincipal.userId).del();
+  if (reason === 'cancelled_run') await f.customer.table('workflow_runs').where('run_id', f.runId).update({ status: 'CANCELLED' });
+  if (reason === 'expired_lease') await f.customer.table('workflow_runs').where('run_id', f.runId).update({ lease_expires_at: new Date(0) });
+  if (reason === 'missing_version') await f.customer.table('workflow_definition_versions').where('workflow_id', f.workflowId).del();
+  if (reason === 'lapsed_license') await f.sponsor.table('co_managed_allocations').del();
+  if (reason === 'missing_composition') f.mutationRegistry.resetWorkflowTicketMutationAdapter();
+  const ticket = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  const clock = await f.sponsor.table('sla_organization_obligations').first();
+  await expect(f.update({ status_id: f.closedStatusId })).rejects.toThrow();
+  expect(await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).toEqual(ticket);
+  expect(await f.sponsor.table('sla_organization_obligations').first()).toEqual(clock);
+}));
+
+it('MSP SLA workflow updates roll back canonical reopen on missing MSP setup', async () => withWorkflowSlaFixture(async f => {
+  const original = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  await f.update({ status_id: f.closedStatusId });
+  const ticket = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  const clock = await f.sponsor.table('sla_organization_obligations').first();
+  await f.sponsor.table('co_managed_sla_priority_mappings').del();
+  await expect(f.update({ status_id: original.status_id })).rejects.toMatchObject({ code: 'CO_MANAGED_SLA_SETUP_REQUIRED' });
+  expect(await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).toEqual(ticket);
+  expect(await f.sponsor.table('sla_organization_obligations')).toEqual([clock]);
+}));
+
+it('MSP SLA workflow updates roll back source, clock and audit when the run expires during the writer', async () => withWorkflowSlaFixture(async f => {
+  const { TicketModel } = await import('../../../../shared/models/ticketModel');
+  const original = TicketModel.updateTicket;
+  const before = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  const clock = await f.sponsor.table('sla_organization_obligations').first();
+  const writer = vi.spyOn(TicketModel, 'updateTicket').mockImplementationOnce(async (...args) => {
+    const result = await original.apply(TicketModel, args);
+    await tenantDb(args[3], f.resource.tenant).table('workflow_runs').where('run_id', f.runId).update({ lease_expires_at: new Date(0) });
+    return result;
+  });
+  try {
+    await expect(f.update({ status_id: f.closedStatusId })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    expect(await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).toEqual(before);
+    expect(await f.sponsor.table('sla_organization_obligations').first()).toEqual(clock);
+    expect(await f.customer.table('audit_logs').where({ record_id: f.runId, operation: 'workflow_action:tickets.update_fields' })).toHaveLength(0);
+  } finally { writer.mockRestore(); }
+}));
+
+it.each(['response_state', 'priority.name'] as const)('MSP SLA workflow updates reject hidden %s mutation or returned data', async field => withWorkflowSlaFixture(async f => {
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: f.resource.tenant, name: 'Workflow field restriction', actorUserId: f.customerPrincipal.userId });
+  await bundles.upsertBundleRule(db, { tenant: f.resource.tenant, bundleId, revisionId, resourceType: 'ticket', action: field === 'response_state' ? 'update' : 'read',
+    templateKey: 'selected_clients', config: { selectedClientIds: [f.operation.customer_client_id], redactedFields: [field] } });
+  await bundles.publishBundleRevision(db, { tenant: f.resource.tenant, bundleId, revisionId, actorUserId: f.customerPrincipal.userId });
+  await bundles.createBundleAssignment(db, { tenant: f.resource.tenant, bundleId, targetType: 'user', targetId: f.customerPrincipal.userId });
+  const before = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  await expect(f.update(field === 'response_state' ? { response_state: 'awaiting_client' } : { title: 'Allowed write cannot return hidden fields' }))
+    .rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).toEqual(before);
+}));
+
+async function withWorkflowAssignmentFixture(work: (fixture: any) => Promise<void>) {
+  return withWorkflowSlaFixture(async f => {
+    const baseUser = await f.customer.table('users').where('user_id', f.customerPrincipal.userId).first();
+    const userIds = [randomUUID(), randomUUID()];
+    for (const userId of userIds) await f.customer.table('users').insert({ ...baseUser, user_id: userId, username: `wf-assign-${userId}`, email: `${userId}@example.test` });
+    const assign = (primary: any = { type: 'user', id: userIds[0] }, extra: any = {}) => f.act('tickets.assign', {
+      ticket_id: f.resource.id, assignment: { primary, additional_user_ids: [userIds[1]] }, ...extra,
+    });
+    await work({ ...f, userIds, assign });
+  });
+}
+
+it.each(['user', 'team', 'queue'] as const)('co-managed workflow assignment retains actual %s targets, resources and no-op state without resetting SLA', async kind => withWorkflowAssignmentFixture(async f => {
+  let id = f.userIds[0];
+  if (kind !== 'user') {
+    id = randomUUID();
+    await f.customer.table('teams').insert({ tenant: f.resource.tenant, team_id: id, team_name: 'Workflow assignment team', manager_id: f.userIds[0] });
+    for (let index = 0; index < f.userIds.length; index++) await f.customer.table('team_members').insert({ tenant: f.resource.tenant, team_id: id, user_id: f.userIds[index], created_at: new Date(1000 + index) });
+  }
+  const clock = await f.sponsor.table('sla_organization_obligations').first();
+  const result = await f.assign({ type: kind, id });
+  expect(result).toMatchObject({ assigned_type: kind, assigned_id: id, assigned_to: f.userIds[0] });
+  const ticket = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  expect(ticket).toMatchObject({ assigned_to: f.userIds[0], assigned_team_id: kind === 'team' ? id : null });
+  const resources = await f.customer.table('ticket_resources').where('ticket_id', f.resource.id);
+  expect(resources).toEqual([expect.objectContaining({ assigned_to: f.userIds[0], additional_user_id: f.userIds[1] })]);
+  expect(await f.assign({ type: kind, id })).toEqual(result);
+  expect(await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).toEqual(ticket);
+  expect(await f.customer.table('ticket_resources').where('ticket_id', f.resource.id)).toEqual(resources);
+  expect(await f.sponsor.table('sla_organization_obligations').first()).toEqual(clock);
+}));
+
+it.each(['expired_lease', 'missing_role', 'read_only', 'missing_composition'] as const)('co-managed workflow assignment rejects %s before changing the ticket', async reason => withWorkflowAssignmentFixture(async f => {
+  if (reason === 'expired_lease') await f.customer.table('workflow_runs').where('run_id', f.runId).update({ lease_expires_at: new Date(0) });
+  if (reason === 'missing_role') await f.customer.table('user_roles').where('user_id', f.customerPrincipal.userId).del();
+  if (reason === 'read_only') await f.sponsor.table('co_managed_allocations').del();
+  if (reason === 'missing_composition') f.mutationRegistry.resetWorkflowTicketMutationAdapter();
+  const before = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  await expect(f.assign()).rejects.toThrow();
+  expect(await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).toEqual(before);
+  expect(await f.customer.table('ticket_resources').where('ticket_id', f.resource.id)).toHaveLength(0);
+}));
+
+it('co-managed workflow assignment rolls back the ticket, resources and audit after late lease expiry', async () => withWorkflowAssignmentFixture(async f => {
+  const { TicketModel } = await import('../../../../shared/models/ticketModel');
+  const original = TicketModel.updateTicket;
+  const before = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  const writer = vi.spyOn(TicketModel, 'updateTicket').mockImplementationOnce(async (...args) => {
+    const result = await original.apply(TicketModel, args);
+    await tenantDb(args[3], f.resource.tenant).table('workflow_runs').where('run_id', f.runId).update({ lease_expires_at: new Date(0) });
+    return result;
+  });
+  try {
+    await expect(f.assign()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    expect(await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).toEqual(before);
+    expect(await f.customer.table('ticket_resources').where('ticket_id', f.resource.id)).toHaveLength(0);
+    expect(await f.customer.table('audit_logs').where({ record_id: f.runId, operation: 'workflow_action:tickets.assign' })).toHaveLength(0);
+  } finally { writer.mockRestore(); }
+}));
+
+it('co-managed workflow assignment retains its optional public comment exactly once on a no-op retry', async () => withWorkflowAssignmentFixture(async f => {
+  const extra = { comment: { body: 'Customer assignment context', visibility: 'public' } };
+  await f.assign(undefined, extra); await f.assign(undefined, extra);
+  const comments = await f.customer.table('comments').where('ticket_id', f.resource.id);
+  expect(comments).toHaveLength(1);
+  expect(comments[0]).toMatchObject({ is_internal: false, publish_state: 'published' });
+  expect(await f.customer.table('co_management_event_outbox').where({ comment_id: comments[0].comment_id, event_type: 'TICKET_COMMENT_ADDED' })).toHaveLength(1);
+}));
+
+it.each(['assigned_to', 'priority.name'] as const)('co-managed workflow assignment applies action-specific read fields for %s', async field => withWorkflowAssignmentFixture(async f => {
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: f.resource.tenant, name: 'Assignment output restriction', actorUserId: f.customerPrincipal.userId });
+  await bundles.upsertBundleRule(db, { tenant: f.resource.tenant, bundleId, revisionId, resourceType: 'ticket', action: 'read', templateKey: 'selected_clients',
+    config: { selectedClientIds: [f.operation.customer_client_id], redactedFields: [field] } });
+  await bundles.publishBundleRevision(db, { tenant: f.resource.tenant, bundleId, revisionId, actorUserId: f.customerPrincipal.userId });
+  await bundles.createBundleAssignment(db, { tenant: f.resource.tenant, bundleId, targetType: 'user', targetId: f.customerPrincipal.userId });
+  if (field === 'assigned_to') await expect(f.assign()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  else expect(await f.assign()).toMatchObject({ assigned_to: f.userIds[0] });
+}));
+
+async function withWorkflowCloseFixture(work: (fixture: any) => Promise<void>) {
+  return withWorkflowSlaFixture(async f => {
+    const contact = await f.customer.table('contacts').where('client_id', f.operation.customer_client_id).first();
+    const contactId = randomUUID();
+    await f.customer.table('contacts').insert({ ...contact, contact_name_id: contactId, email: 'workflow-requester@example.test', is_inactive: false });
+    await f.customer.table('tickets').where('ticket_id', f.resource.id).update({ contact_name_id: contactId, response_state: 'awaiting_client' });
+    const { processCoManagedWorkflowTicketEmails } = await import('../../../../packages/co-managed/src/workflowTicketEmails');
+    const send = vi.fn().mockResolvedValue({ status: 'delivered' });
+    const close = (extra: any = {}) => f.act('tickets.close', { ticket_id: f.resource.id, resolution: { code: 'Fixed <safe>' }, notify_requester: true, ...extra });
+    const recover = () => processCoManagedWorkflowTicketEmails(db, f.resource.tenant, send);
+    await work({ ...f, contactId, close, recover, send, emails: () => f.customer.table('co_management_workflow_ticket_emails') });
+  });
+}
+
+it('co-managed workflow close commits canonical closure and one MSP resolution before durable requester delivery', async () => withWorkflowCloseFixture(async f => {
+  await f.customer.table('board_close_rules').insert({ tenant: f.resource.tenant, board_id: (await f.customer.table('tickets').first()).board_id, required_fields: JSON.stringify(['assigned_to']) });
+  const result = await f.close({ public_note: 'Done', internal_note: 'Internal closure detail' });
+  expect(result).toMatchObject({ ticket_id: f.resource.id, final_status_id: f.closedStatusId, resolution_code: 'Fixed <safe>' });
+  expect(await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).toMatchObject({ is_closed: true, response_state: null, closed_by: f.customerPrincipal.userId });
+  expect((await f.sponsor.table('sla_organization_obligations').first()).clock.resolution.completedAt).not.toBeNull();
+  expect(await f.customer.table('ticket_audit_logs').where('event_type', 'TICKET_CLOSE_RULES_BYPASSED')).toHaveLength(1);
+  expect(await f.customer.table('comments').where('ticket_id', f.resource.id)).toHaveLength(2);
+  expect(await f.emails()).toEqual([expect.objectContaining({ status: 'pending', contact_id: f.contactId, attempt_count: 0 })]);
+  expect(f.send).not.toHaveBeenCalled();
+  await f.customer.table('workflow_runs').where('run_id', f.runId).update({ status: 'SUCCEEDED', lease_expires_at: new Date(0) });
+  expect(await f.recover()).toEqual({ examined: 1, processed: 1 });
+  expect(f.send).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ email: 'workflow-requester@example.test', html: expect.stringContaining('Fixed &lt;safe&gt;') }));
+  expect(await f.emails()).toEqual([expect.objectContaining({ status: 'delivered', attempt_count: 1 })]);
+  expect(await f.recover()).toEqual({ examined: 0, processed: 0 });
+}));
+
+it.each(['expired_lease', 'missing_role', 'missing_composition', 'lapsed_license'] as const)
+('co-managed workflow close rejects %s without closure, SLA, audit or email intents', async reason => withWorkflowCloseFixture(async f => {
+  if (reason === 'expired_lease') await f.customer.table('workflow_runs').where('run_id', f.runId).update({ lease_expires_at: new Date(0) });
+  if (reason === 'missing_role') await f.customer.table('user_roles').where('user_id', f.customerPrincipal.userId).del();
+  if (reason === 'missing_composition') f.mutationRegistry.resetWorkflowTicketMutationAdapter();
+  if (reason === 'lapsed_license') await f.sponsor.table('co_managed_allocations').del();
+  const before = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  const clock = await f.sponsor.table('sla_organization_obligations').first();
+  await expect(f.close()).rejects.toThrow();
+  expect(await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).toEqual(before);
+  expect(await f.sponsor.table('sla_organization_obligations').first()).toEqual(clock);
+  expect(await f.emails()).toHaveLength(0);
+}));
+
+it('co-managed workflow close rolls back an enqueued email on final lease failure', async () => withWorkflowCloseFixture(async f => {
+  const adapter = (await import('../../../../packages/co-managed/src/workflowTicketMutation')).withCoManagedWorkflowTicketMutation;
+  f.mutationRegistry.registerWorkflowTicketMutationAdapter((trx: any, input: any, write: any) => adapter(trx, input, async effects => {
+    const result = await write(effects);
+    expect(await tenantDb(trx, f.resource.tenant).table('co_management_workflow_ticket_emails')).toHaveLength(1);
+    await tenantDb(trx, f.resource.tenant).table('workflow_runs').where('run_id', f.runId).update({ lease_expires_at: new Date(0) });
+    return result;
+  }));
+  const before = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  const clock = await f.sponsor.table('sla_organization_obligations').first();
+  await expect(f.close()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).toEqual(before);
+  expect(await f.sponsor.table('sla_organization_obligations').first()).toEqual(clock);
+  expect(await f.emails()).toHaveLength(0);
+  expect(await f.customer.table('audit_logs').where({ record_id: f.runId, operation: 'workflow_action:tickets.close' })).toHaveLength(0);
+  expect(f.send).not.toHaveBeenCalled();
+}));
+
+it.each(['requester_changed', 'contact_inactive', 'board_hidden', 'author_revoked', 'reopened', 'cancelled', 'notifications_disabled'] as const)
+('co-managed workflow close email suppresses current %s delivery', async reason => withWorkflowCloseFixture(async f => {
+  await f.close();
+  if (reason === 'requester_changed') await f.customer.table('tickets').where('ticket_id', f.resource.id).update({ contact_name_id: null });
+  if (reason === 'contact_inactive') await f.customer.table('contacts').where('contact_name_id', f.contactId).update({ is_inactive: true });
+  if (reason === 'board_hidden') {
+    const groupId = randomUUID();
+    await f.customer.table('client_portal_visibility_groups').insert({ tenant: f.resource.tenant, group_id: groupId, client_id: f.operation.customer_client_id, name: 'No boards' });
+    await f.customer.table('contacts').where('contact_name_id', f.contactId).update({ portal_visibility_group_id: groupId });
+  }
+  if (reason === 'author_revoked') await f.customer.table('user_roles').where('user_id', f.customerPrincipal.userId).del();
+  if (reason === 'reopened') await f.customer.table('tickets').where('ticket_id', f.resource.id).update({ status_id: (await f.customer.table('statuses').where('is_closed', false).first()).status_id, closed_at: null, is_closed: false });
+  if (reason === 'cancelled') await f.customer.table('workflow_runs').where('run_id', f.runId).update({ status: 'CANCELED' });
+  if (reason === 'notifications_disabled') {
+    if (await f.customer.table('notification_settings').first()) await f.customer.table('notification_settings').update({ is_enabled: false });
+    else await f.customer.table('notification_settings').insert({ tenant: f.resource.tenant, is_enabled: false });
+  }
+  await f.recover();
+  expect(f.send).not.toHaveBeenCalled();
+  expect(await f.emails()).toEqual([expect.objectContaining({ status: 'skipped' })]);
+}));
+
+it('co-managed workflow close email retries with stable identity and reloads current address and escaped template data', async () => withWorkflowCloseFixture(async f => {
+  await f.close({ email: { subject: 'Closed {{ticket.resolutionCode}}\r\nnext', html: '<p>{{ticket.resolutionCode}}</p>', text: '{{ticket.resolutionCode}}' } });
+  f.send.mockResolvedValueOnce({ status: 'failed', retryable: true, errorCode: 'provider_down' });
+  await f.recover();
+  expect(await f.emails()).toEqual([expect.objectContaining({ status: 'pending', attempt_count: 1, error_code: 'provider_down' })]);
+  expect(f.send.mock.calls[0][0]).toMatchObject({ subject: 'Closed Fixed <safe> next', html: '<p>Fixed &lt;safe&gt;</p>', text: 'Fixed <safe>' });
+  await f.customer.table('contacts').where('contact_name_id', f.contactId).update({ email: 'current-requester@example.test' });
+  await f.emails().update({ next_attempt_at: new Date(0) });
+  await f.recover();
+  expect(f.send.mock.calls[1][0]).toMatchObject({ email: 'current-requester@example.test', messageId: f.send.mock.calls[0][0].messageId });
+  expect(await f.emails()).toEqual([expect.objectContaining({ status: 'delivered', attempt_count: 2 })]);
+}));
+
+it.each(['attributes.resolution_code', 'response_state', 'contact_name_id'] as const)
+('co-managed workflow close rejects hidden %s source fields before queuing a message', async field => withWorkflowCloseFixture(async f => {
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: f.resource.tenant, name: 'Closure restriction', actorUserId: f.customerPrincipal.userId });
+  await bundles.upsertBundleRule(db, { tenant: f.resource.tenant, bundleId, revisionId, resourceType: 'ticket', action: 'read',
+    templateKey: 'selected_clients', config: { selectedClientIds: [f.operation.customer_client_id], redactedFields: [field] } });
+  await bundles.publishBundleRevision(db, { tenant: f.resource.tenant, bundleId, revisionId, actorUserId: f.customerPrincipal.userId });
+  await bundles.createBundleAssignment(db, { tenant: f.resource.tenant, bundleId, targetType: 'user', targetId: f.customerPrincipal.userId });
+  const before = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  await expect(f.close()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).toEqual(before);
+  expect(await f.emails()).toHaveLength(0);
+}));
+
+it('co-managed workflow close email concurrent recovery sends one committed command once', async () => withWorkflowCloseFixture(async f => {
+  await f.close();
+  await Promise.all([f.recover(), f.recover()]);
+  expect(f.send).toHaveBeenCalledTimes(1);
+  expect(await f.emails()).toEqual([expect.objectContaining({ status: 'delivered', attempt_count: 1 })]);
+}));
+
+it('co-managed workflow close without notification needs no requester and queues no email', async () => withWorkflowCloseFixture(async f => {
+  await f.customer.table('tickets').where('ticket_id', f.resource.id).update({ contact_name_id: null });
+  await f.close({ notify_requester: false });
+  expect(await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).toMatchObject({ is_closed: true, response_state: null });
+  expect(await f.emails()).toHaveLength(0);
+}));
+
+async function withMspTimeWorkFixture(work: (fixture: any) => Promise<void>) {
+  return withSharedTicketMutationFixture(async f => {
+    for (const action of ['read', 'create']) {
+      const permission = await f.customer.table('permissions').where({ resource: 'time_entry', action, msp: true, client: false }).first();
+      await f.sponsor.table('permissions').insert({ ...permission, tenant: f.principal.tenant });
+      await f.sponsor.table('role_permissions').insert({ tenant: f.principal.tenant, role_id: f.roleId, permission_id: permission.permission_id });
+    }
+    const { registerCoManagedTimeWorkReference } = await import('../../../../packages/co-managed/src/timeWorkReference');
+    const { joinTimeEntryBillingWorkContext, timeEntryBillingWorkColumns } = await import('../../../../packages/billing/src/lib/billing/timeEntryWorkContext');
+    const register = (resource = f.resource) => registerCoManagedTimeWorkReference(db, f.principal, resource);
+    const load = (tenant = f.principal.tenant) => {
+      const query = tenantDb(db, tenant).table('time_entries');
+      joinTimeEntryBillingWorkContext(db, tenant, query);
+      return query.select('time_entries.*', 'billing_work.client_id as billing_client_id', ...timeEntryBillingWorkColumns);
+    };
+    const insertTime = async (workItemId: string, type = 'co_managed', tenant = f.principal.tenant, userId = f.principal.userId) => {
+      const entryId = randomUUID();
+      await tenantDb(db, tenant).table('time_entries').insert({ tenant, entry_id: entryId, user_id: userId, work_item_id: workItemId,
+        work_item_type: type, co_managed_work_reference_id: type === 'co_managed' ? workItemId : null, start_time: new Date('2026-09-08T09:00:00Z'), end_time: new Date('2026-09-08T10:00:00Z'),
+        work_date: '2026-09-08', work_timezone: 'UTC', billable_duration: tenant === f.principal.tenant ? 60 : 0, approval_status: 'APPROVED', invoiced: false });
+      return entryId;
+    };
+    await work({ ...f, register, load, insertTime });
+  });
+}
+
+it('MSP time billing work registers one qualified source and keeps customer work outside the MSP invoice loader', async () => withMspTimeWorkFixture(async f => {
+  const [a, b] = await Promise.all([f.register(), f.register()]);
+  expect(a.referenceId).toBe(b.referenceId);
+  expect(await f.sponsor.table('co_managed_time_work_references')).toHaveLength(1);
+  await f.insertTime(a.referenceId);
+  await f.insertTime(f.resource.id, 'ticket', f.resource.tenant, f.customerPrincipal.userId);
+  // A guessed customer UUID is not a local work reference or local ticket.
+  await expect(f.insertTime(f.resource.id, 'co_managed')).rejects.toMatchObject({ code: '23503' });
+  const [row] = await f.load();
+  expect(await f.load()).toHaveLength(1);
+  expect(row).toMatchObject({ tenant: f.principal.tenant, work_source_tenant: f.resource.tenant,
+    work_source_kind: 'ticket', work_source_id: f.resource.id, work_relationship_id: f.resource.relationshipId,
+    work_item_id: a.referenceId, work_item_type: 'co_managed', ticket_title: 'Customer issue' });
+  expect(row.billing_client_id).not.toBe(f.operation.customer_client_id);
+  expect((await f.load(f.resource.tenant))[0]).toMatchObject({ work_item_type: 'ticket', work_source_id: f.resource.id, work_source_tenant: f.resource.tenant });
+}));
+
+it('MSP time billing work retains admitted evidence after revocation without allowing another live registration', async () => withMspTimeWorkFixture(async f => {
+  const reference = await f.register(); await f.insertTime(reference.referenceId);
+  const before = await f.load();
+  await (await import('../../../../packages/co-managed/src/ticketHandoffs')).revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource,
+    { operationId: randomUUID(), expectedRevision: 1, note: 'End live sharing' });
+  await f.customer.table('tickets').where('ticket_id', f.resource.id).update({ title: 'Newly private title', attributes: { description: 'Private replacement' } });
+  await expect(f.register()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(await f.load()).toEqual(before);
+  expect(JSON.stringify(await f.load())).not.toContain('Newly private');
+}));
+
+it('MSP time billing work rejects missing local time permission and wrong relationship before capture', async () => withMspTimeWorkFixture(async f => {
+  await expect(f.register({ ...f.resource, relationshipId: randomUUID() })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await f.sponsor.table('role_permissions').whereIn('permission_id', f.sponsor.table('permissions').where({ resource: 'time_entry', action: 'create' }).select('permission_id')).del();
+  await expect(f.register()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(await f.sponsor.table('co_managed_time_work_references')).toHaveLength(0);
+}));
+
+it('MSP time billing work applies current field scope to captured descriptions', async () => withMspTimeWorkFixture(async f => {
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: f.principal.tenant, name: 'Shared billing evidence', actorUserId: f.principal.userId });
+  const relation = await f.customer.table('co_management_relationships').first();
+  await bundles.upsertBundleRule(db, { tenant: f.principal.tenant, bundleId, revisionId, resourceType: 'ticket', action: 'read', templateKey: 'selected_clients',
+    config: { selectedClientIds: [relation.sponsor_client_id], redactedFields: ['title', 'attributes.description', 'ticket_number'] } });
+  await bundles.publishBundleRevision(db, { tenant: f.principal.tenant, bundleId, revisionId, actorUserId: f.principal.userId });
+  await bundles.createBundleAssignment(db, { tenant: f.principal.tenant, bundleId, targetType: 'user', targetId: f.principal.userId });
+  const registered = await f.register();
+  expect(registered.title).toBeNull();
+  expect(await f.sponsor.table('co_managed_time_work_references').first()).toMatchObject({ title: null, description: null, ticket_number: null });
+}));
+
+it('MSP time billing work reaches the existing catalog charge engine with retained customer provenance', async () => withMspTimeWorkFixture(async f => {
+  const reference = await f.register(), entryId = await f.insertTime(reference.referenceId), serviceId = randomUUID(), typeId = randomUUID();
+  await f.sponsor.table('service_types').insert({ tenant: f.principal.tenant, id: typeId, name: 'Shared MSP labor' });
+  await f.sponsor.table('service_catalog').insert({ tenant: f.principal.tenant, service_id: serviceId, service_name: 'MSP hourly service',
+    custom_service_type_id: typeId, billing_method: 'hourly', default_rate: 12000 });
+  await f.sponsor.table('time_entries').where('entry_id', entryId).update({ service_id: serviceId });
+  const relation = await f.customer.table('co_management_relationships').first();
+  const { BillingEngine } = await import('../../../../packages/billing/src/lib/billing/billingEngine');
+  await withTransaction(db, async trx => {
+    const engine = BillingEngine.forTransaction(trx, f.principal.tenant) as any;
+    // Keep this test about actual loader/charge integration; tax and contract
+    // selection have their own domain suites and no external effects are run.
+    vi.spyOn(engine, 'getEligibleContractLinesForServiceAtDate').mockResolvedValue([]);
+    vi.spyOn(engine, 'getClientDefaultTaxRegionCode').mockResolvedValue(null);
+    vi.spyOn(engine, 'getClientDefaultBillingProfileId').mockResolvedValue(randomUUID());
+    vi.spyOn(engine, 'getTaxInfoFromService').mockResolvedValue({ isTaxable: false, taxRegion: null });
+    const charges = await engine.calculateUnresolvedNonContractCharges(relation.sponsor_client_id, { startDate: '2026-09-08', endDate: '2026-09-09' });
+    expect(charges).toHaveLength(1);
+    expect(charges[0]).toMatchObject({ type: 'time', total: 12000, duration: 1, serviceId,
+      workItemSnapshot: { workItemType: 'ticket', workItemId: f.resource.id, sourceTenant: f.resource.tenant, workReferenceId: reference.referenceId,
+        relationshipId: f.resource.relationshipId, title: 'Customer issue', billedMinutes: 60, netAmount: 12000 } });
+    await tenantDb(trx, f.principal.tenant).table('time_entries').where('entry_id', entryId).update({ invoiced: true });
+    expect(await engine.calculateUnresolvedNonContractCharges(relation.sponsor_client_id, { startDate: '2026-09-08', endDate: '2026-09-09' })).toHaveLength(0);
+  });
+}));
+
+it('MSP time billing work supports shared tasks without assigning an MSP project billing identity', async () => withSharedProjectTaskFixture(async f => {
+  for (const action of ['read', 'create']) {
+    const permission = await f.customer.table('permissions').where({ resource: 'time_entry', action, msp: true, client: false }).first();
+    await f.sponsor.table('permissions').insert({ ...permission, tenant: f.principal.tenant });
+    await f.sponsor.table('role_permissions').insert({ tenant: f.principal.tenant, role_id: f.roleId, permission_id: permission.permission_id });
+  }
+  const { registerCoManagedTimeWorkReference } = await import('../../../../packages/co-managed/src/timeWorkReference');
+  const reference = await registerCoManagedTimeWorkReference(db, f.principal, f.resource), entryId = randomUUID();
+  await f.sponsor.table('time_entries').insert({ tenant: f.principal.tenant, entry_id: entryId, user_id: f.principal.userId,
+    work_item_type: 'co_managed', work_item_id: reference.referenceId, co_managed_work_reference_id: reference.referenceId,
+    start_time: new Date('2026-09-08T09:00:00Z'), end_time: new Date('2026-09-08T10:00:00Z'), work_date: '2026-09-08', work_timezone: 'UTC', billable_duration: 60 });
+  const { joinTimeEntryBillingWorkContext, timeEntryBillingWorkColumns } = await import('../../../../packages/billing/src/lib/billing/timeEntryWorkContext');
+  const query = f.sponsor.table('time_entries'); joinTimeEntryBillingWorkContext(db, f.principal.tenant, query);
+  expect(await query.select(...timeEntryBillingWorkColumns)).toEqual([expect.objectContaining({ work_source_tenant: f.resource.tenant,
+    work_source_id: f.resource.id, work_source_kind: 'project_task', project_task_name: 'Verify rollout', project_id: null, project_phase_id: null })]);
+}));
+
+it('MSP time billing work keeps native ticket and task UUID collisions distinct in normalized billing joins', async () => withSharedProjectTaskFixture(async f => {
+  const ticket = await f.customer.table('tickets').first();
+  await f.customer.table('tickets').where('ticket_id', ticket.ticket_id).update({ ticket_id: f.resource.id, title: 'Same UUID native ticket' });
+  for (const type of ['ticket', 'project_task']) await f.customer.table('time_entries').insert({ tenant: f.resource.tenant,
+    entry_id: randomUUID(), user_id: f.customerPrincipal.userId, work_item_id: f.resource.id, work_item_type: type,
+    start_time: new Date('2026-09-08T09:00:00Z'), end_time: new Date('2026-09-08T10:00:00Z'), work_date: '2026-09-08', work_timezone: 'UTC', billable_duration: 0 });
+  const { joinTimeEntryBillingWorkContext, timeEntryBillingWorkColumns } = await import('../../../../packages/billing/src/lib/billing/timeEntryWorkContext');
+  const query = f.customer.table('time_entries'); joinTimeEntryBillingWorkContext(db, f.resource.tenant, query);
+  const rows = await query.select('time_entries.work_item_type', ...timeEntryBillingWorkColumns);
+  expect(rows).toHaveLength(2);
+  expect(rows.find(row => row.work_item_type === 'ticket')).toMatchObject({ ticket_title: 'Same UUID native ticket', project_task_name: null, project_id: null });
+  expect(rows.find(row => row.work_item_type === 'project_task')).toMatchObject({ ticket_title: null, project_task_name: 'Verify rollout', project_id: f.project.project_id });
+}));
+
+async function withMspSharedTimeSaveFixture(work: (fixture: any) => Promise<void>) {
+  return withMspTimeWorkFixture(async f => {
+    const { referenceId } = await f.register();
+    for (const [resource, action] of [['time_entry', 'update'], ['time_entry', 'delete'], ['time_entry', 'approve'], ['time_sheet', 'read'], ['time_sheet', 'approve']]) {
+      const permission = await f.customer.table('permissions').where({ resource, action, msp: true, client: false }).first();
+      await f.sponsor.table('permissions').insert({ ...permission, tenant: f.principal.tenant });
+      await f.sponsor.table('role_permissions').insert({ tenant: f.principal.tenant, role_id: f.roleId, permission_id: permission.permission_id });
+    }
+    const periodId = randomUUID(), sheetId = randomUUID(), typeId = randomUUID(), serviceId = randomUUID();
+    await f.sponsor.table('time_periods').insert({ tenant: f.principal.tenant, period_id: periodId, start_date: '2026-09-07', end_date: '2026-09-14' });
+    await f.sponsor.table('time_sheets').insert({ tenant: f.principal.tenant, id: sheetId, period_id: periodId, user_id: f.principal.userId, approval_status: 'DRAFT' });
+    await f.sponsor.table('service_types').insert({ tenant: f.principal.tenant, id: typeId, name: 'Shared work labor' });
+    await f.sponsor.table('service_catalog').insert({ tenant: f.principal.tenant, service_id: serviceId, service_name: 'MSP labor', billing_method: 'hourly', custom_service_type_id: typeId, default_rate: 12000 });
+    const dbModule = await import('@alga-psa/db'), auth = await import('@alga-psa/auth');
+    const connection = vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: db, tenant: f.principal.tenant });
+    const actions = await import('../../../../packages/scheduling/src/actions/timeEntryCrudActions');
+    const input = { entry_id: '', work_item_type: 'co_managed', work_item_id: referenceId, user_id: f.principal.userId, time_sheet_id: sheetId,
+      start_time: '2026-09-08T09:00:00Z', end_time: '2026-09-08T10:00:00Z', created_at: '2026-09-08T09:00:00Z', updated_at: '2026-09-08T09:00:00Z',
+      notes: 'MSP-owned work note', billable_duration: 60, approval_status: 'DRAFT', service_id: serviceId };
+    try { await withTrackedTaskBrowser(f.principal, f.sponsor, browser => auth.runWithApiKeyUser(f.user, () => runWithTenant(f.principal.tenant,
+      () => work({ ...f, ...browser, referenceId, sheetId, serviceId, input, actions, save: (extra: any = {}) => actions.saveTimeEntry({ ...input, ...extra } as any) })))); }
+    finally { connection.mockRestore(); }
+  });
+}
+
+it('MSP shared time save uses the existing writer and reads its own commercial effort without a copied ticket', async () => withMspSharedTimeSaveFixture(async f => {
+  await f.customer.table('tickets').where('ticket_id', f.resource.id).update({ title: 'Current customer ticket' });
+  const entry = await f.save();
+  expect(entry).toMatchObject({ tenant: f.principal.tenant, work_item_type: 'co_managed', work_item_id: f.referenceId, co_managed_work_reference_id: f.referenceId,
+    billing_mode: 'commercial', service_id: f.serviceId, billable_duration: 60, workItem: { type: 'co_managed', name: 'Current customer ticket' } });
+  expect(await f.customer.table('time_entries')).toHaveLength(0);
+  expect(await f.sponsor.table('tickets')).toHaveLength(0);
+  expect(await f.actions.getTimeEntryById(entry.entry_id)).toMatchObject({ entry_id: entry.entry_id, notes: 'MSP-owned work note', workItem: { name: 'Current customer ticket' } });
+  expect(await f.actions.fetchTimeEntriesForTimeSheet(f.sheetId)).toEqual([expect.objectContaining({ entry_id: entry.entry_id })]);
+  const changed = await f.save({ entry_id: entry.entry_id, end_time: '2026-09-08T10:30:00Z', billable_duration: 90 });
+  expect(changed).toMatchObject({ entry_id: entry.entry_id, billable_duration: 90 });
+  expect(await f.sponsor.table('time_entries')).toHaveLength(1);
+}));
+
+it('MSP shared time save retains existing effort after revocation and blocks fresh contributions', async () => withMspSharedTimeSaveFixture(async f => {
+  const entry = await f.save();
+  await (await import('../../../../packages/co-managed/src/ticketHandoffs')).revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource,
+    { operationId: randomUUID(), expectedRevision: 1, note: 'Private customer work' });
+  await f.customer.table('tickets').where('ticket_id', f.resource.id).update({ title: 'Private replacement title' });
+  await expect(f.save()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(await f.actions.getTimeEntryById(entry.entry_id)).toMatchObject({ workItem: { name: 'Customer issue' } });
+  expect(await f.save({ entry_id: entry.entry_id, notes: 'Correct our retained time note' })).toMatchObject({ notes: 'Correct our retained time note' });
+  expect(JSON.stringify(await f.actions.fetchTimeEntriesForTimeSheet(f.sheetId))).not.toContain('Private replacement');
+}));
+
+it('MSP shared time save rechecks the session before committing source evidence and time', async () => withMspSharedTimeSaveFixture(async f => {
+  const allocation = await import('../../../../shared/billingClients/hourBlockService');
+  const original = allocation.allocateTimeEntry;
+  const late = vi.spyOn(allocation, 'allocateTimeEntry').mockImplementation(async (...args) => {
+    const result = await original(...args);
+    await tenantDb(args[0], f.principal.tenant).table('sessions').where('session_id', f.principal.sessionId).update({ expires_at: new Date(0) });
+    return result;
+  });
+  const before = await f.sponsor.table('co_managed_time_work_references').first();
+  await f.customer.table('tickets').where('ticket_id', f.resource.id).update({ title: 'Uncommitted evidence' });
+  try {
+    await expect(f.save()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    expect(await f.sponsor.table('time_entries')).toHaveLength(0);
+    expect(await f.sponsor.table('co_managed_time_work_references').first()).toEqual(before);
+  } finally { late.mockRestore(); }
+}));
+
+it('MSP shared time save admits actual API credentials and preserves qualified work on updates and reads', async () => withMspSharedTimeSaveFixture(async f => {
+  const { TimeEntryService } = await import('../../lib/api/services/TimeEntryService'), service = new TimeEntryService();
+  const connection = vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex: db, tenant: f.principal.tenant });
+  const apiKeyId = randomUUID();
+  await f.sponsor.table('api_keys').insert({ tenant: f.principal.tenant, api_key_id: apiKeyId, api_key: randomUUID(), user_id: f.principal.userId, active: true });
+  const context = { tenant: f.principal.tenant, userId: f.principal.userId, user: f.user, apiKeyId };
+  const input = { work_item_id: f.referenceId, work_item_type: 'co_managed', start_time: f.input.start_time, end_time: f.input.end_time,
+    notes: 'API MSP effort', service_id: f.serviceId, is_billable: true };
+  try {
+    const entry = await service.create(input as any, context);
+    expect(entry).toMatchObject({ tenant: f.principal.tenant, co_managed_work_reference_id: f.referenceId, billable_duration: 60, work_item_title: 'Customer issue' });
+    expect(await service.update(entry.entry_id, { notes: 'Edited API MSP effort' }, context)).toMatchObject({ entry_id: entry.entry_id, notes: 'Edited API MSP effort' });
+    expect(await service.getById(entry.entry_id, context)).toMatchObject({ entry_id: entry.entry_id, work_item_type: 'co_managed' });
+    await f.sponsor.table('api_keys').where('api_key_id', apiKeyId).update({ active: false });
+    await expect(service.update(entry.entry_id, { notes: 'Revoked API key' }, context)).rejects.toMatchObject({ statusCode: 403 });
+    expect((await f.sponsor.table('time_entries').where('entry_id', entry.entry_id).first()).notes).toBe('Edited API MSP effort');
+  } finally { connection.mockRestore(); }
+}));
+
+it('MSP shared time save applies current home financial field restrictions to writes and reads', async () => withMspSharedTimeSaveFixture(async f => {
+  const entry = await f.save();
+  const bundles = await import('@alga-psa/authorization');
+  const relation = await f.customer.table('co_management_relationships').first();
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: f.principal.tenant, name: 'MSP time financial scope', actorUserId: f.principal.userId });
+  await bundles.upsertBundleRule(db, { tenant: f.principal.tenant, bundleId, revisionId, resourceType: 'time_entry', action: 'read', templateKey: 'selected_clients',
+    config: { selectedClientIds: [relation.sponsor_client_id], redactedFields: ['billing'] } });
+  await bundles.publishBundleRevision(db, { tenant: f.principal.tenant, bundleId, revisionId, actorUserId: f.principal.userId });
+  await bundles.createBundleAssignment(db, { tenant: f.principal.tenant, bundleId, targetType: 'user', targetId: f.principal.userId });
+  await expect(f.save({ entry_id: entry.entry_id, notes: 'Blind commercial edit' })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(await f.actions.getTimeEntryById(entry.entry_id)).toMatchObject({ notes: 'MSP-owned work note', service_id: null, billable_duration: null });
+}));
+
+it('MSP shared time review preserves the native approval transitions and invoiced evidence', async () => withMspSharedTimeSaveFixture(async f => {
+  const entry = await f.save();
+  const review = (approvalStatus: 'SUBMITTED' | 'APPROVED' | 'DRAFT') => f.actions.updateTimeEntryApprovalStatus({ entryId: entry.entry_id, approvalStatus });
+  await expect(review('APPROVED')).rejects.toMatchObject({ code: 'TIME_REVIEW_STATE_CONFLICT' });
+  await review('SUBMITTED');
+  await (await import('../../../../packages/co-managed/src/ticketHandoffs')).revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource,
+    { operationId: randomUUID(), expectedRevision: 1, note: 'MSP retains its own commercial records' });
+  await review('APPROVED');
+  await review('APPROVED');
+  expect(await f.sponsor.table('time_entries').where('entry_id', entry.entry_id).first()).toMatchObject({ approval_status: 'APPROVED', billable_duration: 60 });
+  await f.sponsor.table('time_entries').where('entry_id', entry.entry_id).update({ invoiced: true });
+  await expect(review('DRAFT')).rejects.toMatchObject({ code: 'TIME_REVIEW_BILLING_EVIDENCE' });
+  expect(await f.customer.table('time_entries')).toHaveLength(0);
+}));
+
+it('MSP shared time deletion retains the source reference and prevents deleting submitted effort', async () => withMspSharedTimeSaveFixture(async f => {
+  const entry = await f.save();
+  await f.sponsor.table('time_entries').where('entry_id', entry.entry_id).update({ approval_status: 'SUBMITTED' });
+  await expect(f.actions.deleteTimeEntry(entry.entry_id)).rejects.toMatchObject({ code: 'TIME_DELETE_NOT_EDITABLE' });
+  await f.sponsor.table('time_entries').where('entry_id', entry.entry_id).update({ approval_status: 'DRAFT' });
+  await (await import('../../../../packages/co-managed/src/ticketHandoffs')).revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource,
+    { operationId: randomUUID(), expectedRevision: 1, note: 'Delete only our own draft time' });
+  await f.actions.deleteTimeEntry(entry.entry_id);
+  expect(await f.sponsor.table('time_entries')).toHaveLength(0);
+  expect(await f.sponsor.table('co_managed_time_work_references').where('reference_id', f.referenceId)).toHaveLength(1);
+  expect(await f.customer.table('tickets').where('ticket_id', f.resource.id)).toHaveLength(1);
+}));
+
+
+async function withMspSharedTimerFixture(work: (fixture: any) => Promise<void>) {
+  return withMspSharedTimeSaveFixture(async f => {
+    const apiKeyId = randomUUID();
+    await f.sponsor.table('api_keys').insert({ tenant: f.principal.tenant, api_key_id: apiKeyId, user_id: f.principal.userId, api_key: randomUUID(), active: true });
+    const context = { tenant: f.principal.tenant, userId: f.principal.userId, apiKeyId, user: f.user };
+    const { TimeEntryService } = await import('../../lib/api/services/TimeEntryService');
+    const service = new TimeEntryService();
+    const connection = vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex: db, tenant: context.tenant });
+    const today = Date.now();
+    await f.sponsor.table('time_periods').update({ start_date: new Date(today - 7 * 86400_000).toISOString().slice(0, 10), end_date: new Date(today + 7 * 86400_000).toISOString().slice(0, 10) });
+    const start = (extra: any = {}) => service.startTimeTracking({ work_item_type: 'co_managed', work_item_id: f.referenceId, service_id: f.serviceId, notes: 'MSP running effort', ...extra }, context);
+    const stop = (timer: any, extra: any = {}) => service.stopTimeTracking(timer.session_id, { end_time: new Date(new Date(timer.start_time).getTime() + 30 * 60000).toISOString(), ...extra }, context);
+    try { await work({ ...f, apiKeyId, context, service, start, stop }); }
+    finally { connection.mockRestore(); }
+  });
+}
+
+it('MSP shared timers retain running effort after revocation and stop exactly once into owned time', async () => withMspSharedTimerFixture(async f => {
+  const timer = await f.start();
+  expect(timer).toMatchObject({ work_item_type: 'co_managed', work_item_id: f.referenceId, work_item_title: 'Customer issue', billing_mode: 'commercial' });
+  expect(await f.sponsor.table('time_entries')).toHaveLength(0);
+  await (await import('../../../../packages/co-managed/src/ticketHandoffs')).revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource,
+    { operationId: randomUUID(), expectedRevision: 1, note: 'Already running effort stays MSP-owned' });
+  await f.customer.table('tickets').where('ticket_id', f.resource.id).update({ title: 'New private customer title' });
+  expect(await f.service.getActiveSession(f.context.userId, f.context)).toMatchObject({ session_id: timer.session_id, work_item_title: 'Customer issue' });
+  const results = await Promise.all([f.stop(timer), f.stop(timer)]);
+  for (const result of results) expect(result).toMatchObject({ entry_id: timer.session_id, co_managed_work_reference_id: f.referenceId,
+    work_item_type: 'co_managed', billing_mode: 'commercial', billable_duration: 30, service_id: f.serviceId, work_item_title: 'Customer issue' });
+  expect(await f.sponsor.table('time_entries')).toHaveLength(1);
+  expect(await f.customer.table('time_entries')).toHaveLength(0);
+  expect(await f.service.getActiveSession(f.context.userId, f.context)).toBeNull();
+  await expect(f.stop(timer, { notes: 'Changed retry' })).rejects.toMatchObject({ statusCode: 409 });
+  await expect(f.start()).rejects.toMatchObject({ statusCode: 403 });
+}));
+
+it('MSP shared timers require current home credentials and financial visibility through completion', async () => withMspSharedTimerFixture(async f => {
+  const timer = await f.start();
+  await f.sponsor.table('api_keys').where('api_key_id', f.apiKeyId).update({ active: false });
+  await expect(f.stop(timer)).rejects.toMatchObject({ statusCode: 403 });
+  expect(await f.sponsor.table('time_entries')).toHaveLength(0);
+  await f.sponsor.table('api_keys').where('api_key_id', f.apiKeyId).update({ active: true });
+  const bundles = await import('@alga-psa/authorization');
+  const relation = await f.customer.table('co_management_relationships').first();
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: f.principal.tenant, name: 'Timer financial scope', actorUserId: f.principal.userId });
+  await bundles.upsertBundleRule(db, { tenant: f.principal.tenant, bundleId, revisionId, resourceType: 'time_entry', action: 'read', templateKey: 'selected_clients',
+    config: { selectedClientIds: [relation.sponsor_client_id], redactedFields: ['billing'] } });
+  await bundles.publishBundleRevision(db, { tenant: f.principal.tenant, bundleId, revisionId, actorUserId: f.principal.userId });
+  await bundles.createBundleAssignment(db, { tenant: f.principal.tenant, bundleId, targetType: 'user', targetId: f.principal.userId });
+  expect(await f.service.getActiveSession(f.context.userId, f.context)).toMatchObject({ service_id: null });
+  await expect(f.stop(timer)).rejects.toMatchObject({ statusCode: 403 });
+  expect(await f.sponsor.table('native_time_tracking_sessions').first()).toMatchObject({ completed_entry_id: null });
+  await f.service.cancelTimeTracking(timer.session_id, f.context);
+  await expect(f.start()).rejects.toMatchObject({ statusCode: 403 });
+  expect(await f.sponsor.table('native_time_tracking_sessions')).toHaveLength(0);
+}));
+
+it('MSP shared timer references retain local integrity and cannot be removed by migration rollback', async () => withMspSharedTimerFixture(async f => {
+  await expect(f.start({ work_item_id: f.resource.id })).rejects.toMatchObject({ statusCode: 403 });
+  const timer = await f.start();
+  const clock = await f.sponsor.table('native_time_tracking_sessions').where('session_id', timer.session_id).first();
+  expect(clock.co_managed_work_reference_id).toBe(f.referenceId);
+  const migration = require('../../../migrations/20260908091756_allow_co_managed_time_tracking.cjs');
+  await migration.up(db);
+  await expect(migration.down(db)).rejects.toThrow('Cannot discard retained co-managed timer');
+  await expect(f.sponsor.table('co_managed_time_work_references').where('reference_id', f.referenceId).del()).rejects.toMatchObject({ code: '23503' });
+  await f.service.cancelTimeTracking(timer.session_id, f.context);
+  await expect(f.sponsor.table('native_time_tracking_sessions').insert({ ...clock, session_id: randomUUID(),
+    work_item_id: f.resource.id, co_managed_work_reference_id: f.resource.id })).rejects.toMatchObject({ code: '23503' });
+}));
+
+
+it('shared time UI actions register the current browser and resolve only the MSP billing client', async () => withMspSharedTimeSaveFixture(async f => {
+  const actions = await import('../../lib/actions/coManagedTimeActions');
+  const auth = await import('@alga-psa/auth');
+  const current = vi.spyOn(auth, 'getCurrentUser').mockResolvedValue(f.user);
+  const { getClientIdForWorkItem } = await import('../../../../packages/scheduling/src/lib/contractLineDisambiguation');
+  try {
+    expect(await actions.registerSharedTimeWorkAction({ ...f.resource, userId: randomUUID(), sessionId: randomUUID() } as any)).toMatchObject({ referenceId: f.referenceId, resource: f.resource });
+    const relationship = await f.customer.table('co_management_relationships').first();
+    expect(await getClientIdForWorkItem(f.referenceId, 'co_managed')).toBe(relationship.sponsor_client_id);
+    const entry = await f.save();
+    await (await import('../../../../packages/co-managed/src/ticketHandoffs')).revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource,
+      { operationId: randomUUID(), expectedRevision: 1, note: 'Keep MSP billing history' });
+    await expect(actions.registerSharedTimeWorkAction(f.resource)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    await expect(getClientIdForWorkItem(f.referenceId, 'co_managed')).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    expect(await getClientIdForWorkItem(f.referenceId, 'co_managed', entry.entry_id)).toBe(relationship.sponsor_client_id);
+    await expect(getClientIdForWorkItem(f.referenceId, 'co_managed', randomUUID())).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  } finally { current.mockRestore(); }
+}));
+
+it('shared time UI actions reject API overrides and redact current local client fields', async () => withMspSharedTimeSaveFixture(async f => {
+  const actions = await import('../../lib/actions/coManagedTimeActions');
+  const auth = await import('@alga-psa/auth');
+  const current = vi.spyOn(auth, 'getCurrentUser').mockResolvedValue(f.user);
+  const { getClientIdForWorkItem } = await import('../../../../packages/scheduling/src/lib/contractLineDisambiguation');
+  const entry = await f.save();
+  try {
+    vi.mocked(auth.getApiKeyUserOverride).mockReturnValue(f.user);
+    await expect(actions.registerSharedTimeWorkAction(f.resource)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    await expect(getClientIdForWorkItem(f.referenceId, 'co_managed', entry.entry_id)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    vi.mocked(auth.getApiKeyUserOverride).mockReturnValue(undefined);
+    const bundles = await import('@alga-psa/authorization');
+    const relationship = await f.customer.table('co_management_relationships').first();
+    const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: f.principal.tenant, name: 'Time client fields', actorUserId: f.principal.userId });
+    await bundles.upsertBundleRule(db, { tenant: f.principal.tenant, bundleId, revisionId, resourceType: 'time_entry', action: 'read', templateKey: 'selected_clients',
+      config: { selectedClientIds: [relationship.sponsor_client_id], redactedFields: ['client_id'] } });
+    await bundles.publishBundleRevision(db, { tenant: f.principal.tenant, bundleId, revisionId, actorUserId: f.principal.userId });
+    await bundles.createBundleAssignment(db, { tenant: f.principal.tenant, bundleId, targetType: 'user', targetId: f.principal.userId });
+    expect(await getClientIdForWorkItem(f.referenceId, 'co_managed', entry.entry_id)).toBeNull();
+  } finally { current.mockRestore(); }
+}));
+
+async function seedMspTimeContract(f: any, options: { bucket?: boolean; clientId?: string; serviceId?: string } = {}) {
+  const tenant = f.principal.tenant, contractId = randomUUID(), lineId = randomUUID(), bucketId = randomUUID();
+  const relation = await f.customer.table('co_management_relationships').first();
+  const clientId = options.clientId ?? relation.sponsor_client_id, serviceId = options.serviceId ?? f.serviceId;
+  await f.sponsor.table('contracts').insert({ tenant, contract_id: contractId, contract_name: 'Shared MSP support', is_active: true });
+  await f.sponsor.table('contract_lines').insert({ tenant, contract_line_id: lineId, contract_id: contractId,
+    contract_line_name: 'MSP support line', contract_line_type: options.bucket ? 'Bucket' : 'Hourly', billing_frequency: 'monthly', is_active: true, is_template: false, cadence_owner: 'client' });
+  await f.sponsor.table('client_contracts').insert({ tenant, client_contract_id: randomUUID(), client_id: clientId, contract_id: contractId,
+    start_date: '2026-01-01', end_date: null, is_active: true });
+  if (options.bucket) {
+    await f.sponsor.table('contract_line_buckets').insert({ tenant, bucket_id: bucketId, contract_line_id: lineId, total_minutes: 600,
+      overage_rate: 15000, allow_rollover: false, covers_all_services: false });
+    await f.sponsor.table('contract_line_bucket_services').insert({ tenant, bucket_id: bucketId, contract_line_id: lineId, service_id: serviceId, burn_multiplier: 2 });
+  } else await f.sponsor.table('contract_line_services').insert({ tenant, contract_line_id: lineId, service_id: serviceId, quantity: 1 });
+  return { clientId, lineId, contractId, bucketId };
+}
+
+it('shared time billing uses the same current contract selection for manual API and timer saves', async () => withMspSharedTimerFixture(async f => {
+  const contract = await seedMspTimeContract(f);
+  const manual = await f.save();
+  expect(manual).toMatchObject({ contract_line_id: contract.lineId, contract_line_source: 'auto_unique_service' });
+  const api = await f.service.create({ work_item_type: 'co_managed', work_item_id: f.referenceId, service_id: f.serviceId,
+    start_time: '2026-09-08T11:00:00Z', end_time: '2026-09-08T12:00:00Z' }, f.context);
+  expect(api).toMatchObject({ contract_line_id: contract.lineId, contract_line_source: 'auto_unique_service' });
+  const changed = await f.service.update(api.entry_id, { end_time: '2026-09-08T12:30:00Z' }, f.context);
+  expect(changed).toMatchObject({ contract_line_id: contract.lineId, contract_line_source: 'auto_unique_service', billable_duration: 90 });
+  // Remove completed fixture entries to avoid the API's overlap gate if the
+  // test clock happens to run in either fixed interval.
+  await f.sponsor.table('time_entries').del();
+  const timer = await f.start();
+  expect(await f.stop(timer)).toMatchObject({ contract_line_id: contract.lineId, contract_line_source: 'auto_unique_service' });
+}));
+
+it('shared time billing rejects foreign or inapplicable explicit contracts and services before writing effort', async () => withMspSharedTimerFixture(async f => {
+  const contract = await seedMspTimeContract(f);
+  await expect(f.save({ contract_line_id: randomUUID() })).rejects.toMatchObject({ code: 'TIME_CONTRACT_UNAVAILABLE' });
+  await expect(f.save({ service_id: randomUUID() })).rejects.toMatchObject({ code: 'TIME_SERVICE_UNAVAILABLE' });
+  await expect(f.service.create({ work_item_type: 'co_managed', work_item_id: f.referenceId, service_id: f.serviceId,
+    contract_line_id: randomUUID(), start_time: '2026-09-08T11:00:00Z', end_time: '2026-09-08T12:00:00Z' }, f.context)).rejects.toMatchObject({ statusCode: 400 });
+  expect(await f.sponsor.table('time_entries')).toHaveLength(0);
+  expect(await f.save({ contract_line_id: contract.lineId })).toMatchObject({ contract_line_id: contract.lineId, contract_line_source: 'explicit' });
+}));
+
+it('shared time billing applies weighted bucket draws and reverses API edits and deletion', async () => withMspSharedTimerFixture(async f => {
+  const contract = await seedMspTimeContract(f, { bucket: true });
+  const entry = await f.service.create({ work_item_type: 'co_managed', work_item_id: f.referenceId, service_id: f.serviceId,
+    start_time: '2026-09-08T11:00:00Z', end_time: '2026-09-08T12:00:00Z' }, f.context);
+  expect(entry.contract_line_id).toBe(contract.lineId);
+  const used = async () => Number((await f.sponsor.table('bucket_usage').where('bucket_id', contract.bucketId).first())?.minutes_used ?? 0);
+  expect(await used()).toBe(120);
+  await f.service.update(entry.entry_id, { end_time: '2026-09-08T12:30:00Z' }, f.context);
+  expect(await used()).toBe(180);
+  await f.service.update(entry.entry_id, { is_billable: false }, f.context);
+  expect(await used()).toBe(0);
+  await f.service.update(entry.entry_id, { is_billable: true }, f.context);
+  expect(await used()).toBe(180);
+  await f.service.delete(entry.entry_id, f.context); expect(await used()).toBe(0);
+}));
+
+it('shared time billing allocates and reverses prepaid hours through native API updates and deletion', async () => withMspSharedTimerFixture(async f => {
+  const relation = await f.customer.table('co_management_relationships').first(), blockId = randomUUID();
+  await f.sponsor.table('hour_blocks').insert({ tenant: f.principal.tenant, block_id: blockId, client_id: relation.sponsor_client_id,
+    service_id: f.serviceId, total_minutes: 180, remaining_minutes: 180, hourly_rate: 12000, status: 'active' });
+  const entry = await f.service.create({ work_item_type: 'co_managed', work_item_id: f.referenceId, service_id: f.serviceId,
+    start_time: '2026-09-08T11:00:00Z', end_time: '2026-09-08T12:00:00Z' }, f.context);
+  const remaining = async () => Number((await f.sponsor.table('hour_blocks').where('block_id', blockId).first()).remaining_minutes);
+  expect(await remaining()).toBe(120);
+  await f.service.update(entry.entry_id, { end_time: '2026-09-08T12:30:00Z' }, f.context); expect(await remaining()).toBe(90);
+  await f.service.update(entry.entry_id, { is_billable: false }, f.context); expect(await remaining()).toBe(180);
+  await f.service.update(entry.entry_id, { is_billable: true }, f.context); expect(await remaining()).toBe(90);
+  const blocks = await import('../../../../shared/billingClients/hourBlockService');
+  await withTransaction(db, trx => blocks.reverseTimeEntryAllocations(trx, f.principal.tenant, entry.entry_id));
+  expect(await remaining()).toBe(180);
+  expect(await withTransaction(db, trx => blocks.reconcileClientAllocations(trx, f.principal.tenant, relation.sponsor_client_id))).toBe(1);
+  expect(await remaining()).toBe(90);
+  await f.service.delete(entry.entry_id, f.context); expect(await remaining()).toBe(180);
+}));
+
+
+it('shared time billing uses the MSP profile to resolve parallel contracts and excludes inactive lines', async () => withMspSharedTimerFixture(async f => {
+  const first = await seedMspTimeContract(f), second = await seedMspTimeContract(f);
+  const profiles = [randomUUID(), randomUUID()];
+  for (const [index, billing_profile_id] of profiles.entries()) await f.sponsor.table('client_billing_profiles').insert({
+    tenant: f.principal.tenant, client_id: first.clientId, billing_profile_id, name: `MSP profile ${index}`, is_default: index === 0,
+    is_system_managed_default: false, is_active: true });
+  await f.sponsor.table('contract_lines').where('contract_line_id', first.lineId).update({ billing_profile_id: profiles[0] });
+  await f.sponsor.table('contract_lines').where('contract_line_id', second.lineId).update({ billing_profile_id: profiles[1] });
+  await f.sponsor.table('co_managed_time_work_references').where('reference_id', f.referenceId).update({ billing_profile_id: profiles[1] });
+  const api = await f.service.create({ work_item_type: 'co_managed', work_item_id: f.referenceId, service_id: f.serviceId,
+    start_time: '2026-09-08T11:00:00Z', end_time: '2026-09-08T12:00:00Z' }, f.context);
+  expect(api).toMatchObject({ contract_line_id: second.lineId, contract_line_source: 'auto_billing_profile' });
+  await f.sponsor.table('contract_lines').where('contract_line_id', second.lineId).update({ is_active: false });
+  await expect(f.save({ contract_line_id: second.lineId })).rejects.toMatchObject({ code: 'TIME_CONTRACT_UNAVAILABLE' });
+  expect(await f.save()).toMatchObject({ contract_line_id: first.lineId, contract_line_source: 'auto_unique_service' });
+}));
+
+it('shared effort totals count completed customer and MSP time without exposing private billing or approval details', async () => withMspSharedTimeSaveFixture(async f => {
+  const { getCoManagedEffortTotals: totals } = await import('../../../../packages/co-managed/src/effortTotals');
+  const localId = await f.insertTime(f.resource.id, 'ticket', f.resource.tenant, f.customerPrincipal.userId);
+  await f.customer.table('time_entries').where('entry_id', localId).update({ end_time: '2026-09-08T09:20:00Z', notes: 'Private customer timesheet note' });
+  const entry = await f.save({ billable_duration: 0 });
+  const expected = { resource: f.resource, customerMinutes: 20, mspMinutes: 60, combinedMinutes: 80 };
+  expect(await totals(db, f.principal, f.resource)).toEqual(expected);
+  expect(await totals(db, f.customerPrincipal, f.resource)).toEqual(expected);
+  await f.save({ entry_id: entry.entry_id, end_time: '2026-09-08T10:30:00Z', billable_duration: 0 });
+  expect(await totals(db, f.principal, f.resource)).toMatchObject({ customerMinutes: 20, mspMinutes: 90, combinedMinutes: 110 });
+  await f.actions.deleteTimeEntry(entry.entry_id);
+  expect(await totals(db, f.principal, f.resource)).toMatchObject({ customerMinutes: 20, mspMinutes: 0, combinedMinutes: 20 });
+}));
+
+it('shared effort totals retain customer-owned effort after revocation without reading ongoing MSP totals', async () => withMspSharedTimeSaveFixture(async f => {
+  const { getCoManagedEffortTotals: totals } = await import('../../../../packages/co-managed/src/effortTotals');
+  await f.insertTime(f.resource.id, 'ticket', f.resource.tenant, f.customerPrincipal.userId);
+  const entry = await f.save();
+  await (await import('../../../../packages/co-managed/src/ticketHandoffs')).revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource,
+    { operationId: randomUUID(), expectedRevision: 1, note: 'End shared work' });
+  await f.save({ entry_id: entry.entry_id, end_time: '2026-09-08T10:30:00Z', billable_duration: 90 });
+  await expect(totals(db, f.principal, f.resource)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(await totals(db, f.customerPrincipal, f.resource)).toEqual({ resource: f.resource, customerMinutes: 60, mspMinutes: null, combinedMinutes: null });
+  await f.customer.table('sessions').where('session_id', f.customerPrincipal.sessionId).update({ expires_at: new Date(0) });
+  await expect(totals(db, f.customerPrincipal, f.resource)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+}));
+
+it('shared effort totals retain customer-owned effort after termination while MSP reads and customer writes stay closed', async () => withMspSharedTimeSaveFixture(async f => {
+  const { getCoManagedEffortTotals: totals } = await import('../../../../packages/co-managed/src/effortTotals');
+  const { closeCoManagedRelationship: close } = await import('../../../../packages/co-managed/src/relationshipClosure');
+  const { withCoManagedCustomerTicket } = await import('../../../../packages/co-managed/src/customerWork');
+  await f.insertTime(f.resource.id, 'ticket', f.resource.tenant, f.customerPrincipal.userId);
+  await f.save();
+  expect(await totals(db, f.customerPrincipal, f.resource)).toEqual({ resource: f.resource, customerMinutes: 60, mspMinutes: 60, combinedMinutes: 120 });
+  const relationship = await f.customer.table('co_management_relationships').first();
+  await close(db, f.customerPrincipal, { customerTenant: f.resource.tenant, relationshipId: f.resource.relationshipId },
+    { operationId: randomUUID(), expectedRevision: relationship.revision, reason: 'departure' }, async () => {});
+  // Closure retains the ticket grant row for history; a leftover unrevoked
+  // grant must not revive MSP effort disclosure once the relationship ended.
+  expect((await f.customer.table('co_management_ticket_work').where('ticket_id', f.resource.id).first()).grant_revoked_at).toBeNull();
+  expect(await totals(db, f.customerPrincipal, f.resource)).toEqual({ resource: f.resource, customerMinutes: 60, mspMinutes: null, combinedMinutes: null });
+  await expect(totals(db, f.principal, f.resource)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  // Retained reads pass the customer-local boundary; updates stay read-only after departure.
+  await withCoManagedCustomerTicket(db, f.customerPrincipal, f.resource, 'read', async context => { expect(context.action).toBe('read'); });
+  await expect(withCoManagedCustomerTicket(db, f.customerPrincipal, f.resource, 'update', async () => {}))
+    .rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY', lifecycle: { state: 'terminated', canWrite: false } });
+}));
+
+it.each([
+  [['time_entries.notes', 'time_entries.approval_status', 'billing'], { customerMinutes: 60, mspMinutes: 60, combinedMinutes: 120 }],
+  [['effort_totals.mspMinutes'], { customerMinutes: 60, mspMinutes: null, combinedMinutes: null }],
+  [['actual_hours'], { customerMinutes: null, mspMinutes: null, combinedMinutes: null }],
+])('shared effort totals respect source field restrictions %j', async (redactedFields, expected) => withMspSharedTimeSaveFixture(async f => {
+  const { getCoManagedEffortTotals: totals } = await import('../../../../packages/co-managed/src/effortTotals');
+  await f.insertTime(f.resource.id, 'ticket', f.resource.tenant, f.customerPrincipal.userId); await f.save();
+  const bundles = await import('@alga-psa/authorization'), relation = await f.customer.table('co_management_relationships').first();
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: f.principal.tenant, name: 'Shared effort scope', actorUserId: f.principal.userId });
+  await bundles.upsertBundleRule(db, { tenant: f.principal.tenant, bundleId, revisionId, resourceType: 'ticket', action: 'read', templateKey: 'selected_clients',
+    config: { selectedClientIds: [relation.sponsor_client_id], redactedFields } });
+  await bundles.publishBundleRevision(db, { tenant: f.principal.tenant, bundleId, revisionId, actorUserId: f.principal.userId });
+  await bundles.createBundleAssignment(db, { tenant: f.principal.tenant, bundleId, targetType: 'user', targetId: f.principal.userId });
+  expect(await totals(db, f.principal, f.resource)).toEqual({ resource: f.resource, ...expected });
+}));
+
+it('shared effort totals roll up actual project tasks without using cached hours or colliding ticket IDs', async () => withSharedProjectTaskFixture(async f => {
+  const { getCoManagedEffortTotals: totals } = await import('../../../../packages/co-managed/src/effortTotals');
+  const relation = await f.customer.table('co_management_relationships').first();
+  const referenceId = randomUUID();
+  await f.sponsor.table('co_managed_time_work_references').insert({ tenant: f.principal.tenant, reference_id: referenceId, customer_tenant: f.resource.tenant,
+    relationship_id: f.resource.relationshipId, source_kind: 'project_task', source_id: f.resource.id, client_id: relation.sponsor_client_id });
+  const insert = async (owner: any, tenant: string, userId: string, type: string, workId: string, minutes: number) => {
+    const entryId = randomUUID();
+    await owner.table('time_entries').insert({ tenant, entry_id: entryId, user_id: userId, work_item_type: type, work_item_id: workId,
+      co_managed_work_reference_id: type === 'co_managed' ? workId : null, start_time: '2026-09-08T09:00:00Z',
+      end_time: new Date(Date.parse('2026-09-08T09:00:00Z') + minutes * 60000), work_date: '2026-09-08', work_timezone: 'UTC', billable_duration: 0, approval_status: 'DRAFT' });
+    return entryId;
+  };
+  const local = await insert(f.customer, f.resource.tenant, f.customerPrincipal.userId, 'project_task', f.resource.id, 30);
+  await insert(f.sponsor, f.principal.tenant, f.principal.userId, 'co_managed', referenceId, 45);
+  // A polymorphic ID collision must not count as project task time.
+  await insert(f.customer, f.resource.tenant, f.customerPrincipal.userId, 'ticket', f.resource.id, 120);
+  const project = { ...f.resource, kind: 'project' as const, id: f.project.project_id };
+  for (const actor of [f.principal, f.customerPrincipal]) {
+    expect(await totals(db, actor, f.resource)).toEqual({ resource: f.resource, customerMinutes: 30, mspMinutes: 45, combinedMinutes: 75 });
+    expect(await totals(db, actor, project)).toEqual({ resource: project, customerMinutes: 30, mspMinutes: 45, combinedMinutes: 75 });
+  }
+  await f.customer.table('time_entries').where('entry_id', local).del();
+  expect(await totals(db, f.principal, project)).toMatchObject({ customerMinutes: 0, mspMinutes: 45, combinedMinutes: 45 });
+  expect((await f.customer.table('project_tasks').where('task_id', f.resource.id).first()).actual_hours).toBe('123');
+}));
+
+it('native task effort action binds customer work to the current browser and denies forged identity and API overrides', async () => withSharedProjectTaskFixture(async f => {
+  const auth = await import('@alga-psa/auth'), dbModule = await import('@alga-psa/db');
+  const actions = await import('../../lib/actions/coManagedTimeActions');
+  const user = await f.customer.table('users').where('user_id', f.customerPrincipal.userId).first();
+  const connection = vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: db, tenant: f.resource.tenant });
+  const current = vi.spyOn(auth, 'getCurrentUser').mockResolvedValue(user);
+  try { await withTrackedTaskBrowser(f.customerPrincipal, f.customer, browser => auth.runWithApiKeyUser(user, () => runWithTenant(f.resource.tenant, async () => {
+    const request = { kind: 'local_task', taskId: f.resource.id, tenant: f.principal.tenant, relationshipId: randomUUID() } as any;
+    expect(await actions.getSharedEffortTotalsAction(request)).toEqual({ resource: f.resource, customerMinutes: 0, mspMinutes: 0, combinedMinutes: 0 });
+    await expect(actions.getSharedEffortTotalsAction({ kind: 'local_task', taskId: randomUUID() })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    browser.override.mockReturnValue(user);
+    await expect(actions.getSharedEffortTotalsAction(request)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    browser.override.mockReturnValue(undefined);
+    browser.session.mockResolvedValue({ session_id: f.customerPrincipal.sessionId, user: { id: randomUUID(), tenant: f.resource.tenant, user_type: 'internal' } });
+    await expect(actions.getSharedEffortTotalsAction(request)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    // After departure the local target still resolves through the ended
+    // relationship: the customer keeps its own effort view, MSP totals do not.
+    browser.session.mockResolvedValue({ session_id: f.customerPrincipal.sessionId, user: { id: f.customerPrincipal.userId, tenant: f.resource.tenant, user_type: 'internal' } });
+    const { closeCoManagedRelationship: close } = await import('../../../../packages/co-managed/src/relationshipClosure');
+    const relationship = await f.customer.table('co_management_relationships').first();
+    await close(db, f.customerPrincipal, { customerTenant: f.resource.tenant, relationshipId: relationship.relationship_id },
+      { operationId: randomUUID(), expectedRevision: relationship.revision, reason: 'departure' }, async () => {});
+    expect(await actions.getSharedEffortTotalsAction(request)).toEqual({ resource: f.resource, customerMinutes: 0, mspMinutes: null, combinedMinutes: null });
+  })));
+  } finally { current.mockRestore(); connection.mockRestore(); }
+}));
+
+it('shared effort totals follow task moves between actual projects and retain customer totals when the project grant ends', async () => withSharedProjectTaskFixture(async f => {
+  const { getCoManagedEffortTotals: totals } = await import('../../../../packages/co-managed/src/effortTotals');
+  const { ProjectModel: model } = await import('@alga-psa/projects/models');
+  const next = await model.create(db, f.resource.tenant, { project_name: 'Private project', project_number: 'PRIVATE-2', client_id: f.operation.customer_client_id,
+    status: f.project.status, wbs_code: '2' } as any);
+  const phase = await model.addPhase(db, f.resource.tenant, { project_id: next.project_id, phase_name: 'Private work', wbs_code: '2.1', status: 'planning', order_number: 1 } as any);
+  await f.customer.table('time_entries').insert({ tenant: f.resource.tenant, entry_id: randomUUID(), user_id: f.customerPrincipal.userId,
+    work_item_type: 'project_task', work_item_id: f.resource.id, start_time: '2026-09-08T09:00:00Z', end_time: '2026-09-08T09:30:00Z',
+    work_date: '2026-09-08', work_timezone: 'UTC', billable_duration: 0, approval_status: 'DRAFT' });
+  const oldProject = { ...f.resource, kind: 'project' as const, id: f.project.project_id }, newProject = { ...oldProject, id: next.project_id };
+  expect(await totals(db, f.principal, oldProject)).toMatchObject({ customerMinutes: 30 });
+  await model.addStatusToProject(db, f.resource.tenant, next.project_id, { name: 'Private ready', status_type: 'project_task', item_type: 'project_task', order_number: 300, is_closed: false, is_default: false } as any);
+  const status = await f.customer.table('project_status_mappings').where('project_id', next.project_id).first();
+  await f.customer.table('project_tasks').where('task_id', f.resource.id).update({ phase_id: phase.phase_id, project_status_mapping_id: status.project_status_mapping_id });
+  expect(await totals(db, f.principal, oldProject)).toMatchObject({ customerMinutes: 0, mspMinutes: 0, combinedMinutes: 0 });
+  await expect(totals(db, f.principal, f.resource)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(await totals(db, f.customerPrincipal, newProject)).toMatchObject({ customerMinutes: 30, mspMinutes: null, combinedMinutes: null });
+}));
+
+it.each(['customer', 'sponsor'])('relationship closure by %s finalizes evidence before revocation and releases capacity exactly once under concurrent retries', async side => withMspSharedTimeSaveFixture(async f => {
+  const { closeCoManagedRelationship: close } = await import('../../../../packages/co-managed/src/relationshipClosure');
+  const relationship = await f.customer.table('co_management_relationships').first();
+  const target = { customerTenant: f.resource.tenant, relationshipId: f.resource.relationshipId };
+  const request = { operationId: randomUUID(), expectedRevision: relationship.revision, reason: 'departure' as const };
+  const allocation = await f.sponsor.table('co_managed_allocations').where('customer_tenant', f.resource.tenant).first();
+  const entry = await f.save();
+  const finalize = vi.fn(async (context: any) => {
+    expect(context.trx.isTransaction).toBe(true);
+    expect(context).toMatchObject({ ...target, sponsorTenant: f.principal.tenant, operationId: request.operationId, cutoffAt: expect.any(Date) });
+    expect((await tenantDb(context.trx, f.resource.tenant).table('co_management_relationships').first()).state).toBe('active');
+    // Stand-in for the required production archive adapter: prove its retained
+    // write commits together with closure, not in an after-commit worker.
+    await tenantDb(context.trx, f.principal.tenant).table('co_managed_time_work_references').where('reference_id', f.referenceId).update({ title: 'Finalized retained work' });
+  });
+  const closingActor = side === 'customer' ? f.customerPrincipal : f.principal;
+  const [first, second] = await Promise.all([close(db, closingActor, target, request, finalize), close(db, closingActor, target, request, finalize)]);
+  expect(second).toEqual(first); expect(finalize).toHaveBeenCalledTimes(1);
+  expect(first).toMatchObject({ ...target, operationId: request.operationId, releasedSeats: allocation.seats, appliedRevision: relationship.revision + 1 });
+  expect(Date.parse(first.cutoffAt)).toBeLessThanOrEqual(Date.parse(first.closedAt));
+  expect(await f.customer.table('co_management_relationships').first()).toMatchObject({ state: 'terminated', ended_at: new Date(first.closedAt) });
+  expect(await f.sponsor.table('co_managed_allocations').where('allocation_id', allocation.allocation_id).first()).toMatchObject({ state: 'released', released_at: new Date(first.closedAt) });
+  expect(await f.sponsor.table('co_managed_relationship_closures')).toHaveLength(1);
+  await expect((await import('../../../../packages/co-managed/src/sharedWorkRead')).getCoManagedSharedWorkSummary(db, f.principal, f.resource)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(await getCoManagedOperationalState(db, f.resource.tenant)).toMatchObject({ state: 'terminated', canWrite: false });
+  expect(await f.actions.getTimeEntryById(entry.entry_id)).toMatchObject({ entry_id: entry.entry_id, workItem: { name: 'Finalized retained work' } });
+  await expect(close(db, f.customerPrincipal, target, { ...request, reason: 'independent_upgrade' }, finalize)).rejects.toMatchObject({ code: 'CLOSURE_CHANGED' });
+  await expect(close(db, f.customerPrincipal, target, { ...request, operationId: randomUUID() }, finalize)).rejects.toMatchObject({ code: 'RELATIONSHIP_CLOSED' });
+  const migration = require('../../../migrations/20260908102610_create_co_managed_relationship_closures.cjs');
+  await migration.up(db); await expect(migration.down(db)).rejects.toThrow('retained');
+}));
+
+it.each(['archive_failure', 'late_session_expiry'])('relationship closure rolls back evidence capacity and trust on %s', async failure => withMspSharedTimeSaveFixture(async f => {
+  const { closeCoManagedRelationship: close } = await import('../../../../packages/co-managed/src/relationshipClosure');
+  const relationship = await f.customer.table('co_management_relationships').first();
+  const before = await f.sponsor.table('co_managed_time_work_references').where('reference_id', f.referenceId).first();
+  const request = { operationId: randomUUID(), expectedRevision: relationship.revision, reason: 'departure' as const };
+  await expect(close(db, f.customerPrincipal, { customerTenant: f.resource.tenant, relationshipId: f.resource.relationshipId }, request, async context => {
+    await tenantDb(context.trx, f.principal.tenant).table('co_managed_time_work_references').where('reference_id', f.referenceId).update({ title: 'Uncommitted archive' });
+    if (failure === 'archive_failure') throw new Error('Archive finalization failed');
+    await tenantDb(context.trx, f.resource.tenant).table('sessions').where('session_id', f.customerPrincipal.sessionId).update({ expires_at: new Date(0) });
+  })).rejects.toThrow();
+  expect(await f.customer.table('co_management_relationships').first()).toEqual(relationship);
+  expect(await f.sponsor.table('co_managed_time_work_references').where('reference_id', f.referenceId).first()).toEqual(before);
+  expect((await f.sponsor.table('co_managed_allocations').where('customer_tenant', f.resource.tenant).first()).state).toBe('active');
+  expect(await f.sponsor.table('co_managed_relationship_closures')).toHaveLength(0);
+  expect(await f.sponsor.table('co_managed_archive_manifests')).toHaveLength(0);
+}));
+
+it('relationship closure requires current administrator authority but remains available after license grace expires', async () => withMspSharedTimeSaveFixture(async f => {
+  const { closeCoManagedRelationship: close } = await import('../../../../packages/co-managed/src/relationshipClosure');
+  const relationship = await f.customer.table('co_management_relationships').first();
+  const target = { customerTenant: f.resource.tenant, relationshipId: f.resource.relationshipId };
+  const request = { operationId: randomUUID(), expectedRevision: relationship.revision, reason: 'departure' as const }, finalize = vi.fn(async () => {});
+  const permission = await f.sponsor.table('permissions').where({ resource: 'co_management', action: 'manage' }).first();
+  await f.sponsor.table('role_permissions').where('permission_id', permission.permission_id).del();
+  await expect(close(db, f.principal, target, request, finalize)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await expect(close(db, f.customerPrincipal, target, { ...request, expectedRevision: relationship.revision + 1 }, finalize)).rejects.toMatchObject({ code: 'CLOSURE_CHANGED' });
+  await expect(close(db, f.customerPrincipal, target, request, undefined as any)).rejects.toMatchObject({ code: 'INVALID_CLOSURE' });
+  expect(finalize).not.toHaveBeenCalled();
+  const lapseAt = new Date(Date.now() - 31 * 86400000);
+  await f.sponsor.table('co_managed_entitlements').update({ valid_until: lapseAt, lapse_started_at: lapseAt, read_only_after: new Date(lapseAt.getTime() + 30 * 86400000) });
+  expect(await getCoManagedOperationalState(db, f.resource.tenant)).toMatchObject({ canWrite: false });
+  await close(db, f.customerPrincipal, target, request, finalize); expect(finalize).toHaveBeenCalledTimes(1);
+}));
+
+it('relationship closure pauses the existing MSP SLA at the archive cutoff and blocks later observation', async () => {
+  const f = await dueMspSlaFixture();
+  const { closeCoManagedRelationship: close } = await import('../../../../packages/co-managed/src/relationshipClosure');
+  const relationship = await f.customer.table('co_management_relationships').first();
+  const beforeTicket = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  const result = await close(db, f.customerPrincipal, { customerTenant: f.resource.tenant, relationshipId: f.resource.relationshipId },
+    { operationId: randomUUID(), expectedRevision: relationship.revision, reason: 'departure' }, async () => {});
+  const after = await f.read();
+  expect(after.clock.pauseReasons).toContain('customer_responsible');
+  expect(after.clock.observedAt).toBe(result.cutoffAt);
+  expect(await f.observeCoManagedTicketSla(db, f.identity)).toBe(false);
+  expect(await f.read()).toEqual(after);
+  expect(await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).toEqual(beforeTicket);
+});
+
+it('participation evidence retains explicit handoff history through revocation and source deletion without private ticket fields', async () => withSharedTicketMutationFixture(async f => {
+  // Revocation retains the access_revoked handoff and the archived work snapshot under one
+  // clock_timestamp(), so occurred_at alone leaves their order undefined; tiebreak for a stable read.
+  const evidence = () => f.sponsor.table('co_managed_participation_evidence').where({ customer_tenant: f.resource.tenant, resource_id: f.resource.id }).orderBy('occurred_at').orderBy('evidence_id');
+  const original = await evidence(); expect(original).toHaveLength(1);
+  expect(original[0]).toMatchObject({ resource_type: 'ticket', source_type: 'ticket_handoff', event_type: 'escalated', payload: { audience: 'shared_it', revision: 1 } });
+  await f.customer.table('tickets').where('ticket_id', f.resource.id).update({ attributes: JSON.stringify({ secret: 'Customer-only password', description: 'Private operational description' }) });
+  const handoff = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  const request = { operationId: randomUUID(), expectedRevision: 1, note: 'Retain this explicit shared history' };
+  await handoff.handBackCoManagedTicket(db, f.principal, f.resource, request);
+  await handoff.handBackCoManagedTicket(db, f.principal, f.resource, request);
+  await handoff.revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource, { operationId: randomUUID(), expectedRevision: 2, note: 'End sharing' });
+  // The repeated handback collapses into the single handed_back row it retained the first time;
+  // the fourth row is revocation's archived work snapshot, not a replayed duplicate.
+  const captured = await evidence(); expect(captured).toHaveLength(4);
+  expect(captured.map((row: any) => `${row.source_type}:${row.event_type}`).sort()).toEqual(
+    ['ticket_handoff:escalated', 'ticket_handoff:handed_back', 'ticket_handoff:access_revoked', 'work_snapshot:work_archived'].sort());
+  expect(captured.filter((row: any) => row.operation_id === request.operationId)).toHaveLength(1);
+  expect(captured[1]).toMatchObject({ operation_id: request.operationId, actor_tenant: f.principal.tenant, payload: { note: request.note } });
+  expect(JSON.stringify(captured)).not.toMatch(/Customer-only password|Private operational description/);
+  await f.customer.table('tickets').where('ticket_id', f.resource.id).del();
+  expect(await evidence()).toEqual(captured);
+  const migration = require('../../../migrations/20260908103849_create_co_managed_participation_evidence.cjs');
+  await migration.up(db); await expect(migration.down(db)).rejects.toThrow('retained participation');
+  await expect(f.sponsor.table('co_managed_participation_evidence').where('evidence_id', captured[0].evidence_id).update({ payload: '{}' })).rejects.toMatchObject({ code: '23514' });
+}));
+
+it('a repeated handback operation converges to one retained handoff, one evidence row and the first receipt', async () => withSharedTicketMutationFixture(async f => {
+  const handoff = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  const handedBack = () => f.customer.table('co_management_ticket_handoffs').where({ ticket_id: f.resource.id, transition: 'handed_back' });
+  const evidence = () => f.sponsor.table('co_managed_participation_evidence')
+    .where({ customer_tenant: f.resource.tenant, resource_id: f.resource.id, source_type: 'ticket_handoff', event_type: 'handed_back' });
+  const request = { operationId: randomUUID(), expectedRevision: 1, note: 'Return responsibility' };
+  const first = await handoff.handBackCoManagedTicket(db, f.principal, f.resource, request);
+  expect(await handoff.handBackCoManagedTicket(db, f.principal, f.resource, request)).toEqual(first);
+  expect(await handedBack()).toHaveLength(1);
+  expect(await evidence()).toHaveLength(1);
+  // The replay must not advance work either: one operation, one revision.
+  expect((await f.customer.table('co_management_ticket_work').where('ticket_id', f.resource.id).first()).revision).toBe(2);
+  // A retry is frozen exactly: reusing the operation with changed content is refused, never merged.
+  await expect(handoff.handBackCoManagedTicket(db, f.principal, f.resource, { ...request, note: 'Different note' }))
+    .rejects.toMatchObject({ code: 'HANDOFF_CHANGED' });
+  expect(await handedBack()).toHaveLength(1);
+  expect((await handedBack().first()).note).toBe(request.note);
+  // Concurrent duplicates converge as well: (tenant, operation_id) admits exactly one row.
+  await handoff.escalateCoManagedTicket(db, f.customerPrincipal, f.resource, { operationId: randomUUID(), expectedRevision: 2, note: 'Share again.' });
+  const concurrent = { operationId: randomUUID(), expectedRevision: 3, note: 'Hand back once more' };
+  const settled = await Promise.allSettled([
+    handoff.handBackCoManagedTicket(db, f.principal, f.resource, concurrent),
+    handoff.handBackCoManagedTicket(db, f.principal, f.resource, concurrent),
+  ]);
+  expect(settled.filter(outcome => outcome.status === 'fulfilled').length).toBeGreaterThanOrEqual(1);
+  expect(await f.customer.table('co_management_ticket_handoffs').where('operation_id', concurrent.operationId)).toHaveLength(1);
+  expect(await evidence()).toHaveLength(2);
+}));
+
+it('participation evidence excludes oversight and customer-only work until the MSP actually contributes', async () => withSharedProjectTaskFixture(async f => {
+  const evidence = () => f.sponsor.table('co_managed_participation_evidence').where('resource_id', f.resource.id).orderBy('occurred_at');
+  await f.domain.getCoManagedProjectTaskEditor(db, f.principal, f.resource); expect(await evidence()).toHaveLength(0);
+  await f.edit(db, f.customerPrincipal, f.resource, { operationId: randomUUID(), expected: { task_name: 'Verify rollout' }, patch: { task_name: 'Customer preparation' } });
+  expect(await evidence()).toHaveLength(0);
+  const operationId = randomUUID(), request = { operationId, expected: { task_name: 'Customer preparation' }, patch: { task_name: 'MSP contribution' } };
+  await f.edit(db, f.principal, f.resource, request); await f.edit(db, f.principal, f.resource, request);
+  expect(await evidence()).toHaveLength(1);
+  await f.edit(db, f.customerPrincipal, f.resource, { operationId: randomUUID(), expected: { task_name: 'MSP contribution' }, patch: { task_name: 'Joint completion' } });
+  const retained = await evidence(); expect(retained).toHaveLength(2);
+  expect(retained[0]).toMatchObject({ operation_id: operationId, actor_tenant: f.principal.tenant, event_type: 'co_managed_project_task_update', payload: { changes: { task_name: 'MSP contribution' } } });
+  expect(JSON.stringify(retained)).not.toContain('Private detailed work');
+  await f.customer.table('project_tasks').where('task_id', f.resource.id).del(); expect(await evidence()).toEqual(retained);
+}));
+
+it('participation evidence records an MSP task assignment and its withdrawal without copying private descriptions', async () => withTaskAssignmentFixture(async f => {
+  const request = { operationId: randomUUID(), expectedRevision: 0, assignee: f.selected };
+  await f.assignments.assignCoManagedProjectTask(db, f.customerPrincipal, f.resource, request);
+  await f.assignments.assignCoManagedProjectTask(db, f.customerPrincipal, f.resource, request);
+  await f.assignments.assignCoManagedProjectTask(db, f.principal, f.resource, { operationId: randomUUID(), expectedRevision: 1, assignee: null });
+  const rows = await f.sponsor.table('co_managed_participation_evidence').where('resource_id', f.resource.id).orderBy('occurred_at');
+  expect(rows).toHaveLength(2); expect(rows[0].payload.changes.msp_assignment).toEqual(expect.any(String));
+  expect(rows[1].payload.changes).toEqual({ msp_assignment: null });
+  expect(JSON.stringify(rows)).not.toContain('Private detailed work');
+}));
+
+it('participation evidence rolls back with the canonical task when the writer expires after capture', async () => withSharedProjectTaskFixture(async f => {
+  const evidence = await import('../../../../packages/co-managed/src/participationEvidence'), original = evidence.retainCoManagedParticipationEvidence;
+  const capture = vi.spyOn(evidence, 'retainCoManagedParticipationEvidence').mockImplementation(async (...args) => {
+    await original(...args);
+    await tenantDb(args[0].trx, f.principal.tenant).table('sessions').where('session_id', f.principal.sessionId).update({ expires_at: new Date(0) });
+  });
+  try {
+    await expect(f.edit(db, f.principal, f.resource, { operationId: randomUUID(), expected: { task_name: 'Verify rollout' }, patch: { task_name: 'Uncommitted contribution' } })).rejects.toThrow();
+    expect(await f.sponsor.table('co_managed_participation_evidence')).toHaveLength(0);
+    expect((await f.customer.table('project_tasks').where('task_id', f.resource.id).first()).task_name).toBe('Verify rollout');
+  } finally { capture.mockRestore(); }
+}));
+
+it('time participation evidence requires a completed entry and native timer retries retain one proof', async () => withMspSharedTimerFixture(async f => {
+  const evidence = () => f.sponsor.table('co_managed_participation_evidence').where('source_type', 'time_entry');
+  await f.register(); expect(await evidence()).toHaveLength(0);
+  const timer = await f.start(); expect(await evidence()).toHaveLength(0);
+  const entry = await f.stop(timer); await f.stop(timer);
+  const rows = await evidence(); expect(rows).toHaveLength(1);
+  expect(rows[0]).toMatchObject({ source_id: entry.entry_id, resource_id: f.resource.id, customer_tenant: f.resource.tenant,
+    actor_tenant: f.principal.tenant, payload: { entryId: entry.entry_id, workReferenceId: f.referenceId, audience: 'organization_private' } });
+  await f.service.getById(entry.entry_id, f.context); expect(await evidence()).toEqual(rows);
+  const migration = require('../../../migrations/20260908105022_allow_co_managed_time_participation.cjs');
+  await migration.up(db); await expect(migration.down(db)).rejects.toThrow('retained time participation');
+}));
+
+it('time participation evidence preserves first attribution through edits renames and deletion without private timesheet fields', async () => withMspSharedTimeSaveFixture(async f => {
+  const entry = await f.save({ notes: 'MSP private timesheet detail' });
+  const evidence = () => f.sponsor.table('co_managed_participation_evidence').where({ source_type: 'time_entry', source_id: entry.entry_id });
+  const original = await evidence(); expect(original).toHaveLength(1);
+  expect(JSON.stringify(original)).not.toMatch(/MSP private timesheet detail|billable_duration|service_id|contract_line|approval_status|default_rate/);
+  await f.sponsor.table('users').where('user_id', f.principal.userId).update({ first_name: 'Renamed technician' });
+  await f.save({ entry_id: entry.entry_id, end_time: '2026-09-08T10:30:00Z', billable_duration: 90 });
+  expect(await evidence()).toEqual(original);
+  await f.actions.deleteTimeEntry(entry.entry_id); expect(await evidence()).toEqual(original);
+}));
+
+it('time participation evidence records both qualified work identities when existing time moves through the API', async () => withMspSharedTimerFixture(async f => {
+  const entry = await f.save();
+  // Simulate an entry predating evidence capture; the admitted move must retain
+  // its old MSP-owned work identity before replacing it.
+  await f.sponsor.table('co_managed_participation_evidence').where({ source_type: 'time_entry', source_id: entry.entry_id }).del();
+  const ticket = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  const otherId = randomUUID();
+  const { title_index: generatedTitleIndex, ...ticketFields } = ticket;
+  await f.customer.table('tickets').insert({ ...ticketFields, ticket_id: otherId, ticket_number: 'MOVE-SECOND' });
+  const other = { ...f.resource, id: otherId };
+  await (await import('../../../../packages/co-managed/src/ticketHandoffs')).escalateCoManagedTicket(db, f.customerPrincipal, other,
+    { operationId: randomUUID(), expectedRevision: 0, note: 'Second shared work item' });
+  const reference = await f.register(other);
+  await f.service.update(entry.entry_id, { work_item_type: 'co_managed', work_item_id: reference.referenceId }, f.context);
+  const rows = await f.sponsor.table('co_managed_participation_evidence').where({ source_type: 'time_entry', source_id: entry.entry_id });
+  expect(rows).toHaveLength(2); expect(rows.map((row: any) => row.resource_id).sort()).toEqual([f.resource.id, otherId].sort());
+  expect(new Set(rows.map((row: any) => row.payload.workReferenceId))).toEqual(new Set([f.referenceId, reference.referenceId]));
+}));
+
+it('time participation evidence can finish retained MSP clocks after revocation without reading newly private customer content', async () => withMspSharedTimerFixture(async f => {
+  const timer = await f.start();
+  await (await import('../../../../packages/co-managed/src/ticketHandoffs')).revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource,
+    { operationId: randomUUID(), expectedRevision: 1, note: 'End live sharing' });
+  await f.customer.table('tickets').where('ticket_id', f.resource.id).update({ title: 'Newly private customer title' });
+  const entry = await f.stop(timer);
+  const evidence = await f.sponsor.table('co_managed_participation_evidence').where({ source_type: 'time_entry', source_id: entry.entry_id }).first();
+  expect(evidence).toMatchObject({ resource_id: f.resource.id, payload: { title: 'Customer issue' } });
+  expect(JSON.stringify(evidence)).not.toContain('Newly private');
+}));
+
+it('time participation evidence rolls back with a native save when the current writer expires after capture', async () => withMspSharedTimeSaveFixture(async f => {
+  const module = await import('../../../../packages/co-managed/src/timeParticipationEvidence'), original = module.retainCoManagedTimeParticipation;
+  const capture = vi.spyOn(module, 'retainCoManagedTimeParticipation').mockImplementation(async (...args) => {
+    await original(...args);
+    await tenantDb(args[0], f.principal.tenant).table('sessions').where('session_id', f.principal.sessionId).update({ expires_at: new Date(0) });
+  });
+  try {
+    await expect(f.save()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    expect(await f.sponsor.table('time_entries')).toHaveLength(0);
+    expect(await f.sponsor.table('co_managed_participation_evidence').where('source_type', 'time_entry')).toHaveLength(0);
+  } finally { capture.mockRestore(); }
+}));
+
+it('conversation participation retains only shared task revisions after actual MSP contribution', async () => withTaskConversationFixture(async f => {
+  const evidence = () => f.sponsor.table('co_managed_participation_evidence').where({ resource_id: f.resource.id, source_type: 'conversation' }).orderBy('occurred_at');
+  await f.add(f.customerPrincipal, 'shared_it', 'Customer-only work');
+  await f.read(f.principal); expect(await evidence()).toHaveLength(0);
+  const command = { kind: 'create', operationId: randomUUID(), audience: 'shared_it', text: 'MSP shared diagnosis' };
+  const root = await f.write(f.principal, command); await f.write(f.principal, command);
+  await f.add(f.customerPrincipal, 'organization_private', 'Never copy customer private notes');
+  await f.add(f.principal, 'organization_private', 'Keep MSP private notes in their own store');
+  await f.write(f.customerPrincipal, { kind: 'create', operationId: randomUUID(), parent: f.ref(root), text: 'Customer shared update' });
+  await f.write(f.principal, { kind: 'edit', operationId: randomUUID(), comment: f.ref(root), expectedRevision: 1, text: 'MSP revised diagnosis' });
+  await f.write(f.principal, { kind: 'delete', operationId: randomUUID(), comment: f.ref(root), expectedRevision: 2 });
+  const saved = await evidence(); expect(saved).toHaveLength(4);
+  expect(saved[0]).toMatchObject({ actor_kind: 'user', actor_tenant: f.principal.tenant, actor_user_id: f.principal.userId,
+    payload: { audience: 'shared_it', markdown: 'MSP shared diagnosis', revision: 1, deleted: false } });
+  expect(saved[1]).toMatchObject({ actor_tenant: f.resource.tenant, payload: { markdown: 'Customer shared update', parentCommentId: root.commentId } });
+  expect(saved[3].payload).toMatchObject({ commentId: root.commentId, deleted: true, revision: 3 });
+  expect(saved[3].payload).not.toHaveProperty('note'); expect(saved[3].payload).not.toHaveProperty('markdown');
+  expect(JSON.stringify(saved)).not.toMatch(/Customer-only work|Never copy|Keep MSP private|Private detailed work/);
+  expect(JSON.stringify(await f.customer.table('co_management_event_outbox'))).not.toMatch(/MSP shared diagnosis|MSP revised diagnosis/);
+  await f.customer.table('project_tasks').where('task_id', f.resource.id).del(); expect(await evidence()).toEqual(saved);
+  const migration = require('../../../migrations/20260908110522_retain_co_managed_conversation_participation.cjs');
+  await migration.up(db); await expect(migration.down(db)).rejects.toThrow('retained conversation');
+}));
+
+it('conversation participation stops new capture after unsharing and never refreshes a replayed event', async () => withTaskConversationFixture(async f => {
+  const root = await f.add(f.principal, 'shared_it', 'Original authorized body');
+  const evidence = () => f.sponsor.table('co_managed_participation_evidence').where({ source_type: 'conversation', resource_id: f.resource.id });
+  const saved = await evidence();
+  await f.customer.table('co_management_project_scopes').where('project_id', f.project.project_id).del();
+  await f.add(f.customerPrincipal, 'shared_it', 'Unshared later customer body');
+  expect(await evidence()).toEqual(saved);
+  const event = await f.customer.table('co_management_event_outbox').where('comment_id', root.commentId).first();
+  const { enqueueCoManagedConversationEvent } = await import('../../../../packages/co-managed/src/conversationEventOutbox');
+  await f.customer.table('project_task_comments').where('task_comment_id', root.commentId).update({ note: 'Do not refresh this later body', markdown_content: 'Do not refresh this later body' });
+  await db.transaction(trx => enqueueCoManagedConversationEvent(trx, { tenant: f.resource.tenant, eventId: event.event_id,
+    resource: { kind: 'project_task', id: f.resource.id }, commentId: root.commentId, threadId: root.threadId, audience: event.audience, publication: event.publication }));
+  expect(await evidence()).toEqual(saved);
+}));
+
+it('conversation participation rolls back the canonical task mutation when capture fails', async () => withTaskConversationFixture(async f => {
+  const name = `conversation_capture_failure_${randomUUID().replaceAll('-', '')}`;
+  await db.raw(db.raw('ALTER TABLE co_managed_participation_evidence ADD CONSTRAINT ?? CHECK (tenant <> ?::uuid)', [name, f.principal.tenant]).toQuery());
+  try { await expect(f.add(f.principal, 'shared_it', 'Rollback shared text')).rejects.toMatchObject({ constraint: name }); }
+  finally { await db.raw('ALTER TABLE co_managed_participation_evidence DROP CONSTRAINT ??', [name]); }
+  for (const table of ['project_task_comments', 'comment_threads', 'co_management_event_outbox', 'co_management_command_receipts', 'collaboration_actor_references']) expect(await f.customer.table(table)).toHaveLength(0);
+  expect(await f.sponsor.table('co_managed_participation_evidence')).toHaveLength(0);
+}));
+
+it('conversation participation uses actual ticket authors and excludes private roots and publication bodies', async () => withConversationFixture(async f => {
+  const { createSharedTicketComment } = await import('../../lib/co-managed/createTicketComment');
+  const command = { operationId: randomUUID(), audience: 'shared_it' as const, text: 'Actual ticket diagnosis' };
+  await createSharedTicketComment(db, f.principal, f.resource, command); await createSharedTicketComment(db, f.principal, f.resource, command);
+  const evidence = () => f.sponsor.table('co_managed_participation_evidence').where({ source_type: 'conversation', resource_id: f.resource.id }).orderBy('occurred_at');
+  expect(await evidence()).toHaveLength(1);
+  const contactId = randomUUID();
+  await f.customer.table('contacts').insert({ tenant: f.resource.tenant, contact_name_id: contactId, client_id: (await f.customer.table('tickets').where('ticket_id', f.resource.id).first('client_id')).client_id,
+    full_name: 'Actual requester', email: 'requester@example.test' });
+  const root = await f.addCustomer({ audience: 'requester', note: 'Actual requester text' });
+  await f.customer.table('comments').where('comment_id', root.id).update({ user_id: null, contact_id: contactId, author_type: 'client' });
+  const { enqueueCoManagedConversationEvent } = await import('../../../../packages/co-managed/src/conversationEventOutbox');
+  const publish = (id: string, threadId: string) => db.transaction(trx => enqueueCoManagedConversationEvent(trx, { tenant: f.resource.tenant, eventId: randomUUID(),
+    ticketId: f.resource.id, commentId: id, threadId, audience: 'requester', publication: { kind: 'event', eventType: 'TICKET_COMMENT_ADDED',
+      payload: { tenantId: f.resource.tenant, ticketId: f.resource.id, commentId: id, comment: { id, content: 'Untrusted publication content', author: 'Invented author' } } } }));
+  await publish(root.id, root.threadId);
+  const privateRoot = await f.addCustomer({ audience: 'organization_private', internal: true, note: 'Customer restricted thread' });
+  await publish(privateRoot.id, privateRoot.threadId);
+  const rows = await evidence(); expect(rows).toHaveLength(2);
+  expect(rows[0]).toMatchObject({ actor_tenant: f.principal.tenant, actor_user_id: f.principal.userId, actor_name: 'Morgan Provider' });
+  expect(rows[1]).toMatchObject({ actor_kind: 'contact', actor_contact_id: contactId, actor_user_id: null, actor_name: 'Actual requester', payload: { note: 'Actual requester text' } });
+  expect(JSON.stringify(rows)).not.toMatch(/Untrusted publication content|Invented author|Customer restricted thread/);
+}));
+
+it('archive files retain authorized bytes before customer deletion and drain without reopening customer storage', async () => withAttachmentFixture(async f => {
+  const root = await f.create(f.principal, { operationId: randomUUID(), audience: 'shared_it', text: 'Shared evidence' });
+  const input = { attachmentId: randomUUID(), comment: attachmentComment(root), fileName: 'Proof.txt', mimeType: 'text/plain', content: Buffer.from('Retained shared bytes') };
+  await f.attachments.uploadCoManagedConversationAttachment(db, f.principal, f.resource, input, f.upload);
+  await f.attachments.uploadCoManagedConversationAttachment(db, f.principal, f.resource, input, f.upload);
+  const files = () => f.sponsor.table('co_managed_archive_files');
+  const [staged] = await files(); expect(await files()).toHaveLength(1);
+  expect(staged).toMatchObject({ status: 'pending', attachment_id: input.attachmentId, audience: 'shared_it', staged_bytes: input.content });
+  await f.customer.table('co_management_relationships').where('relationship_id', f.resource.relationshipId).update({ state: 'terminated', ended_at: new Date() });
+  await f.customer.table('co_management_conversation_attachments').del();
+  await f.customer.table('comments').where('ticket_id', f.resource.id).del();
+  await f.customer.table('comment_threads').where('ticket_id', f.resource.id).del();
+  await f.customer.table('ticket_audit_logs').where('ticket_id', f.resource.id).del();
+  await f.customer.table('tickets').where('ticket_id', f.resource.id).del(); f.objects.clear();
+  artifactStorage.download.mockRejectedValue(new Error('Customer storage must not be reopened'));
+  const { storeCoManagedArchiveFiles, coManagedArchiveFilePath } = await import('../../../../packages/co-managed/src/archiveFiles');
+  const storedObjects = new Map<string, Buffer>();
+  artifactStorage.upload.mockReset().mockImplementation(async (bytes: Buffer, path: string) => { storedObjects.set(path, Buffer.from(bytes)); return { path, size: bytes.length }; });
+  const outcomes = await Promise.all([storeCoManagedArchiveFiles(db, f.principal.tenant), storeCoManagedArchiveFiles(db, f.principal.tenant)]);
+  expect(outcomes.reduce((total, result) => total + result.stored, 0)).toBe(1);
+  const saved = (await files())[0]; expect(saved).toMatchObject({ status: 'ready', staged_bytes: null });
+  expect(storedObjects.get(coManagedArchiveFilePath(f.principal.tenant, saved.archive_file_id))).toEqual(input.content);
+  expect(await storeCoManagedArchiveFiles(db, f.principal.tenant)).toEqual({ stored: 0, failed: 0 });
+  expect(artifactStorage.upload).toHaveBeenCalledOnce();
+  await expect(files().where('archive_file_id', saved.archive_file_id).update({ file_name: 'Rewritten.txt' })).rejects.toMatchObject({ code: '23514' });
+  const migration = require('../../../migrations/20260908111943_create_co_managed_archive_files.cjs');
+  await migration.up(db); await expect(migration.down(db)).rejects.toThrow('retained archive files');
+}));
+
+it('archive files exclude private, unpublished and newly unshared uploads and capture drafts only at publication', async () => withConversationDraftFixture(async f => {
+  const privateRoot = await f.create(f.customerPrincipal, { operationId: randomUUID(), audience: 'organization_private', text: 'Customer private' });
+  const upload = (comment: any, actor: any, text: string) => f.attachments.uploadCoManagedConversationAttachment(db, actor, f.resource,
+    { attachmentId: randomUUID(), comment: attachmentComment(comment), fileName: 'Evidence.txt', mimeType: 'text/plain', content: Buffer.from(text) }, f.upload);
+  await upload(privateRoot, f.customerPrincipal, 'Private customer bytes');
+  const file = f.file('Draft archive bytes');
+  const draft = await f.drafts.beginCoManagedConversationDraft(db, f.principal, f.resource, { operationId: randomUUID(), audience: 'shared_it', content: { text: 'Shared draft' }, files: [file.descriptor] });
+  await f.drafts.uploadCoManagedDraftAttachment(db, f.principal, f.resource, draftRef(draft), file.descriptor.attachmentId, file.content, f.upload);
+  expect(await f.sponsor.table('co_managed_archive_files')).toHaveLength(0);
+  const published = await f.drafts.publishCoManagedConversationDraft(db, f.principal, f.resource, draftRef(draft), f.publishCustomer);
+  const rows = await f.sponsor.table('co_managed_archive_files'); expect(rows).toHaveLength(1); expect(rows[0].staged_bytes).toEqual(file.content);
+  await f.drafts.publishCoManagedConversationDraft(db, f.principal, f.resource, draftRef(draft), f.publishCustomer);
+  const customerRoot = await f.create(f.customerPrincipal, { operationId: randomUUID(), audience: 'requester', text: 'Customer later update' });
+  await f.customer.table('co_management_ticket_work').where('ticket_id', f.resource.id).update({ grant_revoked_at: new Date() });
+  await upload(customerRoot, f.customerPrincipal, 'Newly unshared bytes');
+  expect(await f.sponsor.table('co_managed_archive_files')).toEqual(rows);
+  expect(published.commentId).toBe(draft.operationId);
+}));
+
+it('archive files roll back publication on corrupt source bytes and retain staging across storage failure', async () => withConversationDraftFixture(async f => {
+  const file = f.file('Recoverable bytes'), draft = await f.drafts.beginCoManagedConversationDraft(db, f.principal, f.resource,
+    { operationId: randomUUID(), audience: 'shared_it', content: { text: 'Must commit with file' }, files: [file.descriptor] });
+  await f.drafts.uploadCoManagedDraftAttachment(db, f.principal, f.resource, draftRef(draft), file.descriptor.attachmentId, file.content, f.upload);
+  artifactStorage.download.mockResolvedValueOnce(Buffer.from('wrong bytes'));
+  await expect(f.drafts.publishCoManagedConversationDraft(db, f.principal, f.resource, draftRef(draft), f.publishCustomer)).rejects.toThrow('integrity verification');
+  expect(await f.customer.table('comments').where('comment_id', draft.operationId)).toHaveLength(0);
+  expect(await f.sponsor.table('co_managed_archive_files')).toHaveLength(0);
+  expect(await f.customer.table('co_management_conversation_drafts').where('operation_id', draft.operationId).first()).toMatchObject({ status: 'draft' });
+  await f.drafts.publishCoManagedConversationDraft(db, f.principal, f.resource, draftRef(draft), f.publishCustomer);
+  const { storeCoManagedArchiveFiles } = await import('../../../../packages/co-managed/src/archiveFiles');
+  artifactStorage.upload.mockReset().mockRejectedValueOnce(new Error('Lost acknowledgement')).mockImplementation(async (bytes: Buffer, path: string) => ({ path, size: bytes.length }));
+  expect(await storeCoManagedArchiveFiles(db, f.principal.tenant)).toEqual({ stored: 0, failed: 1 });
+  const saved = await f.sponsor.table('co_managed_archive_files').first(); expect(saved).toMatchObject({ status: 'pending', attempts: 1, staged_bytes: file.content });
+  await f.sponsor.table('co_managed_archive_files').where('archive_file_id', saved.archive_file_id).update({ next_attempt_at: new Date(0) });
+  expect(await storeCoManagedArchiveFiles(db, f.principal.tenant)).toEqual({ stored: 1, failed: 0 });
+  expect(artifactStorage.upload.mock.calls[0][1]).toBe(artifactStorage.upload.mock.calls[1][1]);
+}));
+
+it('archive reads retain qualified shared history after customer source deletion without restoring live access', async () => withTaskConversationFixture(async f => {
+  const archive = await import('../../../../packages/co-managed/src/archiveReads');
+  await f.add(f.principal, 'shared_it', 'Retained MSP contribution');
+  await f.add(f.customerPrincipal, 'organization_private', 'Never archived customer secret');
+  const before = await archive.getCoManagedArchiveHistory(db, f.principal, f.resource);
+  expect(before.entries).toHaveLength(1); expect(before.entries[0]).toMatchObject({ kind: 'conversation', author: { id: f.principal.userId }, markdown: 'Retained MSP contribution' });
+  expect((await archive.listCoManagedArchiveWork(db, f.principal)).items.map(item => item.resource)).toContainEqual(f.resource);
+  await f.customer.table('co_management_relationships').where('relationship_id', f.resource.relationshipId).update({ state: 'terminated', ended_at: new Date() });
+  await f.customer.table('project_tasks').where('task_id', f.resource.id).del();
+  expect(await archive.getCoManagedArchiveHistory(db, f.principal, f.resource)).toEqual(before);
+  await expect(f.read(f.principal)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(JSON.stringify(before)).not.toContain('Never archived');
+  for (const target of [{ ...f.resource, tenant: randomUUID() }, { ...f.resource, relationshipId: randomUUID() }, { ...f.resource, kind: 'ticket' as const }])
+    await expect(archive.getCoManagedArchiveHistory(db, f.principal, target)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await expect(archive.getCoManagedArchiveHistory(db, f.customerPrincipal, f.resource)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+}));
+
+it('archive reads enforce current MSP client scope and field restrictions on history authors and files', async () => withAttachmentFixture(async f => {
+  const archive = await import('../../../../packages/co-managed/src/archiveReads'), bundles = await import('@alga-psa/authorization');
+  const { createSharedTicketComment } = await import('../../lib/co-managed/createTicketComment');
+  const root = await createSharedTicketComment(db, f.principal, f.resource, { operationId: randomUUID(), audience: 'shared_it', text: 'Scoped archive content' });
+  await f.attachments.uploadCoManagedConversationAttachment(db, f.principal, f.resource,
+    { attachmentId: randomUUID(), comment: attachmentComment(root), fileName: 'Scoped.txt', mimeType: 'text/plain', content: Buffer.from('Scoped bytes') }, f.upload);
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: f.principal.tenant, name: 'Archive current scope', actorUserId: f.principal.userId });
+  await bundles.upsertBundleRule(db, { tenant: f.principal.tenant, bundleId, revisionId, resourceType: 'ticket', action: 'read', templateKey: 'selected_clients',
+    config: { selectedClientIds: [f.operation.request.clientId], redactedFields: ['author'] } });
+  await bundles.publishBundleRevision(db, { tenant: f.principal.tenant, bundleId, revisionId, actorUserId: f.principal.userId });
+  await bundles.createBundleAssignment(db, { tenant: f.principal.tenant, bundleId, targetType: 'user', targetId: f.principal.userId });
+  const history = await archive.getCoManagedArchiveHistory(db, f.principal, f.resource); expect(history.entries.length).toBeGreaterThan(0);
+  expect(history.entries.every(entry => entry.author === undefined)).toBe(true);
+  const files = await archive.listCoManagedArchiveFiles(db, f.principal, f.resource); expect(files.items).toHaveLength(1);
+  const rule = () => f.sponsor.table('authorization_bundle_rules').where({ bundle_id: bundleId, resource_type: 'ticket', action: 'read' });
+  await rule().update({ config: { selectedClientIds: [f.operation.request.clientId], redactedFields: ['co_managed_participation_evidence.actor_name', 'payload.resourceTitle'] } });
+  const masked = await archive.getCoManagedArchiveHistory(db, f.principal, f.resource);
+  expect(masked.work.title).toBeNull(); expect(masked.entries.every(entry => entry.author === undefined)).toBe(true);
+  await rule().update({ config: { selectedClientIds: [f.operation.request.clientId], redactedFields: ['co_managed_archive_files.file_name'] } });
+  expect((await archive.listCoManagedArchiveFiles(db, f.principal, f.resource)).items).toEqual([]);
+  await rule().update({ config: { selectedClientIds: [f.operation.request.clientId], redactedFields: ['comments'] } });
+  expect((await archive.getCoManagedArchiveHistory(db, f.principal, f.resource)).entries.every(entry => entry.kind !== 'conversation')).toBe(true);
+  expect((await archive.listCoManagedArchiveFiles(db, f.principal, f.resource)).items).toEqual([]);
+  await expect(archive.downloadCoManagedArchiveFile(db, f.principal, f.resource, files.items[0].archiveFileId)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await rule().update({ config: { selectedClientIds: [randomUUID()], redactedFields: [] } });
+  expect((await archive.listCoManagedArchiveWork(db, f.principal)).items).toEqual([]);
+  await expect(archive.getCoManagedArchiveHistory(db, f.principal, f.resource)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+}));
+
+it('archive reads deliver pending and stored bytes with integrity and final session checks', async () => withAttachmentFixture(async f => {
+  const archive = await import('../../../../packages/co-managed/src/archiveReads');
+  const { storeCoManagedArchiveFiles, coManagedArchiveFilePath } = await import('../../../../packages/co-managed/src/archiveFiles');
+  const root = await f.create(f.principal, { operationId: randomUUID(), audience: 'shared_it', text: 'File archive' }), bytes = Buffer.from('Actual retained bytes');
+  await f.attachments.uploadCoManagedConversationAttachment(db, f.principal, f.resource,
+    { attachmentId: randomUUID(), comment: attachmentComment(root), fileName: 'Retained.txt', mimeType: 'text/plain', content: bytes }, f.upload);
+  const file = (await archive.listCoManagedArchiveFiles(db, f.principal, f.resource)).items[0];
+  artifactStorage.download.mockClear();
+  expect((await archive.downloadCoManagedArchiveFile(db, f.principal, f.resource, file.archiveFileId)).content).toEqual(bytes);
+  expect(artifactStorage.download).not.toHaveBeenCalled();
+  await f.customer.table('co_management_relationships').where('relationship_id', f.resource.relationshipId).update({ state: 'terminated', ended_at: new Date() });
+  artifactStorage.upload.mockReset().mockImplementation(async (content: Buffer, path: string) => ({ path, size: content.length }));
+  await storeCoManagedArchiveFiles(db, f.principal.tenant);
+  artifactStorage.download.mockImplementation(async path => { expect(path).toBe(coManagedArchiveFilePath(f.principal.tenant, file.archiveFileId)); return bytes; });
+  expect((await archive.downloadCoManagedArchiveFile(db, f.principal, f.resource, file.archiveFileId)).content).toEqual(bytes);
+  artifactStorage.download.mockResolvedValueOnce(Buffer.from('corrupt'));
+  await expect(archive.downloadCoManagedArchiveFile(db, f.principal, f.resource, file.archiveFileId)).rejects.toThrow('integrity verification');
+  await expect(archive.downloadCoManagedArchiveFile(db, f.principal, { ...f.resource, relationshipId: randomUUID() }, file.archiveFileId)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await f.sponsor.table('sessions').where('session_id', f.principal.sessionId).update({ expires_at: new Date(Date.now() + 600) });
+  artifactStorage.download.mockImplementationOnce(async () => { await new Promise(resolve => setTimeout(resolve, 800)); return bytes; });
+  await expect(archive.downloadCoManagedArchiveFile(db, f.principal, f.resource, file.archiveFileId)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+}));
+
+it('archive reads download route binds the actual MSP session and returns non-cacheable attachment bytes', async () => withAttachmentFixture(async f => {
+  const auth = await import('@alga-psa/auth'), dbModule = await import('@alga-psa/db');
+  const root = await f.create(f.principal, { operationId: randomUUID(), audience: 'shared_it', text: 'Route evidence' }), bytes = Buffer.from('Route retained bytes');
+  await f.attachments.uploadCoManagedConversationAttachment(db, f.principal, f.resource,
+    { attachmentId: randomUUID(), comment: attachmentComment(root), fileName: 'Evidence.txt', mimeType: 'text/plain', content: bytes }, f.upload);
+  const file = await f.sponsor.table('co_managed_archive_files').first();
+  const session = vi.spyOn(auth, 'getSession').mockResolvedValue({ session_id: f.principal.sessionId, user: { tenant: f.principal.tenant, id: f.principal.userId, user_type: 'internal' } } as any);
+  const override = vi.spyOn(auth, 'getApiKeyUserOverride').mockReturnValue(undefined), connection = vi.spyOn(dbModule, 'getConnection').mockResolvedValue(db);
+  try {
+    const { GET } = await import('../../app/api/co-management/archive-files/[archiveFileId]/route');
+    const { NextRequest } = await import('next/server');
+    const query = new URLSearchParams({ customerTenant: f.resource.tenant, relationshipId: f.resource.relationshipId, ticketId: f.resource.id });
+    const request = new NextRequest(`http://localhost/api/co-management/archive-files/${file.archive_file_id}?${query}`);
+    const response = await GET(request, { params: Promise.resolve({ archiveFileId: file.archive_file_id }) });
+    expect(response.status).toBe(200); expect(Buffer.from(await response.arrayBuffer())).toEqual(bytes);
+    expect(response.headers.get('cache-control')).toBe('no-store, private'); expect(response.headers.get('content-type')).toBe('application/octet-stream');
+    expect(response.headers.get('content-disposition')).toContain('attachment;'); expect(response.headers.get('x-content-type-options')).toBe('nosniff');
+    override.mockReturnValue({ user_id: f.principal.userId } as any);
+    expect((await GET(request, { params: Promise.resolve({ archiveFileId: file.archive_file_id }) })).status).toBe(401);
+    override.mockReturnValue(undefined);
+    session.mockResolvedValue({ session_id: f.customerPrincipal.sessionId, user: { tenant: f.resource.tenant, id: f.customerPrincipal.userId, user_type: 'internal' } } as any);
+    expect((await GET(request, { params: Promise.resolve({ archiveFileId: file.archive_file_id }) })).status).toBe(404);
+  } finally { session.mockRestore(); override.mockRestore(); connection.mockRestore(); }
+}));
+
+it('MSP-private archive retains actual task revisions and tombstones without publishing customer history', async () => withTaskConversationFixture(async f => {
+  const archive = await import('../../../../packages/co-managed/src/archiveReads');
+  const request = { kind: 'create', operationId: randomUUID(), audience: 'organization_private', text: 'Original MSP diagnosis' };
+  const root = await f.write(f.principal, request); await f.write(f.principal, request);
+  await f.sponsor.table('users').where('user_id', f.principal.userId).update({ first_name: 'Renamed', last_name: 'Technician' });
+  await f.write(f.principal, { kind: 'edit', operationId: randomUUID(), comment: f.ref(root), expectedRevision: 1, text: 'Revised MSP diagnosis' });
+  await f.write(f.principal, { kind: 'delete', operationId: randomUUID(), comment: f.ref(root), expectedRevision: 2 });
+  const records = await f.sponsor.table('co_managed_participation_evidence').where('source_type', 'private_conversation').orderBy('occurred_at');
+  expect(records).toHaveLength(3); expect(records.map(row => row.payload.revision)).toEqual([1, 2, 3]);
+  expect(records[1].actor_name).toBe(records[0].actor_name); expect(records[1].actor_name).not.toContain('Renamed');
+  expect(records[2].payload).toMatchObject({ audience: 'organization_private', deleted: true }); expect(records[2].payload).not.toHaveProperty('note');
+  expect(await f.customer.table('project_task_comments')).toHaveLength(0); expect(await f.customer.table('co_management_event_outbox')).toHaveLength(0);
+  expect((await f.read(f.customerPrincipal)).items).toHaveLength(0);
+  const history = await archive.getCoManagedArchiveHistory(db, f.principal, f.resource); expect(history.entries).toHaveLength(3);
+  expect(history.entries.every(entry => entry.kind === 'private_conversation' && entry.audience === 'organization_private')).toBe(true);
+  expect((await archive.listCoManagedArchiveWork(db, f.principal)).items.map(work => work.resource)).toContainEqual(f.resource);
+  await f.customer.table('co_management_relationships').where('relationship_id', f.resource.relationshipId).update({ state: 'terminated', ended_at: new Date() });
+  await f.customer.table('project_tasks').where('task_id', f.resource.id).del();
+  await f.sponsor.table('co_management_private_comments').where('thread_id', root.threadId).del();
+  expect(await archive.getCoManagedArchiveHistory(db, f.principal, f.resource)).toEqual(history);
+  await expect(archive.getCoManagedArchiveHistory(db, f.customerPrincipal, f.resource)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  for (const file of ['20260908105022_allow_co_managed_time_participation.cjs', '20260908110522_retain_co_managed_conversation_participation.cjs', '20260908115957_retain_co_managed_private_history.cjs', '20260908123721_create_co_managed_archive_manifests.cjs', '20260908124921_retain_co_managed_work_snapshots.cjs', '20260908131037_create_tenant_license_state.cjs']) await require('../../../migrations/' + file).up(db);
+  await expect(require('../../../migrations/20260908115957_retain_co_managed_private_history.cjs').down(db)).rejects.toThrow('retained MSP-private history');
+}));
+
+it('MSP-private archive captures published draft files and keeps private and shared policies independent', async () => withConversationDraftFixture(async f => {
+  const archive = await import('../../../../packages/co-managed/src/archiveReads'), bundles = await import('@alga-psa/authorization');
+  const part = f.file('MSP-private bytes');
+  const draft = await f.drafts.beginCoManagedConversationDraft(db, f.principal, f.resource,
+    { operationId: randomUUID(), audience: 'organization_private', content: { text: 'MSP-only draft note' }, files: [part.descriptor] });
+  await f.drafts.uploadCoManagedDraftAttachment(db, f.principal, f.resource, draftRef(draft), part.descriptor.attachmentId, part.content, f.upload);
+  expect(await f.sponsor.table('co_managed_archive_files')).toHaveLength(0);
+  const privateNote = await f.drafts.publishCoManagedConversationDraft(db, f.principal, f.resource, draftRef(draft), f.publishCustomer);
+  const sharedNote = await f.publishCustomer(db, f.principal, f.resource, { operationId: randomUUID(), audience: 'shared_it', text: 'Shared customer note' });
+  await f.attachments.uploadCoManagedConversationAttachment(db, f.principal, f.resource,
+    { attachmentId: part.descriptor.attachmentId, comment: attachmentComment(sharedNote), fileName: 'Shared.txt', mimeType: 'text/plain', content: Buffer.from('Shared bytes') }, f.upload);
+  const files = (await archive.listCoManagedArchiveFiles(db, f.principal, f.resource)).items; expect(files).toHaveLength(2);
+  const privateFile = files.find(file => file.audience === 'organization_private')!, sharedFile = files.find(file => file.audience === 'shared_it')!;
+  expect(privateFile.archiveFileId).not.toBe(sharedFile.archiveFileId);
+  expect((await archive.downloadCoManagedArchiveFile(db, f.principal, f.resource, privateFile.archiveFileId)).content).toEqual(part.content);
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: f.principal.tenant, name: 'Private archive scope', actorUserId: f.principal.userId });
+  await bundles.upsertBundleRule(db, { tenant: f.principal.tenant, bundleId, revisionId, resourceType: 'ticket', action: 'read', templateKey: 'selected_clients',
+    config: { selectedClientIds: [f.operation.request.clientId], redactedFields: ['co_management_private_comments'] } });
+  await bundles.publishBundleRevision(db, { tenant: f.principal.tenant, bundleId, revisionId, actorUserId: f.principal.userId });
+  await bundles.createBundleAssignment(db, { tenant: f.principal.tenant, bundleId, targetType: 'user', targetId: f.principal.userId });
+  expect((await archive.listCoManagedArchiveFiles(db, f.principal, f.resource)).items).toEqual([sharedFile]);
+  expect((await archive.getCoManagedArchiveHistory(db, f.principal, f.resource)).entries.every(entry => entry.kind !== 'private_conversation')).toBe(true);
+  await expect(archive.downloadCoManagedArchiveFile(db, f.principal, f.resource, privateFile.archiveFileId)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await f.sponsor.table('authorization_bundle_rules').where({ bundle_id: bundleId, resource_type: 'ticket', action: 'read' }).update({ config: { selectedClientIds: [f.operation.request.clientId], redactedFields: ['comments'] } });
+  expect((await archive.listCoManagedArchiveFiles(db, f.principal, f.resource)).items).toEqual([privateFile]);
+  expect((await archive.getCoManagedArchiveHistory(db, f.principal, f.resource)).entries.some(entry => entry.kind === 'private_conversation')).toBe(true);
+  await expect(archive.downloadCoManagedArchiveFile(db, f.principal, f.resource, sharedFile.archiveFileId)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await f.customer.table('co_management_relationships').where('relationship_id', f.resource.relationshipId).update({ state: 'terminated', ended_at: new Date() });
+  await f.sponsor.table('co_management_conversation_attachments').where('thread_id', privateNote.threadId).del();
+  await f.sponsor.table('co_management_private_comments').where('thread_id', privateNote.threadId).del();
+  expect((await archive.downloadCoManagedArchiveFile(db, f.principal, f.resource, privateFile.archiveFileId)).content).toEqual(part.content);
+  await expect(archive.downloadCoManagedArchiveFile(db, f.customerPrincipal, f.resource, privateFile.archiveFileId)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+}));
+
+it('MSP-private archive capture rolls back with a private writer that expires after retaining evidence', async () => withTaskConversationFixture(async f => {
+  const module = await import('../../../../packages/co-managed/src/privateParticipationEvidence'), original = module.retainCoManagedPrivateParticipation;
+  const capture = vi.spyOn(module, 'retainCoManagedPrivateParticipation').mockImplementation(async (...args) => {
+    await original(...args); await tenantDb(args[0].trx, f.principal.tenant).table('sessions').where('session_id', f.principal.sessionId).update({ expires_at: new Date(0) });
+  });
+  try { await expect(f.add(f.principal, 'organization_private', 'Rollback private diagnosis')).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' }); }
+  finally { capture.mockRestore(); }
+  for (const table of ['co_management_private_comments', 'co_management_private_threads', 'co_management_private_command_receipts', 'co_managed_participation_evidence']) expect(await f.sponsor.table(table)).toHaveLength(0);
+}));
+
+it('sharing reduction archives legacy ticket history before revocation without copying hidden content or replaying capture', async () => withConversationFixture(async f => {
+  const root = await f.addCustomer({ note: 'Deleted original body', deleted: true });
+  const reply = await f.addCustomer({ note: 'Still visible legacy reply', parent: root });
+  await f.addCustomer({ note: 'Never shared customer secret', internal: true, audience: 'organization_private' });
+  await f.addCustomer({ note: 'Unpublished scheduled body', state: 'scheduled' });
+  const events = await f.customer.table('co_management_event_outbox');
+  const live = await f.read(db, f.principal, f.resource);
+  expect(live.items.find((item: any) => item.commentId === reply.id)?.markdown).toBe('Still visible legacy reply');
+  const { revokeCoManagedTicketGrant } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  const work = await f.customer.table('co_management_ticket_work').where('ticket_id', f.resource.id).first();
+  const request = { operationId: randomUUID(), expectedRevision: work.revision, note: 'Return to our desk' };
+  await revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource, request);
+  const evidence = () => f.sponsor.table('co_managed_participation_evidence').where({ resource_id: f.resource.id, event_type: 'TICKET_COMMENT_ARCHIVED' }).orderBy('source_id');
+  const saved = await evidence(); expect(saved).toHaveLength(2);
+  expect(saved.find((row: any) => row.payload.commentId === root.id)?.payload).toMatchObject({ deleted: true });
+  expect(saved.find((row: any) => row.payload.commentId === reply.id)?.payload).toMatchObject({ markdown: 'Still visible legacy reply', parentCommentId: root.id });
+  expect(JSON.stringify(saved)).not.toMatch(/Deleted original body|Never shared|Unpublished/);
+  expect(saved.every((row: any) => row.operation_id === request.operationId)).toBe(true);
+  await f.customer.table('comments').where('comment_id', reply.id).update({ note: 'Private later revision', markdown_content: 'Private later revision' });
+  await revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource, request);
+  expect(await evidence()).toEqual(saved);
+  expect(await f.customer.table('co_management_event_outbox')).toEqual(events);
+}));
+
+it('sharing reduction snapshots project history only after MSP participation and rolls back with failed scope changes', async () => withTaskConversationFixture(async f => {
+  const policy = await import('../../../../packages/co-managed/src/policy');
+  await f.add(f.customerPrincipal, 'shared_it', 'Older shared customer history');
+  await f.add(f.customerPrincipal, 'organization_private', 'Never capture customer private task');
+  const original = await policy.getCoManagedCollaborationPolicy(db, f.actor, f.target);
+  const reduced = { ...original, projects: [] };
+  // Oversight alone has not established participation.
+  await db.transaction(async trx => {
+    await policy.replaceCoManagedCustomerScope(trx, f.actor, f.target, original.revision, reduced);
+    expect(await tenantDb(trx, f.principal.tenant).table('co_managed_participation_evidence')).toHaveLength(0);
+    throw new Error('restore fixture scope');
+  }).catch(error => { expect(error.message).toBe('restore fixture scope'); });
+  await f.add(f.principal, 'shared_it', 'Actual MSP contribution');
+  const before = await f.sponsor.table('co_managed_participation_evidence');
+  await expect(db.transaction(async trx => {
+    await policy.replaceCoManagedCustomerScope(trx, f.actor, f.target, original.revision, reduced);
+    expect(await tenantDb(trx, f.principal.tenant).table('co_managed_participation_evidence').where('event_type', 'PROJECT_TASK_COMMENT_ARCHIVED')).toHaveLength(2);
+    throw new Error('scope transaction failed');
+  })).rejects.toThrow('scope transaction failed');
+  expect(await f.sponsor.table('co_managed_participation_evidence')).toEqual(before);
+  expect((await policy.getCoManagedCollaborationPolicy(db, f.actor, f.target)).revision).toBe(original.revision);
+  await policy.replaceCoManagedCustomerScope(db, f.actor, f.target, original.revision, reduced);
+  const evidence = () => f.sponsor.table('co_managed_participation_evidence').where('event_type', 'PROJECT_TASK_COMMENT_ARCHIVED').orderBy('source_id');
+  const saved = await evidence(); expect(saved).toHaveLength(2);
+  expect(saved.map((row: any) => row.payload.markdown).sort()).toEqual(['Actual MSP contribution', 'Older shared customer history']);
+  await f.add(f.customerPrincipal, 'shared_it', 'Newly private work after unsharing');
+  await policy.replaceCoManagedCustomerScope(db, f.actor, f.target, original.revision, reduced);
+  expect(await evidence()).toEqual(saved);
+}));
+
+it('sharing reduction archives board-only visibility using the persisted policy operation', async () => withConversationFixture(async f => {
+  const policy = await import('../../../../packages/co-managed/src/policy');
+  const initial = await policy.getCoManagedCollaborationPolicy(db, f.actor, f.target);
+  const ticket = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  await policy.replaceCoManagedCustomerScope(db, f.actor, f.target, initial.revision,
+    { ...initial, visibilityMode: 'board_scope', boards: [{ id: ticket.board_id, canCollaborate: true }] });
+  await f.customer.table('co_management_ticket_work').where('ticket_id', f.resource.id).update({ grant_revoked_at: new Date(), can_collaborate: false });
+  const comment = await f.addCustomer({ note: 'Legacy board-shared history' });
+  await policy.replaceCoManagedCustomerScope(db, f.actor, f.target, initial.revision + 1,
+    { ...initial, visibilityMode: 'escalation_only', boards: [] });
+  const saved = await f.sponsor.table('co_managed_participation_evidence').where({ resource_id: f.resource.id, event_type: 'TICKET_COMMENT_ARCHIVED' });
+  expect(saved).toHaveLength(1);
+  expect(saved[0].payload).toMatchObject({ commentId: comment.id, markdown: 'Legacy board-shared history' });
+  const operation = await f.customer.table('co_management_relationship_events').where('revision', initial.revision + 2).first();
+  expect(saved[0].operation_id).toBe(operation.event_id);
+  await expect(f.read(db, f.principal, f.resource)).rejects.toThrow();
+}));
+
+it('audience reduction retains only the changed shared thread and its legacy files before hiding it', async () => withAttachmentFixture(async f => {
+  const domain = await import('../../../../packages/co-managed/src/threadDisclosure');
+  const { discloseSharedTicketThread } = await import('../../lib/co-managed/discloseTicketThread');
+  const root = await f.create(f.customerPrincipal, { operationId: randomUUID(), audience: 'shared_it', text: 'Legacy customer shared thread' });
+  const reply = await f.create(f.customerPrincipal, { operationId: randomUUID(), parent: attachmentComment(root), text: 'Legacy reply with evidence' });
+  await f.create(f.customerPrincipal, { operationId: randomUUID(), audience: 'shared_it', text: 'Unchanged thread must not be swept' });
+  await f.create(f.customerPrincipal, { operationId: randomUUID(), audience: 'organization_private', text: 'Never shared customer thread' });
+  const file = await f.attachments.uploadCoManagedConversationAttachment(db, f.customerPrincipal, f.resource, {
+    attachmentId: randomUUID(), comment: attachmentComment(reply), fileName: 'legacy.txt', mimeType: 'text/plain', content: Buffer.from('Legacy bytes') }, f.upload);
+  // Simulate a file published before archival capture existed.
+  await f.sponsor.table('co_managed_archive_files').where('attachment_id', file.attachmentId).del();
+  const target = { storeTenant: f.resource.tenant, threadId: root.threadId };
+  const preview = await domain.previewCoManagedThreadDisclosure(db, f.customerPrincipal, f.resource, target);
+  const request = { ...target, operationId: randomUUID(), expectedSnapshot: preview.snapshot, audience: 'organization_private' as const, confirmed: true as const };
+  await discloseSharedTicketThread(db, f.customerPrincipal, f.resource, request);
+  const evidence = () => f.sponsor.table('co_managed_participation_evidence').where('operation_id', request.operationId).orderBy('source_id');
+  const saved = await evidence(); expect(saved).toHaveLength(2);
+  expect(saved.map((row: any) => row.payload.markdown).sort()).toEqual(['Legacy customer shared thread', 'Legacy reply with evidence']);
+  expect(saved.every((row: any) => row.payload.threadId === root.threadId && row.payload.audience === 'shared_it')).toBe(true);
+  const retained = await f.sponsor.table('co_managed_archive_files').where('attachment_id', file.attachmentId).first();
+  expect(retained).toMatchObject({ audience: 'shared_it', staged_bytes: Buffer.from('Legacy bytes') });
+  await expect(f.attachments.downloadCoManagedConversationAttachment(db, f.principal, f.resource, attachmentReference(file), f.download)).rejects.toThrow();
+  await f.customer.table('comments').where('comment_id', root.commentId).update({ note: 'New private body', markdown_content: 'New private body' });
+  await discloseSharedTicketThread(db, f.customerPrincipal, f.resource, request);
+  expect(await evidence()).toEqual(saved);
+}));
+
+it('audience reduction rolls back captured history when the confirmed disclosure fails', async () => withCommentCreationFixture(async f => {
+  const domain = await import('../../../../packages/co-managed/src/threadDisclosure');
+  const root = await f.create(f.customerPrincipal, { operationId: randomUUID(), audience: 'shared_it', text: 'Remain shared on failure' });
+  const target = { storeTenant: f.resource.tenant, threadId: root.threadId };
+  const preview = await domain.previewCoManagedThreadDisclosure(db, f.customerPrincipal, f.resource, target);
+  const request = { ...target, operationId: randomUUID(), expectedSnapshot: preview.snapshot, audience: 'organization_private' as const, confirmed: true as const };
+  await expect(domain.discloseCoManagedTicketThread(db, f.customerPrincipal, f.resource, request, async context => {
+    expect(await tenantDb(context.trx, f.principal.tenant).table('co_managed_participation_evidence').where('operation_id', request.operationId)).toHaveLength(1);
+    throw new Error('Disclosure failed after capture');
+  })).rejects.toThrow('Disclosure failed after capture');
+  expect(await f.sponsor.table('co_managed_participation_evidence').where('operation_id', request.operationId)).toHaveLength(0);
+  expect(await f.customer.table('co_management_command_receipts').where('operation_id', request.operationId)).toHaveLength(0);
+  expect(await f.customer.table('comment_threads').where('thread_id', root.threadId).first()).toMatchObject({ collaboration_audience: 'shared_it' });
+}));
+
+it('source move retention captures board-shared history in the native ticket writer before losing its grant', async () => withConversationFixture(async f => {
+  const policy = await import('../../../../packages/co-managed/src/policy');
+  const original = await policy.getCoManagedCollaborationPolicy(db, f.actor, f.target);
+  const ticket = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  await policy.replaceCoManagedCustomerScope(db, f.actor, f.target, original.revision,
+    { ...original, visibilityMode: 'board_scope', boards: [{ id: ticket.board_id, canCollaborate: true }] });
+  await f.customer.table('co_management_ticket_work').where('ticket_id', f.resource.id).update({ grant_revoked_at: new Date(), can_collaborate: false });
+  await f.addCustomer({ note: 'Before native board move' });
+  await f.addCustomer({ note: 'Private board move secret', internal: true, audience: 'organization_private' });
+  const boardId = randomUUID(), statusId = randomUUID();
+  await f.customer.table('boards').insert({ tenant: f.resource.tenant, board_id: boardId, board_name: 'Customer-only desk', is_default: false });
+  await f.customer.table('statuses').insert({ tenant: f.resource.tenant, status_id: statusId, name: 'Open', status_type: 'ticket', board_id: boardId,
+    order_number: 1, is_closed: false, is_default: true });
+  const user = await f.customer.table('users').where('user_id', f.customerPrincipal.userId).first();
+  const { updateTicketInTransaction } = await import('../../../../packages/tickets/src/actions/optimizedTicketActions');
+  await db.transaction(trx => updateTicketInTransaction(trx, user, f.resource.tenant, f.resource.id, { board_id: boardId, status_id: statusId }));
+  const saved = await f.sponsor.table('co_managed_participation_evidence').where('event_type', 'TICKET_COMMENT_ARCHIVED');
+  expect(saved).toHaveLength(1); expect(saved[0].payload.markdown).toBe('Before native board move');
+  await expect(f.read(db, f.principal, f.resource)).rejects.toThrow();
+  expect(await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).toMatchObject({ board_id: boardId });
+}));
+
+it.each(['task', 'phase'] as const)('source move retention preserves project history during a native %s move and rolls back on failure', async kind => withTaskConversationFixture(async f => {
+  const { ProjectModel } = await import('@alga-psa/projects/models');
+  const root = await f.add(f.customerPrincipal, 'shared_it', 'Shared history before project move');
+  await f.add(f.principal, 'organization_private', 'Actual private MSP participation');
+  await f.add(f.customerPrincipal, 'organization_private', 'Private project history');
+  const project = await ProjectModel.create(db, f.actor.tenant, { project_name: 'Customer-only project', project_number: 'PRIVATE-2', client_id: f.operation.customer_client_id,
+    status: f.project.status, wbs_code: '2' } as any);
+  const phase = await ProjectModel.addPhase(db, f.actor.tenant, { project_id: project.project_id, phase_name: 'Private delivery', wbs_code: '2.1', status: 'planning', order_number: 1 } as any);
+  const move = (trx: Knex.Transaction) => kind === 'phase'
+    ? ProjectModel.updatePhase(trx, f.actor.tenant, f.phase.phase_id, { project_id: project.project_id })
+    : ProjectModel.updateStructure(trx, f.actor.tenant, f.project.project_id, { phases: [], tasks: [{ task_id: f.resource.id, phase_id: phase.phase_id }] });
+  await expect(db.transaction(async trx => { await move(trx); throw new Error('Roll back move'); })).rejects.toThrow('Roll back move');
+  expect(await f.sponsor.table('co_managed_participation_evidence').where('event_type', 'PROJECT_TASK_COMMENT_ARCHIVED')).toHaveLength(0);
+  expect((await f.read(f.principal)).items.some((row: any) => row.commentId === root.commentId)).toBe(true);
+  await db.transaction(move);
+  const saved = await f.sponsor.table('co_managed_participation_evidence').where('event_type', 'PROJECT_TASK_COMMENT_ARCHIVED');
+  expect(saved).toHaveLength(1); expect(saved[0].payload.markdown).toBe('Shared history before project move');
+  await expect(f.read(f.principal)).rejects.toThrow();
+}));
+
+it('archive manifest seals qualified evidence and pending files at closure and survives storage completion and source deletion', async () => withAttachmentFixture(async f => {
+  const { closeCoManagedRelationship: close } = await import('../../../../packages/co-managed/src/relationshipClosure');
+  const { retainCoManagedSharedConversationBeforeReduction: capture } = await import('../../../../packages/co-managed/src/conversationParticipationEvidence');
+  const { coManagedArchiveManifestHash } = await import('../../../../packages/co-managed/src/archiveManifest');
+  const root = await f.create(f.customerPrincipal, { operationId: randomUUID(), audience: 'shared_it', text: 'Final permitted shared history' });
+  await f.attachments.uploadCoManagedConversationAttachment(db, f.customerPrincipal, f.resource, { attachmentId: randomUUID(),
+    comment: attachmentComment(root), fileName: 'Closure.txt', mimeType: 'text/plain', content: Buffer.from('Final bytes') }, f.upload);
+  const other = await f.sponsor.table('co_managed_participation_evidence').first();
+  await f.sponsor.table('co_managed_participation_evidence').insert({ ...other, evidence_id: randomUUID(), relationship_id: randomUUID(), source_id: randomUUID() });
+  const relationship = await f.customer.table('co_management_relationships').first();
+  const target = { customerTenant: f.resource.tenant, relationshipId: f.resource.relationshipId };
+  const request = { operationId: randomUUID(), expectedRevision: relationship.revision, reason: 'departure' as const };
+  const finalize = vi.fn(async (context: any) => capture(context.trx, f.resource, context.operationId, { cutoffAt: context.cutoffAt }));
+  const [receipt, retry] = await Promise.all([close(db, f.customerPrincipal, target, request, finalize), close(db, f.customerPrincipal, target, request, finalize)]);
+  expect(retry).toEqual(receipt); expect(finalize).toHaveBeenCalledOnce();
+  const manifests = () => f.sponsor.table('co_managed_archive_manifests').where('operation_id', request.operationId);
+  const saved = await manifests().first(); expect(await manifests()).toHaveLength(1);
+  const evidence = await f.sponsor.table('co_managed_participation_evidence').where({ customer_tenant: f.resource.tenant, relationship_id: f.resource.relationshipId }).orderBy('evidence_id');
+  expect(saved.manifest.evidence).toEqual(evidence.map((row: any) => [row.evidence_id, row.payload_hash]));
+  expect(saved.cutoff_at.toISOString()).toBe(receipt.cutoffAt);
+  expect(evidence.find((row: any) => row.event_type === 'TICKET_COMMENT_ARCHIVED')?.occurred_at.toISOString()).toBe(receipt.cutoffAt);
+  const file = await f.sponsor.table('co_managed_archive_files').first();
+  expect(saved.manifest.files).toEqual([[file.archive_file_id, file.content_hash, file.file_size]]);
+  expect(saved.content_hash).toBe(coManagedArchiveManifestHash(saved, saved.manifest));
+  expect(JSON.stringify(saved.manifest)).not.toMatch(/Final permitted|Final bytes|Closure.txt/);
+  await f.customer.table('co_management_conversation_attachments').del();
+  await f.customer.table('comments').where('ticket_id', f.resource.id).del();
+  await f.customer.table('comment_threads').where('ticket_id', f.resource.id).del();
+  await f.customer.table('ticket_audit_logs').where('ticket_id', f.resource.id).del();
+  await f.customer.table('tickets').where('ticket_id', f.resource.id).del();
+  artifactStorage.download.mockRejectedValue(new Error('Do not reopen source storage'));
+  artifactStorage.upload.mockReset().mockImplementation(async (bytes: Buffer, path: string) => ({ path, size: bytes.length }));
+  const { storeCoManagedArchiveFiles } = await import('../../../../packages/co-managed/src/archiveFiles');
+  expect(await storeCoManagedArchiveFiles(db, f.principal.tenant)).toEqual({ stored: 1, failed: 0 });
+  expect(await manifests().first()).toEqual(saved);
+  await expect(manifests().update({ manifest: {} })).rejects.toMatchObject({ code: '23514' });
+  const migration = require('../../../migrations/20260908123721_create_co_managed_archive_manifests.cjs');
+  await migration.up(db); await expect(migration.down(db)).rejects.toThrow('retained archive manifests');
+}));
+
+it('archive manifest failure rolls back final history capture and relationship closure', async () => withConversationFixture(async f => {
+  await f.addCustomer({ note: 'Capture must roll back with seal' });
+  const { closeCoManagedRelationship: close } = await import('../../../../packages/co-managed/src/relationshipClosure');
+  const { retainCoManagedSharedConversationBeforeReduction: capture } = await import('../../../../packages/co-managed/src/conversationParticipationEvidence');
+  const relationship = await f.customer.table('co_management_relationships').first();
+  const request = { operationId: randomUUID(), expectedRevision: relationship.revision, reason: 'departure' as const };
+  const constraint = `reject_archive_seal_${randomUUID().replaceAll('-', '')}`;
+  await db.raw(db.raw('ALTER TABLE co_managed_archive_manifests ADD CONSTRAINT ?? CHECK (tenant <> ?::uuid)', [constraint, f.principal.tenant]).toQuery());
+  try {
+    await expect(close(db, f.customerPrincipal, { customerTenant: f.resource.tenant, relationshipId: f.resource.relationshipId }, request,
+      context => capture(context.trx, f.resource, context.operationId, { cutoffAt: context.cutoffAt }))).rejects.toMatchObject({ constraint });
+  } finally { await db.raw('ALTER TABLE co_managed_archive_manifests DROP CONSTRAINT ??', [constraint]); }
+  expect(await f.customer.table('co_management_relationships').first()).toEqual(relationship);
+  expect(await f.sponsor.table('co_managed_participation_evidence').where('operation_id', request.operationId)).toHaveLength(0);
+  expect(await f.sponsor.table('co_managed_archive_manifests')).toHaveLength(0);
+  expect(await f.sponsor.table('co_managed_relationship_closures')).toHaveLength(0);
+  expect((await f.sponsor.table('co_managed_allocations').where('customer_tenant', f.resource.tenant).first()).state).toBe('active');
+}));
+
+it('closure private history captures legacy MSP notes and files after unsharing without reopening customer content', async () => withAttachmentFixture(async f => {
+  const { retainCoManagedPrivateHistoryAtClosure } = await import('../../../../packages/co-managed/src/privateParticipationEvidence');
+  const { closeCoManagedRelationship: close } = await import('../../../../packages/co-managed/src/relationshipClosure');
+  const { mutateCoManagedPrivateTicketComment } = await import('../../../../packages/co-managed/src/privateTicketConversation');
+  const root = await mutateCoManagedPrivateTicketComment(db, f.principal, f.resource, { operationId: randomUUID(), kind: 'create', text: 'MSP retained diagnosis' });
+  const input = { attachmentId: randomUUID(), comment: attachmentComment(root), fileName: 'Private proof.txt', mimeType: 'text/plain', content: Buffer.from('MSP-owned private bytes') };
+  await f.attachments.uploadCoManagedConversationAttachment(db, f.principal, f.resource, input, f.upload);
+  await f.sponsor.table('co_managed_participation_evidence').where({ source_type: 'private_conversation', resource_id: f.resource.id }).del();
+  await f.sponsor.table('co_managed_archive_files').where('attachment_id', input.attachmentId).del();
+  await f.customer.table('co_management_ticket_work').where('ticket_id', f.resource.id).update({ grant_revoked_at: new Date(), can_collaborate: false });
+  await f.customer.table('tickets').where('ticket_id', f.resource.id).update({ title: 'Newly private customer title' });
+  const relationship = await f.customer.table('co_management_relationships').first();
+  const target = { customerTenant: f.resource.tenant, relationshipId: f.resource.relationshipId };
+  const request = { operationId: randomUUID(), expectedRevision: relationship.revision, reason: 'departure' as const };
+  const callback = vi.fn(retainCoManagedPrivateHistoryAtClosure);
+  const receipt = await close(db, f.customerPrincipal, target, request, callback);
+  expect(await close(db, f.customerPrincipal, target, request, callback)).toEqual(receipt); expect(callback).toHaveBeenCalledOnce();
+  const saved = await f.sponsor.table('co_managed_participation_evidence').where({ source_type: 'private_conversation', operation_id: request.operationId });
+  expect(saved).toHaveLength(1); expect(saved[0]).toMatchObject({ actor_tenant: f.principal.tenant, actor_user_id: f.principal.userId,
+    event_type: 'private_comment_archived', occurred_at: new Date(receipt.cutoffAt), payload: { markdown: 'MSP retained diagnosis', audience: 'organization_private' } });
+  expect(JSON.stringify(saved)).not.toContain('Newly private customer title');
+  const file = await f.sponsor.table('co_managed_archive_files').where('attachment_id', input.attachmentId).first();
+  expect(file).toMatchObject({ source_tenant: f.principal.tenant, audience: 'organization_private', staged_bytes: input.content });
+  const manifest = await f.sponsor.table('co_managed_archive_manifests').first();
+  expect(manifest.manifest.evidence).toContainEqual([saved[0].evidence_id, saved[0].payload_hash]);
+  expect(manifest.manifest.files).toContainEqual([file.archive_file_id, file.content_hash, file.file_size]);
+  expect(await f.customer.table('co_managed_participation_evidence')).toHaveLength(0);
+}));
+
+it('closure private history keeps historical authors and empty tombstones for unshared tasks and rolls back with closure', async () => withTaskConversationFixture(async f => {
+  const { retainCoManagedPrivateHistoryAtClosure } = await import('../../../../packages/co-managed/src/privateParticipationEvidence');
+  const { closeCoManagedRelationship: close } = await import('../../../../packages/co-managed/src/relationshipClosure');
+  const root = await f.add(f.principal, 'organization_private', 'Deleted private root body');
+  await f.write(f.principal, { kind: 'create', operationId: randomUUID(), parent: f.ref(root), text: 'Surviving private reply' });
+  await f.write(f.principal, { kind: 'delete', operationId: randomUUID(), comment: f.ref(root), expectedRevision: 1 });
+  const original = await f.sponsor.table('co_management_private_comments').where('comment_id', root.commentId).first();
+  await f.sponsor.table('co_managed_participation_evidence').where('resource_id', f.resource.id).del();
+  await f.sponsor.table('users').where('user_id', f.principal.userId).update({ first_name: 'Later renamed', last_name: 'Technician' });
+  await f.customer.table('co_management_project_scopes').where('project_id', f.project.project_id).del();
+  await f.customer.table('project_tasks').where('task_id', f.resource.id).update({ task_name: 'Newly private task label' });
+  const relationship = await f.customer.table('co_management_relationships').first();
+  const target = { customerTenant: f.resource.tenant, relationshipId: f.resource.relationshipId };
+  const request = { operationId: randomUUID(), expectedRevision: relationship.revision, reason: 'departure' as const };
+  await expect(close(db, f.customerPrincipal, target, request, async context => {
+    await retainCoManagedPrivateHistoryAtClosure(context); throw new Error('Later finalizer failure');
+  })).rejects.toThrow('Later finalizer failure');
+  expect(await f.sponsor.table('co_managed_participation_evidence').where('operation_id', request.operationId)).toHaveLength(0);
+  await close(db, f.customerPrincipal, target, request, retainCoManagedPrivateHistoryAtClosure);
+  const saved = await f.sponsor.table('co_managed_participation_evidence').where('operation_id', request.operationId); expect(saved).toHaveLength(2);
+  expect(saved.every((row: any) => row.actor_name === original.actor_display_name)).toBe(true);
+  expect(saved.find((row: any) => row.payload.commentId === root.commentId)?.payload).toMatchObject({ deleted: true, resourceTitle: null });
+  expect(saved.some((row: any) => row.payload.markdown === 'Surviving private reply')).toBe(true);
+  expect(JSON.stringify(saved)).not.toMatch(/Deleted private root body|Newly private task label|Later renamed/);
+}));
+
+it('work snapshot retains only shared metadata after participation and applies current source-field restrictions after deletion', async () => withTaskConversationFixture(async f => {
+  const { retainCoManagedWorkSnapshot: capture } = await import('../../../../packages/co-managed/src/workSnapshotEvidence');
+  const { getCoManagedSharedWorkSummary } = await import('../../../../packages/co-managed/src/sharedWorkRead');
+  const archive = await import('../../../../packages/co-managed/src/archiveReads'), bundles = await import('@alga-psa/authorization');
+  await db.transaction(trx => capture(trx, f.resource, randomUUID(), new Date()));
+  expect(await f.sponsor.table('co_managed_participation_evidence').where('source_type', 'work_snapshot')).toHaveLength(0);
+  await f.add(f.principal, 'shared_it', 'Actual contribution');
+  const expected = await getCoManagedSharedWorkSummary(db, f.principal, f.resource);
+  await db.transaction(trx => capture(trx, f.resource, randomUUID(), new Date()));
+  const history = await archive.getCoManagedArchiveHistory(db, f.principal, f.resource);
+  const snapshot = history.entries.find(entry => entry.kind === 'work_snapshot');
+  expect(snapshot?.summary).toEqual(expected.fields); expect(snapshot).not.toHaveProperty('author');
+  expect(JSON.stringify(snapshot)).not.toMatch(/Private detailed work|actual_hours|assigned_to|service_id/);
+  await f.customer.table('project_tasks').where('task_id', f.resource.id).del();
+  expect(await archive.getCoManagedArchiveHistory(db, f.principal, f.resource)).toEqual(history);
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: f.principal.tenant, name: 'Archive work fields', actorUserId: f.principal.userId });
+  await bundles.upsertBundleRule(db, { tenant: f.principal.tenant, bundleId, revisionId, resourceType: 'project', action: 'read', templateKey: 'selected_clients',
+    config: { selectedClientIds: [f.operation.request.clientId], redactedFields: ['project_status_mapping_id', 'phase_id', 'payload.resourceTitle'] } });
+  await bundles.publishBundleRevision(db, { tenant: f.principal.tenant, bundleId, revisionId, actorUserId: f.principal.userId });
+  await bundles.createBundleAssignment(db, { tenant: f.principal.tenant, bundleId, targetType: 'user', targetId: f.principal.userId });
+  const masked = await archive.getCoManagedArchiveHistory(db, f.principal, f.resource);
+  expect(masked.work.title).toBeNull();
+  const fields = masked.entries.find(entry => entry.kind === 'work_snapshot')?.summary;
+  for (const field of ['status', 'is_closed', 'phase', 'task_name']) expect(fields).not.toHaveProperty(field);
+  expect(fields).toHaveProperty('project');
+  await f.sponsor.table('authorization_bundle_rules').where({ bundle_id: bundleId, resource_type: 'project', action: 'read' })
+    .update({ config: { selectedClientIds: [f.operation.request.clientId], redactedFields: ['payload.summary'] } });
+  const allMasked = await archive.getCoManagedArchiveHistory(db, f.principal, f.resource);
+  expect(allMasked.work.title).toBeNull(); expect(allMasked.entries.find(entry => entry.kind === 'work_snapshot')?.summary).toEqual({});
+  await f.sponsor.table('authorization_bundle_rules').where({ bundle_id: bundleId, resource_type: 'project', action: 'read' })
+    .update({ config: { selectedClientIds: [f.operation.request.clientId], redactedFields: ['note'] } });
+  const notesMasked = await archive.getCoManagedArchiveHistory(db, f.principal, f.resource);
+  expect(notesMasked.entries.map(entry => entry.kind)).toEqual(['work_snapshot']);
+  expect(notesMasked.entries[0].summary).toEqual(expected.fields);
+  const old = require('../../../migrations/20260908115957_retain_co_managed_private_history.cjs'); await old.up(db);
+  const migration = require('../../../migrations/20260908124921_retain_co_managed_work_snapshots.cjs'); await migration.up(db);
+  await expect(migration.down(db)).rejects.toThrow('retained shared work snapshots');
+}));
+
+it('work snapshot captures ticket context before grant removal and does not refresh newly private metadata', async () => withConversationFixture(async f => {
+  const { revokeCoManagedTicketGrant } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  const { retainCoManagedWorkSnapshot } = await import('../../../../packages/co-managed/src/workSnapshotEvidence');
+  const work = await f.customer.table('co_management_ticket_work').where('ticket_id', f.resource.id).first();
+  const request = { operationId: randomUUID(), expectedRevision: work.revision, note: 'Take back access' };
+  await revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource, request);
+  const evidence = () => f.sponsor.table('co_managed_participation_evidence').where({ source_type: 'work_snapshot', resource_id: f.resource.id });
+  const saved = await evidence(); expect(saved).toHaveLength(1); expect(saved[0].payload.summary.title.value).toBe('Conversation fixture');
+  await f.customer.table('tickets').where('ticket_id', f.resource.id).update({ title: 'Newly private ticket name' });
+  await db.transaction(trx => retainCoManagedWorkSnapshot(trx, f.resource, randomUUID(), new Date()));
+  await revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource, request);
+  expect(await evidence()).toEqual(saved);
+}));
+
+it('archive finalizer composes legacy handoffs shared conversations private history and work context before sealing closure', async () => withConversationFixture(async f => {
+  const { finalizeCoManagedArchive } = await import('../../../../packages/co-managed/src/archiveFinalization');
+  const { closeCoManagedRelationship: close } = await import('../../../../packages/co-managed/src/relationshipClosure');
+  const { handBackCoManagedTicket } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  const work = await f.customer.table('co_management_ticket_work').where('ticket_id', f.resource.id).first();
+  const handback = { operationId: randomUUID(), expectedRevision: work.revision, note: 'Historical shared handback' };
+  await handBackCoManagedTicket(db, f.principal, f.resource, handback);
+  await f.sponsor.table('co_managed_participation_evidence').where({ source_type: 'ticket_handoff', source_id: handback.operationId }).del();
+  const original = await f.sponsor.table('co_managed_participation_evidence').where('source_type', 'ticket_handoff').first();
+  await f.addCustomer({ note: 'Legacy shared context' });
+  await f.addCustomer({ note: 'Never shared customer secret', audience: 'organization_private', internal: true });
+  await f.addPrivate({ note: 'Legacy MSP-owned private context' });
+  await f.customer.table('tickets').where('ticket_id', f.resource.id).update({ title: 'Final shared ticket caption' });
+  const relationship = await f.customer.table('co_management_relationships').first();
+  const target = { customerTenant: f.resource.tenant, relationshipId: f.resource.relationshipId };
+  const request = { operationId: randomUUID(), expectedRevision: relationship.revision, reason: 'departure' as const };
+  const receipt = await close(db, f.customerPrincipal, target, request, finalizeCoManagedArchive);
+  const saved = await f.sponsor.table('co_managed_participation_evidence').where({ customer_tenant: f.resource.tenant, relationship_id: f.resource.relationshipId });
+  expect(saved.find((row: any) => row.evidence_id === original.evidence_id)).toEqual(original);
+  expect(saved.find((row: any) => row.source_id === handback.operationId)?.payload.note).toBe('Historical shared handback');
+  expect(saved.some((row: any) => row.source_type === 'conversation' && row.payload.markdown === 'Legacy shared context')).toBe(true);
+  expect(saved.some((row: any) => row.source_type === 'private_conversation' && row.payload.markdown === 'Legacy MSP-owned private context')).toBe(true);
+  expect(saved.find((row: any) => row.source_type === 'work_snapshot')?.payload.resourceTitle).toBe('Final shared ticket caption');
+  expect(JSON.stringify(saved)).not.toContain('Never shared customer secret');
+  expect((await f.sponsor.table('co_managed_archive_manifests').first()).manifest.evidence).toHaveLength(saved.length);
+  expect(await close(db, f.customerPrincipal, target, request, finalizeCoManagedArchive)).toEqual(receipt);
+  expect(await f.sponsor.table('co_managed_participation_evidence').where({ customer_tenant: f.resource.tenant, relationship_id: f.resource.relationshipId })).toEqual(saved);
+}));
+
+it.each([true, false])('archive finalizer discovers legacy MSP task audits while enforcing current sharing=%s', async shared => withTaskConversationFixture(async f => {
+  const { finalizeCoManagedArchive } = await import('../../../../packages/co-managed/src/archiveFinalization');
+  const { closeCoManagedRelationship: close } = await import('../../../../packages/co-managed/src/relationshipClosure');
+  await f.edit(db, f.principal, f.resource, { operationId: randomUUID(), expected: { task_name: 'Verify rollout' }, patch: { task_name: 'Actual MSP audit contribution' } });
+  const audit = await f.customer.table('audit_logs').where({ table_name: 'project_tasks', record_id: f.resource.id, operation: 'co_managed_project_task_update' }).first();
+  await f.sponsor.table('co_managed_participation_evidence').where('resource_id', f.resource.id).del();
+  await f.add(f.customerPrincipal, 'shared_it', 'Earlier shared task history');
+  const otherTask = randomUUID();
+  await f.customer.table('project_tasks').insert({ tenant: f.resource.tenant, task_id: otherTask, phase_id: f.phase.phase_id, task_name: 'Oversight-only task', wbs_code: '1.1.2',
+    project_status_mapping_id: f.mappings[0].project_status_mapping_id, task_type_key: 'task' });
+  if (!shared) {
+    await f.customer.table('co_management_project_scopes').where('project_id', f.project.project_id).del();
+    await f.customer.table('project_tasks').where('task_id', f.resource.id).update({ task_name: 'Newly private task data' });
+  }
+  const relationship = await f.customer.table('co_management_relationships').first();
+  await close(db, f.customerPrincipal, { customerTenant: f.resource.tenant, relationshipId: f.resource.relationshipId },
+    { operationId: randomUUID(), expectedRevision: relationship.revision, reason: 'departure' }, finalizeCoManagedArchive);
+  const saved = await f.sponsor.table('co_managed_participation_evidence');
+  expect(saved.some((row: any) => row.resource_id === otherTask)).toBe(false);
+  if (shared) {
+    expect(saved.find((row: any) => row.source_id === audit.audit_id)).toMatchObject({ actor_name: audit.details.actor_display_name,
+      payload: { changes: { task_name: 'Actual MSP audit contribution' } } });
+    expect(saved.some((row: any) => row.source_type === 'conversation' && row.payload.markdown === 'Earlier shared task history')).toBe(true);
+    expect(saved.some((row: any) => row.source_type === 'work_snapshot')).toBe(true);
+  } else expect(saved).toHaveLength(0);
+  expect(JSON.stringify(saved)).not.toMatch(/Newly private task data|Private detailed work|Oversight-only task/);
+}));
+
+it('archive finalizer captures completed owned time but not unused time-reference registration', async () => withMspSharedTimeSaveFixture(async f => {
+  const { finalizeCoManagedArchive } = await import('../../../../packages/co-managed/src/archiveFinalization');
+  const { closeCoManagedRelationship: close } = await import('../../../../packages/co-managed/src/relationshipClosure');
+  const entry = await f.save();
+  await f.sponsor.table('co_managed_participation_evidence').where({ source_type: 'time_entry', source_id: entry.entry_id }).del();
+  const reference = await f.sponsor.table('co_managed_time_work_references').where('reference_id', f.referenceId).first();
+  const unusedSource = randomUUID();
+  await f.sponsor.table('co_managed_time_work_references').insert({ ...reference, reference_id: randomUUID(), source_id: unusedSource, title: 'Unused registered reference' });
+  const relationship = await f.customer.table('co_management_relationships').first();
+  await close(db, f.customerPrincipal, { customerTenant: f.resource.tenant, relationshipId: f.resource.relationshipId },
+    { operationId: randomUUID(), expectedRevision: relationship.revision, reason: 'departure' }, finalizeCoManagedArchive);
+  const saved = await f.sponsor.table('co_managed_participation_evidence');
+  expect(saved.filter((row: any) => row.source_type === 'time_entry')).toHaveLength(1);
+  expect(saved.find((row: any) => row.source_id === entry.entry_id)?.payload).toMatchObject({ entryId: entry.entry_id, audience: 'organization_private' });
+  expect(saved.some((row: any) => row.resource_id === unusedSource)).toBe(false);
+  expect(JSON.stringify(saved)).not.toContain('Unused registered reference');
+}));
+
+async function withTenantLicenseFixture(work: (sign: (claims?: Record<string, unknown>) => string) => Promise<void>) {
+  const crypto = await import('node:crypto');
+  const { LICENSE_PUBLIC_KEYS } = await import('../../../../packages/licensing/src/lib/license-keys');
+  const { clearLicenseVerifyCache } = await import('../../../../packages/licensing/src/lib/verify-license');
+  const keys = crypto.generateKeyPairSync('ec', { namedCurve: 'P-256' }), kid = `tenant-fixture-${randomUUID()}`;
+  LICENSE_PUBLIC_KEYS[kid] = keys.publicKey.export({ type: 'spki', format: 'pem' }).toString();
+  const sign = (claims: Record<string, unknown> = {}) => {
+    const header = Buffer.from(JSON.stringify({ alg: 'ES256', kid })).toString('base64url');
+    const payload = Buffer.from(JSON.stringify({ iss: 'nineminds-license', sub: randomUUID(), cust: 'Signed test customer', tier: 'pro',
+      iat: Math.floor(Date.now() / 1000) - 10, exp: Math.floor(Date.now() / 1000) + 3600, seats: 2, ...claims })).toString('base64url');
+    return `${header}.${payload}.${crypto.sign('sha256', Buffer.from(`${header}.${payload}`), { key: keys.privateKey, dsaEncoding: 'ieee-p1363' }).toString('base64url')}`;
+  };
+  const before = await db('license_state');
+  await db('license_state').del();
+  await db('license_state').insert({ edition_choice: 'ee', license_token: sign({ seats: 20, exp: Math.floor(Date.now() / 1000) + 86400 }) });
+  try { await work(sign); }
+  finally { await db('license_state').del(); if (before.length) await db('license_state').insert(before); delete LICENSE_PUBLIC_KEYS[kid]; clearLicenseVerifyCache(); }
+}
+
+it('tenant license state uses real signed tenant binding without changing MSP licensing or co-managed capacity', async () => {
+  const f = await ticketHandoffFixture();
+  await withTenantLicenseFixture(async sign => {
+    const licensing = await import('@alga-psa/licensing');
+    const { checkApplianceLicenseSeatLimit } = await import('../../../../ee/server/src/lib/license/userSeatGuard');
+    const install = await db('license_state').first(), entitlement = await f.sponsor.table('co_managed_entitlements').first();
+    const token = sign({ aud: f.resource.tenant, seats: 2 });
+    await db.transaction(trx => licensing.activateTenantPsaLicense(trx, f.resource.tenant, token));
+    expect(licensing.resolveSelfHostTier(await licensing.getTenantSelfHostLicenseState(f.resource.tenant, db), f.resource.tenant)?.state).toBe('licensed');
+    expect(await checkApplianceLicenseSeatLimit(1, f.resource.tenant, db)).toBeNull();
+    expect(await checkApplianceLicenseSeatLimit(2, f.resource.tenant, db)).toEqual({ seats: 2 });
+    expect(await checkApplianceLicenseSeatLimit(2, f.principal.tenant, db)).toBeNull();
+    expect(await licensing.resolveTenantTier(f.resource.tenant)).toBe('pro');
+    expect(await db('license_state').first()).toEqual(install);
+    expect(await f.sponsor.table('co_managed_entitlements').first()).toEqual(entitlement);
+    expect(await f.sponsor.table('tenant_license_state')).toHaveLength(0);
+    expect((await f.customer.table('tenants').first()).product_code).toBe('co_managed');
+    const migration = require('../../../migrations/20260908131037_create_tenant_license_state.cjs');
+    await migration.up(db); await expect(migration.down(db)).rejects.toThrow('tenant-bound license state');
+  });
+});
+
+it('tenant license state rejects unbound foreign expired and invalid signatures and rolls activation back', async () => {
+  const f = await ticketHandoffFixture();
+  await withTenantLicenseFixture(async sign => {
+    const { activateTenantPsaLicense } = await import('@alga-psa/licensing');
+    const install = await db('license_state').first();
+    for (const token of [sign(), sign({ aud: f.principal.tenant }), sign({ aud: f.resource.tenant, exp: Math.floor(Date.now() / 1000) - 120 }), 'not-a-signed-license']) {
+      await expect(db.transaction(trx => activateTenantPsaLicense(trx, f.resource.tenant, token))).rejects.toThrow();
+    }
+    expect(await f.customer.table('tenant_license_state')).toHaveLength(0); expect(await db('license_state').first()).toEqual(install);
+    const token = sign({ aud: f.resource.tenant });
+    await expect(db.transaction(async trx => { await activateTenantPsaLicense(trx, f.resource.tenant, token); throw new Error('Cancel staged upgrade'); })).rejects.toThrow('Cancel staged upgrade');
+    expect(await f.customer.table('tenant_license_state')).toHaveLength(0);
+    await db('license_state').del();
+    await expect(db.transaction(trx => activateTenantPsaLicense(trx, f.resource.tenant, token))).rejects.toThrow('self-hosted licensing');
+  });
+});
+
+it('tenant license state does not revive an expired independent PSA license from a valid installation license', async () => {
+  const tenant = randomUUID();
+  await tenantDb(db, tenant).table('tenants').insert({ tenant, client_name: 'Independent PSA fixture', email: `${tenant}@example.test`, product_code: 'psa', plan: 'pro' });
+  await withTenantLicenseFixture(async sign => {
+    const licensing = await import('@alga-psa/licensing');
+    const token = sign({ aud: tenant });
+    await db.transaction(trx => licensing.activateTenantPsaLicense(trx, tenant, token));
+    expect(await licensing.resolveTenantTier(tenant)).toBe('pro');
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(Date.now() + 7200000);
+    try {
+      const row = await licensing.getTenantSelfHostLicenseState(tenant, db);
+      expect(row?.license_token).toBe(token);
+      expect(licensing.resolveSelfHostTier(row, tenant)?.state).toBe('license_expired');
+      expect(await licensing.resolveTenantTier(tenant)).toBe('essentials');
+      expect(licensing.resolveSelfHostTier(await db('license_state').first(), tenant)?.state).toBe('licensed');
+    } finally { clock.mockRestore(); }
+  });
+});
+
+it('PSA capability backfills join the co-managed upgrade transaction and preserve customer work and existing grants', async () => {
+  const f = await ticketHandoffFixture();
+  const upgrade = await import('../../../../ee/temporal-workflows/src/db/product-upgrade-operations');
+  const customerTenant = f.resource.tenant;
+  await f.customer.table('boards').where('board_id', f.operation.customer_board_id).update({ priority_type: 'itil', sla_policy_id: null });
+  const tables = ['roles', 'permissions', 'role_permissions', 'tax_rates', 'tax_components', 'client_tax_settings', 'client_tax_rates',
+    'sla_policies', 'sla_notification_thresholds', 'sla_policy_targets', 'boards'];
+  const snapshot = async (connection: Knex) => {
+    const result: Record<string, unknown[]> = {};
+    for (const table of tables) result[table] = await tenantDb(connection, customerTenant).table(table);
+    return result;
+  };
+  const before = await snapshot(db), ticket = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  const sponsorPermissions = await f.sponsor.table('permissions');
+  const seedAndBackfill = async (trx: Knex.Transaction) => {
+    const applied = await upgrade.backfillPsaSeeds(customerTenant, log, trx);
+    expect(applied).not.toContain('03_role_permissions.cjs');
+    await upgrade.applyRbacDelta(customerTenant, log, trx);
+    await upgrade.backfillClientTaxDefaults(customerTenant, log, trx);
+    await upgrade.ensureSlaParity(customerTenant, log, trx);
+    const own = tenantDb(trx, customerTenant);
+    expect((await own.table('boards').where('board_id', f.operation.customer_board_id).first()).sla_policy_id).toBeTruthy();
+    expect((await own.table('sla_notification_thresholds')).length).toBeGreaterThan(0);
+    expect(await own.table('roles').where({ role_name: 'Finance', msp: true })).toHaveLength(1);
+    expect((await own.table('permissions').where('resource', 'billing')).length).toBeGreaterThan(0);
+    expect((await own.table('client_tax_settings')).length).toBeGreaterThan(0);
+    expect(await own.table('role_permissions')).toEqual(expect.arrayContaining(before.role_permissions));
+    expect(await own.table('tickets').where('ticket_id', f.resource.id).first()).toEqual(ticket);
+    // Backfills alone do not change product, licensing, trust or capacity.
+    expect((await own.table('tenants').first()).product_code).toBe('co_managed');
+  };
+  await expect(db.transaction(async trx => {
+    await seedAndBackfill(trx);
+    throw new Error('Cancel independent upgrade');
+  })).rejects.toThrow('Cancel independent upgrade');
+  const rolledBack = await snapshot(db);
+  for (const table of tables) {
+    expect(rolledBack[table], table).toHaveLength(before[table].length);
+    expect(rolledBack[table], table).toEqual(expect.arrayContaining(before[table]));
+  }
+  await db.transaction(seedAndBackfill);
+  const first = await snapshot(db);
+  await db.transaction(seedAndBackfill);
+  const second = await snapshot(db);
+  for (const table of tables) {
+    expect(second[table], table).toHaveLength(first[table].length);
+    expect(second[table], table).toEqual(expect.arrayContaining(first[table]));
+  }
+  expect(await f.sponsor.table('permissions')).toEqual(sponsorPermissions);
+  expect((await f.customer.table('co_management_relationships').first()).state).toBe('active');
+});
+
+it('independent PSA upgrade atomically converts an active customer with its own license and closes live trust exactly once', async () => {
+  const f = await ticketHandoffFixture();
+  await withTenantLicenseFixture(async sign => {
+    const { activateTenantPsaLicense, resolveTenantTier } = await import('@alga-psa/licensing');
+    const { upgradeCoManagedWorkspaceWithTenantLicense: upgrade } = await import('../../../../ee/temporal-workflows/src/db/co-managed-upgrade-operations');
+    const { escalateCoManagedTicket } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+    const { getCoManagedSharedWorkSummary } = await import('../../../../packages/co-managed/src/sharedWorkRead');
+    await escalateCoManagedTicket(db, f.customerPrincipal, f.resource, { operationId: randomUUID(), expectedRevision: 0, note: 'Keep this shared history' });
+    const relationship = await f.customer.table('co_management_relationships').first();
+    const request = { operationId: randomUUID(), expectedRevision: relationship.revision };
+    const token = sign({ aud: f.resource.tenant, seats: 10 });
+    await db.transaction(trx => activateTenantPsaLicense(trx, f.resource.tenant, token));
+    const install = await db('license_state').first(), entitlement = await f.sponsor.table('co_managed_entitlements').first();
+    const ticket = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+    const allocation = await f.sponsor.table('co_managed_allocations').where('customer_tenant', f.resource.tenant).first();
+    const [first, retry] = await Promise.all([
+      upgrade(db, f.customerPrincipal, f.target, request, log), upgrade(db, f.customerPrincipal, f.target, request, log),
+    ]);
+    expect(retry).toEqual(first);
+    expect(first).toMatchObject({ operationId: request.operationId, customerTenant: f.resource.tenant, closureOperationId: request.operationId, productCode: 'psa', seats: 10 });
+    expect(await f.customer.table('tenants').first()).toMatchObject({ product_code: 'psa', plan: 'pro', billing_source: 'manual', licensed_user_count: 10 });
+    expect(await resolveTenantTier(f.resource.tenant)).toBe('pro');
+    expect(await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).toEqual(ticket);
+    expect((await f.customer.table('roles').where({ role_name: 'Finance', msp: true })).length).toBe(1);
+    expect(await f.customer.table('co_managed_independent_upgrades')).toHaveLength(1);
+    expect((await f.sponsor.table('co_managed_relationship_closures').where('operation_id', request.operationId).first()).released_seats).toBe(allocation.seats);
+    expect(await f.sponsor.table('co_managed_allocations').where('allocation_id', allocation.allocation_id).first()).toMatchObject({ state: 'released' });
+    const seal = await f.sponsor.table('co_managed_archive_manifests').where('operation_id', request.operationId).first();
+    expect(seal.manifest.evidence.length).toBeGreaterThan(0);
+    await expect(getCoManagedSharedWorkSummary(db, f.principal, f.resource)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    expect(await db('license_state').first()).toEqual(install);
+    expect(await f.sponsor.table('co_managed_entitlements').first()).toEqual(entitlement);
+    expect((await f.customer.table('tenant_license_state').first()).license_token).toBe(token);
+    await expect(upgrade(db, f.customerPrincipal, f.target, { ...request, expectedRevision: request.expectedRevision + 1 }, log)).rejects.toMatchObject({ code: 'UPGRADE_CHANGED' });
+    await f.customer.table('sessions').where('session_id', f.customerPrincipal.sessionId).update({ revoked_at: new Date() });
+    await expect(upgrade(db, f.customerPrincipal, f.target, request, log)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    const migration = require('../../../migrations/20260908134800_create_co_managed_independent_upgrades.cjs');
+    await migration.up(db); await expect(migration.down(db)).rejects.toThrow('independent upgrade receipts');
+    await expect(f.customer.table('co_managed_independent_upgrades').update({ seats: 100 })).rejects.toThrow('immutable');
+  });
+});
+
+it('independent PSA upgrade after departure preserves the original seal and never reopens or recaptures customer sources', async () => {
+  const f = await ticketHandoffFixture();
+  await withTenantLicenseFixture(async sign => {
+    const { activateTenantPsaLicense } = await import('@alga-psa/licensing');
+    const { closeCoManagedRelationship, finalizeCoManagedArchive } = await import('@alga-psa/co-managed');
+    const { upgradeCoManagedWorkspaceWithTenantLicense: upgrade } = await import('../../../../ee/temporal-workflows/src/db/co-managed-upgrade-operations');
+    const relationship = await f.customer.table('co_management_relationships').first();
+    const closed = await closeCoManagedRelationship(db, f.customerPrincipal, f.target,
+      { operationId: randomUUID(), expectedRevision: relationship.revision, reason: 'departure' }, finalizeCoManagedArchive);
+    const seal = await f.sponsor.table('co_managed_archive_manifests').where('operation_id', closed.operationId).first();
+    const allocation = await f.sponsor.table('co_managed_allocations').where('customer_tenant', f.resource.tenant).first();
+    await f.customer.table('tickets').where('ticket_id', f.resource.id).update({ title: 'Private after departure' });
+    await db.transaction(trx => activateTenantPsaLicense(trx, f.resource.tenant, sign({ aud: f.resource.tenant, seats: 10 })));
+    const request = { operationId: randomUUID(), expectedRevision: closed.appliedRevision };
+    const result = await upgrade(db, f.customerPrincipal, f.target, request, log);
+    expect(result.closureOperationId).toBe(closed.operationId);
+    expect(await upgrade(db, f.customerPrincipal, f.target, request, log)).toEqual(result);
+    expect(await f.sponsor.table('co_managed_archive_manifests').where('operation_id', closed.operationId).first()).toEqual(seal);
+    expect(await f.sponsor.table('co_managed_allocations').where('allocation_id', allocation.allocation_id).first()).toEqual(allocation);
+    expect(await f.sponsor.table('co_managed_relationship_closures').where('customer_tenant', f.resource.tenant)).toHaveLength(1);
+    expect((await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).title).toBe('Private after departure');
+    expect(JSON.stringify(await f.sponsor.table('co_managed_participation_evidence').where('customer_tenant', f.resource.tenant))).not.toContain('Private after departure');
+  });
+});
+
+it('independent PSA upgrade rejects MSP actors and missing or insufficient customer entitlement and rolls final write failure back', async () => {
+  const f = await ticketHandoffFixture();
+  await withTenantLicenseFixture(async sign => {
+    const { activateTenantPsaLicense, countCoManagedCommittedSeats } = await import('@alga-psa/licensing');
+    const { upgradeCoManagedWorkspaceWithTenantLicense: upgrade } = await import('../../../../ee/temporal-workflows/src/db/co-managed-upgrade-operations');
+    const relationship = await f.customer.table('co_management_relationships').first();
+    const request = { operationId: randomUUID(), expectedRevision: relationship.revision };
+    const allocation = await f.sponsor.table('co_managed_allocations').where('customer_tenant', f.resource.tenant).first();
+    const roles = await f.customer.table('roles');
+    await expect(upgrade(db, f.principal, f.target, request, log)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    await expect(upgrade(db, f.customerPrincipal, f.target, request, log)).rejects.toThrow('independent paid PSA license');
+    const role = await f.customer.table('roles').where({ role_name: 'Technician', msp: true }).first();
+    await f.customer.table('user_invitations').insert({ tenant: f.resource.tenant, invitation_id: randomUUID(),
+      email: `pending-${randomUUID()}@example.test`, first_name: 'Pending', last_name: 'Technician', role_id: role.role_id,
+      token: randomUUID(), expires_at: new Date(Date.now() + 3600000) });
+    const seats = await db.transaction(trx => countCoManagedCommittedSeats(trx, f.resource.tenant));
+    expect(seats).toBeGreaterThan(1);
+    await db.transaction(trx => activateTenantPsaLicense(trx, f.resource.tenant, sign({ aud: f.resource.tenant, seats: seats - 1 })));
+    await expect(upgrade(db, f.customerPrincipal, f.target, request, log)).rejects.toMatchObject({ code: 'INSUFFICIENT_PSA_SEATS' });
+    await db.transaction(trx => activateTenantPsaLicense(trx, f.resource.tenant, sign({ aud: f.resource.tenant, seats: 10 })));
+    await db.raw('ALTER TABLE co_managed_independent_upgrades ADD CONSTRAINT test_reject_upgrade CHECK (false) NOT VALID');
+    try { await expect(upgrade(db, f.customerPrincipal, f.target, request, log)).rejects.toThrow('test_reject_upgrade'); }
+    finally { await db.raw('ALTER TABLE co_managed_independent_upgrades DROP CONSTRAINT test_reject_upgrade'); }
+    expect((await f.customer.table('tenants').first()).product_code).toBe('co_managed');
+    expect(await f.customer.table('roles')).toEqual(roles);
+    expect(await f.customer.table('co_management_relationships').first()).toEqual(relationship);
+    expect(await f.sponsor.table('co_managed_allocations').where('allocation_id', allocation.allocation_id).first()).toEqual(allocation);
+    expect(await f.customer.table('co_managed_independent_upgrades')).toHaveLength(0);
+    expect(await f.sponsor.table('co_managed_relationship_closures').where('customer_tenant', f.resource.tenant)).toHaveLength(0);
+    expect(await f.sponsor.table('co_managed_archive_manifests').where('customer_tenant', f.resource.tenant)).toHaveLength(0);
+    expect((await upgrade(db, f.customerPrincipal, f.target, request, log)).productCode).toBe('psa');
+  });
+});
+
+async function withTenantLicenseBrowser(f: Awaited<ReturnType<typeof ticketHandoffFixture>>, work: (browser: any) => Promise<void>) {
+  const auth = await import('@alga-psa/auth'), dbModule = await import('@alga-psa/db');
+  const user = await f.customer.table('users').where('user_id', f.customerPrincipal.userId).first();
+  const current = vi.spyOn(auth, 'getCurrentUser').mockResolvedValue(user);
+  const connection = vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: db, tenant: f.resource.tenant });
+  try { await withTrackedTaskBrowser(f.customerPrincipal, f.customer, browser => runWithTenant(f.resource.tenant, () => work(browser))); }
+  finally { current.mockRestore(); connection.mockRestore(); }
+}
+
+it('tenant license controls bind browser activation to the customer and never expose or mutate installation licensing', async () => {
+  const f = await ticketHandoffFixture();
+  await withTenantLicenseFixture(async sign => withTenantLicenseBrowser(f, async browser => {
+    const actions = await import('../../lib/actions/licenseManagementActions');
+    const installation = await db('license_state').first(), workspace = await f.customer.table('tenants').first();
+    const fetch = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('No license provider call is permitted'));
+    try {
+      expect(await actions.getLicenseStatus()).toMatchObject({ scope: 'tenant', selfHostMode: true, state: 'license_required',
+        customer: null, connected: false, trialUsed: false, lastCheckinAt: null, tenantId: f.resource.tenant });
+      expect(await actions.startTrial()).toMatchObject({ success: false });
+      expect(await actions.connectAppliance('NO-CLAIM')).toMatchObject({ success: false });
+      expect(await actions.refreshLicenseNow()).toMatchObject({ success: false });
+      expect(fetch).not.toHaveBeenCalled();
+      await expect(actions.submitLicense(sign())).rejects.toThrow('bound to this tenant');
+      await expect(actions.submitLicense(sign({ aud: f.principal.tenant }))).rejects.toThrow('bound to this tenant');
+      const token = sign({ aud: f.resource.tenant, cust: 'Customer owns this license', seats: 12 });
+      expect(await actions.submitLicense(token)).toMatchObject({ success: true, status: { scope: 'tenant', state: 'licensed',
+        customer: 'Customer owns this license', connected: false, trialUsed: false } });
+      expect((await f.customer.table('tenant_license_state').first()).license_token).toBe(token);
+      expect(await f.customer.table('tenants').first()).toEqual(workspace);
+      expect(await db('license_state').first()).toEqual(installation);
+      browser.override.mockReturnValue({ tenant: f.resource.tenant, user_id: f.customerPrincipal.userId });
+      await expect(actions.submitLicense(token)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+      await expect(actions.getLicenseStatus()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+      browser.override.mockReturnValue(undefined);
+      await f.customer.table('sessions').where('session_id', f.customerPrincipal.sessionId).update({ revoked_at: new Date() });
+      await expect(actions.submitLicense(token)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+      expect(await db('license_state').first()).toEqual(installation);
+    } finally { fetch.mockRestore(); }
+  }));
+});
+
+it('tenant license controls renew independent PSA seats and retain tenant scope when its key disappears with final-session rollback', async () => {
+  const f = await ticketHandoffFixture();
+  await withTenantLicenseFixture(async sign => withTenantLicenseBrowser(f, async () => {
+    const actions = await import('../../lib/actions/licenseManagementActions');
+    const { upgradeCoManagedWorkspaceWithTenantLicense: upgrade } = await import('../../../../ee/temporal-workflows/src/db/co-managed-upgrade-operations');
+    const { resolveTenantTier } = await import('@alga-psa/licensing');
+    await actions.submitLicense(sign({ aud: f.resource.tenant, seats: 10 }));
+    const relationship = await f.customer.table('co_management_relationships').first();
+    await upgrade(db, f.customerPrincipal, f.target, { operationId: randomUUID(), expectedRevision: relationship.revision }, log);
+    const installation = await db('license_state').first();
+    await actions.submitLicense(sign({ aud: f.resource.tenant, seats: 20 }));
+    expect((await f.customer.table('tenants').first()).licensed_user_count).toBe(20);
+    await f.customer.table('tenant_license_state').update({ license_token: 'invalid-stored-key' });
+    expect(await actions.getLicenseStatus()).toMatchObject({ scope: 'tenant', state: 'license_required', tier: 'essentials', customer: null });
+    await f.customer.table('tenant_license_state').del();
+    expect(await actions.getLicenseStatus()).toMatchObject({ scope: 'tenant', state: 'license_required', tier: 'essentials', trialUsed: false });
+    expect(await resolveTenantTier(f.resource.tenant)).toBe('essentials');
+    expect(await actions.startTrial()).toMatchObject({ success: false });
+    expect(await actions.refreshLicenseNow()).toMatchObject({ success: false });
+    await actions.submitLicense(sign({ aud: f.resource.tenant, seats: 4 }));
+    const own = await f.customer.table('tenant_license_state').first();
+    expect((await f.customer.table('tenants').first()).licensed_user_count).toBe(4);
+    const trigger = `expire_license_${randomUUID().replaceAll('-', '')}`;
+    await db.raw(db.raw(`CREATE FUNCTION ??() RETURNS trigger AS $$ BEGIN IF NEW.tenant = ?::uuid THEN
+      UPDATE sessions SET expires_at = to_timestamp(0) WHERE tenant = ?::uuid AND session_id = ?::uuid;
+      END IF; RETURN NEW; END; $$ LANGUAGE plpgsql`, [trigger, f.resource.tenant, f.resource.tenant, f.customerPrincipal.sessionId]).toQuery());
+    await db.raw('CREATE TRIGGER ?? AFTER INSERT OR UPDATE ON tenant_license_state FOR EACH ROW EXECUTE FUNCTION ??()', [trigger, trigger]);
+    try { await expect(actions.submitLicense(sign({ aud: f.resource.tenant, seats: 30 }))).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' }); }
+    finally { await db.raw('DROP TRIGGER ?? ON tenant_license_state', [trigger]); await db.raw('DROP FUNCTION ??()', [trigger]); }
+    expect(await f.customer.table('tenant_license_state').first()).toEqual(own);
+    expect((await f.customer.table('tenants').first()).licensed_user_count).toBe(4);
+    expect(await db('license_state').first()).toEqual(installation);
+  }));
+});
+
+it.each(['async', 'sync'])('session tier resolution uses the customer entitlement through sign-in and upgrade in the %s auth configuration', async kind => {
+  const f = await ticketHandoffFixture();
+  await withTenantLicenseFixture(async sign => {
+    const tenantConnection = await import('../../../../packages/db/src/lib/tenant');
+    const connection = vi.spyOn(tenantConnection, 'getConnection').mockResolvedValue(db);
+    try {
+      const auth = await import('../../../../packages/auth/src/lib/nextAuthOptions');
+      const config = kind === 'async' ? await auth.getAuthOptions() : auth.options;
+      const { activateTenantPsaLicense, resolveTenantTier } = await import('@alga-psa/licensing');
+      const { upgradeCoManagedWorkspaceWithTenantLicense: upgrade } = await import('../../../../ee/temporal-workflows/src/db/co-managed-upgrade-operations');
+      const install = await db('license_state').first();
+      const user = { id: f.customerPrincipal.userId, tenant: f.resource.tenant, user_type: 'internal', email: 'session-tier@example.test' };
+      const token = await config.callbacks.jwt({ token: { session_id: f.customerPrincipal.sessionId, last_session_extend: Date.now() }, user, trigger: 'signIn' });
+      expect(token).toMatchObject({ tenant: f.resource.tenant, product_code: 'co_managed', effectiveTier: 'pro' });
+      await db.transaction(trx => activateTenantPsaLicense(trx, f.resource.tenant, sign({ aud: f.resource.tenant, seats: 10 })));
+      const relationship = await f.customer.table('co_management_relationships').first();
+      await upgrade(db, f.customerPrincipal, f.target, { operationId: randomUUID(), expectedRevision: relationship.revision }, log);
+      await db('license_state').update({ license_token: sign({ exp: Math.floor(Date.now() / 1000) - 120 }) });
+      const upgraded = await config.callbacks.jwt({ token, trigger: 'update' });
+      expect(upgraded).toMatchObject({ product_code: 'psa', effectiveTier: 'pro' });
+      expect(await resolveTenantTier(f.resource.tenant)).toBe(upgraded.effectiveTier);
+      await db('license_state').update({ license_token: install.license_token });
+      await f.customer.table('tenant_license_state').update({ license_token: sign({ aud: f.resource.tenant, exp: Math.floor(Date.now() / 1000) - 120 }) });
+      const expired = await config.callbacks.jwt({ token: upgraded, trigger: 'update' });
+      expect(expired).toMatchObject({ product_code: 'psa', plan: 'pro', effectiveTier: 'essentials' });
+      const session = await config.callbacks.session({ session: { user: {} }, token: expired });
+      expect(session.user).toMatchObject({ tenant: f.resource.tenant, effectiveTier: 'essentials' });
+      expect(await resolveTenantTier(f.resource.tenant)).toBe('essentials');
+    } finally { connection.mockRestore(); }
+  });
+});
+
+async function withHostedPsaUpgradeFixture(work: (f: any) => Promise<void>) {
+  const f = await ticketHandoffFixture();
+  const installation = await db('license_state');
+  await db('license_state').delete();
+  try {
+    const tenant = f.resource.tenant, catalogTenant = f.principal.tenant;
+    const productId = randomUUID(), priceId = randomUUID(), customerId = randomUUID(), subscriptionId = randomUUID();
+    const externalPrice = `price_${priceId}`, externalCustomer = `cus_${customerId}`, externalSubscription = `sub_${subscriptionId}`;
+    const itemId = `si_${randomUUID()}`, periodEnd = Math.floor(Date.now() / 1000) + 86400 * 30;
+    await f.sponsor.table('stripe_products').insert({ tenant: catalogTenant, stripe_product_id: productId,
+      stripe_product_external_id: `prod_${productId}`, name: 'PSA seats', product_type: 'license' });
+    await f.sponsor.table('stripe_prices').insert({ tenant: catalogTenant, stripe_price_id: priceId,
+      stripe_price_external_id: externalPrice, stripe_product_id: productId, unit_amount: 6500 });
+    await f.customer.table('stripe_customers').insert({ tenant, stripe_customer_id: customerId,
+      stripe_customer_external_id: externalCustomer, billing_tenant: catalogTenant, email: `${tenant}@example.test` });
+    await f.customer.table('stripe_subscriptions').insert({ tenant, stripe_subscription_id: subscriptionId,
+      stripe_subscription_external_id: externalSubscription, stripe_customer_id: customerId, stripe_price_id: priceId,
+      stripe_subscription_item_id: itemId, quantity: 4, status: 'active', current_period_end: new Date(periodEnd * 1000), metadata: { tenant_id: tenant } });
+    const providerCustomer = { id: externalCustomer, object: 'customer', metadata: { tenant_id: tenant } };
+    const providerSubscription = { id: externalSubscription, customer: externalCustomer, status: 'active',
+      metadata: { tenant_id: tenant }, ended_at: null, cancel_at: null, current_period_end: periodEnd,
+      items: { data: [{ id: itemId, quantity: 4, current_period_end: periodEnd,
+        price: { id: externalPrice, currency: 'usd', recurring: { interval: 'month', interval_count: 1, usage_type: 'licensed' } } }] },
+      latest_invoice: { id: `in_${randomUUID()}`, object: 'invoice', customer: externalCustomer,
+        subscription: externalSubscription, status: 'paid', amount_remaining: 0, currency: 'usd' } };
+    const stripe = { customers: { retrieve: vi.fn(async () => structuredClone(providerCustomer)) },
+      subscriptions: { retrieve: vi.fn(async () => structuredClone(providerSubscription)) } };
+    const { upgradeCoManagedWorkspaceWithHostedSubscription: upgrade, paidPsaUpgradeFromStripe: paid } =
+      await import('../../../../ee/temporal-workflows/src/db/co-managed-hosted-upgrade');
+    const relationship = await f.customer.table('co_management_relationships').first();
+    const request = { operationId: randomUUID(), expectedRevision: relationship.revision };
+    const prices = { month: externalPrice };
+    await work({ ...f, relationship, request, stripe, prices, providerCustomer, providerSubscription, subscriptionId, paid,
+      upgrade: () => upgrade(db, f.customerPrincipal, f.target, request, log, { stripe: stripe as any, prices }) });
+  } finally {
+    await db('license_state').delete();
+    if (installation.length) await db('license_state').insert(installation);
+  }
+}
+
+it('hosted PSA upgrade verifies its own paid subscription outside locks and preserves MSP billing and another allocation', async () => {
+  await withHostedPsaUpgradeFixture(async f => {
+    const { getCoManagedIndependentUpgradeScreen: readScreen } = await import('@alga-psa/co-managed');
+    expect(await readScreen(db, f.customerPrincipal)).toMatchObject({ state: 'eligible', selfHosted: false, entitlementReady: false });
+    expect(await readScreen(db, f.customerPrincipal, Object.values(f.prices))).toMatchObject({ state: 'eligible', selfHosted: false, entitlementReady: true });
+    await f.sponsor.table('co_managed_entitlements').update({ capacity: 4 });
+    const clientId = randomUUID();
+    await f.sponsor.table('clients').insert({ tenant: f.principal.tenant, client_id: clientId, client_name: 'Another customer' });
+    const other = await prepareCoManagedProvisioning(db, { sponsorTenant: f.principal.tenant, clientId,
+      requestedBy: f.operation.requested_by, escalationBoardId: f.operation.escalation_board_id,
+      operationId: randomUUID(), seats: 2, visibilityMode: 'board_scope', workspaceName: 'Other customer',
+      administrator: { firstName: 'Another', lastName: 'Admin', email: `other-${randomUUID()}@example.test` } });
+    const otherAllocation = await f.sponsor.table('co_managed_allocations').where('customer_tenant', other.customer_tenant).first();
+    const ownSubscription = await f.customer.table('stripe_subscriptions').first();
+    await require('../../../migrations/20260908143941_retain_stripe_subscription_item_identity.cjs').up(db);
+    const sponsorSubscriptions = await f.sponsor.table('stripe_subscriptions');
+    const sponsorTenant = await f.sponsor.table('tenants').first(), entitlement = await f.sponsor.table('co_managed_entitlements').first();
+    const ticket = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+    f.stripe.customers.retrieve.mockImplementation(async () => {
+      // A different connection can acquire the owner lock while Stripe is pending.
+      await db.transaction(async trx => {
+        await trx.raw("SET LOCAL lock_timeout = '100ms'");
+        await tenantDb(trx, f.resource.tenant).table('tenants').forUpdate().first();
+      });
+      return structuredClone(f.providerCustomer);
+    });
+    const result = await f.upgrade();
+    expect(result).toMatchObject({ productCode: 'psa', seats: 4, operationId: f.request.operationId });
+    expect(await f.customer.table('tenants').first()).toMatchObject({ product_code: 'psa', plan: 'pro', billing_source: 'stripe', licensed_user_count: 4 });
+    expect(await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).toEqual(ticket);
+    expect(await f.customer.table('stripe_subscriptions').first()).toEqual(ownSubscription);
+    expect(await f.sponsor.table('stripe_subscriptions')).toEqual(sponsorSubscriptions);
+    expect(await f.sponsor.table('tenants').first()).toEqual(sponsorTenant);
+    expect(await f.sponsor.table('co_managed_entitlements').first()).toEqual(entitlement);
+    expect(await f.sponsor.table('co_managed_allocations').where('customer_tenant', other.customer_tenant).first()).toEqual(otherAllocation);
+    expect((await f.sponsor.table('co_managed_allocations').where('customer_tenant', f.resource.tenant).first()).state).toBe('released');
+    expect(await f.upgrade()).toEqual(result);
+    expect(f.stripe.customers.retrieve).toHaveBeenCalledTimes(1);
+    expect(f.stripe.subscriptions.retrieve).toHaveBeenCalledWith(ownSubscription.stripe_subscription_external_id, { expand: ['latest_invoice'] });
+    expect(f.stripe.subscriptions.retrieve).toHaveBeenCalledTimes(1);
+    expect(await f.sponsor.table('co_managed_relationship_closures').where('customer_tenant', f.resource.tenant)).toHaveLength(1);
+  });
+});
+
+it('hosted PSA upgrade rejects unpaid or foreign provider state and rechecks local billing and session after provider reads', async () => {
+  await withHostedPsaUpgradeFixture(async f => {
+    const { retainHostedPsaUpgradeCandidate } = await import('@alga-psa/licensing');
+    const candidate = await db.transaction(trx => retainHostedPsaUpgradeCandidate(trx, f.resource.tenant, Object.values(f.prices)));
+    const invalid: Array<(customer: any, subscription: any) => void> = [
+      c => { c.metadata.tenant_id = randomUUID(); },
+      c => { c.deleted = true; },
+      (_, s) => { s.status = 'trialing'; },
+      (_, s) => { s.customer = 'cus_foreign'; },
+      (_, s) => { s.metadata.tenant_id = randomUUID(); },
+      (_, s) => { s.metadata.subscription_kind = 'co_managed'; },
+      (_, s) => { s.latest_invoice.status = 'open'; },
+      (_, s) => { s.latest_invoice.subscription = 'sub_foreign'; },
+      (_, s) => { s.items.data[0].price.id = 'price_foreign'; },
+      (_, s) => { s.items.data[0].quantity = 99; },
+      (_, s) => { s.current_period_end = Math.floor(Date.now() / 1000) - 1; },
+    ];
+    for (const change of invalid) {
+      const customer = structuredClone(f.providerCustomer), subscription = structuredClone(f.providerSubscription);
+      change(customer, subscription);
+      expect(() => f.paid(candidate, customer, subscription, f.prices)).toThrow('PAID_ENTITLEMENT_REQUIRED');
+    }
+    const roles = await f.customer.table('roles');
+    const allocation = await f.sponsor.table('co_managed_allocations').where('customer_tenant', f.resource.tenant).first();
+    f.stripe.subscriptions.retrieve.mockImplementationOnce(async () => {
+      await f.customer.table('stripe_subscriptions').where('stripe_subscription_id', f.subscriptionId).update({ quantity: 5 });
+      return structuredClone(f.providerSubscription);
+    });
+    await expect(f.upgrade()).rejects.toMatchObject({ code: 'UPGRADE_CHANGED' });
+    await f.customer.table('stripe_subscriptions').where('stripe_subscription_id', f.subscriptionId).update({ quantity: 4 });
+    f.stripe.subscriptions.retrieve.mockImplementationOnce(async () => {
+      await f.customer.table('sessions').where('session_id', f.customerPrincipal.sessionId).update({ revoked_at: new Date() });
+      return structuredClone(f.providerSubscription);
+    });
+    await expect(f.upgrade()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    expect((await f.customer.table('tenants').first()).product_code).toBe('co_managed');
+    expect(await f.customer.table('roles')).toEqual(roles);
+    expect(await f.customer.table('co_management_relationships').first()).toEqual(f.relationship);
+    expect(await f.sponsor.table('co_managed_allocations').where('allocation_id', allocation.allocation_id).first()).toEqual(allocation);
+    expect(await f.customer.table('co_managed_independent_upgrades')).toHaveLength(0);
+    expect(await f.sponsor.table('co_managed_relationship_closures').where('customer_tenant', f.resource.tenant)).toHaveLength(0);
+    await f.customer.table('sessions').where('session_id', f.customerPrincipal.sessionId).update({ revoked_at: null });
+    expect((await f.upgrade()).productCode).toBe('psa');
+  });
+});
+
+it('public PSA upgrade binds the browser customer and worker to current authority and refreshes the completed state', async () => {
+  const f = await ticketHandoffFixture();
+  await withTenantLicenseFixture(async sign => {
+    await withTenantLicenseBrowser(f, async browser => {
+      const authContext = await import('@alga-psa/auth');
+      const user = await f.customer.table('users').where('user_id', f.customerPrincipal.userId).first();
+      await authContext.runWithApiKeyUser(user, async () => {
+      const actions = await import('../../../../ee/server/src/lib/actions/coManagedUpgradeActions');
+      const workflows = await import('../../../../ee/server/src/lib/tenant-management/workflowClient');
+      const licensing = await import('@alga-psa/licensing');
+      const temporal = await import('@temporalio/activity');
+      const worker = await import('../../../../ee/temporal-workflows/src/activities/product-upgrade-activities');
+      const schedule = vi.spyOn(workflows, 'startTenantProductUpgradeWorkflow').mockResolvedValue({ available: true,
+        workflowId: 'fixture-upgrade', alreadyRunning: false });
+      const status = vi.spyOn(workflows, 'getTenantProductUpgradeStatus').mockResolvedValue({ available: true, data: { state: 'idle' } });
+      const activityContext = vi.spyOn(temporal.Context, 'current').mockReturnValue({ log } as any);
+      try {
+        expect(await actions.getCoManagedUpgradeScreenAction()).toMatchObject({ state: 'eligible', selfHosted: true, entitlementReady: false });
+        await db.transaction(trx => licensing.activateTenantPsaLicense(trx, f.resource.tenant, sign({ aud: f.resource.tenant, seats: 10 })));
+        const screen = await actions.getCoManagedUpgradeScreenAction();
+        expect(screen).toMatchObject({ state: 'eligible', entitlementReady: true });
+        if (screen.state !== 'eligible') throw new Error('Expected eligible customer');
+        const input = { relationshipId: screen.relationshipId, expectedRevision: screen.revision, operationId: randomUUID() };
+        expect(await actions.startCoManagedUpgradeAction({ ...input, actor: f.principal, customerTenant: f.principal.tenant } as any))
+          .toEqual({ completed: false, enqueued: true });
+        const invocation = schedule.mock.calls[0][0];
+        expect(invocation).toMatchObject({ tenantId: f.resource.tenant, requestedByUserId: f.customerPrincipal.userId,
+          coManaged: { actor: f.customerPrincipal, target: f.target,
+            request: { operationId: input.operationId, expectedRevision: screen.revision } } });
+        await f.customer.table('sessions').where('session_id', f.customerPrincipal.sessionId).update({ revoked_at: new Date() });
+        await expect(worker.product_upgrade_co_managed(invocation.coManaged!)).rejects.toThrow('CO_MANAGED_SHARED_WORK_FORBIDDEN');
+        expect((await f.customer.table('tenants').first()).product_code).toBe('co_managed');
+        await f.customer.table('sessions').where('session_id', f.customerPrincipal.sessionId).update({ revoked_at: null });
+        expect(await worker.product_upgrade_co_managed(invocation.coManaged!)).toMatchObject({ productCode: 'psa', seats: 10 });
+        status.mockClear();
+        expect(await actions.getCoManagedUpgradeScreenAction()).toEqual({ state: 'completed', operationId: input.operationId, progress: 'completed' });
+        expect(status).not.toHaveBeenCalled();
+        expect(await actions.startCoManagedUpgradeAction(input)).toEqual({ completed: true, enqueued: false });
+        expect(schedule).toHaveBeenCalledTimes(1);
+        const auth = await import('@alga-psa/auth');
+        const override = vi.spyOn(auth, 'getApiKeyUserOverride').mockReturnValue({} as any);
+        try { await expect(actions.startCoManagedUpgradeAction(input)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' }); }
+        finally { override.mockRestore(); }
+      } finally { activityContext.mockRestore(); schedule.mockRestore(); status.mockRestore(); }
+      });
+    });
+  });
+});
+
+async function withIndependentCheckoutFixture(work: (f: any) => Promise<void>) {
+  await withHostedPsaUpgradeFixture(async f => {
+    const checkout = await import('../../../../ee/server/src/lib/stripe/coManagedUpgradeCheckout');
+    await f.customer.table('stripe_subscriptions').delete();
+    await f.customer.table('stripe_customers').delete();
+    const sessions = new Map<string, any>();
+    const request = { operationId: randomUUID(), quantity: 4, interval: 'month' as const };
+    const price = f.providerSubscription.items.data[0].price;
+    Object.assign(price, { active: true, type: 'recurring', unit_amount: 6500, metadata: {},
+      product: { id: `prod_${randomUUID()}`, name: 'AlgaPSA Pro', metadata: {} } });
+    const createSession = async (params: any) => {
+      Object.assign(f.providerSubscription.metadata, params.subscription_data.metadata);
+      const session = { id: `cs_${randomUUID()}`, status: 'open', payment_status: 'unpaid', customer: params.customer,
+        mode: 'subscription', metadata: params.metadata, client_reference_id: params.client_reference_id,
+        client_secret: 'fixture-checkout-secret', line_items: { data: [{ quantity: params.line_items[0].quantity, price }] } };
+      sessions.set(session.id, session); return structuredClone(session);
+    };
+    const stripe = { customers: {
+      search: vi.fn(async function* () {}),
+      create: vi.fn(async (params: any) => { Object.assign(f.providerCustomer, { metadata: params.metadata, name: params.name, email: params.email }); return structuredClone(f.providerCustomer); }),
+      retrieve: vi.fn(async () => structuredClone(f.providerCustomer)),
+    }, prices: { retrieve: vi.fn(async () => structuredClone(price)) }, subscriptions: f.stripe.subscriptions,
+    checkout: { sessions: {
+      list: vi.fn(async function* () { for (const session of sessions.values()) yield structuredClone(session); }),
+      create: vi.fn(createSession), retrieve: vi.fn(async (id: string) => structuredClone(sessions.get(id))),
+    } } };
+    await work({ ...f, checkout, sessions, createSession, purchaseRequest: request, paymentStripe: stripe,
+      purchase: (input = request) => checkout.purchaseCoManagedIndependentPsa(db, f.customerPrincipal, input,
+        { stripe: stripe as any, publishableKey: 'pk_fixture', priceId: price.id, returnBaseUrl: 'https://example.test' }) });
+  });
+}
+
+it('independent hosted checkout recovers a lost response and a paid webhook after the browser closes without changing MSP billing or converting early', async () => {
+  await withIndependentCheckoutFixture(async f => {
+    const owner = await f.customer.table('tenants').first(), sponsor = await f.sponsor.table('tenants').first();
+    const allocation = await f.sponsor.table('co_managed_allocations').where('customer_tenant', f.resource.tenant).first();
+    f.paymentStripe.checkout.sessions.create.mockImplementationOnce(async (params: any) => { await f.createSession(params); throw new Error('Lost checkout response'); });
+    await expect(f.purchase()).rejects.toThrow('Lost checkout response');
+    expect((await f.customer.table('co_managed_upgrade_purchases').first()).state).toBe('preparing');
+    expect(await f.purchase()).toMatchObject({ kind: 'checkout', publishableKey: 'pk_fixture', clientSecret: 'fixture-checkout-secret' });
+    expect(f.paymentStripe.customers.create).toHaveBeenCalledTimes(1);
+    expect(f.paymentStripe.checkout.sessions.create).toHaveBeenCalledTimes(1);
+    expect(f.paymentStripe.customers.search.mock.calls[0][0].query).toContain(f.resource.tenant);
+    const session = [...f.sessions.values()][0] as any;
+    const operation = await f.customer.table('co_managed_upgrade_purchases').first();
+    expect(operation).toMatchObject({ state: 'checkout', customer_id: f.providerCustomer.id, checkout_session_id: session.id });
+    expect(JSON.stringify(operation)).not.toContain('fixture-checkout-secret');
+    await expect(f.purchase({ ...f.purchaseRequest, quantity: 5 })).rejects.toThrow('Purchase terms have changed');
+    await expect(f.purchase({ ...f.purchaseRequest, operationId: randomUUID() })).rejects.toThrow('Resume the pending');
+    Object.assign(session, { status: 'complete', payment_status: 'paid', subscription: f.providerSubscription.id });
+    await f.customer.table('sessions').where('session_id', f.customerPrincipal.sessionId).update({ revoked_at: new Date() });
+    const event = { id: `evt_${randomUUID()}`, type: 'checkout.session.completed', data: { object: structuredClone(session) } } as any;
+    const { StripeService } = await import('../../../../ee/server/src/lib/stripe/StripeService');
+    const dbModule = await import('../../lib/db/db');
+    const connection = vi.spyOn(dbModule, 'getConnection').mockResolvedValue(db);
+    const service = new StripeService();
+    Object.assign(service, { stripe: f.paymentStripe, initPromise: Promise.resolve() });
+    try {
+      await service.handleWebhookEvent(event, f.resource.tenant); await service.handleWebhookEvent(event, f.resource.tenant);
+      // Canceling the separately purchased subscription must not deactivate the
+      // still-sponsored workspace or start ordinary PSA tenant deletion.
+      f.providerSubscription.status = 'canceled';
+      await service.handleWebhookEvent({ id: `evt_${randomUUID()}`, type: 'customer.subscription.deleted',
+        data: { object: structuredClone(f.providerSubscription) } } as any, f.resource.tenant);
+      expect((await f.customer.table('stripe_subscriptions').first()).status).toBe('canceled');
+      expect(await f.customer.table('tenants').first()).toEqual(owner);
+      expect((await f.customer.table('users').where('user_id', f.customerPrincipal.userId).first()).is_inactive).toBe(false);
+      f.providerSubscription.status = 'active';
+      await service.handleWebhookEvent({ id: `evt_${randomUUID()}`, type: 'customer.subscription.updated',
+        data: { object: structuredClone(f.providerSubscription) } } as any, f.resource.tenant);
+      expect((await f.customer.table('stripe_subscriptions').first()).status).toBe('active');
+    }
+    finally { connection.mockRestore(); }
+    expect((await f.customer.table('stripe_webhook_events').where('stripe_event_id', event.id).first()).processed).toBe(true);
+    expect((await f.customer.table('co_managed_upgrade_purchases').first()).state).toBe('paid');
+    expect(await f.customer.table('stripe_subscriptions')).toHaveLength(1);
+    expect(await f.customer.table('tenants').first()).toEqual(owner);
+    expect(await f.sponsor.table('tenants').first()).toEqual(sponsor);
+    expect(await f.sponsor.table('co_managed_allocations').where('allocation_id', allocation.allocation_id).first()).toEqual(allocation);
+    await expect(f.purchase()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    await f.customer.table('sessions').where('session_id', f.customerPrincipal.sessionId).update({ revoked_at: null });
+    expect(await f.purchase()).toEqual({ kind: 'paid' });
+    expect((await f.upgrade()).productCode).toBe('psa');
+    const migration = require('../../../migrations/20260908150135_create_co_managed_upgrade_purchases.cjs');
+    await migration.up(db); await expect(migration.down(db)).rejects.toThrow('purchase history');
+  });
+});
+
+it('independent hosted checkout refuses foreign payment ownership and rolls billing imports back when final reconciliation fails', async () => {
+  await withIndependentCheckoutFixture(async f => {
+    await f.purchase();
+    const session = [...f.sessions.values()][0] as any;
+    Object.assign(session, { status: 'complete', payment_status: 'paid', subscription: f.providerSubscription.id });
+    const reconcile = () => f.checkout.reconcileCoManagedUpgradeCheckout(db, f.paymentStripe, f.resource.tenant, f.purchaseRequest.operationId, session.id);
+    f.providerCustomer.metadata.tenant_id = f.principal.tenant;
+    await expect(reconcile()).rejects.toThrow('does not belong to this workspace');
+    f.providerCustomer.metadata.tenant_id = f.resource.tenant;
+    await db.raw("ALTER TABLE co_managed_upgrade_purchases ADD CONSTRAINT test_reject_paid_purchase CHECK (state <> 'paid') NOT VALID");
+    try { await expect(reconcile()).rejects.toThrow('test_reject_paid_purchase'); }
+    finally { await db.raw('ALTER TABLE co_managed_upgrade_purchases DROP CONSTRAINT test_reject_paid_purchase'); }
+    expect(await f.customer.table('stripe_subscriptions')).toHaveLength(0);
+    expect(await f.customer.table('stripe_products')).toHaveLength(0);
+    expect(await f.customer.table('stripe_prices')).toHaveLength(0);
+    expect((await f.customer.table('co_managed_upgrade_purchases').first()).state).toBe('checkout');
+    expect(await reconcile()).toEqual({ kind: 'paid' });
+    expect((await f.customer.table('tenants').first()).product_code).toBe('co_managed');
+  });
+});
+
+it('independent hosted checkout cancellation before payment reconciliation releases the pending purchase without ending sponsorship', async () => {
+  await withIndependentCheckoutFixture(async f => {
+    await f.purchase();
+    const session = [...f.sessions.values()][0] as any;
+    Object.assign(session, { status: 'complete', payment_status: 'paid', subscription: f.providerSubscription.id });
+    f.providerSubscription.status = 'canceled';
+    expect(await f.checkout.handleCoManagedUpgradePaymentEvent(db, f.paymentStripe, f.resource.tenant,
+      { type: 'customer.subscription.deleted', data: { object: structuredClone(f.providerSubscription) } } as any)).toBe(true);
+    expect((await f.customer.table('co_managed_upgrade_purchases').first()).state).toBe('expired');
+    expect((await f.customer.table('stripe_subscriptions').first()).status).toBe('canceled');
+    expect((await f.customer.table('co_management_relationships').first()).state).toBe('active');
+    expect((await f.customer.table('tenants').first()).product_code).toBe('co_managed');
+    expect(await f.purchase({ ...f.purchaseRequest, operationId: randomUUID() })).toMatchObject({ kind: 'checkout' });
+  });
+});
+
+it('independent payment recovery retains asynchronous failure and resumes safely after a lost cancellation response', async () => {
+  await withIndependentCheckoutFixture(async f => {
+    await f.purchase();
+    const session = [...f.sessions.values()][0] as any;
+    Object.assign(session, { status: 'complete', payment_status: 'unpaid', subscription: f.providerSubscription.id });
+    Object.assign(f.providerSubscription.latest_invoice, { status: 'void', amount_paid: 0 });
+    expect(f.providerSubscription.status).toBe('active'); // Stripe keeps async failures active.
+    const event = { type: 'checkout.session.async_payment_failed', data: { object: structuredClone(session) } } as any;
+    expect(await f.checkout.handleCoManagedUpgradePaymentEvent(db, f.paymentStripe, f.resource.tenant, event)).toBe(true);
+    const { getCoManagedIndependentUpgradeScreen: screen } = await import('@alga-psa/co-managed');
+    expect(await screen(db, f.customerPrincipal, Object.values(f.prices))).toMatchObject({ entitlementReady: false,
+      hasOwnBilling: true, pendingPurchase: { operationId: f.purchaseRequest.operationId, paymentFailed: true } });
+    expect(await f.purchase()).toEqual({ kind: 'payment_failed' });
+    await expect(f.purchase({ ...f.purchaseRequest, operationId: randomUUID() })).rejects.toThrow('Resume the pending');
+    f.paymentStripe.subscriptions.cancel = vi.fn(async () => { f.providerSubscription.status = 'canceled'; throw new Error('Lost cancellation response'); });
+    const retry = () => f.checkout.retryCoManagedIndependentPayment(db, f.customerPrincipal, f.purchaseRequest.operationId, f.paymentStripe);
+    await expect(retry()).rejects.toThrow('Lost cancellation response');
+    expect(await retry()).toEqual({ kind: 'expired' });
+    expect(f.paymentStripe.subscriptions.cancel).toHaveBeenCalledTimes(1);
+    expect(f.paymentStripe.subscriptions.cancel).toHaveBeenCalledWith(f.providerSubscription.id, { invoice_now: false, prorate: false });
+    expect((await f.customer.table('co_managed_upgrade_purchases').first()).state).toBe('expired');
+    expect((await f.customer.table('co_management_relationships').first()).state).toBe('active');
+    expect((await f.customer.table('tenants').first()).product_code).toBe('co_managed');
+    expect(await f.purchase({ ...f.purchaseRequest, operationId: randomUUID() })).toMatchObject({ kind: 'checkout' });
+  });
+});
+
+it('independent payment recovery refuses cancellation when the initial invoice has since been paid', async () => {
+  await withIndependentCheckoutFixture(async f => {
+    await f.purchase();
+    const session = [...f.sessions.values()][0] as any;
+    Object.assign(session, { status: 'complete', payment_status: 'unpaid', subscription: f.providerSubscription.id });
+    Object.assign(f.providerSubscription.latest_invoice, { status: 'void', amount_paid: 0 });
+    await f.checkout.reconcileCoManagedUpgradeCheckout(db, f.paymentStripe, f.resource.tenant, f.purchaseRequest.operationId, session.id);
+    const migration = require('../../../migrations/20260908152550_retain_co_managed_payment_failure.cjs');
+    await migration.up(db); await expect(migration.down(db)).rejects.toThrow('pending failed payment');
+    session.payment_status = 'paid'; Object.assign(f.providerSubscription.latest_invoice, { status: 'paid', amount_paid: 26000 });
+    f.paymentStripe.subscriptions.cancel = vi.fn();
+    await expect(f.checkout.retryCoManagedIndependentPayment(db, f.customerPrincipal, f.purchaseRequest.operationId, f.paymentStripe))
+      .rejects.toThrow('no longer a failed unpaid attempt');
+    expect(f.paymentStripe.subscriptions.cancel).not.toHaveBeenCalled();
+    expect(await f.checkout.reconcileCoManagedUpgradeCheckout(db, f.paymentStripe, f.resource.tenant, f.purchaseRequest.operationId, session.id)).toEqual({ kind: 'paid' });
+    expect((await f.customer.table('co_managed_upgrade_purchases').first()).state).toBe('paid');
+  });
+});
+
+it('independent billing portal binds paid seat confirmation to its own subscription and current customer authority', async () => {
+  await withHostedPsaUpgradeFixture(async f => {
+    const { openCoManagedIndependentBilling: open } = await import('../../../../ee/server/src/lib/stripe/coManagedUpgradeCheckout');
+    const portal = vi.fn(async () => ({ url: 'https://billing.stripe.com/p/fixture' }));
+    const stripe = { ...f.stripe, billingPortal: { sessions: { create: portal } } };
+    const dependencies = { stripe: stripe as any, prices: Object.values(f.prices) as string[], returnBaseUrl: 'https://app.example.test' };
+    const before = await f.customer.table('stripe_subscriptions').first(), owner = await f.customer.table('tenants').first();
+    const role = await f.customer.table('roles').where({ role_name: 'Technician', msp: true }).first();
+    await f.customer.table('user_invitations').insert({ tenant: f.resource.tenant, invitation_id: randomUUID(),
+      email: `portal-${randomUUID()}@example.test`, first_name: 'Pending', last_name: 'Technician', role_id: role.role_id,
+      token: randomUUID(), expires_at: new Date(Date.now() + 3600000) });
+    await expect(open(db, f.customerPrincipal, { kind: 'seats', quantity: 1 }, dependencies)).rejects.toThrow('enough paid seats');
+    expect(portal).not.toHaveBeenCalled();
+    expect(await open(db, f.customerPrincipal, { kind: 'seats', quantity: 6 }, dependencies)).toEqual({ url: 'https://billing.stripe.com/p/fixture' });
+    expect(portal).toHaveBeenCalledWith(expect.objectContaining({ customer: f.providerCustomer.id,
+      return_url: 'https://app.example.test/msp/co-management/upgrade', flow_data: expect.objectContaining({ type: 'subscription_update_confirm',
+        subscription_update_confirm: { subscription: f.providerSubscription.id,
+          items: [{ id: f.providerSubscription.items.data[0].id, price: f.prices.month, quantity: 6 }] } }) }));
+    expect(await f.customer.table('stripe_subscriptions').first()).toEqual(before);
+    expect(await f.customer.table('tenants').first()).toEqual(owner);
+    f.providerCustomer.metadata.tenant_id = f.principal.tenant;
+    await expect(open(db, f.customerPrincipal, { kind: 'payment_method' }, dependencies)).rejects.toThrow('does not belong');
+    f.providerCustomer.metadata.tenant_id = f.resource.tenant;
+    portal.mockImplementationOnce(async () => {
+      await f.customer.table('sessions').where('session_id', f.customerPrincipal.sessionId).update({ revoked_at: new Date() });
+      return { url: 'https://billing.stripe.com/p/never-return' };
+    });
+    await expect(open(db, f.customerPrincipal, { kind: 'payment_method' }, dependencies)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  });
+});
+
+async function withPortableVaultExportFixture(work: (fixture: any) => Promise<void>) {
+  const f = await ticketHandoffFixture();
+  const portable = await import('../../../../ee/server/src/lib/co-managed/portableVaultExport');
+  const encryption = await import('../../../../ee/server/src/lib/credentials/encryption');
+  const context = { packageId: randomUUID(), sourceTenant: f.actor.tenant };
+  const permission = await f.customer.table('permissions').where({ resource: 'co_management', action: 'manage' }).first();
+  let read = await f.customer.table('permissions').where({ resource: 'credential', action: 'read' }).first();
+  if (!read) {
+    read = { ...permission, permission_id: randomUUID(), resource: 'credential', action: 'read' };
+    await f.customer.table('permissions').insert(read);
+  }
+  const role = await f.customer.table('user_roles').where('user_id', f.actor.userId).first();
+  await f.customer.table('role_permissions').insert({ tenant: f.actor.tenant, role_id: role.role_id, permission_id: read.permission_id }).onConflict().ignore();
+  const ticket = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  const credentialId = randomUUID();
+  await f.customer.table('credentials').insert({ tenant: f.actor.tenant, credential_id: credentialId, client_id: ticket.client_id,
+    name: 'Customer-owned recovery secret', username: 'customer-admin', password_ciphertext: 'vault:v1:customer-password',
+    otp_secret_ciphertext: 'vault:v1:customer-otp', encryption_scheme: 'vault-transit:v1', is_restricted: true, created_by: f.actor.userId });
+  await f.customer.table('credential_associations').insert({ tenant: f.actor.tenant, credential_id: credentialId, entity_type: 'ticket', entity_id: f.resource.id });
+  const mspCredentialId = randomUUID();
+  await f.sponsor.table('credentials').insert({ tenant: f.principal.tenant, credential_id: mspCredentialId, client_id: f.operation.request.clientId,
+    name: 'MSP private integration secret', password_ciphertext: 'vault:v1:msp-private', encryption_scheme: 'vault-transit:v1', created_by: f.principal.userId });
+  const env = { ...process.env };
+  process.env.ALGA_VAULT_ADDR = 'https://portable-vault.example.test'; process.env.ALGA_VAULT_TOKEN = 'test-only-token';
+  const values = new Map([['vault:v1:customer-password', 'customer recovery password'], ['vault:v1:customer-otp', 'JBSWY3DPEHPK3PXP']]);
+  const provider = vi.spyOn(globalThis, 'fetch').mockImplementation(async (url, options) => {
+    const body = JSON.parse(String(options?.body));
+    if (String(url).includes('/decrypt/')) {
+      const value = values.get(body.ciphertext); if (!value) throw new Error('Unexpected foreign credential read');
+      return { ok: true, json: async () => ({ data: { plaintext: Buffer.from(value).toString('base64') } }) } as Response;
+    }
+    const ciphertext = `vault:v1:restored-${randomUUID()}`;
+    values.set(ciphertext, Buffer.from(body.plaintext, 'base64').toString('utf8'));
+    return { ok: true, json: async () => ({ data: { ciphertext } }) } as Response;
+  });
+  const exportVault = () => portable.exportCoManagedPortableVault(db, f.customerPrincipal, context.packageId, 'customer-held portable recovery phrase');
+  try { await work({ ...f, context, credentialId, mspCredentialId, provider, values, exportVault, encryption, readPermissionId: read.permission_id }); }
+  // Restore keys in place: assigning a fresh object to process.env swaps it out
+  // from under modules holding the original reference (`import { env } from
+  // 'node:process'`), so later files write to one object and read another.
+  finally {
+    provider.mockRestore();
+    for (const key of Object.keys(process.env)) if (!(key in env)) delete process.env[key];
+    for (const [key, value] of Object.entries(env)) if (process.env[key] !== value) process.env[key] = value;
+    encryption.resetCredentialAesKeyCache();
+  }
+}
+
+it('portable vault export retains customer metadata and audited usable secrets after departure without MSP private data', async () => withPortableVaultExportFixture(async f => {
+  await f.customer.table('co_management_relationships').update({ state: 'terminated', ended_at: new Date() });
+  const result = await f.exportVault();
+  expect(result.credentials).toHaveLength(1);
+  expect(result.credentials[0]).toMatchObject({ credential_id: f.credentialId, name: 'Customer-owned recovery secret', is_restricted: true, created_by: f.actor.userId });
+  expect(result.associations).toMatchObject([{ credential_id: f.credentialId, entity_type: 'ticket', entity_id: f.resource.id }]);
+  const serialized = JSON.stringify(result);
+  for (const excluded of ['password_ciphertext', 'otp_secret_ciphertext', 'encryption_scheme', 'customer recovery password', 'JBSWY3DPEHPK3PXP', f.mspCredentialId, 'MSP private integration secret']) expect(serialized).not.toContain(excluded);
+  const audit = await f.customer.table('audit_logs').where('record_id', f.credentialId).orderBy('operation');
+  expect(audit.map((row: any) => row.operation)).toEqual(['credential_otp_seed_reveal', 'credential_reveal']);
+  expect(audit.every((row: any) => row.details.export_package_id === f.context.packageId)).toBe(true);
+  expect(JSON.stringify(audit)).not.toContain('customer recovery password');
+  const { restorePortableCredentialVault } = await import('../../../../ee/server/src/lib/credentials/portable');
+  const restored = await restorePortableCredentialVault(result.vault, f.context, [f.credentialId], 'customer-held portable recovery phrase');
+  expect(await f.encryption.decryptCredentialValue(restored[0].passwordCiphertext, restored[0].scheme)).toBe('customer recovery password');
+  expect(await f.encryption.decryptCredentialValue(restored[0].otpSecretCiphertext, restored[0].scheme)).toBe('JBSWY3DPEHPK3PXP');
+}));
+
+it('portable vault export fails closed on restricted ACL, audit failure and authority changes during provider work', async () => withPortableVaultExportFixture(async f => {
+  const otherUser = await f.customer.table('users').whereNot('user_id', f.actor.userId).first();
+  // Create an unrelated local author if the fixture has only one customer technician.
+  const author = otherUser?.user_id ?? randomUUID();
+  if (!otherUser) {
+    const current = await f.customer.table('users').where('user_id', f.actor.userId).first();
+    await f.customer.table('users').insert({ ...current, user_id: author, email: `${author}@example.test`, username: `user-${author}` });
+  }
+  await f.customer.table('credentials').where('credential_id', f.credentialId).update({ created_by: author });
+  await expect(f.exportVault()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(f.provider).not.toHaveBeenCalled();
+  await f.customer.table('credential_access_grants').insert({ tenant: f.actor.tenant, credential_id: f.credentialId, subject_type: 'user', subject_id: f.actor.userId, created_by: author });
+  await db.raw("ALTER TABLE audit_logs ADD CONSTRAINT portable_vault_audit_failure CHECK (operation <> 'credential_reveal') NOT VALID");
+  try { await expect(f.exportVault()).rejects.toThrow('Failed to write audit log'); }
+  finally { await db.raw('ALTER TABLE audit_logs DROP CONSTRAINT portable_vault_audit_failure'); }
+  expect(f.provider).not.toHaveBeenCalled();
+  const realProvider = f.provider.getMockImplementation();
+  f.provider.mockImplementation(async (...args: any[]) => {
+    await f.customer.table('sessions').where('session_id', f.customerPrincipal.sessionId).update({ revoked_at: db.fn.now() });
+    return realProvider(...args);
+  });
+  await expect(f.exportVault()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await f.customer.table('sessions').where('session_id', f.customerPrincipal.sessionId).update({ revoked_at: null });
+  f.provider.mockImplementation(async (...args: any[]) => {
+    await f.customer.table('credentials').where('credential_id', f.credentialId).update({ name: 'Changed while encrypting' });
+    return realProvider(...args);
+  });
+  await expect(f.exportVault()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+}));
+
+it('portable workspace core preserves local identity relationships and saved authors while excluding authentication and live trust', async () => {
+  const f = await ticketHandoffFixture();
+  const { exportCoManagedPortableCore, validateCoManagedPortableCoreRecords } = await import('../../../../packages/co-managed/src/portableCoreExport');
+  await f.customer.table('users').where('user_id', f.actor.userId).update({ hashed_password: 'never-export-password-hash',
+    two_factor_secret: 'never-export-mfa-secret', client_portal_entra_metadata: { token: 'never-export-entra-login' } });
+  await f.customer.table('tenants').update({ payment_platform_id: 'never-export-billing-customer' });
+  const actorReferenceId = randomUUID();
+  await f.customer.table('collaboration_actor_references').insert({ tenant: f.actor.tenant, actor_reference_id: actorReferenceId,
+    actor_tenant: f.principal.tenant, actor_user_id: f.principal.userId, display_name: 'Retained collaborator', organization_name: 'Former service partner' });
+  const packageId = randomUUID();
+  const result = await exportCoManagedPortableCore(db, f.customerPrincipal, packageId);
+  expect(result).toMatchObject({ kind: 'alga-workspace-core', version: 1, packageId, sourceTenant: f.actor.tenant,
+    restorePolicy: { authentication: 'reauthorize', sponsorship: 'none' } });
+  expect(result.records.users.some((row: any) => row.user_id === f.actor.userId)).toBe(true);
+  expect(result.records.collaboration_actor_references).toMatchObject([{ actor_reference_id: actorReferenceId, display_name: 'Retained collaborator' }]);
+  expect(result.records.user_roles.length).toBeGreaterThan(0);
+  const serialized = JSON.stringify(result);
+  for (const secret of ['never-export-password-hash', 'never-export-mfa-secret', 'never-export-entra-login', 'never-export-billing-customer',
+    'hashed_password', 'two_factor_secret', 'client_portal_entra_metadata', 'co_management_relationships', 'sessions']) expect(serialized).not.toContain(secret);
+  expect(result.records.users.some((row: any) => row.user_id === f.principal.userId)).toBe(false);
+  const { sha256, ...payload } = result;
+  expect(sha256).toBe((await import('node:crypto')).createHash('sha256').update(JSON.stringify(payload)).digest('hex'));
+  expect(() => validateCoManagedPortableCoreRecords(result.records)).not.toThrow();
+  const forged = structuredClone(result.records);
+  forged.users[0].hashed_password = 'injected-authentication';
+  expect(() => validateCoManagedPortableCoreRecords(forged)).toThrow('record columns');
+  const missing = structuredClone(result.records); missing.roles = [];
+  expect(() => validateCoManagedPortableCoreRecords(missing)).toThrow('reference is missing');
+  const duplicate = structuredClone(result.records); duplicate.users.push({ ...duplicate.users[0] });
+  expect(() => validateCoManagedPortableCoreRecords(duplicate)).toThrow('Duplicate portable workspace record identity');
+});
+
+it('portable workspace core requires current customer directory permissions and rejects revoked or MSP sessions', async () => {
+  const f = await ticketHandoffFixture();
+  const { exportCoManagedPortableCore } = await import('../../../../packages/co-managed/src/portableCoreExport');
+  const packageId = randomUUID();
+  await expect(exportCoManagedPortableCore(db, f.principal, packageId)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await f.customer.table('sessions').where('session_id', f.customerPrincipal.sessionId).update({ revoked_at: db.fn.now() });
+  await expect(exportCoManagedPortableCore(db, f.customerPrincipal, packageId)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await f.customer.table('sessions').where('session_id', f.customerPrincipal.sessionId).update({ revoked_at: null });
+  const permission = await f.customer.table('permissions').where({ resource: 'user', action: 'read', msp: true }).first();
+  await f.customer.table('role_permissions').where('permission_id', permission.permission_id).delete();
+  await expect(exportCoManagedPortableCore(db, f.customerPrincipal, packageId)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+});
+
+it('portable work export preserves customer and shared ticket history while excluding MSP private notes and transport metadata', async () => withConversationFixture(async f => {
+  const { exportCoManagedPortableWork, validateCoManagedPortableWorkRecords } = await import('../../../../packages/co-managed/src/portableWorkExport');
+  await f.addCustomer({ note: 'Customer private portable history', internal: true, audience: 'organization_private' });
+  const shared = await f.addCustomer({ note: 'Shared portable history', internal: true, audience: 'shared_it', foreign: true });
+  await f.addPrivate({ note: 'MSP-private never portable' });
+  await f.customer.table('tickets').where('ticket_id', f.resource.id).update({ email_metadata: { authorization: 'never-portable-provider-token' } });
+  const auditId = randomUUID();
+  await f.customer.table('ticket_audit_logs').insert({ tenant: f.actor.tenant, audit_id: auditId, ticket_id: f.resource.id,
+    event_type: 'TICKET_UPDATED', entity_type: 'ticket', entity_id: f.resource.id, actor_type: 'user', actor_user_id: f.actor.userId,
+    actor_display_name: 'Customer administrator', source: 'ui', occurred_at: db.fn.now(), changes: {
+      title: { old: 'Previous title', new: 'Current title', credential: 'never-portable-audit-secret' },
+      email_metadata: { old: null, new: 'never-portable-audit-token' },
+    }, details: { thread_id: shared.threadId, authorization: 'never-portable-detail-token' } });
+  const result = await exportCoManagedPortableWork(db, f.customerPrincipal, randomUUID());
+  expect(result.records.comments.map((row: any) => row.note)).toEqual(expect.arrayContaining(['Customer private portable history', 'Shared portable history']));
+  expect(result.records.comments.find((row: any) => row.comment_id === shared.id)).toMatchObject({ user_id: null, actor_reference_id: expect.any(String), actor_display_name: expect.any(String) });
+  expect(result.records.handoff_history.length).toBeGreaterThan(0);
+  expect(result.records.ticket_audit_logs.find((row: any) => row.audit_id === auditId)).toMatchObject({ changes: { title: { old: 'Previous title', new: 'Current title' } }, details: { thread_id: shared.threadId } });
+  const serialized = JSON.stringify(result);
+  for (const excluded of ['MSP-private never portable', 'never-portable-provider-token', 'never-portable-audit-secret', 'never-portable-audit-token',
+    'never-portable-detail-token', 'never return metadata', 'request_fingerprint', 'relationship_id', 'co_management_private_threads']) expect(serialized).not.toContain(excluded);
+  expect(result.restorePolicy).toMatchObject({ sponsorship: 'none', scheduledPublication: 'paused', handoffHistory: 'historical_activity' });
+  const broken = structuredClone(result.records); broken.tickets = [];
+  expect(() => validateCoManagedPortableWorkRecords(broken)).toThrow('reference is missing');
+}));
+
+it('portable work export preserves project structure and task audiences and rejects missing current work permission', async () => withTaskConversationFixture(async f => {
+  const { exportCoManagedPortableWork } = await import('../../../../packages/co-managed/src/portableWorkExport');
+  await f.add(f.customerPrincipal, 'organization_private', 'Customer private task history');
+  const shared = await f.add(f.principal, 'shared_it', 'Shared task history');
+  await f.add(f.principal, 'organization_private', 'MSP private task history');
+  const result = await exportCoManagedPortableWork(db, f.customerPrincipal, randomUUID());
+  expect(result.records.projects.length).toBeGreaterThan(0);
+  expect(result.records.project_tasks.find((row: any) => row.task_id === f.resource.id)).toBeTruthy();
+  expect(result.records.project_task_comments.map((row: any) => row.markdown_content)).toEqual(expect.arrayContaining(['Customer private task history', 'Shared task history']));
+  expect(result.records.project_task_comments.find((row: any) => row.task_comment_id === shared.commentId)?.note).toBe(
+    (await f.customer.table('project_task_comments').where('task_comment_id', shared.commentId).first()).note);
+  expect(result.records.project_task_comments.find((row: any) => row.task_comment_id === shared.commentId)).toMatchObject({ actor_reference_id: expect.any(String), actor_display_name: expect.any(String) });
+  expect(JSON.stringify(result)).not.toContain('MSP private task history');
+  const permission = await f.customer.table('permissions').where({ resource: 'project', action: 'read', msp: true }).first();
+  await f.customer.table('role_permissions').where('permission_id', permission.permission_id).delete();
+  await expect(exportCoManagedPortableWork(db, f.customerPrincipal, randomUUID())).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+}));
+
+async function withPortableDocumentFixture(work: (fixture: any) => Promise<void>) {
+  const f = await ticketHandoffFixture();
+  const fs = await import('node:fs/promises'), os = await import('node:os'), path = await import('node:path');
+  const { Readable } = await import('node:stream');
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'co-managed-document-test-'));
+  const previousTmp = process.env.TMPDIR; process.env.TMPDIR = root;
+  const { exportCoManagedPortableDocuments } = await import('../../../../packages/co-managed/src/portableDocumentExport');
+  const documentId = randomUUID(), legacyId = randomUUID(), fileId = randomUUID(), versionId = randomUUID();
+  const bytes = Buffer.from('Customer file bytes\u0000with binary data'), legacyBytes = Buffer.from('Legacy customer document');
+  const storagePath = `/${f.actor.tenant}/portable-file.bin`, legacyPath = `/${f.actor.tenant}/portable-legacy.bin`;
+  await f.customer.table('external_files').insert({ tenant: f.actor.tenant, file_id: fileId, file_name: 'instructions.bin', original_name: 'instructions.bin',
+    mime_type: 'application/octet-stream', file_size: bytes.length, storage_path: storagePath, uploaded_by_id: f.actor.userId });
+  await f.customer.table('documents').insert([{ tenant: f.actor.tenant, document_id: documentId, document_name: 'Customer portable instructions',
+    created_by: f.actor.userId, user_id: f.actor.userId, file_id: fileId, file_size: bytes.length, mime_type: 'application/octet-stream' },
+  { tenant: f.actor.tenant, document_id: legacyId, document_name: 'Legacy portable instructions', created_by: f.actor.userId, user_id: f.actor.userId,
+    storage_path: legacyPath, file_size: legacyBytes.length, mime_type: 'application/octet-stream' }]);
+  await f.customer.table('document_associations').insert({ tenant: f.actor.tenant, association_id: randomUUID(), document_id: documentId, entity_id: f.resource.id, entity_type: 'ticket' });
+  await f.customer.table('document_versions').insert({ tenant: f.actor.tenant, document_id: documentId, version_id: versionId, version_number: 1, is_active: true, created_by: f.actor.userId });
+  await f.customer.table('document_block_content').insert({ tenant: f.actor.tenant, document_id: documentId, version_id: versionId, content_id: randomUUID(),
+    block_data: JSON.stringify([{ type: 'paragraph', content: [{ type: 'text', text: 'Customer article rich text', styles: {} }] }]) });
+  await f.customer.table('kb_articles').insert({ tenant: f.actor.tenant, article_id: randomUUID(), document_id: documentId, slug: `portable-${documentId}`,
+    article_type: 'how_to', audience: 'internal', status: 'draft', created_by: f.actor.userId, updated_by: f.actor.userId });
+  await f.sponsor.table('documents').insert({ tenant: f.principal.tenant, document_id: randomUUID(), document_name: 'MSP-private document never export', created_by: f.principal.userId, user_id: f.principal.userId });
+  const objects = new Map([[storagePath, bytes], [legacyPath, legacyBytes]]);
+  const stream = async (source: string) => { const value = objects.get(source); if (!value) throw new Error('Unexpected source object'); return Readable.from([value]); };
+  artifactStorage.getReadStream.mockReset().mockImplementation(stream);
+  const exportDocuments = () => exportCoManagedPortableDocuments(db, f.customerPrincipal, randomUUID());
+  try { await work({ ...f, fs, root, documentId, legacyId, fileId, versionId, bytes, legacyBytes, storagePath, legacyPath, objects, stream, exportDocuments }); }
+  finally { artifactStorage.getReadStream.mockReset(); if (previousTmp === undefined) delete process.env.TMPDIR; else process.env.TMPDIR = previousTmp; await fs.rm(root, { recursive: true, force: true }); }
+}
+
+it('portable document export stages real native and legacy bytes with document versions and KB content under a private lease', async () => withPortableDocumentFixture(async f => {
+  const lease = await f.exportDocuments();
+  try {
+    expect(lease.component.records.documents).toHaveLength(2);
+    expect(lease.component.records.document_versions[0]).toMatchObject({ version_id: f.versionId, document_id: f.documentId });
+    expect(JSON.stringify(lease.component.records.document_block_content)).toContain('Customer article rich text');
+    expect(lease.component.records.kb_articles[0]).toMatchObject({ document_id: f.documentId, audience: 'internal' });
+    expect(lease.component.fileBindings).toEqual(expect.arrayContaining([{ documentId: f.documentId, field: 'file_id', blobId: `file:${f.fileId}` },
+      { documentId: f.legacyId, field: 'file_id', blobId: `document:${f.legacyId}` }]));
+    for (const [id, expected] of [[`file:${f.fileId}`, f.bytes], [`document:${f.legacyId}`, f.legacyBytes]]) {
+      const file = lease.files.find((row: any) => row.id === id);
+      expect(await f.fs.readFile(file.path)).toEqual(expected);
+      expect((await f.fs.stat(file.path)).mode & 0o777).toBe(0o600);
+      expect(file.sha256).toBe((await import('node:crypto')).createHash('sha256').update(expected).digest('hex'));
+    }
+    const component = JSON.stringify(lease.component);
+    for (const excluded of [f.root, f.storagePath, f.legacyPath, 'MSP-private document never export', 'storage_path', 'storage_bucket_id']) expect(component).not.toContain(excluded);
+  } finally { await lease.dispose(); }
+  expect(await f.fs.readdir(f.root)).toEqual([]);
+}));
+
+it('portable document export removes staged bytes on short streams, final session revocation and foreign storage paths', async () => withPortableDocumentFixture(async f => {
+  const { Readable } = await import('node:stream');
+  artifactStorage.getReadStream.mockImplementation(async () => Readable.from([Buffer.from('short')]));
+  await expect(f.exportDocuments()).rejects.toThrow('could not be staged');
+  expect(await f.fs.readdir(f.root)).toEqual([]);
+  artifactStorage.getReadStream.mockImplementation(async (source: string) => {
+    await f.customer.table('sessions').where('session_id', f.customerPrincipal.sessionId).update({ revoked_at: db.fn.now() });
+    return f.stream(source);
+  });
+  await expect(f.exportDocuments()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(await f.fs.readdir(f.root)).toEqual([]);
+  await f.customer.table('sessions').where('session_id', f.customerPrincipal.sessionId).update({ revoked_at: null });
+  artifactStorage.getReadStream.mockClear().mockImplementation(f.stream);
+  await f.customer.table('external_files').where('file_id', f.fileId).update({ storage_path: `/${f.principal.tenant}/private.bin` });
+  await expect(f.exportDocuments()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(artifactStorage.getReadStream).not.toHaveBeenCalled();
+  expect(await f.fs.readdir(f.root)).toEqual([]);
+}));
+
+async function withPortableConversationFileFixture(work: (fixture: any) => Promise<void>) {
+  await withAttachmentFixture(async f => {
+    const fs = await import('node:fs/promises'), os = await import('node:os'), path = await import('node:path');
+    const { Readable } = await import('node:stream');
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'co-managed-conversation-export-test-'));
+    const previousTmp = process.env.TMPDIR; process.env.TMPDIR = root;
+    const { exportCoManagedPortableConversationFiles } = await import('../../../../packages/co-managed/src/portableConversationExport');
+    const sharedRoot = await f.create(f.principal, { operationId: randomUUID(), audience: 'shared_it', text: 'Shared root' });
+    const shared = await f.create(f.principal, { operationId: randomUUID(), parent: attachmentComment(sharedRoot), text: 'Surviving shared reply' });
+    const customerPrivate = await f.create(f.customerPrincipal, { operationId: randomUUID(), audience: 'organization_private', text: 'Customer private message' });
+    const { mutateCoManagedPrivateTicketComment } = await import('../../../../packages/co-managed/src/privateTicketConversation');
+    const mspPrivate = await mutateCoManagedPrivateTicketComment(db, f.principal, f.resource, { operationId: randomUUID(), kind: 'create', text: 'MSP private file message' });
+    const uploaded = [];
+    for (const [comment, actor, name] of [[shared, f.principal, 'shared.txt'], [customerPrivate, f.customerPrincipal, 'customer-private.txt'], [mspPrivate, f.principal, 'msp-private.txt']] as const) {
+      uploaded.push(await f.attachments.uploadCoManagedConversationAttachment(db, actor, f.resource, {
+        attachmentId: randomUUID(), comment: attachmentComment(comment), fileName: name, mimeType: 'text/plain', content: Buffer.from(`Bytes for ${name}`),
+      }, f.upload));
+    }
+    await f.customer.table('comments').where('comment_id', sharedRoot.commentId).update({ deleted_at: new Date() });
+    const pendingId = randomUUID();
+    await expect(f.attachments.uploadCoManagedConversationAttachment(db, f.principal, f.resource, {
+      attachmentId: pendingId, comment: attachmentComment(shared), fileName: 'pending-never-export.txt', mimeType: 'text/plain', content: Buffer.from('Pending bytes'),
+    }, async () => { throw new Error('Interrupted upload'); })).rejects.toThrow('Interrupted upload');
+    const stream = async (source: string) => { const value = f.objects.get(source); if (!value) throw new Error('Unexpected object'); return Readable.from([Buffer.from(value)]); };
+    artifactStorage.getReadStream.mockReset().mockImplementation(stream);
+    const exportFiles = () => exportCoManagedPortableConversationFiles(db, f.customerPrincipal, randomUUID());
+    try { await work({ ...f, fs, root, sharedRoot, shared, customerPrivate, uploaded, stream, exportFiles }); }
+    finally { artifactStorage.getReadStream.mockReset(); if (previousTmp === undefined) delete process.env.TMPDIR; else process.env.TMPDIR = previousTmp; await fs.rm(root, { recursive: true, force: true }); }
+  });
+}
+
+it('portable conversation export preserves published customer/shared files after departure without MSP private or pending uploads', async () => withPortableConversationFileFixture(async f => {
+  await f.customer.table('co_management_relationships').update({ state: 'terminated', ended_at: new Date() });
+  const lease = await f.exportFiles();
+  try {
+    expect(lease.component.attachments.map((row: any) => row.fileName).sort()).toEqual(['customer-private.txt', 'shared.txt']);
+    expect(lease.component.attachments.find((row: any) => row.fileName === 'shared.txt')).toMatchObject({ commentId: f.shared.commentId, threadId: f.shared.threadId,
+      audience: 'shared_it', actorTenant: f.principal.tenant, actorReferenceId: expect.any(String), actorDisplayName: expect.any(String) });
+    expect(lease.component.attachments.find((row: any) => row.fileName === 'customer-private.txt').audience).toBe('organization_private');
+    expect(lease.component.restorePolicy).toEqual({ attachmentStore: 'native_work_documents', sponsorship: 'none' });
+    for (const entry of lease.component.attachments) {
+      const file = lease.files.find((row: any) => row.id === entry.blobId);
+      expect(await f.fs.readFile(file.path)).toEqual(Buffer.from(`Bytes for ${entry.fileName}`));
+      expect(file.sha256).toBe(entry.sha256);
+    }
+    const serialized = JSON.stringify(lease.component);
+    for (const excluded of [f.root, 'storage_path', 'co-management/', 'msp-private.txt', 'pending-never-export.txt', 'relationship_id', 'disclosure_operation_id']) expect(serialized).not.toContain(excluded);
+  } finally { await lease.dispose(); }
+  expect(await f.fs.readdir(f.root)).toEqual([]);
+}));
+
+it('portable workspace coordinator binds actual private and shared conversation files to authenticated package records', async () => withPortableConversationFileFixture(async f => {
+  const { prepareCoManagedPortableWorkspaceExport } = await import('../../../../ee/server/src/lib/co-managed/portableWorkspaceExport');
+  const { openPortableArchive } = await import('../../../../packages/co-managed/src/portableArchive');
+  const { validateCoManagedPortableWorkspaceManifest } = await import('../../../../packages/co-managed/src/portableWorkspaceManifest');
+  let read = await f.customer.table('permissions').where({ resource: 'credential', action: 'read' }).first();
+  if (!read) {
+    const existing = await f.customer.table('permissions').where({ resource: 'co_management', action: 'manage' }).first();
+    read = { ...existing, permission_id: randomUUID(), resource: 'credential', action: 'read' };
+    await f.customer.table('permissions').insert(read);
+  }
+  const role = await f.customer.table('user_roles').where('user_id', f.actor.userId).first();
+  await f.customer.table('role_permissions').insert({ tenant: f.actor.tenant, role_id: role.role_id, permission_id: read.permission_id }).onConflict().ignore();
+  const passphrase = 'Customer-owned complete conversation recovery';
+  const prepared = await prepareCoManagedPortableWorkspaceExport(db, f.customerPrincipal, passphrase);
+  try {
+    await prepared.consume(async artifact => {
+      const opened = await openPortableArchive(artifact.path, passphrase, { packageId: artifact.packageId, sourceTenant: artifact.sourceTenant });
+      try {
+        const manifest = validateCoManagedPortableWorkspaceManifest(opened.manifest, opened.context, opened.files);
+        expect(manifest.conversationFiles.attachments.map((row: any) => row.fileName).sort()).toEqual(['customer-private.txt', 'shared.txt']);
+        for (const attachment of manifest.conversationFiles.attachments) {
+          const file = opened.files.find(row => row.id === attachment.blobId)!;
+          expect((await f.fs.readFile(file.path)).equals(Buffer.from(`Bytes for ${attachment.fileName}`))).toBe(true);
+        }
+      } finally { await opened.dispose(); }
+    });
+  } finally { await prepared.dispose(); }
+  expect(await f.fs.readdir(f.root)).toEqual([]);
+}));
+
+it('portable conversation export verifies stored checksums and removes staged files after parent access or path changes', async () => withPortableConversationFileFixture(async f => {
+  const first = await f.customer.table('co_management_conversation_attachments').where('attachment_id', f.uploaded[0].attachmentId).first();
+  const original = f.objects.get(first.storage_path), changed = Uint8Array.from(original); changed[0] ^= 1;
+  f.objects.set(first.storage_path, changed);
+  await expect(f.exportFiles()).rejects.toThrow('could not be staged');
+  expect(await f.fs.readdir(f.root)).toEqual([]);
+  f.objects.set(first.storage_path, original);
+  artifactStorage.getReadStream.mockImplementation(async (source: string) => {
+    await f.customer.table('comments').where('comment_id', f.shared.commentId).update({ deleted_at: new Date() });
+    return f.stream(source);
+  });
+  await expect(f.exportFiles()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(await f.fs.readdir(f.root)).toEqual([]);
+  await f.customer.table('comments').where('comment_id', f.shared.commentId).update({ deleted_at: null });
+  artifactStorage.getReadStream.mockClear().mockImplementation(f.stream);
+  await f.customer.table('co_management_conversation_attachments').where('attachment_id', first.attachment_id).update({ storage_path: `co-management/${f.principal.tenant}/${first.attachment_id}` });
+  await expect(f.exportFiles()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(artifactStorage.getReadStream).not.toHaveBeenCalled();
+}));
+
+registerCoManagedPortableOperationalCases(() => db, ticketHandoffFixture);
+
+registerCoManagedPortableAssetTests(() => db, ticketHandoffFixture);
+
+it.each(['customer', 'sponsor'])('public departure by %s retains an archive and releases seats once using the reviewed relationship', async side => {
+  const f = await ticketHandoffFixture();
+  const { getCoManagedDepartureScreen: review, departCoManagedRelationship: depart } = await import('../../../../packages/co-managed/src/departure');
+  const actor = side === 'customer' ? f.customerPrincipal : f.principal;
+  const provisioning = side === 'sponsor' ? f.operation.operation_id : undefined;
+  const screen = await review(db, actor, provisioning);
+  expect(screen).toMatchObject({ side, departed: false, relationshipId: f.resource.relationshipId });
+  expect(screen.counterpartName).toBeTruthy();
+  const request = { provisioningOperationId: provisioning, operationId: randomUUID(), relationshipId: screen.relationshipId, expectedRevision: screen.revision };
+  await expect(depart(db, actor, { ...request, relationshipId: randomUUID() })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await expect(depart(db, actor, { ...request, expectedRevision: screen.revision + 1 })).rejects.toMatchObject({ code: 'CLOSURE_CHANGED' });
+  const receipt = await depart(db, actor, request);
+  expect(await depart(db, actor, request)).toEqual(receipt);
+  // Separation runs both ways: after closure neither party keeps reading the other's
+  // current identity, so a rename on the far side can never reach this screen.
+  await (side === 'customer' ? f.sponsor : f.customer).table('tenants').update({ client_name: 'Renamed after closure' });
+  const closed = await review(db, actor, provisioning);
+  expect(closed).toMatchObject({ departed: true, closedAt: receipt.closedAt, counterpartName: null });
+  expect(JSON.stringify(closed)).not.toContain('Renamed after closure');
+  expect(await f.sponsor.table('co_managed_allocations').where('customer_tenant', f.actor.tenant).first()).toMatchObject({ state: 'released' });
+  expect(await f.sponsor.table('co_managed_archive_manifests').where('relationship_id', screen.relationshipId)).toHaveLength(1);
+  expect(await f.customer.table('tenants').first()).toMatchObject({ product_code: 'co_managed' });
+  await tenantDb(db, actor.tenant).table('sessions').where('session_id', actor.sessionId).update({ revoked_at: db.fn.now() });
+  await expect(depart(db, actor, request)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await expect(review(db, actor, provisioning)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+});
+
+it('public departure rejects foreign provisioning selectors and rolls back closure if archive sealing fails', async () => {
+  const f = await ticketHandoffFixture();
+  const { getCoManagedDepartureScreen: review, departCoManagedRelationship: depart } = await import('../../../../packages/co-managed/src/departure');
+  await expect(review(db, f.principal, randomUUID())).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await expect(review(db, f.customerPrincipal, f.operation.operation_id)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  const screen = await review(db, f.customerPrincipal);
+  const constraint = `test_departure_${randomUUID().replaceAll('-', '')}`;
+  await db.raw(db.raw('ALTER TABLE co_managed_archive_manifests ADD CONSTRAINT ?? CHECK (tenant <> ?::uuid) NOT VALID', [constraint, f.principal.tenant]).toQuery());
+  try {
+    await expect(depart(db, f.customerPrincipal, { operationId: randomUUID(), relationshipId: screen.relationshipId, expectedRevision: screen.revision })).rejects.toThrow();
+    expect(await f.customer.table('co_management_relationships').first()).toMatchObject({ state: 'active', revision: screen.revision });
+    expect(await f.sponsor.table('co_managed_allocations').where('customer_tenant', f.actor.tenant).first()).not.toMatchObject({ state: 'released' });
+    expect(await f.sponsor.table('co_managed_relationship_closures')).toHaveLength(0);
+  } finally { await db.raw('ALTER TABLE co_managed_archive_manifests DROP CONSTRAINT ??', [constraint]); }
+});
+
+it('public departure browser actions derive customer authority and reject API override or mismatched tracked identity', async () => {
+  const f = await ticketHandoffFixture();
+  await withTenantLicenseBrowser(f, async browser => {
+    const auth = await import('@alga-psa/auth');
+    const user = await f.customer.table('users').where('user_id', f.customerPrincipal.userId).first();
+    await auth.runWithApiKeyUser(user, async () => {
+      const actions = await import('../../lib/actions/coManagedDepartureActions');
+      const screen = await actions.getCoManagedDepartureScreenAction();
+      const request = { operationId: randomUUID(), relationshipId: screen.relationshipId, expectedRevision: screen.revision };
+      browser.override.mockReturnValue({ tenant: f.actor.tenant, user_id: f.customerPrincipal.userId });
+      await expect(actions.departCoManagedRelationshipAction(request)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+      browser.override.mockReturnValue(undefined);
+      browser.session.mockResolvedValue({ session_id: f.principal.sessionId, user: { id: f.principal.userId, tenant: f.principal.tenant, user_type: 'internal' } });
+      await expect(actions.getCoManagedDepartureScreenAction()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+      browser.session.mockResolvedValue({ session_id: f.customerPrincipal.sessionId, user: { id: f.customerPrincipal.userId, tenant: f.customerPrincipal.tenant, user_type: 'internal' } });
+      const receipt = await actions.departCoManagedRelationshipAction({ ...request, actor: f.principal, customerTenant: f.principal.tenant } as any);
+      expect(receipt.customerTenant).toBe(f.actor.tenant);
+      expect(await actions.getCoManagedDepartureScreenAction()).toMatchObject({ departed: true });
+    });
+  });
+});
+
+it('portable coordinated snapshot gives independently authorized record collectors one cutoff and rejects expired or forged capabilities', async () => {
+  const f = await ticketHandoffFixture();
+  const { withCoManagedPortableSnapshot: capture, portableSnapshotTransaction: read } = await import('../../../../packages/co-managed/src/portableSnapshot');
+  const { exportCoManagedPortableCore: core } = await import('../../../../packages/co-managed/src/portableCoreExport');
+  const { exportCoManagedPortableWork: work } = await import('../../../../packages/co-managed/src/portableWorkExport');
+  const packageId = randomUUID(), laterTicketId = randomUUID();
+  let expired: any;
+  await capture(db, async snapshot => {
+    expired = snapshot;
+    const first = await core(db, f.customerPrincipal, packageId, snapshot);
+    const ticket = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+    delete ticket.title_index;
+    await f.customer.table('tickets').insert({ ...ticket, ticket_id: laterTicketId, ticket_number: `later-${randomUUID()}` });
+    const second = await work(db, f.customerPrincipal, packageId, snapshot);
+    expect(first.capturedAt).toBe(snapshot.capturedAt);
+    expect(second.capturedAt).toBe(snapshot.capturedAt);
+    expect(second.records.tickets.some((row: any) => row.ticket_id === laterTicketId)).toBe(false);
+    expect((await work(db, f.customerPrincipal, packageId)).records.tickets.some((row: any) => row.ticket_id === laterTicketId)).toBe(true);
+    await expect(core(db, f.principal, packageId, snapshot)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    expect(() => read(db, { ...snapshot }, async () => null)).toThrow('unavailable');
+    await f.customer.table('sessions').where('session_id', f.customerPrincipal.sessionId).update({ revoked_at: db.fn.now() });
+    // A snapshot is data consistency, not permission to use a revoked actor.
+    await expect(work(db, f.customerPrincipal, packageId, snapshot)).rejects.toMatchObject({ code: '40001' });
+  });
+  expect(() => read(db, expired, async () => null)).toThrow('unavailable');
+});
+
+it('portable coordinated snapshot still performs document delivery checks against current source and current authority', async () => withPortableDocumentFixture(async f => {
+  const { withCoManagedPortableSnapshot: capture } = await import('../../../../packages/co-managed/src/portableSnapshot');
+  const { exportCoManagedPortableDocuments: documents } = await import('../../../../packages/co-managed/src/portableDocumentExport');
+  await capture(db, async snapshot => {
+    const result = await documents(db, f.customerPrincipal, randomUUID(), snapshot);
+    try { expect(result.component.records.documents.length).toBeGreaterThan(0); }
+    finally { await result.dispose(); }
+    const stream = artifactStorage.getReadStream.getMockImplementation()!;
+    artifactStorage.getReadStream.mockImplementationOnce(async (...args: any[]) => {
+      await f.customer.table('sessions').where('session_id', f.customerPrincipal.sessionId).update({ revoked_at: db.fn.now() });
+      return stream(...args);
+    });
+    await expect(documents(db, f.customerPrincipal, randomUUID(), snapshot)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  });
+}));
+
+it('self-host AI gateway ownership never lends appliance credits to active departed or independently upgraded customers', async () => {
+  const f = await ticketHandoffFixture();
+  await withTenantLicenseFixture(async sign => {
+    const { getSelfHostAiGatewayCredential: credential } = await import('../../../../packages/licensing/src/lib/ai-gateway-auth');
+    const licensing = await import('@alga-psa/licensing');
+    const { upgradeCoManagedWorkspaceWithTenantLicense: upgrade } = await import('../../../../ee/temporal-workflows/src/db/co-managed-upgrade-operations');
+    const { departCoManagedRelationship: depart } = await import('../../../../packages/co-managed/src/departure');
+    await db('license_state').update({ appliance_credential: 'owned-only-by-appliance-msp' });
+    expect(await credential(f.principal.tenant, db)).toBe('owned-only-by-appliance-msp');
+    await expect(credential(f.customerPrincipal.tenant, db)).rejects.toThrow('own AI gateway connection');
+    const relationship = await f.customer.table('co_management_relationships').first();
+    await depart(db, f.customerPrincipal, { relationshipId: relationship.relationship_id, expectedRevision: relationship.revision, operationId: randomUUID() });
+    await expect(credential(f.customerPrincipal.tenant, db)).rejects.toThrow('own AI gateway connection');
+    await db.transaction(trx => licensing.activateTenantPsaLicense(trx, f.customerPrincipal.tenant, sign({ aud: f.customerPrincipal.tenant, seats: 10 })));
+    const closed = await f.customer.table('co_management_relationships').first();
+    await upgrade(db, f.customerPrincipal, f.target, { operationId: randomUUID(), expectedRevision: closed.revision }, log);
+    await expect(credential(f.customerPrincipal.tenant, db)).rejects.toThrow('own AI gateway connection');
+    await f.customer.table('tenant_license_state').delete();
+    await expect(credential(f.customerPrincipal.tenant, db)).rejects.toThrow('own AI gateway connection');
+    expect(await credential(f.principal.tenant, db)).toBe('owned-only-by-appliance-msp');
+  });
+});
+
+registerCoManagedPortableWorkflowTests(() => db, ticketHandoffFixture);
+
+registerCoManagedPortableEngagementCases(() => db, ticketHandoffFixture, withSharedProjectTaskFixture);
+
+it('portable workspace graph validates cross-section identities and rejects dangling author service and configuration references', async () => withTaskConversationFixture(async f => {
+  const { withCoManagedPortableSnapshot } = await import('../../../../packages/co-managed/src/portableSnapshot');
+  const { validateCoManagedPortableWorkspaceRecords: validate } = await import('../../../../packages/co-managed/src/portableWorkspaceGraph');
+  const { exportCoManagedPortableCore } = await import('../../../../packages/co-managed/src/portableCoreExport');
+  const { exportCoManagedPortableWork } = await import('../../../../packages/co-managed/src/portableWorkExport');
+  const { exportCoManagedPortableDocuments } = await import('../../../../packages/co-managed/src/portableDocumentExport');
+  const { exportCoManagedPortableAssets } = await import('../../../../packages/co-managed/src/portableAssetExport');
+  const { exportCoManagedPortableOperational } = await import('../../../../packages/co-managed/src/portableOperationalExport');
+  const { exportCoManagedPortableWorkflows } = await import('../../../../packages/co-managed/src/portableWorkflowExport');
+  const { exportCoManagedPortableEngagement } = await import('../../../../packages/co-managed/src/portableEngagementExport');
+  await f.add(f.principal, 'shared_it', 'Foreign historical author');
+  await f.customer.table('availability_settings').insert({ tenant: f.actor.tenant, availability_setting_id: randomUUID(), setting_type: 'general_settings', config_json: { approver_user_ids: [f.customerPrincipal.userId] } });
+  await f.customer.table('documents').insert({ tenant: f.actor.tenant, document_id: randomUUID(), document_name: 'Historical rendered document', user_id: f.customerPrincipal.userId, created_by: f.customerPrincipal.userId, source_template_id: 'standard-invoice-by-location' });
+  const packageId = randomUUID();
+  await withCoManagedPortableSnapshot(db, async snapshot => {
+    const documents = await exportCoManagedPortableDocuments(db, f.customerPrincipal, packageId, snapshot);
+    try {
+      const sections = { documents: documents.component.records,
+        core: (await exportCoManagedPortableCore(db, f.customerPrincipal, packageId, snapshot)).records,
+        work: (await exportCoManagedPortableWork(db, f.customerPrincipal, packageId, snapshot)).records,
+        assets: (await exportCoManagedPortableAssets(db, f.customerPrincipal, packageId, snapshot)).records,
+        operational: (await exportCoManagedPortableOperational(db, f.customerPrincipal, packageId, snapshot)).records,
+        workflows: (await exportCoManagedPortableWorkflows(db, f.customerPrincipal, packageId, snapshot)).records,
+        engagement: (await exportCoManagedPortableEngagement(db, f.customerPrincipal, packageId, snapshot)).records };
+      expect(validate(sections, { sourceTenant: f.actor.tenant }).records.project_tasks.some(row => row.task_id === f.resource.id)).toBe(true);
+      expect(sections.documents.documents.some((row: any) => row.source_template_id === 'standard-invoice-by-location')).toBe(true);
+      const { prepareCoManagedPortableWorkspaceRecords, CO_MANAGED_PORTABLE_RESTORE_GLOBALS } = await import('../../../../packages/co-managed/src/portableWorkspaceRestoreRecords');
+      const allRecords = validate(sections, { sourceTenant: f.actor.tenant }).records;
+      const globalColumns = ['standard_status_id', 'type_id', 'type_id', 'id'];
+      const destinationCatalogMappings = Object.fromEntries(CO_MANAGED_PORTABLE_RESTORE_GLOBALS.map((table, index) =>
+        [table, Object.fromEntries(allRecords[table].map(row => [row[globalColumns[index]], row[globalColumns[index]]]))]));
+      const prepared = prepareCoManagedPortableWorkspaceRecords({ sourceTenant: f.actor.tenant, destinationTenant: randomUUID(), sections, destinationCatalogMappings: destinationCatalogMappings as any });
+      expect(prepared.records.users.every(row => row.is_inactive)).toBe(true);
+      expect(prepared.records.project_tasks[0].task_id).not.toBe(sections.work.project_tasks[0].task_id);
+      expect(prepared.records.project_task_comments[0].task_id).toBe(prepared.records.project_tasks[0].task_id);
+      const { sealPortableArchive, openPortableArchive } = await import('../../../../packages/co-managed/src/portableArchive');
+      const context = { packageId, sourceTenant: f.actor.tenant };
+      const encrypted = await sealPortableArchive({ context, manifest: { sections }, files: documents.files }, 'Customer-owned complete archive passphrase');
+      try {
+        const opened = await openPortableArchive(encrypted.path, 'Customer-owned complete archive passphrase', context);
+        try {
+          expect(validate(opened.manifest.sections, { sourceTenant: opened.context.sourceTenant }).records.project_tasks).toEqual(sections.work.project_tasks);
+        } finally { await opened.dispose(); }
+      } finally { await encrypted.dispose(); }
+
+      const badAuthor = structuredClone(sections); badAuthor.work.project_tasks[0].assigned_to = randomUUID();
+      expect(() => validate(badAuthor, { sourceTenant: f.actor.tenant })).toThrow('reference is missing');
+      const badService = structuredClone(sections); badService.work.project_tasks[0].service_id = randomUUID();
+      expect(() => validate(badService, { sourceTenant: f.actor.tenant })).toThrow('reference is missing');
+      const badPolicy = structuredClone(sections); badPolicy.work.boards[0].sla_policy_id = randomUUID();
+      expect(() => validate(badPolicy, { sourceTenant: f.actor.tenant })).toThrow('reference is missing');
+      const badApprover = structuredClone(sections); badApprover.engagement.availability_settings[0].config_json.approver_user_ids = [randomUUID()];
+      expect(() => validate(badApprover, { sourceTenant: f.actor.tenant })).toThrow('conditional reference is missing');
+      expect(() => validate({ ...sections, sessions: [] }, { sourceTenant: f.actor.tenant })).toThrow('sections');
+    } finally { await documents.dispose(); }
+  });
+}));
+
+registerCoManagedPortableSupplementalFileCases(() => db, ticketHandoffFixture, artifactStorage);
+registerCoManagedPortableRemoteMeetingCases(() => db, withMeetingCreationFixture);
+registerCoManagedPortableWorkspaceExportTests(() => db, withPortableVaultExportFixture, artifactStorage, withTenantLicenseFixture, withHostedPsaUpgradeFixture);
+
+registerCoManagedTimeBillingProfileTests(() => db, withMspSharedTimeSaveFixture, withSharedProjectTaskFixture);
+
+registerCoManagedInvitationRecoveryTests(() => db, prepare, delivery.send);
+
+registerCoManagedInvoiceJourneyTests(() => db, withMspSharedTimeSaveFixture);
+
+registerCoManagedManagementPolicyTests(() => db, prepare);
+
+registerCoManagedTicketRoutingNotificationTests(() => db, ticketHandoffFixture, withTicketAssignmentFixture);
+
+registerCoManagedRequesterTaskCases(() => db, withSharedProjectTaskFixture);
+
+registerCoManagedDelegatedAdministrationCases(() => db, ticketHandoffFixture);
+
+registerCoManagedProvisioningCleanupTests(() => db, prepare);
+
+registerCoManagedRequesterTaskEmailCases(() => db, withSharedProjectTaskFixture);
+
+registerCoManagedTaskDisclosureCases(() => db, withSharedProjectTaskFixture);
+
+registerCoManagedArchiveBoundaryTests(() => db, withAttachmentFixture, withTaskConversationFixture);

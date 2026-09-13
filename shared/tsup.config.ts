@@ -73,6 +73,7 @@ export default defineConfig({
     // the Next-built consumers are. Without an entry it is "Cannot find
     // package" at test time.
     'billingClients/hourBlockService': 'billingClients/hourBlockService.ts',
+    'billingClients/timeEntryWorkBillingContext': 'billingClients/timeEntryWorkBillingContext.ts',
     'billingClients/bucketUsageService': 'billingClients/bucketUsageService.ts',
     'billingClients/bucketUsageErrors': 'billingClients/bucketUsageErrors.ts',
     'billingClients/weightedBurn': 'billingClients/weightedBurn.ts',
@@ -90,6 +91,19 @@ export default defineConfig({
     'lib/ticketActivity/readTicketActivity': 'lib/ticketActivity/readTicketActivity.ts',
     'lib/ticketActivity/curatedTicketDiff': 'lib/ticketActivity/curatedTicketDiff.ts',
     'lib/businessHours/businessHoursSegmentation': 'lib/businessHours/businessHoursSegmentation.ts',
+    'lib/sla/organizationSlaClock': 'lib/sla/organizationSlaClock.ts',
+    'lib/sla/organizationSlaStore': 'lib/sla/organizationSlaStore.ts',
+    'lib/sla/organizationSlaNotifications': 'lib/sla/organizationSlaNotifications.ts',
+    'lib/sla/organizationSlaLock': 'lib/sla/organizationSlaLock.ts',
+    'lib/sla/slaPolicyResolver': 'lib/sla/slaPolicyResolver.ts',
+    // Exported in package.json as dist targets, so plain-Node consumers (the
+    // workflow/temporal workers and packages/co-managed's dist build, which
+    // imports lib/ticketCloseRules) resolve them through dist rather than
+    // being transpiled from source. Without entries the dist files are never
+    // generated and the import fails at worker startup.
+    'core/index': 'core/index.ts',
+    'lib/ticketChecklists/index': 'lib/ticketChecklists/index.ts',
+    'lib/ticketCloseRules/index': 'lib/ticketCloseRules/index.ts',
   },
   format: ['esm'],
   dts: false,

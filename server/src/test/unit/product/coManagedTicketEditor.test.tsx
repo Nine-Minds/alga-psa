@@ -59,10 +59,10 @@ it('requires reload after a conflict and clears visible editor data after revoke
   expect(await screen.findByText('coManaged.editor.loadError')).toBeInTheDocument();
   expect(screen.queryByDisplayValue('Draft')).toBeNull(); expect(screen.queryByLabelText('coManaged.editor.fields.status_id')).toBeNull();
 });
-it('allows a corrected save with a new operation ID after a known validation failure', async () => {
-  mocks.save.mockResolvedValueOnce({ ok: false, code: 'closeRules' });
+it.each(['closeRules', 'slaSetupRequired'])('allows a corrected save with a new operation ID after a known %s failure', async code => {
+  mocks.save.mockResolvedValueOnce({ ok: false, code });
   mount(); await screen.findByDisplayValue('Original title'); fireEvent.change(title(), { target: { value: 'First draft' } }); fireEvent.click(saveButton());
-  await screen.findByText('coManaged.editor.errors.closeRules'); expect(title()).not.toBeDisabled();
+  await screen.findByText(`coManaged.editor.errors.${code}`); expect(title()).not.toBeDisabled();
   fireEvent.change(title(), { target: { value: 'Corrected draft' } }); fireEvent.click(saveButton());
   await waitFor(() => expect(mocks.saved).toHaveBeenCalledTimes(1));
   expect(mocks.save.mock.calls[1][1]).toMatchObject({ expected: { title: 'Original title' }, patch: { title: 'Corrected draft' } });

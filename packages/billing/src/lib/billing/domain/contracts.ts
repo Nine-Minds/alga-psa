@@ -142,6 +142,19 @@ export type ResolvedContractBillingChargeFacts =
         currencyRate?: number | string | null;
         billableMinutes: number;
         billingProfileId?: string | null;
+        /** Retained work evidence for the immutable invoice receipt. */
+        workItem?: {
+          id?: string | null;
+          type?: string | null;
+          sourceTenant?: string | null;
+          sourceKind?: string | null;
+          sourceId?: string | null;
+          relationshipId?: string | null;
+          ticketNumber?: string | null;
+          ticketTitle?: string | null;
+          ticketDescription?: string | null;
+          projectTaskName?: string | null;
+        };
       }>;
     })
   | (ContractChargeFactsBase & {

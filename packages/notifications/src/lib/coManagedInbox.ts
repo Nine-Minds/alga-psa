@@ -1,10 +1,10 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { getSession, getApiKeyUserOverride } from '@alga-psa/auth';
-import { readCoManagedStoredCommentNotification, CoManagedSharedWorkError, assertCoManagedSessionUnexpired, type CoManagedSessionActor } from '@alga-psa/co-managed';
+import { CoManagedSharedWorkError, assertCoManagedSessionUnexpired, type CoManagedSessionActor } from '@alga-psa/co-managed';
 import type { InternalNotification } from '../types/internalNotification';
 import { getNotificationTemplate, renderTemplate } from '../actions/internal-notification-actions/createNotificationCore';
-import { coManagedCommentPresentation } from './coManagedCommentPresentation';
+import { withCoManagedStoredPresentation } from './coManagedStoredPresentation';
 import { coManagedNotificationPredicate as qualifiedNotification } from './coManagedNotificationClassification';
 
 /** Qualify the shared subset once, then use the same visibility set for SQL
@@ -31,14 +31,14 @@ export async function coManagedInboxScope(trx: Knex.Transaction, user: { user_id
   }
   if (actor) for (const candidate of candidates) {
     try {
-      const current = await readCoManagedStoredCommentNotification(trx, actor, candidate.internal_notification_id, { notificationLock: options.forUpdate ? 'update' : 'share' });
-      if (!current) continue;
-      const template = await getNotificationTemplate(trx, tenant, current.templateName, current.languageCode);
-      if (!template) continue;
-      const presentation = coManagedCommentPresentation(current.message, current.eventId, current.deliveryKey);
-      presentations.set(candidate.internal_notification_id, { title: renderTemplate(template.title, presentation.data),
-        message: renderTemplate(template.message, presentation.data), metadata: presentation.metadata, link: presentation.link,
-        template_name: template.name, language_code: template.language_code });
+      await withCoManagedStoredPresentation(trx, actor, candidate.internal_notification_id, async current => {
+        const template = await getNotificationTemplate(trx, tenant, current.templateName, current.languageCode);
+        if (!template) return;
+        const presentation = current.presentation;
+        presentations.set(candidate.internal_notification_id, { title: renderTemplate(template.title, presentation.data),
+          message: renderTemplate(template.message, presentation.data), metadata: presentation.metadata, link: presentation.link,
+          template_name: template.name, language_code: template.language_code });
+      }, { notificationLock: options.forUpdate ? 'update' : 'share' });
     } catch (error) {
       if (!(error instanceof CoManagedSharedWorkError)) throw error;
     }

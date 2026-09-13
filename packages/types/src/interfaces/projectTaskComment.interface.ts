@@ -6,7 +6,7 @@ export interface IProjectTaskComment extends TenantEntity {
   threadId?: string;
   parentCommentId?: string | null;
   userId: string | null;
-  authorType: 'internal';  // Always 'internal'
+  authorType: 'internal' | 'client';
 
   note: string;  // BlockNote JSON
   markdownContent: string;  // Generated from BlockNote

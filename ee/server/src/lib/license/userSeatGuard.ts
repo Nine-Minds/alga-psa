@@ -1,11 +1,12 @@
-import { getAdminConnection } from '@alga-psa/db/admin';
-import { resolveSelfHostTier, verifyLicense } from '@alga-psa/licensing';
+import type { Knex } from 'knex';
+import { getTenantSelfHostLicenseState, resolveSelfHostTier, verifyLicense } from '@alga-psa/licensing';
 
 /**
- * Self-host appliance license seat enforcement (Enterprise Edition).
+ * Self-host license seat enforcement (Enterprise Edition), using the current
+ * tenant's independent license before the legacy installation license.
  *
  * Returns the licensed seat count when adding another internal user would exceed
- * the appliance license's signed `seats` claim; returns null when allowed:
+ * effective license's signed `seats` claim; returns null when allowed:
  *   - SaaS / no `license_state` row,
  *   - 'essentials' floor tier (unmetered),
  *   - no/invalid license token,
@@ -14,16 +15,13 @@ import { resolveSelfHostTier, verifyLicense } from '@alga-psa/licensing';
  * @param usedSeats current count of active internal users for the tenant
  */
 export async function checkApplianceLicenseSeatLimit(
-  usedSeats: number
+  usedSeats: number, tenant: string, connection?: Knex
 ): Promise<{ seats: number } | null> {
   try {
-    const adminKnex = await getAdminConnection();
-    // license_state is install-wide admin metadata; keep it on the admin
-    // connection rather than tenantDb.
-    const licenseRow = await adminKnex('license_state').orderBy('id').first();
+    const licenseRow = await getTenantSelfHostLicenseState(tenant, connection);
     if (!licenseRow) return null;
 
-    const resolved = resolveSelfHostTier(licenseRow);
+    const resolved = resolveSelfHostTier(licenseRow, tenant);
     if (!resolved || resolved.tier === 'essentials' || !licenseRow.license_token) {
       return null;
     }

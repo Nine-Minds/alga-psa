@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import { MspLayoutClient } from '@/app/msp/MspLayoutClient';
 import { getTenantSettings } from '@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions';
@@ -8,9 +8,19 @@ import { getTenantSettings } from '@alga-psa/tenancy/actions/tenant-settings-act
 const mockUsePathname = vi.fn(() => '/msp/tickets');
 const mockReplace = vi.fn();
 const mockUseFeatureFlag = vi.fn();
+const mockGetCoManagedAcceptance = vi.fn();
 
 vi.mock('@alga-psa/ui/hooks', () => ({
   useFeatureFlag: (...args: unknown[]) => mockUseFeatureFlag(...args),
+}));
+
+// A co-managed workspace renders behind the customer's acceptance of the
+// relationship, so its content only appears once that resolves. The acceptance
+// screen itself is covered by coManagedAcceptanceBoundary.test.tsx; here the
+// relationship is already active so the shell behavior stays the subject.
+vi.mock('@/lib/actions/coManagedAcceptanceActions', () => ({
+  getCustomerCoManagedAcceptance: (...args: unknown[]) => mockGetCoManagedAcceptance(...args),
+  acceptCustomerCoManagedRelationship: vi.fn(),
 }));
 
 vi.mock('next/navigation', () => ({
@@ -87,6 +97,10 @@ vi.mock('@/components/product/ProductRouteBoundary', () => ({
   ProductRouteBoundary: () => <div data-testid="product-route-boundary" />,
 }));
 
+beforeEach(() => {
+  mockGetCoManagedAcceptance.mockResolvedValue({ state: 'active' });
+});
+
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
@@ -96,22 +110,30 @@ afterEach(() => {
 const mockGetTenantSettings = vi.mocked(getTenantSettings);
 
 describe('MspLayoutClient product shell behavior', () => {
-  it.each([false, true])('gates directly navigated co-managed content with enabled=%s', (enabled) => {
+  it.each([false, true])('gates directly navigated co-managed content with enabled=%s', async (enabled) => {
     mockUseFeatureFlag.mockReturnValue({ enabled, loading: false, error: null });
     render(<MspLayoutClient session={null} productCode="co_managed" needsOnboarding={false} initialSidebarCollapsed={false}>
       <button>Customer ticket</button>
     </MspLayoutClient>);
-    expect(Boolean(screen.queryByRole('button', { name: 'Customer ticket' }))).toBe(enabled);
+
+    if (enabled) {
+      expect(await screen.findByRole('button', { name: 'Customer ticket' })).toBeInTheDocument();
+      return;
+    }
+
+    // A flag-off workspace never even asks whether the relationship is accepted.
+    await waitFor(() => expect(mockGetCoManagedAcceptance).not.toHaveBeenCalled());
+    expect(screen.queryByRole('button', { name: 'Customer ticket' })).toBeNull();
   });
 
-  it('still blocks excluded product content when the release flag is enabled', () => {
+  it('still blocks excluded product content when the release flag is enabled', async () => {
     mockUseFeatureFlag.mockReturnValue({ enabled: true, loading: false, error: null });
     mockUsePathname.mockReturnValue('/msp/billing');
     render(<MspLayoutClient session={null} productCode="co_managed" needsOnboarding={false} initialSidebarCollapsed={false}>
       <button>Customer billing</button>
     </MspLayoutClient>);
+    expect(await screen.findByTestId('product-route-boundary')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Customer billing' })).toBeNull();
-    expect(screen.getByTestId('product-route-boundary')).toBeInTheDocument();
   });
 
   it('RT006: renders AlgaDesk shell for allowed AlgaDesk MSP routes', () => {

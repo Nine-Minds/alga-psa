@@ -31,8 +31,8 @@ async function finish(trx: Knex.Transaction, item: Delivery, result: Notificatio
   const code = rawCode && /^[a-z0-9_]{1,100}$/.test(rawCode) ? rawCode : rawCode ? 'delivery_failed' : null;
   await tenantDb(trx, item.tenant).table(TABLE).where({ notification_id: item.notification_id, channel: item.channel }).update({
     status: retry ? 'pending' : result.status, attempt_count: attempt, last_error_code: code,
-    next_attempt_at: retry ? trx.raw("clock_timestamp() + (? * interval '1 millisecond')", [Math.min(300000, 1000 * 2 ** (attempt - 1))]) : null,
-    completed_at: retry ? null : trx.raw('clock_timestamp()'),
+    next_attempt_at: retry ? trx.raw("now() + (? * interval '1 millisecond')", [Math.min(300000, 1000 * 2 ** (attempt - 1))]) : null,
+    completed_at: retry ? null : trx.raw('now()'),
   });
 }
 

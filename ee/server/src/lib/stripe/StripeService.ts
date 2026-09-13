@@ -13,6 +13,7 @@
  */
 
 import Stripe from 'stripe';
+import { handleCoManagedUpgradePaymentEvent } from './coManagedUpgradeCheckout';
 import { Knex } from 'knex';
 import { getConnection } from '@/lib/db/db';
 import { tenantDb } from '@alga-psa/db';
@@ -1239,8 +1240,11 @@ export class StripeService {
       .merge();
 
     try {
-      // Process event based on type
-      switch (event.type) {
+      // Independent customer payments retain their own billing without the
+      // ordinary product/tier update until the customer confirms conversion.
+      const independentPayment = await handleCoManagedUpgradePaymentEvent(knex, this.stripe, eventTenantId, event);
+      // Process other events through the existing billing behavior.
+      if (!independentPayment) switch (event.type) {
         case 'checkout.session.completed':
           await this.handleCheckoutCompleted(event, eventTenantId, knex);
           break;

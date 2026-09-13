@@ -33,6 +33,11 @@ export interface LicenseStateRow {
   last_checkin_at: Date | null;
 }
 
+export type SelfHostLicenseInput = Pick<LicenseStateRow, 'edition_choice' | 'trial_started_at' | 'license_token'> & {
+  /** Independent tenant licensing never inherits an installation trial. */
+  license_scope?: 'tenant';
+};
+
 /** Derived licensing state for an install. */
 export type LicenseStateKind =
   | 'ce'            // Community Edition chosen — always essentials
@@ -41,6 +46,7 @@ export type LicenseStateKind =
   | 'trial_expired' // Trial window elapsed, no license
   | 'licensed'      // Valid unexpired license present
   | 'license_expired' // License was present but has expired
+  | 'license_required' // Independent tenant needs its own valid paid license
   | 'license_wrong_tenant'; // Validly-signed license, but issued for a different tenant (aud mismatch)
 
 export interface ResolvedLicenseState {
@@ -116,7 +122,7 @@ export async function upsertLicenseState(
  * always has the session tenant at activation time).
  */
 export function resolveSelfHostTier(
-  row: LicenseStateRow | null,
+  row: SelfHostLicenseInput | null,
   expectedTenantId?: string,
 ): ResolvedLicenseState | null {
   if (!row) return null;
@@ -133,7 +139,8 @@ export function resolveSelfHostTier(
         // the appliance whose tenant matches. We only block when we actually
         // have a tenant to compare against — an unbound token, or a missing
         // expectedTenantId, falls through to the normal licensed result.
-        if (result.claims.aud && expectedTenantId && result.claims.aud !== expectedTenantId) {
+        if ((row.license_scope === 'tenant' && (!expectedTenantId || result.claims.aud !== expectedTenantId)) ||
+            (result.claims.aud && expectedTenantId && result.claims.aud !== expectedTenantId)) {
           return { state: 'license_wrong_tenant', tier: 'essentials', expiresAt: null, daysRemaining: null };
         }
         const daysRemaining = Math.ceil((expMs - now) / (24 * 60 * 60 * 1000));
@@ -153,6 +160,10 @@ export function resolveSelfHostTier(
       return { state: 'license_expired', tier: 'essentials', expiresAt: null, daysRemaining: null };
     }
     // Malformed/bad_signature/unknown_kid — treat as if no token stored.
+  }
+
+  if (row.license_scope === 'tenant') {
+    return { state: 'license_required', tier: 'essentials', expiresAt: null, daysRemaining: null };
   }
 
   // 2. Check CE choice (no trial available).

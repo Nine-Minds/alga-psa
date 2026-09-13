@@ -1,3 +1,4 @@
+export { registerWorkflowTicketMutationAdapter, resetWorkflowTicketMutationAdapter } from './registries/workflowTicketMutationRegistry';
 export { registerWorkflowConversationRetainer, getWorkflowConversationRetainer, resetWorkflowConversationRetainer } from './registries/workflowConversationRegistry';
 export type { WorkflowConversationEventRetainer } from './registries/workflowConversationRegistry';
 export * from './types';

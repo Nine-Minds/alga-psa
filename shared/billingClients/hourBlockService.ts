@@ -1,3 +1,4 @@
+import { getTimeEntryWorkBillingContext } from './timeEntryWorkBillingContext';
 /*
  * CANONICAL shared hour-block service. This is the single source of truth for
  * burning ad-hoc prepaid hour blocks (minutes-denominated, purchase-minted,
@@ -113,9 +114,8 @@ function toDateOnly(value: string | Date | null | undefined): string | null {
 }
 
 /**
- * Resolves the owning client for a time entry through its work item. Mirrors
- * the scheduling action helper but transaction-scoped and auth-free so both
- * the burn engine and the reconcile job share one resolution.
+ * Resolve through the same owner-local work context used by native saves.
+ * The burn engine and reconciliation never interpret a customer ID as local.
  */
 export async function resolveClientIdForWorkItem(
   trx: Knex.Transaction,
@@ -124,26 +124,7 @@ export async function resolveClientIdForWorkItem(
   workItemType: string | null | undefined,
 ): Promise<string | null> {
   if (!workItemId || !workItemType) return null;
-  const db = tenantDb(trx, tenant);
-
-  if (workItemType === 'project_task') {
-    const query = db.table('project_tasks');
-    db.tenantJoin(query, 'project_phases', 'project_tasks.phase_id', 'project_phases.phase_id');
-    db.tenantJoin(query, 'projects', 'project_phases.project_id', 'projects.project_id');
-    const row = await query
-      .where({ 'project_tasks.task_id': workItemId })
-      .first<{ client_id: string }>('projects.client_id as client_id');
-    return row?.client_id || null;
-  }
-  if (workItemType === 'ticket') {
-    const row = await db.table('tickets').where({ ticket_id: workItemId }).first<{ client_id: string }>('client_id');
-    return row?.client_id || null;
-  }
-  if (workItemType === 'interaction') {
-    const row = await db.table('interactions').where({ interaction_id: workItemId }).first<{ client_id: string }>('client_id');
-    return row?.client_id || null;
-  }
-  return null;
+  return (await getTimeEntryWorkBillingContext(trx, tenant, workItemId, workItemType))?.clientId ?? null;
 }
 
 /**
@@ -440,6 +421,10 @@ async function selectClientEligibleEntries(
     },
   });
 
+  db.tenantJoin(query, 'co_managed_time_work_references as shared_work', 'te.work_item_id', 'shared_work.reference_id', {
+    type: 'left', on(join) { join.andOnVal('te.work_item_type', '=', 'co_managed'); },
+  });
+
   return await query
     .where('te.tenant', tenant)
     .whereNull('te.contract_line_id')
@@ -450,7 +435,8 @@ async function selectClientEligibleEntries(
     .where(function (this: Knex.QueryBuilder) {
       this.where('tk.client_id', clientId)
         .orWhere('p.client_id', clientId)
-        .orWhere('i.client_id', clientId);
+        .orWhere('i.client_id', clientId)
+        .orWhere('shared_work.client_id', clientId);
     })
     .select(
       'te.entry_id',

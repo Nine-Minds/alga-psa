@@ -113,9 +113,9 @@ export async function mutateCoManagedProjectTaskComment(db: Knex, inputActor: Co
       if (comment.deleted_at || comment.collaboration_revision !== request.expectedRevision) throw new CoManagedTaskCommentError('TASK_COMMENT_CONFLICT');
       await current(write, true);
       await owner.table('project_task_comments').where('task_comment_id', commentId).update({ collaboration_revision: revision,
-        updated_at: write.trx.raw('clock_timestamp()'), ...(request.kind === 'edit' ? { ...encodeConversationContent(request), edited_at: write.trx.raw('clock_timestamp()') } : { deleted_at: write.trx.raw('clock_timestamp()') }) });
+        updated_at: write.trx.raw('now()'), ...(request.kind === 'edit' ? { ...encodeConversationContent(request), edited_at: write.trx.raw('now()') } : { deleted_at: write.trx.raw('now()') }) });
     }
-    await owner.table('comment_threads').where('thread_id', threadId).update({ last_activity_at: write.trx.raw('clock_timestamp()'),
+    await owner.table('comment_threads').where('thread_id', threadId).update({ last_activity_at: write.trx.raw('now()'),
       ...(request.kind === 'create' && target ? { reply_count: write.trx.raw('reply_count + 1') } : {}) });
     await retainCoManagedTaskCommentEvent(write.trx, { tenant: resource.tenant, eventId: request.operationId, taskId: resource.id, commentId, kind: request.kind });
     await current(write, true);

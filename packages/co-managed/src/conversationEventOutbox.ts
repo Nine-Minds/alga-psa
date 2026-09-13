@@ -1,3 +1,4 @@
+import { retainCoManagedConversationParticipation } from './conversationParticipationEvidence';
 import { createHash } from 'node:crypto';
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
@@ -41,10 +42,11 @@ export async function enqueueCoManagedConversationEvent(trx: Knex.Transaction, i
   // LEVERAGE: pattern transactional-event-intent — inbound email has the same durable publication state beneath its inbox-specific contract.
   const requestHash = digest({ ...(task ? { resource: { kind: 'project_task', id: resourceId } } : { ticketId: resourceId }), commentId, threadId, audience, publication });
   const owner = tenantDb(trx, tenant);
-  await owner.table(TABLE).insert({ tenant, event_id: eventId, ticket_id: task ? null : resourceId, resource_type: task ? 'project_task' : 'ticket', resource_id: resourceId, comment_id: commentId, thread_id: threadId,
-    event_type: publication.eventType, audience, publication: JSON.stringify(publication), request_hash: requestHash }).onConflict(['tenant', 'event_id']).ignore();
+  const inserted = await owner.table(TABLE).insert({ tenant, event_id: eventId, ticket_id: task ? null : resourceId, resource_type: task ? 'project_task' : 'ticket', resource_id: resourceId, comment_id: commentId, thread_id: threadId,
+    event_type: publication.eventType, audience, publication: JSON.stringify(publication), request_hash: requestHash }).onConflict(['tenant', 'event_id']).ignore().returning('event_id');
   const row = await owner.table(TABLE).where('event_id', eventId).forShare().first('request_hash');
   if (row?.request_hash !== requestHash) throw new Error('Co-managed event identity was reused with different intent');
+  if (inserted.length) await retainCoManagedConversationParticipation(trx, tenant, eventId);
   await enqueueCoManagedEventConsumers(trx, tenant, eventId, publication.eventType, { channel: publication.channel });
 }
 /** Current audience and publication checks apply to newly-created-message
@@ -87,14 +89,14 @@ export async function dispatchCoManagedConversationEvents(db: Knex, tenant: stri
         const publication = await prepareCoManagedConversationEvent({ trx, tenant }, row);
         if (publication) await publish(publication, row.event_id);
         const status = publication ? 'published' : 'cancelled';
-        await owner.table(TABLE).where('event_id', row.event_id).update({ status, completed_at: trx.raw('clock_timestamp()'), error_code: null });
+        await owner.table(TABLE).where('event_id', row.event_id).update({ status, completed_at: trx.raw('now()'), error_code: null });
         return status;
       });
       if (outcome === 'published') result.published++; else if (outcome === 'cancelled') result.cancelled++;
     } catch {
       result.failed++;
       await tenantDb(db, tenant).table(TABLE).where({ event_id: candidate.event_id, status: 'pending' }).update({ attempts: db.raw('attempts + 1'), error_code: 'event_publication_failed',
-        next_attempt_at: db.raw("clock_timestamp() + least(3600, power(2, least(attempts, 10)) * 60) * interval '1 second'") });
+        next_attempt_at: db.raw("now() + least(3600, power(2, least(attempts, 10)) * 60) * interval '1 second'") });
     }
   }
   return result;

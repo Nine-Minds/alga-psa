@@ -11,12 +11,30 @@ AlgaPSA uses PostHog for feature flag management, allowing tenant-based feature 
 Controls co-managed UI on hosted and self-hosted installations. The shared
 `CoManagedFeatureBoundary` requires an enabled, resolved flag without an error.
 Disabled, loading, unknown, and error states render no interactive feature content.
+Independent workspace license key activation and its License navigation entry use this boundary; licensing actions and resolution remain available independently of the flag.
 Both customer workspace shells apply it, including direct browser navigation.
 The provisioning page (`/msp/co-managed`) and access editor (`/msp/co-management`)
 use this boundary. Customer access navigation and the MSP workspace access link
 are also hidden while the flag is off. Shared and customer ticket screens use the
 same boundary for the unified conversation reader and its new-message, reply,
 edit and delete controls, including whole-thread audience disclosure confirmations and MSP-private transfers, comment attachment pickers and removal confirmations, staged new-message/reply file selection and cancellation, and download links. Requester attachment links in portal conversation cards use the same boundary through the portal composition provider. New collaboration controls must use the same boundary.
+The consolidated ticket queue, its CSV export control, and bulk handback selection,
+shared-note submission and retry controls also use this boundary.
+Customer and MSP ticket panels use the same boundary for assignment state, scoped
+user/team choices, assign/clear controls and uncertain-save retries.
+The MSP SLA priority mapping page (`/msp/co-management/sla`), its access-editor link,
+and handoff setup feedback use the same boundary. Mapping configuration and SLA
+handoff processing remain callable independently of the flag.
+Shared ticket/task Log time controls and their native time-entry dialogs use this
+boundary. Organization effort totals on ticket, task and customer/shared project
+screens, including the customer native task form, also use it; disabled UI does not fetch totals. Registration, time writes
+and aggregate actions retain normal authorization independently of the flag.
+The retained shared-work archive (`/msp/co-managed/archive`), its overview link,
+history/file pagination and download links also use this boundary. Disabling it
+unmounts archive state and prevents UI fetches. Archive actions, storage recovery
+and `/api/co-management/archive-files/[archiveFileId]` keep their normal current
+MSP authorization without checking the release flag.
+Export and assignment actions apply current ticket access independently of the flag.
 Ordinary PSA and AlgaDesk workspaces do not depend on this flag.
 
 This is a UI-only release switch. Routes remain registered. APIs, server actions,
@@ -318,3 +336,8 @@ const isEnabled = typeof featureFlag === 'boolean' ? featureFlag : featureFlag?.
 - The construction image is located at `/images/under-construction.png`
 - All text is included in the image itself (no additional text rendering)
 - Service Types and Service Catalog remain accessible regardless of billing feature flag
+
+The co-managed independent upgrade entry and `/msp/co-management/upgrade` screen use the existing `release-v1-6-feature` client boundary. Upgrade actions, readiness reads, workflow scheduling and worker execution do not evaluate this release flag.
+
+
+The co-managed portable export page at `/msp/co-management/export` and its entry links use the existing client `CoManagedFeatureBoundary`. Its screen action and `/api/co-management/export` handler enforce normal customer authorization independently of `release-v1-6-feature`; disabling the flag does not disable authorized backend export.

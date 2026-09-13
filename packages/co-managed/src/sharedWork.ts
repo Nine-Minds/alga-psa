@@ -1,10 +1,11 @@
+import { lockCoManagedLocalAuthentication, snapshotCoManagedAuthenticatedActor, type CoManagedAuthenticatedActor } from './localAuthentication';
 import type { Knex } from 'knex';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { getCoManagedOperationalState, assertCoManagedOperationalWrite } from '@alga-psa/licensing/lifecycle';
 import type { AuthorizationRecord } from '@alga-psa/authorization';
 import type { CoManagedHomeActor } from './policy';
-import { CoManagedSharedWorkError, isCoManagedUuid, snapshotCoManagedSessionActor, lockCoManagedSessionIdentity, lockCoManagedRecipientIdentity,
-  assertCoManagedSessionUnexpired, authorizeCoManagedWorkRecord, type CoManagedSessionActor } from './sharedWorkIdentity';
+import { CoManagedSharedWorkError, isCoManagedUuid, snapshotCoManagedSessionActor, lockCoManagedRecipientIdentity,
+  authorizeCoManagedWorkRecord, type CoManagedSessionActor } from './sharedWorkIdentity';
 export { CoManagedSharedWorkError, type CoManagedSessionActor } from './sharedWorkIdentity';
 
 export interface CoManagedSharedResource {
@@ -13,14 +14,14 @@ export interface CoManagedSharedResource {
   kind: 'ticket' | 'project' | 'project_task';
   id: string;
 }
-export interface CoManagedSharedWorkContext {
+export interface CoManagedSharedWorkContext<Action extends 'read' | 'update' = 'read' | 'update'> {
   trx: Knex.Transaction;
   actor: CoManagedHomeActor;
   /** Internal verified session identity for commands that wait before writing. */
   sessionId: string;
   resource: CoManagedSharedResource;
   revision: number;
-  action: 'read' | 'update';
+  action: Action;
   /** The command must omit these home-policy fields from its response. */
   redactedFields: readonly string[];
 }
@@ -29,13 +30,21 @@ function deny(): never { throw new CoManagedSharedWorkError(); }
 /** Only trusted delivery adapters construct this server-side recipient identity.
  * It grants no interactive access and cannot be used by mutation commands. */
 export interface CoManagedNotificationRecipient extends CoManagedHomeActor { kind: 'notification_recipient' }
-export type CoManagedNotificationRecipientContext = Omit<CoManagedSharedWorkContext, 'sessionId' | 'action'> & { action: 'read' };
-type SharedPrincipal = CoManagedSessionActor | CoManagedNotificationRecipient;
-type SharedPrincipalContext = Omit<CoManagedSharedWorkContext, 'sessionId'>;
+export type CoManagedNotificationRecipientContext = Omit<CoManagedSharedWorkContext<'read'>, 'sessionId'>;
+type SharedPrincipal = CoManagedAuthenticatedActor | CoManagedNotificationRecipient;
+type SharedPrincipalContext<Action extends 'read' | 'update' = 'read' | 'update'> =
+  Omit<CoManagedSharedWorkContext<Action>, 'sessionId'> & { assertCurrent(): Promise<void> };
+
+/** Verified API keys and sessions share live source admission without creating a
+ * synthetic session or granting notification identities mutation authority. */
+export async function withCoManagedAuthenticatedSharedWork<T>(db: Knex, input: CoManagedAuthenticatedActor, resource: CoManagedSharedResource,
+  action: 'read' | 'update', command: (context: SharedPrincipalContext) => Promise<T>): Promise<T> {
+  return withCoManagedSharedPrincipal(db, snapshotCoManagedAuthenticatedActor(input), resource, action, command);
+}
 
 /** Session commands retain their existing admission and post-wait session checks. */
-export async function withCoManagedSharedWork<T>(db: Knex, inputActor: CoManagedSessionActor, inputResource: CoManagedSharedResource,
-  action: 'read' | 'update', command: (context: CoManagedSharedWorkContext) => Promise<T>): Promise<T> {
+export async function withCoManagedSharedWork<T, Action extends 'read' | 'update' = 'read' | 'update'>(db: Knex, inputActor: CoManagedSessionActor, inputResource: CoManagedSharedResource,
+  action: Action, command: (context: CoManagedSharedWorkContext<Action>) => Promise<T>): Promise<T> {
   const actor = snapshotCoManagedSessionActor(inputActor);
   return withCoManagedSharedPrincipal(db, actor, inputResource, action,
     context => command({ ...context, sessionId: actor.sessionId }));
@@ -55,14 +64,14 @@ export async function withCoManagedNotificationRecipient<T>(db: Knex, input: CoM
 /** Shared authority engine: qualified home policy projections, retained trust and
  * resource locks, and explicit principal-specific admission. It never changes
  * AsyncLocalStorage/session tenant or grants linked-resource authority. */
-async function withCoManagedSharedPrincipal<T>(db: Knex, inputActor: SharedPrincipal, inputResource: CoManagedSharedResource,
-  action: 'read' | 'update', command: (context: SharedPrincipalContext) => Promise<T>): Promise<T> {
+async function withCoManagedSharedPrincipal<T, Action extends 'read' | 'update' = 'read' | 'update'>(db: Knex, inputActor: SharedPrincipal, inputResource: CoManagedSharedResource,
+  action: Action, command: (context: SharedPrincipalContext<Action>) => Promise<T>): Promise<T> {
   if (!inputActor || !inputResource) deny();
   // Snapshot qualified identities before the first await; a bulk caller must
   // not be able to change this command by reusing its input object.
   const actor = inputActor;
   const resource: CoManagedSharedResource = { tenant: inputResource.tenant, relationshipId: inputResource.relationshipId, kind: inputResource.kind, id: inputResource.id };
-  if ((actor.kind !== 'session' && (actor.kind !== 'notification_recipient' || action !== 'read')) || !['read', 'update'].includes(action) ||
+  if ((!['session', 'api_key'].includes(actor.kind) && (actor.kind !== 'notification_recipient' || action !== 'read')) || !['read', 'update'].includes(action) ||
       !['ticket', 'project', 'project_task'].includes(resource.kind) || actor.tenant === resource.tenant ||
       ![resource.tenant, resource.relationshipId, resource.id].every(isCoManagedUuid)) deny();
   return withTransaction(db, async trx => {
@@ -77,7 +86,8 @@ async function withCoManagedSharedPrincipal<T>(db: Knex, inputActor: SharedPrinc
     const homeTenant = await home.table('tenants').forShare().first('product_code', 'suspended_at');
     if (!relationship || customerTenant?.product_code !== 'co_managed' || homeTenant?.product_code !== 'psa' ||
         customerTenant.suspended_at || homeTenant.suspended_at) deny();
-    const subject = actor.kind === 'session' ? await lockCoManagedSessionIdentity(trx, actor) : await lockCoManagedRecipientIdentity(trx, actor);
+    const credential = actor.kind !== 'notification_recipient' ? await lockCoManagedLocalAuthentication(trx, actor) : null;
+    const subject = credential?.subject ?? await lockCoManagedRecipientIdentity(trx, actor);
     const teamIds = subject.teamIds ?? [];
     const staff = await home.table('co_management_staff_assignments')
       .where({ customer_tenant: resource.tenant, relationship_id: resource.relationshipId })
@@ -94,6 +104,7 @@ async function withCoManagedSharedPrincipal<T>(db: Knex, inputActor: SharedPrinc
       const ticket = await ticketQuery.first('board_id');
       if (!ticket) deny();
       const work = await owner.table('co_management_ticket_work').where({ relationship_id: resource.relationshipId, ticket_id: resource.id }).forShare().first();
+      // LEVERAGE: pattern shared-work-effective-grant — customer effort projections also check this ticket/board visibility.
       const explicitGrant = work && !work.grant_revoked_at;
       const boardGrant = relationship.visibility_mode === 'board_scope'
         ? await owner.table('co_management_board_scopes').where({ relationship_id: resource.relationshipId, board_id: ticket.board_id }).forShare().first()
@@ -142,9 +153,12 @@ async function withCoManagedSharedPrincipal<T>(db: Knex, inputActor: SharedPrinc
     const decision = await authorizeCoManagedWorkRecord(trx, actor, subject, permissionResource, action, record);
     // Recheck wall-clock expiry after any resource/policy lock wait. Session
     // revocation and identity changes wait for this command's retained locks.
-    if (actor.kind === 'session') await assertCoManagedSessionUnexpired(trx, actor);
-    if (action === 'update') await assertCoManagedOperationalWrite(trx, resource.tenant);
+    const assertCurrent = async () => {
+      await credential?.assertCurrent();
+      if (action === 'update') await assertCoManagedOperationalWrite(trx, resource.tenant);
+    };
+    await assertCurrent();
     return command({ trx, actor: { tenant: actor.tenant, userId: actor.userId }, resource: { ...resource },
-      action, revision: relationship.revision, redactedFields: decision.redactedFields });
+      action, revision: relationship.revision, redactedFields: decision.redactedFields, assertCurrent });
   });
 }

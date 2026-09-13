@@ -22,7 +22,7 @@ export async function readCoManagedNativeTimeEntry(db: Knex, tenant: string, ent
     const owner = tenantDb(trx, tenant);
     const workspace = await owner.table('tenants').forShare().first('product_code', 'suspended_at');
     const hint = await owner.table('time_entries').where('entry_id', entryId).first();
-    if (workspace?.product_code !== 'co_managed' && hint?.billing_mode !== 'operational' && !await hasCoManagedConversationOwnership(trx, tenant)) return { handled: false };
+    if (workspace?.product_code !== 'co_managed' && hint?.billing_mode !== 'operational' && hint?.work_item_type !== 'co_managed' && !await hasCoManagedConversationOwnership(trx, tenant)) return { handled: false };
     if (!workspace || workspace.suspended_at || !productTimeEntryMode(workspace.product_code)) throw new CoManagedSharedWorkError();
     const actor = snapshotCoManagedAuthenticatedActor(await identify());
     if (actor.tenant !== tenant) throw new CoManagedSharedWorkError();
@@ -104,7 +104,7 @@ export async function readCoManagedNativeTimeSheet(db: Knex, tenant: string, she
   return withTransaction(db, async trx => {
     await getCoManagedOperationalState(trx, tenant);
     const owner = tenantDb(trx, tenant), workspace = await owner.table('tenants').forShare().first('product_code', 'suspended_at');
-    const operational = await owner.table('time_entries').where({ time_sheet_id: sheetId, billing_mode: 'operational' }).first('entry_id');
+    const operational = await owner.table('time_entries').where({ time_sheet_id: sheetId }).where(q => q.where('billing_mode', 'operational').orWhere('work_item_type', 'co_managed')).first('entry_id');
     if (workspace?.product_code !== 'co_managed' && !operational && !await hasCoManagedConversationOwnership(trx, tenant)) return { handled: false };
     if (!workspace || workspace.suspended_at || !productTimeEntryMode(workspace.product_code)) throw new CoManagedSharedWorkError();
     const actor = snapshotCoManagedAuthenticatedActor(await identify());
@@ -196,7 +196,7 @@ export async function readCoManagedNativeTimeEntries(db: Knex, tenant: string,
   return withTransaction(db, async trx => {
     await getCoManagedOperationalState(trx, tenant);
     const owner = tenantDb(trx, tenant), workspace = await owner.table('tenants').forShare().first('product_code', 'suspended_at');
-    const operational = await owner.table('time_entries').where('billing_mode', 'operational').first('entry_id');
+    const operational = await owner.table('time_entries').where(q => q.where('billing_mode', 'operational').orWhere('work_item_type', 'co_managed')).first('entry_id');
     if (workspace?.product_code !== 'co_managed' && !operational && !await hasCoManagedConversationOwnership(trx, tenant)) return { handled: false };
     if (!workspace || workspace.suspended_at || !productTimeEntryMode(workspace.product_code)) throw new CoManagedSharedWorkError();
     const actor = snapshotCoManagedAuthenticatedActor(await identify());

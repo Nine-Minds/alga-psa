@@ -539,7 +539,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
     return (
       <div className="mt-3 flex flex-wrap gap-2">
         {artifacts.map((artifact) => {
-          if (artifact.artifact_type === 'transcript' && !artifact.document_id) {
+          if (artifact.artifact_type === 'transcript' && !artifact.document_id && !artifact.download_url) {
             return null;
           }
 
@@ -550,9 +550,9 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
             : t('entryPopup.appointmentRequest.approved.downloadRecording', {
                 defaultValue: 'Download recording',
               });
-          const href = artifact.artifact_type === 'transcript'
+          const href = artifact.download_url ?? (artifact.artifact_type === 'transcript'
             ? `/api/documents/${encodeURIComponent(artifact.document_id!)}/download`
-            : `/api/online-meetings/recordings/${encodeURIComponent(artifact.artifact_id)}`;
+            : `/api/online-meetings/recordings/${encodeURIComponent(artifact.artifact_id)}`);
 
           return (
             <Button

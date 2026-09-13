@@ -260,6 +260,34 @@ export const API_RULES: readonly ApiRule[] = [
     visibleInMetadataByProduct: { psa: false, algadesk: false, co_managed: false },
   },
   {
+    // Co-managed collaboration transport: shared-work comment attachments,
+    // archived thread files and the customer's portable workspace export. These
+    // are browser-session endpoints behind the same relationship authorization
+    // the co-managed server actions use — not v1 API surface, so they never
+    // appear in /api/v1/meta metadata. Reachable from both sides of a
+    // relationship, matching the '/msp/co-management' route rule: the sponsoring
+    // MSP (psa) and the co-managed customer workspace. AlgaDesk has no
+    // co-managed surface at all.
+    group: 'api_co_management_collaboration',
+    staticPrefixes: [
+      '/api/co-management',
+    ],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'denied', co_managed: 'allowed' },
+    visibleInMetadataByProduct: { psa: false, algadesk: false, co_managed: false },
+  },
+  {
+    // Short-lived token that opens the in-app notification stream. Every product
+    // ships the notification inbox, for both internal and client portal users,
+    // so the boundary is open to all three. Session-authenticated rather than
+    // v1 API surface, so it never appears in /api/v1/meta metadata.
+    group: 'api_notification_stream',
+    staticPrefixes: [
+      '/api/notifications',
+    ],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'allowed', co_managed: 'allowed' },
+    visibleInMetadataByProduct: { psa: false, algadesk: false, co_managed: false },
+  },
+  {
     // Telephony provider webhooks (Microsoft Graph callRecords notifications).
     // Graph authenticates with the per-subscription clientState secret the
     // route verifies, so these are not v1 API surface and never appear in

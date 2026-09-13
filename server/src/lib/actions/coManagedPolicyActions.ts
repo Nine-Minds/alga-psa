@@ -5,6 +5,8 @@ import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { getCoManagedOperationalState } from '@alga-psa/licensing';
 import { getCoManagedCollaborationPolicy, replaceCoManagedCustomerScope, replaceCoManagedStaffAssignments,
   CoManagedPolicyError, type CoManagedCustomerScope, type CoManagedStaffAssignment } from '@alga-psa/co-managed';
+import { getCoManagedSlaPriorityMappings, replaceCoManagedSlaPriorityMappings, type CoManagedSlaPriorityMapping } from '@alga-psa/co-managed';
+import { coManagedBrowserActor } from '../co-managed/browserActor';
 import type { Knex } from 'knex';
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -120,5 +122,26 @@ export const saveSponsorCoManagedAssignments = withAuth(async (user, { tenant },
     const resolved = await resolveTarget(trx, tenant, input.operationId);
     if (resolved.side !== 'sponsor') throw new CoManagedPolicyError('FORBIDDEN');
     return { revision: await replaceCoManagedStaffAssignments(trx, { tenant, userId: user.user_id }, resolved.target, input.revision, input.assignments) };
+  });
+});
+
+export const getCoManagedSlaPolicyScreen = withAuth(async (user, { tenant }, operationId: string) => {
+  const actor = await coManagedBrowserActor(user, tenant), { knex } = await createTenantKnex(tenant);
+  return withTransaction(knex, async trx => {
+    const resolved = await resolveTarget(trx, tenant, operationId);
+    if (resolved.side !== 'sponsor') throw new CoManagedPolicyError('FORBIDDEN');
+    return getCoManagedSlaPriorityMappings(trx, actor, resolved.target);
+  });
+});
+
+export const saveCoManagedSlaPriorityMappings = withAuth(async (user, { tenant }, input: {
+  operationId: string; revision: number; mappings: CoManagedSlaPriorityMapping[];
+}) => {
+  const actor = await coManagedBrowserActor(user, tenant), { knex } = await createTenantKnex(tenant);
+  if (!input) throw new CoManagedPolicyError('INVALID_POLICY');
+  return withTransaction(knex, async trx => {
+    const resolved = await resolveTarget(trx, tenant, input.operationId);
+    if (resolved.side !== 'sponsor') throw new CoManagedPolicyError('FORBIDDEN');
+    return { revision: await replaceCoManagedSlaPriorityMappings(trx, actor, resolved.target, input.revision, input.mappings) };
   });
 });

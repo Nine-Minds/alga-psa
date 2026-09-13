@@ -5,6 +5,7 @@
 import { retainNamedScheduledCommentCancellation } from '@alga-psa/co-managed';
 import { admitScheduledCommentCommand } from '../../lib/scheduledCommentCommands';
 import Comment from '../../models/comment';
+import { syncCoManagedTicketAwaitingClientSla } from '@alga-psa/co-managed';
 import { IComment } from '@alga-psa/types';
 import { createTenantKnex, tenantDb, registerAfterCommit } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
@@ -166,6 +167,7 @@ async function updateTicketResponseState(
     await tenantScopedTable(trx, 'tickets', tenant)
       .where({ ticket_id: ticketId })
       .update({ response_state: newState });
+    await syncCoManagedTicketAwaitingClientSla(trx, tenant, ticketId);
 
     // Publish response state change event
     {

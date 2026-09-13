@@ -12,7 +12,7 @@ export class LocalStorageProvider extends BaseStorageProvider {
 
     constructor(config: LocalProviderConfig) {
         super('local', config);
-        this.basePath = config.basePath;
+        this.basePath = path.resolve(config.basePath);
     }
 
     async upload(

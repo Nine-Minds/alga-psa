@@ -609,3 +609,17 @@ describe('mapDbInvoiceToWasmViewModel billed-time collections', () => {
     expect(mapped?.ticketGroups).toBeUndefined();
   });
 });
+
+
+it('keeps identical native and customer work IDs in separate invoice time groups', () => {
+  const { ticketGroups, timeEntries } = buildInvoiceTimeCollections([
+    snapshotSource({ entryId: 'native', workItemId: 'same-id', billedMinutes: 30, netAmount: 5000 }),
+    snapshotSource({ entryId: 'customer-a', workItemId: 'same-id', sourceTenant: 'customer-a', relationshipId: 'relation-a', workReferenceId: 'reference-a', billedMinutes: 60, netAmount: 10000 }),
+    snapshotSource({ entryId: 'customer-b', workItemId: 'same-id', sourceTenant: 'customer-b', relationshipId: 'relation-b', workReferenceId: 'reference-b', billedMinutes: 90, netAmount: 15000 }),
+  ]);
+  expect(ticketGroups).toHaveLength(3);
+  expect(new Set(ticketGroups.map(group => group.key)).size).toBe(3);
+  expect(ticketGroups.find(group => group.sourceTenant === 'customer-a')).toMatchObject({ totalMinutes: 60, totalAmount: 10000, relationshipId: 'relation-a', workReferenceId: 'reference-a' });
+  expect(timeEntries.find(entry => entry.id === 'customer-b')).toMatchObject({ sourceTenant: 'customer-b', workItemId: 'same-id' });
+  expect(ticketGroups.find(group => !group.sourceTenant)?.key).toBe('ticket:same-id');
+});

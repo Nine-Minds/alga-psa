@@ -13,14 +13,19 @@ import {
   recordSelfHostCoManagedRevocation,
   resolveSelfHostTier,
   isLicenseVerifyFailure,
+  getTenantLicenseManagementScope,
   type ResolvedLicenseState,
   type LicenseStateKind,
 } from '@alga-psa/licensing';
 import { verifyLicense } from '@alga-psa/licensing';
 import crypto from 'node:crypto';
 import { getAdminConnection } from '@alga-psa/db/admin';
+import { getCoManagedTenantLicenseStatus, submitCoManagedTenantLicense } from '@alga-psa/co-managed';
+import { coManagedBrowserActor } from '../co-managed/browserActor';
 
 export interface LicenseStatus {
+  /** Tenant licenses expose no appliance connection or trial controls. */
+  scope?: 'tenant' | 'installation';
   /** Whether a license_state row exists (self-host mode). */
   selfHostMode: boolean;
   state: LicenseStateKind | null;
@@ -42,7 +47,7 @@ export interface LicenseStatus {
   tenantId: string | null;
 }
 
-type LicenseAdminUser = NonNullable<Awaited<ReturnType<typeof getCurrentUser>>>;
+type LicenseAdminUser = NonNullable<Awaited<ReturnType<typeof getCurrentUser>>> & { licenseScope: 'tenant' | 'installation' };
 type LicenseMutationResult = { success: boolean; error?: string; status?: LicenseStatus };
 export type LicenseStatusResult = LicenseStatus | ActionPermissionErrorShape;
 
@@ -55,10 +60,14 @@ async function assertAdminPermission(): Promise<LicenseAdminUser | ActionPermiss
   // the payload never passes through the wrapper that would otherwise translate it.
   const user = await getCurrentUser();
   if (!user) return localizeActionError(permissionError('Unauthorized. Sign in to manage licensing.', 'msp/licensing:errors.notSignedIn'));
-  const allowed = await hasPermission(user, 'account_management', 'read');
+  if (!user.tenant) return localizeActionError(permissionError('A tenant is required to manage licensing.', 'msp/licensing:errors.notSignedIn'));
+  const licenseScope = await getTenantLicenseManagementScope(await getAdminConnection(), user.tenant);
+  const allowed = licenseScope === 'tenant'
+    ? await hasPermission(user, 'co_management', 'manage')
+    : await hasPermission(user, 'account_management', 'read');
   if (!allowed) return localizeActionError(permissionError('Permission denied: account_management read required', 'msp/licensing:errors.accountManagementRead'));
   // Returned so callers can bind license checks to this install's tenant.
-  return user;
+  return { ...user, licenseScope };
 }
 
 function permissionFailureResult(error: ActionPermissionErrorShape): LicenseMutationResult {
@@ -66,6 +75,7 @@ function permissionFailureResult(error: ActionPermissionErrorShape): LicenseMuta
 }
 
 async function getLicenseStatusForUser(user: LicenseAdminUser): Promise<LicenseStatus> {
+  if (user.licenseScope === 'tenant') return getCoManagedTenantLicenseStatus(await getAdminConnection(), await coManagedBrowserActor(user, user.tenant!));
   const row = await getLicenseStateRow();
   if (!row) {
     return { selfHostMode: false, state: null, tier: null, expiresAt: null, daysRemaining: null, customer: null, trialUsed: false, connected: false, lastCheckinAt: null, tenantId: user.tenant ?? null };
@@ -116,6 +126,12 @@ export async function submitLicense(token: string): Promise<LicenseMutationResul
     return permissionFailureResult(user);
   }
 
+  if (user.licenseScope === 'tenant') {
+    const actor = await coManagedBrowserActor(user, user.tenant!);
+    const status = await submitCoManagedTenantLicense(await getAdminConnection(), actor, token);
+    return { success: true, status };
+  }
+
   const result = verifyLicense(token.trim());
   if (isLicenseVerifyFailure(result)) {
     return { success: false, error: `License is invalid: ${result.reason}` };
@@ -144,6 +160,7 @@ export async function startTrial(): Promise<LicenseMutationResult> {
   if (isActionPermissionError(user)) {
     return permissionFailureResult(user);
   }
+  if (user.licenseScope === 'tenant') return { success: false, error: 'Independent workspaces require their own paid tenant license.' };
 
   const row = await getLicenseStateRow();
   if (!row) return { success: false, error: 'Not a self-hosted install' };
@@ -175,6 +192,7 @@ export async function refreshLicenseNow(): Promise<LicenseMutationResult> {
   if (isActionPermissionError(user)) {
     return permissionFailureResult(user);
   }
+  if (user.licenseScope === 'tenant') return { success: false, error: 'Activate a renewed tenant license key to update this workspace.' };
 
   const row = await getLicenseStateRow();
   if (!row) return { success: false, error: 'Not a self-hosted install' };
@@ -231,6 +249,7 @@ export async function connectAppliance(
   if (isActionPermissionError(user)) {
     return permissionFailureResult(user);
   }
+  if (user.licenseScope === 'tenant') return { success: false, error: 'Appliance connections are managed by the installation owner.' };
 
   const row = await getLicenseStateRow();
   if (!row) return { success: false, error: 'Not a self-hosted install' };

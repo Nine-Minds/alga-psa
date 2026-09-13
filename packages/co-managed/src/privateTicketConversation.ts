@@ -1,3 +1,4 @@
+import { retainCoManagedPrivateParticipation } from './privateParticipationEvidence';
 import { encodeConversationContent, snapshotConversationContent, type CoManagedConversationContent } from './conversationContent';
 import { createHash } from 'node:crypto';
 import type { Knex } from 'knex';
@@ -110,17 +111,19 @@ async function mutateCoManagedPrivateResourceComment(db: Knex, inputActor: CoMan
           if (comment.deleted_at || comment.revision !== request.expectedRevision) throw new CoManagedPrivateCommentError('PRIVATE_COMMENT_CONFLICT');
           await assertWrite();
           commentId = comment.comment_id; revision = comment.revision + 1;
-          await home.table('co_management_private_comments').where('comment_id', commentId).update({ revision, updated_at: trx.raw('clock_timestamp()'),
-            ...(request.kind === 'edit' ? encodeConversationContent(request) : { deleted_at: trx.raw('clock_timestamp()') }) });
+          await home.table('co_management_private_comments').where('comment_id', commentId).update({ revision, updated_at: trx.raw('now()'),
+            ...(request.kind === 'edit' ? encodeConversationContent(request) : { deleted_at: trx.raw('now()') }) });
         }
         if (resource.kind === 'ticket') await attachPrivateRootToConversation({ trx, storeTenant: actor.tenant,
           ticket: { tenant: resource.tenant, ticketId: resource.id, relationshipId: resource.relationshipId } }, threadId, conversationId);
-        await home.table('co_management_private_threads').where('thread_id', threadId).update({ last_activity_at: trx.raw('clock_timestamp()') });
+        await home.table('co_management_private_threads').where('thread_id', threadId).update({ last_activity_at: trx.raw('now()') });
         await assertWrite();
         const [saved] = await home.table('co_management_private_command_receipts').insert({ tenant: actor.tenant, operation_id: request.operationId,
           customer_tenant: resource.tenant, relationship_id: resource.relationshipId, resource_type: resource.kind, resource_id: resource.id,
           actor_user_id: actor.userId, command_type: request.kind, request_hash: hash, thread_id: threadId, comment_id: commentId, revision,
           applied_at: trx.raw('clock_timestamp()') }).returning('*');
+        await retainCoManagedPrivateParticipation(context, request.operationId);
+        await assertWrite();
         return receipt(saved);
       }));
   } catch (error) {

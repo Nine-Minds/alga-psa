@@ -39,6 +39,8 @@ import {
 import { isEnterpriseEdition } from "@/lib/features";
 import ApplianceAiSection from "@/components/licenses/ApplianceAiSection";
 import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
+import TenantLicensePanel from './TenantLicensePanel';
+import { CoManagedFeatureBoundary } from '../co-managed/CoManagedFeatureBoundary';
 
 type Tone = "neutral" | "success" | "warning" | "danger" | "premium";
 
@@ -251,6 +253,11 @@ function toneClasses(tone: Tone) {
  * can always navigate here to renew or start a trial.
  */
 export default function LicenseManagementPage() {
+  const { data: session } = useSession();
+  return <LicenseManagementContent key={JSON.stringify([session?.user?.tenant, session?.user?.id])} />;
+}
+
+function LicenseManagementContent() {
   const { t } = useTranslation("msp/licensing");
   const [status, setStatus] = useState<LicenseStatus | null>(null);
   const [loading, setLoading] = useState(true);
@@ -302,23 +309,27 @@ export default function LicenseManagementPage() {
     setError(null);
     setSuccessMsg(null);
     startTransition(async () => {
-      const result = await submitLicense(licenseKey.trim());
-      if (result.success && result.status) {
-        await refresh(result.status);
-        setLicenseKey("");
-        setSuccessMsg(
-          t("managementPage.success.licenseKeyActivated", {
-            defaultValue:
-              "License key activated. Paid features are now available on this appliance.",
-          }),
-        );
-      } else {
-        setError(
-          result.error ??
-            t("managementPage.errors.activateLicenseKey", {
-              defaultValue: "Failed to activate license key.",
+      try {
+        const result = await submitLicense(licenseKey.trim());
+        if (result.success && result.status) {
+          await refresh(result.status);
+          setLicenseKey("");
+          setSuccessMsg(
+            t(result.status.scope === 'tenant' ? 'coManaged.tenantLicense.activated' : "managementPage.success.licenseKeyActivated", {
+              defaultValue:
+                result.status.scope === 'tenant' ? 'Workspace license key activated.' : "License key activated. Paid features are now available on this appliance.",
             }),
-        );
+          );
+        } else {
+          setError(
+            result.error ??
+              t("managementPage.errors.activateLicenseKey", {
+                defaultValue: "Failed to activate license key.",
+              }),
+          );
+        }
+      } catch {
+        setError(t('managementPage.errors.activateLicenseKey', { defaultValue: 'Failed to activate license key.' }));
       }
     });
   }
@@ -430,6 +441,11 @@ export default function LicenseManagementPage() {
       </div>
     );
   }
+
+  if (status.scope === 'tenant') return <CoManagedFeatureBoundary>
+    <TenantLicensePanel status={status} licenseKey={licenseKey} onKeyChange={setLicenseKey}
+      onActivate={handleSubmitLicense} pending={isPending} error={error} success={successMsg} portalUrl={PORTAL_URL} />
+  </CoManagedFeatureBoundary>;
 
   const presentation = statusPresentation(status, t);
   const classes = toneClasses(presentation.tone);

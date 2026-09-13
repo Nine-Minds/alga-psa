@@ -14,8 +14,8 @@ export async function discardCoManagedDraft(trx: Knex.Transaction, tenant: strin
   const owner = tenantDb(trx, tenant), files = await owner.table(FILES).where('draft_operation_id', row.operation_id).forUpdate();
   for (const file of files) if (file.customer_tenant !== row.customer_tenant || file.relationship_id !== row.relationship_id || file.ticket_id !== row.ticket_id ||
     file.thread_id !== row.thread_id || file.comment_id !== row.operation_id || file.actor_tenant !== row.actor_tenant || file.actor_user_id !== row.actor_user_id) throw new CoManagedSharedWorkError();
-  await owner.table(DRAFTS).where('operation_id', row.operation_id).update({ abandoned_at: trx.raw('clock_timestamp()') });
-  await owner.table(FILES).where('draft_operation_id', row.operation_id).whereNull('discarded_at').update({ discarded_at: trx.raw('clock_timestamp()') });
+  await owner.table(DRAFTS).where('operation_id', row.operation_id).update({ abandoned_at: trx.raw('now()') });
+  await owner.table(FILES).where('draft_operation_id', row.operation_id).whereNull('discarded_at').update({ discarded_at: trx.raw('now()') });
 }
 /** Trusted tenant maintenance. Claim invisibility before any external deletion;
  * retrying a failed/lost provider acknowledgement is safe at the same path. */
@@ -30,7 +30,7 @@ export async function cleanupCoManagedUploads(db: Knex, tenant: string, remove: 
     for (const row of drafts) { await discardCoManagedDraft(trx, tenant, row); result.abandonedDrafts++; }
     const files = await owner.table(FILES).where({ status: 'pending' }).whereNull('draft_operation_id').whereNull('discarded_at').modify(expired)
       .orderBy('last_activity_at').orderBy('attachment_id').limit(limit).forUpdate().skipLocked();
-    for (const row of files) { await owner.table(FILES).where('attachment_id', row.attachment_id).update({ discarded_at: trx.raw('clock_timestamp()') }); result.discardedFiles++; }
+    for (const row of files) { await owner.table(FILES).where('attachment_id', row.attachment_id).update({ discarded_at: trx.raw('now()') }); result.discardedFiles++; }
     // Ready editor uploads survive indefinitely while selected by their author's
     // draft. Unselected uploads use the existing abandoned-upload retention.
     // Lock the file before checking selection, matching draft-save file locks.
@@ -46,7 +46,7 @@ export async function cleanupCoManagedUploads(db: Knex, tenant: string, remove: 
         ticket_tenant: row.customer_tenant, ticket_id: row.ticket_id })
         .whereRaw('attachment_manifest @> ?::jsonb', [JSON.stringify([{ attachmentId: row.attachment_id }])]).first();
       if (selected) continue;
-      await owner.table(FILES).where('attachment_id', row.attachment_id).update({ discarded_at: trx.raw('clock_timestamp()') });
+      await owner.table(FILES).where('attachment_id', row.attachment_id).update({ discarded_at: trx.raw('now()') });
       result.discardedFiles++;
     }
     const acceptedPublication = owner.table('ticket_conversation_publications as p').whereRaw('p.operation_id = f.named_publication_operation_id');
@@ -55,7 +55,7 @@ export async function cleanupCoManagedUploads(db: Knex, tenant: string, remove: 
       .limit(limit).forUpdate().skipLocked();
     for (const row of publicationFiles) {
       if (await owner.table('ticket_conversation_publications').where('operation_id', row.named_publication_operation_id).first()) continue;
-      await owner.table(FILES).where('attachment_id', row.attachment_id).update({ discarded_at: trx.raw('clock_timestamp()') });
+      await owner.table(FILES).where('attachment_id', row.attachment_id).update({ discarded_at: trx.raw('now()') });
       result.discardedFiles++;
     }
   });
@@ -80,7 +80,7 @@ export async function cleanupCoManagedUploads(db: Knex, tenant: string, remove: 
           if (row.comment_id || row.thread_id || row.tenant !== row.actor_tenant || !row.actor_user_id) throw new Error('Invalid editor cleanup binding');
         } else if (row.status !== 'pending' && !explicitRemoval) throw new Error('Published attachments require explicit deletion');
         await remove(row.storage_path);
-        await owner.table(FILES).where('attachment_id', row.attachment_id).update({ purged_at: trx.raw('clock_timestamp()'), file_name: 'Removed attachment',
+        await owner.table(FILES).where('attachment_id', row.attachment_id).update({ purged_at: trx.raw('now()'), file_name: 'Removed attachment',
           mime_type: 'application/octet-stream', cleanup_error_code: null });
         return true;
       });
@@ -89,7 +89,7 @@ export async function cleanupCoManagedUploads(db: Knex, tenant: string, remove: 
       result.failedFiles++;
       await tenantDb(db, tenant).table(FILES).where('attachment_id', candidate.attachment_id).whereNotNull('discarded_at').whereNull('purged_at').update({
         cleanup_attempts: db.raw('cleanup_attempts + 1'), cleanup_error_code: 'attachment_cleanup_failed',
-        cleanup_next_attempt_at: db.raw("clock_timestamp() + least(3600, power(2, least(cleanup_attempts, 10)) * 60) * interval '1 second'"),
+        cleanup_next_attempt_at: db.raw("now() + least(3600, power(2, least(cleanup_attempts, 10)) * 60) * interval '1 second'"),
       });
     }
   }
@@ -101,7 +101,7 @@ export async function cleanupCoManagedUploads(db: Knex, tenant: string, remove: 
     for (const row of drafts) {
       if (await owner.table(FILES).where('draft_operation_id', row.operation_id).whereNull('purged_at').first()) continue;
       const manifest = (row.manifest as Array<{ attachmentId: string }>).map(file => ({ attachmentId: file.attachmentId }));
-      await owner.table(DRAFTS).where('operation_id', row.operation_id).update({ cleanup_completed_at: trx.raw('clock_timestamp()'),
+      await owner.table(DRAFTS).where('operation_id', row.operation_id).update({ cleanup_completed_at: trx.raw('now()'),
         request: { operationId: row.operation_id }, manifest: JSON.stringify(manifest) });
       result.completedDrafts++;
     }

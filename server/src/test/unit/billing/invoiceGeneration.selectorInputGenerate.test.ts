@@ -205,6 +205,7 @@ const mocks = vi.hoisted(() => {
     return createQueryBuilder(rowsByTable[normalizedTableName] ?? [], normalizedTableName);
   }) as any;
   knex.raw = vi.fn((sql: string) => sql);
+  knex.transaction = vi.fn(async (callback: (trx: any) => Promise<unknown>) => callback(knex));
 
   const getFullInvoiceById = vi.fn(async (_knex: unknown, _tenant: string, invoiceId: string) => {
     const invoice = rowsByTable.invoices.find((row) => row.invoice_id === invoiceId);

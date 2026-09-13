@@ -1,9 +1,16 @@
+export { finalizeCoManagedArchive } from './archiveFinalization';
+export { retainCoManagedConversationBeforeSourceChange } from './sourceChangeRetention';
 export * from './provisioning';
+export * from './provisioningInvitation';
 export * from './acceptance';
+export * from './relationshipClosure';
+export * from './departure';
 export * from './policy';
 export * from './sharedWork';
 export * from './sharedWorkRead';
+export * from './effortTotals';
 export * from './ticketHandoffs';
+export { CoManagedSlaSetupError, recordCoManagedTicketResolution, recordCoManagedTicketReopened, syncCoManagedTicketAwaitingClientSla } from './ticketSla';
 export * from './ticketCollaboration';
 
 export * from './actorReferences';
@@ -11,6 +18,8 @@ export * from './actorReferences';
 export * from './ticketEditing';
 
 export * from './ticketQueue';
+export * from './ticketBulkHandback';
+export * from './ticketAssignments';
 
 export * from './ticketConversation';
 export * from './namedTicketConversations';
@@ -115,3 +124,61 @@ export { prepareNamedConversationShareFiles, assertNamedConversationShareFiles }
 
 export { assertScheduledConversationSynthesisSource } from './conversationSynthesisPublication';
 export { publishNamedConversationAiExchange } from './conversationAiPublication';
+export * from './timePeriodJob';
+export * from './nativeScheduleRead';
+export * from './nativeScheduleCommand';
+export * from './nativeScheduleRelations';
+
+export * from './nativeScheduleMeetingSync';
+
+export * from './nativeAppointmentRequest';
+export * from './nativeAppointmentRequestCommand';
+
+export * from './nativeAppointmentApproval';
+
+export * from './meetingCreationOperation';
+
+export * from './appointmentMeetingCreation';
+
+export * from './nativeMeetingRead';
+
+export * from './nativeInteractionRead';
+
+export * from './nativeInteractionCommand';
+
+export { observeCoManagedTicketSla, observeDueCoManagedTicketSlas } from './ticketSla';
+
+export type { CoManagedSlaTargetDisplay, CoManagedSlaDisplay, CoManagedTicketSlaDisplay } from './ticketSlaRead';
+
+export { fanoutCoManagedSlaNotification, withCoManagedSlaNotification, type CoManagedSlaNotification, type CoManagedSlaNotificationChannel } from './slaNotification';
+export { withCoManagedStoredSlaNotification, type CoManagedStoredSlaNotification } from './storedSlaNotification';
+
+export { processCoManagedSlaEmailDeliveries, type CoManagedSlaEmailDelivery } from './slaEmailDeliveries';
+
+export { processCoManagedWorkflowTicketEmails, type CoManagedWorkflowTicketEmail } from './workflowTicketEmails';
+
+export { registerCoManagedTimeWorkReference } from './timeWorkReference';
+export { getCoManagedTimeBillingProfile, setCoManagedTimeBillingProfile, CoManagedTimeBillingProfileError, type CoManagedTimeBillingProfileChange } from './timeBillingProfile';
+export { retainCoManagedTimeParticipation } from './timeParticipationEvidence';
+
+export { storeCoManagedArchiveFiles } from './archiveFiles';
+export { listCoManagedArchiveWork, getCoManagedArchiveHistory, listCoManagedArchiveFiles, downloadCoManagedArchiveFile } from './archiveReads';
+export type { CoManagedArchiveWork, CoManagedArchiveEntry, CoManagedArchiveFile, CoManagedArchiveHistory } from './archiveReads';
+
+export * from './independentUpgrade';
+export { getCoManagedTenantLicenseStatus, submitCoManagedTenantLicense } from './tenantLicenseManagement';
+export * from './independentUpgradeScreen';
+export * from './upgradePurchase';
+
+export * from './portableRestoreUploads';
+export { assertPortableRestoreInstallationAuthority } from './portableRestoreInstallationAuthority';
+export * from './managementPolicy';
+
+export * from './ticketRoutingNotifications';
+export * from './ticketRoutingEmailDeliveries';
+
+export * from './requesterTaskConversation';
+
+export * from './delegatedAdministration';
+
+export * from './requesterTaskEmail';

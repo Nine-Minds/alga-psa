@@ -7,6 +7,9 @@ import { CoManagedFeatureBoundary } from '../../../components/co-managed/CoManag
 const mocks = vi.hoisted(() => ({ load: vi.fn(), save: vi.fn(), flag: vi.fn(), unavailable: vi.fn(), session: { user: { tenant: 'msp', id: 'technician' } } }));
 vi.mock('../../../lib/actions/coManagedProjectTaskConversationActions', () => ({ getSharedProjectTaskConversationAction: mocks.load, saveSharedProjectTaskCommentAction: mocks.save }));
 vi.mock('next-auth/react', () => ({ useSession: () => ({ data: mocks.session }) }));
+vi.mock('../../../components/co-managed/CoManagedCommentAttachments', () => ({ default: ({ resource, comment }: any) =>
+  <div data-testid="task-attachments" data-kind={resource.kind} data-comment={comment.commentId} /> }));
+vi.mock('../../../components/co-managed/CoManagedThreadDisclosure',()=>({default:({resource,thread,audiences,onClosed,onSaved}:any)=><div data-testid="task-disclosure" data-kind={resource.kind} data-store={thread.storeTenant} data-audiences={audiences.join(',')}><button onClick={onClosed}>close disclosure</button><button onClick={onSaved}>save disclosure</button></div>}));
 vi.mock('@alga-psa/ui/hooks', () => ({ useFeatureFlag: mocks.flag }));
 vi.mock('../../../lib/actions/coManagedAcceptanceActions', () => ({}));
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({ useTranslation: () => ({ t: (key: string) => key }), useFormatters: () => ({ formatDate: () => 'date' }), useOptionalI18n: () => null }));
@@ -29,6 +32,8 @@ it.each([{ enabled: false }, { enabled: true, loading: true }, { enabled: true, 
 });
 it('shows durable foreign authorship and sends an explicit private audience with a qualified task', async () => {
   mount(); await screen.findByText('Shared diagnosis'); expect(screen.getByText(/Provider IT/)).toBeInTheDocument();
+  expect(screen.getByTestId('task-attachments')).toHaveAttribute('data-kind', 'project_task');
+  expect(screen.getByTestId('task-attachments')).toHaveAttribute('data-comment', 'comment');
   fireEvent.click(button('new')); fireEvent.change(screen.getByLabelText('coManaged.conversation.audience'), { target: { value: 'organization_private' } });
   fireEvent.change(message(), { target: { value: 'MSP private diagnosis' } }); fireEvent.click(button('send'));
   await waitFor(() => expect(mocks.save).toHaveBeenCalledOnce()); expect(mocks.save.mock.calls[0]).toEqual([resource, { kind: 'create', operationId: expect.any(String), audience: 'organization_private', document: expect.any(Array) }]);
@@ -87,4 +92,18 @@ it('clears the active draft and visible messages when periodic access revalidati
   mocks.load.mockRejectedValueOnce(new Error('Access revoked'));
   await act(async () => { await vi.advanceTimersByTimeAsync(30000); });
   expect(screen.getByRole('alert')).toBeInTheDocument(); expect(screen.queryByText('Shared diagnosis')).toBeNull(); expect(screen.queryByLabelText('coManaged.conversation.message')).toBeNull(); expect(mocks.unavailable).toHaveBeenCalledOnce();
+});
+
+it('opens confirmed disclosure only for an owned root and preserves task/store identity with MSP audiences',async()=>{
+  mount();await screen.findByText('Shared diagnosis');fireEvent.click(screen.getByRole('button',{name:'coManaged.disclosure.title'}));
+  expect(screen.getByTestId('task-disclosure')).toHaveAttribute('data-kind','project_task');
+  expect(screen.getByTestId('task-disclosure')).toHaveAttribute('data-store','customer');
+  expect(screen.getByTestId('task-disclosure')).toHaveAttribute('data-audiences','requester,shared_it');
+  expect(screen.queryByRole('button',{name:'coManaged.conversation.new'})).toBeNull();
+  fireEvent.click(screen.getByRole('button',{name:'save disclosure'}));await waitFor(()=>expect(mocks.load).toHaveBeenCalledTimes(2));
+  expect(screen.queryByTestId('task-disclosure')).toBeNull();
+});
+it('never offers root audience control for replies, another author or deleted comments',async()=>{
+  mocks.load.mockResolvedValue({...data(),items:[{...item(),parentCommentId:'parent'},{...item(),commentId:'foreign',author:{...item().author,id:'another'}},{...item(),commentId:'deleted',deleted:true}]});
+  mount();await screen.findAllByText('Shared diagnosis');expect(screen.queryByRole('button',{name:'coManaged.disclosure.title'})).toBeNull();
 });

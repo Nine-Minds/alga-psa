@@ -69,6 +69,8 @@ export enum IEditScope {
 }
 
 export interface CreateScheduleEntryOptions {
+  /** Stable identity reserved by an admitted command before insertion. */
+  entryId?: string;
   assignedUserIds: string[];
   assignedByUserId?: string;
 }
