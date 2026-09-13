@@ -2,7 +2,11 @@
 import DailyRotateFile from 'winston-daily-rotate-file';
 import winston from 'winston';
 import path from 'path';
-import { resolveLogLevel, sanitizeLogMeta } from '@alga-psa/core';
+import { sanitizeLogMeta } from '@alga-psa/core';
+// Imported from the dedicated subpath, not the package barrel: the barrel is
+// pulled in by client bundles and jsdom tests that must not eagerly evaluate
+// the logger module graph.
+import { resolveLogLevel } from '@alga-psa/core/logger';
 
 // Define custom log levels
 const levels = {

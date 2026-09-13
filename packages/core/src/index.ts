@@ -7,8 +7,6 @@
 
 // Universal Logger (safe for both)
 export { default as logger } from './lib/logger-universal';
-export { resolveLogLevel, logLevels } from './lib/logger';
-export type { LogLevelName } from './lib/logger';
 
 // Secret Provider Types only
 export type { ISecretProvider } from './lib/secrets/ISecretProvider';
