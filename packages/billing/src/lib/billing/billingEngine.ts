@@ -4272,22 +4272,27 @@ export class BillingEngine {
         unit_rate_cents: number | string;
       }>;
       if (revisionRows.length > 0) {
-        const latestRevisionByService = new Map<
+        // Keyed on (service_id, config_id): a line may carry two configs of the
+        // same service, each with its own prospective revision. Keying on
+        // service_id alone silently dropped the second config's revision.
+        const latestRevisionByConfig = new Map<
           string,
-          { config_id: string; quantity: number; unit_rate_cents: number }
+          { quantity: number; unit_rate_cents: number }
         >();
         for (const revision of revisionRows) {
-          if (!latestRevisionByService.has(revision.service_id)) {
-            latestRevisionByService.set(revision.service_id, {
-              config_id: revision.config_id,
+          const configKey = `${revision.service_id}::${revision.config_id}`;
+          if (!latestRevisionByConfig.has(configKey)) {
+            latestRevisionByConfig.set(configKey, {
               quantity: Number(revision.quantity),
               unit_rate_cents: Number(revision.unit_rate_cents),
             });
           }
         }
         effectivePlanServices = planServices.map((service) => {
-          const revision = latestRevisionByService.get(service.service_id);
-          if (!revision || revision.config_id !== service.config_id) {
+          const revision = latestRevisionByConfig.get(
+            `${service.service_id}::${service.config_id}`,
+          );
+          if (!revision) {
             return service;
           }
           return {
