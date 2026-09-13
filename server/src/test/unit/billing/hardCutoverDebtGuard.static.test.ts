@@ -14,7 +14,6 @@ describe('hard cutover debt guard', () => {
       'packages/billing/src/components/settings/billing/QuickAddProduct.tsx',
       'packages/billing/src/components/settings/billing/ProductsManager.tsx',
       'packages/billing/src/components/settings/billing/ServiceCatalogManager.tsx',
-      'packages/billing/src/components/billing-dashboard/ServiceForm.tsx',
       'packages/billing/src/components/billing-dashboard/contracts/ServiceCatalogPicker.tsx',
       'packages/billing/src/components/billing-dashboard/ContractLineDialog.tsx',
       'packages/billing/src/components/billing-dashboard/contracts/CreateCustomContractLineDialog.tsx',

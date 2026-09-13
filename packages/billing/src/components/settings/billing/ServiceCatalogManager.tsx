@@ -8,7 +8,7 @@ import CurrencyPicker from '@alga-psa/ui/components/CurrencyPicker';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { DeleteEntityDialog } from '@alga-psa/ui';
 // Import new action and types
-import { getServices, updateService, deleteService, getServiceTypesForSelection, PaginatedServicesResponse, createServiceTypeInline, updateServiceTypeInline, deleteServiceTypeInline, setServicePrices } from '../../../actions/serviceActions';
+import { getServices, updateService, updateServicePricing, deleteService, getServiceTypesForSelection, PaginatedServicesResponse, createServiceTypeInline, updateServiceTypeInline, deleteServiceTypeInline } from '../../../actions/serviceActions';
 import { getDefaultBillingSettings } from '../../../actions/billingSettingsActions';
 import { CURRENCY_OPTIONS, getCurrencySymbol } from '@alga-psa/core';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
@@ -326,11 +326,9 @@ const ServiceCatalogManager: React.FC = () => {
       setEditingService(null);
       setEditingPrices([]);
 
-      // Then update the service
-      await updateService(editingService.service_id, editingService);
-
-      // Update the service prices
-      await setServicePrices(editingService.service_id, editingPrices);
+      // Update the service fields and its price rows atomically, deriving
+      // default_rate from the primary row at save time.
+      await updateServicePricing(editingService.service_id, editingService, editingPrices);
 
       // Fetch updated services with flag to preserve page
       await fetchServices(true);

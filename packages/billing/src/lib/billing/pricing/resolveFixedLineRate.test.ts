@@ -188,6 +188,7 @@ describe("resolveFixedLineRate (T15 equivalence matrix)", () => {
           configuration_quantity: 5,
         }),
       ],
+      catalogPrices: [],
       revisions: [
         {
           revision_id: "rev-1-old",
@@ -317,6 +318,7 @@ describe("resolveFixedLineRate (T15 equivalence matrix)", () => {
         rate_provenance: null,
       },
       planServices: [],
+      catalogPrices: [],
     });
     expect(result.line).toMatchObject({
       rateCents: 777,

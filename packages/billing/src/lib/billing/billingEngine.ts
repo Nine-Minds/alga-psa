@@ -142,6 +142,7 @@ import {
   normalizeProjectPhaseRateOverride,
 } from "../../models/projectBillingModelUtils";
 import { isProjectMaterialEligible } from "@alga-psa/inventory/lib";
+import { joinEffectiveServicePrice } from "./pricing/joinEffectiveServicePrice";
 // Workflow imports removed as event emission is moved back to the calling action
 
 type DiscountQueryRow = IDiscount & {
@@ -3381,6 +3382,8 @@ export class BillingEngine {
     try {
       staticInputsByLineId = await this.loadFixedChargeLineStaticInputs(
         dueFixedLines,
+        billingPeriod.startDate,
+        dueFixedLines[0]?.currency_code || "USD",
         session,
       );
       priceableLines = dueFixedLines.filter(
@@ -3496,12 +3499,17 @@ export class BillingEngine {
    */
   private async loadFixedChargeLineStaticInputs(
     clientContractLines: IClientContractLine[],
+    asOf: string,
+    currency: string,
     session?: FixedChargePreviewSession,
   ): Promise<Map<string, FixedChargeLineStaticInputs>> {
     const staticInputsByLineId = new Map<string, FixedChargeLineStaticInputs>();
     const pendingLines: IClientContractLine[] = [];
+    // Catalog prices are effective-dated, so a cached load is only reusable for
+    // the same as-of date and currency.
+    const sessionKey = (lineId: string) => `${lineId}::${asOf}::${currency}`;
     for (const line of clientContractLines) {
-      const cached = session?.get(line.client_contract_line_id);
+      const cached = session?.get(sessionKey(line.client_contract_line_id));
       if (cached) {
         staticInputsByLineId.set(line.client_contract_line_id, cached);
         continue;
@@ -3560,6 +3568,14 @@ export class BillingEngine {
       "sc.service_id",
       "cls.service_id",
     );
+    joinEffectiveServicePrice({
+      db,
+      query: planServicesQuery,
+      catalogExpression: "service_catalog as sc",
+      catalogServiceColumn: "sc.service_id",
+      asOf,
+      currency: currency,
+    });
 
     const planServiceRows = await planServicesQuery
       .whereIn("cls.contract_line_id", serviceLineIds)
@@ -3573,6 +3589,7 @@ export class BillingEngine {
         "sc.service_id",
         "sc.service_name",
         "sc.default_rate",
+        "esp.rate as currency_rate",
         "sc.tax_rate_id",
         "cls.quantity as service_quantity",
         "cls.custom_rate as service_line_custom_rate",
@@ -3666,7 +3683,7 @@ export class BillingEngine {
         ),
       };
       staticInputsByLineId.set(line.client_contract_line_id, staticInputs);
-      session?.set(line.client_contract_line_id, staticInputs);
+      session?.set(sessionKey(line.client_contract_line_id), staticInputs);
     }
 
     return staticInputsByLineId;
@@ -3675,6 +3692,7 @@ export class BillingEngine {
   /** Per-line plan services (and product-only fallback) for the generation path. */
   private async queryFixedChargeLineServices(
     clientContractLine: IClientContractLine,
+    asOf: string,
   ): Promise<{ planServices: any[]; fallbackService: any | null }> {
     const db = tenantDb(this.knex, this.tenant!);
     const tenant = this.tenant;
@@ -3706,6 +3724,14 @@ export class BillingEngine {
       "sc.service_id",
       "cls.service_id",
     );
+    joinEffectiveServicePrice({
+      db,
+      query: planServicesQuery,
+      catalogExpression: "service_catalog as sc",
+      catalogServiceColumn: "sc.service_id",
+      asOf,
+      currency: clientContractLine.currency_code || "USD",
+    });
 
     const planServices = await planServicesQuery
       .where({
@@ -3718,6 +3744,7 @@ export class BillingEngine {
         "sc.service_id",
         "sc.service_name",
         "sc.default_rate",
+        "esp.rate as currency_rate",
         "sc.tax_rate_id",
         "cls.quantity as service_quantity",
         "cls.custom_rate as service_line_custom_rate",
@@ -4176,7 +4203,10 @@ export class BillingEngine {
 
     const { planServices, fallbackService } =
       preloaded ??
-      (await this.queryFixedChargeLineServices(clientContractLine));
+      (await this.queryFixedChargeLineServices(
+        clientContractLine,
+        servicePeriodStart,
+      ));
 
     // Recurring-seat (unit-priced Fixed) lines may carry prospective
     // quantity/rate revisions effective at a service-period boundary. The
@@ -4825,7 +4855,6 @@ export class BillingEngine {
     }
 
     const tenant = this.tenant; // Capture tenant value for joins
-    const knexRef = this.knex; // Closure-friendly knex reference for join callbacks
     const contractCurrency = clientContractLine.currency_code || "USD";
     const clientConfigService = new ClientContractServiceConfigurationService(
       this.knex,
@@ -4946,22 +4975,15 @@ export class BillingEngine {
       "time_entries.service_id",
       { type: "left" },
     );
-    db.tenantJoin(
+    joinEffectiveServicePrice({
+      db,
       query,
-      "service_prices as sp",
-      "sp.service_id",
-      "service_catalog.service_id",
-      {
-        type: "left",
-        on(join) {
-          join.andOn(
-            "sp.currency_code",
-            "=",
-            knexRef.raw("?", [contractCurrency]),
-          );
-        },
-      },
-    );
+      catalogExpression: "service_catalog",
+      catalogServiceColumn: "service_catalog.service_id",
+      asOf: timingResolution.servicePeriodStart,
+      currency: contractCurrency,
+      alias: "sp",
+    });
     db.tenantJoin(
       query,
       "project_ticket_links",
@@ -5227,7 +5249,6 @@ export class BillingEngine {
     }
 
     const tenant = this.tenant; // Capture tenant value for joins
-    const knexRef = this.knex; // Closure-friendly knex reference for join callbacks
     const contractCurrency = clientContractLine.currency_code || "USD";
     const clientConfigService = new ClientContractServiceConfigurationService(
       this.knex,
@@ -5390,22 +5411,15 @@ export class BillingEngine {
         "upt.service_id",
         { type: "left" },
       );
-      db.tenantJoin(
-        totalQuery,
-        "service_prices as sp",
-        "sp.service_id",
-        "service_catalog.service_id",
-        {
-          type: "left",
-          on(join) {
-            join.andOn(
-              "sp.currency_code",
-              "=",
-              knexRef.raw("?", [contractCurrency]),
-            );
-          },
-        },
-      );
+      joinEffectiveServicePrice({
+        db,
+        query: totalQuery,
+        catalogExpression: "service_catalog",
+        catalogServiceColumn: "service_catalog.service_id",
+        asOf: servicePeriodStart,
+        currency: contractCurrency,
+        alias: "sp",
+      });
       const fetchedTotals = await totalQuery
         .where({
           "upt.tenant": this.tenant,
@@ -5451,22 +5465,15 @@ export class BillingEngine {
       "usage_tracking.service_id",
       { type: "left" },
     );
-    db.tenantJoin(
-      usageRecordQuery,
-      "service_prices as sp",
-      "sp.service_id",
-      "service_catalog.service_id",
-      {
-        type: "left",
-        on(join) {
-          join.andOn(
-            "sp.currency_code",
-            "=",
-            knexRef.raw("?", [contractCurrency]),
-          );
-        },
-      },
-    );
+    joinEffectiveServicePrice({
+      db,
+      query: usageRecordQuery,
+      catalogExpression: "service_catalog",
+      catalogServiceColumn: "service_catalog.service_id",
+      asOf: servicePeriodStart,
+      currency: contractCurrency,
+      alias: "sp",
+    });
 
     usageRecordQuery
       .where({
@@ -6052,22 +6059,15 @@ export class BillingEngine {
       "sc.service_id",
       "cls.service_id",
     );
-    db.tenantJoin(
-      planServicesQuery,
-      "service_prices as sp",
-      "sp.service_id",
-      "sc.service_id",
-      {
-        type: "left",
-        on: (join) => {
-          join.andOn(
-            "sp.currency_code",
-            "=",
-            this.knex.raw("?", [clientContractLine.currency_code || "USD"]),
-          );
-        },
-      },
-    );
+    joinEffectiveServicePrice({
+      db,
+      query: planServicesQuery,
+      catalogExpression: "service_catalog as sc",
+      catalogServiceColumn: "sc.service_id",
+      asOf: timingResolution.servicePeriodStart,
+      currency: clientContractLine.currency_code || "USD",
+      alias: "sp",
+    });
 
     planServicesQuery
       .where({
