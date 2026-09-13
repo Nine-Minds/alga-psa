@@ -1182,37 +1182,29 @@ async function readPersistedXeroDefaultRealm(tenantId: string): Promise<string |
  * connection; an absent default falls back to the first stored connection.
  */
 export async function resolveDefaultXeroConnectionId(tenantId: string): Promise<string | null> {
-  const connections = await getTenantConnections(tenantId);
-  const connectionIds = Object.keys(connections);
-  if (connectionIds.length === 0) {
-    return null;
-  }
-
-  const persisted = await readPersistedXeroDefaultRealm(tenantId);
-  const selection = resolveXeroDefaultSelection(connections, persisted);
-  if (selection.status === 'resolved') {
-    return selection.connectionId;
-  }
-  if (selection.status === 'ambiguous') {
-    return null;
-  }
-  return connectionIds[0];
+  const selection = await getXeroDefaultSelection(tenantId);
+  return selection.status === 'resolved' ? selection.connectionId : null;
 }
 
 /**
- * Full persisted-selection outcome for the settings/catalog surfaces, which
- * must distinguish an ambiguous organisation (actionable error) from an
- * absent default (first-connection fallback).
+ * Usable selection for settings, catalogs and exports. An absent or unmatched
+ * default (including another provider's realm) uses the first stored Xero
+ * connection, matching provider-scoped sync routing. Ambiguity stays an error
+ * outcome and never selects another organisation.
  */
 export type XeroDefaultSelectionStatus = XeroDefaultSelection | { status: 'no_connections' };
 
 export async function getXeroDefaultSelection(tenantId: string): Promise<XeroDefaultSelectionStatus> {
   const connections = await getTenantConnections(tenantId);
-  if (Object.keys(connections).length === 0) {
+  const [firstConnectionId] = Object.keys(connections);
+  if (!firstConnectionId) {
     return { status: 'no_connections' };
   }
   const persisted = await readPersistedXeroDefaultRealm(tenantId);
-  return resolveXeroDefaultSelection(connections, persisted);
+  const selection = resolveXeroDefaultSelection(connections, persisted);
+  return selection.status === 'absent' || selection.status === 'unknown'
+    ? { status: 'resolved', connectionId: firstConnectionId }
+    : selection;
 }
 
 export async function getDefaultXeroTenantId(tenantId: string): Promise<string | null> {

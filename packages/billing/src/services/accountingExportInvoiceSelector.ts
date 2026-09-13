@@ -373,7 +373,14 @@ export class AccountingExportInvoiceSelector {
           { adapterType: 'xero', organisationId: selection.organisationId }
         );
       }
-      targetRealm = selection.status === 'resolved' ? selection.connectionId : null;
+      if (selection.status !== 'resolved') {
+        throw new AppError(
+          'ACCOUNTING_EXPORT_XERO_CONNECTION_REQUIRED',
+          'No Xero connection could be selected. Connect Xero in the accounting settings before exporting.',
+          { adapterType: 'xero' }
+        );
+      }
+      targetRealm = selection.connectionId;
     }
 
     const preview = await this.previewInvoiceLines({
