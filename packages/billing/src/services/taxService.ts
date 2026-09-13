@@ -17,16 +17,33 @@ import { ManualInvoiceError } from '../errors/manualInvoiceErrors';
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
+/**
+ * UTC midnight for a calendar day. `Date.UTC` maps years 0-99 to 1900-1999, so
+ * build the date first and set the full year explicitly; otherwise SQL dates
+ * (which use the normalized `YYYY-MM-DD` string) and segmentation (which uses
+ * this Date) would disagree for years below 100.
+ */
+function utcDateFromCalendar(year: number, month: number, day: number): Date {
+  const date = new Date(0);
+  date.setUTCFullYear(year, month - 1, day);
+  date.setUTCHours(0, 0, 0, 0);
+  return date;
+}
+
 function daysInMonth(year: number, month: number): number {
-  return new Date(Date.UTC(year, month, 0)).getUTCDate();
+  return utcDateFromCalendar(year, month + 1, 0).getUTCDate();
 }
 
 function isValidTimeOfDay(time: string): boolean {
   const match = time.match(/^(\d{2}):(\d{2})(?::(\d{2})(?:\.\d{1,9})?)?(Z|[+-]\d{2}:\d{2})?$/);
   if (!match) return false;
-  return Number(match[1]) <= 23
-    && Number(match[2]) <= 59
-    && (match[3] === undefined || Number(match[3]) <= 59);
+  if (Number(match[1]) > 23 || Number(match[2]) > 59) return false;
+  if (match[3] !== undefined && Number(match[3]) > 59) return false;
+  if (match[4] && match[4] !== 'Z') {
+    const [offsetHours, offsetMinutes] = match[4].slice(1).split(':').map(Number);
+    if (offsetHours > 23 || offsetMinutes > 59) return false;
+  }
+  return true;
 }
 
 /**
@@ -75,7 +92,7 @@ function normalizeCalendarDay(value: ISO8601String | Date): ISO8601String {
 /** UTC midnight for a calendar day, used only for inclusive/exclusive day math. */
 function calendarDayToUtc(value: ISO8601String | Date): Date {
   const { year, month, day } = parseCalendarDay(value);
-  return new Date(Date.UTC(year, month - 1, day));
+  return utcDateFromCalendar(year, month, day);
 }
 
 function daysBetween(start: Date, end: Date): number {
@@ -90,6 +107,101 @@ function formatDay(date: Date): ISO8601String {
 function normalizePercentage(value: number | string): number {
   const percentage = typeof value === 'string' ? parseFloat(value) : value;
   return Number.isNaN(percentage) ? 0 : percentage;
+}
+
+/**
+ * Exact non-negative rational used for money math. Tax percentages, caps, and
+ * net amounts are finite decimals, but floating-point sums of per-rate
+ * contributions drift (325 * 1.1% + 325 * 2.9% lands on 13.000000000000002).
+ * Rational arithmetic keeps capped sums and period proration exact; the
+ * uncapped regional path still uses the original combined-rate expression so
+ * its results stay bit-identical.
+ */
+interface Rational {
+  n: bigint;
+  d: bigint;
+}
+
+function toRational(value: number | string): Rational {
+  const text = (typeof value === 'number' ? value.toString() : value).trim();
+  const match = text.match(/^(-?)(\d+)(?:\.(\d+))?(?:[eE]([+-]?\d+))?$/);
+  if (!match) {
+    throw new Error(`Tax calculation cannot represent ${text} exactly`);
+  }
+  const sign = match[1] === '-' ? -1n : 1n;
+  const fraction = match[3] ?? '';
+  let numerator = BigInt(match[2] + fraction) * sign;
+  let scale = fraction.length - (match[4] ? Number(match[4]) : 0);
+  if (scale < 0) {
+    numerator *= 10n ** BigInt(-scale);
+    scale = 0;
+  }
+  return { n: numerator, d: 10n ** BigInt(scale) };
+}
+
+function rationalInteger(value: number): Rational {
+  return { n: BigInt(value), d: 1n };
+}
+
+function multiplyRational(a: Rational, b: Rational): Rational {
+  return { n: a.n * b.n, d: a.d * b.d };
+}
+
+function divideRational(a: Rational, b: Rational): Rational {
+  return { n: a.n * b.d, d: a.d * b.n };
+}
+
+function addRational(a: Rational, b: Rational): Rational {
+  return { n: a.n * b.d + b.n * a.d, d: a.d * b.d };
+}
+
+/** Compares a/b. Denominators are positive. */
+function compareRational(a: Rational, b: Rational): number {
+  const left = a.n * b.d;
+  const right = b.n * a.d;
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
+/** Ceiling of a rational with a positive denominator. */
+function ceilRational(value: Rational): number {
+  const quotient = value.n / value.d;
+  const remainder = value.n % value.d;
+  return Number(remainder > 0n ? quotient + 1n : quotient);
+}
+
+/** Exact `value * percentage / 100`. */
+function percentageOf(value: Rational, percentage: number | string): Rational {
+  return divideRational(multiplyRational(value, toRational(percentage)), rationalInteger(100));
+}
+
+/**
+ * Combined regional tax for one amount. With no binding cap it returns the
+ * original `ceil(amount * combinedRate / 100)` expression (bit-identical to
+ * the previous implementation); when a cap binds it sums the exact capped
+ * contributions instead of relying on floating point or an epsilon.
+ */
+function regionalTaxAmount(
+  amount: number,
+  amountRational: Rational,
+  rates: { percentage: number; cap: number | null }[],
+  combinedTaxRate: number,
+): number {
+  if (amount <= 0) return 0;
+  const contributions = rates.map(({ percentage, cap }) => ({
+    contribution: percentageOf(amountRational, percentage),
+    cap: cap === null ? null : rationalInteger(cap),
+  }));
+  const anyCapBinds = contributions.some(
+    ({ contribution, cap }) => cap !== null && compareRational(contribution, cap) > 0,
+  );
+  if (!anyCapBinds) {
+    return Math.ceil((amount * combinedTaxRate) / 100);
+  }
+  const total = contributions.reduce((sum, { contribution, cap }) => {
+    const bounded = cap !== null && compareRational(contribution, cap) > 0 ? cap : contribution;
+    return addRational(sum, bounded);
+  }, { n: 0n, d: 1n });
+  return ceilRational(total);
 }
 
 /**
@@ -310,14 +422,17 @@ export class TaxService {
         0,
       );
 
-      // Cap each rate's unrounded contribution, then ceil the sum once. With no
-      // caps this is identical to ceil(netAmount * combinedTaxRate / 100), so
-      // existing uncapped rounding is preserved.
-      const rawTaxAmount = applicableRates.reduce((sum, rate) => {
-        const contribution = (netAmount * normalizePercentage(rate.tax_percentage)) / 100;
-        return sum + this.applyCap(contribution, rate.cap_amount);
-      }, 0);
-      const taxAmount = netAmount > 0 ? Math.ceil(rawTaxAmount) : 0;
+      // Cap each rate's contribution; no binding cap keeps the original
+      // combined-rate expression, and capped sums use exact rational math.
+      const taxAmount = regionalTaxAmount(
+        netAmount,
+        toRational(netAmount),
+        applicableRates.map(rate => ({
+          percentage: normalizePercentage(rate.tax_percentage),
+          cap: normalizeTaxCapAmount(rate.cap_amount),
+        })),
+        combinedTaxRate,
+      );
 
       console.log(`Found ${applicableRates.length} applicable rate(s) for regionCode ${regionCode}. Combined rate: ${combinedTaxRate}%`);
       console.log(`Calculated tax amount: ${taxAmount} for net amount: ${netAmount} using combined rate ${combinedTaxRate}%`);
@@ -508,22 +623,32 @@ export class TaxService {
         );
       }
 
+      const netRational = toRational(netAmount);
       const boundaries = collectBoundaries(periodStart, periodEnd, applicableRates);
       const built: BuiltPeriodSegment[] = segmentsFromBoundaries(boundaries).map(({ start, end, days }) => {
         const segmentNet = netAmount * (days / totalDays);
+        // Exact day-share for capped contributions; the reported/uncapped value
+        // keeps the original float expression.
+        const segmentNetRational = divideRational(
+          multiplyRational(netRational, rationalInteger(days)),
+          rationalInteger(totalDays),
+        );
         const ratesForSegment = applicableRates.filter(rate => isRateActiveOn(rate, start));
         const combinedTaxRate = ratesForSegment.reduce(
           (sum, rate) => sum + normalizePercentage(rate.tax_percentage),
           0,
         );
-        // Cap each rate's unrounded contribution, then ceil the segment sum
-        // once. With no caps this equals the previous
-        // ceil(segmentNet * combinedTaxRate / 100).
-        const rawTaxAmount = ratesForSegment.reduce((sum, rate) => {
-          const contribution = (segmentNet * normalizePercentage(rate.tax_percentage)) / 100;
-          return sum + this.applyCap(contribution, rate.cap_amount);
-        }, 0);
-        const taxAmount = segmentNet > 0 ? Math.ceil(rawTaxAmount) : 0;
+        // No binding cap keeps the original combined-rate expression; a binding
+        // cap sums exact capped contributions per segment.
+        const taxAmount = regionalTaxAmount(
+          segmentNet,
+          segmentNetRational,
+          ratesForSegment.map(rate => ({
+            percentage: normalizePercentage(rate.tax_percentage),
+            cap: normalizeTaxCapAmount(rate.cap_amount),
+          })),
+          combinedTaxRate,
+        );
         return {
           start_date: formatDay(start),
           end_date: formatDay(end),

@@ -172,6 +172,47 @@ describe('TaxService PostgreSQL rate selection', () => {
     expect(await new TaxService().calculateTax(clientId, 10000, '2026-06-01', region)).toEqual({ taxAmount: 300, taxRate: 5 });
   });
 
+  it('preserves combined-rate rounding for 325 at 1.1% + 2.9% with no binding cap', async () => {
+    await context.db!('tax_rates').where({ tenant: context.tenant, region_code: region }).update({ is_active: false });
+    await context.db!('tax_rates').insert([
+      { tenant: context.tenant, tax_rate_id: randomUUID(), region_code: region, tax_percentage: 1.1, start_date: '2026-01-01' },
+      { tenant: context.tenant, tax_rate_id: randomUUID(), region_code: region, tax_percentage: 2.9, start_date: '2026-01-01' },
+    ]);
+    const service = new TaxService();
+
+    // Per-rate contributions float to 13.000000000000002; the combined-rate
+    // expression must charge 13 on both the single-date and period paths.
+    expect(await service.calculateTax(clientId, 325, '2026-06-01', region)).toEqual({ taxAmount: 13, taxRate: 4 });
+    const period = await service.calculateTaxForPeriod(clientId, 325, '2026-02-01', '2026-03-01', region);
+    expect(period.taxAmount).toBe(13);
+    expect(period.segments[0].taxAmount).toBe(13);
+  });
+
+  it('keeps combined-rate rounding when configured regional caps do not bind', async () => {
+    await context.db!('tax_rates').where({ tenant: context.tenant, region_code: region }).update({ is_active: false });
+    await context.db!('tax_rates').insert([
+      { tenant: context.tenant, tax_rate_id: randomUUID(), region_code: region, tax_percentage: 1.1, start_date: '2026-01-01', cap_amount: 1000 },
+      { tenant: context.tenant, tax_rate_id: randomUUID(), region_code: region, tax_percentage: 2.9, start_date: '2026-01-01', cap_amount: 1000 },
+    ]);
+    const service = new TaxService();
+
+    expect(await service.calculateTax(clientId, 325, '2026-06-01', region)).toEqual({ taxAmount: 13, taxRate: 4 });
+    expect((await service.calculateTaxForPeriod(clientId, 325, '2026-02-01', '2026-03-01', region)).taxAmount).toBe(13);
+  });
+
+  it('uses exact arithmetic when a regional cap binds (325 at 1.1% cap 3 + 2.9%)', async () => {
+    await context.db!('tax_rates').where({ tenant: context.tenant, region_code: region }).update({ is_active: false });
+    await context.db!('tax_rates').insert([
+      { tenant: context.tenant, tax_rate_id: randomUUID(), region_code: region, tax_percentage: 1.1, start_date: '2026-01-01', cap_amount: 3 },
+      { tenant: context.tenant, tax_rate_id: randomUUID(), region_code: region, tax_percentage: 2.9, start_date: '2026-01-01' },
+    ]);
+    const service = new TaxService();
+
+    // 3.575 -> 3, plus 9.425 = 12.425 -> 13.
+    expect(await service.calculateTax(clientId, 325, '2026-06-01', region)).toEqual({ taxAmount: 13, taxRate: 4 });
+    expect((await service.calculateTaxForPeriod(clientId, 325, '2026-02-01', '2026-03-01', region)).taxAmount).toBe(13);
+  });
+
   it('caps each regional rate per segment across a capped rate boundary', async () => {
     await context.db!('tax_rates').where({ tenant: context.tenant, region_code: region }).update({ is_active: false });
     await context.db!('tax_rates').insert([

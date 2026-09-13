@@ -206,6 +206,42 @@ describe('TaxService.calculateTax', () => {
       expect(result).toEqual({ taxAmount: 25, taxRate: 7.5 });
     });
 
+    it('preserves combined-rate rounding when no cap binds (325 at 1.1% + 2.9%)', async () => {
+      setupKnex({
+        clients: [[{ is_tax_exempt: false }]],
+        tax_rates: [[{ tax_percentage: 1.1 }, { tax_percentage: 2.9 }]],
+      });
+
+      // Summing per-rate contributions floats to 13.000000000000002; the
+      // combined-rate expression must still charge 13.
+      const result = await new TaxService().calculateTax('client-1', 325, DATE, 'US-NY');
+
+      expect(result).toEqual({ taxAmount: 13, taxRate: 4 });
+    });
+
+    it('keeps combined-rate rounding when configured caps do not bind', async () => {
+      setupKnex({
+        clients: [[{ is_tax_exempt: false }]],
+        tax_rates: [[{ tax_percentage: 1.1, cap_amount: 1000 }, { tax_percentage: 2.9, cap_amount: 1000 }]],
+      });
+
+      const result = await new TaxService().calculateTax('client-1', 325, DATE, 'US-NY');
+
+      expect(result).toEqual({ taxAmount: 13, taxRate: 4 });
+    });
+
+    it('uses exact arithmetic when a regional cap binds (325 at 1.1% cap 3 + 2.9%)', async () => {
+      setupKnex({
+        clients: [[{ is_tax_exempt: false }]],
+        tax_rates: [[{ tax_percentage: 1.1, cap_amount: 3 }, { tax_percentage: 2.9 }]],
+      });
+
+      // 3.575 -> 3, plus 9.425 = 12.425 -> 13.
+      const result = await new TaxService().calculateTax('client-1', 325, DATE, 'US-NY');
+
+      expect(result).toEqual({ taxAmount: 13, taxRate: 4 });
+    });
+
     it('parses a regional cap hydrated as a bigint string', async () => {
       setupKnex({
         clients: [[{ is_tax_exempt: false }]],

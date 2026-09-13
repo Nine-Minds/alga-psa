@@ -318,6 +318,59 @@ describe('TaxService.calculateTaxForPeriod', () => {
       expect(result.segments[0].taxRate).toBe(7.5);
     });
 
+    it('preserves combined-rate rounding when no cap binds (325 at 1.1% + 2.9%)', async () => {
+      setupKnex({
+        clients: [[{ is_tax_exempt: false }]],
+        tax_rates: [[
+          rate({ tax_rate_id: 'a', tax_percentage: 1.1 }),
+          rate({ tax_rate_id: 'b', tax_percentage: 2.9 }),
+        ]],
+      });
+
+      // Per-rate contributions float to 13.000000000000002; the combined-rate
+      // expression must still charge 13.
+      const result = await new TaxService().calculateTaxForPeriod(
+        'client-1', 325, '2026-02-01', '2026-03-01', 'US-NY',
+      );
+
+      expect(result.taxAmount).toBe(13);
+      expect(result.segments[0].taxAmount).toBe(13);
+    });
+
+    it('keeps combined-rate rounding when configured regional caps do not bind', async () => {
+      setupKnex({
+        clients: [[{ is_tax_exempt: false }]],
+        tax_rates: [[
+          rate({ tax_rate_id: 'a', tax_percentage: 1.1, cap_amount: 1000 }),
+          rate({ tax_rate_id: 'b', tax_percentage: 2.9, cap_amount: 1000 }),
+        ]],
+      });
+
+      const result = await new TaxService().calculateTaxForPeriod(
+        'client-1', 325, '2026-02-01', '2026-03-01', 'US-NY',
+      );
+
+      expect(result.taxAmount).toBe(13);
+    });
+
+    it('uses exact arithmetic when a regional cap binds across a segment', async () => {
+      setupKnex({
+        clients: [[{ is_tax_exempt: false }]],
+        tax_rates: [[
+          rate({ tax_rate_id: 'a', tax_percentage: 1.1, cap_amount: 3 }),
+          rate({ tax_rate_id: 'b', tax_percentage: 2.9 }),
+        ]],
+      });
+
+      // 3.575 -> 3, plus 9.425 = 12.425 -> 13.
+      const result = await new TaxService().calculateTaxForPeriod(
+        'client-1', 325, '2026-02-01', '2026-03-01', 'US-NY',
+      );
+
+      expect(result.taxAmount).toBe(13);
+      expect(result.segments[0].taxAmount).toBe(13);
+    });
+
     it('caps each regional rate per segment across a capped rate boundary', async () => {
       setupKnex({
         clients: [[{ is_tax_exempt: false }]],
@@ -477,7 +530,7 @@ describe('TaxService.calculateTaxForPeriod', () => {
   describe('date validation', () => {
     beforeEach(() => {
       const client = [{ is_tax_exempt: false }];
-      const regionRate = [rate({ tax_percentage: 5, start_date: '2020-01-01' })];
+      const regionRate = [rate({ tax_percentage: 5, start_date: '0001-01-01' })];
       setupKnex({
         clients: [client, client, client, client],
         tax_rates: [regionRate, regionRate, regionRate, regionRate],
@@ -542,6 +595,47 @@ describe('TaxService.calculateTaxForPeriod', () => {
       await expect(
         new TaxService().calculateTaxForPeriod('client-1', 10000, new Date(NaN) as any, '2026-03-01', 'US-NY'),
       ).rejects.toThrow('Invalid tax calculation date');
+    });
+
+    it.each([
+      '2026-01-01T12:00:00+99:99',
+      '2026-01-01T12:00:00+24:00',
+      '2026-01-01T12:00:00+12:60',
+      '2026-01-01T12:00:00-25:00',
+      '2026-01-01T12:00:00+1:00',
+    ])('rejects an invalid timezone offset %s', async bad => {
+      await expect(
+        new TaxService().calculateTaxForPeriod('client-1', 10000, bad, '2026-03-01', 'US-NY'),
+      ).rejects.toThrow('Invalid tax calculation date');
+    });
+
+    it.each([
+      '2026-02-01T12:00:00+14:00',
+      '2026-02-01T12:00:00-12:00',
+      '2026-02-01T12:00:00+00:00',
+    ])('accepts a valid timezone offset %s', async good => {
+      const result = await new TaxService().calculateTaxForPeriod(
+        'client-1', 28000, good, '2026-03-01', 'US-NY',
+      );
+      expect(result.segments[0].start_date).toBe('2026-02-01');
+      expect(result.segments[0].days).toBe(28);
+    });
+
+    it('keeps years below 100 consistent between the SQL filter and segmentation', async () => {
+      // Date.UTC would silently turn year 26 into 1926; the normalized string and
+      // the segmentation Date must both stay at 0026.
+      const result = await new TaxService().calculateTaxForPeriod(
+        'client-1', 3000, '0026-01-01', '0026-01-31', 'US-NY',
+      );
+
+      expect(result.segments[0]).toEqual({
+        start_date: '0026-01-01',
+        end_date: '0026-01-31',
+        days: 30,
+        netAmount: 3000,
+        taxAmount: 150,
+        taxRate: 5,
+      });
     });
   });
 });

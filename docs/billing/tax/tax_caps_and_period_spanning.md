@@ -19,14 +19,20 @@ before treating any of this as production-ready.
 - Caps apply on every path that resolves rates:
   - **Simple and progressive default-rate paths**: `min(taxAmount, cap)` on the
     rate's single calculation, as before.
-  - **Single-date regional path**: each rate's unrounded contribution is capped
-    at that rate's `cap_amount`, the capped contributions are summed, and the
-    sum is ceiling-rounded once. With no caps this is identical to the previous
-    `ceil(netAmount * combinedRate / 100)`, so existing uncapped rounding is
-    preserved.
-  - **Period regional path**: the same per-rate capping is applied within each
-    segment, so a period crossing several rate intervals charges each interval's
-    cap.
+  - **Single-date regional path**: each rate's contribution is capped at that
+    rate's `cap_amount`, the capped contributions are summed, and the sum is
+    ceiling-rounded once. When no cap binds (no cap configured, or every
+    contribution is at or below its cap) the original
+    `ceil(netAmount * combinedRate / 100)` expression is used unchanged, so
+    uncapped results stay bit-identical; summing per-rate contributions in
+    floating point would drift (325 at 1.1% + 2.9% lands on
+    `13.000000000000002` and overcharges by a cent). When a cap does bind, the
+    contributions are summed with exact rational arithmetic (BigInt
+    numerator/denominator) rather than an epsilon.
+  - **Period regional path**: the same rule applies within each segment, and
+    each segment's day-share is computed exactly as a rational before capped
+    contributions are summed, so a period crossing several rate intervals
+    charges each interval's cap without proration drift.
 - No UI reads or writes `cap_amount`. It can be set through the
   `addTaxRate`/`updateTaxRate` actions (which validate it and spread the full
   row) or directly in the database. The API tax-rate Zod schemas do not expose
@@ -47,10 +53,15 @@ regionCode?, is_taxable?, currencyCode?)` returns
   - ISO 8601 timestamps (`YYYY-MM-DD`, optional `THH:mm[:ss[.sss]]`, optional
     `Z` or `±HH:mm`). The calendar day is the one the timestamp spells out in
     its own offset, not the UTC instant, so an offset never shifts the day.
+    Time and offset components are validated (`+99:99`, `+24:00`, `+12:60`,
+    `+1:00` are rejected; `+14:00`, `-12:00`, `Z` are accepted).
   - `Date` objects, interpreted by their local calendar components because
     PostgreSQL `date` columns hydrate as local midnight.
   - Invalid dates (`2026-02-30`), trailing garbage, and impossible times throw.
     Leap days are accepted; a non-leap February 29 is rejected.
+  - Years below 100 are built with `setUTCFullYear` instead of `Date.UTC`, so
+    `0026-01-01` stays year 26 in segmentation and matches the `YYYY-MM-DD`
+    string used in the SQL filters rather than silently becoming 1926.
 - Every rate `start_date`/`end_date` strictly inside the period splits it into
   constant-rate segments. A period inside one rate interval is a single
   segment.
