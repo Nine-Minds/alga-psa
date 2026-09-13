@@ -721,7 +721,10 @@
       "unit": "Unité",
       "taxRate": "Taux d'imposition",
       "nonTaxable": "Non imposable",
-      "thisService": "ce service"
+      "thisService": "ce service",
+      "contractUsage": "Contrats",
+      "contractUsageNone": "Non utilisé",
+      "contractUsageCount": "Utilisé sur {{contracts}}"
     },
     "errors": {
       "fetchServices": "Échec de la récupération des services",
@@ -1432,6 +1435,69 @@
     },
     "sections": {
       "userRates": "Taux par utilisateur"
+    }
+  },
+  "priceChangeRollout": {
+    "title": "Déploiement du changement de prix",
+    "previewFailed": "Impossible de charger l'aperçu du changement de prix.",
+    "skip": "Enregistrer le prix uniquement",
+    "apply": "Appliquer aux lignes héritées",
+    "applying": "Enregistrement…",
+    "effectiveDate": "Date d'effet",
+    "effectiveDateHint": "Par défaut, la prochaine limite de période de facturation.",
+    "willChange": "Va changer",
+    "noInheritedLines": "Aucune ligne héritée ne change à cette date.",
+    "custom": "Ne change pas — personnalisée",
+    "unreviewed": "Ne change pas — pas encore classée",
+    "unreviewedAlert": "Ces lignes sont facturées sans changement jusqu'à ce que vous les vérifiiez.",
+    "reviewRates": "Vérifier les tarifs",
+    "excluded": "Exclue — déjà facturée",
+    "none": "Aucune.",
+    "totalMonthlyDelta": "Variation totale du chiffre d'affaires mensuel",
+    "acrossAllInherited": "Sur les {{lines}} ligne(s) héritée(s).",
+    "applyFailed": "Impossible d'appliquer le déploiement. Aucune modification n'a été effectuée.",
+    "skipFailed": "Impossible d'enregistrer le changement de prix.",
+    "columns": {
+      "client": "Client",
+      "contract": "Contrat",
+      "line": "Ligne",
+      "current": "Actuel",
+      "new": "Nouveau",
+      "delta": "Écart"
+    },
+    "followsCatalog": "Suit le catalogue",
+    "close": "Fermer",
+    "usageTitle": "Utilisation du service"
+  },
+  "rateReview": {
+    "title": "Vérification des tarifs",
+    "close": "Fermer",
+    "applySelected": "Appliquer la sélection",
+    "applying": "Application…",
+    "previewFailed": "Impossible de charger les tarifs à vérifier.",
+    "applyFailed": "Impossible d'appliquer la vérification des tarifs. Aucune modification n'a été effectuée.",
+    "intro": "Les lignes facturées exactement au tarif du catalogue ne changeront pas sur votre prochaine facture. Les lignes différentes conservent leur tarif actuel en tant que prix négocié.",
+    "applied": "{{applied}} modification(s) appliquée(s).",
+    "refused": "{{refused}} ligne(s) ont été refusées car elles ont changé depuis l'aperçu.",
+    "summary": "{{total}} ligne(s) non vérifiée(s) : {{inherited}} correspondance(s) exacte(s), {{custom}} négociées, {{skipped}} ignorées.",
+    "allClassified": "Toutes les lignes ont été classées. Rien à vérifier.",
+    "noService": "Aucun service",
+    "columns": {
+      "contract": "Contrat",
+      "currentRate": "Tarif actuel",
+      "catalogRate": "Tarif du catalogue",
+      "proposed": "Proposé",
+      "confidence": "Confiance"
+    },
+    "proposal": {
+      "inherited": "Suivre le catalogue",
+      "custom": "Conserver comme personnalisée",
+      "unreviewed": "Laisser non vérifiée"
+    },
+    "confidence": {
+      "exact": "Correspondance exacte",
+      "differs": "Diffère du catalogue",
+      "needsDecision": "Décision requise"
     }
   }
 }

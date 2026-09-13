@@ -721,7 +721,10 @@
       "unit": "Unit",
       "taxRate": "Tax Rate",
       "nonTaxable": "Non-Taxable",
-      "thisService": "this service"
+      "thisService": "this service",
+      "contractUsage": "Contracts",
+      "contractUsageNone": "Not used",
+      "contractUsageCount": "Used on {{contracts}}"
     },
     "errors": {
       "fetchServices": "Failed to fetch services",
@@ -1432,6 +1435,69 @@
     },
     "sections": {
       "userRates": "User rates"
+    }
+  },
+  "priceChangeRollout": {
+    "title": "Price change rollout",
+    "previewFailed": "Could not load the price-change preview.",
+    "skip": "Just save the price",
+    "apply": "Apply to inherited lines",
+    "applying": "Saving…",
+    "effectiveDate": "Effective date",
+    "effectiveDateHint": "Defaults to the next billing period boundary.",
+    "willChange": "Will change",
+    "noInheritedLines": "No inherited lines change at this date.",
+    "custom": "Won't change — custom",
+    "unreviewed": "Won't change — not yet classified",
+    "unreviewedAlert": "These lines bill unchanged until you review them.",
+    "reviewRates": "Review rates",
+    "excluded": "Excluded — already invoiced",
+    "none": "None.",
+    "totalMonthlyDelta": "Total monthly revenue delta",
+    "acrossAllInherited": "Across all {{lines}} inherited line(s).",
+    "applyFailed": "Could not apply the rollout. No changes were made.",
+    "skipFailed": "Could not save the price change.",
+    "columns": {
+      "client": "Client",
+      "contract": "Contract",
+      "line": "Line",
+      "current": "Current",
+      "new": "New",
+      "delta": "Delta"
+    },
+    "followsCatalog": "Follows the catalog",
+    "close": "Close",
+    "usageTitle": "Service usage"
+  },
+  "rateReview": {
+    "title": "Rate review",
+    "close": "Close",
+    "applySelected": "Apply selected",
+    "applying": "Applying…",
+    "previewFailed": "Could not load the rates for review.",
+    "applyFailed": "Could not apply the rate review. No changes were made.",
+    "intro": "Lines priced at exactly the catalog rate will not change on your next invoice. Lines that differ keep their current rate as a negotiated price.",
+    "applied": "Applied {{applied}} change(s).",
+    "refused": "{{refused}} row(s) were refused because they changed since the preview.",
+    "summary": "{{total}} unreviewed line(s): {{inherited}} exact match(es), {{custom}} negotiated, {{skipped}} skipped.",
+    "allClassified": "Every line has been classified. Nothing to review.",
+    "noService": "No service",
+    "columns": {
+      "contract": "Contract",
+      "currentRate": "Current rate",
+      "catalogRate": "Catalog rate",
+      "proposed": "Proposed",
+      "confidence": "Confidence"
+    },
+    "proposal": {
+      "inherited": "Follow the catalog",
+      "custom": "Keep as custom",
+      "unreviewed": "Leave unreviewed"
+    },
+    "confidence": {
+      "exact": "Exact match",
+      "differs": "Differs from catalog",
+      "needsDecision": "Needs a decision"
     }
   }
 }

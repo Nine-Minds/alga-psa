@@ -721,7 +721,10 @@
       "unit": "Unidade",
       "taxRate": "Taxa de imposto",
       "nonTaxable": "Não Tributável",
-      "thisService": "este serviço"
+      "thisService": "este serviço",
+      "contractUsage": "Contratos",
+      "contractUsageNone": "Não utilizada",
+      "contractUsageCount": "Usada em {{contracts}}"
     },
     "errors": {
       "fetchServices": "Falha ao buscar serviços",
@@ -1432,6 +1435,69 @@
     },
     "sections": {
       "userRates": "Taxas por usuário"
+    }
+  },
+  "priceChangeRollout": {
+    "title": "Implementação da alteração de preço",
+    "previewFailed": "Não foi possível carregar a pré-visualização da alteração de preço.",
+    "skip": "Apenas guardar o preço",
+    "apply": "Aplicar às linhas herdadas",
+    "applying": "A guardar…",
+    "effectiveDate": "Data de vigência",
+    "effectiveDateHint": "Por predefinição, o próximo limite do período de faturação.",
+    "willChange": "Vai alterar",
+    "noInheritedLines": "Nenhuma linha herdada é alterada nesta data.",
+    "custom": "Não altera — personalizada",
+    "unreviewed": "Não altera — ainda não classificada",
+    "unreviewedAlert": "Estas linhas são faturadas sem alterações até que as reveja.",
+    "reviewRates": "Rever preços",
+    "excluded": "Excluída — já faturada",
+    "none": "Nenhuma.",
+    "totalMonthlyDelta": "Variação total da receita mensal",
+    "acrossAllInherited": "Em todas as {{lines}} linha(s) herdadas.",
+    "applyFailed": "Não foi possível aplicar a implementação. Não foram feitas alterações.",
+    "skipFailed": "Não foi possível guardar a alteração de preço.",
+    "columns": {
+      "client": "Cliente",
+      "contract": "Contrato",
+      "line": "Linha",
+      "current": "Atual",
+      "new": "Novo",
+      "delta": "Variação"
+    },
+    "followsCatalog": "Segue o catálogo",
+    "close": "Fechar",
+    "usageTitle": "Utilização do serviço"
+  },
+  "rateReview": {
+    "title": "Revisão de preços",
+    "close": "Fechar",
+    "applySelected": "Aplicar selecionadas",
+    "applying": "A aplicar…",
+    "previewFailed": "Não foi possível carregar os preços para revisão.",
+    "applyFailed": "Não foi possível aplicar a revisão de preços. Não foram feitas alterações.",
+    "intro": "As linhas ao preço exato do catálogo não serão alteradas na sua próxima fatura. As linhas diferentes mantêm o preço atual como preço negociado.",
+    "applied": "{{applied}} alteração(ões) aplicada(s).",
+    "refused": "{{refused}} linha(s) foram recusadas porque foram alteradas desde a pré-visualização.",
+    "summary": "{{total}} linha(s) por rever: {{inherited}} correspondência(s) exata(s), {{custom}} negociadas, {{skipped}} ignoradas.",
+    "allClassified": "Todas as linhas foram classificadas. Nada a rever.",
+    "noService": "Sem serviço",
+    "columns": {
+      "contract": "Contrato",
+      "currentRate": "Preço atual",
+      "catalogRate": "Preço do catálogo",
+      "proposed": "Proposto",
+      "confidence": "Confiança"
+    },
+    "proposal": {
+      "inherited": "Seguir o catálogo",
+      "custom": "Manter como personalizada",
+      "unreviewed": "Deixar por rever"
+    },
+    "confidence": {
+      "exact": "Correspondência exata",
+      "differs": "Difere do catálogo",
+      "needsDecision": "Requer decisão"
     }
   }
 }

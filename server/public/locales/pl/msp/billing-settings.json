@@ -723,7 +723,10 @@
       "unit": "Jednostka",
       "taxRate": "Stawka podatku",
       "nonTaxable": "Nie podlega opodatkowaniu",
-      "thisService": "tę usługę"
+      "thisService": "tę usługę",
+      "contractUsage": "Umowy",
+      "contractUsageNone": "Nieużywana",
+      "contractUsageCount": "Używana w {{contracts}}"
     },
     "errors": {
       "fetchServices": "Nie udało się pobrać usług",
@@ -1434,6 +1437,69 @@
     },
     "sections": {
       "userRates": "Stawki użytkowników"
+    }
+  },
+  "priceChangeRollout": {
+    "title": "Wdrażanie zmiany ceny",
+    "previewFailed": "Nie udało się załadować podglądu zmiany ceny.",
+    "skip": "Zapisz tylko cenę",
+    "apply": "Zastosuj do linii dziedziczonych",
+    "applying": "Zapisywanie…",
+    "effectiveDate": "Data obowiązywania",
+    "effectiveDateHint": "Domyślnie następna granica okresu rozliczeniowego.",
+    "willChange": "Zmieni się",
+    "noInheritedLines": "Żadna linia dziedziczona nie zmienia się w tej dacie.",
+    "custom": "Nie zmieni się — niestandardowa",
+    "unreviewed": "Nie zmieni się — jeszcze nie sklasyfikowana",
+    "unreviewedAlert": "Te linie są rozliczane bez zmian, dopóki ich nie sprawdzisz.",
+    "reviewRates": "Sprawdź ceny",
+    "excluded": "Wykluczona — już zafakturowana",
+    "none": "Brak.",
+    "totalMonthlyDelta": "Całkowita miesięczna zmiana przychodu",
+    "acrossAllInherited": "We wszystkich {{lines}} liniach dziedziczonych.",
+    "applyFailed": "Nie udało się zastosować wdrożenia. Nie wprowadzono żadnych zmian.",
+    "skipFailed": "Nie udało się zapisać zmiany ceny.",
+    "columns": {
+      "client": "Klient",
+      "contract": "Umowa",
+      "line": "Linia",
+      "current": "Obecna",
+      "new": "Nowa",
+      "delta": "Różnica"
+    },
+    "followsCatalog": "Podąża za katalogiem",
+    "close": "Zamknij",
+    "usageTitle": "Użycie usługi"
+  },
+  "rateReview": {
+    "title": "Przegląd cen",
+    "close": "Zamknij",
+    "applySelected": "Zastosuj wybrane",
+    "applying": "Stosowanie…",
+    "previewFailed": "Nie udało się załadować cen do przeglądu.",
+    "applyFailed": "Nie udało się zastosować przeglądu cen. Nie wprowadzono żadnych zmian.",
+    "intro": "Linie wycenione dokładnie według ceny katalogowej nie zmienią się na następnej fakturze. Linie różniące się zachowują obecną cenę jako cenę wynegocjowaną.",
+    "applied": "Zastosowano {{applied}} zmian(y).",
+    "refused": "Odrzucono {{refused}} wiersz(y), ponieważ zmieniły się od czasu podglądu.",
+    "summary": "{{total}} niesprawdzonych linii: {{inherited}} dokładnych dopasowań, {{custom}} wynegocjowanych, {{skipped}} pominiętych.",
+    "allClassified": "Wszystkie linie zostały sklasyfikowane. Nie ma nic do przeglądu.",
+    "noService": "Brak usługi",
+    "columns": {
+      "contract": "Umowa",
+      "currentRate": "Obecna cena",
+      "catalogRate": "Cena katalogowa",
+      "proposed": "Propozycja",
+      "confidence": "Pewność"
+    },
+    "proposal": {
+      "inherited": "Podążaj za katalogiem",
+      "custom": "Zachowaj jako niestandardową",
+      "unreviewed": "Pozostaw niesprawdzoną"
+    },
+    "confidence": {
+      "exact": "Dokładne dopasowanie",
+      "differs": "Różni się od katalogu",
+      "needsDecision": "Wymaga decyzji"
     }
   }
 }
