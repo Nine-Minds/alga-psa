@@ -219,6 +219,7 @@ Inline markers are the per-site ledger; `grep -rn "LEVERAGE:"` is the count.
 - Where: qualifiedReplyAdmission.ts, inboundEmailReply.ts, durable worker compositions, processInboundEmailInApp.ts, emailWorkflowActions.ts and TicketModel.createComment.
 - Gate: two real principal kinds and three supported audiences, high identity/disclosure cost; ACT / bounded extension of the existing mail engine rather than a parallel ticket writer.
 - Status: revised (2026-09-07). The typed callback distinguishes requester and customer technician identities. The same canonical writer retains their thread audience, qualified actor in events, reopen policy and durable effects. Technician cutoff checks create/read/update permissions on its fixed client/destination, uses the actual technician as creator, preserves the original audience and keeps IT-only reply subjects/bodies out of public ticket context. Explicit audience/visibility or parent-audience conflicts reject before content persists. Customer technicians use the existing stronger internal sender-authentication policy (DMARC alignment or both aligned SPF and DKIM).
+- Named-conversation extension (2026-09-08): the same engine now supplies a requester-only callback to trusted named admission before any legacy match. A follow-up can initialize its named container before canonical first-comment publication; the model validates its ticket/audience binding. This avoids a second copy of reopen/cutoff policy and post-hoc root reassignment. Named tc1 requester identity/correlation and accepted follow-up lineage are still the domain adapter's remaining work.
 
 ## Technician inbound artifact authority — friction
 - What: the native artifact worker forces portal-visible attachment processing and cannot inherit the recipient-specific conversation audience. Editable comment metadata cannot safely choose its path.
@@ -502,6 +503,32 @@ Inline markers are the per-site ledger; `grep -rn "LEVERAGE:"` is the count.
 - **Gate:** Stable settings invariants and existing calendar lock support shared domain normalization/read/manage admission without another storage engine. ACT / bounded-now.
 - **Status:** Current credentials, bundle scope, field masks and lifecycle guard shared settings operations; calendar locking serializes active-profile conflict checks with generation. Legacy inputs normalize once, canonical responses preserve IDs, compatible profiles coexist and inactive history remains readable. Five new focused scenarios and the affected generator pass in 9.46 seconds. Background authorization and broader generator parity remain pending.
 
+
+## named-editor-file-binding — friction
+- **What:** The protected upload engine required a comment/thread before an editable draft had a publication identity or final reply parent.
+- **Where:** `conversationAttachments.ts`, `protectedConversationFileTransfer.ts`, `namedConversationEditorFiles.ts`, and editable draft manifests.
+- **Gate:** Existing received/published transfers and real author-private draft uploads share stable byte reservation, digest, and retry behavior. Their authority/bindings differ. ACT / bounded-now within the approved ticket-conversation attachment scope.
+- **Status:** revised. The byte-transfer engine accepts immutable domain bindings; published and editor adapters retain separate authority checks. Editor files have actual home-author/destination keys and nullable comment/thread keys, with an exclusive database binding constraint. No fabricated publication or user identities. Existing request fingerprints and storage-path denial semantics are retained. Outbound publication/copy integration remains required by the plan.
+
+
+## conversation-object-upload — pattern
+- **What:** Draft uploads and publication copies need the same tenant storage policy and exact provider acknowledgment as existing protected comment attachments.
+- **Where:** Ticket composer storage adapter and the server's co-managed attachment/disclosure adapters.
+- **Gate:** Stable existing transport contract; real author-home staging and content-owner publication consumers. ACT / bounded-now within ticket conversation file delivery.
+- **Status:** revised for these host consumers. The ticket package owns the existing helper and multipart limit parser; server compatibility exports retain established callers. Durable inbound worker admission remains separately composed. No generic document/file rows are introduced.
+
+
+## ticket-conversation-comment-publication — pattern
+- **What:** The legacy co-managed comment writer and named/native comment writer duplicated qualified author, canonical insert, and event construction; named requester delivery needs the same response-state guard and lifecycle effects.
+- **Where:** `createTicketComment.ts`, `postNamedTicketConversation.ts`, `applyTicketConversationComment.ts`.
+- **Gate:** Two concrete writers with stable shared mutation/event contracts and high correctness cost. Their native versus qualified event retention remains explicit. ACT / bounded-now within the approved requester composer integration; do not generalize unrelated native comment actions or inbound policy.
+- **Status:** revised. Both adapters use the canonical ticket-package writer, preserving receipt/event identities and named-side exclusion from requester state/activity. Named reviewed email uses the existing contact-notification suppression contract; internal recipients retain their existing preference and authorization checks. The 921-case regression passed after extraction and 44 focused DB cases passed with the final classification. Requester email admission stays closed until its inbound correlation is ready.
+
+## ticket-bundle-comment-effects — pattern
+- **What:** Reviewed native Requester publication needs the same published-comment bundle reopen/mirror behavior already implemented inline by the optimized comment action.
+- **Where:** `optimizedTicketActions.ts`, `postNamedTicketConversation.ts`, `ticketBundleCommentEffects.ts`.
+- **Gate:** Two concrete callers, stable legacy effects and a high cost of skipping bundle behavior when migrating the default composer. ACT / bounded-now within the approved native Requester integration.
+- **Status:** extracted. Both paths use the same persisted-source engine; named publication supplies current per-target authority. Additional Requester and private/vendor conversations are excluded. Four representative real-schema cases cover mirror/history/retry, reopen, target-scope rollback and side exclusion. No generic event, inbound or ticket mutation framework introduced.
 ## native-time-period-worker-boundary — friction
 - **What:** The background generator was exported as a server action, accepted caller-supplied settings and diverged from browser calendar calculations.
 - **Where:** `timePeriodJob`, scheduling `timePeriodAutomation`/`timePeriodCadence`, `TimePeriodSuggester`, native generation and scheduler registration.

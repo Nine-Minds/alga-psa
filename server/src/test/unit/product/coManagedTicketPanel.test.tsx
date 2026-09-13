@@ -8,6 +8,7 @@ import CoManagedTicketPanel from '../../../components/co-managed/CoManagedTicket
 import CoManagedExplicitTicketGrantsPanel from '../../../components/co-managed/CoManagedExplicitTicketGrantsPanel';
 import { CoManagedFeatureBoundary } from '../../../components/co-managed/CoManagedFeatureBoundary';
 const mocks = vi.hoisted(() => ({ assignment: vi.fn(), flag: vi.fn(), load: vi.fn(), history: vi.fn(), grants: vi.fn(), escalate: vi.fn(), handback: vi.fn(), revoke: vi.fn() }));
+vi.mock('../../../components/co-managed/CoManagedNamedTicketConversation', () => ({ default: () => null }));
 vi.mock('../../../components/co-managed/CoManagedTicketConversation', () => ({ default: () => null }));
 vi.mock('../../../components/co-managed/CoManagedTicketEditor', () => ({ default: () => null }));
 vi.mock('../../../components/co-managed/CoManagedTicketAssignment', () => ({ default: (props: any) => mocks.assignment(props) }));

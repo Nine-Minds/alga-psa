@@ -116,6 +116,8 @@ export interface TicketBentoLayoutProps {
   onScheduleVisit?: () => void;
   /** Bumped by the parent after a visit is scheduled so the "Next visit" tile refetches. */
   nextVisitRefreshKey?: number;
+  conversationNavigator?: React.ReactNode;
+  conversationPanel?: React.ReactNode;
   // Timeline
   conversations: IComment[];
   userMap: Record<string, CommentUserAuthor>;
@@ -903,9 +905,12 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
           rail), then who/what tiles. 1024–1279px: 4/8 with the right rail
           flowing below. ≥1280px: the full 3/6/3 bento. */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
-        <div className="order-3 lg:order-1 lg:col-span-4 xl:col-span-3">{leftRail}</div>
-        <div className="order-1 lg:order-2 lg:col-span-8 xl:col-span-6 min-w-0">
-          <Suspense
+        {props.conversationNavigator ? <div className="contents lg:block lg:order-1 lg:col-span-4 xl:col-span-3">
+          <div className="order-1 lg:mb-4">{props.conversationNavigator}</div>
+          <div className="order-4">{leftRail}</div>
+        </div> : <div className="order-3 lg:order-1 lg:col-span-4 xl:col-span-3">{leftRail}</div>}
+        <div className={`${props.conversationNavigator ? "order-2" : "order-1"} lg:order-2 lg:col-span-8 xl:col-span-6 min-w-0`}>
+          {props.conversationPanel ?? <Suspense
             fallback={
               <BentoTileSkeleton
                 id={`${id}-timeline-tile-loading`}
@@ -947,9 +952,9 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
             initialEntries={props.bentoStreams?.timelineEntries}
             initialReactions={props.bentoStreams?.commentReactions}
           />
-          </Suspense>
+          </Suspense>}
         </div>
-        <div className="order-2 lg:order-3 lg:col-span-12 xl:col-span-3">{rightRail}</div>
+        <div className={`${props.conversationNavigator ? "order-3" : "order-2"} lg:order-3 lg:col-span-12 xl:col-span-3`}>{rightRail}</div>
       </div>
     </div>
     </ContentCardVariantProvider>

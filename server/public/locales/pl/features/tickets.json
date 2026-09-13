@@ -1944,5 +1944,80 @@
       "internalLabel": "Nie powiadamiaj też agentów i obserwatorów",
       "internalHelper": "Pomija także ich e-maile i powiadomienia w aplikacji"
     }
+  },
+  "namedConversations": {
+    "finishNavigation": "Zakończ lub anuluj bieżącą edycję, aby otworzyć żądaną rozmowę.",
+    "returnToCurrent": "Wróć do bieżącej rozmowy",
+    "returnToRequester": "Otwórz rozmowę ze zgłaszającym",
+    "messageUnavailable": "Ta wiadomość jest niedostępna w tej rozmowie.",
+    "latest": "Pokaż najnowsze wiadomości",
+    "readFailed": "Nie udało się oznaczyć tych wiadomości jako przeczytane.",
+    "share": {
+      "action": "Udostępnij",
+      "title": "Udostępnij wiadomość",
+      "from": "Rozmowa źródłowa",
+      "destination": "Miejsce docelowe",
+      "new": "Nowa rozmowa…",
+      "openDraft": "Otwórz istniejący szkic",
+      "preparing": "Przygotowywanie…",
+      "retry": "Ponów przygotowanie",
+      "replace": "Zastąp szkic i przygotuj kopię",
+      "prepare": "Przygotuj szkic",
+      "existingDraft": "Masz już tutaj szkic.",
+      "existingHelp": "Otwórz go, aby kontynuować pracę, lub świadomie zastąp go tą kopią.",
+      "quote": "Formatuj jako cytat",
+      "files": "Wybierz załączniki do skopiowania",
+      "reviewHelp": "Kopia pozostaje prywatna, dopóki jej nie sprawdzisz i nie wybierzesz Wyślij lub Opublikuj w rozmowie docelowej.",
+      "loadingDraft": "Sprawdzanie szkicu docelowego…",
+      "reloadDraft": "Wczytaj ponownie szkic docelowy",
+      "recipientsHelp": "Oddziel odbiorców średnikami. Wybierz skrzynkę nadawczą i sprawdź wiadomość w szkicu docelowym.",
+      "errors": {
+        "load": "Ta wiadomość jest niedostępna. Odśwież, aby sprawdzić swój dostęp.",
+        "target": "To miejsce docelowe jest niedostępne. Wybierz inną rozmowę lub spróbuj ponownie.",
+        "conflict": "Szkic docelowy lub rozmowa uległy zmianie. Wczytaj ponownie przed przygotowaniem kopii.",
+        "invalid": "Sprawdź odbiorców i wybrane pliki, a następnie wczytaj ponownie miejsce docelowe, aby spróbować jeszcze raz.",
+        "unavailable": "Źródło lub miejsce docelowe nie jest już dostępne. Odśwież, aby sprawdzić swój dostęp.",
+        "unknown": "Nie udało się potwierdzić przygotowania. Ponów to samo żądanie lub otwórz miejsce docelowe, aby sprawdzić szkic."
+      },
+      "sourceLink": "Udostępniono z {{name}}"
+    },
+    "synthesis": {
+      "title": "Podsumuj rozmowę",
+      "stop": "Anuluj generowanie",
+      "generating": "Generowanie…",
+      "retry": "Ponów generowanie",
+      "replace": "Zastąp szkic i wygeneruj",
+      "generate": "Wygeneruj szkic",
+      "wholeSource": "Wykorzystaj całą opublikowaną rozmowę, aby przygotować podsumowanie dla odbiorców. Wynik pozostaje prywatny do czasu sprawdzenia i wysłania lub opublikowania.",
+      "existingHelp": "Otwórz szkic, aby kontynuować, lub świadomie zastąp go nowym podsumowaniem.",
+      "prompt": "Na czym ma się skupić podsumowanie? (opcjonalnie)",
+      "sourceChanged": "Rozmowa źródłowa się zmieniła. Zmiany w szkicu zostały zachowane; wygeneruj ponownie, gdy zechcesz.",
+      "review": "AI przygotowała ten prywatny szkic. Sprawdź go przed wysłaniem lub opublikowaniem.",
+      "sourceUnavailable": "Nie można sprawdzić źródła szkicu. Odśwież, aby sprawdzić dostęp.",
+      "regenerate": "Wygeneruj podsumowanie ponownie…",
+      "action": "Podsumuj z AI",
+      "errors": {
+        "AI_CONTEXT_TOO_LARGE": "Cała rozmowa przekracza dostępny kontekst AI. Nie zapisano częściowego podsumowania. Nadal możesz pisać ręcznie.",
+        "AI_SOURCE_CHANGED": "Źródło zmieniło się podczas generowania. Wczytaj ponownie miejsce docelowe i spróbuj jeszcze raz.",
+        "AI_SOURCE_INVALID": "Ta rozmowa nie zawiera opublikowanych wiadomości nadających się do podsumowania.",
+        "AI_UNAVAILABLE": "AI jest obecnie niedostępna w Twoim obszarze roboczym. Szkic został zachowany; możesz kontynuować pisanie ręcznie.",
+        "AI_CANCELLED": "Generowanie anulowano. Szkic został zachowany."
+      }
+    },
+    "ai": {
+      "title": "Zapytaj AI",
+      "publication": "Twoje pytanie i odpowiedź AI zostaną opublikowane razem w tej wewnętrznej rozmowie. Twój ręczny szkic zostanie zachowany.",
+      "sources": "Rozmowy dostępne dla AI",
+      "scope": "Uwzględniana jest tylko opublikowana treść dozwolona dla tych odbiorców. Odznacz rozmowy, aby zawęzić kontekst.",
+      "noSources": "AI otrzyma tylko Twoje pytanie.",
+      "prompt": "Twoje pytanie",
+      "uncertain": "Nie udało się potwierdzić wyniku. Ponowienie sprawdzi to samo żądanie; zamknięcie anuluje oczekujące generowanie.",
+      "cancelled": "Generowanie anulowano. Twój ręczny szkic nie uległ zmianie.",
+      "changed": "Rozmowa lub źródło uległo zmianie. Zamknij i otwórz ponownie Zapytaj AI, aby sprawdzić aktualny kontekst.",
+      "unavailable": "AI jest niedostępne w tej rozmowie. Możesz kontynuować pisanie ręcznie.",
+      "cancel": "Anuluj generowanie",
+      "generating": "Myślenie…",
+      "contextTooLarge": "Wybrany kontekst przekracza dostępną pojemność AI. Ogranicz źródła i spróbuj ponownie. Nie opublikowano pytania ani odpowiedzi."
+    }
   }
 }

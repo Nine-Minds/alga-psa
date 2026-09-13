@@ -9,6 +9,15 @@ const convertBlockNoteToMarkdownMock = vi.fn();
 const publishEventMock = vi.fn();
 const maybeReopenBundleMasterFromChildReplyMock = vi.fn();
 
+vi.mock('@alga-psa/tickets/lib/clientPortalVisibility.server', () => ({
+  getClientContactVisibilityContext: vi.fn().mockResolvedValue({ clientId: 'client-1', visibleBoardIds: null }),
+}));
+
+vi.mock('@alga-psa/tickets/lib/portalTicketConversations', () => ({
+  readPortalTicketConversations: vi.fn().mockResolvedValue({ selectedConversationId: 'requester-conversation',
+    requesterConversations: [{ conversationId: 'requester-conversation', name: 'Requester', isDefault: true, status: 'open' }] }),
+}));
+
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (action: any) => async (...args: any[]) =>
     action(currentUser, { tenant: currentUser.tenant }, ...args),
@@ -125,6 +134,10 @@ describe('addClientTicketComment response source metadata', () => {
               return builder;
             }
 
+            if (table === 'ticket_conversations') {
+              return { where: () => ({ increment: () => ({ update: vi.fn().mockResolvedValue(1) }) }) };
+            }
+
             if (table === 'comment_threads') {
               return {
                 insert: vi.fn().mockResolvedValue(undefined),
@@ -148,6 +161,7 @@ describe('addClientTicketComment response source metadata', () => {
             throw new Error(`Unexpected table: ${table}`);
           },
           {
+            fn: { now: vi.fn(() => new Date()) },
             raw: vi.fn().mockResolvedValue({
               rows: [{ comment_id: 'comment-1', thread_id: 'thread-1' }],
             }),
@@ -233,6 +247,10 @@ describe('addClientTicketComment response source metadata', () => {
               return builder;
             }
 
+            if (table === 'ticket_conversations') {
+              return { where: () => ({ increment: () => ({ update: vi.fn().mockResolvedValue(1) }) }) };
+            }
+
             if (table === 'comment_threads') {
               return {
                 insert: commentThreadsInsertMock,
@@ -256,6 +274,7 @@ describe('addClientTicketComment response source metadata', () => {
             throw new Error(`Unexpected table: ${table}`);
           },
           {
+            fn: { now: vi.fn(() => new Date()) },
             raw: vi.fn().mockResolvedValue({
               rows: [{ comment_id: 'comment-1', thread_id: 'thread-1' }],
             }),
@@ -351,6 +370,7 @@ describe('addClientTicketComment response source metadata', () => {
             throw new Error(`Unexpected table: ${table}`);
           },
           {
+            fn: { now: vi.fn(() => new Date()) },
             raw: vi.fn().mockResolvedValue({ rows: [] }),
           }
         );

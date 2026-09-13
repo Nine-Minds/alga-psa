@@ -1802,5 +1802,80 @@
       "internalLabel": "Também não notificar agentes e observadores",
       "internalHelper": "Ignora também os e-mails e as notificações no aplicativo deles"
     }
+  },
+  "namedConversations": {
+    "finishNavigation": "Conclua ou cancele a edição atual para abrir a conversa solicitada.",
+    "returnToCurrent": "Voltar à conversa atual",
+    "returnToRequester": "Abrir conversa com o solicitante",
+    "messageUnavailable": "Esta mensagem não está disponível nesta conversa.",
+    "latest": "Mostrar as mensagens mais recentes",
+    "readFailed": "Não foi possível marcar estas mensagens como lidas.",
+    "share": {
+      "action": "Compartilhar",
+      "title": "Compartilhar mensagem",
+      "from": "Conversa de origem",
+      "destination": "Destino",
+      "new": "Nova conversa…",
+      "openDraft": "Abrir rascunho existente",
+      "preparing": "Preparando…",
+      "retry": "Tentar preparação novamente",
+      "replace": "Substituir rascunho e preparar cópia",
+      "prepare": "Preparar rascunho",
+      "existingDraft": "Você já tem um rascunho aqui.",
+      "existingHelp": "Abra-o para continuar trabalhando ou substitua-o explicitamente por esta cópia.",
+      "quote": "Formatar como citação",
+      "files": "Escolher anexos para copiar",
+      "reviewHelp": "A cópia permanece privada até você revisá-la e escolher Enviar ou Publicar na conversa de destino.",
+      "loadingDraft": "Verificando o rascunho de destino…",
+      "reloadDraft": "Recarregar rascunho de destino",
+      "recipientsHelp": "Separe os destinatários com ponto e vírgula. Escolha uma caixa de envio e revise o e-mail no rascunho de destino.",
+      "errors": {
+        "load": "Esta mensagem não está disponível. Atualize para verificar seu acesso.",
+        "target": "Este destino não está disponível. Escolha outra conversa ou tente novamente.",
+        "conflict": "O rascunho de destino ou a conversa mudou. Recarregue-o antes de preparar uma cópia.",
+        "invalid": "Verifique os destinatários e os arquivos selecionados e recarregue o destino para tentar novamente.",
+        "unavailable": "A origem ou o destino não está mais disponível. Atualize para verificar seu acesso.",
+        "unknown": "Não foi possível confirmar a preparação. Repita a mesma solicitação ou abra o destino para verificar o rascunho."
+      },
+      "sourceLink": "Compartilhado de {{name}}"
+    },
+    "synthesis": {
+      "title": "Resumir conversa",
+      "stop": "Cancelar geração",
+      "generating": "A gerar…",
+      "retry": "Tentar gerar novamente",
+      "replace": "Substituir rascunho e gerar",
+      "generate": "Gerar rascunho",
+      "wholeSource": "Utilize toda a conversa publicada para preparar um resumo para os destinatários. O resultado permanece privado até o rever e enviar ou publicar.",
+      "existingHelp": "Abra-o para continuar ou substitua-o explicitamente por um novo resumo.",
+      "prompt": "Em que deve o resumo focar-se? (opcional)",
+      "sourceChanged": "A conversa de origem mudou. As alterações ao rascunho foram mantidas; gere novamente quando quiser.",
+      "review": "A IA preparou este rascunho privado. Reveja-o antes de enviar ou publicar.",
+      "sourceUnavailable": "Não foi possível verificar a origem deste rascunho. Atualize para verificar o seu acesso.",
+      "regenerate": "Gerar resumo novamente…",
+      "action": "Resumir com IA",
+      "errors": {
+        "AI_CONTEXT_TOO_LARGE": "A conversa completa excede o contexto de IA disponível. Não foi guardado nenhum resumo parcial. Pode continuar a escrever manualmente.",
+        "AI_SOURCE_CHANGED": "A origem mudou durante a geração. Recarregue o destino e gere novamente quando quiser.",
+        "AI_SOURCE_INVALID": "Esta conversa não tem mensagens publicadas utilizáveis para resumir.",
+        "AI_UNAVAILABLE": "A IA está indisponível no seu espaço de trabalho. O rascunho foi mantido; pode continuar a escrever manualmente.",
+        "AI_CANCELLED": "A geração foi cancelada. O rascunho foi mantido."
+      }
+    },
+    "ai": {
+      "title": "Perguntar à IA",
+      "publication": "A sua pergunta e a resposta da IA serão publicadas juntas nesta conversa interna. O seu rascunho manual será mantido.",
+      "sources": "Conversas que a IA pode usar",
+      "scope": "Apenas conteúdo publicado permitido para este público é incluído. Desmarque conversas para limitar o contexto.",
+      "noSources": "A IA receberá apenas a sua pergunta.",
+      "prompt": "A sua pergunta",
+      "uncertain": "Não foi possível confirmar o resultado. Tentar novamente verifica o mesmo pedido; fechar cancela qualquer geração pendente.",
+      "cancelled": "A geração foi cancelada. O seu rascunho manual permanece inalterado.",
+      "changed": "A conversa ou a fonte mudou. Feche e reabra Perguntar à IA para rever o contexto atual.",
+      "unavailable": "A IA está indisponível para esta conversa. Pode continuar a escrever manualmente.",
+      "cancel": "Cancelar geração",
+      "generating": "A pensar…",
+      "contextTooLarge": "O contexto selecionado excede a capacidade disponível da IA. Reduza as fontes e tente novamente. Nenhuma pergunta ou resposta foi publicada."
+    }
   }
 }

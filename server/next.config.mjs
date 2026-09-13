@@ -208,6 +208,8 @@ const nextConfig = {
       'server/src': './src', // Add explicit alias for server/src imports
       '@alga-psa/ui': '../packages/ui/src',
       '@alga-psa/ui/': '../packages/ui/src/',
+      '@alga-psa/co-managed': '../packages/co-managed/src',
+      '@alga-psa/co-managed/': '../packages/co-managed/src/',
       '@alga-psa/clients': '../packages/clients/src',
       '@alga-psa/clients/': '../packages/clients/src/',
       // NB: tried switching bare-name aliases to ../packages/<pkg>/dist when
@@ -481,6 +483,7 @@ const nextConfig = {
     '@blocknote/mantine',
     '@emoji-mart/data',
     '@alga-psa/ui',
+    '@alga-psa/co-managed',
     '@alga-psa/scheduling',
     '@alga-psa/agent-tooling',
     '@alga-psa/users',

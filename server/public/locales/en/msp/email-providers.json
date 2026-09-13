@@ -1158,5 +1158,32 @@
         "users": "Failed to load users. Please try again."
       }
     }
+  },
+  "replyReview": {
+    "loadError": "Could not load held replies. Mailbox administration permission is required.",
+    "openError": "Could not open this reply. Refresh to check whether it is still held.",
+    "resolved": "Reply added to the selected conversation.",
+    "resolveError": "Resolution could not be confirmed. Retry to check the same operation, or refresh to review the current state.",
+    "sharedIt": "Shared IT",
+    "private": "Organization private",
+    "title": "Held conversation replies",
+    "refresh": "Refresh",
+    "description": "Review replies whose conversation could not be confirmed, then choose where they belong.",
+    "loading": "Loading…",
+    "back": "Back to held replies",
+    "from": "From",
+    "to": "To",
+    "unverified": "Sender authentication could not be verified, or the message is not usable. This reply remains held.",
+    "destination": "Destination conversation",
+    "chooseDestination": "Choose a conversation",
+    "noDestinations": "No writable vendor conversations are available for this mailbox.",
+    "retry": "Retry resolution",
+    "resolve": "Add reply to conversation",
+    "empty": "No conversation replies are waiting for review.",
+    "noSubject": "(No subject)",
+    "review": "Review",
+    "previous": "Previous",
+    "next": "Next",
+    "nav": "Held replies"
   }
 }

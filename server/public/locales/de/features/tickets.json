@@ -1802,5 +1802,80 @@
       "internalLabel": "Auch Agenten und Beobachter nicht benachrichtigen",
       "internalHelper": "Überspringt auch deren E-Mails und In-App-Benachrichtigungen"
     }
+  },
+  "namedConversations": {
+    "finishNavigation": "Beenden oder verwerfen Sie Ihre aktuelle Bearbeitung, um die angeforderte Unterhaltung zu öffnen.",
+    "returnToCurrent": "Zur aktuellen Unterhaltung zurückkehren",
+    "returnToRequester": "Unterhaltung mit dem Anfragenden öffnen",
+    "messageUnavailable": "Diese Nachricht ist in dieser Unterhaltung nicht verfügbar.",
+    "latest": "Neueste Nachrichten anzeigen",
+    "readFailed": "Diese Nachrichten konnten nicht als gelesen markiert werden.",
+    "share": {
+      "action": "Teilen",
+      "title": "Nachricht teilen",
+      "from": "Aus Unterhaltung",
+      "destination": "Ziel",
+      "new": "Neue Unterhaltung…",
+      "openDraft": "Vorhandenen Entwurf öffnen",
+      "preparing": "Wird vorbereitet…",
+      "retry": "Vorbereitung erneut versuchen",
+      "replace": "Entwurf ersetzen und Kopie vorbereiten",
+      "prepare": "Entwurf vorbereiten",
+      "existingDraft": "Hier ist bereits ein Entwurf vorhanden.",
+      "existingHelp": "Öffnen Sie ihn zum Weiterarbeiten oder ersetzen Sie ihn ausdrücklich durch diese Kopie.",
+      "quote": "Als Zitat formatieren",
+      "files": "Zu kopierende Anhänge auswählen",
+      "reviewHelp": "Die Kopie bleibt privat, bis Sie sie prüfen und in der Zielunterhaltung Senden oder Veröffentlichen wählen.",
+      "loadingDraft": "Zielentwurf wird geprüft…",
+      "reloadDraft": "Zielentwurf neu laden",
+      "recipientsHelp": "Trennen Sie Empfänger durch Semikolons. Wählen Sie im Zielentwurf ein Absenderpostfach und prüfen Sie die E-Mail.",
+      "errors": {
+        "load": "Diese Nachricht ist nicht verfügbar. Aktualisieren Sie, um Ihren Zugriff zu prüfen.",
+        "target": "Dieses Ziel ist nicht verfügbar. Wählen Sie eine andere Unterhaltung oder versuchen Sie es erneut.",
+        "conflict": "Der Zielentwurf oder die Unterhaltung wurde geändert. Laden Sie ihn vor dem Vorbereiten einer Kopie neu.",
+        "invalid": "Prüfen Sie die Empfänger und ausgewählten Dateien und laden Sie dann das Ziel neu, um es erneut zu versuchen.",
+        "unavailable": "Quelle oder Ziel ist nicht mehr verfügbar. Aktualisieren Sie, um Ihren Zugriff zu prüfen.",
+        "unknown": "Die Vorbereitung konnte nicht bestätigt werden. Wiederholen Sie dieselbe Anfrage oder öffnen Sie das Ziel, um den Entwurf zu prüfen."
+      },
+      "sourceLink": "Geteilt aus {{name}}"
+    },
+    "synthesis": {
+      "title": "Unterhaltung zusammenfassen",
+      "stop": "Generierung abbrechen",
+      "generating": "Wird generiert…",
+      "retry": "Generierung erneut versuchen",
+      "replace": "Entwurf ersetzen und generieren",
+      "generate": "Entwurf generieren",
+      "wholeSource": "Verwenden Sie die gesamte veröffentlichte Unterhaltung, um eine Zusammenfassung für die Zielgruppe zu erstellen. Das Ergebnis bleibt privat, bis Sie es prüfen und senden oder veröffentlichen.",
+      "existingHelp": "Öffnen Sie den Entwurf zum Weiterarbeiten oder ersetzen Sie ihn ausdrücklich durch eine neue Zusammenfassung.",
+      "prompt": "Worauf soll sich die Zusammenfassung konzentrieren? (optional)",
+      "sourceChanged": "Die Quellunterhaltung hat sich geändert. Ihre Änderungen bleiben erhalten; generieren Sie bei Bedarf erneut.",
+      "review": "Die KI hat diesen privaten Entwurf erstellt. Prüfen Sie ihn vor dem Senden oder Veröffentlichen.",
+      "sourceUnavailable": "Die Quelle dieses Entwurfs konnte nicht geprüft werden. Aktualisieren Sie, um Ihren Zugriff zu prüfen.",
+      "regenerate": "Zusammenfassung neu generieren…",
+      "action": "Mit KI zusammenfassen",
+      "errors": {
+        "AI_CONTEXT_TOO_LARGE": "Die vollständige Unterhaltung überschreitet den verfügbaren KI-Kontext. Es wurde keine teilweise Zusammenfassung gespeichert. Sie können weiterhin manuell schreiben.",
+        "AI_SOURCE_CHANGED": "Die Quelle hat sich während der Generierung geändert. Laden Sie das Ziel neu und generieren Sie bei Bedarf erneut.",
+        "AI_SOURCE_INVALID": "Diese Unterhaltung enthält keine verwendbaren veröffentlichten Nachrichten für eine Zusammenfassung.",
+        "AI_UNAVAILABLE": "KI ist in Ihrem Arbeitsbereich derzeit nicht verfügbar. Ihr Entwurf bleibt erhalten; Sie können manuell weiterschreiben.",
+        "AI_CANCELLED": "Die Generierung wurde abgebrochen. Ihr Entwurf blieb erhalten."
+      }
+    },
+    "ai": {
+      "title": "KI fragen",
+      "publication": "Ihre Frage und die KI-Antwort werden gemeinsam in dieser internen Unterhaltung veröffentlicht. Ihr manueller Entwurf bleibt erhalten.",
+      "sources": "Unterhaltungen, die die KI verwenden darf",
+      "scope": "Nur veröffentlichte Inhalte, die für diesen Empfängerkreis zulässig sind, werden einbezogen. Deaktivieren Sie Unterhaltungen, um den Kontext einzugrenzen.",
+      "noSources": "Die KI erhält nur Ihre Frage.",
+      "prompt": "Ihre Frage",
+      "uncertain": "Das Ergebnis konnte nicht bestätigt werden. Erneut versuchen prüft dieselbe Anfrage; Schließen bricht ausstehende Generierungen ab.",
+      "cancelled": "Die Generierung wurde abgebrochen. Ihr manueller Entwurf bleibt unverändert.",
+      "changed": "Die Unterhaltung oder Quelle hat sich geändert. Schließen und öffnen Sie KI fragen erneut, um den aktuellen Kontext zu prüfen.",
+      "unavailable": "KI ist für diese Unterhaltung nicht verfügbar. Sie können manuell weiterschreiben.",
+      "cancel": "Generierung abbrechen",
+      "generating": "Denkt nach…",
+      "contextTooLarge": "Der ausgewählte Kontext überschreitet die verfügbare KI-Kapazität. Grenzen Sie die Quellen ein und versuchen Sie es erneut. Es wurde keine Frage oder Antwort veröffentlicht."
+    }
   }
 }

@@ -15,7 +15,7 @@ import {
 } from '@alga-psa/shared/services/email/processInboundEmailInApp';
 import { GmailAdapter } from '@alga-psa/shared/services/email/providers/GmailAdapter';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
-import { resolveListRewriteSender } from '@alga-psa/shared/lib/email/listRewriteSender';
+import { resolveInboundHeaders } from '@alga-psa/shared/lib/email/inboundHeaderBag';
 import { extractRelevantInboundHeaders } from '@alga-psa/shared/lib/email/automatedMessage';
 import { classifyInboundAuthFailure } from '@alga-psa/shared/services/email/InboundEmailAuthFailurePolicy';
 import { EmailProviderLifecycleService } from '@alga-psa/shared/services/email/EmailProviderLifecycleService';
@@ -328,7 +328,6 @@ function mapParsedMimeToEmailMessageDetails(params: {
   parsed: any;
   fallbackMessageId: string;
 }): EmailMessageDetails {
-  const from = params.parsed.from?.value?.[0];
   const to = params.parsed.to?.value || [];
   const cc = params.parsed.cc?.value || [];
   const messageId = asNonEmptyString(params.parsed.messageId) || params.fallbackMessageId;
@@ -342,45 +341,14 @@ function mapParsedMimeToEmailMessageDetails(params: {
   const inReplyTo = extractMessageIds(params.parsed.inReplyTo)[0];
   const threadId = references[0] || inReplyTo;
 
-  // Mailing-list / Google-Group DMARC rewrites replace the visible From with the
-  // list address (e.g. "'Jane Doe' via support <support@lists.example.com>").
-  // Recover the verified original author so downstream contact/watcher/notify
-  // logic uses the real sender. Returns null for ordinary direct mail.
-  const listRewrite = resolveListRewriteSender(params.parsed);
-  const fromEmail = listRewrite ? listRewrite.sender.email : (from?.address || '');
-  const fromName = listRewrite ? (listRewrite.sender.name || from?.name || undefined) : (from?.name || undefined);
-  const resolvedHeaders: Record<string, string> = {};
-  // Preserve Authentication-Results from raw MIME for the sender-auth gate.
-  // mailparser normalizes header names in its Map, while Gmail already supplies
-  // a record via GmailAdapter.
-  const parsedHeaders = params.parsed.headers;
-  if (parsedHeaders?.forEach) {
-    parsedHeaders.forEach((value: unknown, key: string) => {
-      const headerName = key.toLowerCase();
-      // These names are processor metadata, never wire data. Only the verified
-      // listRewrite branch below may add them to the downstream header bag.
-      if (headerName.startsWith('x-resolved-') || headerName.startsWith('x-list-')) {
-        return;
-      }
-      if (typeof value === 'string') {
-        resolvedHeaders[headerName] = value;
-      } else if (Array.isArray(value)) {
-        // Header order is wire order: the first Authentication-Results block is
-        // our receiving MTA's topmost result. Preserve each block for the gate.
-        resolvedHeaders[headerName] = value.filter((item): item is string => typeof item === 'string').join('\n');
-      }
-    });
-  }
-  if (listRewrite) {
-    resolvedHeaders['x-list-address'] = listRewrite.listAddress;
-    resolvedHeaders['x-resolved-original-sender'] = listRewrite.sender.email;
-    resolvedHeaders['x-resolved-original-sender-via'] = listRewrite.via;
+  const resolved = resolveInboundHeaders(params.parsed);
+  if (resolved.listRewrite) {
     console.info('[UnifiedInboundEmailQueueJobProcessor] Recovered original sender from list rewrite', {
       tenant: params.tenant,
       providerId: params.providerId,
-      listAddress: listRewrite.listAddress,
-      originalSender: listRewrite.sender.email,
-      via: listRewrite.via,
+      listAddress: resolved.listRewrite.listAddress,
+      originalSender: resolved.listRewrite.sender.email,
+      via: resolved.listRewrite.via,
     });
   }
 
@@ -392,10 +360,7 @@ function mapParsedMimeToEmailMessageDetails(params: {
     providerId: params.providerId,
     tenant: params.tenant,
     receivedAt: params.parsed.date ? new Date(params.parsed.date).toISOString() : new Date().toISOString(),
-    from: {
-      email: fromEmail,
-      name: fromName,
-    },
+    from: resolved.from,
     to: to.map((item: any) => ({
       email: item?.address || '',
       name: item?.name || undefined,
@@ -431,7 +396,7 @@ function mapParsedMimeToEmailMessageDetails(params: {
     references: references.length ? references : undefined,
     inReplyTo: inReplyTo || undefined,
     rawMimeBase64: params.rawMimeBuffer.toString('base64'),
-    headers: Object.keys(resolvedHeaders).length ? resolvedHeaders : undefined,
+    headers: resolved.headers,
   };
 }
 

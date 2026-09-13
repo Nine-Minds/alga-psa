@@ -10,6 +10,7 @@ import CoManagedTicketEditor from './CoManagedTicketEditor';
 import CoManagedTicketSla from './CoManagedTicketSla';
 import CoManagedTimeEntry from './CoManagedTimeEntry';
 import CoManagedTicketConversation from './CoManagedTicketConversation';
+import CoManagedNamedTicketConversation from './CoManagedNamedTicketConversation';
 import CoManagedTicketAssignment from './CoManagedTicketAssignment';
 import CoManagedHandoffComposer, { type HandoffAction } from './CoManagedHandoffComposer';
 
@@ -92,7 +93,7 @@ function TicketPanel({ target, showSummary }: { target: CoManagedTicketScreenTar
       <CoManagedEffort target={{ kind: 'shared', resource: screen.summary.resource }} refreshKey={effortRefresh} />
       {screen.side === 'sponsor' && <CoManagedTimeEntry resource={screen.summary.resource} canWrite={screen.canWrite} onSaved={() => setEffortRefresh(value => value + 1)} />}
       <CoManagedTicketAssignment resource={screen.summary.resource} onSaved={reload} onReload={reload} onUnavailable={unavailable} />
-      <CoManagedTicketConversation resource={screen.summary.resource} />
+      {showSummary ? <CoManagedNamedTicketConversation resource={screen.summary.resource} /> : <CoManagedTicketConversation resource={screen.summary.resource} />}
       <section className="space-y-3" aria-labelledby="co-ticket-history-title">
         <h2 id="co-ticket-history-title" className="font-semibold">{t('coManaged.ticket.history')}</h2>
         {!history.items.length && !historyBusy && !historyError && <p className="text-sm text-muted-foreground">{t('coManaged.ticket.noHistory')}</p>}

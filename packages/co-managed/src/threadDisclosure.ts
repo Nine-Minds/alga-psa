@@ -2,6 +2,7 @@ import { coManagedAttachmentParent } from './attachmentParent';
 import { projectTaskAudience } from './projectTaskAudience';
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import { ensureDefaultTicketConversation } from '@alga-psa/shared/lib/tickets/namedConversations';
 import { assertCoManagedOperationalWrite } from '@alga-psa/licensing';
 import { resolveCommentAudience, type CommentAudience } from '@alga-psa/shared/lib/commentAudience';
 import { retainCoManagedSharedConversationBeforeReduction } from './conversationParticipationEvidence';
@@ -83,7 +84,11 @@ export async function discloseCoManagedThread(db: Knex, inputActor: CoManagedSes
       await assertCoManagedSessionUnexpired(trx, actor); await assertCoManagedOperationalWrite(trx, resource.tenant);
       const clock = await trx.raw('SELECT clock_timestamp() AS value'), appliedAt: Date = clock.rows[0].value;
       if (request.audience === 'organization_private') await retainCoManagedSharedConversationBeforeReduction(trx, resource, request.operationId, { threadId: request.threadId });
-      await owner.table('comment_threads').where('thread_id', request.threadId).update({ collaboration_audience: request.audience,
+      const destination = resource.kind === 'project_task' ? undefined : await ensureDefaultTicketConversation({ trx, storeTenant: resource.tenant,
+        ticket: { tenant: resource.tenant, ticketId: resource.id } }, request.audience);
+      // Only this confirmed disclosure may move an existing root between audience
+      // containers. Ordinary replies and text edits cannot perform that transfer.
+      await owner.table('comment_threads').where('thread_id', request.threadId).update({ ...(destination ? { conversation_id: destination.conversationId } : {}), collaboration_audience: request.audience,
         is_internal: request.audience !== 'requester', last_activity_at: appliedAt });
       await owner.table(resource.kind === 'project_task' ? 'project_task_comments' : 'comments').where({ thread_id: request.threadId, [resource.kind === 'project_task' ? 'task_id' : 'ticket_id']: resource.id }).update({
         ...(resource.kind === 'project_task' ? { collaboration_revision: trx.raw('collaboration_revision + 1') } : { is_internal: request.audience !== 'requester' }),

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession, getApiKeyUserOverride } from '@alga-psa/auth';
 import { getConnection } from '@alga-psa/db';
 import { CoManagedSharedWorkError } from '@alga-psa/co-managed';
+import { TicketConversationError } from '@alga-psa/shared/lib/tickets/namedConversations';
 import { StorageProviderFactory } from '@alga-psa/storage/StorageProviderFactory';
 import { downloadRequesterTaskAttachment } from '@alga-psa/co-managed';
 import { downloadPortalConversationAttachment } from '@/lib/co-managed/portalAttachments';
@@ -13,6 +14,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     if (getApiKeyUserOverride() || !session?.session_id || session.user?.user_type !== 'client' || !session.user.tenant || !session.user.id)
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers });
     const query = request.nextUrl.searchParams, { attachmentId } = await params;
+    const conversationId = query.get('conversationId');
     // The store always comes from the verified requester session, never a URL tenant.
     if ([...query.keys()].some(key => !['ticketId', 'taskId', 'projectId', 'threadId', 'commentId'].includes(key) || query.getAll(key).length !== 1) ||
         (query.has('ticketId') ? query.has('taskId') || query.has('projectId') : !query.has('taskId') || !query.has('projectId'))) throw new CoManagedSharedWorkError();
@@ -22,12 +24,14 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       { threadId: query.get('threadId') ?? '', commentId: query.get('commentId') ?? '' }, attachmentId,
       async path => (await StorageProviderFactory.createProvider()).download(path)) : await downloadPortalConversationAttachment(await getConnection(session.user.tenant),
       { kind: 'session', tenant: session.user.tenant, userId: session.user.id, sessionId: session.session_id },
-      { ticketId: query.get('ticketId') ?? '', threadId: query.get('threadId') ?? '', commentId: query.get('commentId') ?? '' }, attachmentId,
+      { ticketId: query.get('ticketId') ?? '', threadId: query.get('threadId') ?? '', commentId: query.get('commentId') ?? '',
+        ...(conversationId !== null ? { conversationId } : {}) }, attachmentId,
       async path => (await StorageProviderFactory.createProvider()).download(path));
     return conversationAttachmentResponse(result.attachment, result.content);
   } catch (error) {
-    return NextResponse.json({ error: error instanceof CoManagedSharedWorkError ? 'Not found' : 'Unable to download attachment' },
-      { status: error instanceof CoManagedSharedWorkError ? 404 : 503, headers });
+    const denied = error instanceof CoManagedSharedWorkError || error instanceof TicketConversationError;
+    return NextResponse.json({ error: denied ? 'Not found' : 'Unable to download attachment' },
+      { status: denied ? 404 : 503, headers });
   }
 }
 export const runtime = 'nodejs';

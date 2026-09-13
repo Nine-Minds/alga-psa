@@ -46,3 +46,15 @@ export async function publishNativeCommentWorkflowEvent(trx: Knex.Transaction, s
   event: { eventType: CoManagedEventPublication['eventType']; payload: Record<string, any>; ctx: WorkflowEventPublishContext }) {
   return retainNativeConversationEvent(trx, source, { eventType: event.eventType, payload: event.payload, kind: 'workflow', workflowContext: event.ctx });
 }
+
+/** Qualified named posts retain the same outbox and dispatch semantics as the
+ * existing shared writer, including foreign author references. */
+export async function publishQualifiedNamedConversationEvent(trx: Knex.Transaction,
+  source: Source & { threadId: string; audience: import('@alga-psa/shared/lib/commentAudience').CommentAudience },
+  publication: CoManagedEventPublication, eventId: string) {
+  const { enqueueCoManagedConversationEvent, dispatchCoManagedConversationEvents } = await import('@alga-psa/co-managed');
+  const { registerAfterCommitWithConnection } = await import('@alga-psa/db');
+  await enqueueCoManagedConversationEvent(trx, { ...source, eventId, publication });
+  registerAfterCommitWithConnection(trx, root => dispatchCoManagedConversationEvents(root, source.tenant, publish, { eventId }).then(() => {}),
+    `${publication.eventType} named conversation event=${eventId}`);
+}

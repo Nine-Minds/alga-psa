@@ -3,11 +3,14 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import type { IComment } from '@alga-psa/types';
 import CommentItem from './CommentItem';
+
+const scheduleCommands = vi.hoisted(() => ({ cancel: vi.fn() }));
+vi.mock('../../actions/comment-actions/commentActions', () => ({ cancelScheduledComment: scheduleCommands.cancel, rescheduleScheduledComment: vi.fn() }));
 
 vi.mock('@alga-psa/ui/editor', () => ({
   RichTextViewer: () => <div data-testid="rich-text-viewer" />,
@@ -357,4 +360,26 @@ describe('CommentItem metadata debug control', () => {
     expect(screen.getByText('email.provider')).toBeInTheDocument();
     expect(screen.getByText('google')).toBeInTheDocument();
   });
+});
+
+it('flushes before a scheduled cancellation and refreshes history without reloading the page', async () => {
+  const user = userEvent.setup(), before = vi.fn().mockResolvedValue(false), changed = vi.fn().mockResolvedValue(undefined);
+  const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
+  scheduleCommands.cancel.mockResolvedValue(undefined);
+  try {
+    render(<CommentItem conversation={buildComment({ publish_state: 'scheduled', scheduled_publish_at: '2099-08-23T13:30:00.000Z', scheduled_publish_tz: 'UTC' })}
+      currentUserId="user-1" isEditing={false} currentComment={null} ticketId="t1" userMap={userMap} contactMap={{}}
+      onContentChange={() => {}} onSave={() => {}} onClose={() => {}} onEdit={() => {}} onDelete={() => {}}
+      beforeScheduleChange={before} onScheduleChanged={changed} />);
+    await user.click(screen.getByRole('button', { name: 'Cancel scheduled comment' }));
+    expect(before).toHaveBeenCalledOnce(); expect(scheduleCommands.cancel).not.toHaveBeenCalled();
+    before.mockResolvedValue(true);
+    await user.click(screen.getByRole('button', { name: 'Cancel scheduled comment' }));
+    await waitFor(() => expect(changed).toHaveBeenCalledOnce());
+    expect(scheduleCommands.cancel).toHaveBeenCalledOnce();
+    scheduleCommands.cancel.mockRejectedValueOnce(new Error('Access changed'));
+    await user.click(screen.getByRole('button', { name: 'Cancel scheduled comment' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not confirm the change.');
+    expect(changed).toHaveBeenCalledOnce();
+  } finally { confirm.mockRestore(); }
 });

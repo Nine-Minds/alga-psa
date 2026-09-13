@@ -57,7 +57,9 @@ export function isInboundDurableEnabled(): boolean {
 /** The installation rollout setting cannot disable the durable intake required
  * by co-managed lifecycle pauses. Preserve that choice after an independent
  * upgrade: retained inboxes must not fall back to the legacy processor. This
- * uses customer-owned relationship history, never a caller-supplied tier/flag. */
+ * uses customer-owned relationship history and accepted conversation routes,
+ * never a caller-supplied tier/flag. Native vendor mail also requires durable
+ * source retention and qualified reply admission. */
 export async function getTenantInboundEmailPolicy(tenant: string, db?: DurableDb): Promise<{
   mode: InboundEmailDurableMode; requiresDurable: boolean;
 }> {
@@ -68,7 +70,7 @@ export async function getTenantInboundEmailPolicy(tenant: string, db?: DurableDb
   if (!workspace) throw new Error('The inbound email workspace does not exist');
   const requiresDurable = workspace.product_code === 'co_managed' || Boolean(
     await scoped.table('co_management_relationships').first('relationship_id'),
-  );
+  ) || Boolean(await scoped.table('ticket_conversation_email_routes').first('mailbox_id'));
   return { requiresDurable, mode: requiresDurable ? 'enforce' : getInboundDurableMode() };
 }
 

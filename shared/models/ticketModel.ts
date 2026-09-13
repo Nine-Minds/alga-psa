@@ -4,6 +4,7 @@
  * server actions and used by both server actions and workflow actions.
  */
 
+import { attachNativeRootToConversation } from '../lib/tickets/namedConversations';
 import { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { assertCommentThreadAudience } from '../lib/commentAudience';
@@ -107,6 +108,7 @@ export const createCommentSchema = z.object({
   parent_comment_id: z.string().uuid('Parent comment ID must be a valid UUID').optional(),
   is_internal: z.boolean().optional(),
   collaboration_audience: z.enum(['requester', 'shared_it', 'organization_private']).optional(),
+  conversation_id: z.string().uuid().optional(),
   is_resolution: z.boolean().optional(),
   author_type: z.enum(['internal', 'contact', 'system']).optional(),
   author_id: z.string().uuid('Author ID must be a valid UUID').optional(),
@@ -212,6 +214,7 @@ export interface CreateCommentValidationInput {
   ticket_id: string;
   content: string;
   parent_comment_id?: string;
+  conversation_id?: string;
   is_internal?: boolean;
   is_resolution?: boolean;
   author_type?: 'internal' | 'contact' | 'system';
@@ -236,6 +239,7 @@ export interface CreateCommentInput {
   ticket_id: string;
   content: string;
   parent_comment_id?: string;
+  conversation_id?: string;
   is_internal?: boolean;
   collaboration_audience?: 'requester' | 'shared_it' | 'organization_private';
   is_resolution?: boolean;
@@ -1354,6 +1358,7 @@ export class TicketModel {
     const currentAudience = await assertCommentThreadAudience(trx, tenant, threadId, { ticketId: validatedData.ticket_id, isInternal: commentIsInternal, parentCommentId });
     if (validatedData.collaboration_audience && currentAudience !== validatedData.collaboration_audience) throw new Error('Reply audience changed');
     await db.table('comments').insert(baseCommentData);
+    await attachNativeRootToConversation({ trx, ticket: { tenant, ticketId: validatedData.ticket_id }, storeTenant: tenant }, threadId, validatedData.conversation_id);
 
     if (parentCommentId) {
       await db.table('comment_threads')

@@ -91,6 +91,10 @@ import BackNav from '@alga-psa/ui/components/BackNav';
 import { ResponseStateBadge } from '@alga-psa/ui/components';
 import TicketNavigation from './TicketNavigation';
 import LayoutToggle from './bento/LayoutToggle';
+import { useFeatureFlag } from '@alga-psa/ui/hooks/useFeatureFlag';
+import { NativeRequesterConversation, type RequesterHistoryComposition } from './conversations/NativeRequesterConversation';
+import { BentoTimelineTile } from './bento/BentoTimelineTile';
+import { useNamedTicketConversations } from './conversations/useNamedTicketConversations';
 import TicketBentoLayout from './bento/TicketBentoLayout';
 import {
     getTicketLayoutPreference,
@@ -363,6 +367,13 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const tenant = initialTicket.tenant;
 
     const [ticket, setTicket] = useState(initialTicket);
+    const { enabled: namedConversationsEnabled } = useFeatureFlag('release-v1-6-feature', { defaultValue: false });
+    const namedConversations = useNamedTicketConversations(ticket?.ticket_id && ticket.tenant
+      ? { tenant: ticket.tenant, ticketId: ticket.ticket_id } : null, namedConversationsEnabled, `${id}-named-conversations`, {
+        onPublished: async () => { await refreshTicketSnapshot(['comments', 'status_id', 'response_state']); },
+        requesterPanel: props => <NativeRequesterConversation id={`${id}-requester`} {...props} editing={() => isEditing} historyComments={() => conversations}
+          onPublished={async () => { await refreshTicketSnapshot(['comments', 'status_id', 'response_state']); }} renderHistory={renderRequesterHistory} />,
+    });
     const [bundle, setBundle] = useState<any>(initialBundle);
     const [cardTitleVisible, setCardTitleVisible] = useState(true);
     const cardTitleRef = useRef<HTMLHeadingElement>(null);
@@ -3353,6 +3364,28 @@ const handleClose = () => {
         </>
     );
 
+    function renderRequesterHistory(composition: RequesterHistoryComposition) {
+        // The native snapshot intentionally contains only default containers.
+        // Requester history excludes the separate default internal container.
+        const requesterComments = conversations.filter(comment => !comment.is_internal);
+        const actor = currentUser ? { id: currentUser.user_id, name: `${currentUser.first_name} ${currentUser.last_name}`, email: currentUser.email }
+          : session?.user?.id ? { id: session.user.id, name: session.user.name ?? '', email: session.user.email ?? undefined } : null;
+        const common = { conversations: requesterComments, userMap, contactMap, currentUser: actor, isEditing, currentComment, editorKey,
+          isSubmitting, onContentChange: handleContentChange, onNewCommentContentChange: setNewCommentContent, onAddNewComment: handleAddNewComment,
+          onAddReplyComment: handleAddReplyComment, closedStatusOptions, reactionRefreshVersion, canViewCommentMetadataDebug,
+          onClipboardImageUploaded: refreshTicketDocuments, uploadTicketAttachmentAction, deleteDraftTicketAttachmentImagesAction,
+          resolveTicketAttachmentViewUrl, composition };
+        return useGridLayout ? <Suspense fallback={<div role="status">{t('namedConversations.loading', 'Loading conversations…')}</div>}><BentoTimelineTile {...common} id={`${id}-requester-history`} ticketId={ticket.ticket_id || ''}
+          contactFirstName={contactInfo?.full_name?.split(' ')[0] ?? null} ticketCreatedAt={(ticket.entered_at as unknown as string) ?? null}
+          refreshKey={`${conversations.length}-${activityLogRefreshKey}-${timeEntriesRefreshKey}`} initialOrder={timelinePrefOrder}
+          onSaveComment={handleSave} onCloseEdit={handleClose} onEditComment={handleEdit} onDeleteComment={handleDeleteRequest}
+          initialEntries={bootstrap?.streams?.timelineEntries} initialReactions={bootstrap?.streams?.commentReactions} /></Suspense>
+          : <TicketConversation {...common} id={`${id}-requester-history`} ticket={ticket} documents={documents}
+            activeTab={activeTab === 'internal' ? 'client' : activeTab} onTabChange={setActiveTab} hideInternalTab defaultNewestFirst
+            onEdit={handleEdit} onSave={handleSave} onClose={handleClose} onDelete={handleDeleteRequest}
+            externalComments={bundle?.isBundleMaster ? aggregatedChildClientComments : []} />;
+    }
+
     return (
         <ReflectionContainer id={id} label={`Ticket Details - ${ticket.ticket_number}`}>
             <div className="bg-[rgb(var(--color-app-ground))]">
@@ -3664,6 +3697,8 @@ const handleClose = () => {
                 <TicketBentoLayout
                     id={`${id}-bento`}
                     titleRef={cardTitleRef}
+                    conversationNavigator={namedConversations.navigator}
+                    conversationPanel={namedConversations.panel}
                     ticket={ticket as any}
                     statusOptions={statusOptions}
                     priorityOptions={priorityOptions}
@@ -3846,7 +3881,8 @@ const handleClose = () => {
                         </Suspense>
                         <Suspense fallback={<div id="ticket-conversation-skeleton" className="animate-pulse skeleton-fill h-96 rounded-lg mb-6"></div>}>
                             <div className="mb-6">
-                                <TicketConversation
+                                {namedConversations.navigator && <div className="mb-4">{namedConversations.navigator}</div>}
+                                {namedConversations.panel ?? <TicketConversation
                                     id={`${id}-conversation`}
                                     ticket={ticket}
                                     conversations={conversations}
@@ -3883,7 +3919,7 @@ const handleClose = () => {
                                     defaultNewestFirst
                                     canViewCommentMetadataDebug={canViewCommentMetadataDebug}
                                     reactionRefreshVersion={reactionRefreshVersion}
-                                />
+                                />}
                             </div>
                         </Suspense>
                         

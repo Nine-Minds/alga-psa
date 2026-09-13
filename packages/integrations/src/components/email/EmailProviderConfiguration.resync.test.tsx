@@ -16,6 +16,7 @@ const toastMock = vi.hoisted(() => Object.assign(vi.fn(), {
 }));
 
 vi.mock('react-hot-toast', () => ({ default: toastMock }));
+vi.mock('@alga-psa/ui/hooks/useFeatureFlag', () => ({ useFeatureFlag: () => ({ enabled: false }) }));
 
 vi.mock('../../actions/email-actions/emailProviderActions', () => ({
   deleteEmailProvider: vi.fn(),

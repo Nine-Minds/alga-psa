@@ -44,6 +44,8 @@ export interface IComment extends TenantEntity {
   comment_id?: string;
   ticket_id?: string;
   thread_id?: string;
+  /** Named container selected by an authorized conversation read. */
+  conversation_id?: string;
   parent_comment_id?: string | null;
   user_id?: string | null;
   contact_id?: string | null;

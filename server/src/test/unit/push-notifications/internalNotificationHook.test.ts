@@ -9,7 +9,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // We test the hook mechanism in isolation by importing it directly
 import {
   registerInternalNotificationHook,
-} from '@alga-psa/notifications/actions';
+} from '@alga-psa/notifications/actions/internal-notification-actions/notificationHooks';
 
 describe('Internal Notification Post-Creation Hooks', () => {
   it('registerInternalNotificationHook is a function', () => {

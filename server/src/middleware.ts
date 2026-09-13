@@ -189,6 +189,9 @@ const apiKeySkipPaths = [
 
 export function shouldSkipApiKeyAuth(pathname: string): boolean {
   return apiKeySkipPaths.some((path) => pathname.startsWith(path)) ||
+    // These browser routes enforce tracked sessions and qualified content access in-handler.
+    pathname === '/api/tickets/conversation-synthesis' || pathname === '/api/tickets/conversation-ai' ||
+    /^\/api\/(?:tickets\/(?:conversation-attachments|conversation-editor-files)|client-portal\/conversation-attachments)\/[^/]+\/?$/.test(pathname) ||
     // These co-managed browser routes bind and revalidate the tracked home session in-handler.
     pathname === '/api/co-management/export' ||
     /^\/api\/co-management\/(attachments|archive-files)\/[^/]+$/.test(pathname) ||

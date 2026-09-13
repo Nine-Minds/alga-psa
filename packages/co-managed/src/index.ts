@@ -22,6 +22,10 @@ export * from './ticketBulkHandback';
 export * from './ticketAssignments';
 
 export * from './ticketConversation';
+export * from './namedTicketConversations';
+export * from './conversationMailboxes';
+export * from './namedConversationRecipients';
+export * from './conversationEmailOperations';
 export * from './privateTicketConversation';
 export * from './ticketCommentCreation';
 export * from './ticketCommentNotification';
@@ -84,6 +88,42 @@ export * from './nativeTimeSheetLifecycle';
 
 export * from './nativeTimePeriod';
 export * from './nativeTimePeriodSettings';
+
+export { admitNamedConversationEmailReply } from './inboundNamedConversationEmail';
+export { downloadNamedConversationAttachment, listNamedConversationAttachments } from './namedConversationAttachments';
+export { listNamedReplyReviews, getNamedReplyReview, resolveNamedReplyReview,
+  type NamedReplyReviewDestination, type ResolveNamedReplyReviewRequest } from './inboundNamedConversationReview';
+
+export { uploadNamedConversationEditorFile, downloadNamedConversationEditorFile } from './namedConversationEditorFiles';
+
+export { prepareNamedConversationPublicationFiles, readNamedConversationFileBytes, type NamedConversationFileStorage, type NamedConversationEmailFile } from './namedConversationPublicationFiles';
+
+export { deliverNativeNamedConversationEmail, recoverNativeNamedConversationEmails, withNativeAcceptedConversationEmail } from './nativeConversationEmailDelivery';
+
+export { authorizeNamedConversationMailbox } from './conversationMailboxes';
+export { assertNamedConversationDeliveryFiles } from './namedConversationPublicationFiles';
+
+export { listNamedScheduledComments, type NamedScheduleCursor, admitNamedScheduledCommentCommand, retainNamedScheduledCommentCancellation } from './namedScheduledCommentCommands';
+
+export { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
+
+export { getNamedConversationMessageDetails } from './namedConversationMessageDetails';
+
+export { recordNamedConversationAttention, getNamedConversationAttention, updateNamedConversationPreference, acknowledgeNamedConversationMessages } from './namedConversationAttention';
+
+export { withNamedConversationNotification, namedConversationNotificationCandidates, namedConversationNotificationKey, type NamedConversationNotification, type NamedConversationNotificationSource, type NamedNotificationContext } from './namedConversationNotifications';
+
+export { recoverNamedConversationAttention } from './namedConversationNotificationFanout';
+export { recoverNamedConversationEmailNotifications } from './commentEmailDeliveries';
+
+export { enqueueNativeTicketCommentEmails } from './customerEmailDeliveries';
+
+export { readNamedConversationShareSource, retainNamedConversationShareDraft, getNamedConversationShareSourceLink, assertScheduledConversationShareSource, type NamedConversationShareProvenance, type NamedConversationShareSource } from './namedConversationShares';
+
+export { prepareNamedConversationShareFiles, assertNamedConversationShareFiles } from './namedConversationShareFiles';
+
+export { assertScheduledConversationSynthesisSource } from './conversationSynthesisPublication';
+export { publishNamedConversationAiExchange } from './conversationAiPublication';
 export * from './timePeriodJob';
 export * from './nativeScheduleRead';
 export * from './nativeScheduleCommand';

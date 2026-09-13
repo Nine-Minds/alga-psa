@@ -4,6 +4,7 @@ import { tenantDb } from '@alga-psa/db';
 import { assertCoManagedOperationalWrite, withCoManagedOperationalTransaction } from '@alga-psa/licensing';
 import { assertCommentThreadAudience, type CommentAudience } from '@alga-psa/shared/lib/commentAudience';
 import logger from '@alga-psa/core/logger';
+import { attachNativeRootToConversation, legacyTicketConversationSql } from '@alga-psa/shared/lib/tickets/namedConversations';
 
 function tenantScopedTable<Row extends object = Record<string, unknown>>(
   conn: Knex | Knex.Transaction,
@@ -15,6 +16,9 @@ function tenantScopedTable<Row extends object = Record<string, unknown>>(
 
 /** Internal command context, never part of a browser-supplied comment DTO. */
 export interface CommentCollaborationContext {
+  /** Authorized named destination, supplied only by the command adapter. */
+  conversationId?: string;
+  requesterPublicationOptions?: import('@alga-psa/shared/lib/tickets/requesterPublicationOptions').RequesterPublicationOptions | null;
   ticketId: string;
   actorTenant: string;
   actorUserId: string;
@@ -27,10 +31,12 @@ export interface CommentCollaborationMutationContext extends CommentCollaboratio
 }
 async function collaborationAttribution(trx: Knex.Transaction, tenant: string, comment: Omit<IComment, 'tenant'>,
   context: CommentCollaborationContext) {
+  const schedule = context.requesterPublicationOptions?.schedule;
   if (!trx.isTransaction || comment.ticket_id !== context.ticketId || !['requester', 'shared_it', 'organization_private'].includes(context.audience) ||
       comment.author_type !== 'internal' || comment.contact_id != null || Boolean(comment.is_internal) !== (context.audience !== 'requester') ||
-      comment.is_resolution || (comment as any).is_system_generated || (comment.publish_state != null && comment.publish_state !== 'published') ||
-      comment.scheduled_publish_at || comment.metadata != null) throw new Error('Invalid collaboration comment context');
+      (Boolean(comment.is_resolution) !== Boolean(context.requesterPublicationOptions?.isResolution)) ||
+      (context.requesterPublicationOptions && (context.actorTenant !== tenant || context.audience !== 'requester' || context.actorReferenceId)) || (comment as any).is_system_generated || (schedule ? (comment.publish_state !== 'scheduled' || comment.scheduled_publish_at !== schedule.at || comment.scheduled_publish_tz !== schedule.timeZone || context.requesterPublicationOptions?.close)
+        : ((comment.publish_state != null && comment.publish_state !== 'published') || comment.scheduled_publish_at)) || comment.metadata != null) throw new Error('Invalid collaboration comment context');
   await context.assertWriteAuthority(trx);
   if (context.actorTenant === tenant) {
     if (context.actorReferenceId || comment.user_id !== context.actorUserId) throw new Error('Invalid local collaboration author');
@@ -51,6 +57,7 @@ const Comment = {
       const comments = await tenantScopedTable<IComment>(knexOrTrx, 'comments', tenant)
         .select('comments.*')
         .where('comments.ticket_id', ticket_id)
+        .whereRaw(legacyTicketConversationSql(knexOrTrx, tenant))
         .orderBy('comments.created_at', 'asc');
       return comments;
     } catch (error) {
@@ -210,7 +217,7 @@ const Comment = {
           throw new Error('Failed to get comment_id from inserted record');
         }
 
-        if (isReply) {
+        if (isReply && !collaboration?.requesterPublicationOptions?.schedule) {
           await tenantScopedTable(trx, 'comment_threads', tenant)
             .where({ thread_id: threadId })
             .update({
@@ -219,6 +226,8 @@ const Comment = {
             });
         }
 
+        await attachNativeRootToConversation({ trx, ticket: { tenant, ticketId: comment.ticket_id }, storeTenant: tenant },
+          threadId, collaboration?.conversationId);
         return inserted.comment_id as string;
       } catch (error) {
         logger.error('Error inserting comment:', error);
@@ -266,6 +275,8 @@ const Comment = {
           throw new Error(`Comment with id ${id} not found`);
         }
 
+        if (existingComment.publish_state === 'scheduled' && await tenantDb(trx, tenant).table('ticket_conversation_publications').where('comment_id', id).whereRaw("jsonb_exists(publication_options, 'schedule')").first())
+          throw new Error('Cancel the scheduled email before changing its message.');
         if ((existingComment as any).actor_reference_id || ['actor_reference_id', 'actor_display_name', 'actor_organization_name'].some(field => (comment as any)[field] != null)) {
           throw new Error('Qualified comment authors require a collaboration command');
         }
@@ -330,7 +341,7 @@ const Comment = {
     return withCoManagedOperationalTransaction(knexOrTrx, tenant, async trx => {
       try {
         const existingComment = await tenantScopedTable<IComment>(trx, 'comments', tenant)
-          .select('comment_id', 'parent_comment_id', 'thread_id', 'actor_reference_id' as any)
+          .select('comment_id', 'parent_comment_id', 'thread_id', 'publish_state', 'actor_reference_id' as any)
           .where('comment_id', id)
           .first();
 
@@ -338,6 +349,8 @@ const Comment = {
           return;
         }
 
+        if (existingComment.publish_state === 'scheduled' && await tenantDb(trx, tenant).table('ticket_conversation_publications').where('comment_id', id).whereRaw("jsonb_exists(publication_options, 'schedule')").first())
+          throw new Error('Use Cancel schedule to cancel this email.');
         if ((existingComment as any).actor_reference_id) throw new Error('Qualified comment authors require a collaboration command');
         await assertCommentThreadAudience(trx, tenant, existingComment.thread_id!, {});
 

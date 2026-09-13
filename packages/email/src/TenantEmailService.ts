@@ -16,6 +16,7 @@ import {
 } from './templateProcessors';
 import { SupportedLocale } from './lib/localeConfig';
 import { BaseEmailService, BaseEmailParams, EmailSendResult } from './BaseEmailService';
+import { previewReviewedEmail, reviewedEmailSenderRevision, snapshotReviewedEmailParams, type ReviewedEmailPreview } from './reviewedEmail';
 import { SystemEmailProviderFactory } from './system/SystemEmailProviderFactory';
 import { isEnterprise } from './features';
 import { DelayedEmailQueue } from './DelayedEmailQueue';
@@ -55,6 +56,7 @@ export interface EmailSettingsValidation {
 }
 
 interface TenantProviderSnapshot {
+  settingsFingerprint: string;
   emailProvider: IEmailProvider | null;
   providerInitError: string | null;
   fromAddress: EmailAddress;
@@ -116,6 +118,14 @@ export class TenantEmailService extends BaseEmailService {
    * Override sendEmail to support provider-specific routing and rate limiting
    */
   public async sendEmail(params: BaseEmailParams): Promise<EmailSendResult> {
+    if (params.reviewed) {
+      // Caller-owned recovery is required: a generic queue cannot reauthorize a
+      // conversation or resolve an uncertain provider outcome.
+      if (params.retryPolicy !== 'caller' || params.tenantId !== this.tenantId) return { success: false, error: 'Reviewed email requires caller-owned delivery.',
+        metadata: { deliveryStatus: 'not_attempted', retryable: false, errorCode: 'invalid_review' } };
+      try { params = snapshotReviewedEmailParams(params); }
+      catch { return { success: false, error: 'Invalid reviewed email.', metadata: { deliveryStatus: 'not_attempted', retryable: false, errorCode: 'invalid_review' } }; }
+    }
     // Note: We are intentionally ignoring params.providerId for routing purposes.
     // All outbound emails should go through the configured outbound provider (e.g. Resend/SMTP).
     // The providerId from ticket metadata is used upstream (in ticketEmailSubscriber) to resolve
@@ -138,7 +148,8 @@ export class TenantEmailService extends BaseEmailService {
       });
       return {
         success: false,
-        error: 'Tenant is suspended; outbound email is disabled'
+        error: 'Tenant is suspended; outbound email is disabled',
+        ...(params.reviewed ? { metadata: { deliveryStatus: 'not_attempted', retryable: false } } : {})
       };
     }
 
@@ -147,7 +158,7 @@ export class TenantEmailService extends BaseEmailService {
     if (!rateLimitResult.allowed) {
       if (params.retryPolicy === 'caller') {
         return { success: false, error: `Rate limit exceeded: ${rateLimitResult.reason}`,
-          metadata: { retryable: true, errorCode: 'rate_limited', retryAfterMs: rateLimitResult.retryAfterMs } };
+          metadata: { ...(params.reviewed ? { deliveryStatus: 'not_attempted' } : {}), retryable: true, errorCode: 'rate_limited', retryAfterMs: rateLimitResult.retryAfterMs } };
       }
       const retryCount = params._retryCount ?? 0;
 
@@ -214,6 +225,15 @@ export class TenantEmailService extends BaseEmailService {
       resolvedTenantCompanyName
     );
 
+    if (params.reviewed) {
+      if (!providerSnapshot.emailProvider) return { success: false, error: 'The reviewed sender is unavailable.',
+        metadata: { deliveryStatus: 'not_attempted', retryable: false, errorCode: 'sender_unavailable' } };
+      const sender = this.resolveReviewedSender(providerSnapshot, params, resolvedTenantCompanyName);
+      if (sender.revision !== params.reviewed.senderRevision) return { success: false, error: 'The sender changed. Review the email again.',
+        metadata: { deliveryStatus: 'not_attempted', retryable: false, errorCode: 'sender_changed' } };
+      return super.sendEmail(sender.params);
+    }
+
     return super.sendEmail({
       ...params,
       resolvedTenantCompanyName,
@@ -225,6 +245,39 @@ export class TenantEmailService extends BaseEmailService {
         resolvedSystemFallbackReplyTo: providerSnapshot.fromAddress,
       } : {}),
     });
+  }
+
+  /** Resolve exactly what a reviewed conversation send will use, without
+   * sending, emitting workflow events or touching ticket-wide RFC references. */
+  public async prepareReviewedEmail(input: BaseEmailParams): Promise<ReviewedEmailPreview> {
+    const params = snapshotReviewedEmailParams(input);
+    if (params.tenantId !== this.tenantId) throw new Error('Invalid reviewed email tenant');
+    const db = await getConnection(this.tenantId);
+    if (await isTenantSuspended(db, this.tenantId)) throw new Error('Email sender is unavailable');
+    const companyName = await resolveTenantCompanyName(db, this.tenantId);
+    const snapshot = await this.refreshProviderState(db, companyName);
+    if (!snapshot.emailProvider) throw new Error('Email sender is unavailable');
+    const sender = this.resolveReviewedSender(snapshot, params, companyName);
+    return previewReviewedEmail({ from: sender.from, replyTo: sender.replyTo,
+      to: this.convertToProviderAddressArray(params.to), cc: params.cc ? this.convertToProviderAddressArray(params.cc) : [],
+      subject: params.subject, html: params.html, text: params.text, attachments: params.attachments, headers: params.headers },
+      snapshot.emailProvider, sender.revision);
+  }
+
+  private resolveReviewedSender(snapshot: TenantProviderSnapshot, params: BaseEmailParams, companyName?: string | null) {
+    const bound: BaseEmailParams = { ...params, resolvedTenantCompanyName: companyName,
+      resolvedTenantFromAddress: snapshot.fromAddress, resolvedEmailProvider: snapshot.emailProvider,
+      resolvedProviderInitError: snapshot.providerInitError,
+      resolvedSystemFallbackFromAddress: snapshot.systemFallbackFromAddress,
+      // Preserve the selected conversation's intake even when From must use a
+      // platform-verified domain. This exact Reply-To also appears in review.
+      resolvedSystemFallbackReplyTo: snapshot.systemFallbackFromAddress
+        ? (params.replyTo ? this.convertToProviderAddress(params.replyTo) : snapshot.fromAddress) : undefined };
+    const requested = this.convertToProviderAddress(this.getFromAddress(bound));
+    const from = snapshot.emailProvider?.resolveFromAddress?.(requested) ?? requested;
+    const replyTo = bound.resolvedSystemFallbackReplyTo ?? (params.replyTo ? this.convertToProviderAddress(params.replyTo) : undefined);
+    const revision = reviewedEmailSenderRevision(this.tenantId, snapshot.emailProvider!, snapshot.settingsFingerprint, from, replyTo);
+    return { params: bound, from, replyTo, revision };
   }
 
   /**
@@ -640,6 +693,7 @@ export class TenantEmailService extends BaseEmailService {
         this.tenantSettings = settings;
         this.tenantSettingsLoaded = true;
         return {
+          settingsFingerprint: fingerprint,
           emailProvider: this.emailProvider,
           providerInitError: this.providerInitError,
           fromAddress: this.buildTenantFromAddress(tenantCompanyName),
@@ -655,6 +709,7 @@ export class TenantEmailService extends BaseEmailService {
       await this.initialize();
       this.providerSettingsFingerprint = fingerprint;
       return {
+        settingsFingerprint: fingerprint,
         emailProvider: this.emailProvider,
         providerInitError: this.providerInitError,
         fromAddress: this.buildTenantFromAddress(tenantCompanyName),

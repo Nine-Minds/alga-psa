@@ -183,6 +183,8 @@ export interface ITicketWithDetails extends ITicket {
   priority_name?: string;
   priority_color?: string;
   conversations?: IComment[];
+  selectedConversationId?: string;
+  requesterConversations?: Array<{ conversationId: string; name: string; isDefault: boolean; status: 'open' | 'done' }>;
   documents?: IDocument[];
   userMap?: Record<string, {
     first_name: string;

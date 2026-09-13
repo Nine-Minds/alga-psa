@@ -1,3 +1,4 @@
+import { requesterConversationFollowers, isRequesterConversationFollower } from './requesterConversationFollowers';
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { CoManagedSharedWorkError, isCoManagedUuid } from './sharedWorkIdentity';
@@ -37,6 +38,10 @@ export async function isCoManagedNotificationAssignee(context: CoManagedNotifica
     .where({ team_id: reference.assigned_team_id, user_id: context.actor.userId }).forShare().first('user_id'));
 }
 
+export async function isCoManagedTicketCommentRecipient(context: CoManagedNotificationRecipientContext, message: CoManagedTicketCommentNotification): Promise<boolean> {
+  return await isCoManagedNotificationAssignee(context) || await isRequesterConversationFollower(context, message);
+}
+
 /** Server-side fanout to current MSP routing recipients. Never treats customer
  * assignment/mention UUIDs as MSP users and never notifies all relationship staff.
  * Channel adapters enforce preferences and persist an idempotency receipt using
@@ -53,18 +58,20 @@ export async function deliverCoManagedTicketCommentToAssignees(db: Knex, input: 
   if (!relationship) return;
   const resource: CoManagedSharedResource = { tenant: request.ownerTenant, relationshipId: relationship.relationship_id, kind: 'ticket', id: request.ticketId };
   const reference = await routingReference(db, resource, relationship.sponsor_tenant);
-  if (!reference || (!reference.assigned_to && !reference.assigned_team_id)) return;
+  const followers = await requesterConversationFollowers(db, request.ownerTenant, request.ticketId, request.commentId, relationship.sponsor_tenant);
+  if (!reference?.assigned_to && !reference?.assigned_team_id && !followers.length) return;
   const home = tenantDb(db, relationship.sponsor_tenant);
   const candidates = await home.table('users').where({ user_type: 'internal', is_inactive: false }).where(query => {
-    if (reference.assigned_to) query.where('user_id', reference.assigned_to);
-    if (reference.assigned_team_id) query.orWhereIn('user_id', home.table('team_members').where('team_id', reference.assigned_team_id).select('user_id'));
+    if (reference?.assigned_to) query.where('user_id', reference.assigned_to);
+    if (reference?.assigned_team_id) query.orWhereIn('user_id', home.table('team_members').where('team_id', reference.assigned_team_id).select('user_id'));
+    if (followers.length) query.orWhereIn('user_id', followers);
   }).orderBy('user_id').select('user_id');
   const failures: unknown[] = [];
   for (const candidate of candidates) {
     try {
       await withCoManagedTicketCommentNotification(db, { kind: 'notification_recipient', tenant: relationship.sponsor_tenant, userId: candidate.user_id },
         resource, request.commentId, async (context, message) => {
-          if (!await isCoManagedNotificationAssignee(context)) return;
+          if (!await isCoManagedTicketCommentRecipient(context, message)) return;
           const deliveryKey = `co-managed-comment:${request.ownerTenant}:${request.ticketId}:${request.commentId}:${request.eventId}:${request.channel}:${context.actor.tenant}:${context.actor.userId}`;
           await deliver(context, message, deliveryKey);
         });

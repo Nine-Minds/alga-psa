@@ -1802,5 +1802,80 @@
       "internalLabel": "Non notificare anche agenti e osservatori",
       "internalHelper": "Salta anche le loro e-mail e notifiche in-app"
     }
+  },
+  "namedConversations": {
+    "finishNavigation": "Completa o annulla la modifica corrente per aprire la conversazione richiesta.",
+    "returnToCurrent": "Torna alla conversazione corrente",
+    "returnToRequester": "Apri la conversazione con il richiedente",
+    "messageUnavailable": "Questo messaggio non è disponibile in questa conversazione.",
+    "latest": "Mostra gli ultimi messaggi",
+    "readFailed": "Impossibile contrassegnare questi messaggi come letti.",
+    "share": {
+      "action": "Condividi",
+      "title": "Condividi messaggio",
+      "from": "Conversazione di origine",
+      "destination": "Destinazione",
+      "new": "Nuova conversazione…",
+      "openDraft": "Apri bozza esistente",
+      "preparing": "Preparazione…",
+      "retry": "Riprova preparazione",
+      "replace": "Sostituisci bozza e prepara copia",
+      "prepare": "Prepara bozza",
+      "existingDraft": "Hai già una bozza qui.",
+      "existingHelp": "Aprila per continuare a lavorare oppure sostituiscila esplicitamente con questa copia.",
+      "quote": "Formatta come citazione",
+      "files": "Scegli gli allegati da copiare",
+      "reviewHelp": "La copia resta privata finché non la rivedi e scegli Invia o Pubblica nella conversazione di destinazione.",
+      "loadingDraft": "Verifica della bozza di destinazione…",
+      "reloadDraft": "Ricarica bozza di destinazione",
+      "recipientsHelp": "Separa i destinatari con punti e virgola. Scegli una casella di invio e rivedi l’e-mail nella bozza di destinazione.",
+      "errors": {
+        "load": "Questo messaggio non è disponibile. Aggiorna per verificare il tuo accesso.",
+        "target": "Questa destinazione non è disponibile. Scegli un’altra conversazione o riprova.",
+        "conflict": "La bozza di destinazione o la conversazione è cambiata. Ricaricala prima di preparare una copia.",
+        "invalid": "Controlla i destinatari e i file selezionati, poi ricarica la destinazione per riprovare.",
+        "unavailable": "L’origine o la destinazione non è più disponibile. Aggiorna per verificare il tuo accesso.",
+        "unknown": "Impossibile confermare la preparazione. Riprova la stessa richiesta o apri la destinazione per controllarne la bozza."
+      },
+      "sourceLink": "Condiviso da {{name}}"
+    },
+    "synthesis": {
+      "title": "Riassumi conversazione",
+      "stop": "Annulla generazione",
+      "generating": "Generazione…",
+      "retry": "Riprova generazione",
+      "replace": "Sostituisci bozza e genera",
+      "generate": "Genera bozza",
+      "wholeSource": "Usa tutta la conversazione pubblicata per preparare un riepilogo adatto ai destinatari. Il risultato resta privato finché non lo rivedi e lo invii o pubblichi.",
+      "existingHelp": "Aprila per continuare o sostituiscila esplicitamente con un nuovo riepilogo.",
+      "prompt": "Su cosa deve concentrarsi il riepilogo? (facoltativo)",
+      "sourceChanged": "La conversazione di origine è cambiata. Le modifiche alla bozza sono conservate; rigenera quando vuoi.",
+      "review": "L’IA ha preparato questa bozza privata. Rivedila prima di inviarla o pubblicarla.",
+      "sourceUnavailable": "Impossibile verificare l’origine di questa bozza. Aggiorna per verificare il tuo accesso.",
+      "regenerate": "Rigenera riepilogo…",
+      "action": "Riassumi con IA",
+      "errors": {
+        "AI_CONTEXT_TOO_LARGE": "La conversazione completa supera il contesto IA disponibile. Nessun riepilogo parziale è stato salvato. Puoi continuare a scrivere manualmente.",
+        "AI_SOURCE_CHANGED": "L’origine è cambiata durante la generazione. Ricarica la destinazione e rigenera quando vuoi.",
+        "AI_SOURCE_INVALID": "Questa conversazione non contiene messaggi pubblicati utilizzabili per un riepilogo.",
+        "AI_UNAVAILABLE": "L’IA non è al momento disponibile nel tuo spazio di lavoro. La bozza è conservata; puoi continuare a scrivere manualmente.",
+        "AI_CANCELLED": "La generazione è stata annullata. La bozza è stata conservata."
+      }
+    },
+    "ai": {
+      "title": "Chiedi all’IA",
+      "publication": "La tua domanda e la risposta dell’IA saranno pubblicate insieme in questa conversazione interna. La tua bozza manuale viene conservata.",
+      "sources": "Conversazioni utilizzabili dall’IA",
+      "scope": "Sono inclusi solo contenuti pubblicati consentiti per questo pubblico. Deseleziona le conversazioni per restringere il contesto.",
+      "noSources": "L’IA riceverà solo la tua domanda.",
+      "prompt": "La tua domanda",
+      "uncertain": "Impossibile confermare il risultato. Riprova verifica la stessa richiesta; chiudere annulla qualsiasi generazione in sospeso.",
+      "cancelled": "La generazione è stata annullata. La tua bozza manuale è invariata.",
+      "changed": "La conversazione o la fonte è cambiata. Chiudi e riapri Chiedi all’IA per controllare il contesto attuale.",
+      "unavailable": "L’IA non è disponibile per questa conversazione. Puoi continuare a scrivere manualmente.",
+      "cancel": "Annulla generazione",
+      "generating": "Elaborazione…",
+      "contextTooLarge": "Il contesto selezionato supera la capacità disponibile dell’IA. Riduci le fonti e riprova. Nessuna domanda o risposta è stata pubblicata."
+    }
   }
 }

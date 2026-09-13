@@ -4,8 +4,9 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import CoManagedTicketConversation from '../../../components/co-managed/CoManagedTicketConversation';
 import { CoManagedFeatureBoundary } from '../../../components/co-managed/CoManagedFeatureBoundary';
-const mocks = vi.hoisted(() => ({ flag: vi.fn(), load: vi.fn(), create: vi.fn(), mutate: vi.fn(), private: vi.fn(), prepare: vi.fn(), submitDraft: vi.fn(), abandon: vi.fn(), preview: vi.fn(), disclose: vi.fn(),
+const mocks = vi.hoisted(() => ({ query: '', push: vi.fn(), acknowledge: vi.fn(), flag: vi.fn(), load: vi.fn(), create: vi.fn(), mutate: vi.fn(), private: vi.fn(), prepare: vi.fn(), submitDraft: vi.fn(), abandon: vi.fn(), preview: vi.fn(), disclose: vi.fn(),
   session: { user: { tenant: 'msp', id: 'technician' } } }));
+vi.mock('../../../../../packages/tickets/src/actions/namedTicketConversationActions', () => ({ acknowledgeNamedConversationMessagesAction: mocks.acknowledge }));
 vi.mock('../../../lib/actions/coManagedThreadDisclosureActions', () => ({ previewCoManagedThreadDisclosureAction: mocks.preview, discloseCoManagedThreadAction: mocks.disclose }));
 vi.mock('../../../components/co-managed/CoManagedCommentAttachments', () => ({ default: () => null }));
 vi.mock('../../../components/co-managed/conversationDraftSubmission', () => ({ prepareConversationDraft: mocks.prepare, submitConversationDraft: mocks.submitDraft }));
@@ -14,6 +15,7 @@ vi.mock('next/dynamic', () => ({ default: () => ({ id, label, document, editable
   ? <label>{label}<textarea id={id} disabled={!editable} value={document.map((block: any) => block.content?.map((part: any) => part.text ?? '').join('') ?? '').join('\n')}
       onChange={event => onChange([{ type: 'paragraph', content: [{ type: 'text', text: event.target.value, styles: {} }] }])} /></label>
   : <div id={id}>{document.map((block: any) => block.content?.map((part: any) => part.text ?? '').join('') ?? '').join('\n')}</div> }));
+vi.mock('next/navigation', () => ({ useSearchParams: () => new URLSearchParams(mocks.query), useRouter: () => ({ push: mocks.push }) }));
 vi.mock('next-auth/react', () => ({ useSession: () => ({ data: mocks.session }) }));
 vi.mock('@alga-psa/ui/hooks', () => ({ useFeatureFlag: mocks.flag }));
 vi.mock('../../../lib/actions/coManagedAcceptanceActions', () => ({}));
@@ -36,7 +38,8 @@ const button = (name: string) => screen.getByRole('button', { name: `coManaged.c
 const message = () => screen.getByLabelText('coManaged.conversation.message');
 const deferred = () => { let resolve!: (value: any) => void; const promise = new Promise<any>(done => { resolve = done; }); return { promise, resolve }; };
 beforeEach(() => {
-  vi.resetAllMocks(); mocks.session = { user: { tenant: 'msp', id: 'technician' } };
+  vi.resetAllMocks(); mocks.query = ''; mocks.session = { user: { tenant: 'msp', id: 'technician' } };
+  mocks.acknowledge.mockResolvedValue({ changed: false });
   mocks.flag.mockReturnValue({ enabled: true, loading: false, error: null }); mocks.load.mockResolvedValue(data());
   mocks.prepare.mockImplementation(async input => ({ resource: input.resource, storeTenant: input.resource.tenant, request: { operationId: input.operationId }, files: input.files }));
   mocks.submitDraft.mockResolvedValue({ ok: true, receipt: {} });
@@ -106,6 +109,13 @@ it('retains reads without write controls', async () => {
 it('loads after development StrictMode remounts effects', async () => {
   render(<React.StrictMode><CoManagedTicketConversation resource={resource} /></React.StrictMode>);
   await screen.findByText('Shared content');
+});
+it('never shows a shared-source link outside the named requester conversation panel, even if the screen carries one', async () => {
+  const sharedFrom = { conversation: { storeTenant: 'msp', conversationId: 'source', name: 'Private source exchange' }, commentId: 'source-comment', threadId: 'source-thread' };
+  mocks.load.mockResolvedValue({ ...data(), items: [{ ...item(), sharedFrom }] });
+  mount(); await screen.findByText('Shared content');
+  expect(screen.queryByText(/sourceLink/)).toBeNull();
+  expect(screen.queryByRole('link', { name: /Shared from/ })).toBeNull();
 });
 
 it('does not claim another organization’s author with the same user ID and keeps customer-private creation local', async () => {
@@ -295,4 +305,60 @@ it('keeps an incorrectly qualified transfer receipt uncertain for an exact retry
   await screen.findByText('coManaged.disclosure.transferHelp'); fireEvent.change(screen.getByLabelText('coManaged.conversation.audience'), { target: { value: 'requester' } });
   fireEvent.click(screen.getByRole('button', { name: 'coManaged.disclosure.confirm' })); await screen.findByText('coManaged.disclosure.unknownOutcome');
   expect(screen.getByRole('button', { name: 'coManaged.ticket.cancel' })).toBeDisabled();
+});
+
+it('retains history editing while routing requester replies to the supplied composer and waiting for draft flush', async () => {
+  const row = { ...item(), audience: 'requester', email: { subject: 'Requester update', from: { email: 'desk@example.test' },
+    to: [{ email: 'requester@example.test' }], cc: [], delivery: 'delivered' } };
+  mocks.load.mockResolvedValue({ ...data(), items: [row], writeAudiences: ['requester'] });
+  const pending = deferred();
+  const composition = { ready: true, refreshVersion: 0, beforeEdit: vi.fn(() => pending.promise), reply: vi.fn(async () => true) };
+  render(<CoManagedTicketConversation resource={resource} requester={{ storeTenant: 'customer', conversationId: 'requester' }} composition={composition} />);
+  await screen.findByText('Shared content');
+  expect(screen.getByText('Requester update')).toBeInTheDocument();
+  expect(screen.getByText('requester@example.test')).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'coManaged.conversation.new' })).toBeNull();
+  fireEvent.click(button('reply'));
+  expect(composition.reply).toHaveBeenCalledWith({ threadId: 'thread', commentId: 'comment' });
+  expect(mocks.create).not.toHaveBeenCalled(); expect(screen.queryByLabelText('coManaged.conversation.message')).toBeNull();
+  fireEvent.click(button('edit')); expect(composition.beforeEdit).toHaveBeenCalledOnce();
+  expect(screen.queryByLabelText('coManaged.conversation.message')).toBeNull();
+  await act(async () => pending.resolve(true));
+  fireEvent.change(message(), { target: { value: 'Updated existing message' } });
+  fireEvent.click(button('send'));
+  await waitFor(() => expect(mocks.mutate).toHaveBeenCalledOnce());
+  expect(mocks.mutate.mock.calls[0][1]).toMatchObject({ kind: 'edit', comment: { commentId: 'comment', threadId: 'thread' } });
+});
+
+it('acknowledges only a successfully loaded named requester history in the co-managed screen', async () => {
+  const focused = vi.spyOn(document, 'hasFocus').mockReturnValue(true), pending = deferred();
+  mocks.load.mockReturnValueOnce(pending.promise);
+  try {
+    render(<CoManagedTicketConversation resource={resource} requester={{ storeTenant: 'customer', conversationId: 'requester' }} />);
+    expect(mocks.acknowledge).not.toHaveBeenCalled();
+    await act(async () => pending.resolve({ ...data(), items: [{ ...item(), audience: 'requester' }] }));
+    await screen.findByText('Shared content');
+    await waitFor(() => expect(mocks.acknowledge).toHaveBeenCalledOnce());
+    expect(mocks.acknowledge).toHaveBeenCalledWith({ tenant: 'customer', ticketId: 'ticket', relationshipId: 'relationship' },
+      { storeTenant: 'customer', conversationId: 'requester' }, [{ commentId: 'comment', threadId: 'thread' }]);
+  } finally { focused.mockRestore(); }
+});
+
+it('opens the qualified Requester message and preserves local editing across an unavailable message link', async () => {
+  Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', { configurable: true, value: vi.fn() });
+  mocks.query = 'conversation=requester&conversationStore=customer&message=comment';
+  const requester = { storeTenant: 'customer', conversationId: 'requester' };
+  mocks.load.mockResolvedValue({ ...data(), items: [{ ...item(), audience: 'requester' }] });
+  const view = render(<CoManagedTicketConversation resource={resource} requester={requester} />);
+  await waitFor(() => expect(screen.getByText('Shared content').closest('li')).toHaveFocus());
+  expect(mocks.load).toHaveBeenCalledWith(resource, undefined, requester, 'comment');
+  fireEvent.click(button('reply')); fireEvent.change(message(), { target: { value: 'Unsent linked reply' } });
+  mocks.query = 'conversation=requester&conversationStore=customer&message=missing';
+  mocks.load.mockResolvedValue({ ...data(), items: [{ ...item(), audience: 'requester' }], messageUnavailable: true });
+  view.rerender(<CoManagedTicketConversation resource={resource} requester={requester} />);
+  await screen.findByText('namedConversations.messageUnavailable');
+  expect(message()).toHaveValue('Unsent linked reply'); expect(mocks.create).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: 'namedConversations.latest' }));
+  expect(mocks.push.mock.calls.at(-1)![0]).toContain('conversation=requester');
+  expect(mocks.push.mock.calls.at(-1)![0]).not.toContain('message=');
 });

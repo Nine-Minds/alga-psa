@@ -57,6 +57,18 @@ describe('shouldSkipApiKeyAuth', () => {
     expect(shouldSkipApiKeyAuth('/api/tickets/ticket-123/live-token')).toBe(true);
   });
 
+  it('lets qualified conversation routes enforce browser sessions without widening adjacent API paths', () => {
+    expect(shouldSkipApiKeyAuth('/api/tickets/conversation-synthesis')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/tickets/conversation-ai')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/tickets/conversation-ai/other-action')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/tickets/conversation-ai-other')).toBe(false);
+    for (const prefix of ['/api/tickets/conversation-attachments/', '/api/tickets/conversation-editor-files/', '/api/client-portal/conversation-attachments/']) {
+      expect(shouldSkipApiKeyAuth(prefix + 'file-id')).toBe(true);
+      expect(shouldSkipApiKeyAuth(prefix + 'file-id/other-action')).toBe(false);
+    }
+    expect(shouldSkipApiKeyAuth('/api/tickets/conversation-synthesis-other')).toBe(false);
+  });
+
   it('still requires an API key for unrelated API routes', () => {
     expect(shouldSkipApiKeyAuth('/api/teams/package/upload')).toBe(false);
     expect(shouldSkipApiKeyAuth('/api/instanceinfo')).toBe(false);

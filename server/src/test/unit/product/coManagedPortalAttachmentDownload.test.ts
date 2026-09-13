@@ -33,6 +33,15 @@ it('returns opaque denials and storage failures without disclosing paths', async
   expect(response.status).toBe(503); expect(await response.text()).not.toContain('private/storage'); expect(mocks.provider).not.toHaveBeenCalled();
 });
 
+it('passes explicit named destinations to admission and returns an opaque denial for inaccessible conversations', async () => {
+  const { TicketConversationError } = await import('@alga-psa/shared/lib/tickets/namedConversations');
+  const named = request(); named.nextUrl.searchParams.set('conversationId', 'selected');
+  mocks.download.mockRejectedValue(new TicketConversationError('CONVERSATION_FORBIDDEN'));
+  const result = await GET(named, params);
+  expect(result.status).toBe(404); expect(await result.json()).toEqual({ error: 'Not found' });
+  expect(mocks.download.mock.calls[0][2]).toEqual({ ticketId: 'ticket', threadId: 'thread', commentId: 'comment', conversationId: 'selected' });
+  expect(mocks.provider).not.toHaveBeenCalled();
+});
 it('uses task/project admission for requester task files without accepting mixed or repeated parent identities', async () => {
   mocks.taskDownload.mockResolvedValue({ attachment: { fileName: 'task.txt' }, content: Buffer.from('task') });
   const req = (query: string) => ({ nextUrl: new URL('https://alga.test/api/client-portal/conversation-attachments/file?' + query) }) as any;

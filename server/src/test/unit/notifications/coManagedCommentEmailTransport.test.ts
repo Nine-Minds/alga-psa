@@ -119,6 +119,36 @@ it('uses the admitted owner task path after separation and does not restore mask
   expect(content.text).toContain(path); expect(content.text).not.toContain('/co-management/'); expect(content.text).not.toContain('Customer project'); expect(content.text).not.toContain('A < B');
 });
 
+it.each([true, false])('renders named conversation alerts with exact navigation and no borrowed reply capability (owner=%s)', async ownerTicket => {
+  const source = delivery(), storeTenant = ownerTicket ? source.tenant : source.message.resource.tenant, conversationId = randomUUID();
+  const item: CoManagedEmailDelivery = { ...source, message: { resource: { ...source.message.resource, kind: 'ticket', tenant: storeTenant },
+    commentId: source.message.commentId, threadId: source.message.threadId, note: source.message.note, audience: 'shared_it',
+    conversation: { storeTenant, conversationId, name: 'Vendor <exchange>', audience: 'shared_it' }, sequence: '2', ownerTicket } };
+  await sendCoManagedCommentEmail(item);
+  const params = runtime.send.mock.calls[0][0], content = await params.templateProcessor.process();
+  expect(content.text).toContain(`conversation=${conversationId}`);
+  expect(content.text).toContain(`conversationStore=${storeTenant}`);
+  expect(content.text).toContain(`message=${item.message.commentId}`);
+  expect(content.text).toContain(ownerTicket ? `/msp/tickets/${item.message.resource.id}` : `/msp/co-management/tickets/${storeTenant}/`);
+  expect(content.html).toContain('Vendor &lt;exchange&gt;');
+  expect(content.text).not.toContain('ALGA-REPLY-TOKEN'); expect(content.html).not.toContain('data-alga-reply-token');
+  expect(params.from).toBeUndefined(); expect(params.replyTo).toBeUndefined(); expect(runtime.mailbox).not.toHaveBeenCalled();
+});
+
+it('retains requester portal tenant routing while adding the admitted conversation and message', async () => {
+  const { sendCoManagedRequesterCommentEmail } = await import('@alga-psa/jobs/handlers/coManagedCommentEmailTransport');
+  const source = delivery(), conversationTarget = { storeTenant: source.tenant, conversationId: randomUUID() };
+  const item: any = { ...source, replyToken: `cm1:${'c'.repeat(43)}`, recipient: { kind: 'requester_contact', tenant: source.tenant, clientId: randomUUID(), contactId: randomUUID() },
+    message: { ...source.message, resource: { kind: 'ticket', tenant: source.tenant, id: source.message.resource.id }, audience: 'requester', conversationTarget } };
+  runtime.routing.mockResolvedValue({ url: `https://portal.example.test/client-portal/tickets/${item.message.resource.id}?tenant=existing-slug#existing-anchor` });
+  await sendCoManagedRequesterCommentEmail(item);
+  const content = await runtime.send.mock.calls[0][0].templateProcessor.process();
+  expect(content.text).toContain('tenant=existing-slug'); expect(content.text).toContain('#existing-anchor');
+  expect(content.text).toContain(`conversation=${conversationTarget.conversationId}`);
+  expect(content.text).toContain(`conversationStore=${source.tenant}`);
+  expect(content.text).toContain(`message=${source.message.commentId}`);
+  expect(content.text).toContain(`ALGA-REPLY-TOKEN ${item.replyToken}`);
+});
 it.each(['en', 'fr', 'pt'])('renders requester task email in %s with portal identity and no ticket token or reply mailbox', async locale => {
   const { sendCoManagedRequesterCommentEmail } = await import('@alga-psa/jobs/handlers/coManagedCommentEmailTransport');
   runtime.locale.mockResolvedValue(locale);

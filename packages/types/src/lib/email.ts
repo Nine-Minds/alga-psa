@@ -109,6 +109,8 @@ export interface IEmailProvider {
   readonly providerType: string;
   readonly capabilities: EmailProviderCapabilities;
   initialize(config: Record<string, any>): Promise<void>;
+  /** Providers with a fixed sending mailbox expose the identity used on wire. */
+  resolveFromAddress?(requested: EmailAddress): EmailAddress;
   sendEmail(message: EmailMessage, tenantId: string): Promise<EmailSendResult>;
   sendBulkEmails?(messages: EmailMessage[], tenantId: string): Promise<EmailSendResult[]>;
   healthCheck(): Promise<{ healthy: boolean; details?: string }>;

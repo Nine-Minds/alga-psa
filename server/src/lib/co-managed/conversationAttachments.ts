@@ -1,6 +1,6 @@
+import { uploadConversationAttachmentObject } from '@alga-psa/tickets/lib/conversationFileStorage';
 import { StorageProviderFactory } from '@alga-psa/storage/StorageProviderFactory';
-import { StorageService } from '@alga-psa/storage/StorageService';
-import { uploadCoManagedConversationAttachment, downloadCoManagedConversationAttachment, CoManagedAttachmentError } from '@alga-psa/co-managed';
+import { uploadCoManagedConversationAttachment, downloadCoManagedConversationAttachment } from '@alga-psa/co-managed';
 import type { CoManagedAttachmentUpload, CoManagedAttachmentReference, CoManagedSharedResource, CoManagedSessionActor } from '@alga-psa/co-managed';
 import type { Knex } from 'knex';
 
@@ -17,11 +17,4 @@ export async function downloadConversationAttachment(db: Knex, actor: CoManagedS
   });
 }
 
-/** Internal provider adapter shared by published-comment and draft transfers. */
-export async function uploadConversationAttachmentObject(storeTenant: string, path: string, content: Uint8Array, mimeType: string) {
-    // LEVERAGE: pattern conversation-object-upload — worker and interactive composition share storage validation/confirmation, without generic file rows.
-    try { await StorageService.validateFileUpload(storeTenant, mimeType, content.length); } catch { throw new CoManagedAttachmentError('INVALID_ATTACHMENT'); }
-    const provider = await StorageProviderFactory.createProvider();
-    const result = await provider.upload(Buffer.from(content), path, { mime_type: mimeType });
-    if (result.path !== path || result.size !== content.length) throw new Error('Attachment storage did not confirm the complete object');
-}
+export { uploadConversationAttachmentObject } from '@alga-psa/tickets/lib/conversationFileStorage';

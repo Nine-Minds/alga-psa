@@ -168,7 +168,7 @@ describe('runMaintenanceJob', () => {
     selectTenantsMock.mockReturnValue([{ tenant: 't2' }]);
     const result = await runMaintenanceJob(jobName);
     expect(selectorTablesSeen).toEqual(jobName === 'co-managed-notification-recovery'
-      ? [table, 'co_management_event_outbox', 'co_management_event_consumers', 'co_management_email_deliveries', 'co_management_customer_email_deliveries', 'co_management_requester_email_deliveries', 'co_management_workflow_ticket_emails', 'co_management_ticket_routing_recipients', 'comments']
+      ? ['ticket_conversation_email_operations', table, 'co_management_event_outbox', 'co_management_event_consumers', 'co_management_email_deliveries', 'co_management_customer_email_deliveries', 'ticket_conversation_message_events', 'co_management_requester_email_deliveries', 'co_management_workflow_ticket_emails', 'co_management_ticket_routing_recipients', 'comments']
       : jobName === 'co-managed-sla-observation' ? [table, 'sla_organization_notification_events', 'sla_organization_notification_recipients'] : [table]);
     expect(tenantHandlerMock).toHaveBeenCalledTimes(1);
     expect(tenantHandlerMock).toHaveBeenCalledWith(jobName, { tenantId: 't2' });
@@ -201,6 +201,13 @@ describe('runMaintenanceJob', () => {
 
   it('throws for an unknown job name', async () => {
     await expect(runMaintenanceJob('not-a-real-job')).rejects.toThrow(/Unknown maintenance job/);
+  });
+
+  it('discovers native or private stores with only pending conversation attention', async () => {
+    listTenantsMock.mockReturnValue([{ tenant: 'source-store' }]);
+    selectTenantsMock.mockImplementation(table => table === 'ticket_conversation_message_events' ? [{ tenant: 'source-store' }] : []);
+    expect((await runMaintenanceJob('co-managed-notification-recovery')).total).toBe(1);
+    expect(tenantHandlerMock).toHaveBeenCalledExactlyOnceWith('co-managed-notification-recovery', { tenantId: 'source-store' });
   });
 
   it('discovers MSPs with only pending co-managed email recipients', async () => {
