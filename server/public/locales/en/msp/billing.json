@@ -387,7 +387,8 @@
       "execute": "Execute",
       "createBatch": "Create Batch",
       "creating": "Creating...",
-      "cancelBatch": "Cancel Batch"
+      "cancelBatch": "Cancel Batch",
+      "retry": "Retry"
     },
     "states": {
       "loadingBatches": "Loading batches...",
@@ -414,7 +415,12 @@
         "invoiceStatuses": "Comma-separated (optional), e.g. finalized,posted",
         "notes": "Optional notes"
       },
-      "defaultRealmLabel": "{{realmId}} (default)"
+      "defaultRealmLabel": "{{realmId}} (default)",
+      "loadingConnections": "Loading accounting connections...",
+      "connectionLoadError": "Could not load accounting connections. Check your connection settings and try again.",
+      "ambiguousRealm": "Your saved default accounting organisation is shared by more than one connection. Choose a connection to continue.",
+      "noXeroConnection": "No Xero connection is available. Connect Xero in accounting settings to export.",
+      "noQboConnection": "No QuickBooks Online connection is available. Connect it in accounting settings to export."
     },
     "detailDialog": {
       "title": "Accounting Export Batch",
@@ -438,7 +444,8 @@
       "createError": "Failed to create export batch",
       "executeError": "Failed to execute batch",
       "cancelled": "Batch cancelled",
-      "cancelError": "Failed to cancel batch"
+      "cancelError": "Failed to cancel batch",
+      "realmRequired": "Choose a connected accounting company before creating the export."
     },
     "status": {
       "pending": "Pending",

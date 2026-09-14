@@ -387,7 +387,8 @@
       "execute": "Exécuter",
       "createBatch": "Créer un lot",
       "creating": "Création...",
-      "cancelBatch": "Annuler le lot"
+      "cancelBatch": "Annuler le lot",
+      "retry": "Réessayer"
     },
     "states": {
       "loadingBatches": "Chargement des lots...",
@@ -414,7 +415,12 @@
         "invoiceStatuses": "Séparés par des virgules (facultatif), par ex. finalisé, publié",
         "notes": "Notes facultatives"
       },
-      "defaultRealmLabel": "{{realmId}} (par défaut)"
+      "defaultRealmLabel": "{{realmId}} (par défaut)",
+      "loadingConnections": "Chargement des connexions comptables...",
+      "connectionLoadError": "Impossible de charger les connexions comptables. Vérifiez vos paramètres de connexion et réessayez.",
+      "ambiguousRealm": "Votre organisation comptable par défaut est partagée par plusieurs connexions. Choisissez une connexion pour continuer.",
+      "noXeroConnection": "Aucune connexion Xero n'est disponible. Connectez Xero dans les paramètres comptables pour exporter.",
+      "noQboConnection": "Aucune connexion QuickBooks Online n'est disponible. Connectez-la dans les paramètres comptables pour exporter."
     },
     "detailDialog": {
       "title": "Lot d'export comptable",
@@ -438,7 +444,8 @@
       "createError": "Échec de la création du lot d'exportation",
       "executeError": "Échec de l'exécution du lot",
       "cancelled": "Lot annulé",
-      "cancelError": "Échec de l'annulation du lot"
+      "cancelError": "Échec de l'annulation du lot",
+      "realmRequired": "Choisissez une société comptable connectée avant de créer l'exportation."
     },
     "status": {
       "pending": "En attente",

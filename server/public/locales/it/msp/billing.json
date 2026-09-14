@@ -387,7 +387,8 @@
       "execute": "Esegui",
       "createBatch": "Crea lotto",
       "creating": "Creazione...",
-      "cancelBatch": "Annulla lotto"
+      "cancelBatch": "Annulla lotto",
+      "retry": "Riprova"
     },
     "states": {
       "loadingBatches": "Caricamento batch...",
@@ -414,7 +415,12 @@
         "invoiceStatuses": "Separati da virgole (facoltativo), ad es. finalizzato, pubblicato",
         "notes": "Note facoltative"
       },
-      "defaultRealmLabel": "{{realmId}} (predefinito)"
+      "defaultRealmLabel": "{{realmId}} (predefinito)",
+      "loadingConnections": "Caricamento delle connessioni contabili...",
+      "connectionLoadError": "Impossibile caricare le connessioni contabili. Controlla le impostazioni di connessione e riprova.",
+      "ambiguousRealm": "L'organizzazione contabile predefinita salvata è condivisa da più connessioni. Scegli una connessione per continuare.",
+      "noXeroConnection": "Nessuna connessione Xero disponibile. Connetti Xero nelle impostazioni contabili per esportare.",
+      "noQboConnection": "Nessuna connessione QuickBooks Online disponibile. Connettila nelle impostazioni contabili per esportare."
     },
     "detailDialog": {
       "title": "Batch di esportazione contabile",
@@ -438,7 +444,8 @@
       "createError": "Impossibile creare il batch di esportazione",
       "executeError": "Impossibile eseguire il batch",
       "cancelled": "Batch annullato",
-      "cancelError": "Impossibile annullare il batch"
+      "cancelError": "Impossibile annullare il batch",
+      "realmRequired": "Scegli un'azienda contabile connessa prima di creare l'esportazione."
     },
     "status": {
       "pending": "In sospeso",

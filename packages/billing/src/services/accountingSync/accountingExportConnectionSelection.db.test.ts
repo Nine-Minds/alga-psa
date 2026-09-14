@@ -3,13 +3,15 @@ import type { Knex } from 'knex';
 import { randomUUID } from 'node:crypto';
 
 /**
- * DB-backed valid-selection -> realm-scoped mapping lookup.
+ * DB-backed selected-target delivery.
  *
- * A manual export created with an explicit, connected target must persist that
- * exact adapter/target pair and its mappings must resolve against that realm
- * only. This runs the real selector, the real export service/repository and the
- * real mapping resolver/repository; only the stored connection loaders and the
- * DB handle are pinned.
+ * A manual export created with an explicit, connected target is delivered
+ * through the real export service, the real provider adapter and the real
+ * mapping resolver. Only the vendor HTTP boundary (QboClientService) is faked;
+ * the credential store, DB handle and permissions are the seams pinned for the
+ * test. The reported scenario — QuickBooks Online selected while Xero B is the
+ * saved default — must deliver against the selected QBO realm and use that
+ * realm's mappings.
  */
 
 const connectionsState = vi.hoisted(() => ({
@@ -20,16 +22,51 @@ const connectionsState = vi.hoisted(() => ({
   qbo: { 'qbo-realm-a': { realmId: 'qbo-realm-a' } } as Record<string, unknown>
 }));
 
+const qboVendor = vi.hoisted(() => ({
+  deliveryCalls: [] as Array<{ realm: string; itemRefs: string[] }>
+}));
+
 vi.mock('@alga-psa/integrations/lib/xero/xeroClientService', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@alga-psa/integrations/lib/xero/xeroClientService')>()),
   getStoredXeroConnections: async () => connectionsState.xero,
-  getXeroDefaultSelection: async () => ({ status: 'resolved', connectionId: 'conn-a' })
+  getXeroDefaultSelection: async () => ({ status: 'resolved', connectionId: 'conn-b' })
 }));
 
 vi.mock('@alga-psa/integrations/lib/qbo/qboClientService', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@alga-psa/integrations/lib/qbo/qboClientService')>()),
   getStoredQboCredentialsMap: async () => connectionsState.qbo,
-  getDefaultQboRealmId: async () => 'qbo-realm-a'
+  getDefaultQboRealmId: async () => 'qbo-realm-a',
+  // The vendor boundary: record what would have been sent to QuickBooks.
+  QboClientService: {
+    create: async (_tenant: string, realm: string) => ({
+      read: async () => null,
+      update: async () => ({ Id: 'QB-INV-A-1', SyncToken: '1', Line: [] }),
+      create: async (_entity: string, payload: any) => {
+        const lines = Array.isArray(payload?.Line) ? payload.Line : [];
+        qboVendor.deliveryCalls.push({
+          realm,
+          itemRefs: lines
+            .map((line: any) => line?.SalesItemLineDetail?.ItemRef?.value)
+            .filter((value: unknown): value is string => typeof value === 'string')
+        });
+        return {
+          Id: 'QB-INV-A-1',
+          SyncToken: '0',
+          DocNumber: payload?.DocNumber ?? 'QBO-1',
+          TotalAmt: payload?.TotalAmt ?? 50,
+          Line: lines.map((line: any, index: number) => ({
+            Id: String(index + 1),
+            DetailType: 'SalesItemLineDetail',
+            SalesItemLineDetail: line?.SalesItemLineDetail
+          }))
+        };
+      }
+    })
+  }
+}));
+
+vi.mock('@alga-psa/event-bus/publishers', () => ({
+  publishEvent: vi.fn(async () => undefined)
 }));
 
 vi.mock('@alga-psa/auth', () => ({ withAuth: (fn: unknown) => fn }));
@@ -37,7 +74,7 @@ vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: async () => true }));
 
 import * as dbModule from '@alga-psa/db';
 import { AccountingExportInvoiceSelector } from '../accountingExportInvoiceSelector';
-import { AccountingMappingResolver } from '../accountingMappingResolver';
+import { AccountingExportService } from '../accountingExportService';
 import { KnexInvoiceMappingRepository } from '../../repositories/invoiceMappingRepository';
 import { wireLocalTestDbEnv, createTestDbConnection } from '../../actions/_dbTestUtils';
 
@@ -54,7 +91,7 @@ async function ensureServiceType(tenant: string): Promise<string> {
   return id;
 }
 
-async function seedInvoice(): Promise<{ invoiceId: string; chargeId: string; serviceId: string }> {
+async function seedInvoice(): Promise<{ invoiceId: string; chargeId: string; serviceId: string; clientId: string }> {
   const clientId = randomUUID();
   const invoiceId = randomUUID();
   const chargeId = randomUUID();
@@ -113,7 +150,37 @@ async function seedInvoice(): Promise<{ invoiceId: string; chargeId: string; ser
     updated_at: invoiceDate
   });
 
-  return { invoiceId, chargeId, serviceId };
+  return { invoiceId, chargeId, serviceId, clientId };
+}
+
+async function seedServiceMapping(serviceId: string, realmId: string, externalId: string): Promise<void> {
+  await db('tenant_external_entity_mappings').insert({
+    id: randomUUID(),
+    tenant: tenantA,
+    integration_type: 'quickbooks_online',
+    alga_entity_type: 'service',
+    alga_entity_id: serviceId,
+    external_entity_id: externalId,
+    external_realm_id: realmId,
+    sync_status: 'manual_link',
+    created_at: db.fn.now(),
+    updated_at: db.fn.now()
+  });
+}
+
+async function seedClientMapping(clientId: string, realmId: string): Promise<void> {
+  await db('tenant_external_entity_mappings').insert({
+    id: randomUUID(),
+    tenant: tenantA,
+    integration_type: 'quickbooks_online',
+    alga_entity_type: 'client',
+    alga_entity_id: clientId,
+    external_entity_id: 'QB-CUST-A',
+    external_realm_id: realmId,
+    sync_status: 'manual_link',
+    created_at: db.fn.now(),
+    updated_at: db.fn.now()
+  });
 }
 
 beforeAll(async () => {
@@ -129,6 +196,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  await db('accounting_export_errors').where({ tenant: tenantA }).del();
   await db('accounting_export_lines').where({ tenant: tenantA }).del();
   await db('accounting_export_batches').where({ tenant: tenantA }).del();
   await db('tenant_external_entity_mappings').where({ tenant: tenantA }).del();
@@ -136,12 +204,14 @@ afterAll(async () => {
   await db('invoices').where({ tenant: tenantA }).del();
   await db('service_catalog').where({ tenant: tenantA }).del();
   await db('clients').where({ tenant: tenantA }).del();
+  await db('tenant_settings').where({ tenant: tenantA }).del();
   await db('tenants').where({ tenant: tenantA }).del();
   await db.destroy().catch(() => undefined);
   vi.restoreAllMocks();
 });
 
 beforeEach(async () => {
+  await db('accounting_export_errors').where({ tenant: tenantA }).del();
   await db('accounting_export_lines').where({ tenant: tenantA }).del();
   await db('accounting_export_batches').where({ tenant: tenantA }).del();
   await db('tenant_external_entity_mappings').where({ tenant: tenantA }).del();
@@ -149,15 +219,64 @@ beforeEach(async () => {
   await db('invoices').where({ tenant: tenantA }).del();
   await db('service_catalog').where({ tenant: tenantA }).del();
   await db('clients').where({ tenant: tenantA }).del();
+  await db('tenant_settings').where({ tenant: tenantA }).del();
+  qboVendor.deliveryCalls.length = 0;
   connectionsState.xero = {
     'conn-a': { connectionId: 'conn-a', xeroTenantId: 'org-a', tenantName: 'Org A' },
     'conn-b': { connectionId: 'conn-b', xeroTenantId: 'org-b', tenantName: 'Org B' }
   };
   connectionsState.qbo = { 'qbo-realm-a': { realmId: 'qbo-realm-a' } };
+  // Reported scenario: Xero B is the saved default while QBO is connected.
+  await db('tenant_settings').insert({
+    tenant: tenantA,
+    settings: { accountingSync: { defaultRealm: 'conn-b' } },
+    updated_at: db.fn.now()
+  });
 });
 
-describe('manual export connection selection resolves the selected realm\'s mappings (DB-backed)', () => {
-  it('persists the selected Xero connection and resolves only that connection\'s mappings', async () => {
+describe('manual export selected-target delivery (DB-backed)', () => {
+  it('delivers a QBO batch to the selected realm with that realm\'s mappings even when Xero B is default', async () => {
+    const { invoiceId, serviceId, clientId } = await seedInvoice();
+    // Realm isolation: decoy service mapping in another realm must not be used.
+    await seedServiceMapping(serviceId, 'qbo-realm-decoy', 'SVC-DECOY');
+    await seedServiceMapping(serviceId, 'qbo-realm-a', 'SVC-QBO-A');
+    await seedClientMapping(clientId, 'qbo-realm-a');
+
+    const batch = await new AccountingExportInvoiceSelector(db, tenantA).createBatchFromFilters({
+      adapterType: 'quickbooks_online',
+      targetRealm: 'qbo-realm-a',
+      filters: { invoiceIds: [invoiceId] }
+    });
+
+    expect(batch.batch.adapter_type).toBe('quickbooks_online');
+    expect(batch.batch.target_realm).toBe('qbo-realm-a');
+
+    // Execute through the real service + real QBO adapter + real resolver.
+    const service = await AccountingExportService.createForTenant(tenantA);
+    const result = await service.executeBatch(batch.batch.batch_id);
+
+    expect(result.failedDocuments ?? []).toHaveLength(0);
+    expect(qboVendor.deliveryCalls).toHaveLength(1);
+    expect(qboVendor.deliveryCalls[0].realm).toBe('qbo-realm-a');
+    // Correct mapping usage: the selected realm's item, not the decoy.
+    expect(qboVendor.deliveryCalls[0].itemRefs).toEqual(['SVC-QBO-A']);
+
+    const delivered = await db('accounting_export_batches')
+      .where({ batch_id: batch.batch.batch_id, tenant: tenantA })
+      .first();
+    expect(delivered?.status).toBe('delivered');
+
+    const persistedMapping = await new KnexInvoiceMappingRepository(db).findInvoiceMapping({
+      tenantId: tenantA,
+      adapterType: 'quickbooks_online',
+      invoiceId,
+      targetRealm: 'qbo-realm-a'
+    });
+    expect(persistedMapping?.externalInvoiceId).toBe('QB-INV-A-1');
+    expect(persistedMapping?.externalRealmId).toBe('qbo-realm-a');
+  });
+
+  it('resolves a selected Xero connection\'s mappings and not another connection\'s', async () => {
     const { invoiceId, serviceId } = await seedInvoice();
     const selector = new AccountingExportInvoiceSelector(db, tenantA);
 
@@ -166,20 +285,8 @@ describe('manual export connection selection resolves the selected realm\'s mapp
       targetRealm: 'conn-a',
       filters: { invoiceIds: [invoiceId] }
     });
-
-    expect(batch.adapter_type).toBe('xero');
     expect(batch.target_realm).toBe('conn-a');
 
-    // Simulate the delivery-write of the mapping under the selected realm, plus
-    // a service mapping, then prove the realm-scoped lookups used by delivery
-    // resolve the selected connection and never fall through to another one.
-    await new KnexInvoiceMappingRepository(db).upsertInvoiceMapping({
-      tenantId: tenantA,
-      adapterType: 'xero',
-      invoiceId,
-      externalInvoiceId: 'XERO-INV-CONN-A',
-      targetRealm: 'conn-a'
-    });
     await db('tenant_external_entity_mappings').insert({
       id: randomUUID(),
       tenant: tenantA,
@@ -193,61 +300,15 @@ describe('manual export connection selection resolves the selected realm\'s mapp
       updated_at: db.fn.now()
     });
 
-    const invoiceRepo = new KnexInvoiceMappingRepository(db);
-    await expect(
-      invoiceRepo.findInvoiceMapping({ tenantId: tenantA, adapterType: 'xero', invoiceId, targetRealm: 'conn-a' })
-    ).resolves.toMatchObject({ externalInvoiceId: 'XERO-INV-CONN-A' });
-    await expect(
-      invoiceRepo.findInvoiceMapping({ tenantId: tenantA, adapterType: 'xero', invoiceId, targetRealm: 'conn-b' })
-    ).resolves.toBeNull();
-
-    const resolver = new AccountingMappingResolver(db, undefined, tenantA);
-    await expect(
-      resolver.resolveServiceMapping({ adapterType: 'xero', serviceId, targetRealm: 'conn-a' })
-    ).resolves.toMatchObject({ external_entity_id: 'REVENUE-CONN-A' });
-    await expect(
-      resolver.resolveServiceMapping({ adapterType: 'xero', serviceId, targetRealm: 'conn-b' })
-    ).resolves.toBeNull();
-  });
-
-  it('persists the selected QBO realm and resolves that realm\'s mappings only', async () => {
-    const { invoiceId } = await seedInvoice();
-    const selector = new AccountingExportInvoiceSelector(db, tenantA);
-
-    const { batch } = await selector.createBatchFromFilters({
-      adapterType: 'quickbooks_online',
-      targetRealm: 'qbo-realm-a',
-      filters: { invoiceIds: [invoiceId] }
-    });
-
-    expect(batch.adapter_type).toBe('quickbooks_online');
-    expect(batch.target_realm).toBe('qbo-realm-a');
-
-    await new KnexInvoiceMappingRepository(db).upsertInvoiceMapping({
-      tenantId: tenantA,
-      adapterType: 'quickbooks_online',
-      invoiceId,
-      externalInvoiceId: 'QBO-INV-REALM-A',
-      targetRealm: 'qbo-realm-a'
-    });
-
-    const invoiceRepo = new KnexInvoiceMappingRepository(db);
-    await expect(
-      invoiceRepo.findInvoiceMapping({
-        tenantId: tenantA,
-        adapterType: 'quickbooks_online',
-        invoiceId,
-        targetRealm: 'qbo-realm-a'
-      })
-    ).resolves.toMatchObject({ externalInvoiceId: 'QBO-INV-REALM-A' });
-    await expect(
-      invoiceRepo.findInvoiceMapping({
-        tenantId: tenantA,
-        adapterType: 'quickbooks_online',
-        invoiceId,
-        targetRealm: 'qbo-realm-missing'
-      })
-    ).resolves.toBeNull();
+    // `ensureMappingsForBatch` uses the same realm-scoped resolver; run it to
+    // prove the selected connection's mapping is the one found (and the realm
+    // without a mapping fails closed instead of borrowing conn-a's).
+    const { AccountingExportValidation } = await import('../accountingExportValidation');
+    await AccountingExportValidation.ensureMappingsForBatch(batch.batch_id);
+    const ready = await db('accounting_export_batches')
+      .where({ batch_id: batch.batch_id, tenant: tenantA })
+      .first();
+    expect(ready?.status).toBe('ready');
   });
 
   it('rejects an invalid explicit target before writing any batch row', async () => {

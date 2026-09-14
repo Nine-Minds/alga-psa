@@ -387,7 +387,8 @@
       "execute": "Executar",
       "createBatch": "Criar lote",
       "creating": "Criando...",
-      "cancelBatch": "Cancelar lote"
+      "cancelBatch": "Cancelar lote",
+      "retry": "Tentar novamente"
     },
     "states": {
       "loadingBatches": "Carregando lotes...",
@@ -414,7 +415,12 @@
         "invoiceStatuses": "Separados por vírgula (opcional), por ex. finalizado, postado",
         "notes": "Notas opcionais"
       },
-      "defaultRealmLabel": "{{realmId}} (padrão)"
+      "defaultRealmLabel": "{{realmId}} (padrão)",
+      "loadingConnections": "Carregando conexões contábeis...",
+      "connectionLoadError": "Não foi possível carregar as conexões contábeis. Verifique as configurações de conexão e tente novamente.",
+      "ambiguousRealm": "Sua organização contábil padrão salva é compartilhada por mais de uma conexão. Escolha uma conexão para continuar.",
+      "noXeroConnection": "Nenhuma conexão Xero disponível. Conecte o Xero nas configurações contábeis para exportar.",
+      "noQboConnection": "Nenhuma conexão QuickBooks Online disponível. Conecte-a nas configurações contábeis para exportar."
     },
     "detailDialog": {
       "title": "Lote de exportação contábil",
@@ -438,7 +444,8 @@
       "createError": "Falha ao criar lote de exportação",
       "executeError": "Falha ao executar lote",
       "cancelled": "Lote cancelado",
-      "cancelError": "Falha ao cancelar lote"
+      "cancelError": "Falha ao cancelar lote",
+      "realmRequired": "Escolha uma empresa contábil conectada antes de criar a exportação."
     },
     "status": {
       "pending": "Pendente",

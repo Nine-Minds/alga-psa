@@ -12,7 +12,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  *   - no capability is denied.
  */
 
-const permissionState = vi.hoisted(() => ({ granted: new Set<string>() }));
+const permissionState = vi.hoisted(() => ({
+  granted: new Set<string>(),
+  failXero: false,
+  xeroReads: 0,
+  failSecondXero: false,
+}));
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth:
@@ -46,9 +51,16 @@ vi.mock('@alga-psa/integrations/lib/qbo/qboClientService', () => ({
 }));
 
 vi.mock('@alga-psa/integrations/lib/xero/xeroClientService', () => ({
-  getStoredXeroConnections: async () => ({
-    'conn-a': { connectionId: 'conn-a', xeroTenantId: 'org-a', tenantName: 'Org A' }
-  }),
+  getStoredXeroConnections: async () => {
+    permissionState.xeroReads++;
+    if (
+      permissionState.failXero ||
+      (permissionState.failSecondXero && permissionState.xeroReads === 2)
+    ) {
+      throw new Error('Credential store temporarily unavailable');
+    }
+    return { 'conn-a': { connectionId: 'conn-a', xeroTenantId: 'org-a', tenantName: 'Org A' } };
+  },
   getXeroDefaultSelection: async () => ({ status: 'resolved', connectionId: 'conn-a' })
 }));
 
@@ -56,6 +68,9 @@ import { getAccountingExportConnections } from '../../src/actions/accountingExpo
 
 beforeEach(() => {
   permissionState.granted = new Set();
+  permissionState.failXero = false;
+  permissionState.xeroReads = 0;
+  permissionState.failSecondXero = false;
 });
 
 describe('getAccountingExportConnections authorization', () => {
@@ -86,5 +101,25 @@ describe('getAccountingExportConnections authorization', () => {
     const result = await getAccountingExportConnections('xero');
 
     expect(result).toMatchObject({ permissionError: expect.any(String) });
+  });
+});
+
+describe('getAccountingExportConnections credential-store failures', () => {
+  it('propagates a selected-provider store outage so the dialog can show Retry', async () => {
+    permissionState.granted = new Set(['accounting_integrations:exports_execute']);
+    permissionState.failXero = true;
+
+    await expect(getAccountingExportConnections('xero')).rejects.toThrow(
+      'Credential store temporarily unavailable'
+    );
+  });
+
+  it('never returns connected=true with empty options when the authoritative read fails', async () => {
+    permissionState.granted = new Set(['accounting_integrations:exports_execute']);
+    permissionState.failSecondXero = true;
+
+    await expect(getAccountingExportConnections('xero')).rejects.toThrow(
+      'Credential store temporarily unavailable'
+    );
   });
 });

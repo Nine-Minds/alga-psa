@@ -573,3 +573,43 @@ payload:
   build passes; changed-file ESLint 0 errors. No live vendor call, full
   Next.js build, or new browser smoke run is claimed.
 - Keep the commits local; do not push or open a PR.
+
+## P1 review repair round 2026-09-13 (connection-read failures + delivery proof)
+
+Review of `f488addcbf` found the export connection read still flattened a
+selected provider's credential-store failure into an empty map, so neither an
+outage (`issue=none_connected`) nor a second-read failure
+(`connected=true, realms=[], issue=null`) reached the dialog's error/Retry path.
+
+- `resolveAccountingConnections` now reads the selected provider's own store
+  **strictly**: options and the resolved default come from that one snapshot, so
+  they can never disagree, and a credential-store failure propagates to the
+  action and the dialog's Retry affordance. Provider isolation is preserved
+  (only the selected provider's store is read for options); the canonical shared
+  resolver is still consulted and honored when its target is present in the
+  strict snapshot, otherwise the default is re-derived from it with the same
+  rules. Ambiguity/absent-fallback behavior is unchanged.
+- The reviewer's exact regression suite was folded into
+  `accountingExportConnections.authorization.test.ts` (outage and authoritative
+  second-read failure both reject).
+- New composed UI suite
+  `accountingExportsTab.connectionsFailure.test.tsx` renders the dialog against
+  the **real** connection action (only the store/DB/permission seams faked): the
+  store outage shows the actionable error, and Retry recovers the picker once
+  the store responds.
+- `accountingExportConnectionSelection.db.test.ts` now executes the created
+  batch through the real export service, real QBO adapter and real mapping
+  resolver, mocking only the vendor boundary (`QboClientService.create`). With
+  Xero B as the saved default and QBO selected, it asserts the delivered realm,
+  that the selected realm's item mapping was used (not a decoy realm's),
+  `delivered` batch status and the persisted invoice mapping under the selected
+  realm. The Xero selection and invalid-target guard cases remain.
+- Locale resources for the new loading/error/ambiguity/retry guidance were added
+  to `en`, the seven real locales and the regenerated `xx`/`yy` pseudo-locales.
+  `validate-translations.cjs`, `audit-all.cjs` and `find-untranslated-ui.cjs`
+  all pass.
+- Validation: 101 billing accounting tests, 392 accounting/QBO/Xero behavioral
+  tests via the server config, the DB delivery suite (unique `TEST_DB_NAME`,
+  dropped after), billing + server typechecks, billing tsup build, changed-file
+  ESLint 0 errors, and the translation gates. No live vendor call, full Next.js
+  build, or new browser smoke run is claimed. Keep the commits local.
