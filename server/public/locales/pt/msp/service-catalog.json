@@ -8,7 +8,8 @@
       "add": "Falha ao adicionar taxa de imposto",
       "update": "Falha ao atualizar a taxa de imposto",
       "validateDeletion": "Falha ao validar a exclusão. Por favor, tente novamente.",
-      "confirmDeletion": "Falha ao confirmar a exclusão da taxa de imposto."
+      "confirmDeletion": "Falha ao confirmar a exclusão da taxa de imposto.",
+      "setDefault": "Falha ao definir a taxa de imposto padrão"
     },
     "deleteEntity": {
       "fallback": "esta taxa de imposto",
@@ -28,7 +29,9 @@
       "endDate": "Data de término",
       "actions": "Ações",
       "notAvailable": "N / D",
-      "composite": "Composto"
+      "composite": "Composto",
+      "default": "Padrão",
+      "defaultBadge": "Padrão"
     },
     "actions": {
       "openMenu": "Abrir menu",
@@ -38,7 +41,8 @@
       "addNew": "Adicionar nova taxa de imposto",
       "add": "Adicionar taxa de imposto",
       "update": "Atualizar taxa de imposto",
-      "cancel": "Cancelar"
+      "cancel": "Cancelar",
+      "setDefault": "Definir como padrão"
     },
     "dialog": {
       "addTitle": "Adicionar nova taxa de imposto",
@@ -80,7 +84,8 @@
       "startDate": "Data de início",
       "endDate": "Data de término",
       "isComposite": "É composto",
-      "isActive": "Está ativo"
+      "isActive": "Está ativo",
+      "isDefault": "Padrão do locatário"
     },
     "values": {
       "dash": "-",

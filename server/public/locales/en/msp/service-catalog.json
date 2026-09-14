@@ -8,7 +8,8 @@
       "add": "Failed to add tax rate",
       "update": "Failed to update tax rate",
       "validateDeletion": "Failed to validate deletion. Please try again.",
-      "confirmDeletion": "Failed to confirm tax rate deletion."
+      "confirmDeletion": "Failed to confirm tax rate deletion.",
+      "setDefault": "Failed to set default tax rate"
     },
     "deleteEntity": {
       "fallback": "this tax rate",
@@ -28,7 +29,9 @@
       "endDate": "End Date",
       "actions": "Actions",
       "notAvailable": "N/A",
-      "composite": "Composite"
+      "composite": "Composite",
+      "default": "Default",
+      "defaultBadge": "Default"
     },
     "actions": {
       "openMenu": "Open menu",
@@ -38,7 +41,8 @@
       "addNew": "Add New Tax Rate",
       "add": "Add Tax Rate",
       "update": "Update Tax Rate",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "setDefault": "Set as default"
     },
     "dialog": {
       "addTitle": "Add New Tax Rate",
@@ -80,7 +84,8 @@
       "startDate": "Start Date",
       "endDate": "End Date",
       "isComposite": "Is Composite",
-      "isActive": "Is Active"
+      "isActive": "Is Active",
+      "isDefault": "Tenant Default"
     },
     "values": {
       "dash": "-",

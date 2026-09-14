@@ -499,7 +499,11 @@ export const createTaxRateSchema = taxRateBaseSchema.extend({
 
 export const updateTaxRateSchema = taxRateBaseSchema.partial();
 
-export const taxRateResponseSchema = taxRateBaseSchema.merge(baseEntitySchema);
+// is_default is owned by the tenant default switch, not the generic create/
+// update payloads, so it appears only on the response shape.
+export const taxRateResponseSchema = taxRateBaseSchema.merge(baseEntitySchema).extend({
+  is_default: z.boolean().optional()
+});
 
 export const taxRateListQuerySchema = paginationQuerySchema.merge(baseFilterSchema).extend({
   region_code: z.string().optional(),

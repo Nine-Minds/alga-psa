@@ -28,6 +28,7 @@ export interface ITaxRate extends TenantEntity {
   start_date: ISO8601String;
   end_date?: ISO8601String;
   is_active: boolean;
+  is_default: boolean; // Tenant-wide default used when no rate is specified
   conditions?: Record<string, any>;
   description: string | null; // Added description field from tax_rates table
   region_code: string; // Added region_code field from tax_rates table

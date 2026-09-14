@@ -504,6 +504,7 @@ export interface ITaxRate extends TenantEntity {
   description?: string;
   start_date: string;
   end_date?: string | null;
+  is_default?: boolean; // Tenant-wide default used when no rate is specified
 }
 
 export interface IClientTaxRate extends TenantEntity {

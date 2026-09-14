@@ -47,10 +47,13 @@ export async function createDefaultTaxSettings(
   // and the NOT NULL profile column is part of the row's identity.
   const billingProfileId = await ensureClientDefaultBillingProfile(knexOrTrx, tenant, clientId);
 
-  // Get the first active tax rate to use as the default
+  // Prefer the tenant's explicit default; fall back to the earliest active
+  // rate for tenants that predate the default flag.
   const defaultTaxRate = await db.table<ITaxRate>('tax_rates')
     .where('is_active', true)
+    .orderBy('is_default', 'desc')
     .orderBy('created_at', 'asc')
+    .orderBy('tax_rate_id', 'asc')
     .first();
 
   if (!defaultTaxRate) {

@@ -6,7 +6,8 @@
       "fetchRates": "Impossibile recuperare le aliquote fiscali",
       "add": "Impossibile aggiungere l'aliquota fiscale",
       "update": "Impossibile aggiornare l'aliquota fiscale",
-      "confirmDeletion": "Impossibile confermare l'eliminazione dell'aliquota fiscale."
+      "confirmDeletion": "Impossibile confermare l'eliminazione dell'aliquota fiscale.",
+      "setDefault": "Impossibile impostare l'aliquota fiscale predefinita"
     },
     "validation": {
       "requiredFieldsTitle": "Si prega di compilare i campi richiesti:",
@@ -22,7 +23,9 @@
       "notAvailable": "N/D",
       "region": "Regione",
       "taxPercentage": "Percentuale fiscale",
-      "composite": "composito"
+      "composite": "composito",
+      "default": "Predefinito",
+      "defaultBadge": "Predefinito"
     },
     "actions": {
       "openMenu": "Apri il menu",
@@ -32,7 +35,8 @@
       "addNew": "Aggiungi nuova aliquota fiscale",
       "add": "Aggiungi aliquota fiscale",
       "update": "Aggiorna aliquota fiscale",
-      "cancel": "Annulla"
+      "cancel": "Annulla",
+      "setDefault": "Imposta come predefinito"
     },
     "dialog": {
       "fields": {
@@ -70,7 +74,8 @@
       "taxPercentage": "Percentuale fiscale",
       "taxType": "Tipo di imposta",
       "isComposite": "È composito",
-      "isActive": "È attivo"
+      "isActive": "È attivo",
+      "isDefault": "Predefinito del tenant"
     },
     "values": {
       "dash": "-",

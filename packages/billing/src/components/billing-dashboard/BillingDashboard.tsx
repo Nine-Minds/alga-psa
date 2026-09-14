@@ -233,7 +233,10 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
               settingsRevision={taxSettingsRevision}
               onSettingsChanged={invalidateTaxSettings}
             />
-            <TaxRegionsAndRates />
+            <TaxRegionsAndRates
+              settingsRevision={taxSettingsRevision}
+              onSettingsChanged={invalidateTaxSettings}
+            />
           </div>
         </Tabs.Content>
 

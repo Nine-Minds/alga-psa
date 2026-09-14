@@ -774,6 +774,7 @@ export interface ITaxRate extends TenantEntity {
   is_reverse_charge_applicable?: boolean;
   is_composite?: boolean;
   is_active?: boolean;
+  is_default?: boolean; // Tenant-wide default used when no rate is specified
   conditions?: Record<string, any>;
   name?: string;
 }

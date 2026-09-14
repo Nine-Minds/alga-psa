@@ -1233,7 +1233,8 @@
       "regionInvalid": "De geselecteerde belastingregio is niet meer geldig. Vernieuw de pagina en kies een andere regio.",
       "duplicate": "Er bestaat al een belastingtarief voor deze regio en periode.",
       "missingField": "Er ontbreekt een verplicht veld van het belastingtarief.",
-      "missingFieldNamed": "Er ontbreekt een verplicht veld van het belastingtarief: {{field}}."
+      "missingFieldNamed": "Er ontbreekt een verplicht veld van het belastingtarief: {{field}}.",
+      "inactiveDefault": "Een inactief belastingtarief kan niet als standaard worden ingesteld."
     },
     "tax": {
       "defaultRequiresActiveRate": "Configureer minstens één actief belastingtarief voordat u standaardbelastinginstellingen aanmaakt.",

@@ -24,6 +24,12 @@ exports.seed = async function (knex, tenantId) {
         .first();
 
     if (!existingRate) {
+        // Claim the tenant default only when none is configured, so re-seeding
+        // never overrides an operator's choice.
+        const existingDefault = await db.table('tax_rates')
+            .where({ is_default: true })
+            .first('tax_rate_id');
+
         const taxRateId = uuidv4();
         await db.table('tax_rates').insert({
             tax_rate_id: taxRateId,
@@ -32,7 +38,8 @@ exports.seed = async function (knex, tenantId) {
             description: 'Non-taxable',
             start_date: knex.fn.now(),
             region_code: 'DEFAULT',
-            is_active: true
+            is_active: true,
+            is_default: !existingDefault
         });
         console.log(`Created non-taxable rate (0%) for tenant ${tenantId}`);
     } else {

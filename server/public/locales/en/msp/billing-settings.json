@@ -1233,7 +1233,8 @@
       "regionInvalid": "The selected tax region is no longer valid. Please refresh and choose another region.",
       "duplicate": "A tax rate already exists for this region and date range.",
       "missingField": "Missing required tax rate field.",
-      "missingFieldNamed": "Missing required tax rate field: {{field}}."
+      "missingFieldNamed": "Missing required tax rate field: {{field}}.",
+      "inactiveDefault": "An inactive tax rate cannot be set as the default."
     },
     "tax": {
       "defaultRequiresActiveRate": "Configure at least one active tax rate before creating default tax settings.",

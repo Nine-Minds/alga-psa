@@ -6,7 +6,8 @@
       "fetchRates": "Steuersätze konnten nicht abgerufen werden",
       "add": "Steuersatz konnte nicht hinzugefügt werden",
       "update": "Der Steuersatz konnte nicht aktualisiert werden",
-      "confirmDeletion": "Die Löschung des Steuersatzes konnte nicht bestätigt werden."
+      "confirmDeletion": "Die Löschung des Steuersatzes konnte nicht bestätigt werden.",
+      "setDefault": "Standardsatz konnte nicht festgelegt werden"
     },
     "validation": {
       "requiredFieldsTitle": "Bitte füllen Sie die erforderlichen Felder aus:",
@@ -22,7 +23,9 @@
       "notAvailable": "n. z.",
       "region": "Region",
       "taxPercentage": "Steuerprozentsatz",
-      "composite": "Zusammengesetzt"
+      "composite": "Zusammengesetzt",
+      "default": "Standard",
+      "defaultBadge": "Standard"
     },
     "actions": {
       "openMenu": "Menü öffnen",
@@ -32,7 +35,8 @@
       "addNew": "Neuen Steuersatz hinzufügen",
       "add": "Steuersatz hinzufügen",
       "update": "Steuersatz aktualisieren",
-      "cancel": "Abbrechen"
+      "cancel": "Abbrechen",
+      "setDefault": "Als Standard festlegen"
     },
     "dialog": {
       "fields": {
@@ -70,7 +74,8 @@
       "taxPercentage": "Steuerprozentsatz",
       "taxType": "Steuerart",
       "isComposite": "Ist zusammengesetzt",
-      "isActive": "Ist Aktiv"
+      "isActive": "Ist Aktiv",
+      "isDefault": "Mandantenstandard"
     },
     "values": {
       "dash": "-",

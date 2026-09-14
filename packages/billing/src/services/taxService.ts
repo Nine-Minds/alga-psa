@@ -337,6 +337,32 @@ export class TaxService {
   }
 
   /**
+   * Pick the rate to assign when no rate is specified anywhere: the tenant's
+   * explicit default first, then the legacy earliest-created active rate for
+   * tenants that predate the default flag. Ordering by tax_rate_id breaks
+   * created_at ties deterministically.
+   */
+  private async selectDefaultTaxRate(
+    db: ReturnType<typeof tenantDb>,
+    options: { requireRegion?: boolean } = {},
+  ): Promise<ITaxRate | undefined> {
+    const activeRates = () => {
+      const query = db.table<ITaxRate>('tax_rates').where('is_active', true);
+      return options.requireRegion ? query.whereNotNull('region_code') : query;
+    };
+
+    const tenantDefault = await activeRates().where('is_default', true).first();
+    if (tenantDefault) {
+      return tenantDefault;
+    }
+
+    return activeRates()
+      .orderBy('created_at', 'asc')
+      .orderBy('tax_rate_id', 'asc')
+      .first();
+  }
+
+  /**
    * Provision the default tax settings row for a client's billing profile
    * (F132).
    *
@@ -361,11 +387,9 @@ export class TaxService {
     try {
       const db = tenantDb(trx, tenant);
 
-      // Get the first active tax rate to use as the default
-      const defaultTaxRate = await db.table<ITaxRate>('tax_rates')
-        .where('is_active', true)
-        .orderBy('created_at', 'asc')
-        .first(); // Use first() instead of limit(1) which returns array
+      // Prefer the tenant's explicit default; fall back to the earliest active
+      // rate when no default has been set.
+      const defaultTaxRate = await this.selectDefaultTaxRate(db);
 
       if (!defaultTaxRate) {
         throw new Error('No active tax rates found in the system to assign as default.');
@@ -448,11 +472,7 @@ export class TaxService {
         return;
       }
 
-      const defaultTaxRate = await db.table<ITaxRate>('tax_rates')
-        .where('is_active', true)
-        .whereNotNull('region_code')
-        .orderBy('created_at', 'asc')
-        .first();
+      const defaultTaxRate = await this.selectDefaultTaxRate(db, { requireRegion: true });
 
       if (!defaultTaxRate) {
         throw new Error('No active tax rates found in the system to assign as default.');

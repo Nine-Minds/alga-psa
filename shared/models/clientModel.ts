@@ -193,10 +193,13 @@ export class ClientModel {
   ): Promise<void> {
     const db = tenantDb(trx, tenant);
 
-    // Get the first active tax rate to use as the default
+    // Prefer the tenant's explicit default; fall back to the earliest active
+    // rate for tenants that predate the default flag.
     const defaultTaxRate = await db.table('tax_rates')
       .where('is_active', true)
+      .orderBy('is_default', 'desc')
       .orderBy('created_at', 'asc')
+      .orderBy('tax_rate_id', 'asc')
       .first();
 
     if (!defaultTaxRate) {
