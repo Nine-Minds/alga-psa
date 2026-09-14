@@ -1323,3 +1323,123 @@ describe('renderEvaluatedTemplateAst stacked table-cell lines', () => {
     expect(rendered.html).toContain('-$5.00');
   });
 });
+
+describe('renderEvaluatedTemplateAst richText node', () => {
+  const renderTerms = async (value: unknown) => {
+    const ast: TemplateAst = {
+      kind: 'invoice-template-ast',
+      version: TEMPLATE_AST_VERSION,
+      bindings: {
+        values: {
+          terms: { id: 'terms', kind: 'value', path: 'terms_and_conditions_rich' },
+        },
+        collections: {},
+      },
+      layout: {
+        id: 'root',
+        type: 'document',
+        children: [
+          {
+            id: 'terms-copy',
+            type: 'richText',
+            content: { type: 'binding', bindingId: 'terms' },
+          },
+        ],
+      },
+    };
+    const evaluation = evaluateTemplateAst(ast, { terms_and_conditions_rich: value });
+    return renderEvaluatedTemplateAst(ast, evaluation);
+  };
+
+  it('emits structured content as HTML with a live link', async () => {
+    const rendered = await renderTerms([
+      {
+        type: 'paragraph',
+        content: [
+          { type: 'text', text: 'Read our ' },
+          {
+            type: 'link',
+            href: 'https://example.com/terms',
+            content: [{ type: 'text', text: 'terms' }],
+          },
+        ],
+      },
+    ]);
+
+    expect(rendered.html).toContain('href="https://example.com/terms"');
+    expect(rendered.html).toContain('>terms</a>');
+  });
+
+  it('neutralizes a javascript: link while keeping its text', async () => {
+    const rendered = await renderTerms([
+      {
+        type: 'paragraph',
+        content: [
+          {
+            type: 'link',
+            href: 'javascript:alert(1)',
+            content: [{ type: 'text', text: 'click me' }],
+          },
+        ],
+      },
+    ]);
+
+    expect(rendered.html).not.toContain('<a');
+    expect(rendered.html).toContain('click me');
+  });
+
+  it('mirrors the legacy text node for plain, empty and null values', async () => {
+    const stringRendered = await renderTerms('Line one\nLine two');
+    expect(stringRendered.html).toContain('Line one');
+    expect(stringRendered.html).toContain('white-space:pre-line');
+
+    const emptyRendered = await renderTerms('');
+    expect(emptyRendered.html).toContain('white-space:pre-line');
+    expect(emptyRendered.html).not.toContain('[No content]');
+
+    const nullRendered = await renderTerms(null);
+    expect(nullRendered.html).not.toContain('[No content]');
+  });
+});
+
+describe('legacy quote terms PDF compatibility', () => {
+  const renderTermsNode = async (nodeType: 'text' | 'richText', bindingId: string, value: unknown) => {
+    const ast: TemplateAst = {
+      kind: 'invoice-template-ast',
+      version: TEMPLATE_AST_VERSION,
+      bindings: {
+        values: { [bindingId]: { id: bindingId, kind: 'value', path: 'terms_value' } },
+        collections: {},
+      },
+      layout: {
+        id: 'root',
+        type: 'document',
+        children: [{ id: 'terms-copy', type: nodeType, content: { type: 'binding', bindingId } }],
+      },
+    };
+    const evaluation = evaluateTemplateAst(ast, { terms_value: value });
+    return renderEvaluatedTemplateAst(ast, evaluation);
+  };
+
+  it('renders multiline legacy terms identically through the text node and a migrated richText node', async () => {
+    const value = 'Line one\nLine two\n\nLine four';
+
+    const legacy = await renderTermsNode('text', 'terms', value);
+    const migrated = await renderTermsNode('richText', 'termsRich', value);
+
+    for (const rendered of [legacy, migrated]) {
+      expect(rendered.html).toContain('white-space:pre-line');
+      expect(rendered.html).toContain('Line one\nLine two\n\nLine four');
+    }
+  });
+
+  it('preserves an empty legacy terms paragraph through both node types', async () => {
+    const legacy = await renderTermsNode('text', 'terms', '');
+    const migrated = await renderTermsNode('richText', 'termsRich', '');
+
+    for (const rendered of [legacy, migrated]) {
+      expect(rendered.html).toMatch(/white-space:pre-line[^>]*><\/p>/);
+      expect(rendered.html).not.toContain('[No content]');
+    }
+  });
+});

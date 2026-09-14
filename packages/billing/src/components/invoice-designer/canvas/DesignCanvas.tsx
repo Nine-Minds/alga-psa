@@ -990,6 +990,7 @@ const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel
         singleLine: true,
       };
     }
+    case 'richText':
     case 'text': {
       const authoredText =
         asTrimmedString(metadata.text) ||
@@ -1275,7 +1276,7 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
   const sectionCue = node.type === 'section' ? getSectionSemanticCue(getNodeName(node)) : null;
   const isTotalsRow = isTotalsRowType(node.type);
   const isLabelNode = node.type === 'label';
-  const isTextNode = node.type === 'text';
+  const isTextNode = node.type === 'text' || node.type === 'richText';
   const isFieldNode = node.type === 'field';
   const fieldDisplayLabel = isFieldNode ? asTrimmedString(metadata.label) : '';
   const isFieldLabelTranslatable = isFieldNode && isNodeLabelTranslatable(node);

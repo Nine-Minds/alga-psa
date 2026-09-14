@@ -315,7 +315,8 @@
       "title": "Klantgerichte tekst",
       "subtitle": "Verschijnt op de pdf, onder de totalen.",
       "notes": "Notities aan klant (optioneel)",
-      "terms": "Voorwaarden (optioneel)"
+      "terms": "Voorwaarden (optioneel)",
+      "termsPlaceholder": "Voorwaarden, links en alinea’s toevoegen…"
     },
     "moreDetails": {
       "title": "Meer details",
