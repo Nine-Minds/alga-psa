@@ -16,7 +16,9 @@ export interface EmailBrandingPreview {
   state: TenantTemplateState;
   /** Only set when `action` is 'skip'. */
   skipReason?: EmailBrandingSkipReason;
-  /** The subject the row would carry afterwards; an apply never rewrites one. */
+  /** Previewed as a rebuild from the standard template, edits discarded. */
+  overwrite: boolean;
+  /** The subject the row would carry afterwards; only an overwrite rewrites one. */
   subject: string;
   /** What the tenant sends today: their own row, or the system template. */
   currentHtml: string;
@@ -31,6 +33,8 @@ export interface EmailBrandingPreviewInput {
   appliedPalette?: EmailPaletteTokens | null;
   name: string;
   language: string;
+  /** Preview the forced rebuild instead of the palette-only pass. */
+  overwrite?: boolean;
   decorate?: (html: string) => string;
 }
 
@@ -41,13 +45,14 @@ export interface EmailBrandingPreviewInput {
  *
  * The name is always passed as ticked: the point of the preview is to show what
  * ticking a customized template would produce, not to restate that an unticked
- * one is left alone.
+ * one is left alone. With `overwrite` it is passed as forced instead, so the
+ * tenant sees what they would lose before they agree to lose it.
  *
  * Returns null when there is no system template under that name and language,
  * the one input the planner can say nothing about.
  */
 export function previewEmailBrandingApply(input: EmailBrandingPreviewInput): EmailBrandingPreview | null {
-  const { systemRows, tenantRows, target, appliedPalette, name, language, decorate } = input;
+  const { systemRows, tenantRows, target, appliedPalette, name, language, overwrite, decorate } = input;
 
   const systemRow = systemRows.find((row) => row.name === name && row.language_code === language);
   if (!systemRow) return null;
@@ -61,9 +66,16 @@ export function previewEmailBrandingApply(input: EmailBrandingPreviewInput): Ema
     tenantRows,
     target,
     appliedPalette,
-    scope: { names: [name], languages: [language], includeCustomized: [name] },
+    scope: {
+      names: [name],
+      languages: [language],
+      includeCustomized: [name],
+      ...(overwrite ? { overwrite: [name] } : {}),
+    },
     decorate,
   });
+
+  const forced = overwrite === true;
 
   const insert = plan.inserts[0];
   if (insert) {
@@ -72,6 +84,7 @@ export function previewEmailBrandingApply(input: EmailBrandingPreviewInput): Ema
       language,
       action: 'create',
       state,
+      overwrite: forced,
       subject: insert.subject,
       currentHtml,
       plannedHtml: insert.html,
@@ -85,7 +98,8 @@ export function previewEmailBrandingApply(input: EmailBrandingPreviewInput): Ema
       language,
       action: 'update',
       state,
-      subject: tenantRow?.subject ?? systemRow.subject,
+      overwrite: forced,
+      subject: update.subject ?? tenantRow?.subject ?? systemRow.subject,
       currentHtml,
       plannedHtml: update.html,
     };
@@ -97,6 +111,7 @@ export function previewEmailBrandingApply(input: EmailBrandingPreviewInput): Ema
     language,
     action: 'skip',
     state: skip?.state ?? state,
+    overwrite: forced,
     skipReason: skip?.reason,
     subject: tenantRow?.subject ?? systemRow.subject,
     currentHtml,

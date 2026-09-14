@@ -135,6 +135,66 @@ describe('previewEmailBrandingApply', () => {
     expect(preview.plannedHtml).not.toBe(preview.currentHtml);
   });
 
+  it('previews an overwrite as the standard template in the new palette', () => {
+    const customized = customizedRow(200, 'ticket-created', 'en');
+
+    const preview = previewEmailBrandingApply({
+      systemRows: SYSTEM_ROWS,
+      tenantRows: [customized],
+      target: FOREST,
+      appliedPalette: TERRACOTTA,
+      name: 'ticket-created',
+      language: 'en',
+      overwrite: true,
+    })!;
+
+    expect(preview.action).toBe('update');
+    expect(preview.overwrite).toBe(true);
+    // What the tenant is about to lose is visible in the preview, both ways.
+    expect(preview.currentHtml).toContain('Open in our portal');
+    expect(preview.plannedHtml).not.toContain('Open in our portal');
+    expect(preview.plannedHtml).not.toContain('#101014');
+    expect(preview.plannedHtml).toContain(FOREST.primary);
+    expect(preview.subject).toBe(systemRow('ticket-created', 'en').subject);
+  });
+
+  it('offers an overwrite preview for a row with none of our colors left', () => {
+    const redesign = {
+      id: 400,
+      name: 'ticket-created',
+      language_code: 'en',
+      subject: 'Ticket raised',
+      html_content: '<html><head><style>body{background:#0b0b12}</style></head><body>{{ticket.title}}</body></html>',
+      text_content: 'Ticket raised',
+    };
+
+    const preview = previewEmailBrandingApply({
+      systemRows: SYSTEM_ROWS,
+      tenantRows: [redesign],
+      target: FOREST,
+      appliedPalette: TERRACOTTA,
+      name: 'ticket-created',
+      language: 'en',
+      overwrite: true,
+    })!;
+
+    expect(preview.action).toBe('update');
+    expect(preview.state).toBe('no-stock-colors');
+    expect(preview.plannedHtml).toContain(FOREST.primary);
+  });
+
+  it('marks a normal preview as not an overwrite', () => {
+    const preview = previewEmailBrandingApply({
+      systemRows: SYSTEM_ROWS,
+      tenantRows: [],
+      target: TERRACOTTA,
+      name: 'ticket-created',
+      language: 'en',
+    })!;
+
+    expect(preview.overwrite).toBe(false);
+  });
+
   it('shows the current HTML with a reason when there is nothing to replace', () => {
     const redesign = {
       id: 400,
