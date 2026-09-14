@@ -16,6 +16,7 @@ import {
   BentoTileEmpty,
 } from '@alga-psa/ui/components/bento';
 import TicketDocumentsSection from './../TicketDocumentsSection';
+import { documentViewUrl } from '../../../lib/documentViewUrl';
 
 const MAX_ROWS = 5;
 
@@ -24,7 +25,7 @@ interface DocumentsTileProps {
   ticketId: string;
   documents: IDocument[];
   onDocumentCreated: () => Promise<void>;
-  /** Prefer this resolver when provided (e.g. client portal); falls back to the standard document URLs. */
+  /** Host resolver (e.g. client portal) for file-backed documents; file-less documents always open in the documents viewer. */
   resolveDocumentViewUrl?: (document: { document_id?: string; file_id?: string }) => string;
   forceUploadToRoot?: boolean;
   allowDocumentSharing?: boolean;
@@ -50,17 +51,6 @@ function formatFileSize(bytes?: number): string {
   if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   if (bytes >= 1024) return `${Math.round(bytes / 1024)} KB`;
   return `${bytes} B`;
-}
-
-/** Mirrors the app's own attachment URL fallback (view by file, download by document). */
-function documentViewUrl(
-  doc: IDocument,
-  resolve?: (document: { document_id?: string; file_id?: string }) => string,
-): string {
-  if (resolve) return resolve({ document_id: doc.document_id, file_id: doc.file_id });
-  return doc.file_id
-    ? `/api/documents/view/${doc.document_id}`
-    : `/api/documents/download/${doc.document_id}`;
 }
 
 function DocumentRow({
