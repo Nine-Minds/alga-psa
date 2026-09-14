@@ -1,3 +1,4 @@
+import { createHmac } from 'crypto';
 import { isEnterprise } from './features';
 import { initializeEventBus, cleanupEventBus } from './eventBus/initialize';
 import { logger, registerFeatureFlagChecker, registerJobEnqueuer, registerScheduledJobEnqueuer, registerScheduledJobCanceler } from '@alga-psa/core';
@@ -32,7 +33,7 @@ import { registerWorkflowScheduleJobRunner } from '@alga-psa/workflows/lib/jobRu
 import { registerQboConnectionChangeHandler } from '@alga-psa/integrations/lib/qbo/qboConnectionChangeProvider';
 import { getRedisClient } from '../config/redisConfig';
 import { registerEnterpriseStorageProviders } from './storage/registerEnterpriseStorageProviders';
-import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { getSecret, getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { apiRateLimitConfigGetter } from './api/rateLimit/apiRateLimitConfigGetter';
 import { webhookRateLimitConfigGetter } from './webhooks/rateLimitConfig';
 import { inboundWebhookRateLimitConfigGetter } from './inboundWebhooks/rateLimitConfig';
@@ -762,12 +763,40 @@ async function initializeJobScheduler(storageService: StorageService) {
   }
 }
 
+/**
+ * Resolves the password assigned to the shared development user on boot.
+ *
+ * Multiple dev servers (one per worktree) can share the same database, and
+ * every boot rewrites this password. Deriving it deterministically from the
+ * shared database password means every server pointing at the same database
+ * computes the same value, so a sibling worktree booting later can never
+ * invalidate the credentials this server printed in its boot banner.
+ */
+async function resolveDevUserPassword(email: string): Promise<string> {
+  const explicit = process.env.DEV_USER_PASSWORD;
+  if (explicit) {
+    return explicit;
+  }
+
+  const dbPassword = await getSecret('db_password_server', 'DB_PASSWORD_SERVER');
+  if (dbPassword) {
+    return createHmac('sha256', dbPassword)
+      .update(`alga-dev-user-password:${email}`)
+      .digest('base64url')
+      .slice(0, 16);
+  }
+
+  // No shared secret available to derive from — fall back to a per-boot
+  // random password (single-server setups only).
+  return generateSecurePassword();
+}
+
 // Helper function to setup development environment
 async function setupDevelopmentEnvironment() {
   let newPassword;
   const glinda = await User.findUserByEmail("glinda@emeraldcity.oz");
   if (glinda) {
-    newPassword = generateSecurePassword();
+    newPassword = await resolveDevUserPassword(glinda.email);
     const hashedPassword = await hashPassword(newPassword);
     await User.updatePassword(glinda.user_id, glinda.tenant, hashedPassword);
   } else {
