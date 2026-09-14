@@ -50,6 +50,10 @@
       "import": "./dist/lib/i18n/config.js",
       "types": "./src/lib/i18n/config.ts"
     },
+    "./i18n/countryDateFormat": {
+      "import": "./dist/lib/i18n/countryDateFormat.js",
+      "types": "./src/lib/i18n/countryDateFormat.ts"
+    },
     "./config/deletion": {
       "import": "./dist/config/deletion/index.js",
       "types": "./src/config/deletion/index.ts"
