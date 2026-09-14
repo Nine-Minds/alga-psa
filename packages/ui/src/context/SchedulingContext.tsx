@@ -28,8 +28,27 @@ export interface ScheduleEntryLaunchContext {
   clientName?: string | null;
 }
 
+/**
+ * Optional work-item context for the agent schedule drawer. When present, a
+ * selected calendar slot can create a schedule entry pre-scoped to that work
+ * item; when absent (e.g. the read-only interaction view) selection stays
+ * disabled.
+ */
+export interface AgentScheduleWorkItemContext {
+  workItemId: string;
+  workItemType: 'ticket';
+  /** Pre-fills the entry title and the selected work item label. */
+  title: string;
+  clientName?: string | null;
+  /** Called after a schedule entry is created so the host can refresh. */
+  onScheduled?: () => void;
+}
+
 export interface SchedulingCallbacks {
-  renderAgentSchedule: (agentId: string) => React.ReactNode;
+  renderAgentSchedule: (
+    agentId: string,
+    workItemContext?: AgentScheduleWorkItemContext
+  ) => React.ReactNode;
   launchTimeEntry: (params: {
     openDrawer: OpenDrawerFn;
     closeDrawer: () => void;

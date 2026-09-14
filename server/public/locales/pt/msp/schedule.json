@@ -26,7 +26,8 @@
     "loading": "Carregando...",
     "errors": {
       "loadPermissions": "Falha ao carregar as permissões do usuário",
-      "forbidden": "Você não tem permissão para visualizar esta programação."
+      "forbidden": "Você não tem permissão para visualizar esta programação.",
+      "saveFailed": "Falha ao salvar a entrada da programação"
     }
   },
   "calendar": {

@@ -26,7 +26,8 @@
     "loading": "Chargement...",
     "errors": {
       "loadPermissions": "Échec du chargement des autorisations utilisateur",
-      "forbidden": "Vous n'êtes pas autorisé à consulter cet horaire."
+      "forbidden": "Vous n'êtes pas autorisé à consulter cet horaire.",
+      "saveFailed": "Échec de l'enregistrement de l'entrée de l'horaire"
     }
   },
   "calendar": {

@@ -26,7 +26,8 @@
     "loading": "Loading...",
     "errors": {
       "loadPermissions": "Failed to load user permissions",
-      "forbidden": "You do not have permission to view this schedule."
+      "forbidden": "You do not have permission to view this schedule.",
+      "saveFailed": "Failed to save schedule entry"
     }
   },
   "calendar": {

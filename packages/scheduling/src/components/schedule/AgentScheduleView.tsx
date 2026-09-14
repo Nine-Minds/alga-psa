@@ -2,14 +2,16 @@
 
 import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { momentLocalizer, View } from 'react-big-calendar';
+import toast from 'react-hot-toast';
+import { momentLocalizer, SlotInfo, View } from 'react-big-calendar';
 import moment from 'moment';
 import CalendarSkeleton from '@alga-psa/ui/components/skeletons/CalendarSkeleton';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import type { AgentScheduleWorkItemContext } from '@alga-psa/ui/context';
 import EntryPopup from './EntryPopup';
 import { CalendarStyleProvider } from './CalendarStyleProvider';
 import { AgentScheduleDrawerStyles } from './AgentScheduleDrawerStyles';
-import { getScheduleEntries } from '@alga-psa/scheduling/actions';
+import { getScheduleEntries, addScheduleEntry } from '@alga-psa/scheduling/actions';
 import { getCurrentUser, getCurrentUserPermissions } from '@alga-psa/user-composition/actions';
 import { useUsers } from '@alga-psa/user-composition/hooks';
 import type { IScheduleEntry, WorkItemType } from '@alga-psa/types';
@@ -33,9 +35,15 @@ const workItemColors: Record<WorkItemType, string> = {
 
 interface AgentScheduleViewProps {
   agentId: string;
+  /**
+   * Present when the drawer was opened from a work item (e.g. a ticket). Its
+   * presence is what enables slot selection and scopes a new entry to that
+   * work item; the read-only interaction view omits it.
+   */
+  workItemContext?: AgentScheduleWorkItemContext;
 }
 
-const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentId }) => {
+const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentId, workItemContext }) => {
   const { t } = useTranslation('msp/schedule');
   const [events, setEvents] = useState<IScheduleEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -44,6 +52,13 @@ const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentId }) => {
   const [view, setView] = useState<View>('week');
   const [showEntryPopup, setShowEntryPopup] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<IScheduleEntry | null>(null);
+  const [selectedSlot, setSelectedSlot] = useState<{
+    start: Date | string;
+    end: Date | string;
+    assigned_user_ids?: string[];
+    defaultAssigneeId?: string;
+  } | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
   const [userPermissions, setUserPermissions] = useState<string[] | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const calendarRef = useRef<HTMLDivElement>(null);
@@ -69,6 +84,17 @@ const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentId }) => {
     }
     return canViewOthers;
   }, [agentId, canReadOwn, canViewOthers, currentUserId, permissionsLoaded]);
+
+  const canModifySchedule = useMemo(() => {
+    if (!userPermissions) return false;
+    return userPermissions.includes('user_schedule:update');
+  }, [userPermissions]);
+
+  // Creating an entry from a slot assigns it to the viewed agent, which needs
+  // user_schedule:update. Without it the drawer stays the read-only view it was
+  // before, so a user lacking the permission never gets a slot picker that
+  // would only fail on save.
+  const canCreateFromSlot = Boolean(workItemContext) && canModifySchedule;
 
   const dateRange = useMemo(() => {
     const start = moment(date).startOf(view === 'day' ? 'day' : view === 'week' ? 'week' : 'month').toDate();
@@ -138,7 +164,7 @@ const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentId }) => {
     return () => {
       active = false;
     };
-  }, [agentId, canViewAgent, currentUserId, permissionsLoaded, dateRange.end, dateRange.start, t]);
+  }, [agentId, canViewAgent, currentUserId, permissionsLoaded, dateRange.end, dateRange.start, refreshKey, t]);
 
   useEffect(() => {
     if (!hasScrolled && calendarRef.current && (view === 'day' || view === 'week')) {
@@ -153,30 +179,104 @@ const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentId }) => {
 
   const handleSelectEvent = (event: IScheduleEntry) => {
     setSelectedEvent(event);
+    setSelectedSlot(null);
     setShowEntryPopup(true);
   };
 
+  const handleEntryPopupClose = () => {
+    setShowEntryPopup(false);
+    setSelectedEvent(null);
+    setSelectedSlot(null);
+  };
+
+  // LEVERAGE: pattern slot-select-month-pin — second copy of
+  // ScheduleCalendar.handleSelectSlot's month-view 8am/15-minute adjustment;
+  // the viewed agent is the default assignee so an entry created from their
+  // drawer lands on their schedule.
+  const handleSelectSlot = (slotInfo: SlotInfo) => {
+    if (!workItemContext) return;
+
+    const start = new Date(slotInfo.start);
+    let end = new Date(slotInfo.end);
+    if (view === 'month') {
+      start.setHours(8, 0, 0, 0);
+      end = new Date(start);
+      end.setMinutes(start.getMinutes() + 15);
+    }
+
+    setSelectedEvent(null);
+    setSelectedSlot({
+      start,
+      end,
+      defaultAssigneeId: agentId,
+      assigned_user_ids: [agentId],
+    });
+    setShowEntryPopup(true);
+  };
+
+  const handleEntryPopupSave = async (
+    entryData: Omit<IScheduleEntry, 'tenant'> & { updateType?: string }
+  ) => {
+    if (!workItemContext) return;
+
+    try {
+      const result = await addScheduleEntry({
+        ...entryData,
+        work_item_id: workItemContext.workItemId,
+        work_item_type: workItemContext.workItemType,
+        title: entryData.title || workItemContext.title,
+        recurrence_pattern: entryData.recurrence_pattern || null,
+      });
+
+      if (!result.success) {
+        toast.error(
+          result.error ||
+            t('agentView.errors.saveFailed', { defaultValue: 'Failed to save schedule entry' })
+        );
+        return;
+      }
+
+      handleEntryPopupClose();
+      setRefreshKey((value) => value + 1);
+      workItemContext.onScheduled?.();
+    } catch (err) {
+      console.error('Failed to save schedule entry:', err);
+      toast.error(t('agentView.errors.saveFailed', { defaultValue: 'Failed to save schedule entry' }));
+    }
+  };
+
   const renderEntryPopup = () => {
-    if (!showEntryPopup || !selectedEvent || !currentUserId) return null;
+    if (!showEntryPopup || !currentUserId) return null;
+    if (!selectedEvent && !selectedSlot) return null;
+
+    const isCreating = !selectedEvent && Boolean(selectedSlot) && canCreateFromSlot;
 
     return (
       <EntryPopup
         event={selectedEvent}
-        onClose={() => {
-          setShowEntryPopup(false);
-          setSelectedEvent(null);
-        }}
-        onSave={async () => {}}
+        slot={selectedSlot ?? undefined}
+        initialWorkItem={
+          isCreating && workItemContext
+            ? {
+                work_item_id: workItemContext.workItemId,
+                type: workItemContext.workItemType,
+                name: workItemContext.title,
+                description: '',
+              }
+            : null
+        }
+        onClose={handleEntryPopupClose}
+        onSave={isCreating ? handleEntryPopupSave : async () => {}}
         canAssignMultipleAgents={false}
         users={users}
         currentUserId={currentUserId}
         loading={false}
         isInDrawer={true}
         error={null}
-        canModifySchedule={false}
+        canModifySchedule={canModifySchedule}
         focusedTechnicianId={agentId}
-        canAssignOthers={false}
-        viewOnly={true}
+        canAssignOthers={canModifySchedule}
+        viewOnly={!isCreating}
       />
     );
   };
@@ -233,7 +333,8 @@ const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentId }) => {
             onView={(newView) => setView(newView)}
             onNavigate={(newDate) => setDate(newDate)}
             onSelectEvent={(event: object) => handleSelectEvent(event as IScheduleEntry)}
-            selectable={false}
+            selectable={canCreateFromSlot}
+            onSelectSlot={canCreateFromSlot ? handleSelectSlot : undefined}
             resizableAccessor={() => false}
             draggableAccessor={() => false}
             step={15}

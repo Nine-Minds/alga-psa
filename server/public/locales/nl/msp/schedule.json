@@ -26,7 +26,8 @@
     "loading": "Laden...",
     "errors": {
       "loadPermissions": "Kan gebruikersrechten niet laden",
-      "forbidden": "U heeft geen toestemming om dit schema te bekijken."
+      "forbidden": "U heeft geen toestemming om dit schema te bekijken.",
+      "saveFailed": "Kan het schema-item niet opslaan"
     }
   },
   "calendar": {

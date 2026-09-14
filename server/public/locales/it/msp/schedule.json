@@ -26,7 +26,8 @@
     "loading": "Caricamento...",
     "errors": {
       "loadPermissions": "Impossibile caricare le autorizzazioni utente",
-      "forbidden": "Non hai l'autorizzazione per visualizzare questa pianificazione."
+      "forbidden": "Non hai l'autorizzazione per visualizzare questa pianificazione.",
+      "saveFailed": "Impossibile salvare la voce della pianificazione"
     }
   },
   "calendar": {

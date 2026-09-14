@@ -1656,9 +1656,20 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
       return;
     }
 
+    if (!ticket.ticket_id) {
+      return;
+    }
+
     openDrawer(
       <AgentScheduleDrawer
         agentId={userId}
+        workItemContext={{
+          workItemId: ticket.ticket_id,
+          workItemType: 'ticket',
+          title: ticket.title || t('bento.tiles.scheduledWork', 'Scheduled work'),
+          clientName: client?.client_name ?? null,
+          onScheduled: () => setNextVisitRefreshKey((value) => value + 1),
+        }}
       />
     );
   };

@@ -26,7 +26,8 @@
     "loading": "Ładowanie...",
     "errors": {
       "loadPermissions": "Nie udało się załadować uprawnień użytkownika",
-      "forbidden": "Nie masz uprawnień do przeglądania tego harmonogramu."
+      "forbidden": "Nie masz uprawnień do przeglądania tego harmonogramu.",
+      "saveFailed": "Nie udało się zapisać wpisu harmonogramu"
     }
   },
   "calendar": {

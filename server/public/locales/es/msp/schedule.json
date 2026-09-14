@@ -26,7 +26,8 @@
     "loading": "Cargando...",
     "errors": {
       "loadPermissions": "No se pudieron cargar los permisos de usuario",
-      "forbidden": "No tiene permiso para ver este programa."
+      "forbidden": "No tiene permiso para ver este programa.",
+      "saveFailed": "No se pudo guardar la entrada de la programación"
     }
   },
   "calendar": {

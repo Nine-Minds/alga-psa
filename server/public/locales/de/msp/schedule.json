@@ -26,7 +26,8 @@
     "loading": "Laden...",
     "errors": {
       "loadPermissions": "Benutzerberechtigungen konnten nicht geladen werden",
-      "forbidden": "Sie sind nicht berechtigt, diesen Zeitplan anzuzeigen."
+      "forbidden": "Sie sind nicht berechtigt, diesen Zeitplan anzuzeigen.",
+      "saveFailed": "Der Termin konnte nicht gespeichert werden"
     }
   },
   "calendar": {
