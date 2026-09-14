@@ -69,6 +69,28 @@ describe('formatDateValue country pattern', () => {
   });
 
   it('applies the country pattern to the default (option-less) rendering', () => {
-    expect(formatDateValue(INSTANT, 'en', undefined, countryDateFormat('AU'))).toBe('30/9/2026');
+    // en would write 30/9/2026 here; the country pattern is dd/MM/yyyy, and the
+    // date picker beside the table renders it from that same pattern.
+    expect(formatDateValue(INSTANT, 'en', undefined, countryDateFormat('AU'))).toBe('30/09/2026');
+    expect(formatDateValue(INSTANT, 'de', undefined, countryDateFormat('AU'))).toBe('30/09/2026');
+  });
+
+  it('writes day and month at the pattern width whatever the language chose', () => {
+    const loose: Intl.DateTimeFormatOptions = {
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+    };
+    expect(formatDateValue(INSTANT, 'en', loose, countryDateFormat('US'))).toBe('09/30/2026');
+    expect(formatDateValue(INSTANT, 'de', loose, countryDateFormat('DE'))).toBe('30.09.2026');
+  });
+
+  it('leaves the year width to the caller', () => {
+    const shortYear: Intl.DateTimeFormatOptions = {
+      year: '2-digit',
+      month: 'numeric',
+      day: 'numeric',
+    };
+    expect(formatDateValue(INSTANT, 'en', shortYear, countryDateFormat('AU'))).toBe('30/09/26');
   });
 });

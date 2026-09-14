@@ -29,6 +29,17 @@ const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 const DATE_PART_TYPES: ReadonlySet<string> = new Set<DateFieldPart>(['day', 'month', 'year']);
 
+/**
+ * Parts the country pattern writes two digits wide (`dd`, `MM`).
+ *
+ * Digit width travels with the order: an AU tenant's pattern is dd/MM/yyyy, so
+ * a table must read 30/09/2026 exactly as the date picker beside it does, even
+ * though English would have written 30/9/2026 and German 30.9.2026. The year is
+ * deliberately excluded — `year: '2-digit'` is a caller's density choice for a
+ * cramped column, not a property of where the tenant is.
+ */
+const TWO_DIGIT_PARTS: ReadonlySet<string> = new Set<DateFieldPart>(['day', 'month']);
+
 export function isDateOnlyString(value: unknown): value is string {
   return typeof value === 'string' && DATE_ONLY_PATTERN.test(value);
 }
@@ -49,7 +60,7 @@ function withCountryClock(
 }
 
 /**
- * Re-assemble a formatted date in the country's field order and separator.
+ * Re-assemble a formatted date in the country's order, separator and digit width.
  *
  * Only applies when day and month came out as digits: once Intl has written a
  * month or weekday NAME the order is part of the language's grammar ("22 août
@@ -80,7 +91,10 @@ function applyCountryOrder(
 
   const reordered = dateFormat.order
     .filter((type) => byType.has(type))
-    .map((type) => byType.get(type) as string)
+    .map((type) => {
+      const value = byType.get(type) as string;
+      return TWO_DIGIT_PARTS.has(type) ? value.padStart(2, '0') : value;
+    })
     .join(dateFormat.separator);
 
   const head = parts.slice(0, first).map((part) => part.value).join('');
