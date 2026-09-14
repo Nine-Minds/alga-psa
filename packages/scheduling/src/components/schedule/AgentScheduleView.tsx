@@ -271,7 +271,11 @@ const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentId, workItem
         users={users}
         currentUserId={currentUserId}
         loading={false}
-        isInDrawer={true}
+        // Not isInDrawer: EntryPopup then wraps itself in a Dialog, which the
+        // drawer's InsideDialogContext renders as a centered overlay above the
+        // full-height calendar. Inline rendering put the form below the
+        // calendar, offscreen, so slot selection appeared to do nothing.
+        isInDrawer={false}
         error={null}
         canModifySchedule={canModifySchedule}
         focusedTechnicianId={agentId}

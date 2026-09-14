@@ -177,6 +177,10 @@ describe('AgentScheduleView', () => {
 
     // The popup waits for the async current-user resolution.
     await waitFor(() => expect(getByTestId('entry-popup')).toBeTruthy());
+
+    // Not isInDrawer: EntryPopup must wrap itself in a Dialog so it overlays
+    // the full-height calendar instead of rendering offscreen below it.
+    expect(entryPopupSpy.mock.calls.at(-1)[0].isInDrawer).toBe(false);
   });
 
   it('sets scrollToTime to 8 AM', () => {
@@ -287,6 +291,8 @@ describe('AgentScheduleView', () => {
 
     const popupProps = entryPopupSpy.mock.calls.at(-1)[0];
     expect(popupProps.viewOnly).toBe(false);
+    // Dialog presentation keeps the creation form visible above the calendar.
+    expect(popupProps.isInDrawer).toBe(false);
     expect(popupProps.initialWorkItem).toMatchObject({
       work_item_id: 'ticket-1',
       type: 'ticket',
