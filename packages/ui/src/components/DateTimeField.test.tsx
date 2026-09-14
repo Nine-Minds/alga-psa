@@ -8,11 +8,13 @@ import { DateTimeField } from './DateTimeField';
 import { DateFormatProvider } from '../lib/dateFormat/useDateFormat';
 import {
   buildTimeOptions,
+  getDatePlaceholder,
   isTypableDateText,
   isTypableTimeText,
   parseDateInput,
   parseTimeInput,
 } from '../lib/dateTimeInput';
+import { format as formatDateFns } from 'date-fns';
 
 /**
  * The family's contract, in the order it was argued for: you can type, the
@@ -300,6 +302,23 @@ describe('keyboard', () => {
 });
 
 describe('parsing rules', () => {
+  // What the field prints must be what the field will take back. A display
+  // pattern and a parse order derived from different sources is how a date
+  // silently moves on a blur.
+  it('round-trips display -> parse in every country shape we ship', () => {
+    const date = new Date(2026, 7, 13);
+
+    for (const country of ['US', 'AU', 'GB', 'DE', 'CA', 'BR', 'NL', 'SE', 'HU', 'XX']) {
+      const shape = countryDateFormat(country);
+      const printed = formatDateFns(date, shape.datePattern);
+      expect(parseDateInput(printed, shape)).toEqual(date);
+      // The placeholder promises the same order the parser reads.
+      expect(getDatePlaceholder(shape)).toBe(
+        shape.datePattern.replace('MM', 'mm').replace('dd', 'dd')
+      );
+    }
+  });
+
   it('takes the shortcuts the timesheet already knew, and refuses nonsense', () => {
     expect(parseTimeInput('930p')).toBe('21:30');
     expect(parseTimeInput('9a')).toBe('09:00');
