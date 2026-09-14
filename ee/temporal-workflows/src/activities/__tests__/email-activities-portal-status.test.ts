@@ -71,6 +71,20 @@ describe('welcome email portal-access claims', () => {
     expect(textBody).not.toContain('portal.nineminds.com');
   });
 
+  it('makes no Support Portal claim on the unverified-customer refusal path', () => {
+    // Step 5 records `skipped` when createCustomerClientActivity refuses an
+    // exact-name client with no trusted association (UnverifiedCustomerMatch).
+    // The customer must not be told the temporary password opens a portal.
+    const { htmlBody, textBody } = build('skipped');
+    expect(htmlBody).not.toContain(PORTAL_CONJUNCTION_CLAIM);
+    expect(textBody).not.toContain(PORTAL_CONJUNCTION_CLAIM);
+    expect(htmlBody).not.toContain('portal.nineminds.com');
+    expect(textBody).not.toContain('portal.nineminds.com');
+    // The workspace credentials are still delivered.
+    expect(htmlBody).toContain('TempPass123!');
+    expect(textBody).toContain('TempPass123!');
+  });
+
   it('is conservative by default when no portal status is supplied (resend path)', () => {
     const { htmlBody, textBody } = build(undefined);
     expect(htmlBody).not.toContain(PORTAL_CONJUNCTION_CLAIM);
