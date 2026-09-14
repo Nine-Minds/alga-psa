@@ -1599,7 +1599,7 @@
       "description": "Each event type has a standard template that can be customized. You can either use the standard template or create a custom version.",
       "filter": {
         "languages": "Languages",
-        "reset": "Reset"
+        "allLanguages": "All languages"
       },
       "test": {
         "sentTo": "Test email sent to {{recipient}}",

@@ -1599,7 +1599,7 @@
       "description": "Cada tipo de evento tem um modelo padrão que pode ser personalizado. Você pode usar o modelo padrão ou criar uma versão personalizada.",
       "filter": {
         "languages": "Idiomas",
-        "reset": "Redefinir"
+        "allLanguages": "Todos os idiomas"
       },
       "test": {
         "sentTo": "E-mail de teste enviado para {{recipient}}",

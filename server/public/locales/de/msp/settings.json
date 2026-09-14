@@ -1599,7 +1599,7 @@
       "description": "Jeder Ereignistyp verfügt über eine Standardvorlage, die angepasst werden kann. Sie können die Standardvorlage verwenden oder eine benutzerdefinierte Version erstellen.",
       "filter": {
         "languages": "Sprachen",
-        "reset": "Zurücksetzen"
+        "allLanguages": "Alle Sprachen"
       },
       "test": {
         "sentTo": "Test-E-Mail gesendet an {{recipient}}",

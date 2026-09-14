@@ -1599,7 +1599,7 @@
       "description": "Cada tipo de evento tiene una plantilla estándar que se puede personalizar. Puede usar la plantilla estándar o crear una versión personalizada.",
       "filter": {
         "languages": "Idiomas",
-        "reset": "Restablecer"
+        "allLanguages": "Todos los idiomas"
       },
       "test": {
         "sentTo": "Correo electrónico de prueba enviado a {{recipient}}",

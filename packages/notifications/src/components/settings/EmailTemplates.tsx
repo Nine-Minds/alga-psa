@@ -12,8 +12,11 @@ import { TextArea } from "@alga-psa/ui/components/TextArea";
 import { DataTable } from "@alga-psa/ui/components/DataTable";
 import { ColumnDefinition } from "@alga-psa/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@alga-psa/ui/components/Tabs";
-import { ChevronDown, ChevronRight, CornerDownRight, MoreVertical, Filter, Check, XCircle, Send, BookOpen } from "lucide-react";
+import { ChevronDown, ChevronRight, CornerDownRight, MoreVertical, Filter, Send, BookOpen } from "lucide-react";
 import { useUserPreference } from "@alga-psa/user-composition/hooks";
+import CustomSelect, { type SelectOption } from "@alga-psa/ui/components/CustomSelect";
+import { getTenantLocaleSettingsAction } from "@alga-psa/tenancy/actions/tenant-actions/tenantLocaleActions";
+import { getTranslationLanguageCode, type SupportedLocale } from "@alga-psa/core/i18n/config";
 import {
   getTemplatesAction,
   getEmailBrandingStatusAction,
@@ -49,6 +52,10 @@ import {
 import { measureCaretMenuPosition, type CaretMenuPosition } from "./caretPosition";
 
 export { replaceTemplateVariables } from "./EmailTemplatePreview";
+
+// Sentinel for the "All languages" filter option. Language codes are ISO 639
+// values (two letters), so this cannot collide with a real template language.
+const ALL_LANGUAGES = 'all';
 
 // Language names mapping (shared across component)
 const LANGUAGE_NAMES: Record<string, string> = {
@@ -102,8 +109,12 @@ export function EmailTemplates() {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [brandingStatus, setBrandingStatus] = useState<EmailBrandingStatus | null>(null);
 
-  // Language filter state - empty means show all languages
-  const [selectedLanguages, setSelectedLanguages] = useState<Set<string>>(new Set());
+  // Language filter state - 'all' means show every language
+  const [selectedLanguage, setSelectedLanguage] = useState<string>(ALL_LANGUAGES);
+  const [defaultLocale, setDefaultLocale] = useState<SupportedLocale | null>(null);
+  const [localeResolved, setLocaleResolved] = useState(false);
+  const languageSelectionInitialized = useRef(false);
+  const userChangedLanguage = useRef(false);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -121,11 +132,10 @@ export function EmailTemplates() {
     setCurrentPage(1);
   };
 
-  // Adjust page if current page is out of bounds after data changes (e.g., filtering)
-  // Only adjust when filters change, not when expanding/collapsing categories
+  // Reset to the first page whenever the language filter changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedLanguages.size]);
+  }, [selectedLanguage]);
 
   // Get available languages from templates
   const availableLanguages = useMemo(() => {
@@ -136,23 +146,68 @@ export function EmailTemplates() {
     return Array.from(languageCodes).sort();
   }, [templates]);
 
-  // Toggle language in filter
-  const handleToggleLanguage = useCallback((languageCode: string) => {
-    setSelectedLanguages(prev => {
-      const next = new Set(prev);
-      if (next.has(languageCode)) {
-        next.delete(languageCode);
-      } else {
-        next.add(languageCode);
-      }
-      return next;
-    });
+  const languageOptions = useMemo((): SelectOption[] => [
+    {
+      value: ALL_LANGUAGES,
+      label: t('notifications.emailTemplatesUi.filter.allLanguages', 'All languages'),
+    },
+    ...availableLanguages.map((langCode): SelectOption => ({
+      value: langCode,
+      label: t(
+        `notifications.emailTemplatesUi.languages.${langCode}`,
+        LANGUAGE_NAMES[langCode] || langCode.toUpperCase(),
+      ),
+    })),
+  ], [availableLanguages, t]);
+
+  const handleLanguageChange = useCallback((value: string) => {
+    userChangedLanguage.current = true;
+    setSelectedLanguage(value);
   }, []);
 
-  // Clear all language filters
-  const handleClearLanguageFilters = useCallback(() => {
-    setSelectedLanguages(new Set());
+  // Load the tenant's configured default language so the filter can start there.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const settings = await getTenantLocaleSettingsAction();
+        if (!cancelled && settings) {
+          setDefaultLocale(settings.defaultLocale);
+        }
+      } catch (err) {
+        console.error('Failed to load tenant default language:', err);
+      } finally {
+        if (!cancelled) {
+          setLocaleResolved(true);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
+
+  // Default the filter to the tenant language once both the templates and the
+  // locale are known. Never clobber a choice the user has already made.
+  useEffect(() => {
+    if (languageSelectionInitialized.current || !templates || !localeResolved) {
+      return;
+    }
+    languageSelectionInitialized.current = true;
+    if (userChangedLanguage.current) {
+      return;
+    }
+    // Templates are language-only, so a regional default (en-AU) preselects
+    // its base language (en) instead of falling back to "All languages".
+    const defaultTemplateLanguage = defaultLocale
+      ? getTranslationLanguageCode(defaultLocale)
+      : null;
+    setSelectedLanguage(
+      defaultTemplateLanguage && availableLanguages.includes(defaultTemplateLanguage)
+        ? defaultTemplateLanguage
+        : ALL_LANGUAGES,
+    );
+  }, [templates, localeResolved, defaultLocale, availableLanguages]);
 
   useEffect(() => {
     async function init() {
@@ -276,8 +331,8 @@ export function EmailTemplates() {
     );
     const activeTemplate = tenantTemplate || systemTemplate;
 
-    // Apply language filter - if no languages selected, show all
-    if (selectedLanguages.size > 0 && !selectedLanguages.has(activeTemplate.language_code)) {
+    // Apply language filter - 'all' shows every language
+    if (selectedLanguage !== ALL_LANGUAGES && activeTemplate.language_code !== selectedLanguage) {
       return acc;
     }
 
@@ -500,58 +555,21 @@ export function EmailTemplates() {
           </Button>
 
           {/* Language Filter */}
-          <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              id="language-filter-btn"
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-2 whitespace-nowrap"
-            >
-              <Filter className="h-4 w-4" />
-              {t('notifications.emailTemplatesUi.filter.languages', 'Languages')}
-              {selectedLanguages.size > 0 && (
-                <span className="ml-1 px-1.5 py-0.5 text-xs bg-primary-100 text-primary-700 rounded-full">
-                  {selectedLanguages.size}
-                </span>
-              )}
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            {availableLanguages.map(langCode => (
-              <DropdownMenuItem
-                key={langCode}
-                id={`filter-language-${langCode}`}
-                onClick={(e) => {
-                  e.preventDefault();
-                  handleToggleLanguage(langCode);
-                }}
-                className="flex items-center justify-between cursor-pointer"
-              >
-                <span>{t(`notifications.emailTemplatesUi.languages.${langCode}`, LANGUAGE_NAMES[langCode] || langCode.toUpperCase())}</span>
-                {selectedLanguages.has(langCode) && (
-                  <Check className="h-4 w-4 text-primary-600" />
-                )}
-              </DropdownMenuItem>
-            ))}
-            {selectedLanguages.size > 0 && (
-              <>
-                <div className="border-t border-gray-200 my-1" />
-                <DropdownMenuItem
-                  id="clear-language-filter"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    handleClearLanguageFilters();
-                  }}
-                  className="flex items-center gap-2 text-gray-600 cursor-pointer"
-                >
-                  <XCircle className="h-4 w-4" />
-                  {t('notifications.emailTemplatesUi.filter.reset', 'Reset')}
-                </DropdownMenuItem>
-              </>
-            )}
-          </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex items-center gap-2">
+            <Filter className="h-4 w-4 shrink-0 text-gray-500" aria-hidden="true" />
+            <div className="w-48">
+              <CustomSelect
+                id="language-filter-btn"
+                size="sm"
+                value={selectedLanguage}
+                onValueChange={handleLanguageChange}
+                options={languageOptions}
+                placeholder={t('notifications.emailTemplatesUi.filter.languages', 'Languages')}
+                showPlaceholderInDropdown={false}
+                data-automation-id="email-template-language-filter"
+              />
+            </div>
+          </div>
         </div>
       </div>
 

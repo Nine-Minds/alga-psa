@@ -1599,7 +1599,7 @@
       "description": "Elk gebeurtenistype heeft een standaardsjabloon dat kan worden aangepast. U kunt het standaardsjabloon gebruiken of een aangepaste versie maken.",
       "filter": {
         "languages": "Talen",
-        "reset": "Resetten"
+        "allLanguages": "Alle talen"
       },
       "test": {
         "sentTo": "Test-e-mail verzonden naar {{recipient}}",

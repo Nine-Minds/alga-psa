@@ -1605,7 +1605,7 @@
       "description": "Każdy typ zdarzenia ma standardowy szablon, który można dostosować. Możesz użyć standardowego szablonu lub utworzyć wersję niestandardową.",
       "filter": {
         "languages": "Języki",
-        "reset": "Resetuj"
+        "allLanguages": "Wszystkie języki"
       },
       "test": {
         "sentTo": "Testowy e-mail wysłany do {{recipient}}",
