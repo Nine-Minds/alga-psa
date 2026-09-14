@@ -31,6 +31,10 @@ export default defineConfig({
       // coverage run that globs ../packages/**.
       'src/components/settings/billing/ServiceCatalogManager.rollout.contract.test.tsx',
       'src/components/settings/billing/PriceChangeRolloutDialog.contract.test.tsx',
+      // Multi-select bulk actions on the catalog and product lists — listed for
+      // the same reason as the suites above.
+      'src/components/settings/billing/ServiceCatalogManager.bulkActions.contract.test.tsx',
+      'src/components/settings/billing/ProductsManager.bulkActions.contract.test.tsx',
       'src/components/billing-dashboard/quotes/QuoteDocumentTemplateEditor.tenantBranding.test.tsx',
       'src/components/billing-dashboard/quotes/QuoteDocumentTemplateEditor.existingQuote.test.tsx',
       'src/components/invoice-designer/DesignerVisualWorkspace.test.tsx',
