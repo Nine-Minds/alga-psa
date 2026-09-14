@@ -26,10 +26,12 @@ import {
   groupTemplatesByState,
   previewKey,
   previewLanguagesFor,
+  shouldFetchPreview,
   summarizeApplyResult,
   type PreviewCache,
   type PreviewCacheEntry,
 } from "./applyEmailBrandingState";
+import { createSerialMutationQueue } from "./serialMutationQueue";
 
 const DIFFERS_FALLBACKS: Record<string, string> = {
   colors: 'colors',
@@ -95,8 +97,17 @@ export function ApplyEmailBrandingDialog({
   const [previewCache, setPreviewCache] = useState<PreviewCache>({});
   /** Keys already requested, so re-rendering never fires a second round trip. */
   const requestedPreviews = useRef<Set<string>>(new Set());
+  /** One request at a time: a run down the eyes must not become a burst. */
+  const previewQueue = useRef(createSerialMutationQueue());
+  /** The preview actually on screen; everything else is dropped unasked. */
+  const visiblePreview = useRef<string | null>(null);
 
   const groups = useMemo(() => groupTemplatesByState(status.templates, languages), [status.templates, languages]);
+
+  const closePreview = useCallback(() => {
+    visiblePreview.current = null;
+    setPreviewName(null);
+  }, []);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -105,6 +116,7 @@ export function ApplyEmailBrandingDialog({
     setLanguages(status.languages.length > 0 ? status.languages : ['en']);
     setOverwrite(new Set());
     setPreviewName(null);
+    visiblePreview.current = null;
     // The palette may have changed since the last time this opened.
     setPreviewCache({});
     requestedPreviews.current = new Set();
@@ -112,21 +124,29 @@ export function ApplyEmailBrandingDialog({
 
   const loadPreview = useCallback(async (name: string, language: string, forced: boolean) => {
     const key = previewKey(name, language, forced);
+    visiblePreview.current = key;
     if (requestedPreviews.current.has(key)) return;
-    requestedPreviews.current.add(key);
     setPreviewCache((current) => ({ ...current, [key]: { status: 'loading' } }));
 
-    try {
-      const preview = await previewEmailBrandingApplyAction({ name, language, overwrite: forced });
-      setPreviewCache((current) => ({ ...current, [key]: { status: 'ready', preview } }));
-    } catch (previewError) {
-      // Dropped from the requested set so reopening the eye retries.
-      requestedPreviews.current.delete(key);
-      setPreviewCache((current) => ({
-        ...current,
-        [key]: { status: 'error', error: getErrorMessage(previewError) },
-      }));
-    }
+    await previewQueue.current.enqueue(async () => {
+      // Clicked past while this waited its turn, or fetched meanwhile: the
+      // server is never asked for a preview nobody is looking at. The cache
+      // entry stays pending, and reopening the eye asks again.
+      if (!shouldFetchPreview(key, visiblePreview.current, requestedPreviews.current)) return;
+      requestedPreviews.current.add(key);
+
+      try {
+        const preview = await previewEmailBrandingApplyAction({ name, language, overwrite: forced });
+        setPreviewCache((current) => ({ ...current, [key]: { status: 'ready', preview } }));
+      } catch (previewError) {
+        // Dropped from the requested set so reopening the eye retries.
+        requestedPreviews.current.delete(key);
+        setPreviewCache((current) => ({
+          ...current,
+          [key]: { status: 'error', error: getErrorMessage(previewError) },
+        }));
+      }
+    });
   }, []);
 
   const openPreview = (name: string) => {
@@ -502,7 +522,7 @@ export function ApplyEmailBrandingDialog({
       <Dialog
         id="preview-branding-template"
         isOpen={!!previewName}
-        onClose={() => setPreviewName(null)}
+        onClose={closePreview}
         className="max-w-3xl"
         // The title lives in the prop, not a DialogTitle: a nested dialog renders
         // inside the parent's Radix root, which already owns the accessible title.
@@ -512,7 +532,7 @@ export function ApplyEmailBrandingDialog({
         })}
         footer={(
           <div className="flex justify-end">
-            <Button id="close-preview-branding-template" type="button" variant="outline" onClick={() => setPreviewName(null)}>
+            <Button id="close-preview-branding-template" type="button" variant="outline" onClick={closePreview}>
               {t('notifications.emailBranding.actions.done', 'Done')}
             </Button>
           </div>

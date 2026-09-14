@@ -155,3 +155,19 @@ export function previewLanguagesFor(
 
   return ticked.length > 0 ? ticked : [...available].sort();
 }
+
+/**
+ * Whether a queued preview is still worth asking the server for.
+ *
+ * The eye fires one server action per click, and every server action a page
+ * makes is queued behind the last, so an impatient run down the list used to
+ * put the preview being looked at behind a dozen nobody will read. Only the row
+ * on screen is fetched; the rest are dropped where they queue.
+ */
+export function shouldFetchPreview(
+  key: string,
+  visibleKey: string | null,
+  requested: ReadonlySet<string>,
+): boolean {
+  return key === visibleKey && !requested.has(key);
+}

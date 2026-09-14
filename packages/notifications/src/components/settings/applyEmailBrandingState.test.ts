@@ -8,6 +8,7 @@ import {
   groupTemplatesByState,
   previewKey,
   previewLanguagesFor,
+  shouldFetchPreview,
   summarizeApplyResult,
 } from './applyEmailBrandingState';
 import type { EmailBrandingTemplateStatus } from '../../lib/emailBranding';
@@ -167,6 +168,24 @@ describe('preview language tabs', () => {
   });
 });
 
+describe('shouldFetchPreview', () => {
+  it('fetches the row that is on screen', () => {
+    expect(shouldFetchPreview('a::en', 'a::en', new Set())).toBe(true);
+  });
+
+  it('drops a preview the tenant has already clicked past', () => {
+    expect(shouldFetchPreview('a::en', 'b::en', new Set())).toBe(false);
+  });
+
+  it('drops one that arrived in the cache while it queued', () => {
+    expect(shouldFetchPreview('a::en', 'a::en', new Set(['a::en']))).toBe(false);
+  });
+
+  it('drops everything once the preview is closed', () => {
+    expect(shouldFetchPreview('a::en', null, new Set())).toBe(false);
+  });
+});
+
 describe('apply dialog markup', () => {
   it('renders as apply-email-branding-dialog with language checkboxes', () => {
     expect(dialogSource).toContain('id="apply-email-branding"');
@@ -240,6 +259,18 @@ describe('per-template preview', () => {
     expect(dialogSource).toContain('previewEmailBrandingApplyAction({ name, language, overwrite: forced })');
     expect(dialogSource).toContain('if (requestedPreviews.current.has(key)) return;');
     expect(dialogSource).toContain("previewLanguagesFor(status.templates, name, languages)[0]");
+  });
+
+  it('asks for one preview at a time, and only for the row on screen', () => {
+    // A run down the eyes queued a server action per click, each one holding a
+    // database connection; enough of them and the session check behind the next
+    // request times out, which signs the tenant out.
+    expect(dialogSource).toContain('const previewQueue = useRef(createSerialMutationQueue());');
+    expect(dialogSource).toContain('await previewQueue.current.enqueue(async () => {');
+    expect(dialogSource).toContain('shouldFetchPreview(key, visiblePreview.current, requestedPreviews.current)');
+    // Closing the preview retires the target, so nothing queued is fetched.
+    expect(dialogSource).toContain('visiblePreview.current = null;');
+    expect(dialogSource).toContain('onClose={closePreview}');
   });
 
   it('shows a loading and an error state instead of an empty frame', () => {
