@@ -10,6 +10,7 @@ import {
   previewLanguagesFor,
   shouldFetchPreview,
   summarizeApplyResult,
+  templateStatusTone,
 } from './applyEmailBrandingState';
 import type { EmailBrandingTemplateStatus } from '../../lib/emailBranding';
 
@@ -186,6 +187,24 @@ describe('shouldFetchPreview', () => {
   });
 });
 
+describe('templateStatusTone', () => {
+  const entry = (differs: EmailBrandingTemplateStatus['differs']) =>
+    groupTemplatesByState([row('invoice-email', 'en', 'customized', { differs })], ['en']).customized[0];
+
+  it('marks a row no apply can reach as inert', () => {
+    const inert = groupTemplatesByState(templates, ['en'])['no-stock-colors'][0];
+    expect(templateStatusTone(inert, true)).toBe('inert');
+  });
+
+  it('calls out a row whose edits differ from the palette', () => {
+    expect(templateStatusTone(entry(['colors']), false)).toBe('differs');
+  });
+
+  it('falls back to the category when nothing differs', () => {
+    expect(templateStatusTone(entry([]), false)).toBe('category');
+  });
+});
+
 describe('apply dialog markup', () => {
   it('renders as apply-email-branding-dialog with language checkboxes', () => {
     expect(dialogSource).toContain('id="apply-email-branding"');
@@ -271,6 +290,14 @@ describe('per-template preview', () => {
     // Closing the preview retires the target, so nothing queued is fetched.
     expect(dialogSource).toContain('visiblePreview.current = null;');
     expect(dialogSource).toContain('onClose={closePreview}');
+  });
+
+  it('states each row in a pill, never as text beside the overwrite box', () => {
+    expect(dialogSource).toContain('const tone = templateStatusTone(entry, disabled);');
+    expect(dialogSource).toContain('id={`status-branding-template-${entry.name}`}');
+    expect(dialogSource).toContain('variant={STATUS_TONE_VARIANTS[tone]}');
+    // An empty category would otherwise render as a bare dot.
+    expect(dialogSource).toContain('{statusLabel && (');
   });
 
   it('shows a loading and an error state instead of an empty frame', () => {

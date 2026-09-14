@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Eye } from "lucide-react";
+import { Badge } from "@alga-psa/ui/components/Badge";
 import { Button } from "@alga-psa/ui/components/Button";
 import { Checkbox } from "@alga-psa/ui/components/Checkbox";
 import { Dialog, DialogContent } from "@alga-psa/ui/components/Dialog";
@@ -28,8 +29,10 @@ import {
   previewLanguagesFor,
   shouldFetchPreview,
   summarizeApplyResult,
+  templateStatusTone,
   type PreviewCache,
   type PreviewCacheEntry,
+  type TemplateStatusTone,
 } from "./applyEmailBrandingState";
 import { createSerialMutationQueue } from "./serialMutationQueue";
 
@@ -37,6 +40,13 @@ const DIFFERS_FALLBACKS: Record<string, string> = {
   colors: 'colors',
   text: 'text',
   subject: 'subject',
+};
+
+/** A pill, so the row's state is never read as a second checkbox. */
+const STATUS_TONE_VARIANTS: Record<TemplateStatusTone, 'default-muted' | 'warning' | 'secondary'> = {
+  inert: 'default-muted',
+  differs: 'warning',
+  category: 'secondary',
 };
 
 /**
@@ -456,7 +466,20 @@ export function ApplyEmailBrandingDialog({
                     </div>
 
                     <ul className="max-h-52 divide-y overflow-y-auto">
-                      {entries.map((entry) => (
+                      {entries.map((entry) => {
+                        const tone = templateStatusTone(entry, disabled);
+                        const statusLabel = tone === 'inert'
+                          ? groupAction('no-stock-colors')
+                          : tone === 'differs'
+                            ? t('notifications.emailBranding.apply.differs', {
+                              defaultValue: 'Differs in {{parts}}',
+                              parts: entry.differs
+                                .map((part) => t(`notifications.emailBranding.apply.differsParts.${part}`, DIFFERS_FALLBACKS[part]))
+                                .join(', '),
+                            })
+                            : entry.category;
+
+                        return (
                         <li key={entry.name} className="flex items-center justify-between gap-2 px-3 py-2">
                           <Checkbox
                             id={`apply-branding-template-${entry.name}`}
@@ -465,19 +488,18 @@ export function ApplyEmailBrandingDialog({
                             disabled={disabled && !overwrite.has(entry.name)}
                             onChange={() => toggleTemplate(entry.name)}
                           />
-                          <span className="flex shrink-0 items-center gap-1">
-                            <span className="text-xs text-gray-500">
-                              {disabled
-                                ? groupAction('no-stock-colors')
-                                : entry.differs.length > 0
-                                  ? t('notifications.emailBranding.apply.differs', {
-                                    defaultValue: 'Differs in {{parts}}',
-                                    parts: entry.differs
-                                      .map((part) => t(`notifications.emailBranding.apply.differsParts.${part}`, DIFFERS_FALLBACKS[part]))
-                                      .join(', '),
-                                  })
-                                  : entry.category}
-                            </span>
+                          <div className="flex shrink-0 items-center gap-2">
+                            {/* A pill, not bare text: beside a checkbox, a bare
+                                phrase reads like a second thing to tick. */}
+                            {statusLabel && (
+                              <Badge
+                                id={`status-branding-template-${entry.name}`}
+                                variant={STATUS_TONE_VARIANTS[tone]}
+                                size="sm"
+                              >
+                                {statusLabel}
+                              </Badge>
+                            )}
                             {/* The only way to repaint colors the tenant chose
                                 themselves: rebuild the row and lose their edits. */}
                             {overwritable && (
@@ -505,9 +527,10 @@ export function ApplyEmailBrandingDialog({
                             >
                               <Eye className="h-4 w-4" />
                             </Button>
-                          </span>
+                          </div>
                         </li>
-                      ))}
+                        );
+                      })}
                     </ul>
                   </div>
                 );

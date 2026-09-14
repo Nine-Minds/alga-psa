@@ -157,6 +157,18 @@ export function previewLanguagesFor(
 }
 
 /**
+ * What the pill beside a row says about it, as a tone rather than a color so the
+ * three cases stay readable: a row no apply can reach, a row whose edits differ
+ * from the palette, and a row that is simply filed under a category.
+ */
+export type TemplateStatusTone = 'inert' | 'differs' | 'category';
+
+export function templateStatusTone(entry: TemplateGroupEntry, disabled: boolean): TemplateStatusTone {
+  if (disabled) return 'inert';
+  return entry.differs.length > 0 ? 'differs' : 'category';
+}
+
+/**
  * Whether a queued preview is still worth asking the server for.
  *
  * The eye fires one server action per click, and every server action a page
