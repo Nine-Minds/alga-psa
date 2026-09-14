@@ -27,6 +27,9 @@ import ServiceCatalogManager from '../settings/billing/ServiceCatalogManager';
 import ProductsManager from '../settings/billing/ProductsManager';
 import ServiceTypeSettings from '../settings/billing/ServiceTypeSettings';
 import ServiceCategoriesSettings from '../settings/billing/ServiceCategoriesSettings';
+import { TaxSourceSettings } from '../settings/tax/TaxSourceSettings';
+import { TaxRegionsManager } from '../settings/tax/TaxRegionsManager';
+import TaxDelegationBanner from '../tax/TaxDelegationBanner';
 import AccountingExportsTab, { AccountingExportsAccessDenied } from './accounting/AccountingExportsTab';
 import QuotesTab from './quotes/QuotesTab';
 import QuoteDocumentTemplatesPage from './quotes/QuoteDocumentTemplatesPage';
@@ -213,7 +216,12 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
         </Tabs.Content>
 
         <Tabs.Content value="tax-rates">
-          <TaxRates />
+          <div className="space-y-6">
+            <TaxDelegationBanner />
+            <TaxSourceSettings />
+            <TaxRegionsManager />
+            <TaxRates />
+          </div>
         </Tabs.Content>
 
         <Tabs.Content value="contract-lines">
