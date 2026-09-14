@@ -381,7 +381,8 @@
       "salesOrderNotInvoiceable": "That sales order is no longer available to invoice.",
       "USAGE_RECORDS_MISSING_ACK_REQUIRED": "This invoice window has billable charges, but {{services}} have no usage reported for the service period {{periodStart}} to {{periodEnd}}. Record the usage first, or explicitly acknowledge generating without it — the unreported services stay billable later.",
       "USAGE_PERIOD_TOTAL_STALE": "The preview is out of date: {{details}}. Re-run the preview to see the current numbers, then generate again.",
-      "USAGE_CALCULATION_ERROR": "Usage for {{services}} in the service period {{periodStart}} to {{periodEnd}} is recorded but could not be priced. Fix the service pricing (catalog price in the contract currency, a custom rate, or rate tiers), then try again. Do not record replacement usage."
+      "USAGE_CALCULATION_ERROR": "Usage for {{services}} in the service period {{periodStart}} to {{periodEnd}} is recorded but could not be priced. Fix the service pricing (catalog price in the contract currency, a custom rate, or rate tiers), then try again. Do not record replacement usage.",
+      "SOURCE_ALREADY_BILLED": "Some selected items are no longer billable (already invoiced, not approved, or removed). Refresh and try again."
     },
     "warnings": {
       "noBillingEmail": "This client has no billing email. Set a billing contact, a client billing email, or an email on the billing or default location before generating the invoice."
@@ -392,6 +393,26 @@
     },
     "salesOrderContext": {
       "summary": "{{quantity}} item(s) ready to invoice from {{lineCount}} line(s). This draft will be linked back to the sales order."
+    }
+  },
+  "quickInvoice": {
+    "action": "Quick invoice",
+    "title": "Quick invoice this ticket",
+    "loading": "Loading billable items…",
+    "empty": "There are no unbilled items on this ticket.",
+    "billableTime": "Billable time",
+    "products": "Products",
+    "selectedTotal": "Selected total",
+    "create": "Create invoice",
+    "creating": "Creating…",
+    "done": "Done",
+    "viewInvoice": "View invoice",
+    "created": "Invoice created",
+    "createdDetail": "The invoice was created and linked to this ticket.",
+    "existingInvoices": "Invoices for this ticket",
+    "unknownService": "Billable item",
+    "errors": {
+      "ticketNotFound": "That ticket no longer exists."
     }
   },
   "draftsTab": {

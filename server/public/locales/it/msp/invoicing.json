@@ -381,7 +381,8 @@
       "salesOrderNotInvoiceable": "Questo ordine di vendita non è più disponibile per la fatturazione.",
       "USAGE_RECORDS_MISSING_ACK_REQUIRED": "Questa finestra di fatturazione contiene addebiti fatturabili, ma {{services}} non ha utilizzo registrato per il periodo di servizio dal {{periodStart}} al {{periodEnd}}. Registra prima l'utilizzo oppure conferma esplicitamente la generazione senza di esso: i servizi non registrati resteranno fatturabili in seguito.",
       "USAGE_PERIOD_TOTAL_STALE": "L'anteprima non è aggiornata: {{details}}. Riesegui l'anteprima per vedere i valori attuali, poi genera di nuovo.",
-      "USAGE_CALCULATION_ERROR": "L'utilizzo di {{services}} nel periodo di servizio dal {{periodStart}} al {{periodEnd}} è registrato ma non è stato possibile prezzarlo. Correggi i prezzi del servizio (prezzo di listino nella valuta del contratto, una tariffa personalizzata o scaglioni tariffari) e riprova. Non registrare utilizzo sostitutivo."
+      "USAGE_CALCULATION_ERROR": "L'utilizzo di {{services}} nel periodo di servizio dal {{periodStart}} al {{periodEnd}} è registrato ma non è stato possibile prezzarlo. Correggi i prezzi del servizio (prezzo di listino nella valuta del contratto, una tariffa personalizzata o scaglioni tariffari) e riprova. Non registrare utilizzo sostitutivo.",
+      "SOURCE_ALREADY_BILLED": "Alcuni elementi selezionati non sono più fatturabili (già fatturati, non approvati o rimossi). Aggiorna e riprova."
     },
     "warnings": {
       "noBillingEmail": "Questo cliente non ha un indirizzo e-mail di fatturazione. Imposta un contatto per la fatturazione, un indirizzo e-mail di fatturazione del cliente o un indirizzo e-mail nella sede di fatturazione o predefinita prima di generare la fattura."
@@ -392,6 +393,26 @@
     },
     "salesOrderContext": {
       "summary": "{{quantity}} articoli pronti per la fatturazione da {{lineCount}} righe. Questa bozza verrà collegata all'ordine di vendita."
+    }
+  },
+  "quickInvoice": {
+    "action": "Fattura rapida",
+    "title": "Fattura rapida per questo ticket",
+    "loading": "Caricamento elementi fatturabili…",
+    "empty": "Non ci sono elementi non fatturati su questo ticket.",
+    "billableTime": "Tempo fatturabile",
+    "products": "Prodotti",
+    "selectedTotal": "Totale selezionato",
+    "create": "Crea fattura",
+    "creating": "Creazione…",
+    "done": "Fatto",
+    "viewInvoice": "Visualizza fattura",
+    "created": "Fattura creata",
+    "createdDetail": "La fattura è stata creata e collegata a questo ticket.",
+    "existingInvoices": "Fatture per questo ticket",
+    "unknownService": "Elemento fatturabile",
+    "errors": {
+      "ticketNotFound": "Questo ticket non esiste più."
     }
   },
   "draftsTab": {

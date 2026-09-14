@@ -90,6 +90,8 @@ interface TicketInfoProps {
   itilCategory?: string;
   itilSubcategory?: string;
   renderProjectTaskActions?: (args: { ticket: ITicket; additionalAgents?: { user_id: string; name: string }[] }) => React.ReactNode;
+  /** Injected quick-invoice-a-ticket action (billing package). */
+  renderQuickInvoiceActions?: (args: { ticket: ITicket }) => React.ReactNode;
   onResolveAndClose?: () => void;
   resolveAndCloseDisabled?: boolean;
   additionalAgents?: { user_id: string; name: string }[];
@@ -145,6 +147,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   itilCategory,
   itilSubcategory,
   renderProjectTaskActions,
+  renderQuickInvoiceActions,
   onResolveAndClose,
   resolveAndCloseDisabled = false,
   additionalAgents,
@@ -1997,6 +2000,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
           {/* Save Changes Button - matching contracts behavior */}
           <div className="flex flex-wrap items-center gap-3 mt-6 pt-4 border-t border-gray-200">
             {renderProjectTaskActions?.({ ticket, additionalAgents })}
+            {renderQuickInvoiceActions?.({ ticket })}
             {onResolveAndClose ? (
               <Button
                 id={`${id}-resolve-and-close-button`}

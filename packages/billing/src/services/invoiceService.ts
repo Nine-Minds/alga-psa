@@ -4,7 +4,7 @@ import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import { TaxService } from './taxService';
 import { generateInvoiceNumber } from '@alga-psa/billing/actions/invoiceGeneration';
-import type { InvoiceViewModel, IInvoiceCharge as ManualInvoiceItem, NetAmountItem, DiscountType } from '@alga-psa/types'; // Renamed for clarity
+import type { InvoiceViewModel, IInvoiceCharge as ManualInvoiceItem, NetAmountItem, DiscountType, ManualInvoiceSourceLink } from '@alga-psa/types'; // Renamed for clarity
 import type { IBillingCharge, IFixedPriceCharge, IService, TransactionType, RecurringChargeFamily, IHourBlockCharge, InvoiceTimeEntrySnapshot } from '@alga-psa/types'; // Added import
 import type { IClientWithLocation } from '@alga-psa/types';
 import { Knex } from 'knex';
@@ -503,6 +503,12 @@ interface ManualInvoiceItemInput extends NetAmountItem {
   so_line_id?: string | null;
   /** Per-line tax override: takes precedence over the service's tax_rate_id (F045). */
   tax_rate_id?: string | null;
+  /**
+   * Ticket source record this line claims (quick-invoice-a-ticket). When set,
+   * the owning time entry / ticket material is marked billed and linked in the
+   * same transaction as the charge, so an already-billed selection aborts.
+   */
+  source_link?: ManualInvoiceSourceLink;
 }
 
 
@@ -592,6 +598,63 @@ export async function recalculatePercentageDiscountInvoiceCharges(
   }
 
   return normalizedInvoiceItems;
+}
+
+/**
+ * Claims the source record behind a manual invoice line inside the caller's
+ * transaction. Conditional updates are the lock: a record already billed by
+ * another invoice updates zero rows and aborts the whole invoice, so a stale
+ * or concurrent selection can never be billed twice.
+ */
+async function claimManualChargeSource(
+  tx: Knex.Transaction,
+  tenant: string,
+  invoiceId: string,
+  invoiceItemId: string,
+  sourceLink: ManualInvoiceSourceLink,
+  claimedAt: string,
+): Promise<void> {
+  if (sourceLink.kind === 'time_entry') {
+    const updated = await tenantScopedTable(tx, tenant, 'time_entries')
+      .where({ entry_id: sourceLink.entryId, invoiced: false })
+      .update({ invoiced: true });
+    if (updated !== 1) {
+      throw new ManualInvoiceError(
+        'SOURCE_ALREADY_BILLED',
+        `Time entry ${sourceLink.entryId} is no longer billable (already invoiced or removed).`,
+        { recordId: sourceLink.entryId },
+      );
+    }
+
+    await tenantScopedTable(tx, tenant, 'invoice_time_entries').insert({
+      invoice_time_entry_id: uuidv4(),
+      invoice_id: invoiceId,
+      item_id: invoiceItemId,
+      entry_id: sourceLink.entryId,
+      work_item_snapshot: sourceLink.snapshot ? JSON.stringify(sourceLink.snapshot) : null,
+      tenant,
+      created_at: claimedAt,
+    });
+    return;
+  }
+
+  if (sourceLink.kind === 'ticket_material') {
+    const updated = await tenantScopedTable(tx, tenant, 'ticket_materials')
+      .where({ ticket_material_id: sourceLink.materialId, is_billed: false })
+      .update({
+        is_billed: true,
+        billed_invoice_id: invoiceId,
+        billed_at: claimedAt,
+        updated_at: claimedAt,
+      });
+    if (updated !== 1) {
+      throw new ManualInvoiceError(
+        'SOURCE_ALREADY_BILLED',
+        `Ticket product ${sourceLink.materialId} is no longer billable (already invoiced or removed).`,
+        { recordId: sourceLink.materialId },
+      );
+    }
+  }
 }
 
 /**
@@ -721,6 +784,16 @@ export async function persistManualInvoiceCharges(
     };
 
     await tenantScopedTable(tx, tenant, 'invoice_charges').insert(invoiceItem);
+    if (requestItem.source_link) {
+      await claimManualChargeSource(
+        tx,
+        tenant,
+        invoiceId,
+        invoiceItem.item_id,
+        requestItem.source_link,
+        now,
+      );
+    }
     if (requestItem.service_id) {
       serviceToItemMap.set(requestItem.service_id, invoiceItem.item_id);
     }
