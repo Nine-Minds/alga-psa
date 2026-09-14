@@ -721,6 +721,33 @@
       "cancel": "⟦Ƈȧƞƈḗŀ⟧",
       "saveChanges": "⟦Şȧṽḗ Ƈħȧƞɠḗş⟧"
     },
+    "bulk": {
+      "selectedCount": "⟦{{count}} şḗŀḗƈŧḗḓ⟧",
+      "selectAll": "⟦Şḗŀḗƈŧ ȧŀŀ şḗřṽīƈḗş⟧",
+      "clear": "⟦Ƈŀḗȧř⟧",
+      "actions": {
+        "activate": "⟦Ȧƈŧīṽȧŧḗ⟧",
+        "deactivate": "⟦Ḓḗȧƈŧīṽȧŧḗ⟧",
+        "delete": "⟦Ḓḗŀḗŧḗ⟧"
+      },
+      "deleteDialog": {
+        "title": "⟦Ḓḗŀḗŧḗ Şḗřṽīƈḗş⟧",
+        "message": "⟦Ƥḗřḿȧƞḗƞŧŀẏ ḓḗŀḗŧḗ {{count}} şḗŀḗƈŧḗḓ şḗřṽīƈḗ(ş)? Şḗřṽīƈḗş şŧīŀŀ řḗƒḗřḗƞƈḗḓ ƀẏ ƈȯƞŧřȧƈŧş ȯř īƞṽȯīƈḗş ȧřḗ şķīƥƥḗḓ. Ŧħīş ƈȧƞƞȯŧ ƀḗ ŭƞḓȯƞḗ.⟧"
+      },
+      "feedback": {
+        "activateSuccess": "⟦{{count}} şḗřṽīƈḗ(ş) ȧƈŧīṽȧŧḗḓ⟧",
+        "activatePartial": "⟦Ȧƈŧīṽȧŧḗḓ {{count}} şḗřṽīƈḗ(ş); {{failed}} ƈȯŭŀḓ ƞȯŧ ƀḗ ȧƈŧīṽȧŧḗḓ⟧",
+        "activateError": "⟦Ƒȧīŀḗḓ ŧȯ ȧƈŧīṽȧŧḗ {{count}} şḗřṽīƈḗ(ş)⟧",
+        "deactivateSuccess": "⟦{{count}} şḗřṽīƈḗ(ş) ḓḗȧƈŧīṽȧŧḗḓ⟧",
+        "deactivatePartial": "⟦Ḓḗȧƈŧīṽȧŧḗḓ {{count}} şḗřṽīƈḗ(ş); {{failed}} ƈȯŭŀḓ ƞȯŧ ƀḗ ḓḗȧƈŧīṽȧŧḗḓ⟧",
+        "deactivateError": "⟦Ƒȧīŀḗḓ ŧȯ ḓḗȧƈŧīṽȧŧḗ {{count}} şḗřṽīƈḗ(ş)⟧",
+        "deleteSuccess": "⟦{{count}} şḗřṽīƈḗ(ş) ḓḗŀḗŧḗḓ⟧",
+        "deletePartial": "⟦Ḓḗŀḗŧḗḓ {{count}} şḗřṽīƈḗ(ş); {{failed}} ƈȯŭŀḓ ƞȯŧ ƀḗ ḓḗŀḗŧḗḓ⟧",
+        "deletePartialBlocked": "⟦Ḓḗŀḗŧḗḓ {{count}} şḗřṽīƈḗ(ş); {{failed}} ƈȯŭŀḓ ƞȯŧ ƀḗ ḓḗŀḗŧḗḓ: {{names}}⟧",
+        "deleteBlocked": "⟦Ƈȯŭŀḓ ƞȯŧ ḓḗŀḗŧḗ {{count}} şḗřṽīƈḗ(ş) — şŧīŀŀ īƞ ŭşḗ: {{names}}⟧",
+        "deleteError": "⟦Ƒȧīŀḗḓ ŧȯ ḓḗŀḗŧḗ {{count}} şḗřṽīƈḗ(ş)⟧"
+      }
+    },
     "table": {
       "serviceName": "⟦Şḗřṽīƈḗ Ƞȧḿḗ⟧",
       "serviceType": "⟦Şḗřṽīƈḗ Ŧẏƥḗ⟧",
@@ -760,6 +787,33 @@
       "restore": "⟦Řḗşŧȯřḗ⟧",
       "archive": "⟦Ȧřƈħīṽḗ⟧",
       "delete": "⟦Ḓḗŀḗŧḗ⟧"
+    },
+    "bulk": {
+      "selectedCount": "⟦{{count}} şḗŀḗƈŧḗḓ⟧",
+      "selectAll": "⟦Şḗŀḗƈŧ ȧŀŀ ƥřȯḓŭƈŧş⟧",
+      "clear": "⟦Ƈŀḗȧř⟧",
+      "actions": {
+        "archive": "⟦Ȧřƈħīṽḗ⟧",
+        "restore": "⟦Řḗşŧȯřḗ⟧",
+        "delete": "⟦Ḓḗŀḗŧḗ⟧"
+      },
+      "deleteDialog": {
+        "title": "⟦Ḓḗŀḗŧḗ Ƥřȯḓŭƈŧş Ƥḗřḿȧƞḗƞŧŀẏ⟧",
+        "message": "⟦Ƥḗřḿȧƞḗƞŧŀẏ ḓḗŀḗŧḗ {{count}} şḗŀḗƈŧḗḓ ƥřȯḓŭƈŧ(ş)? Ƥřȯḓŭƈŧş ȧşşȯƈīȧŧḗḓ ẇīŧħ ḗẋīşŧīƞɠ ḓȧŧȧ ȧřḗ şķīƥƥḗḓ. Ŧħīş ȧƈŧīȯƞ ƈȧƞƞȯŧ ƀḗ ŭƞḓȯƞḗ.⟧"
+      },
+      "feedback": {
+        "archiveSuccess": "⟦{{count}} ƥřȯḓŭƈŧ(ş) ȧřƈħīṽḗḓ⟧",
+        "archivePartial": "⟦Ȧřƈħīṽḗḓ {{count}} ƥřȯḓŭƈŧ(ş); {{failed}} ƈȯŭŀḓ ƞȯŧ ƀḗ ȧřƈħīṽḗḓ⟧",
+        "archiveError": "⟦Ƒȧīŀḗḓ ŧȯ ȧřƈħīṽḗ {{count}} ƥřȯḓŭƈŧ(ş)⟧",
+        "restoreSuccess": "⟦{{count}} ƥřȯḓŭƈŧ(ş) řḗşŧȯřḗḓ⟧",
+        "restorePartial": "⟦Řḗşŧȯřḗḓ {{count}} ƥřȯḓŭƈŧ(ş); {{failed}} ƈȯŭŀḓ ƞȯŧ ƀḗ řḗşŧȯřḗḓ⟧",
+        "restoreError": "⟦Ƒȧīŀḗḓ ŧȯ řḗşŧȯřḗ {{count}} ƥřȯḓŭƈŧ(ş)⟧",
+        "deleteSuccess": "⟦{{count}} ƥřȯḓŭƈŧ(ş) ḓḗŀḗŧḗḓ ƥḗřḿȧƞḗƞŧŀẏ⟧",
+        "deletePartial": "⟦Ḓḗŀḗŧḗḓ {{count}} ƥřȯḓŭƈŧ(ş); {{failed}} ƈȯŭŀḓ ƞȯŧ ƀḗ ḓḗŀḗŧḗḓ⟧",
+        "deletePartialBlocked": "⟦Ḓḗŀḗŧḗḓ {{count}} ƥřȯḓŭƈŧ(ş); {{failed}} ƈȯŭŀḓ ƞȯŧ ƀḗ ḓḗŀḗŧḗḓ: {{names}}⟧",
+        "deleteBlocked": "⟦Ƈȯŭŀḓ ƞȯŧ ḓḗŀḗŧḗ {{count}} ƥřȯḓŭƈŧ(ş) — şŧīŀŀ īƞ ŭşḗ: {{names}}⟧",
+        "deleteError": "⟦Ƒȧīŀḗḓ ŧȯ ḓḗŀḗŧḗ {{count}} ƥřȯḓŭƈŧ(ş)⟧"
+      }
     },
     "filters": {
       "searchPlaceholder": "⟦Şḗȧřƈħ ƀẏ ƞȧḿḗ, ŞĶŬ, ḓḗşƈřīƥŧīȯƞ...⟧",

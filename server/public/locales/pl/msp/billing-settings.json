@@ -723,6 +723,33 @@
       "cancel": "Anuluj",
       "saveChanges": "Zapisz zmiany"
     },
+    "bulk": {
+      "selectedCount": "Zaznaczono {{count}}",
+      "selectAll": "Zaznacz wszystkie usługi",
+      "clear": "Wyczyść zaznaczenie",
+      "actions": {
+        "activate": "Aktywuj",
+        "deactivate": "Dezaktywuj",
+        "delete": "Usuń"
+      },
+      "deleteDialog": {
+        "title": "Usuń usługi",
+        "message": "Trwale usunąć zaznaczone usługi ({{count}})? Usługi nadal używane przez umowy lub faktury zostaną pominięte. Tej akcji nie można cofnąć."
+      },
+      "feedback": {
+        "activateSuccess": "Aktywowano usługi: {{count}}",
+        "activatePartial": "Aktywowano usługi: {{count}}; nie udało się aktywować: {{failed}}",
+        "activateError": "Nie udało się aktywować usług: {{count}}",
+        "deactivateSuccess": "Dezaktywowano usługi: {{count}}",
+        "deactivatePartial": "Dezaktywowano usługi: {{count}}; nie udało się dezaktywować: {{failed}}",
+        "deactivateError": "Nie udało się dezaktywować usług: {{count}}",
+        "deleteSuccess": "Usunięto usługi: {{count}}",
+        "deletePartial": "Usunięto usługi: {{count}}; nie udało się usunąć: {{failed}}",
+        "deletePartialBlocked": "Usunięto usługi: {{count}}; nie udało się usunąć: {{failed}} — {{names}}",
+        "deleteBlocked": "Nie udało się usunąć usług ({{count}}) — nadal w użyciu: {{names}}",
+        "deleteError": "Nie udało się usunąć usług: {{count}}"
+      }
+    },
     "table": {
       "serviceName": "Nazwa usługi",
       "serviceType": "Typ usługi",
@@ -762,6 +789,33 @@
       "restore": "Przywrócić",
       "archive": "Archiwum",
       "delete": "Usuwać"
+    },
+    "bulk": {
+      "selectedCount": "Zaznaczono {{count}}",
+      "selectAll": "Zaznacz wszystkie produkty",
+      "clear": "Wyczyść zaznaczenie",
+      "actions": {
+        "archive": "Archiwizuj",
+        "restore": "Przywróć",
+        "delete": "Usuń"
+      },
+      "deleteDialog": {
+        "title": "Trwale usuń produkty",
+        "message": "Trwale usunąć zaznaczone produkty ({{count}})? Produkty powiązane z istniejącymi danymi zostaną pominięte. Tej akcji nie można cofnąć."
+      },
+      "feedback": {
+        "archiveSuccess": "Zarchiwizowano produkty: {{count}}",
+        "archivePartial": "Zarchiwizowano produkty: {{count}}; nie udało się zarchiwizować: {{failed}}",
+        "archiveError": "Nie udało się zarchiwizować produktów: {{count}}",
+        "restoreSuccess": "Przywrócono produkty: {{count}}",
+        "restorePartial": "Przywrócono produkty: {{count}}; nie udało się przywrócić: {{failed}}",
+        "restoreError": "Nie udało się przywrócić produktów: {{count}}",
+        "deleteSuccess": "Trwale usunięto produkty: {{count}}",
+        "deletePartial": "Usunięto produkty: {{count}}; nie udało się usunąć: {{failed}}",
+        "deletePartialBlocked": "Usunięto produkty: {{count}}; nie udało się usunąć: {{failed}} — {{names}}",
+        "deleteBlocked": "Nie udało się usunąć produktów ({{count}}) — nadal w użyciu: {{names}}",
+        "deleteError": "Nie udało się usunąć produktów: {{count}}"
+      }
     },
     "filters": {
       "searchPlaceholder": "Szukaj według nazwy, SKU, opisu...",

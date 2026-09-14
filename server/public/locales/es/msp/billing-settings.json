@@ -721,6 +721,33 @@
       "cancel": "Cancelar",
       "saveChanges": "Guardar cambios"
     },
+    "bulk": {
+      "selectedCount": "{{count}} seleccionados",
+      "selectAll": "Seleccionar todos los servicios",
+      "clear": "Limpiar selección",
+      "actions": {
+        "activate": "Activar",
+        "deactivate": "Desactivar",
+        "delete": "Eliminar"
+      },
+      "deleteDialog": {
+        "title": "Eliminar servicios",
+        "message": "¿Eliminar permanentemente {{count}} servicio(s) seleccionado(s)? Se omitirán los servicios que aún estén referenciados por contratos o facturas. Esta acción no se puede deshacer."
+      },
+      "feedback": {
+        "activateSuccess": "{{count}} servicio(s) activado(s)",
+        "activatePartial": "Se activaron {{count}} servicio(s); {{failed}} no se pudieron activar",
+        "activateError": "No se pudieron activar {{count}} servicio(s)",
+        "deactivateSuccess": "{{count}} servicio(s) desactivado(s)",
+        "deactivatePartial": "Se desactivaron {{count}} servicio(s); {{failed}} no se pudieron desactivar",
+        "deactivateError": "No se pudieron desactivar {{count}} servicio(s)",
+        "deleteSuccess": "{{count}} servicio(s) eliminado(s)",
+        "deletePartial": "Se eliminaron {{count}} servicio(s); {{failed}} no se pudieron eliminar",
+        "deletePartialBlocked": "Se eliminaron {{count}} servicio(s); {{failed}} no se pudieron eliminar: {{names}}",
+        "deleteBlocked": "No se pudieron eliminar {{count}} servicio(s); aún están en uso: {{names}}",
+        "deleteError": "No se pudieron eliminar {{count}} servicio(s)"
+      }
+    },
     "table": {
       "serviceName": "Nombre del servicio",
       "serviceType": "Tipo de servicio",
@@ -760,6 +787,33 @@
       "restore": "Restaurar",
       "archive": "Archivo",
       "delete": "Borrar"
+    },
+    "bulk": {
+      "selectedCount": "{{count}} seleccionados",
+      "selectAll": "Seleccionar todos los productos",
+      "clear": "Limpiar selección",
+      "actions": {
+        "archive": "Archivar",
+        "restore": "Restaurar",
+        "delete": "Eliminar"
+      },
+      "deleteDialog": {
+        "title": "Eliminar productos permanentemente",
+        "message": "¿Eliminar permanentemente {{count}} producto(s) seleccionado(s)? Se omitirán los productos asociados con datos existentes. Esta acción no se puede deshacer."
+      },
+      "feedback": {
+        "archiveSuccess": "{{count}} producto(s) archivado(s)",
+        "archivePartial": "Se archivaron {{count}} producto(s); {{failed}} no se pudieron archivar",
+        "archiveError": "No se pudieron archivar {{count}} producto(s)",
+        "restoreSuccess": "{{count}} producto(s) restaurado(s)",
+        "restorePartial": "Se restauraron {{count}} producto(s); {{failed}} no se pudieron restaurar",
+        "restoreError": "No se pudieron restaurar {{count}} producto(s)",
+        "deleteSuccess": "{{count}} producto(s) eliminado(s) permanentemente",
+        "deletePartial": "Se eliminaron {{count}} producto(s); {{failed}} no se pudieron eliminar",
+        "deletePartialBlocked": "Se eliminaron {{count}} producto(s); {{failed}} no se pudieron eliminar: {{names}}",
+        "deleteBlocked": "No se pudieron eliminar {{count}} producto(s); aún están en uso: {{names}}",
+        "deleteError": "No se pudieron eliminar {{count}} producto(s)"
+      }
     },
     "filters": {
       "searchPlaceholder": "Busca por nombre, SKU, descripción...",

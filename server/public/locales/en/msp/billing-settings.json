@@ -721,6 +721,33 @@
       "cancel": "Cancel",
       "saveChanges": "Save Changes"
     },
+    "bulk": {
+      "selectedCount": "{{count}} selected",
+      "selectAll": "Select all services",
+      "clear": "Clear",
+      "actions": {
+        "activate": "Activate",
+        "deactivate": "Deactivate",
+        "delete": "Delete"
+      },
+      "deleteDialog": {
+        "title": "Delete Services",
+        "message": "Permanently delete {{count}} selected service(s)? Services still referenced by contracts or invoices are skipped. This cannot be undone."
+      },
+      "feedback": {
+        "activateSuccess": "{{count}} service(s) activated",
+        "activatePartial": "Activated {{count}} service(s); {{failed}} could not be activated",
+        "activateError": "Failed to activate {{count}} service(s)",
+        "deactivateSuccess": "{{count}} service(s) deactivated",
+        "deactivatePartial": "Deactivated {{count}} service(s); {{failed}} could not be deactivated",
+        "deactivateError": "Failed to deactivate {{count}} service(s)",
+        "deleteSuccess": "{{count}} service(s) deleted",
+        "deletePartial": "Deleted {{count}} service(s); {{failed}} could not be deleted",
+        "deletePartialBlocked": "Deleted {{count}} service(s); {{failed}} could not be deleted: {{names}}",
+        "deleteBlocked": "Could not delete {{count}} service(s) — still in use: {{names}}",
+        "deleteError": "Failed to delete {{count}} service(s)"
+      }
+    },
     "table": {
       "serviceName": "Service Name",
       "serviceType": "Service Type",
@@ -760,6 +787,33 @@
       "restore": "Restore",
       "archive": "Archive",
       "delete": "Delete"
+    },
+    "bulk": {
+      "selectedCount": "{{count}} selected",
+      "selectAll": "Select all products",
+      "clear": "Clear",
+      "actions": {
+        "archive": "Archive",
+        "restore": "Restore",
+        "delete": "Delete"
+      },
+      "deleteDialog": {
+        "title": "Delete Products Permanently",
+        "message": "Permanently delete {{count}} selected product(s)? Products associated with existing data are skipped. This action cannot be undone."
+      },
+      "feedback": {
+        "archiveSuccess": "{{count}} product(s) archived",
+        "archivePartial": "Archived {{count}} product(s); {{failed}} could not be archived",
+        "archiveError": "Failed to archive {{count}} product(s)",
+        "restoreSuccess": "{{count}} product(s) restored",
+        "restorePartial": "Restored {{count}} product(s); {{failed}} could not be restored",
+        "restoreError": "Failed to restore {{count}} product(s)",
+        "deleteSuccess": "{{count}} product(s) deleted permanently",
+        "deletePartial": "Deleted {{count}} product(s); {{failed}} could not be deleted",
+        "deletePartialBlocked": "Deleted {{count}} product(s); {{failed}} could not be deleted: {{names}}",
+        "deleteBlocked": "Could not delete {{count}} product(s) — still in use: {{names}}",
+        "deleteError": "Failed to delete {{count}} product(s)"
+      }
     },
     "filters": {
       "searchPlaceholder": "Search by name, SKU, description...",

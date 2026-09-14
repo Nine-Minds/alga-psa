@@ -6,6 +6,11 @@ import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import CurrencyPicker from '@alga-psa/ui/components/CurrencyPicker';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
+import { Checkbox } from '@alga-psa/ui/components/Checkbox';
+import { BulkActionBar } from '@alga-psa/ui/components/BulkActionBar';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import { useRangeSelection } from '@alga-psa/ui/hooks';
+import toast from 'react-hot-toast';
 import { DeleteEntityDialog } from '@alga-psa/ui';
 // Import new action and types
 import { getServices, updateService, updateServicePricing, deleteService, getServiceTypesForSelection, PaginatedServicesResponse, createServiceTypeInline, updateServiceTypeInline, deleteServiceTypeInline } from '../../../actions/serviceActions';
@@ -33,7 +38,7 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { ColumnDefinition } from '@alga-psa/types';
 import { QuickAddService } from './QuickAddService';
 import { EditableServiceTypeSelect } from '@alga-psa/ui/components/EditableServiceTypeSelect';
-import { MoreVertical } from 'lucide-react';
+import { Ban, CheckCircle, MoreVertical, Trash2 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -51,6 +56,10 @@ const BILLING_METHOD_OPTION_VALUES = ['fixed', 'hourly', 'usage'] as const;
 // Removed hardcoded SERVICE_CATEGORY_OPTIONS - will use fetched categories instead
 
 const LICENSE_TERM_OPTION_VALUES = ['monthly', 'annual', 'perpetual'] as const;
+
+// Bulk activate/deactivate composes the single-item action, so the selection is
+// issued in small batches instead of one request per row all at once.
+const BULK_CHUNK_SIZE = 10;
 
 const ServiceCatalogManager: React.FC = () => {
   const { t } = useTranslation('msp/billing-settings');
@@ -114,6 +123,29 @@ const ServiceCatalogManager: React.FC = () => {
     return serviceTypeMatch && billingMethodMatch;
   });
   const memoizedFilteredServices = useMemo(() => filteredServices, [JSON.stringify(filteredServices)]);
+  const [selectedServiceIds, setSelectedServiceIds] = useState<Set<string>>(new Set());
+  const [isBulkProcessing, setIsBulkProcessing] = useState(false);
+  const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
+  const rangeSelect = useRangeSelection<IService>({
+    items: memoizedFilteredServices,
+    getId: (service) => service.service_id,
+    selectedIds: selectedServiceIds,
+    onSelectedIdsChange: setSelectedServiceIds,
+  });
+  const visibleServiceIds = useMemo(
+    () =>
+      memoizedFilteredServices
+        .map((service) => service.service_id)
+        .filter((serviceId): serviceId is string => Boolean(serviceId)),
+    [memoizedFilteredServices]
+  );
+  const selectedVisibleCount = useMemo(
+    () => visibleServiceIds.filter((serviceId) => selectedServiceIds.has(serviceId)).length,
+    [visibleServiceIds, selectedServiceIds]
+  );
+  const allVisibleSelected =
+    visibleServiceIds.length > 0 && selectedVisibleCount === visibleServiceIds.length;
+  const clearSelection = useCallback(() => setSelectedServiceIds(new Set()), []);
   const billingMethodOptions = useMemo(
     () =>
       BILLING_METHOD_OPTION_VALUES.map((value) => ({
@@ -170,6 +202,9 @@ const ServiceCatalogManager: React.FC = () => {
     if (services.length > 0) {
       console.log("Filters changed, resetting to page 1 and fetching data");
       setCurrentPage(1); // Reset to page 1 when filters change
+      // The rows behind the selection are about to change, so the selection is
+      // no longer something the operator can see or verify.
+      clearSelection();
       fetchServices(false);
     }
   }, [selectedServiceType, selectedBillingMethod]);
@@ -596,8 +631,9 @@ const ServiceCatalogManager: React.FC = () => {
       // Mark that this page change was from user interaction
       setUserChangedPage(true);
       setCurrentPage(newPage);
+      clearSelection();
     }
-  }, [currentPage]); // Include currentPage in dependencies
+  }, [currentPage, clearSelection]); // Include currentPage in dependencies
 
   // Handle page size change - reset to page 1
   const handlePageSizeChange = useCallback((newPageSize: number) => {
@@ -605,9 +641,206 @@ const ServiceCatalogManager: React.FC = () => {
     setUserChangedPage(true);
     setPageSize(newPageSize);
     setCurrentPage(1);
-  }, []);
+    clearSelection();
+  }, [clearSelection]);
+
+  const handleSelectAllVisible = (checked: boolean) => {
+    setSelectedServiceIds(checked ? new Set(visibleServiceIds) : new Set());
+    rangeSelect.resetAnchor();
+  };
+
+  const runBulkActiveUpdate = async (isActive: boolean) => {
+    const ids = Array.from(selectedServiceIds);
+    if (ids.length === 0) return;
+
+    setIsBulkProcessing(true);
+    let updated = 0;
+    let failed = 0;
+    try {
+      for (let index = 0; index < ids.length; index += BULK_CHUNK_SIZE) {
+        const chunk = ids.slice(index, index + BULK_CHUNK_SIZE);
+        // Each id is its own request, so one refusal must not hide the rest of
+        // the chunk's outcomes.
+        const results = await Promise.all(
+          chunk.map(async (serviceId) => {
+            try {
+              const result = await updateService(serviceId, { is_active: isActive });
+              return !(isActionMessageError(result) || isActionPermissionError(result));
+            } catch (updateError) {
+              console.error(`Error updating service ${serviceId}:`, updateError);
+              return false;
+            }
+          })
+        );
+        for (const ok of results) {
+          if (ok) updated += 1;
+          else failed += 1;
+        }
+      }
+
+      const feedback = isActive
+        ? {
+            success: t('serviceCatalog.bulk.feedback.activateSuccess', {
+              defaultValue: '{{count}} service(s) activated',
+              count: updated,
+            }),
+            partial: t('serviceCatalog.bulk.feedback.activatePartial', {
+              defaultValue: 'Activated {{count}} service(s); {{failed}} could not be activated',
+              count: updated,
+              failed,
+            }),
+            error: t('serviceCatalog.bulk.feedback.activateError', {
+              defaultValue: 'Failed to activate {{count}} service(s)',
+              count: failed,
+            }),
+          }
+        : {
+            success: t('serviceCatalog.bulk.feedback.deactivateSuccess', {
+              defaultValue: '{{count}} service(s) deactivated',
+              count: updated,
+            }),
+            partial: t('serviceCatalog.bulk.feedback.deactivatePartial', {
+              defaultValue: 'Deactivated {{count}} service(s); {{failed}} could not be deactivated',
+              count: updated,
+              failed,
+            }),
+            error: t('serviceCatalog.bulk.feedback.deactivateError', {
+              defaultValue: 'Failed to deactivate {{count}} service(s)',
+              count: failed,
+            }),
+          };
+
+      if (failed === 0) {
+        toast.success(feedback.success);
+      } else if (updated > 0) {
+        toast.error(feedback.partial);
+      } else {
+        toast.error(feedback.error);
+      }
+    } finally {
+      clearSelection();
+      setIsBulkProcessing(false);
+      await fetchServices(true);
+    }
+  };
+
+  const runBulkDelete = async () => {
+    const ids = Array.from(selectedServiceIds);
+    if (ids.length === 0) return;
+
+    setIsBulkProcessing(true);
+    let deleted = 0;
+    let failed = 0;
+    // Dependency validation refuses individual services; naming them is the
+    // only way the operator learns which of the batch survived and why.
+    const blockedNames: string[] = [];
+    try {
+      for (const serviceId of ids) {
+        const serviceName =
+          services.find((service) => service.service_id === serviceId)?.service_name ?? serviceId;
+        try {
+          const result = await deleteService(serviceId);
+          if (isActionPermissionError(result)) {
+            failed += 1;
+          } else if (result.success) {
+            deleted += 1;
+          } else {
+            blockedNames.push(serviceName);
+          }
+        } catch (deleteError) {
+          console.error(`Error deleting service ${serviceId}:`, deleteError);
+          failed += 1;
+        }
+      }
+
+      const names = blockedNames.join(', ');
+      const unresolved = blockedNames.length + failed;
+      if (unresolved === 0) {
+        toast.success(t('serviceCatalog.bulk.feedback.deleteSuccess', {
+          defaultValue: '{{count}} service(s) deleted',
+          count: deleted,
+        }));
+      } else if (deleted > 0) {
+        toast.error(names
+          ? t('serviceCatalog.bulk.feedback.deletePartialBlocked', {
+              defaultValue: 'Deleted {{count}} service(s); {{failed}} could not be deleted: {{names}}',
+              count: deleted,
+              failed: unresolved,
+              names,
+            })
+          : t('serviceCatalog.bulk.feedback.deletePartial', {
+              defaultValue: 'Deleted {{count}} service(s); {{failed}} could not be deleted',
+              count: deleted,
+              failed: unresolved,
+            }));
+      } else {
+        toast.error(names
+          ? t('serviceCatalog.bulk.feedback.deleteBlocked', {
+              defaultValue: 'Could not delete {{count}} service(s) — still in use: {{names}}',
+              count: unresolved,
+              names,
+            })
+          : t('serviceCatalog.bulk.feedback.deleteError', {
+              defaultValue: 'Failed to delete {{count}} service(s)',
+              count: unresolved,
+            }));
+      }
+    } finally {
+      clearSelection();
+      setIsBulkProcessing(false);
+      setIsBulkDeleteOpen(false);
+      await fetchServices(true);
+    }
+  };
 
   const getColumns = (): ColumnDefinition<IService>[] => {
+    // The selection cell must swallow its own clicks: the row click opens the
+    // edit dialog, which is not what ticking a checkbox asks for.
+    const selectionColumn: ColumnDefinition<IService> = {
+      title: (
+        <div className="flex items-center" onClick={(event) => event.stopPropagation()}>
+          <Checkbox
+            id="service-catalog-select-all"
+            checked={allVisibleSelected}
+            indeterminate={selectedVisibleCount > 0 && !allVisibleSelected}
+            onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+              event.stopPropagation();
+              handleSelectAllVisible(event.target.checked);
+            }}
+            aria-label={t('serviceCatalog.bulk.selectAll', { defaultValue: 'Select all services' })}
+            className="m-0"
+            skipRegistration
+          />
+        </div>
+      ),
+      dataIndex: 'selection',
+      width: '4%',
+      sortable: false,
+      render: (_value, record) => {
+        const serviceId = record.service_id;
+        if (!serviceId) return null;
+        const isChecked = rangeSelect.isSelected(serviceId);
+        return (
+          <div className="flex items-center" onClick={(event) => event.stopPropagation()}>
+            <Checkbox
+              id={`service-catalog-select-${serviceId}`}
+              checked={isChecked}
+              onClick={(event: React.MouseEvent<HTMLInputElement>) => {
+                event.stopPropagation();
+                rangeSelect.handleSelect(serviceId, {
+                  shiftKey: event.shiftKey,
+                  selected: !isChecked,
+                });
+              }}
+              onChange={() => { /* controlled via onClick for shift-range support */ }}
+              className="m-0"
+              skipRegistration
+            />
+          </div>
+        );
+      },
+    };
+
     const baseColumns: ColumnDefinition<IService>[] = [
       {
         title: t('serviceCatalog.table.serviceName', { defaultValue: 'Service Name' }),
@@ -857,7 +1090,7 @@ const ServiceCatalogManager: React.FC = () => {
       ),
     });
 
-    return baseColumns;
+    return [selectionColumn, ...baseColumns];
   };
 
   const columns = getColumns();
@@ -943,6 +1176,11 @@ const ServiceCatalogManager: React.FC = () => {
                 totalItems={totalCount} // Pass total count for server-side pagination
                 onPageChange={handlePageChange}
                 onItemsPerPageChange={handlePageSizeChange}
+                rowClassName={(record: IService) =>
+                  record.service_id && selectedServiceIds.has(record.service_id)
+                    ? 'bg-table-selected'
+                    : ''
+                }
                 onRowClick={(record: IService) => { // Use updated IService
                   // Store the current page before opening the dialog
                   const currentPageBeforeDialog = currentPage;
@@ -974,6 +1212,55 @@ const ServiceCatalogManager: React.FC = () => {
           </div>
         </CardContent>
       </Card>
+      <BulkActionBar
+        idPrefix="service-catalog-bulk-action-bar"
+        count={selectedServiceIds.size}
+        selectedLabel={t('serviceCatalog.bulk.selectedCount', {
+          defaultValue: '{{count}} selected',
+          count: selectedServiceIds.size,
+        })}
+        actions={[
+          {
+            id: 'deactivate',
+            label: t('serviceCatalog.bulk.actions.deactivate', { defaultValue: 'Deactivate' }),
+            icon: <Ban className="h-4 w-4" />,
+            disabled: isBulkProcessing,
+            onClick: () => { void runBulkActiveUpdate(false); },
+          },
+          {
+            id: 'activate',
+            label: t('serviceCatalog.bulk.actions.activate', { defaultValue: 'Activate' }),
+            icon: <CheckCircle className="h-4 w-4" />,
+            disabled: isBulkProcessing,
+            onClick: () => { void runBulkActiveUpdate(true); },
+          },
+          {
+            id: 'delete',
+            label: t('serviceCatalog.bulk.actions.delete', { defaultValue: 'Delete' }),
+            icon: <Trash2 className="h-4 w-4" />,
+            destructive: true,
+            disabled: isBulkProcessing,
+            onClick: () => setIsBulkDeleteOpen(true),
+          },
+        ]}
+        onClear={clearSelection}
+        clearLabel={t('serviceCatalog.bulk.clear', { defaultValue: 'Clear' })}
+      />
+      <ConfirmationDialog
+        id="service-catalog-bulk-delete-dialog"
+        isOpen={isBulkDeleteOpen}
+        onClose={() => setIsBulkDeleteOpen(false)}
+        onConfirm={runBulkDelete}
+        title={t('serviceCatalog.bulk.deleteDialog.title', { defaultValue: 'Delete Services' })}
+        message={t('serviceCatalog.bulk.deleteDialog.message', {
+          defaultValue:
+            'Permanently delete {{count}} selected service(s)? Services still referenced by contracts or invoices are skipped. This cannot be undone.',
+          count: selectedServiceIds.size,
+        })}
+        confirmLabel={t('serviceCatalog.bulk.actions.delete', { defaultValue: 'Delete' })}
+        cancelLabel={t('serviceCatalog.actions.cancel', { defaultValue: 'Cancel' })}
+        isConfirming={isBulkProcessing}
+      />
         <Dialog
         isOpen={isEditDialogOpen}
         onClose={() => setIsEditDialogOpen(false)}
