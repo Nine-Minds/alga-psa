@@ -103,6 +103,13 @@ export default defineConfig({
         find: /^@alga-psa\/core\/logger$/,
         replacement: `${path.resolve(__dirname, '../core/src/lib/logger.ts')}`,
       },
+      // Same shape as the logger rule: core's i18n exports sit under src/lib, so
+      // the generic @alga-psa/<pkg>/<path> rule below misses them. Reached here
+      // through @alga-psa/ui's date formatter.
+      {
+        find: /^@alga-psa\/core\/i18n\/(.*)$/,
+        replacement: `${path.resolve(__dirname, '../core/src/lib/i18n')}/$1`,
+      },
       {
         find: /^@alga-psa\/db\/(admin|connection|tenant|workDate)$/,
         replacement: `${path.resolve(__dirname, '../db/src/lib')}/$1.ts`,
