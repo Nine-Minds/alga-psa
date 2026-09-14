@@ -17,16 +17,17 @@ import {
   updateTicketingDisplaySettings
 } from '@alga-psa/tickets/actions/ticketDisplaySettings';
 import { TOGGLEABLE_TICKET_COLUMNS, resolveTicketColumnVisibility } from '@alga-psa/tickets/lib';
-import { getTenantDefaultCountry } from '@alga-psa/clients/actions/countryActions';
+import { useDateFormat } from '@alga-psa/ui/lib';
 
 const DisplaySettings = (): React.JSX.Element => {
   const { t } = useTranslation('features/tickets');
   // Ticket display preferences (tenant-wide)
   const [showWeekday, setShowWeekday] = useState<boolean>(false);
-  // Null once resolved means the company country is still the 'XX' placeholder,
-  // so dates are on the fixed system default and the tenant should be told where
-  // to change that — this screen is where they used to do it.
-  const [countryMissing, setCountryMissing] = useState<boolean>(false);
+  // A null country means the pattern fell through to the fixed system default:
+  // the company country is still the 'XX' placeholder. Tenants who lose dd/MM
+  // on cutover need to be told where it went, and this screen is where they
+  // used to set it.
+  const countryMissing = useDateFormat().country === null;
   const [isSavingDisplay, setIsSavingDisplay] = useState<boolean>(false);
   const [columnVisibility, setColumnVisibility] = useState<Record<string, boolean>>(() => resolveTicketColumnVisibility());
   // LEVERAGE: friction tags-inline-dead — tagsInlineUnderTitle no longer affects
@@ -95,12 +96,6 @@ const DisplaySettings = (): React.JSX.Element => {
       }
     };
     loadDisplay();
-  }, []);
-
-  useEffect(() => {
-    getTenantDefaultCountry()
-      .then((country) => setCountryMissing(!country))
-      .catch(() => setCountryMissing(false));
   }, []);
 
   const handleSaveDisplaySettings = async (): Promise<void> => {

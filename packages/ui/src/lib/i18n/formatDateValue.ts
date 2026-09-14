@@ -43,8 +43,9 @@ function withCountryClock(
   options: Intl.DateTimeFormatOptions | undefined,
   dateFormat: CountryDateFormat,
 ): Intl.DateTimeFormatOptions {
-  const { hourCycle: _ignored, ...rest } = options ?? {};
-  return { ...rest, hour12: dateFormat.hour12 };
+  const resolved: Intl.DateTimeFormatOptions = { ...options, hour12: dateFormat.hour12 };
+  delete resolved.hourCycle;
+  return resolved;
 }
 
 /**
