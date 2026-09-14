@@ -15,7 +15,21 @@ const {
   isReviewed,
   loadReviewState,
 } = require('../lib/translation-utils.cjs');
-const { compareBaseline } = require('../audit.cjs');
+const { compareBaseline, runAudit } = require('../audit.cjs');
+
+test('Polish tax settings pass the locale quality audit', () => {
+  const { report } = runAudit({
+    locale: 'pl',
+    namespaceFilter: new Set(['msp/billing-settings']),
+    writeReport: false,
+  });
+  assert.equal(report.namespaces.length, 1);
+  const namespace = report.namespaces[0];
+  assert.ok(namespace.keyCount > 0);
+  assert.deepEqual(namespace.structuralErrors, []);
+  assert.deepEqual(namespace.untranslated.filter(({ key }) => key.startsWith('tax.')), []);
+  assert.deepEqual(namespace.forbiddenViolations.filter(({ key }) => key.startsWith('tax.')), []);
+});
 
 test('identical allowlist matches exact, locale-folded, and pattern values', () => {
   const allowlist = allowlistMatchers({

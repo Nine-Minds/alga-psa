@@ -274,7 +274,7 @@
         "placeholder": "Szukaj regionów"
       },
       "columns": {
-        "region": "Region",
+        "region": "Region podatkowy",
         "currentRate": "Bieżąca stawka",
         "rates": "Stawki"
       },
