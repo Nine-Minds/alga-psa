@@ -600,6 +600,85 @@ export async function recalculatePercentageDiscountInvoiceCharges(
   return normalizedInvoiceItems;
 }
 
+/** Validate ticket sources under locks held until invoice creation commits. */
+async function validateManualTicketSources(
+  tx: Knex.Transaction,
+  tenant: string,
+  invoiceId: string,
+  clientId: string,
+  items: ManualInvoiceItemInput[],
+): Promise<Map<ManualInvoiceItemInput, InvoiceTimeEntrySnapshot>> {
+  const snapshots = new Map<ManualInvoiceItemInput, InvoiceTimeEntrySnapshot>();
+  const invoice = await tenantScopedTable(tx, tenant, 'invoices')
+    .where({ invoice_id: invoiceId }).first();
+  const sourceItems = items.filter(item => item.source_link);
+  if (!invoice?.ticket_id && sourceItems.length === 0) return snapshots;
+
+  const reject = () => new ManualInvoiceError(
+    'SOURCE_NOT_ELIGIBLE', 'The selected source does not match this ticket invoice or is no longer eligible.',
+  );
+  if (!invoice?.ticket_id || invoice.client_id !== clientId || !invoice.is_manual || invoice.is_prepayment) {
+    throw reject();
+  }
+  const ticket = await tenantScopedTable(tx, tenant, 'tickets')
+    .where({ ticket_id: invoice.ticket_id }).forShare().first();
+  if (!ticket || ticket.client_id !== invoice.client_id) throw reject();
+
+  // Stable lock order prevents overlapping selections from deadlocking.
+  const key = (item: ManualInvoiceItemInput) => {
+    const link = item.source_link!;
+    return link.kind === 'time_entry' ? `time:${link.entryId}` : `material:${'materialId' in link ? link.materialId : ''}`;
+  };
+  const seen = new Set<string>();
+  for (const item of [...sourceItems].sort((a, b) => key(a).localeCompare(key(b)))) {
+    const link = item.source_link!;
+    if (seen.has(key(item)) || item.is_discount) throw reject();
+    seen.add(key(item));
+    if (link.kind === 'time_entry') {
+      const entry = await tenantScopedTable(tx, tenant, 'time_entries')
+        .where({ entry_id: link.entryId }).forUpdate().first();
+      if (!entry || entry.invoiced) {
+        throw new ManualInvoiceError('SOURCE_ALREADY_BILLED', 'The selected time entry is already billed or removed.');
+      }
+      if (entry.work_item_type !== 'ticket' || entry.work_item_id !== ticket.ticket_id ||
+          entry.approval_status !== 'APPROVED' || Number(entry.billable_duration) <= 0 || !entry.service_id) {
+        throw reject();
+      }
+      const service = await tenantScopedTable(tx, tenant, 'service_catalog')
+        .where({ service_id: entry.service_id }).forShare().first();
+      if (!service) throw reject();
+      const minutes = Number(entry.billable_duration);
+      const rate = Math.max(0, Math.round(Number(service.default_rate) || 0));
+      if (item.service_id !== entry.service_id || item.quantity !== minutes / 60 || item.rate !== rate) throw reject();
+      snapshots.set(item, {
+        version: 2, rateKind: 'uniform', uniformRate: rate,
+        workItemType: 'ticket', workItemId: ticket.ticket_id,
+        ticketNumber: ticket.ticket_number ?? null, title: ticket.title ?? null,
+        description: null, entryDate: entry.start_time ? new Date(entry.start_time).toISOString() : null,
+        billedMinutes: minutes, rate, netAmount: Math.round(minutes / 60 * rate),
+        serviceId: entry.service_id, serviceName: service.service_name,
+      });
+    } else if (link.kind === 'ticket_material') {
+      const material = await tenantScopedTable(tx, tenant, 'ticket_materials')
+        .where({ ticket_material_id: link.materialId }).forUpdate().first();
+      if (!material || material.is_billed) {
+        throw new ManualInvoiceError('SOURCE_ALREADY_BILLED', 'The selected product is already billed or removed.');
+      }
+      if (material.ticket_id !== ticket.ticket_id || material.client_id !== invoice.client_id || Number(material.quantity) <= 0) {
+        throw reject();
+      }
+      if (material.currency_code !== invoice.currency_code) {
+        throw new ManualInvoiceError('SOURCE_CURRENCY_MISMATCH', 'The selected product currency does not match the invoice.');
+      }
+      if (item.service_id !== material.service_id || item.quantity !== Number(material.quantity) ||
+          item.rate !== Math.max(0, Math.round(Number(material.rate) || 0))) throw reject();
+    } else {
+      throw reject();
+    }
+  }
+  return snapshots;
+}
+
 /**
  * Claims the source record behind a manual invoice line inside the caller's
  * transaction. Conditional updates are the lock: a record already billed by
@@ -613,6 +692,7 @@ async function claimManualChargeSource(
   invoiceItemId: string,
   sourceLink: ManualInvoiceSourceLink,
   claimedAt: string,
+  snapshot?: InvoiceTimeEntrySnapshot,
 ): Promise<void> {
   if (sourceLink.kind === 'time_entry') {
     const updated = await tenantScopedTable(tx, tenant, 'time_entries')
@@ -631,7 +711,7 @@ async function claimManualChargeSource(
       invoice_id: invoiceId,
       item_id: invoiceItemId,
       entry_id: sourceLink.entryId,
-      work_item_snapshot: sourceLink.snapshot ? JSON.stringify(sourceLink.snapshot) : null,
+      work_item_snapshot: snapshot ? JSON.stringify(snapshot) : null,
       tenant,
       created_at: claimedAt,
     });
@@ -673,6 +753,7 @@ export async function persistManualInvoiceCharges(
   session: Session,
   tenant: string
 ): Promise<number> {
+  const sourceSnapshots = await validateManualTicketSources(tx, tenant, invoiceId, client.client_id, manualItems);
   let subtotal = 0;
   const serviceToItemMap = new Map<string, string>(); // Maps service_id to item_id for discount resolution
   const now = Temporal.Now.instant().toString();
@@ -792,6 +873,7 @@ export async function persistManualInvoiceCharges(
         invoiceItem.item_id,
         requestItem.source_link,
         now,
+        sourceSnapshots.get(requestItem),
       );
     }
     if (requestItem.service_id) {

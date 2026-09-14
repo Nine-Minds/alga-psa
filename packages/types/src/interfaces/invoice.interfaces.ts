@@ -76,12 +76,13 @@ export interface NetAmountItem {
  *
  * Used by quick-invoice-a-ticket: a time-entry line marks `time_entries.invoiced`
  * and writes the `invoice_time_entries` link; a ticket-material line marks the
- * `ticket_materials` row billed. The conditional claim makes a stale selection
- * (already billed in another invoice) fail the whole transaction rather than
- * double-bill.
+ * `ticket_materials` row billed. The claim is validated and snapshotted from the
+ * source rows inside the transaction — callers never supply the work-item
+ * snapshot — so a stale, foreign, or ineligible selection fails the whole
+ * transaction rather than double-bill or bill a source it does not own.
  */
 export type ManualInvoiceSourceLink =
-  | { kind: 'time_entry'; entryId: string; snapshot?: InvoiceTimeEntrySnapshot | null }
+  | { kind: 'time_entry'; entryId: string }
   | { kind: 'ticket_material'; materialId: string };
 
 export interface IInvoiceChargeRecurringDetailPeriod {

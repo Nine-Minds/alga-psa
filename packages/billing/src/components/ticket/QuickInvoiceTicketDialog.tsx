@@ -266,6 +266,17 @@ export default function QuickInvoiceTicketDialog({
             </Alert>
           ) : (
             <div className="space-y-6">
+              {(billable?.excludedMaterialCount ?? 0) > 0 ? (
+                <Alert variant="warning">
+                  <AlertDescription>
+                    {t('quickInvoice.currencyExcluded', {
+                      count: billable?.excludedMaterialCount ?? 0,
+                      currency: currencyCode,
+                      defaultValue: '{{count}} product(s) excluded because their currency differs from {{currency}}.',
+                    })}
+                  </AlertDescription>
+                </Alert>
+              ) : null}
               {!hasItems ? (
                 <p className="text-sm text-[rgb(var(--color-text-600))]">
                   {t('quickInvoice.empty', {

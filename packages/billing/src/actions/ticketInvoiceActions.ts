@@ -3,7 +3,7 @@
 import type { Knex } from 'knex';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth, hasPermission } from '@alga-psa/auth';
-import type { InvoiceTimeEntrySnapshot, ManualInvoiceSourceLink } from '@alga-psa/types';
+import type { ManualInvoiceSourceLink } from '@alga-psa/types';
 import {
   actionError,
   permissionError,
@@ -27,7 +27,8 @@ import {
  *
  * The server is the authority on eligibility: the dialog is only ever a view
  * of `getTicketBillableItems`, and `generateTicketInvoice` re-reads the
- * selection inside the invoice transaction. Each selected source record is
+ * selection before submission. Invoice persistence validates and locks the sources
+ * inside the invoice transaction. Each selected source record is
  * claimed with a conditional update (`invoiced = false` / `is_billed = false`),
  * so a stale or concurrent selection aborts the whole invoice instead of
  * double-billing.
@@ -72,6 +73,7 @@ export interface TicketBillableItems {
   ticketTitle: string | null;
   timeItems: TicketBillableTimeItem[];
   materialItems: TicketBillableMaterialItem[];
+  excludedMaterialCount: number;
 }
 
 export interface TicketInvoiceSummary {
@@ -187,6 +189,7 @@ export const getTicketBillableItems = withAuth(async (
         'tm.quantity',
         'tm.rate',
         'tm.description',
+        'tm.currency_code',
         'sc.service_name',
       );
 
@@ -207,7 +210,9 @@ export const getTicketBillableItems = withAuth(async (
       };
     });
 
-    const materialItems: TicketBillableMaterialItem[] = materialRows.map((row: any) => {
+    const currencyCode = await resolveClientCurrency(knex, tenant, ticket.client_id);
+    const eligibleMaterials = materialRows.filter((row: any) => row.currency_code === currencyCode);
+    const materialItems: TicketBillableMaterialItem[] = eligibleMaterials.map((row: any) => {
       const quantity = Number(row.quantity) || 0;
       const rate = Math.max(0, Math.round(Number(row.rate) || 0));
       return {
@@ -225,7 +230,8 @@ export const getTicketBillableItems = withAuth(async (
     return {
       ticketId,
       clientId: ticket.client_id,
-      currencyCode: await resolveClientCurrency(knex, tenant, ticket.client_id),
+      currencyCode,
+      excludedMaterialCount: materialRows.length - eligibleMaterials.length,
       ticketNumber: ticket.ticket_number ?? null,
       ticketTitle: ticket.title ?? null,
       timeItems,
@@ -238,37 +244,6 @@ export const getTicketBillableItems = withAuth(async (
     throw error;
   }
 });
-
-function buildTimeSnapshot(params: {
-  ticket: TicketRow;
-  entry: {
-    entry_id: string;
-    service_id: string | null;
-    service_name: string | null;
-    start_time: unknown;
-    billable_duration: number | string;
-  };
-  rate: number;
-}): InvoiceTimeEntrySnapshot {
-  const billedMinutes = Math.round(Number(params.entry.billable_duration) || 0);
-  const netAmount = Math.round((billedMinutes / 60) * params.rate);
-  return {
-    version: 2,
-    rateKind: billedMinutes > 0 ? 'uniform' : 'unknown',
-    uniformRate: billedMinutes > 0 ? params.rate : null,
-    workItemType: 'ticket',
-    workItemId: params.ticket.ticket_id,
-    ticketNumber: params.ticket.ticket_number ?? null,
-    title: params.ticket.title ?? null,
-    description: null,
-    entryDate: toIsoDate(params.entry.start_time),
-    billedMinutes,
-    rate: params.rate,
-    netAmount,
-    serviceId: params.entry.service_id,
-    serviceName: params.entry.service_name,
-  };
-}
 
 /**
  * Create a manual invoice from selected unbilled ticket items.
@@ -346,7 +321,7 @@ export const generateTicketInvoice = withAuth(async (
         .table('ticket_materials as tm')
         .whereIn('tm.ticket_material_id', materialIds)
         .where({ 'tm.ticket_id': input.ticketId, 'tm.is_billed': false })
-        .select('tm.ticket_material_id', 'tm.service_id', 'tm.quantity', 'tm.rate', 'tm.description');
+        .select('tm.ticket_material_id', 'tm.service_id', 'tm.quantity', 'tm.rate', 'tm.description', 'tm.currency_code');
 
   if (timeRows.length !== timeEntryIds.length || materialRows.length !== materialIds.length) {
     return {
@@ -362,16 +337,23 @@ export const generateTicketInvoice = withAuth(async (
     };
   }
 
+  const currencyCode = await resolveClientCurrency(knex, tenant, ticket.client_id);
+  if (materialRows.some(row => row.currency_code !== currencyCode)) {
+    return {
+      success: false, code: 'SOURCE_CURRENCY_MISMATCH',
+      message: 'The selected product currency does not match the invoice.',
+      error: 'The selected product currency does not match the invoice.',
+    };
+  }
+
   const items: ManualInvoiceItem[] = [];
 
   for (const row of timeRows) {
     const billableMinutes = Number(row.billable_duration) || 0;
     const rate = Math.max(0, Math.round(Number(row.default_rate) || 0));
-    const snapshot = buildTimeSnapshot({ ticket, entry: row, rate });
     const sourceLink: ManualInvoiceSourceLink = {
       kind: 'time_entry',
       entryId: row.entry_id,
-      snapshot,
     };
     items.push({
       service_id: row.service_id,
@@ -400,6 +382,7 @@ export const generateTicketInvoice = withAuth(async (
     clientId: ticket.client_id,
     items,
     ticket_id: ticket.ticket_id,
+    currency_code: currencyCode,
   });
 });
 
