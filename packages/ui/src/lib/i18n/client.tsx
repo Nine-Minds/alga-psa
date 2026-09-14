@@ -18,6 +18,7 @@ import {
   getTranslationLanguageCode,
 } from './config';
 import { formatDateValue } from './formatDateValue';
+import { useDateFormat } from '../dateFormat/useDateFormat';
 
 /**
  * Initialize i18next on the client side.
@@ -394,13 +395,20 @@ export function detectClientLocale(
  * default locale, which at least stays deterministic rather than following
  * whatever the browser happens to be set to. `locale` is returned so callers
  * can pass it to module-scope helpers that have no hook of their own.
+ *
+ * `dateFormat` comes from the country, not the locale: digit order, separator
+ * and the 12/24h clock are the tenant's (or client's) country's, while the
+ * locale still supplies month and weekday names. Outside a DateFormatProvider
+ * it is the fixed system default, so provider-less trees stay deterministic.
  */
 export function useFormatters() {
   const context = useOptionalI18n();
   const locale = context?.locale ?? (LOCALE_CONFIG.defaultLocale as SupportedLocale);
+  const dateFormat = useDateFormat();
 
   return useMemo(() => ({
     locale,
+    dateFormat,
 
     formatDate: (
       date: Date | string,
@@ -408,7 +416,7 @@ export function useFormatters() {
     ) => {
       // Date-only strings are calendar dates and must not shift through the
       // browser timezone; see formatDateValue.
-      return formatDateValue(date, locale, options);
+      return formatDateValue(date, locale, options, dateFormat);
     },
 
     formatNumber: (value: number, options?: Intl.NumberFormatOptions) => {
@@ -445,5 +453,5 @@ export function useFormatters() {
       }
       return rtf.format(Math.trunc(diff / 1000), 'second');
     },
-  }), [locale]);
+  }), [locale, dateFormat]);
 }
