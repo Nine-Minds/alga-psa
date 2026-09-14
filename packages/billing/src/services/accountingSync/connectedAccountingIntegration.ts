@@ -211,58 +211,39 @@ async function loadTolerantSelectionSnapshot(
  * Resolve the export picker options for one provider without loading the
  * broader health payload.
  *
- * The selected provider's own connection store is read strictly so a
- * credential-store outage propagates to the caller (the dialog then shows an
- * actionable error with Retry) instead of being flattened into an empty list.
- * The options AND the resolved default come from that same snapshot, so they
- * can never disagree. The canonical shared selection is still consulted and
- * honored when its target is present in the strict snapshot; otherwise the
- * default is re-derived from the strict snapshot with the same shared rules.
- * When no default can be resolved the target is left unset and `issue`
- * explains why.
+ * Read settings and the selected provider's connections once. Apply the shared
+ * pure selection rules to those inputs, and build the options from the same
+ * connection map. A failed read must reach the dialog's Retry path rather than
+ * choosing a different default or reporting no connections.
  */
 export async function resolveAccountingConnections(
   knex: Knex,
   tenantId: string,
   adapterType: ConnectedAccountingAdapterType
 ): Promise<AccountingConnectionsView> {
-  const settings = await getAccountingSyncSettings(knex, tenantId).catch(() => null);
-
-  // Canonical selection, using the same rules as sync routing. Tolerant so the
-  // shared routing behavior is unchanged; the strict provider read below is
-  // authoritative for the picker.
-  const canonical = await resolveConnectedAccountingIntegration(knex, tenantId, {
-    preferredAdapterType: adapterType
-  });
-  const canonicalRealm =
-    canonical && canonical.adapterType === adapterType ? canonical.targetRealm : null;
-
-  const { getStoredQboCredentialsMap } = await import('@alga-psa/integrations/lib/qbo/qboClientService');
-  const { getStoredXeroConnections } = await import('@alga-psa/integrations/lib/xero/xeroClientService');
-  const { resolveXeroDefaultSelection } = await import('@alga-psa/integrations/lib/xero/xeroRealmIdentity');
+  const settings = await getAccountingSyncSettings(knex, tenantId);
 
   if (adapterType === 'xero') {
+    const { getStoredXeroConnections } = await import('@alga-psa/integrations/lib/xero/xeroClientService');
+    const { resolveXeroDefaultSelection } = await import('@alga-psa/integrations/lib/xero/xeroRealmIdentity');
     const connections = (await getStoredXeroConnections(tenantId)) as Record<
       string,
       XeroConnectionIdentity
     >;
-    const xeroSelection = resolveXeroDefaultSelection(connections, settings?.defaultRealm ?? null);
+    const xeroSelection = resolveXeroDefaultSelection(connections, settings.defaultRealm);
     const connectionIds = Object.keys(connections);
-    const resolved =
-      canonicalRealm && connections[canonicalRealm]
-        ? { adapterType, targetRealm: canonicalRealm }
-        : selectConnectedAccountingIntegration(
-            {
-              qboRealms: [],
-              xeroConnectionIds: connectionIds,
-              persistedXeroConnectionId:
-                xeroSelection.status === 'resolved' ? xeroSelection.connectionId : null,
-              xeroSelectionAmbiguous: xeroSelection.status === 'ambiguous',
-              settingsDefaultRealm: settings?.defaultRealm ?? null,
-              qboDefaultRealm: null
-            },
-            { preferredAdapterType: adapterType }
-          );
+    const resolved = selectConnectedAccountingIntegration(
+      {
+        qboRealms: [],
+        xeroConnectionIds: connectionIds,
+        persistedXeroConnectionId:
+          xeroSelection.status === 'resolved' ? xeroSelection.connectionId : null,
+        xeroSelectionAmbiguous: xeroSelection.status === 'ambiguous',
+        settingsDefaultRealm: settings.defaultRealm,
+        qboDefaultRealm: null
+      },
+      { preferredAdapterType: adapterType }
+    );
 
     const realms = connectionIds.map((realmId) => ({
       realmId,
@@ -280,29 +261,27 @@ export async function resolveAccountingConnections(
     };
   }
 
-  const credentials = (await getStoredQboCredentialsMap(tenantId)) as Record<string, unknown>;
+  const { getStoredQboCredentialsMap } = await import('@alga-psa/integrations/lib/qbo/qboClientService');
+  const credentials = await getStoredQboCredentialsMap(tenantId);
   const realmIds = Object.keys(credentials);
   // Mirror resolveDefaultRealm: the saved realm wins when it is connected,
   // otherwise the first stored company. Derived from the strict snapshot so it
   // can never disagree with the options below.
   const qboDefaultRealm =
-    settings?.defaultRealm && realmIds.includes(settings.defaultRealm)
+    settings.defaultRealm && realmIds.includes(settings.defaultRealm)
       ? settings.defaultRealm
       : realmIds[0] ?? null;
-  const resolved =
-    canonicalRealm && realmIds.includes(canonicalRealm)
-      ? { adapterType, targetRealm: canonicalRealm }
-      : selectConnectedAccountingIntegration(
-          {
-            qboRealms: realmIds,
-            xeroConnectionIds: [],
-            persistedXeroConnectionId: null,
-            xeroSelectionAmbiguous: false,
-            settingsDefaultRealm: settings?.defaultRealm ?? null,
-            qboDefaultRealm
-          },
-          { preferredAdapterType: adapterType }
-        );
+  const resolved = selectConnectedAccountingIntegration(
+    {
+      qboRealms: realmIds,
+      xeroConnectionIds: [],
+      persistedXeroConnectionId: null,
+      xeroSelectionAmbiguous: false,
+      settingsDefaultRealm: settings.defaultRealm,
+      qboDefaultRealm
+    },
+    { preferredAdapterType: adapterType }
+  );
 
   const realms = realmIds.map((realmId) => ({
     realmId,
