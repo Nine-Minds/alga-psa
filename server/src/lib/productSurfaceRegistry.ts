@@ -150,6 +150,7 @@ export const API_RULES: readonly ApiRule[] = [
       '/api/v1/teams',
       '/api/v1/interactions',
       '/api/v1/interaction-types',
+      '/api/v1/interaction-statuses',
       '/api/v1/mobile/me/capabilities',
     ],
     behaviorByProduct: { psa: 'allowed', algadesk: 'allowed' },
