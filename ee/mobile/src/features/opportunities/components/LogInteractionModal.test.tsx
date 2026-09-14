@@ -114,7 +114,7 @@ function pressOption(renderer: ReactTestRenderer, value: string) {
 }
 
 function submitButton(renderer: ReactTestRenderer): ReactTestInstance {
-  const button = renderer.root.findAllByType(PrimaryButton).find((b) => b.props.children === "Log it");
+  const button = renderer.root.findAllByType(PrimaryButton).find((b) => b.props.children === "Log it" || b.props.children === "Schedule");
   if (!button) throw new Error("submit button not found");
   return button;
 }

@@ -21,7 +21,8 @@
     "meeting": "Meeting",
     "break": "Break",
     "other": "Other",
-    "adHoc": "Ad-hoc"
+    "adHoc": "Ad-hoc",
+    "interaction": "Interaction"
   },
   "detail": {
     "whenLabel": "When",
@@ -37,7 +38,14 @@
     "deleting": "Deleting…",
     "deleteTitle": "Delete entry?",
     "deleteMessage": "This schedule entry will be permanently removed.",
-    "deleteConfirm": "Delete"
+    "deleteConfirm": "Delete",
+    "interaction": {
+      "ticket": "Ticket",
+      "client": "Client",
+      "contact": "Contact",
+      "phone": "Phone",
+      "email": "Email"
+    }
   },
   "form": {
     "createTitle": "New schedule entry",

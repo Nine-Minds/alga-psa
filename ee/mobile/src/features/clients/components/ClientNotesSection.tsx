@@ -27,6 +27,7 @@ export function ClientNotesSection({
   canAdd = false,
   initiallyCollapsed = false,
   collapseWhenEmpty = false,
+  variant = "card",
 }: {
   client: ApiClient | null;
   apiKey: string;
@@ -36,6 +37,10 @@ export function ClientNotesSection({
   canAdd?: boolean;
   initiallyCollapsed?: boolean;
   collapseWhenEmpty?: boolean;
+  /** "inline" renders just a label and the notes text (no card, header, or
+   *  collapse) for embedding inside another row, e.g. the ticket's Client field.
+   *  It renders nothing at all when there are no notes. */
+  variant?: "card" | "inline";
 }) {
   const { t } = useTranslation("clients");
   const { colors, spacing, typography, borderRadius } = useTheme();
@@ -96,6 +101,34 @@ export function ClientNotesSection({
     setNoteDraft("");
     await load();
   }, [apiKey, blockData, client, clientId, load, noteDraft, t]);
+
+  if (variant === "inline") {
+    if (loading || (!error && !notesText && !legacyText)) return null;
+    return (
+      <View testID="client-notes-inline" style={{ marginTop: spacing.sm }}>
+        <Text style={{ ...typography.caption, color: colors.textSecondary }}>{title}</Text>
+        {error ? (
+          <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm, marginTop: 2 }}>
+            <Text style={{ ...typography.caption, color: colors.danger, flex: 1 }}>{error}</Text>
+            <Pressable
+              onPress={() => { setLoading(true); void load(); }}
+              accessibilityRole="button"
+              accessibilityLabel={t("notes.retry")}
+              hitSlop={8}
+            >
+              <Text style={{ ...typography.caption, color: colors.primary }}>{t("notes.retry")}</Text>
+            </Pressable>
+          </View>
+        ) : null}
+        {notesText ? (
+          <Text testID="client-notes-body" style={{ ...typography.body, color: colors.text, marginTop: 2 }}>{notesText}</Text>
+        ) : null}
+        {legacyText ? (
+          <Text testID="client-notes-legacy" style={{ ...typography.body, color: colors.text, marginTop: notesText ? spacing.xs : 2 }}>{legacyText}</Text>
+        ) : null}
+      </View>
+    );
+  }
 
   return (
     <Card accessibilityLabel={title}>

@@ -228,7 +228,10 @@
       "selectedHint": "A schedule entry will be added to the selected users' AlgaPSA calendars.",
       "usersError": "Could not load users.",
       "you": "You"
-    }
+    },
+    "scheduleTitle": "Schedule interaction",
+    "scheduleSubmit": "Schedule",
+    "scheduleSuccess": "Interaction scheduled"
   },
   "callPrompt": {
     "title": "Log this call?",

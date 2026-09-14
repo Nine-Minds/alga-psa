@@ -183,4 +183,22 @@ describe("ClientNotesSection", () => {
     expect(texts(renderer)).toContain("Permission denied");
     expect(renderer.root.findAllByProps({ accessibilityLabel: "client-note-submit" }).length).toBeGreaterThan(0);
   });
+
+  it("inline variant renders only a label and the text, and nothing when there are no notes", async () => {
+    const empty = render({ variant: "inline" });
+    await flush();
+    expect(empty.root.findAllByProps({ testID: "client-notes-inline" })).toHaveLength(0);
+    expect(empty.root.findAllByProps({ accessibilityLabel: "expand notes.title" })).toHaveLength(0);
+
+    getClientNotesMock.mockResolvedValue({
+      ok: true,
+      data: { data: { document: {}, blockData: [paragraph("Gate code 4321")], lastUpdated: null } },
+    });
+    const withNotes = render({ variant: "inline", titleKey: "notes.ticketTitle", legacyNotes: "Old note" });
+    await flush();
+    expect(texts(withNotes)).toContain("notes.ticketTitle");
+    expect(withNotes.root.findByProps({ testID: "client-notes-body" }).props.children).toBe("Gate code 4321");
+    expect(withNotes.root.findByProps({ testID: "client-notes-legacy" }).props.children).toBe("Old note");
+    expect(withNotes.root.findAllByType("MockSectionHeader" as never)).toHaveLength(0);
+  });
 });

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Modal, Pressable, ScrollView, Switch, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import type { ApiClient } from "../../../api";
@@ -47,6 +48,7 @@ export function LogInteractionModal({
 }) {
   const { t } = useTranslation("opportunities");
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const { showToast } = useToast();
 
   const [types, setTypes] = useState<InteractionType[]>([]);
@@ -179,7 +181,12 @@ export function LogInteractionModal({
       setError(serverErrorMessage(result.error, t("errors.generic", "Something went wrong. Please try again.")));
       return;
     }
-    showToast({ message: t("logInteraction.success", "Interaction logged"), tone: "success" });
+    showToast({
+      message: addToSchedule
+        ? t("logInteraction.scheduleSuccess", "Interaction scheduled")
+        : t("logInteraction.success", "Interaction logged"),
+      tone: "success",
+    });
     onLogged();
     onClose();
   }, [addToSchedule, apiKey, assignees, canAssignOthers, canSubmit, client, clientId, contactNameId, duration, notes, onClose, onLogged, opportunityId, showToast, startIso, t, ticketId, title, typeId, userId]);
@@ -190,11 +197,11 @@ export function LogInteractionModal({
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <ScrollView
         style={{ flex: 1, backgroundColor: theme.colors.background }}
-        contentContainerStyle={{ padding: theme.spacing.lg, paddingBottom: theme.spacing.xl }}
+        contentContainerStyle={{ padding: theme.spacing.lg, paddingTop: insets.top + theme.spacing.lg, paddingBottom: insets.bottom + theme.spacing.xl }}
         keyboardShouldPersistTaps="handled"
       >
         <Text style={{ ...theme.typography.title, color: theme.colors.text }}>
-          {t("logInteraction.title", "Log interaction")}
+          {addToSchedule ? t("logInteraction.scheduleTitle", "Schedule interaction") : t("logInteraction.title", "Log interaction")}
         </Text>
 
         <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: theme.spacing.lg }}>
@@ -339,9 +346,9 @@ export function LogInteractionModal({
           <PrimaryButton
             onPress={() => void handleSubmit()}
             disabled={!canSubmit}
-            accessibilityLabel={t("logInteraction.submit", "Log it")}
+            accessibilityLabel={addToSchedule ? t("logInteraction.scheduleSubmit", "Schedule") : t("logInteraction.submit", "Log it")}
           >
-            {t("logInteraction.submit", "Log it")}
+            {addToSchedule ? t("logInteraction.scheduleSubmit", "Schedule") : t("logInteraction.submit", "Log it")}
           </PrimaryButton>
           <View style={{ flexDirection: "row" }}>
             <SecondaryButton

@@ -651,6 +651,15 @@ export function TicketDetailBody({
                 <Text style={{ ...typography.caption, color: colors.primary, marginTop: 2 }}>{ticket.location_name}</Text>
               </Pressable>
             ) : null}
+            {ticketClientId ? (
+              <ClientNotesSection
+                variant="inline"
+                client={client}
+                apiKey={session.accessToken}
+                clientId={ticketClientId}
+                titleKey="notes.ticketTitle"
+              />
+            ) : null}
           </KeyValue>
           <View style={{ height: spacing.sm }} />
           <KeyValue label={t("detail.created")} value={formatDateTimeWithRelative(ticket.entered_at)} />
@@ -661,18 +670,6 @@ export function TicketDetailBody({
           <View style={{ height: spacing.sm }} />
           <KeyValue label={t("detail.closed")} value={formatDateTimeWithRelative(ticket.closed_at)} />
           </TicketDetailsSection>
-          {ticketClientId ? (
-            <>
-              <View style={{ height: spacing.sm }} />
-              <ClientNotesSection
-                client={client}
-                apiKey={session.accessToken}
-                clientId={ticketClientId}
-                titleKey="notes.ticketTitle"
-                collapseWhenEmpty
-              />
-            </>
-          ) : null}
           <View style={{ height: spacing.sm }} />
           <TagsSection
             tags={tagsHook.tags}

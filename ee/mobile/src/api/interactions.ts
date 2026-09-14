@@ -23,6 +23,10 @@ export type InteractionItem = {
   user_id?: string;
   user_name?: string | null;
   interaction_date?: string | null;
+  start_time?: string | null;
+  end_time?: string | null;
+  status_name?: string | null;
+  is_status_closed?: boolean | null;
   duration?: number | null;
 };
 

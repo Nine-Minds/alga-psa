@@ -551,6 +551,17 @@
     "interaction": "Interaction",
     "errors": {
       "load": "Unable to load calls and emails."
+    },
+    "detail": {
+      "type": "Type",
+      "when": "When",
+      "scheduledFor": "Scheduled for",
+      "status": "Status",
+      "duration": "Duration",
+      "minutes": "{{count}} minutes",
+      "loggedBy": "Logged by",
+      "notes": "Notes",
+      "noNotes": "No notes"
     }
   }
 }
