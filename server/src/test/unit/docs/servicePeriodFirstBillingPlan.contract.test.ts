@@ -133,6 +133,7 @@ const billingCycleAlignmentPostInventoryRefs = new Set([
 // createFixedPlanAssignment helper); the snapshot remains an accurate record
 // of its point in time.
 const billingCycleAlignmentPostInventoryRemovals = new Set([
+  'server/src/lib/repositories/contractLineRepository.ts',
   'server/src/test/infrastructure/billing/credits/creditApplication.test.ts',
 ]);
 
@@ -140,6 +141,8 @@ const billingCycleAlignmentPostInventoryRemovals = new Set([
 // pass-0 inventory snapshot was taken (recurring service-period ledger work
 // landed after the inventory was captured).
 const servicePeriodPostInventoryRefs = new Set([
+  'packages/billing/src/lib/billing/pricing/isPeriodAlreadyInvoiced.ts',
+  'shared/billingClients/resolveFixedLineRate.ts',
   // Invoice ticket presentation (origin/main a81661446e) added template
   // descriptors and behavioral coverage after this historical snapshot.
   'packages/billing/src/lib/invoice-template-ast/collectionDescriptors.ts',

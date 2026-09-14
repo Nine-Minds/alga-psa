@@ -9,8 +9,8 @@ import { tenantDb } from '@alga-psa/db';
 // The schedule-selection semantics live in one place now (plan §0.5 / §2.3):
 // the deferred-revenue report and the billing engine cannot disagree about
 // which pricing schedule is active, including the null-rate-latest case.
-import { selectActivePricingSchedule, selectEffectiveServicePrice } from '@alga-psa/billing/lib/billing/pricing/resolveFixedLineRate';
-import type { ServicePriceRateRow } from '@alga-psa/billing/lib/billing/pricing/resolveFixedLineRate';
+import { selectActivePricingSchedule, selectEffectiveServicePrice } from '@alga-psa/shared/billingClients/resolveFixedLineRate';
+import type { ServicePriceRateRow } from '@alga-psa/shared/billingClients/resolveFixedLineRate';
 
 import { resolvePeriodFee, type BilledFeeCandidate } from './fee';
 import { classifyCreditSource, type CreditSourceInvoice } from './creditSource';

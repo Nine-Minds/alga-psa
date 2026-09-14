@@ -24,10 +24,10 @@
   },
   "dependencies": {
     "@alga-psa/auth": "*",
-    "@alga-psa/billing": "*",
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
     "@alga-psa/formatting": "*",
+    "@alga-psa/shared": "*",
     "@alga-psa/tenancy": "*",
     "@alga-psa/types": "*",
     "@alga-psa/validation": "*"

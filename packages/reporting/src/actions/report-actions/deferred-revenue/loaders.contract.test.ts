@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { resolveConfiguredFee, type RawBucketPeriodRow } from './loaders';
+import { resolveConfiguredFee, resolvePricingScheduleRate, type RawBucketPeriodRow } from './loaders';
 
 const source = readFileSync(new URL('./loaders.ts', import.meta.url), 'utf8');
 
@@ -64,4 +64,18 @@ describe('deferred revenue loaders tenant-scoped query contract', () => {
     const legacyOnly = periodRow({ catalogCurrencyRate: null, catalogDefaultRate: 10000 });
     expect(resolveConfiguredFee(legacyOnly, null, null)).toBe(10000);
   });
+});
+
+// The report's inclusive period end is converted to the shared resolver's
+// exclusive bound. Preserve scope precedence and null-rate blocking together.
+it('selects line schedules within the reporting period without reviving older rates', () => {
+  const schedules: Parameters<typeof resolvePricingScheduleRate>[3] = [
+    { contractId: 'contract-1', contractLineId: null, effectiveDate: '2023-01-20', endDate: null, customRate: 9000 },
+    { contractId: 'contract-1', contractLineId: 'line-1', effectiveDate: '2023-01-01', endDate: null, customRate: 7000 },
+    { contractId: 'contract-1', contractLineId: 'line-1', effectiveDate: '2023-02-01', endDate: null, customRate: 11000 },
+    { contractId: 'other-contract', contractLineId: 'line-1', effectiveDate: '2023-01-31', endDate: null, customRate: 99000 },
+  ];
+  expect(resolvePricingScheduleRate('2023-01-01', '2023-01-31', 'contract-1', schedules, 'line-1')).toBe(7000);
+  schedules.push({ contractId: 'contract-1', contractLineId: 'line-1', effectiveDate: '2023-01-31', endDate: null, customRate: null });
+  expect(resolvePricingScheduleRate('2023-01-01', '2023-01-31', 'contract-1', schedules, 'line-1')).toBeNull();
 });
