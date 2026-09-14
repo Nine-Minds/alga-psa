@@ -545,8 +545,8 @@
   },
   "callsEmails": {
     "title": "Calls and emails",
-    "log": "Log",
-    "logInteraction": "Log call or email",
+    "log": "Add",
+    "logInteraction": "Add call or email",
     "empty": "No calls or emails logged",
     "interaction": "Interaction",
     "errors": {
