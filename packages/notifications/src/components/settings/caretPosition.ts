@@ -120,3 +120,50 @@ export function scrollTopForOffset(offsetTop: number, clientHeight: number): num
   if (!Number.isFinite(offsetTop)) return 0;
   return Math.max(0, offsetTop - clientHeight / 3);
 }
+
+/**
+ * How far a surrounding pane has to move to bring a point at viewport `top` a
+ * third of the way down itself. Positive scrolls down.
+ */
+export function scrollDeltaForOffset(top: number, paneTop: number, paneHeight: number): number {
+  if (!Number.isFinite(top)) return 0;
+  return top - (paneTop + paneHeight / 3);
+}
+
+/** The nearest ancestor that is actually scrolling right now. */
+function scrollParent(element: HTMLElement): HTMLElement | null {
+  let node = element.parentElement;
+  while (node) {
+    const { overflowY } = window.getComputedStyle(node);
+    if ((overflowY === 'auto' || overflowY === 'scroll') && node.scrollHeight > node.clientHeight + 1) {
+      return node;
+    }
+    node = node.parentElement;
+  }
+  return null;
+}
+
+/**
+ * Brings a character of a textarea's value into view.
+ *
+ * Asking the textarea first costs nothing and is clamped to whatever room it
+ * has — TextArea grows to fit its content, so that is usually none and the pane
+ * around it does the work. Whatever the textarea managed is subtracted before
+ * the pane is asked for the rest, so the two can never fight.
+ */
+export function revealOffset(element: HTMLTextAreaElement, offset: number): void {
+  const offsetTop = measureOffsetTop(element, offset);
+  if (!Number.isFinite(offsetTop)) return;
+
+  element.scrollTop = scrollTopForOffset(offsetTop, element.clientHeight);
+
+  const pane = scrollParent(element);
+  if (!pane) return;
+
+  const paneRect = pane.getBoundingClientRect();
+  pane.scrollTop += scrollDeltaForOffset(
+    element.getBoundingClientRect().top + offsetTop - element.scrollTop,
+    paneRect.top,
+    pane.clientHeight,
+  );
+}

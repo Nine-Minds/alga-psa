@@ -46,12 +46,7 @@ import {
   TemplateVariablePanel,
   VariableReferenceDialog,
 } from "./TemplateVariableReference";
-import {
-  measureCaretMenuPosition,
-  measureOffsetTop,
-  scrollTopForOffset,
-  type CaretMenuPosition,
-} from "./caretPosition";
+import { measureCaretMenuPosition, revealOffset, type CaretMenuPosition } from "./caretPosition";
 import { getTenantLocaleSettingsAction } from "@alga-psa/tenancy/actions/tenant-actions/tenantLocaleActions";
 import { collectTemplateLanguages, initialLanguageSelection } from "./emailTemplatesState";
 import type { SourceRange } from "./emailTemplateSourceMap";
@@ -758,16 +753,6 @@ function useDebouncedValue<T>(value: T, delay: number): T {
   return debounced;
 }
 
-/**
- * Brings a source offset into view after a preview click, the mirror image of
- * the preview's own scrollIntoView when the caret moves: first the pane scrolls
- * to the editor, then the editor scrolls to the character.
- */
-function scrollToOffset(element: HTMLTextAreaElement, offset: number) {
-  element.scrollIntoView({ block: 'nearest' });
-  element.scrollTop = scrollTopForOffset(measureOffsetTop(element, offset), element.clientHeight);
-}
-
 function EditTemplateDialog({
   isOpen,
   onClose,
@@ -879,7 +864,8 @@ function EditTemplateDialog({
     lastFocusedField.current = 'html_content';
     element.focus();
     element.setSelectionRange(range.start, range.end);
-    scrollToOffset(element, range.start);
+    // The mirror image of the preview's own scrollIntoView when the caret moves.
+    revealOffset(element, range.start);
     setCaretOffset(range.start);
   };
 

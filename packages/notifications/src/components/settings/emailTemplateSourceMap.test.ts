@@ -145,8 +145,7 @@ describe('side-by-side editor', () => {
     // The preview scrolls to the caret's element; a preview click has to scroll
     // the source the same way, and a template line wraps many times over.
     expect(previewSource).toContain("match.scrollIntoView({ block: 'nearest' })");
-    expect(templatesSource).toContain("element.scrollIntoView({ block: 'nearest' })");
-    expect(templatesSource).toContain('scrollTopForOffset(measureOffsetTop(element, offset), element.clientHeight)');
+    expect(templatesSource).toContain('revealOffset(element, range.start)');
     expect(templatesSource).not.toContain("split('\\n').length - 1");
   });
 
