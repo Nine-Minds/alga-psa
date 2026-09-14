@@ -721,6 +721,33 @@
       "cancel": "Annuleren",
       "saveChanges": "Wijzigingen opslaan"
     },
+    "bulk": {
+      "selectedCount": "{{count}} geselecteerd",
+      "selectAll": "Alle services selecteren",
+      "clear": "Selectie wissen",
+      "actions": {
+        "activate": "Activeren",
+        "deactivate": "Deactiveren",
+        "delete": "Verwijderen"
+      },
+      "deleteDialog": {
+        "title": "Services verwijderen",
+        "message": "{{count}} geselecteerde service(s) definitief verwijderen? Services waarnaar nog wordt verwezen door contracten of facturen worden overgeslagen. Deze actie kan niet ongedaan worden gemaakt."
+      },
+      "feedback": {
+        "activateSuccess": "{{count}} service(s) geactiveerd",
+        "activatePartial": "{{count}} service(s) geactiveerd; {{failed}} konden niet worden geactiveerd",
+        "activateError": "Kan {{count}} service(s) niet activeren",
+        "deactivateSuccess": "{{count}} service(s) gedeactiveerd",
+        "deactivatePartial": "{{count}} service(s) gedeactiveerd; {{failed}} konden niet worden gedeactiveerd",
+        "deactivateError": "Kan {{count}} service(s) niet deactiveren",
+        "deleteSuccess": "{{count}} service(s) verwijderd",
+        "deletePartial": "{{count}} service(s) verwijderd; {{failed}} konden niet worden verwijderd",
+        "deletePartialBlocked": "{{count}} service(s) verwijderd; {{failed}} konden niet worden verwijderd: {{names}}",
+        "deleteBlocked": "Kan {{count}} service(s) niet verwijderen — nog in gebruik: {{names}}",
+        "deleteError": "Kan {{count}} service(s) niet verwijderen"
+      }
+    },
     "table": {
       "serviceName": "Dienstnaam",
       "serviceType": "Servicetype",
@@ -760,6 +787,33 @@
       "restore": "Herstellen",
       "archive": "Archief",
       "delete": "Verwijderen"
+    },
+    "bulk": {
+      "selectedCount": "{{count}} geselecteerd",
+      "selectAll": "Alle producten selecteren",
+      "clear": "Selectie wissen",
+      "actions": {
+        "archive": "Archiveren",
+        "restore": "Herstellen",
+        "delete": "Verwijderen"
+      },
+      "deleteDialog": {
+        "title": "Producten definitief verwijderen",
+        "message": "{{count}} geselecteerde product(en) definitief verwijderen? Producten die aan bestaande gegevens zijn gekoppeld, worden overgeslagen. Deze actie kan niet ongedaan worden gemaakt."
+      },
+      "feedback": {
+        "archiveSuccess": "{{count}} product(en) gearchiveerd",
+        "archivePartial": "{{count}} product(en) gearchiveerd; {{failed}} konden niet worden gearchiveerd",
+        "archiveError": "Kan {{count}} product(en) niet archiveren",
+        "restoreSuccess": "{{count}} product(en) hersteld",
+        "restorePartial": "{{count}} product(en) hersteld; {{failed}} konden niet worden hersteld",
+        "restoreError": "Kan {{count}} product(en) niet herstellen",
+        "deleteSuccess": "{{count}} product(en) definitief verwijderd",
+        "deletePartial": "{{count}} product(en) verwijderd; {{failed}} konden niet worden verwijderd",
+        "deletePartialBlocked": "{{count}} product(en) verwijderd; {{failed}} konden niet worden verwijderd: {{names}}",
+        "deleteBlocked": "Kan {{count}} product(en) niet verwijderen — nog in gebruik: {{names}}",
+        "deleteError": "Kan {{count}} product(en) niet verwijderen"
+      }
     },
     "filters": {
       "searchPlaceholder": "Zoek op naam, SKU, beschrijving...",

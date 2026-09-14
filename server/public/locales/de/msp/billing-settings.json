@@ -721,6 +721,33 @@
       "cancel": "Stornieren",
       "saveChanges": "Änderungen speichern"
     },
+    "bulk": {
+      "selectedCount": "{{count}} ausgewählt",
+      "selectAll": "Alle Dienste auswählen",
+      "clear": "Auswahl aufheben",
+      "actions": {
+        "activate": "Aktivieren",
+        "deactivate": "Deaktivieren",
+        "delete": "Löschen"
+      },
+      "deleteDialog": {
+        "title": "Dienste löschen",
+        "message": "{{count}} ausgewählte Dienste dauerhaft löschen? Dienste, die noch von Verträgen oder Rechnungen verwendet werden, werden übersprungen. Diese Aktion kann nicht rückgängig gemacht werden."
+      },
+      "feedback": {
+        "activateSuccess": "{{count}} Dienst(e) aktiviert",
+        "activatePartial": "{{count}} Dienst(e) aktiviert; {{failed}} konnten nicht aktiviert werden",
+        "activateError": "{{count}} Dienst(e) konnten nicht aktiviert werden",
+        "deactivateSuccess": "{{count}} Dienst(e) deaktiviert",
+        "deactivatePartial": "{{count}} Dienst(e) deaktiviert; {{failed}} konnten nicht deaktiviert werden",
+        "deactivateError": "{{count}} Dienst(e) konnten nicht deaktiviert werden",
+        "deleteSuccess": "{{count}} Dienst(e) gelöscht",
+        "deletePartial": "{{count}} Dienst(e) gelöscht; {{failed}} konnten nicht gelöscht werden",
+        "deletePartialBlocked": "{{count}} Dienst(e) gelöscht; {{failed}} konnten nicht gelöscht werden: {{names}}",
+        "deleteBlocked": "{{count}} Dienst(e) konnten nicht gelöscht werden – noch in Verwendung: {{names}}",
+        "deleteError": "{{count}} Dienst(e) konnten nicht gelöscht werden"
+      }
+    },
     "table": {
       "serviceName": "Dienstname",
       "serviceType": "Servicetyp",
@@ -760,6 +787,33 @@
       "restore": "Wiederherstellen",
       "archive": "Archiv",
       "delete": "Löschen"
+    },
+    "bulk": {
+      "selectedCount": "{{count}} ausgewählt",
+      "selectAll": "Alle Produkte auswählen",
+      "clear": "Auswahl aufheben",
+      "actions": {
+        "archive": "Archivieren",
+        "restore": "Wiederherstellen",
+        "delete": "Löschen"
+      },
+      "deleteDialog": {
+        "title": "Produkte dauerhaft löschen",
+        "message": "{{count}} ausgewählte Produkte dauerhaft löschen? Produkte, die vorhandenen Daten zugeordnet sind, werden übersprungen. Diese Aktion kann nicht rückgängig gemacht werden."
+      },
+      "feedback": {
+        "archiveSuccess": "{{count}} Produkt(e) archiviert",
+        "archivePartial": "{{count}} Produkt(e) archiviert; {{failed}} konnten nicht archiviert werden",
+        "archiveError": "{{count}} Produkt(e) konnten nicht archiviert werden",
+        "restoreSuccess": "{{count}} Produkt(e) wiederhergestellt",
+        "restorePartial": "{{count}} Produkt(e) wiederhergestellt; {{failed}} konnten nicht wiederhergestellt werden",
+        "restoreError": "{{count}} Produkt(e) konnten nicht wiederhergestellt werden",
+        "deleteSuccess": "{{count}} Produkt(e) dauerhaft gelöscht",
+        "deletePartial": "{{count}} Produkt(e) gelöscht; {{failed}} konnten nicht gelöscht werden",
+        "deletePartialBlocked": "{{count}} Produkt(e) gelöscht; {{failed}} konnten nicht gelöscht werden: {{names}}",
+        "deleteBlocked": "{{count}} Produkt(e) konnten nicht gelöscht werden – noch in Verwendung: {{names}}",
+        "deleteError": "{{count}} Produkt(e) konnten nicht gelöscht werden"
+      }
     },
     "filters": {
       "searchPlaceholder": "Suche nach Name, SKU, Beschreibung...",
