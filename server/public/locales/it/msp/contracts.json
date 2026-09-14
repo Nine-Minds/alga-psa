@@ -504,7 +504,8 @@
       "addFromPresets": "Aggiungi da preimpostazioni",
       "collapseLine": "Comprimi linea contrattuale",
       "createCustom": "Crea personalizzata",
-      "expandLine": "Espandi linea contrattuale"
+      "expandLine": "Espandi linea contrattuale",
+      "resetToStandard": "Ripristina allo standard"
     },
     "billingProfile": {
       "hint": "Gli addebiti di questa riga vengono fatturati a questo profilo, prevalendo sul contratto.",
@@ -550,7 +551,8 @@
       "readOnly": "Questo contratto predefinito gestito dal sistema è solo di attribuzione. La creazione di linee contrattuali è disabilitata."
     },
     "dialogs": {
-      "confirmRemove": "Rimuovere la linea contrattuale \"{{name}}\"?"
+      "confirmRemove": "Rimuovere la linea contrattuale \"{{name}}\"?",
+      "confirmResetRate": "Ripristinare questa riga alla tariffa di catalogo standard? Il prezzo personalizzato memorizzato verrà rimosso."
     },
     "empty": {
       "noneAdded": "Nessuna linea contrattuale ancora aggiunta.",
@@ -562,7 +564,8 @@
       "failedToLoad": "Impossibile caricare le linee contrattuali",
       "failedToRefresh": "Impossibile aggiornare le linee contrattuali",
       "failedToRemove": "Impossibile rimuovere la linea contrattuale",
-      "failedToUpdate": "Impossibile aggiornare la linea contrattuale"
+      "failedToUpdate": "Impossibile aggiornare la linea contrattuale",
+      "failedToResetRate": "Impossibile ripristinare la tariffa della riga"
     },
     "loading": {
       "contractLines": "Caricamento linee contrattuali",
@@ -601,7 +604,12 @@
       "semanticsEffectiveFrom": "Modifiche a prezzi e misurazione del servizio con effetto dal",
       "prospectiveSemanticsHelp": "Le modifiche si applicano al confine del periodo di servizio; quantità, misurazione e prezzi precedenti restano invariati. Cambiando la data si ricaricano le impostazioni applicabili da rivedere."
     },
-    "title": "Linee contrattuali"
+    "title": "Linee contrattuali",
+    "rateProvenance": {
+      "standard": "Standard",
+      "custom": "Personalizzato",
+      "unreviewed": "Non revisionato"
+    }
   },
   "contractLineEdit": {
     "actions": {

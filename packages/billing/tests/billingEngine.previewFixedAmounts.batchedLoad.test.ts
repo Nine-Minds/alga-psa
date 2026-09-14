@@ -22,6 +22,9 @@ vi.mock('@alga-psa/db', async () => {
     tenantDb: (conn: any, _tenant: string) => ({
       table: (table: string) => conn(table),
       tenantJoin: (query: any) => query,
+      // Rows are pre-merged into one table array in this fixture, so the
+      // lateral "first matching" join is a passthrough here as well.
+      tenantJoinFirstMatching: (query: any) => query,
     }),
   };
 });
@@ -168,6 +171,7 @@ function createBuilder(rows: Row[]) {
       });
       return builder;
     },
+    orderByRaw: () => builder,
     select: (...columns: any[]) => {
       projection = columns.flat();
       return builder;
@@ -594,7 +598,10 @@ describe('previewFixedChargeAmountsForInvoiceWindow batched load', () => {
 
     expect(secondWindowCalls).not.toContain('contract_lines');
     expect(secondWindowCalls).not.toContain('contract_line_services');
-    expect(session.get('line-dead')?.unpriceable).toBe(true);
+    // The session is keyed by line + as-of date + currency (catalog prices are
+    // effective-dated), so match the line by key prefix rather than bare id.
+    const deadEntry = [...session.entries()].find(([key]) => key.startsWith('line-dead'));
+    expect(deadEntry?.[1].unpriceable).toBe(true);
     expect(
       baseRateError.mock.calls.filter(([message]) =>
         String(message).includes('Unable to determine base_rate'),

@@ -117,6 +117,8 @@ vi.mock('@alga-psa/ui/components/Dialog', () => ({
     </div>
   ) : null,
   DialogContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DialogDescription: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
+  DialogFooter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
 vi.mock('@alga-psa/ui/components/Button', () => ({

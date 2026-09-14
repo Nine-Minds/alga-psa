@@ -694,7 +694,10 @@
       "allServicesAssociated": "Tutti i servizi disponibili sono già associati a questa riga di contratto.",
       "badges": {
         "billingMismatch": "Mancata corrispondenza della fatturazione",
-        "defaultConfigType": "Predefinito"
+        "defaultConfigType": "Predefinito",
+        "standard": "Standard",
+        "custom": "Personalizzato",
+        "unreviewed": "Non verificato"
       },
       "billingMethod": {
         "fixed": "Prezzo fisso",

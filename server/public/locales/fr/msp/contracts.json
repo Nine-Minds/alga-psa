@@ -504,7 +504,8 @@
       "addFromPresets": "Ajouter à partir des préréglages",
       "collapseLine": "Replier la ligne de contrat",
       "createCustom": "Créer personnalisé",
-      "expandLine": "Déplier la ligne de contrat"
+      "expandLine": "Déplier la ligne de contrat",
+      "resetToStandard": "Réinitialiser au standard"
     },
     "billingProfile": {
       "hint": "Les charges de cette ligne sont facturées à ce profil, remplaçant le contrat.",
@@ -550,7 +551,8 @@
       "readOnly": "Ce contrat par défaut géré par le système est à attribution uniquement. La création de lignes de contrat est désactivée."
     },
     "dialogs": {
-      "confirmRemove": "Retirer la ligne de contrat « {{name}} » ?"
+      "confirmRemove": "Retirer la ligne de contrat « {{name}} » ?",
+      "confirmResetRate": "Réinitialiser cette ligne au tarif catalogue standard ? Le tarif personnalisé enregistré sera supprimé."
     },
     "empty": {
       "noneAdded": "Aucune ligne de contrat ajoutée pour le moment.",
@@ -562,7 +564,8 @@
       "failedToLoad": "Échec du chargement des lignes de contrat",
       "failedToRefresh": "Échec de l'actualisation des lignes de contrat",
       "failedToRemove": "Échec de la suppression de la ligne de contrat",
-      "failedToUpdate": "Échec de la mise à jour de la ligne de contrat"
+      "failedToUpdate": "Échec de la mise à jour de la ligne de contrat",
+      "failedToResetRate": "Échec de la réinitialisation du tarif de la ligne"
     },
     "loading": {
       "contractLines": "Chargement des lignes de contrat",
@@ -601,7 +604,12 @@
       "semanticsEffectiveFrom": "Modifications de tarification et de mesure du service applicables à partir du",
       "prospectiveSemanticsHelp": "Les modifications s'appliquent à cette limite de période de service ; les quantités, la mesure et la tarification antérieures sont conservées. Changer la date recharge les paramètres applicables pour vérification."
     },
-    "title": "Lignes de contrat"
+    "title": "Lignes de contrat",
+    "rateProvenance": {
+      "standard": "Standard",
+      "custom": "Personnalisé",
+      "unreviewed": "Non vérifié"
+    }
   },
   "contractLineEdit": {
     "actions": {

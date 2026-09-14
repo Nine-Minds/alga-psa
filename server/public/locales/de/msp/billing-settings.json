@@ -641,6 +641,8 @@
     }
   },
   "serviceCatalog": {
+    "scheduledPriceBadge": "Nächste Änderung {{date}}",
+    "scheduledPriceNotice": "Für {{date}} ist eine Preisänderung geplant. Speichern aktualisiert hier den aktuellen Preis und hebt die geplante Änderung nicht auf.",
     "title": "Servicekatalogverwaltung",
     "loading": "Ladedienste",
     "dialog": {
@@ -727,7 +729,11 @@
       "unit": "Einheit",
       "taxRate": "Steuersatz",
       "nonTaxable": "Nicht steuerpflichtig",
-      "thisService": "diesen Dienst"
+      "thisService": "diesen Dienst",
+      "contractUsage": "Verträge",
+      "contractUsageNone": "Nicht verwendet",
+      "contractUsageOne": "In {{contracts}} Vertrag verwendet",
+      "contractUsageMany": "In {{contracts}} Verträgen verwendet"
     },
     "errors": {
       "fetchServices": "Dienste konnten nicht abgerufen werden",
@@ -1438,6 +1444,70 @@
     },
     "sections": {
       "userRates": "Benutzersätze"
+    }
+  },
+  "priceChangeRollout": {
+    "title": "Preisänderung ausrollen",
+    "previewFailed": "Die Vorschau der Preisänderung konnte nicht geladen werden.",
+    "skip": "Preis nur speichern",
+    "apply": "Auf vererbte Positionen anwenden",
+    "applying": "Wird gespeichert…",
+    "effectiveDate": "Gültigkeitsdatum",
+    "effectiveDateHint": "Standard ist die nächste Abrechnungsperiodengrenze.",
+    "willChange": "Ändert sich",
+    "noInheritedLines": "An diesem Datum ändert sich keine vererbte Position.",
+    "custom": "Ändert sich nicht — individuell",
+    "unreviewed": "Ändert sich nicht — noch nicht klassifiziert",
+    "unreviewedAlert": "Diese Positionen werden unverändert abgerechnet, bis Sie sie überprüfen.",
+    "reviewRates": "Preise überprüfen",
+    "excluded": "Ausgeschlossen — bereits abgerechnet",
+    "none": "Keine.",
+    "totalMonthlyDelta": "Monatliche Gesamtumsatzänderung",
+    "acrossAllInherited": "Über alle {{lines}} vererbten Position(en).",
+    "applyFailed": "Das Ausrollen konnte nicht angewendet werden. Es wurden keine Änderungen vorgenommen.",
+    "skipFailed": "Die Preisänderung konnte nicht gespeichert werden.",
+    "columns": {
+      "client": "Kunde",
+      "contract": "Vertrag",
+      "line": "Position",
+      "current": "Aktuell",
+      "new": "Neu",
+      "delta": "Differenz",
+      "rateAtDate": "Preis am Datum"
+    },
+    "followsCatalog": "Folgt dem Katalog",
+    "close": "Schließen",
+    "usageTitle": "Servicenutzung"
+  },
+  "rateReview": {
+    "title": "Preisüberprüfung",
+    "close": "Schließen",
+    "applySelected": "Auswahl anwenden",
+    "applying": "Wird angewendet…",
+    "previewFailed": "Die Preise zur Überprüfung konnten nicht geladen werden.",
+    "applyFailed": "Die Preisüberprüfung konnte nicht angewendet werden. Es wurden keine Änderungen vorgenommen.",
+    "intro": "Positionen, die genau auf dem Katalogpreis liegen, ändern sich in Ihrer nächsten Rechnung nicht. Abweichende Positionen behalten ihren aktuellen Preis als ausgehandelten Preis.",
+    "applied": "{{applied}} Änderung(en) angewendet.",
+    "refused": "{{refused}} Zeile(n) wurden abgelehnt, weil sie sich seit der Vorschau geändert haben.",
+    "summary": "{{total}} ungeprüfte Position(en): {{inherited}} exakte Übereinstimmung(en), {{custom}} ausgehandelt, {{skipped}} übersprungen.",
+    "allClassified": "Alle Positionen wurden klassifiziert. Nichts zu überprüfen.",
+    "noService": "Kein Service",
+    "columns": {
+      "contract": "Vertrag",
+      "currentRate": "Aktueller Preis",
+      "catalogRate": "Katalogpreis",
+      "proposed": "Vorschlag",
+      "confidence": "Konfidenz"
+    },
+    "proposal": {
+      "inherited": "Katalog folgen",
+      "custom": "Als individuell beibehalten",
+      "unreviewed": "Ungeprüft belassen"
+    },
+    "confidence": {
+      "exact": "Exakte Übereinstimmung",
+      "differs": "Vom Katalog abweichend",
+      "needsDecision": "Entscheidung erforderlich"
     }
   }
 }
