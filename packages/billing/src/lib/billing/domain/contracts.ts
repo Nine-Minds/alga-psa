@@ -97,6 +97,11 @@ export type ResolvedContractBillingChargeFacts =
         serviceId: string;
         serviceName: string;
         defaultRate: number | string | null;
+        /**
+         * Effective `service_prices.rate` in the contract currency; preferred
+         * over the currency-untagged `defaultRate` when present.
+         */
+        currencyRate?: number | string | null;
         taxRateId: string | null;
         configurationId: string;
         serviceQuantity?: number | string | null;
