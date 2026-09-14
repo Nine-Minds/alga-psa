@@ -522,3 +522,54 @@ explicit target before preview or persistence:
   a second service to the same Xero revenue account.
 - Keep the commit local; do not push or open a PR. Parent merge base remains
   `0af97e5c61`.
+
+## P1 review repair round 2026-09-13 (ambiguity override + export authorization)
+
+Independent review of `9c592603d2` reproduced two regressions in the manual
+export dialog and required the connection read to leave the broad health
+payload:
+
+1. **Ambiguity must not become an implicit override.** The dialog selected
+   `realms.find(isDefault) ?? realms[0]`. For an ambiguous saved Xero
+   organisation the shared resolver returns `connected=false` with every realm
+   `isDefault=false`, so the `?? realms[0]` branch silently chose the first
+   connection and submitted it as an explicit target — bypassing the
+   server-side fail-closed ambiguity guard. The dialog now auto-selects only a
+   resolver-produced default (`view.connected && isDefault`). An unresolved
+   provider leaves the target unset, shows actionable guidance, keeps Create
+   disabled, and submits a connection only when the operator deliberately picks
+   one. Legitimate absent/unmatched saved defaults still resolve through the
+   shared resolver and auto-select as before.
+
+2. **Export operators must not need `catalog_read`.** Loading connections
+   through `getAccountingSyncHealth` required `catalog_read`, but the export
+   surface is gated by `exports_execute`. A new
+   `getAccountingExportConnections(adapterType)` action is authorized by the
+   same `exports_execute` check as the rest of the export surface and returns
+   only `{ adapterType, connected, realms, organisationName, issue }` through a
+   new `resolveAccountingConnections` helper that reuses
+   `resolveConnectedAccountingIntegration` — never the settings, cycle history,
+   operation counts or exception data in the health payload. Loading failures
+   now surface an actionable inline error with a Retry button instead of
+   silently leaving Create disabled.
+
+### Validation
+
+- Composed UI suite now covers: adapter switching and race protection,
+  ambiguous Xero requiring a deliberate choice, connection-load failure with a
+  successful Retry, and an `exports_execute`-without-`catalog_read` operator
+  creating a live export.
+- New real authorization suite drives `getAccountingExportConnections` against
+  the real provider resolver: `exports_execute` alone succeeds,
+  `catalog_read` alone is denied, no capability is denied.
+- New DB-backed suite
+  `accountingExportConnectionSelection.db.test.ts` runs the real selector,
+  export service/repository and mapping resolver/repository: a selected Xero
+  connection persists `target_realm=conn-a` and its invoice/service mappings
+  resolve for `conn-a` only; a selected QBO realm persists and resolves for
+  that realm only; an invalid explicit pair writes no batch row.
+- 93 billing accounting tests pass; 382 accounting/QBO/Xero behavioral tests
+  pass via the server config; billing + server typechecks pass; billing tsup
+  build passes; changed-file ESLint 0 errors. No live vendor call, full
+  Next.js build, or new browser smoke run is claimed.
+- Keep the commits local; do not push or open a PR.

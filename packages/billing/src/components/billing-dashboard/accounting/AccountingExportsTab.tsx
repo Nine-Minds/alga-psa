@@ -13,9 +13,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import toast from 'react-hot-toast';
 import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { cancelAccountingExportBatch, createAccountingExportBatch, executeAccountingExportBatch, getAccountingExportBatch, listAccountingExportBatches } from '@alga-psa/billing/actions/accountingExportActions';
+import { cancelAccountingExportBatch, createAccountingExportBatch, executeAccountingExportBatch, getAccountingExportBatch, getAccountingExportConnections, listAccountingExportBatches } from '@alga-psa/billing/actions/accountingExportActions';
 import type { AccountingExportActionError } from '@alga-psa/billing/actions/accountingExportActions';
-import { getAccountingSyncHealth } from '@alga-psa/billing/actions/accountingSyncActions';
 import { useAccountingCapabilities } from '@alga-psa/auth/hooks/useAccountingCapabilities';
 
 type AccountingExportStatus =
@@ -171,7 +170,15 @@ export default function AccountingExportsTab(): React.JSX.Element {
   const [targetRealm, setTargetRealm] = useState<string>('');
   const [availableRealms, setAvailableRealms] = useState<Array<{ realmId: string; isDefault: boolean }>>([]);
   const [realmLoading, setRealmLoading] = useState(false);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [connectionIssue, setConnectionIssue] = useState<'ambiguous' | 'none_connected' | null>(null);
+  const [realmReloadNonce, setRealmReloadNonce] = useState(0);
   const realmRequestRef = useRef(0);
+  // Keep `t` out of the connection-loading effect deps: some i18n setups return
+  // a fresh bound function each render, which would re-trigger the effect
+  // forever. The ref keeps the latest translator available without looping.
+  const tRef = useRef(t);
+  tRef.current = t;
 
   const denyAccess = useCallback(() => {
     setAccessDenied(true);
@@ -181,6 +188,8 @@ export default function AccountingExportsTab(): React.JSX.Element {
     setCreateOpen(false);
     setAvailableRealms([]);
     setTargetRealm('');
+    setConnectionError(null);
+    setConnectionIssue(null);
   }, []);
 
   const loadBatches = useCallback(async () => {
@@ -224,15 +233,21 @@ export default function AccountingExportsTab(): React.JSX.Element {
   }, [denyAccess, t]);
 
   // Load the connected organisations for the currently selected live adapter.
-  // Switching adapters resets the previous provider's options and target
-  // immediately; a request token drops any in-flight response so an earlier
-  // provider can never repopulate the picker or reselect a stale target after
-  // the user has moved on. File adapters (CSV/desktop) have no accounting
-  // realm, so their selection is cleared and the export proceeds without one.
+  // This uses the export-scoped connection action (authorized by
+  // `exports_execute`, not `catalog_read`) and returns only connection choices,
+  // never the broader health payload. Switching adapters resets the previous
+  // provider's options and target immediately; a request token drops any
+  // in-flight response so an earlier provider can never repopulate the picker
+  // or reselect a stale target. A target is auto-selected only when the shared
+  // resolver produced a default — an ambiguous saved organisation leaves it
+  // unset so the operator must choose deliberately. File adapters have no
+  // accounting realm, so their selection is cleared.
   useEffect(() => {
     const requestId = ++realmRequestRef.current;
     setAvailableRealms([]);
     setTargetRealm('');
+    setConnectionIssue(null);
+    setConnectionError(null);
 
     if (
       !createOpen ||
@@ -251,18 +266,32 @@ export default function AccountingExportsTab(): React.JSX.Element {
     }
 
     setRealmLoading(true);
-    getAccountingSyncHealth({ preferredAdapterType: provider })
-      .then((health) => {
+    getAccountingExportConnections(provider)
+      .then((view) => {
         if (requestId !== realmRequestRef.current) return;
-        const realms = Array.isArray(health.realms) ? health.realms : [];
+        if (isActionPermissionError(view)) {
+          setRealmLoading(false);
+          denyAccess();
+          return;
+        }
+        const realms = Array.isArray(view.realms) ? view.realms : [];
         setAvailableRealms(realms);
-        const defaultRealm = realms.find((realm) => realm.isDefault) ?? realms[0];
+        setConnectionIssue(view.issue ?? null);
+        // Only auto-select when the shared resolver returned a usable default.
+        // An unresolved (ambiguous) selection deliberately stays unset.
+        const defaultRealm = view.connected
+          ? realms.find((realm) => realm.isDefault)
+          : undefined;
         setTargetRealm(defaultRealm ? defaultRealm.realmId : '');
       })
       .catch(() => {
         if (requestId !== realmRequestRef.current) return;
         setAvailableRealms([]);
         setTargetRealm('');
+        setConnectionIssue(null);
+        setConnectionError(tRef.current('accountingExports.createDialog.connectionLoadError', {
+          defaultValue: 'Could not load accounting connections. Check your connection settings and try again.',
+        }));
       })
       .finally(() => {
         if (requestId !== realmRequestRef.current) return;
@@ -274,6 +303,8 @@ export default function AccountingExportsTab(): React.JSX.Element {
     accountingCapabilities.loaded,
     adapterType,
     createOpen,
+    denyAccess,
+    realmReloadNonce,
   ]);
 
   useEffect(() => {
@@ -301,7 +332,12 @@ export default function AccountingExportsTab(): React.JSX.Element {
   // A live export cannot be submitted until its provider's connections have
   // loaded and a target is selected for that provider.
   const realmSelectionReady = !realmSelectionRequired || Boolean(targetRealm);
-  const canSubmit = !creating && !realmLoading && realmSelectionReady;
+  const canSubmit = !creating && !realmLoading && !connectionError && realmSelectionReady;
+  const showRealmPicker =
+    realmSelectionRequired && (availableRealms.length > 1 || (availableRealms.length > 0 && !targetRealm));
+  const retryConnectionLoad = useCallback(() => {
+    setRealmReloadNonce((nonce) => nonce + 1);
+  }, []);
 
   const onCreate = async () => {
     if (realmSelectionRequired && (realmLoading || !targetRealm)) {
@@ -549,7 +585,64 @@ export default function AccountingExportsTab(): React.JSX.Element {
               />
             </div>
 
-            {availableRealms.length > 1 && (
+            {realmSelectionRequired && realmLoading && (
+              <div className="text-sm text-muted-foreground" role="status" id="accounting-export-connections-loading">
+                {t('accountingExports.createDialog.loadingConnections', {
+                  defaultValue: 'Loading accounting connections...',
+                })}
+              </div>
+            )}
+
+            {connectionError && (
+              <div
+                id="accounting-export-connections-error"
+                role="alert"
+                className="flex items-start justify-between gap-3 rounded-md border border-[rgb(var(--badge-error-border))] bg-[rgb(var(--badge-error-bg))] p-3 text-sm text-[rgb(var(--badge-error-text))]"
+              >
+                <span>{connectionError}</span>
+                <Button
+                  id="accounting-export-connections-retry"
+                  variant="outline"
+                  size="sm"
+                  onClick={retryConnectionLoad}
+                >
+                  {t('accountingExports.actions.retry', { defaultValue: 'Retry' })}
+                </Button>
+              </div>
+            )}
+
+            {!connectionError && connectionIssue === 'ambiguous' && !targetRealm && (
+              <div
+                id="accounting-export-realm-guidance"
+                role="status"
+                className="rounded-md border border-[rgb(var(--color-border-200))] p-3 text-sm text-[rgb(var(--color-text-700))]"
+              >
+                {t('accountingExports.createDialog.ambiguousRealm', {
+                  defaultValue:
+                    'Your saved default accounting organisation is shared by more than one connection. Choose a connection to continue.',
+                })}
+              </div>
+            )}
+
+            {!connectionError && connectionIssue === 'none_connected' && (
+              <div
+                id="accounting-export-realm-guidance"
+                role="status"
+                className="rounded-md border border-[rgb(var(--color-border-200))] p-3 text-sm text-[rgb(var(--color-text-700))]"
+              >
+                {liveProvider === 'xero'
+                  ? t('accountingExports.createDialog.noXeroConnection', {
+                      defaultValue:
+                        'No Xero connection is available. Connect Xero in accounting settings to export.',
+                    })
+                  : t('accountingExports.createDialog.noQboConnection', {
+                      defaultValue:
+                        'No QuickBooks Online connection is available. Connect it in accounting settings to export.',
+                    })}
+              </div>
+            )}
+
+            {showRealmPicker && !connectionError && (
               <div className="space-y-2" id="accounting-export-realm-picker">
                 <Label htmlFor="accounting-export-realm">
                   {t('accountingExports.createDialog.fields.realm', { defaultValue: 'Target Company (Realm)' })}

@@ -17,7 +17,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import '@testing-library/jest-dom';
 
 const mocks = vi.hoisted(() => ({
-  health: vi.fn(),
+  connections: vi.fn(),
   list: vi.fn(),
   get: vi.fn(),
   create: vi.fn(),
@@ -44,10 +44,7 @@ vi.mock('@alga-psa/billing/actions/accountingExportActions', () => ({
   createAccountingExportBatch: (...args: unknown[]) => mocks.create(...args),
   executeAccountingExportBatch: (...args: unknown[]) => mocks.execute(...args),
   cancelAccountingExportBatch: (...args: unknown[]) => mocks.cancel(...args),
-}));
-
-vi.mock('@alga-psa/billing/actions/accountingSyncActions', () => ({
-  getAccountingSyncHealth: (...args: unknown[]) => mocks.health(...args),
+  getAccountingExportConnections: (...args: unknown[]) => mocks.connections(...args),
 }));
 
 vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
@@ -78,22 +75,30 @@ vi.mock('@alga-psa/ui/components/DatePicker', () => ({
   DatePicker: ({ id }: { id?: string }) => <input id={id} data-testid={id} readOnly />,
 }));
 
-const QBO_HEALTH = {
+const QBO_CONNECTIONS = {
+  adapterType: 'quickbooks_online',
+  connected: true,
+  issue: null,
+  organisationName: 'smoke-realm-a',
   realms: [
     { realmId: 'smoke-realm-a', isDefault: true },
     { realmId: 'smoke-realm-b', isDefault: false },
   ],
 };
 
-const XERO_HEALTH = {
+const XERO_CONNECTIONS = {
+  adapterType: 'xero',
+  connected: true,
+  issue: null,
+  organisationName: 'Smoke Org B',
   realms: [
     { realmId: 'smoke-conn-a', isDefault: false },
     { realmId: 'smoke-conn-b', isDefault: true },
   ],
 };
 
-function healthFor(provider: string) {
-  return provider === 'xero' ? XERO_HEALTH : QBO_HEALTH;
+function connectionsFor(provider: string) {
+  return provider === 'xero' ? XERO_CONNECTIONS : QBO_CONNECTIONS;
 }
 
 async function renderTab() {
@@ -124,9 +129,7 @@ beforeEach(() => {
   };
   mocks.list.mockResolvedValue([]);
   mocks.get.mockResolvedValue({ batch: null, lines: [], errors: [] });
-  mocks.health.mockImplementation(async (selection: { preferredAdapterType: string }) =>
-    healthFor(selection.preferredAdapterType)
-  );
+  mocks.connections.mockImplementation(async (provider: string) => connectionsFor(provider));
   mocks.create.mockImplementation(async (input: { adapter_type: string; target_realm?: string }) => ({
     ...input,
     batch_id: 'batch-1',
@@ -143,12 +146,12 @@ describe('AccountingExportsTab adapter-scoped connection selection', () => {
   it('exposes and submits only the selected QBO realm', async () => {
     await renderTab();
 
-    // Default adapter is a file adapter: no provider health call, no realm.
-    expect(mocks.health).not.toHaveBeenCalled();
+    // Default adapter is a file adapter: no provider connection call, no realm.
+    expect(mocks.connections).not.toHaveBeenCalled();
 
     selectAdapter('quickbooks_online');
     await waitFor(() => {
-      expect(mocks.health).toHaveBeenCalledWith({ preferredAdapterType: 'quickbooks_online' });
+      expect(mocks.connections).toHaveBeenCalledWith('quickbooks_online');
     });
     const qboRealm = await screen.findByTestId('accounting-export-realm');
     expect(qboRealm).toHaveValue('smoke-realm-a');
@@ -175,7 +178,7 @@ describe('AccountingExportsTab adapter-scoped connection selection', () => {
 
     selectAdapter('xero');
     await waitFor(() => {
-      expect(mocks.health).toHaveBeenCalledWith({ preferredAdapterType: 'xero' });
+      expect(mocks.connections).toHaveBeenCalledWith('xero');
     });
     await waitFor(() => {
       expect(screen.getByTestId('accounting-export-realm')).toHaveValue('smoke-conn-b');
@@ -194,7 +197,7 @@ describe('AccountingExportsTab adapter-scoped connection selection', () => {
 
   it('ignores a late response from a previously selected provider', async () => {
     const pending: Array<(value: unknown) => void> = [];
-    mocks.health.mockImplementation(
+    mocks.connections.mockImplementation(
       () => new Promise((resolve) => { pending.push(resolve); })
     );
 
@@ -207,12 +210,12 @@ describe('AccountingExportsTab adapter-scoped connection selection', () => {
 
     // Resolve the *new* (Xero) request first, then let the stale QBO request
     // finish last. The stale response must not overwrite the picker/target.
-    pending[1](XERO_HEALTH);
+    pending[1](XERO_CONNECTIONS);
     await waitFor(() => {
       expect(screen.getByTestId('accounting-export-realm')).toHaveValue('smoke-conn-b');
     });
 
-    pending[0](QBO_HEALTH);
+    pending[0](QBO_CONNECTIONS);
     await waitFor(() => {
       expect(screen.getByTestId('accounting-export-realm')).toHaveValue('smoke-conn-b');
     });
@@ -237,7 +240,7 @@ describe('AccountingExportsTab adapter-scoped connection selection', () => {
     await waitFor(() => {
       expect(screen.queryByTestId('accounting-export-realm-picker')).not.toBeInTheDocument();
     });
-    expect(mocks.health).toHaveBeenCalledTimes(1);
+    expect(mocks.connections).toHaveBeenCalledTimes(1);
 
     fireEvent.click(screen.getByRole('button', { name: 'Create Batch' }));
     await waitFor(() => {
@@ -252,7 +255,7 @@ describe('AccountingExportsTab adapter-scoped connection selection', () => {
 
   it('disables submission until the selected provider connections resolve', async () => {
     const pending: Array<(value: unknown) => void> = [];
-    mocks.health.mockImplementation(
+    mocks.connections.mockImplementation(
       () => new Promise((resolve) => { pending.push(resolve); })
     );
 
@@ -262,9 +265,89 @@ describe('AccountingExportsTab adapter-scoped connection selection', () => {
     await waitFor(() => expect(pending).toHaveLength(1));
     expect(screen.getByRole('button', { name: 'Create Batch' })).toBeDisabled();
 
-    pending[0](QBO_HEALTH);
+    pending[0](QBO_CONNECTIONS);
     await waitFor(() => {
       expect(screen.getByRole('button', { name: 'Create Batch' })).toBeEnabled();
+    });
+  });
+});
+
+describe('review regressions', () => {
+  it('does not silently select an org when the resolver reports an ambiguous Xero default', async () => {
+    mocks.connections.mockResolvedValue({
+      adapterType: 'xero',
+      connected: false,
+      issue: 'ambiguous',
+      organisationName: null,
+      realms: [
+        { realmId: 'smoke-conn-a', isDefault: false },
+        { realmId: 'smoke-conn-b', isDefault: false },
+      ],
+    });
+
+    await renderTab();
+    selectAdapter('xero');
+
+    // No auto-selected target, actionable guidance, and Create stays blocked.
+    await waitFor(() => {
+      expect(document.getElementById('accounting-export-realm-guidance')).toBeInTheDocument();
+    });
+    const realmSelect = await screen.findByTestId('accounting-export-realm');
+    // The native <select> mock shows its first option when the controlled value
+    // is empty; the disabled Create button is the real "no target" signal.
+    expect(screen.getByRole('button', { name: 'Create Batch' })).toBeDisabled();
+    expect(mocks.create).not.toHaveBeenCalled();
+
+    // A deliberate choice is required and must be submitted verbatim.
+    fireEvent.change(realmSelect, { target: { value: 'smoke-conn-b' } });
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Create Batch' })).toBeEnabled();
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Create Batch' }));
+    await waitFor(() => {
+      expect(mocks.create).toHaveBeenCalledWith(
+        expect.objectContaining({ adapter_type: 'xero', target_realm: 'smoke-conn-b' })
+      );
+    });
+  });
+
+  it('surfaces a connection-load failure with a retry that recovers', async () => {
+    mocks.connections
+      .mockRejectedValueOnce(new Error('Forbidden'))
+      .mockResolvedValueOnce(QBO_CONNECTIONS);
+
+    await renderTab();
+    selectAdapter('quickbooks_online');
+
+    const errorAlert = await screen.findByRole('alert');
+    expect(errorAlert).toHaveTextContent(/could not load accounting connections/i);
+    expect(screen.getByRole('button', { name: 'Create Batch' })).toBeDisabled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    await waitFor(() => {
+      expect(document.getElementById('accounting-export-connections-error')).toBeNull();
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId('accounting-export-realm')).toHaveValue('smoke-realm-a');
+    });
+    expect(screen.getByRole('button', { name: 'Create Batch' })).toBeEnabled();
+  });
+
+  it('lets an exports_execute user without catalog_read create a live export', async () => {
+    mocks.capabilities = { ...mocks.capabilities, catalogRead: false };
+
+    await renderTab();
+    selectAdapter('quickbooks_online');
+
+    await waitFor(() => {
+      expect(screen.getByTestId('accounting-export-realm')).toHaveValue('smoke-realm-a');
+    });
+    expect(screen.getByRole('button', { name: 'Create Batch' })).toBeEnabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Create Batch' }));
+    await waitFor(() => {
+      expect(mocks.create).toHaveBeenCalledWith(
+        expect.objectContaining({ adapter_type: 'quickbooks_online', target_realm: 'smoke-realm-a' })
+      );
     });
   });
 });
