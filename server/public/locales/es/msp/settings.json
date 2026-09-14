@@ -1561,7 +1561,8 @@
       "preview": {
         "subjectLabel": "Vista previa del asunto",
         "iframeTitle": "Vista previa de la plantilla de correo electrónico",
-        "sampleDataNote": "La vista previa usa datos de muestra. Los correos electrónicos reales contendrán valores reales."
+        "sampleDataNote": "La vista previa usa datos de muestra. Los correos electrónicos reales contendrán valores reales.",
+        "sourceSyncNote": "Haga clic en cualquier elemento de la vista previa para seleccionar su código; al mover el cursor en el código, el elemento se resalta aquí."
       },
       "errors": {
         "loadFailed": "Error al cargar las plantillas"
@@ -1610,7 +1611,8 @@
       },
       "tabs": {
         "source": "Código fuente",
-        "preview": "Vista previa"
+        "preview": "Vista previa",
+        "variables": "Variables"
       },
       "common": {
         "notAvailable": "N/D"

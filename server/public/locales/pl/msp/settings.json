@@ -1567,7 +1567,8 @@
       "preview": {
         "subjectLabel": "Podgląd tematu",
         "iframeTitle": "Podgląd szablonu e-maila",
-        "sampleDataNote": "Podgląd korzysta z przykładowych danych. Rzeczywiste e-maile będą zawierać prawdziwe wartości."
+        "sampleDataNote": "Podgląd korzysta z przykładowych danych. Rzeczywiste e-maile będą zawierać prawdziwe wartości.",
+        "sourceSyncNote": "Kliknij element w podglądzie, aby zaznaczyć odpowiadający mu kod; przesunięcie kursora w kodzie obrysowuje ten element tutaj."
       },
       "errors": {
         "loadFailed": "Nie udało się załadować szablonów"
@@ -1616,7 +1617,8 @@
       },
       "tabs": {
         "source": "Kod źródłowy",
-        "preview": "Podgląd"
+        "preview": "Podgląd",
+        "variables": "Zmienne"
       },
       "common": {
         "notAvailable": "Nd."

@@ -1561,7 +1561,8 @@
       "preview": {
         "subjectLabel": "Voorbeeld onderwerp",
         "iframeTitle": "Voorbeeld e-mailsjabloon",
-        "sampleDataNote": "Het voorbeeld gebruikt voorbeeldgegevens. Echte e-mails bevatten echte waarden."
+        "sampleDataNote": "Het voorbeeld gebruikt voorbeeldgegevens. Echte e-mails bevatten echte waarden.",
+        "sourceSyncNote": "Klik in het voorbeeld op een element om de bijbehorende code te selecteren; als u de cursor in de code verplaatst, wordt het element hier omlijnd."
       },
       "errors": {
         "loadFailed": "Sjablonen laden mislukt"
@@ -1610,7 +1611,8 @@
       },
       "tabs": {
         "source": "Broncode",
-        "preview": "Voorbeeld"
+        "preview": "Voorbeeld",
+        "variables": "Variabelen"
       },
       "common": {
         "notAvailable": "n.v.t."

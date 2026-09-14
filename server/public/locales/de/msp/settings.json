@@ -1561,7 +1561,8 @@
       "preview": {
         "subjectLabel": "Betreff-Vorschau",
         "iframeTitle": "Vorschau der E-Mail-Vorlage",
-        "sampleDataNote": "Die Vorschau verwendet Beispieldaten. Tatsächliche E-Mails enthalten echte Werte."
+        "sampleDataNote": "Die Vorschau verwendet Beispieldaten. Tatsächliche E-Mails enthalten echte Werte.",
+        "sourceSyncNote": "Klicken Sie in der Vorschau auf ein Element, um den zugehörigen Code auszuwählen; wenn Sie den Cursor im Code bewegen, wird das Element hier umrandet."
       },
       "errors": {
         "loadFailed": "Vorlagen konnten nicht geladen werden"
@@ -1610,7 +1611,8 @@
       },
       "tabs": {
         "source": "Quellcode",
-        "preview": "Vorschau"
+        "preview": "Vorschau",
+        "variables": "Variablen"
       },
       "common": {
         "notAvailable": "k. A."

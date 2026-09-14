@@ -1561,7 +1561,8 @@
       "preview": {
         "subjectLabel": "Subject Preview",
         "iframeTitle": "Email template preview",
-        "sampleDataNote": "Preview uses sample data. Actual emails will contain real values."
+        "sampleDataNote": "Preview uses sample data. Actual emails will contain real values.",
+        "sourceSyncNote": "Click anything in the preview to select the markup behind it; moving the cursor in the source outlines it here."
       },
       "errors": {
         "loadFailed": "Failed to load templates"
@@ -1610,7 +1611,8 @@
       },
       "tabs": {
         "source": "Source",
-        "preview": "Preview"
+        "preview": "Preview",
+        "variables": "Variables"
       },
       "common": {
         "notAvailable": "N/A"

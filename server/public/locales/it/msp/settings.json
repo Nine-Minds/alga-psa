@@ -1561,7 +1561,8 @@
       "preview": {
         "subjectLabel": "Anteprima oggetto",
         "iframeTitle": "Anteprima del modello di email",
-        "sampleDataNote": "L'anteprima utilizza dati di esempio. Le email reali conterranno valori reali."
+        "sampleDataNote": "L'anteprima utilizza dati di esempio. Le email reali conterranno valori reali.",
+        "sourceSyncNote": "Fai clic su un elemento dell’anteprima per selezionare il codice corrispondente; spostando il cursore nel codice, l’elemento viene evidenziato qui."
       },
       "errors": {
         "loadFailed": "Impossibile caricare i modelli"
@@ -1610,7 +1611,8 @@
       },
       "tabs": {
         "source": "Codice sorgente",
-        "preview": "Anteprima"
+        "preview": "Anteprima",
+        "variables": "Variabili"
       },
       "common": {
         "notAvailable": "N/D"

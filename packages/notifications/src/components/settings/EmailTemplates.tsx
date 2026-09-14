@@ -49,6 +49,7 @@ import {
 import { measureCaretMenuPosition, type CaretMenuPosition } from "./caretPosition";
 import { getTenantLocaleSettingsAction } from "@alga-psa/tenancy/actions/tenant-actions/tenantLocaleActions";
 import { collectTemplateLanguages, initialLanguageSelection } from "./emailTemplatesState";
+import type { SourceRange } from "./emailTemplateSourceMap";
 
 export { replaceTemplateVariables } from "./EmailTemplatePreview";
 
@@ -735,6 +736,25 @@ function ViewTemplateDialog({
   );
 }
 
+function useDebouncedValue<T>(value: T, delay: number): T {
+  const [debounced, setDebounced] = useState(value);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebounced(value), delay);
+    return () => window.clearTimeout(timer);
+  }, [value, delay]);
+
+  return debounced;
+}
+
+/** Best-effort scroll so a source offset lands in view after a preview click. */
+function scrollToOffset(element: HTMLTextAreaElement, offset: number) {
+  const lineHeight = parseFloat(window.getComputedStyle(element).lineHeight);
+  if (!Number.isFinite(lineHeight)) return;
+  const line = element.value.slice(0, offset).split('\n').length - 1;
+  element.scrollTop = Math.max(0, line * lineHeight - element.clientHeight / 3);
+}
+
 function EditTemplateDialog({
   isOpen,
   onClose,
@@ -763,7 +783,8 @@ function EditTemplateDialog({
     text_content: template?.text_content ?? "",
     language_code: template?.language_code ?? "en"
   });
-  const [htmlTab, setHtmlTab] = useState<string>('source');
+  const [sidePanel, setSidePanel] = useState<string>('preview');
+  const [caretOffset, setCaretOffset] = useState<number | null>(null);
   const [sendingTest, setSendingTest] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const subjectRef = useRef<HTMLInputElement>(null);
@@ -788,12 +809,17 @@ function EditTemplateDialog({
         text_content: template.text_content,
         language_code: template.language_code
       });
-      setHtmlTab('source');
+      setSidePanel('preview');
+      setCaretOffset(null);
       setTestResult(null);
       setAutocomplete(null);
     }
   }, [template]);
   const [isSaving, setIsSaving] = useState(false);
+
+  // The preview re-renders a whole iframe, so it follows the draft one pause behind.
+  const previewHtml = useDebouncedValue(formData.html_content ?? '', 300);
+  const previewSubject = useDebouncedValue(formData.subject ?? '', 300);
 
   const getFieldRef = (field: EditableField) => {
     if (field === 'subject') return subjectRef.current;
@@ -830,6 +856,19 @@ function EditTemplateDialog({
   };
 
   const insertVariable = (token: string) => replaceSelection(lastFocusedField.current, token);
+
+  const trackCaret = (element: HTMLTextAreaElement) => setCaretOffset(element.selectionStart);
+
+  // Preview click -> select the markup it was rendered from.
+  const selectSourceRange = (range: SourceRange) => {
+    const element = htmlRef.current;
+    if (!element) return;
+    lastFocusedField.current = 'html_content';
+    element.focus();
+    element.setSelectionRange(range.start, range.end);
+    scrollToOffset(element, range.start);
+    setCaretOffset(range.start);
+  };
 
   const detectAutocomplete = (
     field: EditableField,
@@ -985,11 +1024,11 @@ function EditTemplateDialog({
   );
 
   return (
-    <Dialog isOpen={isOpen} onClose={onClose} className="max-w-6xl" footer={footer}>
+    <Dialog isOpen={isOpen} onClose={onClose} className="max-w-[92rem]" footer={footer}>
       <form id="edit-template-form" onSubmit={handleSubmit}>
         <DialogTitle>{t('notifications.emailTemplatesUi.edit.title', { defaultValue: 'Edit Custom Template: {{name}}', name: formatTemplateName(template?.name ?? '') })}</DialogTitle>
 
-        <DialogContent className="grid gap-5 px-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
+        <DialogContent className="grid gap-5 px-6 lg:grid-cols-2">
           <div className="min-w-0 space-y-4">
           <div>
             <Label>{t('notifications.emailTemplatesUi.fields.language', 'Language')}</Label>
@@ -1031,61 +1070,45 @@ function EditTemplateDialog({
                 </Button>
               )}
             </div>
-            <Tabs value={htmlTab} onValueChange={setHtmlTab}>
-              <TabsList>
-                <TabsTrigger value="source">{t('notifications.emailTemplatesUi.tabs.source', 'Source')}</TabsTrigger>
-                <TabsTrigger value="preview">{t('notifications.emailTemplatesUi.tabs.preview', 'Preview')}</TabsTrigger>
-              </TabsList>
-              <TabsContent value="source">
-                <TextArea
-                  id="html-content"
-                  ref={htmlRef}
-                  value={formData.html_content}
-                  onFocus={() => { lastFocusedField.current = 'html_content'; }}
-                  onChange={(e) => {
-                    setFormData(prev => ({ ...prev, html_content: e.target.value }));
-                    detectAutocomplete('html_content', e.currentTarget);
-                  }}
-                  onScroll={() => setAutocomplete(null)}
-                  onKeyDown={(event) => handleAutocompleteKeyDown(event, 'html_content')}
-                  required
-                  rows={10}
-                  className="mt-2"
-                />
-                {autocompleteMenu('html_content')}
-              </TabsContent>
-              <TabsContent value="preview">
-                <div className="mt-2">
-                  <EmailTemplatePreview
-                    htmlContent={formData.html_content ?? ''}
-                    templateName={template?.name ?? ''}
-                    subject={formData.subject}
-                  />
-                </div>
-              </TabsContent>
-            </Tabs>
+            <TextArea
+              id="html-content"
+              ref={htmlRef}
+              value={formData.html_content}
+              onFocus={() => { lastFocusedField.current = 'html_content'; }}
+              onChange={(e) => {
+                setFormData(prev => ({ ...prev, html_content: e.target.value }));
+                detectAutocomplete('html_content', e.currentTarget);
+                trackCaret(e.currentTarget);
+              }}
+              onSelect={(event) => trackCaret(event.currentTarget)}
+              onClick={(event) => trackCaret(event.currentTarget)}
+              onScroll={() => setAutocomplete(null)}
+              onKeyDown={(event) => handleAutocompleteKeyDown(event, 'html_content')}
+              required
+              rows={18}
+              className="mt-2 font-mono text-xs"
+            />
+            {autocompleteMenu('html_content')}
           </div>
 
-          {htmlTab !== 'preview' && (
-            <div>
-              <Label htmlFor="text-content">{t('notifications.emailTemplatesUi.fields.textContent', 'Text Content')}</Label>
-              <TextArea
-                id="text-content"
-                ref={textRef}
-                value={formData.text_content}
-                onFocus={() => { lastFocusedField.current = 'text_content'; }}
-                onChange={(e) => {
-                  setFormData(prev => ({ ...prev, text_content: e.target.value }));
-                  detectAutocomplete('text_content', e.currentTarget);
-                }}
-                onScroll={() => setAutocomplete(null)}
-                onKeyDown={(event) => handleAutocompleteKeyDown(event, 'text_content')}
-                required
-                rows={10}
-              />
-              {autocompleteMenu('text_content')}
-            </div>
-          )}
+          <div>
+            <Label htmlFor="text-content">{t('notifications.emailTemplatesUi.fields.textContent', 'Text Content')}</Label>
+            <TextArea
+              id="text-content"
+              ref={textRef}
+              value={formData.text_content}
+              onFocus={() => { lastFocusedField.current = 'text_content'; }}
+              onChange={(e) => {
+                setFormData(prev => ({ ...prev, text_content: e.target.value }));
+                detectAutocomplete('text_content', e.currentTarget);
+              }}
+              onScroll={() => setAutocomplete(null)}
+              onKeyDown={(event) => handleAutocompleteKeyDown(event, 'text_content')}
+              required
+              rows={8}
+            />
+            {autocompleteMenu('text_content')}
+          </div>
 
           {testResult && (
             <div className={`p-3 rounded text-sm ${testResult.success ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
@@ -1093,10 +1116,39 @@ function EditTemplateDialog({
             </div>
           )}
           </div>
-          <TemplateVariablePanel
-            templateName={template?.name ?? ''}
-            onInsert={insertVariable}
-          />
+
+          <div className="min-w-0">
+            <Tabs value={sidePanel} onValueChange={setSidePanel}>
+              <TabsList>
+                <TabsTrigger value="preview">{t('notifications.emailTemplatesUi.tabs.preview', 'Preview')}</TabsTrigger>
+                <TabsTrigger value="variables">{t('notifications.emailTemplatesUi.tabs.variables', 'Variables')}</TabsTrigger>
+              </TabsList>
+              <TabsContent value="preview">
+                <div className="mt-2 space-y-2">
+                  <EmailTemplatePreview
+                    id="edit-template-preview"
+                    htmlContent={previewHtml}
+                    templateName={template?.name ?? ''}
+                    subject={previewSubject}
+                    sourceMap
+                    highlightOffset={caretOffset}
+                    onSelectSource={selectSourceRange}
+                  />
+                  <p className="text-xs text-gray-400">
+                    {t('notifications.emailTemplatesUi.preview.sourceSyncNote', 'Click anything in the preview to select the markup behind it; moving the cursor in the source outlines it here.')}
+                  </p>
+                </div>
+              </TabsContent>
+              <TabsContent value="variables">
+                <div className="mt-2">
+                  <TemplateVariablePanel
+                    templateName={template?.name ?? ''}
+                    onInsert={insertVariable}
+                  />
+                </div>
+              </TabsContent>
+            </Tabs>
+          </div>
         </DialogContent>
       </form>
     </Dialog>

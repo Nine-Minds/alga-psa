@@ -1561,7 +1561,8 @@
       "preview": {
         "subjectLabel": "Pré-visualização do assunto",
         "iframeTitle": "Pré-visualização do modelo de e-mail",
-        "sampleDataNote": "A pré-visualização usa dados de exemplo. Os e-mails reais conterão valores reais."
+        "sampleDataNote": "A pré-visualização usa dados de exemplo. Os e-mails reais conterão valores reais.",
+        "sourceSyncNote": "Clique em qualquer elemento da pré-visualização para selecionar o código correspondente; mover o cursor no código destaca o elemento aqui."
       },
       "errors": {
         "loadFailed": "Falha ao carregar os modelos"
@@ -1610,7 +1611,8 @@
       },
       "tabs": {
         "source": "Código-fonte",
-        "preview": "Pré-visualização"
+        "preview": "Pré-visualização",
+        "variables": "Variáveis"
       },
       "common": {
         "notAvailable": "N/D"
