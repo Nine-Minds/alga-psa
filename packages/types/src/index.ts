@@ -70,6 +70,8 @@ export type {
   ITaxRateThreshold,
   ITaxHoliday,
   ITaxCalculationResult,
+  ITaxPeriodSegment,
+  ITaxPeriodCalculationResult,
   ITaxRegion,
   IClientTaxRateAssociation,
   TaxSource,

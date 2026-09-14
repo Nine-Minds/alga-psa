@@ -26,6 +26,8 @@ export interface ITaxRate extends TenantEntity {
   description: string | null; // Added description field from tax_rates table
   region_code: string; // Added region_code field from tax_rates table
   name?: string; // Made optional for backward compatibility with tests
+  /** Maximum tax per calculation, in the smallest currency unit. Null means uncapped. */
+  cap_amount?: number | null;
 }
 
 // Removed ITaxRateWithDetails as fields are now in ITaxRate
@@ -71,6 +73,19 @@ export interface ITaxCalculationResult {
   taxComponents?: ITaxComponent[];
   appliedThresholds?: ITaxRateThreshold[];
   appliedHolidays?: ITaxHoliday[];
+}
+
+export interface ITaxPeriodSegment {
+  start_date: ISO8601String;
+  end_date: ISO8601String;
+  days: number;
+  netAmount: number;
+  taxAmount: number;
+  taxRate: number;
+}
+
+export interface ITaxPeriodCalculationResult extends ITaxCalculationResult {
+  segments: ITaxPeriodSegment[];
 }
 
 export interface ITaxRegion extends TenantEntity {
