@@ -1,5 +1,6 @@
 import type { IService } from '@/interfaces/billing.interfaces';
 import { BaseService, ServiceContext, ListResult, tenantDb } from '@alga-psa/db';
+import { splitServicePricesByEffectiveDate } from '@alga-psa/billing/models/service';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { ListOptions } from '../controllers/types';
 import { NotFoundError, ValidationError } from '../middleware/apiMiddleware';
@@ -184,10 +185,16 @@ export class ServiceCatalogService extends BaseService<IService> {
       pricesByService[price.service_id].push(price);
     }
 
-    const data = servicesData.map((service: any) => ({
-      ...service,
-      prices: pricesByService[service.service_id] || []
-    }));
+    // `prices` holds only the price effective today (one per currency);
+    // future-dated rows are returned separately as `scheduled_prices` so a
+    // consumer reading `prices[0]` cannot take an increase that has not
+    // started yet.
+    const data = servicesData.map((service: any) => {
+      const { current, scheduled } = splitServicePricesByEffectiveDate(
+        pricesByService[service.service_id] || [],
+      );
+      return { ...service, prices: current, scheduled_prices: scheduled };
+    });
 
     return { data, total };
   }
@@ -213,7 +220,8 @@ export class ServiceCatalogService extends BaseService<IService> {
       .where('service_id', id)
       .select('*');
 
-    return { ...service, prices } as IService;
+    const { current, scheduled } = splitServicePricesByEffectiveDate(prices);
+    return { ...service, prices: current, scheduled_prices: scheduled } as IService;
   }
 
   async create(data: Partial<IService>, context: ServiceContext): Promise<IService> {

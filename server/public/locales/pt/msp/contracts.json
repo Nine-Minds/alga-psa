@@ -504,7 +504,8 @@
       "addFromPresets": "Adicionar de predefinições",
       "collapseLine": "Recolher linha de contrato",
       "createCustom": "Criar personalizado",
-      "expandLine": "Expandir linha de contrato"
+      "expandLine": "Expandir linha de contrato",
+      "resetToStandard": "Redefinir para o padrão"
     },
     "billingProfile": {
       "hint": "Os encargos desta linha são faturados neste perfil, substituindo o contrato.",
@@ -550,7 +551,8 @@
       "readOnly": "Este contrato padrão gerenciado pelo sistema é somente de atribuição. A criação de linha de contrato está desabilitada."
     },
     "dialogs": {
-      "confirmRemove": "Remover linha de contrato \"{{name}}\"?"
+      "confirmRemove": "Remover linha de contrato \"{{name}}\"?",
+      "confirmResetRate": "Redefinir esta linha para o preço de catálogo padrão? O preço personalizado armazenado será removido."
     },
     "empty": {
       "noneAdded": "Nenhuma linha de contrato adicionada ainda.",
@@ -562,7 +564,8 @@
       "failedToLoad": "Falha ao carregar linhas de contrato",
       "failedToRefresh": "Falha ao atualizar linhas de contrato",
       "failedToRemove": "Falha ao remover a linha de contrato",
-      "failedToUpdate": "Falha ao atualizar a linha de contrato"
+      "failedToUpdate": "Falha ao atualizar a linha de contrato",
+      "failedToResetRate": "Falha ao redefinir o preço da linha"
     },
     "loading": {
       "contractLines": "Carregando linhas de contrato",
@@ -601,7 +604,12 @@
       "semanticsEffectiveFrom": "Alterações de preços e medição do serviço em vigor a partir de",
       "prospectiveSemanticsHelp": "As alterações se aplicam no limite deste período de serviço; as quantidades, a medição e os preços anteriores são preservados. Alterar a data recarrega as configurações aplicáveis para revisão."
     },
-    "title": "Linhas de Contrato"
+    "title": "Linhas de Contrato",
+    "rateProvenance": {
+      "standard": "Padrão",
+      "custom": "Personalizado",
+      "unreviewed": "Não revisado"
+    }
   },
   "contractLineEdit": {
     "actions": {

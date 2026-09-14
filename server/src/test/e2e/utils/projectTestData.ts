@@ -4,7 +4,7 @@ import { faker } from '@faker-js/faker';
  * Create test project data
  */
 export function createProjectTestData(overrides: Partial<any> = {}) {
-  const startDate = faker.date.future({ years: 0.5 });
+  const startDate = faker.date.soon({ days: 180 });
   const endDate = faker.date.future({ years: 1, refDate: startDate });
 
   
@@ -25,8 +25,8 @@ export function createProjectTestData(overrides: Partial<any> = {}) {
  * Create test project phase data
  */
 export function createProjectPhaseData(projectId: string, overrides: Partial<any> = {}) {
-  const startDate = faker.date.future({ years: 0.25 });
-  const endDate = faker.date.future({ years: 0.5, refDate: startDate });
+  const startDate = faker.date.soon({ days: 90 });
+  const endDate = faker.date.soon({ days: 180, refDate: startDate });
   
   return {
     project_id: projectId,
@@ -51,7 +51,7 @@ export function createProjectTaskData(projectId: string, overrides: Partial<any>
     status: overrides.status || faker.helpers.arrayElement(['todo', 'in_progress', 'review', 'done']),
     priority: overrides.priority || faker.helpers.arrayElement(['low', 'medium', 'high']),
     assigned_to: overrides.assigned_to || faker.string.uuid(),
-    due_date: overrides.due_date || faker.date.future({ years: 0.1 }).toISOString(),
+    due_date: overrides.due_date || faker.date.soon({ days: 36 }).toISOString(),
     estimated_hours: overrides.estimated_hours || faker.number.int({ min: 1, max: 40 }),
     actual_hours: overrides.actual_hours || faker.number.int({ min: 0, max: 50 }),
     completion_percentage: overrides.completion_percentage || faker.number.int({ min: 0, max: 100 }),

@@ -16,6 +16,7 @@ export { ContractWizard } from './billing-dashboard/contracts/ContractWizard';
 export { ContractDialog } from './billing-dashboard/contracts/ContractDialog';
 export { default as CreditsPage } from './credits/CreditsPage';
 export { default as HourBlocksSection } from './hour-blocks/HourBlocksSection';
+export { default as QuickInvoiceTicketDialog } from './ticket/QuickInvoiceTicketDialog';
 export { default as TaxSettingsForm } from './tax/TaxSettingsForm';
 export { default as TaxDelegationNudge } from './tax/TaxDelegationNudge';
 export { default as TaxDelegationBanner } from './tax/TaxDelegationBanner';
