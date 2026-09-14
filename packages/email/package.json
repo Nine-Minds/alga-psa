@@ -36,7 +36,7 @@
     "@alga-psa/tenancy": "*",
     "@alga-psa/types": "*",
     "axios": "^1.18.0",
-    "nodemailer": "^9.0.3"
+    "nodemailer": "^9.1.1"
   },
   "devDependencies": {
     "@types/mailparser": "^3.4.6",
