@@ -26,6 +26,8 @@ import {
   type TicketAppointmentRequestSummary,
 } from '../../../actions/ticketBentoActions';
 
+type FormatDate = (date: Date | string, options?: Intl.DateTimeFormatOptions) => string;
+
 // These run at module scope with no hook to read the app locale from, so it is
 // passed in: omitting it would format in the browser's locale, not the app's.
 function formatShortDate(iso: string, locale: string): { month: string; day: string } {
@@ -36,13 +38,16 @@ function formatShortDate(iso: string, locale: string): { month: string; day: str
   };
 }
 
-function formatTimeRange(startIso: string, endIso: string, locale: string): string {
+// Times go through the central formatter: the 12/24h clock belongs to the
+// country, not the reading language. The day fallback keeps a NAMED month, so
+// its order is the language's grammar and Intl stays in charge there.
+function formatTimeRange(startIso: string, endIso: string, formatDate: FormatDate): string {
   const start = new Date(startIso);
   const end = new Date(endIso);
   const sameDay = start.toDateString() === end.toDateString();
-  const time = (d: Date) => d.toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' });
+  const time = (d: Date) => formatDate(d, { hour: 'numeric', minute: '2-digit' });
   if (sameDay) return `${time(start)} – ${time(end)}`;
-  const day = (d: Date) => d.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
+  const day = (d: Date) => formatDate(d, { month: 'short', day: 'numeric' });
   return `${day(start)} – ${day(end)}`;
 }
 
@@ -128,7 +133,7 @@ export function NextVisitTile({
 }
 
 function ScheduleRow({ id, entry, t }: { id: string; entry: TicketScheduleEntrySummary; t: (key: string, defaultValue: string) => string }) {
-  const { locale } = useFormatters();
+  const { locale, formatDate } = useFormatters();
   const date = formatShortDate(entry.scheduledStart, locale);
   return (
     <div id={id} className={`flex items-center gap-3 ${entry.isUpcoming ? '' : 'opacity-60'}`}>
@@ -136,7 +141,7 @@ function ScheduleRow({ id, entry, t }: { id: string; entry: TicketScheduleEntryS
       <div className="min-w-0">
         <div className="text-sm font-medium text-[rgb(var(--color-text-800))] truncate">{entry.title || t('bento.tiles.scheduledWork', 'Scheduled work')}</div>
         <div className="text-xs text-[rgb(var(--color-text-500))] truncate">
-          {formatTimeRange(entry.scheduledStart, entry.scheduledEnd, locale)}
+          {formatTimeRange(entry.scheduledStart, entry.scheduledEnd, formatDate)}
           {entry.assignedUserNames.length > 0 ? ` · ${entry.assignedUserNames.join(', ')}` : ''}
           {!entry.isUpcoming ? ` · ${t('bento.tiles.scheduleDone', 'done')}` : ''}
         </div>
@@ -159,12 +164,12 @@ function appointmentStatusVariant(status: string): BadgeVariant {
   }
 }
 
-function formatAppointmentDateTime(date: string | null, time: string | null, tz: string | null, locale: string): string | null {
+function formatAppointmentDateTime(date: string | null, time: string | null, tz: string | null, formatDate: FormatDate): string | null {
   if (!date || !time) return null;
   try {
     const dt = fromZonedTime(`${date}T${time}:00`, tz || 'UTC');
     if (Number.isNaN(dt.getTime())) return null;
-    return dt.toLocaleString(locale, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+    return formatDate(dt, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
   } catch {
     return null;
   }
@@ -179,8 +184,8 @@ function AppointmentRequestRow({
   request: TicketAppointmentRequestSummary;
   t: (key: string, defaultValue: string) => string;
 }) {
-  const { locale } = useFormatters();
-  const when = formatAppointmentDateTime(request.requestedDate, request.requestedTime, request.requesterTimezone, locale);
+  const { formatDate } = useFormatters();
+  const when = formatAppointmentDateTime(request.requestedDate, request.requestedTime, request.requesterTimezone, formatDate);
   const duration = request.requestedDurationMinutes ? formatMinutes(request.requestedDurationMinutes) : null;
   return (
     <BentoRow id={id} align="start" className="justify-between">
