@@ -36,7 +36,8 @@
       "clientContact": "⟦Ƈŀīḗƞŧ Ƈȯƞŧȧƈŧ⟧",
       "billing": "⟦Ɓīŀŀīƞɠ⟧",
       "ticketing": "⟦Ŧīƈķḗŧīƞɠ⟧",
-      "algadeskWorkspace": "⟦Ẇȯřķşƥȧƈḗ⟧"
+      "algadeskWorkspace": "⟦Ẇȯřķşƥȧƈḗ⟧",
+      "coManagedWorkspace": "⟦Ẇȯřķşƥȧƈḗ⟧"
     },
     "errors": {
       "saveClientInfo": "⟦Ƒȧīŀḗḓ ŧȯ şȧṽḗ ƈŀīḗƞŧ īƞƒȯ⟧",
@@ -65,7 +66,9 @@
       "title": "⟦Şḗŧŭƥ Ẏȯŭř Şẏşŧḗḿ⟧",
       "description": "⟦Ŀḗŧ'ş ɠḗŧ ẏȯŭř ẇȯřķşƥȧƈḗ ƈȯƞƒīɠŭřḗḓ ȧƞḓ řḗȧḓẏ ŧȯ ŭşḗ.⟧",
       "algadeskTitle": "⟦Şḗŧ Ŭƥ ȦŀɠȧḒḗşķ⟧",
-      "algadeskDescription": "⟦Ƈȯƞƒīɠŭřḗ ẏȯŭř ħḗŀƥ ḓḗşķ ẇȯřķşƥȧƈḗ, ƈŀīḗƞŧş, ȧƞḓ ŧīƈķḗŧīƞɠ ḓḗƒȧŭŀŧş.⟧"
+      "algadeskDescription": "⟦Ƈȯƞƒīɠŭřḗ ẏȯŭř ħḗŀƥ ḓḗşķ ẇȯřķşƥȧƈḗ, ƈŀīḗƞŧş, ȧƞḓ ŧīƈķḗŧīƞɠ ḓḗƒȧŭŀŧş.⟧",
+      "coManagedTitle": "⟦Şḗŧ Ŭƥ Ẏȯŭř ĪŦ Ẇȯřķşƥȧƈḗ⟧",
+      "coManagedDescription": "⟦Ƈȯƞƒīɠŭřḗ ẏȯŭř ẇȯřķşƥȧƈḗ, ẏȯŭř ĪŦ ŧḗȧḿ, ȧƞḓ ẏȯŭř ŧīƈķḗŧīƞɠ ḓḗƒȧŭŀŧş.⟧"
     }
   },
   "addClientStep": {
@@ -303,7 +306,9 @@
     },
     "header": {
       "title": "⟦Ẏȯŭř Ƈȯḿƥȧƞẏ & Ȧḓḿīƞ Ȧƈƈȯŭƞŧ⟧",
-      "description": "⟦Ŀḗŧ'ş şŧȧřŧ ẇīŧħ ẏȯŭř ḾŞƤ'ş ȯẇƞ ƈȯḿƥȧƞẏ ḓḗŧȧīŀş ȧƞḓ ẏȯŭř ȧḓḿīƞ ŀȯɠīƞ, ƞȯŧ ȧ ƈŀīḗƞŧ ẏȯŭ şŭƥƥȯřŧ.⟧"
+      "description": "⟦Ŀḗŧ'ş şŧȧřŧ ẇīŧħ ẏȯŭř ḾŞƤ'ş ȯẇƞ ƈȯḿƥȧƞẏ ḓḗŧȧīŀş ȧƞḓ ẏȯŭř ȧḓḿīƞ ŀȯɠīƞ, ƞȯŧ ȧ ƈŀīḗƞŧ ẏȯŭ şŭƥƥȯřŧ.⟧",
+      "coManagedTitle": "Your Organization & Admin Account",
+      "coManagedDescription": "Let's start with your organization's details and your admin login."
     },
     "fields": {
       "firstName": {
@@ -354,7 +359,8 @@
           "label": "⟦Ƈȯŭƞŧřẏ⟧",
           "placeholder": "⟦Şḗŀḗƈŧ Ƈȯŭƞŧřẏ⟧"
         }
-      }
+      },
+      "coManagedDescription": "Your organization's address. Review and correct it if needed."
     },
     "password": {
       "resetRequired": {

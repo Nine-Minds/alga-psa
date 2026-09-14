@@ -36,7 +36,8 @@
       "clientContact": "Klantcontact",
       "billing": "Facturatie",
       "ticketing": "Tickets",
-      "algadeskWorkspace": "Werkruimte"
+      "algadeskWorkspace": "Werkruimte",
+      "coManagedWorkspace": "Werkruimte"
     },
     "errors": {
       "saveClientInfo": "Klantinfo opslaan mislukt",
@@ -65,7 +66,9 @@
       "title": "Stel uw systeem in",
       "description": "Laten we uw werkruimte configureren en klaarzetten voor gebruik.",
       "algadeskTitle": "AlgaDesk instellen",
-      "algadeskDescription": "Configureer uw helpdeskomgeving, klanten en standaardinstellingen voor tickets."
+      "algadeskDescription": "Configureer uw helpdeskomgeving, klanten en standaardinstellingen voor tickets.",
+      "coManagedTitle": "Uw IT-werkruimte instellen",
+      "coManagedDescription": "Configureer uw werkruimte, uw IT-team en uw standaardinstellingen voor tickets."
     }
   },
   "addClientStep": {
@@ -303,7 +306,9 @@
     },
     "header": {
       "title": "Uw bedrijf en beheerdersaccount",
-      "description": "We beginnen met de bedrijfsgegevens van uw eigen MSP en uw beheerderslogin, niet met een klant die u ondersteunt."
+      "description": "We beginnen met de bedrijfsgegevens van uw eigen MSP en uw beheerderslogin, niet met een klant die u ondersteunt.",
+      "coManagedTitle": "Your Organization & Admin Account",
+      "coManagedDescription": "Let's start with your organization's details and your admin login."
     },
     "fields": {
       "firstName": {
@@ -354,7 +359,8 @@
           "label": "Land",
           "placeholder": "Land selecteren"
         }
-      }
+      },
+      "coManagedDescription": "Your organization's address. Review and correct it if needed."
     },
     "password": {
       "resetRequired": {

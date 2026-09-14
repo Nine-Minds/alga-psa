@@ -36,7 +36,8 @@
       "clientContact": "Kontakt klienta",
       "billing": "Fakturowanie",
       "ticketing": "Zgłoszenia",
-      "algadeskWorkspace": "Obszar roboczy"
+      "algadeskWorkspace": "Obszar roboczy",
+      "coManagedWorkspace": "Obszar roboczy"
     },
     "errors": {
       "saveClientInfo": "Nie udało się zapisać informacji o kliencie",
@@ -65,7 +66,9 @@
       "title": "Skonfiguruj swój system",
       "description": "Skonfigurujmy Twoje środowisko i przygotujmy je do użycia.",
       "algadeskTitle": "Skonfiguruj AlgaDesk",
-      "algadeskDescription": "Skonfiguruj obszar roboczy helpdesku, klientów i domyślne ustawienia zgłoszeń."
+      "algadeskDescription": "Skonfiguruj obszar roboczy helpdesku, klientów i domyślne ustawienia zgłoszeń.",
+      "coManagedTitle": "Skonfiguruj swój obszar roboczy IT",
+      "coManagedDescription": "Skonfiguruj swój obszar roboczy, swój zespół IT i domyślne ustawienia zgłoszeń."
     }
   },
   "addClientStep": {
@@ -305,7 +308,9 @@
     },
     "header": {
       "title": "Twoja firma i konto administratora",
-      "description": "Zacznijmy od danych Twojej własnej firmy MSP i Twojego loginu administratora, a nie od klienta, którego obsługujesz."
+      "description": "Zacznijmy od danych Twojej własnej firmy MSP i Twojego loginu administratora, a nie od klienta, którego obsługujesz.",
+      "coManagedTitle": "Your Organization & Admin Account",
+      "coManagedDescription": "Let's start with your organization's details and your admin login."
     },
     "fields": {
       "firstName": {
@@ -356,7 +361,8 @@
           "label": "Kraj",
           "placeholder": "Wybierz kraj"
         }
-      }
+      },
+      "coManagedDescription": "Your organization's address. Review and correct it if needed."
     },
     "password": {
       "resetRequired": {
