@@ -6,8 +6,12 @@ const taskTypeSource = readFileSync(resolve(__dirname, '../models/taskType.ts'),
 const statusMappingSource = readFileSync(resolve(__dirname, 'projectStatusMappingUtils.ts'), 'utf8');
 
 describe('project utility tenant-scoped query contract', () => {
+  // Writes moved under withCoManagedOperationalTransaction in 096b160555, which renamed the
+  // connection binding knexOrTrx -> trx, so both bindings must be asserted here.
   it('uses structural tenant scoping for custom task type roots', () => {
-    expect(taskTypeSource).toContain("tenantScopedTable(knexOrTrx, 'custom_task_types', tenant)");
+    expect(taskTypeSource).toContain("tenantScopedTable<ITaskType>(knexOrTrx, 'custom_task_types', tenant)");
+    expect(taskTypeSource).toContain("tenantScopedTable<ICustomTaskType>(trx, 'custom_task_types', tenant)");
+    expect(taskTypeSource).toContain("tenantScopedTable(trx, 'custom_task_types', tenant)");
     expect(taskTypeSource).toContain("tenantScopedTable<ITaskType>(knexOrTrx, 'standard_task_types', tenant)");
     expect(taskTypeSource).not.toContain("knexOrTrx('standard_task_types')");
     expect(taskTypeSource).not.toContain('.where({ tenant, is_active: true })');
