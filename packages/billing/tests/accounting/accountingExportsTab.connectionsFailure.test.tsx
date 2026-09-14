@@ -15,6 +15,7 @@ import '@testing-library/jest-dom';
 
 const state = vi.hoisted(() => ({
   failXero: true,
+  failSettings: false,
   capabilities: {
     catalogRead: false,
     connectionsManage: false,
@@ -56,7 +57,10 @@ vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: async () => true }));
 function settingsBuilder() {
   const builder: Record<string, unknown> = {};
   builder.select = () => builder;
-  builder.first = async () => ({ settings: { accountingSync: { defaultRealm: null } } });
+  builder.first = async () => {
+    if (state.failSettings) throw new Error('Settings temporarily unavailable');
+    return { settings: { accountingSync: { defaultRealm: 'conn-b' } } };
+  };
   return builder;
 }
 
@@ -122,6 +126,7 @@ async function renderTab() {
 beforeEach(() => {
   vi.clearAllMocks();
   state.failXero = true;
+  state.failSettings = false;
 });
 
 afterEach(() => {
@@ -129,7 +134,9 @@ afterEach(() => {
 });
 
 describe('AccountingExportsTab real connection-read failure', () => {
-  it('shows an actionable Retry on a store outage and recovers when Retry succeeds', async () => {
+  it.each(['credentials', 'settings'])('shows Retry on a %s outage and recovers the saved organisation', async (failure) => {
+    state.failXero = failure === 'credentials';
+    state.failSettings = failure === 'settings';
     await renderTab();
 
     fireEvent.change(screen.getByTestId('accounting-export-adapter'), {
@@ -142,13 +149,14 @@ describe('AccountingExportsTab real connection-read failure', () => {
 
     // Store recovers; Retry re-runs the real action and loads the picker.
     state.failXero = false;
+    state.failSettings = false;
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
 
     await waitFor(() => {
       expect(document.getElementById('accounting-export-connections-error')).toBeNull();
     });
     await waitFor(() => {
-      expect(screen.getByTestId('accounting-export-realm')).toHaveValue('conn-a');
+      expect(screen.getByTestId('accounting-export-realm')).toHaveValue('conn-b');
     });
     expect(screen.getByRole('button', { name: 'Create Batch' })).toBeEnabled();
   });

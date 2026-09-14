@@ -4,6 +4,52 @@ Card: Complete shared accounting sync and Xero two-way reconciliation
 Worktree branch: `feature/complete-shared-accounting-sync-and-xero-two-way` (stacked on `feature/co-managed-it`)
 Date: 2026-09-13
 
+## P1 takeover: consistent export connection selection
+
+The export picker must derive its options and default from one successful
+settings read and one read of the selected provider's connections. The prior
+tolerant lookup can override both a known saved default and ambiguity found in
+the later connection read. Remove that preliminary lookup from the export
+picker and apply the existing pure selection rules directly to the strict
+inputs. Settings and credential-store errors must reach the existing error and
+Retry UI; an unavailable read is not an absent default or an empty store.
+
+Keep tolerant sync routing, the export authorization boundary, explicit-target
+validation, historical Xero aliases, and provider-specific fallback unchanged.
+Read only the selected provider's connection store. Add real-action tests for
+one-read consistency, saved/historical/ambiguous defaults, store/settings
+failures, and isolation from the other provider. Extend the composed Retry
+coverage to settings errors. Re-run accounting regressions, isolated DB
+selected-target delivery and guards, affected typechecks/build, and translation
+validation. Preserve the recorded Co-Managed base `0af97e5c61`; commit locally.
+
+Takeover validation completed:
+
+- Removed the preliminary tolerant selection from the export picker. Both
+  settings and the selected provider's store now fail visibly, while options
+  and the default share the same inputs and pure rules. Sync routing retains
+  its existing behavior.
+- 13 regression assertions failed before the repair. The saved-default
+  reproduction now passes; the old second-read reproduction is covered by
+  requiring a single settings/store read and testing ambiguity in that input.
+  Retry recovery uses the real action and restores the saved second
+  organisation after either settings or credential-store failures.
+- 112 billing accounting/UI/action tests and 392 server-config accounting/sync
+  regressions pass. The dedicated DB suites pass 15 checks: selected-target
+  delivery/guards (3) and Xero export/payment/credit/replacement/replay (12).
+  Billing and server typechecks, billing tsup build, translation validation,
+  and changed-file ESLint pass (four existing test-harness `any` warnings).
+- An initial broad test command accidentally included DB suites because
+  `**/*.db.test.ts` does not match paths through `../packages`; it passed 393
+  tests, running those DB suites serially on `test_database`. The clean
+  behavioral rerun uses `SKIP_DB_TESTS=1`, which adds the required `../**`
+  exclusion. Dedicated DB checks used unique databases, removed afterward.
+- No live vendor call, new browser smoke, or full Next.js build is claimed.
+  Ports 3004 and 4908 were not listening during validation. The existing smoke
+  artifacts and environment files remain unchanged; the parent base is still
+  `0af97e5c61`. Review the export connection resolver and its real-action tests
+  first. No push or PR.
+
 ## Final mitigation takeover: manual export default
 
 The three final-round repairs are present at `642ca29d60`. Independent review
