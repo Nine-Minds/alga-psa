@@ -209,7 +209,7 @@ export default function QuickInvoiceTicketDialog({
           onClick={() => setIsOpen(false)}
           disabled={isSubmitting}
         >
-          {t('common.cancel', { ns: 'common', defaultValue: 'Cancel' })}
+          {t('common.actions.cancel', { defaultValue: 'Cancel' })}
         </Button>
         <Button
           id={`${id}-quick-invoice-create-button`}
