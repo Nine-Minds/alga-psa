@@ -29,14 +29,11 @@ const MIRRORED_STYLE_PROPERTIES = [
 ] as const;
 
 /**
- * Measure the viewport position immediately below a native input/textarea caret.
- * A hidden mirror keeps wrapping, padding, and typography identical without
- * replacing the accessible native editor.
+ * A hidden copy of the editor with the same typography, width and wrapping, cut
+ * off at `caret`, so the marker span sits exactly where that character does.
+ * The caller is responsible for removing the mirror.
  */
-export function measureCaretMenuPosition(
-  element: EditableTemplateElement,
-  caret: number,
-): CaretMenuPosition {
+function mirrorUpTo(element: EditableTemplateElement, caret: number) {
   const style = window.getComputedStyle(element);
   const mirror = document.createElement("div");
   const marker = document.createElement("span");
@@ -72,6 +69,20 @@ export function measureCaretMenuPosition(
   mirror.append(marker);
   document.body.append(mirror);
 
+  return { mirror, marker, style, elementRect, isSingleLine };
+}
+
+/**
+ * Measure the viewport position immediately below a native input/textarea caret.
+ * A hidden mirror keeps wrapping, padding, and typography identical without
+ * replacing the accessible native editor.
+ */
+export function measureCaretMenuPosition(
+  element: EditableTemplateElement,
+  caret: number,
+): CaretMenuPosition {
+  const { mirror, marker, style, elementRect, isSingleLine } = mirrorUpTo(element, caret);
+
   const lineHeight =
     Number.parseFloat(style.lineHeight) ||
     Number.parseFloat(style.fontSize) * 1.2;
@@ -85,4 +96,27 @@ export function measureCaretMenuPosition(
     left: Math.max(8, Math.min(left, window.innerWidth - 328)),
     top,
   };
+}
+
+/**
+ * How far down an offset sits inside a textarea's own scrollable content.
+ *
+ * Counting newlines would be cheaper and wrong: one line of an email template
+ * is a tag with a long style attribute, which wraps into a dozen visual lines
+ * in a half-width editor, so the count lands near the top of a long document.
+ */
+export function measureOffsetTop(element: HTMLTextAreaElement, offset: number): number {
+  const { mirror, marker } = mirrorUpTo(element, offset);
+  const top = marker.offsetTop;
+  mirror.remove();
+  return top;
+}
+
+/**
+ * Where to scroll a textarea so `offsetTop` sits a third of the way down,
+ * clamped to the top: near enough to the caret to read what surrounds it.
+ */
+export function scrollTopForOffset(offsetTop: number, clientHeight: number): number {
+  if (!Number.isFinite(offsetTop)) return 0;
+  return Math.max(0, offsetTop - clientHeight / 3);
 }

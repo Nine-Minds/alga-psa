@@ -141,6 +141,29 @@ describe('side-by-side editor', () => {
     expect(previewSource).toContain("closest?.(`[${SOURCE_RANGE_ATTRIBUTE}]`)");
   });
 
+  it('scrolls both ways, measuring wrapped lines instead of counting them', () => {
+    // The preview scrolls to the caret's element; a preview click has to scroll
+    // the source the same way, and a template line wraps many times over.
+    expect(previewSource).toContain("match.scrollIntoView({ block: 'nearest' })");
+    expect(templatesSource).toContain("element.scrollIntoView({ block: 'nearest' })");
+    expect(templatesSource).toContain('scrollTopForOffset(measureOffsetTop(element, offset), element.clientHeight)');
+    expect(templatesSource).not.toContain("split('\\n').length - 1");
+  });
+
+  it('gives each pane its own scrollbar', () => {
+    const dialog = templatesSource.slice(templatesSource.indexOf('function EditTemplateDialog'));
+
+    expect(dialog).toContain('className="min-w-0 max-h-[34rem] space-y-4 overflow-y-auto pr-2"');
+    expect(dialog).toContain('className="max-h-[30rem] overflow-y-auto pr-1"');
+  });
+
+  it('puts the heading in the drag handle, not below it', () => {
+    const dialog = templatesSource.slice(templatesSource.indexOf('function EditTemplateDialog'));
+
+    expect(dialog).toContain("title={t('notifications.emailTemplatesUi.edit.title'");
+    expect(templatesSource).not.toContain('<DialogTitle>');
+  });
+
   it('leaves every other preview untouched', () => {
     expect(previewSource).toContain('sourceMap?: boolean;');
     expect(previewSource).toContain('if (!sourceMap) return;');

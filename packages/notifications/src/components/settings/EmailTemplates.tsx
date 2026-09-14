@@ -46,7 +46,12 @@ import {
   TemplateVariablePanel,
   VariableReferenceDialog,
 } from "./TemplateVariableReference";
-import { measureCaretMenuPosition, type CaretMenuPosition } from "./caretPosition";
+import {
+  measureCaretMenuPosition,
+  measureOffsetTop,
+  scrollTopForOffset,
+  type CaretMenuPosition,
+} from "./caretPosition";
 import { getTenantLocaleSettingsAction } from "@alga-psa/tenancy/actions/tenant-actions/tenantLocaleActions";
 import { collectTemplateLanguages, initialLanguageSelection } from "./emailTemplatesState";
 import type { SourceRange } from "./emailTemplateSourceMap";
@@ -753,12 +758,14 @@ function useDebouncedValue<T>(value: T, delay: number): T {
   return debounced;
 }
 
-/** Best-effort scroll so a source offset lands in view after a preview click. */
+/**
+ * Brings a source offset into view after a preview click, the mirror image of
+ * the preview's own scrollIntoView when the caret moves: first the pane scrolls
+ * to the editor, then the editor scrolls to the character.
+ */
 function scrollToOffset(element: HTMLTextAreaElement, offset: number) {
-  const lineHeight = parseFloat(window.getComputedStyle(element).lineHeight);
-  if (!Number.isFinite(lineHeight)) return;
-  const line = element.value.slice(0, offset).split('\n').length - 1;
-  element.scrollTop = Math.max(0, line * lineHeight - element.clientHeight / 3);
+  element.scrollIntoView({ block: 'nearest' });
+  element.scrollTop = scrollTopForOffset(measureOffsetTop(element, offset), element.clientHeight);
 }
 
 function EditTemplateDialog({
@@ -1041,7 +1048,12 @@ function EditTemplateDialog({
     >
       <form id="edit-template-form" onSubmit={handleSubmit}>
         <DialogContent className="grid gap-5 lg:grid-cols-2">
-          <div className="min-w-0 space-y-4">
+          {/* Each pane scrolls inside itself, so the source never pushes the
+              preview off the bottom of the dialog. */}
+          <div
+            className="min-w-0 max-h-[34rem] space-y-4 overflow-y-auto pr-2"
+            onScroll={() => setAutocomplete(null)}
+          >
           <div>
             <Label>{t('notifications.emailTemplatesUi.fields.language', 'Language')}</Label>
             <div className="p-2 bg-gray-50 rounded border text-gray-700">
@@ -1137,15 +1149,18 @@ function EditTemplateDialog({
               </TabsList>
               <TabsContent value="preview">
                 <div className="mt-2 space-y-2">
-                  <EmailTemplatePreview
-                    id="edit-template-preview"
-                    htmlContent={previewHtml}
-                    templateName={template?.name ?? ''}
-                    subject={previewSubject}
-                    sourceMap
-                    highlightOffset={caretOffset}
-                    onSelectSource={selectSourceRange}
-                  />
+                  {/* The iframe grows to its content, so the scroll belongs here. */}
+                  <div className="max-h-[30rem] overflow-y-auto pr-1">
+                    <EmailTemplatePreview
+                      id="edit-template-preview"
+                      htmlContent={previewHtml}
+                      templateName={template?.name ?? ''}
+                      subject={previewSubject}
+                      sourceMap
+                      highlightOffset={caretOffset}
+                      onSelectSource={selectSourceRange}
+                    />
+                  </div>
                   <p className="text-xs text-gray-400">
                     {t('notifications.emailTemplatesUi.preview.sourceSyncNote', 'Click anything in the preview to select the markup behind it; moving the cursor in the source outlines it here.')}
                   </p>
