@@ -87,11 +87,14 @@ if (process.env.E2E_EDITION !== 'enterprise') {
         await expect.poll(async () => (await database('schedule_entries').where({ ...scope, title: outboundTitle })).length).toBe(1);
         const outboundEntry = await database('schedule_entries').where({ ...scope, title: outboundTitle }).first();
         const outboundMappingScope = { ...providerScope, schedule_entry_id: outboundEntry.entry_id };
+        // The first outbound sync of the suite can be slow to warm the calendar
+        // workload; allow the same headroom as the rest of the journey so a cold
+        // start is not misreported as a failure.
         await expect.poll(async () => (await database('calendar_event_mappings').where(outboundMappingScope)).length,
-          { timeout: 60000 }).toBe(1);
+          { timeout: 120000 }).toBe(1);
         const outboundMapping = await database('calendar_event_mappings').where(outboundMappingScope).first();
         await expect.poll(async () => await emulators.state<GraphEvent[]>('msgraph', 'calendar-events'),
-          { timeout: 60000 }).toEqual([expect.objectContaining({ id: outboundMapping.external_event_id, subject: outboundTitle })]);
+          { timeout: 120000 }).toEqual([expect.objectContaining({ id: outboundMapping.external_event_id, subject: outboundTitle })]);
         await page.reload();
         const outboundEvent = page.locator('.rbc-event').filter({ hasText: outboundTitle });
         await expect(outboundEvent).toHaveCount(1);

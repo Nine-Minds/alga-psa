@@ -6,6 +6,7 @@
   "main": "index.js",
   "types": "index.d.ts",
   "exports": {
+    "./billingClients/resolveFixedLineRate": "./dist/billingClients/resolveFixedLineRate.js",
     "./types": "./dist/types/index.js",
     "./core": "./dist/core/index.js",
     "./core/logger.js": "./dist/core/logger.js",

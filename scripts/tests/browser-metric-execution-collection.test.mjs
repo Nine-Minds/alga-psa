@@ -1,9 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import yaml from 'js-yaml';
 import { collectBrowserMetricExecutions } from '../lib/collect-browser-metric-executions.mjs';
 import { reconcileBrowserMetricExecutions } from '../lib/reconcile-browser-metric-executions.mjs';
 import { BROWSER_HEADER } from '../record-browser-metrics.mjs';
 const revision = 'a'.repeat(40), head = 'b'.repeat(40), base = 'c'.repeat(40);
+const notSelectedSteps = () => [
+  { name: 'Record browser tests not selected', status: 'completed', conclusion: 'success' },
+  { name: 'Record browser journey readiness', status: 'completed', conclusion: 'skipped' },
+];
 function fixture() {
   const run = { id: 123, repository: { full_name: 'Nine-Minds/alga-psa' }, path: '.github/workflows/production-regression.yml',
     run_attempt: 2, head_sha: head, status: 'completed', conclusion: 'failure', event: 'pull_request',
@@ -54,6 +60,43 @@ test('binds explicit PR merge parents and current attempt, returning both browse
   assert.ok(result.expectedExecutions.every(x => x.revision === revision && x.eventName === 'pull_request' && x.runId === '123'));
   assert.deepEqual(result.exportedRows, { header: BROWSER_HEADER, rows: state.values.values.slice(1) });
   assert.equal(state.calls.filter(x => x.url.pathname.endsWith('/actions/runs/123')).length, 2);
+});
+
+test('documentation-only executions need no browser artifact or export', async () => {
+  const { state, collect } = fixture();
+  state.jobs.forEach(job => { job.steps = notSelectedSteps(); });
+  state.intercept = url => url.pathname.endsWith('/artifacts')
+    ? new Response(JSON.stringify({ total_count: 0, artifacts: [] }), { status: 200 }) : null;
+  state.values.values = [BROWSER_HEADER];
+  const input = await collect({ revisionMode: 'artifact' });
+  assert.ok(input.expectedExecutions.every(entry => entry.executionRequired === false && entry.revision === null));
+  const result = reconcileBrowserMetricExecutions(input);
+  assert.equal(result.status, 'not-required');
+  assert.ok(result.records.every(record => record.status === 'not-required'));
+});
+
+for (const defect of ['missing-marker', 'skipped-marker', 'failed-job', 'recorder-executed']) {
+  test(`does not excuse missing exports with ${defect}`, async () => {
+    const { state, collect } = fixture();
+    state.jobs[0].steps = notSelectedSteps();
+    if (defect === 'missing-marker') state.jobs[0].steps.shift();
+    if (defect === 'skipped-marker') state.jobs[0].steps[0].conclusion = 'skipped';
+    if (defect === 'failed-job') state.jobs[0].conclusion = 'failure';
+    if (defect === 'recorder-executed') state.jobs[0].steps[1].conclusion = 'success';
+    state.values.values = [BROWSER_HEADER];
+    const input = await collect();
+    assert.notEqual(input.expectedExecutions[0].executionRequired, false);
+    assert.equal(reconcileBrowserMetricExecutions(input).status, 'incomplete');
+  });
+}
+
+test('the browser matrix emits non-selection evidence only for the explicit false filter result', () => {
+  const workflow = yaml.load(readFileSync('.github/workflows/e2e-fresh-install-tests.yaml', 'utf8'));
+  const job = Object.values(workflow.jobs).find(job => job.name === 'Production browser (${{ matrix.edition }})');
+  const markers = job.steps.filter(step => step.name === 'Record browser tests not selected');
+  assert.equal(markers.length, 1);
+  assert.equal(markers[0].if, "needs.changes.outputs.run_tests == 'false'");
+  assert.ok(job.steps.findIndex(step => step.name === 'Check build results') < job.steps.indexOf(markers[0]));
 });
 
 test('collects all current-attempt job pages before matching late browser jobs', async () => {

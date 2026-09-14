@@ -5,6 +5,7 @@ import {
   FileOutput,
   Percent,
   Layers3,
+  FolderTree,
   Calendar,
   Gauge,
   BarChart3,
@@ -34,6 +35,7 @@ export type BillingTabValue =
   | 'service-periods'
   | 'products'
   | 'service-types'
+  | 'service-categories'
   | 'service-catalog'
   | 'tax-rates'
   | 'usage-tracking'
@@ -145,6 +147,13 @@ export const billingTabDefinitions: BillingTabDefinition[] = [
     labelKey: 'dashboard.tabs.serviceTypes',
     href: '/msp/billing?tab=service-types',
     icon: Layers3
+  },
+  {
+    value: 'service-categories',
+    label: 'Service Categories',
+    labelKey: 'dashboard.tabs.serviceCategories',
+    href: '/msp/billing?tab=service-categories',
+    icon: FolderTree
   },
   {
     value: 'service-catalog',

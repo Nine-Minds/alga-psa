@@ -506,6 +506,7 @@
   },
   "serviceCategories": {
     "title": "Categorie di servizi",
+    "description": "Raggruppamenti opzionali per i tuoi prodotti. Le categorie gestiscono la colonna e il filtro Categoria nella scheda Prodotti e sono distinte dai Tipi di servizio, obbligatori e usati in report e inserimento ore.",
     "dialog": {
       "addTitle": "Aggiungi categoria di servizio",
       "editTitle": "Modifica categoria di servizio",
@@ -531,6 +532,11 @@
       "importFromStandard": "Importa da categorie standard",
       "create": "Creare",
       "update": "Aggiornamento"
+    },
+    "empty": {
+      "title": "Nessuna categoria di servizio",
+      "description": "Importa l'elenco standard per iniziare, oppure aggiungi le tue. Le categorie sono opzionali e servono solo se vuoi raggruppare i prodotti.",
+      "importPrimary": "Importa categorie di servizio standard"
     },
     "delete": {
       "message": "Sei sicuro di voler eliminare \"{{name}}\"? Questa azione non può essere annullata."
@@ -635,6 +641,8 @@
     }
   },
   "serviceCatalog": {
+    "scheduledPriceBadge": "Prossima modifica {{date}}",
+    "scheduledPriceNotice": "È prevista una modifica del prezzo per il {{date}}. Salvare qui aggiorna il prezzo corrente e non annulla la modifica pianificata.",
     "title": "Gestione del catalogo dei servizi",
     "loading": "Caricamento servizi",
     "dialog": {
@@ -721,7 +729,11 @@
       "unit": "Unità",
       "taxRate": "Aliquota fiscale",
       "nonTaxable": "Non imponibile",
-      "thisService": "questo servizio"
+      "thisService": "questo servizio",
+      "contractUsage": "Contratti",
+      "contractUsageNone": "Non utilizzato",
+      "contractUsageOne": "Usato in {{contracts}} contratto",
+      "contractUsageMany": "Usato in {{contracts}} contratti"
     },
     "errors": {
       "fetchServices": "Impossibile recuperare i servizi",
@@ -902,8 +914,8 @@
         "loading": "Caricamento..."
       },
       "label": {
-        "label": "Etichetta",
-        "placeholder": "Etichetta a forma libera opzionale"
+        "label": "Etichetta categoria",
+        "placeholder": "Etichetta libera opzionale"
       },
       "vendor": {
         "label": "Venditore"
@@ -1432,6 +1444,70 @@
     },
     "sections": {
       "userRates": "Tariffe per utente"
+    }
+  },
+  "priceChangeRollout": {
+    "title": "Distribuzione della modifica di prezzo",
+    "previewFailed": "Impossibile caricare l'anteprima della modifica di prezzo.",
+    "skip": "Salva solo il prezzo",
+    "apply": "Applica alle righe ereditate",
+    "applying": "Salvataggio…",
+    "effectiveDate": "Data di decorrenza",
+    "effectiveDateHint": "Predefinita al prossimo confine del periodo di fatturazione.",
+    "willChange": "Cambierà",
+    "noInheritedLines": "Nessuna riga ereditata cambia a questa data.",
+    "custom": "Non cambia — personalizzata",
+    "unreviewed": "Non cambia — non ancora classificata",
+    "unreviewedAlert": "Queste righe vengono fatturate invariate finché non le revisioni.",
+    "reviewRates": "Revisiona tariffe",
+    "excluded": "Esclusa — già fatturata",
+    "none": "Nessuna.",
+    "totalMonthlyDelta": "Variazione totale dei ricavi mensili",
+    "acrossAllInherited": "Su tutte le {{lines}} righe ereditate.",
+    "applyFailed": "Impossibile applicare la distribuzione. Nessuna modifica è stata apportata.",
+    "skipFailed": "Impossibile salvare la modifica di prezzo.",
+    "columns": {
+      "client": "Cliente",
+      "contract": "Contratto",
+      "line": "Riga",
+      "current": "Attuale",
+      "new": "Nuovo",
+      "delta": "Variazione",
+      "rateAtDate": "Tariffa alla data"
+    },
+    "followsCatalog": "Segue il catalogo",
+    "close": "Chiudi",
+    "usageTitle": "Utilizzo del servizio"
+  },
+  "rateReview": {
+    "title": "Revisione tariffe",
+    "close": "Chiudi",
+    "applySelected": "Applica selezionate",
+    "applying": "Applicazione…",
+    "previewFailed": "Impossibile caricare le tariffe da revisionare.",
+    "applyFailed": "Impossibile applicare la revisione delle tariffe. Nessuna modifica è stata apportata.",
+    "intro": "Le righe prezzate esattamente alla tariffa di catalogo non cambieranno nella prossima fattura. Le righe diverse mantengono la tariffa attuale come prezzo negoziato.",
+    "applied": "{{applied}} modifica(he) applicata(e).",
+    "refused": "{{refused}} riga(he) rifiutata(e) perché sono cambiate dall'anteprima.",
+    "summary": "{{total}} riga(he) non revisionata(e): {{inherited}} corrispondenza(e) esatta(e), {{custom}} negoziate, {{skipped}} ignorate.",
+    "allClassified": "Tutte le righe sono state classificate. Nulla da revisionare.",
+    "noService": "Nessun servizio",
+    "columns": {
+      "contract": "Contratto",
+      "currentRate": "Tariffa attuale",
+      "catalogRate": "Tariffa di catalogo",
+      "proposed": "Proposta",
+      "confidence": "Affidabilità"
+    },
+    "proposal": {
+      "inherited": "Segui il catalogo",
+      "custom": "Mantieni come personalizzata",
+      "unreviewed": "Lascia non revisionata"
+    },
+    "confidence": {
+      "exact": "Corrispondenza esatta",
+      "differs": "Differisce dal catalogo",
+      "needsDecision": "Richiede una decisione"
     }
   }
 }

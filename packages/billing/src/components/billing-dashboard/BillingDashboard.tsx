@@ -26,6 +26,7 @@ import InvoicingHub from './InvoicingHub';
 import ServiceCatalogManager from '../settings/billing/ServiceCatalogManager';
 import ProductsManager from '../settings/billing/ProductsManager';
 import ServiceTypeSettings from '../settings/billing/ServiceTypeSettings';
+import ServiceCategoriesSettings from '../settings/billing/ServiceCategoriesSettings';
 import AccountingExportsTab, { AccountingExportsAccessDenied } from './accounting/AccountingExportsTab';
 import QuotesTab from './quotes/QuotesTab';
 import QuoteDocumentTemplatesPage from './quotes/QuoteDocumentTemplatesPage';
@@ -189,7 +190,7 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
               </h2>
               <QuoteTemplatesList
                 onEdit={(id) => router.push(`/msp/billing?tab=quotes&quoteId=${id}&mode=edit`)}
-                onCreateFromTemplate={(id) => router.push(`/msp/billing?tab=quotes&quoteId=new&templateId=${id}`)}
+                onCreateFromTemplate={(id) => router.push(`/msp/billing?tab=quotes&quoteId=new&sourceTemplateId=${id}`)}
                 onNewTemplate={() => router.push('/msp/billing?tab=quotes&quoteId=new&isTemplate=true')}
               />
             </div>
@@ -252,6 +253,10 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
 
         <Tabs.Content value="service-types">
           <ServiceTypeSettings />
+        </Tabs.Content>
+
+        <Tabs.Content value="service-categories">
+          <ServiceCategoriesSettings />
         </Tabs.Content>
 
         <Tabs.Content value="service-catalog">

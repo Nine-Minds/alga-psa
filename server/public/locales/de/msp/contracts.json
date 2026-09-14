@@ -504,7 +504,8 @@
       "addFromPresets": "Aus Vorlagenbausteinen hinzufügen",
       "collapseLine": "Vertragslinie einklappen",
       "createCustom": "Benutzerdefiniert erstellen",
-      "expandLine": "Vertragslinie ausklappen"
+      "expandLine": "Vertragslinie ausklappen",
+      "resetToStandard": "Auf Standard zurücksetzen"
     },
     "billingProfile": {
       "hint": "Buchungen dieser Position werden diesem Profil zugeordnet und überschreiben den Vertrag.",
@@ -550,7 +551,8 @@
       "readOnly": "Dieser vom System verwaltete Standardvertrag dient nur der Zuordnung. Die Erstellung von Vertragslinien ist deaktiviert."
     },
     "dialogs": {
-      "confirmRemove": "Vertragslinie \"{{name}}\" entfernen?"
+      "confirmRemove": "Vertragslinie \"{{name}}\" entfernen?",
+      "confirmResetRate": "Diese Position auf den Standardkatalogpreis zurücksetzen? Der gespeicherte benutzerdefinierte Preis wird entfernt."
     },
     "empty": {
       "noneAdded": "Noch keine Vertragslinien hinzugefügt.",
@@ -562,7 +564,8 @@
       "failedToLoad": "Vertragslinien konnten nicht geladen werden",
       "failedToRefresh": "Vertragslinien konnten nicht aktualisiert werden",
       "failedToRemove": "Vertragslinie konnte nicht entfernt werden",
-      "failedToUpdate": "Vertragslinie konnte nicht aktualisiert werden"
+      "failedToUpdate": "Vertragslinie konnte nicht aktualisiert werden",
+      "failedToResetRate": "Zurücksetzen des Positionspreises fehlgeschlagen"
     },
     "loading": {
       "contractLines": "Vertragslinien werden geladen",
@@ -601,7 +604,12 @@
       "semanticsEffectiveFrom": "Preis- und Messänderungen des Dienstes wirksam ab",
       "prospectiveSemanticsHelp": "Änderungen gelten ab dieser Leistungszeitraumgrenze; frühere Mengen, Messweise und Preise bleiben erhalten. Bei Änderung des Datums werden die geltenden Einstellungen zur Prüfung neu geladen."
     },
-    "title": "Vertragslinien"
+    "title": "Vertragslinien",
+    "rateProvenance": {
+      "standard": "Standard",
+      "custom": "Benutzerdefiniert",
+      "unreviewed": "Ungeprüft"
+    }
   },
   "contractLineEdit": {
     "actions": {

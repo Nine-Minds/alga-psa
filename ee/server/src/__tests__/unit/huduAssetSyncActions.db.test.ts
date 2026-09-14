@@ -18,6 +18,7 @@ describe('hudu asset sync helpers — DB persistence (T226/T227/T228 row layer)'
   let tenantId: string;
   let assetMappingDb: typeof import('../../lib/integrations/hudu/assetMapping');
 
+  // This hook recreates, migrates, and seeds the full database on CI.
   beforeAll(async () => {
     assetMappingDb = await vi.importActual('@ee/lib/integrations/hudu/assetMapping');
 
@@ -29,7 +30,7 @@ describe('hudu asset sync helpers — DB persistence (T226/T227/T228 row layer)'
       client_name: 'Hudu Asset Sync Test Tenant',
       email: `hudu-asset-sync-${tenantId}@example.test`,
     });
-  }, HOOK_TIMEOUT);
+  }, 300_000);
 
   afterAll(async () => {
     if (db && tenantId) {

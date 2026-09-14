@@ -506,6 +506,7 @@
   },
   "serviceCategories": {
     "title": "Servicecategorieën",
+    "description": "Optionele groepen voor uw producten. Categorieën bepalen de kolom en het filter Categorie op het tabblad Producten en staan los van Servicetypen, die verplicht zijn en worden gebruikt in rapportages en tijdregistratie.",
     "dialog": {
       "addTitle": "Servicecategorie toevoegen",
       "editTitle": "Servicecategorie bewerken",
@@ -531,6 +532,11 @@
       "importFromStandard": "Importeren uit standaardcategorieën",
       "create": "Creëren",
       "update": "Bijwerken"
+    },
+    "empty": {
+      "title": "Nog geen servicecategorieën",
+      "description": "Importeer de standaardlijst om te beginnen, of voeg uw eigen toe. Categorieën zijn optioneel en alleen nodig als u producten wilt groeperen.",
+      "importPrimary": "Standaard servicecategorieën importeren"
     },
     "delete": {
       "message": "Weet u zeker dat u \"{{name}}\" wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt."
@@ -635,6 +641,8 @@
     }
   },
   "serviceCatalog": {
+    "scheduledPriceBadge": "Volgende wijziging {{date}}",
+    "scheduledPriceNotice": "Er is een prijswijziging gepland voor {{date}}. Opslaan hier werkt de huidige prijs bij en annuleert de geplande wijziging niet.",
     "title": "Servicecatalogusbeheer",
     "loading": "Laaddiensten",
     "dialog": {
@@ -721,7 +729,11 @@
       "unit": "Eenheid",
       "taxRate": "Belastingtarief",
       "nonTaxable": "Niet-belastbaar",
-      "thisService": "deze dienst"
+      "thisService": "deze dienst",
+      "contractUsage": "Contracten",
+      "contractUsageNone": "Niet gebruikt",
+      "contractUsageOne": "Gebruikt op {{contracts}} contract",
+      "contractUsageMany": "Gebruikt op {{contracts}} contracten"
     },
     "errors": {
       "fetchServices": "Kan services niet ophalen",
@@ -902,8 +914,8 @@
         "loading": "Laden..."
       },
       "label": {
-        "label": "Label",
-        "placeholder": "Optioneel vrije-vormlabel"
+        "label": "Categorielabel",
+        "placeholder": "Optioneel vrij label"
       },
       "vendor": {
         "label": "Leverancier"
@@ -1432,6 +1444,70 @@
     },
     "sections": {
       "userRates": "Gebruikerstarieven"
+    }
+  },
+  "priceChangeRollout": {
+    "title": "Prijs wijziging uitrollen",
+    "previewFailed": "Kan de voorvertoning van de prijswijziging niet laden.",
+    "skip": "Alleen de prijs opslaan",
+    "apply": "Toepassen op overgenomen regels",
+    "applying": "Opslaan…",
+    "effectiveDate": "Ingangsdatum",
+    "effectiveDateHint": "Standaard de volgende grens van de factuurperiode.",
+    "willChange": "Verandert",
+    "noInheritedLines": "Geen overgenomen regel verandert op deze datum.",
+    "custom": "Verandert niet — aangepast",
+    "unreviewed": "Verandert niet — nog niet geclassificeerd",
+    "unreviewedAlert": "Deze regels worden ongewijzigd gefactureerd totdat u ze beoordeelt.",
+    "reviewRates": "Tarieven beoordelen",
+    "excluded": "Uitgesloten — al gefactureerd",
+    "none": "Geen.",
+    "totalMonthlyDelta": "Totale maandelijkse omzetverschil",
+    "acrossAllInherited": "Over alle {{lines}} overgenomen regel(s).",
+    "applyFailed": "Kan de uitrol niet toepassen. Er zijn geen wijzigingen aangebracht.",
+    "skipFailed": "Kan de prijswijziging niet opslaan.",
+    "columns": {
+      "client": "Klant",
+      "contract": "Contract",
+      "line": "Regel",
+      "current": "Huidig",
+      "new": "Nieuw",
+      "delta": "Verschil",
+      "rateAtDate": "Tarief op datum"
+    },
+    "followsCatalog": "Volgt de catalogus",
+    "close": "Sluiten",
+    "usageTitle": "Servicegebruik"
+  },
+  "rateReview": {
+    "title": "Tarieven beoordelen",
+    "close": "Sluiten",
+    "applySelected": "Selectie toepassen",
+    "applying": "Toepassen…",
+    "previewFailed": "Kan de tarieven voor beoordeling niet laden.",
+    "applyFailed": "Kan de tariefbeoordeling niet toepassen. Er zijn geen wijzigingen aangebracht.",
+    "intro": "Regels die precies op de catalogusprijs zijn geprijsd, veranderen niet op uw volgende factuur. Regels die afwijken behouden hun huidige tarief als onderhandelde prijs.",
+    "applied": "{{applied}} wijziging(en) toegepast.",
+    "refused": "{{refused}} rij(en) zijn geweigerd omdat ze sinds de voorvertoning zijn gewijzigd.",
+    "summary": "{{total}} niet-beoordeelde regel(s): {{inherited}} exacte overeenkomst(en), {{custom}} onderhandeld, {{skipped}} overgeslagen.",
+    "allClassified": "Alle regels zijn geclassificeerd. Niets te beoordelen.",
+    "noService": "Geen service",
+    "columns": {
+      "contract": "Contract",
+      "currentRate": "Huidig tarief",
+      "catalogRate": "Catalogustarief",
+      "proposed": "Voorgesteld",
+      "confidence": "Betrouwbaarheid"
+    },
+    "proposal": {
+      "inherited": "Catalogus volgen",
+      "custom": "Behouden als aangepast",
+      "unreviewed": "Onbeoordeeld laten"
+    },
+    "confidence": {
+      "exact": "Exacte overeenkomst",
+      "differs": "Wijkt af van catalogus",
+      "needsDecision": "Vereist een beslissing"
     }
   }
 }

@@ -71,6 +71,23 @@ export function buildTestPushMessage(expoPushToken: string, serverHost: string):
   };
 }
 
+export interface PushSendResult {
+  to: string;
+  status: 'ok' | 'error';
+  error?: string | null;
+}
+
+export function buildTestPushMessage(expoPushToken: string, serverHost: string): ExpoPushMessage {
+  return {
+    to: expoPushToken,
+    sound: 'default' as const,
+    title: 'AlgaPSA test notification',
+    body: `Push notifications from ${serverHost} are working.`,
+    data: { kind: 'push-test', priority: 'normal' },
+    priority: 'high' as const,
+  };
+}
+
 export async function sendPushNotifications(
   messages: ExpoPushMessage[],
   tenant: string,

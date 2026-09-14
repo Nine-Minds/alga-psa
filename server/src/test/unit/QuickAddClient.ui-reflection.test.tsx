@@ -62,6 +62,7 @@ vi.mock('@alga-psa/clients/actions/clientLocationActions', async (importOriginal
 vi.mock('@alga-psa/clients/actions/countryActions', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   getAllCountries: vi.fn().mockResolvedValue([]),
+  getTenantDefaultCountry: vi.fn().mockResolvedValue(null),
 }));
 
 vi.mock('@alga-psa/clients/actions/contact-actions/contactActions', async (importOriginal) => ({

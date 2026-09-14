@@ -21,6 +21,7 @@ import {
   FileSignature,
   FileText,
   FlaskConical,
+  FolderTree,
   Globe,
   Gauge,
   Ghost,
@@ -475,6 +476,7 @@ export const billingNavigationSections: NavigationSection[] = [
     translationKey: 'nav.billing.sections.pricing',
     items: [
       { name: 'Service Types', translationKey: 'nav.billing.serviceTypes', icon: Layers3, href: '/msp/billing?tab=service-types' },
+      { name: 'Service Categories', translationKey: 'nav.billing.serviceCategories', icon: FolderTree, href: '/msp/billing?tab=service-categories' },
       { name: 'Services', translationKey: 'nav.billing.serviceCatalog', icon: Package, href: '/msp/billing?tab=service-catalog' },
       { name: 'Products', translationKey: 'nav.billing.products', icon: Package, href: '/msp/billing?tab=products' },
       { name: 'Tax Rates', translationKey: 'nav.billing.taxRates', icon: Percent, href: '/msp/billing?tab=tax-rates' },

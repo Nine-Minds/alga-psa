@@ -635,7 +635,11 @@ describe('Contract quantity & usage semantics — period totals and recurring se
       expect(result.failures?.[0]?.code).toBe('USAGE_PERIOD_TOTAL_STALE');
       expect(await context.db('invoices').where({tenant: context.tenantId})).toHaveLength(0);
       expect((await totalsTable().where({tenant: context.tenantId}).first()).lifecycle_state).toBe('recorded');
-    });
+      // The first phrasing of this six-case matrix pays the suite's cold import
+      // cost (~21s measured) and trips the suite's 20s global testTimeout
+      // non-deterministically. Give just this matrix room; the other cases run
+      // in a few seconds. Test-only, no product code involved.
+    }, 120000);
     it('a newly reported previously absent service invalidates a mixed preview', async () => {
       const setup = await setupUsageLine({measurementMode: 'period_total'});
       await upsertUsagePeriodTotal(reportInput(setup));
@@ -1314,6 +1318,80 @@ describe('Contract quantity & usage semantics — period totals and recurring se
       const invoice = unwrapInvoiceResult(await generateInvoice(setup.billingCycleId));
       expect(invoice.subtotal).toBe(190000); // 10 catalog-priced seats plus the unchanged bundle total.
       expect(await context.db('contract_line_service_fixed_config').where({tenant: context.tenantId, config_id: setup.basic.configId}).first()).toMatchObject({pricing_basis: null});
+    });
+    it('T19: two configs of the same service each apply their own unit revision', async () => {
+      // One service, two seat configurations on the same line. A revision map
+      // keyed on service_id alone would drop the second config's revision.
+      const serviceId = await createTestService(context, {
+        service_name: 'Shared Seat Service',
+        billing_method: 'fixed',
+        default_rate: 10000,
+        unit_of_measure: 'unit',
+        tax_region: 'US-NY'
+      });
+
+      const contractLineId = await context.createEntity('contract_lines', {
+        contract_line_name: 'Two-config seat line',
+        billing_frequency: 'monthly',
+        is_custom: false,
+        contract_line_type: 'Fixed',
+        custom_rate: null,
+        billing_timing: 'arrears'
+      }, 'contract_line_id');
+
+      const configA = uuidv4();
+      const configB = uuidv4();
+      await context.db('contract_line_services').insert({
+        contract_line_id: contractLineId,
+        service_id: serviceId,
+        tenant: context.tenantId
+      });
+      for (const [configId, quantity] of [[configA, 2], [configB, 3]] as const) {
+        await context.db('contract_line_service_configuration').insert({
+          config_id: configId,
+          contract_line_id: contractLineId,
+          service_id: serviceId,
+          configuration_type: 'Fixed',
+          quantity,
+          tenant: context.tenantId
+        });
+        await context.db('contract_line_service_fixed_config').insert({
+          config_id: configId,
+          tenant: context.tenantId,
+          base_rate: 10000,
+          pricing_basis: 'unit'
+        });
+      }
+
+      await assignContractLineToClient(context, contractLineId, {
+        startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
+      });
+      const januaryCycle = await setupInvoiceCycle(2023, 2, 1);
+      const first = unwrapInvoiceResult(await generateInvoice(januaryCycle));
+      expect(first.subtotal).toBe(50000); // (2 + 3) × 10000
+
+      const revisionA = await scheduleUnitPricingRevision({
+        contract_line_id: contractLineId,
+        service_id: serviceId,
+        config_id: configA,
+        quantity: 5,
+        unit_rate_cents: 10000,
+        effective_period_start: '2023-02-01'
+      });
+      if ('actionError' in (revisionA as object)) throw new Error(JSON.stringify(revisionA));
+      const revisionB = await scheduleUnitPricingRevision({
+        contract_line_id: contractLineId,
+        service_id: serviceId,
+        config_id: configB,
+        quantity: 7,
+        unit_rate_cents: 10000,
+        effective_period_start: '2023-02-01'
+      });
+      if ('actionError' in (revisionB as object)) throw new Error(JSON.stringify(revisionB));
+
+      const februaryCycle = await setupInvoiceCycle(2023, 3, 1);
+      const second = unwrapInvoiceResult(await generateInvoice(februaryCycle));
+      expect(second.subtotal).toBe(120000); // (5 + 7) × 10000
     });
     it('10/9/1 seats bill CA$1890 equivalent without usage rows', async () => {
       const setup = await setupSeatLine({ year: 2023, month: 2, day: 1 });

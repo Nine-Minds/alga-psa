@@ -86,6 +86,7 @@ import {
   shouldApplyOpenOnlyStatusFilter,
 } from '../lib/ticketStatusFilter';
 import { ticketActionErrorFrom, type TicketActionError } from './ticketActionErrors';
+import { permissionError } from '@alga-psa/ui/lib/errorHandling';
 // SLA cancellation is injected by the composition layer to avoid tickets→sla cross-package violation
 let _cancelSlaFn: ((tenantId: string, ticketId: string) => Promise<void>) | null = null;
 
@@ -678,6 +679,13 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
 
     if (suppressInternalNotifications && !suppressContactNotifications) {
       throw new Error('suppressInternalNotifications requires suppressContactNotifications');
+    }
+
+    // MSP ticket write surface. A client-portal session can reach server actions
+    // through the page bundle it is rendered on, so block non-internal callers
+    // before they can update any tenant ticket by id.
+    if (user.user_type !== 'internal') {
+      return permissionError('Permission denied: operation not available in client portal');
     }
 
     const {knex: db} = await createTenantKnex();
@@ -2054,6 +2062,15 @@ export const bulkUpdateTicketStatus = withAuth(async (
 
   if (uniqueIds.length === 0) {
     return { updatedIds: [], failed: [] };
+  }
+
+  // MSP bulk status write surface. Reject client-portal callers before the
+  // permission lookup or any per-ticket transaction, mirroring updateTicket.
+  if (user.user_type !== 'internal') {
+    return {
+      updatedIds: [],
+      failed: ticketBulkFailuresForAll(uniqueIds, 'Permission denied: operation not available in client portal'),
+    };
   }
 
   // Authorize once up front instead of paying a permission lookup per ticket.

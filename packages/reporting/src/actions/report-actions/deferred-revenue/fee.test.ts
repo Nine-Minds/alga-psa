@@ -222,9 +222,9 @@ describe('resolveConfiguredFee fallback chain', () => {
 
   it('resolves the active pricing schedule for the period (engine exclusivity semantics)', () => {
     const schedules: RawPricingScheduleRow[] = [
-      { contractId: 'contract-1', effectiveDate: '2026-01-01', endDate: '2026-02-14', customRate: 7000 },
-      { contractId: 'contract-1', effectiveDate: '2026-02-15', endDate: null, customRate: 12000 },
-      { contractId: 'contract-other', effectiveDate: '2026-01-01', endDate: null, customRate: 99999 },
+      { contractId: 'contract-1', contractLineId: null, effectiveDate: '2026-01-01', endDate: '2026-02-14', customRate: 7000 },
+      { contractId: 'contract-1', contractLineId: null, effectiveDate: '2026-02-15', endDate: null, customRate: 12000 },
+      { contractId: 'contract-other', contractLineId: null, effectiveDate: '2026-01-01', endDate: null, customRate: 99999 },
     ];
     // Feb 1–28 overlaps only the second schedule (effective Feb 15, no end).
     expect(resolvePricingScheduleRate('2026-02-01', '2026-02-28', 'contract-1', schedules)).toBe(12000);
@@ -232,5 +232,24 @@ describe('resolveConfiguredFee fallback chain', () => {
     expect(resolvePricingScheduleRate('2025-12-01', '2025-12-31', 'contract-1', schedules)).toBeNull();
     // A period that ends after the first schedule's end_date (exclusive) skips it.
     expect(resolvePricingScheduleRate('2026-02-01', '2026-02-14', 'contract-1', schedules)).toBe(7000);
+  });
+
+  it('T21: a null-rate newest schedule blocks older schedules (engine parity)', () => {
+    const schedules: RawPricingScheduleRow[] = [
+      { contractId: 'contract-1', contractLineId: null, effectiveDate: '2026-08-01', endDate: null, customRate: 50000 },
+      { contractId: 'contract-1', contractLineId: null, effectiveDate: '2026-10-15', endDate: null, customRate: null },
+    ];
+    // The report must NOT fall back to the older 50000; the billing engine
+    // picks the latest schedule and only then checks for a null rate.
+    expect(resolvePricingScheduleRate('2026-11-01', '2026-11-30', 'contract-1', schedules)).toBeNull();
+  });
+
+  it('line-scoped schedules win over contract-wide ones at the same time', () => {
+    const schedules: RawPricingScheduleRow[] = [
+      { contractId: 'contract-1', contractLineId: null, effectiveDate: '2026-01-01', endDate: null, customRate: 7000 },
+      { contractId: 'contract-1', contractLineId: 'line-1', effectiveDate: '2026-01-01', endDate: null, customRate: 8000 },
+    ];
+    expect(resolvePricingScheduleRate('2026-02-01', '2026-02-28', 'contract-1', schedules, 'line-1')).toBe(8000);
+    expect(resolvePricingScheduleRate('2026-02-01', '2026-02-28', 'contract-1', schedules, 'line-2')).toBe(7000);
   });
 });
