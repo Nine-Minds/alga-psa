@@ -188,7 +188,7 @@ export interface TicketBentoLayoutProps {
   onStop: () => void;
   onAddTimeEntry: () => void;
   userId?: string;
-  dateTimeFormat?: string;
+  showWeekday?: boolean;
   timeEntriesRefreshKey?: number;
   onEditTimeEntry?: (entry: any) => void;
   onDeleteTimeEntry?: (entry: any) => void;
@@ -685,7 +685,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
             id={`${id}-time-entries`}
             ticketId={ticketId}
             currentUserId={props.userId}
-            dateTimeFormat={props.dateTimeFormat}
+            showWeekday={props.showWeekday}
             refreshKey={props.timeEntriesRefreshKey}
             onEditEntry={props.onEditTimeEntry}
             onDeleteEntry={props.onDeleteTimeEntry}

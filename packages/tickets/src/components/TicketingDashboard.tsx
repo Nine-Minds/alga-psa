@@ -301,7 +301,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const { t } = useTranslation('features/tickets');
   // These followed the browser locale, so a German UI printed American dates.
   const { formatDate } = useFormatters();
-  const { locale } = useFormatters();
+  const { locale, dateFormat } = useFormatters();
   // Pre-fetch tag permissions to prevent individual API calls
   useTagPermissions(['ticket']);
 
@@ -1323,6 +1323,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       onToggleBundleExpanded: bundleView === 'bundled' ? toggleBundleExpanded : undefined,
       t,
       locale,
+      dateFormat,
     });
 
     const selectionColumn: ColumnDefinition<ITicketListItem> = {
@@ -1444,6 +1445,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     bundleView,
     densityClasses.tagSize,
     t,
+    locale,
+    dateFormat,
   ]);
 
   const handleBulkDeleteClose = useCallback(() => {

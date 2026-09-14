@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
-import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { toast } from 'react-hot-toast';
 import {
   getErrorMessage,
@@ -18,11 +17,16 @@ import {
   updateTicketingDisplaySettings
 } from '@alga-psa/tickets/actions/ticketDisplaySettings';
 import { TOGGLEABLE_TICKET_COLUMNS, resolveTicketColumnVisibility } from '@alga-psa/tickets/lib';
+import { getTenantDefaultCountry } from '@alga-psa/clients/actions/countryActions';
 
 const DisplaySettings = (): React.JSX.Element => {
-  const { t, i18n } = useTranslation('features/tickets');
+  const { t } = useTranslation('features/tickets');
   // Ticket display preferences (tenant-wide)
-  const [dateTimeFormat, setDateTimeFormat] = useState<string>('MMM d, yyyy h:mm a');
+  const [showWeekday, setShowWeekday] = useState<boolean>(false);
+  // Null once resolved means the company country is still the 'XX' placeholder,
+  // so dates are on the fixed system default and the tenant should be told where
+  // to change that — this screen is where they used to do it.
+  const [countryMissing, setCountryMissing] = useState<boolean>(false);
   const [isSavingDisplay, setIsSavingDisplay] = useState<boolean>(false);
   const [columnVisibility, setColumnVisibility] = useState<Record<string, boolean>>(() => resolveTicketColumnVisibility());
   // LEVERAGE: friction tags-inline-dead — tagsInlineUnderTitle no longer affects
@@ -31,17 +35,6 @@ const DisplaySettings = (): React.JSX.Element => {
   // and drop this state in a follow-up.
   const [tagsInlineUnderTitle, setTagsInlineUnderTitle] = useState<boolean>(false);
   const [responseStateTrackingEnabled, setResponseStateTrackingEnabled] = useState<boolean>(true);
-  const sampleDate = new Date(Date.UTC(2025, 7, 22, 13, 23));
-  const locale = i18n.language || 'en';
-  const formatDateExample = (options: Intl.DateTimeFormatOptions): string =>
-    new Intl.DateTimeFormat(locale, { ...options, timeZone: 'UTC' }).format(sampleDate);
-  const dateTimeOptions = [
-    { value: 'MMM d, yyyy h:mm a', label: formatDateExample({ month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) },
-    { value: 'yyyy-MM-dd HH:mm', label: '2025-08-22 13:23' },
-    { value: 'MM/dd/yyyy h:mm a', label: formatDateExample({ month: '2-digit', day: '2-digit', year: 'numeric', hour: 'numeric', minute: '2-digit' }) },
-    { value: 'dd/MM/yyyy HH:mm', label: '22/08/2025 13:23' },
-    { value: 'EEE, MMM d, yyyy h:mm a', label: formatDateExample({ weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) },
-  ];
   // Only user-toggleable columns appear here. Title is always shown; ticket
   // number and category fold into the Title cell, so they're not toggles.
   const columnOptions = TOGGLEABLE_TICKET_COLUMNS.map((c) => ({
@@ -51,12 +44,12 @@ const DisplaySettings = (): React.JSX.Element => {
 
   // Track original values to detect changes
   const [originalDisplaySettings, setOriginalDisplaySettings] = useState<{
-    dateTimeFormat: string;
+    showWeekday: boolean;
     columnVisibility: Record<string, boolean>;
     tagsInlineUnderTitle: boolean;
     responseStateTrackingEnabled: boolean;
   }>({
-    dateTimeFormat: 'MMM d, yyyy h:mm a',
+    showWeekday: false,
     columnVisibility: resolveTicketColumnVisibility(),
     tagsInlineUnderTitle: false,
     responseStateTrackingEnabled: true,
@@ -65,7 +58,7 @@ const DisplaySettings = (): React.JSX.Element => {
   // Check if there are unsaved changes
   const hasUnsavedChanges = (): boolean => {
     return (
-      dateTimeFormat !== originalDisplaySettings.dateTimeFormat ||
+      showWeekday !== originalDisplaySettings.showWeekday ||
       JSON.stringify(columnVisibility) !== JSON.stringify(originalDisplaySettings.columnVisibility) ||
       tagsInlineUnderTitle !== originalDisplaySettings.tagsInlineUnderTitle ||
       responseStateTrackingEnabled !== originalDisplaySettings.responseStateTrackingEnabled
@@ -77,7 +70,7 @@ const DisplaySettings = (): React.JSX.Element => {
     const loadDisplay = async () => {
       try {
         const s = await getTicketingDisplaySettings();
-        const loadedDateFormat = s?.dateTimeFormat || 'MMM d, yyyy h:mm a';
+        const loadedShowWeekday = s?.showWeekday ?? false;
         const loadedColumnVisibility = resolveTicketColumnVisibility(
           s?.list?.columnVisibility as Record<string, boolean> | undefined,
         );
@@ -85,14 +78,14 @@ const DisplaySettings = (): React.JSX.Element => {
         const loadedResponseStateTracking = s?.responseStateTrackingEnabled ?? true;
 
         // Set current values
-        setDateTimeFormat(loadedDateFormat);
+        setShowWeekday(loadedShowWeekday);
         setColumnVisibility(loadedColumnVisibility);
         setTagsInlineUnderTitle(loadedTagsInline);
         setResponseStateTrackingEnabled(loadedResponseStateTracking);
 
         // Store original values for change detection
         setOriginalDisplaySettings({
-          dateTimeFormat: loadedDateFormat,
+          showWeekday: loadedShowWeekday,
           columnVisibility: loadedColumnVisibility,
           tagsInlineUnderTitle: loadedTagsInline,
           responseStateTrackingEnabled: loadedResponseStateTracking,
@@ -104,11 +97,17 @@ const DisplaySettings = (): React.JSX.Element => {
     loadDisplay();
   }, []);
 
+  useEffect(() => {
+    getTenantDefaultCountry()
+      .then((country) => setCountryMissing(!country))
+      .catch(() => setCountryMissing(false));
+  }, []);
+
   const handleSaveDisplaySettings = async (): Promise<void> => {
     try {
       setIsSavingDisplay(true);
       const result = await updateTicketingDisplaySettings({
-        dateTimeFormat,
+        showWeekday,
         responseStateTrackingEnabled,
         list: {
           columnVisibility,
@@ -123,7 +122,7 @@ const DisplaySettings = (): React.JSX.Element => {
 
       // Update original settings after successful save
       setOriginalDisplaySettings({
-        dateTimeFormat,
+        showWeekday,
         columnVisibility: { ...columnVisibility },
         tagsInlineUnderTitle,
         responseStateTrackingEnabled,
@@ -167,18 +166,21 @@ const DisplaySettings = (): React.JSX.Element => {
           'Configure how your Ticketing dashboard displays columns and timestamps for your team.'
         )}
       </p>
-      <div className="flex flex-col gap-3 md:flex-row md:items-end md:gap-4">
-        <div className="flex-1 min-w-[260px]">
-          <label className="block text-md font-semibold text-gray-800 mb-2">
-            {t('settings.display.dateTimeFormat', 'Date/Time Format')}
-          </label>
-          <CustomSelect
-            value={dateTimeFormat}
-            onValueChange={(v: string) => setDateTimeFormat(v)}
-            options={dateTimeOptions}
-            className="!w-fit"
-          />
-        </div>
+      <div className="flex flex-col gap-3">
+        <Checkbox
+          id="show-weekday"
+          label={t('settings.display.showWeekday', 'Show weekday in timestamps')}
+          checked={showWeekday}
+          onChange={(e) => setShowWeekday((e.target as HTMLInputElement).checked)}
+        />
+        {countryMissing && (
+          <p className="text-sm text-gray-600">
+            {t(
+              'settings.display.countryDrivesFormat',
+              'Date and time format follows your company country. Set it under Settings \u2192 General.'
+            )}
+          </p>
+        )}
       </div>
 
       <div className="mt-6">
