@@ -40,7 +40,7 @@ describe('email template API auth', () => {
     const controller = new ApiEmailTemplateController();
     const service = (controller as any).emailTemplateService;
     const upsertSpy = vi.spyOn(service, 'upsertOverride');
-    const listSpy = vi.spyOn(service, 'list');
+    const listSpy = vi.spyOn(service, 'listTemplates');
 
     vi.spyOn(controller as any, 'authenticate').mockResolvedValue(
       Object.assign(request(`${BASE}/ticket-created`, 'PUT', { language_code: 'en', subject: 'x' }), {

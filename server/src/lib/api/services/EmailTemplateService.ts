@@ -98,7 +98,7 @@ export class EmailTemplateService extends BaseService<never> {
   }
 
   /** Every template the tenant can send, system defaults and overrides merged. */
-  async list(
+  async listTemplates(
     query: EmailTemplateListQuery,
     context: ServiceContext,
   ): Promise<{ data: EmailTemplateSummary[]; total: number; page: number; limit: number }> {

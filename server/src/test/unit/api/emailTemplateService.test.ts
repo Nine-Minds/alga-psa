@@ -115,7 +115,7 @@ describe('EmailTemplateService', () => {
       text_content: 'ours', language_code: 'en', system_template_id: 1, updated_at: '2026-09-01',
     }];
 
-    const result = await service().list({}, context);
+    const result = await service().listTemplates({}, context);
 
     expect(result.total).toBe(3);
     expect(result.data.map((row) => `${row.name}/${row.language_code}`)).toEqual([
@@ -127,19 +127,19 @@ describe('EmailTemplateService', () => {
   });
 
   it('never reads another tenant, and filters by language and category', async () => {
-    const byLanguage = await service().list({ language: 'fr' }, context);
+    const byLanguage = await service().listTemplates({ language: 'fr' }, context);
     expect(byLanguage.data.map((row) => row.subject)).toEqual(['Nouveau ticket']);
 
-    const byCategory = await service().list({ category: 'Billing' }, context);
+    const byCategory = await service().listTemplates({ category: 'Billing' }, context);
     expect(byCategory.data.map((row) => row.name)).toEqual(['invoice-email']);
 
-    const everything = await service().list({}, context);
+    const everything = await service().listTemplates({}, context);
     expect(everything.data.some((row) => row.subject === 'Other tenant ticket')).toBe(false);
     expect(touched.every((access) => access.tenant === TENANT)).toBe(true);
   });
 
   it('paginates', async () => {
-    const page = await service().list({ page: 2, limit: 2 }, context);
+    const page = await service().listTemplates({ page: 2, limit: 2 }, context);
 
     expect(page).toMatchObject({ total: 3, page: 2, limit: 2 });
     expect(page.data).toHaveLength(1);

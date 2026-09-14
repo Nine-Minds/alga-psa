@@ -64,7 +64,7 @@ export class ApiEmailTemplateController extends ApiBaseController {
         return await this.runWithApiKeyContext(apiRequest, async () => {
           await this.checkPermission(apiRequest, 'read');
           const query = this.validateQuery(apiRequest, emailTemplateListQuerySchema);
-          const result = await this.emailTemplateService.list(query, apiRequest.context);
+          const result = await this.emailTemplateService.listTemplates(query, apiRequest.context);
 
           return createPaginatedResponse(
             result.data,
