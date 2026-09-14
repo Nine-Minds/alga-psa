@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Eye } from "lucide-react";
 import { Button } from "@alga-psa/ui/components/Button";
 import { Checkbox } from "@alga-psa/ui/components/Checkbox";
-import { Dialog, DialogContent, DialogTitle } from "@alga-psa/ui/components/Dialog";
+import { Dialog, DialogContent } from "@alga-psa/ui/components/Dialog";
 import { Label } from "@alga-psa/ui/components/Label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@alga-psa/ui/components/Tabs";
 import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
@@ -323,10 +323,18 @@ export function ApplyEmailBrandingDialog({
 
   return (
     // Dialog appends "-dialog" to the id it renders: apply-email-branding-dialog.
-    <Dialog id="apply-email-branding" isOpen={isOpen} onClose={onClose} className="max-w-4xl" footer={footer}>
-      <DialogTitle>{t('notifications.emailBranding.apply.title', 'Apply branding to templates')}</DialogTitle>
-
-      <DialogContent className="space-y-4 px-6">
+    // The heading goes in the `title` prop, not a child DialogTitle: only the
+    // prop fills the drag handle, and a child leaves it blank with the heading
+    // stranded below the grab bar, scrolling away with the body.
+    <Dialog
+      id="apply-email-branding"
+      isOpen={isOpen}
+      onClose={onClose}
+      className="max-w-4xl"
+      title={t('notifications.emailBranding.apply.title', 'Apply branding to templates')}
+      footer={footer}
+    >
+      <DialogContent className="space-y-4">
         {error && (
           <div id="apply-email-branding-error" className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">
             {error}

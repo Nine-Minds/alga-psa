@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback, useLayoutEffect, useMemo, useRef } fr
 import { createPortal } from "react-dom";
 import { useSession } from "next-auth/react";
 import { Button } from "@alga-psa/ui/components/Button";
-import { Dialog, DialogContent, DialogTitle } from "@alga-psa/ui/components/Dialog";
+import { Dialog, DialogContent } from "@alga-psa/ui/components/Dialog";
 import { Input } from "@alga-psa/ui/components/Input";
 import { Label } from "@alga-psa/ui/components/Label";
 import { TextArea } from "@alga-psa/ui/components/TextArea";
@@ -674,10 +674,16 @@ function ViewTemplateDialog({
   );
 
   return (
-    <Dialog isOpen={!!template} onClose={onClose} className="max-w-6xl" footer={footer}>
-      <DialogTitle>{t('notifications.emailTemplatesUi.view.title', { defaultValue: 'Standard Template: {{name}}', name: formatTemplateName(template.name) })}</DialogTitle>
-
-      <DialogContent className="grid gap-5 px-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
+    <Dialog
+      isOpen={!!template}
+      onClose={onClose}
+      className="max-w-6xl"
+      // The `title` prop, not a child DialogTitle: only the prop fills the drag
+      // handle, which otherwise shows an empty grab bar above the heading.
+      title={t('notifications.emailTemplatesUi.view.title', { defaultValue: 'Standard Template: {{name}}', name: formatTemplateName(template.name) })}
+      footer={footer}
+    >
+      <DialogContent className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <div className="min-w-0 space-y-4">
         <div>
           <Label>{t('notifications.emailTemplatesUi.fields.language', 'Language')}</Label>
@@ -1024,11 +1030,17 @@ function EditTemplateDialog({
   );
 
   return (
-    <Dialog isOpen={isOpen} onClose={onClose} className="max-w-[92rem]" footer={footer}>
+    <Dialog
+      isOpen={isOpen}
+      onClose={onClose}
+      className="max-w-[92rem]"
+      // The `title` prop, not a child DialogTitle: only the prop fills the drag
+      // handle, which otherwise shows an empty grab bar above the heading.
+      title={t('notifications.emailTemplatesUi.edit.title', { defaultValue: 'Edit Custom Template: {{name}}', name: formatTemplateName(template?.name ?? '') })}
+      footer={footer}
+    >
       <form id="edit-template-form" onSubmit={handleSubmit}>
-        <DialogTitle>{t('notifications.emailTemplatesUi.edit.title', { defaultValue: 'Edit Custom Template: {{name}}', name: formatTemplateName(template?.name ?? '') })}</DialogTitle>
-
-        <DialogContent className="grid gap-5 px-6 lg:grid-cols-2">
+        <DialogContent className="grid gap-5 lg:grid-cols-2">
           <div className="min-w-0 space-y-4">
           <div>
             <Label>{t('notifications.emailTemplatesUi.fields.language', 'Language')}</Label>

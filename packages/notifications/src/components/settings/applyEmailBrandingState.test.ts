@@ -169,8 +169,14 @@ describe('preview language tabs', () => {
 
 describe('apply dialog markup', () => {
   it('renders as apply-email-branding-dialog with language checkboxes', () => {
-    expect(dialogSource).toContain('<Dialog id="apply-email-branding"');
+    expect(dialogSource).toContain('id="apply-email-branding"');
     expect(dialogSource).toContain('id={`apply-branding-language-${code}`}');
+  });
+
+  it('puts its heading in the drag handle, not below it', () => {
+    // A child DialogTitle leaves the handle empty and scrolls the heading away.
+    expect(dialogSource).toContain("title={t('notifications.emailBranding.apply.title'");
+    expect(dialogSource).not.toContain('<DialogTitle>');
   });
 
   it('disables the no-stock-colors group and hints why', () => {
