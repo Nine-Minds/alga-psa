@@ -15,7 +15,6 @@ import {
   SupportedLocale,
   isSupportedLocale,
   filterPseudoLocales,
-  getTranslationLanguageCode,
 } from './config';
 import { formatDateValue } from './formatDateValue';
 import { useDateFormat } from '../dateFormat/useDateFormat';
@@ -37,10 +36,6 @@ const BOOTSTRAP_LOADING_TEXT: Record<
   { translations: string; languagePreferences: string }
 > = {
   en: {
-    translations: 'Loading translations...',
-    languagePreferences: 'Loading language preferences...',
-  },
-  'en-AU': {
     translations: 'Loading translations...',
     languagePreferences: 'Loading language preferences...',
   },
@@ -102,20 +97,16 @@ export type PreloadedNamespaceResources = Record<string, Record<string, unknown>
  * never fetches them. Safe to call before or after init (addResourceBundle is
  * idempotent with the merge flag).
  *
- * Bundles are keyed by the locale's translation-language code: packs are
- * language-only and i18next runs with `load: 'languageOnly'`, so a regional
- * locale (`en-AU`) resolves its resources from `en`. Seeding under the full
- * tag instead would strand the data where lookups never read it.
+ * Locales are language codes, so a bundle is keyed by the locale itself.
  */
 function applyPreloadedResources(
   locale: SupportedLocale,
   preloaded?: PreloadedNamespaceResources,
 ) {
   if (!preloaded) return;
-  const resourcesLocale = getTranslationLanguageCode(locale);
   for (const [namespace, resources] of Object.entries(preloaded)) {
-    if (!i18next.hasResourceBundle(resourcesLocale, namespace)) {
-      i18next.addResourceBundle(resourcesLocale, namespace, resources, true, true);
+    if (!i18next.hasResourceBundle(locale, namespace)) {
+      i18next.addResourceBundle(locale, namespace, resources, true, true);
     }
   }
 }
@@ -136,9 +127,8 @@ async function ensureNamespacesLoaded(
 ) {
   if (!namespaces || namespaces.length === 0) return;
 
-  const resourcesLocale = getTranslationLanguageCode(locale);
   const missing = namespaces.filter(
-    (namespace) => !i18next.hasResourceBundle(resourcesLocale, namespace)
+    (namespace) => !i18next.hasResourceBundle(locale, namespace)
   );
   if (missing.length === 0) return;
 
@@ -166,14 +156,12 @@ async function initI18n(
     return;
   }
 
-  // Seed resources under the translation-language code the regional tag will
-  // actually resolve (see applyPreloadedResources), and only when the server
-  // actually embedded namespace data — an empty seed would mark the bundle as
-  // loaded and mask the real (fetched) translations with missing keys.
-  const resourcesLocale = getTranslationLanguageCode(resolvedLocale);
+  // Seed only when the server actually embedded namespace data — an empty seed
+  // would mark the bundle as loaded and mask the real (fetched) translations
+  // with missing keys.
   const hasPreloadedContent = preloaded && Object.keys(preloaded).length > 0;
   const seededResources = hasPreloadedContent
-    ? { [resourcesLocale]: preloaded }
+    ? { [resolvedLocale]: preloaded }
     : undefined;
 
   await i18next
