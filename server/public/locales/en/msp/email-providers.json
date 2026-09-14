@@ -875,7 +875,8 @@
         "clearButton": "Clear ticket identity",
         "savingButton": "Saving...",
         "saveButton": "Save sender identities"
-      }
+      },
+      "diagnosticsButton": "Run Outbound Diagnostics"
     },
     "inbound": {
       "intro": "Configure inbound email routing and provider-specific automation."

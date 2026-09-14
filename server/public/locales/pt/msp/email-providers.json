@@ -875,7 +875,8 @@
         "clearButton": "Limpar identidade dos tickets",
         "savingButton": "Salvando...",
         "saveButton": "Salvar identidades dos remetentes"
-      }
+      },
+      "diagnosticsButton": "Executar diagnóstico de e-mail de saída"
     },
     "inbound": {
       "intro": "Configure o roteamento de e-mail de entrada e a automação específica do provedor."

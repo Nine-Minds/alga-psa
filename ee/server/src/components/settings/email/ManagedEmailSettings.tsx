@@ -21,7 +21,7 @@ import {
 } from '@alga-psa/ui/lib/errorHandling';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Switch } from '@alga-psa/ui/components/Switch';
-import { Globe, Send, Inbox, Mail, Eye, EyeOff, CheckCircle, XCircle } from 'lucide-react';
+import { Globe, Send, Inbox, Mail, Eye, EyeOff } from 'lucide-react';
 import { useTier } from 'server/src/context/TierContext';
 import {
   getManagedEmailDomains,
@@ -32,7 +32,7 @@ import {
   type ManagedDomainActionResult,
   type ManagedDomainActionFailure,
 } from '@ee/lib/actions/email-actions/managedDomainActions';
-import { EmailProviderConfiguration, EmailSenderIdentityCards } from '@alga-psa/integrations/components';
+import { EmailProviderConfiguration, EmailSenderIdentityCards, OutboundEmailDiagnosticsDialog } from '@alga-psa/integrations/components';
 import type { EmailProvider } from '@alga-psa/integrations/components';
 import type { TenantEmailSettings } from 'server/src/types/email.types';
 import { createDefaultProviderConfig } from '@alga-psa/email/providerConfig';
@@ -41,7 +41,6 @@ import {
   getEmailSettings,
   updateEmailSettings,
   getEmailProviders,
-  testOutboundEmail,
   getMicrosoftOutboundMailboxes,
   type EmailSettingsView,
   type MicrosoftOutboundMailboxOption,
@@ -144,13 +143,11 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
   const [microsoftMailboxError, setMicrosoftMailboxError] = useState<string | null>(null);
   const [showSmtpPassword, setShowSmtpPassword] = useState(false);
   const [savingSmtp, setSavingSmtp] = useState(false);
-  const [smtpTestRecipient, setSmtpTestRecipient] = useState('');
-  const [testingSmtp, setTestingSmtp] = useState(false);
-  const [smtpTestResult, setSmtpTestResult] = useState<{ success: boolean; message?: string; error?: string } | null>(null);
+  const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
   const [pendingDomainRemoval, setPendingDomainRemoval] = useState<string | null>(null);
   // Provider changes return the configuration required by dependent saves.
   // Keep those operations serialized so the UI cannot submit an older config.
-  const outboundBusy = loadingOutbound || savingProvider || savingTicketingFrom || savingSmtp || testingSmtp;
+  const outboundBusy = loadingOutbound || savingProvider || savingTicketingFrom || savingSmtp;
 
   const resolveEmailSettingsResult = (
     result: EmailSettingsActionResult,
@@ -615,25 +612,20 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
     }
   };
 
-  const handleTestSmtp = async () => {
-    setTestingSmtp(true);
-    setSmtpTestResult(null);
-    try {
-      // Persist current edits first so the test reflects what's on screen.
-      // The masked password ('***') is resolved to the stored secret server-side.
-      const updated = await persistSmtpSettings();
-      if (!updated) return;
-      const result = await testOutboundEmail(smtpTestRecipient.trim() || undefined);
-      setSmtpTestResult(result);
-    } catch (err: any) {
-      console.error('[ManagedEmailSettings] Failed to test outbound email', err);
-      setSmtpTestResult({
-        success: false,
-        error: err?.message || t('managed.messages.testOutboundFailed')
-      });
-    } finally {
-      setTestingSmtp(false);
+  const handleOpenDiagnostics = async () => {
+    if (outboundProvider === 'smtp') {
+      try {
+        // Persist current edits first so diagnostics reflect what's on screen.
+        // The masked password ('***') is resolved to the stored secret server-side.
+        const updated = await persistSmtpSettings();
+        if (!updated) return;
+      } catch (err: any) {
+        console.error('[ManagedEmailSettings] Failed to save SMTP settings before diagnostics', err);
+        toast.error(t('managed.messages.smtpSaveFailed'));
+        return;
+      }
     }
+    setDiagnosticsOpen(true);
   };
 
   const handleAddDomain = async () => {
@@ -794,8 +786,25 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
                 ? t('managed.outbound.microsoft.description', 'Messages are sent as the selected mailbox through Microsoft Graph and saved to Sent Items.')
                 : t('managed.outbound.smtpDescription')}
             </p>
+            <div className="border-t pt-4 mt-4">
+              <Button
+                id="open-outbound-diagnostics"
+                variant="outline"
+                onClick={handleOpenDiagnostics}
+                disabled={outboundBusy || !emailSettings}
+              >
+                <Send className="h-4 w-4 mr-2" />
+                {t('managed.outbound.diagnosticsButton', 'Run Outbound Diagnostics')}
+              </Button>
+            </div>
           </CardContent>
         </Card>
+
+        <OutboundEmailDiagnosticsDialog
+          isOpen={diagnosticsOpen}
+          onClose={() => setDiagnosticsOpen(false)}
+          hasUnsavedChanges={false}
+        />
 
         {outboundProvider === 'resend' && canUseManagedEmail && (
           <Card>
@@ -1040,48 +1049,6 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
                       >
                         {savingSmtp ? t('managed.outbound.smtp.savingButton') : t('managed.outbound.smtp.saveButton')}
                       </Button>
-                    </div>
-
-                    <div className="border-t pt-4 space-y-4">
-                      <h4 className="text-sm font-medium flex items-center gap-2">
-                        <Send className="h-4 w-4" />
-                        {t('managed.outbound.smtp.test.title')}
-                      </h4>
-                      <p className="text-sm text-muted-foreground">
-                        {t('managed.outbound.smtp.test.description')}
-                      </p>
-                      <div className="flex items-end gap-2">
-                        <div className="flex-1">
-                          <Label htmlFor="test-recipient">
-                            {t('managed.outbound.smtp.test.recipientLabel')}
-                          </Label>
-                          <Input
-                            id="test-recipient"
-                            type="email"
-                            value={smtpTestRecipient}
-                            placeholder={t('managed.outbound.smtp.test.recipientPlaceholder')}
-                            onChange={(e) => setSmtpTestRecipient(e.target.value)}
-                          />
-                        </div>
-                        <Button
-                          id="test-outbound-email"
-                          variant="outline"
-                          onClick={handleTestSmtp}
-                          disabled={outboundBusy}
-                        >
-                          {testingSmtp
-                            ? t('managed.outbound.smtp.test.testingButton')
-                            : t('managed.outbound.smtp.test.runButton')}
-                        </Button>
-                      </div>
-                      {smtpTestResult && (
-                        <div className={`flex items-start gap-2 text-sm ${smtpTestResult.success ? 'text-green-600' : 'text-red-600'}`}>
-                          {smtpTestResult.success
-                            ? <CheckCircle className="h-4 w-4 mt-0.5 shrink-0" />
-                            : <XCircle className="h-4 w-4 mt-0.5 shrink-0" />}
-                          <span>{smtpTestResult.success ? smtpTestResult.message : smtpTestResult.error}</span>
-                        </div>
-                      )}
                     </div>
                   </div>
                 );

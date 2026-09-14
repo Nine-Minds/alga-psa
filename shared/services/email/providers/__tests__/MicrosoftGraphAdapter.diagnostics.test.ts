@@ -219,4 +219,28 @@ describe('MicrosoftGraphAdapter.runMicrosoft365Diagnostics', () => {
       }),
     ]);
   });
+
+  it('carries status, code, request-id and client-request-id on a sanitized sendMail failure', async () => {
+    const adapter = makeAdapter();
+    (adapter as any).httpClient = {
+      post: vi.fn(async () => {
+        throw {
+          response: {
+            status: 403,
+            headers: { 'request-id': 'req-send', 'client-request-id': 'cli-send' },
+            data: { error: { code: 'ErrorSendAsDenied', message: 'Denied' } },
+          },
+        };
+      }),
+    };
+
+    await expect(
+      adapter.sendMail({ kind: 'json', message: { subject: 'diag' } as any }),
+    ).rejects.toMatchObject({
+      status: 403,
+      code: 'ErrorSendAsDenied',
+      requestId: 'req-send',
+      clientRequestId: 'cli-send',
+    });
+  });
 });

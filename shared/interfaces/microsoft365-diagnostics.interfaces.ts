@@ -1,34 +1,26 @@
-export type DiagnosticsStepStatus = 'pass' | 'warn' | 'fail' | 'skip';
+/**
+ * Microsoft 365 diagnostics public types.
+ *
+ * The generic diagnostics kernel types are the source of truth; this module
+ * preserves the existing Microsoft365-named aliases and exports so current
+ * imports keep compiling.
+ */
 
-export interface DiagnosticsHttpMeta {
-  method: 'GET' | 'POST' | 'PATCH' | 'DELETE';
-  url?: string;
-  path?: string;
-  resource?: string;
-  status?: number;
-  requestId?: string;
-  clientRequestId?: string;
-}
+import type {
+  DiagnosticsStep,
+  DiagnosticsStepData,
+  DiagnosticsStepStatus,
+} from './diagnostics.interfaces';
 
-export interface DiagnosticsErrorMeta {
-  message: string;
-  status?: number;
-  code?: string;
-  requestId?: string;
-  clientRequestId?: string;
-  responseBody?: unknown;
-}
+export type {
+  DiagnosticsErrorMeta,
+  DiagnosticsHttpMeta,
+  DiagnosticsStepStatus,
+} from './diagnostics.interfaces';
 
-export interface Microsoft365DiagnosticsStep {
-  id: string;
-  title: string;
-  status: DiagnosticsStepStatus;
+export type Microsoft365DiagnosticsStep = DiagnosticsStep<DiagnosticsStepData> & {
   startedAt: string;
-  durationMs: number;
-  http?: DiagnosticsHttpMeta;
-  data?: Record<string, unknown>;
-  error?: DiagnosticsErrorMeta;
-}
+};
 
 export interface Microsoft365DiagnosticsSummary {
   providerId: string;
@@ -58,4 +50,3 @@ export interface Microsoft365DiagnosticsOptions {
   requiredScopes?: string[];
   folderListTop?: number;
 }
-

@@ -658,5 +658,43 @@
       "fail": "Fail",
       "skip": "Skip"
     }
+  },
+  "outboundDiagnostics": {
+    "title": "Outbound Email Diagnostics",
+    "description": "Runs the saved outbound configuration through a provider checklist. No message is sent unless you explicitly enable the live send option below.",
+    "unsavedNotice": "Unsaved changes on this screen are not included. Save settings before running diagnostics.",
+    "states": {
+      "running": "Running diagnostics...",
+      "failed": "Diagnostics failed"
+    },
+    "actions": {
+      "retry": "Retry",
+      "rerun": "Run again",
+      "copyBundle": "Copy Support Bundle",
+      "copied": "Copied",
+      "downloadBundle": "Download"
+    },
+    "labels": {
+      "overall": "Overall:",
+      "provider": "Provider:",
+      "effectiveSender": "Effective sender:",
+      "authorizedUser": "Authorized user:",
+      "mailboxRoute": "Mailbox route:",
+      "recommendations": "Recommendations",
+      "error": "Error",
+      "redacted": "Support export redacts mailbox identifiers by default."
+    },
+    "statuses": {
+      "pass": "Pass",
+      "warn": "Warn",
+      "fail": "Fail",
+      "skip": "Skip"
+    },
+    "liveSend": {
+      "label": "Send one test message (live)",
+      "recipient": "Recipient",
+      "run": "Run with live send",
+      "invalidRecipient": "Enter a valid recipient email address."
+    }
   }
 }

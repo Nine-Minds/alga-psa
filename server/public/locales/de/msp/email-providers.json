@@ -875,7 +875,8 @@
         "clearButton": "Absenderidentität für Tickets löschen",
         "savingButton": "Wird gespeichert...",
         "saveButton": "Absenderidentitäten speichern"
-      }
+      },
+      "diagnosticsButton": "Ausgehende E-Mail-Diagnose ausführen"
     },
     "inbound": {
       "intro": "Konfigurieren Sie eingehendes E-Mail-Routing und anbieterspezifische Automatisierung."

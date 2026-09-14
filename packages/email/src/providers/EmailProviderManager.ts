@@ -209,7 +209,13 @@ export class EmailProviderManager implements IEmailProviderManager {
     logger.info(`[EmailProviderManager] Updated settings for tenant: ${tenantId}`);
   }
 
-  private async resolveProviderConfig(tenantId: string, config: EmailProviderConfig): Promise<Record<string, any>> {
+  /**
+   * Resolve the runtime config for a saved provider config using the same
+   * secret/vendor lookups as real sending (Microsoft inbound provider binding,
+   * Resend secret fallback). Exposed so diagnostics dispatch through production
+   * selection instead of re-deriving it.
+   */
+  public async resolveProviderConfig(tenantId: string, config: EmailProviderConfig): Promise<Record<string, any>> {
     const originalConfig = typeof config.config === 'object' && config.config !== null ? config.config : {};
 
     if (config.providerType === 'microsoft') {

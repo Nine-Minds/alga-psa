@@ -658,5 +658,43 @@
       "fail": "Fehlgeschlagen",
       "skip": "Übersprungen"
     }
+  },
+  "outboundDiagnostics": {
+    "title": "Diagnose für ausgehende E-Mails",
+    "description": "Führt die gespeicherte ausgehende Konfiguration durch eine Anbieter-Checkliste. Es wird keine Nachricht gesendet, sofern Sie die Option für den Live-Versand unten nicht ausdrücklich aktivieren.",
+    "unsavedNotice": "Nicht gespeicherte Änderungen auf diesem Bildschirm werden nicht berücksichtigt. Speichern Sie die Einstellungen, bevor Sie die Diagnose ausführen.",
+    "states": {
+      "running": "Diagnose wird ausgeführt...",
+      "failed": "Diagnose fehlgeschlagen"
+    },
+    "actions": {
+      "retry": "Erneut versuchen",
+      "rerun": "Erneut ausführen",
+      "copyBundle": "Support-Paket kopieren",
+      "copied": "Kopiert",
+      "downloadBundle": "Herunterladen"
+    },
+    "labels": {
+      "overall": "Gesamt:",
+      "provider": "Anbieter:",
+      "effectiveSender": "Effektiver Absender:",
+      "authorizedUser": "Autorisierter Benutzer:",
+      "mailboxRoute": "Postfachroute:",
+      "recommendations": "Empfehlungen",
+      "error": "Fehler",
+      "redacted": "Der Support-Export redigiert Postfach-IDs standardmäßig."
+    },
+    "statuses": {
+      "pass": "Bestanden",
+      "warn": "Warnung",
+      "fail": "Fehlgeschlagen",
+      "skip": "Übersprungen"
+    },
+    "liveSend": {
+      "label": "Eine Testnachricht senden (live)",
+      "recipient": "Empfänger",
+      "run": "Mit Live-Versand ausführen",
+      "invalidRecipient": "Geben Sie eine gültige Empfänger-E-Mail-Adresse ein."
+    }
   }
 }

@@ -84,7 +84,8 @@ export {
   getEmailSettings,
   getMicrosoftOutboundMailboxes,
   updateEmailSettings,
-  testOutboundEmail
+  testOutboundEmail,
+  runOutboundEmailDiagnostics
 } from './email-actions/emailSettingsActions';
 export type {
   EmailSettingsView,

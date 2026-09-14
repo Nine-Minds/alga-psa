@@ -658,5 +658,43 @@
       "fail": "Échec",
       "skip": "Ignoré"
     }
+  },
+  "outboundDiagnostics": {
+    "title": "Diagnostic des e-mails sortants",
+    "description": "Exécute la configuration sortante enregistrée via une liste de vérifications du fournisseur. Aucun message n'est envoyé tant que vous n'activez pas explicitement l'option d'envoi réel ci-dessous.",
+    "unsavedNotice": "Les modifications non enregistrées sur cet écran ne sont pas incluses. Enregistrez les paramètres avant d'exécuter le diagnostic.",
+    "states": {
+      "running": "Exécution du diagnostic...",
+      "failed": "Le diagnostic a échoué"
+    },
+    "actions": {
+      "retry": "Réessayer",
+      "rerun": "Relancer",
+      "copyBundle": "Copier le lot de support",
+      "copied": "Copié",
+      "downloadBundle": "Télécharger"
+    },
+    "labels": {
+      "overall": "Global :",
+      "provider": "Fournisseur :",
+      "effectiveSender": "Expéditeur effectif :",
+      "authorizedUser": "Utilisateur autorisé :",
+      "mailboxRoute": "Route de la boîte aux lettres :",
+      "recommendations": "Recommandations",
+      "error": "Erreur",
+      "redacted": "L'export de support masque les identifiants de boîte aux lettres par défaut."
+    },
+    "statuses": {
+      "pass": "Réussi",
+      "warn": "Avertissement",
+      "fail": "Échec",
+      "skip": "Ignoré"
+    },
+    "liveSend": {
+      "label": "Envoyer un message de test (réel)",
+      "recipient": "Destinataire",
+      "run": "Exécuter avec envoi réel",
+      "invalidRecipient": "Saisissez une adresse e-mail de destinataire valide."
+    }
   }
 }

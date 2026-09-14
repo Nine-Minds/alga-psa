@@ -875,7 +875,8 @@
         "clearButton": "Ticketidentiteit wissen",
         "savingButton": "Opslaan...",
         "saveButton": "Afzenderidentiteiten opslaan"
-      }
+      },
+      "diagnosticsButton": "Diagnose voor uitgaande e-mail uitvoeren"
     },
     "inbound": {
       "intro": "Configureer inkomende e-mailroutering en provider-specifieke automatisering."

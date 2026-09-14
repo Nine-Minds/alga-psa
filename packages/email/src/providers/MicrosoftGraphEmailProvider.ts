@@ -21,6 +21,7 @@ import {
   MicrosoftGraphAdapter,
   type MicrosoftGraphSendMailPayload,
 } from '@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter';
+import { extractGraphBodyCorrelationIds } from '@alga-psa/shared/services/email/microsoftGraphDiagnostics';
 import type { EmailProviderConfig as InboundEmailProviderConfig } from '@alga-psa/shared/interfaces/inbound-email.interfaces';
 
 const SIMPLE_ATTACHMENT_LIMIT = 3 * 1024 * 1024;
@@ -354,7 +355,15 @@ export class MicrosoftGraphEmailProvider implements IEmailProvider {
 
     const status = Number(error?.status || error?.response?.status || 0) || undefined;
     const code = String(error?.code || error?.response?.data?.error?.code || status || 'SEND_FAILED');
-    const requestId = error?.requestId || error?.response?.headers?.['request-id'];
+    // Header/top-level ids win; fall back to a body-only Graph failure's
+    // error.innerError (native response.data or sanitized responseBody). Only
+    // the two safe id fields are read, so the raw body stays out of metadata.
+    const bodyIds = extractGraphBodyCorrelationIds(
+      error?.responseBody ?? error?.response?.data,
+    );
+    const requestId = error?.requestId || error?.response?.headers?.['request-id'] || bodyIds.requestId;
+    const clientRequestId =
+      error?.clientRequestId || error?.response?.headers?.['client-request-id'] || bodyIds.clientRequestId;
     // A named Graph code does not identify acceptance. HTTP 429 is an explicit
     // rejection; network failures and 5xx responses may follow an accepted send.
     const definitelyNotSent = Boolean(status && status >= 400 && status < 500 && status !== 408);
@@ -388,7 +397,7 @@ export class MicrosoftGraphEmailProvider implements IEmailProvider {
       this.providerType,
       retryable,
       code,
-      { status, requestId, definitelyNotSent, requiresReconciliation: !definitelyNotSent,
+      { status, requestId, clientRequestId, definitelyNotSent, requiresReconciliation: !definitelyNotSent,
         ...(Number.isFinite(retryAfterMs) ? { retryAfterMs } : {}) }
     );
   }
