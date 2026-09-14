@@ -33,7 +33,7 @@ export { QuickAddService } from './settings/billing/QuickAddService';
 
 export { default as TaxComponentEditor } from './settings/tax/TaxComponentEditor';
 export { default as TaxHolidayManager } from './settings/tax/TaxHolidayManager';
-export { TaxRegionsManager } from './settings/tax/TaxRegionsManager';
+export { TaxRegionsAndRates } from './settings/tax/TaxRegionsAndRates';
 export { default as TaxSourceSettings } from './settings/tax/TaxSourceSettings';
 export { default as TaxThresholdEditor } from './settings/tax/TaxThresholdEditor';
 export { InvoiceTaxSourceBadge } from './invoices/InvoiceTaxSourceBadge';

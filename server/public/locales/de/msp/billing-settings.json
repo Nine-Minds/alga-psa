@@ -226,12 +226,13 @@
       }
     },
     "regions": {
-      "title": "Steuerregionen verwalten",
+      "title": "Steuerregionen und Steuersätze",
       "loading": "Regionen werden geladen...",
       "fields": {
         "code": {
           "label": "Regionalcode",
-          "placeholder": "z. B. CA, NY, VAT-UK"
+          "placeholder": "z. B. CA, NY, VAT-UK",
+          "immutableHint": "Der Regionscode identifiziert diese Region für Steuersätze, Kunden und Standorte und kann daher nicht geändert werden."
         },
         "name": {
           "label": "Regionsname",
@@ -268,6 +269,57 @@
         "update": "Steuerregion konnte nicht aktualisiert werden.",
         "activate": "Steuerregion konnte nicht aktiviert werden.",
         "deactivate": "Steuerregion konnte nicht deaktiviert werden."
+      },
+      "search": {
+        "placeholder": "Regionen durchsuchen"
+      },
+      "columns": {
+        "region": "Region",
+        "currentRate": "Aktueller Satz",
+        "rates": "Sätze"
+      },
+      "rateSummary": {
+        "noRates": "Kein Satz",
+        "noCurrentRate": "Kein aktueller Satz",
+        "combined": "{{count}} kombiniert",
+        "combinedHint": "{{count}} aktive Sätze gelten heute und werden auf Rechnungen addiert."
+      },
+      "empty": {
+        "title": "Noch keine Steuerregionen",
+        "description": "Legen Sie für jeden Ort, an dem Sie Steuern berechnen, eine Region an und geben Sie ihr einen Satz.",
+        "noMatch": "Keine Regionen entsprechen \"{{query}}\""
+      },
+      "a11y": {
+        "expand": "Sätze anzeigen",
+        "collapse": "Sätze ausblenden"
+      },
+      "rates": {
+        "empty": "Diese Region hat keine Sätze. Rechnungen mit dieser Region schlagen fehl, bis ein Satz hinzugefügt wird.",
+        "composite": "Zusammengesetzt",
+        "effectiveRange": "{{start}} bis {{end}}",
+        "effectiveFrom": "ab {{start}}",
+        "deleteEntity": "den Satz {{rate}} für {{region}}",
+        "columns": {
+          "rate": "Satz",
+          "description": "Beschreibung",
+          "effective": "Gültig"
+        },
+        "status": {
+          "current": "Aktuell",
+          "scheduled": "Geplant",
+          "expired": "Abgelaufen",
+          "inactive": "Inaktiv"
+        },
+        "actions": {
+          "add": "Satz hinzufügen",
+          "edit": "Bearbeiten",
+          "advanced": "Erweiterte Einstellungen",
+          "delete": "Löschen"
+        },
+        "errors": {
+          "validateDeletion": "Die Löschung konnte nicht geprüft werden. Bitte versuchen Sie es erneut.",
+          "delete": "Der Steuersatz konnte nicht gelöscht werden."
+        }
       }
     },
     "thresholds": {

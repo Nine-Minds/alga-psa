@@ -226,12 +226,13 @@
       }
     },
     "regions": {
-      "title": "Belastingregio's beheren",
+      "title": "Belastingregio's en tarieven",
       "loading": "Regio's laden...",
       "fields": {
         "code": {
           "label": "Regiocode",
-          "placeholder": "bijv. CA, NY, BTW-VK"
+          "placeholder": "bijv. CA, NY, BTW-VK",
+          "immutableHint": "De regiocode identificeert deze regio voor btw-tarieven, klanten en locaties en kan daarom niet worden gewijzigd."
         },
         "name": {
           "label": "Regionaam",
@@ -268,6 +269,57 @@
         "update": "Kan de belastingregio niet updaten.",
         "activate": "Kan belastingregio niet activeren.",
         "deactivate": "Kan de belastingregio niet deactiveren."
+      },
+      "search": {
+        "placeholder": "Regio's zoeken"
+      },
+      "columns": {
+        "region": "Regio",
+        "currentRate": "Huidig tarief",
+        "rates": "Tarieven"
+      },
+      "rateSummary": {
+        "noRates": "Geen tarief",
+        "noCurrentRate": "Geen geldend tarief",
+        "combined": "{{count}} gecombineerd",
+        "combinedHint": "{{count}} actieve tarieven gelden vandaag en worden op facturen bij elkaar opgeteld."
+      },
+      "empty": {
+        "title": "Nog geen belastingregio's",
+        "description": "Voeg een regio toe voor elke plaats waar u belasting rekent en geef die een tarief.",
+        "noMatch": "Geen regio's komen overeen met \"{{query}}\""
+      },
+      "a11y": {
+        "expand": "Tarieven tonen",
+        "collapse": "Tarieven verbergen"
+      },
+      "rates": {
+        "empty": "Deze regio heeft geen tarieven. Facturen die hier belast worden, mislukken totdat er een tarief is toegevoegd.",
+        "composite": "Samengesteld",
+        "effectiveRange": "{{start}} tot {{end}}",
+        "effectiveFrom": "Vanaf {{start}}",
+        "deleteEntity": "het tarief van {{rate}} voor {{region}}",
+        "columns": {
+          "rate": "Tarief",
+          "description": "Omschrijving",
+          "effective": "Geldig"
+        },
+        "status": {
+          "current": "Geldend",
+          "scheduled": "Gepland",
+          "expired": "Verlopen",
+          "inactive": "Inactief"
+        },
+        "actions": {
+          "add": "Tarief toevoegen",
+          "edit": "Bewerken",
+          "advanced": "Geavanceerde instellingen",
+          "delete": "Verwijderen"
+        },
+        "errors": {
+          "validateDeletion": "Verwijderen kon niet worden gecontroleerd. Probeer het opnieuw.",
+          "delete": "Het belastingtarief kon niet worden verwijderd."
+        }
       }
     },
     "thresholds": {

@@ -13,7 +13,6 @@ import InvoiceTemplates from './InvoiceTemplates';
 import InvoiceTemplateEditor from './InvoiceTemplateEditor';
 import BillingCycles from './BillingCycles';
 import RecurringServicePeriodsTab from './RecurringServicePeriodsTab';
-import TaxRates from './TaxRates';
 import UsageTracking from './UsageTracking';
 import TemplatesTab from './contracts/TemplatesTab';
 import ClientContractsTab from './contracts/ClientContractsTab';
@@ -28,7 +27,7 @@ import ProductsManager from '../settings/billing/ProductsManager';
 import ServiceTypeSettings from '../settings/billing/ServiceTypeSettings';
 import ServiceCategoriesSettings from '../settings/billing/ServiceCategoriesSettings';
 import { TaxSourceSettings } from '../settings/tax/TaxSourceSettings';
-import { TaxRegionsManager } from '../settings/tax/TaxRegionsManager';
+import { TaxRegionsAndRates } from '../settings/tax/TaxRegionsAndRates';
 import TaxDelegationBanner from '../tax/TaxDelegationBanner';
 import AccountingExportsTab, { AccountingExportsAccessDenied } from './accounting/AccountingExportsTab';
 import QuotesTab from './quotes/QuotesTab';
@@ -64,16 +63,12 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
   const accountingCapabilities = useAccountingCapabilities();
 
   // The tax hub's sibling components each fetch their own copy of tax state.
-  // These revision counters are the shared invalidation channel: a component
-  // that mutates shared tax data bumps the counter, and the siblings that read
-  // that data refetch when their prop changes.
+  // This revision counter is the shared invalidation channel: a component that
+  // mutates the tax source settings bumps it, and the siblings that read those
+  // settings refetch when their prop changes.
   const [taxSettingsRevision, setTaxSettingsRevision] = useState(0);
-  const [taxRegionsRevision, setTaxRegionsRevision] = useState(0);
   const invalidateTaxSettings = useCallback(() => {
     setTaxSettingsRevision((revision) => revision + 1);
-  }, []);
-  const invalidateTaxRegions = useCallback(() => {
-    setTaxRegionsRevision((revision) => revision + 1);
   }, []);
 
   const tabDefinitions = useMemo(() => {
@@ -238,8 +233,7 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
               settingsRevision={taxSettingsRevision}
               onSettingsChanged={invalidateTaxSettings}
             />
-            <TaxRegionsManager onRegionsChanged={invalidateTaxRegions} />
-            <TaxRates regionsRevision={taxRegionsRevision} />
+            <TaxRegionsAndRates />
           </div>
         </Tabs.Content>
 

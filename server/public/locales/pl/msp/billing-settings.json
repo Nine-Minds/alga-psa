@@ -226,12 +226,13 @@
       }
     },
     "regions": {
-      "title": "Zarządzaj regionami podatkowymi",
+      "title": "Regiony i stawki podatkowe",
       "loading": "Ładowanie regionów...",
       "fields": {
         "code": {
           "label": "Kod regionu",
-          "placeholder": "np. Kalifornia, Nowy Jork, VAT-UK"
+          "placeholder": "np. Kalifornia, Nowy Jork, VAT-UK",
+          "immutableHint": "Kod regionu identyfikuje ten region dla stawek podatkowych, klientów i lokalizacji, dlatego nie można go zmienić."
         },
         "name": {
           "label": "Nazwa regionu",
@@ -268,6 +269,57 @@
         "update": "Nie udało się zaktualizować regionu podatkowego.",
         "activate": "Nie udało się aktywować regionu podatkowego.",
         "deactivate": "Nie udało się dezaktywować regionu podatkowego."
+      },
+      "search": {
+        "placeholder": "Szukaj regionów"
+      },
+      "columns": {
+        "region": "Region",
+        "currentRate": "Bieżąca stawka",
+        "rates": "Stawki"
+      },
+      "rateSummary": {
+        "noRates": "Brak stawki",
+        "noCurrentRate": "Brak obowiązującej stawki",
+        "combined": "{{count}} łącznie",
+        "combinedHint": "{{count}} aktywne stawki obowiązują dziś i są sumowane na fakturach."
+      },
+      "empty": {
+        "title": "Brak regionów podatkowych",
+        "description": "Dodaj region dla każdego miejsca, w którym naliczasz podatek, a następnie przypisz mu stawkę.",
+        "noMatch": "Żaden region nie pasuje do \"{{query}}\""
+      },
+      "a11y": {
+        "expand": "Pokaż stawki",
+        "collapse": "Ukryj stawki"
+      },
+      "rates": {
+        "empty": "Ten region nie ma stawek. Faktury opodatkowane w tym regionie nie powiodą się, dopóki nie zostanie dodana stawka.",
+        "composite": "Złożona",
+        "effectiveRange": "Od {{start}} do {{end}}",
+        "effectiveFrom": "Od {{start}}",
+        "deleteEntity": "stawkę {{rate}} dla regionu {{region}}",
+        "columns": {
+          "rate": "Stawka",
+          "description": "Opis",
+          "effective": "Obowiązuje"
+        },
+        "status": {
+          "current": "Obowiązująca",
+          "scheduled": "Zaplanowana",
+          "expired": "Wygasła",
+          "inactive": "Nieaktywna"
+        },
+        "actions": {
+          "add": "Dodaj stawkę",
+          "edit": "Edytuj",
+          "advanced": "Ustawienia zaawansowane",
+          "delete": "Usuń"
+        },
+        "errors": {
+          "validateDeletion": "Nie udało się zweryfikować usunięcia. Spróbuj ponownie.",
+          "delete": "Nie udało się usunąć stawki podatkowej."
+        }
       }
     },
     "thresholds": {

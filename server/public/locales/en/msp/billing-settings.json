@@ -226,12 +226,13 @@
       }
     },
     "regions": {
-      "title": "Manage Tax Regions",
+      "title": "Tax Regions and Rates",
       "loading": "Loading regions...",
       "fields": {
         "code": {
           "label": "Region Code",
-          "placeholder": "e.g., CA, NY, VAT-UK"
+          "placeholder": "e.g., CA, NY, VAT-UK",
+          "immutableHint": "The region code identifies this region to tax rates, clients and locations, so it cannot be changed."
         },
         "name": {
           "label": "Region Name",
@@ -268,6 +269,57 @@
         "update": "Failed to update tax region.",
         "activate": "Failed to activate tax region.",
         "deactivate": "Failed to deactivate tax region."
+      },
+      "search": {
+        "placeholder": "Search regions"
+      },
+      "columns": {
+        "region": "Region",
+        "currentRate": "Current rate",
+        "rates": "Rates"
+      },
+      "rateSummary": {
+        "noRates": "No rate",
+        "noCurrentRate": "No current rate",
+        "combined": "{{count}} combined",
+        "combinedHint": "{{count}} active rates apply today and are added together on invoices."
+      },
+      "empty": {
+        "title": "No tax regions yet",
+        "description": "Add a region for each place you charge tax, then give it a rate.",
+        "noMatch": "No regions match \"{{query}}\""
+      },
+      "a11y": {
+        "expand": "Show rates",
+        "collapse": "Hide rates"
+      },
+      "rates": {
+        "empty": "This region has no rates. Invoices taxed here will fail until one is added.",
+        "composite": "Composite",
+        "effectiveRange": "{{start}} to {{end}}",
+        "effectiveFrom": "{{start}} onward",
+        "deleteEntity": "the {{rate}} rate for {{region}}",
+        "columns": {
+          "rate": "Rate",
+          "description": "Description",
+          "effective": "Effective"
+        },
+        "status": {
+          "current": "Current",
+          "scheduled": "Scheduled",
+          "expired": "Expired",
+          "inactive": "Inactive"
+        },
+        "actions": {
+          "add": "Add rate",
+          "edit": "Edit",
+          "advanced": "Advanced settings",
+          "delete": "Delete"
+        },
+        "errors": {
+          "validateDeletion": "Failed to validate deletion. Please try again.",
+          "delete": "Failed to delete tax rate."
+        }
       }
     },
     "thresholds": {
