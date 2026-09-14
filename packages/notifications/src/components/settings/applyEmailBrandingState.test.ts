@@ -69,6 +69,8 @@ describe('groupTemplatesByState', () => {
 
     expect(groups.system[0].rows).toBe(2);
     expect(groups['no-stock-colors'][0].rows).toBe(0);
+    // An overwrite can still reach that row, so it is counted separately.
+    expect(groups['no-stock-colors'][0].allRows).toBe(1);
   });
 });
 
@@ -102,6 +104,38 @@ describe('selection', () => {
 
   it('keeps a no-stock-colors template out of the scope entirely', () => {
     expect(buildApplyScope(groups, new Set(['portal-invitation']), ['en']).names).toEqual([]);
+  });
+});
+
+describe('forced overwrite', () => {
+  const groups = groupTemplatesByState(templates, ['en', 'fr']);
+
+  it('sends the forced names as overwrite alongside the ticked ones', () => {
+    const scope = buildApplyScope(
+      groups,
+      new Set(['ticket-created', 'invoice-email']),
+      ['en', 'fr'],
+      new Set(['invoice-email']),
+    );
+
+    expect(scope.names.sort()).toEqual(['invoice-email', 'ticket-created']);
+    expect(scope.overwrite).toEqual(['invoice-email']);
+  });
+
+  it('is the one way a no-stock-colors template enters the scope', () => {
+    const scope = buildApplyScope(groups, new Set(), ['en'], new Set(['portal-invitation']));
+
+    expect(scope.names).toEqual(['portal-invitation']);
+    expect(scope.overwrite).toEqual(['portal-invitation']);
+  });
+
+  it('counts the rows an overwrite would reach, including the disabled ones', () => {
+    expect(countSelectedRows(groups, new Set(), new Set(['portal-invitation']))).toBe(1);
+    expect(countSelectedRows(groups, new Set(['invoice-email']), new Set(['invoice-email']))).toBe(2);
+  });
+
+  it('keys the preview cache apart from the palette-only run', () => {
+    expect(previewKey('invoice-email', 'en', true)).not.toBe(previewKey('invoice-email', 'en'));
   });
 });
 
@@ -141,7 +175,8 @@ describe('apply dialog markup', () => {
 
   it('disables the no-stock-colors group and hints why', () => {
     expect(dialogSource).toContain("const disabled = state === 'no-stock-colors'");
-    expect(dialogSource).toContain('disabled={disabled}');
+    // Disabled unless the tenant forced it: an overwrite is the one way in.
+    expect(dialogSource).toContain('disabled={disabled && !overwrite.has(entry.name)}');
     expect(dialogSource).toContain("groups.no-stock-colors.action");
   });
 
@@ -186,8 +221,17 @@ describe('per-template preview', () => {
     expect(dialogSource).toContain('reason: skipReason(preview.skipReason');
   });
 
+  it('offers an overwrite on the groups an apply would otherwise not reach', () => {
+    expect(dialogSource).toContain('const overwritable = OVERWRITABLE_STATES.includes(state)');
+    expect(dialogSource).toContain('id={`overwrite-branding-template-${entry.name}`}');
+    expect(dialogSource).toContain('apply.overwriteHint');
+    expect(dialogSource).toContain('apply.preview.captions.overwrite');
+    // Forcing a row implies selecting it, and the scope carries both.
+    expect(dialogSource).toContain('buildApplyScope(groups, selected, languages, overwrite)');
+  });
+
   it('fetches lazily, once per name and language', () => {
-    expect(dialogSource).toContain('previewEmailBrandingApplyAction({ name, language })');
+    expect(dialogSource).toContain('previewEmailBrandingApplyAction({ name, language, overwrite: forced })');
     expect(dialogSource).toContain('if (requestedPreviews.current.has(key)) return;');
     expect(dialogSource).toContain("previewLanguagesFor(status.templates, name, languages)[0]");
   });

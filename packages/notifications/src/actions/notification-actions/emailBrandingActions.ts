@@ -250,7 +250,7 @@ function buildBrandDecorator(
 export const previewEmailBrandingApplyAction = withAuth(async (
   user,
   { tenant },
-  { name, language }: EmailBrandingPreviewRequest,
+  { name, language, overwrite }: EmailBrandingPreviewRequest,
 ): Promise<EmailBrandingPreviewResult> => {
   const { knex } = await createTenantKnex();
 
@@ -270,6 +270,7 @@ export const previewEmailBrandingApplyAction = withAuth(async (
     appliedPalette: context.palette.appliedPalette ?? null,
     name,
     language,
+    overwrite,
     decorate: buildBrandDecorator(context.palette, context.settings.branding, isEnterprise),
   });
 
@@ -343,7 +344,13 @@ export const applyEmailBrandingAction = withAuth(async (
         for (const update of updates) {
           await tenantScopedTable(trx, "tenant_email_templates", tenant)
             .where({ id: update.id })
-            .update({ html_content: update.html, updated_at: now });
+            .update({
+              html_content: update.html,
+              // Only an overwrite restores these; a palette pass never touches them.
+              ...(update.subject !== undefined ? { subject: update.subject } : {}),
+              ...(update.text !== undefined ? { text_content: update.text } : {}),
+              updated_at: now,
+            });
         }
       });
 

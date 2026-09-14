@@ -78,6 +78,8 @@ export interface EmailBrandingRemoveResult {
 export interface EmailBrandingPreviewRequest {
   name: string;
   language: string;
+  /** Preview the forced rebuild from the standard template instead. */
+  overwrite?: boolean;
 }
 
 export type EmailBrandingPreviewResult = EmailBrandingPreview;

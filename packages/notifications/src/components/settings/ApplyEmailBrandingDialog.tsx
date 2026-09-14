@@ -18,6 +18,7 @@ import type {
 } from "../../lib/emailBranding";
 import { EmailTemplatePreview } from "./EmailTemplatePreview";
 import {
+  OVERWRITABLE_STATES,
   TEMPLATE_GROUP_ORDER,
   buildApplyScope,
   countSelectedRows,
@@ -84,6 +85,8 @@ export function ApplyEmailBrandingDialog({
 
   const [languages, setLanguages] = useState<string[]>(status.languages.length > 0 ? status.languages : ['en']);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  /** Names to rebuild from the standard template, tenant edits and all. */
+  const [overwrite, setOverwrite] = useState<Set<string>>(new Set());
   const [applying, setApplying] = useState(false);
   const [result, setResult] = useState<EmailBrandingApplyResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -100,20 +103,21 @@ export function ApplyEmailBrandingDialog({
     setResult(null);
     setError(null);
     setLanguages(status.languages.length > 0 ? status.languages : ['en']);
+    setOverwrite(new Set());
     setPreviewName(null);
     // The palette may have changed since the last time this opened.
     setPreviewCache({});
     requestedPreviews.current = new Set();
   }, [isOpen, status.languages]);
 
-  const loadPreview = useCallback(async (name: string, language: string) => {
-    const key = previewKey(name, language);
+  const loadPreview = useCallback(async (name: string, language: string, forced: boolean) => {
+    const key = previewKey(name, language, forced);
     if (requestedPreviews.current.has(key)) return;
     requestedPreviews.current.add(key);
     setPreviewCache((current) => ({ ...current, [key]: { status: 'loading' } }));
 
     try {
-      const preview = await previewEmailBrandingApplyAction({ name, language });
+      const preview = await previewEmailBrandingApplyAction({ name, language, overwrite: forced });
       setPreviewCache((current) => ({ ...current, [key]: { status: 'ready', preview } }));
     } catch (previewError) {
       // Dropped from the requested set so reopening the eye retries.
@@ -130,12 +134,12 @@ export function ApplyEmailBrandingDialog({
     if (!language) return;
     setPreviewName(name);
     setPreviewLanguage(language);
-    loadPreview(name, language);
+    loadPreview(name, language, overwrite.has(name));
   };
 
   const selectPreviewLanguage = (language: string) => {
     setPreviewLanguage(language);
-    if (previewName) loadPreview(previewName, language);
+    if (previewName) loadPreview(previewName, language, overwrite.has(previewName));
   };
 
   useEffect(() => {
@@ -144,7 +148,7 @@ export function ApplyEmailBrandingDialog({
     // Recomputed whenever the language set changes the grouping.
   }, [isOpen, groups, preselectedNames]);
 
-  const selectedRows = countSelectedRows(groups, selected);
+  const selectedRows = countSelectedRows(groups, selected, overwrite);
 
   const toggleLanguage = (code: string) => {
     setLanguages((current) => (current.includes(code)
@@ -159,6 +163,30 @@ export function ApplyEmailBrandingDialog({
       else next.add(name);
       return next;
     });
+    if (selected.has(name)) {
+      setOverwrite((current) => {
+        if (!current.has(name)) return current;
+        const next = new Set(current);
+        next.delete(name);
+        return next;
+      });
+    }
+  };
+
+  /** Ticking "overwrite" is a stronger yes than the checkbox, so it implies one. */
+  const toggleOverwrite = (name: string) => {
+    setOverwrite((current) => {
+      const next = new Set(current);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
+      return next;
+    });
+    setSelected((current) => {
+      if (overwrite.has(name)) return current;
+      const next = new Set(current);
+      next.add(name);
+      return next;
+    });
   };
 
   const setGroupSelection = (state: TenantTemplateState, checked: boolean) => {
@@ -170,13 +198,21 @@ export function ApplyEmailBrandingDialog({
       }
       return next;
     });
+    // Unticking a group cannot leave a forced rebuild behind it.
+    if (!checked) {
+      setOverwrite((current) => {
+        const next = new Set(current);
+        for (const entry of groups[state]) next.delete(entry.name);
+        return next;
+      });
+    }
   };
 
   const handleApply = async () => {
     setApplying(true);
     setError(null);
     try {
-      const applied = await applyEmailBrandingAction(buildApplyScope(groups, selected, languages));
+      const applied = await applyEmailBrandingAction(buildApplyScope(groups, selected, languages, overwrite));
       setResult(applied);
       await onApplied();
     } catch (applyError) {
@@ -189,10 +225,18 @@ export function ApplyEmailBrandingDialog({
   const summary = result ? summarizeApplyResult(result) : null;
 
   const previewTabs = previewName ? previewLanguagesFor(status.templates, previewName, languages) : [];
-  const previewEntry = previewName ? previewCache[previewKey(previewName, previewLanguage)] : undefined;
+  const previewEntry = previewName
+    ? previewCache[previewKey(previewName, previewLanguage, overwrite.has(previewName))]
+    : undefined;
 
   /** Says, in words, what the rendered HTML below it is: a clone, a recolor, or nothing. */
   const previewCaption = (preview: EmailBrandingPreviewResult) => {
+    if (preview.overwrite && preview.action !== 'skip') {
+      return t(
+        'notifications.emailBranding.apply.preview.captions.overwrite',
+        'Your edits to this template will be discarded. It will be rebuilt from the standard template in your palette.',
+      );
+    }
     if (preview.action === 'skip') {
       return t('notifications.emailBranding.apply.preview.captions.skipped', {
         defaultValue: 'Nothing will be written — {{reason}}. This is the template as it stands today.',
@@ -342,6 +386,8 @@ export function ApplyEmailBrandingDialog({
                 const entries = groups[state];
                 if (entries.length === 0) return null;
                 const disabled = state === 'no-stock-colors';
+                // Only these two groups keep tenant edits an apply cannot repaint.
+                const overwritable = OVERWRITABLE_STATES.includes(state);
 
                 return (
                   <div key={state} className="rounded border">
@@ -349,6 +395,15 @@ export function ApplyEmailBrandingDialog({
                       <div>
                         <span className="text-sm font-medium">{groupTitle(state)}</span>
                         <span className="ml-2 text-xs text-gray-500">{groupAction(state)}</span>
+                        {/* Stated in words, not only in a tooltip: it discards edits. */}
+                        {overwritable && (
+                          <p className="mt-0.5 text-xs text-gray-500">
+                            {t(
+                              'notifications.emailBranding.apply.overwriteHint',
+                              'Overwrite rebuilds a template from the standard one in your palette and discards your edits.',
+                            )}
+                          </p>
+                        )}
                       </div>
                       {!disabled && (
                         <div className="flex gap-2">
@@ -378,8 +433,8 @@ export function ApplyEmailBrandingDialog({
                           <Checkbox
                             id={`apply-branding-template-${entry.name}`}
                             label={entry.name}
-                            checked={!disabled && selected.has(entry.name)}
-                            disabled={disabled}
+                            checked={overwrite.has(entry.name) || (!disabled && selected.has(entry.name))}
+                            disabled={disabled && !overwrite.has(entry.name)}
                             onChange={() => toggleTemplate(entry.name)}
                           />
                           <span className="flex shrink-0 items-center gap-1">
@@ -395,6 +450,21 @@ export function ApplyEmailBrandingDialog({
                                   })
                                   : entry.category}
                             </span>
+                            {/* The only way to repaint colors the tenant chose
+                                themselves: rebuild the row and lose their edits. */}
+                            {overwritable && (
+                              <Checkbox
+                                id={`overwrite-branding-template-${entry.name}`}
+                                label={t('notifications.emailBranding.apply.overwrite', 'Overwrite')}
+                                title={t(
+                                  'notifications.emailBranding.apply.overwriteHint',
+                                  'Overwrite rebuilds a template from the standard one in your palette and discards your edits.',
+                                )}
+                                checked={overwrite.has(entry.name)}
+                                onChange={() => toggleOverwrite(entry.name)}
+                                size="sm"
+                              />
+                            )}
                             {/* Previewable even when the checkbox is not: seeing why a
                                 template will be left alone is the point. */}
                             <Button

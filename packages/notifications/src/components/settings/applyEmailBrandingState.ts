@@ -19,8 +19,13 @@ export interface TemplateGroupEntry {
   differs: TenantTemplateDifference[];
   /** How many (name, language) rows this entry stands for in the current selection. */
   rows: number;
+  /** Every row, including the ones only an overwrite can reach. */
+  allRows: number;
   isNew: boolean;
 }
+
+/** The groups whose rows an apply can only change by discarding tenant edits. */
+export const OVERWRITABLE_STATES: TenantTemplateState[] = ['customized', 'no-stock-colors'];
 
 /**
  * One entry per template name, filed under the most conservative state any of
@@ -60,6 +65,7 @@ export function groupTemplatesByState(
       state,
       differs: [...new Set(rows.flatMap((row) => row.differs))],
       rows: rows.filter((row) => row.state !== 'no-stock-colors').length,
+      allRows: rows.length,
       isNew: rows.some((row) => row.isNew),
     });
   }
@@ -72,32 +78,37 @@ export function defaultSelection(groups: Record<TenantTemplateState, TemplateGro
   return new Set([...groups.system, ...groups.branded].map((entry) => entry.name));
 }
 
+/**
+ * A row counts when its name is ticked, and a no-stock-colors row only when it
+ * is also being overwritten — that is the one way an apply reaches it.
+ */
 export function countSelectedRows(
   groups: Record<TenantTemplateState, TemplateGroupEntry[]>,
   selected: Set<string>,
+  overwrite: Set<string> = new Set(),
 ): number {
   return TEMPLATE_GROUP_ORDER
-    .filter((state) => state !== 'no-stock-colors')
     .flatMap((state) => groups[state])
-    .filter((entry) => selected.has(entry.name))
-    .reduce((total, entry) => total + entry.rows, 0);
+    .filter((entry) => selected.has(entry.name) || overwrite.has(entry.name))
+    .reduce((total, entry) => total + (overwrite.has(entry.name) ? entry.allRows : entry.rows), 0);
 }
 
 export function buildApplyScope(
   groups: Record<TenantTemplateState, TemplateGroupEntry[]>,
   selected: Set<string>,
   languages: string[],
+  overwrite: Set<string> = new Set(),
 ): EmailBrandingApplyScope {
-  const names = TEMPLATE_GROUP_ORDER
-    .filter((state) => state !== 'no-stock-colors')
+  const entries = TEMPLATE_GROUP_ORDER
     .flatMap((state) => groups[state])
-    .filter((entry) => selected.has(entry.name))
-    .map((entry) => entry.name);
+    .filter((entry) => overwrite.has(entry.name)
+      || (selected.has(entry.name) && entry.state !== 'no-stock-colors'));
 
   return {
-    names,
+    names: entries.map((entry) => entry.name),
     languages,
     includeCustomized: groups.customized.filter((entry) => selected.has(entry.name)).map((entry) => entry.name),
+    overwrite: entries.filter((entry) => overwrite.has(entry.name)).map((entry) => entry.name),
   };
 }
 
@@ -115,8 +126,12 @@ export function summarizeApplyResult(result: EmailBrandingApplyResult): ApplySum
   };
 }
 
-/** One preview per (name, language): the eye reopens without a second round trip. */
-export const previewKey = (name: string, language: string) => `${name}::${language}`;
+/**
+ * One preview per (name, language, overwrite): the eye reopens without a second
+ * round trip, and ticking "overwrite" never shows the cached palette-only run.
+ */
+export const previewKey = (name: string, language: string, overwrite = false) =>
+  `${name}::${language}${overwrite ? '::overwrite' : ''}`;
 
 export type PreviewCacheEntry =
   | { status: 'loading' }

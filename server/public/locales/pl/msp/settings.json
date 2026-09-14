@@ -1689,6 +1689,8 @@
           "text": "tekst",
           "subject": "temat"
         },
+        "overwrite": "Nadpisz",
+        "overwriteHint": "Nadpisanie odtwarza szablon na podstawie standardowego z Twoją paletą i usuwa Twoje zmiany.",
         "preview": {
           "open": "Zobacz podgląd wyniku",
           "title": "Podgląd: {{name}}",
@@ -1697,6 +1699,7 @@
             "create": "Ze standardowego szablonu powstanie kopia w Państwa kolorystyce.",
             "update": "Państwa kopia zostanie zbudowana na nowo ze standardowego szablonu z zapisaną paletą.",
             "customized": "Państwa zmiany pozostają słowo w słowo. Zamieniane są tylko kolory standardowe, które jeszcze zostały w tym szablonie.",
+            "overwrite": "Twoje zmiany w tym szablonie zostaną usunięte. Szablon zostanie odtworzony na podstawie standardowego z Twoją paletą.",
             "skipped": "Nic nie zostanie zapisane — {{reason}}. Tak wygląda ten szablon dzisiaj."
           }
         },

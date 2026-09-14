@@ -1683,6 +1683,8 @@
           "text": "texto",
           "subject": "asunto"
         },
+        "overwrite": "Sobrescribir",
+        "overwriteHint": "Sobrescribir reconstruye una plantilla a partir de la estándar con su paleta y descarta sus ediciones.",
         "preview": {
           "open": "Ver el resultado",
           "title": "Vista previa: {{name}}",
@@ -1691,6 +1693,7 @@
             "create": "Se creará una copia con su marca a partir de la plantilla estándar.",
             "update": "Su copia con la marca se volverá a crear desde la plantilla estándar con la paleta guardada.",
             "customized": "Sus cambios se conservan palabra por palabra. Solo se reemplazan los colores originales que quedan en esta plantilla.",
+            "overwrite": "Se descartarán sus ediciones de esta plantilla. Se reconstruirá a partir de la plantilla estándar con su paleta.",
             "skipped": "No se escribirá nada: {{reason}}. Esta es la plantilla tal como está hoy."
           }
         },

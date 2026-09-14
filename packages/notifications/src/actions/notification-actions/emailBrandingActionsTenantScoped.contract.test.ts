@@ -35,10 +35,12 @@ describe('email branding actions contract', () => {
     expect(apply).toContain('await withTransaction(knex, async (trx: Knex.Transaction) => {');
     expect(apply).toContain('chunked(inserts, INSERT_BATCH_SIZE)');
     // Citus rejects column references in the SET clause of a distributed table.
-    expect(apply).toContain(".update({ html_content: update.html, updated_at: now })");
+    expect(apply).toContain('html_content: update.html,');
+    expect(apply).toContain('updated_at: now,');
     expect(apply).not.toMatch(/\.update\([^)]*knex\.raw/);
-    // text_content is never rewritten on an existing row.
-    expect(apply).not.toMatch(/\.update\(\{[^}]*text_content/);
+    // Subject and plain text move only when the planner asked for an overwrite.
+    expect(apply).toContain('...(update.subject !== undefined ? { subject: update.subject } : {})');
+    expect(apply).toContain('...(update.text !== undefined ? { text_content: update.text } : {})');
   });
 
   it('runs every action under withAuth so the tenant comes from the session', () => {

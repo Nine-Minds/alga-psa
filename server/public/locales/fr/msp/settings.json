@@ -1683,6 +1683,8 @@
           "text": "texte",
           "subject": "objet"
         },
+        "overwrite": "Écraser",
+        "overwriteHint": "L'écrasement reconstruit un modèle à partir du modèle standard avec votre palette et supprime vos modifications.",
         "preview": {
           "open": "Aperçu du résultat",
           "title": "Aperçu : {{name}}",
@@ -1691,6 +1693,7 @@
             "create": "Une copie à vos couleurs sera créée à partir du modèle standard.",
             "update": "Votre copie personnalisée sera recréée à partir du modèle standard avec la palette enregistrée.",
             "customized": "Vos modifications sont conservées mot pour mot. Seules les couleurs d’origine encore présentes dans ce modèle sont remplacées.",
+            "overwrite": "Vos modifications de ce modèle seront supprimées. Il sera reconstruit à partir du modèle standard avec votre palette.",
             "skipped": "Rien ne sera écrit — {{reason}}. Voici le modèle tel qu’il est aujourd’hui."
           }
         },

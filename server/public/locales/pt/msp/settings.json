@@ -1683,6 +1683,8 @@
           "text": "texto",
           "subject": "assunto"
         },
+        "overwrite": "Substituir",
+        "overwriteHint": "A substituição recria um modelo a partir do padrão com a sua paleta e descarta as suas edições.",
         "preview": {
           "open": "Ver o resultado",
           "title": "Pré-visualização: {{name}}",
@@ -1691,6 +1693,7 @@
             "create": "Será criada uma cópia com a sua marca a partir do modelo padrão.",
             "update": "A sua cópia com a marca será refeita a partir do modelo padrão com a paleta salva.",
             "customized": "As suas edições são mantidas palavra por palavra. Só são substituídas as cores originais que ainda restam neste modelo.",
+            "overwrite": "As suas edições neste modelo serão descartadas. Ele será recriado a partir do modelo padrão com a sua paleta.",
             "skipped": "Nada será gravado — {{reason}}. Este é o modelo como ele está hoje."
           }
         },
