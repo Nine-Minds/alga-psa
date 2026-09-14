@@ -68,5 +68,12 @@
     "noClients": "No clients found",
     "noContacts": "No contacts found",
     "loadFailed": "Couldn't load the list."
+  },
+  "callPrompt": {
+    "title": "Log this call?",
+    "body": "You called {{name}}. Log it as an interaction?",
+    "log": "Log the call",
+    "dismiss": "Not now",
+    "unavailable": "This device can't place phone calls."
   }
 }

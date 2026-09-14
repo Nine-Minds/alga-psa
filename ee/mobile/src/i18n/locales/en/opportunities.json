@@ -233,12 +233,6 @@
     "scheduleSubmit": "Schedule",
     "scheduleSuccess": "Interaction scheduled"
   },
-  "callPrompt": {
-    "title": "Log this call?",
-    "body": "You called {{name}}. Add it to the deal's record.",
-    "log": "Log the call",
-    "dismiss": "Not now"
-  },
   "followUp": {
     "title": "Schedule follow-up",
     "defaultTitle": "Follow up: {{deal}}",
@@ -281,7 +275,6 @@
   "errors": {
     "unableToLoad": "Unable to load.",
     "generic": "Something went wrong. Please try again.",
-    "callUnavailable": "This device can't place phone calls.",
     "emailUnavailable": "No email app is available on this device."
   },
   "common": {

@@ -235,6 +235,19 @@ describe('InteractionService', () => {
     ]);
   });
 
+  it('filters by a specific interaction status', async () => {
+    const dataQuery = queryResolving([]);
+    const countQuery = queryResolving(undefined);
+    countQuery.first.mockResolvedValue({ count: '0' });
+    const table = vi.fn().mockReturnValueOnce(dataQuery).mockReturnValueOnce(countQuery);
+    mocks.tenantDb.mockReturnValue({ table, tenantJoin: vi.fn((q: unknown) => q) });
+
+    await new InteractionService().list({ status_id: 'status-1', page: 1, page_size: 10 }, context);
+
+    expect(dataQuery.where).toHaveBeenCalledWith('i.status_id', 'status-1');
+    expect(countQuery.where).toHaveBeenCalledWith('i.status_id', 'status-1');
+  });
+
   it('filters open interactions by closure via the tenant statuses table, treating no status as open', async () => {
     const dataQuery = queryResolving([]);
     dataQuery.whereIn = vi.fn().mockReturnValue(dataQuery);

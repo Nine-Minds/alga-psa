@@ -49,6 +49,7 @@ export function CallsEmailsSection({
   contactNameId,
   onLogged,
   initiallyCollapsed = false,
+  reloadKey = 0,
 }: {
   client: ApiClient | null;
   apiKey: string;
@@ -58,6 +59,8 @@ export function CallsEmailsSection({
   contactNameId?: string | null;
   onLogged?: () => void;
   initiallyCollapsed?: boolean;
+  /** Bump to refetch after an interaction is logged from outside the section. */
+  reloadKey?: number;
 }) {
   const { t } = useTranslation("tickets");
   const { colors, spacing, typography } = useTheme();
@@ -88,7 +91,7 @@ export function CallsEmailsSection({
 
   useEffect(() => {
     void load();
-  }, [load]);
+  }, [load, reloadKey]);
 
   return (
     <Card accessibilityLabel={t("callsEmails.title")}>

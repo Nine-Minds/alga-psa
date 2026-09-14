@@ -29,6 +29,8 @@ import { ClientNotesSection } from "../features/clients/components/ClientNotesSe
 import { useTheme } from "../ui/ThemeContext";
 import type { Theme } from "../ui/themes";
 import { logger } from "../logging/logger";
+import { usePlaceCall } from "../features/interactions/hooks/usePlaceCall";
+import { CallPromptHost } from "../features/interactions/components/CallPromptHost";
 
 type Props = NativeStackScreenProps<RootStackParamList, "ClientDetail">;
 
@@ -56,6 +58,7 @@ export function ClientDetailScreen({ navigation, route }: Props) {
   const { session, refreshSession } = useAuth();
   const abortRef = useRef<AbortController | null>(null);
   const { clientId, clientName } = route.params;
+  const placeCall = usePlaceCall();
 
   const client = useMemo(() => {
     if (!config.ok || !session) return null;
@@ -253,6 +256,7 @@ export function ClientDetailScreen({ navigation, route }: Props) {
 
   const logoUri = detail.logoUrl ? `${config.baseUrl}${detail.logoUrl}` : null;
   const notSet = t("detail.notSet", { defaultValue: "Not set" });
+  const clientPhone = detail.phone_no?.trim() || null;
 
   const detailRows: {
     icon: keyof typeof Feather.glyphMap;
@@ -265,7 +269,9 @@ export function ClientDetailScreen({ navigation, route }: Props) {
       icon: "phone",
       label: t("detail.phone"),
       value: detail.phone_no,
-      onPress: detail.phone_no ? () => void Linking.openURL(`tel:${detail.phone_no}`) : undefined,
+      onPress: clientPhone
+        ? () => placeCall({ origin: { kind: "client", id: clientId }, phone: clientPhone, name: detail.client_name, contactId: null, clientId })
+        : undefined,
     },
     {
       icon: "mail",
@@ -334,6 +340,13 @@ export function ClientDetailScreen({ navigation, route }: Props) {
           {managerError}
         </Text>
       ) : null}
+
+      <CallPromptHost
+        origin={{ kind: "client", id: clientId }}
+        client={client}
+        apiKey={session.accessToken}
+        userId={session.user?.id ?? null}
+      />
 
       <View style={{ marginTop: theme.spacing.lg }}>
         <ClientNotesSection
