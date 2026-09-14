@@ -47,6 +47,8 @@ import {
   VariableReferenceDialog,
 } from "./TemplateVariableReference";
 import { measureCaretMenuPosition, type CaretMenuPosition } from "./caretPosition";
+import { getTenantLocaleSettingsAction } from "@alga-psa/tenancy/actions/tenant-actions/tenantLocaleActions";
+import { collectTemplateLanguages, initialLanguageSelection } from "./emailTemplatesState";
 
 export { replaceTemplateVariables } from "./EmailTemplatePreview";
 
@@ -104,6 +106,8 @@ export function EmailTemplates() {
 
   // Language filter state - empty means show all languages
   const [selectedLanguages, setSelectedLanguages] = useState<Set<string>>(new Set());
+  // Once the tenant touches the filter, the default-language prefill stays out of the way.
+  const languageFilterTouched = useRef(false);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -128,16 +132,14 @@ export function EmailTemplates() {
   }, [selectedLanguages.size]);
 
   // Get available languages from templates
-  const availableLanguages = useMemo(() => {
-    if (!templates) return [];
-    const languageCodes = new Set<string>();
-    templates.systemTemplates.forEach(t => languageCodes.add(t.language_code));
-    templates.tenantTemplates.forEach(t => languageCodes.add(t.language_code));
-    return Array.from(languageCodes).sort();
-  }, [templates]);
+  const availableLanguages = useMemo(
+    () => (templates ? collectTemplateLanguages(templates) : []),
+    [templates],
+  );
 
   // Toggle language in filter
   const handleToggleLanguage = useCallback((languageCode: string) => {
+    languageFilterTouched.current = true;
     setSelectedLanguages(prev => {
       const next = new Set(prev);
       if (next.has(languageCode)) {
@@ -151,6 +153,7 @@ export function EmailTemplates() {
 
   // Clear all language filters
   const handleClearLanguageFilters = useCallback(() => {
+    languageFilterTouched.current = true;
     setSelectedLanguages(new Set());
   }, []);
 
@@ -162,6 +165,21 @@ export function EmailTemplates() {
         setTenant(currentTenant);
         const currentTemplates = await getTemplatesAction(currentTenant);
         setTemplates(currentTemplates);
+
+        // Land on the tenant's own language instead of every translation of
+        // every template; the filter itself still toggles and clears normally.
+        try {
+          const localeSettings = await getTenantLocaleSettingsAction();
+          const preselected = initialLanguageSelection(
+            collectTemplateLanguages(currentTemplates),
+            localeSettings?.defaultLocale,
+          );
+          if (preselected.length > 0 && !languageFilterTouched.current) {
+            setSelectedLanguages(new Set(preselected));
+          }
+        } catch (localeErr) {
+          console.error('Failed to load tenant locale settings:', localeErr);
+        }
       } catch (err) {
         console.error('Failed to load email templates:', err);
         setError(t('notifications.emailTemplatesUi.errors.loadFailed', 'Failed to load templates'));
