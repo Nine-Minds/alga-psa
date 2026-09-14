@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Card, CardHeader, CardContent } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -37,7 +37,16 @@ import {
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 
-const TaxRates: React.FC = () => {
+interface TaxRatesProps {
+  /**
+   * Revision bumped by the shared parent when the region set changes in
+   * TaxRegionsManager. When it changes, this component refetches its region
+   * options so the rate dialog picker stays current.
+   */
+  regionsRevision?: number;
+}
+
+const TaxRates: React.FC<TaxRatesProps> = ({ regionsRevision = 0 }) => {
   const { t } = useTranslation('msp/service-catalog');
   const [taxRates, setTaxRates] = useState<ITaxRate[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -132,6 +141,18 @@ const TaxRates: React.FC = () => {
     void fetchTaxRates();
     void fetchTaxRegions();
   }, [fetchTaxRates, fetchTaxRegions]);
+
+  const lastRegionsRevisionRef = useRef(regionsRevision);
+
+  // Refetch region options when TaxRegionsManager mutates the region set, so a
+  // newly created/renamed/deactivated region is current in the rate picker.
+  useEffect(() => {
+    if (lastRegionsRevisionRef.current === regionsRevision) {
+      return;
+    }
+    lastRegionsRevisionRef.current = regionsRevision;
+    void fetchTaxRegions();
+  }, [regionsRevision, fetchTaxRegions]);
 
   const clearErrorIfSubmitted = () => {
     if (hasAttemptedSubmit) {

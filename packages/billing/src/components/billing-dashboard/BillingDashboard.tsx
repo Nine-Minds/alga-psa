@@ -1,6 +1,6 @@
 // BillingDashboard.tsx
 'use client'
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import * as Tabs from '@radix-ui/react-tabs';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { IClient, IService } from '@alga-psa/types';
@@ -62,6 +62,19 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
   const [isHydrated, setIsHydrated] = useState(false);
   const [error] = useState<string | null>(null);
   const accountingCapabilities = useAccountingCapabilities();
+
+  // The tax hub's sibling components each fetch their own copy of tax state.
+  // These revision counters are the shared invalidation channel: a component
+  // that mutates shared tax data bumps the counter, and the siblings that read
+  // that data refetch when their prop changes.
+  const [taxSettingsRevision, setTaxSettingsRevision] = useState(0);
+  const [taxRegionsRevision, setTaxRegionsRevision] = useState(0);
+  const invalidateTaxSettings = useCallback(() => {
+    setTaxSettingsRevision((revision) => revision + 1);
+  }, []);
+  const invalidateTaxRegions = useCallback(() => {
+    setTaxRegionsRevision((revision) => revision + 1);
+  }, []);
 
   const tabDefinitions = useMemo(() => {
     return billingTabDefinitions
@@ -217,10 +230,16 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
 
         <Tabs.Content value="tax-rates">
           <div className="space-y-6">
-            <TaxDelegationBanner />
-            <TaxSourceSettings />
-            <TaxRegionsManager />
-            <TaxRates />
+            <TaxDelegationBanner
+              settingsRevision={taxSettingsRevision}
+              onSettingsChanged={invalidateTaxSettings}
+            />
+            <TaxSourceSettings
+              settingsRevision={taxSettingsRevision}
+              onSettingsChanged={invalidateTaxSettings}
+            />
+            <TaxRegionsManager onRegionsChanged={invalidateTaxRegions} />
+            <TaxRates regionsRevision={taxRegionsRevision} />
           </div>
         </Tabs.Content>
 

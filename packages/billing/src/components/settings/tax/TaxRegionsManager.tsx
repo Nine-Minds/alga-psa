@@ -52,7 +52,12 @@ const taxRegionSchema = z.object({
 
 type TaxRegionFormData = z.infer<typeof taxRegionSchema>;
 
-export function TaxRegionsManager() {
+interface TaxRegionsManagerProps {
+  /** Notifies the shared parent that the region set changed, so siblings can refetch. */
+  onRegionsChanged?: () => void;
+}
+
+export function TaxRegionsManager({ onRegionsChanged }: TaxRegionsManagerProps) {
   const { t } = useTranslation('msp/billing-settings');
   const [regions, setRegions] = useState<ITaxRegion[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -160,6 +165,7 @@ export function TaxRegionsManager() {
       }
       toast.success(successMessage);
       await fetchRegions(); // Refresh data
+      onRegionsChanged?.();
       handleCloseDialog();
     } catch (error: any) {
       console.error('Failed to save tax region:', error);
@@ -202,6 +208,7 @@ export function TaxRegionsManager() {
             })
       );
       await fetchRegions(); // Refresh data
+      onRegionsChanged?.();
     } catch (error: any) {
       console.error('Failed to update tax region active state:', error);
       handleError(
