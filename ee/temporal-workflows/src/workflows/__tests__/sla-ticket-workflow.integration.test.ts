@@ -80,6 +80,7 @@ async function setupWorkflowTest(activitiesOverrides: Record<string, any> = {}) 
       responseMet: null,
       resolutionMet: null,
     }),
+    getTicketSlaPauseState: async () => ({ paused: true, reason: 'awaiting_client' }),
     ...activitiesOverrides,
   };
 
