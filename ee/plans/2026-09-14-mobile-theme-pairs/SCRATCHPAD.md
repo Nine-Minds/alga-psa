@@ -83,6 +83,12 @@ cd ee/mobile && node scripts/generate-theme-fixture.mjs
 
 ## Device pass checklist
 
+Operator action — **not run**: this session had no provisioned device or EE
+server, and the operator's local environment is off limits. Everything below is
+covered in code by `src/ui/themePairs.contract.test.ts` (all nine pairs × both
+modes against the web-generated fixture, plus the contrast bars), but the pass
+still wants a human eye on a real screen.
+
 | Pair | Light | Dark | Notes |
 |---|---|---|---|
 | Alga | | | |
@@ -90,3 +96,18 @@ cd ee/mobile && node scripts/generate-theme-fixture.mjs
 | Vice | | | |
 | High contrast | | | borders + badges |
 | Custom (EE) | | | valid + corrupted tokens |
+
+## Verification run (implementation session)
+
+```
+cd ee/mobile && npm run typecheck && npm run lint && npm test   # 167 files, 1155 tests green
+cd server && npx vitest run src/test/unit/api/mobileCapabilities \
+  src/test/unit/app/customThemePresets src/test/unit/app/themeContract \
+  src/test/unit/layout/mspBranding ../packages/tenancy               # green
+```
+
+`src/test/unit/tenancy` does not exist in the server suite; the tenancy theme
+tests live in `src/test/unit/app/{customThemePresets,themeContract}` and
+`../packages/tenancy`, which is what was run instead. A full `server` typecheck
+still OOMs V8 on this repo (pre-existing); the four touched server files were
+typechecked in a scoped project instead and are clean.

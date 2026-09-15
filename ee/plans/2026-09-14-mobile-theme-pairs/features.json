@@ -405,7 +405,7 @@
   {
     "id": "F045",
     "description": "A mobile test builds all nine presets in both modes from the committed fixture and asserts the mapped tokens match expected values",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "verification",
     "prdRefs": [
       "Acceptance"
@@ -414,7 +414,7 @@
   {
     "id": "F046",
     "description": "A mobile test runs the ported contrast checks over all nine built themes and asserts no failures",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "verification",
     "prdRefs": [
       "NFR"
@@ -423,7 +423,7 @@
   {
     "id": "F047",
     "description": "A server test pins the theme block for each predefined pair to CUSTOM_THEME_PRESETS and asserts the custom fallback path",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "verification",
     "prdRefs": [
       "FR2",

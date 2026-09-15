@@ -528,7 +528,7 @@
   {
     "id": "T058",
     "description": "Fixture-driven test: for every preset and mode, background, card, text, border and primary mapped tokens equal the fixture",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "verification",
     "featureIds": [
       "F045"
@@ -537,7 +537,7 @@
   {
     "id": "T059",
     "description": "Contrast test: text on background, textSecondary on card and textInverse on primary pass their thresholds for all nine pairs in both modes",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "verification",
     "featureIds": [
       "F046"
@@ -546,7 +546,7 @@
   {
     "id": "T060",
     "description": "Server pin test: theme block for each predefined pair equals CUSTOM_THEME_PRESETS and the custom-fallback case returns Alga",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "verification",
     "featureIds": [
       "F047"
@@ -564,7 +564,7 @@
   {
     "id": "T062",
     "description": "Regression: full mobile suite and server unit suite green after all groups land",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "verification",
     "featureIds": [
       "F045",
