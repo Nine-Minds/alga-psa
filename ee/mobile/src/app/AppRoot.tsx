@@ -29,6 +29,8 @@ import { setUser as setSentryUser, reactNavigationIntegration } from "../errors/
 import { getSecureJson, setSecureJson } from "../storage/secureStorage";
 import { ToastProvider } from "../ui/toast/ToastProvider";
 import { ThemeProvider } from "../ui/ThemeContext";
+import { clearCachedTheme, readCachedTheme } from "../ui/themeCache";
+import type { MobileTheme } from "../ui/themeTokens";
 import { I18nProvider } from "../i18n/I18nProvider";
 import { TimerProvider } from "../features/timer/TimerContext";
 import { CapabilitiesProvider } from "../capabilities/CapabilitiesContext";
@@ -45,6 +47,7 @@ export function AppRoot() {
   const [isBiometricLocked, setIsBiometricLocked] = useState(false);
   const [navInitialState, setNavInitialState] = useState<InitialState | undefined>(undefined);
   const [navStateLoaded, setNavStateLoaded] = useState(false);
+  const [cachedTenantTheme, setCachedTenantTheme] = useState<MobileTheme | null>(null);
   const network = useNetworkStatus();
   const refreshPromiseRef = useRef<Promise<string | null> | null>(null);
   const navPersistHandle = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -92,6 +95,13 @@ export function AppRoot() {
       if (stored && isSessionUsable(stored)) {
         const biometricEnabled = await getBiometricGateEnabled();
         if (biometricEnabled && !canceled) setIsBiometricLocked(true);
+      }
+
+      // Read the tenant pair before the first themed frame, so a warm launch on
+      // a Forest tenant never flashes Alga purple.
+      if (stored && isSessionUsable(stored) && config.ok) {
+        const cached = await readCachedTheme(config.baseUrl, stored.tenantId);
+        if (!canceled) setCachedTenantTheme(cached);
       }
 
       if (!canceled) setBootStatus("ready");
@@ -297,7 +307,14 @@ export function AppRoot() {
     } catch (e) {
       logger.warn("Logout revoke failed", { error: e });
     } finally {
-      await Promise.allSettled([clearPendingMobileAuth(), clearReceivedOtt(), clearPushRegistration()]);
+      await Promise.allSettled([
+        clearPendingMobileAuth(),
+        clearReceivedOtt(),
+        clearPushRegistration(),
+        // A different tenant must not inherit this one's colours.
+        clearCachedTheme(baseUrl, currentSession?.tenantId),
+      ]);
+      setCachedTenantTheme(null);
       setSession(null);
     }
   }, [baseUrl, session, setSession]);
@@ -306,22 +323,26 @@ export function AppRoot() {
     async (url: string) => {
       const normalized = await saveStoredHost(url);
       await clearPushRegistration();
+      await clearCachedTheme(baseUrl, sessionRef.current?.tenantId);
+      setCachedTenantTheme(null);
       setActiveBaseUrl(normalized);
       const config = getAppConfig();
       setBaseUrl(config.ok ? config.baseUrl : null);
       setSession(null);
     },
-    [setSession],
+    [baseUrl, setSession],
   );
 
   const clearHost = useCallback(async () => {
     await clearStoredHost();
     await clearPushRegistration();
+    await clearCachedTheme(baseUrl, sessionRef.current?.tenantId);
+    setCachedTenantTheme(null);
     setActiveBaseUrl(null);
     const config = getAppConfig();
     setBaseUrl(config.ok ? config.baseUrl : null);
     setSession(null);
-  }, [setSession]);
+  }, [baseUrl, setSession]);
 
   if (bootStatus === "booting") {
     return <LoadingState message={t("common:loadingEllipsis")} />;
@@ -332,7 +353,7 @@ export function AppRoot() {
   }
 
   return (
-    <ThemeProvider>
+    <ThemeProvider initialTenantTheme={cachedTenantTheme}>
     <I18nProvider>
     <ToastProvider>
       <AuthContext.Provider

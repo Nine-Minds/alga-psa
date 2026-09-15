@@ -212,7 +212,7 @@
   {
     "id": "F024",
     "description": "api/capabilities.ts MyCapabilities gains an optional theme field typed as MobileTheme",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "theme-delivery",
     "prdRefs": [
       "FR11"
@@ -221,7 +221,7 @@
   {
     "id": "F025",
     "description": "CapabilitiesProvider exposes theme (or null) and refreshes it on the same triggers as features (sign-in, resume, focus)",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "theme-delivery",
     "prdRefs": [
       "FR11",
@@ -231,7 +231,7 @@
   {
     "id": "F026",
     "description": "ThemeProvider builds the active theme from the capabilities theme block, memoised per (version, mode), and falls back to the Alga pair when absent",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "theme-delivery",
     "prdRefs": [
       "FR11"
@@ -240,7 +240,7 @@
   {
     "id": "F027",
     "description": "ThemeProvider caches the theme block in secure storage under alga.mobile.theme.tokens.<baseUrl>.<tenantId> whenever a new version arrives",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "theme-delivery",
     "prdRefs": [
       "FR12",
@@ -250,7 +250,7 @@
   {
     "id": "F028",
     "description": "On launch ThemeProvider reads the cached block for the current server+tenant before the first themed frame so warm launches show the tenant pair, not Alga",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "theme-delivery",
     "prdRefs": [
       "FR12"
@@ -259,7 +259,7 @@
   {
     "id": "F029",
     "description": "Signing out or changing the server host clears the cached theme block and reverts to Alga",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "theme-delivery",
     "prdRefs": [
       "FR13"
@@ -268,7 +268,7 @@
   {
     "id": "F030",
     "description": "The light/dark/system preference continues to select which half of the pair renders and keeps its existing storage key",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "theme-delivery",
     "prdRefs": [
       "FR15"
@@ -277,7 +277,7 @@
   {
     "id": "F031",
     "description": "ThemeContext exposes the active pairId and label for the Settings row",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "theme-delivery",
     "prdRefs": [
       "FR17"

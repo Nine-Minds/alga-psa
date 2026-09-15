@@ -273,7 +273,7 @@
   {
     "id": "T030",
     "description": "MyCapabilities type accepts a response without theme (older servers) and with theme",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "theme-delivery",
     "featureIds": [
       "F024"
@@ -282,7 +282,7 @@
   {
     "id": "T031",
     "description": "CapabilitiesProvider stores theme from the response and exposes null when absent",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "theme-delivery",
     "featureIds": [
       "F025"
@@ -291,7 +291,7 @@
   {
     "id": "T032",
     "description": "ThemeProvider renders the Forest pair when the capabilities context supplies Forest tokens",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "theme-delivery",
     "featureIds": [
       "F026"
@@ -300,7 +300,7 @@
   {
     "id": "T033",
     "description": "ThemeProvider renders the Alga pair when the capabilities context has no theme",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "theme-delivery",
     "featureIds": [
       "F026"
@@ -309,7 +309,7 @@
   {
     "id": "T034",
     "description": "ThemeProvider memoises: the same version and mode yield the same Theme object reference across renders",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "theme-delivery",
     "featureIds": [
       "F026"
@@ -318,7 +318,7 @@
   {
     "id": "T035",
     "description": "ThemeProvider writes the theme block to secure storage keyed by baseUrl and tenantId when version changes",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "theme-delivery",
     "featureIds": [
       "F027"
@@ -327,7 +327,7 @@
   {
     "id": "T036",
     "description": "ThemeProvider reads the cached block for the current server and tenant on mount and renders it before capabilities resolve",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "theme-delivery",
     "featureIds": [
       "F028"
@@ -336,7 +336,7 @@
   {
     "id": "T037",
     "description": "ThemeProvider ignores a cached block whose key belongs to a different server or tenant",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "theme-delivery",
     "featureIds": [
       "F028",
@@ -346,7 +346,7 @@
   {
     "id": "T038",
     "description": "Signing out clears the cached theme and the next render is Alga",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "theme-delivery",
     "featureIds": [
       "F029"
@@ -355,7 +355,7 @@
   {
     "id": "T039",
     "description": "A newer version from the server replaces the cached block and re-renders without remounting the provider",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "theme-delivery",
     "featureIds": [
       "F027",
@@ -365,7 +365,7 @@
   {
     "id": "T040",
     "description": "Preference 'dark' with a Forest pair renders Forest dark; preference 'system' follows useColorScheme",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "theme-delivery",
     "featureIds": [
       "F030"
@@ -374,7 +374,7 @@
   {
     "id": "T041",
     "description": "ThemeContext exposes pairId and label matching the active theme block",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "theme-delivery",
     "featureIds": [
       "F031"

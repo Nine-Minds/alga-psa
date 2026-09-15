@@ -5,9 +5,13 @@ import { EMPTY_FEATURE_CAPABILITIES, getMyCapabilities, type FeatureCapabilities
 import { useAuth } from "../auth/AuthContext";
 import { useAppResume } from "../hooks/useAppResume";
 import { logger } from "../logging/logger";
+import { TenantThemeBridge } from "../ui/TenantThemeBridge";
+import { parseMobileTheme, type MobileTheme } from "../ui/themeTokens";
 
 export type CapabilitiesContextValue = {
   features: FeatureCapabilities;
+  /** Tenant theme pair from the server; null on older servers and after sign-out. */
+  theme: MobileTheme | null;
   loaded: boolean;
   refresh: () => Promise<void>;
 };
@@ -23,6 +27,7 @@ export function useCapabilities(): CapabilitiesContextValue {
 export function CapabilitiesProvider({ children }: { children: ReactNode }) {
   const { session, refreshSession, baseUrl } = useAuth();
   const [features, setFeatures] = useState<FeatureCapabilities>(EMPTY_FEATURE_CAPABILITIES);
+  const [theme, setTheme] = useState<MobileTheme | null>(null);
   const [loaded, setLoaded] = useState(false);
   const inFlight = useRef(false);
   const accessToken = session?.accessToken ?? null;
@@ -46,8 +51,11 @@ export function CapabilitiesProvider({ children }: { children: ReactNode }) {
           opportunities: result.data.data?.features?.opportunities === true,
           opportunitiesCreate: result.data.data?.features?.opportunitiesCreate === true,
         });
+        // Older servers send no theme block; the app keeps the Alga pair.
+        setTheme(parseMobileTheme(result.data.data?.theme));
       } else {
         // Older servers have no endpoint (404) — every feature stays off.
+        // The theme is left alone: a flaky network should not repaint the app.
         setFeatures(EMPTY_FEATURE_CAPABILITIES);
         if (result.error.kind !== "http" && result.error.kind !== "network") {
           logger.warn("capabilities.fetch_failed", { kind: result.error.kind });
@@ -62,6 +70,7 @@ export function CapabilitiesProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!accessToken) {
       setFeatures(EMPTY_FEATURE_CAPABILITIES);
+      setTheme(null);
       setLoaded(false);
       return;
     }
@@ -74,7 +83,15 @@ export function CapabilitiesProvider({ children }: { children: ReactNode }) {
     }, [accessToken, refresh]),
   );
 
-  const value = useMemo(() => ({ features, loaded, refresh }), [features, loaded, refresh]);
+  const value = useMemo(
+    () => ({ features, theme, loaded, refresh }),
+    [features, theme, loaded, refresh],
+  );
 
-  return <CapabilitiesContext.Provider value={value}>{children}</CapabilitiesContext.Provider>;
+  return (
+    <CapabilitiesContext.Provider value={value}>
+      <TenantThemeBridge theme={theme} baseUrl={baseUrl} tenantId={tenantId} />
+      {children}
+    </CapabilitiesContext.Provider>
+  );
 }
