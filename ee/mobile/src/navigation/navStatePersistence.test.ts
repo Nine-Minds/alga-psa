@@ -25,6 +25,29 @@ describe("stripTransientRouteParams", () => {
     expect(stripped.routes[0].state!.routes![0].state!.routes![1].params).toEqual({ ticketId: "t-1" });
   });
 
+  it("scrubs the drill-down copies a nested navigate leaves on ancestor routes", () => {
+    const drill = { clientId: "c-1", clientName: "Acme" };
+    const state = {
+      routes: [{
+        name: "Tabs",
+        params: { screen: "TicketsTab", params: { screen: "TicketsList", params: drill } },
+        state: {
+          routes: [{
+            name: "TicketsTab",
+            params: { screen: "TicketsList", params: { ...drill, other: 1 } },
+            state: { routes: [{ name: "TicketsList", params: drill }] },
+          }],
+        },
+      }],
+    };
+    const stripped = stripTransientRouteParams(state);
+    const tabs = stripped.routes[0];
+    expect(tabs.params).toEqual({ screen: "TicketsTab", params: { screen: "TicketsList" } });
+    const ticketsTab = tabs.state!.routes![0];
+    expect(ticketsTab.params).toEqual({ screen: "TicketsList", params: { other: 1 } });
+    expect(ticketsTab.state!.routes![0].params).toBeUndefined();
+  });
+
   it("returns the same object when nothing is transient", () => {
     const state = { routes: [{ name: "TicketsList", params: { other: 1 } }, { name: "Settings" }] };
     expect(stripTransientRouteParams(state)).toBe(state);

@@ -28,13 +28,13 @@ export function PrimaryButton({
       style={({ pressed }) => ({
         paddingVertical: theme.spacing.md,
         paddingHorizontal: theme.spacing.lg,
-        backgroundColor: disabled ? theme.colors.border : theme.colors.primary,
+        backgroundColor: disabled ? theme.colors.disabled.bg : theme.colors.primary,
         borderRadius: 10,
         opacity: pressed && !disabled ? 0.9 : 1,
         alignSelf: "center",
       })}
     >
-      <Text style={{ ...theme.typography.body, color: disabled ? theme.colors.textSecondary : theme.colors.textInverse, fontWeight: "600" }}>
+      <Text style={{ ...theme.typography.body, color: disabled ? theme.colors.disabled.text : theme.colors.textInverse, fontWeight: "600" }}>
         {children}
       </Text>
     </Pressable>

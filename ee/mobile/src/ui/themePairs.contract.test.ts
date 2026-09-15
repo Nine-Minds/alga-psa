@@ -25,6 +25,55 @@ const themeFor = (pairId: string, mode: "light" | "dark") =>
     version: `${pairId}-${mode}-contract`,
   });
 
+/**
+ * A tenant-authored palette (the Oz dev tenant's) whose border and secondary
+ * text are both near black: any control that pairs two authored tokens for a
+ * disabled state goes unreadable on it.
+ */
+const CUSTOM_PALETTE: Record<"light" | "dark", MobileThemeSeedTokens> = {
+  light: {
+    background: "#ffffff", card: "#ffffff", surface: "#ffffff",
+    textPrimary: "#000000", textSecondary: "#1f2937", textMuted: "#374151",
+    border: "#111111", borderStrong: "#1f2937",
+    primary: "#1a1a1a", secondary: "#247024", accent: "#b45309",
+    sidebarBg: "#000000", sidebarText: "#ffffff", sidebarHover: "#333333", headerBg: "#ffffff",
+  },
+  dark: {
+    background: "#000000", card: "#000000", surface: "#000000",
+    textPrimary: "#ffffff", textSecondary: "#e5e7eb", textMuted: "#d1d5db",
+    border: "#f5f5f5", borderStrong: "#9ca3af",
+    primary: "#737373", secondary: "#737373", accent: "#f59e0b",
+    sidebarBg: "#000000", sidebarText: "#ffffff", sidebarHover: "#333333", headerBg: "#000000",
+  },
+};
+
+/** The bars the web applies in validateCustomThemeContrast, plus the mobile-only disabled surfaces. */
+function expectReadable(colors: ReturnType<typeof buildTheme>["colors"]) {
+  // Body text at 4.5:1, muted text and button labels at 3:1.
+  expect(contrastRatio(colors.text, colors.background)).toBeGreaterThanOrEqual(4.5);
+  expect(contrastRatio(colors.text, colors.card)).toBeGreaterThanOrEqual(4.5);
+  expect(contrastRatio(colors.textSecondary, colors.background)).toBeGreaterThanOrEqual(4.5);
+  expect(contrastRatio(colors.textSecondary, colors.card)).toBeGreaterThanOrEqual(4.5);
+  expect(contrastRatio(colors.placeholder, colors.background)).toBeGreaterThanOrEqual(3);
+  expect(contrastRatio(colors.primary, colors.background)).toBeGreaterThanOrEqual(3);
+  expect(contrastRatio(colors.textInverse, colors.primary)).toBeGreaterThanOrEqual(3);
+
+  // Disabled controls (PrimaryButton, SecondaryButton, TextInput, ListRow all
+  // paint disabled.bg/text): the label must read, and the surface must still
+  // be distinguishable from an enabled card.
+  expect(contrastRatio(colors.disabled.text, colors.disabled.bg), "disabled label").toBeGreaterThanOrEqual(4.5);
+  expect(contrastRatio(colors.disabled.bg, colors.card), "disabled surface vs card").toBeGreaterThanOrEqual(1.1);
+
+  for (const tone of ["info", "success", "warning", "danger", "neutral"] as const) {
+    const badge = colors.badge[tone];
+    expect(contrastRatio(badge.text, badge.bg), tone).toBeGreaterThanOrEqual(4.5);
+  }
+  for (const tone of ["info", "success", "error"] as const) {
+    const toast = colors.toast[tone];
+    expect(contrastRatio(toast.text, toast.bg), tone).toBeGreaterThanOrEqual(4.5);
+  }
+}
+
 describe("theme pair contract", () => {
   it("covers all nine predefined pairs", () => {
     expect(PAIR_IDS).toEqual([
@@ -66,25 +115,13 @@ describe("theme pair contract", () => {
   });
 
   it.each(CASES)("T059 keeps the %s %s pair readable", (pairId, mode) => {
-    const { colors } = themeFor(pairId, mode);
+    expectReadable(themeFor(pairId, mode).colors);
+  });
 
-    // Same bars the web applies in validateCustomThemeContrast: body text at
-    // 4.5:1, muted text and button labels at 3:1.
-    expect(contrastRatio(colors.text, colors.background)).toBeGreaterThanOrEqual(4.5);
-    expect(contrastRatio(colors.text, colors.card)).toBeGreaterThanOrEqual(4.5);
-    expect(contrastRatio(colors.textSecondary, colors.background)).toBeGreaterThanOrEqual(4.5);
-    expect(contrastRatio(colors.textSecondary, colors.card)).toBeGreaterThanOrEqual(4.5);
-    expect(contrastRatio(colors.placeholder, colors.background)).toBeGreaterThanOrEqual(3);
-    expect(contrastRatio(colors.primary, colors.background)).toBeGreaterThanOrEqual(3);
-    expect(contrastRatio(colors.textInverse, colors.primary)).toBeGreaterThanOrEqual(3);
-
-    for (const tone of ["info", "success", "warning", "danger", "neutral"] as const) {
-      const badge = colors.badge[tone];
-      expect(contrastRatio(badge.text, badge.bg), tone).toBeGreaterThanOrEqual(4.5);
-    }
-    for (const tone of ["info", "success", "error"] as const) {
-      const toast = colors.toast[tone];
-      expect(contrastRatio(toast.text, toast.bg), tone).toBeGreaterThanOrEqual(4.5);
-    }
+  it.each(MODES)("T060 keeps a tenant custom palette readable in %s mode, disabled controls included", (mode) => {
+    const { colors } = buildTheme(CUSTOM_PALETTE[mode], mode, { pairId: "custom", version: `custom-${mode}-contract` });
+    expectReadable(colors);
+    // The authored pairing the old PrimaryButton used is exactly what fails here.
+    expect(contrastRatio(colors.textSecondary, colors.border)).toBeLessThan(4.5);
   });
 });

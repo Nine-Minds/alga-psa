@@ -30,17 +30,18 @@ export function CapabilitiesProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<MobileTheme | null>(null);
   const [loaded, setLoaded] = useState(false);
   const inFlight = useRef(false);
-  const accessToken = session?.accessToken ?? null;
-  const tenantId = session?.tenantId;
+  const signedIn = Boolean(session?.accessToken);
 
+  // Keyed on the session handle, not the token: a rotation must not refetch.
   const refresh = useCallback(async () => {
+    const accessToken = session?.accessToken;
     if (!accessToken || !baseUrl || inFlight.current) return;
     inFlight.current = true;
     try {
       const client = createApiClient({
         baseUrl,
-        getAccessToken: () => accessToken ?? undefined,
-        getTenantId: () => tenantId,
+        getAccessToken: () => session?.accessToken,
+        getTenantId: () => session?.tenantId,
         getUserAgentTag: () => `mobile/${Platform.OS}/capabilities`,
         onAuthError: refreshSession,
       });
@@ -52,7 +53,14 @@ export function CapabilitiesProvider({ children }: { children: ReactNode }) {
           opportunitiesCreate: result.data.data?.features?.opportunitiesCreate === true,
         });
         // Older servers send no theme block; the app keeps the Alga pair.
-        setTheme(parseMobileTheme(result.data.data?.theme));
+        const themeBlock = result.data.data?.theme;
+        const parsedTheme = parseMobileTheme(themeBlock);
+        if (themeBlock && !parsedTheme) {
+          logger.warn("capabilities.theme_rejected", { pairId: (themeBlock as { pairId?: unknown }).pairId });
+        } else {
+          logger.info("capabilities.theme", { pairId: parsedTheme?.pairId ?? null, version: parsedTheme?.version ?? null });
+        }
+        setTheme(parsedTheme);
       } else {
         // Older servers have no endpoint (404) — every feature stays off.
         // The theme is left alone: a flaky network should not repaint the app.
@@ -65,22 +73,22 @@ export function CapabilitiesProvider({ children }: { children: ReactNode }) {
       inFlight.current = false;
       setLoaded(true);
     }
-  }, [accessToken, baseUrl, tenantId, refreshSession]);
+  }, [session, baseUrl, refreshSession]);
 
   useEffect(() => {
-    if (!accessToken) {
+    if (!signedIn) {
       setFeatures(EMPTY_FEATURE_CAPABILITIES);
       setTheme(null);
       setLoaded(false);
       return;
     }
     void refresh();
-  }, [accessToken, refresh]);
+  }, [signedIn, refresh]);
 
   useAppResume(
     useCallback(() => {
-      if (accessToken) void refresh();
-    }, [accessToken, refresh]),
+      if (signedIn) void refresh();
+    }, [signedIn, refresh]),
   );
 
   const value = useMemo(
@@ -90,7 +98,7 @@ export function CapabilitiesProvider({ children }: { children: ReactNode }) {
 
   return (
     <CapabilitiesContext.Provider value={value}>
-      <TenantThemeBridge theme={theme} baseUrl={baseUrl} tenantId={tenantId} />
+      <TenantThemeBridge theme={theme} baseUrl={baseUrl} tenantId={session?.tenantId} />
       {children}
     </CapabilitiesContext.Provider>
   );

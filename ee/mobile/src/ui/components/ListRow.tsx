@@ -45,7 +45,7 @@ export function ListRow({
         <Text
           style={{
             ...theme.typography.body,
-            color: disabled ? theme.colors.textSecondary : theme.colors.text,
+            color: disabled ? theme.colors.disabled.text : theme.colors.text,
           }}
           numberOfLines={1}
         >

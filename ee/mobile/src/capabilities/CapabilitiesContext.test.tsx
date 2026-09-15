@@ -31,6 +31,7 @@ vi.mock("../ui/TenantThemeBridge", () => ({ TenantThemeBridge: () => null }));
 
 import { CapabilitiesProvider, useCapabilities } from "./CapabilitiesContext";
 import { ALGA_THEME_TOKENS } from "../ui/themes";
+import { logger } from "../logging/logger";
 
 const themeBlock = {
   pairId: "forest",
@@ -73,6 +74,33 @@ describe("CapabilitiesProvider", () => {
     expect(value.features.inventory).toBe(true);
     expect(value.theme?.pairId).toBe("forest");
     expect(value.theme?.version).toBe("forest-v1");
+  });
+
+  it("logs the pair it applied so a theme mismatch is visible in Metro", async () => {
+    const info = vi.spyOn(logger, "info").mockImplementation(() => {});
+    getMyCapabilities.mockResolvedValue({
+      ok: true,
+      data: { data: { features: { inventory: false, opportunities: false, opportunitiesCreate: false }, theme: themeBlock } },
+    });
+
+    await renderProvider();
+
+    expect(info).toHaveBeenCalledWith("capabilities.theme", { pairId: "forest", version: "forest-v1" });
+    info.mockRestore();
+  });
+
+  it("warns when the server sends a theme block the app cannot parse", async () => {
+    const warn = vi.spyOn(logger, "warn").mockImplementation(() => {});
+    getMyCapabilities.mockResolvedValue({
+      ok: true,
+      data: { data: { features: { inventory: false, opportunities: false, opportunitiesCreate: false }, theme: { pairId: "forest", light: {} } } },
+    });
+
+    await renderProvider();
+
+    expect(warn).toHaveBeenCalledWith("capabilities.theme_rejected", { pairId: "forest" });
+    expect(value.theme).toBeNull();
+    warn.mockRestore();
   });
 
   it("T031 exposes null for a server that sends no theme", async () => {

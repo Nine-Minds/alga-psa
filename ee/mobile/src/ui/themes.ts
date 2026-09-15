@@ -86,6 +86,8 @@ export type Theme = {
     shadow: string;
     /** Text and icons that sit on an intentionally black scrim (image preview, camera). */
     overlayText: string;
+    /** Disabled controls: a tint of the card, with a label guaranteed to read on it. */
+    disabled: { bg: string; text: string };
     badge: Record<"info" | "success" | "warning" | "danger" | "neutral", BadgeColorSet>;
     toast: Record<"info" | "success" | "error", ToastColorSet>;
   };
@@ -330,6 +332,16 @@ export function buildTheme(
     ? WHITE
     : textPrimaryHex;
 
+  // Seed tokens are authored independently, so no two of them are guaranteed
+  // to contrast (the Oz custom palette has border and textSecondary both near
+  // black). Disabled surfaces are derived from the card instead, and the label
+  // is the first authored text token that clears 4.5:1 on that surface.
+  const disabledBg = hex(mix(card, seed.textPrimary, mode === "light" ? 0.1 : 0.16));
+  const disabledText =
+    [hex(seed.textMuted), hex(seed.textSecondary), textPrimaryHex].find(
+      (candidate) => contrastRatio(candidate, disabledBg) >= 4.5,
+    ) ?? textPrimaryHex;
+
   const statusSet = (color: string): BadgeColorSet => {
     const rgb = hexToRgb(color) as Rgb;
     return {
@@ -367,6 +379,7 @@ export function buildTheme(
       placeholder: hex(seed.textMuted),
       shadow: "#000000",
       overlayText: WHITE,
+      disabled: { bg: disabledBg, text: disabledText },
       badge: {
         info: statusSet(status.info),
         success: statusSet(status.success),

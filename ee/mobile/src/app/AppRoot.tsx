@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Platform, View } from "react-native";
 import { NavigationContainer, useNavigationContainerRef } from "@react-navigation/native";
 import type { InitialState } from "@react-navigation/native";
@@ -12,6 +12,7 @@ import { LoadingState } from "../ui/states";
 import { useNetworkStatus } from "../network/useNetworkStatus";
 import { OfflineBanner } from "../ui/components/OfflineBanner";
 import { AuthContext, type MobileSession } from "../auth/AuthContext";
+import { createSessionHandle, sessionIdentityKey } from "../auth/sessionHandle";
 import { clearStoredSession, getStoredSession, storeSession } from "../auth/sessionStorage";
 import { useAppResume } from "../hooks/useAppResume";
 import { createApiClient } from "../api";
@@ -34,7 +35,7 @@ import type { MobileTheme } from "../ui/themeTokens";
 import { I18nProvider } from "../i18n/I18nProvider";
 import { TimerProvider } from "../features/timer/TimerContext";
 import { CapabilitiesProvider } from "../capabilities/CapabilitiesContext";
-import { isSessionUsable, msUntilExpiry, msUntilRefresh, shouldRefreshOnResume, shouldRunRevocationCheck } from "./bootstrapUtils";
+import { isSessionUsable, msUntilExpiry, msUntilRefresh, shouldRefreshOnResume } from "./bootstrapUtils";
 import { isOffline as isOfflineStatus } from "../network/isOffline";
 import { getActiveRouteName } from "../navigation/activeRoute";
 import { t } from "../i18n/i18n";
@@ -53,7 +54,6 @@ export function AppRoot() {
   const navPersistHandle = useRef<ReturnType<typeof setTimeout> | null>(null);
   const startupStartedAt = useRef(Date.now());
   const startupReported = useRef(false);
-  const lastRevocationCheckAtMs = useRef(0);
   const lastBiometricUnlockAtMs = useRef(0);
 
   const navigationRef = useNavigationContainerRef<RootStackParamList>();
@@ -264,12 +264,11 @@ export function AppRoot() {
 
   useAppResume(() => {
     if (!session) return;
-    const now = Date.now();
-    // Refresh if token is near expiry, or periodically to detect revocation
-    if (shouldRefreshOnResume(session.expiresAtMs, now)) {
-      void refreshSession();
-    } else if (shouldRunRevocationCheck(lastRevocationCheckAtMs.current, now)) {
-      lastRevocationCheckAtMs.current = now;
+    // Only a near-expiry token is refreshed here. A revoked session surfaces
+    // as a 401 on the first resume fetch, which already routes through
+    // refreshSession and signs out when that fails; a periodic refresh only
+    // rotated the key underneath the fetches every screen fires on resume.
+    if (shouldRefreshOnResume(session.expiresAtMs, Date.now())) {
       void refreshSession();
     }
   });
@@ -286,7 +285,7 @@ export function AppRoot() {
   });
 
   const logout = useCallback(async () => {
-    const currentSession = session;
+    const currentSession = sessionRef.current;
     analytics.trackEvent(MobileAnalyticsEvents.authLogout, { hadSession: Boolean(currentSession) });
     try {
       if (baseUrl && currentSession) {
@@ -317,7 +316,7 @@ export function AppRoot() {
       setCachedTenantTheme(null);
       setSession(null);
     }
-  }, [baseUrl, session, setSession]);
+  }, [baseUrl, setSession]);
 
   const setHost = useCallback(
     async (url: string) => {
@@ -344,6 +343,14 @@ export function AppRoot() {
     setSession(null);
   }, [baseUrl, setSession]);
 
+  // Consumers get one object per signed-in account; a token refresh updates
+  // its fields in place instead of handing every screen a new session.
+  const sessionKey = sessionIdentityKey(session);
+  const sessionHandle = useMemo(
+    () => (sessionKey === null ? null : createSessionHandle(sessionRef)),
+    [sessionKey],
+  );
+
   if (bootStatus === "booting") {
     return <LoadingState message={t("common:loadingEllipsis")} />;
   }
@@ -358,7 +365,7 @@ export function AppRoot() {
     <ToastProvider>
       <AuthContext.Provider
         value={{
-          session,
+          session: sessionHandle,
           setSession,
           refreshSession,
           logout,
